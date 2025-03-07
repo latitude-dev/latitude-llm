@@ -39,30 +39,30 @@ export default async function PrivateLayout({
       ? { paymentUrl: env.LATITUDE_CLOUD_PAYMENT_URL }
       : undefined
   return (
-    <CSPostHogProvider>
-      <IdentifyUser user={user} workspace={workspace}>
-        <SupportChat identity={supportIdentity} />
-        <SocketIOProvider>
-          <SessionProvider
-            currentUser={user}
-            workspace={workspace}
-            subscriptionPlan={subscriptionPlan}
-          >
-            <LatitudeWebsocketsProvider
+      <CSPostHogProvider>
+        <IdentifyUser user={user} workspace={workspace}>
+          <SupportChat identity={supportIdentity} />
+          <SocketIOProvider>
+            <SessionProvider
+              currentUser={user}
               workspace={workspace}
-              socketServer={env.WEBSOCKETS_SERVER}
+              subscriptionPlan={subscriptionPlan}
             >
-              <AppLayout
-                currentUser={user}
-                navigationLinks={NAV_LINKS}
-                cloudInfo={cloudInfo}
+              <LatitudeWebsocketsProvider
+                workspace={workspace}
+                socketServer={env.WEBSOCKETS_SERVER}
               >
-                {children}
-              </AppLayout>
-            </LatitudeWebsocketsProvider>
-          </SessionProvider>
-        </SocketIOProvider>
-      </IdentifyUser>
-    </CSPostHogProvider>
+                <AppLayout
+                  currentUser={user}
+                  navigationLinks={NAV_LINKS}
+                  cloudInfo={cloudInfo}
+                >
+                  {children}
+                </AppLayout>
+              </LatitudeWebsocketsProvider>
+            </SessionProvider>
+          </SocketIOProvider>
+        </IdentifyUser>
+      </CSPostHogProvider>
   )
 }
