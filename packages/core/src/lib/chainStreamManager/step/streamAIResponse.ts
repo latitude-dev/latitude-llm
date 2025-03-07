@@ -41,6 +41,7 @@ export async function streamAIResponse({
   schema,
   output,
   injectFakeAgentStartTool,
+  abortSignal,
 }: {
   controller: ReadableStreamDefaultController
   workspace: Workspace
@@ -51,6 +52,7 @@ export async function streamAIResponse({
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema'
   injectFakeAgentStartTool?: boolean
+  abortSignal?: AbortSignal
 }): Promise<{
   response: ChainStepResponse<StreamType>
   tokenUsage: LanguageModelUsage
@@ -101,13 +103,15 @@ export async function streamAIResponse({
   }
 
   const aiResult = await ai({
-    // TODO: vitest will cry when checking the parameters passed to this function when the object mutes afterwards.
-    // To fix this, we make a deep copy of the array so that it is immutable.
+    // TODO: vitest will cry when checking the parameters passed to this
+    // function when the object mutes afterwards. To fix this, we make a deep
+    // copy of the array so that it is immutable.
     messages: optimizedAgentMessages,
     config: conversation.config as VercelConfig,
     provider,
     schema,
     output,
+    abortSignal,
   }).then((r) => r.unwrap())
 
   const checkResult = checkValidStream(aiResult)

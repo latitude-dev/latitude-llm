@@ -13,16 +13,15 @@ export function runAgent<T extends boolean, C extends SomeChain>({
   promptlVersion,
   chain,
   globalConfig,
-
   persistErrors = true,
   generateUUID = generateUUIDIdentifier,
   errorableType,
   messages: pausedMessages,
   newMessages,
   pausedTokenUsage,
-
   configOverrides,
   promptSource,
+  abortSignal,
 }: RunChainArgs<T, C>) {
   const errorableUuid = generateUUID()
   const chainStartTime = Date.now()
@@ -54,6 +53,7 @@ export function runAgent<T extends boolean, C extends SomeChain>({
       configOverrides,
       removeSchema: true, // Removes the schema configuration for the AI generation, as it is reserved for the agent's Return function
       promptSource,
+      abortSignal,
     })
 
     const chainEventsReader = chainResult.stream.getReader()
@@ -102,7 +102,7 @@ export function runAgent<T extends boolean, C extends SomeChain>({
       newMessages,
       previousConfig: conversation.config,
     })
-  })
+  }, abortSignal)
 
   return {
     ...streamResult,

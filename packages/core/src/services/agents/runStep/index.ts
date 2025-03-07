@@ -51,6 +51,7 @@ export async function runAgentStep({
   globalConfig,
   newMessages = undefined,
   stepCount,
+  abortSignal,
 }: {
   chainStreamManager: ChainStreamManager
   workspace: Workspace
@@ -62,6 +63,7 @@ export async function runAgentStep({
   globalConfig: PromptConfig
   previousConfig: Config
   stepCount: number
+  abortSignal?: AbortSignal
 }) {
   if (newMessages?.length) {
     const lastResponseMessage = newMessages[0]! as AssistantMessage
@@ -104,6 +106,7 @@ export async function runAgentStep({
       output: step.output,
       injectAgentFinishTool: true,
       injectFakeAgentStartTool: !step.config.disableAgentOptimization,
+      abortSignal,
     })
 
   // Stop the chain if there are tool calls
@@ -123,5 +126,6 @@ export async function runAgentStep({
     stepCount: stepCount + 1,
     newMessages: buildMessagesFromResponse({ response }),
     previousConfig: step.config,
+    abortSignal,
   })
 }
