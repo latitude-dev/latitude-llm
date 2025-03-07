@@ -160,6 +160,7 @@ export function useSelectDataset({
   )
   const isLoading = isLoadingDatasets || isLoadingPreviewDataset
 
+  // TODO: Move this to useLegacyPreview.ts hook
   const onRowChange = useCallback(
     (rowIndex: number) => {
       if (!datasetPreview || !selectedDataset) return
