@@ -35,6 +35,7 @@ export enum HostedIntegrationType {
   Jira = 'jira',
   Attio = 'attio',
   Ghost = 'ghost',
+  Figma = 'figma',
 
   // Require all auth file :point_down:
   // Gmail = 'google_drive',

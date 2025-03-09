@@ -148,6 +148,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Supabase',
     icon: 'supabase',
   },
+  [HostedIntegrationType.Figma]: {
+    label: 'Figma',
+    icon: 'figma',
+  },
 }
 
 export function integrationOptions(

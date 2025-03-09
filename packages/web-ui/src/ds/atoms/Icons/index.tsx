@@ -127,6 +127,7 @@ import Redis from './custom-icons/logos/Redis'
 import Attio from './custom-icons/logos/Attio'
 import Supabase from './custom-icons/logos/Supabase'
 import Ghost from './custom-icons/logos/Ghost'
+import Figma from './custom-icons/logos/Figma'
 
 const Icons = {
   addCircle: CirclePlus,
@@ -252,6 +253,7 @@ const Icons = {
   neon: Neon,
   postgres: Postgres,
   redis: Redis,
+  figma: Figma,
 }
 
 export type IconName = keyof typeof Icons
