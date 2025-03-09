@@ -16,14 +16,18 @@ export type EvaluationMetricBackendSpecification<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = EvaluationMetricSpecification<T, M> & {
   validate: (
-    args: { configuration: EvaluationConfiguration<M> },
+    args: { configuration: EvaluationConfiguration<T, M> },
     db?: Database,
-  ) => Promise<TypedResult<EvaluationConfiguration<M>, LatitudeError>>
+  ) => Promise<TypedResult<EvaluationConfiguration<T, M>, LatitudeError>>
 }
 
 export type EvaluationBackendSpecification<
   T extends EvaluationType = EvaluationType,
 > = Omit<EvaluationSpecification<T>, 'metrics'> & {
+  validate: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
+    args: { metric: M; configuration: EvaluationConfiguration<T, M> },
+    db?: Database,
+  ) => Promise<TypedResult<EvaluationConfiguration<T, M>, LatitudeError>>
   metrics: {
     [M in EvaluationMetric<T>]: EvaluationMetricBackendSpecification<T, M>
   }

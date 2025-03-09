@@ -97,6 +97,8 @@ export type LlmEvaluationResultMetadata<M extends LlmEvaluationMetric = LlmEvalu
 export const LlmEvaluationSpecification = {
   name: 'LLM-as-a-Judge',
   description: 'Evaluate responses using an LLM as a judge',
+  configuration: llmEvaluationConfiguration,
+  resultMetadata: llmEvaluationResultMetadata,
   // prettier-ignore
   metrics: {
     [LlmEvaluationMetric.Binary]: LlmEvaluationBinarySpecification,

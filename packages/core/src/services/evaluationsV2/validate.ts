@@ -36,22 +36,26 @@ export async function validateEvaluationV2<
   },
   db: Database = database,
 ) {
-  const specification =
-    EVALUATION_SPECIFICATIONS[settings.type].metrics[settings.metric]
+  const specification = EVALUATION_SPECIFICATIONS[settings.type]
   if (!specification) {
-    return Result.error(new BadRequestError('Invalid type or metric'))
+    return Result.error(new BadRequestError('Invalid type'))
   }
+
+  specification.configuration.parse(settings.configuration)
+
+  settings.configuration = await specification
+    .validate(
+      {
+        metric: settings.metric,
+        configuration: settings.configuration,
+      },
+      db,
+    )
+    .then((r) => r.unwrap())
 
   if (!settings.name) {
     return Result.error(new BadRequestError('Name is required'))
   }
-
-  settings.configuration = specification.configuration.parse(
-    settings.configuration,
-  )
-  settings.configuration = await specification
-    .validate({ configuration: settings.configuration }, db)
-    .then((r) => r.unwrap())
 
   if (!Object.values(EvaluationCondition).includes(settings.condition)) {
     return Result.error(new BadRequestError('Invalid pass condition'))

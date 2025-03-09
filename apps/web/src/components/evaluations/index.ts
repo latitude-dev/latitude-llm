@@ -16,15 +16,22 @@ export type EvaluationMetricFrontendSpecification<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = EvaluationMetricSpecification<T, M> & {
   icon: IconName
-  configurationForm: React.FC<{
-    configuration: EvaluationConfiguration<M>
-    onChange: (configuration: EvaluationConfiguration<M>) => void
-  }>
+  ConfigurationForm: (props: {
+    configuration: EvaluationConfiguration<T, M>
+    onChange: (configuration: EvaluationConfiguration<T, M>) => void
+  }) => React.ReactNode
 }
 
 export type EvaluationFrontendSpecification<
   T extends EvaluationType = EvaluationType,
 > = Omit<EvaluationSpecification<T>, 'metrics'> & {
+  ConfigurationForm: <
+    M extends EvaluationMetric<T> = EvaluationMetric<T>,
+  >(props: {
+    metric: M
+    configuration: EvaluationConfiguration<T, M>
+    onChange: (configuration: EvaluationConfiguration<T>) => void
+  }) => React.ReactNode
   metrics: {
     [M in EvaluationMetric<T>]: EvaluationMetricFrontendSpecification<T, M>
   }

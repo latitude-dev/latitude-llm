@@ -43,10 +43,13 @@ export const EvaluationMetricSchema = z.union([
 ])
 
 // prettier-ignore
-export type EvaluationConfiguration<M extends EvaluationMetric = EvaluationMetric> =
-  M extends RuleEvaluationMetric ? RuleEvaluationConfiguration<M> :
-  M extends LlmEvaluationMetric ? LlmEvaluationConfiguration<M> :
-  M extends HumanEvaluationMetric ? HumanEvaluationConfiguration<M> :
+export type EvaluationConfiguration<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> =
+  T extends EvaluationType.Rule ? RuleEvaluationConfiguration<M extends RuleEvaluationMetric ? M : never> :
+  T extends EvaluationType.Llm ? LlmEvaluationConfiguration<M extends LlmEvaluationMetric ? M : never> :
+  T extends EvaluationType.Human ? HumanEvaluationConfiguration<M extends HumanEvaluationMetric ? M : never> :
   never;
 
 export const EvaluationConfigurationSchema = z.custom<EvaluationConfiguration>()
@@ -63,11 +66,17 @@ export enum EvaluationCondition {
 export const EvaluationConditionSchema = z.nativeEnum(EvaluationCondition)
 
 // prettier-ignore
-export type EvaluationResultMetadata<M extends EvaluationMetric = EvaluationMetric> =
-  M extends RuleEvaluationMetric ? RuleEvaluationResultMetadata<M> :
-  M extends LlmEvaluationMetric ? LlmEvaluationResultMetadata<M> :
-  M extends HumanEvaluationMetric ? HumanEvaluationResultMetadata<M> :
+export type EvaluationResultMetadata<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> =
+  T extends EvaluationType.Rule ? RuleEvaluationResultMetadata<M extends RuleEvaluationMetric ? M : never> :
+  T extends EvaluationType.Llm ? LlmEvaluationResultMetadata<M extends LlmEvaluationMetric ? M : never> :
+  T extends EvaluationType.Human ? HumanEvaluationResultMetadata<M extends HumanEvaluationMetric ? M : never> :
   never;
+
+// prettier-ignore
+export const EvaluationResultMetadataSchema = z.custom<EvaluationResultMetadata>()
 
 export type EvaluationMetricSpecification<
   T extends EvaluationType = EvaluationType,
@@ -75,8 +84,8 @@ export type EvaluationMetricSpecification<
 > = {
   name: string
   description: string
-  configuration: z.ZodSchema<EvaluationConfiguration<M>>
-  resultMetadata: z.ZodSchema<EvaluationResultMetadata<M>>
+  configuration: z.ZodSchema<EvaluationConfiguration<T, M>>
+  resultMetadata: z.ZodSchema<EvaluationResultMetadata<T, M>>
   supportsLiveEvaluation: boolean
 }
 
@@ -84,6 +93,8 @@ export type EvaluationSpecification<T extends EvaluationType = EvaluationType> =
   {
     name: string
     description: string
+    configuration: z.ZodSchema
+    resultMetadata: z.ZodSchema
     metrics: { [M in EvaluationMetric<T>]: EvaluationMetricSpecification<T, M> }
   }
 
@@ -110,7 +121,7 @@ export type EvaluationV2<
   metric: M
   condition: EvaluationCondition
   threshold: number
-  configuration: EvaluationConfiguration<M>
+  configuration: EvaluationConfiguration<T, M>
   live: boolean | null
   enableSuggestions: boolean | null
   autoApplySuggestions: boolean | null
@@ -131,7 +142,7 @@ export type EvaluationResultV2<
   experimentId: number | null
   evaluatedLogId: number
   score: number
-  metadata: EvaluationResultMetadata<M>
+  metadata: EvaluationResultMetadata<T, M>
   usedForSuggestion: boolean | null
   createdAt: Date
   updatedAt: Date

@@ -94,6 +94,8 @@ export type HumanEvaluationResultMetadata<M extends HumanEvaluationMetric = Huma
 export const HumanEvaluationSpecification = {
   name: 'Human-in-the-Loop',
   description: 'Evaluate responses using a human as a judge',
+  configuration: humanEvaluationConfiguration,
+  resultMetadata: humanEvaluationResultMetadata,
   // prettier-ignore
   metrics: {
     [HumanEvaluationMetric.Binary]: HumanEvaluationBinarySpecification,

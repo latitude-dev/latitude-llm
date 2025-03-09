@@ -8,7 +8,7 @@ const specification = RuleEvaluationRegularExpressionSpecification
 export default {
   ...specification,
   icon: 'regex' as IconName,
-  configurationForm: ConfigurationForm,
+  ConfigurationForm: ConfigurationForm,
 }
 
 function ConfigurationForm({

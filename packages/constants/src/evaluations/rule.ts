@@ -141,6 +141,8 @@ export type RuleEvaluationResultMetadata<M extends RuleEvaluationMetric = RuleEv
 export const RuleEvaluationSpecification = {
   name: 'Programmatic Rule',
   description: 'Evaluate responses using a programmatic rule',
+  configuration: ruleEvaluationConfiguration,
+  resultMetadata: ruleEvaluationResultMetadata,
   // prettier-ignore
   metrics: {
     [RuleEvaluationMetric.ExactMatch]: RuleEvaluationExactMatchSpecification,

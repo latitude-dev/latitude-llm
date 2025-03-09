@@ -21,7 +21,7 @@ type CreateEvaluationResultV2Args<
   commit: Commit
   workspace: Workspace
   score?: number
-  metadata?: EvaluationResultMetadata<M>
+  metadata?: EvaluationResultMetadata<T, M>
   usedForSuggestion?: boolean
   createdAt?: Date
 }

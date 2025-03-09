@@ -8,7 +8,7 @@ const specification = RuleEvaluationExactMatchSpecification
 export default {
   ...specification,
   icon: 'equal' as IconName,
-  configurationForm: ConfigurationForm,
+  ConfigurationForm: ConfigurationForm,
 }
 
 function ConfigurationForm({
