@@ -4,6 +4,7 @@ import { verifyWebhookSignature } from '@latitude-data/core/services/documentTri
 import { EmailWebhookRoute } from './webhook.route'
 import { env } from '@latitude-data/env'
 import { UnauthorizedError } from '@latitude-data/core/lib/errors'
+import { EmailWebhookBodySchema } from './bodySchema'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735
@@ -11,6 +12,8 @@ import { UnauthorizedError } from '@latitude-data/core/lib/errors'
 export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (
   c,
 ) => {
+  const formData = await c.req.formData()
+  const data = Object.fromEntries(formData.entries())
   const {
     recipient,
     subject,
@@ -20,7 +23,7 @@ export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (
     timestamp,
     signature,
     'Message-Id': messageId,
-  } = c.req.valid('json')
+  } = data as EmailWebhookBodySchema
 
   if (!env.MAILGUN_WEBHOOK_SIGNING_KEY) {
     throw new UnauthorizedError('Env MAILGUN_WEBHOOK_SIGNING_KEY missing.')
