@@ -47,7 +47,7 @@ export const evaluationVersions = latitudeSchema.table(
       .notNull()
       .$type<EvaluationConfiguration>(),
     // Denormalized configuration fields - create indexes if necessary
-    live: boolean('live'),
+    evaluateLiveLogs: boolean('evaluate_live_logs'),
     enableSuggestions: boolean('enable_suggestions'),
     autoApplySuggestions: boolean('auto_apply_suggestions'),
     ...timestamps(),

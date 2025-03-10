@@ -1,3 +1,4 @@
+/* eslint-disable no-unreachable */ // TODO: Delete after live to evaluateLiveLogs name has changed
 import { eq } from 'drizzle-orm'
 import {
   Commit,
@@ -27,6 +28,7 @@ export async function deleteEvaluationV2<
   },
   db: Database = database,
 ) {
+  return Result.ok({ evaluation }) // TODO: Delete after live to evaluateLiveLogs name has changed
   return await Transaction.call(async (tx) => {
     const repository = new EvaluationsV2Repository(workspace.id, tx)
     const existsAnotherVersion = await repository

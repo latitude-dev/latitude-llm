@@ -122,7 +122,7 @@ export type EvaluationV2<
   condition: EvaluationCondition
   threshold: number
   configuration: EvaluationConfiguration<T, M>
-  live: boolean | null
+  evaluateLiveLogs: boolean | null
   enableSuggestions: boolean | null
   autoApplySuggestions: boolean | null
   createdAt: Date
@@ -174,11 +174,11 @@ export const EvaluationSettingsSchema = z.object({
 
 export type EvaluationOptions = Pick<
   EvaluationV2,
-  'live' | 'enableSuggestions' | 'autoApplySuggestions'
+  'evaluateLiveLogs' | 'enableSuggestions' | 'autoApplySuggestions'
 >
 
 export const EvaluationOptionsSchema = z.object({
-  live: z.boolean().nullable(),
+  evaluateLiveLogs: z.boolean().nullable(),
   enableSuggestions: z.boolean().nullable(),
   autoApplySuggestions: z.boolean().nullable(),
 })

@@ -101,7 +101,7 @@ export async function validateEvaluationV2<
       configuration: settings.configuration,
     },
     options: {
-      live: options.live,
+      evaluateLiveLogs: options.evaluateLiveLogs,
       enableSuggestions: options.enableSuggestions,
       autoApplySuggestions: options.autoApplySuggestions,
     },
