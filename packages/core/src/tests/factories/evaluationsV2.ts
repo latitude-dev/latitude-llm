@@ -3,7 +3,6 @@ import {
   Commit,
   DocumentVersion,
   EvaluationCondition,
-  EvaluationConfiguration,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
@@ -19,13 +18,12 @@ import * as services from '../../services/evaluationsV2'
 type CreateEvaluationV2Args<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
 > = {
   document: DocumentVersion
   commit: Commit
   workspace: Workspace
   createdAt?: Date
-} & Partial<EvaluationSettings<T, M, C>> &
+} & Partial<EvaluationSettings<T, M>> &
   Partial<EvaluationOptions>
 
 // prettier-ignore

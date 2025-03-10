@@ -1,4 +1,5 @@
 export * from './create'
 export * from './delete'
+export * from './shared'
 export * from './update'
 export * from './validate'

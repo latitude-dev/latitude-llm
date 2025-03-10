@@ -1,45 +1,21 @@
 import { z } from 'zod'
 import {
-  HumanEvaluationBinaryConfiguration,
-  HumanEvaluationBinaryResultMetadata,
-  HumanEvaluationBinarySpecification,
-  HumanEvaluationComparisonConfiguration,
-  HumanEvaluationComparisonResultMetadata,
-  HumanEvaluationComparisonSpecification,
+  HumanEvaluationConfiguration,
   HumanEvaluationMetric,
-  HumanEvaluationRatingConfiguration,
-  HumanEvaluationRatingResultMetadata,
-  HumanEvaluationRatingSpecification,
+  HumanEvaluationResultMetadata,
+  HumanEvaluationSpecification,
 } from './human'
 import {
-  LlmEvaluationBinaryConfiguration,
-  LlmEvaluationBinaryResultMetadata,
-  LlmEvaluationBinarySpecification,
-  LlmEvaluationComparisonConfiguration,
-  LlmEvaluationComparisonResultMetadata,
-  LlmEvaluationComparisonSpecification,
+  LlmEvaluationConfiguration,
   LlmEvaluationMetric,
-  LlmEvaluationRatingConfiguration,
-  LlmEvaluationRatingResultMetadata,
-  LlmEvaluationRatingSpecification,
+  LlmEvaluationResultMetadata,
+  LlmEvaluationSpecification,
 } from './llm'
 import {
-  RuleEvaluationExactMatchConfiguration,
-  RuleEvaluationExactMatchResultMetadata,
-  RuleEvaluationExactMatchSpecification,
-  RuleEvaluationLengthCountConfiguration,
-  RuleEvaluationLengthCountResultMetadata,
-  RuleEvaluationLengthCountSpecification,
-  RuleEvaluationLexicalOverlapConfiguration,
-  RuleEvaluationLexicalOverlapResultMetadata,
-  RuleEvaluationLexicalOverlapSpecification,
+  RuleEvaluationConfiguration,
   RuleEvaluationMetric,
-  RuleEvaluationRegularExpressionConfiguration,
-  RuleEvaluationRegularExpressionResultMetadata,
-  RuleEvaluationRegularExpressionSpecification,
-  RuleEvaluationSemanticSimilarityConfiguration,
-  RuleEvaluationSemanticSimilarityResultMetadata,
-  RuleEvaluationSemanticSimilaritySpecification,
+  RuleEvaluationResultMetadata,
+  RuleEvaluationSpecification,
 } from './rule'
 export * from './human'
 export * from './llm'
@@ -67,21 +43,13 @@ export const EvaluationMetricSchema = z.union([
 ])
 
 // prettier-ignore
-export type EvaluationConfiguration<M extends EvaluationMetric = EvaluationMetric> =
-  // Rule Evaluations
-  M extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchConfiguration :
-  M extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionConfiguration :
-  M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountConfiguration :
-  M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapConfiguration :
-  M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityConfiguration :
-  // Llm Evaluations
-  M extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryConfiguration :
-  M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingConfiguration :
-  M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonConfiguration :
-  // Human Evaluations
-  M extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryConfiguration :
-  M extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingConfiguration :
-  M extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonConfiguration :
+export type EvaluationConfiguration<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> =
+  T extends EvaluationType.Rule ? RuleEvaluationConfiguration<M extends RuleEvaluationMetric ? M : never> :
+  T extends EvaluationType.Llm ? LlmEvaluationConfiguration<M extends LlmEvaluationMetric ? M : never> :
+  T extends EvaluationType.Human ? HumanEvaluationConfiguration<M extends HumanEvaluationMetric ? M : never> :
   never;
 
 export const EvaluationConfigurationSchema = z.custom<EvaluationConfiguration>()
@@ -98,66 +66,49 @@ export enum EvaluationCondition {
 export const EvaluationConditionSchema = z.nativeEnum(EvaluationCondition)
 
 // prettier-ignore
-export type EvaluationResultMetadata<M extends EvaluationMetric = EvaluationMetric> =
-  // Rule Evaluations
-  M extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchResultMetadata :
-  M extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionResultMetadata :
-  M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountResultMetadata :
-  M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapResultMetadata :
-  M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityResultMetadata :
-  // Llm Evaluations
-  M extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryResultMetadata :
-  M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingResultMetadata :
-  M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonResultMetadata :
-  // Human Evaluations
-  M extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryResultMetadata :
-  M extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingResultMetadata :
-  M extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonResultMetadata :
+export type EvaluationResultMetadata<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> =
+  T extends EvaluationType.Rule ? RuleEvaluationResultMetadata<M extends RuleEvaluationMetric ? M : never> :
+  T extends EvaluationType.Llm ? LlmEvaluationResultMetadata<M extends LlmEvaluationMetric ? M : never> :
+  T extends EvaluationType.Human ? HumanEvaluationResultMetadata<M extends HumanEvaluationMetric ? M : never> :
   never;
+
+// prettier-ignore
+export const EvaluationResultMetadataSchema = z.custom<EvaluationResultMetadata>()
 
 export type EvaluationMetricSpecification<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
-  R extends EvaluationResultMetadata<M> = EvaluationResultMetadata<M>,
 > = {
   name: string
   description: string
-  configuration: z.ZodSchema<C>
-  resultMetadata: z.ZodSchema<R>
+  configuration: z.ZodSchema<EvaluationConfiguration<T, M>>
+  resultMetadata: z.ZodSchema<EvaluationResultMetadata<T, M>>
+  supportsLiveEvaluation: boolean
 }
 
-// prettier-ignore
-export type EvaluationMetricSpecifications = {
-  [T in EvaluationType]: { [M in EvaluationMetric<T>]: EvaluationMetricSpecification<T, M> }
-}
-
-// prettier-ignore
-export const EVALUATION_METRIC_SPECIFICATIONS: EvaluationMetricSpecifications =
+export type EvaluationSpecification<T extends EvaluationType = EvaluationType> =
   {
-    [EvaluationType.Rule]: {
-      [RuleEvaluationMetric.ExactMatch]: RuleEvaluationExactMatchSpecification,
-      [RuleEvaluationMetric.RegularExpression]: RuleEvaluationRegularExpressionSpecification,
-      [RuleEvaluationMetric.LengthCount]: RuleEvaluationLengthCountSpecification,
-      [RuleEvaluationMetric.LexicalOverlap]: RuleEvaluationLexicalOverlapSpecification,
-      [RuleEvaluationMetric.SemanticSimilarity]: RuleEvaluationSemanticSimilaritySpecification,
-    },
-    [EvaluationType.Llm]: {
-      [LlmEvaluationMetric.Binary]: LlmEvaluationBinarySpecification,
-      [LlmEvaluationMetric.Rating]: LlmEvaluationRatingSpecification,
-      [LlmEvaluationMetric.Comparison]: LlmEvaluationComparisonSpecification,
-    },
-    [EvaluationType.Human]: {
-      [HumanEvaluationMetric.Binary]: HumanEvaluationBinarySpecification,
-      [HumanEvaluationMetric.Rating]: HumanEvaluationRatingSpecification,
-      [HumanEvaluationMetric.Comparison]: HumanEvaluationComparisonSpecification,
-    },
+    name: string
+    description: string
+    configuration: z.ZodSchema
+    resultMetadata: z.ZodSchema
+    metrics: { [M in EvaluationMetric<T>]: EvaluationMetricSpecification<T, M> }
   }
+
+export const EVALUATION_SPECIFICATIONS: {
+  [T in EvaluationType]: EvaluationSpecification<T>
+} = {
+  [EvaluationType.Rule]: RuleEvaluationSpecification,
+  [EvaluationType.Llm]: LlmEvaluationSpecification,
+  [EvaluationType.Human]: HumanEvaluationSpecification,
+}
 
 export type EvaluationV2<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
 > = {
   uuid: string
   versionId: number
@@ -170,7 +121,7 @@ export type EvaluationV2<
   metric: M
   condition: EvaluationCondition
   threshold: number
-  configuration: C
+  configuration: EvaluationConfiguration<T, M>
   live: boolean | null
   enableSuggestions: boolean | null
   autoApplySuggestions: boolean | null
@@ -182,7 +133,6 @@ export type EvaluationV2<
 export type EvaluationResultV2<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  R extends EvaluationResultMetadata<M> = EvaluationResultMetadata<M>,
 > = {
   id: number
   uuid: string
@@ -192,7 +142,7 @@ export type EvaluationResultV2<
   experimentId: number | null
   evaluatedLogId: number
   score: number
-  metadata: R
+  metadata: EvaluationResultMetadata<T, M>
   usedForSuggestion: boolean | null
   createdAt: Date
   updatedAt: Date
@@ -201,9 +151,8 @@ export type EvaluationResultV2<
 export type EvaluationSettings<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
 > = Pick<
-  EvaluationV2<T, M, C>,
+  EvaluationV2<T, M>,
   | 'name'
   | 'description'
   | 'type'

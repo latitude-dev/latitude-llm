@@ -1,7 +1,6 @@
 import {
   Commit,
   DocumentVersion,
-  EvaluationConfiguration,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
@@ -19,7 +18,6 @@ import { validateEvaluationV2 } from './validate'
 export async function createEvaluationV2<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
-  C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
 >(
   {
     document,
@@ -30,7 +28,7 @@ export async function createEvaluationV2<
   }: {
     document: DocumentVersion
     commit: Commit
-    settings: EvaluationSettings<T, M, C>
+    settings: EvaluationSettings<T, M>
     options?: Partial<EvaluationOptions>
     workspace: Workspace
   },
@@ -69,7 +67,7 @@ export async function createEvaluationV2<
       ...result,
       uuid: result.evaluationUuid,
       versionId: result.id,
-    } as unknown as EvaluationV2<T, M, C>
+    } as unknown as EvaluationV2<T, M>
 
     await publisher.publishLater({
       type: 'evaluationV2Created',

@@ -38,7 +38,8 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
           gte(evaluationResultsV2.createdAt, since),
         ),
       )
+      .then((r) => r[0]!)
 
-    return Result.ok<number>(result[0]!.count)
+    return Result.ok<number>(result.count)
   }
 }

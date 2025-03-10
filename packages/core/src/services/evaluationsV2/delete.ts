@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm'
 import {
   Commit,
-  EvaluationConfiguration,
   EvaluationMetric,
   EvaluationType,
   EvaluationV2,
@@ -16,14 +15,13 @@ import { pingProjectUpdate } from '../projects'
 export async function deleteEvaluationV2<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
 >(
   {
     evaluation,
     commit,
     workspace,
   }: {
-    evaluation: EvaluationV2<T, M, C>
+    evaluation: EvaluationV2<T, M>
     commit: Commit
     workspace: Workspace
   },
@@ -61,7 +59,7 @@ export async function deleteEvaluationV2<
         ...result,
         uuid: result.evaluationUuid,
         versionId: result.id,
-      } as unknown as EvaluationV2<T, M, C>
+      } as unknown as EvaluationV2<T, M>
     } else {
       await tx
         .delete(evaluationVersions)

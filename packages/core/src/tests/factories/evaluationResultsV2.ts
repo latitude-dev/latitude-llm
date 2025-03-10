@@ -15,14 +15,13 @@ import { evaluationResultsV2 } from '../../schema'
 type CreateEvaluationResultV2Args<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  R extends EvaluationResultMetadata<M> = EvaluationResultMetadata<M>,
 > = {
   evaluation: EvaluationV2<T, M>
   providerLog: ProviderLog
   commit: Commit
   workspace: Workspace
   score?: number
-  metadata?: R
+  metadata?: EvaluationResultMetadata<T, M>
   usedForSuggestion?: boolean
   createdAt?: Date
 }
@@ -70,6 +69,7 @@ export async function createEvaluationResultV2<
       ...(createdAt && { createdAt }),
     })
     .returning()
+    .then((r) => r[0]!)
 
-  return result[0]! as unknown as EvaluationResultV2<T, M>
+  return result as EvaluationResultV2<T, M>
 }
