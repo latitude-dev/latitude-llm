@@ -24,7 +24,9 @@ export default function SendEmailTrigger() {
       const content = formData.get('content')?.toString()
       if (!content) return
 
-      await execute({ sender, recipient, subject, body: content })
+      const messageId = formData.get('messageId')?.toString()
+
+      await execute({ sender, recipient, subject, body: content, messageId })
     },
     [execute],
   )
@@ -46,6 +48,11 @@ export default function SendEmailTrigger() {
           label='Subject'
           name='subject'
           placeholder='Subject of the email'
+        />
+        <Input
+          label='Message ID (optional)'
+          name='messageId'
+          placeholder='Optional message ID – Allows sending the response as a reply'
         />
         <TextArea
           label='Content'

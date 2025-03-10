@@ -14,6 +14,7 @@ export const manualEmailTriggerAction = withAdmin
       sender: z.string().email(),
       subject: z.string(),
       body: z.string(),
+      messageId: z.string().optional(),
     }),
   )
   .handler(async ({ input }) => {
@@ -29,6 +30,7 @@ export const manualEmailTriggerAction = withAdmin
       subject: input.subject,
       body: input.body,
       sender: input.sender,
+      messageId: input.messageId?.length ? input.messageId : undefined,
     })
 
     return {}
