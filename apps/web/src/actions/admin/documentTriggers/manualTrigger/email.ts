@@ -3,6 +3,7 @@
 import { z } from 'zod'
 
 import { withAdmin } from '../../../procedures'
+import { handleEmailTrigger } from '@latitude-data/core/services/documentTriggers/handlers/email'
 import { env } from 'process'
 
 export const manualEmailTriggerAction = withAdmin
@@ -26,23 +27,12 @@ export const manualEmailTriggerAction = withAdmin
       throw new Error('EMAIL_TRIGGER_DOMAIN is not set')
     }
 
-    try {
-      fetch(
-        `http://${env.GATEWAY_HOSTNAME}:${env.GATEWAY_PORT}/webhook/email`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            recipient: input.recipient,
-            sender: input.sender,
-            subject: input.subject,
-            'plain-body': input.body,
-          }),
-        },
-      )
-    } catch (error) {
-      throw new Error((error as Error).message)
-    }
+    handleEmailTrigger({
+      recipient: input.recipient,
+      subject: input.subject,
+      body: input.body,
+      sender: input.sender,
+    })
+
+    return {}
   })

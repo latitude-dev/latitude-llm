@@ -137,11 +137,13 @@ export async function handleEmailTrigger(
     subject,
     body,
     sender,
+    messageId,
   }: {
     sender: string
     recipient: string
     subject: string
     body: string
+    messageId?: string
   },
   db = database,
 ): PromisedResult<undefined> {
@@ -174,7 +176,7 @@ export async function handleEmailTrigger(
     {
       trigger,
       sender,
-      subject,
+      subject: 'Re: ' + subject,
       body,
     },
     db,
@@ -184,13 +186,18 @@ export async function handleEmailTrigger(
     return Result.nil()
   }
 
+  const replyHeaders = messageId
+    ? { inReplyTo: messageId, references: [messageId] }
+    : {}
+
   const mailer = new DocumentTriggerMailer(
     {
       to: sender,
       from: recipient,
+      ...replyHeaders,
     },
     {
-      subject,
+      subject: 'Re: ' + subject,
       result: responseResult,
     },
   )
