@@ -19,7 +19,7 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
       .$dynamic()
   }
 
-  findByScopedDocumentUuid(documentUuid: string): Promise<DocumentTrigger[]> {
+  findByDocumentUuid(documentUuid: string): Promise<DocumentTrigger[]> {
     return this.scope
       .where(eq(documentTriggers.documentUuid, documentUuid))
       .execute() as Promise<DocumentTrigger[]>

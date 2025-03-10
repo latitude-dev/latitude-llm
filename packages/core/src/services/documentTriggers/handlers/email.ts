@@ -147,12 +147,12 @@ export async function handleEmailTrigger(
   },
   db = database,
 ): PromisedResult<undefined> {
-  if (!env.EMAIL_TRIGGER_DOMAIN) {
+  if (!env.NEXT_PUBLIC_EMAIL_TRIGGER_DOMAIN) {
     return Result.error(new LatitudeError('Email triggers are not enabled'))
   }
 
   const [documentUuid, domain] = recipient.split('@')
-  if (domain !== env.EMAIL_TRIGGER_DOMAIN) {
+  if (domain !== env.NEXT_PUBLIC_EMAIL_TRIGGER_DOMAIN) {
     return Result.nil()
   }
 

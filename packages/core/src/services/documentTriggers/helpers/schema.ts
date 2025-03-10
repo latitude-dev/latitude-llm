@@ -24,6 +24,19 @@ export const documentTriggerConfigurationSchema = z.discriminatedUnion(
   ],
 )
 
+const configurationSchemas = documentTriggerConfigurationSchema.options.map(
+  (schema) => schema.shape.configuration,
+)
+
+export const documentTriggerConfigurationsUnionSchema =
+  configurationSchemas.length > 1
+    ? z.union([
+        configurationSchemas[0],
+        configurationSchemas[1],
+        ...configurationSchemas.slice(2),
+      ] as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])
+    : configurationSchemas[0]!
+
 export type DocumentTriggerConfiguration = EmailTriggerConfiguration
 
 export type DocumentTriggerWithConfiguration = z.infer<

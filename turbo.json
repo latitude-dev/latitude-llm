@@ -45,7 +45,8 @@
     "npm_package_name",
     "DISABLE_EMAIL_AUTHENTICATION",
     "DD_TRACING_ENABLED",
-    "DEV_ROOT_PATH"
+    "DEV_ROOT_PATH",
+    "EMAIL_TRIGGER_DOMAIN"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
@@ -60,7 +61,8 @@
         "SENTRY_PROJECT",
         "SENTRY_AUTH_TOKEN",
         "NEXT_PUBLIC_POSTHOG_KEY",
-        "NEXT_PUBLIC_POSTHOG_HOST"
+        "NEXT_PUBLIC_POSTHOG_HOST",
+        "EMAIL_TRIGGER_DOMAIN"
       ]
     },
     "lint": {

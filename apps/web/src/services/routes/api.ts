@@ -217,6 +217,9 @@ export const API_ROUTES = {
                   }
                 },
               },
+              triggers: {
+                root: `${documentRoot}/triggers`,
+              },
             }
           },
         },

@@ -26,7 +26,7 @@ export function PromptConfiguration({
         sideOffset={8}
         alignOffset={-16}
         maxHeight='none'
-        style={{ maxWidth: 600 }}
+        width={600}
         onOpenAutoFocus={(event) => {
           event.preventDefault() // fixes https://github.com/radix-ui/primitives/issues/2248
         }}

@@ -201,6 +201,7 @@ export const env = createEnv({
 
     // Triggers
     EMAIL_TRIGGER_DOMAIN: z.string().optional(),
+    NEXT_PUBLIC_EMAIL_TRIGGER_DOMAIN: z.string().optional(),
     MAILGUN_WEBHOOK_SIGNING_KEY: z.string().optional(),
 
     ENCRYPTION_KEY: z.string().optional(),
