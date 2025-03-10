@@ -5,10 +5,10 @@ import {
 } from './shared'
 
 const humanEvaluationConfiguration = BaseEvaluationConfiguration.extend({
-  Instructions: z.string(),
+  instructions: z.string(),
 })
 const humanEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({
-  Reason: z.string(),
+  reason: z.string(),
 })
 
 // BINARY
@@ -17,8 +17,8 @@ export const HumanEvaluationBinarySpecification = {
   name: 'Binary',
   description: 'Judges whether the response is correct or incorrect',
   configuration: humanEvaluationConfiguration.extend({
-    PassDescription: z.string(),
-    FailDescription: z.string(),
+    passDescription: z.string(),
+    failDescription: z.string(),
   }),
   resultMetadata: humanEvaluationResultMetadata.extend({}),
   supportsLiveEvaluation: false,
@@ -36,10 +36,10 @@ export const HumanEvaluationRatingSpecification = {
   name: 'Rating',
   description: 'Judges the quality of the response',
   configuration: humanEvaluationConfiguration.extend({
-    MinRating: z.number(),
-    MinRatingDescription: z.string(),
-    MaxRating: z.number(),
-    MaxRatingDescription: z.string(),
+    minRating: z.number(),
+    minRatingDescription: z.string(),
+    maxRating: z.number(),
+    maxRatingDescription: z.string(),
   }),
   resultMetadata: humanEvaluationResultMetadata.extend({}),
   supportsLiveEvaluation: false,
@@ -57,7 +57,7 @@ export const HumanEvaluationComparisonSpecification = {
   name: 'Comparison',
   description: 'Judges whether the response is similar to the expected label',
   configuration: humanEvaluationConfiguration.extend({
-    DatasetLabel: z.string(),
+    datasetLabel: z.string(),
   }),
   resultMetadata: humanEvaluationResultMetadata.extend({}),
   supportsLiveEvaluation: false,

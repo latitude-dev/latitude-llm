@@ -1,10 +1,16 @@
 import {
+  AlertCircle,
+  AppWindow,
   ArrowDownIcon,
   ArrowLeft,
   ArrowRightIcon,
   ArrowUpIcon,
+  AtSign,
   BarChart4,
+  Blocks,
   Bot,
+  Braces,
+  Brain,
   CalendarIcon,
   CheckCircle2,
   CheckIcon,
@@ -15,14 +21,24 @@ import {
   ChevronsUpDown,
   ChevronUp,
   CircleAlert,
+  CircleArrowUp,
+  CircleChevronLeft,
+  CircleChevronRight,
+  CircleDollarSign,
   CircleHelp,
+  CircleIcon,
   CirclePlus,
+  CircleUser,
+  Clock,
   Code,
   Code2,
+  Computer,
   Copy,
+  Database,
   Ellipsis,
   EllipsisVertical,
   EqualApproximatelyIcon,
+  EqualIcon,
   EqualNotIcon,
   ExternalLink,
   Eye,
@@ -34,27 +50,37 @@ import {
   FolderOpen,
   FolderPlus,
   Github,
+  Gitlab,
+  Globe,
   History,
   Image,
   ImageUp,
   InfoIcon,
   LetterText,
+  ListCheck,
   ListOrdered,
+  ListVideo,
   LoaderCircle,
   Lock,
   Logs,
+  MapPin,
+  Maximize2,
+  Minimize2,
   MinusIcon,
   MonitorIcon,
   Moon,
+  Newspaper,
   Paperclip,
   Pencil,
   Pin,
   PinOff,
   Puzzle,
   RefreshCcw,
+  RegexIcon,
   ScrollTextIcon,
   SearchIcon,
   SettingsIcon,
+  Slack,
   Sparkles,
   SquareArrowRight,
   SquareDot,
@@ -63,73 +89,51 @@ import {
   Star,
   Sun,
   Terminal,
+  Thermometer,
   ThumbsDown,
   ThumbsUp,
   Trash,
   Twitter,
   Undo,
-  XIcon,
-  Braces,
-  ListCheck,
-  Newspaper,
-  CircleDollarSign,
-  Globe,
-  Maximize2,
-  Minimize2,
-  Thermometer,
-  ListVideo,
+  UserRound,
   WholeWord,
-  AlertCircle,
-  CircleArrowUp,
-  Blocks,
-  Slack,
+  XIcon,
   Youtube,
-  Gitlab,
-  MapPin,
-  Database,
-  AppWindow,
-  Brain,
-  Clock,
-  CircleIcon,
-  RegexIcon,
-  EqualIcon,
-  AtSign,
-  CircleUser,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
 import { colors, DarkTextColor, type TextColor } from '../../tokens'
 import {
+  GridVertical,
   LatitudeLogo,
   LatitudeLogoMonochrome,
-  GridVertical,
   MCP,
 } from './custom-icons'
-import Stripe from './custom-icons/logos/Stripe'
-import Reddit from './custom-icons/logos/Reddit'
-import Notion from './custom-icons/logos/Notion'
-import Wordpress from './custom-icons/logos/Wordpress'
-import Telegram from './custom-icons/logos/Telegram'
-import Google from './custom-icons/logos/Google'
-import Discord from './custom-icons/logos/Discord'
-import Intercom from './custom-icons/logos/Intercom'
-import Jira from './custom-icons/logos/Jira'
-import TwitterX from './custom-icons/logos/TwitterX'
-import Linear from './custom-icons/logos/Linear'
 import Airtable from './custom-icons/logos/Airtable'
-import Tinybird from './custom-icons/logos/Tinybird'
-import Perplexity from './custom-icons/logos/Perplexity'
+import Attio from './custom-icons/logos/Attio'
 import AwsBedrock from './custom-icons/logos/AwsBedrock'
 import Brave from './custom-icons/logos/Brave'
-import Sentry from './custom-icons/logos/Sentry'
 import Browserbase from './custom-icons/logos/Browserbase'
-import Neon from './custom-icons/logos/Neon'
-import Postgres from './custom-icons/logos/Postgres'
-import Redis from './custom-icons/logos/Redis'
-import Attio from './custom-icons/logos/Attio'
-import Supabase from './custom-icons/logos/Supabase'
-import Ghost from './custom-icons/logos/Ghost'
+import Discord from './custom-icons/logos/Discord'
 import Figma from './custom-icons/logos/Figma'
+import Ghost from './custom-icons/logos/Ghost'
+import Google from './custom-icons/logos/Google'
+import Intercom from './custom-icons/logos/Intercom'
+import Jira from './custom-icons/logos/Jira'
+import Linear from './custom-icons/logos/Linear'
+import Neon from './custom-icons/logos/Neon'
+import Notion from './custom-icons/logos/Notion'
+import Perplexity from './custom-icons/logos/Perplexity'
+import Postgres from './custom-icons/logos/Postgres'
+import Reddit from './custom-icons/logos/Reddit'
+import Redis from './custom-icons/logos/Redis'
+import Sentry from './custom-icons/logos/Sentry'
+import Stripe from './custom-icons/logos/Stripe'
+import Supabase from './custom-icons/logos/Supabase'
+import Telegram from './custom-icons/logos/Telegram'
+import Tinybird from './custom-icons/logos/Tinybird'
+import TwitterX from './custom-icons/logos/TwitterX'
+import Wordpress from './custom-icons/logos/Wordpress'
 
 const Icons = {
   addCircle: CirclePlus,
@@ -258,6 +262,10 @@ const Icons = {
   postgres: Postgres,
   redis: Redis,
   figma: Figma,
+  circleChevronLeft: CircleChevronLeft,
+  circleChevronRight: CircleChevronRight,
+  computer: Computer,
+  userRound: UserRound,
 }
 
 export type IconName = keyof typeof Icons

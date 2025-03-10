@@ -1,5 +1,6 @@
 import { cache } from 'react'
 
+import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { Workspace, type Commit } from '@latitude-data/core/browser'
 import { findAllEvaluationTemplates } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
@@ -10,11 +11,11 @@ import {
   DatasetsRepository,
   DocumentVersionsRepository,
   EvaluationsRepository,
+  EvaluationsV2Repository,
   ProjectsRepository,
   ProviderApiKeysRepository,
   ProviderLogsRepository,
 } from '@latitude-data/core/repositories/index'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { notFound } from 'next/navigation'
 
 export const getFirstProjectCached = cache(
@@ -226,6 +227,30 @@ export const getEvaluationsByDocumentUuidCached = cache(
     const scope = new EvaluationsRepository(workspace.id)
     const result = await scope.findByDocumentUuid(documentUuid)
     return result.unwrap()
+  },
+)
+
+export const listEvaluationsV2AtCommitByDocumentCached = cache(
+  async ({
+    projectId,
+    commitUuid,
+    documentUuid,
+  }: {
+    projectId?: number
+    commitUuid: string
+    documentUuid: string
+  }) => {
+    const { workspace } = await getCurrentUser()
+    const repository = new EvaluationsV2Repository(workspace.id)
+    const evaluations = await repository
+      .listAtCommitByDocument({
+        projectId: projectId,
+        commitUuid: commitUuid,
+        documentUuid: documentUuid,
+      })
+      .then((r) => r.unwrap())
+
+    return evaluations
   },
 )
 

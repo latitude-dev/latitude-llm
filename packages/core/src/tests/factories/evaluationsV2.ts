@@ -54,7 +54,7 @@ export async function createEvaluationV2<
         metric: args.metric ?? RuleEvaluationMetric.ExactMatch,
         condition: args.condition ?? EvaluationCondition.Greater,
         threshold: args.threshold ?? 50,
-        configuration: args.configuration ?? { DatasetLabel: 'expected' },
+        configuration: args.configuration ?? { datasetLabel: 'expected' },
       },
       options: {
         evaluateLiveLogs: args.evaluateLiveLogs,

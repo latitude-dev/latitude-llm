@@ -64,6 +64,10 @@ export default function useEvaluationsV2(
   } = useLatitudeAction(createEvaluationV2Action, {
     onSuccess: async ({ data: { evaluation } }) => {
       mutate((prev) => [evaluation, ...(prev ?? [])])
+      toast({
+        title: 'Evaluation created successfully',
+        description: `Evaluation ${evaluation.name} created successfully`,
+      })
     },
     onError: async (error) => {
       toast({
@@ -106,6 +110,10 @@ export default function useEvaluationsV2(
             return evaluation
           }) ?? [],
       )
+      toast({
+        title: 'Evaluation updated successfully',
+        description: `Evaluation ${evaluation.name} updated successfully`,
+      })
     },
     onError: async (error) => {
       toast({
@@ -145,6 +153,10 @@ export default function useEvaluationsV2(
   } = useLatitudeAction(deleteEvaluationV2Action, {
     onSuccess: async ({ data: { evaluation } }) => {
       mutate((prev) => prev?.filter((e) => e.uuid !== evaluation.uuid) ?? [])
+      toast({
+        title: 'Evaluation deleted successfully',
+        description: `Evaluation ${evaluation.name} deleted successfully`,
+      })
     },
     onError: async (error) => {
       toast({

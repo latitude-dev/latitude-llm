@@ -19,9 +19,13 @@ async function validate(
   },
   _: Database = database,
 ) {
-  if (!configuration.DatasetLabel) {
+  if (!configuration.datasetLabel) {
     return Result.error(new BadRequestError('Dataset label is required'))
   }
 
-  return Result.ok(configuration)
+  // Note: all settings are explicitly returned to ensure we don't
+  // carry dangling fields from the original settings object
+  return Result.ok({
+    datasetLabel: configuration.datasetLabel,
+  })
 }

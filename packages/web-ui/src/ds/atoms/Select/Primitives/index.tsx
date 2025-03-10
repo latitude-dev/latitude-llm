@@ -13,7 +13,7 @@ import * as SelectPrimitive from '@radix-ui/react-select'
 
 import { SelectOption, SelectOptionGroup } from '..'
 import { cn } from '../../../../lib/utils'
-import { Icon } from '../../Icons'
+import { Icon, IconName } from '../../Icons'
 
 const SelectRoot = SelectPrimitive.Root
 
@@ -27,12 +27,12 @@ function SelectValueWithIcon({
   icon,
   children,
 }: {
-  icon?: ReactNode
+  icon?: ReactNode | IconName
   children: ReactNode
 }) {
   return (
     <div className='w-full flex flex-row items-center gap-x-2 min-w-0 truncate'>
-      {icon}
+      {typeof icon === 'string' ? <Icon name={icon as IconName} /> : icon}
       {children}
     </div>
   )
@@ -216,7 +216,7 @@ const SelectLabel = forwardRef<
 SelectLabel.displayName = SelectPrimitive.Label.displayName
 
 type SelectItemProps = ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & {
-  icon?: ReactNode
+  icon?: ReactNode | IconName
 }
 const SelectItem = forwardRef<
   ElementRef<typeof SelectPrimitive.Item>,

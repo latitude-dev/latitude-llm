@@ -14,7 +14,7 @@ export const RuleEvaluationExactMatchSpecification = {
   description:
     'Checks if the response is exactly the same as the expected label',
   configuration: ruleEvaluationConfiguration.extend({
-    DatasetLabel: z.string(),
+    datasetLabel: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   supportsLiveEvaluation: false,
@@ -32,7 +32,7 @@ export const RuleEvaluationRegularExpressionSpecification = {
   name: 'Regular Expression',
   description: 'Checks if the response matches the regular expression',
   configuration: ruleEvaluationConfiguration.extend({
-    Pattern: z.string(),
+    pattern: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   supportsLiveEvaluation: true,
@@ -50,9 +50,9 @@ export const RuleEvaluationLengthCountSpecification = {
   name: 'Length Count',
   description: 'Checks if the response is of a certain length',
   configuration: ruleEvaluationConfiguration.extend({
-    Algorithm: z.enum(['character', 'word', 'sentence', 'paragraph']),
-    MinLength: z.number().optional(),
-    MaxLength: z.number().optional(),
+    algorithm: z.enum(['character', 'word', 'sentence', 'paragraph']),
+    minLength: z.number().optional(),
+    maxLength: z.number().optional(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   supportsLiveEvaluation: true,
@@ -70,14 +70,14 @@ export const RuleEvaluationLexicalOverlapSpecification = {
   name: 'Lexical Overlap',
   description: 'Checks if the response contains the expected label',
   configuration: ruleEvaluationConfiguration.extend({
-    Algorithm: z.enum([
+    algorithm: z.enum([
       'substring',
       'levenshtein_distance',
       'rouge',
       'bleu',
       'meteor',
     ]),
-    DatasetLabel: z.string(),
+    datasetLabel: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   supportsLiveEvaluation: false,
@@ -96,9 +96,9 @@ export const RuleEvaluationSemanticSimilaritySpecification = {
   description:
     'Checks if the response is semantically similar to the expected label',
   configuration: ruleEvaluationConfiguration.extend({
-    Algorithm: z.literal('cosine_similarity'),
-    EmbeddingModel: z.enum(['openai_3_small', 'anthropic_voyage_3']),
-    DatasetLabel: z.string(),
+    algorithm: z.literal('cosine_similarity'),
+    embeddingModel: z.enum(['openai_3_small', 'anthropic_voyage_3']),
+    datasetLabel: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   supportsLiveEvaluation: false,
