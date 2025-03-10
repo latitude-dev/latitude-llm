@@ -199,6 +199,9 @@ export const env = createEnv({
     LATITUDE_MCP_HOST: z.string().optional(),
     USE_EKS_CLUSTER: z.coerce.boolean().optional().default(false),
 
+    // Triggers
+    EMAIL_TRIGGER_DOMAIN: z.string().optional(),
+
     ENCRYPTION_KEY: z.string().optional(),
   },
   runtimeEnv: {
