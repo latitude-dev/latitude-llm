@@ -1,6 +1,8 @@
-import { envClient } from '$/envClient'
 import useDocumentTriggers from '$/stores/documentTriggers'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import {
+  DocumentTriggerType,
+  EMAIL_TRIGGER_DOMAIN,
+} from '@latitude-data/constants'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import { EmailTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/helpers/schema'
 import { Text } from '@latitude-data/web-ui'
@@ -58,7 +60,7 @@ export function EmailTriggerSettings({
     [emailTrigger, create, deleteFn, update],
   )
 
-  const triggerEmailAddress = `${document.documentUuid}@${envClient.NEXT_PUBLIC_EMAIL_TRIGGER_DOMAIN ?? 'env.not.configured'}`
+  const triggerEmailAddress = `${document.documentUuid}@${EMAIL_TRIGGER_DOMAIN}`
 
   return (
     <div className='flex flex-col gap-4'>

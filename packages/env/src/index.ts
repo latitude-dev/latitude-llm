@@ -200,7 +200,6 @@ export const env = createEnv({
     USE_EKS_CLUSTER: z.coerce.boolean().optional().default(false),
 
     // Triggers
-    EMAIL_TRIGGER_DOMAIN: z.string().optional(),
     NEXT_PUBLIC_EMAIL_TRIGGER_DOMAIN: z.string().optional(),
     MAILGUN_WEBHOOK_SIGNING_KEY: z.string().optional(),
 

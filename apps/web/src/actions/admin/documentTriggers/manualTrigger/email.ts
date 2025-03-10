@@ -23,9 +23,6 @@ export const manualEmailTriggerAction = withAdmin
     if (!env.GATEWAY_PORT) {
       throw new Error('GATEWAY_PORT is not set')
     }
-    if (!env.EMAIL_TRIGGER_DOMAIN) {
-      throw new Error('EMAIL_TRIGGER_DOMAIN is not set')
-    }
 
     handleEmailTrigger({
       recipient: input.recipient,

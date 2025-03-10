@@ -1,4 +1,3 @@
-import { env } from '@latitude-data/env'
 import {
   BadRequestError,
   LatitudeError,
@@ -6,7 +5,11 @@ import {
   Result,
 } from '../../../lib'
 import { findUnscopedDocumentTriggers } from '../find'
-import { DocumentTriggerType, LogSources } from '@latitude-data/constants'
+import {
+  DocumentTriggerType,
+  EMAIL_TRIGGER_DOMAIN,
+  LogSources,
+} from '@latitude-data/constants'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -147,12 +150,8 @@ export async function handleEmailTrigger(
   },
   db = database,
 ): PromisedResult<undefined> {
-  if (!env.NEXT_PUBLIC_EMAIL_TRIGGER_DOMAIN) {
-    return Result.error(new LatitudeError('Email triggers are not enabled'))
-  }
-
   const [documentUuid, domain] = recipient.split('@')
-  if (domain !== env.NEXT_PUBLIC_EMAIL_TRIGGER_DOMAIN) {
+  if (domain !== EMAIL_TRIGGER_DOMAIN) {
     return Result.nil()
   }
 
