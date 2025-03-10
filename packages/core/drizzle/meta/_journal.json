@@ -939,6 +939,13 @@
       "when": 1741345746373,
       "tag": "0134_spicy_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 135,
+      "version": "7",
+      "when": 1741598428285,
+      "tag": "0135_lowly_ghost_rider",
+      "breakpoints": true
     }
   ]
 }

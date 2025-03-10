@@ -57,7 +57,7 @@ export async function createEvaluationV2<
         configuration: args.configuration ?? { DatasetLabel: 'expected' },
       },
       options: {
-        live: args.live,
+        evaluateLiveLogs: args.evaluateLiveLogs,
         enableSuggestions: args.enableSuggestions,
         autoApplySuggestions: args.autoApplySuggestions,
       },
