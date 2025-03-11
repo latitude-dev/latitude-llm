@@ -159,13 +159,21 @@ export type EvaluationResultV2<
   evaluationUuid: string
   experimentId: number | null
   evaluatedLogId: number
-  score: number | null
-  metadata: EvaluationResultMetadata<T, M> | null
-  error: EvaluationResultError<T, M> | null
   usedForSuggestion: boolean | null
   createdAt: Date
   updatedAt: Date
-}
+} & (
+  | {
+      score: number
+      metadata: EvaluationResultMetadata<T, M>
+      error: null
+    }
+  | {
+      score: null
+      metadata: null
+      error: EvaluationResultError<T, M>
+    }
+)
 
 export type EvaluationSettings<
   T extends EvaluationType = EvaluationType,
