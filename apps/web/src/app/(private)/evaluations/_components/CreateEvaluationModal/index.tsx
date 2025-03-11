@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
+import { envClient } from '$/envClient'
 import useEvaluations from '$/stores/evaluations'
 import useEvaluationsV2 from '$/stores/evaluationsV2'
 import {
@@ -44,17 +45,22 @@ const METADATA_TYPE_DESCRIPTIONS = {
 const METADATA_TYPE_OPTIONS = [
   {
     label: 'LLM as judge',
-    value: EvaluationMetadataType.LlmAsJudgeSimple,
+    value: EvaluationMetadataType.LlmAsJudgeSimple as EvaluationMetadataTypeTmp,
   },
   {
     label: 'Code / Manual',
-    value: EvaluationMetadataType.Manual,
+    value: EvaluationMetadataType.Manual as EvaluationMetadataTypeTmp,
   },
-  {
-    label: 'Rule',
-    value: 'evaluationV2',
-  },
-]
+].concat(
+  envClient?.NEXT_PUBLIC_EVALUATIONS_V2_ENABLED
+    ? [
+        {
+          label: 'Rule',
+          value: 'evaluationV2',
+        },
+      ]
+    : [],
+)
 
 const DEFAULT_SETTINGS_V2 = {
   name: 'Accuracy',
