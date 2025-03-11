@@ -6,6 +6,7 @@ import {
 } from '../../../lib'
 import { findUnscopedDocumentTriggers } from '../find'
 import {
+  DocumentTriggerParameters,
   DocumentTriggerType,
   EMAIL_TRIGGER_DOMAIN,
   LogSources,
@@ -53,12 +54,14 @@ export async function assertTriggerFilters({
 export async function getTriggerResponse(
   {
     trigger,
+    senderEmail,
+    senderName,
     subject,
     body,
-    sender,
   }: {
     trigger: DocumentTrigger
-    sender: string
+    senderEmail: string
+    senderName: string | undefined
     subject: string
     body: string
   },
@@ -94,26 +97,19 @@ export async function getTriggerResponse(
     return Result.error(new BadRequestError('Document is deleted'))
   }
 
-  const parameters = {
-    ...Object.fromEntries(
-      trigger.configuration.senderParameters?.map((paramName) => [
-        paramName,
-        sender,
-      ]) ?? [],
+  const parameters = Object.fromEntries(
+    Object.entries(trigger.configuration.parameters ?? {}).map(
+      ([key, value]: [string, DocumentTriggerParameters]) => {
+        if (value === DocumentTriggerParameters.SenderName)
+          return [key, senderName]
+        if (value === DocumentTriggerParameters.SenderEmail)
+          return [key, senderEmail]
+        if (value === DocumentTriggerParameters.Subject) return [key, subject]
+        if (value === DocumentTriggerParameters.Body) return [key, body]
+        return [key, undefined]
+      },
     ),
-    ...Object.fromEntries(
-      trigger.configuration.subjectParameters?.map((paramName) => [
-        paramName,
-        subject,
-      ]) ?? [],
-    ),
-    ...Object.fromEntries(
-      trigger.configuration.contentParameters?.map((paramName) => [
-        paramName,
-        body,
-      ]) ?? [],
-    ),
-  }
+  )
 
   const runResult = await runDocumentAtCommit({
     workspace,
@@ -137,13 +133,15 @@ export async function getTriggerResponse(
 export async function handleEmailTrigger(
   {
     recipient,
+    senderEmail,
+    senderName,
     subject,
     body,
-    sender,
     messageId,
   }: {
-    sender: string
     recipient: string
+    senderEmail: string
+    senderName: string | undefined
     subject: string
     body: string
     messageId?: string
@@ -166,7 +164,7 @@ export async function handleEmailTrigger(
   if (!trigger) return Result.nil()
 
   const assertFilterResult = await assertTriggerFilters({
-    sender,
+    sender: senderEmail,
     trigger,
   })
   if (assertFilterResult.error) return assertFilterResult
@@ -174,7 +172,8 @@ export async function handleEmailTrigger(
   const responseResult = await getTriggerResponse(
     {
       trigger,
-      sender,
+      senderEmail,
+      senderName,
       subject: 'Re: ' + subject,
       body,
     },
@@ -191,7 +190,7 @@ export async function handleEmailTrigger(
 
   const mailer = new DocumentTriggerMailer(
     {
-      to: sender,
+      to: senderEmail,
       from: recipient,
       ...replyHeaders,
     },

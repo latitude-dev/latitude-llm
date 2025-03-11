@@ -25,6 +25,13 @@ export enum DocumentTriggerType {
   Email = 'email',
 }
 
+export enum DocumentTriggerParameters {
+  SenderEmail = 'senderEmail',
+  SenderName = 'senderName',
+  Subject = 'subject',
+  Body = 'body',
+}
+
 export * from './models'
 export * from './ai'
 export * from './tools'
