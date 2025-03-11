@@ -1,13 +1,41 @@
-import { BadRequestError, PromisedResult, Result } from '../../../../lib'
+import {
+  BadRequestError,
+  LatitudeError,
+  PromisedResult,
+  Result,
+} from '../../../../lib'
 import { findUnscopedDocumentTriggers } from '../../find'
 import {
   DocumentTriggerType,
   EMAIL_TRIGGER_DOMAIN,
 } from '@latitude-data/constants'
 import { database } from '../../../../client'
-import { DocumentTrigger } from '../../../../browser'
+import { DocumentTrigger, HEAD_COMMIT } from '../../../../browser'
 import { DocumentTriggerMailer } from '../../../../mailers'
 import { getEmailResponse } from './getResponse'
+import { DocumentVersionsRepository } from '../../../../repositories'
+
+async function getTriggerName(
+  trigger: DocumentTrigger,
+  db = database,
+): PromisedResult<string, LatitudeError> {
+  const configName = trigger.configuration.name?.trim()
+  if (configName?.length) {
+    return Result.ok(configName)
+  }
+
+  const docsScope = new DocumentVersionsRepository(trigger.workspaceId, db)
+  const documentResult = await docsScope.getDocumentAtCommit({
+    projectId: trigger.projectId,
+    commitUuid: HEAD_COMMIT,
+    documentUuid: trigger.documentUuid,
+  })
+  if (documentResult.error) return documentResult
+
+  const document = documentResult.unwrap()
+  const docName = document.path.split('/').pop()!
+  return Result.ok(docName)
+}
 
 export async function assertTriggerFilters({
   sender,
@@ -79,6 +107,9 @@ export async function handleEmailTrigger(
   })
   if (assertFilterResult.error) return assertFilterResult
 
+  const name = await getTriggerName(trigger, db)
+  if (name.error) return name
+
   const responseResult = await getEmailResponse(
     {
       documentUuid: documentUuid!,
@@ -101,10 +132,12 @@ export async function handleEmailTrigger(
     ? { inReplyTo: messageId, references: parentMessageIds ?? [messageId] }
     : {}
 
+  const from = `${JSON.stringify(name.unwrap())} <${trigger.documentUuid}@${EMAIL_TRIGGER_DOMAIN}>`
+
   const mailer = new DocumentTriggerMailer(
     {
       to: senderEmail,
-      from: recipient,
+      from,
       ...replyHeaders,
     },
     {

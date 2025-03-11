@@ -161,6 +161,9 @@ export function EmailTriggerConfig({
   const [replyWithResponse, setReplyWithResponse] = useState<boolean>(
     emailTriggerConfig?.replyWithResponse ?? true,
   )
+  const [name, setName] = useState<string>(
+    emailTriggerConfig?.name ?? document.path.split('/').at(-1)!,
+  )
   const [parameters, setParameters] = useState<
     Record<string, DocumentTriggerParameters>
   >(emailTriggerConfig?.parameters ?? {})
@@ -217,6 +220,7 @@ export function EmailTriggerConfig({
       domainWhitelist: domainWhitelist.length > 0 ? domainWhitelist : undefined,
       replyWithResponse,
       parameters,
+      name,
     })
   }, [
     emailWhitelist,
@@ -224,6 +228,7 @@ export function EmailTriggerConfig({
     replyWithResponse,
     parameters,
     emailAvailability,
+    name,
   ])
 
   return (
@@ -286,15 +291,25 @@ export function EmailTriggerConfig({
       </Section>
       {emailAvailability !== EmailAvailabilityOptions.Disabled && (
         <>
-          <Section title='Parameters'>
-            <ParameterSelects
-              parameterNames={documentParameters}
-              parameters={parameters}
-              setParameters={setParameters}
-              disabled={!canEdit}
-            />
-          </Section>
+          {documentParameters.length && (
+            <Section title='Parameters'>
+              <ParameterSelects
+                parameterNames={documentParameters}
+                parameters={parameters}
+                setParameters={setParameters}
+                disabled={!canEdit}
+              />
+            </Section>
+          )}
           <Section title='Email settings'>
+            <Input
+              name='emailName'
+              label='Name'
+              value={name}
+              disabled={!canEdit}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={document.path.split('/').at(-1)}
+            />
             <Text.H5 color='foregroundMuted'>
               Send an email to this address to run the prompt:
             </Text.H5>

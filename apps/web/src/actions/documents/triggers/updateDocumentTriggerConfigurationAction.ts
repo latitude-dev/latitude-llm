@@ -3,7 +3,10 @@
 import { updateDocumentTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/update'
 
 import { withDocument } from '../../procedures'
-import { documentTriggerConfigurationsUnionSchema } from '@latitude-data/core/services/documentTriggers/helpers/schema'
+import {
+  documentTriggerConfigurationsUnionSchema,
+  EmailTriggerConfiguration,
+} from '@latitude-data/core/services/documentTriggers/helpers/schema'
 import { z } from 'zod'
 import { DocumentTriggersRepository } from '@latitude-data/core/repositories'
 
@@ -16,7 +19,10 @@ export const updateDocumentTriggerConfigurationAction = withDocument
     }),
   )
   .handler(async ({ input, ctx }) => {
-    const { documentTriggerId, configuration } = input
+    const { documentTriggerId, configuration } = input as {
+      documentTriggerId: number
+      configuration: EmailTriggerConfiguration
+    }
 
     const scope = new DocumentTriggersRepository(ctx.workspace.id)
     const trigger = await scope.find(documentTriggerId)
