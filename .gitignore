@@ -65,4 +65,6 @@ TODO.md
 .sentryclirc
 .env.sentry-build-plugin
 bin
-
+ 
+# Avante
+*.avanterules
