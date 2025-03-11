@@ -4,6 +4,7 @@ import { Button, DotIndicator, Popover, Text } from '@latitude-data/web-ui'
 import { TriggerSettings } from './Settings'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
+import { NotEditableBanner } from '../_components/NotEditableBanner'
 
 export function DocumentTriggersButton({
   document,
@@ -36,6 +37,7 @@ export function DocumentTriggersButton({
         </Button>
       </Popover.Trigger>
       <Popover.Content maxHeight='none' width={500} align='end'>
+        <NotEditableBanner description='Trigger settings cannot be modified in a Draft.' />
         <TriggerSettings document={document} projectId={projectId} />
       </Popover.Content>
     </Popover.Root>
