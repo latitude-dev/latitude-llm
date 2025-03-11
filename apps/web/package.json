@@ -39,6 +39,7 @@
     "dd-trace": "^5.37.1",
     "diff-match-patch": "^1.0.5",
     "drizzle-orm": "^0.33.0",
+    "eventsource-parser": "^2.0.1",
     "import-in-the-middle": "^1.11.2",
     "ioredis": "^5.4.1",
     "ip": "^2.0.1",

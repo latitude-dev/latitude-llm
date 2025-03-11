@@ -35,6 +35,7 @@ export async function addChatMessage({
   globalConfig,
   messages: newMessages,
   promptSource,
+  abortSignal,
 }: {
   workspace: Workspace
   providerLog: ProviderLog
@@ -42,6 +43,7 @@ export async function addChatMessage({
   globalConfig: PromptConfig
   source: LogSources
   promptSource: PromptSource
+  abortSignal?: AbortSignal
 }) {
   if (!providerLog.providerId) {
     return Result.error(
@@ -84,6 +86,7 @@ export async function addChatMessage({
       provider,
       source,
       conversation,
+      abortSignal,
     })
 
     if (clientToolCalls.length) {

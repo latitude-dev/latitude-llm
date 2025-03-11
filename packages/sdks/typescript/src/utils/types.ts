@@ -190,6 +190,7 @@ export type RunPromptOptions<Tools extends ToolSpec> =
     parameters?: Record<string, unknown>
     stream?: boolean
     tools?: ToolCalledFn<Tools>
+    signal?: AbortSignal
   }
 
 export type RenderPromptOptions<M extends AdapterMessageType = PromptlMessage> =
@@ -217,6 +218,7 @@ export type ChatOptions<Tools extends ToolSpec> = StreamResponseCallbacks & {
   messages: Message[]
   stream?: boolean
   tools?: ToolCalledFn<Tools>
+  signal?: AbortSignal
 }
 
 export type SDKOptions = {
@@ -226,6 +228,7 @@ export type SDKOptions = {
   routeResolver: RouteResolver
   versionUuid?: string
   projectId?: number
+  signal?: AbortSignal
 }
 
 export type ChatOptionsWithSDKOptions<Tools extends ToolSpec> =

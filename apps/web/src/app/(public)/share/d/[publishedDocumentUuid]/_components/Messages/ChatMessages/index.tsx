@@ -1,4 +1,4 @@
-import { StreamMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
+import { StreamMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/components'
 import { Conversation } from '@latitude-data/compiler'
 import { ErrorMessage, MessageList, Text } from '@latitude-data/web-ui'
 export function ChatMessages({

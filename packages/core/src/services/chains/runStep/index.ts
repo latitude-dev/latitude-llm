@@ -60,6 +60,7 @@ export type StepProps = {
   removeSchema?: boolean
   stepCount?: number
   previousConfig: PromptConfig
+  abortSignal?: AbortSignal
 }
 
 export async function runStep({
@@ -77,6 +78,7 @@ export async function runStep({
   configOverrides,
   removeSchema,
   stepCount = 0,
+  abortSignal,
 }: StepProps) {
   if (newMessages?.length) {
     const lastResponseMessage = newMessages[0]! as AssistantMessage
@@ -123,6 +125,7 @@ export async function runStep({
       provider: step.provider,
       schema: step.schema,
       output: step.output,
+      abortSignal,
       injectFakeAgentStartTool:
         step.conversation.config.type === 'agent' &&
         !step.conversation.config.disableAgentOptimization,
@@ -163,5 +166,6 @@ export async function runStep({
     previousConfig: step.conversation.config as PromptConfig,
     configOverrides,
     removeSchema,
+    abortSignal,
   })
 }

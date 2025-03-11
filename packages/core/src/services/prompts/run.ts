@@ -24,6 +24,7 @@ export async function runPrompt({
   promptlVersion,
   source,
   promptSource,
+  abortSignal,
 }: {
   workspace: Workspace
   parameters: Record<string, unknown>
@@ -32,6 +33,7 @@ export async function runPrompt({
   providersMap: CachedApiKeys
   source: LogSources
   promptSource: PromptSource
+  abortSignal?: AbortSignal
 }) {
   let chain: PromptlChain | LegacyChain
   let metadata: LegacyMetadata | PromptlMetadata
@@ -69,6 +71,7 @@ export async function runPrompt({
     globalConfig: metadata.config as PromptConfig,
     persistErrors: false,
     promptSource,
+    abortSignal,
   })
   return Result.ok(run)
 }

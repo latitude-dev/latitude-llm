@@ -89,6 +89,7 @@ export async function ai({
   output,
   customLanguageModel,
   aiSdkProvider,
+  abortSignal,
 }: {
   provider: ProviderApiKey
   config: VercelConfig
@@ -98,6 +99,7 @@ export async function ai({
   customLanguageModel?: LanguageModel
   output?: ObjectOutput
   aiSdkProvider?: Partial<AISDKProvider>
+  abortSignal?: AbortSignal
 }): Promise<
   TypedResult<
     AIReturn<StreamType>,
@@ -161,6 +163,7 @@ export async function ai({
       prompt,
       messages: messages as CoreMessage[],
       tools: toolsResult.value,
+      abortSignal,
       experimental_telemetry: {
         isEnabled: true,
       },

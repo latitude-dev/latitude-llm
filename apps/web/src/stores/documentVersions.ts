@@ -76,13 +76,7 @@ export default function useDocumentVersions(
         ROUTES.api.projects.detail(projectId).commits.detail(commitUuid).root,
         { credentials: 'include' },
       )
-      if (!response.ok) {
-        const error = await response.json()
-
-        console.error(error)
-
-        return []
-      }
+      if (!response.ok) return []
 
       return response.json()
     }, [projectId, commitUuid]),

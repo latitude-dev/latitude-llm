@@ -65,8 +65,14 @@ export const API_ROUTES = {
     root: '/api/traces',
   },
   documents: {
+    logs: {
+      detail: (documentLogUuid: string) => ({
+        chat: `/api/documents/logs/${documentLogUuid}/chat`,
+      }),
+    },
     detail: (documentUuid: string) => ({
       root: `/api/documents/${documentUuid}`,
+      run: `/api/documents/${documentUuid}/run`,
     }),
   },
   projects: {

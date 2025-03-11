@@ -45,6 +45,7 @@ export async function makeRequest<H extends HandlerType>({
             __internal: { source },
           })
         : undefined,
+    signal: options.signal,
   })
 
   if (!response.ok && response.status > 500 && retries < MAX_RETRIES) {

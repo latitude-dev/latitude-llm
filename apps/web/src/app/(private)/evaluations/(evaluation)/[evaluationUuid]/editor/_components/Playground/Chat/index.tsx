@@ -18,15 +18,15 @@ import {
   useAutoScroll,
 } from '@latitude-data/web-ui'
 import { runEvaluationPromptAction } from '$/actions/prompts/run'
-import {
-  StreamMessage,
-  Timer,
-  StatusIndicator,
-} from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
 import useEvaluationPrompt from '$/stores/evaluationPrompt'
 import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
 import { useToolContentMap } from 'node_modules/@latitude-data/web-ui/src/lib/hooks/useToolContentMap'
+import {
+  StatusIndicator,
+  StreamMessage,
+  Timer,
+} from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/components'
 
 export default function Chat({
   clearChat,
@@ -193,8 +193,8 @@ export default function Chat({
       <div className='flex relative flex-row w-full items-center justify-center'>
         <StatusIndicator
           isScrolledToBottom={isScrolledToBottom}
-          usage={usage}
           isStreaming={isStreaming}
+          usage={usage}
         />
       </div>
       <div className='flex items-center justify-center'>

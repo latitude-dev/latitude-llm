@@ -1,6 +1,5 @@
 import { StreamEventTypes } from '@latitude-data/core/browser'
 import { LanguageModelUsage } from 'ai'
-import { readStreamableValue, StreamableValue } from 'ai/rsc'
 import { useCallback, useRef, useState } from 'react'
 import {
   ContentType,
@@ -13,7 +12,10 @@ import {
   AGENT_RETURN_TOOL_NAME,
   ChainEvent,
   ChainEventTypes,
+  LatitudeChainCompletedEventData,
+  LatitudeEventData,
 } from '@latitude-data/constants'
+import { ParsedEvent } from 'eventsource-parser/stream'
 
 function buildMessage({ input }: { input: string | ToolMessage[] }) {
   if (typeof input === 'string') {
@@ -32,19 +34,14 @@ export function usePlaygroundChat({
   addMessagesFn,
   onPromptRan,
 }: {
-  runPromptFn: () => Promise<{
-    stream: StreamableValue<ChainEvent>
-    documentLogUuid: Promise<string>
-  }>
+  runPromptFn: () => Promise<ReadableStream<ParsedEvent>>
   addMessagesFn: ({
     documentLogUuid,
     messages,
   }: {
     documentLogUuid: string
     messages: Message[]
-  }) => Promise<{
-    stream: StreamableValue<ChainEvent>
-  }>
+  }) => Promise<ReadableStream<ParsedEvent>>
   onPromptRan?: (documentLogUuid?: string, error?: Error) => void
 }) {
   const isChat = useRef(false)
@@ -73,17 +70,26 @@ export function usePlaygroundChat({
   )
 
   const handleStream = useCallback(
-    async (stream: StreamableValue<ChainEvent>) => {
+    async (
+      stream: ReadableStream<ParsedEvent>,
+      onPromptRan?: (documentLogUuid?: string, error?: Error) => void,
+    ) => {
       setIsLoading(true)
       setError(undefined)
       const start = performance.now()
       let accumulatedTextDelta = ''
+      let documentLogUuid: string | undefined
 
       try {
-        for await (const serverEvent of readStreamableValue(stream)) {
-          if (!serverEvent) continue
+        for await (const parsedEvent of stream as unknown as AsyncIterable<ParsedEvent>) {
+          const { event } = parsedEvent
+          const data = JSON.parse(parsedEvent.data) as ChainEvent['data']
+          const { uuid } = data as LatitudeChainCompletedEventData
 
-          const { event, data } = serverEvent
+          if (uuid) {
+            documentLogUuid = uuid
+            setDocumentLogUuid(uuid)
+          }
 
           // Delta text from the provider
           if (event === StreamEventTypes.Provider) {
@@ -94,8 +100,8 @@ export function usePlaygroundChat({
             continue
           }
 
-          if (data.messages) {
-            setMessages(data.messages)
+          if ((data as LatitudeEventData).messages) {
+            setMessages((data as LatitudeEventData).messages)
           }
 
           if (data.type === ChainEventTypes.StepStarted) {
@@ -120,6 +126,10 @@ export function usePlaygroundChat({
               setChainLength(data.messages.length)
               setTime((prev) => (prev ?? 0) + (performance.now() - start))
             }
+
+            if (onPromptRan) {
+              onPromptRan(documentLogUuid)
+            }
           }
           if (data.type === ChainEventTypes.ToolsRequested) {
             setUnresponedToolCalls(
@@ -128,6 +138,7 @@ export function usePlaygroundChat({
           }
         }
       } catch (error) {
+        onPromptRan?.(documentLogUuid, error as Error)
         setError(error as Error)
       }
 
@@ -175,7 +186,8 @@ export function usePlaygroundChat({
 
       try {
         setIsLoading(true)
-        const { stream } = await addMessagesFn({
+
+        const stream = await addMessagesFn({
           documentLogUuid,
           messages: newMessages,
         })
@@ -192,11 +204,8 @@ export function usePlaygroundChat({
   const start = useCallback(async () => {
     try {
       setIsLoading(true)
-      const { stream, documentLogUuid } = await runPromptFn()
-      handleStream(stream)
-      const uuid = await documentLogUuid
-      setDocumentLogUuid(uuid)
-      onPromptRan?.(uuid, error)
+      const stream = await runPromptFn()
+      handleStream(stream, onPromptRan)
     } catch (error) {
       setIsLoading(false)
       setError(error as Error)

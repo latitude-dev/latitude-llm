@@ -1,40 +1,23 @@
-import {
-  ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
-
-import {
-  ContentType,
-  Message as ConversationMessage,
-  MessageRole,
-} from '@latitude-data/compiler'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Message as ConversationMessage } from '@latitude-data/compiler'
 import { type DocumentVersion } from '@latitude-data/core/browser'
 import {
-  AnimatedDots,
   ChatTextArea,
-  cn,
   ErrorMessage,
-  Icon,
-  LineSeparator,
-  Message,
   MessageList,
   Text,
-  Tooltip,
   useAutoScroll,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { LanguageModelUsage } from 'ai'
 
-import { DocumentEditorContext } from '..'
 import Actions, { ActionsState } from './Actions'
+import { StatusIndicator, StreamMessage, Timer } from './components'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import { useToolContentMap } from 'node_modules/@latitude-data/web-ui/src/lib/hooks/useToolContentMap'
+import { useStreamHandler } from './hooks/useStreamHandler'
+import { ROUTES } from '$/services/routes'
 
 export default function Chat({
   document,
@@ -52,44 +35,63 @@ export default function Chat({
   const runOnce = useRef(false)
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Setup auto-scroll behavior
   useAutoScroll(containerRef, {
     startAtBottom: true,
     onScrollChange: setIsScrolledToBottom,
   })
 
+  // Get project and commit information
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const { runDocumentAction, addMessagesAction } = useContext(
-    DocumentEditorContext,
-  )!
+
+  // Get agent tools map
   const { data: agentToolsMap } = useAgentToolsMap({
     commitUuid: commit.uuid,
     projectId: project.id,
   })
 
+  // Custom hook for handling streaming responses
+  const { createStreamHandler, abortCurrentStream, hasActiveStream } =
+    useStreamHandler()
+
+  // Create run prompt function with proper error handling
   const runPromptFn = useCallback(async () => {
-    const { response, output } = await runDocumentAction({
-      projectId: project.id,
-      documentPath: document.path,
-      commitUuid: commit.uuid,
-      parameters,
-    })
+    try {
+      const response = await fetch(
+        ROUTES.api.documents.detail(document.documentUuid).run,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            path: document.path,
+            commitUuid: commit.uuid,
+            parameters,
+            projectId: project.id,
+            stream: true, // Explicitly request streaming
+          }),
+        },
+      )
 
-    const documentLogUuid = new Promise<string>((resolve, _reject) => {
-      response.then((r) => {
-        if (!r?.uuid) {
-          // TODO: This error is raised when the streaming returns an error
-          // Without the uuid, we can't chat anymore.
-          // reject(new Error('No document log uuid'))
-          return
-        }
-        resolve(r.uuid)
-      })
-    })
+      return createStreamHandler(response)
+    } catch (error) {
+      console.error('Error running prompt:', error)
+      throw error
+    }
+  }, [
+    project.id,
+    document.path,
+    document.documentUuid,
+    commit.uuid,
+    parameters,
+    createStreamHandler,
+  ])
 
-    return { stream: output, documentLogUuid }
-  }, [project.id, document.path, commit.uuid, parameters, runDocumentAction])
-
+  // Create add messages function
   const addMessagesFn = useCallback(
     async ({
       documentLogUuid,
@@ -98,16 +100,26 @@ export default function Chat({
       documentLogUuid: string
       messages: ConversationMessage[]
     }) => {
-      const { output } = await addMessagesAction({
-        documentLogUuid,
-        messages,
-      })
+      const response = await fetch(
+        ROUTES.api.documents.logs.detail(documentLogUuid).chat,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages,
+          }),
+        },
+      )
 
-      return { stream: output }
+      return createStreamHandler(response)
     },
-    [],
+    [createStreamHandler],
   )
 
+  // Initialize playground chat
   const {
     start,
     submitUserMessage,
@@ -127,8 +139,20 @@ export default function Chat({
     onPromptRan,
   })
 
+  // Function to stop the streaming response with confirmation
+  const stopStreaming = useCallback(() => {
+    // We only clear the stream if it's the first generation as otherwise the
+    // UI is in an non-obvious state for the user
+    if (abortCurrentStream() && messages.length <= 1) {
+      // Only clear chat if stream was actually aborted
+      clearChat()
+    }
+  }, [abortCurrentStream, clearChat, messages.length])
+
+  // Get tool content map
   const toolContentMap = useToolContentMap(messages)
 
+  // Start chat on first render
   useEffect(() => {
     if (!runOnce.current) {
       runOnce.current = true
@@ -138,6 +162,7 @@ export default function Chat({
 
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
+      {/* Header */}
       <div className='flex flex-row items-center justify-between w-full'>
         <Text.H6M>Prompt</Text.H6M>
         <Actions
@@ -145,10 +170,13 @@ export default function Chat({
           setExpandParameters={setExpandParameters}
         />
       </div>
+
+      {/* Messages container */}
       <div
         ref={containerRef}
         className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar scrollable-indicator pb-12'
       >
+        {/* Prompt messages */}
         <MessageList
           messages={messages.slice(0, chainLength - 1) ?? []}
           parameters={Object.keys(parameters)}
@@ -156,6 +184,8 @@ export default function Chat({
           agentToolsMap={agentToolsMap}
           toolContentMap={toolContentMap}
         />
+
+        {/* Chain result */}
         {(messages.length ?? 0) >= chainLength && (
           <>
             <MessageList
@@ -165,6 +195,8 @@ export default function Chat({
             {time && <Timer timeMs={time} />}
           </>
         )}
+
+        {/* Chat messages */}
         {(messages.length ?? 0) > chainLength && (
           <>
             <Text.H6M>Chat</Text.H6M>
@@ -174,6 +206,8 @@ export default function Chat({
             />
           </>
         )}
+
+        {/* Error or streaming response */}
         {error ? (
           <ErrorMessage error={error} />
         ) : (
@@ -184,147 +218,27 @@ export default function Chat({
           />
         )}
       </div>
+
+      {/* Chat input */}
       <div className='flex relative flex-row w-full items-center justify-center'>
         <StatusIndicator
           isScrolledToBottom={isScrolledToBottom}
           usage={usage}
           runningLatitudeTools={runningLatitudeTools}
           isStreaming={isLoading}
+          stopStreaming={stopStreaming}
+          canStopStreaming={hasActiveStream() && isLoading}
         />
         <ChatTextArea
           clearChat={clearChat}
           placeholder='Enter followup message...'
-          disabled={isLoading || !!error}
           onSubmit={submitUserMessage}
           toolRequests={unresponedToolCalls}
           addMessages={addMessages}
+          disabled={isLoading || !!error}
+          disableReset={isLoading}
         />
       </div>
     </div>
   )
-}
-
-function FloatingElement({
-  isScrolledToBottom,
-  children,
-}: {
-  isScrolledToBottom: boolean
-  children: ReactNode
-}) {
-  return (
-    <div
-      className={cn(
-        'absolute -top-10 bg-background rounded-xl p-2 flex flex-row gap-2',
-        {
-          'shadow-xl': !isScrolledToBottom,
-        },
-      )}
-    >
-      {children}
-    </div>
-  )
-}
-
-function TokenUsage({ usage }: { usage?: LanguageModelUsage }) {
-  return (
-    <Tooltip
-      side='top'
-      align='center'
-      sideOffset={5}
-      delayDuration={250}
-      trigger={
-        <div className='cursor-pointer flex flex-row items-center gap-x-1'>
-          <Text.H6M color='foregroundMuted'>
-            {usage?.totalTokens ||
-              usage?.promptTokens ||
-              usage?.completionTokens ||
-              0}{' '}
-            tokens
-          </Text.H6M>
-          <Icon name='info' color='foregroundMuted' />
-        </div>
-      }
-    >
-      <div className='flex flex-col gap-2'>
-        <span>{usage?.promptTokens || 0} prompt tokens</span>
-        <span>{usage?.completionTokens || 0} completion tokens</span>
-      </div>
-    </Tooltip>
-  )
-}
-
-export function StatusIndicator({
-  usage,
-  isScrolledToBottom,
-  runningLatitudeTools,
-  isStreaming,
-}: {
-  usage: LanguageModelUsage | undefined
-  isScrolledToBottom: boolean
-  runningLatitudeTools?: number
-  isStreaming: boolean
-}) {
-  if (runningLatitudeTools) {
-    return (
-      <FloatingElement isScrolledToBottom={isScrolledToBottom}>
-        <div className='flex flex-row gap-2'>
-          <Icon
-            name='loader'
-            color='foregroundMuted'
-            className='animate-spin'
-          />
-          <Text.H6 color='foregroundMuted'>
-            Running <Text.H6B color='primary'>{runningLatitudeTools}</Text.H6B>{' '}
-            tools...
-          </Text.H6>
-        </div>
-      </FloatingElement>
-    )
-  }
-
-  if (isStreaming) {
-    return (
-      <FloatingElement isScrolledToBottom={isScrolledToBottom}>
-        <AnimatedDots />
-      </FloatingElement>
-    )
-  }
-
-  return (
-    <FloatingElement isScrolledToBottom={isScrolledToBottom}>
-      <TokenUsage usage={usage} />
-    </FloatingElement>
-  )
-}
-
-export function StreamMessage({
-  responseStream,
-  messages,
-  chainLength,
-}: {
-  responseStream: string | undefined
-  messages: ConversationMessage[]
-  chainLength: number
-}) {
-  if (responseStream === undefined) return null
-  if (messages.length < chainLength - 1) {
-    return (
-      <Message
-        role={MessageRole.assistant}
-        content={[{ type: ContentType.text, text: responseStream }]}
-        animatePulse
-      />
-    )
-  }
-
-  return (
-    <Message
-      role={MessageRole.assistant}
-      content={[{ type: ContentType.text, text: responseStream }]}
-    />
-  )
-}
-
-export function Timer({ timeMs }: { timeMs: number }) {
-  return <LineSeparator text={`${(timeMs / 1_000).toFixed(2)} s`} />
 }

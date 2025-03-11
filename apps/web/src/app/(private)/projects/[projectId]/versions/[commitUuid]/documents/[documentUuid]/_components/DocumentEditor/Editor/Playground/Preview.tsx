@@ -191,16 +191,16 @@ export default function Preview({
             side='bottom'
             asChild
             trigger={
-              <Button fancy disabled>
-                Run prompt
+              <Button iconProps={{ name: 'play' }} fancy disabled>
+                Run
               </Button>
             }
           >
             There are errors in your prompt. Please fix them before running.
           </Tooltip>
         ) : (
-          <Button fancy onClick={runPrompt}>
-            Run prompt
+          <Button iconProps={{ name: 'play' }} fancy onClick={runPrompt}>
+            Run
           </Button>
         )}
         <Link
@@ -213,7 +213,7 @@ export default function Preview({
           }
         >
           <Button fancy variant='outline'>
-            Run in batch
+            Run batch
           </Button>
         </Link>
       </div>

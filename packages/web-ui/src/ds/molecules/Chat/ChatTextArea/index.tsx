@@ -14,11 +14,13 @@ function SimpleTextArea({
   clearChat,
   onSubmit: onSubmitProp,
   disabled = false,
+  disableReset = false,
 }: {
   placeholder: string
   clearChat: () => void
   disabled?: boolean
   onSubmit?: (value: string) => void
+  disableReset?: boolean
 }) {
   const [value, setValue] = useState('')
   const onSubmit = useCallback(() => {
@@ -53,6 +55,7 @@ function SimpleTextArea({
           onSubmit={onSubmit}
           clearChat={clearChat}
           disabled={disabled}
+          disableReset={disableReset}
         />
       </div>
     </>
@@ -68,6 +71,7 @@ export function ChatTextArea({
   disabled = false,
   toolRequests = [],
   addMessages,
+  disableReset = false,
 }: {
   placeholder: string
   clearChat: () => void
@@ -75,6 +79,7 @@ export function ChatTextArea({
   onSubmit?: OnSubmit | OnSubmitWithTools
   addMessages?: (messages: Message[]) => void
   toolRequests?: ToolCall[]
+  disableReset?: boolean
 }) {
   return (
     <div
@@ -100,6 +105,7 @@ export function ChatTextArea({
           clearChat={clearChat}
           onSubmit={onSubmit}
           disabled={disabled}
+          disableReset={disableReset}
         />
       )}
     </div>

@@ -290,7 +290,13 @@ class Latitude {
     path: string,
     args: RunPromptOptions<Tools>,
   ) {
-    const options = { ...args, options: this.options }
+    const options = {
+      ...args,
+      options: {
+        ...this.options,
+        signal: args.signal,
+      },
+    }
 
     if (args.stream) return streamRun(path, options)
     return syncRun(path, options)
@@ -341,7 +347,14 @@ class Latitude {
     args?: Omit<ChatOptions<Tools>, 'messages'>,
   ) {
     // Note: Args is optional and messages is omitted to maintain backwards compatibility
-    const options = { ...(args || {}), messages, options: this.options }
+    const options = {
+      ...(args || {}),
+      messages,
+      options: {
+        ...this.options,
+        signal: args?.signal,
+      },
+    }
 
     if (args?.stream) return streamChat(uuid, options)
     return syncChat(uuid, options)

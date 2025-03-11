@@ -62,11 +62,13 @@ export async function addMessages({
   documentLogUuid,
   messages,
   source,
+  abortSignal,
 }: {
   workspace: Workspace
   documentLogUuid: string | undefined
   messages: Message[]
   source: LogSources
+  abortSignal?: AbortSignal
 }) {
   if (!documentLogUuid) {
     return Result.error(new Error('documentLogUuid is required'))
@@ -92,6 +94,7 @@ export async function addMessages({
       responseMessages: messages,
       documentLogUuid,
       source,
+      abortSignal,
     })
   }
 
@@ -106,10 +109,12 @@ export async function addMessages({
         document,
         commit,
       },
+      abortSignal,
     })
   }
 
   return addChatMessage({
+    abortSignal,
     workspace,
     providerLog,
     globalConfig,
