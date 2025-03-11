@@ -8,7 +8,8 @@ export const emailWebhookBodySchema = z.object({
   subject: z.string(),
   'body-plain': z.string(), // Body as plain text
   'stripped-html': z.string().optional(), // Body as HTML
-  'Message-Id': z.string().optional(),
+  'Message-Id': z.string().optional(), // The identifier of the user message
+  References: z.string().optional(), // Includes all Message-Ids of the parent messages, split by spaces
   token: z.string().optional(),
   timestamp: z.string().optional(),
   signature: z.string().optional(),

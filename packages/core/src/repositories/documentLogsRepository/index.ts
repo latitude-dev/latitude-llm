@@ -1,6 +1,6 @@
 import { and, count, eq, getTableColumns, gte, isNull } from 'drizzle-orm'
 
-import { Commit, DocumentLog, ErrorableEntity } from '../../browser'
+import { Commit, DocumentLog, ErrorableEntity, LogSources } from '../../browser'
 import { NotFoundError, Result } from '../../lib'
 import { commits, documentLogs, projects, runErrors } from '../../schema'
 import Repository from '../repositoryV2'
@@ -114,5 +114,27 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
       .where(and(this.scopeFilter, gte(documentLogs.createdAt, minDate)))
 
     return result[0]?.count ?? 0
+  }
+
+  async findByFields({
+    documentUuid,
+    source,
+    customIdentifier,
+  }: {
+    documentUuid?: string
+    source?: LogSources
+    customIdentifier?: string
+  }) {
+    const filters = [
+      documentUuid && eq(documentLogs.documentUuid, documentUuid),
+      source && eq(documentLogs.source, source),
+      customIdentifier && eq(documentLogs.customIdentifier, customIdentifier),
+    ].filter((v) => !!v && typeof v !== 'string')
+
+    if (!filters.length) return []
+
+    const results = await this.scope.where(and(this.scopeFilter, ...filters))
+
+    return results
   }
 }
