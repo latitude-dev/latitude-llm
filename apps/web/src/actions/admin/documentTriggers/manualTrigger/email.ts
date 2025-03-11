@@ -3,7 +3,7 @@
 import { z } from 'zod'
 
 import { withAdmin } from '../../../procedures'
-import { handleEmailTrigger } from '@latitude-data/core/services/documentTriggers/handlers/email'
+import { handleEmailTrigger } from '../../../../../../../packages/core/src/services/documentTriggers/handlers/email'
 import { env } from 'process'
 
 export const manualEmailTriggerAction = withAdmin
@@ -16,6 +16,7 @@ export const manualEmailTriggerAction = withAdmin
       subject: z.string(),
       body: z.string(),
       messageId: z.string().optional(),
+      references: z.string().optional(),
     }),
   )
   .handler(async ({ input }) => {
@@ -33,6 +34,9 @@ export const manualEmailTriggerAction = withAdmin
       senderEmail: input.senderEmail,
       senderName: input.senderName,
       messageId: input.messageId?.length ? input.messageId : undefined,
+      parentMessageIds: input.references?.length
+        ? input.references.split(' ')
+        : undefined,
     })
 
     return {}

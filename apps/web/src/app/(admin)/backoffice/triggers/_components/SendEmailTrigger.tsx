@@ -28,6 +28,7 @@ export default function SendEmailTrigger() {
       if (!content) return
 
       const messageId = formData.get('messageId')?.toString()
+      const references = formData.get('references')?.toString()
 
       await execute({
         senderEmail,
@@ -36,6 +37,7 @@ export default function SendEmailTrigger() {
         subject,
         body: content,
         messageId,
+        references,
       })
     },
     [execute],
@@ -66,6 +68,11 @@ export default function SendEmailTrigger() {
           label='Message ID (optional)'
           name='messageId'
           placeholder='Optional message ID – Allows sending the response as a reply'
+        />
+        <Input
+          label='References (optional)'
+          name='references'
+          placeholder='Optional list of past message IDs – Used to add follow-up messages to a previous conversation'
         />
         <TextArea
           label='Content'
