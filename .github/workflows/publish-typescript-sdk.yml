@@ -56,7 +56,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm install
+        run: pnpm install --filter=@latitude-data/sdk...
 
       - name: Build package (with workspace dependencies)
         if: steps.check_version.outputs.should_publish == 'true'
