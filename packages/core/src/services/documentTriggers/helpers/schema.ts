@@ -1,13 +1,14 @@
-import { DocumentTriggerType } from '@latitude-data/constants'
+import {
+  DocumentTriggerParameters,
+  DocumentTriggerType,
+} from '@latitude-data/constants'
 import { z } from 'zod'
 
 export const emailTriggerConfigurationSchema = z.object({
   replyWithResponse: z.boolean(),
   emailWhitelist: z.array(z.string()).optional(),
   domainWhitelist: z.array(z.string()).optional(),
-  subjectParameters: z.array(z.string()).optional(),
-  contentParameters: z.array(z.string()).optional(),
-  senderParameters: z.array(z.string()).optional(),
+  parameters: z.record(z.nativeEnum(DocumentTriggerParameters)).optional(),
 })
 
 export type EmailTriggerConfiguration = z.infer<

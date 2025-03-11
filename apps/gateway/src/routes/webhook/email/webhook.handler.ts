@@ -1,6 +1,7 @@
 import { AppRouteHandler } from '$/openApi/types'
 import { handleEmailTrigger } from '@latitude-data/core/services/documentTriggers/handlers/email'
 import { verifyWebhookSignature } from '@latitude-data/core/services/documentTriggers/helpers/verifySignature'
+import { extractEmailSender } from '@latitude-data/core/services/documentTriggers/helpers/extractEmailSender'
 import { EmailWebhookRoute } from './webhook.route'
 import { env } from '@latitude-data/env'
 import { UnauthorizedError } from '@latitude-data/core/lib/errors'
@@ -13,9 +14,10 @@ export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (
 ) => {
   const {
     recipient,
+    sender,
+    from,
     subject,
     'body-plain': body,
-    sender,
     token,
     timestamp,
     signature,
@@ -33,11 +35,17 @@ export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (
     signingKey: env.MAILGUN_WEBHOOK_SIGNING_KEY,
   }).unwrap()
 
+  const { email: senderEmail, name: senderName } = extractEmailSender({
+    from,
+    sender,
+  })
+
   const result = await handleEmailTrigger({
     recipient,
     subject,
     body,
-    sender,
+    senderEmail,
+    senderName,
     messageId,
   })
 

@@ -12,8 +12,11 @@ export default function SendEmailTrigger() {
       e.preventDefault()
       const formData = new FormData(e.currentTarget)
 
-      const sender = formData.get('sender')?.toString()
-      if (!sender) return
+      const senderEmail = formData.get('senderEmail')?.toString()
+      if (!senderEmail) return
+
+      const senderName = formData.get('senderName')?.toString()
+      if (!senderName) return
 
       const recipient = formData.get('recipient')?.toString()
       if (!recipient) return
@@ -26,7 +29,14 @@ export default function SendEmailTrigger() {
 
       const messageId = formData.get('messageId')?.toString()
 
-      await execute({ sender, recipient, subject, body: content, messageId })
+      await execute({
+        senderEmail,
+        senderName,
+        recipient,
+        subject,
+        body: content,
+        messageId,
+      })
     },
     [execute],
   )
@@ -34,11 +44,14 @@ export default function SendEmailTrigger() {
   return (
     <form onSubmit={handleSubmit}>
       <FormWrapper>
-        <Input
-          label='Sender email'
-          name='sender'
-          placeholder='user@latitude.so'
-        />
+        <div className='flex flex-row w-full gap-4'>
+          <Input label='Sender name' name='senderName' placeholder='John Doe' />
+          <Input
+            label='Sender email'
+            name='senderEmail'
+            placeholder='user@latitude.so'
+          />
+        </div>
         <Input
           label='Receiver email'
           name='recipient'

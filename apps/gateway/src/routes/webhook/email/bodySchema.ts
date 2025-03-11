@@ -4,6 +4,7 @@ import { z } from '@hono/zod-openapi'
 export const emailWebhookBodySchema = z.object({
   recipient: z.string(), // Recipient email address
   sender: z.string(), // Sender email address
+  from: z.string(), // Sender name and email
   subject: z.string(),
   'body-plain': z.string(), // Body as plain text
   'stripped-html': z.string(), // Body as HTML

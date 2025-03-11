@@ -1,6 +1,7 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useUsers from '$/stores/users'
+import { DocumentTriggerParameters } from '@latitude-data/constants'
 import { EmailTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/helpers/schema'
 import {
   Badge,
@@ -64,43 +65,28 @@ function Whitelist({
   ))
 }
 
-enum ParameterType {
-  Subject = 'subject',
-  Content = 'content',
-  Sender = 'sender',
-}
-
-const PARAMETER_OPTIONS: Record<ParameterType, string> = {
-  [ParameterType.Subject]: 'Email Subject',
-  [ParameterType.Content]: 'Email Content',
-  [ParameterType.Sender]: 'Sender Email',
+const PARAMETER_OPTIONS: Record<DocumentTriggerParameters, string> = {
+  [DocumentTriggerParameters.SenderName]: 'Sender Name',
+  [DocumentTriggerParameters.SenderEmail]: 'Sender Email',
+  [DocumentTriggerParameters.Subject]: 'Email Subject',
+  [DocumentTriggerParameters.Body]: 'Email Content',
 }
 
 function ParameterSelects({
+  parameterNames,
   parameters,
-  subjectParameters: [subjectParameters, setSubjectParameters],
-  contentParameters: [contentParameters, setContentParameters],
-  senderParameters: [senderParameters, setSenderParameters],
+  setParameters,
   disabled,
 }: {
-  parameters: string[]
-  subjectParameters: [string[], (value: string[]) => void]
-  contentParameters: [string[], (value: string[]) => void]
-  senderParameters: [string[], (value: string[]) => void]
+  parameterNames: string[]
+  parameters: Record<string, DocumentTriggerParameters>
+  setParameters: (params: Record<string, DocumentTriggerParameters>) => void
   disabled: boolean
 }) {
   return (
     <div className='flex flex-col gap-2'>
-      {parameters.map((paramName) => {
-        const value: ParameterType | undefined = subjectParameters.includes(
-          paramName,
-        )
-          ? ParameterType.Subject
-          : contentParameters.includes(paramName)
-            ? ParameterType.Content
-            : senderParameters.includes(paramName)
-              ? ParameterType.Sender
-              : undefined
+      {parameterNames.map((paramName) => {
+        const value = parameters[paramName]
 
         return (
           <div className='flex gap-2 items-center' key={paramName}>
@@ -119,30 +105,10 @@ function ParameterSelects({
               value={value}
               onChange={(newValue) => {
                 if (value === newValue) return
-                if (value === ParameterType.Subject) {
-                  setSubjectParameters(
-                    subjectParameters.filter((e) => e !== paramName),
-                  )
-                }
-                if (value === ParameterType.Content) {
-                  setContentParameters(
-                    contentParameters.filter((e) => e !== paramName),
-                  )
-                }
-                if (value === ParameterType.Sender) {
-                  setSenderParameters(
-                    senderParameters.filter((e) => e !== paramName),
-                  )
-                }
-                if (newValue === ParameterType.Subject) {
-                  setSubjectParameters([...subjectParameters, paramName])
-                }
-                if (newValue === ParameterType.Content) {
-                  setContentParameters([...contentParameters, paramName])
-                }
-                if (newValue === ParameterType.Sender) {
-                  setSenderParameters([...senderParameters, paramName])
-                }
+                setParameters({
+                  ...parameters,
+                  [paramName]: newValue as DocumentTriggerParameters,
+                })
               }}
             />
           </div>
@@ -195,15 +161,9 @@ export function EmailTriggerConfig({
   const [replyWithResponse, setReplyWithResponse] = useState<boolean>(
     emailTriggerConfig?.replyWithResponse ?? true,
   )
-  const [subjectParameters, setSubjectParameters] = useState<
-    string[] | undefined
-  >(emailTriggerConfig?.subjectParameters)
-  const [contentParameters, setContentParameters] = useState<
-    string[] | undefined
-  >(emailTriggerConfig?.contentParameters)
-  const [senderParameters, setSenderParameters] = useState<
-    string[] | undefined
-  >(emailTriggerConfig?.senderParameters)
+  const [parameters, setParameters] = useState<
+    Record<string, DocumentTriggerParameters>
+  >(emailTriggerConfig?.parameters ?? {})
 
   const [emailInput, setEmailInput] = useState('')
   const onAddEmail = useCallback(() => {
@@ -256,21 +216,13 @@ export function EmailTriggerConfig({
       emailWhitelist: emailWhitelist.length > 0 ? emailWhitelist : undefined,
       domainWhitelist: domainWhitelist.length > 0 ? domainWhitelist : undefined,
       replyWithResponse,
-      subjectParameters: subjectParameters?.length
-        ? subjectParameters
-        : undefined,
-      contentParameters: contentParameters?.length
-        ? contentParameters
-        : undefined,
-      senderParameters: senderParameters?.length ? senderParameters : undefined,
+      parameters,
     })
   }, [
     emailWhitelist,
     domainWhitelist,
     replyWithResponse,
-    subjectParameters,
-    contentParameters,
-    senderParameters,
+    parameters,
     emailAvailability,
   ])
 
@@ -336,16 +288,9 @@ export function EmailTriggerConfig({
         <>
           <Section title='Parameters'>
             <ParameterSelects
-              parameters={documentParameters}
-              subjectParameters={[
-                subjectParameters ?? [],
-                setSubjectParameters,
-              ]}
-              contentParameters={[
-                contentParameters ?? [],
-                setContentParameters,
-              ]}
-              senderParameters={[senderParameters ?? [], setSenderParameters]}
+              parameterNames={documentParameters}
+              parameters={parameters}
+              setParameters={setParameters}
               disabled={!canEdit}
             />
           </Section>
