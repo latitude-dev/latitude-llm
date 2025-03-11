@@ -15,6 +15,7 @@ export const envClient = createEnv({
     NEXT_PUBLIC_POSTHOG_HOST: z.string(),
     NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: z.string(),
     NEXT_PUBLIC_EMAIL_TRIGGER_DOMAIN: z.string().optional(),
+    NEXT_PUBLIC_EVALUATIONS_V2_ENABLED: z.string().optional(), // TODO: Remove when evaluations v2 is fully released
   },
   runtimeEnv: {
     NEXT_PUBLIC_APP_DOMAIN: APP_DOMAIN,
@@ -22,5 +23,7 @@ export const envClient = createEnv({
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? '',
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY ?? '',
     NEXT_PUBLIC_EMAIL_TRIGGER_DOMAIN: EMAIL_TRIGGER_DOMAIN ?? '',
+    NEXT_PUBLIC_EVALUATIONS_V2_ENABLED:
+      process.env.NEXT_PUBLIC_EVALUATIONS_V2_ENABLED, // TODO: Remove when evaluations v2 is fully released
   },
 })

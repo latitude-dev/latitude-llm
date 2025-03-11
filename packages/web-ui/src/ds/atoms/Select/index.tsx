@@ -11,11 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from './Primitives'
+import { IconName } from '../Icons'
 
 export type SelectOption<V extends unknown = unknown> = {
   label: string
   value: V
-  icon?: ReactNode
+  icon?: ReactNode | IconName
 }
 
 export type SelectOptionGroup<V extends unknown = unknown> = {

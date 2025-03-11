@@ -2,7 +2,8 @@ import {
   RuleEvaluationExactMatchConfiguration,
   RuleEvaluationExactMatchSpecification,
 } from '@latitude-data/constants'
-import { IconName } from '@latitude-data/web-ui'
+import { IconName, Input } from '@latitude-data/web-ui'
+import { useEffect, useState } from 'react'
 
 const specification = RuleEvaluationExactMatchSpecification
 export default {
@@ -12,13 +13,33 @@ export default {
 }
 
 function ConfigurationForm({
-  configuration,
+  configuration: defaultConfiguration,
   onChange,
 }: {
-  configuration: RuleEvaluationExactMatchConfiguration
-  onChange: (configuration: RuleEvaluationExactMatchConfiguration) => void
+  mode: 'create' | 'update'
+  configuration?: RuleEvaluationExactMatchConfiguration
+  onChange?: (configuration: RuleEvaluationExactMatchConfiguration) => void
 }) {
-  configuration // TODO: Implement
-  onChange // TODO: Implement
-  return <div>Exact Match</div>
+  const [configuration, setConfiguration] =
+    useState<RuleEvaluationExactMatchConfiguration>({
+      datasetLabel: defaultConfiguration?.datasetLabel ?? '',
+    } as RuleEvaluationExactMatchConfiguration)
+  useEffect(() => onChange?.(configuration), [configuration])
+
+  return (
+    <>
+      <Input
+        value={configuration.datasetLabel}
+        name='datasetLabel'
+        label='Dataset Label'
+        description='The column of the dataset to match against'
+        placeholder='label'
+        onChange={(e) =>
+          setConfiguration({ ...configuration, datasetLabel: e.target.value })
+        }
+        className='w-full'
+        required
+      />
+    </>
+  )
 }

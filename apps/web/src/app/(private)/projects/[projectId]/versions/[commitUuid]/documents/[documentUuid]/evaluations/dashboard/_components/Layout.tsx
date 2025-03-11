@@ -3,10 +3,12 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
+import useEvaluationsV2 from '$/stores/evaluationsV2'
 import {
   EvaluationDto,
   EvaluationResultableType,
   EvaluationTemplateWithCategory,
+  EvaluationV2,
 } from '@latitude-data/core/browser'
 import {
   BlankSlateStep,
@@ -90,29 +92,50 @@ Don't rawdog your prompts!
 }
 
 function EvaluationsTable({
-  evaluations: fallbackData,
+  evaluations: evaluationsFallback,
+  evaluationsV2: evaluationsV2Fallback,
   isGeneratorEnabled,
 }: {
   evaluations: EvaluationDto[]
+  evaluationsV2: EvaluationV2[]
   isGeneratorEnabled?: boolean
 }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
+
   const {
     data: evaluations,
-    isLoading,
-    destroy,
+    isLoading: isEvaluationsLoading,
+    destroy: deleteEvaluation,
   } = useEvaluations({
-    fallbackData,
+    fallbackData: evaluationsFallback,
     params: { documentUuid: document.documentUuid },
   })
 
-  if (!evaluations.length && isLoading) {
+  const {
+    data: evaluationsV2,
+    isLoading: isEvaluationsV2Loading,
+    deleteEvaluation: deleteEvaluationV2,
+  } = useEvaluationsV2(
+    { project, commit, document },
+    { fallbackData: evaluationsV2Fallback },
+  )
+
+  const isLoading = isEvaluationsLoading || isEvaluationsV2Loading
+
+  if (isLoading) {
     return <TableSkeleton cols={2} rows={3} />
   }
 
-  if (evaluations.length) {
+  if (evaluations.length || evaluationsV2.length) {
     return (
-      <ConnectedEvaluationsTable evaluations={evaluations} destroy={destroy} />
+      <ConnectedEvaluationsTable
+        evaluations={evaluations}
+        evaluationsV2={evaluationsV2}
+        deleteEvaluation={deleteEvaluation}
+        deleteEvaluationV2={deleteEvaluationV2}
+      />
     )
   }
 
@@ -141,10 +164,12 @@ function EvaluationsTable({
 
 export default function EvaluationsLayoutClient({
   evaluations,
+  evaluationsV2,
   templates,
   isGeneratorEnabled,
 }: {
   evaluations: EvaluationDto[]
+  evaluationsV2: EvaluationV2[]
   templates: EvaluationTemplateWithCategory[]
   isGeneratorEnabled?: boolean
 }) {
@@ -194,6 +219,7 @@ export default function EvaluationsLayoutClient({
         table={
           <EvaluationsTable
             evaluations={evaluations}
+            evaluationsV2={evaluationsV2}
             isGeneratorEnabled={isGeneratorEnabled}
           />
         }

@@ -1,15 +1,22 @@
 import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
 
-import { EvaluationMetadataType, EvaluationResultableType } from '../constants'
+import {
+  EvaluationMetadataType,
+  EvaluationResultableType,
+  EvaluationV2,
+} from '../constants'
 import { apiKeys } from './models/apiKeys'
 import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
 // DEPRECATED: we need to run migration and create new records in datasetsV2 for all existing datasets
+import { DocumentTriggerWithConfiguration } from '../services/documentTriggers/helpers/schema'
+import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
 import { datasetRows } from './models/datasetRows'
 import { datasets } from './models/datasets'
 import { datasetsV2 } from './models/datasetsV2'
 import { documentSuggestions } from './models/documentSuggestions'
+import { documentTriggers } from './models/documentTriggers'
 import { documentVersions } from './models/documentVersions'
 import { evaluationAdvancedTemplates } from './models/evaluationAdvancedTemplates'
 import { evaluationConfigurationBoolean } from './models/evaluationConfigurationBoolean'
@@ -21,8 +28,8 @@ import { evaluationMetadataLlmAsJudgeSimple } from './models/evaluationMetadataL
 import { evaluations } from './models/evaluations'
 import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
 import { integrations } from './models/integrations'
-import { mcpServers } from './models/mcpServers'
 import { magicLinkTokens } from './models/magicLinkTokens'
+import { mcpServers } from './models/mcpServers'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
 import { providerApiKeys } from './models/providerApiKeys'
@@ -35,9 +42,6 @@ import { subscriptions } from './models/subscriptions'
 import { traces } from './models/traces'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
-import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
-import { documentTriggers } from './models/documentTriggers'
-import { DocumentTriggerWithConfiguration } from '../services/documentTriggers/helpers/schema'
 
 export type {
   DocumentLog,
@@ -255,3 +259,8 @@ export type IntegrationDto = Omit<Integration, 'configuration' | 'type'> &
 type _DocumentTrigger = InferSelectModel<typeof documentTriggers>
 export type DocumentTrigger = Omit<_DocumentTrigger, 'configuration' | 'type'> &
   DocumentTriggerWithConfiguration
+
+// TODO: Remove when we migrate to v2
+export type EvaluationTmp =
+  | (EvaluationDto & { version: 'v1' })
+  | (EvaluationV2 & { version: 'v2' })

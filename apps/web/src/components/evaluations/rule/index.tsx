@@ -4,6 +4,8 @@ import {
   RuleEvaluationMetric,
   RuleEvaluationSpecification,
 } from '@latitude-data/constants'
+import { IconName } from '@latitude-data/web-ui'
+import { useEffect, useState } from 'react'
 import { EvaluationMetricFrontendSpecification } from '../index'
 import RuleEvaluationExactMatchSpecification from './ExactMatch'
 import RuleEvaluationRegularExpressionSpecification from './RegularExpression'
@@ -22,30 +24,37 @@ const METRICS: {
 const specification = RuleEvaluationSpecification
 export default {
   ...specification,
+  icon: 'computer' as IconName,
   ConfigurationForm: ConfigurationForm,
   metrics: METRICS,
 }
 
 function ConfigurationForm<M extends RuleEvaluationMetric>({
+  mode,
   metric,
-  configuration,
+  configuration: defaultConfiguration,
   onChange,
 }: {
+  mode: 'create' | 'update'
   metric: M
-  configuration: RuleEvaluationConfiguration<M>
-  onChange: (configuration: RuleEvaluationConfiguration<M>) => void
+  configuration?: RuleEvaluationConfiguration<M>
+  onChange?: (configuration: RuleEvaluationConfiguration<M>) => void
 }) {
+  const [configuration, setConfiguration] = useState<
+    RuleEvaluationConfiguration<M>
+  >(defaultConfiguration ?? ({} as RuleEvaluationConfiguration<M>))
+  useEffect(() => onChange?.(configuration), [configuration])
+
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
-  // TODO: Implement (probably dont pass the metric and make a selector component)
   return (
-    <div>
-      <h1>Rule Evaluation</h1>
+    <>
       <metricSpecification.ConfigurationForm
+        mode={mode}
         configuration={configuration}
-        onChange={onChange}
+        onChange={(value) => setConfiguration({ ...configuration, ...value })}
       />
-    </div>
+    </>
   )
 }

@@ -22,19 +22,23 @@ async function validate(
   },
   _: Database = database,
 ) {
-  if (!configuration.Pattern) {
+  if (!configuration.pattern) {
     return Result.error(new BadRequestError('Pattern is required'))
   }
 
   try {
-    new RegExp(configuration.Pattern)
+    new RegExp(configuration.pattern)
   } catch {
     return Result.error(new BadRequestError('Invalid regex pattern'))
   }
 
-  if (!safeRegex(configuration.Pattern, { limit: PATTERN_COMPLEXITY_LIMIT })) {
+  if (!safeRegex(configuration.pattern, { limit: PATTERN_COMPLEXITY_LIMIT })) {
     return Result.error(new BadRequestError('Invalid regex pattern'))
   }
 
-  return Result.ok(configuration)
+  // Note: all settings are explicitly returned to ensure we don't
+  // carry dangling fields from the original settings object
+  return Result.ok({
+    pattern: configuration.pattern,
+  })
 }

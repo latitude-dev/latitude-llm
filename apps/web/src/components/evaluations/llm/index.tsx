@@ -3,6 +3,7 @@ import {
   LlmEvaluationMetric,
   LlmEvaluationSpecification,
 } from '@latitude-data/constants'
+import { IconName } from '@latitude-data/web-ui'
 import { EvaluationMetricFrontendSpecification } from '../index'
 
 // prettier-ignore
@@ -17,6 +18,7 @@ const METRICS: {
 const specification = LlmEvaluationSpecification
 export default {
   ...specification,
+  icon: 'bot' as IconName,
   ConfigurationForm: undefined as any, // TODO: Implement
   metrics: METRICS,
 }

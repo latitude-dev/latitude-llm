@@ -6,7 +6,13 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
-import { EvaluationDto } from '@latitude-data/core/browser'
+import useEvaluationsV2 from '$/stores/evaluationsV2'
+import {
+  EvaluationDto,
+  EvaluationTmp,
+  EvaluationV2,
+  RuleEvaluationSpecification,
+} from '@latitude-data/core/browser'
 import {
   Button,
   ClickToCopyUuid,
@@ -21,21 +27,38 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 export default function ConnectedEvaluationsTable({
   evaluations,
-  destroy,
+  evaluationsV2,
+  deleteEvaluation,
+  deleteEvaluationV2,
 }: {
   evaluations: EvaluationDto[]
-  destroy: ReturnType<typeof useEvaluations>['destroy']
+  evaluationsV2: EvaluationV2[]
+  deleteEvaluation: ReturnType<typeof useEvaluations>['destroy']
+  deleteEvaluationV2: ReturnType<typeof useEvaluationsV2>['deleteEvaluation']
 }) {
   const navigate = useNavigate()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
-  const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationDto>()
+  const rows = useMemo<EvaluationTmp[]>(() => {
+    return [
+      ...evaluations.map((evaluation) => ({
+        ...evaluation,
+        version: 'v1' as const,
+      })),
+      ...evaluationsV2.map((evaluation) => ({
+        ...evaluation,
+        version: 'v2' as const,
+      })),
+    ]
+  }, [evaluations, evaluationsV2])
+
+  const [selectedRow, setSelectedRow] = useState<EvaluationTmp>()
   const [openDestroyModal, setOpenDestroyModal] = useState(false)
 
   return (
@@ -51,41 +74,46 @@ export default function ConnectedEvaluationsTable({
           </TableRow>
         </TableHeader>
         <TableBody className='max-h-full overflow-y-auto'>
-          {evaluations.map((evaluation) => (
+          {rows.map((row) => (
             <TableRow
-              key={evaluation.id}
+              key={row.uuid}
               className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border'
-              onClick={() =>
+              onClick={() => {
+                if (row.version !== 'v1') return
                 navigate.push(
                   ROUTES.projects
                     .detail({ id: project.id })
                     .commits.detail({ uuid: commit.uuid })
                     .documents.detail({ uuid: document.documentUuid })
-                    .evaluations.detail(evaluation.id).root,
+                    .evaluations.detail(row.id).root,
                 )
-              }
+              }}
             >
               <TableCell>
                 <div className='flex items-center justify-between gap-2 truncate'>
                   <Text.H5 noWrap ellipsis>
-                    {evaluation.name}
+                    {row.name}
                   </Text.H5>
                   <div onClick={(e) => e.stopPropagation()}>
-                    <ClickToCopyUuid uuid={evaluation.uuid} />
+                    <ClickToCopyUuid uuid={row.uuid} />
                   </div>
                 </div>
               </TableCell>
               <TableCell>
-                <Text.H5>{evaluation.description || '-'}</Text.H5>
+                <Text.H5>{row.description || '-'}</Text.H5>
               </TableCell>
               <TableCell>
                 <Text.H5>
-                  {evaluationMetadataTypes[evaluation.metadataType]}
+                  {row.version === 'v2'
+                    ? RuleEvaluationSpecification.name
+                    : evaluationMetadataTypes[row.metadataType]}
                 </Text.H5>
               </TableCell>
               <TableCell>
                 <Text.H5>
-                  {evaluationResultTypes[evaluation.resultType]}
+                  {row.version === 'v2'
+                    ? evaluationResultTypes['evaluation_resultable_numbers']
+                    : evaluationResultTypes[row.resultType]}
                 </Text.H5>
               </TableCell>
               <TableCell>
@@ -96,7 +124,7 @@ export default function ConnectedEvaluationsTable({
                   onClick={(e) => {
                     e.stopPropagation()
                     setOpenDestroyModal(true)
-                    setSelectedEvaluation(evaluation)
+                    setSelectedRow(row)
                   }}
                 />
               </TableCell>
@@ -104,28 +132,34 @@ export default function ConnectedEvaluationsTable({
           ))}
         </TableBody>
       </Table>
-      {selectedEvaluation && (
+      {selectedRow && (
         <ConfirmModal
           dismissible
           open={openDestroyModal}
-          title={`Remove ${selectedEvaluation.name} evaluation`}
+          title={`Remove ${selectedRow.name} evaluation`}
           type='destructive'
           onConfirm={() => {
-            destroy({ id: selectedEvaluation.id })
+            if (selectedRow.version === 'v2') {
+              deleteEvaluationV2({
+                evaluationUuid: selectedRow.uuid,
+              })
+            } else {
+              deleteEvaluation({ id: selectedRow.id })
+            }
             setOpenDestroyModal(false)
-            setSelectedEvaluation(undefined)
+            setSelectedRow(undefined)
           }}
           onCancel={() => {
             setOpenDestroyModal(false)
-            setSelectedEvaluation(undefined)
+            setSelectedRow(undefined)
           }}
           onOpenChange={(open) => {
             setOpenDestroyModal(open)
-            if (!open) setSelectedEvaluation(undefined)
+            if (!open) setSelectedRow(undefined)
           }}
           confirm={{
             label: 'Remove evaluation',
-            description: `Are you sure you want to delete the evaluation "${selectedEvaluation.name}"? This action cannot be undone.`,
+            description: `Are you sure you want to delete the evaluation "${selectedRow.name}"? This action cannot be undone.`,
           }}
         />
       )}

@@ -49,5 +49,7 @@ async function validate<M extends RuleEvaluationMetric>(
     .validate({ configuration }, db)
     .then((r) => r.unwrap())
 
-  return Result.ok(configuration)
+  // Note: all settings are explicitly returned to ensure we don't
+  // carry dangling fields from the original settings object
+  return Result.ok({ ...configuration })
 }

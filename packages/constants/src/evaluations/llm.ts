@@ -5,13 +5,13 @@ import {
 } from './shared'
 
 const llmEvaluationConfiguration = BaseEvaluationConfiguration.extend({
-  ProviderId: z.string(),
-  Model: z.string(),
-  Instructions: z.string(),
+  providerId: z.string(),
+  model: z.string(),
+  instructions: z.string(),
 })
 const llmEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({
-  EvaluationLogId: z.string(),
-  Reason: z.string(),
+  evaluationLogId: z.string(),
+  reason: z.string(),
 })
 
 // BINARY
@@ -20,8 +20,8 @@ export const LlmEvaluationBinarySpecification = {
   name: 'Binary',
   description: 'Judges whether the response is correct or incorrect',
   configuration: llmEvaluationConfiguration.extend({
-    PassDescription: z.string(),
-    FailDescription: z.string(),
+    passDescription: z.string(),
+    failDescription: z.string(),
   }),
   resultMetadata: llmEvaluationResultMetadata.extend({}),
   supportsLiveEvaluation: true,
@@ -39,10 +39,10 @@ export const LlmEvaluationRatingSpecification = {
   name: 'Rating',
   description: 'Judges the quality of the response',
   configuration: llmEvaluationConfiguration.extend({
-    MinRating: z.number(),
-    MinRatingDescription: z.string(),
-    MaxRating: z.number(),
-    MaxRatingDescription: z.string(),
+    minRating: z.number(),
+    minRatingDescription: z.string(),
+    maxRating: z.number(),
+    maxRatingDescription: z.string(),
   }),
   resultMetadata: llmEvaluationResultMetadata.extend({}),
   supportsLiveEvaluation: true,
@@ -60,7 +60,7 @@ export const LlmEvaluationComparisonSpecification = {
   name: 'Comparison',
   description: 'Judges whether the response is similar to the expected label',
   configuration: llmEvaluationConfiguration.extend({
-    DatasetLabel: z.string(),
+    datasetLabel: z.string(),
   }),
   resultMetadata: llmEvaluationResultMetadata.extend({}),
   supportsLiveEvaluation: false,
