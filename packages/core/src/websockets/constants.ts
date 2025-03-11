@@ -48,13 +48,23 @@ type DocumentBatchRunStatusArgs = {
 
 type EvaluationStatusArgs = {
   batchId: string
-  evaluationId: number
-  documentUuid: string
   total: number
   completed: number
   errors: number
   enqueued: number
-}
+} & (
+  | {
+      evaluationId: number
+      documentUuid: string
+      version: 'v1'
+    }
+  | {
+      commitId: number
+      documentUuid: string
+      evaluationUuid: string
+      version: 'v2'
+    }
+)
 
 type EvaluationResultCreatedArgs = {
   workspaceId: number

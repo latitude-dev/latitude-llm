@@ -4,6 +4,7 @@ import { queues } from '@latitude-data/core/queues'
 import { Worker } from 'bullmq'
 
 import { defaultWorker } from './worker-definitions/defaultWorker'
+import { evaluationsWorker } from './worker-definitions/evaluationsWorker'
 
 const WORKER_OPTS = {
   concurrency: 5,
@@ -13,7 +14,7 @@ const WORKER_OPTS = {
     removeOnFail: { count: 0 },
   }),
 }
-const WORKERS = [defaultWorker]
+const WORKERS = [defaultWorker, evaluationsWorker]
 
 export default async function startWorkers() {
   const connection = await queues({ enableOfflineQueue: true })

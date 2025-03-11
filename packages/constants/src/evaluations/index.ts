@@ -148,6 +148,21 @@ export type EvaluationV2<
   deletedAt: Date | null
 }
 
+export type EvaluationResultValue<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> =
+  | {
+      score: number
+      metadata: EvaluationResultMetadata<T, M>
+      error: null
+    }
+  | {
+      score: null
+      metadata: null
+      error: EvaluationResultError<T, M>
+    }
+
 export type EvaluationResultV2<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
@@ -162,18 +177,7 @@ export type EvaluationResultV2<
   usedForSuggestion: boolean | null
   createdAt: Date
   updatedAt: Date
-} & (
-  | {
-      score: number
-      metadata: EvaluationResultMetadata<T, M>
-      error: null
-    }
-  | {
-      score: null
-      metadata: null
-      error: EvaluationResultError<T, M>
-    }
-)
+} & EvaluationResultValue<T, M>
 
 export type EvaluationSettings<
   T extends EvaluationType = EvaluationType,

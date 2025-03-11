@@ -5,6 +5,7 @@ export enum Queues {
   eventsQueue = 'eventsQueue',
   eventHandlersQueue = 'eventHandlersQueue',
   liveEvaluationsQueue = 'liveEvaluationsQueue',
+  evaluationsQueue = 'evaluationsQueue',
 }
 
 // TODO: Review if we can remove this declarations
@@ -27,6 +28,7 @@ export enum Jobs {
   generateDocumentSuggestionJob = 'generateDocumentSuggestionJob',
   requestDocumentSuggestionsJob = 'requestDocumentSuggestionsJob',
   cleanDocumentSuggestionsJob = 'cleanDocumentSuggestionsJob',
+  runEvaluationV2Job = 'runEvaluationV2Job',
 }
 
 export const QUEUES = {
@@ -41,7 +43,6 @@ export const QUEUES = {
       'runDocumentForEvaluationJob',
       'runDocumentInBatchJob',
       'runDocumentJob',
-      'runEvaluationJob',
       'uploadDocumentLogsJob',
       'generateDocumentSuggestionJob',
       'requestDocumentSuggestionsJob',
@@ -73,10 +74,15 @@ export const QUEUES = {
       'sendSuggestionNotification',
       'requestDocumentSuggestionJob',
       'createDatasetRowsJob',
+      'evaluateLiveLogJob',
     ],
   },
   [Queues.liveEvaluationsQueue]: {
     name: Queues.liveEvaluationsQueue,
     jobs: ['runLiveEvaluationJob'],
+  },
+  [Queues.evaluationsQueue]: {
+    name: Queues.evaluationsQueue,
+    jobs: ['runEvaluationJob', 'runEvaluationV2Job'],
   },
 } as const
