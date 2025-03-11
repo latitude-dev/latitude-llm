@@ -286,14 +286,16 @@ export function EmailTriggerConfig({
       </Section>
       {emailAvailability !== EmailAvailabilityOptions.Disabled && (
         <>
-          <Section title='Parameters'>
-            <ParameterSelects
-              parameterNames={documentParameters}
-              parameters={parameters}
-              setParameters={setParameters}
-              disabled={!canEdit}
-            />
-          </Section>
+          {documentParameters.length && (
+            <Section title='Parameters'>
+              <ParameterSelects
+                parameterNames={documentParameters}
+                parameters={parameters}
+                setParameters={setParameters}
+                disabled={!canEdit}
+              />
+            </Section>
+          )}
           <Section title='Email settings'>
             <Text.H5 color='foregroundMuted'>
               Send an email to this address to run the prompt:
