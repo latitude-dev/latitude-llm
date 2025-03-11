@@ -6,7 +6,10 @@ import {
   jsonb,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { EvaluationResultMetadata } from '../../constants'
+import {
+  EvaluationResultError,
+  EvaluationResultMetadata,
+} from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
@@ -30,8 +33,9 @@ export const evaluationResultsV2 = latitudeSchema.table(
     evaluatedLogId: bigint('evaluated_log_id', { mode: 'number' })
       .notNull()
       .references(() => providerLogs.id, { onDelete: 'cascade' }),
-    score: bigint('score', { mode: 'number' }).notNull(),
-    metadata: jsonb('metadata').notNull().$type<EvaluationResultMetadata>(),
+    score: bigint('score', { mode: 'number' }),
+    metadata: jsonb('metadata').$type<EvaluationResultMetadata>(),
+    error: jsonb('error').$type<EvaluationResultError>(),
     // Denormalized metadata fields - create indexes if necessary
     usedForSuggestion: boolean('used_for_suggestion'),
     ...timestamps(),

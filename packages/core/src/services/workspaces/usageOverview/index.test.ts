@@ -4,8 +4,11 @@ import {
   EvaluationResultV2,
 } from '@latitude-data/constants'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { inArray } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { database } from '../../../client'
 import { ErrorableEntity } from '../../../constants'
+import { evaluationResultsV2 } from '../../../schema'
 import * as factories from '../../../tests/factories'
 import { getUsageOverview } from './getUsageOverview'
 import { buildAllData, onlyOverviewWorkspaces } from './testHelper'
@@ -105,20 +108,19 @@ describe('getUsageOverview', () => {
     })
     const evaluationResultV21 = data.workspaces.workspaceB.info
       .evaluationResultsV2[0] as EvaluationResultV2
-    await factories.createRunError({
-      errorableType: ErrorableEntity.EvaluationResult,
-      errorableUuid: evaluationResultV21.uuid,
-      code: RunErrorCodes.Unknown,
-      message: 'Error message',
-    })
     const evaluationResultV22 = data.workspaces.workspaceB.info
       .evaluationResultsV2[1] as EvaluationResultV2
-    await factories.createRunError({
-      errorableType: ErrorableEntity.EvaluationResult,
-      errorableUuid: evaluationResultV22.uuid,
-      code: RunErrorCodes.Unknown,
-      message: 'Error message',
-    })
+    await database
+      .update(evaluationResultsV2)
+      .set({
+        error: { message: 'Error message' },
+      })
+      .where(
+        inArray(evaluationResultsV2.id, [
+          evaluationResultV21.id,
+          evaluationResultV22.id,
+        ]),
+      )
 
     const result = await getUsageOverview({
       page: 1,
