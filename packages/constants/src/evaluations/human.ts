@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import {
   BaseEvaluationConfiguration,
+  BaseEvaluationResultError,
   BaseEvaluationResultMetadata,
 } from './shared'
 
@@ -10,6 +11,7 @@ const humanEvaluationConfiguration = BaseEvaluationConfiguration.extend({
 const humanEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({
   reason: z.string(),
 })
+const humanEvaluationResultError = BaseEvaluationResultError.extend({})
 
 // BINARY
 
@@ -21,6 +23,7 @@ export const HumanEvaluationBinarySpecification = {
     failDescription: z.string(),
   }),
   resultMetadata: humanEvaluationResultMetadata.extend({}),
+  resultError: humanEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
 }
 export type HumanEvaluationBinaryConfiguration = z.infer<
@@ -28,6 +31,9 @@ export type HumanEvaluationBinaryConfiguration = z.infer<
 >
 export type HumanEvaluationBinaryResultMetadata = z.infer<
   typeof HumanEvaluationBinarySpecification.resultMetadata
+>
+export type HumanEvaluationBinaryResultError = z.infer<
+  typeof HumanEvaluationBinarySpecification.resultError
 >
 
 // RATING
@@ -42,6 +48,7 @@ export const HumanEvaluationRatingSpecification = {
     maxRatingDescription: z.string(),
   }),
   resultMetadata: humanEvaluationResultMetadata.extend({}),
+  resultError: humanEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
 }
 export type HumanEvaluationRatingConfiguration = z.infer<
@@ -49,6 +56,9 @@ export type HumanEvaluationRatingConfiguration = z.infer<
 >
 export type HumanEvaluationRatingResultMetadata = z.infer<
   typeof HumanEvaluationRatingSpecification.resultMetadata
+>
+export type HumanEvaluationRatingResultError = z.infer<
+  typeof HumanEvaluationRatingSpecification.resultError
 >
 
 // COMPARISON
@@ -60,6 +70,7 @@ export const HumanEvaluationComparisonSpecification = {
     datasetLabel: z.string(),
   }),
   resultMetadata: humanEvaluationResultMetadata.extend({}),
+  resultError: humanEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
 }
 export type HumanEvaluationComparisonConfiguration = z.infer<
@@ -67,6 +78,9 @@ export type HumanEvaluationComparisonConfiguration = z.infer<
 >
 export type HumanEvaluationComparisonResultMetadata = z.infer<
   typeof HumanEvaluationComparisonSpecification.resultMetadata
+>
+export type HumanEvaluationComparisonResultError = z.infer<
+  typeof HumanEvaluationComparisonSpecification.resultError
 >
 
 /* ------------------------------------------------------------------------- */
@@ -91,11 +105,19 @@ export type HumanEvaluationResultMetadata<M extends HumanEvaluationMetric = Huma
   M extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonResultMetadata :
   never;
 
+// prettier-ignore
+export type HumanEvaluationResultError<M extends HumanEvaluationMetric = HumanEvaluationMetric> =
+  M extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryResultError :
+  M extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingResultError :
+  M extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonResultError :
+  never;
+
 export const HumanEvaluationSpecification = {
   name: 'Human-in-the-Loop',
   description: 'Evaluate responses using a human as a judge',
   configuration: humanEvaluationConfiguration,
   resultMetadata: humanEvaluationResultMetadata,
+  resultError: humanEvaluationResultError,
   // prettier-ignore
   metrics: {
     [HumanEvaluationMetric.Binary]: HumanEvaluationBinarySpecification,

@@ -1,7 +1,7 @@
 import { and, count, desc, eq, getTableColumns, gte, isNull } from 'drizzle-orm'
-import { ErrorableEntity, EvaluationResultV2 } from '../browser'
+import { EvaluationResultV2 } from '../browser'
 import { Result } from '../lib'
-import { evaluationResultsV2, runErrors } from '../schema'
+import { evaluationResultsV2 } from '../schema'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(evaluationResultsV2)
@@ -24,17 +24,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const result = await this.db
       .select({ count: count() })
       .from(evaluationResultsV2)
-      .leftJoin(
-        runErrors,
-        and(
-          eq(runErrors.errorableUuid, evaluationResultsV2.uuid),
-          eq(runErrors.errorableType, ErrorableEntity.EvaluationResult),
-        ),
-      )
       .where(
         and(
           this.scopeFilter,
-          isNull(runErrors.id),
+          isNull(evaluationResultsV2.error),
           gte(evaluationResultsV2.createdAt, since),
         ),
       )

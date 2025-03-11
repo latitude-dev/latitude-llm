@@ -1,6 +1,7 @@
 import {
   Commit,
   EvaluationMetric,
+  EvaluationResultError,
   EvaluationResultMetadata,
   EvaluationResultV2,
   EvaluationType,
@@ -22,6 +23,7 @@ type CreateEvaluationResultV2Args<
   workspace: Workspace
   score?: number
   metadata?: EvaluationResultMetadata<T, M>
+  error?: EvaluationResultError<T, M>
   usedForSuggestion?: boolean
   createdAt?: Date
 }
@@ -29,7 +31,7 @@ type CreateEvaluationResultV2Args<
 // prettier-ignore
 // eslint-disable-next-line no-redeclare
 export async function createEvaluationResultV2(
-  args: Omit<CreateEvaluationResultV2Args, 'metadata'>,
+  args: Omit<CreateEvaluationResultV2Args, 'metadata' | 'error'>,
 ): Promise<EvaluationResultV2<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>>
 
 // prettier-ignore
@@ -52,6 +54,7 @@ export async function createEvaluationResultV2<
     workspace,
     score = 75,
     metadata = {},
+    error,
     usedForSuggestion,
     createdAt,
   } = args
@@ -65,6 +68,7 @@ export async function createEvaluationResultV2<
       evaluatedLogId: providerLog.id,
       score: score,
       metadata: metadata,
+      error: error,
       usedForSuggestion: usedForSuggestion,
       ...(createdAt && { createdAt }),
     })

@@ -1,5 +1,7 @@
-import { sql, desc, eq, and, gte, isNull, max } from 'drizzle-orm'
+import { and, desc, eq, gte, isNull, max, sql } from 'drizzle-orm'
 import { database, Database } from '../../../client'
+import { ErrorableEntity } from '../../../constants'
+import { SubscriptionPlan } from '../../../plans'
 import {
   commits,
   documentLogs,
@@ -10,9 +12,7 @@ import {
   runErrors,
   workspaces,
 } from '../../../schema'
-import { ErrorableEntity } from '../../../constants'
 import { workspaceUsageInfoCTE } from './workspaceUsageInfoQuery'
-import { SubscriptionPlan } from '../../../plans'
 
 /**
  * Nice and big query. DON'T GET INTIMIDATED BY IT!
@@ -161,7 +161,6 @@ export async function getUsageOverview(
 
   const evaluationResultsV2CTE = db.$with('evaluation_results_v2_counts').as(
     db
-      .with(errorsCTE)
       .select({
         workspaceId: sql<number>`${evaluationResultsV2.workspaceId}`.as(
           'evaluation_result_v2_workspace_id',
@@ -186,16 +185,9 @@ export async function getUsageOverview(
         `.as('last_two_months_evaluation_results_v2_count'),
       })
       .from(evaluationResultsV2)
-      .leftJoin(
-        errorsCTE,
-        and(
-          eq(errorsCTE.errorableUuid, evaluationResultsV2.uuid),
-          eq(errorsCTE.errorableType, ErrorableEntity.EvaluationResult),
-        ),
-      )
       .where(
         and(
-          isNull(errorsCTE.id),
+          isNull(evaluationResultsV2.error),
           gte(
             evaluationResultsV2.createdAt,
             sql<Date>`${dateCondition} - INTERVAL '2 months'`,

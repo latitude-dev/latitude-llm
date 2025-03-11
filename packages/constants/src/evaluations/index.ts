@@ -2,18 +2,21 @@ import { z } from 'zod'
 import {
   HumanEvaluationConfiguration,
   HumanEvaluationMetric,
+  HumanEvaluationResultError,
   HumanEvaluationResultMetadata,
   HumanEvaluationSpecification,
 } from './human'
 import {
   LlmEvaluationConfiguration,
   LlmEvaluationMetric,
+  LlmEvaluationResultError,
   LlmEvaluationResultMetadata,
   LlmEvaluationSpecification,
 } from './llm'
 import {
   RuleEvaluationConfiguration,
   RuleEvaluationMetric,
+  RuleEvaluationResultError,
   RuleEvaluationResultMetadata,
   RuleEvaluationSpecification,
 } from './rule'
@@ -78,6 +81,19 @@ export type EvaluationResultMetadata<
 // prettier-ignore
 export const EvaluationResultMetadataSchema = z.custom<EvaluationResultMetadata>()
 
+// prettier-ignore
+export type EvaluationResultError<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> =
+  T extends EvaluationType.Rule ? RuleEvaluationResultError<M extends RuleEvaluationMetric ? M : never> :
+  T extends EvaluationType.Llm ? LlmEvaluationResultError<M extends LlmEvaluationMetric ? M : never> :
+  T extends EvaluationType.Human ? HumanEvaluationResultError<M extends HumanEvaluationMetric ? M : never> :
+  never;
+
+// prettier-ignore
+export const EvaluationResultErrorSchema = z.custom<EvaluationResultError>()
+
 export type EvaluationMetricSpecification<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
@@ -86,6 +102,7 @@ export type EvaluationMetricSpecification<
   description: string
   configuration: z.ZodSchema<EvaluationConfiguration<T, M>>
   resultMetadata: z.ZodSchema<EvaluationResultMetadata<T, M>>
+  resultError: z.ZodSchema<EvaluationResultError<T, M>>
   supportsLiveEvaluation: boolean
 }
 
@@ -95,6 +112,7 @@ export type EvaluationSpecification<T extends EvaluationType = EvaluationType> =
     description: string
     configuration: z.ZodSchema
     resultMetadata: z.ZodSchema
+    resultError: z.ZodSchema
     metrics: { [M in EvaluationMetric<T>]: EvaluationMetricSpecification<T, M> }
   }
 
@@ -141,8 +159,9 @@ export type EvaluationResultV2<
   evaluationUuid: string
   experimentId: number | null
   evaluatedLogId: number
-  score: number
-  metadata: EvaluationResultMetadata<T, M>
+  score: number | null
+  metadata: EvaluationResultMetadata<T, M> | null
+  error: EvaluationResultError<T, M> | null
   usedForSuggestion: boolean | null
   createdAt: Date
   updatedAt: Date

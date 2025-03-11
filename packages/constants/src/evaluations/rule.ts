@@ -1,11 +1,13 @@
 import { z } from 'zod'
 import {
   BaseEvaluationConfiguration,
+  BaseEvaluationResultError,
   BaseEvaluationResultMetadata,
 } from './shared'
 
 const ruleEvaluationConfiguration = BaseEvaluationConfiguration.extend({})
 const ruleEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({})
+const ruleEvaluationResultError = BaseEvaluationResultError.extend({})
 
 // EXACT MATCH
 
@@ -17,6 +19,7 @@ export const RuleEvaluationExactMatchSpecification = {
     datasetLabel: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
+  resultError: ruleEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
 }
 export type RuleEvaluationExactMatchConfiguration = z.infer<
@@ -24,6 +27,9 @@ export type RuleEvaluationExactMatchConfiguration = z.infer<
 >
 export type RuleEvaluationExactMatchResultMetadata = z.infer<
   typeof RuleEvaluationExactMatchSpecification.resultMetadata
+>
+export type RuleEvaluationExactMatchResultError = z.infer<
+  typeof RuleEvaluationExactMatchSpecification.resultError
 >
 
 // REGULAR EXPRESSION
@@ -35,6 +41,7 @@ export const RuleEvaluationRegularExpressionSpecification = {
     pattern: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
+  resultError: ruleEvaluationResultError.extend({}),
   supportsLiveEvaluation: true,
 }
 export type RuleEvaluationRegularExpressionConfiguration = z.infer<
@@ -42,6 +49,9 @@ export type RuleEvaluationRegularExpressionConfiguration = z.infer<
 >
 export type RuleEvaluationRegularExpressionResultMetadata = z.infer<
   typeof RuleEvaluationRegularExpressionSpecification.resultMetadata
+>
+export type RuleEvaluationRegularExpressionResultError = z.infer<
+  typeof RuleEvaluationRegularExpressionSpecification.resultError
 >
 
 // LENGTH COUNT
@@ -55,6 +65,7 @@ export const RuleEvaluationLengthCountSpecification = {
     maxLength: z.number().optional(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
+  resultError: ruleEvaluationResultError.extend({}),
   supportsLiveEvaluation: true,
 }
 export type RuleEvaluationLengthCountConfiguration = z.infer<
@@ -62,6 +73,9 @@ export type RuleEvaluationLengthCountConfiguration = z.infer<
 >
 export type RuleEvaluationLengthCountResultMetadata = z.infer<
   typeof RuleEvaluationLengthCountSpecification.resultMetadata
+>
+export type RuleEvaluationLengthCountResultError = z.infer<
+  typeof RuleEvaluationLengthCountSpecification.resultError
 >
 
 // LEXICAL OVERLAP
@@ -80,6 +94,7 @@ export const RuleEvaluationLexicalOverlapSpecification = {
     datasetLabel: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
+  resultError: ruleEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
 }
 export type RuleEvaluationLexicalOverlapConfiguration = z.infer<
@@ -87,6 +102,9 @@ export type RuleEvaluationLexicalOverlapConfiguration = z.infer<
 >
 export type RuleEvaluationLexicalOverlapResultMetadata = z.infer<
   typeof RuleEvaluationLexicalOverlapSpecification.resultMetadata
+>
+export type RuleEvaluationLexicalOverlapResultError = z.infer<
+  typeof RuleEvaluationLexicalOverlapSpecification.resultError
 >
 
 // SEMANTIC SIMILARITY
@@ -101,6 +119,7 @@ export const RuleEvaluationSemanticSimilaritySpecification = {
     datasetLabel: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
+  resultError: ruleEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
 }
 export type RuleEvaluationSemanticSimilarityConfiguration = z.infer<
@@ -108,6 +127,9 @@ export type RuleEvaluationSemanticSimilarityConfiguration = z.infer<
 >
 export type RuleEvaluationSemanticSimilarityResultMetadata = z.infer<
   typeof RuleEvaluationSemanticSimilaritySpecification.resultMetadata
+>
+export type RuleEvaluationSemanticSimilarityResultError = z.infer<
+  typeof RuleEvaluationSemanticSimilaritySpecification.resultError
 >
 
 /* ------------------------------------------------------------------------- */
@@ -138,11 +160,21 @@ export type RuleEvaluationResultMetadata<M extends RuleEvaluationMetric = RuleEv
   M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityResultMetadata :
   never;
 
+// prettier-ignore
+export type RuleEvaluationResultError<M extends RuleEvaluationMetric = RuleEvaluationMetric> = 
+  M extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchResultError :
+  M extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionResultError :
+  M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountResultError :
+  M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapResultError :
+  M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityResultError :
+  never;
+
 export const RuleEvaluationSpecification = {
   name: 'Programmatic Rule',
   description: 'Evaluate responses using a programmatic rule',
   configuration: ruleEvaluationConfiguration,
   resultMetadata: ruleEvaluationResultMetadata,
+  resultError: ruleEvaluationResultError,
   // prettier-ignore
   metrics: {
     [RuleEvaluationMetric.ExactMatch]: RuleEvaluationExactMatchSpecification,
