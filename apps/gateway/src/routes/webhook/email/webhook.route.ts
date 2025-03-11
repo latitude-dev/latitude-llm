@@ -11,7 +11,7 @@ export const emailWebhookRoute = createRoute({
   request: {
     body: {
       content: {
-        [http.MediaTypes.JSON]: {
+        'multipart/form-data': {
           schema: emailWebhookBodySchema,
         },
       },

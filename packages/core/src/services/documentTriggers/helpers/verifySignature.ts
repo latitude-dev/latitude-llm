@@ -13,14 +13,18 @@ export function verifyWebhookSignature(
     signature,
   }: {
     signingKey: string
-    timestamp: string
-    token: string
-    signature: string
+    timestamp?: string
+    token?: string
+    signature?: string
   },
   options: VerifyWebhookSignatureOptions = {
     maxTimestampAge: 300, // 300 seconds = 5 minutes
   },
 ): TypedResult<undefined, UnauthorizedError> {
+  if (!timestamp || !token || !signature) {
+    return Result.error(new UnauthorizedError('Missing signature'))
+  }
+
   const now = Math.floor(Date.now() / 1000)
   const timeDiff = now - parseInt(timestamp, 10)
   if (timeDiff > options.maxTimestampAge) {
