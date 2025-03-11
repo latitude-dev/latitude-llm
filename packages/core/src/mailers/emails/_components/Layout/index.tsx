@@ -9,6 +9,7 @@ import {
   Heading,
   Html,
   Img,
+  Link,
   Preview,
   Section,
   Tailwind,
@@ -19,10 +20,12 @@ export default function Layout({
   children,
   title,
   previewText,
+  footerText = 'The Latitude Team',
 }: {
   children: ReactNode
   title?: string
   previewText: string
+  footerText?: string | string[]
 }) {
   const rootUrl = env.APP_URL
   return (
@@ -54,17 +57,27 @@ export default function Layout({
               )}
               {children}
               <Section className='pt-4'>
-                <Text className='text-gray-500 text-sm'>The Latitude Team</Text>
+                {Array.isArray(footerText) ? (
+                  footerText.map((text) => (
+                    <Text key={text} className='text-gray-500 text-sm'>
+                      {text}
+                    </Text>
+                  ))
+                ) : (
+                  <Text className='text-gray-500 text-sm'>{footerText}</Text>
+                )}
               </Section>
             </Section>
             <Section className='w-full pt-4'>
-              <Img
-                src={`${rootUrl}/logodark.png`}
-                width='32'
-                height='32'
-                alt="Latitude's Logo"
-                className='mx-auto'
-              />
+              <Link href={rootUrl} className='text-center'>
+                <Img
+                  src={`${rootUrl}/logodark.png`}
+                  width='32'
+                  height='32'
+                  alt="Latitude's Logo"
+                  className='mx-auto'
+                />
+              </Link>
             </Section>
           </Container>
         </Tailwind>

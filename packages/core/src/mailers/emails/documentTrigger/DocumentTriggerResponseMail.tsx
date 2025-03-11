@@ -39,7 +39,7 @@ export default function DocumentTriggerResponseMail({
   if (result.error) {
     return (
       <Layout title='Error' previewText='An error occurred.'>
-        <Text>There was an error running the prompt:</Text>
+        <Text>There was an error running your prompt:</Text>
         <Text>{result.error.message}</Text>
       </Layout>
     )
@@ -49,7 +49,10 @@ export default function DocumentTriggerResponseMail({
   const agentResponse = getAgentResponse(message)
 
   return (
-    <Layout title='Response' previewText={`Prompt response.`}>
+    <Layout
+      previewText='Prompt response.'
+      footerText={['This is an AI-generated response.', 'Powered by Latitude.']}
+    >
       {agentResponse ? (
         <AgentResponseContent agentResponse={agentResponse} />
       ) : (

@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { APP_DOMAIN } from '$/app/(private)/_lib/constants'
 import { ROUTES } from '$/services/routes'
+import { NotEditableBanner } from '../_components/NotEditableBanner'
 
 function UnpublishedDocumentSettings({
   document,
@@ -204,6 +205,7 @@ export function PublishDocumentButton({
         </Button>
       </Popover.Trigger>
       <Popover.Content maxHeight='none' width={500} align='end'>
+        <NotEditableBanner description='Publish settings cannot be modified in a Draft.' />
         {isPublished ? (
           <PublishedDocumentSettings
             document={document}
