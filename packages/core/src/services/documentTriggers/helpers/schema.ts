@@ -5,6 +5,7 @@ import {
 import { z } from 'zod'
 
 export const emailTriggerConfigurationSchema = z.object({
+  name: z.string().optional(),
   replyWithResponse: z.boolean(),
   emailWhitelist: z.array(z.string()).optional(),
   domainWhitelist: z.array(z.string()).optional(),
