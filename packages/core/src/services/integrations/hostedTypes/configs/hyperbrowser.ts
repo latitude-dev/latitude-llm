@@ -2,8 +2,7 @@ import { HostedIntegrationConfig } from '../types'
 import { npxCommand } from '../utils'
 
 export default {
-  description:
-    'Integration for interacting with Hyperbrowser',
+  description: 'Integration for interacting with Hyperbrowser',
   command: npxCommand({
     package: 'hyperbrowser-mcp',
   }),
@@ -15,6 +14,5 @@ export default {
       required: true,
     },
   },
-  envSource:
-    'https://www.hyperbrowser.ai/',
+  envSource: 'https://www.hyperbrowser.ai/',
 } as HostedIntegrationConfig
