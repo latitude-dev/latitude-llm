@@ -545,6 +545,7 @@ const ContentImage = ({
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
 }) => {
+  // TODO: Improve ContentImage component to actually display the image instead of just the URL
   if (
     (typeof image !== 'string' && !(image instanceof URL)) ||
     !URL.canParse(image.toString()) ||
@@ -612,6 +613,7 @@ const ContentFile = ({
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
 }) => {
+  // TODO: Improve ContentFile component to actually display a file representation instead of just the URL
   if (
     (typeof file !== 'string' && !(file instanceof URL)) ||
     !URL.canParse(file.toString()) ||

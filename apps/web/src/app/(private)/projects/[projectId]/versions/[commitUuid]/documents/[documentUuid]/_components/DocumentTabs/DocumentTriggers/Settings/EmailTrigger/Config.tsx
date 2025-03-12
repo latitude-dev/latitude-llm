@@ -70,6 +70,7 @@ const PARAMETER_OPTIONS: Record<DocumentTriggerParameters, string> = {
   [DocumentTriggerParameters.SenderEmail]: 'Sender Email',
   [DocumentTriggerParameters.Subject]: 'Email Subject',
   [DocumentTriggerParameters.Body]: 'Email Content',
+  [DocumentTriggerParameters.Attachments]: 'Attachments',
 }
 
 function ParameterSelects({

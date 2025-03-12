@@ -3,7 +3,7 @@ import React from 'react'
 
 import { Link, Text } from '@react-email/components'
 
-import Layout from '../_components/Layout'
+import ContainerLayout from '../_components/ContainerLayout'
 import { User } from '../../../browser'
 
 type Props = {
@@ -11,7 +11,7 @@ type Props = {
 }
 export default function InvitationMail({ invitee }: Props) {
   return (
-    <Layout previewText={`You've been invited to join Latitude!`}>
+    <ContainerLayout previewText={`You've been invited to join Latitude!`}>
       <Text>Hi!</Text>
       <Text>
         {invitee.name} has invited you to join Latitude. Click the link below to
@@ -24,7 +24,7 @@ export default function InvitationMail({ invitee }: Props) {
       >
         Click here to set up your account
       </Link>
-    </Layout>
+    </ContainerLayout>
   )
 }
 

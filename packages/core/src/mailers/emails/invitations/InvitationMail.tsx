@@ -3,7 +3,7 @@ import React from 'react'
 
 import { Link, Text } from '@react-email/components'
 
-import Layout from '../_components/Layout'
+import ContainerLayout from '../_components/ContainerLayout'
 import { User } from '../../../browser'
 
 type Props = {
@@ -17,7 +17,7 @@ export default function InvitationMail({
   invitationToken,
 }: Props) {
   return (
-    <Layout previewText={`Join ${invitee.name}'s workspace.`}>
+    <ContainerLayout previewText={`Join ${invitee.name}'s workspace.`}>
       <Text>Hi {invited.name},</Text>
       <Text>
         {invitee.name} has invited you to join their workspace in Latitude.
@@ -30,7 +30,7 @@ export default function InvitationMail({
       >
         Click here to log in
       </Link>
-    </Layout>
+    </ContainerLayout>
   )
 }
 

@@ -17,6 +17,7 @@ export const manualEmailTriggerAction = withAdmin
       body: z.string(),
       messageId: z.string().optional(),
       references: z.string().optional(),
+      files: z.array(z.union([z.string(), z.instanceof(File)])).optional(),
     }),
   )
   .handler(async ({ input }) => {
@@ -37,6 +38,7 @@ export const manualEmailTriggerAction = withAdmin
       parentMessageIds: input.references?.length
         ? input.references.split(' ')
         : undefined,
+      attachments: input.files,
     })
 
     return {}

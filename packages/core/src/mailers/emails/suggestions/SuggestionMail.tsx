@@ -1,7 +1,7 @@
 import React from 'react'
 
 import { Link, Text } from '@react-email/components'
-import Layout from '../_components/Layout'
+import ContainerLayout from '../_components/ContainerLayout'
 
 export default function SuggestionMail({
   user,
@@ -17,7 +17,10 @@ export default function SuggestionMail({
   link: string
 }) {
   return (
-    <Layout title='Suggestion' previewText={`Suggestion for ${document}.`}>
+    <ContainerLayout
+      title='Suggestion'
+      previewText={`Suggestion for ${document}.`}
+    >
       <Text>Hi {user},</Text>
       <Text>
         We have generated a suggestion for {document} to improve {evaluation}:
@@ -30,7 +33,7 @@ export default function SuggestionMail({
       >
         Click here to improve {document}
       </Link>
-    </Layout>
+    </ContainerLayout>
   )
 }
 

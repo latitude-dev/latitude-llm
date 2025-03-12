@@ -1,7 +1,7 @@
 import React from 'react'
 
 import { Text, Img, Markdown } from '@react-email/components'
-import Layout from '../_components/Layout'
+import ContainerLayout from '../_components/ContainerLayout'
 import { LatitudeError, TypedResult } from '../../../lib'
 import {
   ContentType,
@@ -10,6 +10,7 @@ import {
   type ToolCall,
 } from '@latitude-data/compiler'
 import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
+import PlainLayout from '../_components/PlainLayout'
 
 function getAgentResponse(
   message: AssistantMessage,
@@ -38,10 +39,10 @@ export default function DocumentTriggerResponseMail({
 }) {
   if (result.error) {
     return (
-      <Layout title='Error' previewText='An error occurred.'>
+      <ContainerLayout title='Error' previewText='An error occurred.'>
         <Text>There was an error running your prompt:</Text>
         <Text>{result.error.message}</Text>
-      </Layout>
+      </ContainerLayout>
     )
   }
 
@@ -49,7 +50,7 @@ export default function DocumentTriggerResponseMail({
   const agentResponse = getAgentResponse(message)
 
   return (
-    <Layout
+    <PlainLayout
       previewText='Prompt response.'
       footerText={['This is an AI-generated response.', 'Powered by Latitude.']}
     >
@@ -58,7 +59,7 @@ export default function DocumentTriggerResponseMail({
       ) : (
         <RegularPromptResponseContent message={message} />
       )}
-    </Layout>
+    </PlainLayout>
   )
 }
 
