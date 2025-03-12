@@ -42,6 +42,8 @@ export default function useConnectedEvaluations(
       }: {
         data: ConnectedEvaluation
       }) => {
+        if (!updatedEvaluation) return
+
         mutate(
           (evaluations) =>
             evaluations?.map((evaluation) =>
