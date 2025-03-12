@@ -30,6 +30,7 @@ export enum DocumentTriggerParameters {
   SenderName = 'senderName',
   Subject = 'subject',
   Body = 'body',
+  Attachments = 'attachments',
 }
 
 export * from './models'

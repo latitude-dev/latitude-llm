@@ -16,7 +16,7 @@ import {
   Text,
 } from '@react-email/components'
 
-export default function Layout({
+export default function ContainerLayout({
   children,
   title,
   previewText,

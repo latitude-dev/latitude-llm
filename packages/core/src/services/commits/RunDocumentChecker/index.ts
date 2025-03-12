@@ -4,12 +4,26 @@ import {
   type ReferencePromptFn,
 } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
+import {
+  Adapters,
+  isPromptLFile,
+  Chain as PromptlChain,
+  scan,
+  toPromptLFile,
+  type PromptLFile,
+} from 'promptl-ai'
 
 import { DocumentVersion, ErrorableEntity } from '../../../browser'
-import { Result } from '../../../lib'
+import {
+  BadRequestError,
+  ErrorResult,
+  LatitudeError,
+  PromisedResult,
+  Result,
+} from '../../../lib'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { createRunError } from '../../runErrors/create'
+import { PromptConfig } from '@latitude-data/constants'
 
 type RunDocumentErrorCodes = RunErrorCodes.ChainCompileError
 
@@ -68,10 +82,17 @@ export class RunDocumentChecker {
           referenceFn: this.referenceFn,
         })
 
+        const processedParameters = await this.processParameters({
+          parameters: this.parameters,
+          config: metadata.config as PromptConfig,
+        })
+
+        if (processedParameters.error) return processedParameters
+
         return Result.ok({
           chain: new PromptlChain({
             prompt: metadata.resolvedPrompt,
-            parameters: this.processParameters(this.parameters),
+            parameters: processedParameters.unwrap(),
             adapter: Adapters.default,
             includeSourceMap: true,
           }),
@@ -101,9 +122,13 @@ export class RunDocumentChecker {
     }).then((r) => r.unwrap())
   }
 
-  private processParameters(
-    parameters: Record<string, unknown>,
-  ): Record<string, unknown> {
+  private processParameters({
+    parameters,
+    config,
+  }: {
+    parameters: Record<string, unknown>
+    config: PromptConfig
+  }): PromisedResult<Record<string, unknown>, LatitudeError> {
     const result = Object.entries(parameters).reduce(
       (acc, [key, value]) => {
         if (typeof value === 'string') {
@@ -121,6 +146,90 @@ export class RunDocumentChecker {
       {} as Record<string, unknown>,
     )
 
-    return result
+    return this.convertFileParameters({ parameters: result, config })
+  }
+
+  /**
+   * Fetches the file metadata for a given URL without downloading the file.
+   */
+  private async getFileMetadata(
+    url: string,
+  ): PromisedResult<PromptLFile, LatitudeError> {
+    try {
+      const response = await fetch(url, { method: 'HEAD' })
+      if (!response.ok) {
+        return Result.error(new LatitudeError(`Error fetching file: ${url}`))
+      }
+
+      const contentDisposition = response.headers.get('Content-Disposition')
+      const contentType = response.headers.get('Content-Type')
+      const contentLength = response.headers.get('Content-Length')
+
+      let fileName: string | undefined
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?(.+)/)
+        if (match && match.length >= 2) fileName = decodeURIComponent(match[1]!)
+      }
+      if (!fileName) {
+        const urlPath = new URL(url).pathname
+        fileName = urlPath.substring(urlPath.lastIndexOf('/') + 1)
+      }
+
+      return Result.ok(
+        toPromptLFile({
+          url,
+          file: {
+            name: fileName,
+            type: contentType ?? '',
+            size: parseInt(contentLength ?? '0'),
+          } as File,
+        }),
+      )
+    } catch (e) {
+      return Result.error(new LatitudeError(`Error fetching file: ${url}`))
+    }
+  }
+
+  /**
+   * Converts all parameters marked as "file" in the config to the PromptLFile type.
+   */
+  private async convertFileParameters({
+    parameters,
+    config,
+  }: {
+    parameters: Record<string, unknown>
+    config: PromptConfig
+  }): PromisedResult<Record<string, unknown>, LatitudeError> {
+    if (!config.parameters) return Result.ok(parameters)
+
+    const fileParameterKeys = Object.entries(config.parameters)
+      .filter(([, value]) => value.type === 'file')
+      .map(([key]) => key)
+
+    const fileResults = await Promise.all(
+      fileParameterKeys.map(async (paramName) => {
+        const value = parameters[paramName]
+        if (isPromptLFile(value)) return Result.nil()
+        if (Array.isArray(value) && value.every(isPromptLFile)) {
+          return Result.nil()
+        }
+
+        if (typeof value !== 'string') {
+          return Result.error(
+            new BadRequestError(
+              `Invalid parameter value for '${paramName}'. Expected a the file URL.`,
+            ),
+          )
+        }
+        const fileResult = await this.getFileMetadata(value)
+        if (fileResult.error) return fileResult
+        parameters[paramName] = fileResult.unwrap()
+        return Result.nil()
+      }),
+    )
+
+    const fileError = fileResults.find((r) => r.error)
+    if (fileError) return fileError as ErrorResult<LatitudeError>
+    return Result.ok(parameters)
   }
 }

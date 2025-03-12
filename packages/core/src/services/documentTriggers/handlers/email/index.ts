@@ -75,6 +75,7 @@ export async function handleEmailTrigger(
     body,
     messageId,
     parentMessageIds,
+    attachments,
   }: {
     recipient: string
     senderEmail: string
@@ -83,6 +84,7 @@ export async function handleEmailTrigger(
     body: string
     messageId?: string
     parentMessageIds?: string[]
+    attachments?: (string | File)[]
   },
   db = database,
 ): PromisedResult<undefined> {
@@ -120,6 +122,7 @@ export async function handleEmailTrigger(
       senderName,
       subject,
       body,
+      attachments,
     },
     db,
   )

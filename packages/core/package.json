@@ -163,7 +163,7 @@
     "diff-match-patch": "^1.0.5",
     "js-yaml": "^4.1.0",
     "mustache": "^4.2.0",
-    "promptl-ai": "^0.4.12",
+    "promptl-ai": "^0.5.1",
     "safe-regex": "^2.1.1"
   }
 }

@@ -3,10 +3,18 @@
 import { manualEmailTriggerAction } from '$/actions/admin/documentTriggers/manualTrigger/email'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { Button, FormWrapper, Input, TextArea } from '@latitude-data/web-ui'
-import { FormEvent, useCallback } from 'react'
+import { ChangeEvent, FormEvent, useCallback, useState } from 'react'
 
 export default function SendEmailTrigger() {
   const { execute, isPending } = useLatitudeAction(manualEmailTriggerAction)
+  const [files, setFiles] = useState<File[]>([])
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles(Array.from(e.target.files))
+    }
+  }
+
   const handleSubmit = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault()
@@ -38,9 +46,10 @@ export default function SendEmailTrigger() {
         body: content,
         messageId,
         references,
+        files,
       })
     },
-    [execute],
+    [execute, files],
   )
 
   return (
@@ -78,6 +87,13 @@ export default function SendEmailTrigger() {
           label='Content'
           name='content'
           placeholder='Content of the email'
+        />
+        <Input
+          type='file'
+          label='Attachments'
+          name='attachments'
+          multiple
+          onChange={handleFileChange}
         />
         <Button type='submit' disabled={isPending}>
           Send

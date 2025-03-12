@@ -1,9 +1,15 @@
 import {
   BadRequestError,
+  ErrorResult,
   LatitudeError,
   PromisedResult,
   Result,
 } from '../../../../lib'
+import {
+  type PromptLFile,
+  promptLFileToMessageContent,
+  toPromptLFile,
+} from 'promptl-ai'
 import {
   DocumentLog,
   DocumentTriggerParameters,
@@ -19,11 +25,13 @@ import { runDocumentAtCommit } from '../../../commits/runDocumentAtCommit'
 import { unsafelyFindWorkspace } from '../../../../data-access'
 import { DocumentTrigger, Workspace } from '../../../../browser'
 import {
-  AssistantMessage,
   MessageRole,
-  UserMessage,
+  ContentType,
+  type AssistantMessage,
+  type UserMessage,
 } from '@latitude-data/compiler'
 import { addMessages } from '../../../documentLogs'
+import { uploadFile } from '../../../files'
 
 async function getNewTriggerResponse(
   {
@@ -34,6 +42,7 @@ async function getNewTriggerResponse(
     senderName,
     subject,
     body,
+    attachments,
   }: {
     workspace: Workspace
     trigger: DocumentTrigger
@@ -42,6 +51,7 @@ async function getNewTriggerResponse(
     senderName: string | undefined
     subject: string
     body: string
+    attachments?: PromptLFile[]
   },
   db = database,
 ): PromisedResult<AssistantMessage, LatitudeError> {
@@ -73,12 +83,21 @@ async function getNewTriggerResponse(
   const parameters = Object.fromEntries(
     Object.entries(trigger.configuration.parameters ?? {}).map(
       ([key, value]: [string, DocumentTriggerParameters]) => {
-        if (value === DocumentTriggerParameters.SenderName)
+        if (value === DocumentTriggerParameters.SenderName) {
           return [key, senderName]
-        if (value === DocumentTriggerParameters.SenderEmail)
+        }
+        if (value === DocumentTriggerParameters.SenderEmail) {
           return [key, senderEmail]
-        if (value === DocumentTriggerParameters.Subject) return [key, subject]
-        if (value === DocumentTriggerParameters.Body) return [key, body]
+        }
+        if (value === DocumentTriggerParameters.Subject) {
+          return [key, subject]
+        }
+        if (value === DocumentTriggerParameters.Body) {
+          return [key, body]
+        }
+        if (value === DocumentTriggerParameters.Attachments) {
+          return [key, attachments ?? []]
+        }
         return [key, undefined]
       },
     ),
@@ -108,10 +127,12 @@ async function getFollowUpTriggerResponse({
   workspace,
   parentLog,
   body,
+  attachments,
 }: {
   workspace: Workspace
   parentLog: DocumentLog
   body: string
+  attachments?: PromptLFile[]
 }): PromisedResult<AssistantMessage, LatitudeError> {
   const runResult = await addMessages({
     workspace,
@@ -119,7 +140,10 @@ async function getFollowUpTriggerResponse({
     messages: [
       {
         role: MessageRole.user,
-        content: [{ type: 'text', text: body }],
+        content: [
+          { type: ContentType.text, text: body },
+          ...(attachments ?? []).map(promptLFileToMessageContent),
+        ],
       } as UserMessage,
     ],
     source: LogSources.EmailTrigger,
@@ -165,6 +189,44 @@ export async function findReferencedLog(
   return Result.nil()
 }
 
+export async function uploadAttachments({
+  workspace,
+  attachments,
+}: {
+  workspace: Workspace
+  attachments: (string | File)[]
+}): PromisedResult<PromptLFile[], LatitudeError> {
+  const results = await Promise.all(
+    attachments.map(async (file) => {
+      if (typeof file === 'string') {
+        return Result.error(
+          new BadRequestError(`Invalid attachment: '${file}'`),
+        )
+      }
+
+      const uploadResult = await uploadFile({
+        file,
+        workspace,
+      })
+      if (uploadResult.error) return uploadResult as ErrorResult<LatitudeError>
+
+      return Result.ok(
+        toPromptLFile({
+          file,
+          url: uploadResult.unwrap(),
+        }),
+      )
+    }),
+  )
+
+  const errors = results.filter((result) => result.error)
+  if (errors.length) {
+    return Result.error(errors[0]!.error!)
+  }
+
+  return Result.ok(results.map((result) => result.unwrap()))
+}
+
 export async function getEmailResponse(
   {
     documentUuid,
@@ -175,6 +237,7 @@ export async function getEmailResponse(
     senderName,
     subject,
     body,
+    attachments: attachedFiles,
   }: {
     documentUuid: string
     trigger: DocumentTrigger
@@ -184,6 +247,7 @@ export async function getEmailResponse(
     senderName: string | undefined
     subject: string
     body: string
+    attachments?: (string | File)[]
   },
   db = database,
 ): PromisedResult<AssistantMessage, LatitudeError> {
@@ -191,6 +255,13 @@ export async function getEmailResponse(
     trigger.workspaceId,
     db,
   )) as Workspace
+
+  const attachmentsResult = await uploadAttachments({
+    workspace,
+    attachments: attachedFiles ?? [],
+  })
+  if (attachmentsResult.error) return attachmentsResult
+  const attachments = attachmentsResult.unwrap()
 
   const referencedLogResult = await findReferencedLog(
     {
@@ -209,6 +280,7 @@ export async function getEmailResponse(
       workspace,
       parentLog,
       body,
+      attachments,
     })
   }
 
@@ -220,5 +292,6 @@ export async function getEmailResponse(
     senderName,
     subject: 'Re: ' + subject,
     body,
+    attachments,
   })
 }

@@ -278,8 +278,8 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       promptl-ai:
-        specifier: ^0.4.12
-        version: 0.4.12
+        specifier: ^0.5.1
+        version: 0.5.1
       rate-limiter-flexible:
         specifier: ^5.0.3
         version: 5.0.4
@@ -435,8 +435,8 @@ importers:
         specifier: ^1.161.6
         version: 1.176.0
       promptl-ai:
-        specifier: ^0.4.12
-        version: 0.4.12
+        specifier: ^0.5.1
+        version: 0.5.1
       rate-limiter-flexible:
         specifier: ^5.0.3
         version: 5.0.4
@@ -781,8 +781,8 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0
       promptl-ai:
-        specifier: ^0.4.12
-        version: 0.4.12
+        specifier: ^0.5.1
+        version: 0.5.1
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -824,8 +824,8 @@ importers:
         specifier: ^4.2.0
         version: 4.2.0
       promptl-ai:
-        specifier: ^0.4.12
-        version: 0.4.12
+        specifier: ^0.5.1
+        version: 0.5.1
       safe-regex:
         specifier: ^2.1.1
         version: 2.1.1
@@ -1062,8 +1062,8 @@ importers:
         specifier: 3.3.2
         version: 3.3.2
       promptl-ai:
-        specifier: ^0.4.12
-        version: 0.4.12
+        specifier: ^0.5.1
+        version: 0.5.1
       typescript:
         specifier: ^5.5.4
         version: 5.7.2
@@ -1404,8 +1404,8 @@ importers:
         specifier: ^8.4.39
         version: 8.4.47
       promptl-ai:
-        specifier: ^0.4.12
-        version: 0.4.12
+        specifier: ^0.5.1
+        version: 0.5.1
       react:
         specifier: 18.3.0
         version: 18.3.0
@@ -3432,9 +3432,6 @@ packages:
     peerDependencies:
       drizzle-orm: '>= 0.29 <1'
       lucia: 3.x
-    peerDependenciesMeta:
-      drizzle-orm:
-        optional: true
 
   '@lukeed/ms@2.0.2':
     resolution: {integrity: sha512-9I2Zn6+NJLfaGoz9jN3lpwDgAYvfGeNYdbAIjJOqzs4Tpc+VU3Jqq4IofSUBKajiDS8k9fZIg18/z13mpk1bsA==}
@@ -11427,8 +11424,8 @@ packages:
     resolution: {integrity: sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==}
     engines: {node: '>=0.4.0'}
 
-  promptl-ai@0.4.12:
-    resolution: {integrity: sha512-8iLalee/FucFdpsci3dDUd/edsAcPlr/ebgKoRIS5KDsHC9RMcJzYY60G2/vpxrsWQeqCC8hheoKEznNmJR7Pg==}
+  promptl-ai@0.5.1:
+    resolution: {integrity: sha512-vNSe6EaVmTVcRu63G58QYaqrW0rG9Veb3d/8jDz/PBhZHYcGI2t5lU+ezY7oLaEiZyx/HBbYlweof4Hoos3Q7g==}
 
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
@@ -16149,9 +16146,8 @@ snapshots:
 
   '@lucia-auth/adapter-drizzle@1.1.0(drizzle-orm@0.33.0(@opentelemetry/api@1.8.0)(@types/pg@8.11.10)(@types/react@18.3.0)(pg@8.13.1)(react@19.0.0-rc-5d19e1c8-20240923))(lucia@3.2.2)':
     dependencies:
-      lucia: 3.2.2
-    optionalDependencies:
       drizzle-orm: 0.33.0(@opentelemetry/api@1.8.0)(@types/pg@8.11.10)(@types/react@18.3.0)(pg@8.13.1)(react@19.0.0-rc-5d19e1c8-20240923)
+      lucia: 3.2.2
 
   '@lukeed/ms@2.0.2': {}
 
@@ -20370,7 +20366,7 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.7.2))(eslint@8.57.1)(typescript@5.7.2)
       '@typescript-eslint/parser': 6.21.0(eslint@8.57.1)(typescript@5.7.2)
       eslint-config-prettier: 9.1.0(eslint@8.57.1)
-      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.7.2))(eslint-import-resolver-typescript@3.6.3)(eslint@8.57.1))
+      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.31.0)
       eslint-import-resolver-typescript: 3.6.3(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.7.2))(eslint-plugin-import@2.31.0)(eslint@8.57.1)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.57.1)
       eslint-plugin-import: 2.31.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.2))(eslint@8.57.1)
@@ -22277,7 +22273,7 @@ snapshots:
       eslint: 8.57.1
       eslint-plugin-turbo: 2.2.3(eslint@8.57.1)
 
-  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.7.2))(eslint-import-resolver-typescript@3.6.3)(eslint@8.57.1)):
+  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.31.0):
     dependencies:
       eslint-plugin-import: 2.31.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.7.2))(eslint@8.57.1)
 
@@ -22295,7 +22291,7 @@ snapshots:
       debug: 4.3.7
       enhanced-resolve: 5.17.1
       eslint: 8.57.1
-      eslint-module-utils: 2.12.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.7.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.6.3(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.7.2))(eslint-plugin-import@2.31.0)(eslint@8.57.1))(eslint@8.57.1)
+      eslint-module-utils: 2.12.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.7.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.6.3)(eslint@8.57.1)
       fast-glob: 3.3.2
       get-tsconfig: 4.8.1
       is-bun-module: 1.2.1
@@ -22308,7 +22304,7 @@ snapshots:
       - eslint-import-resolver-webpack
       - supports-color
 
-  eslint-module-utils@2.12.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.7.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.6.3(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.7.2))(eslint-plugin-import@2.31.0)(eslint@8.57.1))(eslint@8.57.1):
+  eslint-module-utils@2.12.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.7.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.6.3)(eslint@8.57.1):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
@@ -26612,7 +26608,7 @@ snapshots:
 
   progress@2.0.3: {}
 
-  promptl-ai@0.4.12:
+  promptl-ai@0.5.1:
     dependencies:
       acorn: 8.14.0
       code-red: 1.0.4

@@ -20,7 +20,9 @@ export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (
     sender,
     from,
     subject,
-    'body-plain': body,
+    'body-plain': plainBody,
+    'stripped-text': strippedText,
+    'stripped-signature': strippedSignature,
     token,
     timestamp,
     signature,
@@ -31,6 +33,9 @@ export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (
   if (!env.MAILGUN_WEBHOOK_SIGNING_KEY) {
     throw new UnauthorizedError('Env MAILGUN_WEBHOOK_SIGNING_KEY missing.')
   }
+
+  const attachedFiles = await c.req.parseBody()
+  const attachments = Object.values(attachedFiles)
 
   verifyWebhookSignature({
     token,
@@ -46,6 +51,12 @@ export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (
 
   const parentMessageIds = References?.split(' ')
 
+  // If included, use only the stripped text (and signature if available).
+  // Otherwise, the plain body usually contains the full email with quoted replies, which is not necessary.
+  const body = strippedText
+    ? [strippedText, strippedSignature].filter(Boolean).join('\n')
+    : plainBody
+
   const result = await handleEmailTrigger({
     recipient,
     senderEmail,
@@ -54,6 +65,7 @@ export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (
     body,
     messageId,
     parentMessageIds,
+    attachments,
   })
 
   if (result.error) {
