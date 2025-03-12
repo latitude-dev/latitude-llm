@@ -125,7 +125,6 @@ export class ChainStreamManager {
 
         if (abortSignal) {
           if (abortSignal.aborted) {
-            controller.close()
             this.endStream()
             return
           }
@@ -133,7 +132,6 @@ export class ChainStreamManager {
           abortSignal.addEventListener(
             'abort',
             () => {
-              controller.close()
               this.endStream()
             },
             { once: true },
@@ -415,7 +413,12 @@ export class ChainStreamManager {
     if (this.finished) throw new Error('Chain already finished')
     this.finished = true
 
-    this.controller.close()
+    try {
+      this.controller.close()
+    } catch (_) {
+      // do nothing, the stream is already closed
+    }
+
     this.resolveMessages?.(this.messages)
     this.resolveLastResponse?.(this.lastResponse)
     this.resolveError?.(undefined)
