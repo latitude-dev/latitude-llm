@@ -144,6 +144,8 @@ export default function CreateEvaluationModal({
   const isCreating = isCreatingEvaluation || isCreatingEvaluationV2
 
   const onConfirm = useCallback(async () => {
+    if (isLoading || isCreating) return
+
     if (metadataType === 'evaluationV2') {
       const result = await createEvaluationV2({
         settings: settingsV2,
@@ -167,8 +169,9 @@ export default function CreateEvaluationModal({
           }
         : { type: configuration.type }
 
+    let result
     if (prompt) {
-      create({
+      result = await create({
         name: title,
         description,
         metadata: {
@@ -178,7 +181,7 @@ export default function CreateEvaluationModal({
         resultConfiguration,
       })
     } else if (metadataType === EvaluationMetadataType.LlmAsJudgeSimple) {
-      create({
+      result = await create({
         name: title,
         description,
         metadata: {
@@ -189,7 +192,7 @@ export default function CreateEvaluationModal({
         resultConfiguration,
       })
     } else {
-      create({
+      result = await create({
         name: title,
         description,
         resultConfiguration,
@@ -199,7 +202,7 @@ export default function CreateEvaluationModal({
       })
     }
 
-    onClose(null)
+    if (result) onClose(null)
   }, [
     create,
     onClose,
