@@ -31,10 +31,8 @@ export default abstract class Mailer {
     let result
     try {
       result = await this.adapter.sendMail({
-        to: options.to,
+        ...options,
         from: options.from || Mailer.from,
-        subject: options.subject,
-        html: options.html,
       })
       const info = this.ensureSendMessageInfo(result, options)
       const failed = info.rejected.concat(info.pending).filter(Boolean)

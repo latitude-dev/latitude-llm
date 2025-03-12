@@ -9,30 +9,20 @@ import type { AssistantMessage } from '@latitude-data/compiler'
 import DocumentTriggerResponseMail from '../../../emails/documentTrigger/DocumentTriggerResponseMail'
 
 export class DocumentTriggerMailer extends Mailer {
-  subject: string
   result: TypedResult<AssistantMessage, LatitudeError>
 
   constructor(
+    result: TypedResult<AssistantMessage, LatitudeError>,
     options: Mail.Options,
-    {
-      subject,
-      result,
-    }: {
-      subject: string
-      result: TypedResult<AssistantMessage, LatitudeError>
-    },
   ) {
     super(options)
 
-    this.subject = subject
     this.result = result
   }
 
   async send(): Promise<TypedResult<SMTPTransport.SentMessageInfo, Error>> {
     return this.sendMail({
-      to: this.options.to,
-      from: this.options.from,
-      subject: this.subject,
+      ...this.options,
       html: await render(DocumentTriggerResponseMail({ result: this.result })),
     })
   }
