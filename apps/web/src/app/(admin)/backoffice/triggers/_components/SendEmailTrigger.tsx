@@ -70,7 +70,7 @@ export default function SendEmailTrigger() {
           placeholder='Optional message ID – Allows sending the response as a reply'
         />
         <Input
-          label='References (optional)'
+          label='Thread Message IDs (optional)'
           name='references'
           placeholder='Optional list of past message IDs – Used to add follow-up messages to a previous conversation'
         />

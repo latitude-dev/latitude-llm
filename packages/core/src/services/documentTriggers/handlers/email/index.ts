@@ -128,23 +128,20 @@ export async function handleEmailTrigger(
     return Result.nil()
   }
 
-  const replyHeaders = messageId
-    ? { inReplyTo: messageId, references: parentMessageIds ?? [messageId] }
-    : {}
-
   const from = `${JSON.stringify(name.unwrap())} <${trigger.documentUuid}@${EMAIL_TRIGGER_DOMAIN}>`
 
-  const mailer = new DocumentTriggerMailer(
-    {
-      to: senderEmail,
-      from,
-      ...replyHeaders,
-    },
-    {
-      subject: 'Re: ' + subject,
-      result: responseResult,
-    },
-  )
+  const references = [
+    ...(parentMessageIds ?? []),
+    ...(messageId ? [messageId] : []),
+  ]
+
+  const mailer = new DocumentTriggerMailer(responseResult, {
+    to: senderEmail,
+    from,
+    inReplyTo: messageId,
+    references,
+    subject: 'Re: ' + subject,
+  })
 
   const sendResult = await mailer.send()
   if (sendResult.error) return sendResult
