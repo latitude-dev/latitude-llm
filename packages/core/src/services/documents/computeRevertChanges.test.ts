@@ -208,7 +208,7 @@ describe('computeDocumentRevertChanges', () => {
 1 OLD VALUE
 2 OLD VALUE
 3
-4    
+4
 `
     const newContent = `
 1 OLD VALUE
