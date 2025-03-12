@@ -138,12 +138,17 @@ export async function handleEmailTrigger(
     ...(messageId ? [messageId] : []),
   ]
 
+  const headers = messageId
+    ? { 'In-Reply-To': messageId, References: references }
+    : undefined
+
   const mailer = new DocumentTriggerMailer(responseResult, {
     to: senderEmail,
     from,
     inReplyTo: messageId,
     references,
     subject: 'Re: ' + subject,
+    headers,
   })
 
   const sendResult = await mailer.send()
