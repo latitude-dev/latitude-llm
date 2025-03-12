@@ -45,6 +45,11 @@ export type LinkedDataset = {
   mappedInputs: Record<string, number>
 }
 
+export type LinkedDatasetRow = {
+  datasetRowId: number | undefined
+  mappedInputs: Record<string, string>
+}
+
 export type PlaygroundInputs<S extends InputSource> = {
   source: S
   manual: {
