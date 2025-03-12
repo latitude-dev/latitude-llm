@@ -1,6 +1,6 @@
 import { DocumentVersion } from '@latitude-data/constants'
 import { DocumentTrigger, Project, Workspace } from '../../browser'
-import { DocumentTriggerWithConfiguration } from './helpers/schema'
+import { InsertDocumentTriggerWithConfiguration } from './helpers/schema'
 import {
   generateUUIDIdentifier,
   LatitudeError,
@@ -10,6 +10,7 @@ import {
 } from '../../lib'
 import { documentTriggers } from '../../schema'
 import { database } from '../../client'
+import { buildConfiguration } from './helpers/buildConfiguration'
 
 export async function createDocumentTrigger(
   {
@@ -22,7 +23,7 @@ export async function createDocumentTrigger(
     workspace: Workspace
     document: DocumentVersion
     project: Project
-  } & DocumentTriggerWithConfiguration,
+  } & InsertDocumentTriggerWithConfiguration,
   db = database,
 ): PromisedResult<DocumentTrigger> {
   return await Transaction.call(async (tx) => {
@@ -34,7 +35,7 @@ export async function createDocumentTrigger(
         documentUuid: document.documentUuid,
         projectId: project.id,
         triggerType,
-        configuration,
+        configuration: buildConfiguration({ triggerType, configuration }),
       })
       .returning()
 
