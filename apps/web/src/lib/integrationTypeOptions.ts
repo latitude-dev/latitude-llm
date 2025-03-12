@@ -152,6 +152,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Figma',
     icon: 'figma',
   },
+  [HostedIntegrationType.Hyperbrowser]: {
+    label: 'Hyperbrowser',
+    icon: 'hyperbrowser',
+  },
 }
 
 export function integrationOptions(

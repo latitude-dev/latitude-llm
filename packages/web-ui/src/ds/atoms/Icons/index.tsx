@@ -136,6 +136,7 @@ import Telegram from './custom-icons/logos/Telegram'
 import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
+import Hyperbrowser from './custom-icons/logos/Hyperbrowser'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -205,6 +206,7 @@ const Icons = {
   googleWorkspace: Google,
   gridVertical: GridVertical,
   history: History,
+  hyperbrowser: Hyperbrowser,
   image: Image,
   imageUp: ImageUp,
   info: InfoIcon,
