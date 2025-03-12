@@ -27,6 +27,8 @@ export enum Jobs {
   generateDocumentSuggestionJob = 'generateDocumentSuggestionJob',
   requestDocumentSuggestionsJob = 'requestDocumentSuggestionsJob',
   cleanDocumentSuggestionsJob = 'cleanDocumentSuggestionsJob',
+  checkScheduledDocumentTriggersJob = 'checkScheduledDocumentTriggersJob',
+  processScheduledTriggerJob = 'processScheduledTriggerJob',
 }
 
 export const QUEUES = {
@@ -45,6 +47,8 @@ export const QUEUES = {
       'uploadDocumentLogsJob',
       'generateDocumentSuggestionJob',
       'requestDocumentSuggestionsJob',
+      'checkScheduledDocumentTriggersJob',
+      'processScheduledTriggerJob',
     ],
   },
   [Queues.maintenanceQueue]: {
