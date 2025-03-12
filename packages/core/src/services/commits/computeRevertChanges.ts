@@ -95,7 +95,9 @@ function getChangesToRevertDocument({
       'mergedAt', // Why is this here (?)
       'commitId',
       'datasetId',
+      'datasetV2Id',
       'linkedDataset',
+      'linkedDatasetAndRow',
     ],
   )
 }
