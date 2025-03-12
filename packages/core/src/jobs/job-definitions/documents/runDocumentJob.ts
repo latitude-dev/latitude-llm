@@ -14,7 +14,7 @@ export type RunDocumentJobData = {
   documentUuid: string
   commitUuid: string
   projectId: number
-  parameters?: Record<string, unknown>
+  parameters: Record<string, unknown>
   batchId?: string
 }
 
@@ -47,7 +47,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     documentUuid,
     commitUuid,
     projectId,
-    parameters = {},
+    parameters,
     batchId = randomUUID(),
   } = job.data
   const websockets = await WebsocketClient.getSocket()

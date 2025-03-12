@@ -159,7 +159,6 @@
     "@codesandbox/sdk": "^0.6.2",
     "@modelcontextprotocol/sdk": "^1.6.0",
     "@tavily/core": "^0.3.1",
-    "cron-parser": "^5.0.4",
     "date-fns": "^3.6.0",
     "diff-match-patch": "^1.0.5",
     "js-yaml": "^4.1.0",

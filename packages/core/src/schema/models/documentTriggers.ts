@@ -10,7 +10,7 @@ import { sql } from 'drizzle-orm'
 
 export const documentTriggerTypeEnum = latitudeSchema.enum(
   'document_trigger_types',
-  [DocumentTriggerType.Email, DocumentTriggerType.Scheduled],
+  [DocumentTriggerType.Email],
 )
 
 export const documentTriggers = latitudeSchema.table(
@@ -36,11 +36,5 @@ export const documentTriggers = latitudeSchema.table(
     projectWorkspaceIdx: index('document_trigger_doc_workspace_idx').on(
       table.workspaceId,
     ),
-    // Index for efficient scheduled trigger queries
-    scheduledTriggerNextRunTimeIdx: index(
-      'scheduled_trigger_next_run_time_idx',
-    ).on(sql`(configuration->>'nextRunTime')`),
-    // Index on triggerType to quickly find scheduled triggers
-    triggerTypeIdx: index('document_trigger_type_idx').on(table.triggerType),
   }),
 )

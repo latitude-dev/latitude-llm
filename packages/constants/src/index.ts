@@ -6,7 +6,6 @@ export enum LogSources {
   SharedPrompt = 'shared_prompt',
   AgentAsTool = 'agent_as_tool',
   EmailTrigger = 'email_trigger',
-  ScheduledTrigger = 'scheduled_trigger',
 }
 
 export const NON_LIVE_EVALUABLE_LOG_SOURCES = [LogSources.Evaluation]
@@ -24,7 +23,6 @@ export enum Providers {
 
 export enum DocumentTriggerType {
   Email = 'email',
-  Scheduled = 'scheduled',
 }
 
 export enum DocumentTriggerParameters {

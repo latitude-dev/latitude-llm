@@ -5,31 +5,26 @@ import { DocumentTrigger } from '../../browser'
 import { DocumentTriggerType } from '@latitude-data/constants'
 
 /**
- * Find document triggers by type without workspace scoping
+ * Warning: This is not scoped by a workspace. Must only be used by services that are not scoped by workspace.
  */
 export async function findUnscopedDocumentTriggers(
   {
     documentUuid,
     triggerType,
   }: {
-    documentUuid?: string
-    triggerType?: DocumentTriggerType
+    documentUuid: string
+    triggerType: DocumentTriggerType
   },
   db = database,
 ): Promise<DocumentTrigger[]> {
-  const conditions = []
-
-  if (documentUuid) {
-    conditions.push(eq(documentTriggers.documentUuid, documentUuid))
-  }
-
-  if (triggerType) {
-    conditions.push(eq(documentTriggers.triggerType, triggerType))
-  }
-
-  const whereClause = conditions.length ? and(...conditions) : undefined
-
-  const result = await db.select().from(documentTriggers).where(whereClause)
-
-  return result as DocumentTrigger[]
+  return db
+    .select()
+    .from(documentTriggers)
+    .where(
+      and(
+        eq(documentTriggers.documentUuid, documentUuid),
+        eq(documentTriggers.triggerType, triggerType),
+      ),
+    )
+    .execute() as Promise<DocumentTrigger[]>
 }

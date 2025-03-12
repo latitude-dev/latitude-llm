@@ -16,29 +16,12 @@ export type EmailTriggerConfiguration = z.infer<
   typeof emailTriggerConfigurationSchema
 >
 
-export const scheduledTriggerConfigurationSchema = z.object({
-  name: z.string().optional(),
-  cronExpression: z.string(),
-  timezone: z.string().default('UTC'),
-  enabled: z.boolean().default(true),
-  lastRun: z.date().optional(),
-  nextRunTime: z.date().optional(),
-})
-
-export type ScheduledTriggerConfiguration = z.infer<
-  typeof scheduledTriggerConfigurationSchema
->
-
 export const documentTriggerConfigurationSchema = z.discriminatedUnion(
   'triggerType',
   [
     z.object({
       triggerType: z.literal(DocumentTriggerType.Email),
       configuration: emailTriggerConfigurationSchema,
-    }),
-    z.object({
-      triggerType: z.literal(DocumentTriggerType.Scheduled),
-      configuration: scheduledTriggerConfigurationSchema,
     }),
   ],
 )
@@ -56,9 +39,7 @@ export const documentTriggerConfigurationsUnionSchema =
       ] as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])
     : configurationSchemas[0]!
 
-export type DocumentTriggerConfiguration =
-  | EmailTriggerConfiguration
-  | ScheduledTriggerConfiguration
+export type DocumentTriggerConfiguration = EmailTriggerConfiguration
 
 export type DocumentTriggerWithConfiguration = z.infer<
   typeof documentTriggerConfigurationSchema
