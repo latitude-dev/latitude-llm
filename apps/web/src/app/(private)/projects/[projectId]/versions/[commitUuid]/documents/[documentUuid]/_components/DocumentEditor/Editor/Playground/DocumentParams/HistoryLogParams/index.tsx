@@ -21,6 +21,10 @@ import Link from 'next/link'
 
 import { ParametersPaginationNav } from '../PaginationNav'
 import { type UseLogHistoryParams } from './useLogHistoryParams'
+import {
+  asPromptLFile,
+  PromptLFileParameter,
+} from '$/components/PromptLFileParameter'
 
 function usePaginatedDocumentLogUrl({
   page,
@@ -126,6 +130,9 @@ export function HistoryLogParams({
                 {Object.entries(inputs).map(([param, input], idx) => {
                   const includedInPrompt =
                     input.metadata.includeInPrompt ?? true
+
+                  const file = asPromptLFile(input.value)
+
                   return (
                     <div
                       className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
@@ -142,18 +149,22 @@ export function HistoryLogParams({
                         )}
                       </div>
                       <div className='flex flex-grow w-full min-w-0'>
-                        <TextArea
-                          value={input.value ?? ''}
-                          minRows={1}
-                          maxRows={6}
-                          onChange={(e) => {
-                            setInput?.(param, {
-                              ...input,
-                              value: e.target.value,
-                            })
-                          }}
-                          disabled={data.isLoading}
-                        />
+                        {file ? (
+                          <PromptLFileParameter file={file} />
+                        ) : (
+                          <TextArea
+                            value={input.value ?? ''}
+                            minRows={1}
+                            maxRows={6}
+                            onChange={(e) => {
+                              setInput?.(param, {
+                                ...input,
+                                value: e.target.value,
+                              })
+                            }}
+                            disabled={data.isLoading}
+                          />
+                        )}
                       </div>
                     </div>
                   )

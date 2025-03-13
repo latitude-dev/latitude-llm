@@ -21,6 +21,10 @@ import {
   MetadataItemTooltip,
 } from '../../../../../[documentUuid]/_components/MetadataItem'
 import { getCostPer1M } from '@latitude-data/core/services/ai/estimateCost/index'
+import {
+  asPromptLFile,
+  PromptLFileParameter,
+} from '$/components/PromptLFileParameter'
 
 function costNotCalculatedReason({
   provider,
@@ -247,26 +251,33 @@ function DocumentLogParameters({
     <>
       <Text.H5M color='foreground'>Parameters</Text.H5M>
       <div className='grid grid-cols-[auto_1fr] gap-y-3'>
-        {parameters.map(({ parameter, value }, index) => (
-          <div
-            key={index}
-            className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
-          >
-            <div className='flex flex-row items-center gap-x-2 min-h-8'>
-              <Badge variant='accent'>
-                &#123;&#123;{parameter}&#125;&#125;
-              </Badge>
+        {parameters.map(({ parameter, value }, index) => {
+          const file = asPromptLFile(value)
+          return (
+            <div
+              key={index}
+              className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
+            >
+              <div className='flex flex-row items-center gap-x-2 min-h-8'>
+                <Badge variant='accent'>
+                  &#123;&#123;{parameter}&#125;&#125;
+                </Badge>
+              </div>
+              <div className='flex flex-grow w-full min-w-0'>
+                {file ? (
+                  <PromptLFileParameter file={file} />
+                ) : (
+                  <TextArea
+                    value={String(value || '')}
+                    minRows={1}
+                    maxRows={6}
+                    disabled={true}
+                  />
+                )}
+              </div>
             </div>
-            <div className='flex flex-grow w-full min-w-0'>
-              <TextArea
-                value={String(value || '')}
-                minRows={1}
-                maxRows={6}
-                disabled={true}
-              />
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </>
   )

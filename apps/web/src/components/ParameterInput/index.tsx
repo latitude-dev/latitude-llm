@@ -1,9 +1,10 @@
-import { ChangeEvent, useCallback } from 'react'
+import { ChangeEvent, useCallback, useMemo } from 'react'
 
 import useFiles from '$/stores/files'
 import { SUPPORTED_IMAGE_TYPES } from '@latitude-data/core/browser'
 import { DropzoneInput, Skeleton, TextArea } from '@latitude-data/web-ui'
 import { ParameterType } from '@latitude-data/constants'
+import { isPromptLFile } from 'promptl-ai'
 
 export function ParameterInputSkeleton() {
   return (
@@ -35,8 +36,8 @@ export function ParameterInput({
     async (files: FileList | null) => {
       const file = files?.[0]
       if (file) {
-        const url = await uploadFile({ file })
-        if (url) return onChange(url)
+        const uploadedFile = await uploadFile({ file })
+        if (uploadedFile) return onChange(JSON.stringify(uploadedFile))
       }
 
       onChange('')
@@ -48,8 +49,8 @@ export function ParameterInput({
     async (files: FileList | null) => {
       const file = files?.[0]
       if (file) {
-        const url = await uploadFile({ file })
-        if (url) return onChange(url)
+        const uploadedFile = await uploadFile({ file })
+        if (uploadedFile) return onChange(JSON.stringify(uploadedFile))
       }
 
       onChange('')
@@ -57,11 +58,23 @@ export function ParameterInput({
     [uploadFile, onChange],
   )
 
+  const [textValue, filename] = useMemo(() => {
+    try {
+      const file = JSON.parse(value)
+      if (isPromptLFile(file)) {
+        return [file.url, file.name]
+      }
+    } catch {
+      // Do nothing
+    }
+    return [value, (value ?? '').split('/').at(-1)]
+  }, [value])
+
   switch (type) {
     case ParameterType.Text:
       return (
         <TextArea
-          value={value}
+          value={textValue}
           onChange={onTextChange}
           minRows={1}
           maxRows={6}
@@ -77,7 +90,7 @@ export function ParameterInput({
           icon='imageUp'
           inputSize='small'
           placeholder='Upload image'
-          defaultFilename={(value ?? '').split('/').at(-1)}
+          defaultFilename={filename}
           onChange={onImageChange}
           accept={SUPPORTED_IMAGE_TYPES.join(',')}
           multiple={false}
@@ -93,7 +106,7 @@ export function ParameterInput({
           icon='fileUp'
           inputSize='small'
           placeholder='Upload file'
-          defaultFilename={(value ?? '').split('/').at(-1)}
+          defaultFilename={filename}
           onChange={onFileChange}
           accept={undefined}
           multiple={false}
