@@ -31,53 +31,53 @@ jobs:
       matrix:
         include:
           # Public images on GitHub Container Registry (without Sentry)
-          - app: web
-            dockerfile: apps/web/docker/Dockerfile
-            private: false
-            registry: ghcr.io
-            owner: latitude-dev
-            repo_name: web
+          # - app: web
+          #   dockerfile: apps/web/docker/Dockerfile
+          #   private: false
+          #   registry: ghcr.io
+          #   owner: latitude-dev
+          #   repo_name: web
           - app: gateway
             dockerfile: apps/gateway/docker/Dockerfile
             private: false
             registry: ghcr.io
             owner: latitude-dev
             repo_name: gateway
-          - app: workers
-            dockerfile: apps/workers/docker/Dockerfile
-            private: false
-            registry: ghcr.io
-            owner: latitude-dev
-            repo_name: workers
-          - app: websockets
-            dockerfile: apps/websockets/docker/Dockerfile
-            private: false
-            registry: ghcr.io
-            owner: latitude-dev
-            repo_name: websockets
-          - app: migrations
-            dockerfile: packages/core/docker/Dockerfile
-            private: false
-            registry: ghcr.io
-            owner: latitude-dev
-            repo_name: migrations
+          # - app: workers
+          #   dockerfile: apps/workers/docker/Dockerfile
+          #   private: false
+          #   registry: ghcr.io
+          #   owner: latitude-dev
+          #   repo_name: workers
+          # - app: websockets
+          #   dockerfile: apps/websockets/docker/Dockerfile
+          #   private: false
+          #   registry: ghcr.io
+          #   owner: latitude-dev
+          #   repo_name: websockets
+          # - app: migrations
+          #   dockerfile: packages/core/docker/Dockerfile
+          #   private: false
+          #   registry: ghcr.io
+          #   owner: latitude-dev
+          #   repo_name: migrations
           # Private images on AWS ECR (with Sentry)
-          - app: web
-            dockerfile: apps/web/docker/Dockerfile
-            private: true
-            repo_name: latitude-llm-app-repo-43d71dc
+          # - app: web
+          #   dockerfile: apps/web/docker/Dockerfile
+          #   private: true
+          #   repo_name: latitude-llm-app-repo-43d71dc
           - app: gateway
             dockerfile: apps/gateway/docker/Dockerfile
             private: true
             repo_name: latitude-llm-gateway-repo-b859826
-          - app: workers
-            dockerfile: apps/workers/docker/Dockerfile
-            private: true
-            repo_name: latitude-llm-workers-repo-184cb29
-          - app: websockets
-            dockerfile: apps/websockets/docker/Dockerfile
-            private: true
-            repo_name: latitude-llm-websockets-repo-eea3d9a
+          # - app: workers
+          #   dockerfile: apps/workers/docker/Dockerfile
+          #   private: true
+          #   repo_name: latitude-llm-workers-repo-184cb29
+          # - app: websockets
+          #   dockerfile: apps/websockets/docker/Dockerfile
+          #   private: true
+          #   repo_name: latitude-llm-websockets-repo-eea3d9a
 
     steps:
       - name: Checkout repository
