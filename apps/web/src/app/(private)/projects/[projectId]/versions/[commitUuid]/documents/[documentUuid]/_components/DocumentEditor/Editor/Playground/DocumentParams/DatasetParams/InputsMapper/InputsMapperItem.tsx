@@ -9,6 +9,7 @@ import {
   Tooltip,
 } from '@latitude-data/web-ui'
 import { DatasetVersion, InputSource } from '@latitude-data/core/browser'
+import { DatasetRowDataContent } from '@latitude-data/core/schema'
 
 type SelectValueType<V extends DatasetVersion> = V extends DatasetVersion.V1
   ? number
@@ -38,7 +39,7 @@ export function InputsMapperItem<V extends DatasetVersion = DatasetVersion>({
   onSelectRowCell: OnSelectRowCellFn<SelectValueType<V>>
   rowCellOptions: SelectOption<SelectValueType<V>>[]
   setSource: (source: InputSource) => void
-  tooltipValue: { isEmpty: boolean; value: string }
+  tooltipValue: { isEmpty: boolean; value: DatasetRowDataContent }
   copyToManual: () => void
 }) {
   return (

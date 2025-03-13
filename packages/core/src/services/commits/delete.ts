@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
-import { DatabaseError } from 'pg'
+import pg from 'pg'
+const { DatabaseError } = pg
 
 import { Commit } from '../../browser'
 import { database } from '../../client'

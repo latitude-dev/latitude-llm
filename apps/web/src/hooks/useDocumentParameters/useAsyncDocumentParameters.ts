@@ -62,6 +62,8 @@ export function getLocalStorageInputsBySource({
   inputs: PlaygroundInputs<InputSource>
   linkedDataset?: LinkedDataset
 }) {
+  if (source === INPUT_SOURCE.datasetV2) return undefined
+
   return source === INPUT_SOURCE.dataset
     ? (linkedDataset?.inputs ?? inputs.dataset.inputs)
     : 'inputs' in inputs[source]
@@ -96,21 +98,30 @@ export function useAsyncDocumentParameters({
     linkedDataset: datasetV1Deprecated,
   })
 
-  // Set parameters for sources that are in localStorage
   useEffect(() => {
     if (!isMountedOnRoot) return
-    if (datasetVersion === DatasetVersion.V2) return
+    if (source === INPUT_SOURCE.datasetV2) {
+      // Do not sync the store when is handle asycronously in the case
+      // of datasets parameters
+      return
+    }
 
+    // Set parameters for sources that are in localStorage
     if (localInputs) {
       const newLocalInputs = convertToParams(localInputs)
       asyncParameters.set(newLocalInputs)
     }
-  }, [localInputs, datasetVersion, asyncParameters.set, isMountedOnRoot])
+  }, [
+    source,
+    localInputs,
+    datasetVersion,
+    asyncParameters.set,
+    isMountedOnRoot,
+  ])
 
-  // Set async loading state for
   useEffect(() => {
+    // Set async loading state for
     if (!isMountedOnRoot) return
-    if (!datasetVersion) return
 
     if (
       source === INPUT_SOURCE.dataset &&

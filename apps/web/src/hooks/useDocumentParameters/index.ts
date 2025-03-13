@@ -327,15 +327,23 @@ export function useDocumentParameters<
 
   const setDatasetMappedInputs = useCallback(
     ({
-      datasetRowId,
-      mappedInputs,
+      datasetId,
+      datasetRowId: nextDatasetRowId,
+      mappedInputs: nextMappedInputs,
     }: {
+      datasetId: number
       mappedInputs: LinkedDatasetRow['mappedInputs'] | undefined
       datasetRowId: number | undefined
     }) => {
       setValue((oldState) => {
         const { state, doc } = getDocState(oldState, key)
-        const prevSource = doc['datasetV2']
+        const prevSource = doc['datasetV2'] ?? {
+          datasetId,
+          mappedInputs: nextMappedInputs ?? {},
+          datasetRowId: nextDatasetRowId,
+        }
+        const mappedInputs = nextMappedInputs ?? prevSource.mappedInputs
+        const datasetRowId = nextDatasetRowId ?? prevSource.datasetRowId
 
         return {
           ...state,
@@ -343,8 +351,8 @@ export function useDocumentParameters<
             ...doc,
             datasetV2: {
               ...prevSource,
-              ...(datasetRowId !== undefined && { datasetRowId }),
-              ...(mappedInputs !== undefined && { mappedInputs }),
+              mappedInputs,
+              datasetRowId,
             },
           },
         }
@@ -367,12 +375,17 @@ export function useDocumentParameters<
       }
     }) => {
       const { doc } = getDocState(allInputs, key)
-      const datasetDoc = doc['datasetV2']
+      const datasetDoc = doc['datasetV2'] ?? {
+        datasetId,
+        mappedInputs: data.mappedInputs ?? {},
+        datasetRowId: data.datasetRowId,
+      }
       const prevDatasetRowId = datasetDoc.datasetRowId
       const prevMappedInputs = datasetDoc.mappedInputs
 
       // Optimistic update in local storage
       setDatasetMappedInputs({
+        datasetId,
         mappedInputs: data.mappedInputs,
         datasetRowId: data.datasetRowId,
       })
@@ -389,6 +402,7 @@ export function useDocumentParameters<
 
       if (error) {
         setDatasetMappedInputs({
+          datasetId,
           mappedInputs: prevMappedInputs,
           datasetRowId: prevDatasetRowId,
         })

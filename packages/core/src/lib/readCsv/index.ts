@@ -2,8 +2,9 @@ import { isNumber } from 'lodash-es'
 
 import { parse as csvParse, Info } from 'csv-parse'
 import { CsvError, parse, type Options as CsvOptions } from 'csv-parse/sync'
+import { castCell } from './castCells'
 
-import { Result } from './Result'
+import { Result } from '../Result'
 import { Readable } from 'node:stream'
 
 function getData(file: File | string) {
@@ -101,7 +102,16 @@ export async function* csvBatchGenerator({
   batchSize = DEFAULT_CSV_BATCH_SIZE,
   ...options
 }: StreamArgs) {
-  const opts = buildCsvOptions(options)
+  const defaultOpts = buildCsvOptions(options)
+  const opts = {
+    ...defaultOpts,
+    // https://csv.js.org/parse/options/bom/#option-code-classlanguage-textbomcode
+    // It stands for Byte Order Mark (BOM) —
+    // a hidden character (U+FEFF) sometimes placed at the start of a UTF-8 file.
+    // It's added by some programs like Excel or Google Sheets to indicate that the file is UTF-8 encoded.
+    bom: true,
+    cast: castCell,
+  }
 
   const parser = stream.pipe(csvParse(opts))
 

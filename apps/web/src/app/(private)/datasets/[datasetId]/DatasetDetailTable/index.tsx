@@ -51,6 +51,7 @@ export function DatasetHeadText({
   )
 }
 
+export const ROWS_PAGE_SIZE = '50'
 export function DatasetDetailTable({
   dataset,
   rows: serverDatasetRows,
@@ -61,7 +62,7 @@ export function DatasetDetailTable({
   const { backgroundCssClasses } = useDatasetRole()
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
-  const pageSize = searchParams.get('pageSize') ?? '25'
+  const pageSize = searchParams.get('pageSize') ?? ROWS_PAGE_SIZE
   const { data: rows, mutate } = useDatasetRows(
     { dataset, page, pageSize },
     {

@@ -6,7 +6,11 @@ import type { ConversationMetadata } from 'promptl-ai'
 import { useDebouncedCallback } from 'use-debounce'
 import type { ReadMetadataWorkerProps } from '../workers/readMetadata'
 
-async function getManifest() {
+let workerPath: string | null = null
+
+async function getWorkerUrl(): Promise<string | null> {
+  if (workerPath) return workerPath
+
   return fetch('/workers/worker-manifest.json')
     .then((res) => res.json())
     .then((manifest) => manifest['readMetadata.js'])
@@ -15,6 +19,7 @@ async function getManifest() {
       return null
     })
 }
+
 export function useMetadata({
   onMetadataProcessed,
 }: {
@@ -27,7 +32,7 @@ export function useMetadata({
     if (typeof window === 'undefined') return
 
     const initWorker = async () => {
-      const workerPath = await getManifest()
+      workerPath = await getWorkerUrl()
 
       if (!workerPath) return
 

@@ -6,7 +6,7 @@ import {
 } from '@latitude-data/core/repositories'
 import { notFound } from 'next/navigation'
 import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
-import { DatasetDetailTable } from './DatasetDetailTable'
+import { DatasetDetailTable, ROWS_PAGE_SIZE } from './DatasetDetailTable'
 import {
   Dataset,
   DatasetV2,
@@ -52,7 +52,7 @@ async function getData({
   const rows = await rowsRepo.findByDatasetPaginated({
     datasetId: dataset.id,
     page,
-    pageSize: pageSize as string | undefined,
+    pageSize: pageSize ?? ROWS_PAGE_SIZE,
   })
 
   return Result.ok({ dataset, rows, isV2: true })

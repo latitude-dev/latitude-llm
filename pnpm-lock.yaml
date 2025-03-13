@@ -226,12 +226,36 @@ importers:
       recast:
         specifier: ^0.23.11
         version: 0.23.11
+      tsx:
+        specifier: ^4.16.2
+        version: 4.19.3
       turbo:
         specifier: ^2.4.4
         version: 2.4.4
       typescript:
         specifier: ^5.8.2
         version: 5.8.2
+
+  apps/console:
+    devDependencies:
+      '@latitude-data/core':
+        specifier: workspace:^
+        version: link:../../packages/core
+      '@latitude-data/env':
+        specifier: workspace:^
+        version: link:../../packages/env
+      '@latitude-data/eslint-config':
+        specifier: workspace:^
+        version: link:../../tools/eslint
+      '@latitude-data/typescript-config':
+        specifier: workspace:^
+        version: link:../../tools/typescript
+      '@types/node':
+        specifier: ^22.5.1
+        version: 22.13.10
+      tsx:
+        specifier: ^4.16.2
+        version: 4.19.3
 
   apps/gateway:
     dependencies:
