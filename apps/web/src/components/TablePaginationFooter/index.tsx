@@ -44,7 +44,9 @@ export function LinkableTablePaginationFooter({
         <>
           {countLabel ? (
             <Text.H5M color='foregroundMuted'>
-              {countLabel ? countLabel(pagination.count) : pagination.count}{' '}
+              {countLabel
+                ? countLabel(pagination.count)
+                : pagination.count}{' '}
             </Text.H5M>
           ) : (
             <span />

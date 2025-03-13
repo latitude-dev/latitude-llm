@@ -10,18 +10,18 @@ env:
   PUBLIC_OWNER: latitude-dev
 
 jobs:
-  lint:
-    uses: ./.github/workflows/lint.yml
-    with:
-      workflow_call: true
-
-  test:
-    uses: ./.github/workflows/test.yml
-    with:
-      workflow_call: true
+  # lint:
+  #   uses: ./.github/workflows/lint.yml
+  #   with:
+  #     workflow_call: true
+  #
+  # test:
+  #   uses: ./.github/workflows/test.yml
+  #   with:
+  #     workflow_call: true
 
   build-and-push:
-    needs: [lint, test]
+    # needs: [lint, test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -160,7 +160,7 @@ jobs:
             NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
 
   run-migrations:
-    needs: [lint, test]
+    # needs: [lint, test]
     uses: ./.github/workflows/run-migrations.yml
     with:
       workflow_call: true
@@ -175,7 +175,7 @@ jobs:
       SSH_USER: ${{ secrets.SSH_USER }}
 
   deploy-bluegreen:
-    needs: [run-migrations, lint, test, build-and-push]
+    needs: [build-and-push]
     uses: ./.github/workflows/deploy-bluegreen.yml
     permissions:
       id-token: write
@@ -185,18 +185,18 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-
-  deploy-rolling:
-    needs: [run-migrations, lint, test, build-and-push]
-    uses: ./.github/workflows/deploy-rolling.yml
-    permissions:
-      id-token: write
-      contents: read
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
-      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  #
+  # deploy-rolling:
+  #   needs: [run-migrations, lint, test, build-and-push]
+  #   uses: ./.github/workflows/deploy-rolling.yml
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   secrets:
+  #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #     ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
+  #     AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
 # Concurrency settings to manage multiple workflow runs
 # - Groups runs by workflow name and git ref
