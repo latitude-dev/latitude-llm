@@ -12,7 +12,8 @@ async function getToLine({
 }) {
   if (toLine !== undefined) return toLine
 
-  return repo.getCountByDataset(dataset.id)
+  const result = await repo.getCountByDataset(dataset.id)
+  return !result[0] ? 0 : result[0].count
 }
 
 function extractValue(

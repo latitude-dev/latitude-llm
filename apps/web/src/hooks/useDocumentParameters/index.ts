@@ -1,13 +1,15 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback } from 'react'
 
 import { recalculateInputs } from '$/hooks/useDocumentParameters/recalculateInputs'
 import {
+  DatasetVersion,
   DocumentLog,
   DocumentVersion,
   INPUT_SOURCE,
   Inputs,
   InputSource,
   LinkedDataset,
+  LinkedDatasetRow,
   LocalInputs,
   LocalInputSource,
   PlaygroundInput,
@@ -20,29 +22,35 @@ import {
   useLocalStorage,
 } from '@latitude-data/web-ui'
 import useDocumentVersions from '$/stores/documentVersions'
+import { useFeatureFlag } from '$/hooks/useFeatureFlag'
+import {
+  getLocalStorageInputsBySource,
+  useAsyncDocumentParameters,
+} from './useAsyncDocumentParameters'
 
 const EMPTY_LINKED_DATASET = {
   rowIndex: 0,
   inputs: {} as LinkedDataset['inputs'],
   mappedInputs: {} as LinkedDataset['mappedInputs'],
 }
+
+const EMPTY_LINKED_DATASET_ROW: LinkedDatasetRow = {
+  datasetRowId: 0, // This is wrong. This is an ID in DB. But allows to have this attribute as non optional
+  mappedInputs: {} as LinkedDatasetRow['mappedInputs'],
+}
+
 const EMPTY_INPUTS: PlaygroundInputs<'manual'> = {
   source: INPUT_SOURCE.manual,
   manual: { inputs: {} },
-  dataset: { datasetId: undefined, ...EMPTY_LINKED_DATASET },
+  dataset: {
+    datasetId: undefined,
+    ...EMPTY_LINKED_DATASET,
+  },
+  datasetV2: {
+    datasetId: undefined,
+    ...EMPTY_LINKED_DATASET_ROW,
+  },
   history: { logUuid: undefined, inputs: {} },
-}
-
-function convertToParams(inputs: Inputs<InputSource>) {
-  return Object.fromEntries(
-    Object.entries(inputs).map(([key, input]) => {
-      try {
-        return [key, JSON.parse(input.value)]
-      } catch (e) {
-        return [key, input?.value?.toString?.()]
-      }
-    }),
-  )
 }
 
 function getDocState(oldState: InputsByDocument | null, key: string) {
@@ -80,38 +88,54 @@ function mapLogParametersToInputs({
 
 type InputsByDocument = Record<string, PlaygroundInputs<InputSource>>
 
+// DEPRECATED: Remove after datasets V2 migration
 function getLinkedDataset({
   document,
   localInputs,
+  datasetVersion,
 }: {
   document: DocumentVersion
   localInputs: PlaygroundInputs<'dataset'>['dataset']
+  datasetVersion: DatasetVersion | undefined
 }) {
-  const datasetId = document.datasetId
-  if (!datasetId) return EMPTY_LINKED_DATASET
+  if (!datasetVersion) return EMPTY_LINKED_DATASET
 
-  const all = document.linkedDataset ?? {}
+  const isV1 = datasetVersion === DatasetVersion.V1
+  if (!isV1) return
+
+  const identifier = document.datasetId
+  if (!identifier) return EMPTY_LINKED_DATASET
+
+  let all = document.linkedDataset ?? {}
+
+  // TODO: From here remove after migration to datasets V2
   const isEmpty = Object.keys(all).length === 0
-
   if (isEmpty) {
-    const legacyLocalData = localInputs
+    const legacyInputs = localInputs as LinkedDataset
     return {
-      rowIndex: legacyLocalData.rowIndex,
-      inputs: legacyLocalData.inputs,
-      mappedInputs: legacyLocalData.mappedInputs,
+      inputs: legacyInputs.inputs,
+      mappedInputs: legacyInputs.mappedInputs,
+      rowIndex: 0,
     }
   }
 
-  return all[datasetId] ? all[datasetId] : EMPTY_LINKED_DATASET
+  return all[identifier] ?? EMPTY_LINKED_DATASET
 }
 
-export function useDocumentParameters({
+export function useDocumentParameters<
+  V extends DatasetVersion = DatasetVersion,
+>({
   document,
   commitVersionUuid,
+  datasetVersion,
+  isMountedOnRoot = false,
 }: {
   document: DocumentVersion
+  datasetVersion: V | undefined
   commitVersionUuid: string
+  isMountedOnRoot?: boolean
 }) {
+  const { isLoading: isLoadingFeatureFlag } = useFeatureFlag()
   const { project } = useCurrentProject()
   const projectId = project.id
   const commitUuid = commitVersionUuid
@@ -130,12 +154,15 @@ export function useDocumentParameters({
   const linkedDataset = getLinkedDataset({
     document,
     localInputs: inputs.dataset,
+    datasetVersion,
   })
-
-  let inputsBySource =
-    source === INPUT_SOURCE.dataset
-      ? linkedDataset.inputs
-      : inputs[source].inputs
+  const { asyncParameters, onParametersChange } = useAsyncDocumentParameters({
+    isMountedOnRoot,
+    source,
+    inputs,
+    datasetVersion,
+    datasetV1Deprecated: linkedDataset,
+  })
 
   const setInputs = useCallback(
     <S extends LocalInputSource>(source: S, newInputs: LocalInputs<S>) => {
@@ -172,21 +199,30 @@ export function useDocumentParameters({
 
   const setInput = useCallback(
     <S extends InputSource>(
-      source: S,
+      currentSource: S,
       value: PlaygroundInput<S>,
       param: string,
     ) => {
-      inputs
-      switch (source) {
-        case INPUT_SOURCE.manual:
-          setManualInputs({ ...inputsBySource, [param]: value })
+      switch (currentSource) {
+        case INPUT_SOURCE.manual: {
+          const prev = getLocalStorageInputsBySource({
+            source: currentSource,
+            inputs,
+          })
+          setManualInputs({ ...prev, [param]: value })
           break
-        case INPUT_SOURCE.history:
-          setHistoryInputs({ ...inputsBySource, [param]: value })
+        }
+        case INPUT_SOURCE.history: {
+          const prev = getLocalStorageInputsBySource({
+            source: currentSource,
+            inputs,
+          })
+          setHistoryInputs({ ...prev, [param]: value })
           break
+        }
       }
     },
-    [source, inputsBySource, setInputs],
+    [source, inputs, setInputs],
   )
 
   const setManualInput = useCallback(
@@ -219,8 +255,15 @@ export function useDocumentParameters({
     [key, setValue],
   )
 
+  // TODO: Remove after a dataset V2 migration
   const copyDatasetInputsToManual = useCallback(() => {
-    if (!linkedDataset?.inputs) return
+    if (
+      !linkedDataset ||
+      !('inputs' in linkedDataset) ||
+      !linkedDataset?.inputs
+    ) {
+      return
+    }
 
     setManualInputs(linkedDataset.inputs)
   }, [linkedDataset?.inputs, inputs])
@@ -263,19 +306,108 @@ export function useDocumentParameters({
     [inputs, key, setInputs],
   )
 
+  // TODO: Remove after a dataset V2 migration
   const setDataset = useCallback(
-    async ({ datasetId, data }: { datasetId: number; data: LinkedDataset }) => {
+    async ({
+      datasetId,
+      datasetVersion,
+      data,
+    }: {
+      datasetId: number
+      data: LinkedDataset
+      datasetVersion: DatasetVersion
+    }) => {
       await saveLinkedDataset({
         projectId,
         commitUuid,
         documentUuid: document.documentUuid,
         datasetId,
-        rowIndex: data.rowIndex ?? 0,
+        datasetVersion,
         inputs: data.inputs,
         mappedInputs: data.mappedInputs,
+        rowIndex: data.rowIndex,
       })
     },
     [saveLinkedDataset, projectId, commitUuid, document.documentUuid],
+  )
+
+  const setDatasetMappedInputs = useCallback(
+    ({
+      datasetRowId,
+      mappedInputs,
+    }: {
+      mappedInputs: LinkedDatasetRow['mappedInputs'] | undefined
+      datasetRowId: number | undefined
+    }) => {
+      setValue((oldState) => {
+        const { state, doc } = getDocState(oldState, key)
+        const prevSource = doc['datasetV2']
+
+        return {
+          ...state,
+          [key]: {
+            ...doc,
+            datasetV2: {
+              ...prevSource,
+              ...(datasetRowId !== undefined && { datasetRowId }),
+              ...(mappedInputs !== undefined && { mappedInputs }),
+            },
+          },
+        }
+      })
+    },
+    [allInputs, key, source, setValue],
+  )
+
+  const setDatasetV2 = useCallback(
+    async ({
+      datasetId,
+      datasetVersion,
+      data,
+    }: {
+      datasetId: number
+      datasetVersion: DatasetVersion
+      data: {
+        mappedInputs?: LinkedDatasetRow['mappedInputs'] | undefined
+        datasetRowId?: number | undefined
+      }
+    }) => {
+      const { doc } = getDocState(allInputs, key)
+      const datasetDoc = doc['datasetV2']
+      const prevDatasetRowId = datasetDoc.datasetRowId
+      const prevMappedInputs = datasetDoc.mappedInputs
+
+      // Optimistic update in local storage
+      setDatasetMappedInputs({
+        mappedInputs: data.mappedInputs,
+        datasetRowId: data.datasetRowId,
+      })
+
+      const [_, error] = await saveLinkedDataset({
+        projectId,
+        commitUuid,
+        documentUuid: document.documentUuid,
+        datasetId,
+        datasetVersion,
+        mappedInputs: data.mappedInputs,
+        datasetRowId: data.datasetRowId,
+      })
+
+      if (error) {
+        setDatasetMappedInputs({
+          mappedInputs: prevMappedInputs,
+          datasetRowId: prevDatasetRowId,
+        })
+      }
+    },
+    [
+      saveLinkedDataset,
+      projectId,
+      commitUuid,
+      document.documentUuid,
+      allInputs,
+      key,
+    ],
   )
 
   const onMetadataProcessed = useCallback(
@@ -288,19 +420,30 @@ export function useDocumentParameters({
         }),
       )
 
-      if (document.datasetId && linkedDataset) {
+      // TODO: Remove after a dataset V2 migration
+      // This is not needed with new datasets. We don't store the values
+      // of the cells viewed because they can be modified now.
+      if (document.datasetId && linkedDataset && 'inputs' in linkedDataset) {
         const datasetInputs = recalculateInputs<'dataset'>({
-          inputs: linkedDataset.inputs,
+          inputs: linkedDataset.inputs as Inputs<'dataset'>,
           metadata,
         })
-        setDataset({
-          datasetId: document.datasetId,
-          data: {
-            rowIndex: linkedDataset.rowIndex,
-            mappedInputs: linkedDataset.mappedInputs,
-            inputs: datasetInputs,
-          },
-        })
+
+        if (
+          !isLoadingFeatureFlag &&
+          datasetVersion === DatasetVersion.V1 &&
+          'rowIndex' in linkedDataset
+        ) {
+          setDataset({
+            datasetId: document.datasetId,
+            datasetVersion,
+            data: {
+              inputs: datasetInputs,
+              mappedInputs: linkedDataset.mappedInputs,
+              rowIndex: linkedDataset.rowIndex,
+            } as LinkedDataset,
+          })
+        }
       }
 
       setInputs(
@@ -311,16 +454,22 @@ export function useDocumentParameters({
         }),
       )
     },
-    [inputs, setInputs, source, document.datasetId, linkedDataset],
-  )
-
-  const parameters = useMemo(
-    () => convertToParams(inputsBySource),
-    [inputsBySource],
+    [
+      inputs,
+      setInputs,
+      source,
+      document.datasetId,
+      linkedDataset,
+      datasetVersion,
+      isLoadingFeatureFlag,
+    ],
   )
 
   return {
-    parameters,
+    onParametersChange,
+    parameters: asyncParameters.parameters,
+    setParametersLoading: asyncParameters.setLoading,
+    parametersLoading: asyncParameters.loading,
     onMetadataProcessed,
     source,
     setSource,
@@ -332,11 +481,20 @@ export function useDocumentParameters({
     },
     dataset: {
       datasetId: document.datasetId,
-      rowIndex: linkedDataset?.rowIndex,
+      rowIndex:
+        linkedDataset && 'rowIndex' in linkedDataset
+          ? linkedDataset?.rowIndex
+          : undefined,
       inputs: linkedDataset?.inputs,
       mappedInputs: linkedDataset?.mappedInputs,
       setDataset,
       copyToManual: copyDatasetInputsToManual,
+    },
+    datasetV2: {
+      datasetRowId: document.datasetV2Id
+        ? document.linkedDatasetAndRow?.[document.datasetV2Id]?.datasetRowId
+        : undefined,
+      setDataset: setDatasetV2,
     },
     history: {
       logUuid: inputs['history'].logUuid,
@@ -348,3 +506,5 @@ export function useDocumentParameters({
     },
   }
 }
+
+export type UseDocumentParameters = ReturnType<typeof useDocumentParameters>

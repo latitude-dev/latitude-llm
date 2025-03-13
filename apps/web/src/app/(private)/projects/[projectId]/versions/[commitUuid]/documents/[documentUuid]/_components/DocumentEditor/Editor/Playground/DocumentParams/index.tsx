@@ -1,5 +1,9 @@
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import {
+  UseDocumentParameters,
+  useDocumentParameters,
+} from '$/hooks/useDocumentParameters'
+import {
+  DatasetVersion,
   DocumentVersion,
   INPUT_SOURCE,
   InputSource,
@@ -25,6 +29,7 @@ import {
 } from './HistoryLogParams/useLogHistoryParams'
 import { ManualParams } from './ManualParams'
 import { ParametersPaginationNav } from './PaginationNav'
+import { ConversationMetadata } from 'promptl-ai'
 
 const TABS: TabSelectorOption<InputSource>[] = [
   { label: 'Manual', value: INPUT_SOURCE.manual },
@@ -33,6 +38,7 @@ const TABS: TabSelectorOption<InputSource>[] = [
 ]
 
 export type Props = {
+  datasetVersion: DatasetVersion | undefined
   document: DocumentVersion
   commit: ICommitContextType['commit']
   prompt: string
@@ -40,6 +46,8 @@ export type Props = {
   onExpand?: OnExpandFn
 }
 type ContentProps = Props & {
+  source: InputSource
+  setSource: ReturnType<typeof useDocumentParameters>['setSource']
   datasetInfo: UseSelectDataset
   historyInfo: UseLogHistoryParams
 }
@@ -49,14 +57,12 @@ function ParamsTabs({
   commit,
   prompt,
   setPrompt,
+  setSource,
+  source,
   datasetInfo,
   historyInfo,
+  datasetVersion,
 }: ContentProps) {
-  const { source, setSource } = useDocumentParameters({
-    document,
-    commitVersionUuid: commit.uuid,
-  })
-
   return (
     <div className='w-full flex flex-col gap-4'>
       <TabSelector<InputSource>
@@ -71,16 +77,23 @@ function ParamsTabs({
           commit={commit}
           prompt={prompt}
           setPrompt={setPrompt}
+          datasetVersion={datasetVersion}
         />
       )}
       {source === INPUT_SOURCE.dataset && (
-        <DatasetParams data={datasetInfo} document={document} commit={commit} />
+        <DatasetParams
+          data={datasetInfo}
+          document={document}
+          commit={commit}
+          datasetVersion={datasetVersion}
+        />
       )}
       {source === INPUT_SOURCE.history && (
         <HistoryLogParams
           data={historyInfo}
           document={document}
           commit={commit}
+          datasetVersion={datasetVersion}
         />
       )}
     </div>
@@ -88,35 +101,25 @@ function ParamsTabs({
 }
 
 function CollapsedContentHeader({
-  document,
-  commit,
+  source,
   datasetInfo,
   historyInfo,
 }: ContentProps) {
   const src = INPUT_SOURCE
-  const { source } = useDocumentParameters({
-    document,
-    commitVersionUuid: commit.uuid,
-  })
-
   if (source === src.manual) return null
   const isDataset =
     source === INPUT_SOURCE.dataset && datasetInfo.selectedDataset
   const isHistory = source === src.history && historyInfo.count > 0
-
-  const onPrevDatasetPage = (page: number) => datasetInfo.onRowChange(page - 1)
-  const onNextDatasetPage = (page: number) => datasetInfo.onRowChange(page + 1)
-
   return (
     <div className='w-full flex items-center justify-end gap-4'>
       {isDataset && (
         <ParametersPaginationNav
           zeroIndex
           label='rows in dataset'
-          currentIndex={datasetInfo.selectedRowIndex}
-          totalCount={datasetInfo.totalRows}
-          onPrevPage={onPrevDatasetPage}
-          onNextPage={onNextDatasetPage}
+          currentIndex={datasetInfo.position}
+          totalCount={datasetInfo.count}
+          onPrevPage={datasetInfo.onPrevPage}
+          onNextPage={datasetInfo.onNextPage}
         />
       )}
       {isHistory && (
@@ -132,21 +135,40 @@ function CollapsedContentHeader({
   )
 }
 
-export default function DocumentParams({ onExpand, ...props }: Props) {
+type DocumentParamsProps = Props & {
+  metadata: ConversationMetadata | undefined
+  source: UseDocumentParameters['source']
+  setSource: UseDocumentParameters['setSource']
+}
+export default function DocumentParams({
+  onExpand,
+  metadata,
+  setSource,
+  source,
+  ...props
+}: DocumentParamsProps) {
+  const commit = props.commit
   const datasetInfo = useSelectDataset({
     document: props.document,
-    commitVersionUuid: props.commit.uuid,
+    commitVersionUuid: commit.uuid,
+    source,
+    metadata,
   })
 
+  // TODO: Improve. Pass source and only fetch logs when in logs tab
   const historyInfo = useLogHistoryParams({
     document: props.document,
-    commitVersionUuid: props.commit.uuid,
+    commitVersionUuid: commit.uuid,
+    datasetVersion: props.datasetVersion,
   })
 
   const contentProps = {
     ...props,
+    source,
+    setSource,
     datasetInfo,
     historyInfo,
+    datasetVersion: props.datasetVersion,
   }
 
   return (

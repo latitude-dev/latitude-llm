@@ -1,6 +1,10 @@
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useGenerateDocumentLogDetailUrl } from '$/hooks/useGenerateDocumentLogDetailUrl'
-import { DocumentLog, DocumentVersion } from '@latitude-data/core/browser'
+import {
+  DatasetVersion,
+  DocumentLog,
+  DocumentVersion,
+} from '@latitude-data/core/browser'
 import {
   Badge,
   ClientOnly,
@@ -48,16 +52,19 @@ export function HistoryLogParams({
   data,
   commit,
   document,
+  datasetVersion,
 }: {
   document: DocumentVersion
   commit: ICommitContextType['commit']
   data: UseLogHistoryParams
+  datasetVersion: DatasetVersion | undefined
 }) {
   const {
     history: { inputs, setInput },
   } = useDocumentParameters({
     document,
     commitVersionUuid: commit.uuid,
+    datasetVersion,
   })
   const urlData = usePaginatedDocumentLogUrl({
     selectedLog: data.selectedLog,

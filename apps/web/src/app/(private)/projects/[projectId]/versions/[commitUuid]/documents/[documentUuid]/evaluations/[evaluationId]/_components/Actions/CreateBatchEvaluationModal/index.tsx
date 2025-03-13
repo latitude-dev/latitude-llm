@@ -1,17 +1,18 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback } from 'react'
 
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
 import { Button, CloseTrigger, Modal } from '@latitude-data/web-ui'
-import { useMetadata } from '$/hooks/useMetadata'
 
 import DatasetForm from './DatasetForm'
 import { useRunBatch } from './useRunBatch'
 import { useRunBatchForm } from './useRunBatchForm'
+import { ConversationMetadata } from 'promptl-ai'
 
 export default function CreateBatchEvaluationModal({
   open,
   onClose,
   document,
+  documentMetadata,
   evaluation,
   projectId,
   commitUuid,
@@ -21,6 +22,7 @@ export default function CreateBatchEvaluationModal({
   projectId: string
   commitUuid: string
   document: DocumentVersion
+  documentMetadata: ConversationMetadata | undefined
   evaluation: EvaluationDto
 }) {
   const { runBatch, errors, isRunningBatch } = useRunBatch({
@@ -31,16 +33,8 @@ export default function CreateBatchEvaluationModal({
       onClose()
     },
   })
-  const { metadata, runReadMetadata } = useMetadata()
-  useEffect(() => {
-    runReadMetadata({
-      prompt: document.content ?? '',
-      fullPath: document.path,
-      promptlVersion: document.promptlVersion,
-    })
-  }, [])
 
-  const form = useRunBatchForm({ document, documentMetadata: metadata })
+  const form = useRunBatchForm({ document, documentMetadata })
   const onRunBatch = useCallback(() => {
     runBatch({
       datasetId: form.selectedDataset?.id,

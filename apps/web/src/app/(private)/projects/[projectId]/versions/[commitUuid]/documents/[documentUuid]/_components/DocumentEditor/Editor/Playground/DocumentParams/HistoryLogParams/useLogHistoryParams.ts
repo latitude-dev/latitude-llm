@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
 import { useCurrentProject } from '@latitude-data/web-ui'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogs from '$/stores/documentLogs'
@@ -15,9 +15,11 @@ const ONLY_ONE_PAGE = '1'
 export function useLogHistoryParams({
   document,
   commitVersionUuid,
+  datasetVersion,
 }: {
   document: DocumentVersion
   commitVersionUuid: string
+  datasetVersion: DatasetVersion | undefined
 }) {
   const { project } = useCurrentProject()
   const {
@@ -25,6 +27,7 @@ export function useLogHistoryParams({
   } = useDocumentParameters({
     document,
     commitVersionUuid,
+    datasetVersion,
   })
 
   const filterOptions = useDefaultLogFilterOptions()

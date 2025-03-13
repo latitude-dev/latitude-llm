@@ -249,6 +249,11 @@ export const API_ROUTES = {
   datasetsRows: {
     root: '/api/dataset-rows',
     count: '/api/dataset-rows/count',
+    withPosition: (id: number) => {
+      return {
+        root: `/api/dataset-rows/${id}/position`,
+      }
+    },
   },
   evaluationTemplates: {
     root: '/api/evaluationTemplates',

@@ -7,6 +7,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
+const EMPTY_ARRAY: Dataset[] = []
 export default function useDatasets(
   {
     onCreateSuccess,
@@ -24,10 +25,10 @@ export default function useDatasets(
     serializer: (rows) => rows.map(deserialize),
   })
   const {
-    data = [],
+    data = EMPTY_ARRAY,
     mutate,
     ...rest
-  } = useSWR<Dataset[]>(['datasets'], fetcher, {
+  } = useSWR<Dataset[]>(enabled ? ['datasets'] : undefined, fetcher, {
     ...opts,
     onSuccess: (data) => {
       onFetched?.(data)

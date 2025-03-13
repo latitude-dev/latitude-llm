@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
@@ -31,6 +31,7 @@ import {
 } from './EvaluationResultsTable'
 import { EvaluationStatusBanner } from './EvaluationStatusBanner'
 import { RefineEvaluationResults } from '../RefineEvaluationResults'
+import { useMetadata } from '$/hooks/useMetadata'
 
 const useEvaluationResultsSocket = (
   evaluation: EvaluationDto,
@@ -133,6 +134,14 @@ export function EvaluationResults({
     getSelectedRowIds: selectableState.getSelectedRowIds,
   })
   useEvaluationResultsSocket(evaluation, document, mutate)
+  const { metadata, runReadMetadata } = useMetadata()
+  useEffect(() => {
+    runReadMetadata({
+      prompt: document.content ?? '',
+      fullPath: document.path,
+      promptlVersion: document.promptlVersion,
+    })
+  }, [])
 
   return (
     <div className='flex flex-col gap-4 flex-grow min-h-0'>
@@ -192,6 +201,7 @@ export function EvaluationResults({
         open={open}
         onClose={onClose}
         document={document}
+        documentMetadata={metadata}
         evaluation={evaluation}
         projectId={project.id.toString()}
         commitUuid={commit.uuid}

@@ -150,6 +150,7 @@ export function EmailTriggerConfig({
   } = useDocumentParameters({
     document,
     commitVersionUuid: commit.uuid,
+    datasetVersion: undefined,
   })
   const documentParameters = Object.keys(inputs)
 

@@ -39,7 +39,10 @@ export default abstract class Repository<T extends Record<string, unknown>> {
       .where(and(this.scopeFilter, eq(this.scope._.selectedFields.id, id)))
       .limit(1)
     if (!result[0]) {
-      return Result.error(new NotFoundError(`Record with id ${id} not found`))
+      const table = this.scope._.tableName
+      return Result.error(
+        new NotFoundError(`Record with id ${id} not found in ${table}`),
+      )
     }
 
     return Result.ok(result[0]! as T)

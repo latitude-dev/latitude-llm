@@ -34,6 +34,7 @@ export const GET = errorHandler(
       const page = parsePage(searchParams.get('page'))
       const pageSize =
         searchParams.get('pageSize') ?? String(DEFAULT_PAGINATION_SIZE)
+
       const repo = new DatasetRowsRepository(workspace.id)
       const rows = await repo.findByDatasetPaginated({
         datasetId: dataset.id,

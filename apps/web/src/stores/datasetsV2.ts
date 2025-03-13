@@ -9,6 +9,7 @@ import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 
+const EMPTY_ARRAY: DatasetV2[] = []
 export default function useDatasets(
   {
     onCreateSuccess,
@@ -34,15 +35,19 @@ export default function useDatasets(
     }) as Record<string, string>,
   })
   const {
-    data = [],
+    data = EMPTY_ARRAY,
     mutate,
     ...rest
-  } = useSWR<DatasetV2[]>(compact(['datasetsV2', page, pageSize]), fetcher, {
-    ...opts,
-    onSuccess: (data) => {
-      onFetched?.(data)
+  } = useSWR<DatasetV2[]>(
+    enabled ? compact(['datasetsV2', page, pageSize]) : undefined,
+    fetcher,
+    {
+      ...opts,
+      onSuccess: (data) => {
+        onFetched?.(data)
+      },
     },
-  })
+  )
   const {
     isPending: isCreating,
     error: createError,

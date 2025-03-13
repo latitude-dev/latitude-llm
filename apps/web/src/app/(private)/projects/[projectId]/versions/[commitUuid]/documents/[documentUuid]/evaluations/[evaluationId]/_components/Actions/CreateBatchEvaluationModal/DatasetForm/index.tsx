@@ -48,7 +48,7 @@ function LineRangeInputs({
   disabled: boolean
   fromDefaultValue: number | undefined
   toDefaultValue: number | undefined
-  onChangeFromLine: ReactStateDispatch<number | undefined>
+  onChangeFromLine: ReactStateDispatch<number>
   onChangeToLine: ReactStateDispatch<number | undefined>
   max: number | undefined
 }) {
@@ -112,7 +112,7 @@ export default function DatasetForm({
   wantAllLines: boolean
   fromLine: number | undefined
   toLine: number | undefined
-  onChangeFromLine: ReactStateDispatch<number | undefined>
+  onChangeFromLine: ReactStateDispatch<number>
   onChangeToLine: ReactStateDispatch<number | undefined>
   headers: SelectOption<string>[]
   selectedDataset: Dataset | DatasetV2 | null

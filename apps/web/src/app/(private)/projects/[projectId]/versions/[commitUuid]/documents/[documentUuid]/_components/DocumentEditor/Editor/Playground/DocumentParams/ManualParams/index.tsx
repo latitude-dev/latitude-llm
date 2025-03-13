@@ -7,12 +7,19 @@ import { ParameterType } from '@latitude-data/constants'
 import { Badge, ClientOnly, Icon, Text, Tooltip } from '@latitude-data/web-ui'
 import { ParameterTypeSelector } from './ParameterTypeSelector'
 
-export function ManualParams({ document, commit, prompt, setPrompt }: Props) {
+export function ManualParams({
+  document,
+  commit,
+  prompt,
+  setPrompt,
+  datasetVersion,
+}: Props) {
   const {
     manual: { inputs, setInput },
   } = useDocumentParameters({
     document,
     commitVersionUuid: commit.uuid,
+    datasetVersion,
   })
   return (
     <ClientOnly>
