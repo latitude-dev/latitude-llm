@@ -83,6 +83,7 @@
     "nodemailer": "^6.10.0",
     "nodemailer-html-to-text": "^3.2.0",
     "nodemailer-mailgun-transport": "^2.1.5",
+    "officeparser": "^5.1.1",
     "pg": "^8.14.0",
     "posthog-node": "^4.10.1",
     "react": "^18.3.1",
