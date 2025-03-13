@@ -79,7 +79,7 @@ async function run(
       metadata: metadata,
       error: null,
     }
-  } catch (error: unknown) {
+  } catch (error) {
     return {
       score: null,
       metadata: null,

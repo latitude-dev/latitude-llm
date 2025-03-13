@@ -128,7 +128,7 @@ export async function runEvaluationV2<
         `Metric score must be between 0 and ${EVALUATION_SCORE_SCALE}`,
       )
     }
-  } catch (error: unknown) {
+  } catch (error) {
     value = {
       score: null,
       metadata: null,

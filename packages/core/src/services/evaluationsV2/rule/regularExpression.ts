@@ -36,13 +36,13 @@ async function validate(
   }
 
   try {
-    new RegExp(configuration.pattern)
-  } catch (error: unknown) {
-    return Result.error(new BadRequestError((error as Error).message))
-  }
+    const regex = new RegExp(configuration.pattern, 'gm')
 
-  if (!safeRegex(configuration.pattern, { limit: PATTERN_COMPLEXITY_LIMIT })) {
-    return Result.error(new BadRequestError('Pattern is too complex'))
+    if (!safeRegex(regex, { limit: PATTERN_COMPLEXITY_LIMIT })) {
+      return Result.error(new BadRequestError('Pattern is too complex'))
+    }
+  } catch (error) {
+    return Result.error(new BadRequestError((error as Error).message))
   }
 
   // Note: all settings are explicitly returned to ensure we don't
@@ -78,7 +78,7 @@ async function run(
       metadata: metadata,
       error: null,
     }
-  } catch (error: unknown) {
+  } catch (error) {
     return {
       score: null,
       metadata: null,

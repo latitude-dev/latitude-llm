@@ -76,7 +76,7 @@ async function run<M extends RuleEvaluationMetric>(
     const value = await metricSpecification.run({ ...rest }, db)
 
     return value
-  } catch (error: unknown) {
+  } catch (error) {
     return {
       score: null,
       metadata: null,
