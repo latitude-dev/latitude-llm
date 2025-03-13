@@ -70,7 +70,12 @@ describe('useDatasetRows', () => {
         ...omit(row, 'rowData'),
         createdAt: new Date(row.createdAt),
         updatedAt: new Date(row.updatedAt),
-        rowData: row.rowData,
+        rowData: {
+          '7dagyMD': 'tortilla de patatas',
+          AGqIoHr: '["patatas", "huevos", "aceite", "sal"]',
+          FdBuNWV: '4',
+          KhdzZS0: 'Paco Merlo',
+        },
         cells: [
           'tortilla de patatas',
           '["patatas", "huevos", "aceite", "sal"]',
