@@ -4,7 +4,7 @@ ARG SENTRY_DSN
 ARG SENTRY_ORG
 ARG SENTRY_PROJECT
 
-FROM node:20-alpine AS alpine
+FROM node:22-alpine AS alpine
 
 # Install build dependencies
 RUN apk add --update --no-cache \

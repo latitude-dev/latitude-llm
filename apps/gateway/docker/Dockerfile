@@ -1,7 +1,7 @@
 ARG PROJECT="@latitude-data/gateway"
 ARG PROJECT_PATH="apps/gateway"
 
-FROM node:20-alpine AS alpine
+FROM node:22-alpine AS alpine
 
 # Install build dependencies
 RUN apk add --update --no-cache \

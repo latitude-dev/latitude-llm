@@ -1,7 +1,7 @@
 ARG PROJECT="@latitude-data/workers"
 ARG PROJECT_PATH="apps/workers"
 
-FROM node:20-alpine AS alpine
+FROM node:22-alpine AS alpine
 
 # Install build dependencies
 RUN apk add --no-cache libc6-compat curl
