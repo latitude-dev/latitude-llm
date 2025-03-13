@@ -17,7 +17,7 @@
     "@types/node": "^22.5.1",
     "eslint": "8",
     "glob": "^11.0.0",
-    "mintlify": "^4.0.233",
+    "mintlify": "4.0.233",
     "prettier": "^3.3.3",
     "recast": "^0.23.9",
     "turbo": "^2.4.0",
