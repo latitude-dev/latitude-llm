@@ -9,6 +9,7 @@ import { diskFactory } from '../../lib/disk'
 import * as factories from '../../tests/factories'
 
 import { uploadFile } from './upload'
+import { isPromptLFile } from 'promptl-ai'
 
 describe('uploadFile', () => {
   const DOCUMENTS_PATH = join(__dirname, '../../tests/fixtures/files/documents')
@@ -31,20 +32,20 @@ describe('uploadFile', () => {
 
   it('not uploads empty file', async () => {
     const file = new File([Buffer.from('')], 'file')
-
-    await expect(
-      uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
-    ).rejects.toThrowError(new BadRequestError(`File is empty`))
+    const result = await uploadFile({ file, workspace }, disk)
+    expect(result.ok).toBeFalsy()
+    expect(result.error).toBeInstanceOf(BadRequestError)
+    expect(result.error!.message).toBe('File is empty')
   })
 
   it('not uploads large file', async () => {
     vi.spyOn(constants, 'MAX_UPLOAD_SIZE_IN_MB', 'get').mockReturnValue(1)
 
     const file = new File([Buffer.from('Too large!')], 'file')
-
-    await expect(
-      uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
-    ).rejects.toThrowError(new BadRequestError(`File too large`))
+    const result = await uploadFile({ file, workspace }, disk)
+    expect(result.ok).toBeFalsy()
+    expect(result.error).toBeInstanceOf(BadRequestError)
+    expect(result.error!.message).toBe('File too large')
   })
 
   it('not uploads when disk upload fails', async () => {
@@ -55,12 +56,10 @@ describe('uploadFile', () => {
     const name = 'file.png'
     const content = await readFile(join(IMAGES_PATH, name))
     const file = new File([content], name)
-
-    await expect(
-      uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new UnprocessableEntityError(`Failed to upload .png file`, {}),
-    )
+    const result = await uploadFile({ file, workspace }, disk)
+    expect(result.ok).toBeFalsy()
+    expect(result.error).toBeInstanceOf(UnprocessableEntityError)
+    expect(result.error!.message).toBe('Failed to upload .png file')
   })
 
   it('uploads image files', async () => {
@@ -68,10 +67,13 @@ describe('uploadFile', () => {
     for (const name of files) {
       const content = await readFile(join(IMAGES_PATH, name))
       const file = new File([content], name)
+      const result = await uploadFile({ file, workspace }, disk)
+      expect(result.ok).toBeTruthy()
 
-      await expect(
-        uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
-      ).resolves.toContain(
+      const uploadedFile = result.unwrap()
+      expect(isPromptLFile(uploadedFile)).toBeTruthy()
+      expect(uploadedFile.name).toBe(name)
+      expect(uploadedFile.url).toContain(
         `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
       )
     }
@@ -82,10 +84,13 @@ describe('uploadFile', () => {
     for (const name of files) {
       const content = await readFile(join(DOCUMENTS_PATH, name))
       const file = new File([content], name)
+      const result = await uploadFile({ file, workspace }, disk)
+      expect(result.ok).toBeTruthy()
 
-      await expect(
-        uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
-      ).resolves.toContain(
+      const uploadedFile = result.unwrap()
+      expect(isPromptLFile(uploadedFile)).toBeTruthy()
+      expect(uploadedFile.name).toBe(name)
+      expect(uploadedFile.url).toContain(
         `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
       )
     }
@@ -96,10 +101,13 @@ describe('uploadFile', () => {
     for (const name of files) {
       const content = await readFile(join(AUDIO_PATH, name))
       const file = new File([content], name)
+      const result = await uploadFile({ file, workspace }, disk)
+      expect(result.ok).toBeTruthy()
 
-      await expect(
-        uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
-      ).resolves.toContain(
+      const uploadedFile = result.unwrap()
+      expect(isPromptLFile(uploadedFile)).toBeTruthy()
+      expect(uploadedFile.name).toBe(name)
+      expect(uploadedFile.url).toContain(
         `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
       )
     }
@@ -109,29 +117,40 @@ describe('uploadFile', () => {
     const name = 'file.png'
     const content = await readFile(join(IMAGES_PATH, name))
     const file = new File([content], name)
+    const result = await uploadFile({ file, workspace }, disk)
+    expect(result.ok).toBeTruthy()
 
-    await expect(
-      uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
-    ).resolves.toContain(`/workspaces/${workspace.id}/files/fake-uuid/${name}`)
+    const uploadedFile = result.unwrap()
+    expect(isPromptLFile(uploadedFile)).toBeTruthy()
+    expect(uploadedFile.name).toBe(name)
+    expect(uploadedFile.url).toContain(
+      `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
+    )
   })
 
   it('it uploads files with a custom prefix', async () => {
     const name = 'file.png'
     const content = await readFile(join(IMAGES_PATH, name))
     const file = new File([content], name)
+    const result = await uploadFile({ file, prefix: 'custom' }, disk)
+    expect(result.ok).toBeTruthy()
 
-    await expect(
-      uploadFile({ file, prefix: 'custom' }, disk).then((r) => r.unwrap()),
-    ).resolves.toContain(`/custom/files/fake-uuid/${name}`)
+    const uploadedFile = result.unwrap()
+    expect(isPromptLFile(uploadedFile)).toBeTruthy()
+    expect(uploadedFile.name).toBe(name)
+    expect(uploadedFile.url).toContain(`/custom/files/fake-uuid/${name}`)
   })
 
   it('it uploads files with an unknown prefix', async () => {
     const name = 'file.png'
     const content = await readFile(join(IMAGES_PATH, name))
     const file = new File([content], name)
+    const result = await uploadFile({ file }, disk)
+    expect(result.ok).toBeTruthy()
 
-    await expect(
-      uploadFile({ file }, disk).then((r) => r.unwrap()),
-    ).resolves.toContain(`/unknown/files/fake-uuid/${name}`)
+    const uploadedFile = result.unwrap()
+    expect(isPromptLFile(uploadedFile)).toBeTruthy()
+    expect(uploadedFile.name).toBe(name)
+    expect(uploadedFile.url).toContain(`/unknown/files/fake-uuid/${name}`)
   })
 })

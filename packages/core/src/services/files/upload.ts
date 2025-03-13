@@ -12,6 +12,7 @@ import {
 
 import { Workspace } from '../../browser'
 import { MAX_UPLOAD_SIZE_IN_MB } from '../../constants'
+import { PromptLFile, toPromptLFile } from 'promptl-ai'
 
 function generateKey({
   filename,
@@ -44,7 +45,7 @@ export async function uploadFile(
     workspace?: Workspace
   },
   disk: DiskWrapper = diskFactory('public'),
-): Promise<TypedResult<string, Error>> {
+): Promise<TypedResult<PromptLFile, Error>> {
   const key = generateKey({ filename: file.name, prefix, workspace })
   const extension = path.extname(file.name).toLowerCase()
 
@@ -62,7 +63,7 @@ export async function uploadFile(
     // acting as a reverse proxy refreshing the signed urls
     const url = await disk.getUrl(key)
 
-    return Result.ok(url)
+    return Result.ok(toPromptLFile({ file, url }))
   } catch (error) {
     return Result.error(
       new UnprocessableEntityError(`Failed to upload ${extension} file`, {}),

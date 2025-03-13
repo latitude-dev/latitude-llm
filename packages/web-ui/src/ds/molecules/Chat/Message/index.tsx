@@ -414,7 +414,10 @@ function ReferenceComponent({
           <div className='line-clamp-6'>{reference.content}</div>
         )}
         {reference.type === ContentType.image && (
-          <Image src={reference.content} className='max-h-72 rounded-xl' />
+          <Image
+            src={reference.content}
+            className='max-h-72 rounded-xl w-fit object-contain'
+          />
         )}
         {reference.type === ContentType.file && (
           <FileComponent src={reference.content} />
@@ -451,15 +454,32 @@ function ReferenceComponent({
 }
 
 function FileComponent({ src }: { src: string }) {
+  const [isHovering, setIsHovering] = useState(false)
+
   return (
     <a
       href={src}
       target='_blank'
       rel='noopener noreferrer'
-      className='h-auto w-auto text-accent-foreground font-semibold bg-muted flex flex-row items-center justify-center gap-2 py-2 px-3 rounded-xl shadow-sm'
+      className={cn(
+        'flex flex-row p-4 gap-2 rounded-xl w-fit items-center',
+        'text-muted-foreground hover:text-accent-foreground transition-colors',
+        'bg-muted hover:bg-accent',
+      )}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
     >
-      <Icon name='paperclip' size='normal' className='shrink-0' />
-      {src.split('/').at(-1)}
+      <Icon
+        name={isHovering ? 'fileDown' : 'file'}
+        color={isHovering ? 'accentForeground' : 'foregroundMuted'}
+      />
+      <Text.H5
+        whiteSpace='preWrap'
+        wordBreak='breakAll'
+        color={isHovering ? 'accentForeground' : 'foregroundMuted'}
+      >
+        {src.split('/').at(-1)}
+      </Text.H5>
     </a>
   )
 }
@@ -528,6 +548,17 @@ function groupSegments(segments: Segment[]) {
   return groups
 }
 
+function isValidUrl(url: unknown) {
+  const isUrl =
+    url instanceof URL || (typeof url === 'string' && URL.canParse(url))
+  if (!isUrl) return false
+
+  if (url.toString().startsWith('https')) return true
+  if (url.toString().startsWith('http://localhost')) return true
+
+  return false
+}
+
 const ContentImage = ({
   index = 0,
   color,
@@ -545,20 +576,16 @@ const ContentImage = ({
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
 }) => {
-  // TODO: Improve ContentImage component to actually display the image instead of just the URL
-  if (
-    (typeof image !== 'string' && !(image instanceof URL)) ||
-    !URL.canParse(image.toString()) ||
-    (!image.toString().startsWith('https') &&
-      !image.toString().startsWith('http://localhost'))
-  ) {
+  if (!isValidUrl(image)) {
+    const TextComponent = size === 'small' ? Text.H6 : Text.H5
+
     return (
-      <ContentText
-        index={index}
-        color={color}
-        size={size}
-        message={'<Image preview unavailable>'}
-      />
+      <div className='flex flex-row p-4 gap-2 bg-muted rounded-xl w-fit items-center'>
+        <Icon name='imageOff' color='foregroundMuted' />
+        <TextComponent color={color} whiteSpace='preWrap' wordBreak='breakAll'>
+          {'<Image preview unavailable>'}
+        </TextComponent>
+      </div>
     )
   }
 
@@ -575,7 +602,14 @@ const ContentImage = ({
     [image, sourceMap, parameters],
   )[0]
 
-  if (!segment) return null
+  if (!segment || typeof segment === 'string') {
+    return (
+      <Image
+        src={image.toString()}
+        className='max-h-72 rounded-xl w-fit object-contain'
+      />
+    )
+  }
 
   return (
     <TextComponent
@@ -613,20 +647,14 @@ const ContentFile = ({
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
 }) => {
-  // TODO: Improve ContentFile component to actually display a file representation instead of just the URL
-  if (
-    (typeof file !== 'string' && !(file instanceof URL)) ||
-    !URL.canParse(file.toString()) ||
-    (!file.toString().startsWith('https') &&
-      !file.toString().startsWith('http://localhost'))
-  ) {
+  if (!isValidUrl(file)) {
     return (
-      <ContentText
-        index={index}
-        color={color}
-        size={size}
-        message={'<File preview unavailable>'}
-      />
+      <div className='flex flex-row p-4 gap-2 bg-muted rounded-xl w-fit items-center'>
+        <Icon name='fileOff' color='foregroundMuted' />
+        <Text.H5 color={color} whiteSpace='preWrap' wordBreak='breakAll'>
+          {'<File preview unavailable>'}
+        </Text.H5>
+      </div>
     )
   }
 
@@ -638,7 +666,9 @@ const ContentFile = ({
     [file, sourceMap, parameters],
   )[0]
 
-  if (!segment) return null
+  if (!segment || typeof segment === 'string') {
+    return <FileComponent src={file.toString()} />
+  }
 
   return (
     <TextComponent
@@ -647,14 +677,10 @@ const ContentFile = ({
       wordBreak='breakAll'
       key={`${index}`}
     >
-      {typeof segment === 'string' ? (
-        segment
-      ) : (
-        <ReferenceComponent
-          reference={segment}
-          collapseParameters={collapseParameters}
-        />
-      )}
+      <ReferenceComponent
+        reference={segment}
+        collapseParameters={collapseParameters}
+      />
     </TextComponent>
   )
 }

@@ -1,15 +1,10 @@
 import {
   BadRequestError,
-  ErrorResult,
   LatitudeError,
   PromisedResult,
   Result,
 } from '../../../../lib'
-import {
-  type PromptLFile,
-  promptLFileToMessageContent,
-  toPromptLFile,
-} from 'promptl-ai'
+import { type PromptLFile, promptLFileToMessageContent } from 'promptl-ai'
 import {
   DocumentLog,
   DocumentTriggerParameters,
@@ -204,24 +199,13 @@ export async function uploadAttachments({
         )
       }
 
-      const uploadResult = await uploadFile({
-        file,
-        workspace,
-      })
-      if (uploadResult.error) return uploadResult as ErrorResult<LatitudeError>
-
-      return Result.ok(
-        toPromptLFile({
-          file,
-          url: uploadResult.unwrap(),
-        }),
-      )
+      return await uploadFile({ file, workspace })
     }),
   )
 
   const errors = results.filter((result) => result.error)
   if (errors.length) {
-    return Result.error(errors[0]!.error!)
+    return Result.error(errors[0]!.error! as LatitudeError)
   }
 
   return Result.ok(results.map((result) => result.unwrap()))

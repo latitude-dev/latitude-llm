@@ -57,10 +57,10 @@ export default function useFiles() {
         return
       }
 
-      const [url, error] = await executeUploadFile({ file })
+      const [uploadedFile, error] = await executeUploadFile({ file })
       if (error) return
 
-      return url
+      return uploadedFile
     },
     [executeUploadFile],
   )
