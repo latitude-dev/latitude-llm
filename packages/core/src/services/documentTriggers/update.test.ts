@@ -2,14 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTrigger, Workspace } from '../../browser'
 import { updateDocumentTriggerConfiguration } from './update'
-import { LatitudeError, Result, Transaction } from '../../lib'
+import { LatitudeError, Transaction } from '../../lib'
 import { database } from '../../client'
 import * as buildConfigurationModule from './helpers/buildConfiguration'
 import { documentTriggers } from '../../schema'
-import {
-  DocumentTriggerConfiguration,
-  EmailTriggerConfiguration,
-} from './helpers/schema'
+import { EmailTriggerConfiguration } from './helpers/schema'
 import { and, eq } from 'drizzle-orm'
 
 describe('updateDocumentTriggerConfiguration', () => {

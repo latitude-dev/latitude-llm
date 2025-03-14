@@ -14,12 +14,15 @@ import { DocumentTrigger, HEAD_COMMIT } from '../../../../browser'
 import { DocumentTriggerMailer } from '../../../../mailers'
 import { getEmailResponse } from './getResponse'
 import { DocumentVersionsRepository } from '../../../../repositories'
+import { EmailTriggerConfiguration } from '../../helpers/schema'
 
 async function getTriggerName(
   trigger: DocumentTrigger,
   db = database,
 ): PromisedResult<string, LatitudeError> {
-  const configName = trigger.configuration.name?.trim()
+  const configName = (
+    trigger.configuration as EmailTriggerConfiguration
+  ).name?.trim()
   if (configName?.length) {
     return Result.ok(configName)
   }
@@ -44,20 +47,18 @@ export async function assertTriggerFilters({
   sender: string
   trigger: DocumentTrigger
 }): PromisedResult<undefined> {
-  if (
-    !trigger.configuration.emailWhitelist &&
-    !trigger.configuration.domainWhitelist
-  ) {
+  const configuration = trigger.configuration as EmailTriggerConfiguration
+  if (!configuration.emailWhitelist && !configuration.domainWhitelist) {
     return Result.nil()
   }
 
-  if (trigger.configuration.emailWhitelist) {
-    const whitelist = trigger.configuration.emailWhitelist
+  if (configuration.emailWhitelist) {
+    const whitelist = configuration.emailWhitelist
     if (whitelist.includes(sender)) return Result.nil()
   }
 
-  if (trigger.configuration.domainWhitelist) {
-    const whitelist = trigger.configuration.domainWhitelist
+  if (configuration.domainWhitelist) {
+    const whitelist = configuration.domainWhitelist
     const domain = sender.split('@')[1]
     if (!domain) return Result.nil()
     if (whitelist.includes(domain)) return Result.nil()
@@ -127,9 +128,8 @@ export async function handleEmailTrigger(
     db,
   )
 
-  if (trigger.configuration.replyWithResponse === false) {
-    return Result.nil()
-  }
+  const configuration = trigger.configuration as EmailTriggerConfiguration
+  if (configuration.replyWithResponse === false) return Result.nil()
 
   const from = `${JSON.stringify(name.unwrap())} <${trigger.documentUuid}@${EMAIL_TRIGGER_DOMAIN}>`
 

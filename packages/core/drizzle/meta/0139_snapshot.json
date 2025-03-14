@@ -1,6 +1,6 @@
 {
-  "id": "94fb99bf-8da6-4446-9596-4b4b9945fa41",
-  "prevId": "6a6be33c-cb46-470d-8272-9008ed6da986",
+  "id": "88dd3625-fa1c-4ec3-a94a-cfe35e17c775",
+  "prevId": "6fd939e3-e25c-4c1b-90d5-af0df11d0068",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1031,8 +1031,21 @@
           "primaryKey": false,
           "notNull": false
         },
+        "dataset_v2_id": {
+          "name": "dataset_v2_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
         "linked_dataset_by_dataset_id": {
           "name": "linked_dataset_by_dataset_id",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::json"
+        },
+        "linked_dataset_by_dataset_id_and_row_id": {
+          "name": "linked_dataset_by_dataset_id_and_row_id",
           "type": "json",
           "primaryKey": false,
           "notNull": false,
@@ -1176,6 +1189,20 @@
           "schemaTo": "latitude",
           "columnsFrom": [
             "dataset_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "document_versions_dataset_v2_id_datasets_v2_id_fk": {
+          "name": "document_versions_dataset_v2_id_datasets_v2_id_fk",
+          "tableFrom": "document_versions",
+          "tableTo": "datasets_v2",
+          "schemaTo": "latitude",
+          "columnsFrom": [
+            "dataset_v2_id"
           ],
           "columnsTo": [
             "id"

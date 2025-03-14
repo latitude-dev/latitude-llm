@@ -1,1 +1,0 @@
-ALTER TYPE "latitude"."log_source" ADD VALUE 'scheduled_trigger';
