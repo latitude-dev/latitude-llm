@@ -84,7 +84,7 @@ export async function handleEmailTrigger(
     body: string
     messageId?: string
     parentMessageIds?: string[]
-    attachments?: (string | File)[]
+    attachments?: File[]
   },
   db = database,
 ): PromisedResult<undefined> {

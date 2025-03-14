@@ -189,16 +189,10 @@ export async function uploadAttachments({
   attachments,
 }: {
   workspace: Workspace
-  attachments: (string | File)[]
+  attachments: File[]
 }): PromisedResult<PromptLFile[], LatitudeError> {
   const results = await Promise.all(
     attachments.map(async (file) => {
-      if (typeof file === 'string') {
-        return Result.error(
-          new BadRequestError(`Invalid attachment: '${file}'`),
-        )
-      }
-
       return await uploadFile({ file, workspace })
     }),
   )
@@ -231,7 +225,7 @@ export async function getEmailResponse(
     senderName: string | undefined
     subject: string
     body: string
-    attachments?: (string | File)[]
+    attachments?: File[]
   },
   db = database,
 ): PromisedResult<AssistantMessage, LatitudeError> {

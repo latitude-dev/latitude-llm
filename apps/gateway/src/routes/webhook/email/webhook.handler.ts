@@ -35,7 +35,9 @@ export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (
   }
 
   const attachedFiles = await c.req.parseBody()
-  const attachments = Object.values(attachedFiles)
+  const attachments = Object.values(attachedFiles).filter(
+    (item) => typeof item !== 'string',
+  )
 
   verifyWebhookSignature({
     token,
