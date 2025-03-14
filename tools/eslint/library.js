@@ -1,10 +1,16 @@
 const { resolve } = require('node:path')
 
 const project = resolve(process.cwd(), 'tsconfig.json')
+const turboConfig = require('eslint-config-turbo')
+const unwrappedTurbo = turboConfig.default || turboConfig
 
 /** @type {import("eslint").Linter.Config} */
 module.exports = {
-  extends: ['eslint:recommended', 'prettier', 'eslint-config-turbo'],
+  extends: [
+    'eslint:recommended',
+    'prettier',
+    ...(unwrappedTurbo.extends || []),
+  ],
   plugins: ['@typescript-eslint/eslint-plugin'],
   parser: '@typescript-eslint/parser',
   settings: {
@@ -13,6 +19,13 @@ module.exports = {
         project,
       },
     },
+  },
+  parserOptions: {
+    // Ignores these warnings when running ESLint
+    // Example:
+    // WARNING: You are currently running a version of TypeScript which is not officially
+    // supported by @typescript-eslint/typescript-estree.
+    warnOnUnsupportedTypeScriptVersion: false,
   },
   ignorePatterns: [
     // Ignore dotfiles
