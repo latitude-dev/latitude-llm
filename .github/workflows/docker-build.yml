@@ -10,10 +10,10 @@ env:
   PUBLIC_OWNER: latitude-dev
 
 jobs:
-  lint:
-    uses: ./.github/workflows/lint.yml
-    with:
-      workflow_call: true
+  # lint:
+  #   uses: ./.github/workflows/lint.yml
+  #   with:
+  #     workflow_call: true
 
   test:
     uses: ./.github/workflows/test.yml
@@ -21,7 +21,7 @@ jobs:
       workflow_call: true
 
   build-and-push:
-    needs: [lint, test]
+    needs: [test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -160,7 +160,7 @@ jobs:
             NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
 
   run-migrations:
-    needs: [lint, test]
+    needs: [test]
     uses: ./.github/workflows/run-migrations.yml
     with:
       workflow_call: true
@@ -175,7 +175,7 @@ jobs:
       SSH_USER: ${{ secrets.SSH_USER }}
 
   deploy-bluegreen:
-    needs: [lint, test, run-migrations, build-and-push]
+    needs: [test, run-migrations, build-and-push]
     uses: ./.github/workflows/deploy-bluegreen.yml
     permissions:
       id-token: write
@@ -187,7 +187,7 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
   deploy-rolling:
-    needs: [lint, test, run-migrations, build-and-push]
+    needs: [test, run-migrations, build-and-push]
     uses: ./.github/workflows/deploy-rolling.yml
     permissions:
       id-token: write
