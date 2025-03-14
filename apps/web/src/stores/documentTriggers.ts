@@ -51,6 +51,11 @@ export default function useDocumentTriggers(
     updateDocumentTriggerConfigurationAction,
     {
       onSuccess: ({ data: updatedTrigger }) => {
+        toast({
+          title: 'Success',
+          description: 'Updated the document trigger successfully.',
+        })
+
         mutate([
           ...data.filter((t) => t.id !== updatedTrigger.id),
           updatedTrigger,
@@ -63,6 +68,11 @@ export default function useDocumentTriggers(
     deleteDocumentTriggerAction,
     {
       onSuccess: ({ data: deletedTrigger }) => {
+        toast({
+          title: 'Success',
+          description: 'Deleted the document trigger successfully.',
+        })
+
         mutate(data.filter((t) => t.id !== deletedTrigger.id))
       },
     },

@@ -30,7 +30,6 @@ export interface ScheduleConfig {
 // Final configuration to be saved
 export interface SavedConfig {
   cronExpression: string
-  enabled: boolean
 }
 
 export const DEFAULT_CONFIG: ScheduleConfig = {

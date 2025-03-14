@@ -34,7 +34,7 @@ export function ScheduleTriggerSettings({
   )
   const onChangeConfig = useMemo(
     () => (config?: any) => {
-      if (!config || !config.enabled) {
+      if (!config) {
         if (!trigger) return
 
         deleteFn(trigger)
@@ -64,8 +64,10 @@ export function ScheduleTriggerSettings({
         day.
       </Text.H5>
       <ScheduleTriggerConfig
+        canDestroy={!!trigger}
         onChangeConfig={onChangeConfig}
         isLoading={isLoading || isCreating || isUpdating || isDeleting}
+        initialConfig={trigger?.configuration}
       />
     </div>
   )

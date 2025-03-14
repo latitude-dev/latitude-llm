@@ -1,11 +1,5 @@
 import { useState } from 'react'
-import {
-  Button,
-  Checkbox,
-  Select,
-  Text,
-  useCurrentCommit,
-} from '@latitude-data/web-ui'
+import { Button, Select, Text, useCurrentCommit } from '@latitude-data/web-ui'
 import { SimpleScheduleForm } from './SimpleScheduleForm'
 import { SpecificScheduleForm } from './SpecificScheduleForm'
 import { CustomScheduleForm } from './CustomScheduleForm'
@@ -17,15 +11,40 @@ import {
   convertToCronExpression,
   getScheduleDescription,
 } from './scheduleUtils'
+import { ScheduledTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/helpers/schema'
+
+// Convert ScheduledTriggerConfiguration to ScheduleConfig
+function convertToScheduleConfig(
+  triggerConfig?: ScheduledTriggerConfiguration,
+): ScheduleConfig {
+  if (!triggerConfig) {
+    return DEFAULT_CONFIG
+  }
+
+  // Create a custom schedule config with the cron expression
+  return {
+    ...DEFAULT_CONFIG,
+    type: 'custom',
+    custom: {
+      expression: triggerConfig.cronExpression,
+    },
+  }
+}
 
 export function ScheduleTriggerConfig({
+  canDestroy = false,
   onChangeConfig,
   isLoading,
+  initialConfig,
 }: {
+  canDestroy: boolean
   onChangeConfig: (config?: SavedConfig) => void
   isLoading: boolean
+  initialConfig?: ScheduledTriggerConfiguration
 }) {
-  const [config, setConfig] = useState<ScheduleConfig>(DEFAULT_CONFIG)
+  const [config, setConfig] = useState<ScheduleConfig>(
+    convertToScheduleConfig(initialConfig),
+  )
   const [isDirty, setIsDirty] = useState(false)
   const { isHead } = useCurrentCommit()
   const canEdit = isHead && !isLoading
@@ -43,20 +62,16 @@ export function ScheduleTriggerConfig({
     }))
   }
 
-  const handleEnabledChange = (enabled: boolean) => {
-    updateConfig((prev) => ({
-      ...prev,
-      enabled,
-    }))
+  const handleDestroy = () => {
+    onChangeConfig(undefined)
+    setIsDirty(false)
   }
 
   const handleSave = () => {
     const cronExpression = convertToCronExpression(config)
 
-    // Create the saved configuration with only cronExpression and enabled properties
     const savedConfig: SavedConfig = {
       cronExpression,
-      enabled: config.enabled,
     }
 
     onChangeConfig(savedConfig)
@@ -65,15 +80,6 @@ export function ScheduleTriggerConfig({
 
   return (
     <div className='flex flex-col gap-4'>
-      <div className='flex items-center gap-2'>
-        <Checkbox
-          checked={config.enabled}
-          onCheckedChange={handleEnabledChange}
-          label='Enabled'
-          disabled={isLoading}
-        />
-      </div>
-
       <div className='flex flex-col gap-2'>
         <Select
           label='Schedule Type'
@@ -117,15 +123,20 @@ export function ScheduleTriggerConfig({
         <Text.H6>
           <Text.H6B>Schedule:</Text.H6B> {getScheduleDescription(config)}
         </Text.H6>
-        {!config.enabled && (
-          <Text.H6 color='accent'>This schedule is currently disabled</Text.H6>
-        )}
         <Text.H6 color='foregroundMuted'>
           Cron expression: {convertToCronExpression(config)}
         </Text.H6>
       </div>
 
-      <div className='flex justify-end'>
+      <div className='flex justify-end gap-2'>
+        <Button
+          fancy
+          variant='destructive'
+          onClick={handleDestroy}
+          disabled={!canEdit || isLoading || !canDestroy}
+        >
+          Remove
+        </Button>
         <Button
           fancy
           onClick={handleSave}

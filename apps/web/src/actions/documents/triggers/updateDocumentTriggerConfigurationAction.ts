@@ -4,6 +4,7 @@ import { updateDocumentTriggerConfiguration } from '@latitude-data/core/services
 
 import { withDocument } from '../../procedures'
 import {
+  DocumentTriggerConfiguration,
   emailTriggerConfigurationSchema,
   insertScheduledTriggerConfigurationSchema,
 } from '@latitude-data/core/services/documentTriggers/helpers/schema'
@@ -15,11 +16,10 @@ export const updateDocumentTriggerConfigurationAction = withDocument
   .input(
     z.object({
       documentTriggerId: z.number(),
-      configuration: z.union(
-        // @ts-ignore
+      configuration: z.union([
         insertScheduledTriggerConfigurationSchema,
         emailTriggerConfigurationSchema,
-      ),
+      ]),
     }),
   )
   .handler(async ({ input, ctx }) => {
@@ -31,6 +31,6 @@ export const updateDocumentTriggerConfigurationAction = withDocument
     return updateDocumentTriggerConfiguration({
       workspace: ctx.workspace,
       documentTrigger: trigger.unwrap(),
-      configuration,
+      configuration: configuration as DocumentTriggerConfiguration,
     }).then((r) => r.unwrap())
   })

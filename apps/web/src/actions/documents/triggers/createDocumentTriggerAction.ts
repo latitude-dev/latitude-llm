@@ -14,22 +14,22 @@ export const createDocumentTriggerAction = withDocument
   .createServerAction()
   .input(
     z.object({
-      triggerType: z.nativeEnum(DocumentTriggerType),
-      configuration: z.union(
-        // @ts-ignore - TODO: fix this
+      triggerType: z.any(),
+      configuration: z.union([
         insertScheduledTriggerConfigurationSchema,
         emailTriggerConfigurationSchema,
-      ),
+      ]),
     }),
   )
   .handler(async ({ input, ctx }) => {
     const { triggerType, configuration } = input
 
+    // @ts-expect-error - TS cannot reconcile configuration union type
     return createDocumentTrigger({
       workspace: ctx.workspace,
       project: ctx.project,
       document: ctx.document as DocumentVersion,
       triggerType: triggerType as DocumentTriggerType,
-      configuration,
+      configuration: configuration,
     }).then((r) => r.unwrap())
   })
