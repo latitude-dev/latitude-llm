@@ -62,10 +62,6 @@ export async function callIntegrationTool({
     return Result.ok(content)
   } catch (err) {
     const error = err as Error
-    return Result.error(
-      new LatitudeError(
-        `Error listing tools from Integration '${integration.name}': ${error.message}`,
-      ),
-    )
+    return Result.error(new LatitudeError(error.message))
   }
 }
