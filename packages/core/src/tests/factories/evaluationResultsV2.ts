@@ -1,9 +1,9 @@
+import { eq } from 'drizzle-orm'
 import {
   Commit,
   EvaluationMetric,
-  EvaluationResultError,
-  EvaluationResultMetadata,
   EvaluationResultV2,
+  EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
   ProviderLog,
@@ -12,6 +12,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { evaluationResultsV2 } from '../../schema'
+import * as services from '../../services/evaluationsV2'
 
 type CreateEvaluationResultV2Args<
   T extends EvaluationType = EvaluationType,
@@ -20,13 +21,10 @@ type CreateEvaluationResultV2Args<
   evaluation: EvaluationV2<T, M>
   providerLog: ProviderLog
   commit: Commit
-  workspace: Workspace
-  score?: number
-  metadata?: EvaluationResultMetadata<T, M>
-  error?: EvaluationResultError<T, M>
   usedForSuggestion?: boolean
+  workspace: Workspace
   createdAt?: Date
-}
+} & Partial<EvaluationResultValue<T, M>>
 
 // prettier-ignore
 // eslint-disable-next-line no-redeclare
@@ -45,35 +43,26 @@ export async function createEvaluationResultV2<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
 >(args: CreateEvaluationResultV2Args<T, M>): Promise<EvaluationResultV2<T, M>> {
-  // TODO: Use create service
-
-  const {
-    evaluation,
-    providerLog,
-    commit,
-    workspace,
-    score = 75,
-    metadata = {},
-    error,
-    usedForSuggestion,
-    createdAt,
-  } = args
-
-  const result = await database
-    .insert(evaluationResultsV2)
-    .values({
-      workspaceId: workspace.id,
-      commitId: commit.id,
-      evaluationUuid: evaluation.uuid,
-      evaluatedLogId: providerLog.id,
-      score: score,
-      metadata: metadata,
-      error: error,
-      usedForSuggestion: usedForSuggestion,
-      ...(createdAt && { createdAt }),
+  const { result } = await services
+    .createEvaluationResultV2({
+      evaluation: args.evaluation,
+      providerLog: args.providerLog,
+      commit: args.commit,
+      value: {
+        score: args.score ?? 75,
+        metadata: args.metadata ?? {},
+        error: args.error ?? null,
+      } as EvaluationResultValue<T, M>,
+      usedForSuggestion: args.usedForSuggestion,
+      workspace: args.workspace,
     })
-    .returning()
-    .then((r) => r[0]!)
+    .then((r) => r.unwrap())
+
+  result.createdAt = args.createdAt ?? result.createdAt
+  await database
+    .update(evaluationResultsV2)
+    .set({ createdAt: result.createdAt })
+    .where(eq(evaluationResultsV2.id, result.id))
 
   return result as EvaluationResultV2<T, M>
 }

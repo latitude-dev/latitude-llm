@@ -1,3 +1,4 @@
+import app from '$/routes/app'
 import {
   ApiKey,
   DocumentLog,
@@ -14,13 +15,12 @@ import {
   helpers,
 } from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
-import app from '$/routes/app'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   evaluateDocumentLog: vi.fn(),
   queues: {
-    defaultQueue: {
+    evaluationsQueue: {
       jobs: {
         enqueueRunEvaluationJob: vi.fn(),
       },
@@ -63,7 +63,7 @@ describe('POST /evaluate', () => {
   describe('authorized', () => {
     beforeEach(async () => {
       mocks.evaluateDocumentLog.mockClear()
-      mocks.queues.defaultQueue.jobs.enqueueRunEvaluationJob.mockClear()
+      mocks.queues.evaluationsQueue.jobs.enqueueRunEvaluationJob.mockClear()
 
       const {
         workspace: wsp,
