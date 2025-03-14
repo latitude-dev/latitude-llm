@@ -136,10 +136,18 @@ export async function handleEmailTrigger(
   const references = [
     ...(parentMessageIds ?? []),
     ...(messageId ? [messageId] : []),
-  ]
+  ].join(' ')
 
   const headers = messageId
-    ? { 'In-Reply-To': messageId, References: references }
+    ? {
+        'In-Reply-To': messageId,
+        References: references,
+        // It seems like nodemailer-mailgun-transport is ignoring the "References" header.
+        // Maybe some of these will work:
+        'X-Mailgun-References': references,
+        'h:References': references,
+        'h:X-Mailgun-References': references,
+      }
     : undefined
 
   const mailer = new DocumentTriggerMailer(responseResult, {
