@@ -1,6 +1,13 @@
 import { and, eq } from 'drizzle-orm'
 
-import { DocumentVersion, User, Workspace, type Commit } from '../../browser'
+import {
+  Dataset,
+  DocumentVersion,
+  LinkedDataset,
+  User,
+  Workspace,
+  type Commit,
+} from '../../browser'
 import { database } from '../../client'
 import { documentVersions } from '../../schema'
 import { destroyDocument } from '../../services/documents'
@@ -12,6 +19,10 @@ export type IDocumentVersionData = {
   path: string
   content: string
   deletedAt?: Date
+  datasetV1?: {
+    dataset: Dataset
+    linkedDataset: Record<number, LinkedDataset>
+  }
 }
 
 export async function markAsSoftDelete(
@@ -40,10 +51,25 @@ export async function createDocumentVersion(
     path: data.path,
   })
 
+  let doc = result.unwrap()
+
+  // FIXME: Remove after dataset V2 migration
+  if (data.datasetV1) {
+    const upDocs = await tx
+      .update(documentVersions)
+      .set({
+        datasetId: data.datasetV1.dataset.id,
+        linkedDataset: data.datasetV1.linkedDataset,
+      })
+      .where(eq(documentVersions.id, doc.id))
+      .returning()
+    doc = upDocs[0]!
+  }
+
   if (data.content) {
     result = await updateDocument({
       commit: data.commit,
-      document: result.unwrap(),
+      document: doc,
       content: data.content,
       deletedAt: data.deletedAt,
     })
@@ -77,6 +103,8 @@ export async function updateDocumentVersion(
     commit: Commit
     path?: string
     content?: string
+    datasetId?: number
+    linkedDataset?: Record<number, LinkedDataset>
   },
   tx = database,
 ) {
