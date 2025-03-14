@@ -89,24 +89,21 @@ export function useAsyncDocumentParameters({
     setLoading: state.setLoading,
   }))
 
+  const localInputs = getLocalStorageInputsBySource({
+    source,
+    inputs,
+    linkedDataset: datasetV1Deprecated,
+  })
   // Set parameters for sources that are in localStorage
   useEffect(() => {
     if (!datasetVersion) return
     if (datasetVersion === DatasetVersion.V2) return
 
-    const localInputs = getLocalStorageInputsBySource({
-      source,
-      inputs,
-      linkedDataset: datasetV1Deprecated,
-    })
-
     if (localInputs) {
       const newLocalInputs = convertToParams(localInputs)
       asyncParameters.set(newLocalInputs)
     }
-
-    return () => {}
-  }, [inputs, source, datasetVersion, datasetV1Deprecated, asyncParameters.set])
+  }, [localInputs, datasetVersion, asyncParameters.set])
 
   // Set async loading state for
   useEffect(() => {
