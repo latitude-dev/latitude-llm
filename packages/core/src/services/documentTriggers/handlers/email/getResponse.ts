@@ -27,6 +27,7 @@ import {
 } from '@latitude-data/compiler'
 import { addMessages } from '../../../documentLogs'
 import { uploadFile } from '../../../files'
+import { EmailTriggerConfiguration } from '../../helpers/schema'
 
 async function getNewTriggerResponse(
   {
@@ -76,26 +77,26 @@ async function getNewTriggerResponse(
   }
 
   const parameters = Object.fromEntries(
-    Object.entries(trigger.configuration.parameters ?? {}).map(
-      ([key, value]: [string, DocumentTriggerParameters]) => {
-        if (value === DocumentTriggerParameters.SenderName) {
-          return [key, senderName]
-        }
-        if (value === DocumentTriggerParameters.SenderEmail) {
-          return [key, senderEmail]
-        }
-        if (value === DocumentTriggerParameters.Subject) {
-          return [key, subject]
-        }
-        if (value === DocumentTriggerParameters.Body) {
-          return [key, body]
-        }
-        if (value === DocumentTriggerParameters.Attachments) {
-          return [key, attachments ?? []]
-        }
-        return [key, undefined]
-      },
-    ),
+    Object.entries(
+      (trigger.configuration as EmailTriggerConfiguration).parameters ?? {},
+    ).map(([key, value]: [string, DocumentTriggerParameters]) => {
+      if (value === DocumentTriggerParameters.SenderName) {
+        return [key, senderName]
+      }
+      if (value === DocumentTriggerParameters.SenderEmail) {
+        return [key, senderEmail]
+      }
+      if (value === DocumentTriggerParameters.Subject) {
+        return [key, subject]
+      }
+      if (value === DocumentTriggerParameters.Body) {
+        return [key, body]
+      }
+      if (value === DocumentTriggerParameters.Attachments) {
+        return [key, attachments ?? []]
+      }
+      return [key, undefined]
+    }),
   )
 
   const runResult = await runDocumentAtCommit({

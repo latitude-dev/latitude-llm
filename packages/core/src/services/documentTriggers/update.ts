@@ -4,6 +4,7 @@ import { LatitudeError, PromisedResult, Result, Transaction } from '../../lib'
 import { documentTriggers } from '../../schema'
 import { database } from '../../client'
 import { and, eq } from 'drizzle-orm'
+import { buildConfiguration } from './helpers/buildConfiguration'
 
 export async function updateDocumentTriggerConfiguration(
   {
@@ -20,7 +21,12 @@ export async function updateDocumentTriggerConfiguration(
   return await Transaction.call(async (tx) => {
     const result = await tx
       .update(documentTriggers)
-      .set({ configuration })
+      .set({
+        configuration: buildConfiguration({
+          triggerType: documentTrigger.triggerType,
+          configuration,
+        }),
+      })
       .where(
         and(
           eq(documentTriggers.workspaceId, workspace.id),

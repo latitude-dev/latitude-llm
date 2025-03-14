@@ -4,15 +4,22 @@ import { createDocumentTrigger } from '@latitude-data/core/services/documentTrig
 
 import { withDocument } from '../../procedures'
 import { DocumentTriggerType, DocumentVersion } from '@latitude-data/constants'
-import { documentTriggerConfigurationsUnionSchema } from '@latitude-data/core/services/documentTriggers/helpers/schema'
 import { z } from 'zod'
+import {
+  emailTriggerConfigurationSchema,
+  insertScheduledTriggerConfigurationSchema,
+} from '@latitude-data/core/services/documentTriggers/helpers/schema'
 
 export const createDocumentTriggerAction = withDocument
   .createServerAction()
   .input(
     z.object({
       triggerType: z.nativeEnum(DocumentTriggerType),
-      configuration: documentTriggerConfigurationsUnionSchema,
+      configuration: z.union(
+        // @ts-ignore - TODO: fix this
+        insertScheduledTriggerConfigurationSchema,
+        emailTriggerConfigurationSchema,
+      ),
     }),
   )
   .handler(async ({ input, ctx }) => {
@@ -22,7 +29,7 @@ export const createDocumentTriggerAction = withDocument
       workspace: ctx.workspace,
       project: ctx.project,
       document: ctx.document as DocumentVersion,
-      triggerType,
+      triggerType: triggerType as DocumentTriggerType,
       configuration,
     }).then((r) => r.unwrap())
   })

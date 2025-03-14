@@ -71,6 +71,7 @@
     "clsx": "^2.1.1",
     "csv-parse": "^5.6.0",
     "dotenv": "^16.4.7",
+    "cron-parser": "^5.0.4",
     "drizzle-orm": "^0.33.0",
     "flydrive": "^1.1.0",
     "ioredis": "^5.6.0",

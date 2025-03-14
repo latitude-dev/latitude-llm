@@ -27,6 +27,7 @@ export const logSourcesEnum = latitudeSchema.enum('log_source', [
   LogSources.SharedPrompt,
   LogSources.AgentAsTool,
   LogSources.EmailTrigger,
+  LogSources.ScheduledTrigger,
 ])
 
 export const providerLogs = latitudeSchema.table(

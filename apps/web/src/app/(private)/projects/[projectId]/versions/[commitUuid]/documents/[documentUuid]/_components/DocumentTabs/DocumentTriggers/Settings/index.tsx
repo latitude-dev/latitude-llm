@@ -4,9 +4,11 @@ import { useState } from 'react'
 import { EmailTriggerSettings } from './EmailTrigger'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
+import { ScheduleTriggerSettings } from './ScheduleTrigger'
 
 enum ShareSettingsTabs {
   Email = 'email',
+  Schedule = 'schedule',
 }
 
 function TabLabel({ text, isActive }: { text: string; isActive: boolean }) {
@@ -49,12 +51,26 @@ export function TriggerSettings({
               />
             ),
           },
+          {
+            value: ShareSettingsTabs.Schedule,
+            label: (
+              <TabLabel
+                text='Schedule'
+                isActive={triggers?.some(
+                  (t) => t.triggerType === DocumentTriggerType.Scheduled,
+                )}
+              />
+            ),
+          },
         ]}
         selected={selectedTab}
         onSelect={setSelectedTab}
       />
       {selectedTab === ShareSettingsTabs.Email && (
         <EmailTriggerSettings document={document} projectId={projectId} />
+      )}
+      {selectedTab === ShareSettingsTabs.Schedule && (
+        <ScheduleTriggerSettings document={document} projectId={projectId} />
       )}
     </div>
   )

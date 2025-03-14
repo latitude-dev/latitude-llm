@@ -5,13 +5,13 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { createDocumentTriggerAction } from '$/actions/documents/triggers/createDocumentTriggerAction'
-import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/triggers/updateDocumentTriggerConfigurationAction'
 import { deleteDocumentTriggerAction } from '$/actions/documents/triggers/deleteDocumentTriggerAction'
 import {
   DocumentTriggerConfiguration,
   DocumentTriggerWithConfiguration,
 } from '@latitude-data/core/services/documentTriggers/helpers/schema'
 import { useCallback } from 'react'
+import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/triggers/updateDocumentTriggerConfigurationAction'
 
 const EMPTY_ARRAY = [] as const
 export default function useDocumentTriggers(
