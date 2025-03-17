@@ -34,7 +34,7 @@ vi.mock('$/services/auth/getSession', () => ({
 }))
 
 vi.mock('@latitude-data/core/jobs', () => ({
-  setupJobs: vi.fn().mockImplementation(() => mocks.queues),
+  setupQueues: vi.fn().mockImplementation(() => mocks.queues),
 }))
 
 let setup: FactoryCreateProjectReturn

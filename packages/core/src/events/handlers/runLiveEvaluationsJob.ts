@@ -3,7 +3,7 @@ import {
   NON_LIVE_EVALUABLE_LOG_SOURCES,
 } from '@latitude-data/constants'
 import { findWorkspaceFromDocumentLog } from '../../data-access'
-import { setupJobs } from '../../jobs'
+import { setupQueues } from '../../jobs'
 import { NotFoundError } from '../../lib'
 import { EvaluationsRepository } from '../../repositories'
 import { DocumentLogCreatedEvent } from '../events'
@@ -31,11 +31,11 @@ export const runLiveEvaluationsJob = async ({
     .findByDocumentUuid(documentLog.documentUuid)
     .then((r) => r.unwrap())
 
-  const jobs = await setupJobs()
+  const queues = await setupQueues()
   evaluations
     .filter((ev) => !!ev.live)
     .forEach((ev) => {
-      jobs.liveEvaluationsQueue.jobs.enqueueRunLiveEvaluationJob({
+      queues.liveEvaluationsQueue.jobs.enqueueRunLiveEvaluationJob({
         evaluation: ev,
         documentLog,
         documentUuid: documentLog.documentUuid,

@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
-import { queues } from '../../../queues'
+import { queuesConnection } from '../../../queues'
 import { WebsocketClient, WorkerSocket } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { runDocumentAtCommitWithAutoToolResponses } from './runDocumentAtCommitWithAutoToolResponses'
@@ -51,7 +51,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     batchId = randomUUID(),
   } = job.data
   const websockets = await WebsocketClient.getSocket()
-  const progressTracker = new ProgressTracker(await queues(), batchId)
+  const progressTracker = new ProgressTracker(await queuesConnection(), batchId)
 
   try {
     await runDocumentAtCommitWithAutoToolResponses({

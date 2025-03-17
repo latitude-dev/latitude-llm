@@ -1,6 +1,6 @@
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { LogSources } from '../../constants'
-import { setupJobs } from '../../jobs'
+import { setupQueues } from '../../jobs'
 import { syncReadCsv } from '../../lib/readCsv'
 
 export async function bulkUploadDocumentLogs({
@@ -20,7 +20,7 @@ export async function bulkUploadDocumentLogs({
     delimiter: csvDelimiter,
     columns: false,
   }).then((r) => r.unwrap())
-  const queues = await setupJobs()
+  const queues = await setupQueues()
 
   queues.defaultQueue.jobs.enqueueUploadDocumentLogsJob({
     workspaceId: workspace.id,

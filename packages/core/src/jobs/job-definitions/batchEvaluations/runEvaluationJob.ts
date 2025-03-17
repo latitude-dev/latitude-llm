@@ -1,7 +1,7 @@
 import { Job } from 'bullmq'
 
 import { getUnknownError, Result } from '../../../lib'
-import { queues } from '../../../queues'
+import { queuesConnection } from '../../../queues'
 import {
   EvaluationsRepository,
   ProviderLogsRepository,
@@ -58,7 +58,7 @@ export async function runEvaluationJob(job: Job<RunEvaluationJobData>) {
   const websockets = await WebsocketClient.getSocket()
   let progressTracker: ProgressTracker | undefined
   if (batchId) {
-    progressTracker = new ProgressTracker(await queues(), batchId)
+    progressTracker = new ProgressTracker(await queuesConnection(), batchId)
   }
   const { providerLog, evaluation } = await fetchData({
     workspaceId,

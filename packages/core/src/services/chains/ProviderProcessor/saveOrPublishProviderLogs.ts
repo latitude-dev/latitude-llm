@@ -5,7 +5,7 @@ import { ProviderApiKey, ProviderLog, Workspace } from '../../../browser'
 import { ChainStepResponse, LogSources, StreamType } from '../../../constants'
 import { AIProviderCallCompletedData } from '../../../events/events'
 import { publisher } from '../../../events/publisher'
-import { setupJobs } from '../../../jobs'
+import { setupQueues } from '../../../jobs'
 import { generateUUIDIdentifier } from '../../../lib'
 import { PartialConfig } from '../../ai'
 import { createProviderLog } from '../../providerLogs'
@@ -49,7 +49,7 @@ export async function saveOrPublishProviderLogs<
     return providerLog as P
   }
 
-  const queues = await setupJobs()
+  const queues = await setupQueues()
   queues.defaultQueue.jobs.enqueueCreateProviderLogJob({
     ...providerLogsData,
     generatedAt: data.generatedAt.toISOString(),

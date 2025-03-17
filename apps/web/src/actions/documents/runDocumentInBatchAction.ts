@@ -1,7 +1,7 @@
 'use server'
 
 import { publisher } from '@latitude-data/core/events/publisher'
-import { setupJobs } from '@latitude-data/core/jobs'
+import { setupQueues } from '@latitude-data/core/jobs'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { z } from 'zod'
 
@@ -36,7 +36,7 @@ export const runDocumentInBatchAction = withDataset
       .getCommitByUuid({ uuid: ctx.currentCommitUuid })
       .then((r) => r.unwrap())
 
-    const queues = await setupJobs()
+    const queues = await setupQueues()
 
     queues.defaultQueue.jobs.enqueueRunDocumentInBatchJob({
       commit,

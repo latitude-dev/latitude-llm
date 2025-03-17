@@ -51,10 +51,10 @@ previewDatasetSpy.mockResolvedValue({
   }),
 })
 
-// Replace the mock of setupJobs with a spy
-const setupJobsSpy = vi.spyOn(jobsModule, 'setupJobs')
-// @ts-expect-error - mock implementation
-setupJobsSpy.mockResolvedValue(mocks.queues)
+// Replace the mock of setupQueues with a spy
+const setupQueuesSpy = vi.spyOn(jobsModule, 'setupQueues')
+// @ts-ignore
+setupQueuesSpy.mockResolvedValue(mocks.queues)
 
 // Replace the mock for ProgressTracker with a spy
 const progressTrackerSpy = {
@@ -168,7 +168,7 @@ describe('runBatchEvaluationJob', () => {
     it('should setup jobs', async () => {
       await runBatchEvaluationJob(buildFakeJob(commonJobData))
 
-      expect(setupJobsSpy).toHaveBeenCalled()
+      expect(setupQueuesSpy).toHaveBeenCalled()
     })
 
     it('should use provided batchId', async () => {

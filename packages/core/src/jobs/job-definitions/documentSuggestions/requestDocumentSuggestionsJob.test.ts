@@ -367,7 +367,7 @@ describe('requestDocumentSuggestionsJob', () => {
     ]
 
     mocks = { enqueueGenerateDocumentSuggestionJob: vi.fn() }
-    vi.spyOn(jobs, 'setupJobs').mockResolvedValue({
+    vi.spyOn(jobs, 'setupQueues').mockResolvedValue({
       defaultQueue: {
         jobs: {
           enqueueGenerateDocumentSuggestionJob:

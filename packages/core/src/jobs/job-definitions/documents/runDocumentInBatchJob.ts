@@ -1,6 +1,6 @@
 import { Job } from 'bullmq'
 
-import { setupJobs } from '../..'
+import { setupQueues } from '../..'
 import { Commit, Dataset, DocumentVersion, Workspace } from '../../../browser'
 import { getBatchParamaters } from '../batchEvaluations'
 
@@ -33,10 +33,10 @@ export const runDocumentInBatchJob = async (
     parametersMap,
   })
 
-  const jobs = await setupJobs()
+  const queues = await setupQueues()
 
   for (let i = 0; i < parameters.length; i++) {
-    await jobs.defaultQueue.jobs.enqueueRunDocumentJob({
+    await queues.defaultQueue.jobs.enqueueRunDocumentJob({
       workspaceId: workspace.id,
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,

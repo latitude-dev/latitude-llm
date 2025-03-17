@@ -64,7 +64,7 @@ describe('runDocumentJob', () => {
       emit: vi.fn(),
     } as any)
 
-    vi.spyOn(jobs, 'setupJobs').mockResolvedValue({
+    vi.spyOn(jobs, 'setupQueues').mockResolvedValue({
       defaultQueue: {
         jobs: {
           enqueueRunEvaluationJob: vi.fn(),
@@ -79,7 +79,7 @@ describe('runDocumentJob', () => {
       },
     } as any)
 
-    vi.spyOn(queues, 'queues').mockResolvedValue({} as any)
+    vi.spyOn(queues, 'queuesConnection').mockResolvedValue({} as any)
     vi.spyOn(commits, 'runDocumentAtCommit')
     // @ts-ignore
     vi.spyOn(utils, 'ProgressTracker').mockImplementation(() => ({
@@ -113,9 +113,9 @@ describe('runDocumentJob', () => {
       }),
     )
 
-    const setupJobsResult = await jobs.setupJobs()
+    const setupQueuesResult = await jobs.setupQueues()
     expect(
-      setupJobsResult.defaultQueue.jobs.enqueueRunEvaluationJob,
+      setupQueuesResult.defaultQueue.jobs.enqueueRunEvaluationJob,
     ).toHaveBeenCalledWith(
       {
         workspaceId: workspace.id,
@@ -152,9 +152,9 @@ describe('runDocumentJob', () => {
     })
 
     expect(commits.runDocumentAtCommit).toHaveBeenCalled()
-    const setupJobsResult = await jobs.setupJobs()
+    const setupQueuesResult = await jobs.setupQueues()
     expect(
-      setupJobsResult.defaultQueue.jobs.enqueueRunEvaluationJob,
+      setupQueuesResult.defaultQueue.jobs.enqueueRunEvaluationJob,
     ).not.toHaveBeenCalled()
 
     expect(incrementErrorsMock).toHaveBeenCalled()

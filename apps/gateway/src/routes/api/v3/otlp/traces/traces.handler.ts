@@ -1,6 +1,6 @@
 import { chunk } from 'lodash-es'
 
-import { setupJobs } from '@latitude-data/core/jobs'
+import { setupQueues } from '@latitude-data/core/jobs'
 import { AppRouteHandler } from '$/openApi/types'
 import { CreateTracesRoute } from './traces.route'
 
@@ -23,7 +23,7 @@ export const tracesHandler: AppRouteHandler<CreateTracesRoute> = async (c) => {
 
   // Process spans in batches
   const batches = chunk(allSpans, BATCH_SIZE)
-  const queues = await setupJobs()
+  const queues = await setupQueues()
 
   await Promise.all(
     batches.map((batch) =>

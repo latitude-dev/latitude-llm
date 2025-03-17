@@ -20,8 +20,7 @@ import * as websockets from '../../../websockets/workers'
 import * as progressTracker from '../../utils/progressTracker'
 import { runEvaluationJob, type RunEvaluationJobData } from './runEvaluationJob'
 
-// @ts-ignore
-vi.spyOn(queues, 'queues').mockResolvedValue({})
+vi.spyOn(queues, 'queuesConnection').mockResolvedValue({} as any)
 const runEvaluationSpy = vi.spyOn(evaluations, 'runEvaluation')
 
 const FAKE_ERRORABLE_UUID = '12345678-1234-1234-1234-123456789012'

@@ -1,7 +1,7 @@
 import { Job } from 'bullmq'
 import { DocumentTrigger, HEAD_COMMIT } from '../../../browser'
 import { updateScheduledTriggerLastRun } from '../../../services/documentTriggers/handlers/scheduled'
-import { setupJobs } from '../../../jobs'
+import { setupQueues } from '../../../jobs'
 import { RunDocumentJobData } from '../documents/runDocumentJob'
 import { DEFAULT_JOB_OPTIONS } from '../../queues'
 import { ScheduledTriggerConfiguration } from '../../../services/documentTriggers/helpers/schema'
@@ -44,7 +44,7 @@ export const processScheduledTriggerJob = async (
     )
 
     // Get the queues to enqueue the document run job
-    const jobQueues = await setupJobs()
+    const jobQueues = await setupQueues()
 
     // Prepare data for the document run job
     const runJobData: RunDocumentJobData = {

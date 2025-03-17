@@ -7,7 +7,7 @@ import {
 } from 'bullmq'
 import Redis from 'ioredis'
 
-import { queues } from '../../queues'
+import { queuesConnection } from '../../queues'
 import { Jobs, Queues, QUEUES } from '../constants'
 import { JobDefinition } from '../job-definitions/types'
 
@@ -79,9 +79,15 @@ function setupQueue({
   }
 }
 
-export async function setupQueues(connection?: Redis) {
-  if (!connection) connection = await queues()
-  return Object.entries(QUEUES).reduce<{
+let queues: Awaited<ReturnType<typeof setupQueues>> | undefined
+
+export async function setupQueues(): Promise<
+  Record<keyof typeof QUEUES, ReturnType<typeof setupQueue>>
+> {
+  if (queues) return queues
+  const connection = await queuesConnection()
+
+  queues = Object.entries(QUEUES).reduce<{
     [K in keyof typeof QUEUES]: ReturnType<typeof setupQueue>
   }>(
     (acc, [name, { jobs }]) => {
@@ -92,4 +98,6 @@ export async function setupQueues(connection?: Redis) {
     },
     {} as { [K in keyof typeof QUEUES]: ReturnType<typeof setupQueue> },
   )
+
+  return queues
 }

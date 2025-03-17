@@ -1,22 +1,10 @@
-import Redis from 'ioredis'
 import { setupQueues } from './queues'
 
+export { setupQueues } from './queues'
 export { Worker } from 'bullmq'
 
-let queues: Awaited<ReturnType<typeof setupQueues>>
-
-export async function setupJobs(connection?: Redis) {
-  if (!queues) {
-    queues = await setupQueues(connection)
-  }
-
-  return queues
-}
-
-export async function setupSchedules(connection?: Redis) {
-  if (!queues) {
-    queues = await setupQueues(connection)
-  }
+export async function setupSchedules() {
+  const queues = await setupQueues()
 
   // Every day at 8 AM
   await queues.defaultQueue.jobs.scheduleRequestDocumentSuggestionsJob(
