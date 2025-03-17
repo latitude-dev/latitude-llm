@@ -3,7 +3,6 @@ import { Button, DotIndicator, Popover, Text } from '@latitude-data/web-ui'
 
 import { TriggerSettings } from './Settings'
 import useDocumentTriggers from '$/stores/documentTriggers'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { NotEditableBanner } from '../_components/NotEditableBanner'
 
 export function DocumentTriggersButton({
@@ -13,15 +12,10 @@ export function DocumentTriggersButton({
   document: DocumentVersion
   projectId: number
 }) {
-  const { data: currentWorkspace } = useCurrentWorkspace()
-
   const { data: triggers } = useDocumentTriggers({
     documentUuid: document.documentUuid,
     projectId,
   })
-
-  // TODO: Temp feature flag
-  if (currentWorkspace?.id !== 1) return null
 
   return (
     <Popover.Root>
