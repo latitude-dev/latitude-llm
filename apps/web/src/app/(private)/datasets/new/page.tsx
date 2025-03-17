@@ -47,6 +47,7 @@ export default function NewDataset() {
       >
         <FormWrapper>
           <Input
+            required
             type='text'
             label='Name'
             name='name'
