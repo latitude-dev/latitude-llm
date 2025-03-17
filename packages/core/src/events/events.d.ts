@@ -318,20 +318,10 @@ export type CommitPublishedEvent = LatitudeEventGeneric<
 export type BatchEvaluationRunEvent = LatitudeEventGeneric<
   'batchEvaluationRun',
   {
+    evaluationId: number
     workspaceId: number
     userEmail: string
-  } & (
-    | {
-        evaluationId: number
-        version: 'v1'
-      }
-    | {
-        commitId: number
-        documentUuid: string
-        evaluationUuid: string
-        version: 'v2'
-      }
-  )
+  }
 >
 
 export type DocumentCreatedEvent = LatitudeEventGeneric<
@@ -412,21 +402,11 @@ export type ForkDocumentRequestedEvent = LatitudeEventGeneric<
 export type BatchEvaluationRunRequestedEvent = LatitudeEventGeneric<
   'batchEvaluationRunRequested',
   {
+    evaluationIds: number[]
+    documentUuid: string
     workspaceId: number
     userEmail: string
-  } & (
-    | {
-        evaluationIds: number[]
-        documentUuid: string
-        version: 'v1'
-      }
-    | {
-        commitId: number
-        documentUuid: string
-        evaluationUuids: string[]
-        version: 'v2'
-      }
-  )
+  }
 >
 
 export type RunDocumentInBatchRequestedEvent = LatitudeEventGeneric<

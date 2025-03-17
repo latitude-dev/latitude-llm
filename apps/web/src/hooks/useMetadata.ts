@@ -1,11 +1,16 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import type { ConversationMetadata } from 'promptl-ai'
 import { useDebouncedCallback } from 'use-debounce'
 
 import type { ReadMetadataWorkerProps } from '../workers/readMetadata'
+
+const worker =
+  typeof window === 'undefined'
+    ? undefined
+    : new Worker(new URL('public/workers/readMetadata', import.meta.url))
 
 export function useMetadata({
   onMetadataProcessed,
@@ -13,34 +18,19 @@ export function useMetadata({
   onMetadataProcessed?: (metadata: ConversationMetadata) => void
 } = {}) {
   const [metadata, setMetadata] = useState<ConversationMetadata>()
-  const workerRef = useRef<Worker | null>(null)
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || !worker) return
 
-    // Dynamic import for the worker
-    const createWorker = async () => {
-      const worker = new Worker(
-        new URL('public/workers/readMetadata', import.meta.url),
-      )
-      workerRef.current = worker
-
-      worker.onmessage = (event: { data: ConversationMetadata }) => {
-        setMetadata(event.data)
-        onMetadataProcessed?.(event.data)
-      }
-    }
-
-    createWorker()
-
-    return () => {
-      workerRef.current?.terminate()
+    worker.onmessage = (event: { data: ConversationMetadata }) => {
+      setMetadata(event.data)
+      onMetadataProcessed?.(event.data)
     }
   }, [onMetadataProcessed])
 
   const runReadMetadata = useDebouncedCallback(
     async (props: ReadMetadataWorkerProps) => {
-      workerRef.current?.postMessage(props)
+      worker?.postMessage(props)
     },
     500,
     { trailing: true },

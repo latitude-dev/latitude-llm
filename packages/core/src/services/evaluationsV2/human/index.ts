@@ -18,6 +18,5 @@ const specification = HumanEvaluationSpecification
 export default {
   ...specification,
   validate: undefined as any, // TODO: Implement
-  run: undefined as any, // TODO: Implement
   metrics: METRICS,
 }

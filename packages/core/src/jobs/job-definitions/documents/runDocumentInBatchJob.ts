@@ -2,7 +2,7 @@ import { Job } from 'bullmq'
 
 import { setupJobs } from '../..'
 import { Commit, Dataset, DocumentVersion, Workspace } from '../../../browser'
-import { getBatchRows } from '../batchEvaluations'
+import { getBatchParamaters } from '../batchEvaluations'
 
 export type RunDocumentInBatchJobProps = {
   commit: Commit
@@ -26,7 +26,7 @@ export const runDocumentInBatchJob = async (
     toLine,
     parametersMap,
   } = job.data
-  const rows = await getBatchRows({
+  const parameters = await getBatchParamaters({
     dataset,
     fromLine,
     toLine,
@@ -35,13 +35,13 @@ export const runDocumentInBatchJob = async (
 
   const jobs = await setupJobs()
 
-  for (let i = 0; i < rows.length; i++) {
+  for (let i = 0; i < parameters.length; i++) {
     await jobs.defaultQueue.jobs.enqueueRunDocumentJob({
       workspaceId: workspace.id,
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
       projectId: commit.projectId,
-      parameters: rows[i]!.parameters,
+      parameters: parameters[i]!,
     })
   }
 }

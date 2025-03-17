@@ -29,13 +29,7 @@ function extractValue(
 }
 
 function extractValues(row: DatasetRow) {
-  const values: Record<string, string> = {}
-
-  for (const [id, value] of Object.entries(row.rowData)) {
-    values[id] = extractValue(value)
-  }
-
-  return { id: row.id, values }
+  return Object.values(row.rowData).map(extractValue)
 }
 
 export async function getRowsFromRange({

@@ -1,8 +1,8 @@
 import { useCallback } from 'react'
 
+import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
 import { runBatchEvaluationAction } from '$/actions/evaluations/runBatch'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
 
 export type RunBatchParameters = Record<string, number | undefined>
 export function useRunBatch({
@@ -25,7 +25,6 @@ export function useRunBatch({
   const runBatch = useCallback(
     async ({
       evaluationIds,
-      evaluationUuids,
       wantAllLines,
       datasetId,
       parameters,
@@ -33,29 +32,25 @@ export function useRunBatch({
       toLine,
       datasetVersion,
     }: {
-      evaluationIds?: number[]
-      evaluationUuids?: string[]
-      datasetId: number
-      fromLine?: number
-      toLine?: number
+      datasetId: number | undefined
+      fromLine: number | undefined
+      toLine: number | undefined
       wantAllLines: boolean
+      evaluationIds: number[]
       parameters: RunBatchParameters
       datasetVersion: DatasetVersion
     }) => {
-      const [result, errors] = await run({
+      await run({
         projectId: Number(projectId),
         documentUuid: document.documentUuid,
         commitUuid,
         evaluationIds,
-        evaluationUuids,
-        datasetId,
+        datasetId: datasetId!,
         datasetVersion,
         fromLine: wantAllLines ? undefined : fromLine,
         toLine: wantAllLines ? undefined : toLine,
         parameters,
       })
-      if (errors) return
-      return result
     },
     [run, projectId, document.documentUuid, commitUuid],
   )

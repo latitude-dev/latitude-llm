@@ -2,12 +2,10 @@
 
 import { useCallback } from 'react'
 
+import { EvaluationMetadataType } from '@latitude-data/core/browser'
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import useEvaluationResultsCounters from '$/stores/evaluationResultCharts/evaluationResultsCounters'
-import {
-  EvaluationDto,
-  EvaluationMetadataType,
-} from '@latitude-data/core/browser'
+import useEvaluations from '$/stores/evaluations'
 import { useDebouncedCallback } from 'use-debounce'
 
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
@@ -16,17 +14,19 @@ import Panel from '../Panel'
 export default function TotalsPanels({
   commitUuid,
   documentUuid,
-  evaluation,
+  evaluationId,
 }: {
   commitUuid: string
   documentUuid: string
-  evaluation: EvaluationDto
+  evaluationId: number
 }) {
+  const { data: evaluations } = useEvaluations()
+  const evaluation = evaluations.find((e) => e.id === evaluationId)
   const { data, refetch, isLoading } = useEvaluationResultsCounters(
     {
       commitUuid,
       documentUuid,
-      evaluationId: evaluation.id,
+      evaluationId,
     },
     {
       revalidateIfStale: false,
@@ -38,11 +38,7 @@ export default function TotalsPanels({
     2000,
     { trailing: true },
   )
-  useEvaluationStatusEvent({
-    evaluation: { ...evaluation, version: 'v1' },
-    documentUuid,
-    onStatusChange,
-  })
+  useEvaluationStatusEvent({ evaluationId, documentUuid, onStatusChange })
 
   const cost =
     data?.costInMillicents === undefined

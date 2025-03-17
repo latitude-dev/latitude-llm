@@ -1,12 +1,12 @@
 import { useCallback } from 'react'
 
-import { DocumentVersion, EvaluationTmp } from '@latitude-data/core/browser'
+import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
 import { Button, CloseTrigger, Modal } from '@latitude-data/web-ui'
 
-import { ConversationMetadata } from 'promptl-ai'
 import DatasetForm from './DatasetForm'
 import { useRunBatch } from './useRunBatch'
 import { useRunBatchForm } from './useRunBatchForm'
+import { ConversationMetadata } from 'promptl-ai'
 
 export default function CreateBatchEvaluationModal({
   open,
@@ -23,7 +23,7 @@ export default function CreateBatchEvaluationModal({
   commitUuid: string
   document: DocumentVersion
   documentMetadata: ConversationMetadata | undefined
-  evaluation: EvaluationTmp
+  evaluation: EvaluationDto
 }) {
   const { runBatch, errors, isRunningBatch } = useRunBatch({
     document,
@@ -35,24 +35,25 @@ export default function CreateBatchEvaluationModal({
   })
 
   const form = useRunBatchForm({ document, documentMetadata })
-  const onRunBatch = useCallback(async () => {
-    if (!form.selectedDataset) return
-    await runBatch({
-      datasetId: form.selectedDataset.id,
-      ...(evaluation.version === 'v2'
-        ? {
-            evaluationUuids: [evaluation.uuid],
-          }
-        : {
-            evaluationIds: [evaluation.id],
-          }),
+  const onRunBatch = useCallback(() => {
+    runBatch({
+      datasetId: form.selectedDataset?.id,
+      evaluationIds: [evaluation.id],
       fromLine: form.fromLine,
       toLine: form.toLine,
       wantAllLines: form.wantAllLines,
       parameters: form.parameters,
       datasetVersion: form.datasetVersion,
     })
-  }, [form, evaluation, runBatch])
+  }, [
+    evaluation.id,
+    runBatch,
+    form.fromLine,
+    form.toLine,
+    form.selectedDataset,
+    form.parameters,
+    form.wantAllLines,
+  ])
 
   return (
     <Modal
@@ -70,7 +71,7 @@ export default function CreateBatchEvaluationModal({
             fancy
             onClick={onRunBatch}
           >
-            {isRunningBatch ? 'Starting...' : 'Run Evaluations'}
+            {isRunningBatch ? 'Running...' : 'Run Evaluations'}
           </Button>
         </>
       }

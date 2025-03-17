@@ -1,35 +1,23 @@
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
-import { LogSources } from '@latitude-data/constants'
 import { setupJobs } from '../../'
 import { NotFoundError } from '../../../lib/errors'
 import { queues } from '../../../queues'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
-import { runEvaluationV2JobKey } from '../evaluations'
+import { LogSources } from '@latitude-data/constants'
 
 export type RunDocumentForEvaluationJobData = {
   workspaceId: number
   documentUuid: string
   commitUuid: string
-  commitId: number
   projectId: number
   parameters: Record<string, unknown>
+  evaluationId: number
   batchId: string
-} & (
-  | {
-      evaluationId: number
-      version: 'v1'
-    }
-  | {
-      evaluationUuid: string
-      datasetId: number
-      rowId: number
-      version: 'v2'
-    }
-)
+}
 
 export const runDocumentForEvaluationJob = async (
   job: Job<RunDocumentForEvaluationJobData>,
@@ -38,10 +26,9 @@ export const runDocumentForEvaluationJob = async (
     workspaceId,
     documentUuid,
     commitUuid,
-    commitId,
     projectId,
     parameters,
-    version,
+    evaluationId,
     batchId,
   } = job.data
   const progressTracker = new ProgressTracker(await queues(), batchId)
@@ -63,30 +50,16 @@ export const runDocumentForEvaluationJob = async (
       throw new NotFoundError('Provider log not found after running document')
     }
 
-    if (version === 'v2') {
-      const payload = {
-        workspaceId: workspaceId,
-        commitId: commitId,
-        evaluationUuid: job.data.evaluationUuid,
-        providerLogUuid: providerLog.uuid,
-        datasetId: job.data.datasetId,
-        rowId: job.data.rowId,
-        batchId: batchId,
-      }
-
-      const queues = await setupJobs()
-      queues.evaluationsQueue.jobs.enqueueRunEvaluationV2Job(payload, {
-        deduplication: { id: runEvaluationV2JobKey(payload) },
-      })
-    } else {
-      await jobs.evaluationsQueue.jobs.enqueueRunEvaluationJob({
+    await jobs.defaultQueue.jobs.enqueueRunEvaluationJob(
+      {
         workspaceId,
         documentUuid,
         providerLogUuid: providerLog.uuid,
-        evaluationId: job.data.evaluationId,
+        evaluationId,
         batchId,
-      })
-    }
+      },
+      { lifo: true },
+    )
   } catch (error) {
     if (env.NODE_ENV !== 'production') {
       console.error(error)
@@ -97,29 +70,14 @@ export const runDocumentForEvaluationJob = async (
     const progress = await progressTracker.getProgress()
     const websockets = await WebsocketClient.getSocket()
 
-    if (version === 'v2') {
-      websockets.emit('evaluationStatus', {
-        workspaceId,
-        data: {
-          batchId,
-          commitId: commitId,
-          documentUuid: documentUuid,
-          evaluationUuid: job.data.evaluationUuid,
-          version: 'v2',
-          ...progress,
-        },
-      })
-    } else {
-      websockets.emit('evaluationStatus', {
-        workspaceId,
-        data: {
-          batchId,
-          evaluationId: job.data.evaluationId,
-          documentUuid,
-          version: 'v1',
-          ...progress,
-        },
-      })
-    }
+    websockets.emit('evaluationStatus', {
+      workspaceId,
+      data: {
+        batchId,
+        evaluationId,
+        documentUuid,
+        ...progress,
+      },
+    })
   }
 }

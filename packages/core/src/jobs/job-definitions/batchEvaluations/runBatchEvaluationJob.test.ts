@@ -6,16 +6,16 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as jobsModule from '../../'
 import { Dataset, DatasetV2, Providers } from '../../../browser'
 import * as datasetsPreview from '../../../services/datasets/preview'
-import { identityHashAlgorithm } from '../../../services/datasetsV2/utils'
-import * as factories from '../../../tests/factories'
-import { type FactoryCreateProjectReturn } from '../../../tests/factories'
-import getTestDisk from '../../../tests/testDrive'
 import * as WebsocketClientModule from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import {
   runBatchEvaluationJob,
   RunBatchEvaluationJobParams,
 } from './runBatchEvaluationJob'
+import * as factories from '../../../tests/factories'
+import { type FactoryCreateProjectReturn } from '../../../tests/factories'
+import getTestDisk from '../../../tests/testDrive'
+import { identityHashAlgorithm } from '../../../services/datasetsV2/utils'
 
 const testDrive = getTestDisk()
 const mocks = vi.hoisted(() => ({
@@ -87,7 +87,7 @@ function buildFakeJob(data: Partial<Job<RunBatchEvaluationJobParams>>['data']) {
   return {
     data: {
       workspace: data!.workspace,
-      evaluation: { id: 1, version: 'v1' },
+      evaluation: { id: 1 },
       document: data!.document,
       commitUuid: data!.commitUuid,
       projectId: data!.projectId,
@@ -185,7 +185,6 @@ describe('runBatchEvaluationJob', () => {
       ).toHaveBeenCalledWith(
         expect.objectContaining({
           batchId,
-          version: 'v1',
         }),
       )
     })
@@ -203,7 +202,6 @@ describe('runBatchEvaluationJob', () => {
           enqueued: 0,
           total: 3,
           completed: 0,
-          version: 'v1',
         },
       })
     })
@@ -242,7 +240,6 @@ describe('runBatchEvaluationJob', () => {
       ).toHaveBeenCalledWith(
         expect.objectContaining({
           parameters: { name: '"John"', secondName: '"Doe"' },
-          version: 'v1',
         }),
       )
     })
@@ -260,7 +257,6 @@ describe('runBatchEvaluationJob', () => {
           workspaceId: setup.workspace.id,
           documentUuid: setup.documents[0]!.documentUuid,
           parameters: { name: '"Paco"', secondName: '"Merlo"' },
-          version: 'v1',
         }),
       )
       expect(runDocumentForEvaluationMock).toHaveBeenCalledWith(
@@ -318,7 +314,6 @@ describe('runBatchEvaluationJob', () => {
           parameters: { param1: 'value1', param2: 'value2' },
           evaluationId: 1,
           batchId: expect.any(String),
-          version: 'v1',
         }),
       )
     })

@@ -2,6 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { EvaluationDto } from '@latitude-data/core/browser'
+import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
+import {
+  cn,
+  TableBlankSlate,
+  Text,
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   EventArgs,
@@ -12,26 +21,17 @@ import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import useEvaluationResultsWithMetadata from '$/stores/evaluationResultsWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
-import { EvaluationDto } from '@latitude-data/core/browser'
-import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
-import {
-  cn,
-  TableBlankSlate,
-  Text,
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui'
 import { useSearchParams } from 'next/navigation'
 
-import { useMetadata } from '$/hooks/useMetadata'
 import CreateBatchEvaluationModal from '../Actions/CreateBatchEvaluationModal'
-import { RefineEvaluationResults } from '../RefineEvaluationResults'
 import { EvaluationResultInfo } from './EvaluationResultInfo'
 import {
   EvaluationResultRow,
   EvaluationResultsTable,
 } from './EvaluationResultsTable'
 import { EvaluationStatusBanner } from './EvaluationStatusBanner'
+import { RefineEvaluationResults } from '../RefineEvaluationResults'
+import { useMetadata } from '$/hooks/useMetadata'
 
 const useEvaluationResultsSocket = (
   evaluation: EvaluationDto,
@@ -148,7 +148,7 @@ export function EvaluationResults({
       <Text.H4>Evaluation Results</Text.H4>
       <EvaluationStatusBanner
         documentUuid={document.documentUuid}
-        evaluation={evaluation}
+        evaluationId={evaluation.id}
       />
       <div
         className={cn('gap-x-4 grid pb-6', {
@@ -202,7 +202,7 @@ export function EvaluationResults({
         onClose={onClose}
         document={document}
         documentMetadata={metadata}
-        evaluation={{ ...evaluation, version: 'v1' }}
+        evaluation={evaluation}
         projectId={project.id.toString()}
         commitUuid={commit.uuid}
       />

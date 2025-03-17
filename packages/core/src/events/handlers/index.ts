@@ -3,7 +3,6 @@ import { createClaimInvitationReferralJob } from './createClaimInvitationReferra
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
 import { createDocumentLogsFromSpansJob } from './createDocumentLogsFromSpansJob'
 import { createLoopsContact } from './createLoopsContact'
-import { evaluateLiveLogJob } from './evaluateLiveLog'
 import { notifyClientOfBulkCreateTracesAndSpans } from './notifyClientOfBulkCreateTracesAndSpans'
 import { notifyClientOfDocumentSuggestionCreated } from './notifyClientOfDocumentSuggestionCreated'
 import { notifyClientOfEvaluationResultV2Created } from './notifyClientOfEvaluationResultV2Created'
@@ -27,7 +26,6 @@ export const EventHandlers: IEventsHandlers = {
   documentCreated: [],
   documentLogCreated: [
     runLiveEvaluationsJob,
-    evaluateLiveLogJob,
     notifyToClientDocumentLogCreatedJob,
   ],
   documentSuggestionCreated: [

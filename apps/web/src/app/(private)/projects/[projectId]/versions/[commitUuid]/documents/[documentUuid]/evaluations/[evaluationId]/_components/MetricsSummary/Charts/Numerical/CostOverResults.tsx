@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo } from 'react'
 
-import useAverageResultsAndCostOverCommit from '$/stores/evaluationResultCharts/numericalResults/averageResultAndCostOverCommitStore'
 import {
   EvaluationConfigurationNumerical,
   EvaluationDto,
@@ -14,6 +13,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
+import useAverageResultsAndCostOverCommit from '$/stores/evaluationResultCharts/numericalResults/averageResultAndCostOverCommitStore'
 import { useDebouncedCallback } from 'use-debounce'
 
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
@@ -49,7 +49,7 @@ export function CostOverResultsChart({
     { trailing: true },
   )
   useEvaluationStatusEvent({
-    evaluation: { ...evaluation, version: 'v1' },
+    evaluationId: evaluation.id,
     documentUuid,
     onStatusChange,
   })

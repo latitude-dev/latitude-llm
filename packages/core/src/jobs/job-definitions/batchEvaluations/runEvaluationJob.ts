@@ -89,7 +89,6 @@ export async function runEvaluationJob(job: Job<RunEvaluationJobData>) {
         batchId,
         evaluationId,
         documentUuid,
-        version: 'v1',
         ...progress,
       },
     })

@@ -18,6 +18,5 @@ const specification = LlmEvaluationSpecification
 export default {
   ...specification,
   validate: undefined as any, // TODO: Implement
-  run: undefined as any, // TODO: Implement (remember to create a run error as a side effect)
   metrics: METRICS,
 }

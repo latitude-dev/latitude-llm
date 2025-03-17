@@ -193,7 +193,6 @@ describe('runEvaluationJob', () => {
           documentUuid,
           completed: 1,
           total: 1,
-          version: 'v1',
         },
       })
     })
@@ -220,7 +219,6 @@ describe('runEvaluationJob', () => {
           documentUuid,
           completed: 1,
           total: 1,
-          version: 'v1',
         },
       })
     })
@@ -262,7 +260,6 @@ describe('runEvaluationJob', () => {
           documentUuid,
           completed: 1,
           total: 1,
-          version: 'v1',
         },
       })
     })

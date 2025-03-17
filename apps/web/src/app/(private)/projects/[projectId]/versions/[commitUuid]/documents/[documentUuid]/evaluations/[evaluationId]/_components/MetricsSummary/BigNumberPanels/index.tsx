@@ -20,9 +20,9 @@ export function BigNumberPanels({
   return (
     <div className='flex flex-wrap gap-6'>
       <TotalsPanels
-        evaluation={evaluation}
         commitUuid={commit.uuid}
         documentUuid={documentUuid}
+        evaluationId={evaluation.id}
       />
 
       {evaluation.resultType == EvaluationResultableType.Number ? (
@@ -33,7 +33,7 @@ export function BigNumberPanels({
         />
       ) : (
         <ModalValuePanel
-          evaluation={evaluation}
+          evaluationId={evaluation.id}
           commitUuid={commit.uuid}
           documentUuid={documentUuid}
         />

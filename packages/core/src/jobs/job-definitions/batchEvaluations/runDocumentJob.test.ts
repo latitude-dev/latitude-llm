@@ -8,9 +8,9 @@ import { Result } from '../../../lib/Result'
 import * as queues from '../../../queues'
 import * as commits from '../../../services/commits/runDocumentAtCommit'
 import * as factories from '../../../tests/factories'
-import { mockToolRequestsCopilot } from '../../../tests/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
 import * as utils from '../../utils/progressTracker'
+import { mockToolRequestsCopilot } from '../../../tests/helpers'
 
 const incrementErrorsMock = vi.hoisted(() => vi.fn())
 
@@ -65,7 +65,7 @@ describe('runDocumentJob', () => {
     } as any)
 
     vi.spyOn(jobs, 'setupJobs').mockResolvedValue({
-      evaluationsQueue: {
+      defaultQueue: {
         jobs: {
           enqueueRunEvaluationJob: vi.fn(),
         },
@@ -115,14 +115,17 @@ describe('runDocumentJob', () => {
 
     const setupJobsResult = await jobs.setupJobs()
     expect(
-      setupJobsResult.evaluationsQueue.jobs.enqueueRunEvaluationJob,
-    ).toHaveBeenCalledWith({
-      workspaceId: workspace.id,
-      documentUuid: document.documentUuid,
-      providerLogUuid: 'log1',
-      evaluationId: evaluation.id,
-      batchId: 'batch1',
-    })
+      setupJobsResult.defaultQueue.jobs.enqueueRunEvaluationJob,
+    ).toHaveBeenCalledWith(
+      {
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        providerLogUuid: 'log1',
+        evaluationId: evaluation.id,
+        batchId: 'batch1',
+      },
+      { lifo: true },
+    )
 
     expect(incrementErrorsMock).not.toHaveBeenCalled()
   })
@@ -145,14 +148,13 @@ describe('runDocumentJob', () => {
         batchId: 'batch1',
         evaluationId: evaluation.id,
         documentUuid: document.documentUuid,
-        version: 'v1',
       }),
     })
 
     expect(commits.runDocumentAtCommit).toHaveBeenCalled()
     const setupJobsResult = await jobs.setupJobs()
     expect(
-      setupJobsResult.evaluationsQueue.jobs.enqueueRunEvaluationJob,
+      setupJobsResult.defaultQueue.jobs.enqueueRunEvaluationJob,
     ).not.toHaveBeenCalled()
 
     expect(incrementErrorsMock).toHaveBeenCalled()
@@ -179,7 +181,6 @@ describe('runDocumentJob', () => {
         batchId: 'batch1',
         evaluationId: evaluation.id,
         documentUuid: document.documentUuid,
-        version: 'v1',
       }),
     })
   })
