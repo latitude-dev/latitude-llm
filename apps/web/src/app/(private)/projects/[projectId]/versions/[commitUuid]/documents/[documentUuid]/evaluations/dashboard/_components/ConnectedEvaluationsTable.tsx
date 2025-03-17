@@ -3,6 +3,7 @@ import {
   evaluationResultTypes,
 } from '$/app/(private)/evaluations/_components/ActiveEvaluations/Table'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
@@ -14,9 +15,8 @@ import {
   RuleEvaluationSpecification,
 } from '@latitude-data/core/browser'
 import {
-  Button,
-  ClickToCopyUuid,
   ConfirmModal,
+  DropdownMenu,
   Table,
   TableBody,
   TableCell,
@@ -69,8 +69,8 @@ export default function ConnectedEvaluationsTable({
             <TableHead>Name</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Type</TableHead>
-            <TableHead>Result Type</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead>Metric</TableHead>
+            <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody className='max-h-full overflow-y-auto'>
@@ -79,7 +79,17 @@ export default function ConnectedEvaluationsTable({
               key={row.uuid}
               className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border'
               onClick={() => {
-                if (row.version !== 'v1') return
+                if (row.version === 'v2') {
+                  navigate.push(
+                    ROUTES.projects
+                      .detail({ id: project.id })
+                      .commits.detail({ uuid: commit.uuid })
+                      .documents.detail({ uuid: document.documentUuid })
+                      .evaluationsV2.detail({ uuid: row.uuid }).root,
+                  )
+                  return
+                }
+
                 navigate.push(
                   ROUTES.projects
                     .detail({ id: project.id })
@@ -94,9 +104,10 @@ export default function ConnectedEvaluationsTable({
                   <Text.H5 noWrap ellipsis>
                     {row.name}
                   </Text.H5>
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <ClickToCopyUuid uuid={row.uuid} />
-                  </div>
+                  {/* TODO: Uncomment this when we only have v2 because v1 does not carry that info
+                  {row.version === 'v2' && !!row.evaluateLiveLogs && (
+                    <Badge variant='accent'>Live</Badge>
+                  )} */}
                 </div>
               </TableCell>
               <TableCell>
@@ -112,19 +123,27 @@ export default function ConnectedEvaluationsTable({
               <TableCell>
                 <Text.H5>
                   {row.version === 'v2'
-                    ? evaluationResultTypes['evaluation_resultable_numbers']
+                    ? getEvaluationMetricSpecification(row).name
                     : evaluationResultTypes[row.resultType]}
                 </Text.H5>
               </TableCell>
               <TableCell>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  iconProps={{ name: 'trash' }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setOpenDestroyModal(true)
-                    setSelectedRow(row)
+                <DropdownMenu
+                  options={[
+                    {
+                      label: 'Remove',
+                      onElementClick: (e) => e.stopPropagation(),
+                      onClick: () => {
+                        setOpenDestroyModal(true)
+                        setSelectedRow(row)
+                      },
+                      type: 'destructive',
+                    },
+                  ]}
+                  side='bottom'
+                  align='end'
+                  triggerButtonProps={{
+                    className: 'border-none justify-end cursor-pointer',
                   }}
                 />
               </TableCell>

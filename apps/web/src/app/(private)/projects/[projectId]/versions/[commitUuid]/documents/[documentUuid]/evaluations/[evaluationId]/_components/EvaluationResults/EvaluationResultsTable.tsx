@@ -1,6 +1,13 @@
 import { forwardRef } from 'react'
-import { capitalize } from 'lodash-es'
 
+import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
+import { formatCostInMillicents } from '$/app/_lib/formatUtils'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { SelectableRowsHook } from '$/hooks/useSelectableRows'
+import { relativeTime } from '$/lib/relativeTime'
+import { ROUTES } from '$/services/routes'
+import useEvaluationResultsPagination from '$/stores/useEvaluationResultsCount'
 import {
   DEFAULT_PAGINATION_SIZE,
   EvaluationDto,
@@ -24,14 +31,6 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { formatCostInMillicents } from '$/app/_lib/formatUtils'
-import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
-import { SelectableRowsHook } from '$/hooks/useSelectableRows'
-import { relativeTime } from '$/lib/relativeTime'
-import { ROUTES } from '$/services/routes'
-import useEvaluationResultsPagination from '$/stores/useEvaluationResultsCount'
 import { useSearchParams } from 'next/navigation'
 
 const countLabel = (selected: number) => (count: number) => {
@@ -157,7 +156,6 @@ export const EvaluationResultsTable = forwardRef<HTMLTableElement, Props>(
             ) : null}
             <TableHead>Time</TableHead>
             <TableHead>Version</TableHead>
-            <TableHead>Origin</TableHead>
             <TableHead>Result</TableHead>
             <TableHead>Cost</TableHead>
             <TableHead>Tokens</TableHead>
@@ -233,13 +231,6 @@ export const EvaluationResultsTable = forwardRef<HTMLTableElement, Props>(
                       {evaluationResult.commit.title}
                     </Text.H5>
                   </div>
-                </TableCell>
-                <TableCell>
-                  <Text.H5 noWrap color={cellColor}>
-                    {evaluationResult.source
-                      ? capitalize(evaluationResult.source)
-                      : '-'}
-                  </Text.H5>
                 </TableCell>
                 <TableCell>
                   {evaluationResult.result !== null ? (

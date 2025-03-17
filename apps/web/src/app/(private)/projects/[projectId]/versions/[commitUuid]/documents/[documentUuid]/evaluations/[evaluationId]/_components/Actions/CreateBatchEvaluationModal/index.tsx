@@ -3,10 +3,10 @@ import { useCallback, useEffect } from 'react'
 import { DocumentVersion, EvaluationTmp } from '@latitude-data/core/browser'
 import { Button, CloseTrigger, Modal } from '@latitude-data/web-ui'
 
+import { useMetadata } from '$/hooks/useMetadata'
 import DatasetForm from './DatasetForm'
 import { useRunBatch } from './useRunBatch'
 import { useRunBatchForm } from './useRunBatchForm'
-import { useMetadata } from '$/hooks/useMetadata'
 
 export default function CreateBatchEvaluationModal({
   open,
@@ -45,6 +45,8 @@ export default function CreateBatchEvaluationModal({
     if (!form.selectedDataset) return
     await runBatch({
       datasetId: form.selectedDataset.id,
+      datasetVersion: form.datasetVersion,
+      datasetLabel: form.datasetLabel,
       ...(evaluation.version === 'v2'
         ? {
             evaluationUuids: [evaluation.uuid],
@@ -56,7 +58,6 @@ export default function CreateBatchEvaluationModal({
       toLine: form.toLine,
       wantAllLines: form.wantAllLines,
       parameters: form.parameters,
-      datasetVersion: form.datasetVersion,
     })
   }, [form, evaluation, runBatch])
 
@@ -83,6 +84,7 @@ export default function CreateBatchEvaluationModal({
     >
       <DatasetForm
         document={document}
+        evaluation={evaluation}
         errors={errors}
         datasets={form.datasets}
         isLoadingDatasets={form.isLoadingDatasets}
@@ -92,9 +94,12 @@ export default function CreateBatchEvaluationModal({
         wantAllLines={form.wantAllLines}
         fromLine={form.fromLine}
         toLine={form.toLine}
+        datasetLabel={form.datasetLabel}
         onChangeFromLine={form.setFromLine}
         onChangeToLine={form.setToLine}
+        onChangeDatasetLabel={form.setDatasetLabel}
         headers={form.headers}
+        labels={form.labels}
         parametersList={form.parametersList}
         onParametersChange={form.onParameterChange}
         parameters={form.parameters}

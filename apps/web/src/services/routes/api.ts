@@ -133,6 +133,24 @@ export const API_ROUTES = {
                   },
                   evaluationsV2: {
                     root: `${documentRoot}/evaluations-v2`,
+                    detail: (evaluationUuid: string) => {
+                      const evaluationRoot = `${documentRoot}/evaluations-v2/${evaluationUuid}`
+                      return {
+                        root: evaluationRoot,
+                        results: {
+                          root: `${evaluationRoot}/results`,
+                          pagination: {
+                            root: `${evaluationRoot}/results/pagination`,
+                          },
+                        },
+                      }
+                    },
+                    results: {
+                      root: `${documentRoot}/evaluations-v2/results`,
+                      documentLogs: {
+                        root: `${documentRoot}/evaluations-v2/results/document-logs`,
+                      },
+                    },
                   },
                 }
               },

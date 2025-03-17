@@ -6,6 +6,7 @@ import {
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
 import {
+  Alert,
   FormFieldGroup,
   FormWrapper,
   IconName,
@@ -75,7 +76,6 @@ export default function EvaluationV2Form<
     configuration: defaultSettings?.configuration ?? {
       reverseScale: false,
       caseInsensitive: false,
-      datasetLabel: '',
     },
   } as EvaluationSettings<T, M>)
   useEffect(() => onSettingsChange?.(settings), [settings])
@@ -92,8 +92,10 @@ export default function EvaluationV2Form<
 
   useEffect(() => {
     if (!metricSpecification) return
-    if (metricSpecification.supportsLiveEvaluation) return
-    setOptions({ ...options, evaluateLiveLogs: false })
+    setOptions({
+      ...options,
+      evaluateLiveLogs: !!metricSpecification.supportsLiveEvaluation,
+    })
   }, [metricSpecification?.supportsLiveEvaluation])
 
   return (
@@ -124,7 +126,7 @@ export default function EvaluationV2Form<
           required
         />
         {/* TODO: Uncomment when all types are implemented */}
-        {/* <Select
+        {/*{mode === 'create' && (<Select
           value={settings.type}
           name='type'
           label='Type'
@@ -132,20 +134,24 @@ export default function EvaluationV2Form<
           placeholder='Select an evaluation type'
           options={EVALUATION_TYPE_OPTIONS}
           onChange={(value) => setSettings({ ...settings, type: value as T })}
-          disabled={disabled || mode === 'update'}
+          disabled={disabled}
           required
-        /> */}
-        <Select
-          value={settings.metric}
-          name='metric'
-          label='Metric'
-          description={metricSpecification?.description}
-          placeholder='Select an evaluation metric'
-          options={EVALUATION_METRIC_OPTIONS(settings.type)}
-          onChange={(value) => setSettings({ ...settings, metric: value as M })}
-          disabled={disabled || mode === 'update'}
-          required
-        />
+        />)} */}
+        {mode === 'create' && (
+          <Select
+            value={settings.metric}
+            name='metric'
+            label='Metric'
+            description={metricSpecification?.description}
+            placeholder='Select an evaluation metric'
+            options={EVALUATION_METRIC_OPTIONS(settings.type)}
+            onChange={(value) =>
+              setSettings({ ...settings, metric: value as M })
+            }
+            disabled={disabled}
+            required
+          />
+        )}
         <FormFieldGroup layout='vertical'>
           <ConfigurationForm
             mode={mode}
@@ -157,6 +163,13 @@ export default function EvaluationV2Form<
             }
             disabled={disabled}
           />
+          {mode === 'create' && metricSpecification?.requiresExpectedOutput && (
+            <Alert
+              variant='default'
+              title='This evaluation requires an expected output'
+              description='You will configure the column that contains the expected output when you run a batch evaluation'
+            />
+          )}
         </FormFieldGroup>
         <FormFieldGroup label='Options' layout='vertical'>
           {metricSpecification?.supportsLiveEvaluation && (

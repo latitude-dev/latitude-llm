@@ -1,7 +1,6 @@
 import safeRegex from 'safe-regex'
 import {
   EvaluationType,
-  formatMessage,
   RuleEvaluationMetric,
   RuleEvaluationRegularExpressionSpecification,
 } from '../../../browser'
@@ -56,7 +55,7 @@ async function validate(
 async function run(
   {
     evaluation,
-    conversation,
+    actualOutput,
   }: EvaluationMetricRunArgs<
     EvaluationType.Rule,
     RuleEvaluationMetric.RegularExpression
@@ -66,10 +65,9 @@ async function run(
   try {
     let metadata = {}
 
-    const response = formatMessage(conversation.at(-1)!)
     const regex = new RegExp(evaluation.configuration.pattern, 'gm')
 
-    const matches = response.match(regex)
+    const matches = actualOutput.match(regex)
 
     const score = (matches?.length ?? 0) > 0 ? 1 : 0
     let normalizedScore = normalizeScore(score, 0, 1)

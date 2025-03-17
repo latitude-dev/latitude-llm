@@ -1,6 +1,8 @@
 import { nanoid } from 'nanoid'
 
+import { DatasetRow, DatasetV2 } from '../../browser'
 import { DATASET_COLUMN_ROLES, DatasetColumnRole } from '../../constants'
+import { BadRequestError } from '../../lib'
 import { type Column } from '../../schema'
 
 export type HashAlgorithmFn = (args: { columnName: string }) => string
@@ -98,4 +100,21 @@ export function buildColumns({
       : Infinity
     return aIndex - bIndex
   })
+}
+
+export function getColumnData({
+  dataset,
+  row,
+  column: columnName,
+}: {
+  dataset: DatasetV2
+  row: DatasetRow
+  column: string
+}) {
+  const column = dataset.columns.find((c) => c.name === columnName)
+  if (!column) {
+    throw new BadRequestError(`${columnName} column not found in dataset`)
+  }
+
+  return row.rowData[column.identifier]?.toString() ?? ''
 }

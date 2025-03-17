@@ -13,6 +13,8 @@ const llmEvaluationConfiguration = BaseEvaluationConfiguration.extend({
 const llmEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({
   evaluationLogId: z.number(),
   reason: z.string(),
+  tokens: z.number(),
+  cost: z.number(),
 })
 const llmEvaluationResultError = BaseEvaluationResultError.extend({
   runErrorId: z.number(),
@@ -29,7 +31,9 @@ export const LlmEvaluationBinarySpecification = {
   }),
   resultMetadata: llmEvaluationResultMetadata.extend({}),
   resultError: llmEvaluationResultError.extend({}),
+  requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
+  supportsBatchEvaluation: true,
 }
 export type LlmEvaluationBinaryConfiguration = z.infer<
   typeof LlmEvaluationBinarySpecification.configuration
@@ -56,7 +60,9 @@ export const LlmEvaluationRatingSpecification = {
   }),
   resultMetadata: llmEvaluationResultMetadata.extend({}),
   resultError: llmEvaluationResultError.extend({}),
+  requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
+  supportsBatchEvaluation: true,
 }
 export type LlmEvaluationRatingConfiguration = z.infer<
   typeof LlmEvaluationRatingSpecification.configuration
@@ -73,15 +79,16 @@ export type LlmEvaluationRatingResultError = z.infer<
 export const LlmEvaluationComparisonSpecification = {
   name: 'Comparison',
   description:
-    'Judges the response by comparing the criteria to the expected label',
+    'Judges the response by comparing the criteria to the expected output',
   configuration: llmEvaluationConfiguration.extend({
     minThreshold: z.number(), // Threshold percentage
     maxThreshold: z.number(), // Threshold percentage
-    datasetLabel: z.string(),
   }),
   resultMetadata: llmEvaluationResultMetadata.extend({}),
   resultError: llmEvaluationResultError.extend({}),
+  requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
 }
 export type LlmEvaluationComparisonConfiguration = z.infer<
   typeof LlmEvaluationComparisonSpecification.configuration

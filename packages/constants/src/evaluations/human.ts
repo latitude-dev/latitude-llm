@@ -24,7 +24,9 @@ export const HumanEvaluationBinarySpecification = {
   }),
   resultMetadata: humanEvaluationResultMetadata.extend({}),
   resultError: humanEvaluationResultError.extend({}),
+  requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: false,
 }
 export type HumanEvaluationBinaryConfiguration = z.infer<
   typeof HumanEvaluationBinarySpecification.configuration
@@ -51,7 +53,9 @@ export const HumanEvaluationRatingSpecification = {
   }),
   resultMetadata: humanEvaluationResultMetadata.extend({}),
   resultError: humanEvaluationResultError.extend({}),
+  requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: false,
 }
 export type HumanEvaluationRatingConfiguration = z.infer<
   typeof HumanEvaluationRatingSpecification.configuration
@@ -68,15 +72,16 @@ export type HumanEvaluationRatingResultError = z.infer<
 export const HumanEvaluationComparisonSpecification = {
   name: 'Comparison',
   description:
-    'Judges the response by comparing the criteria to the expected label',
+    'Judges the response by comparing the criteria to the expected output',
   configuration: humanEvaluationConfiguration.extend({
     minThreshold: z.number(), // Threshold percentage
     maxThreshold: z.number(), // Threshold percentage
-    datasetLabel: z.string(),
   }),
   resultMetadata: humanEvaluationResultMetadata.extend({}),
   resultError: humanEvaluationResultError.extend({}),
+  requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: false,
 }
 export type HumanEvaluationComparisonConfiguration = z.infer<
   typeof HumanEvaluationComparisonSpecification.configuration

@@ -358,11 +358,8 @@ export interface ProjectStats {
   costPerModel: Record<string, number>
   rollingDocumentLogs: Array<{ date: string; count: number }>
   totalEvaluations: number
-  totalEvaluationRuns: number
-  evaluationCosts: Array<{
-    evaluationName: string
-    cost: number
-  }>
+  totalEvaluationResults: number
+  costPerEvaluation: Record<string, number>
 }
 
 export enum SpanKind {

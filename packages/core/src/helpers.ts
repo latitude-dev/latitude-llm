@@ -1,12 +1,12 @@
-import { type CsvData } from './constants'
-import type { ProviderLogDto } from './schema/types'
-
 import type { Message } from '@latitude-data/compiler'
 import {
   buildResponseMessage,
   ChainStepResponse,
   StreamType,
 } from '@latitude-data/constants'
+import { type CsvData, DEFAULT_PAGINATION_SIZE } from './constants'
+import { type QueryParams } from './lib'
+import type { ProviderLogDto } from './schema/types'
 
 export function buildCsvFile(csvData: CsvData, name: string): File {
   const headers = csvData.headers.map((h) => JSON.stringify(h)).join(',')
@@ -127,4 +127,87 @@ export function formatConversation(conversation: Message[]) {
   }
 
   return result
+}
+
+export type EvaluationResultsV2Search = {
+  filters?: {
+    commitIds?: number[]
+  }
+  orders?: {
+    recency?: 'asc' | 'desc'
+  }
+  pagination: {
+    page: number
+    pageSize: number
+    resultUuid?: string
+  }
+}
+
+export function evaluationResultsV2SearchFromQueryParams(params: QueryParams) {
+  const search = {
+    filters: {},
+    orders: {
+      recency: 'desc',
+    },
+    pagination: {
+      page: 1,
+      pageSize: DEFAULT_PAGINATION_SIZE,
+    },
+  } as EvaluationResultsV2Search
+
+  if (params.commitIds && typeof params.commitIds === 'string') {
+    search.filters!.commitIds = [...new Set(params.commitIds.split(','))]
+      .filter(Boolean)
+      .map(Number)
+  }
+
+  if (params.recency && params.recency === 'asc') {
+    search.orders!.recency = 'asc'
+  }
+
+  if (params.recency && params.recency === 'desc') {
+    search.orders!.recency = 'desc'
+  }
+
+  if (params.page && typeof params.page === 'string') {
+    search.pagination.page = Number(params.page)
+  }
+
+  if (params.pageSize && typeof params.pageSize === 'string') {
+    search.pagination.pageSize = Number(params.pageSize)
+  }
+
+  if (params.resultUuid && typeof params.resultUuid === 'string') {
+    search.pagination.resultUuid = params.resultUuid
+  }
+
+  return search
+}
+
+export function evaluationResultsV2SearchToQueryParams(
+  search: EvaluationResultsV2Search,
+) {
+  const params = new URLSearchParams()
+
+  if (search.filters?.commitIds?.length) {
+    const commitIds = [...new Set(search.filters?.commitIds)].filter(Boolean)
+    params.set('commitIds', commitIds.join(','))
+  }
+
+  if (search.orders?.recency === 'asc') {
+    params.set('recency', 'asc')
+  }
+
+  if (search.orders?.recency === 'desc') {
+    params.set('recency', 'desc')
+  }
+
+  params.set('page', String(search.pagination.page))
+  params.set('pageSize', String(search.pagination.pageSize))
+
+  if (search.pagination.resultUuid) {
+    params.set('resultUuid', search.pagination.resultUuid)
+  }
+
+  return params.toString()
 }

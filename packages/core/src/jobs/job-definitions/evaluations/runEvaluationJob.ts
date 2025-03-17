@@ -20,7 +20,8 @@ export type RunEvaluationV2JobData = {
   evaluationUuid: string
   providerLogUuid: string
   datasetId?: number
-  rowId?: number
+  datasetLabel?: string
+  datasetRowId?: number
   batchId?: string // TODO: Replace with experiments when they exists
 }
 
@@ -30,9 +31,10 @@ export function runEvaluationV2JobKey({
   evaluationUuid,
   providerLogUuid,
   datasetId,
-  rowId,
+  datasetLabel,
+  datasetRowId,
 }: RunEvaluationV2JobData) {
-  return `runEvaluationV2Job-${workspaceId}-${commitId}-${evaluationUuid}-${providerLogUuid}-${datasetId}-${rowId}`
+  return `runEvaluationV2Job-${workspaceId}-${commitId}-${evaluationUuid}-${providerLogUuid}-${datasetId}-${datasetLabel}-${datasetRowId}`
 }
 
 export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
@@ -42,7 +44,8 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     evaluationUuid,
     providerLogUuid,
     datasetId,
-    rowId,
+    datasetLabel,
+    datasetRowId,
     batchId,
   } = job.data
 
@@ -74,20 +77,23 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     .then((r) => r.unwrap())
 
   let dataset = undefined
-  let row = undefined
-  if (datasetId && rowId) {
+  if (datasetId) {
     const datasetsRepository = new DatasetsV2Repository(workspace.id)
     dataset = await datasetsRepository.find(datasetId).then((r) => r.unwrap())
+  }
 
+  let datasetRow = undefined
+  if (datasetRowId) {
     const rowsRepository = new DatasetRowsRepository(workspace.id)
-    row = await rowsRepository.find(rowId).then((r) => r.unwrap())
+    datasetRow = await rowsRepository.find(datasetRowId).then((r) => r.unwrap())
   }
 
   const { result } = await runEvaluationV2({
     evaluation: evaluation,
     providerLog: providerLog,
     dataset: dataset,
-    row: row,
+    datasetLabel: datasetLabel,
+    datasetRow: datasetRow,
     commit: commit,
     workspace: workspace,
   }).then((r) => r.unwrap())

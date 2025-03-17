@@ -1,14 +1,15 @@
 'use server'
 
+import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { setupQueues } from '@latitude-data/core/jobs'
+import { BadRequestError } from '@latitude-data/core/lib/errors'
 import {
   EvaluationsRepository,
   EvaluationsV2Repository,
 } from '@latitude-data/core/repositories'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
-
 import { refineParameters, withDataset } from './_helpers'
 
 export const runBatchEvaluationAction = withDataset
@@ -25,12 +26,27 @@ export const runBatchEvaluationAction = withDataset
         .superRefine(async (parameters = {}, refineCtx) => {
           await refineParameters({ ctx, parameters, refineCtx })
         }),
+      datasetLabel: z.string().optional(),
     }),
   )
   .handler(async ({ input, ctx }) => {
+    if (
+      input.datasetLabel &&
+      'columns' in ctx.dataset &&
+      !ctx.dataset.columns.find((c) => c.name === input.datasetLabel)
+    ) {
+      throw new BadRequestError(
+        `${input.datasetLabel} is not a valid dataset column`,
+      )
+    }
+
     let evaluations = []
 
     if (input.evaluationUuids) {
+      if (!('columns' in ctx.dataset)) {
+        throw new Error('Cannot run a batch evaluation v2 without a dataset v2')
+      }
+
       const evaluationsRepository = new EvaluationsV2Repository(
         ctx.workspace.id,
       )
@@ -46,6 +62,22 @@ export const runBatchEvaluationAction = withDataset
         .map((e) => ({ ...e, version: 'v2' }))
 
       if (evaluations.length === 0) return { success: true }
+
+      evaluations.forEach((evaluation) => {
+        const specification = getEvaluationMetricSpecification(evaluation)
+
+        if (!specification.supportsBatchEvaluation) {
+          throw new BadRequestError(
+            `${evaluation.name} does not support batch evaluation`,
+          )
+        }
+
+        if (specification.requiresExpectedOutput && !input.datasetLabel) {
+          throw new BadRequestError(
+            `${evaluation.name} requires a dataset label`,
+          )
+        }
+      })
 
       publisher.publishLater({
         type: 'batchEvaluationRunRequested',
@@ -88,6 +120,7 @@ export const runBatchEvaluationAction = withDataset
         user: ctx.user,
         evaluation,
         dataset: ctx.dataset,
+        datasetLabel: input.datasetLabel,
         document: ctx.document,
         projectId: ctx.project.id,
         commitUuid: ctx.currentCommitUuid,

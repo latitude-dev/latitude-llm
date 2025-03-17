@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
-import { envClient } from '$/envClient'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import useEvaluations from '$/stores/evaluations'
 import useEvaluationsV2 from '$/stores/evaluationsV2'
 import {
@@ -41,7 +41,7 @@ const METADATA_TYPE_DESCRIPTIONS = {
   evaluationV2: RuleEvaluationSpecification.description,
 }
 
-const METADATA_TYPE_OPTIONS = [
+const DEFAULT_METADATA_TYPE_OPTIONS = [
   {
     label: 'LLM as judge',
     value: EvaluationMetadataType.LlmAsJudgeSimple as EvaluationMetadataTypeTmp,
@@ -50,16 +50,7 @@ const METADATA_TYPE_OPTIONS = [
     label: 'Code / Manual',
     value: EvaluationMetadataType.Manual as EvaluationMetadataTypeTmp,
   },
-].concat(
-  envClient?.NEXT_PUBLIC_EVALUATIONS_V2_ENABLED
-    ? [
-        {
-          label: 'Rule',
-          value: 'evaluationV2',
-        },
-      ]
-    : [],
-)
+]
 
 const DEFAULT_SETTINGS_V2 = {
   name: 'Accuracy',
@@ -69,7 +60,6 @@ const DEFAULT_SETTINGS_V2 = {
   configuration: {
     reverseScale: false,
     caseInsensitive: false,
-    datasetLabel: '',
   },
 }
 
@@ -96,6 +86,10 @@ export default function CreateEvaluationModal({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
+
+  const { enabled: evaluationsV2Enabled } = useFeatureFlag({
+    featureFlag: 'evaluationsV2',
+  })
 
   const [title, setTitle] = useState(initialData?.title ?? '')
   const [description, setDescription] = useState(initialData?.description ?? '')
@@ -223,6 +217,18 @@ export default function CreateEvaluationModal({
     return undefined
   }, [metadataType, existingEvaluations, title])
 
+  const METADATA_TYPE_OPTIONS = [
+    ...DEFAULT_METADATA_TYPE_OPTIONS,
+    ...(evaluationsV2Enabled
+      ? [
+          {
+            label: 'Rule',
+            value: 'evaluationV2',
+          },
+        ]
+      : []),
+  ]
+
   return (
     <ConfirmModal
       dismissible
@@ -232,7 +238,7 @@ export default function CreateEvaluationModal({
       onOpenChange={() => onClose(null)}
       onConfirm={onConfirm}
       confirm={{
-        label: isLoading ? 'Loading...' : 'Create evaluation',
+        label: isLoading ? 'Creating...' : 'Create evaluation',
         description:
           prompt &&
           'A prompt is included with this template. You can edit it once you create the evaluation.',

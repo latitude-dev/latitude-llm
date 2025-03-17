@@ -14,14 +14,15 @@ const ruleEvaluationResultError = BaseEvaluationResultError.extend({})
 export const RuleEvaluationExactMatchSpecification = {
   name: 'Exact Match',
   description:
-    'Checks if the response is exactly the same as the expected label',
+    'Checks if the response is exactly the same as the expected output',
   configuration: ruleEvaluationConfiguration.extend({
     caseInsensitive: z.boolean(),
-    datasetLabel: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   resultError: ruleEvaluationResultError.extend({}),
+  requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationExactMatchConfiguration = z.infer<
   typeof RuleEvaluationExactMatchSpecification.configuration
@@ -43,7 +44,9 @@ export const RuleEvaluationRegularExpressionSpecification = {
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   resultError: ruleEvaluationResultError.extend({}),
+  requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationRegularExpressionConfiguration = z.infer<
   typeof RuleEvaluationRegularExpressionSpecification.configuration
@@ -67,7 +70,9 @@ export const RuleEvaluationLengthCountSpecification = {
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   resultError: ruleEvaluationResultError.extend({}),
+  requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationLengthCountConfiguration = z.infer<
   typeof RuleEvaluationLengthCountSpecification.configuration
@@ -83,7 +88,7 @@ export type RuleEvaluationLengthCountResultError = z.infer<
 
 export const RuleEvaluationLexicalOverlapSpecification = {
   name: 'Lexical Overlap',
-  description: 'Checks if the response contains the expected label',
+  description: 'Checks if the response contains the expected output',
   configuration: ruleEvaluationConfiguration.extend({
     algorithm: z.enum([
       'substring',
@@ -94,11 +99,12 @@ export const RuleEvaluationLexicalOverlapSpecification = {
     ]),
     minOverlap: z.number().optional(), // Percentage of overlap
     maxOverlap: z.number().optional(), // Percentage of overlap
-    datasetLabel: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   resultError: ruleEvaluationResultError.extend({}),
+  requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationLexicalOverlapConfiguration = z.infer<
   typeof RuleEvaluationLexicalOverlapSpecification.configuration
@@ -115,17 +121,17 @@ export type RuleEvaluationLexicalOverlapResultError = z.infer<
 export const RuleEvaluationSemanticSimilaritySpecification = {
   name: 'Semantic Similarity',
   description:
-    'Checks if the response is semantically similar to the expected label',
+    'Checks if the response is semantically similar to the expected output',
   configuration: ruleEvaluationConfiguration.extend({
     algorithm: z.literal('cosine_similarity'),
-    embeddingModel: z.enum(['openai_3_small', 'anthropic_voyage_3']),
     minSimilarity: z.number().optional(), // Percentage of similarity
     maxSimilarity: z.number().optional(), // Percentage of similarity
-    datasetLabel: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   resultError: ruleEvaluationResultError.extend({}),
+  requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationSemanticSimilarityConfiguration = z.infer<
   typeof RuleEvaluationSemanticSimilaritySpecification.configuration

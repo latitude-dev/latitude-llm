@@ -17,6 +17,7 @@ import { queuesConnection } from '../../../queues'
 import { CommitsRepository } from '../../../repositories'
 import { getRowsFromRange } from '../../../services/datasetRows/getRowsFromRange'
 import { previewDataset } from '../../../services/datasets/preview'
+import { getEvaluationMetricSpecification } from '../../../services/evaluationsV2'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 
@@ -88,6 +89,7 @@ export type RunBatchEvaluationJobParams = {
   user: User
   evaluation: EvaluationTmp
   dataset: Dataset | DatasetV2
+  datasetLabel?: string
   document: DocumentVersion
   commitUuid: string
   projectId: number
@@ -105,6 +107,7 @@ export const runBatchEvaluationJob = async (
     user,
     evaluation,
     dataset,
+    datasetLabel,
     document,
     projectId,
     commitUuid,
@@ -118,9 +121,26 @@ export const runBatchEvaluationJob = async (
     .getCommitByUuid({ projectId, uuid: commitUuid })
     .then((r) => r.unwrap())
 
+  if (
+    datasetLabel &&
+    'columns' in dataset &&
+    !dataset.columns.find((c) => c.name === datasetLabel)
+  ) {
+    throw new Error(`${datasetLabel} is not a valid dataset column`)
+  }
+
   if (evaluation.version === 'v2') {
     if (!('columns' in dataset)) {
-      throw new Error('Cannot run a batch evaluation without a dataset v2')
+      throw new Error('Cannot run a batch evaluation v2 without a dataset v2')
+    }
+
+    const specification = getEvaluationMetricSpecification(evaluation)
+    if (!specification.supportsBatchEvaluation) {
+      throw new Error('Evaluation does not support batch evaluation')
+    }
+
+    if (specification.requiresExpectedOutput && !datasetLabel) {
+      throw new Error('Evaluation requires a dataset label')
     }
 
     publisher.publishLater({
@@ -208,7 +228,8 @@ export const runBatchEvaluationJob = async (
         ? {
             evaluationUuid: evaluation.uuid,
             datasetId: dataset.id,
-            rowId: rows[i]!.id,
+            datasetLabel: datasetLabel,
+            datasetRowId: rows[i]!.id,
           }
         : { evaluationId: evaluation.id }),
       version: evaluation.version,

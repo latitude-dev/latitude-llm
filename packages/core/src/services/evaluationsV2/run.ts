@@ -9,6 +9,7 @@ import {
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
+  formatMessage,
   ProviderLog,
   Workspace,
 } from '../../browser'
@@ -25,6 +26,7 @@ import {
   DocumentVersionsRepository,
 } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema'
+import { getColumnData } from '../datasetsV2/utils'
 import serializeProviderLog from '../providerLogs/serialize'
 import { EVALUATION_SPECIFICATIONS } from './shared'
 
@@ -36,14 +38,16 @@ export async function runEvaluationV2<
     evaluation,
     providerLog,
     dataset,
-    row,
+    datasetLabel,
+    datasetRow,
     commit,
     workspace,
   }: {
     evaluation: EvaluationV2<T, M>
     providerLog: ProviderLog
     dataset?: DatasetV2
-    row?: DatasetRow
+    datasetLabel?: string
+    datasetRow?: DatasetRow
     commit: Commit
     workspace: Workspace
   },
@@ -85,35 +89,50 @@ export async function runEvaluationV2<
     )
   }
 
-  if ((dataset && !row) || (row && !dataset)) {
-    return Result.error(
-      new BadRequestError(
-        'If a row is provided, a dataset must also be provided',
-      ),
-    )
-  }
+  const actualOutput = formatMessage(conversation.at(-1)!)
 
-  if (dataset && row && row.datasetId !== dataset.id) {
-    return Result.error(new BadRequestError('Row is not part of the dataset'))
-  }
-
-  const specification = EVALUATION_SPECIFICATIONS[evaluation.type]
-  if (!specification) {
+  const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
+  if (!typeSpecification) {
     return Result.error(new BadRequestError('Invalid evaluation type'))
+  }
+
+  const metricSpecification = typeSpecification.metrics[evaluation.metric]
+  if (!metricSpecification) {
+    return Result.error(new BadRequestError('Invalid evaluation metric'))
+  }
+
+  let expectedOutput = undefined
+  if (metricSpecification.requiresExpectedOutput) {
+    if (!dataset || !datasetLabel || !datasetRow) {
+      throw new BadRequestError('Dataset, label and row are required')
+    }
+
+    if (datasetRow.datasetId !== dataset.id) {
+      return Result.error(new BadRequestError('Row is not part of the dataset'))
+    }
+
+    expectedOutput = getColumnData({
+      dataset: dataset,
+      row: datasetRow,
+      column: datasetLabel,
+    })
   }
 
   let value
   try {
-    value = (await specification.run(
+    value = (await typeSpecification.run(
       {
         metric: evaluation.metric,
         evaluation: evaluation,
+        actualOutput: actualOutput,
+        expectedOutput: expectedOutput,
         conversation: conversation,
-        dataset: dataset,
-        row: row,
         providerLog: providerLog,
         documentLog: documentLog,
         document: document,
+        dataset: dataset,
+        datasetLabel: datasetLabel,
+        datasetRow: datasetRow,
         commit: commit,
         workspace: workspace,
       },

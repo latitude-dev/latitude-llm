@@ -28,6 +28,7 @@ export function useRunBatch({
       evaluationUuids,
       wantAllLines,
       datasetId,
+      datasetLabel,
       parameters,
       fromLine,
       toLine,
@@ -36,6 +37,7 @@ export function useRunBatch({
       evaluationIds?: number[]
       evaluationUuids?: string[]
       datasetId: number
+      datasetLabel?: string
       fromLine?: number
       toLine?: number
       wantAllLines: boolean
@@ -50,6 +52,7 @@ export function useRunBatch({
         evaluationUuids,
         datasetId,
         datasetVersion,
+        datasetLabel,
         fromLine: wantAllLines ? undefined : fromLine,
         toLine: wantAllLines ? undefined : toLine,
         parameters,

@@ -1,7 +1,11 @@
 import { ROUTES } from '$/services/routes'
 import { useMemo } from 'react'
 
-import { EvaluationResultableType } from '@latitude-data/core/browser'
+import {
+  EvaluationResultableType,
+  EvaluationResultDto,
+  EvaluationResultV2,
+} from '@latitude-data/core/browser'
 import { Badge, Button, Skeleton, Text } from '@latitude-data/web-ui'
 import Link from 'next/link'
 
@@ -27,7 +31,7 @@ export function ExpandedContent({
     return (
       <div className='w-full flex gap-4 items-center justify-center'>
         <Text.H5 userSelect={false} color='foregroundMuted'>
-          There are no evaluations connected yet
+          There are no evaluations added yet
         </Text.H5>
       </div>
     )
@@ -38,7 +42,7 @@ export function ExpandedContent({
       {evaluations.map((evaluation) => (
         <EvaluationItem
           key={evaluation.uuid}
-          result={results[evaluation.id]}
+          result={results[evaluation.uuid]}
           evaluation={evaluation}
           isLoading={isLoading}
           {...rest}
@@ -59,7 +63,7 @@ export function ExpandedContentHeader({ document, commit, project }: Props) {
     <div className='w-full flex items-center justify-end gap-4'>
       <Link href={route}>
         <Button variant='link' onClick={(e) => e.stopPropagation()}>
-          + Connect an evaluation
+          + Add an evaluation
         </Button>
       </Link>
     </div>
@@ -76,10 +80,24 @@ export function CollapsedContentHeader({
   const count = useMemo(() => {
     return evaluations.reduce(
       (acc, evaluation) => {
-        if (!evaluation.live) return { ...acc, skipped: acc.skipped + 1 }
-        if (!results[evaluation.id]) return { ...acc, skipped: acc.skipped + 1 }
+        if (evaluation.version === 'v2') {
+          const result = results[evaluation.uuid] as EvaluationResultV2
 
-        let value = results[evaluation.id]!.result
+          if (!evaluation.evaluateLiveLogs) {
+            return { ...acc, skipped: acc.skipped + 1 }
+          }
+          if (!result) return { ...acc, skipped: acc.skipped + 1 }
+          if (result.hasPassed) return { ...acc, passed: acc.passed + 1 }
+
+          return acc
+        }
+
+        const result = results[evaluation.uuid] as EvaluationResultDto
+
+        if (!evaluation.live) return { ...acc, skipped: acc.skipped + 1 }
+        if (!result) return { ...acc, skipped: acc.skipped + 1 }
+
+        let value = result.result
         if (value === undefined) return acc
 
         if (evaluation.resultType === EvaluationResultableType.Boolean) {

@@ -136,6 +136,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     lookDisabled?: boolean
     ellipsis?: boolean
     containerClassName?: string
+    innerClassName?: string
     indicator?: DotIndicatorProps
   }
 
@@ -143,6 +144,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
     className,
     containerClassName,
+    innerClassName,
     variant,
     size,
     fancy,
@@ -208,6 +210,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
           <div
             className={cn(
               'flex flex-row items-center gap-x-2 cursor-pointer max-w-full',
+              innerClassName,
               {
                 'w-full justify-center': fullWidth,
                 'overflow-hidden flex-grow min-w-0': ellipsis,

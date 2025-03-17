@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
-import { Icon, Skeleton, Text, Tooltip } from '@latitude-data/web-ui'
+import { Icon, Skeleton, Text, TextColor, Tooltip } from '@latitude-data/web-ui'
 import { FinishReason } from 'ai'
 
 const REASONS_FINISH: Record<FinishReason, string> = {
@@ -29,6 +29,7 @@ type MetadataItemProps = {
   stacked?: boolean
   label: string
   value?: string
+  color?: TextColor
   loading?: boolean
   children?: ReactNode
 }
@@ -37,6 +38,7 @@ export function MetadataItem({
   label,
   stacked = false,
   value,
+  color = 'foregroundMuted',
   loading,
   children,
 }: MetadataItemProps) {
@@ -52,7 +54,7 @@ export function MetadataItem({
         ) : (
           <>
             {value && (
-              <Text.H5 align='right' color='foregroundMuted'>
+              <Text.H5 align='right' color={color}>
                 {value}
               </Text.H5>
             )}

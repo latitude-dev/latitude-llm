@@ -3,8 +3,14 @@ import {
   RuleEvaluationExactMatchSpecification,
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
-import { IconName, Input, SwitchInput } from '@latitude-data/web-ui'
-import { ConfigurationFormProps, ResultBadgeProps } from '../index'
+import { IconName, SwitchInput } from '@latitude-data/web-ui'
+import {
+  ConfigurationFormProps,
+  ResultBadgeProps,
+  ResultPanelProps,
+  ResultRowCellsProps,
+  ResultRowHeadersProps,
+} from '../index'
 
 const specification = RuleEvaluationExactMatchSpecification
 export default {
@@ -12,6 +18,11 @@ export default {
   icon: 'equal' as IconName,
   ConfigurationForm: ConfigurationForm,
   ResultBadge: ResultBadge,
+  ResultRowHeaders: ResultRowHeaders,
+  ResultRowCells: ResultRowCells,
+  resultPanelTabs: [],
+  ResultPanelMetadata: ResultPanelMetadata,
+  ResultPanelContent: ResultPanelContent,
 }
 
 function ConfigurationForm({
@@ -35,19 +46,6 @@ function ConfigurationForm({
         disabled={disabled}
         required
       />
-      <Input
-        value={configuration.datasetLabel ?? ''}
-        name='datasetLabel'
-        label='Dataset Label'
-        description='The column of the dataset to match against'
-        placeholder='label'
-        onChange={(e) =>
-          setConfiguration({ ...configuration, datasetLabel: e.target.value })
-        }
-        className='w-full'
-        disabled={disabled}
-        required
-      />
     </>
   )
 }
@@ -56,4 +54,40 @@ function ResultBadge({
   result,
 }: ResultBadgeProps<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>) {
   return <>{result.hasPassed ? 'Matched' : 'Unmatched'}</>
+}
+
+function ResultRowHeaders(
+  _props: ResultRowHeadersProps<
+    EvaluationType.Rule,
+    RuleEvaluationMetric.ExactMatch
+  >,
+) {
+  return <></>
+}
+
+function ResultRowCells(
+  _props: ResultRowCellsProps<
+    EvaluationType.Rule,
+    RuleEvaluationMetric.ExactMatch
+  >,
+) {
+  return <></>
+}
+
+function ResultPanelMetadata(
+  _props: ResultPanelProps<
+    EvaluationType.Rule,
+    RuleEvaluationMetric.ExactMatch
+  >,
+) {
+  return <></>
+}
+
+function ResultPanelContent(
+  _props: ResultPanelProps<
+    EvaluationType.Rule,
+    RuleEvaluationMetric.ExactMatch
+  >,
+) {
+  return <></>
 }
