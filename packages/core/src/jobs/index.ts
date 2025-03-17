@@ -1,6 +1,5 @@
 import Redis from 'ioredis'
 import { setupQueues } from './queues'
-import { initializeNextRunTimesForAllScheduledTriggers } from '../services/documentTriggers/handlers/scheduled'
 
 export { Worker } from 'bullmq'
 
@@ -10,6 +9,7 @@ export async function setupJobs(connection?: Redis) {
   if (!queues) {
     queues = await setupQueues(connection)
   }
+
   return queues
 }
 
@@ -17,23 +17,6 @@ export async function setupSchedules(connection?: Redis) {
   if (!queues) {
     queues = await setupQueues(connection)
   }
-
-  // Initialize nextRunTime for all scheduled triggers
-  await initializeNextRunTimesForAllScheduledTriggers()
-    .then((result) => {
-      if (result.error) {
-        console.error(
-          'Failed to initialize nextRunTime for scheduled triggers:',
-          result.error,
-        )
-      }
-    })
-    .catch((error) => {
-      console.error(
-        'Error initializing nextRunTime for scheduled triggers:',
-        error,
-      )
-    })
 
   // Every day at 8 AM
   await queues.defaultQueue.jobs.scheduleRequestDocumentSuggestionsJob(
