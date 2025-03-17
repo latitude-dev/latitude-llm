@@ -3,6 +3,61 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-03-17'>
+## Integrations
+
+We've added a new integrations section in the settings page. This section
+allows you to connect your Latitude prompts to other tools and services such as
+Figma, Notion, Slack, and more. We've started with 20+ integrations and we are
+constantly adding more.
+
+![](/assets/changelog/250221/integrations.png)
+
+Under the hood, integrations are just MCP servers we automatically manage for
+you, so you will see a deployment status and some deploy-related logs in the
+integrations section. Most MCP servers take just a few seconds to deploy. We
+also have a special integration type to connect your prompts to existing MCP
+servers that you might be hosting yourself.
+
+Integrations can easily be made available to your prompts via the integrations
+section in the playground.
+
+![](/assets/changelog/250221/integrations-2.png)
+
+This feature is specially useful for agents that perform long running tasks and
+need access to several tools and services. For example, here's an agent that
+surfaces the web for some AI-related news and sends a summary to a Slack
+channel.
+
+[video](https://www.loom.com/share/9272a98a234b49e1bd32cfa28a93133d?sid=2ac3efb0-6e67-4190-841f-3f5f34330993)
+
+The prompt is triggered everyday at 9AM, which brings us to the next topic...
+
+## Triggers
+
+We've added support for triggers in the playground. Triggers are a new way to
+trigger your prompts based on certain heuristics. To start we've implemented 2 type of triggers:
+
+- Time-based triggers: these triggers are triggered based on a specific time of day, for example, you can trigger your prompts at 9AM everyday.
+- Email-based triggers: these triggers are triggered based on a specific email address, for example, you can trigger your prompts when a specific email address receives an email.
+
+![](/assets/changelog/250221/triggers.png)
+
+## Subagents
+
+We've added support for subagents. Subagents are a way for agents to delegate tasks to other agents. This allows you to create complex agents that can handle more complex tasks.
+
+![](/assets/changelog/250317/subagents.png)
+
+## Other stuff
+
+- Drag and drop files/folders from the sidebar
+- Improved editor error reporting
+- Improved agentic behavior of agents running in Latitude
+- General performance and stability improvements
+
+</Update>
+
 <Update label='2025-02-20'>
 ## Built-in tools
 
@@ -48,6 +103,7 @@ We've added a new feature that suggests changes to your prompts based on the res
 We're very happy to introduce the first version of Latitude Agents. An agent is a new way to build LLM-powered applications that can interact with the world and perform tasks.
 
 The easiest way to think about agents is as a prompt that runs in a loop and has:
+
 - Some instructions—including a goal and some context—just like any other prompt
 - A set of tools that it can use to interact with the world
 - A tool the agent can call to signal that it's finished its work
@@ -57,6 +113,7 @@ The agent runs in a loop, using the tools available to it to achieve its goal.
 ![](/assets/changelog/250122/agents.png)
 
 This is the first step in our agent journey. We're already working on:
+
 - Adding support for using other agents as tools
 - Supporting code execution as a tool
 - Building a library of built-in tools ready to use (web browsing, search, etc.)
