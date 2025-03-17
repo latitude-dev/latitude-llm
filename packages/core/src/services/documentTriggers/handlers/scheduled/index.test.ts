@@ -1,13 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { database } from '../../../../client'
-import { documentTriggers } from '../../../../schema'
-import { eq } from 'drizzle-orm'
 import {
   isScheduledTriggerDue,
   updateScheduledTriggerLastRun,
   findAllScheduledTriggers,
   findScheduledTriggersDueToRun,
-  initializeNextRunTimesForAllScheduledTriggers,
 } from './index'
 import * as cronHelperModule from '../../helpers/cronHelper'
 import { createScheduledDocumentTrigger } from '../../../../tests/factories/documentTriggers'
@@ -262,57 +258,6 @@ describe('Scheduled Document Triggers Handlers', () => {
         expect(dueIds).toContain(triggerWithoutNextRunTime.id)
       }
       expect(cronHelperModule.checkCronExpression).toHaveBeenCalled()
-    })
-  })
-
-  describe('initializeNextRunTimesForAllScheduledTriggers', () => {
-    it('initializes nextRunTime for triggers without one', async () => {
-      // Arrange
-      const trigger = await createScheduledDocumentTrigger({
-        cronExpression: '0 * * * *',
-        nextRunTime: undefined,
-      })
-
-      const triggerWithFutureTime = await createScheduledDocumentTrigger({
-        cronExpression: '0 0 * * *',
-        nextRunTime: new Date('2099-01-01'), // Far in the future
-      })
-
-      // Act
-      const result = await initializeNextRunTimesForAllScheduledTriggers()
-
-      // Assert
-      expect(result.ok).toBe(true)
-      if (result.ok) {
-        expect(result.value).toBeGreaterThanOrEqual(1) // At least one trigger should be updated
-      }
-
-      // Verify the trigger was updated
-      const updatedTrigger = await database
-        .select()
-        .from(documentTriggers)
-        .where(eq(documentTriggers.id, trigger.id))
-        .then((rows) => rows[0])
-
-      const configuration = updatedTrigger!
-        .configuration as ScheduledTriggerConfiguration
-
-      expect(configuration.nextRunTime).toEqual(
-        new Date('2023-01-02').toISOString(),
-      )
-
-      // Verify the future trigger was not updated
-      const unchangedTrigger = await database
-        .select()
-        .from(documentTriggers)
-        .where(eq(documentTriggers.id, triggerWithFutureTime.id))
-        .then((rows) => rows[0])
-
-      const configuration2 = unchangedTrigger!
-        .configuration as ScheduledTriggerConfiguration
-      expect(configuration2.nextRunTime).toEqual(
-        new Date('2099-01-01').toISOString(),
-      )
     })
   })
 })
