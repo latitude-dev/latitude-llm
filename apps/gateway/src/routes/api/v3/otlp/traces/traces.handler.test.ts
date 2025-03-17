@@ -24,7 +24,7 @@ const mocks = vi.hoisted(() => ({
 
 // Replace the mock setup with spies
 // @ts-ignore
-vi.spyOn(jobsModule, 'setupJobs').mockResolvedValue(mocks.queues)
+vi.spyOn(jobsModule, 'setupQueues').mockResolvedValue(mocks.queues)
 
 describe('POST /api/v2/otlp/v1/traces', () => {
   let workspace: Workspace

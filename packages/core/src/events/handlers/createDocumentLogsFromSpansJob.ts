@@ -1,5 +1,5 @@
 import { BulkCreateTracesAndSpansEvent } from '../events'
-import { setupJobs } from '../../jobs'
+import { setupQueues } from '../../jobs'
 import { database } from '../../client'
 import { and, eq, inArray } from 'drizzle-orm'
 import { spans as spansModel } from '../../schema'
@@ -43,9 +43,9 @@ export async function createDocumentLogsFromSpansJob({
   )
   if (!spansToImport.length) return
 
-  const jobs = await setupJobs()
+  const queues = await setupQueues()
   spansToImport.forEach(async (data) => {
-    jobs.defaultQueue.jobs.enqueueCreateDocumentLogFromSpanJob({
+    queues.defaultQueue.jobs.enqueueCreateDocumentLogFromSpanJob({
       ...data,
     })
   })

@@ -5,7 +5,7 @@ import {
   WorkspaceDto,
 } from '../../browser'
 import { findLastProviderLogFromDocumentLogUuid } from '../../data-access'
-import { setupJobs } from '../../jobs'
+import { setupQueues } from '../../jobs'
 import { NotFoundError, Result } from '../../lib'
 
 export async function evaluateDocumentLog(
@@ -13,7 +13,7 @@ export async function evaluateDocumentLog(
   workspace: WorkspaceDto | Workspace,
   { evaluations }: { evaluations?: EvaluationDto[] } = {},
 ) {
-  const queues = await setupJobs()
+  const queues = await setupQueues()
   const providerLog = await findLastProviderLogFromDocumentLogUuid(
     documentLog.uuid,
   )

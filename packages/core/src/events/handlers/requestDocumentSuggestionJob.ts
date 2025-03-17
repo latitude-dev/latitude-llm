@@ -1,6 +1,6 @@
 import { LogSources } from '../../browser'
 import { unsafelyFindWorkspace } from '../../data-access'
-import { setupJobs } from '../../jobs'
+import { setupQueues } from '../../jobs'
 import { generateDocumentSuggestionJobKey } from '../../jobs/job-definitions'
 import { NotFoundError } from '../../lib'
 import { hasEvaluationResultPassed } from '../../services/evaluationResults'
@@ -24,7 +24,7 @@ export const requestDocumentSuggestionJob = async ({
   if (documentLog.source !== LogSources.Playground) return
   if (hasEvaluationResultPassed({ result, evaluation })) return
 
-  const queues = await setupJobs()
+  const queues = await setupQueues()
   queues.defaultQueue.jobs.enqueueGenerateDocumentSuggestionJob(
     {
       workspaceId: workspace.id,

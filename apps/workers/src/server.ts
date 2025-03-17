@@ -4,13 +4,13 @@ import express from 'express'
 import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js'
 import { ExpressAdapter } from '@bull-board/express'
-import { setupJobs } from '@latitude-data/core/jobs'
+import { setupQueues } from '@latitude-data/core/jobs'
 
 import { captureException, captureMessage } from './utils/sentry'
 import startWorkers from './workers'
 import { env } from '@latitude-data/env'
 
-const queues = await setupJobs()
+const queues = await setupQueues()
 const app = express()
 const workers = await startWorkers()
 
@@ -19,7 +19,7 @@ const serverAdapter = new ExpressAdapter()
 serverAdapter.setBasePath('/admin/queues')
 
 createBullBoard({
-  queues: Object.values(queues).map((queue) => new BullMQAdapter(queue.queue)),
+  queues: Object.values(queues).map((q) => new BullMQAdapter(q.queue)),
   serverAdapter,
 })
 

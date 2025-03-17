@@ -1,7 +1,7 @@
 'use server'
 
 import { publisher } from '@latitude-data/core/events/publisher'
-import { setupJobs } from '@latitude-data/core/jobs'
+import { setupQueues } from '@latitude-data/core/jobs'
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
@@ -38,7 +38,7 @@ export const runBatchEvaluationAction = withDataset
     const evaluations = await evaluationsRepo
       .filterById(input.evaluationIds)
       .then((r) => r.unwrap())
-    const queues = await setupJobs()
+    const queues = await setupQueues()
     evaluations.forEach((evaluation) => {
       const batchId = `evaluation:${evaluation.id}:${nanoid(5)}`
 

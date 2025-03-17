@@ -27,9 +27,9 @@ const mocks = vi.hoisted(() => ({
     },
   },
 }))
-const setupJobsSpy = vi.spyOn(jobsModule, 'setupJobs')
+const setupQueuesSpy = vi.spyOn(jobsModule, 'setupQueues')
 // @ts-expect-error - mock implementation
-setupJobsSpy.mockResolvedValue(mocks.queues)
+setupQueuesSpy.mockResolvedValue(mocks.queues)
 
 let data: ReturnType<typeof buildProviderLogDto>
 let workspace: Workspace

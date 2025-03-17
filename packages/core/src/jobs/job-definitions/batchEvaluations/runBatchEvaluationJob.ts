@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto'
 
 import { Job } from 'bullmq'
 
-import { setupJobs } from '../..'
+import { setupQueues } from '../..'
 import {
   Dataset,
   DatasetV2,
@@ -13,7 +13,7 @@ import {
   Workspace,
 } from '../../../browser'
 import { publisher } from '../../../events/publisher'
-import { queues } from '../../../queues'
+import { queuesConnection } from '../../../queues'
 import { CommitsRepository } from '../../../repositories'
 import { previewDataset } from '../../../services/datasets/preview'
 import { WebsocketClient } from '../../../websockets/workers'
@@ -120,7 +120,7 @@ export const runBatchEvaluationJob = async (
     toLine,
   })
 
-  const progressTracker = new ProgressTracker(await queues(), batchId)
+  const progressTracker = new ProgressTracker(await queuesConnection(), batchId)
   const firstAttempt = job.attemptsMade === 0
 
   if (firstAttempt) {
@@ -128,7 +128,7 @@ export const runBatchEvaluationJob = async (
   }
 
   const progress = await progressTracker.getProgress()
-  const jobs = await setupJobs()
+  const queues = await setupQueues()
 
   if (firstAttempt && parameters.length > 0) {
     websockets.emit('evaluationStatus', {
@@ -149,7 +149,7 @@ export const runBatchEvaluationJob = async (
 
     // NOTE: This is running jobs for the document with different parameters
     // then the result is evaluated with `runEvaluationJob`
-    await jobs.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob({
+    await queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob({
       workspaceId: workspace.id,
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,

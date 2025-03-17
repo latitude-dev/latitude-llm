@@ -1,9 +1,9 @@
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
-import { setupJobs } from '../../'
+import { setupQueues } from '../../'
 import { NotFoundError } from '../../../lib/errors'
-import { queues } from '../../../queues'
+import { queuesConnection } from '../../../queues'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
@@ -31,10 +31,10 @@ export const runDocumentForEvaluationJob = async (
     evaluationId,
     batchId,
   } = job.data
-  const progressTracker = new ProgressTracker(await queues(), batchId)
+  const progressTracker = new ProgressTracker(await queuesConnection(), batchId)
 
   try {
-    const jobs = await setupJobs()
+    const queues = await setupQueues()
     const result = await runDocumentAtCommitWithAutoToolResponses({
       workspaceId,
       projectId,
@@ -50,7 +50,7 @@ export const runDocumentForEvaluationJob = async (
       throw new NotFoundError('Provider log not found after running document')
     }
 
-    await jobs.defaultQueue.jobs.enqueueRunEvaluationJob(
+    await queues.defaultQueue.jobs.enqueueRunEvaluationJob(
       {
         workspaceId,
         documentUuid,

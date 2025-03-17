@@ -1,3 +1,3 @@
-import { setupJobs } from '@latitude-data/core/jobs'
+import { setupQueues } from '@latitude-data/core/jobs'
 
-export const queues = setupJobs()
+export const queues = setupQueues()

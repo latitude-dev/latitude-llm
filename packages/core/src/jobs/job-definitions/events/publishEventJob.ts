@@ -1,6 +1,6 @@
 import { Job } from 'bullmq'
 
-import { setupJobs } from '../..'
+import { setupQueues } from '../..'
 import { LatitudeEvent } from '../../../events/events'
 import { EventHandlers } from '../../../events/handlers/index'
 
@@ -9,7 +9,7 @@ export const publishEventJob = async (job: Job<LatitudeEvent>) => {
   const handlers = EventHandlers[event.type]
   if (!handlers?.length) return
 
-  const queues = await setupJobs()
+  const queues = await setupQueues()
 
   handlers.forEach((handler) => {
     queues.eventsQueue.queue.add(handler.name, event)

@@ -1,7 +1,7 @@
 import { Job } from 'bullmq'
 import { findScheduledTriggersDueToRun } from '../../../services/documentTriggers/handlers/scheduled'
 import { ProcessScheduledTriggerJobData } from './processScheduledTriggerJob'
-import { setupJobs } from '../../../jobs'
+import { setupQueues } from '../../../jobs'
 import { HEAD_COMMIT } from '../../../constants'
 
 export type CheckScheduledDocumentTriggersJobData = unknown
@@ -28,7 +28,7 @@ export const checkScheduledDocumentTriggersJob = async (
   console.log(`Found ${triggers.length} scheduled triggers due to run`)
 
   // Get the queue instance
-  const jobQueues = await setupJobs()
+  const jobQueues = await setupQueues()
 
   // Enqueue individual jobs for each trigger
   const jobPromises = triggers.map(async (trigger) => {
