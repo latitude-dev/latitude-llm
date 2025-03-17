@@ -11,7 +11,7 @@ allows you to connect your Latitude prompts to other tools and services such as
 Figma, Notion, Slack, and more. We've started with 20+ integrations and we are
 constantly adding more.
 
-![](/assets/changelog/250221/integrations.png)
+![](/assets/changelog/250317/integrations.png)
 
 Under the hood, integrations are just MCP servers we automatically manage for
 you, so you will see a deployment status and some deploy-related logs in the
@@ -22,7 +22,7 @@ servers that you might be hosting yourself.
 Integrations can easily be made available to your prompts via the integrations
 section in the playground.
 
-![](/assets/changelog/250221/integrations-2.png)
+![](/assets/changelog/250317/integrations-2.png)
 
 This feature is specially useful for agents that perform long running tasks and
 need access to several tools and services. For example, here's an agent that
@@ -41,7 +41,7 @@ trigger your prompts based on certain heuristics. To start we've implemented 2 t
 - Time-based triggers: these triggers are triggered based on a specific time of day, for example, you can trigger your prompts at 9AM everyday.
 - Email-based triggers: these triggers are triggered based on a specific email address, for example, you can trigger your prompts when a specific email address receives an email.
 
-![](/assets/changelog/250221/triggers.png)
+![](/assets/changelog/250317/triggers.png)
 
 ## Subagents
 
@@ -139,9 +139,10 @@ Running prompts with tool calls in batch mode is also supported, with mock tool 
 We shipped the new Python SDK. Now you can interact with our API from your Python applications.
 
 It ships with support for:
-  - Running prompts through our gateway
-  - Pushing logs to Latitude
-  - Telemetry, automatic tracing of your LLM calls
+
+- Running prompts through our gateway
+- Pushing logs to Latitude
+- Telemetry, automatic tracing of your LLM calls
 
 We're also working on adding support for compiling prompts locally, so you can run them from your code. Stay tuned!
 
@@ -152,7 +153,7 @@ Here's the documentation to get started with the [Python SDK](/guides/sdk/python
 - General improvements to stability and performance
 - Added revert/reset commit actions to the Project's History
 - Added full support for OpenAI's `o1` model family
-- The response of a step now is automatically parsed as JSON if the JSON output schema is defined. 
+- The response of a step now is automatically parsed as JSON if the JSON output schema is defined.
 - Lots of tool-related fixes
 
 </Update>
