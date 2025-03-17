@@ -5,6 +5,7 @@ import { Worker } from 'bullmq'
 import { defaultWorker } from './worker-definitions/defaultWorker'
 import { buildRedisConnection } from '@latitude-data/core/redis'
 import { env } from '@latitude-data/env'
+import { evaluationsWorker } from './worker-definitions/evaluationsWorker'
 
 const WORKER_OPTS = {
   concurrency: 5,
@@ -14,7 +15,7 @@ const WORKER_OPTS = {
     removeOnFail: { count: 0 },
   }),
 }
-const WORKERS = [defaultWorker]
+const WORKERS = [defaultWorker, evaluationsWorker]
 
 export default async function startWorkers() {
   await setupSchedules()

@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from 'react'
 
+import useAverageResultOverTime from '$/stores/evaluationResultCharts/numericalResults/averageResultOverTimeStore'
 import {
   EvaluationConfigurationNumerical,
   EvaluationDto,
@@ -12,7 +13,6 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import useAverageResultOverTime from '$/stores/evaluationResultCharts/numericalResults/averageResultOverTimeStore'
 import { useDebouncedCallback } from 'use-debounce'
 
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
@@ -54,7 +54,7 @@ export function ResultOverTimeChart({
     { trailing: true },
   )
   useEvaluationStatusEvent({
-    evaluationId: evaluation.id,
+    evaluation: { ...evaluation, version: 'v1' },
     documentUuid,
     onStatusChange,
   })

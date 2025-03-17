@@ -2,27 +2,28 @@
 
 import { useCallback } from 'react'
 
-import { Skeleton, Text } from '@latitude-data/web-ui'
 import useEvaluationResultsModalValue from '$/stores/evaluationResultCharts/evaluationResultsModalValue'
+import { Skeleton, Text } from '@latitude-data/web-ui'
 import { useDebouncedCallback } from 'use-debounce'
 
+import { EvaluationDto } from '@latitude-data/core/browser'
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import Panel from '../Panel'
 
 export default function ModalValuePanel({
   commitUuid,
   documentUuid,
-  evaluationId,
+  evaluation,
 }: {
   commitUuid: string
   documentUuid: string
-  evaluationId: number
+  evaluation: EvaluationDto
 }) {
   const { data, refetch, isLoading } = useEvaluationResultsModalValue(
     {
       commitUuid,
       documentUuid,
-      evaluationId,
+      evaluationId: evaluation.id,
     },
     {
       revalidateIfStale: false,
@@ -34,7 +35,11 @@ export default function ModalValuePanel({
     2000,
     { trailing: true },
   )
-  useEvaluationStatusEvent({ evaluationId, documentUuid, onStatusChange })
+  useEvaluationStatusEvent({
+    evaluation: { ...evaluation, version: 'v1' },
+    documentUuid,
+    onStatusChange,
+  })
   return (
     <Panel
       label='Value more repeated'

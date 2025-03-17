@@ -14,6 +14,7 @@ import type { UploadDocumentLogsJobData } from './documents/uploadDocumentLogsJo
 import type { CleanDocumentSuggestionsJobData } from './documentSuggestions/cleanDocumentSuggestionsJob'
 import type { GenerateDocumentSuggestionJobData } from './documentSuggestions/generateDocumentSuggestionJob'
 import type { RequestDocumentSuggestionsJobData } from './documentSuggestions/requestDocumentSuggestionsJob'
+import type { RunEvaluationV2JobData } from './evaluations/runEvaluationV2Job'
 import type { RunLiveEvaluationJobData } from './liveEvaluations/runLiveEvaluationJob'
 
 export type JobDataMap = {
@@ -33,6 +34,7 @@ export type JobDataMap = {
   [Jobs.generateDocumentSuggestionJob]: GenerateDocumentSuggestionJobData
   [Jobs.requestDocumentSuggestionsJob]: RequestDocumentSuggestionsJobData
   [Jobs.cleanDocumentSuggestionsJob]: CleanDocumentSuggestionsJobData
+  [Jobs.runEvaluationV2Job]: RunEvaluationV2JobData
 }
 
 type JobData<J extends Jobs> = J extends keyof JobDataMap

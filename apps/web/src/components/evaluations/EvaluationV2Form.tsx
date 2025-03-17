@@ -12,6 +12,7 @@ import {
   FormWrapper,
   IconName,
   Input,
+  NumberInput,
   Select,
   SwitchInput,
   TextArea,
@@ -154,6 +155,7 @@ export default function EvaluationV2Form<
           description={
             EVALUATION_CONDITION_DETAILS[settings.condition].description
           }
+          tooltip={`Metric scores are normalized to a scale of 0 to ${EVALUATION_SCORE_SCALE} points`}
         >
           <Select
             value={settings.condition}
@@ -163,19 +165,20 @@ export default function EvaluationV2Form<
             onChange={(value) => setSettings({ ...settings, condition: value })}
             required
           />
-          <Input
-            value={settings.threshold}
-            name='threshold'
-            placeholder='Enter a pass threshold'
-            type='number'
-            min={0}
-            max={EVALUATION_SCORE_SCALE}
-            onChange={(e) =>
-              setSettings({ ...settings, threshold: parseInt(e.target.value) })
-            }
-            className='w-full'
-            required
-          />
+          <div className='w-32'>
+            <NumberInput
+              value={settings.threshold}
+              name='threshold'
+              placeholder='Enter a pass threshold'
+              min={0}
+              max={EVALUATION_SCORE_SCALE}
+              onChange={(value) =>
+                setSettings({ ...settings, threshold: value ?? 0 })
+              }
+              className='w-full'
+              required
+            />
+          </div>
         </FormFieldGroup>
         <FormFieldGroup layout='vertical'>
           <typeSpecification.ConfigurationForm

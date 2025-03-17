@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { Badge, Text } from '@latitude-data/web-ui'
 import { type EventArgs } from '$/components/Providers/WebsocketsProvider/useSockets'
+import { EvaluationDto } from '@latitude-data/core/browser'
+import { Badge, Text } from '@latitude-data/web-ui'
 
 import { isEvaluationRunDone } from '../../../_lib/isEvaluationRunDone'
 import { useEvaluationStatusEvent } from '../../../_lib/useEvaluationStatusEvent'
@@ -34,16 +35,16 @@ function BatchIndicator({ job }: { job: EventArgs<'evaluationStatus'> }) {
 
 export function EvaluationStatusBanner({
   documentUuid,
-  evaluationId,
+  evaluation,
 }: {
-  evaluationId: number
   documentUuid: string
+  evaluation: EvaluationDto
 }) {
   const timeoutRef = useRef<number | null>(null)
   const [jobs, setJobs] = useState<EventArgs<'evaluationStatus'>[]>([])
 
   useEvaluationStatusEvent({
-    evaluationId,
+    evaluation: { ...evaluation, version: 'v1' },
     documentUuid,
     onStatusChange: (args) => {
       setJobs((prevJobs) => {
