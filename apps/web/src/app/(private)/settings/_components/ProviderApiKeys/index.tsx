@@ -125,12 +125,12 @@ const ProviderApiKeysTable = ({
         {providerApiKeys.map((apiKey) => (
           <TableRow key={apiKey.id} hoverable={false} verticalPadding>
             <TableCell>
-              <Text.H5>
-                {apiKey.name}
+              <div className='flex flex-row items-center gap-2'>
+                <Text.H5>{apiKey.name}</Text.H5>
                 {apiKey.id === workspace.defaultProviderId && (
                   <DefaultProviderBadge provider={apiKey} className='ml-2' />
                 )}
-              </Text.H5>
+              </div>
             </TableCell>
             <TableCell>
               <Text.H5 color='foregroundMuted'>

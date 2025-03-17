@@ -101,7 +101,7 @@ export function CommitItem({
           {user ? user.name : 'Unknown user'}
         </Text.H6>
       </div>
-      <div className='flex gap-x-4'>
+      <div className='flex flex-row items-center gap-x-4'>
         {currentCommit.uuid !== commit.uuid && (
           <Link href={commitPath}>
             <Button variant='link' size='none'>
