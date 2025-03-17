@@ -115,7 +115,7 @@ describe('runDocumentJob', () => {
 
     const setupQueuesResult = await jobs.setupQueues()
     expect(
-      setupQueuesResult.defaultQueue.jobs.enqueueRunEvaluationJob,
+      setupQueuesResult.evaluationsQueue.jobs.enqueueRunEvaluationJob,
     ).toHaveBeenCalledWith({
       workspaceId: workspace.id,
       documentUuid: document.documentUuid,
