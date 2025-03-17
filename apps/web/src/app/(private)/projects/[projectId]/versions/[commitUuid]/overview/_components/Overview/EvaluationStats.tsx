@@ -1,7 +1,8 @@
+import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { ProjectStats } from '@latitude-data/core/browser'
 import { BarChart, ChartBlankSlate, Text } from '@latitude-data/web-ui'
-import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 
+import { useMemo } from 'react'
 import Panel from '../../../documents/[documentUuid]/evaluations/[evaluationId]/_components/MetricsSummary/BigNumberPanels/Panel'
 import { ChartWrapper } from '../../../documents/[documentUuid]/evaluations/[evaluationId]/_components/MetricsSummary/Charts/ChartContainer'
 
@@ -12,33 +13,35 @@ export function EvaluationStats({
   stats?: ProjectStats
   isLoading: boolean
 }) {
-  const evaluationCostData =
-    stats?.evaluationCosts.map(
-      (item: { evaluationName: string; cost: number }) => ({
-        x: item.evaluationName,
-        y: item.cost,
+  const costPerEvaluationData = useMemo(() => {
+    if (!stats?.costPerEvaluation) return []
+    return Object.entries(stats.costPerEvaluation).map(
+      ([evaluation, cost]) => ({
+        x: evaluation,
+        y: cost,
       }),
-    ) ?? []
+    )
+  }, [stats?.costPerEvaluation])
 
   return (
     <div className='flex flex-col gap-4 min-h-[400px]'>
       <div className='grid grid-cols-2 gap-4'>
         <div className='grid grid-cols-1 gap-4'>
           <Panel
-            label='Connected Evaluations'
-            additionalInfo='The number of evaluations connected to prompts in this project.'
+            label='Evaluations'
+            additionalInfo='The total number of evaluations across all versions, including deleted ones.'
             loading={isLoading}
             value={String(stats?.totalEvaluations ?? '-')}
           />
           <Panel
-            label='Total evaluation runs'
-            additionalInfo='The number of evaluation results computed across all evaluations in this project.'
+            label='Total results'
+            additionalInfo='The total number of evaluation results across all versions, including deleted evaluations.'
             loading={isLoading}
-            value={String(stats?.totalEvaluationRuns ?? '-')}
+            value={String(stats?.totalEvaluationResults ?? '-')}
           />
         </div>
         <ChartWrapper label='Total cost per evaluation' loading={isLoading}>
-          {evaluationCostData.length > 0 && (
+          {costPerEvaluationData.length > 0 && (
             <BarChart
               config={{
                 xAxis: {
@@ -52,7 +55,7 @@ export function EvaluationStats({
                   tickFormatter: (value) =>
                     formatCostInMillicents(Number(value)),
                 },
-                data: evaluationCostData,
+                data: costPerEvaluationData,
                 tooltipContent: (item) => (
                   <div className='flex flex-col gap-2'>
                     <div className='flex w-full gap-2 justify-between'>
@@ -70,7 +73,7 @@ export function EvaluationStats({
               }}
             />
           )}
-          {!evaluationCostData.length && (
+          {!costPerEvaluationData.length && (
             <ChartBlankSlate>No evaluation costs found so far.</ChartBlankSlate>
           )}
         </ChartWrapper>

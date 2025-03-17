@@ -133,6 +133,15 @@ export const API_ROUTES = {
                   },
                   evaluationsV2: {
                     root: `${documentRoot}/evaluations-v2`,
+                    detail: (evaluationUuid: string) => {
+                      const evaluationRoot = `${documentRoot}/evaluations-v2/${evaluationUuid}`
+                      return {
+                        root: evaluationRoot,
+                        results: {
+                          root: `${evaluationRoot}/results`,
+                        },
+                      }
+                    },
                   },
                 }
               },
@@ -272,6 +281,9 @@ export const API_ROUTES = {
     },
     evaluationResults: {
       root: `/api/documentLogs/evaluation-results`,
+    },
+    evaluationResultsV2: {
+      root: `/api/documentLogs/evaluation-results-v2`,
     },
     // DEPRECATED: Is for all datasets
     generateCsv: {

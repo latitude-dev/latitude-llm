@@ -1,27 +1,19 @@
 'use client'
 
-import {
-  ReactNode,
-  RefObject,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
-
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
+import useEvaluationsV2 from '$/stores/evaluationsV2'
 import {
   DatasetVersion,
+  EvaluationDto,
+  EvaluationResultTmp,
   ProviderLogDto,
   buildConversation,
 } from '@latitude-data/core/browser'
-import {
-  DocumentLogWithMetadataAndError,
-  ResultWithEvaluation,
-} from '@latitude-data/core/repositories'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
   Alert,
   Button,
@@ -31,8 +23,15 @@ import {
 } from '@latitude-data/web-ui'
 import { useRouter } from 'next/navigation'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
-
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import {
+  ReactNode,
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { MetadataItem } from '../../../../../[documentUuid]/_components/MetadataItem'
 import {
   DEFAULT_TABS,
@@ -41,7 +40,6 @@ import {
 import { DocumentLogEvaluations } from './Evaluations'
 import { DocumentLogMessages } from './Messages'
 import { DocumentLogMetadata } from './Metadata'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 function DocumentLogMetadataLoading() {
   return (
@@ -136,7 +134,7 @@ export function DocumentLogInfo({
 }: {
   documentLog: DocumentLogWithMetadataAndError
   providerLogs?: ProviderLogDto[]
-  evaluationResults?: ResultWithEvaluation[]
+  evaluationResults?: EvaluationResultTmp[]
   isLoading?: boolean
   error?: Error
   className?: string
@@ -145,6 +143,10 @@ export function DocumentLogInfo({
   children?: ReactNode
   offset?: StickyOffset
 }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+
   const ref = useRef<HTMLDivElement>(null)
   const [target, setTarget] = useState<HTMLDivElement | null>(null)
 
@@ -169,6 +171,29 @@ export function DocumentLogInfo({
     return buildConversation(providerLog)
   }, [providerLogs])
 
+  const { data: evaluations, isLoading: isEvaluationsLoading } =
+    useEvaluationsV2({ project, commit, document })
+
+  const resultsWithEvaluations = useMemo(
+    () =>
+      evaluationResults?.map((result) =>
+        result.version === 'v2'
+          ? {
+              result: result,
+              evaluation: evaluations.find(
+                (evaluation) => evaluation.uuid === result.evaluationUuid,
+              )!,
+              version: 'v2' as const,
+            }
+          : {
+              result: result,
+              evaluation: (result as any).evaluation as EvaluationDto,
+              version: 'v1' as const,
+            },
+      ) ?? [],
+    [evaluations, evaluationResults],
+  )
+
   return (
     <MetadataInfoTabs
       ref={ref}
@@ -188,7 +213,7 @@ export function DocumentLogInfo({
       }
     >
       {({ selectedTab }) =>
-        isLoading ? (
+        isLoading || isEvaluationsLoading ? (
           <DocumentLogMetadataLoading />
         ) : (
           <>
@@ -209,7 +234,7 @@ export function DocumentLogInfo({
                 )}
                 {selectedTab === 'evaluations' && (
                   <DocumentLogEvaluations
-                    evaluationResults={evaluationResults}
+                    evaluationResults={resultsWithEvaluations}
                   />
                 )}
               </>

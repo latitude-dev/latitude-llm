@@ -14,9 +14,9 @@ import {
   RuleEvaluationSpecification,
 } from '@latitude-data/core/browser'
 import {
-  Button,
   ClickToCopyUuid,
   ConfirmModal,
+  DropdownMenu,
   Table,
   TableBody,
   TableCell,
@@ -70,7 +70,7 @@ export default function ConnectedEvaluationsTable({
             <TableHead>Description</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Result Type</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody className='max-h-full overflow-y-auto'>
@@ -117,14 +117,22 @@ export default function ConnectedEvaluationsTable({
                 </Text.H5>
               </TableCell>
               <TableCell>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  iconProps={{ name: 'trash' }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setOpenDestroyModal(true)
-                    setSelectedRow(row)
+                <DropdownMenu
+                  options={[
+                    {
+                      label: 'Remove',
+                      onElementClick: (e) => e.stopPropagation(),
+                      onClick: () => {
+                        setOpenDestroyModal(true)
+                        setSelectedRow(row)
+                      },
+                      type: 'destructive',
+                    },
+                  ]}
+                  side='bottom'
+                  align='end'
+                  triggerButtonProps={{
+                    className: 'border-none justify-end cursor-pointer',
                   }}
                 />
               </TableCell>

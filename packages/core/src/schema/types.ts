@@ -3,6 +3,7 @@ import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
+  EvaluationResultV2,
   EvaluationV2,
 } from '../constants'
 import { apiKeys } from './models/apiKeys'
@@ -10,6 +11,7 @@ import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
 // DEPRECATED: we need to run migration and create new records in datasetsV2 for all existing datasets
+import { EvaluationResultDto } from '@latitude-data/constants'
 import { DocumentTriggerWithConfiguration } from '../services/documentTriggers/helpers/schema'
 import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
 import { datasetRows } from './models/datasetRows'
@@ -264,3 +266,7 @@ export type DocumentTrigger = Omit<_DocumentTrigger, 'configuration' | 'type'> &
 export type EvaluationTmp =
   | (EvaluationDto & { version: 'v1' })
   | (EvaluationV2 & { version: 'v2' })
+
+export type EvaluationResultTmp =
+  | (EvaluationResultDto & { version: 'v1' })
+  | (EvaluationResultV2 & { version: 'v2' })

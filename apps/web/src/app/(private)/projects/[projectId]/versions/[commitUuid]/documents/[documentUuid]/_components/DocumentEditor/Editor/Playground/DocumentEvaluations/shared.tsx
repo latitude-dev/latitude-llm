@@ -2,7 +2,8 @@ import {
   ConnectedEvaluation,
   DocumentVersion,
   EvaluationDto,
-  EvaluationResultDto,
+  EvaluationResultTmp,
+  EvaluationV2,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
@@ -10,9 +11,13 @@ import {
   type IProjectContextType,
 } from '@latitude-data/web-ui'
 
+export type EvaluationTmp =
+  | (EvaluationDto & { live: ConnectedEvaluation['live']; version: 'v1' })
+  | (EvaluationV2 & { version: 'v2' })
+
 export type Props = {
-  results: Record<number, EvaluationResultDto>
-  evaluations: (EvaluationDto & { live: ConnectedEvaluation['live'] })[]
+  results: Record<string, EvaluationResultTmp>
+  evaluations: EvaluationTmp[]
   document: DocumentVersion
   commit: ICommitContextType['commit']
   project: IProjectContextType['project']
