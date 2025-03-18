@@ -10,6 +10,7 @@ import Redis from 'ioredis'
 import { queuesConnection } from '../../queues'
 import { Jobs, Queues, QUEUES } from '../constants'
 import { JobDefinition } from '../job-definitions/types'
+import { env } from '@latitude-data/env'
 
 export function capitalize(string: string) {
   return string.charAt(0).toUpperCase() + string.slice(1)
@@ -31,7 +32,7 @@ type JobScheduleFn = {
   ) => Promise<Job<JobDefinition[Queues][Jobs]['data']>>
 }
 
-const attempts = process.env.NODE_ENV === 'production' ? 15 : 3
+const attempts = env.JOB_RETRY_ATTEMPTS
 
 export const DEFAULT_JOB_OPTIONS: JobsOptions = {
   attempts,

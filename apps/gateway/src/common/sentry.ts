@@ -5,12 +5,12 @@ if (env.SENTRY_DSN) {
   Sentry.init({
     dsn: env.SENTRY_DSN,
 
-    enabled: env.NODE_ENV === 'production',
+    enabled: !!env.SENTRY_DSN,
   })
 }
 
 export const captureException = (error: Error) => {
-  if (env.NODE_ENV === 'production' && env.SENTRY_DSN) {
+  if (env.SENTRY_DSN) {
     Sentry.captureException(error)
   } else if (env.NODE_ENV === 'development') {
     console.error(error)
@@ -18,7 +18,7 @@ export const captureException = (error: Error) => {
 }
 
 export const captureMessage = (message: string) => {
-  if (env.NODE_ENV === 'production' && env.SENTRY_DSN) {
+  if (env.SENTRY_DSN) {
     Sentry.captureMessage(message)
   } else {
     console.log(message)

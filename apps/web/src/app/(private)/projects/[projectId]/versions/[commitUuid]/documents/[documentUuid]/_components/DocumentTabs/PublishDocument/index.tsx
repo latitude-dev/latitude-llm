@@ -14,7 +14,6 @@ import {
 import { PublishedDocumentPreview } from './Preview'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { APP_DOMAIN } from '$/app/(private)/_lib/constants'
 import { ROUTES } from '$/services/routes'
 import { NotEditableBanner } from '../_components/NotEditableBanner'
 
@@ -100,7 +99,7 @@ function PublishedDocumentSettings({
     setCanChat(undefined)
   }, [isUpdating])
 
-  const url = `${APP_DOMAIN}${ROUTES.share.document(data!.uuid!).root}`
+  const url = `/${ROUTES.share.document(data!.uuid!).root}`
 
   const onSaveChanges = useCallback(() => {
     if (isUpdating) return

@@ -3,6 +3,7 @@ import { sessions, users } from '@latitude-data/core/schema'
 import { DrizzlePostgreSQLAdapter } from '@lucia-auth/adapter-drizzle'
 import { AUTH_COOKIE_NAME } from '$/services/auth/constants'
 import { Lucia } from 'lucia'
+import { env } from '@latitude-data/env'
 
 const adapter = new DrizzlePostgreSQLAdapter(
   // @ts-expect-error - No idea why this is happening
@@ -32,7 +33,7 @@ export const lucia = new Lucia(adapter, {
     name: AUTH_COOKIE_NAME,
     expires: false,
     attributes: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: !!env.SECURE_LUCIA,
     },
   },
   getUserAttributes: (attributes) => {

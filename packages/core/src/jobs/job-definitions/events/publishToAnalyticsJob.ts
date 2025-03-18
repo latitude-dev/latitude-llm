@@ -15,11 +15,8 @@ export const publishToAnalyticsJob = async (job: Job<LatitudeEvent>) => {
   }
 
   if (!userEmail) return
-
-  if (env.NODE_ENV !== 'production') {
+  if (env.NODE_ENV === 'development') {
     console.log('Analytics event captured:', event.type)
-
-    return
   }
 
   const client = PostHogClient()

@@ -67,6 +67,8 @@ if (environment === 'development' || environment === 'test') {
       GATEWAY_HOSTNAME: 'localhost',
       GATEWAY_PORT: '8787',
       GATEWAY_SSL: 'false',
+      GATEWAY_BIND_ADDRESS: 'localhost',
+      GATEWAY_BIND_PORT: environment === 'development' ? '8787' : '8788',
       APP_DOMAIN: 'latitude.so',
       APP_URL: 'http://localhost:3000',
       NEXT_PUBLIC_POSTHOG_HOST: '',
@@ -83,6 +85,7 @@ if (environment === 'development' || environment === 'test') {
       MCP_SCHEME: 'internet-facing',
       MCP_DOCKER_IMAGE: 'ghcr.io/latitude-dev/latitude-mcp:sha-dd84ff4',
       MCP_NODE_GROUP_NAME: 'latitude-dev-node-group',
+      MAIL_TRANSPORT: 'mailpit',
     },
     { path: pathToEnv },
   )
@@ -148,6 +151,8 @@ export const env = createEnv({
     SENTRY_PROJECT: z.string().optional(),
 
     // Gateway
+    GATEWAY_BIND_ADDRESS: z.string(),
+    GATEWAY_BIND_PORT: z.coerce.number(),
     GATEWAY_HOSTNAME: z.string(),
     GATEWAY_PORT: z.coerce.number().optional(),
     GATEWAY_SSL: z
@@ -180,6 +185,10 @@ export const env = createEnv({
     MAILGUN_EMAIL_DOMAIN: z.string().optional(),
     MAILGUN_MAILER_API_KEY: z.string().optional(),
     DISABLE_EMAIL_AUTHENTICATION: z.boolean().optional().default(false),
+    MAIL_TRANSPORT: z
+      .enum(['mailpit', 'mailgun'])
+      .optional()
+      .default('mailpit'),
 
     // Workers
     WORKERS_HOST: z.string().optional(),
@@ -204,6 +213,11 @@ export const env = createEnv({
     MAILGUN_WEBHOOK_SIGNING_KEY: z.string().optional(),
 
     ENCRYPTION_KEY: z.string().optional(),
+
+    SECURE_LUCIA: z.coerce.boolean().optional().default(false),
+    SECURE_WEBSOCKETS: z.coerce.boolean().optional().default(false),
+
+    JOB_RETRY_ATTEMPTS: z.coerce.number().optional().default(3),
   },
   runtimeEnv: {
     ...process.env,

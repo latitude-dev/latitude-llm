@@ -14,6 +14,7 @@ export default createEnv({
     SUPPORT_APP_SECRET_KEY: z.string(),
     LATITUDE_CLOUD: z.boolean(),
     LATITUDE_CLOUD_PAYMENT_URL: z.string().optional(),
+    SENTRY_DSN: z.string().optional(),
   },
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
@@ -23,5 +24,6 @@ export default createEnv({
     SUPPORT_APP_SECRET_KEY: process.env.SUPPORT_APP_SECRET_KEY ?? '',
     LATITUDE_CLOUD: process.env.LATITUDE_CLOUD === 'true',
     LATITUDE_CLOUD_PAYMENT_URL: process.env.LATITUDE_CLOUD_PAYMENT_URL,
+    SENTRY_DSN: process.env.SENTRY_DSN,
   },
 })

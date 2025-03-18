@@ -4,11 +4,10 @@ import { serve } from '@hono/node-server'
 import app from '$/routes/app'
 
 import { captureException, captureMessage } from './common/sentry'
+import { env } from '@latitude-data/env'
 
-const isProd = process.env.NODE_ENV === 'production'
-const isTest = process.env.NODE_ENV === 'test'
-const HOSTNAME = isProd ? '0.0.0.0' : 'localhost'
-const PORT = isTest ? 8788 : isProd ? 8080 : 8787
+const HOSTNAME = env.GATEWAY_BIND_ADDRESS
+const PORT = env.GATEWAY_BIND_PORT
 
 serve(
   {
