@@ -41,7 +41,7 @@ import {
 import { DocumentLogEvaluations } from './Evaluations'
 import { DocumentLogMessages } from './Messages'
 import { DocumentLogMetadata } from './Metadata'
-import { useFeatureFlag } from '$/hooks/useFeatureFlag'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 function DocumentLogMetadataLoading() {
   return (
@@ -65,12 +65,10 @@ function UseDocumentLogInPlaygroundButton({
   const { project } = useCurrentProject()
   const documentUuid = documentLog.documentUuid
   const { document } = useCurrentDocument()
-  const { data: hasDatasetsV2, isLoading: isLoadingFeatureFlag } =
-    useFeatureFlag()
-  const datasetVersion =
-    hasDatasetsV2 && !isLoadingFeatureFlag
-      ? DatasetVersion.V2
-      : DatasetVersion.V1
+  const { enabled: hasDatasetsV2 } = useFeatureFlag({
+    featureFlag: 'datasetsV2',
+  })
+  const datasetVersion = hasDatasetsV2 ? DatasetVersion.V2 : DatasetVersion.V1
   const {
     setSource,
     history: { setHistoryLog },

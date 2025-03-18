@@ -141,7 +141,6 @@ export default function RunPromptInBatchModal() {
         document={document}
         errors={errors}
         datasets={form.datasets}
-        datasetVersion={form.datasetVersion}
         maxLineCount={form.maxLineCount}
         isLoadingDatasets={form.isLoadingDatasets}
         selectedDataset={form.selectedDataset}

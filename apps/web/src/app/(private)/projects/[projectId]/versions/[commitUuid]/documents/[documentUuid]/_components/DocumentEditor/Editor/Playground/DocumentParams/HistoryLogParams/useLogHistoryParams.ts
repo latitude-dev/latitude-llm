@@ -19,7 +19,7 @@ export function useLogHistoryParams({
 }: {
   document: DocumentVersion
   commitVersionUuid: string
-  datasetVersion: DatasetVersion | undefined
+  datasetVersion: DatasetVersion
 }) {
   const { project } = useCurrentProject()
   const {

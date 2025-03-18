@@ -4,17 +4,12 @@
     "outDir": "./public/workers",
     "module": "es2022",
     "noEmit": false,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
     "moduleResolution": "Bundler",
     "jsx": "preserve",
     "typeRoots": ["./node_modules/@types"],
     "baseUrl": ".",
     "paths": {
-      "$/*": ["./src/*"]
+      "$/*": ["./src/workers/*"]
     }
   },
   "include": ["./src/workers/**/*.ts", "../../packages/constants/src/**/*.ts"],

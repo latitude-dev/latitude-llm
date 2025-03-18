@@ -1,6 +1,6 @@
+import { CsvPreviewTable } from '$/components/CsvPreviewTable'
 import { CsvData } from '@latitude-data/core/browser'
 import { Input, TableSkeleton, Text } from '@latitude-data/web-ui'
-import { CsvPreviewTable } from '$/app/(private)/datasets/generate/CsvPreviewTable'
 
 function LogsCsvPreview({
   csvData,
@@ -26,17 +26,20 @@ export function ExportLogsContent({
   datasetAlreadyExists,
   datasetName,
   setDatasetName,
+  disabled = false,
 }: {
   csvData?: CsvData
   selectedRowCount: number
   datasetAlreadyExists: boolean
   datasetName: string
   setDatasetName: (name: string) => void
+  disabled?: boolean
 }) {
   return (
     <div className='flex flex-col gap-2'>
       <Text.H5B>Name</Text.H5B>
       <Input
+        disabled={disabled}
         value={datasetName}
         onChange={(e) => setDatasetName(e.target.value)}
         placeholder='Dataset Name'

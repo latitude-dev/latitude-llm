@@ -1,4 +1,7 @@
-import { readMetadata } from '@latitude-data/compiler'
+import {
+  readMetadata,
+  CompileError as CompilerCompileError,
+} from '@latitude-data/compiler'
 import {
   AgentToolsMap,
   promptConfigSchema,
@@ -6,7 +9,9 @@ import {
 } from '@latitude-data/constants'
 import type { DocumentVersion } from '@latitude-data/core/browser'
 
-import { scan } from 'promptl-ai'
+import { CompileError as PromptlCompileError, scan } from 'promptl-ai'
+
+type CompileError = PromptlCompileError | CompilerCompileError
 
 export type ReadMetadataWorkerProps = Parameters<typeof readMetadata>[0] & {
   promptlVersion: number
@@ -52,7 +57,7 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
 
   const { setConfig: _, errors: errors, ...returnedMetadata } = metadata
 
-  const errorsWithPositions = errors.map((error) => {
+  const errorsWithPositions = errors.map((error: CompileError) => {
     return {
       start: {
         line: error.start?.line ?? 0,

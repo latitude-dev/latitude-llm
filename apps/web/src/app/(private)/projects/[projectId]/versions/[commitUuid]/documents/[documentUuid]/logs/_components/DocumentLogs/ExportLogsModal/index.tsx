@@ -6,6 +6,7 @@ import {
   DocumentVersion,
 } from '@latitude-data/core/browser'
 import {
+  Alert,
   Button,
   Modal,
   useCurrentProject,
@@ -22,6 +23,7 @@ import useSWR from 'swr'
 
 import { ExportLogsContent } from './Content'
 import { ExportLogsModalFooter } from './Footer'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 function generateDatasetName(document: DocumentVersion) {
   const date = new Date().toISOString().split('T')[0]
@@ -36,6 +38,9 @@ export function ExportLogsModal({
   selectedLogsIds: number[]
   close: () => void
 }) {
+  const { enabled: canNotModifyDatasets } = useFeatureFlag({
+    featureFlag: 'datasetsV1ModificationBlocked',
+  })
   const toast = useToast()
   const { project } = useCurrentProject()
   const { document: currentDocument } = useCurrentDocument()
@@ -73,7 +78,7 @@ export function ExportLogsModal({
           title: 'Dataset saved successfully',
           description: `Dataset '${datasetName}' has been saved`,
           action: (
-            <Link href={ROUTES.datasets.preview(data.dataset.id)}>
+            <Link href={ROUTES.datasets.detail(data.dataset.id)}>
               <Button variant='outline'>View</Button>
             </Link>
           ),
@@ -128,6 +133,7 @@ export function ExportLogsModal({
       onOpenChange={(open) => !open && close()}
       footer={
         <ExportLogsModalFooter
+          disabled={canNotModifyDatasets}
           datasetName={datasetName}
           setDatasetName={setDatasetName}
           datasetAlreadyExists={datasetAlreadyExists}
@@ -146,7 +152,17 @@ export function ExportLogsModal({
         />
       }
     >
+      {canNotModifyDatasets ? (
+        <div className='mb-4'>
+          <Alert
+            variant='default'
+            title='Dataset creation is disabled'
+            description="We're running some maintenance on datasets. At the moment is not possible to create or delete datasets. Please try again later."
+          />
+        </div>
+      ) : null}
       <ExportLogsContent
+        disabled={canNotModifyDatasets}
         selectedRowCount={selectedLogsIds.length}
         csvData={csvData}
         datasetAlreadyExists={datasetAlreadyExists}

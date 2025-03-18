@@ -4,7 +4,6 @@ import { isNumber } from 'lodash-es'
 import {
   Dataset,
   DatasetV2,
-  DatasetVersion,
   DocumentVersion,
 } from '@latitude-data/core/browser'
 import {
@@ -85,7 +84,6 @@ function LineRangeInputs({
 }
 
 export default function DatasetForm({
-  datasetVersion,
   document,
   onParametersChange,
   parameters,
@@ -104,7 +102,6 @@ export default function DatasetForm({
   errors,
   maxLineCount,
 }: {
-  datasetVersion: DatasetVersion
   document: DocumentVersion
   onParametersChange: (param: string) => (header: string) => void
   parameters: RunBatchParameters
@@ -153,11 +150,6 @@ export default function DatasetForm({
     () => datasets.map((ds) => ({ value: ds.id, label: ds.name })),
     [datasets],
   )
-  const urlParameter = new URLSearchParams()
-  urlParameter.set('name', `Dataset for prompt: ${document.path}`)
-  urlParameter.set('parameters', parametersList.join(','))
-  urlParameter.set('backUrl', window.location.href)
-
   const noDatasets = !isLoadingDatasets && datasets.length === 0
   const selectDatasetComponent = (
     <Select
@@ -169,15 +161,6 @@ export default function DatasetForm({
       defaultValue={selectedDataset?.id}
     />
   )
-  const uploadRoute =
-    datasetVersion === DatasetVersion.V1
-      ? ROUTES.datasets.new.root
-      : ROUTES.datasetsV2.root({ modal: 'new' })
-  const generateRoute =
-    datasetVersion === DatasetVersion.V1
-      ? ROUTES.datasets.generate.root
-      : ROUTES.datasetsV2.generate.root
-
   return (
     <>
       <NumeredList>
@@ -194,7 +177,7 @@ export default function DatasetForm({
                   <>
                     <Link
                       className='flex flex-row items-center gap-1 hover:underline'
-                      href={uploadRoute}
+                      href={ROUTES.datasets.root({ modal: 'new' })}
                     >
                       <Text.H5 color='primary'>Upload dataset</Text.H5>
                       <Icon color='primary' name='externalLink' />
@@ -204,7 +187,12 @@ export default function DatasetForm({
                 )}
                 <Link
                   className='flex flex-row items-center gap-1 hover:underline'
-                  href={`${generateRoute}?${urlParameter.toString()}`}
+                  href={ROUTES.datasets.root({
+                    modal: 'generate',
+                    name: `Dataset for prompt: ${document.path}`,
+                    parameters: parametersList.join(','),
+                    backUrl: window.location.href,
+                  })}
                 >
                   <Text.H5 color='primary'>Generate dataset</Text.H5>
                   <Icon color='primary' name='externalLink' />

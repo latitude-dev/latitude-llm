@@ -9,6 +9,7 @@ export const INPUT_SOURCE = {
 const LOCAL_INPUT_SOURCE = {
   manual: 'manual',
   history: 'history',
+  dataset: 'dataset',
 } as const
 export type LocalInputSource =
   (typeof LOCAL_INPUT_SOURCE)[keyof typeof LOCAL_INPUT_SOURCE]

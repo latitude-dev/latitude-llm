@@ -11,7 +11,7 @@ export function RootBreadcrumbItems({ segments }: { segments: string[] }) {
     },
     datasets: {
       label: 'Datasets',
-      href: ROUTES.datasets.root,
+      href: ROUTES.datasets.root(),
     },
     traces: {
       label: 'Traces',

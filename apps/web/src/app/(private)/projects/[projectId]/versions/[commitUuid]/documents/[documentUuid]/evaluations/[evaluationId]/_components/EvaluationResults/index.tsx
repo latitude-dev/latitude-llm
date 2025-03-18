@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
@@ -23,7 +23,6 @@ import {
 } from '@latitude-data/web-ui'
 import { useSearchParams } from 'next/navigation'
 
-import { useMetadata } from '$/hooks/useMetadata'
 import CreateBatchEvaluationModal from '../Actions/CreateBatchEvaluationModal'
 import { RefineEvaluationResults } from '../RefineEvaluationResults'
 import { EvaluationResultInfo } from './EvaluationResultInfo'
@@ -134,14 +133,6 @@ export function EvaluationResults({
     getSelectedRowIds: selectableState.getSelectedRowIds,
   })
   useEvaluationResultsSocket(evaluation, document, mutate)
-  const { metadata, runReadMetadata } = useMetadata()
-  useEffect(() => {
-    runReadMetadata({
-      prompt: document.content ?? '',
-      fullPath: document.path,
-      promptlVersion: document.promptlVersion,
-    })
-  }, [])
 
   return (
     <div className='flex flex-col gap-4 flex-grow min-h-0'>
@@ -201,7 +192,6 @@ export function EvaluationResults({
         open={open}
         onClose={onClose}
         document={document}
-        documentMetadata={metadata}
         evaluation={{ ...evaluation, version: 'v1' }}
         projectId={project.id.toString()}
         commitUuid={commit.uuid}

@@ -4,9 +4,6 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { Label, TableWithHeader } from '@latitude-data/web-ui'
-
-import { useMetadata } from '$/hooks/useMetadata'
-import { useEffect } from 'react'
 import DefaultProviderBanner from '../DefaulProviderBanner'
 import CreateBatchEvaluationModal from './CreateBatchEvaluationModal'
 import LiveEvaluationToggle from './LiveEvaluationToggle'
@@ -26,14 +23,7 @@ export function Actions({
 }) {
   const { document } = useCurrentDocument()
   const { open, onClose, onOpen } = useToggleModal()
-  const { metadata, runReadMetadata } = useMetadata()
-  useEffect(() => {
-    runReadMetadata({
-      prompt: document.content ?? '',
-      fullPath: document.path,
-      promptlVersion: document.promptlVersion,
-    })
-  }, [document])
+
   return (
     <div className='flex flex-row items-center gap-4'>
       <div className='flex flex-row items-center gap-4'>
@@ -56,7 +46,6 @@ export function Actions({
         evaluation={{ ...evaluation, version: 'v1' }}
         projectId={projectId}
         commitUuid={commitUuid}
-        documentMetadata={metadata}
       />
     </div>
   )

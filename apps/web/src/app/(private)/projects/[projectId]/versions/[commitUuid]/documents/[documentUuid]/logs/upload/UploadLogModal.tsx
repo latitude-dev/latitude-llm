@@ -12,11 +12,11 @@ import {
   useToast,
 } from '@latitude-data/web-ui'
 import { uploadDocumentLogsAction } from '$/actions/documentLogs/upload'
-import DelimiterSelector from '$/app/(private)/datasets/new/_components/DelimiterSelector'
 import { useFormAction } from '$/hooks/useFormAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
+import DelimiterSelector from '$/app/(private)/datasets/_components/DelimiterSelector'
 
 interface UploadLogModalProps {
   documentUuid: string

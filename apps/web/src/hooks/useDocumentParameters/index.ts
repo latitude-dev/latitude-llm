@@ -22,11 +22,11 @@ import {
   useLocalStorage,
 } from '@latitude-data/web-ui'
 import useDocumentVersions from '$/stores/documentVersions'
-import { useFeatureFlag } from '$/hooks/useFeatureFlag'
 import {
   getLocalStorageInputsBySource,
   useAsyncDocumentParameters,
 } from './useAsyncDocumentParameters'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 const EMPTY_LINKED_DATASET = {
   rowIndex: 0,
@@ -92,34 +92,26 @@ type InputsByDocument = Record<string, PlaygroundInputs<InputSource>>
 function getLinkedDataset({
   document,
   localInputs,
-  datasetVersion,
 }: {
   document: DocumentVersion
   localInputs: PlaygroundInputs<'dataset'>['dataset']
-  datasetVersion: DatasetVersion | undefined
 }) {
-  if (!datasetVersion) return EMPTY_LINKED_DATASET
+  const datasetId = document.datasetId
+  if (!datasetId) return localInputs ?? EMPTY_LINKED_DATASET
 
-  const isV1 = datasetVersion === DatasetVersion.V1
-  if (!isV1) return
-
-  const identifier = document.datasetId
-  if (!identifier) return EMPTY_LINKED_DATASET
-
-  let all = document.linkedDataset ?? {}
-
-  // TODO: From here remove after migration to datasets V2
+  const all = document.linkedDataset ?? {}
   const isEmpty = Object.keys(all).length === 0
+
   if (isEmpty) {
-    const legacyInputs = localInputs as LinkedDataset
+    const legacyLocalData = localInputs
     return {
-      inputs: legacyInputs.inputs,
-      mappedInputs: legacyInputs.mappedInputs,
-      rowIndex: 0,
+      rowIndex: legacyLocalData.rowIndex,
+      inputs: legacyLocalData.inputs,
+      mappedInputs: legacyLocalData.mappedInputs,
     }
   }
 
-  return all[identifier] ?? EMPTY_LINKED_DATASET
+  return all[datasetId] ? all[datasetId] : (localInputs ?? EMPTY_LINKED_DATASET)
 }
 
 export function useDocumentParameters<
@@ -131,11 +123,13 @@ export function useDocumentParameters<
   isMountedOnRoot = false,
 }: {
   document: DocumentVersion
-  datasetVersion: V | undefined
+  datasetVersion: V
   commitVersionUuid: string
   isMountedOnRoot?: boolean
 }) {
-  const { isLoading: isLoadingFeatureFlag } = useFeatureFlag()
+  const { enabled: useDatasetsV2 } = useFeatureFlag({
+    featureFlag: 'datasetsV2',
+  })
   const { project } = useCurrentProject()
   const projectId = project.id
   const commitUuid = commitVersionUuid
@@ -154,8 +148,8 @@ export function useDocumentParameters<
   const linkedDataset = getLinkedDataset({
     document,
     localInputs: inputs.dataset,
-    datasetVersion,
   })
+
   const { asyncParameters, onParametersChange } = useAsyncDocumentParameters({
     isMountedOnRoot,
     source,
@@ -423,17 +417,15 @@ export function useDocumentParameters<
       // TODO: Remove after a dataset V2 migration
       // This is not needed with new datasets. We don't store the values
       // of the cells viewed because they can be modified now.
-      if (document.datasetId && linkedDataset && 'inputs' in linkedDataset) {
+      if (datasetVersion === DatasetVersion.V1) {
         const datasetInputs = recalculateInputs<'dataset'>({
-          inputs: linkedDataset.inputs as Inputs<'dataset'>,
+          inputs: linkedDataset.inputs,
           metadata,
         })
+        // Store in local while not stored in the DB
+        setInputs('dataset', datasetInputs)
 
-        if (
-          !isLoadingFeatureFlag &&
-          datasetVersion === DatasetVersion.V1 &&
-          'rowIndex' in linkedDataset
-        ) {
+        if (document.datasetId && linkedDataset) {
           setDataset({
             datasetId: document.datasetId,
             datasetVersion,
@@ -461,7 +453,7 @@ export function useDocumentParameters<
       document.datasetId,
       linkedDataset,
       datasetVersion,
-      isLoadingFeatureFlag,
+      useDatasetsV2,
     ],
   )
 

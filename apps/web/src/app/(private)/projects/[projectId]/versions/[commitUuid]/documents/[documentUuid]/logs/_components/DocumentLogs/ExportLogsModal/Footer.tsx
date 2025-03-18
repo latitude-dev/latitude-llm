@@ -7,6 +7,7 @@ export function ExportLogsModalFooter({
   saveAsDatasetDisabled,
   isSavingAsDataset,
   saveAsDataset,
+  disabled = false,
 }: {
   datasetName: string
   datasetAlreadyExists: boolean
@@ -16,6 +17,7 @@ export function ExportLogsModalFooter({
   saveAsDatasetDisabled: boolean
   isSavingAsDataset: boolean
   setDatasetName: (name: string) => void
+  disabled?: boolean
 }) {
   return (
     <div className='flex w-full justify-end gap-2'>
@@ -28,12 +30,13 @@ export function ExportLogsModalFooter({
         Download
       </Button>
       <Tooltip
+        asChild
         open={datasetAlreadyExists ? undefined : false}
         trigger={
           <Button
             fancy
             variant='default'
-            disabled={saveAsDatasetDisabled}
+            disabled={disabled || saveAsDatasetDisabled}
             isLoading={isSavingAsDataset}
             onClick={saveAsDataset}
           >

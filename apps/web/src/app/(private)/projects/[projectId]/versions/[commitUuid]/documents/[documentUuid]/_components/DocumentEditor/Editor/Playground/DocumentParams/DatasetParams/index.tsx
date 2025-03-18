@@ -23,7 +23,7 @@ import { type UseSelectDataset } from './useSelectDataset'
 function BlankSlate() {
   return (
     <Link
-      href={ROUTES.datasets.root}
+      href={ROUTES.datasets.root()}
       className='flex flex-row items-center gap-1'
     >
       <Button iconProps={{ name: 'externalLink' }} variant='link'>
@@ -42,7 +42,7 @@ export function DatasetParams({
   document: DocumentVersion
   commit: ICommitContextType['commit']
   data: UseSelectDataset
-  datasetVersion: DatasetVersion | undefined
+  datasetVersion: DatasetVersion
 }) {
   const selectedId = data.selectedDataset?.id
   return (

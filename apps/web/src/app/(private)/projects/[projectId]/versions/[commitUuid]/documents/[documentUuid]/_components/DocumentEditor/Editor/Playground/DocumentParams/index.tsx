@@ -38,7 +38,7 @@ const TABS: TabSelectorOption<InputSource>[] = [
 ]
 
 export type Props = {
-  datasetVersion: DatasetVersion | undefined
+  datasetVersion: DatasetVersion
   document: DocumentVersion
   commit: ICommitContextType['commit']
   prompt: string
