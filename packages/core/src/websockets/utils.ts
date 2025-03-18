@@ -25,8 +25,8 @@ export async function generateWebsocketToken({
     token,
     cookiesOptions: {
       secure: env.SECURE_WEBSOCKETS,
-      domain: `.${env.APP_DOMAIN}`,
-      path: '/',
+      domain: env.WEBSOCKETS_COOKIES_DOMAIN,
+      path: env.WEBSOCKETS_COOKIES_PATH,
       maxAge: config.maxAge.numberValue,
     },
   }

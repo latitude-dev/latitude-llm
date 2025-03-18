@@ -132,6 +132,8 @@ export const env = createEnv({
     WEBSOCKETS_SERVER: z.string(),
     WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: z.string(),
     WEBSOCKET_SECRET_TOKEN_KEY: z.string(),
+    WEBSOCKETS_COOKIES_DOMAIN: z.string().optional().default('localhost'),
+    WEBSOCKETS_COOKIES_PATH: z.string().optional().default('/'),
 
     // Support app (intercom)
     SUPPORT_APP_ID: z.string(),
