@@ -33,7 +33,7 @@ export const lucia = new Lucia(adapter, {
     name: AUTH_COOKIE_NAME,
     expires: false,
     attributes: {
-      secure: !!env.SECURE_LUCIA,
+      secure: !!env.SECURE_COOKIES,
     },
   },
   getUserAttributes: (attributes) => {

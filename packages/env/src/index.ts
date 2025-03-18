@@ -129,6 +129,7 @@ export const env = createEnv({
     WEBSOCKET_SECRET_TOKEN_KEY: z.string(),
 
     // Support app (intercom)
+    SUPPORT_APP_ID: z.string(),
     SUPPORT_APP_SECRET_KEY: z.string().optional(),
     NEXT_PUBLIC_SUPPORT_APP_ID: z.string().optional(),
 
@@ -162,6 +163,7 @@ export const env = createEnv({
       .default('true'),
 
     LATITUDE_CLOUD: z.boolean().optional().default(false),
+    LATITUDE_CLOUD_PAYMENT_URL: z.string().url().optional(),
 
     // Copilot
     COPILOT_CODE_SUGGESTION_PROMPT_PATH: z.string().optional(),
@@ -214,7 +216,7 @@ export const env = createEnv({
 
     ENCRYPTION_KEY: z.string().optional(),
 
-    SECURE_LUCIA: z.coerce.boolean().optional().default(false),
+    SECURE_COOKIES: z.coerce.boolean().optional().default(false),
     SECURE_WEBSOCKETS: z.coerce.boolean().optional().default(false),
 
     JOB_RETRY_ATTEMPTS: z.coerce.number().optional().default(3),

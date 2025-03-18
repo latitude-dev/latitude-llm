@@ -19,7 +19,7 @@ import { redirect } from 'next/navigation'
 import { EvaluationResults } from './_components/EvaluationResults'
 import { ManualEvaluationResultsClient } from './_components/ManualEvaluationResults'
 import { fetchEvaluationCached } from './_lib/fetchEvaluationCached'
-import env from '$/env'
+import { env } from '@latitude-data/env'
 
 export default async function ConnectedEvaluationPage({
   params,

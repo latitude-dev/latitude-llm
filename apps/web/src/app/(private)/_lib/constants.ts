@@ -2,7 +2,6 @@ import {
   LATITUDE_DOCS_URL,
   LATITUDE_HELP_URL,
 } from '@latitude-data/core/browser'
-import { envClient } from '$/envClient'
 import { ROUTES } from '$/services/routes'
 
 export const NAV_LINKS = [

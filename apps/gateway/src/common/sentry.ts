@@ -12,7 +12,7 @@ if (env.SENTRY_DSN) {
 export const captureException = (error: Error) => {
   if (env.SENTRY_DSN) {
     Sentry.captureException(error)
-  } else if (env.NODE_ENV === 'development') {
+  } else {
     console.error(error)
   }
 }

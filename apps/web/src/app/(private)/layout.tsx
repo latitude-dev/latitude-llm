@@ -9,7 +9,7 @@ import {
   LatitudeWebsocketsProvider,
   SocketIOProvider,
 } from '$/components/Providers/WebsocketsProvider'
-import env from '$/env'
+import { env } from '@latitude-data/env'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
@@ -37,10 +37,10 @@ export default async function PrivateLayout({
 
   const supportIdentity = createSupportUserIdentity(user)
   const featureFlags = getFeatureFlagsForWorkspaceCached({ workspace })
-  const cloudInfo =
-    env.LATITUDE_CLOUD && env.LATITUDE_CLOUD_PAYMENT_URL
-      ? { paymentUrl: env.LATITUDE_CLOUD_PAYMENT_URL }
-      : undefined
+  const cloudInfo = env.LATITUDE_CLOUD_PAYMENT_URL
+    ? { paymentUrl: env.LATITUDE_CLOUD_PAYMENT_URL }
+    : undefined
+
   return (
     <CSPostHogProvider>
       <IdentifyUser user={user} workspace={workspace}>
