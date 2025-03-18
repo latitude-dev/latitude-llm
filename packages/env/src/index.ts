@@ -25,12 +25,17 @@ function buildDevStoragePaths() {
   const devRootPath = process.env.DEV_ROOT_PATH
 
   if (!devRootPath) {
-    console.error(`
-  \x1b[31m[ERROR]\x1b[0m DEV_ROOT_PATH is missing!
-  Please define the \x1b[33mDEV_ROOT_PATH\x1b[0m environment variable in:
-  \x1b[36m.env.development\x1b[0m (located in the root of the project).
+    console.warn(`
+  \x1b[33m[WARNING]\x1b[0m 
+  \x1b[1mDEV_ROOT_PATH\x1b[0m is missing. Without it, file storage features will not work. 
+  Please add the \x1b[1mDEV_ROOT_PATH\x1b[0m environment variable in \x1b[36m.env.development\x1b[0m (located in the project root).
+  Example: DEV_ROOT_PATH=/Users/YOUR_MACHINE_NAME/your-path-to/latitude/tmp/data
   `)
-    process.exit(1)
+
+    return {
+      storagePath: '',
+      publicStoragePath: buildPublicWebPath(''),
+    }
   }
 
   const storagePath = `${devRootPath}/${UPLOADS_PATH}`
