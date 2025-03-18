@@ -293,7 +293,7 @@ export function EmailTriggerConfig({
       </Section>
       {emailAvailability !== EmailAvailabilityOptions.Disabled && (
         <>
-          {documentParameters.length && (
+          {!!documentParameters.length && (
             <Section title='Parameters'>
               <ParameterSelects
                 parameterNames={documentParameters}
