@@ -197,17 +197,17 @@ export const env = createEnv({
     WORKERS_PORT: z.coerce.number().optional(),
 
     // BullMQ dashboard
-    BULL_ADMIN_USER: z.string(),
-    BULL_ADMIN_PASS: z.string(),
+    BULL_ADMIN_USER: z.string().optional().default('admin'),
+    BULL_ADMIN_PASS: z.string().optional().default('admin'),
 
     // MCP Server feature configurations
-    MCP_NODE_GROUP_NAME: z.string(),
-    MCP_DOCKER_IMAGE: z.string(),
-    MCP_SCHEME: z.string(),
     EKS_CA_DATA: z.string().optional(),
     EKS_CLUSTER_NAME: z.string().optional(),
     K8S_API_URL: z.string().optional(),
     LATITUDE_MCP_HOST: z.string().optional(),
+    MCP_DOCKER_IMAGE: z.string().optional(),
+    MCP_NODE_GROUP_NAME: z.string().optional(),
+    MCP_SCHEME: z.string().optional(),
     USE_EKS_CLUSTER: z.coerce.boolean().optional().default(false),
 
     // Triggers
