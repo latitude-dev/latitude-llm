@@ -11,6 +11,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 import {
+  EvaluationCondition,
   EvaluationConfiguration,
   EvaluationMetric,
   EvaluationType,
@@ -38,10 +39,10 @@ export const evaluationVersions = latitudeSchema.table(
     metric: varchar('metric', { length: 128 })
       .notNull()
       .$type<EvaluationMetric>(),
-    // condition: varchar('condition', { length: 128 })
-    //   .notNull()
-    //   .$type<EvaluationCondition>(),
-    // threshold: bigint('threshold', { mode: 'number' }).notNull(),
+    condition: varchar('condition', { length: 128 })
+      .notNull()
+      .$type<EvaluationCondition>(),
+    threshold: bigint('threshold', { mode: 'number' }).notNull(),
     configuration: jsonb('configuration')
       .notNull()
       .$type<EvaluationConfiguration>(),

@@ -1,7 +1,4 @@
-/* eslint-disable no-unreachable */ // TODO: Delete after live to evaluateLiveLogs name has changed
-
 import { eq } from 'drizzle-orm'
-import { omit } from 'lodash-es'
 import {
   Commit,
   EvaluationMetric,
@@ -30,7 +27,6 @@ export async function deleteEvaluationV2<
   },
   db: Database = database,
 ) {
-  return Result.ok({ evaluation }) // TODO: Delete after live to evaluateLiveLogs name has changed
   return await Transaction.call(async (tx) => {
     const repository = new EvaluationsV2Repository(workspace.id, tx)
     const existsAnotherVersion = await repository
@@ -44,7 +40,7 @@ export async function deleteEvaluationV2<
       const result = await tx
         .insert(evaluationVersions)
         .values({
-          ...omit(evaluation, 'condition', 'threshold'),
+          ...evaluation,
           id: undefined,
           commitId: commit.id,
           deletedAt: new Date(),

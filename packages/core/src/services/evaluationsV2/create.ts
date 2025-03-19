@@ -1,4 +1,3 @@
-import { omit } from 'lodash-es'
 import {
   Commit,
   DocumentVersion,
@@ -48,8 +47,7 @@ export async function createEvaluationV2<
     },
     db,
   ).then((r) => r.unwrap())
-  // @ts-expect-error temporal
-  settings = omit(vSettings, 'condition', 'threshold')
+  settings = vSettings
   options = vOptions
 
   return await Transaction.call(async (tx) => {
