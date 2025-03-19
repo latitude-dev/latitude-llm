@@ -81,7 +81,11 @@ const useLocalStorageStore = create<LocalStorageStore>(
           return value ? JSON.parse(value) : null
         },
         setItem: (name, value) => {
-          localStorage.setItem(name, JSON.stringify(value))
+          try {
+            localStorage.setItem(name, JSON.stringify(value))
+          } catch (_) {
+            // Do nothing, localStorage is not available or user is trying to set a value that is too large
+          }
         },
         removeItem: (name) => {
           localStorage.removeItem(name)
