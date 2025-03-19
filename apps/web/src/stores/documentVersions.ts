@@ -261,6 +261,8 @@ export default function useDocumentVersions(
     updateDocumentContentAction,
     {
       onSuccess: ({ data: document }) => {
+        if (!document) return
+
         const prevDocuments = data || []
 
         mutate(
@@ -274,6 +276,8 @@ export default function useDocumentVersions(
 
   const { execute: assignDataset } = useLatitudeAction(assignDatasetAction, {
     onSuccess: ({ data: document }) => {
+      if (!document) return
+
       const prevDocuments = data || []
       mutate(
         prevDocuments.map((d) =>
@@ -287,6 +291,8 @@ export default function useDocumentVersions(
     saveLinkedDatasetAction,
     {
       onSuccess: ({ data: document }) => {
+        if (!document) return
+
         const prevDocuments = data || []
         mutate(
           prevDocuments.map((d) =>
