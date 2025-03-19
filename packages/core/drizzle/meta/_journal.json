@@ -981,6 +981,13 @@
       "when": 1742223903854,
       "tag": "0140_woozy_misty_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 141,
+      "version": "7",
+      "when": 1742413055794,
+      "tag": "0141_omniscient_scorpion",
+      "breakpoints": true
     }
   ]
 }

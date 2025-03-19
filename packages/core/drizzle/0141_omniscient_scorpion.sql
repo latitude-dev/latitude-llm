@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "document_uuid_idx" ON "latitude"."provider_logs" USING btree ("document_log_uuid");
