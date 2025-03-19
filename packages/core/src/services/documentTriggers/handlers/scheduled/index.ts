@@ -40,7 +40,7 @@ export function isScheduledTriggerDue(trigger: DocumentTrigger): boolean {
 export async function updateScheduledTriggerLastRun(
   trigger: Pick<DocumentTrigger, 'id' | 'uuid'>,
   lastRunTime = new Date(),
-  db?: typeof database,
+  db = database,
 ): PromisedResult<DocumentTrigger> {
   return Transaction.call(async (trx) => {
     try {
@@ -106,10 +106,10 @@ export async function updateScheduledTriggerLastRun(
  * @returns A promise that resolves to an array of scheduled triggers
  */
 export async function findAllScheduledTriggers(
-  db?: typeof database,
+  db = database,
 ): PromisedResult<DocumentTrigger[]> {
   try {
-    const triggers = await (db || database)
+    const triggers = await db
       .select()
       .from(documentTriggers)
       .where(eq(documentTriggers.triggerType, DocumentTriggerType.Scheduled))
@@ -127,16 +127,14 @@ export async function findAllScheduledTriggers(
  * @returns A promise that resolves to an array of triggers due to run
  */
 export async function findScheduledTriggersDueToRun(
-  db?: typeof database,
+  db = database,
 ): PromisedResult<DocumentTrigger[]> {
   const now = new Date()
 
   try {
-    const dbInstance = db || database
-
     // Use an optimized query that leverages our index on the JSON path configuration->nextRunTime
     // This query finds all scheduled triggers with nextRunTime <= now
-    const triggersWithNextRunTime = (await dbInstance
+    const triggersWithNextRunTime = (await db
       .select()
       .from(documentTriggers)
       .where(
@@ -149,7 +147,7 @@ export async function findScheduledTriggersDueToRun(
       .execute()) as DocumentTrigger[]
 
     // Also fetch triggers that don't have nextRunTime set yet
-    const triggersWithoutNextRunTime = (await dbInstance
+    const triggersWithoutNextRunTime = (await db
       .select()
       .from(documentTriggers)
       .where(
