@@ -122,20 +122,15 @@ export async function runEvaluationV2<
 
     if (
       !value.error &&
-      (value.score < 0 || value.score > EVALUATION_SCORE_SCALE)
+      (value.normalizedScore < 0 ||
+        value.normalizedScore > EVALUATION_SCORE_SCALE)
     ) {
       throw new UnprocessableEntityError(
-        `Metric score must be between 0 and ${EVALUATION_SCORE_SCALE}`,
+        `Normalized metric score must be between 0 and ${EVALUATION_SCORE_SCALE}`,
       )
     }
   } catch (error) {
-    value = {
-      score: null,
-      metadata: null,
-      error: {
-        message: (error as Error).message,
-      },
-    }
+    value = { error: { message: (error as Error).message } }
   }
 
   return await Transaction.call(async (tx) => {
@@ -204,6 +199,9 @@ export async function createEvaluationResultV2<
       data: {
         workspaceId: workspace.id,
         result: result,
+        evaluation: evaluation,
+        commit: commit,
+        providerLog: providerLog,
       },
     })
 

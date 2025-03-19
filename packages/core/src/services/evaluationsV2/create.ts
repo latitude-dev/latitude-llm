@@ -42,7 +42,7 @@ export async function createEvaluationV2<
       document: document,
       commit: commit,
       settings: settings,
-      options: options as EvaluationOptions,
+      options: options,
       workspace: workspace,
     },
     db,

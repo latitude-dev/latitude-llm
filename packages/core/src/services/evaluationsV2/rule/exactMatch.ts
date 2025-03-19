@@ -35,6 +35,8 @@ async function validate(
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original settings object
   return Result.ok({
+    reverseScale: configuration.reverseScale,
+    caseInsensitive: configuration.caseInsensitive,
     datasetLabel: configuration.datasetLabel,
   })
 }
@@ -52,10 +54,7 @@ async function run(
   _: Database = database,
 ) {
   try {
-    let score = 0
     let metadata = {}
-
-    const response = formatMessage(conversation.at(-1)!)
 
     if (!dataset || !row) {
       throw new BadRequestError('Dataset row is required')
@@ -70,22 +69,23 @@ async function run(
       )
     }
 
-    const expected = row.rowData[column.identifier]?.toString() ?? ''
-    score = response === expected ? 1 : 0
+    let response = formatMessage(conversation.at(-1)!)
+    let expected = row.rowData[column.identifier]?.toString() ?? ''
+    if (evaluation.configuration.caseInsensitive) {
+      response = response.toLowerCase()
+      expected = expected.toLowerCase()
+    }
 
-    // Note: score is explicitly returned normalized
-    return {
-      score: normalizeScore(score, 0, 1),
-      metadata: metadata,
-      error: null,
+    const score = response === expected ? 1 : 0
+    let normalizedScore = normalizeScore(score, 0, 1)
+    if (evaluation.configuration.reverseScale) {
+      normalizedScore = normalizeScore(score, 1, 0)
     }
+
+    const hasPassed = score === 1
+
+    return { score, normalizedScore, metadata, hasPassed }
   } catch (error) {
-    return {
-      score: null,
-      metadata: null,
-      error: {
-        message: (error as Error).message,
-      },
-    }
+    return { error: { message: (error as Error).message } }
   }
 }

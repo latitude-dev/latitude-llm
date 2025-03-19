@@ -20,5 +20,6 @@ export default {
   ...specification,
   icon: 'userRound' as IconName,
   ConfigurationForm: undefined as any, // TODO: Implement
+  ResultBadge: undefined as any, // TODO: Implement
   metrics: METRICS,
 }

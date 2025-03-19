@@ -37,9 +37,9 @@ async function validate<M extends RuleEvaluationMetric>(
   {
     metric,
     configuration,
-  }: {
+  }: EvaluationMetricValidateArgs<EvaluationType.Rule, M> & {
     metric: M
-  } & EvaluationMetricValidateArgs<EvaluationType.Rule, M>,
+  },
   db: Database = database,
 ) {
   const metricSpecification = METRICS[metric]
@@ -55,16 +55,19 @@ async function validate<M extends RuleEvaluationMetric>(
 
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original settings object
-  return Result.ok({ ...configuration })
+  return Result.ok({
+    ...configuration,
+    reverseScale: configuration.reverseScale,
+  })
 }
 
 async function run<M extends RuleEvaluationMetric>(
   {
     metric,
     ...rest
-  }: {
+  }: EvaluationMetricRunArgs<EvaluationType.Rule, M> & {
     metric: M
-  } & EvaluationMetricRunArgs<EvaluationType.Rule, M>,
+  },
   db: Database = database,
 ) {
   try {
@@ -78,11 +81,7 @@ async function run<M extends RuleEvaluationMetric>(
     return value
   } catch (error) {
     return {
-      score: null,
-      metadata: null,
-      error: {
-        message: (error as Error).message,
-      },
+      error: { message: (error as Error).message },
     } as EvaluationResultValue<EvaluationType.Rule, M>
   }
 }

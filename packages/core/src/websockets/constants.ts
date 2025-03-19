@@ -4,9 +4,12 @@
 // put in other place.
 
 import {
+  Commit,
   DatasetRow,
   DocumentSuggestionWithDetails,
   EvaluationResultV2,
+  EvaluationV2,
+  ProviderLog,
   Span,
   Trace,
 } from '../browser'
@@ -71,6 +74,7 @@ type EvaluationResultCreatedArgs = {
   evaluationId: number
   documentUuid: string
   evaluationResultId: number
+  documentLogUuid: string
   row: EvaluationResultWithMetadataAndErrors
 }
 
@@ -100,6 +104,9 @@ type DatasetRowsCreatedArgs =
 type EvaluationResultV2CreatedArgs = {
   workspaceId: number
   result: EvaluationResultV2
+  evaluation: EvaluationV2
+  commit: Commit
+  providerLog: ProviderLog
 }
 
 export type WebServerToClientEvents = {

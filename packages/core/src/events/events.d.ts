@@ -521,6 +521,9 @@ export type EvaluationResultV2CreatedEvent = LatitudeEventGeneric<
   {
     workspaceId: number
     result: EvaluationResultV2
+    evaluation: EvaluationV2
+    commit: Commit
+    providerLog: ProviderLog
   }
 >
 

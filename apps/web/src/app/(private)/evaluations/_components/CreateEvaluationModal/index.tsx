@@ -6,7 +6,6 @@ import { envClient } from '$/envClient'
 import useEvaluations from '$/stores/evaluations'
 import useEvaluationsV2 from '$/stores/evaluationsV2'
 import {
-  EvaluationCondition,
   EvaluationMetadataType,
   EvaluationOptions,
   EvaluationResultableType,
@@ -67,9 +66,9 @@ const DEFAULT_SETTINGS_V2 = {
   description: 'Matches the expected output?',
   type: EvaluationType.Rule,
   metric: RuleEvaluationMetric.ExactMatch,
-  condition: EvaluationCondition.Greater,
-  threshold: 50,
   configuration: {
+    reverseScale: false,
+    caseInsensitive: false,
     datasetLabel: '',
   },
 }

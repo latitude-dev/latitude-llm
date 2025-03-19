@@ -2,7 +2,6 @@ import { eq } from 'drizzle-orm'
 import {
   Commit,
   DocumentVersion,
-  EvaluationCondition,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
@@ -52,9 +51,11 @@ export async function createEvaluationV2<
         description: args.description ?? 'Description',
         type: args.type ?? EvaluationType.Rule,
         metric: args.metric ?? RuleEvaluationMetric.ExactMatch,
-        condition: args.condition ?? EvaluationCondition.Greater,
-        threshold: args.threshold ?? 50,
-        configuration: args.configuration ?? { datasetLabel: 'expected' },
+        configuration: args.configuration ?? {
+          reverseScale: false,
+          caseInsensitive: false,
+          datasetLabel: 'expected',
+        },
       },
       options: {
         evaluateLiveLogs: args.evaluateLiveLogs,

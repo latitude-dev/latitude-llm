@@ -1,10 +1,11 @@
 import {
-  EvaluationCondition,
   EvaluationConfiguration,
   EvaluationMetric,
   EvaluationMetricSpecification,
+  EvaluationResultV2,
   EvaluationSpecification,
   EvaluationType,
+  EvaluationV2,
 } from '@latitude-data/constants'
 import { IconName } from '@latitude-data/web-ui'
 import React from 'react'
@@ -12,30 +13,43 @@ import HumanEvaluationSpecification from './human'
 import LlmEvaluationSpecification from './llm'
 import RuleEvaluationSpecification from './rule'
 
+export type ConfigurationFormProps<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> = {
+  mode: 'create' | 'update'
+  configuration: EvaluationConfiguration<T, M>
+  setConfiguration: (configuration: EvaluationConfiguration<T, M>) => void
+  disabled?: boolean
+}
+
+export type ResultBadgeProps<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> = {
+  evaluation: EvaluationV2<T, M>
+  result: EvaluationResultV2<T, M>
+}
+
 export type EvaluationMetricFrontendSpecification<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = EvaluationMetricSpecification<T, M> & {
   icon: IconName
-  ConfigurationForm: (props: {
-    mode: 'create' | 'update'
-    configuration?: EvaluationConfiguration<T, M>
-    onChange?: (configuration: EvaluationConfiguration<T, M>) => void
-  }) => React.ReactNode
+  ConfigurationForm: (props: ConfigurationFormProps<T, M>) => React.ReactNode
+  ResultBadge: (props: ResultBadgeProps<T, M>) => React.ReactNode
 }
 
 export type EvaluationFrontendSpecification<
   T extends EvaluationType = EvaluationType,
 > = Omit<EvaluationSpecification<T>, 'metrics'> & {
   icon: IconName
-  ConfigurationForm: <
-    M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  >(props: {
-    mode: 'create' | 'update'
-    metric: M
-    configuration?: EvaluationConfiguration<T, M>
-    onChange?: (configuration: EvaluationConfiguration<T>) => void
-  }) => React.ReactNode
+  ConfigurationForm: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
+    props: ConfigurationFormProps<T, M> & { metric: M },
+  ) => React.ReactNode
+  ResultBadge: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
+    props: ResultBadgeProps<T, M> & { metric: M },
+  ) => React.ReactNode
   metrics: {
     [M in EvaluationMetric<T>]: EvaluationMetricFrontendSpecification<T, M>
   }
@@ -47,51 +61,4 @@ export const EVALUATION_SPECIFICATIONS: {
   [EvaluationType.Rule]: RuleEvaluationSpecification,
   [EvaluationType.Llm]: LlmEvaluationSpecification,
   [EvaluationType.Human]: HumanEvaluationSpecification,
-}
-
-export type EvaluationConditionDetail = {
-  name: string
-  description: string
-  icon: IconName
-}
-
-export const EVALUATION_CONDITION_DETAILS: {
-  [T in EvaluationCondition]: EvaluationConditionDetail
-} = {
-  [EvaluationCondition.Less]: {
-    name: 'Less than',
-    description:
-      'Evaluation will pass if the metric score is less than the threshold',
-    icon: 'chevronLeft',
-  },
-  [EvaluationCondition.LessEqual]: {
-    name: 'Less than or equal to',
-    description:
-      'Evaluation will pass if the metric score is less than or equal to the threshold',
-    icon: 'circleChevronLeft',
-  },
-  [EvaluationCondition.Equal]: {
-    name: 'Equal to',
-    description:
-      'Evaluation will pass if the metric score is equal to the threshold',
-    icon: 'equal',
-  },
-  [EvaluationCondition.NotEqual]: {
-    name: 'Not equal to',
-    description:
-      'Evaluation will pass if the metric score is not equal to the threshold',
-    icon: 'notEqual',
-  },
-  [EvaluationCondition.Greater]: {
-    name: 'Greater than',
-    description:
-      'Evaluation will pass if the metric score is greater than the threshold',
-    icon: 'chevronRight',
-  },
-  [EvaluationCondition.GreaterEqual]: {
-    name: 'Greater than or equal to',
-    description:
-      'Evaluation will pass if the metric score is greater than or equal to the threshold',
-    icon: 'circleChevronRight',
-  },
 }

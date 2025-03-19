@@ -20,5 +20,6 @@ export default {
   ...specification,
   icon: 'bot' as IconName,
   ConfigurationForm: undefined as any, // TODO: Implement
+  ResultBadge: undefined as any, // TODO: Implement
   metrics: METRICS,
 }

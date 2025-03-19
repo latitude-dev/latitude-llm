@@ -34,7 +34,9 @@ export const evaluationResultsV2 = latitudeSchema.table(
       .notNull()
       .references(() => providerLogs.id, { onDelete: 'cascade' }),
     score: bigint('score', { mode: 'number' }),
+    normalizedScore: bigint('normalized_score', { mode: 'number' }),
     metadata: jsonb('metadata').$type<EvaluationResultMetadata>(),
+    hasPassed: boolean('has_passed'),
     error: jsonb('error').$type<EvaluationResultError>(),
     // Denormalized metadata fields - create indexes if necessary
     usedForSuggestion: boolean('used_for_suggestion'),

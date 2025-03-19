@@ -27,6 +27,7 @@ export const notifyToClientEvaluationResultCreatedJob = async ({
       workspaceId: evaluation.workspaceId,
       evaluationId: evaluation.id,
       evaluationResultId: evaluationResult.id,
+      documentLogUuid: documentLog.uuid,
       row,
     },
   })
