@@ -22,7 +22,27 @@ workers, websockets, database, and Redis.
 cp .env.example .env
 ```
 
-2. Configure your `.env` file with your production settings. The following key configurations are available:
+2. For proper functioning of the project, you need to create a Docker network named web. This network is used for communication between the various services, including Traefik.
+
+You can create the network using the following command:
+
+```bash
+docker network create web
+```
+
+Make sure this network is created before running the containers with  `docker compose`.
+
+
+3. Configure your `.env` file with your production settings. The following key configurations are available:
+
+- **Traefik Settings**:
+
+  - `TRAEFIK_ACME_EMAIL`: Database credentials
+  - `TRAEFIK_ADMIN_PASS`: Passwords must be hashed using MD5, SHA1, or BCrypt. Read more: https://doc.traefik.io/traefik/middlewares/http/basicauth/
+    Example command to generate a password for user admin:
+    ```bash
+    echo $(htpasswd -nb admin password) | sed -e s/\\$/\\$\\$/g
+    ```
 
 - **Database Settings**:
 

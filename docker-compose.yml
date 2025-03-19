@@ -33,7 +33,7 @@ x-gateway-common: &gateway-common
   labels:
     - "traefik.enable=true"
     - "traefik.docker.network=web"
-    - "traefik.http.services.gateway-service.loadbalancer.server.port=8081"
+    - "traefik.http.services.gateway-service.loadbalancer.server.port=8080"
     - "traefik.http.routers.gateway-http.entrypoints=http"
     - "traefik.http.routers.gateway-http.service=gateway-service"
     - "traefik.http.routers.gateway-http.rule=Host(`gateway-latitude.${APP_DOMAIN}`)"
@@ -75,7 +75,7 @@ services:
       --providers.file.watch=true
       --api.dashboard=true
       --api.debug=false
-      --api.insecure=false
+      --api.insecure=${TRAEFIK_API_INSECURE:-false}
       --metrics.prometheus=true
       --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
       --metrics.prometheus.addEntryPointsLabels=true
@@ -83,7 +83,7 @@ services:
       --entrypoints.https.address=:443
       --entryPoints.http.forwardedHeaders.insecure
       --entryPoints.https.forwardedHeaders.insecure
-      --certificatesresolvers.letsencryptresolver.acme.email=${TRAEFIK_ACME_EMAIL}
+      --certificatesresolvers.letsencryptresolver.acme.email=${TRAEFIK_ACME_EMAIL:-your@email.com}
       --certificatesresolvers.letsencryptresolver.acme.storage=/acme/acme.json
       --certificatesresolvers.letsencryptresolver.acme.httpchallenge.entrypoint=http
       --log.level=INFO
@@ -140,7 +140,7 @@ services:
       - .env
     volumes:
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
-      - pgdata:/var/lib/postgresql/data
+      - ./docker/pgdata:/var/lib/postgresql/data
     networks:
       - web
 
@@ -246,6 +246,3 @@ services:
 networks:
   web:
     external: true
-
-volumes:
-  pgdata:
