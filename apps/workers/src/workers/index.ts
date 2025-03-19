@@ -10,10 +10,8 @@ import { evaluationsWorker } from './worker-definitions/evaluationsWorker'
 const WORKER_OPTS = {
   concurrency: 5,
   autorun: true,
-  ...(process.env.NODE_ENV !== 'development' && {
-    removeOnComplete: { count: 0 },
-    removeOnFail: { count: 0 },
-  }),
+  removeOnComplete: { count: 0 },
+  removeOnFail: { count: 0 },
 }
 const WORKERS = [defaultWorker, evaluationsWorker]
 

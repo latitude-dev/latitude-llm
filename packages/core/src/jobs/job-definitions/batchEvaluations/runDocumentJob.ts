@@ -87,7 +87,7 @@ export const runDocumentForEvaluationJob = async (
       })
     }
   } catch (error) {
-    if (env.NODE_ENV !== 'production') {
+    if (env.NODE_ENV === 'development') {
       console.error(error)
     }
 

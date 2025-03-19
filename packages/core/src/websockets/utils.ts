@@ -15,7 +15,6 @@ export async function generateWebsocketToken({
   name: TokenType
   payload: WebSocketData
 }) {
-  const isProd = env.NODE_ENV === 'production'
   const config = TOKEN_CONFIG[name]
   const secret = new TextEncoder().encode(SECRET_TOKENS[name])
   const token = await new SignJWT(payload)
@@ -25,9 +24,9 @@ export async function generateWebsocketToken({
   return {
     token,
     cookiesOptions: {
-      secure: isProd,
-      domain: isProd ? `.${env.APP_DOMAIN}` : 'localhost',
-      path: '/',
+      secure: env.SECURE_WEBSOCKETS,
+      domain: env.WEBSOCKETS_COOKIES_DOMAIN,
+      path: env.WEBSOCKETS_COOKIES_PATH,
       maxAge: config.maxAge.numberValue,
     },
   }

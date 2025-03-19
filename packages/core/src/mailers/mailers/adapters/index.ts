@@ -25,11 +25,17 @@ export function createAdapter() {
     transportOptions: { component: 'latitude_mailer' },
   }
 
-  const isPro = env.NODE_ENV === 'production'
-
-  const transport: MaybeTransport = isPro
-    ? createMailgunTransport(options)
-    : createMailpitTransport(options)
+  let transport: MaybeTransport = null
+  switch (env.MAIL_TRANSPORT) {
+    case 'mailgun':
+      transport = createMailgunTransport(options)
+      break
+    case 'mailpit':
+      transport = createMailpitTransport(options)
+      break
+    default:
+      throw new Error('Invalid MAIL_TRANSPORT')
+  }
 
   if (!transport) throw new Error('Could not create transport')
 

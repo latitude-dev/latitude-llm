@@ -134,7 +134,6 @@ describe('runDocumentJob', () => {
     vi.mocked(commits.runDocumentAtCommit).mockRejectedValue(
       new Error('Test error'),
     )
-    vi.mocked(env).NODE_ENV = 'production'
 
     await runDocumentForEvaluationJob(mockJob)
 

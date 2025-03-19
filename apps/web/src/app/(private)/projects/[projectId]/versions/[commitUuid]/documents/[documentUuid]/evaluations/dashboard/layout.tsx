@@ -5,9 +5,9 @@ import {
   getEvaluationTemplatesCached,
   listEvaluationsV2AtCommitByDocumentCached,
 } from '$/app/(private)/_data-access'
-import env from '$/env'
 
 import EvaluationsLayoutClient from './_components/Layout'
+import { env } from '@latitude-data/env'
 
 export default async function EvaluationsLayout({
   children,

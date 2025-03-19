@@ -72,7 +72,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
       progressTracker,
     )
   } catch (error) {
-    if (env.NODE_ENV !== 'production') {
+    if (env.NODE_ENV === 'development') {
       console.error(error)
     }
 

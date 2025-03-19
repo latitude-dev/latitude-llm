@@ -1,4 +1,4 @@
-import _ from '$/env'
+import '@latitude-data/env'
 import { envClient as __ } from '$/envClient'
 
 export async function GET() {

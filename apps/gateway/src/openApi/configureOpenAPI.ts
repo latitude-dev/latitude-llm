@@ -4,18 +4,14 @@ import { swaggerUI } from '@hono/swagger-ui'
 
 import packageJson from '../../package.json'
 import { tags } from '$/openApi/tags'
+import { env } from '@latitude-data/env'
 
-const isDev = process.env.NODE_ENV === 'development'
 let servers = [
-  { url: 'https://gateway.latitude.so', description: 'Latitude production' },
+  {
+    url: `${env.GATEWAY_SSL ? 'https' : 'http'}://${env.GATEWAY_HOSTNAME}:${env.GATEWAY_PORT}`,
+    description: 'Latitude',
+  },
 ]
-
-if (isDev) {
-  servers = [
-    { url: 'http://localhost:8787', description: 'Latitude development' },
-    ...servers,
-  ]
-}
 
 export const openAPIObjectConfig = {
   openapi: '3.1.0',

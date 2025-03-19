@@ -25,12 +25,17 @@ function buildDevStoragePaths() {
   const devRootPath = process.env.DEV_ROOT_PATH
 
   if (!devRootPath) {
-    console.error(`
-  \x1b[31m[ERROR]\x1b[0m DEV_ROOT_PATH is missing!
-  Please define the \x1b[33mDEV_ROOT_PATH\x1b[0m environment variable in:
-  \x1b[36m.env.development\x1b[0m (located in the root of the project).
+    console.warn(`
+  \x1b[33m[WARNING]\x1b[0m 
+  \x1b[1mDEV_ROOT_PATH\x1b[0m is missing. Without it, file storage features will not work. 
+  Please add the \x1b[1mDEV_ROOT_PATH\x1b[0m environment variable in \x1b[36m.env.development\x1b[0m (located in the project root).
+  Example: DEV_ROOT_PATH=/Users/YOUR_MACHINE_NAME/your-path-to/latitude/tmp/data
   `)
-    process.exit(1)
+
+    return {
+      storagePath: '',
+      publicStoragePath: buildPublicWebPath(''),
+    }
   }
 
   const storagePath = `${devRootPath}/${UPLOADS_PATH}`
@@ -67,6 +72,8 @@ if (environment === 'development' || environment === 'test') {
       GATEWAY_HOSTNAME: 'localhost',
       GATEWAY_PORT: '8787',
       GATEWAY_SSL: 'false',
+      GATEWAY_BIND_ADDRESS: 'localhost',
+      GATEWAY_BIND_PORT: environment === 'development' ? '8787' : '8788',
       APP_DOMAIN: 'latitude.so',
       APP_URL: 'http://localhost:3000',
       NEXT_PUBLIC_POSTHOG_HOST: '',
@@ -83,6 +90,7 @@ if (environment === 'development' || environment === 'test') {
       MCP_SCHEME: 'internet-facing',
       MCP_DOCKER_IMAGE: 'ghcr.io/latitude-dev/latitude-mcp:latest',
       MCP_NODE_GROUP_NAME: 'latitude-dev-node-group',
+      MAIL_TRANSPORT: 'mailpit',
     },
     { path: pathToEnv },
   )
@@ -124,8 +132,11 @@ export const env = createEnv({
     WEBSOCKETS_SERVER: z.string(),
     WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: z.string(),
     WEBSOCKET_SECRET_TOKEN_KEY: z.string(),
+    WEBSOCKETS_COOKIES_DOMAIN: z.string().optional().default('localhost'),
+    WEBSOCKETS_COOKIES_PATH: z.string().optional().default('/'),
 
     // Support app (intercom)
+    SUPPORT_APP_ID: z.string(),
     SUPPORT_APP_SECRET_KEY: z.string().optional(),
     NEXT_PUBLIC_SUPPORT_APP_ID: z.string().optional(),
 
@@ -148,6 +159,8 @@ export const env = createEnv({
     SENTRY_PROJECT: z.string().optional(),
 
     // Gateway
+    GATEWAY_BIND_ADDRESS: z.string(),
+    GATEWAY_BIND_PORT: z.coerce.number(),
     GATEWAY_HOSTNAME: z.string(),
     GATEWAY_PORT: z.coerce.number().optional(),
     GATEWAY_SSL: z
@@ -157,6 +170,7 @@ export const env = createEnv({
       .default('true'),
 
     LATITUDE_CLOUD: z.boolean().optional().default(false),
+    LATITUDE_CLOUD_PAYMENT_URL: z.string().url().optional(),
 
     // Copilot
     COPILOT_CODE_SUGGESTION_PROMPT_PATH: z.string().optional(),
@@ -180,23 +194,27 @@ export const env = createEnv({
     MAILGUN_EMAIL_DOMAIN: z.string().optional(),
     MAILGUN_MAILER_API_KEY: z.string().optional(),
     DISABLE_EMAIL_AUTHENTICATION: z.boolean().optional().default(false),
+    MAIL_TRANSPORT: z
+      .enum(['mailpit', 'mailgun'])
+      .optional()
+      .default('mailpit'),
 
     // Workers
     WORKERS_HOST: z.string().optional(),
     WORKERS_PORT: z.coerce.number().optional(),
 
     // BullMQ dashboard
-    BULL_ADMIN_USER: z.string(),
-    BULL_ADMIN_PASS: z.string(),
+    BULL_ADMIN_USER: z.string().optional().default('admin'),
+    BULL_ADMIN_PASS: z.string().optional().default('admin'),
 
     // MCP Server feature configurations
-    MCP_NODE_GROUP_NAME: z.string(),
-    MCP_DOCKER_IMAGE: z.string(),
-    MCP_SCHEME: z.string(),
     EKS_CA_DATA: z.string().optional(),
     EKS_CLUSTER_NAME: z.string().optional(),
     K8S_API_URL: z.string().optional(),
     LATITUDE_MCP_HOST: z.string().optional(),
+    MCP_DOCKER_IMAGE: z.string().optional(),
+    MCP_NODE_GROUP_NAME: z.string().optional(),
+    MCP_SCHEME: z.string().optional(),
     USE_EKS_CLUSTER: z.coerce.boolean().optional().default(false),
 
     // Triggers
@@ -204,6 +222,11 @@ export const env = createEnv({
     MAILGUN_WEBHOOK_SIGNING_KEY: z.string().optional(),
 
     ENCRYPTION_KEY: z.string().optional(),
+
+    SECURE_COOKIES: z.coerce.boolean().optional().default(false),
+    SECURE_WEBSOCKETS: z.coerce.boolean().optional().default(false),
+
+    JOB_RETRY_ATTEMPTS: z.coerce.number().optional().default(3),
   },
   runtimeEnv: {
     ...process.env,
