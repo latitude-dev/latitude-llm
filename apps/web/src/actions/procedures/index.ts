@@ -2,6 +2,7 @@ import { getUnsafeIp } from '$/helpers/ip'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { cache } from '@latitude-data/core/cache'
 import {
+  LatitudeError,
   RateLimitError,
   UnauthorizedError,
 } from '@latitude-data/core/lib/errors'
@@ -23,6 +24,8 @@ const DEFAULT_RATE_LIMIT_DURATION = 60
 
 export const errorHandlingProcedure = createServerActionProcedure()
   .onError(async (error) => {
+    if (error instanceof LatitudeError) return
+
     try {
       const data = await getCurrentUserOrError()
 
