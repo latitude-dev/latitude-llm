@@ -156,6 +156,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Hyperbrowser',
     icon: 'hyperbrowser',
   },
+  [HostedIntegrationType.Audiense]: {
+    label: 'Audiense',
+    icon: 'audiense',
+  },
 }
 
 export function integrationOptions(

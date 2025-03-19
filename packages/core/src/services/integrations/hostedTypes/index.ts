@@ -30,6 +30,7 @@ import ATTIO_MCP_CONFIG from './configs/attio'
 import GHOST_MCP_CONFIG from './configs/ghost'
 import FIGMA_MCP_CONFIG from './configs/figma'
 import HYPERBROWSER_MCP_CONFIG from './configs/hyperbrowser'
+import AUDIENSE_MCP_CONFIG from './configs/audiense'
 
 export const HOSTED_MCP_CONFIGS: Record<
   HostedIntegrationType,
@@ -66,4 +67,5 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.Ghost]: GHOST_MCP_CONFIG,
   [HostedIntegrationType.Figma]: FIGMA_MCP_CONFIG,
   [HostedIntegrationType.Hyperbrowser]: HYPERBROWSER_MCP_CONFIG,
+  [HostedIntegrationType.Audiense]: AUDIENSE_MCP_CONFIG,
 }

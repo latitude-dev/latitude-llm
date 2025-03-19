@@ -81,7 +81,7 @@ if (environment === 'development' || environment === 'test') {
       BULL_ADMIN_USER: 'admin',
       BULL_ADMIN_PASS: 'admin',
       MCP_SCHEME: 'internet-facing',
-      MCP_DOCKER_IMAGE: 'ghcr.io/latitude-dev/latitude-mcp:sha-dd84ff4',
+      MCP_DOCKER_IMAGE: 'ghcr.io/latitude-dev/latitude-mcp:latest',
       MCP_NODE_GROUP_NAME: 'latitude-dev-node-group',
     },
     { path: pathToEnv },

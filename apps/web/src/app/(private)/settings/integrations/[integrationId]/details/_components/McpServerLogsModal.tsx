@@ -95,7 +95,10 @@ export function McpServerLogsModal({ integrationId }: McpServerLogsModalProps) {
             </div>
           ) : data.logs.length === 0 ? (
             <div className='text-center p-4 flex flex-col items-center gap-4'>
-              <Text.H6 color='foregroundMuted'>No logs available</Text.H6>
+              <Text.H6 color='foregroundMuted'>
+                No logs available. Please wait a few seconds for logs to appear
+                after creating this integration.
+              </Text.H6>
             </div>
           ) : (
             <div className='h-full rounded-lg overflow-auto'>
