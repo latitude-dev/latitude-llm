@@ -16,6 +16,7 @@ export const RuleEvaluationExactMatchSpecification = {
   description:
     'Checks if the response is exactly the same as the expected label',
   configuration: ruleEvaluationConfiguration.extend({
+    caseInsensitive: z.boolean(),
     datasetLabel: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
@@ -91,6 +92,8 @@ export const RuleEvaluationLexicalOverlapSpecification = {
       'bleu',
       'meteor',
     ]),
+    minOverlap: z.number().optional(), // Percentage of overlap
+    maxOverlap: z.number().optional(), // Percentage of overlap
     datasetLabel: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
@@ -116,6 +119,8 @@ export const RuleEvaluationSemanticSimilaritySpecification = {
   configuration: ruleEvaluationConfiguration.extend({
     algorithm: z.literal('cosine_similarity'),
     embeddingModel: z.enum(['openai_3_small', 'anthropic_voyage_3']),
+    minSimilarity: z.number().optional(), // Percentage of similarity
+    maxSimilarity: z.number().optional(), // Percentage of similarity
     datasetLabel: z.string(),
   }),
   resultMetadata: ruleEvaluationResultMetadata.extend({}),

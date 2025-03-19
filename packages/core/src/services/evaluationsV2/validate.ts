@@ -1,8 +1,6 @@
 import {
   Commit,
   DocumentVersion,
-  // EVALUATION_SCORE_SCALE,
-  // EvaluationCondition,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
@@ -36,14 +34,23 @@ export async function validateEvaluationV2<
   },
   db: Database = database,
 ) {
-  const specification = EVALUATION_SPECIFICATIONS[settings.type]
-  if (!specification) {
+  if (!settings.name) {
+    return Result.error(new BadRequestError('Name is required'))
+  }
+
+  const typeSpecification = EVALUATION_SPECIFICATIONS[settings.type]
+  if (!typeSpecification) {
     return Result.error(new BadRequestError('Invalid type'))
   }
 
-  specification.configuration.parse(settings.configuration)
+  const metricSpecification = typeSpecification.metrics[settings.metric]
+  if (!metricSpecification) {
+    return Result.error(new BadRequestError('Invalid metric'))
+  }
 
-  settings.configuration = await specification
+  typeSpecification.configuration.parse(settings.configuration)
+
+  settings.configuration = await typeSpecification
     .validate(
       {
         metric: settings.metric,
@@ -52,22 +59,6 @@ export async function validateEvaluationV2<
       db,
     )
     .then((r) => r.unwrap())
-
-  if (!settings.name) {
-    return Result.error(new BadRequestError('Name is required'))
-  }
-
-  // if (!Object.values(EvaluationCondition).includes(settings.condition)) {
-  //   return Result.error(new BadRequestError('Invalid pass condition'))
-  // }
-
-  // if (settings.threshold < 0 || settings.threshold > EVALUATION_SCORE_SCALE) {
-  //   return Result.error(
-  //     new BadRequestError(
-  //       `Threshold must be between 0 and ${EVALUATION_SCORE_SCALE}`,
-  //     ),
-  //   )
-  // }
 
   const repository = new EvaluationsV2Repository(workspace.id, db)
   const evaluations = await repository
@@ -88,6 +79,12 @@ export async function validateEvaluationV2<
     )
   }
 
+  if (options.evaluateLiveLogs && !metricSpecification.supportsLiveEvaluation) {
+    return Result.error(
+      new BadRequestError('This metric does not support live evaluation'),
+    )
+  }
+
   // Note: all settings and options are explicitly returned to ensure we don't
   // carry dangling fields from the original settings and options object
   return Result.ok({
@@ -96,8 +93,6 @@ export async function validateEvaluationV2<
       description: settings.description,
       type: settings.type,
       metric: settings.metric,
-      condition: settings.condition,
-      threshold: settings.threshold,
       configuration: settings.configuration,
     },
     options: {

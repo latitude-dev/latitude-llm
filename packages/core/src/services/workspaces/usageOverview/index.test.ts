@@ -28,7 +28,7 @@ describe('getUsageOverview', () => {
     vi.unstubAllEnvs()
   })
 
-  it.skip('returns all workspaces ordered by usage of runs', async () => {
+  it('returns all workspaces ordered by usage of runs', async () => {
     const result = await getUsageOverview({
       page: 1,
       pageSize: 10,
@@ -53,7 +53,7 @@ describe('getUsageOverview', () => {
     ])
   })
 
-  it.skip('filter logs with errors', async () => {
+  it('filter logs with errors', async () => {
     const { documentLog } = data.workspaces.workspaceB.info.logs[0] as {
       documentLog: DocumentLog
     }
@@ -89,7 +89,7 @@ describe('getUsageOverview', () => {
     ])
   })
 
-  it.skip('filter evaluation results with errors', async () => {
+  it('filter evaluation results with errors', async () => {
     const evaluationResult1 = data.workspaces.workspaceB.info
       .evaluationResults[0] as EvaluationResultDto
     await factories.createRunError({

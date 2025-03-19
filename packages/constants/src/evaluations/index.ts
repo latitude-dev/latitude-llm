@@ -57,17 +57,6 @@ export type EvaluationConfiguration<
 
 export const EvaluationConfigurationSchema = z.custom<EvaluationConfiguration>()
 
-export enum EvaluationCondition {
-  Less = 'less',
-  LessEqual = 'less_equal',
-  Equal = 'equal',
-  NotEqual = 'not_equal',
-  Greater = 'greater',
-  GreaterEqual = 'greater_equal',
-}
-
-export const EvaluationConditionSchema = z.nativeEnum(EvaluationCondition)
-
 // prettier-ignore
 export type EvaluationResultMetadata<
   T extends EvaluationType = EvaluationType,
@@ -137,15 +126,13 @@ export type EvaluationV2<
   description: string
   type: T
   metric: M
-  condition: EvaluationCondition
-  threshold: number
   configuration: EvaluationConfiguration<T, M>
-  evaluateLiveLogs: boolean | null
-  enableSuggestions: boolean | null
-  autoApplySuggestions: boolean | null
+  evaluateLiveLogs?: boolean | null
+  enableSuggestions?: boolean | null
+  autoApplySuggestions?: boolean | null
   createdAt: Date
   updatedAt: Date
-  deletedAt: Date | null
+  deletedAt?: Date | null
 }
 
 export type EvaluationResultValue<
@@ -154,12 +141,16 @@ export type EvaluationResultValue<
 > =
   | {
       score: number
+      normalizedScore: number
       metadata: EvaluationResultMetadata<T, M>
-      error: null
+      hasPassed: boolean
+      error?: null
     }
   | {
-      score: null
-      metadata: null
+      score?: null
+      normalizedScore?: null
+      metadata?: null
+      hasPassed?: null
       error: EvaluationResultError<T, M>
     }
 
@@ -172,9 +163,9 @@ export type EvaluationResultV2<
   workspaceId: number
   commitId: number
   evaluationUuid: string
-  experimentId: number | null
+  experimentId?: number | null
   evaluatedLogId: number
-  usedForSuggestion: boolean | null
+  usedForSuggestion?: boolean | null
   createdAt: Date
   updatedAt: Date
 } & EvaluationResultValue<T, M>
@@ -184,13 +175,7 @@ export type EvaluationSettings<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = Pick<
   EvaluationV2<T, M>,
-  | 'name'
-  | 'description'
-  | 'type'
-  | 'metric'
-  | 'condition'
-  | 'threshold'
-  | 'configuration'
+  'name' | 'description' | 'type' | 'metric' | 'configuration'
 >
 
 export const EvaluationSettingsSchema = z.object({
@@ -198,8 +183,6 @@ export const EvaluationSettingsSchema = z.object({
   description: z.string(),
   type: EvaluationTypeSchema,
   metric: EvaluationMetricSchema,
-  condition: EvaluationConditionSchema,
-  threshold: z.number(),
   configuration: EvaluationConfigurationSchema,
 })
 
@@ -209,9 +192,9 @@ export type EvaluationOptions = Pick<
 >
 
 export const EvaluationOptionsSchema = z.object({
-  evaluateLiveLogs: z.boolean().nullable(),
-  enableSuggestions: z.boolean().nullable(),
-  autoApplySuggestions: z.boolean().nullable(),
+  evaluateLiveLogs: z.boolean().nullable().optional(),
+  enableSuggestions: z.boolean().nullable().optional(),
+  autoApplySuggestions: z.boolean().nullable().optional(),
 })
 
 export const EVALUATION_SCORE_SCALE = 100

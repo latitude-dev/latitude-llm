@@ -1,6 +1,4 @@
 import {
-  EVALUATION_SCORE_SCALE,
-  EvaluationCondition,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
@@ -12,16 +10,13 @@ import {
   FormWrapper,
   IconName,
   Input,
-  NumberInput,
   Select,
   SwitchInput,
   TextArea,
 } from '@latitude-data/web-ui'
 import { useEffect, useState } from 'react'
-import {
-  EVALUATION_CONDITION_DETAILS,
-  EVALUATION_SPECIFICATIONS,
-} from './index'
+import ConfigurationForm from './ConfigurationForm'
+import { EVALUATION_SPECIFICATIONS } from './index'
 
 // TODO: Uncomment when all types are implemented
 // const EVALUATION_TYPE_OPTIONS = Object.values(EvaluationType).map((type) => {
@@ -54,17 +49,6 @@ const EVALUATION_METRIC_OPTIONS = (_type: EvaluationType) => {
   )
 }
 
-const EVALUATION_CONDITION_OPTIONS = Object.values(EvaluationCondition).map(
-  (condition) => {
-    const detail = EVALUATION_CONDITION_DETAILS[condition]
-    return {
-      label: detail.name,
-      value: condition,
-      icon: detail.icon,
-    }
-  },
-)
-
 export default function EvaluationV2Form<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
@@ -74,21 +58,25 @@ export default function EvaluationV2Form<
   options: defaultOptions,
   onSettingsChange,
   onOptionsChange,
+  disabled,
 }: {
   mode: 'create' | 'update'
   settings?: EvaluationSettings<T, M>
   onSettingsChange?: (settings: EvaluationSettings<T, M>) => void
   options?: Partial<EvaluationOptions>
   onOptionsChange?: (options: Partial<EvaluationOptions>) => void
+  disabled?: boolean
 }) {
-  const [settings, setSettings] = useState<EvaluationSettings<T, M>>({
+  const [settings, setSettings] = useState({
     name: defaultSettings?.name ?? 'Accuracy',
     description: defaultSettings?.description ?? 'Matches the expected output?',
     type: defaultSettings?.type ?? EvaluationType.Rule,
     metric: defaultSettings?.metric ?? RuleEvaluationMetric.ExactMatch,
-    condition: defaultSettings?.condition ?? EvaluationCondition.Greater,
-    threshold: defaultSettings?.threshold ?? 50,
-    configuration: defaultSettings?.configuration ?? { datasetLabel: '' },
+    configuration: defaultSettings?.configuration ?? {
+      reverseScale: false,
+      caseInsensitive: false,
+      datasetLabel: '',
+    },
   } as EvaluationSettings<T, M>)
   useEffect(() => onSettingsChange?.(settings), [settings])
 
@@ -96,11 +84,17 @@ export default function EvaluationV2Form<
     evaluateLiveLogs: defaultOptions?.evaluateLiveLogs ?? true,
     enableSuggestions: defaultOptions?.enableSuggestions ?? true,
     autoApplySuggestions: defaultOptions?.autoApplySuggestions ?? true,
-  })
+  } as EvaluationOptions)
   useEffect(() => onOptionsChange?.(options), [options])
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[settings.type]
   const metricSpecification = typeSpecification?.metrics[settings.metric]
+
+  useEffect(() => {
+    if (!metricSpecification) return
+    if (metricSpecification.supportsLiveEvaluation) return
+    setOptions({ ...options, evaluateLiveLogs: false })
+  }, [metricSpecification?.supportsLiveEvaluation])
 
   return (
     <form className='min-w-0' id='evaluationV2Form'>
@@ -112,6 +106,7 @@ export default function EvaluationV2Form<
           placeholder='Give your evaluation a name'
           onChange={(e) => setSettings({ ...settings, name: e.target.value })}
           className='w-full'
+          disabled={disabled}
           required
         />
         <TextArea
@@ -125,6 +120,7 @@ export default function EvaluationV2Form<
             setSettings({ ...settings, description: e.target.value })
           }
           className='w-full'
+          disabled={disabled}
           required
         />
         {/* TODO: Uncomment when all types are implemented */}
@@ -136,62 +132,34 @@ export default function EvaluationV2Form<
           placeholder='Select an evaluation type'
           options={EVALUATION_TYPE_OPTIONS}
           onChange={(value) => setSettings({ ...settings, type: value as T })}
-          disabled={mode === 'update'}
+          disabled={disabled || mode === 'update'}
           required
         /> */}
         <Select
           value={settings.metric}
           name='metric'
           label='Metric'
-          description={metricSpecification.description}
+          description={metricSpecification?.description}
           placeholder='Select an evaluation metric'
           options={EVALUATION_METRIC_OPTIONS(settings.type)}
           onChange={(value) => setSettings({ ...settings, metric: value as M })}
-          disabled={mode === 'update'}
+          disabled={disabled || mode === 'update'}
           required
         />
-        <FormFieldGroup
-          label='Pass condition'
-          description={
-            EVALUATION_CONDITION_DETAILS[settings.condition].description
-          }
-          tooltip={`Metric scores are normalized to a scale of 0 to ${EVALUATION_SCORE_SCALE} points`}
-        >
-          <Select
-            value={settings.condition}
-            name='condition'
-            placeholder='Select a pass condition'
-            options={EVALUATION_CONDITION_OPTIONS}
-            onChange={(value) => setSettings({ ...settings, condition: value })}
-            required
-          />
-          <div className='w-32'>
-            <NumberInput
-              value={settings.threshold}
-              name='threshold'
-              placeholder='Enter a pass threshold'
-              min={0}
-              max={EVALUATION_SCORE_SCALE}
-              onChange={(value) =>
-                setSettings({ ...settings, threshold: value ?? 0 })
-              }
-              className='w-full'
-              required
-            />
-          </div>
-        </FormFieldGroup>
         <FormFieldGroup layout='vertical'>
-          <typeSpecification.ConfigurationForm
+          <ConfigurationForm
             mode={mode}
+            type={settings.type}
             metric={settings.metric}
             configuration={settings.configuration}
             onChange={(value) =>
               setSettings({ ...settings, configuration: value })
             }
+            disabled={disabled}
           />
         </FormFieldGroup>
         <FormFieldGroup label='Options' layout='vertical'>
-          {metricSpecification.supportsLiveEvaluation && (
+          {metricSpecification?.supportsLiveEvaluation && (
             <SwitchInput
               checked={!!options.evaluateLiveLogs}
               name='evaluateLiveLogs'
@@ -200,7 +168,9 @@ export default function EvaluationV2Form<
               onCheckedChange={(value) =>
                 setOptions({ ...options, evaluateLiveLogs: value })
               }
-              disabled={!metricSpecification.supportsLiveEvaluation}
+              disabled={
+                disabled || !metricSpecification?.supportsLiveEvaluation
+              }
             />
           )}
           <SwitchInput
@@ -211,6 +181,7 @@ export default function EvaluationV2Form<
             onCheckedChange={(value) =>
               setOptions({ ...options, enableSuggestions: value })
             }
+            disabled={disabled}
           />
           <SwitchInput
             checked={!!options.autoApplySuggestions}
@@ -220,6 +191,7 @@ export default function EvaluationV2Form<
             onCheckedChange={(value) =>
               setOptions({ ...options, autoApplySuggestions: value })
             }
+            disabled={disabled}
           />
         </FormFieldGroup>
       </FormWrapper>

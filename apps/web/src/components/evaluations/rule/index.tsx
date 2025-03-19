@@ -1,12 +1,14 @@
 import {
   EvaluationType,
-  RuleEvaluationConfiguration,
   RuleEvaluationMetric,
   RuleEvaluationSpecification,
 } from '@latitude-data/constants'
 import { IconName } from '@latitude-data/web-ui'
-import { useEffect, useState } from 'react'
-import { EvaluationMetricFrontendSpecification } from '../index'
+import {
+  ConfigurationFormProps,
+  EvaluationMetricFrontendSpecification,
+  ResultBadgeProps,
+} from '../index'
 import RuleEvaluationExactMatchSpecification from './ExactMatch'
 import RuleEvaluationRegularExpressionSpecification from './RegularExpression'
 
@@ -26,35 +28,38 @@ export default {
   ...specification,
   icon: 'computer' as IconName,
   ConfigurationForm: ConfigurationForm,
+  ResultBadge: ResultBadge,
   metrics: METRICS,
 }
 
 function ConfigurationForm<M extends RuleEvaluationMetric>({
-  mode,
   metric,
-  configuration: defaultConfiguration,
-  onChange,
-}: {
-  mode: 'create' | 'update'
+  ...rest
+}: ConfigurationFormProps<EvaluationType.Rule, M> & {
   metric: M
-  configuration?: RuleEvaluationConfiguration<M>
-  onChange?: (configuration: RuleEvaluationConfiguration<M>) => void
 }) {
-  const [configuration, setConfiguration] = useState<
-    RuleEvaluationConfiguration<M>
-  >(defaultConfiguration ?? ({} as RuleEvaluationConfiguration<M>))
-  useEffect(() => onChange?.(configuration), [configuration])
-
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
   return (
     <>
-      <metricSpecification.ConfigurationForm
-        mode={mode}
-        configuration={configuration}
-        onChange={(value) => setConfiguration({ ...configuration, ...value })}
-      />
+      <metricSpecification.ConfigurationForm {...rest} />
+    </>
+  )
+}
+
+function ResultBadge<M extends RuleEvaluationMetric>({
+  metric,
+  ...rest
+}: ResultBadgeProps<EvaluationType.Rule, M> & {
+  metric: M
+}) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) return null
+
+  return (
+    <>
+      <metricSpecification.ResultBadge {...rest} />
     </>
   )
 }

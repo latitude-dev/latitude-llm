@@ -6,23 +6,23 @@ import {
 } from './shared'
 
 const llmEvaluationConfiguration = BaseEvaluationConfiguration.extend({
-  providerId: z.string(),
+  provider: z.string(),
   model: z.string(),
   instructions: z.string(),
 })
 const llmEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({
-  evaluationLogId: z.string(),
+  evaluationLogId: z.number(),
   reason: z.string(),
 })
 const llmEvaluationResultError = BaseEvaluationResultError.extend({
-  runErrorId: z.string(),
+  runErrorId: z.number(),
 })
 
 // BINARY
 
 export const LlmEvaluationBinarySpecification = {
   name: 'Binary',
-  description: 'Judges whether the response is correct or incorrect',
+  description: 'Judges whether the response meets the criteria',
   configuration: llmEvaluationConfiguration.extend({
     passDescription: z.string(),
     failDescription: z.string(),
@@ -45,12 +45,14 @@ export type LlmEvaluationBinaryResultError = z.infer<
 
 export const LlmEvaluationRatingSpecification = {
   name: 'Rating',
-  description: 'Judges the quality of the response',
+  description: 'Judges the response by rating it under a criteria',
   configuration: llmEvaluationConfiguration.extend({
     minRating: z.number(),
     minRatingDescription: z.string(),
     maxRating: z.number(),
     maxRatingDescription: z.string(),
+    minThreshold: z.number(),
+    maxThreshold: z.number(),
   }),
   resultMetadata: llmEvaluationResultMetadata.extend({}),
   resultError: llmEvaluationResultError.extend({}),
@@ -70,8 +72,11 @@ export type LlmEvaluationRatingResultError = z.infer<
 
 export const LlmEvaluationComparisonSpecification = {
   name: 'Comparison',
-  description: 'Judges whether the response is similar to the expected label',
+  description:
+    'Judges the response by comparing the criteria to the expected label',
   configuration: llmEvaluationConfiguration.extend({
+    minThreshold: z.number(), // Threshold percentage
+    maxThreshold: z.number(), // Threshold percentage
     datasetLabel: z.string(),
   }),
   resultMetadata: llmEvaluationResultMetadata.extend({}),

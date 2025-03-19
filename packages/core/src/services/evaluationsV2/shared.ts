@@ -62,11 +62,11 @@ export type EvaluationBackendSpecification<
   T extends EvaluationType = EvaluationType,
 > = Omit<EvaluationSpecification<T>, 'metrics'> & {
   validate: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
-    args: { metric: M } & EvaluationMetricValidateArgs<T, M>,
+    args: EvaluationMetricValidateArgs<T, M> & { metric: M },
     db?: Database,
   ) => Promise<TypedResult<EvaluationConfiguration<T, M>, LatitudeError>>
   run: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
-    args: { metric: M } & EvaluationMetricRunArgs<T, M>,
+    args: EvaluationMetricRunArgs<T, M> & { metric: M },
     db?: Database,
   ) => Promise<EvaluationResultValue<T, M>>
   metrics: {

@@ -29,7 +29,7 @@ type CreateEvaluationResultV2Args<
 // prettier-ignore
 // eslint-disable-next-line no-redeclare
 export async function createEvaluationResultV2(
-  args: Omit<CreateEvaluationResultV2Args, 'metadata' | 'error'>,
+  args: Omit<CreateEvaluationResultV2Args, keyof EvaluationResultValue>,
 ): Promise<EvaluationResultV2<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>>
 
 // prettier-ignore
@@ -49,8 +49,10 @@ export async function createEvaluationResultV2<
       providerLog: args.providerLog,
       commit: args.commit,
       value: {
-        score: args.score ?? 75,
+        score: args.score ?? 1,
+        normalizedScore: args.normalizedScore ?? 100,
         metadata: args.metadata ?? {},
+        hasPassed: args.hasPassed ?? true,
         error: args.error ?? null,
       } as EvaluationResultValue<T, M>,
       usedForSuggestion: args.usedForSuggestion,

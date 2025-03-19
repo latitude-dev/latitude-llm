@@ -17,7 +17,7 @@ const humanEvaluationResultError = BaseEvaluationResultError.extend({})
 
 export const HumanEvaluationBinarySpecification = {
   name: 'Binary',
-  description: 'Judges whether the response is correct or incorrect',
+  description: 'Judges whether the response meets the criteria',
   configuration: humanEvaluationConfiguration.extend({
     passDescription: z.string(),
     failDescription: z.string(),
@@ -40,12 +40,14 @@ export type HumanEvaluationBinaryResultError = z.infer<
 
 export const HumanEvaluationRatingSpecification = {
   name: 'Rating',
-  description: 'Judges the quality of the response',
+  description: 'Judges the response by rating it under a criteria',
   configuration: humanEvaluationConfiguration.extend({
     minRating: z.number(),
     minRatingDescription: z.string(),
     maxRating: z.number(),
     maxRatingDescription: z.string(),
+    minThreshold: z.number(),
+    maxThreshold: z.number(),
   }),
   resultMetadata: humanEvaluationResultMetadata.extend({}),
   resultError: humanEvaluationResultError.extend({}),
@@ -65,8 +67,11 @@ export type HumanEvaluationRatingResultError = z.infer<
 
 export const HumanEvaluationComparisonSpecification = {
   name: 'Comparison',
-  description: 'Judges whether the response is similar to the expected label',
+  description:
+    'Judges the response by comparing the criteria to the expected label',
   configuration: humanEvaluationConfiguration.extend({
+    minThreshold: z.number(), // Threshold percentage
+    maxThreshold: z.number(), // Threshold percentage
     datasetLabel: z.string(),
   }),
   resultMetadata: humanEvaluationResultMetadata.extend({}),
