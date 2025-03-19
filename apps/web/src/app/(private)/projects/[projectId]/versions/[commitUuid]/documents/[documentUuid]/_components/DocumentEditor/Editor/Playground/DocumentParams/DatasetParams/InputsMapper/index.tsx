@@ -33,7 +33,7 @@ export function InputMapper({
   onSelectRowCell: OnSelectRowCellFn<string>
   isLoading: boolean
   selectedDataset: Dataset | DatasetV2 | undefined
-  datasetVersion: DatasetVersion | undefined
+  datasetVersion: DatasetVersion
 }) {
   const { setSource } = useDocumentParameters({
     document,

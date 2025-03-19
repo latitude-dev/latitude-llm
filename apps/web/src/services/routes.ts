@@ -2,6 +2,8 @@ import { HEAD_COMMIT } from '@latitude-data/core/browser'
 
 import { API_ROUTES } from './routes/api'
 
+export type IDatasetSettingsModal = 'new' | 'generate'
+
 export enum DocumentRoutes {
   editor = 'editor',
   logs = 'logs',
@@ -104,24 +106,29 @@ export const ROUTES = {
     },
   },
   datasets: {
-    root: '/datasets',
-    new: {
-      root: `/datasets/new`,
+    root: ({
+      modal,
+      name,
+      parameters,
+      backUrl,
+    }: {
+      modal?: IDatasetSettingsModal
+      backUrl?: string
+      name?: string
+      parameters?: string
+    } = {}) => {
+      const root = '/datasets'
+      const searchParams = new URLSearchParams()
+
+      if (modal !== undefined) searchParams.set('modal', modal)
+      if (backUrl !== undefined) searchParams.set('backUrl', backUrl)
+      if (name !== undefined) searchParams.set('name', name)
+
+      if (parameters !== undefined) searchParams.set('parameters', parameters)
+      const query = searchParams.toString()
+      return query ? `${root}?${query}` : root
     },
-    generate: {
-      root: `/datasets/generate`,
-    },
-    preview: (id: string | number) => `/datasets/preview/${id}`,
-  },
-  datasetsV2: {
-    root: ({ modal }: { modal?: 'new' } = {}) => {
-      const root = '/datasets-v2'
-      return modal ? `${root}?modal=${modal}` : root
-    },
-    generate: {
-      root: `/datasets-v2/generate`,
-    },
-    detail: (id: string | number) => `/datasets-v2/${id}`,
+    detail: (id: string | number) => `/datasets/${id}`,
   },
   evaluations: {
     detail: ({ uuid }: { uuid: string }) => {

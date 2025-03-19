@@ -32,7 +32,7 @@ export default function Playground({
   prompt: string
   setPrompt: (prompt: string) => void
   metadata: ConversationMetadata
-  datasetVersion: DatasetVersion | undefined
+  datasetVersion: DatasetVersion
 }) {
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const { commit } = useCurrentCommit()

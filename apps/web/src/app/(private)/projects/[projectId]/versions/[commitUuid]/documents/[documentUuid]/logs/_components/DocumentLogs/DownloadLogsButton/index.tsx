@@ -49,8 +49,8 @@ export function DownloadLogsButton({
   return (
     <Button
       disabled={selectableState.selectedCount === 0 || isDownloading}
-      variant='shiny'
       fancy
+      variant='outline'
       onClick={onClick}
     >
       {isDownloading ? 'Downloading...' : 'Download Logs'}

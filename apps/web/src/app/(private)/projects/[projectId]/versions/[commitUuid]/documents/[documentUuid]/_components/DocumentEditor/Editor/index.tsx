@@ -43,7 +43,7 @@ import { UpdateToPromptLButton } from './UpdateToPromptl'
 import { RefinementHook, useRefinement } from './useRefinement'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import useIntegrations from '$/stores/integrations'
-import { useFeatureFlag } from '$/hooks/useFeatureFlag'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 function RefineButton({
   refinement,
@@ -209,13 +209,10 @@ export default function DocumentEditor({
     { trailing: true },
   )
 
-  const { data: hasDatasetsV2, isLoading: isLoadingFeatureFlag } =
-    useFeatureFlag()
-  const datasetVersion = isLoadingFeatureFlag
-    ? undefined
-    : hasDatasetsV2
-      ? DatasetVersion.V2
-      : DatasetVersion.V1
+  const { enabled: hasDatasetsV2 } = useFeatureFlag({
+    featureFlag: 'datasetsV2',
+  })
+  const datasetVersion = hasDatasetsV2 ? DatasetVersion.V2 : DatasetVersion.V1
 
   const { onMetadataProcessed } = useDocumentParameters({
     commitVersionUuid: commit.uuid,
@@ -344,6 +341,7 @@ export default function DocumentEditor({
                 rightActions={
                   <>
                     <Tooltip
+                      asChild
                       trigger={
                         <Link
                           href={

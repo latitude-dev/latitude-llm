@@ -17,6 +17,8 @@ import { redirect } from 'next/navigation'
 
 import { CSPostHogProvider, IdentifyUser } from '../providers'
 import { NAV_LINKS } from './_lib/constants'
+import { FeatureFlagProvider } from '$/components/Providers/FeatureFlags'
+import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
 
 export const metadata = buildMetatags({
   title: 'Home',
@@ -34,6 +36,7 @@ export default async function PrivateLayout({
   if (!user) return redirect(ROUTES.auth.login)
 
   const supportIdentity = createSupportUserIdentity(user)
+  const featureFlags = getFeatureFlagsForWorkspaceCached({ workspace })
   const cloudInfo =
     env.LATITUDE_CLOUD && env.LATITUDE_CLOUD_PAYMENT_URL
       ? { paymentUrl: env.LATITUDE_CLOUD_PAYMENT_URL }
@@ -48,18 +51,20 @@ export default async function PrivateLayout({
             workspace={workspace}
             subscriptionPlan={subscriptionPlan}
           >
-            <LatitudeWebsocketsProvider
-              workspace={workspace}
-              socketServer={env.WEBSOCKETS_SERVER}
-            >
-              <AppLayout
-                currentUser={user}
-                navigationLinks={NAV_LINKS}
-                cloudInfo={cloudInfo}
+            <FeatureFlagProvider featureFlags={featureFlags}>
+              <LatitudeWebsocketsProvider
+                workspace={workspace}
+                socketServer={env.WEBSOCKETS_SERVER}
               >
-                {children}
-              </AppLayout>
-            </LatitudeWebsocketsProvider>
+                <AppLayout
+                  currentUser={user}
+                  navigationLinks={NAV_LINKS}
+                  cloudInfo={cloudInfo}
+                >
+                  {children}
+                </AppLayout>
+              </LatitudeWebsocketsProvider>
+            </FeatureFlagProvider>
           </SessionProvider>
         </SocketIOProvider>
       </IdentifyUser>

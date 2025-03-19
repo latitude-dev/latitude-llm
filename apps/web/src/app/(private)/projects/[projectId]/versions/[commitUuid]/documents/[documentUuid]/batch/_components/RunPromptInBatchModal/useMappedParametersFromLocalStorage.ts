@@ -8,7 +8,7 @@ import {
 } from '@latitude-data/core/browser'
 import { RunBatchParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { useFeatureFlag } from '$/hooks/useFeatureFlag'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 /**
  * TODO: Remove. This wont be needed after migrate to datasets v2
@@ -32,12 +32,10 @@ export function useMappedParametersFromLocalStorage({
   selectedDataset: DatasetV2 | Dataset | null | undefined
   onDatasetReady: (_args: { mapped: RunBatchParameters }) => void
 }) {
-  const { data: hasDatasetsV2, isLoading: isLoadingFeatureFlag } =
-    useFeatureFlag()
-  const datasetVersion =
-    hasDatasetsV2 && !isLoadingFeatureFlag
-      ? DatasetVersion.V2
-      : DatasetVersion.V1
+  const { enabled: hasDatasetsV2 } = useFeatureFlag({
+    featureFlag: 'datasetsV2',
+  })
+  const datasetVersion = hasDatasetsV2 ? DatasetVersion.V2 : DatasetVersion.V1
   const {
     dataset: { mappedInputs },
   } = useDocumentParameters({

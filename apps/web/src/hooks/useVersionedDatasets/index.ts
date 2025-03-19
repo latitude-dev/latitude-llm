@@ -1,7 +1,7 @@
 import { Dataset, DatasetV2, DatasetVersion } from '@latitude-data/core/browser'
 import useDatasets from '$/stores/datasets'
 import useDatasetsV2 from '$/stores/datasetsV2'
-import { useFeatureFlag } from '$/hooks/useFeatureFlag'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 export function buildColumnList(
   dataset: Dataset | DatasetV2 | null | undefined,
@@ -43,14 +43,10 @@ export function useVersionedDatasets({
   ) => void
   enabled?: boolean
 } = {}) {
-  const { data: hasDatasetsV2, isLoading: isLoadingFeatureFlag } =
-    useFeatureFlag()
-  const datasetVersion =
-    hasDatasetsV2 && !isLoadingFeatureFlag
-      ? DatasetVersion.V2
-      : !isLoadingFeatureFlag
-        ? DatasetVersion.V1
-        : undefined
+  const { enabled: hasDatasetsV2 } = useFeatureFlag({
+    featureFlag: 'datasetsV2',
+  })
+  const datasetVersion = hasDatasetsV2 ? DatasetVersion.V2 : DatasetVersion.V1
 
   const isV1 = datasetVersion === DatasetVersion.V1
 
@@ -69,8 +65,7 @@ export function useVersionedDatasets({
     pageSize: '100000', // Big enough page to avoid pagination
   })
 
-  const isLoading =
-    isLoadingFeatureFlag || isLoadingDatasetsV1 || isLoadingDatasetsV2
+  const isLoading = isLoadingDatasetsV1 || isLoadingDatasetsV2
 
   return {
     data: isV1 ? datasetsV1 : datasetsV2,

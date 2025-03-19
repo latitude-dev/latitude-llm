@@ -25,10 +25,10 @@ import { ExportLogsModal } from './ExportLogsModal'
 import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { LogsOverTime } from '../../../../../overview/_components/Overview/LogsOverTime'
 import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
-import { useFeatureFlag } from '$/hooks/useFeatureFlag'
 import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
 import { DownloadLogsButton } from './DownloadLogsButton'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -47,8 +47,9 @@ export function DocumentLogs({
   evaluationResults: Record<number, ResultWithEvaluation[]>
   isEvaluationResultsLoading: boolean
 }) {
-  const { data: featureFlag } = useFeatureFlag()
-  const hasNewDatasets = featureFlag === true
+  const { enabled: hasNewDatasets } = useFeatureFlag({
+    featureFlag: 'datasetsV2',
+  })
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
   const { document } = useCurrentDocument()
@@ -143,21 +144,11 @@ export function DocumentLogs({
         <div className='flex justify-center sticky bottom-4 pointer-events-none'>
           <FloatingPanel visible={selectableState.selectedCount > 0}>
             <div className='flex flex-row justify-between gap-x-4'>
-              <Button
-                disabled={selectableState.selectedCount === 0}
-                fancy
-                onClick={() =>
-                  setSelectedLogsIds(selectableState.getSelectedRowIds())
-                }
-              >
-                Export selected logs
-              </Button>
               <>
                 {hasNewDatasets ? (
                   <>
                     <Button
                       fancy
-                      variant='shiny'
                       disabled={selectableState.selectedCount === 0}
                       onClick={previewLogsState.onClickShowPreview}
                     >
@@ -165,7 +156,19 @@ export function DocumentLogs({
                     </Button>
                     <DownloadLogsButton selectableState={selectableState} />
                   </>
-                ) : null}
+                ) : (
+                  <>
+                    <Button
+                      disabled={selectableState.selectedCount === 0}
+                      fancy
+                      onClick={() =>
+                        setSelectedLogsIds(selectableState.getSelectedRowIds())
+                      }
+                    >
+                      Export selected logs
+                    </Button>
+                  </>
+                )}
               </>
               <Button
                 fancy

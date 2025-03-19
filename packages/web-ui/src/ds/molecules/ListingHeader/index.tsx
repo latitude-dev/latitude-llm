@@ -8,12 +8,14 @@ export function ListingButton({
   variant = 'outline',
   children,
   onClick,
+  disabled = false,
 }: {
   children: ReactNode
   variant?: ButtonProps['variant']
+  disabled?: boolean
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <Button onClick={onClick} fancy variant={variant}>
+    <Button onClick={onClick} fancy variant={variant} disabled={disabled}>
       {children}
     </Button>
   )
@@ -38,7 +40,7 @@ export const TableWithHeader = ({
         'flex-grow min-h-0': takeVertialSpace,
       })}
     >
-      <div>
+      <div className='flex flex-col gap-y-4'>
         <TitleWithActions title={title} actions={actions} />
         {description ? (
           <Text.H5 color='foregroundMuted'>{description}</Text.H5>

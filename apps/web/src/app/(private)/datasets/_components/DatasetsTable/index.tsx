@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { compact } from 'lodash-es'
-
-import { Dataset } from '@latitude-data/core/browser'
+import Link from 'next/link'
+import { DatasetV2 } from '@latitude-data/core/browser'
 import {
   Button,
   dateFormatter,
@@ -15,47 +14,79 @@ import {
   TableHeader,
   TableRow,
   Text,
-  Tooltip,
 } from '@latitude-data/web-ui'
-import DeleteDatasetModal from '$/app/(private)/datasets/_components/DeleteDatasetModal'
-import { useNavigate } from '$/hooks/useNavigate'
+import useDatasets from '$/stores/datasetsV2'
+import { useToggleModal } from '$/hooks/useToogleModal'
+import { useSearchParams } from 'next/navigation'
+import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { ROUTES } from '$/services/routes'
-import useDatasets from '$/stores/datasets'
-import Link from 'next/link'
+import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+
+import DeleteDatasetModal from '../DeleteDatasetModal'
+import { NewDatasetModal } from '../RootHeader/NewDatasetModal'
 
 export function DatasetsTable({
   datasets: serverDatasets,
 }: {
-  datasets: Dataset[]
+  datasets: DatasetV2[]
 }) {
-  const navigate = useNavigate()
-  const [deletable, setDeletable] = useState<Dataset | null>(null)
-  const { data: datasets } = useDatasets(undefined, {
-    fallbackData: serverDatasets,
-  })
+  const searchParams = useSearchParams()
+  const page = searchParams.get('page') ?? '1'
+  const pageSize = searchParams.get('pageSize') ?? '25'
+  const newDataset = useToggleModal()
+  const [deletable, setDeletable] = useState<DatasetV2 | null>(null)
+  const { data: datasets } = useDatasets(
+    { page, pageSize },
+    {
+      fallbackData: serverDatasets,
+    },
+  )
+
   if (!datasets.length) {
+    const isFirstPage = page === '1'
+    const msg = isFirstPage
+      ? 'There are no datasets yet. Create one to start testing your prompts.'
+      : 'No more datasets to show.'
     return (
-      <TableBlankSlate
-        description='There are no datasets yet. Create one to start testing your prompts.'
-        link={
-          <Link href={ROUTES.datasets.new.root}>
-            <TableBlankSlate.Button>
-              Create your first dataset
-            </TableBlankSlate.Button>
-          </Link>
-        }
-      />
+      <>
+        <TableBlankSlate
+          description={msg}
+          link={
+            <>
+              {isFirstPage ? (
+                <TableBlankSlate.Button onClick={newDataset.onOpen}>
+                  Create your first dataset
+                </TableBlankSlate.Button>
+              ) : null}
+            </>
+          }
+        />
+        <NewDatasetModal
+          open={newDataset.open}
+          onOpenChange={newDataset.onOpenChange}
+        />
+      </>
     )
   }
 
   return (
     <>
       <DeleteDatasetModal dataset={deletable} setDataset={setDeletable} />
-      <Table>
+      <Table
+        externalFooter={
+          <LinkableTablePaginationFooter
+            pagination={buildPagination({
+              count: Infinity,
+              baseUrl: ROUTES.datasets.root(),
+              page: Number(page),
+              pageSize: Number(pageSize),
+            })}
+          />
+        }
+      >
         <TableHeader>
           <TableRow verticalPadding>
             <TableHead>Name</TableHead>
-            <TableHead>Rows</TableHead>
             <TableHead>Columns</TableHead>
             <TableHead>Author</TableHead>
             <TableHead>Created at</TableHead>
@@ -63,16 +94,15 @@ export function DatasetsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {compact(datasets).map((dataset) => (
+          {datasets.map((dataset) => (
             <TableRow key={dataset.id} verticalPadding hoverable={false}>
               <TableCell>
-                <Text.H5>{dataset.name}</Text.H5>
+                <Link href={ROUTES.datasets.detail(dataset.id)}>
+                  <Text.H5 underline>{dataset.name}</Text.H5>
+                </Link>
               </TableCell>
               <TableCell>
-                <Text.H5>{dataset.fileMetadata.rowCount}</Text.H5>
-              </TableCell>
-              <TableCell>
-                <Text.H5>{dataset.fileMetadata.headers.length}</Text.H5>
+                <Text.H5>{dataset.columns.length}</Text.H5>
               </TableCell>
               <TableCell>
                 <Text.H5>{dataset.author?.name}</Text.H5>
@@ -84,19 +114,12 @@ export function DatasetsTable({
               </TableCell>
               <TableCell align='center'>
                 <div className='flex flex-row gap-4'>
-                  <Tooltip
-                    trigger={
-                      <Button
-                        onClick={() =>
-                          navigate.push(ROUTES.datasets.preview(dataset.id))
-                        }
-                        variant='nope'
-                        iconProps={{ name: 'eye', color: 'foregroundMuted' }}
-                      />
-                    }
-                  >
-                    Show file preview (first 100 rows)
-                  </Tooltip>
+                  <Link href={ROUTES.datasets.detail(dataset.id)}>
+                    <Button
+                      variant='nope'
+                      iconProps={{ name: 'eye', color: 'foregroundMuted' }}
+                    />
+                  </Link>
                   <Button
                     onClick={() => setDeletable(dataset)}
                     variant='nope'

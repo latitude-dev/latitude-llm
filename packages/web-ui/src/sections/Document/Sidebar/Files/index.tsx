@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { ConfirmModal } from '../../../../ds/atoms'
+import { ClientOnly, ConfirmModal } from '../../../../ds/atoms'
 import { cn } from '../../../../lib/utils'
 import DocumentHeader from './DocumentHeader'
 import { FileTreeProvider, useFileTreeContext } from './FilesProvider'
@@ -247,7 +247,7 @@ export function FilesTree({
     [renamePaths],
   )
   return (
-    <>
+    <ClientOnly>
       <FileTreeProvider
         isLoading={isLoading}
         isMerged={isMerged}
@@ -313,6 +313,6 @@ export function FilesTree({
           }}
         />
       ) : null}
-    </>
+    </ClientOnly>
   )
 }

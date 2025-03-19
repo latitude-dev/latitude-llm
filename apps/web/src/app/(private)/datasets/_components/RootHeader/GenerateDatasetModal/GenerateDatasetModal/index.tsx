@@ -1,0 +1,99 @@
+import { FormEvent } from 'react'
+
+import { useServerAction } from 'zsa-react'
+import { useToast } from '@latitude-data/web-ui'
+import { generateDatasetAction } from '$/actions/datasetsV2/generateDataset'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
+import useDatasets from '$/stores/datasetsV2'
+import { GenerateDatasetModalComponent } from './GenerateDatasetModalComponent'
+import { useDatasetPreviewModal } from './useDatasetPreviewModal'
+
+export function GenerateDatasetModal({
+  open,
+  onOpenChange,
+  parameters: defaultParameters,
+  name: defaultName,
+  backUrl,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  parameters: string[]
+  name?: string
+  backUrl?: string
+}) {
+  const navigate = useNavigate()
+  const { toast } = useToast()
+  const { data: datasets, mutate } = useDatasets()
+  const {
+    execute: runGenerateAction,
+    isPending: generateIsLoading,
+    error: generateError,
+  } = useServerAction(generateDatasetAction, {
+    onError: (error) => {
+      toast({
+        title: 'Failed to generate dataset',
+        description: error.err.message,
+        variant: 'destructive',
+      })
+    },
+  })
+  const modalData = useDatasetPreviewModal({
+    defaultParameters,
+    generateErrorMessage: generateError?.message,
+  })
+
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.target as HTMLFormElement)
+
+    if (!modalData.previewCsv) {
+      modalData.generatePreview(formData)
+    } else {
+      const [dataset] = await runGenerateAction({
+        parameters: formData.get('parameters') as string,
+        description: formData.get('description') as string,
+        rowCount: parseInt(formData.get('rows') as string, 10),
+        name: formData.get('name') as string,
+      })
+
+      if (!dataset) return
+
+      mutate([...datasets, dataset])
+      toast({
+        title: 'Success',
+        description: 'Dataset generated succesfully',
+      })
+
+      // TODO: What to when backUrl
+      if (backUrl) {
+        navigate.push(backUrl)
+      } else {
+        navigate.push(ROUTES.datasets.detail(dataset.id))
+      }
+    }
+  }
+
+  return (
+    <GenerateDatasetModalComponent
+      // Component state
+      open={open}
+      onOpenChange={onOpenChange}
+      backUrl={backUrl}
+      defaultName={defaultName}
+      // Data
+      explanation={modalData.explanation}
+      defaultParameters={modalData.defaultParameters}
+      parameters={modalData.parameters}
+      previewCsv={modalData.previewCsv}
+      // State
+      handleRegeneratePreview={modalData.handleRegeneratePreview}
+      handleParametersChange={modalData.handleParametersChange}
+      onSubmit={onSubmit}
+      // Actions
+      previewIsLoading={modalData.previewIsLoading}
+      generateIsLoading={generateIsLoading}
+      errorMessage={modalData.errorMessage}
+    />
+  )
+}

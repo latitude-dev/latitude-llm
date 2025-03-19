@@ -61,7 +61,7 @@ export function HistoryLogParams({
   document: DocumentVersion
   commit: ICommitContextType['commit']
   data: UseLogHistoryParams
-  datasetVersion: DatasetVersion | undefined
+  datasetVersion: DatasetVersion
 }) {
   const {
     history: { inputs, setInput },
