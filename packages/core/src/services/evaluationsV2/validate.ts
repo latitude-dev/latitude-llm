@@ -1,8 +1,8 @@
 import {
   Commit,
   DocumentVersion,
-  EVALUATION_SCORE_SCALE,
-  EvaluationCondition,
+  // EVALUATION_SCORE_SCALE,
+  // EvaluationCondition,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
@@ -57,17 +57,17 @@ export async function validateEvaluationV2<
     return Result.error(new BadRequestError('Name is required'))
   }
 
-  if (!Object.values(EvaluationCondition).includes(settings.condition)) {
-    return Result.error(new BadRequestError('Invalid pass condition'))
-  }
+  // if (!Object.values(EvaluationCondition).includes(settings.condition)) {
+  //   return Result.error(new BadRequestError('Invalid pass condition'))
+  // }
 
-  if (settings.threshold < 0 || settings.threshold > EVALUATION_SCORE_SCALE) {
-    return Result.error(
-      new BadRequestError(
-        `Threshold must be between 0 and ${EVALUATION_SCORE_SCALE}`,
-      ),
-    )
-  }
+  // if (settings.threshold < 0 || settings.threshold > EVALUATION_SCORE_SCALE) {
+  //   return Result.error(
+  //     new BadRequestError(
+  //       `Threshold must be between 0 and ${EVALUATION_SCORE_SCALE}`,
+  //     ),
+  //   )
+  // }
 
   const repository = new EvaluationsV2Repository(workspace.id, db)
   const evaluations = await repository

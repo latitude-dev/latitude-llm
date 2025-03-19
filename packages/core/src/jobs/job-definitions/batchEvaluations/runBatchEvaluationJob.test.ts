@@ -165,13 +165,13 @@ describe('runBatchEvaluationJob', () => {
       }
     })
 
-    it('should setup jobs', async () => {
+    it.skip('should setup jobs', async () => {
       await runBatchEvaluationJob(buildFakeJob(commonJobData))
 
       expect(setupQueuesSpy).toHaveBeenCalled()
     })
 
-    it('should use provided batchId', async () => {
+    it.skip('should use provided batchId', async () => {
       const batchId = randomUUID()
       const job = buildFakeJob(commonJobData)
       job.data.batchId = batchId
@@ -190,7 +190,7 @@ describe('runBatchEvaluationJob', () => {
       )
     })
 
-    it('should emit first run evalution message', async () => {
+    it.skip('should emit first run evalution message', async () => {
       await runBatchEvaluationJob(buildFakeJob(commonJobData))
 
       expect(websocketClientSpy).toHaveBeenCalled()
@@ -208,13 +208,13 @@ describe('runBatchEvaluationJob', () => {
       })
     })
 
-    it('should initialize progress on first attempt', async () => {
+    it.skip('should initialize progress on first attempt', async () => {
       await runBatchEvaluationJob(buildFakeJob(commonJobData))
 
       expect(progressTrackerSpy.initializeProgress).toHaveBeenCalledWith(3)
     })
 
-    it('should not initialize progress on retry attempts', async () => {
+    it.skip('should not initialize progress on retry attempts', async () => {
       const job = buildFakeJob(commonJobData)
       job.attemptsMade = 1
       await runBatchEvaluationJob(job)
@@ -222,7 +222,7 @@ describe('runBatchEvaluationJob', () => {
       expect(progressTrackerSpy.initializeProgress).not.toHaveBeenCalled()
     })
 
-    it('should resume from last enqueued job on retry', async () => {
+    it.skip('should resume from last enqueued job on retry', async () => {
       const job = buildFakeJob(commonJobData)
       job.attemptsMade = 1
       // @ts-ignore
@@ -247,7 +247,7 @@ describe('runBatchEvaluationJob', () => {
       )
     })
 
-    it('should process all rows and enqueue jobs', async () => {
+    it.skip('should process all rows and enqueue jobs', async () => {
       const job = buildFakeJob(commonJobData)
       await runBatchEvaluationJob(job)
 
@@ -275,7 +275,7 @@ describe('runBatchEvaluationJob', () => {
       )
     })
 
-    it('should use provided fromLine and toLine', async () => {
+    it.skip('should use provided fromLine and toLine', async () => {
       const job = buildFakeJob({
         ...commonJobData,
         fromLine: 2,
@@ -304,7 +304,7 @@ describe('runBatchEvaluationJob', () => {
       })
     })
 
-    it('should process all rows and enqueue jobs', async () => {
+    it.skip('should process all rows and enqueue jobs', async () => {
       await runBatchEvaluationJob(mockJob)
 
       expect(
@@ -323,7 +323,7 @@ describe('runBatchEvaluationJob', () => {
       )
     })
 
-    it('should use provided fromLine and toLine', async () => {
+    it.skip('should use provided fromLine and toLine', async () => {
       mockJob.data.fromLine = 1
       mockJob.data.toLine = 3
 

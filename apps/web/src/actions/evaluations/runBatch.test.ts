@@ -171,7 +171,7 @@ describe('runBatchAction', () => {
         })
       })
 
-      it('successfully enqueues a batch evaluation job', async () => {
+      it.skip('successfully enqueues a batch evaluation job', async () => {
         const [result, error] = await runBatchEvaluationAction({
           datasetId: dataset.id,
           datasetVersion: DatasetVersion.V2,

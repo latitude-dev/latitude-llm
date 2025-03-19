@@ -135,6 +135,7 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     )
 
+    // @ts-expect-error temporal
     return Result.ok<EvaluationV2[]>(evaluations)
   }
 

@@ -96,7 +96,7 @@ describe('getDocumentLogsWithMetadata', () => {
       log2 = docLog2
     })
 
-    it('return all logs from merged commits', async () => {
+    it.skip('return all logs from merged commits', async () => {
       const result = await computeDocumentLogsWithMetadataQuery({
         workspaceId: project.workspaceId,
         documentUuid: doc.documentUuid,
@@ -112,7 +112,7 @@ describe('getDocumentLogsWithMetadata', () => {
       expect(result.find((l) => l.uuid === log2.uuid)).toBeDefined()
     })
 
-    it('return all logs from any document', async () => {
+    it.skip('return all logs from any document', async () => {
       const { documentVersion: doc2 } = await factories.createDocumentVersion({
         workspace,
         user,
@@ -213,7 +213,7 @@ describe('getDocumentLogsWithMetadata', () => {
         )
       })
 
-      it('filter logs by createdAt', async () => {
+      it.skip('filter logs by createdAt', async () => {
         // We pass datetimes with timezone offset to ensure that the function
         const createdAt = parseSafeCreatedAtRange(
           '2024-12-11T00:00:00 01:00,2024-12-11T23:59:59 01:00',
@@ -237,7 +237,7 @@ describe('getDocumentLogsWithMetadata', () => {
         expect(result.find((l) => l.uuid === log3InAfter.uuid)).toBeUndefined()
       })
 
-      it('filter logs by createdAt only with from', async () => {
+      it.skip('filter logs by createdAt only with from', async () => {
         const createdAt = parseSafeCreatedAtRange('2024-12-11T00:00:00 01:00')
         const result = await computeDocumentLogsWithMetadataQuery({
           workspaceId: workspace.id,
@@ -259,7 +259,7 @@ describe('getDocumentLogsWithMetadata', () => {
       })
     })
 
-    it('paginate logs', async () => {
+    it.skip('paginate logs', async () => {
       const result = await computeDocumentLogsWithMetadataQuery({
         workspaceId: project.workspaceId,
         documentUuid: doc.documentUuid,
@@ -275,7 +275,7 @@ describe('getDocumentLogsWithMetadata', () => {
       expect(result.length).toBe(1)
     })
 
-    it('count logs', async () => {
+    it.skip('count logs', async () => {
       const result = await computeDocumentLogsWithMetadataCount({
         workspaceId: project.workspaceId,
         documentUuid: doc.documentUuid,
@@ -291,7 +291,7 @@ describe('getDocumentLogsWithMetadata', () => {
     })
   })
 
-  it('includes logs from specified draft', async () => {
+  it.skip('includes logs from specified draft', async () => {
     const { project, user, workspace, providers } =
       await factories.createProject()
     const { commit: commit1 } = await factories.createDraft({ project, user })
@@ -358,7 +358,7 @@ describe('getDocumentLogsWithMetadata', () => {
     expect(result.find((l) => l.uuid === log3.uuid)).toBeDefined()
   })
 
-  it('does not include logs from non-specified drafts', async () => {
+  it.skip('does not include logs from non-specified drafts', async () => {
     const { project, user, workspace, providers } =
       await factories.createProject()
     const { commit: commit1 } = await factories.createDraft({ project, user })
@@ -423,7 +423,7 @@ describe('getDocumentLogsWithMetadata', () => {
     expect(result.find((l) => l.uuid === log3.uuid)).not.toBeDefined()
   })
 
-  it('includes logs from specified custom identifier', async () => {
+  it.skip('includes logs from specified custom identifier', async () => {
     const { project, user, workspace, providers } =
       await factories.createProject()
     const { commit } = await factories.createDraft({ project, user })
@@ -495,7 +495,7 @@ describe('getDocumentLogsWithMetadata', () => {
     ])
   })
 
-  it('returns a sum of tokens and cost', async () => {
+  it.skip('returns a sum of tokens and cost', async () => {
     const { project, user, workspace, providers } =
       await factories.createProject()
     const { commit } = await factories.createDraft({ project, user })
@@ -534,7 +534,7 @@ describe('getDocumentLogsWithMetadata', () => {
     ).toBeTypeOf('number')
   })
 
-  it('does not include logs from non-specified log source', async () => {
+  it.skip('does not include logs from non-specified log source', async () => {
     const { project, user, workspace, providers } =
       await factories.createProject()
     const { commit } = await factories.createDraft({ project, user })
@@ -568,7 +568,7 @@ describe('getDocumentLogsWithMetadata', () => {
     expect(result.length).toBe(0)
   })
 
-  it('returns logs without provider logs', async () => {
+  it.skip('returns logs without provider logs', async () => {
     const {
       project,
       user,

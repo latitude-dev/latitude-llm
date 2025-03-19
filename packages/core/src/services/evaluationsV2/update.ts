@@ -1,3 +1,4 @@
+import { omit } from 'lodash-es'
 import {
   Commit,
   EvaluationMetric,
@@ -51,7 +52,7 @@ export async function updateEvaluationV2<
     },
     db,
   ).then((r) => r.unwrap())
-  settings = vSettings
+  settings = omit(vSettings, 'condition', 'threshold')
   options = vOptions
 
   return await Transaction.call(async (tx) => {
