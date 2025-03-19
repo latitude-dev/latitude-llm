@@ -140,6 +140,7 @@ import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import Hyperbrowser from './custom-icons/logos/Hyperbrowser'
+import Audiense from './custom-icons/logos/Audiense'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -155,6 +156,7 @@ const Icons = {
   arrowUp: ArrowUpIcon,
   atSign: AtSign,
   attio: Attio,
+  audiense: Audiense,
   awsBedrock: AwsBedrock,
   barChart4: BarChart4,
   blocks: Blocks,

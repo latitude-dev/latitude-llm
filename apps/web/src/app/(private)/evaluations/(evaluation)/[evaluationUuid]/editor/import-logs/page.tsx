@@ -114,7 +114,7 @@ const ProviderLogsTable = ({
   if (!orderedData.length) {
     return (
       <div className='flex flex-col items-center justify-center rounded-lg border border-2 bg-secondary p-4'>
-        <Text.H5M color='foregroundMuted'>No logs available</Text.H5M>
+        <Text.H5M color='foregroundMuted'>No logs available.</Text.H5M>
       </div>
     )
   }
