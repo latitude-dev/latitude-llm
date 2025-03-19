@@ -60,6 +60,7 @@ tmp
 TODO.md
 .cursorrules
 .vscode/settings.json
+/acme
 
 # Sentry
 .sentryclirc
