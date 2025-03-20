@@ -49,7 +49,7 @@ export const getOrCreateRouteV2 = getOrCreateRouteFactory({
 
 export const getOrCreateRouteV3 = getOrCreateRouteFactory({
   path: ROUTES.api.v3.documents.getOrCreate,
-  tags: ['Documents'],
+  tags: ['V3_DEPRECATED'],
 })
 
 export type GetOrCreateRoute = typeof getOrCreateRouteV3

@@ -4,6 +4,9 @@ import {
   type MessageRole,
 } from '@latitude-data/compiler'
 import {
+  CreateDocumentData,
+  DocumentData,
+  DocumentList,
   Providers,
   type ChainEventDto,
   type DocumentLog,
@@ -128,6 +131,24 @@ class Latitude {
     ) => Promise<{ config: Config; messages: M[] }>
   }
 
+  public project: {
+    prompts: {
+      list: (args: GetPromptOptions) => Promise<DocumentList>
+      read: (
+        args: GetPromptOptions & { documentUuid: string },
+      ) => Promise<DocumentData>
+      create: (
+        args: GetPromptOptions & { data: CreateDocumentData },
+      ) => Promise<DocumentData>
+      update: (
+        args: GetPromptOptions & { documentUuid: string; data: DocumentData },
+      ) => Promise<DocumentData>
+      delete: (
+        args: GetPromptOptions & { documentUuid: string },
+      ) => Promise<void>
+    }
+  }
+
   constructor(
     apiKey: string,
     {
@@ -180,6 +201,16 @@ class Latitude {
       renderChain: this.renderChain.bind(this),
     }
 
+    this.project = {
+      prompts: {
+        list: this.listPrompts.bind(this),
+        read: this.readPrompt.bind(this),
+        create: this.createPrompt.bind(this),
+        update: this.updatePrompt.bind(this),
+        delete: this.deletePrompt.bind(this),
+      },
+    }
+
     if (telemetry) {
       const exporter =
         telemetry.exporter ??
@@ -195,6 +226,9 @@ class Latitude {
     }
   }
 
+  /**
+   * @deprecated Use `project.prompts.read` instead
+   */
   async getPrompt(
     path: string,
     { projectId, versionUuid }: GetPromptOptions = {},
@@ -226,6 +260,9 @@ class Latitude {
     return (await response.json()) as Prompt
   }
 
+  /**
+   * @deprecated Use `project.prompts.list` instead
+   */
   async getAllPrompts({ projectId, versionUuid }: GetPromptOptions = {}) {
     projectId = projectId ?? this.options.projectId
     if (!projectId) throw new Error('Project ID is required')
@@ -254,6 +291,9 @@ class Latitude {
     return (await response.json()) as Prompt[]
   }
 
+  /**
+   * @deprecated Use `project.prompts.create` instead
+   */
   async getOrCreatePrompt(
     path: string,
     { projectId, versionUuid, prompt }: GetOrCreatePromptOptions = {},
@@ -484,6 +524,29 @@ class Latitude {
     }
 
     return (await response.json()) as EvaluationResultDto
+  }
+
+  private async listPrompts(args: GetPromptOptions) {
+    const response = await makeRequest({
+      method: 'GET',
+      handler: HandlerType.GetAllDocuments,
+      params: { ...args, ...this.options },
+      options: this.options,
+    })
+
+    if (!response.ok) {
+      const error = (await response.json()) as ApiErrorJsonResponse
+
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
+      })
+    }
+
+    return (await response.json()) as DocumentList
   }
 }
 

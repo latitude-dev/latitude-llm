@@ -1,14 +1,4 @@
-import {
-  ChatUrlParams,
-  EvaluationResultUrlParams,
-  GetAllDocumentsParams,
-  GetDocumentUrlParams,
-  GetOrCreateDocumentUrlParams,
-  HandlerType,
-  LogUrlParams,
-  RunDocumentUrlParams,
-  UrlParams,
-} from '$sdk/utils/types'
+import { HandlerType, UrlParams } from '$sdk/utils/types'
 
 type ResolveParams<T extends HandlerType> = {
   handler: T
@@ -41,34 +31,41 @@ export class RouteResolver {
   resolve<T extends HandlerType>({ handler, params }: ResolveParams<T>) {
     switch (handler) {
       case HandlerType.GetDocument: {
-        const getParams = params as GetDocumentUrlParams
+        const getParams = params as UrlParams<HandlerType.GetDocument>
         return this.documents(getParams).document(getParams.path)
       }
       case HandlerType.GetAllDocuments: {
-        const getParams = params as GetAllDocumentsParams
+        const getParams = params as UrlParams<HandlerType.GetAllDocuments>
         return this.documents(getParams).root
       }
       case HandlerType.GetOrCreateDocument: {
-        return this.documents(params as GetOrCreateDocumentUrlParams)
-          .getOrCreate
+        const getParams = params as UrlParams<HandlerType.GetOrCreateDocument>
+        return this.documents(getParams).getOrCreate
       }
-      case HandlerType.RunDocument:
-        return this.documents(params as RunDocumentUrlParams).run
-      case HandlerType.Chat:
-        return this.conversations().chat(
-          (params as ChatUrlParams).conversationUuid,
-        )
-      case HandlerType.Log:
-        return this.documents(params as LogUrlParams).log
-      case HandlerType.Evaluate:
-        return this.conversations().evaluate(
-          (params as ChatUrlParams).conversationUuid,
-        )
-      case HandlerType.EvaluationResult:
+      case HandlerType.RunDocument: {
+        const runParams = params as UrlParams<HandlerType.RunDocument>
+        return this.documents(runParams).run
+      }
+      case HandlerType.Chat: {
+        const chatParams = params as UrlParams<HandlerType.Chat>
+        return this.conversations().chat(chatParams.conversationUuid)
+      }
+      case HandlerType.Log: {
+        const logParams = params as UrlParams<HandlerType.Log>
+        return this.documents(logParams).log
+      }
+      case HandlerType.Evaluate: {
+        const evaluateParams = params as UrlParams<HandlerType.Evaluate>
+        return this.conversations().evaluate(evaluateParams.conversationUuid)
+      }
+      case HandlerType.EvaluationResult: {
+        const evaluationResultParams =
+          params as UrlParams<HandlerType.EvaluationResult>
         return this.conversations().evaluationResult(
-          (params as ChatUrlParams).conversationUuid,
-          (params as EvaluationResultUrlParams).evaluationUuid,
+          evaluationResultParams.conversationUuid,
+          evaluationResultParams.evaluationUuid,
         )
+      }
       default:
         throw new Error(`Unknown handler: ${handler satisfies never}`)
     }

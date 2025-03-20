@@ -30,7 +30,7 @@ function getRouteFactory({ path, tags }: { path: string; tags: string[] }) {
 
 export const getAllRoute = getRouteFactory({
   path: ROUTES.api.v3.documents.getAll,
-  tags: ['Documents'],
+  tags: ['V3_DEPRECATED'],
 })
 
 export type GetRoute = typeof getAllRoute

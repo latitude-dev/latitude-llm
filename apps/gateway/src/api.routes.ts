@@ -30,6 +30,8 @@ const V3_EVALUATION_DETAIL = `${V3_EVALUATIONS}/{evaluationUuid}`
 const V2_TELEMETRY = `${V2_PATH}/otlp`
 const V3_TELEMETRY = `${V3_PATH}/otlp`
 
+const V3_PROJECT_MANAGEMENT = `${V3_PATH}/project`
+
 export const API_ROUTES = {
   v1: {
     documents: {
@@ -72,6 +74,10 @@ export const API_ROUTES = {
     },
     telemetry: {
       traces: `${V3_TELEMETRY}/v1/traces`,
+    },
+    project: {
+      prompts: `${V3_PROJECT_MANAGEMENT}/prompts`,
+      prompt: `${V3_PROJECT_MANAGEMENT}/prompts/:documentUuid{.+}`,
     },
   },
 }

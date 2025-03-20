@@ -40,7 +40,7 @@ export const getRouteV2 = getRouteFactory({
 })
 export const getRouteV3 = getRouteFactory({
   path: ROUTES.api.v3.documents.get,
-  tags: ['Documents'],
+  tags: ['V3_DEPRECATED'],
 })
 
 export type GetRoute = typeof getRouteV3

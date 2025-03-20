@@ -21,29 +21,17 @@ import {
   ParameterType,
 } from '@latitude-data/constants'
 
-export type GetAllDocumentsParams = {
-  projectId: number
-  versionUuid?: string
-}
-export type GetDocumentUrlParams = GetAllDocumentsParams & {
-  path: string
-}
-
-export type GetOrCreateDocumentUrlParams = {
+type ProjectAndVersion = {
   projectId: number
   versionUuid?: string
 }
 
-type GetOrCreateDocumentBodyParams = {
-  path: string
-  prompt?: string
-}
+export type GetAllDocumentsParams = ProjectAndVersion
+export type GetDocumentUrlParams = ProjectAndVersion & { path: string }
+export type GetOrCreateDocumentUrlParams = ProjectAndVersion
+export type RunDocumentUrlParams = ProjectAndVersion
 
-export type RunDocumentUrlParams = {
-  projectId: number
-  versionUuid?: string
-}
-
+type GetOrCreateDocumentBodyParams = { path: string; prompt?: string }
 type RunDocumentBodyParams = {
   path: string
   parameters?: Record<string, unknown>
@@ -64,7 +52,7 @@ export type EvaluationResultUrlParams = {
   evaluationUuid: string
 }
 
-export type LogUrlParams = RunDocumentUrlParams
+export type LogUrlParams = ProjectAndVersion
 
 type LogBodyParams = {
   path: string
@@ -83,41 +71,39 @@ export enum HandlerType {
   EvaluationResult = 'evaluationResult',
 }
 
-export type UrlParams<T extends HandlerType> = T extends HandlerType.GetDocument
-  ? GetDocumentUrlParams
-  : T extends HandlerType.GetOrCreateDocument
-    ? GetOrCreateDocumentUrlParams
-    : T extends HandlerType.RunDocument
-      ? RunDocumentUrlParams
-      : T extends HandlerType.Chat
-        ? ChatUrlParams
-        : T extends HandlerType.Log
-          ? LogUrlParams
-          : T extends HandlerType.Evaluate
-            ? { conversationUuid: string }
-            : T extends HandlerType.EvaluationResult
-              ? { conversationUuid: string; evaluationUuid: string }
-              : T extends HandlerType.GetAllDocuments
-                ? GetAllDocumentsParams
-                : never
+type UrlParamsMap = {
+  [HandlerType.GetDocument]: GetDocumentUrlParams
+  [HandlerType.GetAllDocuments]: GetAllDocumentsParams
+  [HandlerType.GetOrCreateDocument]: GetOrCreateDocumentUrlParams
+  [HandlerType.RunDocument]: RunDocumentUrlParams
+  [HandlerType.Chat]: ChatUrlParams
+  [HandlerType.Log]: LogUrlParams
+  [HandlerType.Evaluate]: { conversationUuid: string }
+  [HandlerType.EvaluationResult]: {
+    conversationUuid: string
+    evaluationUuid: string
+  }
+}
 
-export type BodyParams<T extends HandlerType> =
-  T extends HandlerType.GetOrCreateDocument
-    ? GetOrCreateDocumentBodyParams
-    : T extends HandlerType.RunDocument
-      ? RunDocumentBodyParams
-      : T extends HandlerType.Chat
-        ? ChatBodyParams
-        : T extends HandlerType.Log
-          ? LogBodyParams
-          : T extends HandlerType.Evaluate
-            ? { evaluationUuids?: string[] }
-            : T extends HandlerType.EvaluationResult
-              ? {
-                  result: string | boolean | number
-                  reason: string
-                }
-              : never
+export type UrlParams<T extends HandlerType> = T extends keyof UrlParamsMap
+  ? UrlParamsMap[T]
+  : never
+
+type BodyParamsMap = {
+  [HandlerType.GetOrCreateDocument]: GetOrCreateDocumentBodyParams
+  [HandlerType.RunDocument]: RunDocumentBodyParams
+  [HandlerType.Chat]: ChatBodyParams
+  [HandlerType.Log]: LogBodyParams
+  [HandlerType.Evaluate]: { evaluationUuids?: string[] }
+  [HandlerType.EvaluationResult]: {
+    result: string | boolean | number
+    reason: string
+  }
+}
+
+export type BodyParams<T extends HandlerType> = T extends keyof BodyParamsMap
+  ? BodyParamsMap[T]
+  : never
 
 export type StreamChainResponse = {
   uuid: string
