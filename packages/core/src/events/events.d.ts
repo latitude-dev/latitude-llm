@@ -71,6 +71,8 @@ export type Events =
   | 'evaluationV2Created'
   | 'evaluationV2Ran'
   | 'evaluationResultV2Created'
+  | 'mcpServerConnected'
+  | 'scaleMcpServer'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -527,6 +529,23 @@ export type EvaluationResultV2CreatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type ScaleMcpServerEvent = LatitudeEventGeneric<
+  'scaleMcpServer',
+  {
+    workspaceId: number
+    mcpServerId: number
+    replicas: number
+  }
+>
+
+export type McpServerConnectedEvent = LatitudeEventGeneric<
+  'mcpServerConnected',
+  {
+    workspaceId: number
+    mcpServerId: number
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -570,6 +589,8 @@ export type LatitudeEvent =
   | EvaluationV2CreatedEvent
   | EvaluationV2RanEvent
   | EvaluationResultV2CreatedEvent
+  | ScaleMcpServerEvent
+  | McpServerConnectedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -614,4 +635,6 @@ export interface IEventsHandlers {
   evaluationV2Created: EventHandler<EvaluationV2CreatedEvent>[]
   evaluationV2Ran: EventHandler<EvaluationV2RanEvent>[]
   evaluationResultV2Created: EventHandler<EvaluationResultV2CreatedEvent>[]
+  scaleMcpServer: EventHandler<ScaleMcpServerEvent>[]
+  mcpServerConnected: EventHandler<McpServerConnectedEvent>[]
 }

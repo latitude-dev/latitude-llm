@@ -240,8 +240,6 @@ export default function DocumentEditor({
     })
   }, [document.promptlVersion, agentToolsMap, providers, integrations])
 
-  console.log('TOP_METADATA', metadata)
-
   const onChange = useCallback(
     (newValue: string) => {
       setIsSaved(false)

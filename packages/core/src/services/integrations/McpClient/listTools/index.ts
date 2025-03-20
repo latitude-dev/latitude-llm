@@ -1,15 +1,17 @@
 import { McpTool } from '@latitude-data/constants'
 import { IntegrationDto } from '../../../../browser'
 import { LatitudeError, PromisedResult, Result } from '../../../../lib'
-import { getMcpClient } from '../getMcpClient'
+import { getMcpClient } from '../McpClientManager'
 import { touchIntegration } from '../../touch'
 import { fixToolSchema } from './fixToolSchema'
 import { JSONSchema7 } from 'json-schema'
+import { ChainStreamManager } from '../../../../lib/chainStreamManager'
 
 export async function listTools(
   integration: IntegrationDto,
+  chainStreamManager?: ChainStreamManager,
 ): PromisedResult<McpTool[], LatitudeError> {
-  const clientResult = await getMcpClient(integration)
+  const clientResult = await getMcpClient(integration, chainStreamManager)
   if (clientResult.error) {
     return clientResult
   }

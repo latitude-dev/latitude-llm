@@ -46,7 +46,6 @@ export const GET = errorHandler(
         .findByName(params.integrationName)
         .then((r) => r.unwrap())
 
-      // const toolList = await listTools(integration).then((r) => r.unwrap())
       const result = await listTools(integration)
 
       if (result.error) {

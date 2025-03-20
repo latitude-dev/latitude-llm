@@ -11,6 +11,8 @@ import { getAgentsAsToolCallsResults } from './agentsAsTools'
 import { getIntegrationToolCallResults } from './integrationTools'
 import { getAgentReturnToolCallsResults } from './agentReturn'
 import { ResolvedTools, ToolSource } from '../../resolveTools/types'
+import { createMcpClientManager } from '../../../../services/integrations/McpClient/McpClientManager'
+import { ChainStreamManager } from '../..'
 
 export function getBuiltInToolCallResponses({
   workspace,
@@ -18,12 +20,16 @@ export function getBuiltInToolCallResponses({
   resolvedTools,
   toolCalls,
   onFinish,
+  chainStreamManager,
+  mcpClientManager,
 }: {
   workspace: Workspace
   promptSource: PromptSource
   resolvedTools: ResolvedTools
   toolCalls: ToolCall[]
   onFinish: (toolMessage: ToolMessage) => void
+  chainStreamManager?: ChainStreamManager
+  mcpClientManager?: ReturnType<typeof createMcpClientManager>
 }): Promise<ToolMessage>[] {
   // Split tool calls into Latitude, Agent, Integration, and Unknown tools
   const [
@@ -77,6 +83,8 @@ export function getBuiltInToolCallResponses({
       promptSource,
       resolvedTools,
       toolCalls,
+      chainStreamManager,
+      mcpClientManager,
     })
     return results.map(async (promisedResult, idx) => {
       const message = buildToolMessage({

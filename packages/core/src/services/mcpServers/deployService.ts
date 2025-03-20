@@ -57,13 +57,10 @@ export async function deployMcpServer(
       } as k8s.KubernetesObject
 
       await k8sObjectApi.create(namespaceManifest)
-      console.log(`Created namespace: ${targetNamespace}`)
     } catch (namespaceError: any) {
       // If namespace already exists (409 Conflict), we can continue safely
       if (namespaceError.code === 409) {
-        console.log(
-          `Namespace ${targetNamespace} already exists, continuing deployment`,
-        )
+        // Namespace already exists, continuing deployment,
       } else {
         // For other errors, fail the deployment
         return Result.error(
@@ -158,6 +155,7 @@ export async function deployMcpServer(
           k8sManifest: manifest,
           environmentVariables: encrypt(JSON.stringify(environmentVariables)),
           endpoint: `${uniqueAppName}.${env.LATITUDE_MCP_HOST}`,
+          replicas: 1,
           command,
         })
         .returning()

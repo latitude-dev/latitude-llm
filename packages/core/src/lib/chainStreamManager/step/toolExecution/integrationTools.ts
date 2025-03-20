@@ -6,12 +6,19 @@ import { ToolResponsesArgs } from './types'
 import { callIntegrationTool } from '../../../../services/integrations/McpClient/callTool'
 import { IntegrationsRepository } from '../../../../repositories'
 import { IntegrationDto } from '../../../../browser'
+import { createMcpClientManager } from '../../../../services/integrations/McpClient/McpClientManager'
+import { ChainStreamManager } from '../..'
 
 export function getIntegrationToolCallResults({
   workspace,
   toolCalls,
   resolvedTools,
-}: ToolResponsesArgs): PromisedResult<unknown>[] {
+  chainStreamManager,
+  mcpClientManager,
+}: ToolResponsesArgs & {
+  chainStreamManager?: ChainStreamManager
+  mcpClientManager?: ReturnType<typeof createMcpClientManager>
+}): PromisedResult<unknown>[] {
   const integrationNames = Object.values(resolvedTools).reduce((acc, tool) => {
     if (tool.sourceData?.source === ToolSource.Integration) {
       acc.add(tool.sourceData.integrationName)
@@ -45,6 +52,8 @@ export function getIntegrationToolCallResults({
       integration,
       toolName: toolSourceData.toolName,
       args: toolCall.arguments,
+      chainStreamManager,
+      mcpClientManager,
     })
   })
 }

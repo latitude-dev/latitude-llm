@@ -22,12 +22,13 @@ import { buildMessagesFromResponse } from '../../helpers'
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { ChainError } from './ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { ProviderApiKey, Workspace } from '../../browser'
+import { IntegrationDto, ProviderApiKey, Workspace } from '../../browser'
 import { resolveToolsFromConfig } from './resolveTools'
 import { omit } from 'lodash-es'
 import { ToolSource } from './resolveTools/types'
 import { getBuiltInToolCallResponses } from './step/toolExecution'
 import { JSONSchema7 } from 'json-schema'
+import { createMcpClientManager } from '../../services/integrations/McpClient/McpClientManager'
 
 const usePromise = <T>(): readonly [Promise<T>, (value: T) => void] => {
   let resolveValue: (value: T) => void
@@ -63,6 +64,7 @@ export class ChainStreamManager {
   ) => void
   private controller?: ReadableStreamDefaultController<ChainEvent>
   private finishReason?: FinishReason
+  private mcpClientManager: ReturnType<typeof createMcpClientManager>
 
   constructor({
     workspace,
@@ -86,6 +88,7 @@ export class ChainStreamManager {
     this.tokenUsage = tokenUsage
     this.errorableUuid = errorableUuid
     this.promptSource = promptSource
+    this.mcpClientManager = createMcpClientManager()
   }
 
   /**
@@ -190,6 +193,7 @@ export class ChainStreamManager {
       promptSource: this.promptSource,
       config: conversation.config as PromptConfig,
       injectAgentFinishTool,
+      chainStreamManager: this,
     }).then((r) => r.unwrap())
 
     const tools = Object.fromEntries(
@@ -297,6 +301,8 @@ export class ChainStreamManager {
       promptSource: this.promptSource,
       resolvedTools,
       toolCalls: nonClientToolCalls,
+      chainStreamManager: this,
+      mcpClientManager: this.mcpClientManager,
       onFinish: (toolMessage: ToolMessage) => {
         this.messages.push(toolMessage)
         this.sendEvent({ type: ChainEventTypes.ToolCompleted })
@@ -358,6 +364,16 @@ export class ChainStreamManager {
   }
 
   /**
+   * Sends an event to the client to inform it that an integration is waking up
+   */
+  wakingIntegration(integration: IntegrationDto) {
+    this.sendEvent({
+      type: ChainEventTypes.IntegrationWakingUp,
+      integrationName: integration.name,
+    })
+  }
+
+  /**
    * Ends the chain stream with an error
    */
   error(error: ChainError<RunErrorCodes>) {
@@ -415,6 +431,7 @@ export class ChainStreamManager {
 
     try {
       this.controller.close()
+      this.mcpClientManager.closeAllClients()
     } catch (_) {
       // do nothing, the stream is already closed
     }

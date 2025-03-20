@@ -22,4 +22,9 @@ export async function setupSchedules() {
     '* * * * *',
     { attempts: 1 },
   )
+
+  // Every 10 minutes
+  await queues.maintenanceQueue.jobs.scheduleAutoScaleJob('*/10 * * * *', {
+    attempts: 1,
+  })
 }
