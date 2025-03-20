@@ -31,17 +31,20 @@ export default function DataGrid<R>({
   ...rest
 }: Props<R>) {
   return (
-    <div className='border rounded-lg'>
-      <ReactDataGrid<R>
-        className={cn('latitude-data-grid rounded-lg custom-scrollbar h-full', className)}
-        headerRowHeight={headerRowHeight}
-        rowHeight={rowHeight}
-        renderers={{
-          ...renderers,
-          noRowsFallback: <NoRowsFallback fallbackText={fallbackText} />,
-        }}
-        {...rest}
-      />
-    </div>
+    <ReactDataGrid<R>
+      className={cn(
+        'latitude-data-grid ',
+        'custom-scrollbar h-full max-h-full flex-grow',
+        'border rounded-lg',
+        className,
+      )}
+      headerRowHeight={headerRowHeight}
+      rowHeight={rowHeight}
+      renderers={{
+        ...renderers,
+        noRowsFallback: <NoRowsFallback fallbackText={fallbackText} />,
+      }}
+      {...rest}
+    />
   )
 }
