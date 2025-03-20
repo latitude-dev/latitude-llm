@@ -16,7 +16,7 @@ const DataGrid = dynamic(() => import('./DataGrid'), {
   ssr: false,
 })
 
-export const ROWS_PAGE_SIZE = '50'
+export const ROWS_PAGE_SIZE = '25'
 export function DatasetDetailTable({
   dataset,
   rows: serverDatasetRows,

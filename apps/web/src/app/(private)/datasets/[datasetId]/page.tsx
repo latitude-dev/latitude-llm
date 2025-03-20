@@ -16,7 +16,7 @@ import {
 } from '@latitude-data/core/repositories'
 import { notFound } from 'next/navigation'
 import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
-import { DatasetDetailTable, ROWS_PAGE_SIZE } from './DatasetDetailTable'
+import { DatasetDetailTable } from './DatasetDetailTable'
 import {
   Dataset,
   DatasetV2,
@@ -30,6 +30,7 @@ type GetDataResult =
   | { isV2: false; dataset: Dataset }
   | { isV2: true; dataset: DatasetV2; rows: DatasetRow[] }
 
+const ROWS_PAGE_SIZE = '100'
 async function getData({
   workspace,
   datasetId,
@@ -59,10 +60,12 @@ async function getData({
 
   const dataset = result.value
   const rowsRepo = new DatasetRowsRepository(workspace.id)
+  const size = pageSize ?? ROWS_PAGE_SIZE
+  console.log('fooSize', size)
   const rows = await rowsRepo.findByDatasetPaginated({
     datasetId: dataset.id,
     page,
-    pageSize: pageSize ?? ROWS_PAGE_SIZE,
+    pageSize: size,
   })
 
   return Result.ok({ dataset, rows, isV2: true })
@@ -79,6 +82,7 @@ export default async function DatasetDetail({
   }>
 }) {
   const { pageSize, page: pageString } = await searchParams
+  console.log('PAGE_SIZE', pageSize)
   const { datasetId } = await params
   const { workspace } = await getCurrentUser()
   const result = await getData({
