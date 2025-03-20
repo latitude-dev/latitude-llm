@@ -12,7 +12,7 @@ import {
 import { type OutputItem } from '../useSelectedLogs'
 import { Column, DatasetRowData } from '@latitude-data/core/schema'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
-import { DatasetHeadText } from '$/app/(private)/datasets/[datasetId]/DatasetDetailTable'
+import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
 
 type Cell = DatasetRowData[keyof DatasetRowData]
 

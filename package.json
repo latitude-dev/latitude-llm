@@ -64,6 +64,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@react-email/components": "^0.0.23",
     "@sindresorhus/slugify": "^2.2.1",
+    "react-data-grid": "7.0.0-beta.51",
     "@t3-oss/env-core": "^0.11.1",
     "ai": "^4.1.61",
     "argon2": "^0.41.1",

@@ -1,3 +1,13 @@
+// NOTE:: About CSS for DataGrid component
+//
+// Whenever you use `@latitude-data/web-ui/data-grid`,
+// you must also import the CSS file from the library we use.
+// I would rather prefer collocated CSS, but sometimes life is not perfect.
+//
+// If we found ourselves using data grid a lot maybe move this import
+// to root layout. But I think it's a shame to always load this CSS.
+import 'react-data-grid/lib/styles.css'
+
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import {
   DatasetRowsRepository,
