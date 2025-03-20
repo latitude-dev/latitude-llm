@@ -392,7 +392,7 @@ function ReferenceComponent({
           reference.identifier ? (
             <Badge
               variant='accent'
-              className='cursor-pointer'
+              className='cursor-pointer inline-flex'
               onClick={() => setCollapseReference(!collapseReference)}
             >
               &#123;&#123;{reference.identifier}&#125;&#125;
