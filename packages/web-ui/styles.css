@@ -217,3 +217,7 @@
   border-inline-end: 1px solid var(--rdg-border-color);
   border-block-end: 1px solid var(--rdg-border-color);
 }
+.rdg-header-row .rdg-cell:last-child,
+.rdg-row .rdg-cell:last-child {
+  border-inline-end: none;
+}

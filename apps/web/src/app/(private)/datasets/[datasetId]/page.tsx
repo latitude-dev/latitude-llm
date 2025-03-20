@@ -61,7 +61,6 @@ async function getData({
   const dataset = result.value
   const rowsRepo = new DatasetRowsRepository(workspace.id)
   const size = pageSize ?? ROWS_PAGE_SIZE
-  console.log('fooSize', size)
   const rows = await rowsRepo.findByDatasetPaginated({
     datasetId: dataset.id,
     page,
