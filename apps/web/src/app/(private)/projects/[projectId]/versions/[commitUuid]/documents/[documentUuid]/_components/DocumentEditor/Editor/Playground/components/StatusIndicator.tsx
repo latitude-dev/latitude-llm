@@ -48,6 +48,7 @@ export function StatusIndicator({
               align='center'
               sideOffset={5}
               delayDuration={250}
+              asChild
               trigger={
                 <button
                   type='button'

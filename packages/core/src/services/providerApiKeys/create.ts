@@ -1,4 +1,5 @@
-import { DatabaseError } from 'pg'
+import pg from 'pg'
+const { DatabaseError } = pg
 
 import { Providers, User, Workspace } from '../../browser'
 import { database } from '../../client'

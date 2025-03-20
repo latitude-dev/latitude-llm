@@ -87,49 +87,49 @@ describe('createRowsFromUploadedDataset', () => {
       {
         [name]: 'Paco',
         [surname]: 'Merlo',
-        [age]: '43',
+        [age]: 43,
         [nationality]: 'Spanish',
       },
       {
         [name]: 'Frank',
         [surname]: 'Merlo',
-        [age]: '11',
+        [age]: 11,
         [nationality]: 'North American',
       },
       {
         [name]: 'François',
         [surname]: 'Merlo',
-        [age]: '84',
+        [age]: 84,
         [nationality]: 'French',
       },
       {
         [name]: 'Francesco',
         [surname]: 'Merlo',
-        [age]: '19',
+        [age]: 19,
         [nationality]: 'Italian',
       },
       {
         [name]: 'Francisco',
         [surname]: 'Merlo',
-        [age]: '9',
+        [age]: 9,
         [nationality]: 'Portuguese',
       },
       {
         [name]: 'Frančišek',
         [surname]: 'Merlo',
-        [age]: '89',
+        [age]: 89,
         [nationality]: 'Slovenian',
       },
       {
         [name]: 'Francis',
         [surname]: 'Merlo',
-        [age]: '23',
+        [age]: 23,
         [nationality]: 'British',
       },
       {
         [name]: 'Franz',
         [surname]: 'Merlo',
-        [age]: '48',
+        [age]: 48,
         [nationality]: 'German',
       },
     ])
@@ -148,13 +148,21 @@ describe('createRowsFromUploadedDataset', () => {
       `,
       })
       .then((r) => r.dataset)
+    const francoisJson = JSON.stringify({
+      name: 'valueFrançois',
+      age: 18,
+    }).replace(/"/g, '""')
+    const francescoJson = JSON.stringify({
+      name: 'valueFrancesco',
+      age: 29,
+    }).replace(/"/g, '""')
     const { fileKey: anotherFileKey } = await createTestCsvFile({
       name: 'another.csv',
       fileContent: `
-        age,name,surname
-        18,François,Merlo
-        29,Francesco,Merlo
-      `,
+        age,name,surname,json_data,nullColumn,emptyColumn,booleanColumn,dateColumn,floatColumn
+        18,François,Merlo,"${francoisJson}",null,"",true,2000-01-01,1.1
+        29,Francesco,Merlo,"${francescoJson}","null","",false,2025-01-01,3.3
+      `.trim(),
     })
     expect(true).toBe(true)
     const event = {
@@ -188,11 +196,37 @@ describe('createRowsFromUploadedDataset', () => {
     const name = columns.find((c) => c.name === 'name')!.identifier
     const surname = columns.find((c) => c.name === 'surname')!.identifier
     const age = columns.find((c) => c.name === 'age')!.identifier
+    const jsonCol = columns.find((c) => c.name === 'json_data')!.identifier
+    const nullCol = columns.find((c) => c.name === 'nullColumn')!.identifier
+    const emptyCol = columns.find((c) => c.name === 'emptyColumn')!.identifier
+    const booleanCol = columns.find(
+      (c) => c.name === 'booleanColumn',
+    )!.identifier
+    const dateCol = columns.find((c) => c.name === 'dateColumn')!.identifier
+    const floatCol = columns.find((c) => c.name === 'floatColumn')!.identifier
 
     expect(columns).toEqual([
       { identifier: expect.any(String), name: 'name', role: 'parameter' },
       { identifier: expect.any(String), name: 'surname', role: 'parameter' },
       { identifier: expect.any(String), name: 'age', role: 'parameter' },
+      { identifier: expect.any(String), name: 'json_data', role: 'parameter' },
+      { identifier: expect.any(String), name: 'nullColumn', role: 'parameter' },
+      {
+        identifier: expect.any(String),
+        name: 'emptyColumn',
+        role: 'parameter',
+      },
+      {
+        identifier: expect.any(String),
+        name: 'booleanColumn',
+        role: 'parameter',
+      },
+      { identifier: expect.any(String), name: 'dateColumn', role: 'parameter' },
+      {
+        identifier: expect.any(String),
+        name: 'floatColumn',
+        role: 'parameter',
+      },
     ])
     expect(rowData).toEqual([
       {
@@ -206,12 +240,24 @@ describe('createRowsFromUploadedDataset', () => {
       {
         [name]: 'François',
         [surname]: 'Merlo',
-        [age]: '18',
+        [age]: 18,
+        [jsonCol]: { name: 'valueFrançois', age: 18 },
+        [nullCol]: '',
+        [emptyCol]: '',
+        [booleanCol]: true,
+        [dateCol]: '2000-01-01T00:00:00.000Z',
+        [floatCol]: 1.1,
       },
       {
         [name]: 'Francesco',
         [surname]: 'Merlo',
-        [age]: '29',
+        [age]: 29,
+        [jsonCol]: { name: 'valueFrancesco', age: 29 },
+        [nullCol]: '',
+        [emptyCol]: '',
+        [booleanCol]: false,
+        [dateCol]: '2025-01-01T00:00:00.000Z',
+        [floatCol]: 3.3,
       },
     ])
   })

@@ -12,7 +12,7 @@ export const FEATURE_FLAGS_CONDITIONS: Record<
   FeatureFlag,
   FeatureFlagCondition
 > = {
-  datasetsV2: { workspaceIds: [] },
+  datasetsV2: { workspaceIds: [1] },
   datasetsV1ModificationBlocked: { workspaceIds: [] },
 }
 

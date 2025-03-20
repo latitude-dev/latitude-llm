@@ -8,7 +8,51 @@ import {
   Transaction,
 } from '../../lib'
 import { datasetsV2 } from '../../schema'
-import { DatabaseError } from 'pg'
+import pg from 'pg'
+const { DatabaseError } = pg
+import { syncReadCsv } from '../../lib/readCsv'
+import { buildColumns, HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
+
+export async function getCsvAndBuildColumns({
+  file,
+  csvDelimiter,
+  hashAlgorithm = nanoidHashAlgorithm,
+}: {
+  file: File | string
+  csvDelimiter: string
+  hashAlgorithm?: HashAlgorithmFn
+}) {
+  const readCsvResult = await syncReadCsv(file, {
+    delimiter: csvDelimiter,
+  })
+
+  if (readCsvResult.error) return Result.error(readCsvResult.error)
+
+  const headers = readCsvResult.value?.headers ?? []
+  const uniqueHeaders = new Set(headers)
+
+  if (uniqueHeaders.size === 0) {
+    return Result.error(new BadRequestError('CSV file must contain headers'))
+  }
+
+  if ([...uniqueHeaders].some((h) => h.length === 0)) {
+    return Result.error(
+      new BadRequestError('CSV header cannot be an empty string'),
+    )
+  }
+
+  let columns: Column[] = []
+  const newColumns = Array.from(uniqueHeaders.keys()).map((columnName) => ({
+    name: columnName,
+  }))
+  return Result.ok(
+    buildColumns({
+      newColumns,
+      prevColumns: columns,
+      hashAlgorithm,
+    }),
+  )
+}
 
 export const createDataset = async (
   {

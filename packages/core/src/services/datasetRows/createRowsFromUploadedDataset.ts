@@ -59,6 +59,7 @@ function parseBatch({
 }) {
   return batch.reduce((acc, row) => {
     const parsedRow = parseRow({ columns, row })
+
     acc.push(parsedRow)
     return acc
   }, [] as DatasetRowData[])
@@ -92,6 +93,7 @@ export async function createRowsFromUploadedDataset(
     onRowsCreated,
     onFinished,
     onError,
+    deleteFile = true,
     disk = diskFactory(),
     batchSize = DEFAULT_CSV_BATCH_SIZE,
     hashAlgorithm = nanoidHashAlgorithm,
@@ -101,6 +103,7 @@ export async function createRowsFromUploadedDataset(
     onRowsCreated?: (args: { dataset: DatasetV2; rows: DatasetRow[] }) => void
     onFinished?: () => void
     disk?: DiskWrapper
+    deleteFile?: boolean
     batchSize?: number
     hashAlgorithm?: HashAlgorithmFn
   },
@@ -121,6 +124,7 @@ export async function createRowsFromUploadedDataset(
   const stream = await file.getStream()
   let columns = dataset.columns
   let index = 0
+  let rowCount = 0
 
   for await (const batch of csvBatchGenerator({
     stream,
@@ -129,13 +133,19 @@ export async function createRowsFromUploadedDataset(
   })) {
     if (batch === null) {
       onFinished?.()
-      const deleteResult = await disk.delete(fileKey)
 
-      if (deleteResult.error) {
-        throw new Error(
-          `Error deleting file: ${deleteResult.error.message} datasetId: ${datasetId} workspaceId: ${workspaceId}`,
-        )
-      }
+      if (!deleteFile) break
+
+      // PARANOID MODE: I don't want to enable file deletion until we have migrated
+      // all datasets V1
+
+      /* const deleteResult = await disk.delete(fileKey) */
+      /**/
+      /* if (deleteResult.error) { */
+      /*   throw new Error( */
+      /*     `Error deleting file: ${deleteResult.error.message} datasetId: ${datasetId} workspaceId: ${workspaceId}`, */
+      /*   ) */
+      /* } */
       break
     }
 
@@ -158,6 +168,7 @@ export async function createRowsFromUploadedDataset(
     }
 
     const rows = parseBatch({ columns, batch })
+    rowCount += rows.length
     const insertResult = await insertRowsInBatch(
       { dataset, data: { rows } },
       db,
@@ -173,5 +184,5 @@ export async function createRowsFromUploadedDataset(
     index++
   }
 
-  return Result.nil()
+  return Result.ok({ dataset, rowCount })
 }

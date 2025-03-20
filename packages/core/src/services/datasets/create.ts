@@ -1,7 +1,8 @@
 import path from 'path'
 
 import slugify from '@sindresorhus/slugify'
-import { DatabaseError } from 'pg'
+import pg from 'pg'
+const { DatabaseError } = pg
 
 import { User, Workspace } from '../../browser'
 import { database } from '../../client'

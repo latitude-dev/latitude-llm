@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
 }))
 vi.mock('nanoid', () => ({ nanoid: mocks.nanoid }))
 
-describe('createDataset', () => {
+describe('createDatasetFromFile', () => {
   let workspace: Workspace
   let user: User
   let file: File

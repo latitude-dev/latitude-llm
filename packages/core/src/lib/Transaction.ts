@@ -1,7 +1,7 @@
 import { env } from '@latitude-data/env'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import { PgQueryResultHKT, PgTransaction } from 'drizzle-orm/pg-core'
-import { DatabaseError } from 'pg'
+import { type DatabaseError } from 'pg'
 
 import { database, Database } from '../client'
 import * as schema from '../schema'

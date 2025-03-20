@@ -8,7 +8,7 @@
     "./cache": "./src/cache/index.ts",
     "./client": "./src/client/index.ts",
     "./data-access": "./src/data-access/index.ts",
-    "./data-migrations/*": "./src/data-migrations/*.ts",
+    "./data-migrations": "./src/data-migrations/index.ts",
     "./events/*": "./src/events/*.ts",
     "./factories": "./src/tests/factories/index.ts",
     "./jobs": "./src/jobs/index.ts",
