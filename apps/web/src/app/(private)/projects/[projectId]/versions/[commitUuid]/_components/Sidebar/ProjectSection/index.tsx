@@ -54,6 +54,13 @@ export default function ProjectSection({
         .commits.detail({ uuid: commit.uuid }).history.root,
       iconName: 'history',
     },
+    {
+      label: 'Copilot',
+      route: ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({ uuid: commit.uuid }).copilot.root,
+      iconName: 'bot',
+    },
   ]
 
   return (

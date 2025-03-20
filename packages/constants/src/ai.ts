@@ -55,7 +55,7 @@ type GoogleConfig = z.infer<typeof googleConfig>
 
 export type ToolDefinition = JSONSchema7 & {
   description: string
-  parameters: {
+  parameters?: {
     type: 'object'
     properties: Record<string, JSONSchema7>
     required?: string[]
