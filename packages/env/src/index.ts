@@ -183,6 +183,7 @@ export const env = createEnv({
     COPILOT_REFINE_PROMPT_PATH: z.string().optional(),
     COPILOT_WORKSPACE_API_KEY: z.string().optional(),
     COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH: z.string().optional(),
+    COPILOT_PROJECT_MANAGER_PROMPT_PATH: z.string().optional(),
 
     LOOPS_API_KEY: z.string().optional(),
     CODESANDBOX_API_KEY: z.string().optional(),
