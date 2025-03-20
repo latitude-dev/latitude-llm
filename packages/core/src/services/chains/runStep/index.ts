@@ -15,9 +15,11 @@ import { cacheChain } from '../chainCache'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import {
   ABSOLUTE_MAX_STEPS,
+  ChainStepResponse,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
   PromptConfig,
+  StreamType,
 } from '@latitude-data/constants'
 
 function assertValidStepCount({
@@ -61,6 +63,7 @@ export type StepProps = {
   stepCount?: number
   previousConfig: PromptConfig
   abortSignal?: AbortSignal
+  previousResponse?: ChainStepResponse<StreamType>
 }
 
 export async function runStep({
@@ -79,6 +82,7 @@ export async function runStep({
   removeSchema,
   stepCount = 0,
   abortSignal,
+  previousResponse,
 }: StepProps) {
   if (newMessages?.length) {
     const lastResponseMessage = newMessages[0]! as AssistantMessage
@@ -106,7 +110,11 @@ export async function runStep({
 
   // With PromptL, the chain complete is checked AFTER the step is executed.
   // If the chain is completed, no more steps must be ran.
-  if (chain instanceof PromptlChain && step.chainCompleted) {
+  if (
+    chain instanceof PromptlChain &&
+    step.chainCompleted &&
+    !!previousResponse // If no previous response has been generated, make an additional step
+  ) {
     chainStreamManager.done()
     return step.conversation
   }
@@ -167,5 +175,6 @@ export async function runStep({
     configOverrides,
     removeSchema,
     abortSignal,
+    previousResponse: response,
   })
 }
