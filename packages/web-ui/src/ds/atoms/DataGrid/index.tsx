@@ -35,11 +35,11 @@ export default function DataGrid<R>({
 }: Props<R>) {
   return (
     <div className='flex-1 min-h-0 flex flex-col h-full border rounded-lg '>
-      <div className='flex-1 min-h-0 relative'>
+      <div className='flex flex-col flex-1 min-h-0 relative'>
         <ReactDataGrid<R>
           className={cn(
-            'latitude-data-grid custom-scrollbar',
-            'relative h-full max-h-full',
+            'latitude-data-grid custom-scrollbar rounded-lg',
+            'relative max-h-full h-full',
             className,
           )}
           headerRowHeight={headerRowHeight}
@@ -52,7 +52,7 @@ export default function DataGrid<R>({
         />
       </div>
       {footer ? (
-        <div className='relative z-10 shrink-0 bg-muted w-full py-2 px-4'>
+        <div className='rounded-b-lg relative z-10 shrink-0 bg-muted w-full py-2 px-4'>
           {footer}
         </div>
       ) : null}
