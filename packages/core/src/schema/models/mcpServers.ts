@@ -1,4 +1,11 @@
-import { bigint, bigserial, index, text, timestamp } from 'drizzle-orm/pg-core'
+import {
+  bigint,
+  bigserial,
+  index,
+  integer,
+  text,
+  timestamp,
+} from 'drizzle-orm/pg-core'
 
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'
@@ -42,7 +49,9 @@ export const mcpServers = latitudeSchema.table(
     status: k8sAppStatusEnum('status').notNull(),
 
     // Deployment timestamps
+    replicas: integer('replicas').notNull().default(1),
     deployedAt: timestamp('deployed_at'),
+    lastUsedAt: timestamp('last_used_at').notNull().defaultNow(),
     lastAttemptAt: timestamp('last_attempt_at'),
 
     // k8s namespace
@@ -62,5 +71,6 @@ export const mcpServers = latitudeSchema.table(
     authorIdIdx: index('mcp_servers_author_id_idx').on(table.authorId),
     statusIdx: index('mcp_servers_status_idx').on(table.status),
     uniqueNameIdx: index('mcp_servers_unique_name_idx').on(table.uniqueName),
+    lastUsedAtIdx: index('mcp_servers_last_used_at_idx').on(table.lastUsedAt),
   }),
 )

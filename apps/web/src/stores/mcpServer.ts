@@ -8,8 +8,7 @@ export function useMcpServer(
 ) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<Error | null>(null)
-
-  const { data, isLoading, error } = useSWR<McpServer>(
+  const { data, isLoading, isValidating, error } = useSWR<McpServer>(
     mcpServerId ? ['mcpServers', mcpServerId] : null,
     updateMcpServerStatus,
     swrConfig,
@@ -18,6 +17,7 @@ export function useMcpServer(
   return {
     data,
     isLoading,
+    isValidating,
     isUpdating,
     error,
     updateError,

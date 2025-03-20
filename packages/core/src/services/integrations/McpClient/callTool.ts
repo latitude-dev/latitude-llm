@@ -1,7 +1,8 @@
 import { IntegrationDto } from '../../../browser'
 import { LatitudeError, PromisedResult, Result } from '../../../lib'
-import { getMcpClient } from './getMcpClient'
+import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import { touchIntegration } from '../touch'
+import { createMcpClientManager } from './McpClientManager'
 
 type ResultContent =
   | { type: 'text'; text: string }
@@ -28,12 +29,23 @@ export async function callIntegrationTool({
   integration,
   toolName,
   args,
+  chainStreamManager,
+  mcpClientManager,
 }: {
   integration: IntegrationDto
   toolName: string
   args: Record<string, unknown>
+  chainStreamManager?: ChainStreamManager
+  mcpClientManager?: ReturnType<typeof createMcpClientManager>
 }): PromisedResult<unknown, LatitudeError> {
-  const clientResult = await getMcpClient(integration)
+  if (!mcpClientManager) {
+    return Result.error(new LatitudeError('MCP Client Manager not provided'))
+  }
+
+  const clientResult = await mcpClientManager.getClient(
+    integration,
+    chainStreamManager,
+  )
   if (clientResult.error) {
     return clientResult
   }

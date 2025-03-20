@@ -2,6 +2,8 @@ import type { IntegrationDto } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { createIntegrationAction } from '$/actions/integrations/create'
 import { destroyIntegrationAction } from '$/actions/integrations/destroy'
+import { scaleDownMcpServerAction } from '$/actions/integrations/scaleDown'
+import { scaleUpMcpServerAction } from '$/actions/integrations/scaleUp'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
@@ -65,6 +67,42 @@ export default function useIntegrations({
     },
   )
 
+  const { execute: scaleDown, isPending: isScalingDown } = useLatitudeAction(
+    scaleDownMcpServerAction,
+    {
+      onSuccess: async ({ data: mcpServer }) => {
+        toast({
+          title: 'Success',
+          description: 'MCP server scaled down successfully',
+        })
+
+        mutate(
+          data.map((item) =>
+            item.id === mcpServer.id ? { ...item, mcpServer: mcpServer } : item,
+          ),
+        )
+      },
+    },
+  )
+
+  const { execute: scaleUp, isPending: isScalingUp } = useLatitudeAction(
+    scaleUpMcpServerAction,
+    {
+      onSuccess: async ({ data: mcpServer }) => {
+        toast({
+          title: 'Success',
+          description: 'MCP server scaled up successfully',
+        })
+
+        mutate(
+          data.map((item) =>
+            item.id === mcpServer.id ? { ...item, mcpServer: mcpServer } : item,
+          ),
+        )
+      },
+    },
+  )
+
   return {
     data,
     create,
@@ -72,6 +110,10 @@ export default function useIntegrations({
     isCreating,
     destroy,
     isDestroying,
+    scaleDown,
+    isScalingDown,
+    scaleUp,
+    isScalingUp,
     mutate,
     ...rest,
   }

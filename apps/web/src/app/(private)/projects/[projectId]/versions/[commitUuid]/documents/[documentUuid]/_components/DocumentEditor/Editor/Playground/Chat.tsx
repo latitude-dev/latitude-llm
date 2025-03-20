@@ -130,6 +130,7 @@ export default function Chat({
     time,
     messages,
     runningLatitudeTools,
+    wakingUpIntegration,
     streamingResponse,
     chainLength,
     isLoading,
@@ -224,6 +225,7 @@ export default function Chat({
         <StatusIndicator
           isScrolledToBottom={isScrolledToBottom}
           usage={usage}
+          wakingUpIntegration={wakingUpIntegration}
           runningLatitudeTools={runningLatitudeTools}
           isStreaming={isLoading}
           stopStreaming={stopStreaming}

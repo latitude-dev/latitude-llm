@@ -5,18 +5,22 @@ import { useEffect, useState } from 'react'
 import { cn } from '../../../lib/utils'
 import { Progress } from '../../atoms'
 
-const DELAY_INCREMENT = 50
-const MAX_PROGRESS = 99
-const PROGRESS_INCREMENT_PERCENTAGE = 10
-
 export function FakeProgress({
   completed,
   className,
   indicatorClassName,
+  delayIncrement = 50,
+  maxProgress = 99,
+  progressIncrementPercentage = 10,
+  initialDelay = 500,
 }: {
   completed: boolean
   className?: string
   indicatorClassName?: string
+  delayIncrement?: number
+  maxProgress?: number
+  progressIncrementPercentage?: number
+  initialDelay?: number
 }) {
   const [progress, setProgress] = useState(0)
 
@@ -26,22 +30,28 @@ export function FakeProgress({
       return
     }
 
-    let incrementDelay = 500
+    let incrementDelay = initialDelay
     let timeout: ReturnType<typeof setTimeout>
     const incrementProgress = () => {
       setProgress((prevProgress) => {
         const increment =
-          (MAX_PROGRESS - prevProgress) / PROGRESS_INCREMENT_PERCENTAGE
+          (maxProgress - prevProgress) / progressIncrementPercentage
         return prevProgress + increment
       })
 
-      incrementDelay += DELAY_INCREMENT
+      incrementDelay += delayIncrement
       timeout = setTimeout(incrementProgress, incrementDelay)
     }
 
     timeout = setTimeout(incrementProgress, incrementDelay)
     return () => clearTimeout(timeout)
-  }, [completed])
+  }, [
+    completed,
+    delayIncrement,
+    maxProgress,
+    progressIncrementPercentage,
+    initialDelay,
+  ])
 
   return (
     <Progress
