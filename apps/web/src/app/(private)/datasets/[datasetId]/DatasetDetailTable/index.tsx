@@ -63,9 +63,7 @@ export function DatasetDetailTable({
   }
 
   if (!showDataGrid) {
-    return (
-      <SimpleTable {...props} />
-    )
+    return <SimpleTable {...props} />
   }
 
   return <DataGrid {...props} />

@@ -1,7 +1,11 @@
 'use client'
 
 import { ReactNode } from 'react'
-import { DataGrid as ReactDataGrid, type DataGridProps, textEditor } from 'react-data-grid'
+import {
+  DataGrid as ReactDataGrid,
+  type DataGridProps,
+  textEditor,
+} from 'react-data-grid'
 import { cn } from '../../../lib/utils'
 
 export type {
@@ -37,7 +41,10 @@ export default function DataGrid<R>({
   ...rest
 }: Props<R>) {
   return (
-    <div className='flex-1 min-h-0 flex flex-col h-full border rounded-lg '>
+    <div
+      role='grid-wrapper'
+      className='relative flex-1 min-h-0 flex flex-col h-full border rounded-lg '
+    >
       <div className='flex flex-col flex-1 min-h-0 relative'>
         <ReactDataGrid<R>
           className={cn(
