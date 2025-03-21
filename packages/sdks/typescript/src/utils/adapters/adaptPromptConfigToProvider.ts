@@ -1,4 +1,5 @@
 import type { Config } from '@latitude-data/compiler'
+import { ToolDefinitionsMap } from '@latitude-data/constants/ai'
 import { Adapters, ProviderAdapter } from 'promptl-ai'
 
 /**
@@ -11,6 +12,13 @@ export function adaptPromptConfigToProvider(
   config: Config,
   adapter: ProviderAdapter<object>,
 ): Config {
+  if (config.tools) {
+    config.tools = adaptToolsConfig(
+      config.tools as ToolDefinitionsMap | ToolDefinitionsMap[],
+      adapter,
+    )
+  }
+
   if (adapter == Adapters.openai || adapter == Adapters.anthropic) {
     return Object.keys(config).reduce((acc: Config, key: string) => {
       if (key in SNAKE_CASE_CONFIGURATION_ATTRIBUTES) {
@@ -31,4 +39,36 @@ const SNAKE_CASE_CONFIGURATION_ATTRIBUTES: Record<string, string> = {
   presencePenalty: 'presence_penalty',
   stopSequences: 'stop_sequences',
   toolChoice: 'tool_choice',
+}
+
+export function adaptToolsConfig(
+  tools: ToolDefinitionsMap | ToolDefinitionsMap[],
+  adapter: ProviderAdapter<object>,
+): object {
+  if (Array.isArray(tools)) {
+    tools = Object.assign({}, ...tools) as ToolDefinitionsMap
+  }
+
+  if (adapter == Adapters.openai) {
+    return Object.entries(tools).map(([name, definition]) => ({
+      type: 'function',
+      function: {
+        name,
+        ...definition,
+      },
+    }))
+  }
+
+  if (adapter == Adapters.anthropic) {
+    return Object.entries(tools).map(([name, definition]) => {
+      const { parameters, ...rest } = definition
+      return {
+        name,
+        input_schema: parameters,
+        ...rest,
+      }
+    })
+  }
+
+  return tools
 }
