@@ -1,4 +1,4 @@
-import BaseDataGrid from '@latitude-data/web-ui/data-grid'
+import BaseDataGrid, { SelectColumn } from '@latitude-data/web-ui/data-grid'
 import type {
   RenderCellProps,
   RenderEditCellProps,
@@ -9,12 +9,13 @@ import type {
 } from '@latitude-data/web-ui/data-grid'
 import { Text } from '@latitude-data/web-ui'
 import { DatasetRoleStyle } from '$/hooks/useDatasetRoles'
-import { ClientDatasetRow } from '$/stores/datasetRows'
 import { DatasetV2 } from '@latitude-data/core/browser'
 import { ClientPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { EditCell } from '$/app/(private)/datasets/[datasetId]/DatasetDetailTable/DataGrid/EditCell'
+import { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
+import useDatasetRows from '$/stores/datasetRows'
 
 function rowKeyGetter(row: ClientDatasetRow) {
   return row.id
@@ -30,11 +31,12 @@ export type DatasetRowsTableProps = {
 }
 
 function renderCell(props: RenderCellProps<ClientDatasetRow, unknown>) {
-  // TODO: this value is not cleaned up
   return (
-    <Text.H5 ellipsis noWrap>
-      {props.row.processedRowData[props.column.key]}
-    </Text.H5>
+    <div className='max-w-72'>
+      <Text.H5 ellipsis noWrap>
+        {props.row.processedRowData[props.column.key]}
+      </Text.H5>
+    </div>
   )
 }
 
@@ -42,21 +44,41 @@ function renderEditCell(props: RenderEditCellProps<ClientDatasetRow, unknown>) {
   return <EditCell {...props} />
 }
 
+type Props = DatasetRowsTableProps & {
+  updateRows: ReturnType<typeof useDatasetRows>['updateRows']
+}
+
 export default function DataGrid({
   dataset,
   rows,
+  updateRows,
   pagination,
-}: DatasetRowsTableProps) {
-  const columns = useMemo<DataGridProps<ClientDatasetRow>['columns']>(
-    () =>
+}: Props) {
+  const [selectedRows, setSelectedRows] = useState(
+    (): Set<number> => new Set(),
+  )
+  const columns = useMemo<DataGridProps<ClientDatasetRow>['columns']>(() => {
+    const dataColumns: DataGridProps<ClientDatasetRow>['columns'] =
       dataset.columns.map((col) => ({
         key: col.identifier,
         name: col.name,
+        resizable: true,
+        selectable: true,
+        minWidth: 80,
         renderEditCell,
         renderCell,
-      })),
-    [dataset.columns],
+      }))
+
+    return [SelectColumn, ...dataColumns]
+  }, [dataset.columns])
+  const onCellClick = useCallback(
+    (args: CellClickArgs<ClientDatasetRow>, event: CellMouseEvent) => {
+      event.preventGridDefault()
+      args.selectCell(true)
+    },
+    [],
   )
+
   const onRowsChange = useCallback(
     (
       rows: ClientDatasetRow[],
@@ -66,16 +88,9 @@ export default function DataGrid({
         .map((index) => rows[index])
         .filter((r) => r !== undefined)
 
-      console.log('CHANGED_ROWS', changedRows)
+      updateRows({ rows: changedRows })
     },
-    [],
-  )
-  const onCellClick = useCallback(
-    (args: CellClickArgs<ClientDatasetRow>, event: CellMouseEvent) => {
-      event.preventGridDefault()
-      args.selectCell(true)
-    },
-    [],
+    [updateRows],
   )
   return (
     <BaseDataGrid
@@ -84,6 +99,8 @@ export default function DataGrid({
       columns={columns}
       onRowsChange={onRowsChange}
       onCellClick={onCellClick}
+      selectedRows={selectedRows}
+      onSelectedRowsChange={setSelectedRows}
       footer={<LinkableTablePaginationFooter pagination={pagination} />}
     />
   )

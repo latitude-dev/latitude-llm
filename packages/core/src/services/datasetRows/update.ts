@@ -20,14 +20,23 @@ export const updateDatasetRow = async (
   db = database,
 ) => {
   return Transaction.call(async (trx) => {
-    const rowIds = data.rows.map((r) => r.rowId)
-    const updatedRows = await trx
-      .update(datasetRows)
-      .set({ rowData: data.rowData })
-      .where(
-        and(eq(datasetsV2.id, dataset.id), inArray(datasetRows.id, rowIds)),
-      )
-      .returning()
+    const updatedRows: (typeof datasetRows.$inferSelect)[] = []
+
+    for (const row of data.rows) {
+      const result = await trx
+        .update(datasetRows)
+        .set({ rowData: row.rowData })
+        .where(
+          and(
+            eq(datasetRows.id, row.rowId),
+            eq(datasetRows.datasetId, dataset.id),
+          ),
+        )
+        .returning()
+
+      const updatedRow = result[0]!
+      updatedRows.push(updatedRow)
+    }
 
     return Result.ok(updatedRows)
   }, db)

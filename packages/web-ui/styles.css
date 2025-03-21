@@ -193,7 +193,7 @@
       --rdg-header-draggable-background-color: hsl(var(--muted));
       --rdg-row-hover-background-color: hsl(var(--muted));
       --rdg-row-selected-background-color: hsl(var(--accent));
-      --rdg-row-selected-hover-background-color: hsl(var(--accent-button));
+      --rdg-row-selected-hover-background-color: hsl(var(--accent));
       --rdg-checkbox-focus-color: hsl(var(--accent-button));
     }
   }

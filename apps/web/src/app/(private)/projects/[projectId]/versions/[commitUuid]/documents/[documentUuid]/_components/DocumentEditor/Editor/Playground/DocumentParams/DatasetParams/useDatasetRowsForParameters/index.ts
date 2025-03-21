@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
-import useDatasetRows, { parseRowCell } from '$/stores/datasetRows'
+import useDatasetRows from '$/stores/datasetRows'
 import {
   DatasetV2,
   DatasetVersion,
@@ -14,6 +14,7 @@ import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { SelectOption } from '@latitude-data/web-ui'
 import { ConversationMetadata } from 'promptl-ai'
 import { type DatasetRowDataContent } from '@latitude-data/core/schema'
+import { parseRowCell } from '$/stores/datasetRows/rowSerializationHelpers'
 
 export type DatasetMappedValue = {
   param: string

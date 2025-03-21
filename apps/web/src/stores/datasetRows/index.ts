@@ -8,7 +8,6 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { updateDatasetRowAction } from '$/actions/datasetRows/update'
 import {
   ClientDatasetRow,
-  deserializeRow,
   serializeRow,
   serializeRows,
 } from './rowSerializationHelpers'
@@ -104,12 +103,12 @@ export default function useDatasetRows(
     ({ rows }: { rows: ClientDatasetRow[] }) => {
       if (!dataset) return
 
-      const rowsData = rows.map((row) => ({
+      const serverRows = rows.map((row) => ({
         rowId: row.id,
-        rowData: deserializeRow({ row, columns: dataset.columns }),
+        rowData: row.rowData,
       }))
 
-      update({ datasetId: dataset.id, rows: rowsData })
+      update({ datasetId: dataset.id, rows: serverRows })
     },
     [update],
   )

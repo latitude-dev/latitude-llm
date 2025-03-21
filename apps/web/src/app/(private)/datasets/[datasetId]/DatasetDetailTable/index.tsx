@@ -31,7 +31,11 @@ export function DatasetDetailTable({
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
   const pageSize = searchParams.get('pageSize') ?? ROWS_PAGE_SIZE
-  const { data: rows, mutate } = useDatasetRows(
+  const {
+    data: rows,
+    mutate,
+    updateRows,
+  } = useDatasetRows(
     { dataset, page, pageSize },
     {
       fallbackData: serverDatasetRows,
@@ -66,5 +70,5 @@ export function DatasetDetailTable({
     return <SimpleTable {...props} />
   }
 
-  return <DataGrid {...props} />
+  return <DataGrid {...props} updateRows={updateRows} />
 }

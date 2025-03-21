@@ -7,6 +7,17 @@ import {
   DatasetsV2Repository,
 } from '@latitude-data/core/repositories'
 import { authProcedure } from '$/actions/procedures'
+import { DatasetRowDataContent } from '@latitude-data/core/schema'
+
+const rowDataSchema = z.record(
+  z.custom<DatasetRowDataContent>((val) => {
+    return (
+      ['string', 'number', 'boolean'].includes(typeof val) ||
+      val === null ||
+      val === undefined
+    )
+  }),
+)
 
 export const updateDatasetRowAction = authProcedure
   .createServerAction()
@@ -16,14 +27,7 @@ export const updateDatasetRowAction = authProcedure
       rows: z.array(
         z.object({
           rowId: z.number(),
-          rowData: z.record(
-            z.union([
-              z.string(),
-              z.number(),
-              z.boolean(),
-              z.null(),
-            ]),
-          ),
+          rowData: rowDataSchema,
         }),
       ),
     }),

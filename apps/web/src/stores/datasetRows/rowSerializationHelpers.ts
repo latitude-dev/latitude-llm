@@ -58,9 +58,9 @@ export function serializeRow({
 
 export const serializeRows =
   (columns: DatasetV2['columns']) =>
-    (rows: DatasetRow[]): ClientDatasetRow[] => {
-      return rows.map((item) => serializeRow({ row: item, columns }))
-    }
+  (rows: DatasetRow[]): ClientDatasetRow[] => {
+    return rows.map((item) => serializeRow({ row: item, columns }))
+  }
 
 export function parseRowCell({
   cell,
@@ -94,56 +94,4 @@ export function parseRowCell({
   }
 
   return String(cell)
-}
-
-function tryParseFormattedDate(value: string): Date | null {
-  const formats = ['dd MMM yyyy, HH:mm', 'dd MMM yyyy']
-  for (const fmt of formats) {
-    const parsed = parseISO(formatMaybeIsoDate(value) ?? '') // naive check
-    if (isValid(parsed)) return parsed
-  }
-  return null
-}
-
-function deserializeCell(value: string): DatasetRowDataContent {
-  if (value === '') return null
-
-  // Try to parse JSON objects
-  try {
-    const parsed = JSON.parse(value)
-    if (typeof parsed === 'object' && parsed !== null) {
-      return parsed
-    }
-  } catch {
-    // not JSON
-  }
-
-  // Try to parse booleans
-  if (value === 'true') return true
-  if (value === 'false') return false
-
-  // Try to parse numbers
-  const num = Number(value)
-  if (!isNaN(num) && value.trim() !== '') {
-    return num
-  }
-
-  // Try to parse back to ISO string if it looks like a formatted date
-  const maybeDate = tryParseFormattedDate(value)
-  if (maybeDate) return maybeDate.toISOString()
-
-  return value
-}
-
-export function deserializeRow({ row }: { row: ClientDatasetRow }): DatasetRow {
-  const parsedRowData: DatasetRowData = Object.fromEntries(
-    Object.entries(row.processedRowData).map(([key, value]) => {
-      return [key, deserializeCell(value)]
-    }),
-  )
-
-  return {
-    ...row,
-    rowData: parsedRowData,
-  }
 }

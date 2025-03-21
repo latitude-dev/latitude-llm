@@ -8,7 +8,7 @@ import {
 import { createPortal } from 'react-dom'
 import { TextArea } from '@latitude-data/web-ui'
 import type { RenderEditCellProps } from '@latitude-data/web-ui/data-grid'
-import { ClientDatasetRow } from '$/stores/datasetRows'
+import { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
 
 const COMMIT_CHANGES_KEYS = ['Escape', 'Tab']
 export function EditCell({
@@ -17,7 +17,8 @@ export function EditCell({
   onRowChange,
 }: RenderEditCellProps<ClientDatasetRow, unknown>) {
   const rawValue = row.processedRowData[column.key]
-  const value = rawValue === undefined ? '' : String(rawValue)
+  const initialValue = rawValue === undefined ? '' : String(rawValue)
+  const [value, setValue] = useState(initialValue)
   const [position, setPosition] = useState<{
     top: number
     left: number
@@ -48,6 +49,7 @@ export function EditCell({
     const relativeLeft = cellRect.left - gridRect.left + gridScrollLeft
     const relativeTop = cellRect.top - gridRect.top + gridScrollTop
 
+    console.log("PREFFERED WIDTH", preferredWidth)
     setPosition({
       top: relativeTop,
       left: relativeLeft,
@@ -64,12 +66,13 @@ export function EditCell({
   const onChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {
       const prevData = row.processedRowData
+      const changedValue = e.target.value
       const newRow = {
         ...row,
-        rowData: { ...prevData, [column.key]: e.target.value },
+        rowData: { ...prevData, [column.key]: changedValue },
       }
-      const commitChanges = false
-      onRowChange(newRow, commitChanges)
+      setValue(changedValue)
+      onRowChange(newRow, false)
     },
     [row, column.key, onRowChange],
   )
@@ -78,11 +81,15 @@ export function EditCell({
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       const key = e.key
 
-      if (key === 'Enter') {
+      const isCmd = e.metaKey || e.ctrlKey
+      if (isCmd && key === 'Enter') {
         e.stopPropagation()
-      }
-
-      if (COMMIT_CHANGES_KEYS.includes(key)) {
+        e.preventDefault()
+        commitChanges()
+      } else if (key === 'Enter') {
+        e.stopPropagation()
+      } else if (COMMIT_CHANGES_KEYS.includes(key)) {
+        e.stopPropagation()
         e.preventDefault()
         commitChanges()
       }
