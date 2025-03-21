@@ -6,7 +6,6 @@ import { useSelectableRows } from '$/hooks/useSelectableRows'
 import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
 import useProviderLogs from '$/stores/providerLogs'
 import {
-  Commit,
   DocumentLogFilterOptions,
   ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
@@ -35,8 +34,6 @@ export function DocumentLogs({
   selectedLog: serverSelectedLog,
   aggregations,
   isAggregationsLoading,
-  commits,
-  isCommitsLoading,
   evaluationResults,
   isEvaluationResultsLoading,
 }: {
@@ -45,8 +42,6 @@ export function DocumentLogs({
   selectedLog?: DocumentLogWithMetadataAndError
   aggregations?: DocumentLogsAggregations
   isAggregationsLoading: boolean
-  commits: Commit[]
-  isCommitsLoading: boolean
   evaluationResults: Record<string, ResultWithEvaluationTmp[]>
   isEvaluationResultsLoading: boolean
 }) {
@@ -128,7 +123,7 @@ export function DocumentLogs({
           evaluationResults={evaluationResults}
           selectedLog={selectedLog}
           setSelectedLog={setSelectedLog}
-          isLoading={isEvaluationResultsLoading || isCommitsLoading}
+          isLoading={isEvaluationResultsLoading}
           selectableState={selectableState}
         />
         {selectedLog && (
@@ -137,12 +132,7 @@ export function DocumentLogs({
               documentLog={selectedLog}
               providerLogs={providerLogs}
               evaluationResults={evaluationResults[selectedLog.uuid]}
-              commits={commits}
-              isLoading={
-                isProviderLogsLoading ||
-                isEvaluationResultsLoading ||
-                isCommitsLoading
-              }
+              isLoading={isProviderLogsLoading || isEvaluationResultsLoading}
               stickyRef={stickyRef}
               sidebarWrapperRef={sidebarWrapperRef}
               offset={{ top: 12, bottom: 12 }}

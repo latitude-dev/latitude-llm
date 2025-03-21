@@ -7,7 +7,6 @@ import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
 import {
   buildConversation,
-  Commit,
   DatasetVersion,
   ProviderLogDto,
   ResultWithEvaluationTmp,
@@ -123,7 +122,6 @@ export function DocumentLogInfo({
   documentLog,
   providerLogs,
   evaluationResults,
-  commits,
   isLoading = false,
   error,
   className,
@@ -135,7 +133,6 @@ export function DocumentLogInfo({
   documentLog: DocumentLogWithMetadataAndError
   providerLogs?: ProviderLogDto[]
   evaluationResults?: ResultWithEvaluationTmp[]
-  commits: Commit[]
   isLoading?: boolean
   error?: Error
   className?: string
@@ -209,7 +206,7 @@ export function DocumentLogInfo({
                 {selectedTab === 'evaluations' && (
                   <DocumentLogEvaluations
                     evaluationResults={evaluationResults}
-                    commits={commits}
+                    commit={documentLog.commit}
                   />
                 )}
               </>

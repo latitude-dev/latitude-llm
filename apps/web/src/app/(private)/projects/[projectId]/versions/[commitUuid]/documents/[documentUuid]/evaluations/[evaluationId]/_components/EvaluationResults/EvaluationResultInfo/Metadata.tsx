@@ -80,6 +80,13 @@ export function EvaluationResultMetadata({
   return (
     <div className='flex flex-col gap-4'>
       <RunErrorMessage error={evaluationResult.error} />
+      <MetadataItem label='Result uuid'>
+        <ClickToCopy copyValue={evaluationResult.uuid}>
+          <Text.H5 align='right' color='foregroundMuted'>
+            {evaluationResult.uuid.split('-')[0]}
+          </Text.H5>
+        </ClickToCopy>
+      </MetadataItem>
       <MetadataItem
         label='Timestamp'
         value={format(evaluationResult.createdAt, 'PPp')}

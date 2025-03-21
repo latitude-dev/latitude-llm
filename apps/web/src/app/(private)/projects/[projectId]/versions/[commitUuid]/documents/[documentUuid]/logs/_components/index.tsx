@@ -92,7 +92,7 @@ export function DocumentLogsPage({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-  const { data: commits, isLoading: isCommitsLoading } = useCommits()
+  const { data: commits } = useCommits()
   const searchParams = useSearchParams()
   const page = searchParams.get('page')
   const pageSize = searchParams.get('pageSize')
@@ -209,8 +209,6 @@ export function DocumentLogsPage({
             selectedLog={selectedLog}
             aggregations={aggregations}
             isAggregationsLoading={isAggregationsLoading}
-            commits={commits}
-            isCommitsLoading={isCommitsLoading}
             evaluationResults={evaluationResults}
             isEvaluationResultsLoading={
               isEvaluationResultsV1Loading || isEvaluationResultsV2Loading

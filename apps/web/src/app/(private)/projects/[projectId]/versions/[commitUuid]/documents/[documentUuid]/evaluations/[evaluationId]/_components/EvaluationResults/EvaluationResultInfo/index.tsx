@@ -1,98 +1,26 @@
-import { RefObject, useCallback, useEffect, useRef, useState } from 'react'
-
-import useFetcher from '$/hooks/useFetcher'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
-import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
-import useProviderLogs from '$/stores/providerLogs'
+import { useProviderLog } from '$/stores/providerLogs'
 import {
   EvaluationDto,
   EvaluationMetadataType,
   ProviderLogDto,
 } from '@latitude-data/core/browser'
+import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import {
-  DocumentLogWithMetadataAndError,
-  type EvaluationResultWithMetadataAndErrors,
-} from '@latitude-data/core/repositories'
-import { Button, cn, Modal, ReactStateDispatch } from '@latitude-data/web-ui'
+  Button,
+  cn,
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui'
+import Link from 'next/link'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
-import useSWR from 'swr'
-
+import { RefObject, useEffect, useRef, useState } from 'react'
 import { MetadataInfoTabs } from '../../../../../_components/MetadataInfoTabs'
-import { DocumentLogInfo } from '../../../../../logs/_components/DocumentLogs/DocumentLogInfo'
+import { MetadataItem } from '../../../../../_components/MetadataItem'
 import { EvaluationResultMessages } from './Messages'
 import { EvaluationResultMetadata } from './Metadata'
-
-type MaybeProviderLog = number | null | undefined
-
-function useFetchDocumentLog({
-  documentLogId: providerLogId,
-}: {
-  documentLogId: number
-}) {
-  const fetcher = useFetcher(
-    ROUTES.api.documentLogs.detail({ id: providerLogId }).root,
-  )
-  const {
-    data: documentLog,
-    isLoading,
-    error,
-  } = useSWR<DocumentLogWithMetadataAndError>(
-    ['documentLogs', providerLogId],
-    fetcher,
-  )
-  return { documentLog, isLoading, error }
-}
-
-function DocumentLogInfoModal({
-  documentLogId,
-  providerLogId,
-  onOpenChange,
-}: {
-  documentLogId: number
-  providerLogId: number
-  onOpenChange: ReactStateDispatch<MaybeProviderLog>
-}) {
-  const {
-    documentLog,
-    isLoading: isLoadingDocumentLog,
-    error: errorDocumentLog,
-  } = useFetchDocumentLog({
-    documentLogId,
-  })
-  const { data: _providerLogs, isLoading: isProviderLogsLoading } =
-    useProviderLogs({
-      documentLogUuid: documentLog?.uuid,
-    })
-  const { data: evaluationResults, isLoading: isEvaluationResultsLoading } =
-    useEvaluationResultsByDocumentLogs({
-      documentLogIds: [documentLogId],
-    })
-
-  const idx = _providerLogs?.findIndex((p) => p.id === providerLogId)
-  const providerLogs = _providerLogs?.slice(0, idx + 1)
-
-  const isLoading =
-    isLoadingDocumentLog || isProviderLogsLoading || isEvaluationResultsLoading
-
-  return (
-    <Modal
-      dismissible
-      defaultOpen
-      onOpenChange={() => onOpenChange(null)}
-      title='Document Log Info'
-      description='Details of original document log'
-    >
-      <DocumentLogInfo
-        documentLog={documentLog!}
-        providerLogs={providerLogs}
-        evaluationResults={evaluationResults[documentLogId]}
-        isLoading={isLoading}
-        error={errorDocumentLog}
-      />
-    </Modal>
-  )
-}
 
 export function EvaluationResultInfo({
   evaluation,
@@ -107,15 +35,10 @@ export function EvaluationResultInfo({
   tableRef: RefObject<HTMLTableElement>
   sidebarWrapperRef: RefObject<HTMLDivElement>
 }) {
-  const [selected, setSelected] = useState<MaybeProviderLog>(null)
-  const onClickOpen = useCallback(async () => {
-    setSelected(evaluationResult.evaluatedProviderLogId)
-  }, [evaluationResult.evaluatedProviderLogId])
   const ref = useRef<HTMLDivElement | null>(null)
   const [target, setTarget] = useState<HTMLDivElement | null>(null)
   useEffect(() => {
     if (!ref.current) return
-
     setTarget(ref.current)
   }, [ref.current])
   const scrollableArea = usePanelDomRef({ selfRef: target })
@@ -127,21 +50,34 @@ export function EvaluationResultInfo({
     targetContainer: sidebarWrapperRef.current,
     offset: { top: 12, bottom: 12 },
   })
+
+  const { data: evaluatedLog, isLoading } = useProviderLog(
+    evaluationResult.evaluatedProviderLogId,
+  )
+
   return (
     <div ref={ref} className='flex flex-col'>
-      <MetadataInfo
-        evaluation={evaluation}
-        evaluationResult={evaluationResult}
-        providerLog={providerLog}
-        onClickOpen={onClickOpen}
-      />
-      {!!selected && (
-        <DocumentLogInfoModal
-          providerLogId={selected}
-          documentLogId={evaluationResult.documentLogId}
-          onOpenChange={setSelected}
+      {isLoading ? (
+        <MetadataInfoLoading />
+      ) : (
+        <MetadataInfo
+          evaluation={evaluation}
+          evaluationResult={evaluationResult}
+          providerLog={providerLog}
+          evaluatedLog={evaluatedLog}
         />
       )}
+    </div>
+  )
+}
+
+function MetadataInfoLoading() {
+  return (
+    <div className='flex flex-col gap-4'>
+      <MetadataItem label='Uuid' loading />
+      <MetadataItem label='Timestamp' loading />
+      <MetadataItem label='Version' loading />
+      <MetadataItem label='Result' loading />
     </div>
   )
 }
@@ -149,13 +85,13 @@ export function EvaluationResultInfo({
 function MetadataInfo({
   evaluation,
   evaluationResult,
+  evaluatedLog,
   providerLog,
-  onClickOpen,
 }: {
   evaluation: EvaluationDto
   evaluationResult: EvaluationResultWithMetadataAndErrors
+  evaluatedLog?: ProviderLogDto
   providerLog?: ProviderLogDto
-  onClickOpen: () => void
 }) {
   switch (evaluation.metadataType) {
     case EvaluationMetadataType.Manual:
@@ -172,20 +108,21 @@ function MetadataInfo({
               evaluationResult={evaluationResult}
               providerLog={providerLog}
             />
-            {evaluationResult.evaluatedProviderLogId && (
-              <div className='w-full flex justify-center'>
-                <Button
-                  variant='link'
-                  iconProps={{
-                    name: 'arrowRight',
-                    widthClass: 'w-4',
-                    heightClass: 'h-4',
-                    placement: 'right',
-                  }}
-                  onClick={onClickOpen}
-                >
-                  Check original log
-                </Button>
+            {evaluatedLog && (
+              <div className='w-full flex justify-center pt-4'>
+                <Link href={evaluatedLogLink({ evaluatedLog })} target='_blank'>
+                  <Button
+                    variant='link'
+                    iconProps={{
+                      name: 'arrowRight',
+                      widthClass: 'w-4',
+                      heightClass: 'h-4',
+                      placement: 'right',
+                    }}
+                  >
+                    Check original log
+                  </Button>
+                </Link>
               </div>
             )}
           </div>
@@ -206,20 +143,24 @@ function MetadataInfo({
               {selectedTab === 'messages' && (
                 <EvaluationResultMessages providerLog={providerLog} />
               )}
-              {evaluationResult.evaluatedProviderLogId && (
-                <div className='w-full flex justify-center'>
-                  <Button
-                    variant='link'
-                    iconProps={{
-                      name: 'arrowRight',
-                      widthClass: 'w-4',
-                      heightClass: 'h-4',
-                      placement: 'right',
-                    }}
-                    onClick={onClickOpen}
+              {evaluatedLog && (
+                <div className='w-full flex justify-center pt-4'>
+                  <Link
+                    href={evaluatedLogLink({ evaluatedLog })}
+                    target='_blank'
                   >
-                    Check original log
-                  </Button>
+                    <Button
+                      variant='link'
+                      iconProps={{
+                        name: 'arrowRight',
+                        widthClass: 'w-4',
+                        heightClass: 'h-4',
+                        placement: 'right',
+                      }}
+                    >
+                      Check original log
+                    </Button>
+                  </Link>
                 </div>
               )}
             </>
@@ -227,4 +168,21 @@ function MetadataInfo({
         </MetadataInfoTabs>
       )
   }
+}
+
+function evaluatedLogLink({ evaluatedLog }: { evaluatedLog: ProviderLogDto }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+
+  const query = new URLSearchParams()
+  query.set('logUuid', evaluatedLog.documentLogUuid!)
+
+  return (
+    ROUTES.projects
+      .detail({ id: project.id })
+      .commits.detail({ uuid: commit.uuid })
+      .documents.detail({ uuid: document.documentUuid }).logs.root +
+    `?${query.toString()}`
+  )
 }
