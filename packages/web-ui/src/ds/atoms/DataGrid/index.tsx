@@ -13,6 +13,7 @@ export type {
   RenderEditCellProps,
   CellClickArgs,
   CellMouseEvent,
+  RowsChangeData,
   DataGridProps,
 } from 'react-data-grid'
 

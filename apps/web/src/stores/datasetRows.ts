@@ -12,6 +12,7 @@ import { format, isValid, parseISO } from 'date-fns'
 
 export type ClientDatasetRow = DatasetRow & {
   cells: DatasetRowData[keyof DatasetRowData][]
+  processedRowData: { [key: string]: string }
 }
 function formatMaybeIsoDate(value: string): string | null {
   if (typeof value !== 'string') return null
@@ -111,10 +112,20 @@ export const serializeRows =
     return rows.map((item) => {
       return {
         ...item,
+        // DEPRECATED: We don't need this. Remove once
+        // DataGrid is used without feature flag.
         cells: columns.map(({ identifier }) => {
           const cell = item.rowData[identifier]
           return parseRowCell({ cell, parseDates: true })
         }),
+        processedRowData: Object.keys(item.rowData).reduce(
+          (acc, key) => {
+            const rawCell = item.rowData[key]
+            const cell = parseRowCell({ cell: rawCell, parseDates: true })
+            return { ...acc, [key]: cell }
+          },
+          {} as ClientDatasetRow['processedRowData'],
+        ),
         createdAt: new Date(item.createdAt),
         updatedAt: new Date(item.updatedAt),
       }

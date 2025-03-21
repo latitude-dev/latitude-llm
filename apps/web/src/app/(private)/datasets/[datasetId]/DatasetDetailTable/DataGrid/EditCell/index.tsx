@@ -4,8 +4,6 @@ import {
   ChangeEvent,
   FocusEvent,
   KeyboardEvent,
-  useRef,
-  useEffect,
 } from 'react'
 import { createPortal } from 'react-dom'
 import { TextArea } from '@latitude-data/web-ui'
@@ -18,7 +16,7 @@ export function EditCell({
   column,
   onRowChange,
 }: RenderEditCellProps<ClientDatasetRow, unknown>) {
-  const rawValue = row.rowData[column.key]
+  const rawValue = row.processedRowData[column.key]
   const value = rawValue === undefined ? '' : String(rawValue)
   const [position, setPosition] = useState<{
     top: number
@@ -65,7 +63,7 @@ export function EditCell({
 
   const onChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {
-      const prevData = row.rowData
+      const prevData = row.processedRowData
       const newRow = {
         ...row,
         rowData: { ...prevData, [column.key]: e.target.value },

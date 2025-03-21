@@ -3,6 +3,7 @@ import type {
   RenderCellProps,
   RenderEditCellProps,
   Props as DataGridProps,
+  RowsChangeData,
   CellClickArgs,
   CellMouseEvent,
 } from '@latitude-data/web-ui/data-grid'
@@ -32,7 +33,7 @@ function renderCell(props: RenderCellProps<ClientDatasetRow, unknown>) {
   // TODO: this value is not cleaned up
   return (
     <Text.H5 ellipsis noWrap>
-      {props.row.rowData[props.column.key]}
+      {props.row.processedRowData[props.column.key]}
     </Text.H5>
   )
 }
@@ -56,6 +57,19 @@ export default function DataGrid({
       })),
     [dataset.columns],
   )
+  const onRowsChange = useCallback(
+    (
+      rows: ClientDatasetRow[],
+      { indexes }: RowsChangeData<ClientDatasetRow>,
+    ) => {
+      const changedRows = indexes
+        .map((index) => rows[index])
+        .filter((r) => r !== undefined)
+
+      console.log('CHANGED_ROWS', changedRows)
+    },
+    [],
+  )
   const onCellClick = useCallback(
     (args: CellClickArgs<ClientDatasetRow>, event: CellMouseEvent) => {
       event.preventGridDefault()
@@ -67,8 +81,9 @@ export default function DataGrid({
     <BaseDataGrid
       rowKeyGetter={rowKeyGetter}
       rows={rows}
-      onCellClick={onCellClick}
       columns={columns}
+      onRowsChange={onRowsChange}
+      onCellClick={onCellClick}
       footer={<LinkableTablePaginationFooter pagination={pagination} />}
     />
   )

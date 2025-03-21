@@ -97,7 +97,6 @@ export default async function DatasetDetail({
   if (isV1) {
     return <DatasetV1DetailTable dataset={result.value.dataset} />
   }
-
   return (
     <DatasetDetailTable
       dataset={result.value.dataset}
