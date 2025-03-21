@@ -94,3 +94,5 @@ export function buildPagination({
         : undefined,
   }
 }
+
+export type ClientPagination = ReturnType<typeof buildPagination>

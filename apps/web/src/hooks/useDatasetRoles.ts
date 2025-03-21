@@ -40,3 +40,5 @@ export function useDatasetRole() {
 
   return { getStyleForRole, backgroundCssClasses }
 }
+
+export type DatasetRoleStyle = ReturnType<typeof useDatasetRole>
