@@ -124,12 +124,11 @@ const response = await openai.chat.completions.create({
 })
 ```
 
-You can also execute [chains](/promptl/advanced/chains) by providing an `onStep` callback to the
-`renderChain` method, which will be called for each step of the chain to generate
-the corresponding response:
+To execute [chains](/promptl/advanced/chains) or [agents](/guides/prompt-manager/agents) locally, you can use the `renderChain` and `renderAgent` methods.
+In these cases, you must provide the `onStep` callback that will be called to generate the response for each step of the chain or agent.
 
 ```typescript
-await sdk.prompts.renderChain({
+const { messages } = await sdk.prompts.renderChain({
   prompt,
   parameters: {
     // Any parameters your prompt expects
@@ -146,9 +145,27 @@ await sdk.prompts.renderChain({
 })
 ```
 
+If your prompt contains tools, you can also provide callbacks for each tool with the `tools` argument, and they will be automatically called when the LLM invokes them.
+
+```typescript
+const { messages, result } = await sdk.prompts.renderAgent({
+  prompt,
+  parameters: {
+    // Any parameters your prompt expects
+  },
+  tools: {
+    get_weather: async ({ latitude, longitude }) => {
+      // your custom tool logic here
+      const temperature = await fetch(...)
+      return { temperature }
+    },
+  },
+})
+```
+
 <Note>
-  `render` and `renderChain` only work with the latest version of Latitude's
-  open source prompt syntax: [PromptL](https://promptl.ai/)
+  Make sure the tool definitions in the prompt match the function signatures you
+  provide, otherwise it may not work as expected.
 </Note>
 
 ### Run a prompt through Latitude Gateway
@@ -210,12 +227,19 @@ const response = await sdk.prompts.run<Tools>(documentPath, {
   stream: true,
   tools: {
     get_coordinates: async ({ location }) => {
-      const data = fetch('https://api.example.com/coordinates?location=' + location)
+      const data = fetch(
+        'https://api.example.com/coordinates?location=' + location,
+      )
       const { latitude, longitude } = await data.json()
       return { latitude, longitude }
     },
     get_weather: async ({ latitude, longitude }) => {
-      const data = fetch('https://api.example.com/weather?latitude=' + latitude + '&longitude=' + longitude)
+      const data = fetch(
+        'https://api.example.com/weather?latitude=' +
+          latitude +
+          '&longitude=' +
+          longitude,
+      )
       const { temperature } = await data.json()
       return { temperature }
     },
@@ -276,6 +300,7 @@ await sdk.logs.create('path/to/your/prompt', messages, {
 ```
 
 <Note>
-  Logs follow the [PromptL format](/promptl/getting-started/introduction).
-  If you're using a different method to run your prompts, you'll need to format your logs accordingly.
+  Logs follow the [PromptL format](/promptl/getting-started/introduction). If
+  you're using a different method to run your prompts, you'll need to format
+  your logs accordingly.
 </Note>

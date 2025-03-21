@@ -2,6 +2,7 @@ import { Adapters } from 'promptl-ai'
 import { Latitude } from '$sdk/index'
 import { Prompt } from '$sdk/utils/types'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 
 const SIMPLE_PROMPT: Partial<Prompt> = {
   path: 'path/to/prompt',
@@ -189,6 +190,194 @@ describe('render', () => {
           tool_calls: undefined,
         },
       ])
+    })
+
+    it('handles requested tools', async () => {
+      const prompt = {
+        path: 'prompt/with/tools',
+        content: `
+---
+provider: openai
+model: gpt-4o
+tools:
+ - get_weather:
+      description: Get the weather for a location
+      parameters:
+        location:
+          type: string
+          description: The location to get the weather for
+---
+<step>
+  Request the weather for {{ location }}
+</step>
+<step>
+  Now, return a detailed report about the weather to the user.
+</step>
+`,
+      }
+
+      const get_weather = vi.fn(async ({ location }) => ({
+        location,
+        temperature: 20,
+        description: 'Sunny',
+        humidity: 50,
+      }))
+
+      let step = 0
+      const onStep = vi.fn(async (_args) => {
+        step++
+        if (step === 1) {
+          return {
+            role: 'assistant',
+            content: [],
+            tool_calls: [
+              {
+                id: 'call_12345xyz',
+                type: 'function',
+                function: {
+                  name: 'get_weather',
+                  arguments: '{"location":"Paris"}',
+                },
+              },
+            ],
+          }
+        }
+        return `It is sunny in Paris with a temperature of 20°C and humidity of 50%.`
+      })
+
+      await sdk.prompts.renderChain({
+        prompt: prompt as Prompt,
+        parameters: {
+          location: 'Paris',
+        },
+        onStep: (_args) => onStep(_args),
+        tools: {
+          get_weather,
+        },
+      })
+
+      expect(get_weather).toHaveBeenCalledTimes(1)
+      expect(get_weather).toHaveBeenCalledWith(
+        {
+          location: 'Paris',
+        },
+        expect.any(Object),
+      )
+    })
+  })
+
+  describe('agent', () => {
+    it('handles tools and executes autonomously until it returns a custom tool call', async () => {
+      const prompt = {
+        path: 'prompt/agent',
+        content: `
+---
+provider: openai
+model: gpt-4o
+tools:
+- get_weather:
+    description: Get the weather for a location
+    parameters:
+      location:
+        type: string
+        description: The location to get the weather for
+- get_location:
+    description: Returns the location of the user
+---
+What's the weather like in my location?
+`,
+      }
+
+      const get_weather = vi.fn(async ({ location }) => ({
+        location,
+        temperature: 20,
+        description: 'Sunny',
+        humidity: 50,
+      }))
+
+      const get_location = vi.fn(async () => ({
+        location: 'Paris',
+      }))
+
+      let step = 0
+      const onStep = vi.fn(async (_args) => {
+        step++
+        if (step === 1) {
+          return {
+            role: 'assistant',
+            content: [],
+            tool_calls: [
+              {
+                id: 'call_1',
+                type: 'function',
+                function: {
+                  name: 'get_location',
+                  arguments: '{}',
+                },
+              },
+            ],
+          }
+        }
+        if (step === 2) {
+          return {
+            role: 'assistant',
+            content: [],
+            tool_calls: [
+              {
+                id: 'call_2',
+                type: 'function',
+                function: {
+                  name: 'get_weather',
+                  arguments: '{"location":"Paris"}',
+                },
+              },
+            ],
+          }
+        }
+        return {
+          role: 'assistant',
+          content: [],
+          tool_calls: [
+            {
+              id: 'call_3',
+              type: 'function',
+              function: {
+                name: AGENT_RETURN_TOOL_NAME,
+                arguments:
+                  '{"response":"It is sunny in Paris with a temperature of 20°C and humidity of 50%."}',
+              },
+            },
+          ],
+        }
+      })
+
+      const { result } = await sdk.prompts.renderAgent({
+        prompt: prompt as Prompt,
+        parameters: {
+          location: 'Paris',
+        },
+        onStep,
+        tools: {
+          get_weather,
+          get_location,
+        },
+      })
+
+      expect(get_weather).toHaveBeenCalledTimes(1)
+      expect(get_weather).toHaveBeenCalledWith(
+        { location: 'Paris' },
+        expect.any(Object),
+      )
+
+      expect(get_location).toHaveBeenCalledTimes(1)
+      expect(get_location).toHaveBeenCalledWith({}, expect.any(Object))
+
+      expect(onStep).toHaveBeenCalledTimes(3)
+
+      expect(result).toEqual({
+        response:
+          'It is sunny in Paris with a temperature of 20°C and humidity of 50%.',
+      })
     })
   })
 })

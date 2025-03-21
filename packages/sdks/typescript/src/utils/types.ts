@@ -152,6 +152,13 @@ export type ToolCallDetails = {
   pauseExecution: () => void
 }
 
+type RenderToolCallDetails = {
+  toolId: string
+  toolName: string
+  requestedToolCalls: ToolCall[]
+  messages: Message[]
+}
+
 export type ToolSpec = Record<string, Record<string, unknown>>
 export type ToolHandler<T extends ToolSpec, K extends keyof T> = (
   toolCall: T[K],
@@ -159,6 +166,14 @@ export type ToolHandler<T extends ToolSpec, K extends keyof T> = (
 ) => Promise<unknown>
 export type ToolCalledFn<Tools extends ToolSpec> = {
   [K in keyof Tools]: ToolHandler<Tools, K>
+}
+
+export type RenderToolHandler<T extends ToolSpec, K extends keyof T> = (
+  toolCall: T[K],
+  details: RenderToolCallDetails,
+) => Promise<string | Omit<PromptlMessage, 'role'> | PromptlMessage[]>
+export type RenderToolCalledFn<Tools extends ToolSpec> = {
+  [K in keyof Tools]: RenderToolHandler<Tools, K>
 }
 
 export type SdkApiVersion = 'v1' | 'v2' | 'v3'
@@ -211,6 +226,7 @@ export type RenderChainOptions<M extends AdapterMessageType = PromptlMessage> =
       config: Config
       messages: M[]
     }) => Promise<string | Omit<M, 'role'>>
+    tools?: RenderToolCalledFn<ToolSpec>
     logResponses?: boolean
   }
 
