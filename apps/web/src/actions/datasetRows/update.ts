@@ -16,7 +16,14 @@ export const updateDatasetRowAction = authProcedure
       rows: z.array(
         z.object({
           rowId: z.number(),
-          rowData: z.record(z.string()),
+          rowData: z.record(
+            z.union([
+              z.string(),
+              z.number(),
+              z.boolean(),
+              z.null(),
+            ]),
+          ),
         }),
       ),
     }),

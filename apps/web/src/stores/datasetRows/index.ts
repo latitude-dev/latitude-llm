@@ -84,27 +84,31 @@ export default function useDatasetRows(
   const { execute: update, isPending: isUpdating } = useLatitudeAction(
     updateDatasetRowAction,
     {
-      onSuccess: ({ data: updatedRow }) => {
-        if (!updatedRow || !dataset) return
+      onSuccess: ({ data: updatedRows }) => {
+        if (!updatedRows || !updatedRows.length || !dataset) return
 
         const prevRows = data
+        const updatedRowsMap = new Map()
 
-        mutate(
-          prevRows.map((prevRow) =>
-            prevRow.id === updatedRow.id
-              ? serializeRow({ row: updatedRow, columns: dataset.columns })
-              : prevRow,
-          ),
-        )
+        updatedRows.forEach((row) => {
+          updatedRowsMap.set(
+            row.id,
+            serializeRow({ row, columns: dataset.columns }),
+          )
+        })
+        mutate(prevRows.map((row) => updatedRowsMap.get(row.id) || row))
       },
     },
   )
   const updateRows = useCallback(
     ({ rows }: { rows: ClientDatasetRow[] }) => {
+      if (!dataset) return
+
       const rowsData = rows.map((row) => ({
         rowId: row.id,
         rowData: deserializeRow({ row, columns: dataset.columns }),
       }))
+
       update({ datasetId: dataset.id, rows: rowsData })
     },
     [update],
@@ -113,7 +117,7 @@ export default function useDatasetRows(
   return {
     data,
     mutate,
-    updateRow,
+    updateRows,
     isUpdating,
     ...rest,
   }
