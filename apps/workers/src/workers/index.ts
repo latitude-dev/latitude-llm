@@ -22,7 +22,7 @@ export default async function startWorkers() {
     host: env.QUEUE_HOST,
     port: env.QUEUE_PORT,
     password: env.QUEUE_PASSWORD,
-    enableOfflineQueue: false,
+    enableOfflineQueue: true,
     maxRetriesPerRequest: null,
     retryStrategy: (times: number) =>
       Math.max(Math.min(Math.exp(times), 20000), 1000), // Exponential backoff with a max of 20 seconds and a min of 1 second
