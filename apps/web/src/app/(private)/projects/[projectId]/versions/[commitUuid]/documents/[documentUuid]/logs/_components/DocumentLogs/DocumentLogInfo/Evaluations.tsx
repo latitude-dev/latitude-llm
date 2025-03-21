@@ -7,14 +7,16 @@ import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import ResultBadge from '$/components/evaluations/ResultBadge'
 import { EvaluationRoutes, ROUTES } from '$/services/routes'
 import {
+  Commit,
   EvaluationMetadataType,
   EvaluationMetric,
   EvaluationResultableType,
   EvaluationResultV2,
   EvaluationType,
-  EvaluationV2,
+  ResultWithEvaluation,
+  ResultWithEvaluationTmp,
+  ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
-import { ResultWithEvaluation } from '@latitude-data/core/repositories'
 import {
   Button,
   Text,
@@ -22,20 +24,14 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import Link from 'next/link'
+import { useMemo } from 'react'
 import { MetadataItem } from '../../../../_components/MetadataItem'
 import { ResultCellContent } from '../../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
 
-type ResultWithEvaluationV2<
+type Props<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-> = {
-  result: EvaluationResultV2<T, M>
-  evaluation: EvaluationV2<T, M>
-}
-
-type ResultWithEvaluationTmp =
-  | (ResultWithEvaluation & { version: 'v1' })
-  | (ResultWithEvaluationV2 & { version: 'v2' })
+> = ResultWithEvaluationV2<T, M> & { commit?: Commit }
 
 function EvaluationResultItem({ result, evaluation }: ResultWithEvaluation) {
   if (result.resultableType === EvaluationResultableType.Text) {
@@ -49,29 +45,12 @@ function EvaluationResultItem({ result, evaluation }: ResultWithEvaluation) {
   return <ResultCellContent evaluation={evaluation} value={result.result} />
 }
 
-function evaluatedLogLink({
-  result,
-  evaluation,
-  version,
-}: ResultWithEvaluationTmp) {
+function evaluatedLogLinkV1({ result, evaluation }: ResultWithEvaluation) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
   const query = new URLSearchParams()
-
-  if (version === 'v2') {
-    query.set('resultUuid', result.uuid)
-
-    return (
-      ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({ uuid: commit.uuid })
-        .documents.detail({ uuid: document.documentUuid })
-        .evaluationsV2.detail({ uuid: evaluation.uuid }).root +
-      `?${query.toString()}`
-    )
-  }
 
   if (evaluation.metadataType === EvaluationMetadataType.Manual) {
     query.set('documentLogId', result.documentLogId.toString())
@@ -88,24 +67,31 @@ function evaluatedLogLink({
   )
 }
 
-function evaluationEditorLink({
-  result,
-  evaluation,
-  version,
-}: ResultWithEvaluationTmp) {
+function evaluatedLogLinkV2<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+>({ result, evaluation, commit }: Props<T, M>) {
   const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
-  if (version === 'v2') {
-    // TODO: Go to LLM evaluation editor when LLM V2 evaluations are available
-    return ROUTES.projects
+  // This edge case happens with logs from new versions
+  // streamed to the table of an old version
+  if (!commit) return ''
+
+  const query = new URLSearchParams()
+  query.set('resultUuid', result.uuid)
+
+  return (
+    ROUTES.projects
       .detail({ id: project.id })
       .commits.detail({ uuid: commit.uuid })
       .documents.detail({ uuid: document.documentUuid })
-      .evaluationsV2.detail({ uuid: evaluation.uuid }).root
-  }
+      .evaluationsV2.detail({ uuid: evaluation.uuid }).root +
+    `?${query.toString()}`
+  )
+}
 
+function evaluationEditorLinkV1({ result, evaluation }: ResultWithEvaluation) {
   const query = new URLSearchParams()
   if (result.evaluatedProviderLogId) {
     query.set('providerLogId', result.evaluatedProviderLogId.toString())
@@ -116,6 +102,25 @@ function evaluationEditorLink({
       EvaluationRoutes.editor
     ].root + `?${query.toString()}`
   )
+}
+
+function evaluationEditorLinkV2<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+>({ evaluation, commit }: Props<T, M>) {
+  const { project } = useCurrentProject()
+  const { document } = useCurrentDocument()
+
+  // This edge case happens with logs from new versions
+  // streamed to the table of an old version
+  if (!commit) return ''
+
+  // TODO: Go to LLM evaluation editor when LLM V2 evaluations are available
+  return ROUTES.projects
+    .detail({ id: project.id })
+    .commits.detail({ uuid: commit.uuid })
+    .documents.detail({ uuid: document.documentUuid })
+    .evaluationsV2.detail({ uuid: evaluation.uuid }).root
 }
 
 function DocumentLogEvaluationsV1({
@@ -143,7 +148,7 @@ function DocumentLogEvaluationsV1({
 function DocumentLogEvaluationsV2<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
->({ result, evaluation }: ResultWithEvaluationV2<T, M>) {
+>({ result, evaluation }: Props<T, M>) {
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   const metricSpecification = typeSpecification.metrics[evaluation.metric]
 
@@ -184,10 +189,17 @@ function DocumentLogEvaluationsV2<
 }
 
 export function DocumentLogEvaluations({
-  evaluationResults,
+  evaluationResults = [],
+  commits,
 }: {
-  evaluationResults: ResultWithEvaluationTmp[]
+  evaluationResults?: ResultWithEvaluationTmp[]
+  commits: Commit[]
 }) {
+  const commitsById = useMemo(
+    () => Object.fromEntries(commits.map((c) => [c.id, c])),
+    [commits],
+  )
+
   if (!evaluationResults.length) {
     return (
       <Text.H5 color='foregroundMuted' centered>
@@ -207,7 +219,17 @@ export function DocumentLogEvaluations({
             <Text.H4M noWrap ellipsis>
               {item.evaluation.name}
             </Text.H4M>
-            <Link href={evaluationEditorLink(item)} target='_blank'>
+            <Link
+              href={
+                item.version === 'v2'
+                  ? evaluationEditorLinkV2({
+                      ...item,
+                      commit: commitsById[item.result.commitId],
+                    })
+                  : evaluationEditorLinkV1(item)
+              }
+              target='_blank'
+            >
               <Button
                 variant='link'
                 iconProps={{
@@ -223,13 +245,26 @@ export function DocumentLogEvaluations({
           </span>
           <div className='flex flex-col gap-2.5'>
             {item.version === 'v2' ? (
-              <DocumentLogEvaluationsV2 {...item} />
+              <DocumentLogEvaluationsV2
+                {...item}
+                commit={commitsById[item.result.commitId]}
+              />
             ) : (
               <DocumentLogEvaluationsV1 {...item} />
             )}
           </div>
           <div className='w-full flex justify-start pt-2'>
-            <Link href={evaluatedLogLink(item)} target='_blank'>
+            <Link
+              href={
+                item.version === 'v2'
+                  ? evaluatedLogLinkV2({
+                      ...item,
+                      commit: commitsById[item.result.commitId],
+                    })
+                  : evaluatedLogLinkV1(item)
+              }
+              target='_blank'
+            >
               <Button variant='outline' fancy>
                 View log
               </Button>

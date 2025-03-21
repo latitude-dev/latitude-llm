@@ -10,9 +10,10 @@ import { ROUTES } from '$/services/routes'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import {
   DocumentLogFilterOptions,
+  EvaluationConfigurationNumerical,
   EvaluationResultableType,
-  EvaluationResultTmp,
   LOG_FILTERS_ENCODED_PARAMS,
+  ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
@@ -45,18 +46,18 @@ type DocumentLogRow = DocumentLogWithMetadataAndError & {
 }
 
 function EvaluationsColumn({
-  results = [],
+  evaluationResults = [],
   color: cellColor,
   isLoading,
 }: {
-  results?: EvaluationResultTmp[]
+  evaluationResults?: ResultWithEvaluationTmp[]
   color: TextColor
   isLoading: boolean
 }) {
   const passedResults = useMemo(
     () =>
-      results.filter((result) => {
-        if (result.version === 'v2') return !!result.hasPassed
+      evaluationResults.filter(({ evaluation, result, version }) => {
+        if (version === 'v2') return !!result.hasPassed
 
         const value = result.result
         if (value === undefined) return false
@@ -68,20 +69,22 @@ function EvaluationsColumn({
         if (result.resultableType === EvaluationResultableType.Number) {
           return (
             Number(value) >=
-            ((result as any).evaluation?.resultConfiguration?.maxValue ?? 0)
+            ((
+              evaluation.resultConfiguration as EvaluationConfigurationNumerical
+            )?.maxValue ?? 0)
           )
         }
 
         return true
       }).length,
-    [results],
+    [evaluationResults],
   )
 
   if (isLoading) {
     return <Skeleton className='w-full h-4' />
   }
 
-  if (!results.length) {
+  if (!evaluationResults.length) {
     return <Text.H5 color={cellColor}>-</Text.H5>
   }
 
@@ -90,13 +93,13 @@ function EvaluationsColumn({
       <Badge
         variant={
           passedResults
-            ? passedResults >= results.length / 2
+            ? passedResults >= evaluationResults.length / 2
               ? 'successMuted'
               : 'warningMuted'
             : 'destructiveMuted'
         }
       >
-        {passedResults}/{results.length} passed
+        {passedResults}/{evaluationResults.length} passed
       </Badge>
     </div>
   )
@@ -105,7 +108,7 @@ function EvaluationsColumn({
 type Props = {
   documentLogs: DocumentLogRow[]
   documentLogFilterOptions: DocumentLogFilterOptions
-  evaluationResults: Record<string, EvaluationResultTmp[]>
+  evaluationResults: Record<string, ResultWithEvaluationTmp[]>
   selectedLog: DocumentLogWithMetadataAndError | undefined
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void
   isLoading: boolean
@@ -262,7 +265,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                 <TableCell>
                   <EvaluationsColumn
                     color={cellColor}
-                    results={evaluationResults[documentLog.uuid]}
+                    evaluationResults={evaluationResults[documentLog.uuid]}
                     isLoading={isLoading}
                   />
                 </TableCell>

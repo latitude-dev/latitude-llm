@@ -2,20 +2,35 @@
 
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { EvaluationResultV2 } from '@latitude-data/core/browser'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+  ResultWithEvaluationV2,
+} from '@latitude-data/core/browser'
 import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useEvaluationResultsV2ByDocumentLogs(
   {
+    project,
+    commit,
+    document,
     documentLogUuids,
   }: {
+    project: Pick<Project, 'id'>
+    commit: Pick<Commit, 'uuid'>
+    document: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
     documentLogUuids: string[]
   },
   opts?: SWRConfiguration,
 ) {
-  const route = ROUTES.api.documentLogs.evaluationResultsV2.root
+  const route = ROUTES.api.projects
+    .detail(project.id)
+    .commits.detail(commit.uuid)
+    .documents.detail(document.documentUuid).evaluationsV2.results
+    .documentLogs.root
   const query = useMemo(() => {
     const query = new URLSearchParams()
     if (documentLogUuids.length) {
@@ -25,8 +40,17 @@ export default function useEvaluationResultsV2ByDocumentLogs(
   }, [documentLogUuids])
   const fetcher = useFetcher(`${route}?${query}`)
 
-  const { data = {}, ...rest } = useSWR<Record<string, EvaluationResultV2[]>>(
-    compact(['evaluationResultsV2ByDocumentLogs', query]),
+  const { data = {}, ...rest } = useSWR<
+    Record<string, ResultWithEvaluationV2[]>
+  >(
+    compact([
+      'evaluationResultsV2ByDocumentLogs',
+      project.id,
+      commit.uuid,
+      document.commitId,
+      document.documentUuid,
+      query,
+    ]),
     fetcher,
     opts,
   )

@@ -9,17 +9,29 @@ export const GET = errorHandler(
     async (
       request: NextRequest,
       {
+        params,
         workspace,
       }: {
+        params: {
+          projectId: number
+          commitUuid: string
+          documentUuid: string
+        }
         workspace: Workspace
       },
     ) => {
+      const { projectId, commitUuid, documentUuid } = params
       const documentLogUuids =
         request.nextUrl.searchParams.get('documentLogUuids')?.split(',') || []
 
       const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
       const results = await resultsRepository
-        .listByDocumentLogs({ documentLogUuids })
+        .listByDocumentLogs({
+          projectId: projectId,
+          commitUuid: commitUuid,
+          documentUuid: documentUuid,
+          documentLogUuids: documentLogUuids,
+        })
         .then((r) => r.unwrap())
 
       return NextResponse.json(results, { status: 200 })

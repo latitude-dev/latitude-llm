@@ -139,8 +139,17 @@ export const API_ROUTES = {
                         root: evaluationRoot,
                         results: {
                           root: `${evaluationRoot}/results`,
+                          pagination: {
+                            root: `${evaluationRoot}/results/pagination`,
+                          },
                         },
                       }
+                    },
+                    results: {
+                      root: `${documentRoot}/evaluations-v2/results`,
+                      documentLogs: {
+                        root: `${documentRoot}/evaluations-v2/results/document-logs`,
+                      },
                     },
                   },
                 }
@@ -281,9 +290,6 @@ export const API_ROUTES = {
     },
     evaluationResults: {
       root: `/api/documentLogs/evaluation-results`,
-    },
-    evaluationResultsV2: {
-      root: `/api/documentLogs/evaluation-results-v2`,
     },
     // DEPRECATED: Is for all datasets
     generateCsv: {

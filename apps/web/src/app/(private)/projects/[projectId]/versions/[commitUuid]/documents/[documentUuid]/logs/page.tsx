@@ -1,22 +1,22 @@
 import {
+  findCommitCached,
+  findCommitsByProjectCached,
+} from '$/app/(private)/_data-access'
+import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { ROUTES } from '$/services/routes'
+import {
   DocumentLogFilterOptions,
   Workspace,
 } from '@latitude-data/core/browser'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
-import {
-  findCommitCached,
-  findCommitsByProjectCached,
-} from '$/app/(private)/_data-access'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
-import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
-import { DocumentLogsPage } from './_components'
 import { DocumentLogsRepository } from '@latitude-data/core/repositories'
-import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
 import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs/index'
+import { DocumentLogsPage } from './_components'
+import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
 
 async function fetchDocumentLogPage({
   workspace,
@@ -83,7 +83,7 @@ export default async function DocumentPage({
     const route = ROUTES.projects
       .detail({ id: projectId })
       .commits.detail({ uuid: commit.uuid })
-      .documents.detail({ uuid: documentUuid }).logs
+      .documents.detail({ uuid: documentUuid }).logs.root
 
     const parameters = [
       `page=${currentLogPage}`,

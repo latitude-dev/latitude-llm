@@ -6,8 +6,9 @@ import { useSelectableRows } from '$/hooks/useSelectableRows'
 import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
 import useProviderLogs from '$/stores/providerLogs'
 import {
+  Commit,
   DocumentLogFilterOptions,
-  EvaluationResultTmp,
+  ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { DocumentLogsAggregations } from '@latitude-data/core/services/documentLogs/computeDocumentLogsAggregations'
@@ -34,6 +35,8 @@ export function DocumentLogs({
   selectedLog: serverSelectedLog,
   aggregations,
   isAggregationsLoading,
+  commits,
+  isCommitsLoading,
   evaluationResults,
   isEvaluationResultsLoading,
 }: {
@@ -42,7 +45,9 @@ export function DocumentLogs({
   selectedLog?: DocumentLogWithMetadataAndError
   aggregations?: DocumentLogsAggregations
   isAggregationsLoading: boolean
-  evaluationResults: Record<string, EvaluationResultTmp[]>
+  commits: Commit[]
+  isCommitsLoading: boolean
+  evaluationResults: Record<string, ResultWithEvaluationTmp[]>
   isEvaluationResultsLoading: boolean
 }) {
   const { enabled: hasNewDatasets } = useFeatureFlag({
@@ -123,7 +128,7 @@ export function DocumentLogs({
           evaluationResults={evaluationResults}
           selectedLog={selectedLog}
           setSelectedLog={setSelectedLog}
-          isLoading={isEvaluationResultsLoading}
+          isLoading={isEvaluationResultsLoading || isCommitsLoading}
           selectableState={selectableState}
         />
         {selectedLog && (
@@ -132,7 +137,12 @@ export function DocumentLogs({
               documentLog={selectedLog}
               providerLogs={providerLogs}
               evaluationResults={evaluationResults[selectedLog.uuid]}
-              isLoading={isProviderLogsLoading || isEvaluationResultsLoading}
+              commits={commits}
+              isLoading={
+                isProviderLogsLoading ||
+                isEvaluationResultsLoading ||
+                isCommitsLoading
+              }
               stickyRef={stickyRef}
               sidebarWrapperRef={sidebarWrapperRef}
               offset={{ top: 12, bottom: 12 }}

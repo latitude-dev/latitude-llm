@@ -3,18 +3,20 @@ import {
   evaluationResultTypes,
 } from '$/app/(private)/evaluations/_components/ActiveEvaluations/Table'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
 import useEvaluationsV2 from '$/stores/evaluationsV2'
 import {
   EvaluationDto,
+  EvaluationMetric,
   EvaluationTmp,
+  EvaluationType,
   EvaluationV2,
   RuleEvaluationSpecification,
 } from '@latitude-data/core/browser'
 import {
-  ClickToCopyUuid,
   ConfirmModal,
   DropdownMenu,
   Table,
@@ -28,6 +30,15 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { useMemo, useState } from 'react'
+
+// TODO: Delete this helper when we dont have EvaluationTmp
+// and the rows.map can use generics
+function getSpecification<
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+>(evaluation: EvaluationV2<T, M>) {
+  return EVALUATION_SPECIFICATIONS[evaluation.type].metrics[evaluation.metric]
+}
 
 export default function ConnectedEvaluationsTable({
   evaluations,
@@ -69,7 +80,7 @@ export default function ConnectedEvaluationsTable({
             <TableHead>Name</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Type</TableHead>
-            <TableHead>Result Type</TableHead>
+            <TableHead>Metric</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
@@ -79,7 +90,17 @@ export default function ConnectedEvaluationsTable({
               key={row.uuid}
               className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border'
               onClick={() => {
-                if (row.version !== 'v1') return
+                if (row.version === 'v2') {
+                  navigate.push(
+                    ROUTES.projects
+                      .detail({ id: project.id })
+                      .commits.detail({ uuid: commit.uuid })
+                      .documents.detail({ uuid: document.documentUuid })
+                      .evaluationsV2.detail({ uuid: row.uuid }).root,
+                  )
+                  return
+                }
+
                 navigate.push(
                   ROUTES.projects
                     .detail({ id: project.id })
@@ -94,9 +115,10 @@ export default function ConnectedEvaluationsTable({
                   <Text.H5 noWrap ellipsis>
                     {row.name}
                   </Text.H5>
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <ClickToCopyUuid uuid={row.uuid} />
-                  </div>
+                  {/* TODO: Uncomment this when we only have v2 because v1 does not carry that info
+                  {row.version === 'v2' && !!row.evaluateLiveLogs && (
+                    <Badge variant='accent'>Live</Badge>
+                  )} */}
                 </div>
               </TableCell>
               <TableCell>
@@ -112,7 +134,7 @@ export default function ConnectedEvaluationsTable({
               <TableCell>
                 <Text.H5>
                   {row.version === 'v2'
-                    ? evaluationResultTypes['evaluation_resultable_numbers']
+                    ? getSpecification(row).name
                     : evaluationResultTypes[row.resultType]}
                 </Text.H5>
               </TableCell>

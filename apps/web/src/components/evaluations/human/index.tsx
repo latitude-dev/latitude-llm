@@ -21,5 +21,10 @@ export default {
   icon: 'userRound' as IconName,
   ConfigurationForm: undefined as any, // TODO: Implement
   ResultBadge: undefined as any, // TODO: Implement
+  ResultRowHeaders: undefined as any, // TODO: Implement
+  ResultRowCells: undefined as any, // TODO: Implement
+  resultPanelTabs: [], // TODO: Implement
+  ResultPanelMetadata: undefined as any, // TODO: Implement
+  ResultPanelContent: undefined as any, // TODO: Implement
   metrics: METRICS,
 }

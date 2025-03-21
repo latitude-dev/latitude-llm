@@ -22,6 +22,7 @@ export const RuleEvaluationExactMatchSpecification = {
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   resultError: ruleEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationExactMatchConfiguration = z.infer<
   typeof RuleEvaluationExactMatchSpecification.configuration
@@ -44,6 +45,7 @@ export const RuleEvaluationRegularExpressionSpecification = {
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   resultError: ruleEvaluationResultError.extend({}),
   supportsLiveEvaluation: true,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationRegularExpressionConfiguration = z.infer<
   typeof RuleEvaluationRegularExpressionSpecification.configuration
@@ -68,6 +70,7 @@ export const RuleEvaluationLengthCountSpecification = {
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   resultError: ruleEvaluationResultError.extend({}),
   supportsLiveEvaluation: true,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationLengthCountConfiguration = z.infer<
   typeof RuleEvaluationLengthCountSpecification.configuration
@@ -99,6 +102,7 @@ export const RuleEvaluationLexicalOverlapSpecification = {
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   resultError: ruleEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationLexicalOverlapConfiguration = z.infer<
   typeof RuleEvaluationLexicalOverlapSpecification.configuration
@@ -118,7 +122,6 @@ export const RuleEvaluationSemanticSimilaritySpecification = {
     'Checks if the response is semantically similar to the expected label',
   configuration: ruleEvaluationConfiguration.extend({
     algorithm: z.literal('cosine_similarity'),
-    embeddingModel: z.enum(['openai_3_small', 'anthropic_voyage_3']),
     minSimilarity: z.number().optional(), // Percentage of similarity
     maxSimilarity: z.number().optional(), // Percentage of similarity
     datasetLabel: z.string(),
@@ -126,6 +129,7 @@ export const RuleEvaluationSemanticSimilaritySpecification = {
   resultMetadata: ruleEvaluationResultMetadata.extend({}),
   resultError: ruleEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationSemanticSimilarityConfiguration = z.infer<
   typeof RuleEvaluationSemanticSimilaritySpecification.configuration

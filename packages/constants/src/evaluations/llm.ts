@@ -13,6 +13,8 @@ const llmEvaluationConfiguration = BaseEvaluationConfiguration.extend({
 const llmEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({
   evaluationLogId: z.number(),
   reason: z.string(),
+  tokens: z.number(),
+  cost: z.number(),
 })
 const llmEvaluationResultError = BaseEvaluationResultError.extend({
   runErrorId: z.number(),
@@ -30,6 +32,7 @@ export const LlmEvaluationBinarySpecification = {
   resultMetadata: llmEvaluationResultMetadata.extend({}),
   resultError: llmEvaluationResultError.extend({}),
   supportsLiveEvaluation: true,
+  supportsBatchEvaluation: true,
 }
 export type LlmEvaluationBinaryConfiguration = z.infer<
   typeof LlmEvaluationBinarySpecification.configuration
@@ -57,6 +60,7 @@ export const LlmEvaluationRatingSpecification = {
   resultMetadata: llmEvaluationResultMetadata.extend({}),
   resultError: llmEvaluationResultError.extend({}),
   supportsLiveEvaluation: true,
+  supportsBatchEvaluation: true,
 }
 export type LlmEvaluationRatingConfiguration = z.infer<
   typeof LlmEvaluationRatingSpecification.configuration
@@ -82,6 +86,7 @@ export const LlmEvaluationComparisonSpecification = {
   resultMetadata: llmEvaluationResultMetadata.extend({}),
   resultError: llmEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
 }
 export type LlmEvaluationComparisonConfiguration = z.infer<
   typeof LlmEvaluationComparisonSpecification.configuration

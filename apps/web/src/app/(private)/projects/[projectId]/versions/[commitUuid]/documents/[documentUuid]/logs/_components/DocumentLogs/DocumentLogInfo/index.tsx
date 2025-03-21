@@ -5,13 +5,12 @@ import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
-import useEvaluationsV2 from '$/stores/evaluationsV2'
 import {
-  DatasetVersion,
-  EvaluationDto,
-  EvaluationResultTmp,
-  ProviderLogDto,
   buildConversation,
+  Commit,
+  DatasetVersion,
+  ProviderLogDto,
+  ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
@@ -124,6 +123,7 @@ export function DocumentLogInfo({
   documentLog,
   providerLogs,
   evaluationResults,
+  commits,
   isLoading = false,
   error,
   className,
@@ -134,7 +134,8 @@ export function DocumentLogInfo({
 }: {
   documentLog: DocumentLogWithMetadataAndError
   providerLogs?: ProviderLogDto[]
-  evaluationResults?: EvaluationResultTmp[]
+  evaluationResults?: ResultWithEvaluationTmp[]
+  commits: Commit[]
   isLoading?: boolean
   error?: Error
   className?: string
@@ -143,10 +144,6 @@ export function DocumentLogInfo({
   children?: ReactNode
   offset?: StickyOffset
 }) {
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
-  const { document } = useCurrentDocument()
-
   const ref = useRef<HTMLDivElement>(null)
   const [target, setTarget] = useState<HTMLDivElement | null>(null)
 
@@ -171,29 +168,6 @@ export function DocumentLogInfo({
     return buildConversation(providerLog)
   }, [providerLogs])
 
-  const { data: evaluations, isLoading: isEvaluationsLoading } =
-    useEvaluationsV2({ project, commit, document })
-
-  const resultsWithEvaluations = useMemo(
-    () =>
-      evaluationResults?.map((result) =>
-        result.version === 'v2'
-          ? {
-              result: result,
-              evaluation: evaluations.find(
-                (evaluation) => evaluation.uuid === result.evaluationUuid,
-              )!,
-              version: 'v2' as const,
-            }
-          : {
-              result: result,
-              evaluation: (result as any).evaluation as EvaluationDto,
-              version: 'v1' as const,
-            },
-      ) ?? [],
-    [evaluations, evaluationResults],
-  )
-
   return (
     <MetadataInfoTabs
       ref={ref}
@@ -213,7 +187,7 @@ export function DocumentLogInfo({
       }
     >
       {({ selectedTab }) =>
-        isLoading || isEvaluationsLoading ? (
+        isLoading ? (
           <DocumentLogMetadataLoading />
         ) : (
           <>
@@ -234,7 +208,8 @@ export function DocumentLogInfo({
                 )}
                 {selectedTab === 'evaluations' && (
                   <DocumentLogEvaluations
-                    evaluationResults={resultsWithEvaluations}
+                    evaluationResults={evaluationResults}
+                    commits={commits}
                   />
                 )}
               </>

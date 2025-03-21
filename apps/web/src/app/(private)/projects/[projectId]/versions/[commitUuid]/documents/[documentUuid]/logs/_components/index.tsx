@@ -14,8 +14,8 @@ import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocu
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import {
   DocumentLogFilterOptions,
-  EvaluationResultDto,
-  EvaluationResultTmp,
+  ResultWithEvaluation,
+  ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
@@ -92,7 +92,7 @@ export function DocumentLogsPage({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-  const { data: commits } = useCommits()
+  const { data: commits, isLoading: isCommitsLoading } = useCommits()
   const searchParams = useSearchParams()
   const page = searchParams.get('page')
   const pageSize = searchParams.get('pageSize')
@@ -131,29 +131,25 @@ export function DocumentLogsPage({
       documentLogs.reduce(
         (acc, log) => ({
           ...acc,
-          ...(resultsV1[log.id]
-            ? {
-                [log.uuid]: resultsV1[log.id]!.map((r) => ({
-                  ...r.result,
-                  evaluation: r.evaluation,
-                })),
-              }
-            : {}),
+          ...(resultsV1[log.id] ? { [log.uuid]: resultsV1[log.id]! } : {}),
         }),
-        {} as Record<string, EvaluationResultDto[]>,
+        {} as Record<string, ResultWithEvaluation[]>,
       ),
     [documentLogs, resultsV1],
   )
 
   const { data: evaluationResultsV2, isLoading: isEvaluationResultsV2Loading } =
     useEvaluationResultsV2ByDocumentLogs({
+      project: project,
+      commit: commit,
+      document: document,
       documentLogUuids: documentLogs.map((l) => l.uuid),
     })
 
   const evaluationResults = useMemo<
-    Record<string, EvaluationResultTmp[]>
+    Record<string, ResultWithEvaluationTmp[]>
   >(() => {
-    let evaluationResults: Record<string, EvaluationResultTmp[]> =
+    let evaluationResults: Record<string, ResultWithEvaluationTmp[]> =
       Object.fromEntries(
         Object.entries(evaluationResultsV1).map(([documentLog, results]) => [
           documentLog,
@@ -213,6 +209,8 @@ export function DocumentLogsPage({
             selectedLog={selectedLog}
             aggregations={aggregations}
             isAggregationsLoading={isAggregationsLoading}
+            commits={commits}
+            isCommitsLoading={isCommitsLoading}
             evaluationResults={evaluationResults}
             isEvaluationResultsLoading={
               isEvaluationResultsV1Loading || isEvaluationResultsV2Loading

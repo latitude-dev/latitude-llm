@@ -81,7 +81,7 @@ const useEvaluationResultsV2Socket = ({
         (prev) => ({
           ...(prev ?? {}),
           [args.providerLog.documentLogUuid!]: [
-            args.result,
+            { result: args.result, evaluation: args.evaluation },
             ...(prev?.[args.providerLog.documentLogUuid!] ?? []),
           ],
         }),
@@ -157,30 +157,35 @@ export default function DocumentEvaluations({
           documentLogUuid: documentLog.uuid,
         },
       }),
-      {} as Record<string, EvaluationResultDto>,
+      {} as Record<string, EvaluationResultDto & { documentLogUuid: string }>,
     )
   }, [evaluationResultsV1])
 
   const { data: evaluationResultsV2, mutate: mutateV2 } =
     useEvaluationResultsV2ByDocumentLogs({
+      project: project,
+      commit: commit,
+      document: document,
       documentLogUuids: documentLog ? [documentLog.uuid] : [],
     })
   useEvaluationResultsV2Socket({ evaluations: evaluationsV2, mutate: mutateV2 })
   const resultsV2 = useMemo(() => {
     if (!documentLog || !evaluationResultsV2[documentLog.uuid]) return {}
     return evaluationResultsV2[documentLog.uuid]!.reduce(
-      (acc, result) => ({
+      (acc, { result }) => ({
         ...acc,
         [result.evaluationUuid]: {
           ...result,
           documentLogUuid: documentLog.uuid,
         },
       }),
-      {} as Record<string, EvaluationResultV2>,
+      {} as Record<string, EvaluationResultV2 & { documentLogUuid: string }>,
     )
   }, [evaluationResultsV2])
 
-  const results = useMemo<Record<string, EvaluationResultTmp>>(
+  const results = useMemo<
+    Record<string, EvaluationResultTmp & { documentLogUuid: string }>
+  >(
     () => ({
       ...Object.fromEntries(
         Object.entries(resultsV1).map(([evaluation, result]) => [
@@ -215,7 +220,6 @@ export default function DocumentEvaluations({
     () =>
       snapshot &&
       !snapshot.evaluations.every(
-        // @ts-expect-error I don't like how this is being done
         (e) => results[e.uuid]?.documentLogUuid === snapshot.documentLog.uuid,
       ),
     [snapshot, results],

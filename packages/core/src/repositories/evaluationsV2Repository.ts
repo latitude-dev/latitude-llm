@@ -34,7 +34,7 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
       .select(tt)
       .from(evaluationVersions)
       .where(this.scopeFilter)
-      .orderBy(desc(evaluationVersions.createdAt))
+      .orderBy(desc(evaluationVersions.createdAt), desc(evaluationVersions.id))
       .$dynamic()
   }
 

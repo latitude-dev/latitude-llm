@@ -9,6 +9,7 @@ import { BadRequestError, Result } from '../../../lib'
 import {
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
+  getDatasetColumnData,
   normalizeScore,
 } from '../shared'
 
@@ -60,17 +61,12 @@ async function run(
       throw new BadRequestError('Dataset row is required')
     }
 
-    const column = dataset.columns.find(
-      (c) => c.name === evaluation.configuration.datasetLabel,
-    )
-    if (!column) {
-      throw new BadRequestError(
-        `${evaluation.configuration.datasetLabel} column not found in dataset`,
-      )
-    }
-
     let response = formatMessage(conversation.at(-1)!)
-    let expected = row.rowData[column.identifier]?.toString() ?? ''
+    let expected = getDatasetColumnData({
+      dataset: dataset,
+      row: row,
+      column: evaluation.configuration.datasetLabel,
+    })
     if (evaluation.configuration.caseInsensitive) {
       response = response.toLowerCase()
       expected = expected.toLowerCase()

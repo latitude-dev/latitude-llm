@@ -1,14 +1,20 @@
 'use server'
 
+import {
+  EVALUATION_SPECIFICATIONS,
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+} from '@latitude-data/constants'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { setupQueues } from '@latitude-data/core/jobs'
+import { BadRequestError } from '@latitude-data/core/lib/errors'
 import {
   EvaluationsRepository,
   EvaluationsV2Repository,
 } from '@latitude-data/core/repositories'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
-
 import { refineParameters, withDataset } from './_helpers'
 
 export const runBatchEvaluationAction = withDataset
@@ -46,6 +52,25 @@ export const runBatchEvaluationAction = withDataset
         .map((e) => ({ ...e, version: 'v2' }))
 
       if (evaluations.length === 0) return { success: true }
+
+      evaluations.forEach(
+        <
+          T extends EvaluationType = EvaluationType,
+          M extends EvaluationMetric<T> = EvaluationMetric<T>,
+        >(
+          evaluation: EvaluationV2<T, M>,
+        ) => {
+          if (
+            !EVALUATION_SPECIFICATIONS[evaluation.type].metrics[
+              evaluation.metric
+            ].supportsBatchEvaluation
+          ) {
+            throw new BadRequestError(
+              `${evaluation.name} does not support batch evaluation`,
+            )
+          }
+        },
+      )
 
       publisher.publishLater({
         type: 'batchEvaluationRunRequested',

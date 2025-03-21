@@ -2,8 +2,10 @@ import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
 
 import {
   EvaluationMetadataType,
+  EvaluationMetric,
   EvaluationResultableType,
   EvaluationResultV2,
+  EvaluationType,
   EvaluationV2,
 } from '../constants'
 import { apiKeys } from './models/apiKeys'
@@ -262,11 +264,30 @@ type _DocumentTrigger = InferSelectModel<typeof documentTriggers>
 export type DocumentTrigger = Omit<_DocumentTrigger, 'configuration' | 'type'> &
   DocumentTriggerWithConfiguration
 
+export type ResultWithEvaluation = {
+  result: EvaluationResultDto
+  evaluation: EvaluationDto
+}
+
+export type ResultWithEvaluationV2<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> = {
+  result: EvaluationResultV2<T, M>
+  evaluation: EvaluationV2<T, M>
+}
+
 // TODO: Remove when we migrate to v2
 export type EvaluationTmp =
   | (EvaluationDto & { version: 'v1' })
   | (EvaluationV2 & { version: 'v2' })
 
+// TODO: Remove when we migrate to v2
 export type EvaluationResultTmp =
   | (EvaluationResultDto & { version: 'v1' })
   | (EvaluationResultV2 & { version: 'v2' })
+
+// TODO: Remove when we migrate to v2
+export type ResultWithEvaluationTmp =
+  | (ResultWithEvaluation & { version: 'v1' })
+  | (ResultWithEvaluationV2 & { version: 'v2' })

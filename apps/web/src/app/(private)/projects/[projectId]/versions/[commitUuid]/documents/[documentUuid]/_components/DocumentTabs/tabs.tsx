@@ -1,9 +1,11 @@
 'use client'
 
-import { TabSelector } from '@latitude-data/web-ui'
 import { useNavigate } from '$/hooks/useNavigate'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
+import { TabSelector } from '@latitude-data/web-ui'
 import { useSelectedLayoutSegment } from 'next/navigation'
+
+const evaluationsV2Route = 'evaluations-v2' as DocumentRoutes.evaluationsV2
 
 export function DocumentTabSelector({
   projectId,
@@ -41,8 +43,15 @@ export function DocumentTabSelector({
   return (
     <TabSelector
       options={Object.values(options)}
-      selected={selectedSegment ?? DocumentRoutes.editor}
+      selected={
+        (selectedSegment === evaluationsV2Route
+          ? DocumentRoutes.evaluations
+          : selectedSegment) ?? DocumentRoutes.editor
+      }
       onSelect={(value) => {
+        if (value === evaluationsV2Route) {
+          return router.push(options[DocumentRoutes.evaluations].route)
+        }
         router.push(options[value].route)
       }}
     />
