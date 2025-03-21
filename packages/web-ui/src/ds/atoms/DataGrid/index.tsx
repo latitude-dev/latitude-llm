@@ -1,17 +1,20 @@
 'use client'
 
 import { ReactNode } from 'react'
-import { DataGrid as ReactDataGrid, type DataGridProps } from 'react-data-grid'
+import { DataGrid as ReactDataGrid, type DataGridProps, textEditor } from 'react-data-grid'
 import { cn } from '../../../lib/utils'
 
 export type {
   RenderCellProps,
+  RenderEditCellProps,
   CellClickArgs,
   CellMouseEvent,
   DataGridProps,
 } from 'react-data-grid'
 
-const DEFAULT_ROW_HEIGHT = 35
+const DEFAULT_ROW_HEIGHT = 31
+
+export const textEditorCell = textEditor
 
 // TODO: style this better
 const NoRowsFallback = ({ fallbackText }: { fallbackText: string }) => (

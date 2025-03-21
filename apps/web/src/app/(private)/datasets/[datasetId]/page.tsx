@@ -81,7 +81,6 @@ export default async function DatasetDetail({
   }>
 }) {
   const { pageSize, page: pageString } = await searchParams
-  console.log('PAGE_SIZE', pageSize)
   const { datasetId } = await params
   const { workspace } = await getCurrentUser()
   const result = await getData({

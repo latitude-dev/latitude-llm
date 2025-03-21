@@ -1,16 +1,19 @@
 import BaseDataGrid from '@latitude-data/web-ui/data-grid'
 import type {
+  RenderCellProps,
+  RenderEditCellProps,
+  Props as DataGridProps,
   CellClickArgs,
   CellMouseEvent,
-  RenderCellProps,
-  Props as DataGridProps,
 } from '@latitude-data/web-ui/data-grid'
+import { Text } from '@latitude-data/web-ui'
 import { DatasetRoleStyle } from '$/hooks/useDatasetRoles'
 import { ClientDatasetRow } from '$/stores/datasetRows'
 import { DatasetV2 } from '@latitude-data/core/browser'
 import { ClientPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { useCallback, useMemo } from 'react'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { EditCell } from '$/app/(private)/datasets/[datasetId]/DatasetDetailTable/DataGrid/EditCell'
 
 function rowKeyGetter(row: ClientDatasetRow) {
   return row.id
@@ -26,7 +29,16 @@ export type DatasetRowsTableProps = {
 }
 
 function renderCell(props: RenderCellProps<ClientDatasetRow, unknown>) {
-  return <div className='hola'>{props.row.rowData[props.column.key]}</div>
+  // TODO: this value is not cleaned up
+  return (
+    <Text.H5 ellipsis noWrap>
+      {props.row.rowData[props.column.key]}
+    </Text.H5>
+  )
+}
+
+function renderEditCell(props: RenderEditCellProps<ClientDatasetRow, unknown>) {
+  return <EditCell {...props} />
 }
 
 export default function DataGrid({
@@ -39,21 +51,24 @@ export default function DataGrid({
       dataset.columns.map((col) => ({
         key: col.identifier,
         name: col.name,
+        renderEditCell,
         renderCell,
       })),
     [dataset.columns],
   )
   const onCellClick = useCallback(
-    (_args: CellClickArgs<ClientDatasetRow>, _event: CellMouseEvent) => { },
+    (args: CellClickArgs<ClientDatasetRow>, event: CellMouseEvent) => {
+      event.preventGridDefault()
+      args.selectCell(true)
+    },
     [],
   )
-
   return (
     <BaseDataGrid
       rowKeyGetter={rowKeyGetter}
       rows={rows}
-      columns={columns}
       onCellClick={onCellClick}
+      columns={columns}
       footer={<LinkableTablePaginationFooter pagination={pagination} />}
     />
   )
