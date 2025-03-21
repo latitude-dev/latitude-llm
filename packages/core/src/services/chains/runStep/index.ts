@@ -64,6 +64,7 @@ export type StepProps = {
   previousConfig: PromptConfig
   abortSignal?: AbortSignal
   previousResponse?: ChainStepResponse<StreamType>
+  injectAgentFinishTool?: boolean
 }
 
 export async function runStep({
@@ -83,6 +84,7 @@ export async function runStep({
   stepCount = 0,
   abortSignal,
   previousResponse,
+  injectAgentFinishTool = false,
 }: StepProps) {
   if (newMessages?.length) {
     const lastResponseMessage = newMessages[0]! as AssistantMessage
@@ -126,6 +128,9 @@ export async function runStep({
     return step.conversation
   }
 
+  const isAgent = step.conversation.config.type === 'agent'
+  const enableAgentOptimization =
+    !step.conversation.config.disableAgentOptimization
   const { response, clientToolCalls } =
     await chainStreamManager.getProviderResponse({
       source,
@@ -134,9 +139,8 @@ export async function runStep({
       schema: step.schema,
       output: step.output,
       abortSignal,
-      injectFakeAgentStartTool:
-        step.conversation.config.type === 'agent' &&
-        !step.conversation.config.disableAgentOptimization,
+      injectFakeAgentStartTool: isAgent && enableAgentOptimization,
+      injectAgentFinishTool: isAgent && injectAgentFinishTool,
     })
 
   const isPromptl = chain instanceof PromptlChain

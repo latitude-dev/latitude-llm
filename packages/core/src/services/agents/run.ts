@@ -22,6 +22,7 @@ export function runAgent<T extends boolean, C extends SomeChain>({
   configOverrides,
   promptSource,
   abortSignal,
+  isChain,
 }: RunChainArgs<T, C>) {
   const errorableUuid = generateUUID()
   const chainStartTime = Date.now()
@@ -54,6 +55,7 @@ export function runAgent<T extends boolean, C extends SomeChain>({
       removeSchema: true, // Removes the schema configuration for the AI generation, as it is reserved for the agent's Return function
       promptSource,
       abortSignal,
+      isChain,
     })
 
     const chainEventsReader = chainResult.stream.getReader()

@@ -138,6 +138,7 @@ export async function runDocumentAtCommit({
     errorableType,
     workspace,
     chain: checkerResult.value.chain,
+    isChain: checkerResult.value.isChain,
     globalConfig: checkerResult.value.config as PromptConfig,
     promptlVersion: document.promptlVersion,
     providersMap,
