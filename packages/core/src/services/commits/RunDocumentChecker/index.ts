@@ -74,6 +74,7 @@ export class RunDocumentChecker {
             includeSourceMap: true,
           }),
           config: metadata.config,
+          isChain: true,
         })
       } else {
         const metadata = await scan({
@@ -97,6 +98,7 @@ export class RunDocumentChecker {
             includeSourceMap: true,
           }),
           config: metadata.config,
+          isChain: metadata.isChain,
         })
       }
     } catch (e) {

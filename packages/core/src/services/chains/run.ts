@@ -42,6 +42,7 @@ type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
   source: LogSources
   promptlVersion: number
   chain: C
+  isChain?: boolean
   promptSource: PromptSource
   globalConfig: PromptConfig
 
@@ -83,6 +84,7 @@ export function runChain<T extends boolean, C extends SomeChain>({
   removeSchema = false,
   promptSource,
   abortSignal,
+  isChain = true,
 }: RunChainArgs<T, C>) {
   const errorableUuid = generateUUID()
   const chainStartTime = Date.now()
@@ -115,6 +117,7 @@ export function runChain<T extends boolean, C extends SomeChain>({
         newMessages,
         previousConfig: globalConfig,
         abortSignal,
+        injectAgentFinishTool: isChain === false,
       })
 
       resolveConversation(conversation)
