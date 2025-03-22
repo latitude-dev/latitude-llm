@@ -43,59 +43,55 @@ export async function updateScheduledTriggerLastRun(
   db = database,
 ): PromisedResult<DocumentTrigger> {
   return Transaction.call(async (trx) => {
-    try {
-      // First, get the current configuration if only a partial trigger was provided
-      let config: ScheduledTriggerConfiguration
+    // First, get the current configuration if only a partial trigger was provided
+    let config: ScheduledTriggerConfiguration
 
-      if (!('configuration' in trigger)) {
-        const fullTrigger = await trx
-          .select()
-          .from(documentTriggers)
-          .where(eq(documentTriggers.id, trigger.id))
-          .then((rows) => rows[0] as DocumentTrigger | undefined)
-
-        if (!fullTrigger) {
-          return Result.error(
-            new Error(`Trigger with id ${trigger.id} not found`),
-          )
-        }
-
-        config = fullTrigger.configuration as ScheduledTriggerConfiguration
-      } else {
-        config = (trigger as DocumentTrigger)
-          .configuration as ScheduledTriggerConfiguration
-      }
-
-      // Calculate the next run time
-      const nextRunTime = getNextRunTime(
-        config.cronExpression,
-        'UTC',
-        lastRunTime,
-      )
-
-      // Update the trigger configuration with the new last run time and next run time
-      const updateResult = await trx
-        .update(documentTriggers)
-        .set({
-          configuration: {
-            ...config,
-            lastRun: lastRunTime,
-            nextRunTime: nextRunTime || undefined,
-          },
-        })
+    if (!('configuration' in trigger)) {
+      const fullTrigger = await trx
+        .select()
+        .from(documentTriggers)
         .where(eq(documentTriggers.id, trigger.id))
-        .returning()
+        .then((rows) => rows[0] as DocumentTrigger | undefined)
 
-      if (!updateResult.length) {
+      if (!fullTrigger) {
         return Result.error(
-          new Error(`Failed to update document trigger ${trigger.uuid}`),
+          new Error(`Trigger with id ${trigger.id} not found`),
         )
       }
 
-      return Result.ok(updateResult[0] as DocumentTrigger)
-    } catch (error) {
-      return Result.error(error as Error)
+      config = fullTrigger.configuration as ScheduledTriggerConfiguration
+    } else {
+      config = (trigger as DocumentTrigger)
+        .configuration as ScheduledTriggerConfiguration
     }
+
+    // Calculate the next run time
+    const nextRunTime = getNextRunTime(
+      config.cronExpression,
+      'UTC',
+      lastRunTime,
+    )
+
+    // Update the trigger configuration with the new last run time and next run time
+    const updateResult = await trx
+      .update(documentTriggers)
+      .set({
+        configuration: {
+          ...config,
+          lastRun: lastRunTime,
+          nextRunTime: nextRunTime || undefined,
+        },
+      })
+      .where(eq(documentTriggers.id, trigger.id))
+      .returning()
+
+    if (!updateResult.length) {
+      return Result.error(
+        new Error(`Failed to update document trigger ${trigger.uuid}`),
+      )
+    }
+
+    return Result.ok(updateResult[0] as DocumentTrigger)
   }, db)
 }
 

@@ -42,27 +42,15 @@ export const checkScheduledDocumentTriggersJob = async (
       parameters: trigger.configuration.parameters,
     }
 
-    // Enqueue with some delay to prevent all jobs starting at exactly the same time
-    const randomDelay = Math.floor(Math.random() * 2000) // 0-2 seconds random delay
-
     const job =
       await jobQueues.defaultQueue.jobs.enqueueProcessScheduledTriggerJob(
         jobData,
-        {
-          delay: randomDelay,
-          removeOnComplete: true,
-          removeOnFail: false, // Keep failed jobs for debugging
-          attempts: 3, // Allow up to 3 attempts for each trigger
-          backoff: {
-            type: 'exponential',
-            delay: 5000, // Start with 5 second delay, then exponential backoff
-          },
-        },
       )
 
     console.log(
       `Enqueued job ${job.id} for trigger ${trigger.uuid} (document: ${trigger.documentUuid})`,
     )
+
     return { success: true, jobId: job.id }
   })
 
