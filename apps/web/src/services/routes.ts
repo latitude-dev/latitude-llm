@@ -8,6 +8,7 @@ export enum DocumentRoutes {
   editor = 'editor',
   logs = 'logs',
   evaluations = 'evaluations',
+  evaluationsV2 = 'evaluationsV2',
 }
 
 export enum EvaluationRoutes {
@@ -172,7 +173,8 @@ export const ROUTES = {
                 root: rootDocuments,
                 detail: ({ uuid }: { uuid: string }) => {
                   const root = `${rootDocuments}/${uuid}`
-                  const evaluationsRoot: string = `${root}/evaluations`
+                  const evaluationsRoot = `${root}/evaluations`
+                  const rootEvaluations = `${root}/evaluations-v2`
                   return {
                     root,
                     [DocumentRoutes.editor]: {
@@ -196,6 +198,15 @@ export const ROUTES = {
                         return {
                           root: detailRoot,
                           createBatch: `${detailRoot}/create-batch`,
+                        }
+                      },
+                    },
+                    [DocumentRoutes.evaluationsV2]: {
+                      root: rootEvaluations,
+                      detail: ({ uuid }: { uuid: string }) => {
+                        const root = `${rootEvaluations}/${uuid}`
+                        return {
+                          root: root,
                         }
                       },
                     },

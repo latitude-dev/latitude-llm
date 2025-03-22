@@ -1,15 +1,7 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import {
-  Button,
-  TableWithHeader,
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   EventArgs,
@@ -19,13 +11,26 @@ import { ROUTES } from '$/services/routes'
 import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
 import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
 import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
+import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
+import {
+  DocumentLogFilterOptions,
+  ResultWithEvaluation,
+  ResultWithEvaluationTmp,
+} from '@latitude-data/core/browser'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import {
+  Button,
+  TableWithHeader,
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
-import { DocumentLogs } from './DocumentLogs'
-import { DocumentLogFilters } from './Filters'
 import { useCommits } from '$/stores/commitsStore'
 import { useDebounce } from 'use-debounce'
+import { DocumentLogs } from './DocumentLogs'
+import { DocumentLogFilters } from './Filters'
 
 const useDocumentLogSocket = (
   documentUuid: string,
@@ -116,10 +121,59 @@ export function DocumentLogsPage({
       filterOptions: debouncedFilterOptions,
       projectId: project.id,
     })
-  const { data: evaluationResults, isLoading: isEvaluationResultsLoading } =
+
+  const { data: resultsV1, isLoading: isEvaluationResultsV1Loading } =
     useEvaluationResultsByDocumentLogs({
       documentLogIds: documentLogs.map((l) => l.id),
     })
+  const evaluationResultsV1 = useMemo(
+    () =>
+      documentLogs.reduce(
+        (acc, log) => ({
+          ...acc,
+          ...(resultsV1[log.id] ? { [log.uuid]: resultsV1[log.id]! } : {}),
+        }),
+        {} as Record<string, ResultWithEvaluation[]>,
+      ),
+    [documentLogs, resultsV1],
+  )
+
+  const { data: evaluationResultsV2, isLoading: isEvaluationResultsV2Loading } =
+    useEvaluationResultsV2ByDocumentLogs({
+      project: project,
+      commit: commit,
+      document: document,
+      documentLogUuids: documentLogs.map((l) => l.uuid),
+    })
+
+  const evaluationResults = useMemo<
+    Record<string, ResultWithEvaluationTmp[]>
+  >(() => {
+    let evaluationResults: Record<string, ResultWithEvaluationTmp[]> =
+      Object.fromEntries(
+        Object.entries(evaluationResultsV1).map(([documentLog, results]) => [
+          documentLog,
+          results.map((result) => ({ ...result, version: 'v1' as const })),
+        ]),
+      )
+
+    Object.entries(evaluationResultsV2).forEach(([documentLog, results]) => {
+      const resultsV2 = results.map((result) => ({
+        ...result,
+        version: 'v2' as const,
+      }))
+      if (evaluationResults[documentLog]) {
+        evaluationResults[documentLog] = [
+          ...evaluationResults[documentLog],
+          ...resultsV2,
+        ]
+      } else {
+        evaluationResults[documentLog] = resultsV2
+      }
+    })
+
+    return evaluationResults
+  }, [evaluationResultsV1, evaluationResultsV2])
 
   useDocumentLogSocket(document.documentUuid, mutate)
 
@@ -156,7 +210,9 @@ export function DocumentLogsPage({
             aggregations={aggregations}
             isAggregationsLoading={isAggregationsLoading}
             evaluationResults={evaluationResults}
-            isEvaluationResultsLoading={isEvaluationResultsLoading}
+            isEvaluationResultsLoading={
+              isEvaluationResultsV1Loading || isEvaluationResultsV2Loading
+            }
           />
         }
       />

@@ -25,6 +25,7 @@ export const HumanEvaluationBinarySpecification = {
   resultMetadata: humanEvaluationResultMetadata.extend({}),
   resultError: humanEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: false,
 }
 export type HumanEvaluationBinaryConfiguration = z.infer<
   typeof HumanEvaluationBinarySpecification.configuration
@@ -52,6 +53,7 @@ export const HumanEvaluationRatingSpecification = {
   resultMetadata: humanEvaluationResultMetadata.extend({}),
   resultError: humanEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: false,
 }
 export type HumanEvaluationRatingConfiguration = z.infer<
   typeof HumanEvaluationRatingSpecification.configuration
@@ -77,6 +79,7 @@ export const HumanEvaluationComparisonSpecification = {
   resultMetadata: humanEvaluationResultMetadata.extend({}),
   resultError: humanEvaluationResultError.extend({}),
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: false,
 }
 export type HumanEvaluationComparisonConfiguration = z.infer<
   typeof HumanEvaluationComparisonSpecification.configuration

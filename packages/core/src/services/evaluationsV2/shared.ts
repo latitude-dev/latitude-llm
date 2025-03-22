@@ -17,7 +17,7 @@ import {
   Workspace,
 } from '../../browser'
 import { Database } from '../../client'
-import { LatitudeError, TypedResult } from '../../lib'
+import { BadRequestError, LatitudeError, TypedResult } from '../../lib'
 import HumanEvaluationSpecification from './human'
 import LlmEvaluationSpecification from './llm'
 import RuleEvaluationSpecification from './rule'
@@ -87,4 +87,25 @@ export function normalizeScore(score: number, lower: number, upper: number) {
   const value = Math.abs(score - lower)
   const map = (value * EVALUATION_SCORE_SCALE) / range
   return Math.min(Math.max(0, map), EVALUATION_SCORE_SCALE)
+}
+
+export function getDatasetColumnData({
+  dataset,
+  row,
+  column: columnName,
+}: {
+  dataset: DatasetV2
+  row: DatasetRow
+  column: string
+}) {
+  const column = dataset.columns.find((c) => c.name === columnName)
+  if (!column) {
+    throw new BadRequestError(`${columnName} column not found in dataset`)
+  }
+
+  if (column.role !== 'label') {
+    throw new BadRequestError(`${column.name} column role must be label`)
+  }
+
+  return row.rowData[column.identifier]?.toString() ?? ''
 }

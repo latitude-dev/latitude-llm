@@ -1,11 +1,11 @@
 import { useCallback, useEffect } from 'react'
 
-import { WorkspaceUsage } from '@latitude-data/core/browser'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
 import useUsers from '$/stores/users'
+import { WorkspaceUsage } from '@latitude-data/core/browser'
+import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useWorkspaceUsage(opts?: SWRConfiguration) {
   const { data: users } = useUsers()
@@ -32,6 +32,7 @@ export default function useWorkspaceUsage(opts?: SWRConfiguration) {
     )
   }, [])
 
+  useSockets({ event: 'evaluationResultV2Created', onMessage })
   useSockets({ event: 'evaluationResultCreated', onMessage })
   useSockets({ event: 'documentLogCreated', onMessage })
   useEffect(() => {

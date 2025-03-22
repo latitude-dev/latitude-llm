@@ -1,11 +1,15 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
-
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { useSelectableRows } from '$/hooks/useSelectableRows'
+import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
+import useProviderLogs from '$/stores/providerLogs'
 import {
-  DocumentLogWithMetadataAndError,
-  ResultWithEvaluation,
-} from '@latitude-data/core/repositories'
+  DocumentLogFilterOptions,
+  ResultWithEvaluationTmp,
+} from '@latitude-data/core/browser'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { DocumentLogsAggregations } from '@latitude-data/core/services/documentLogs/computeDocumentLogsAggregations'
 import {
   Button,
@@ -14,21 +18,15 @@ import {
   TableBlankSlate,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useSelectableRows } from '$/hooks/useSelectableRows'
-import useProviderLogs from '$/stores/providerLogs'
-
+import { useMemo, useRef, useState } from 'react'
+import { LogsOverTime } from '../../../../../overview/_components/Overview/LogsOverTime'
 import { AggregationPanels } from './AggregationPanels'
 import { DocumentLogInfo } from './DocumentLogInfo'
 import { DocumentLogsTable } from './DocumentLogsTable'
-import { ExportLogsModal } from './ExportLogsModal'
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
-import { LogsOverTime } from '../../../../../overview/_components/Overview/LogsOverTime'
-import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
-import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
-import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
 import { DownloadLogsButton } from './DownloadLogsButton'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { ExportLogsModal } from './ExportLogsModal'
+import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
+import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -44,7 +42,7 @@ export function DocumentLogs({
   selectedLog?: DocumentLogWithMetadataAndError
   aggregations?: DocumentLogsAggregations
   isAggregationsLoading: boolean
-  evaluationResults: Record<number, ResultWithEvaluation[]>
+  evaluationResults: Record<string, ResultWithEvaluationTmp[]>
   isEvaluationResultsLoading: boolean
 }) {
   const { enabled: hasNewDatasets } = useFeatureFlag({
@@ -133,7 +131,7 @@ export function DocumentLogs({
             <DocumentLogInfo
               documentLog={selectedLog}
               providerLogs={providerLogs}
-              evaluationResults={evaluationResults[selectedLog.id]}
+              evaluationResults={evaluationResults[selectedLog.uuid]}
               isLoading={isProviderLogsLoading || isEvaluationResultsLoading}
               stickyRef={stickyRef}
               sidebarWrapperRef={sidebarWrapperRef}
