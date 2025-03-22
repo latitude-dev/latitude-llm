@@ -71,6 +71,8 @@ ENV SENTRY_ORG=$SENTRY_ORG
 ENV SENTRY_PROJECT=$SENTRY_PROJECT
 ENV NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
 ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
+ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL} 
+ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA}
 
 WORKDIR /app
 
@@ -93,6 +95,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN 2>/dev/null || echo '')" \
   NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY \
   NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST \
+  DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL} \
+  DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA} \
   pnpm turbo build --filter="${PROJECT}..."
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
@@ -101,10 +105,19 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optiona
 FROM alpine AS runner
 
 ARG PROJECT_PATH
+ARG DD_GIT_REPOSITORY_URL
+ARG DD_GIT_COMMIT_SHA
+
+ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA}
+ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL} 
+ENV HOSTNAME=0.0.0.0
+ENV KEEP_ALIVE_TIMEOUT=601000
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+ENV NODE_ENV=production
+ENV PORT=8080
 
 WORKDIR /app
-
-ENV NODE_ENV=production
 
 # Install runtime dependencies for canvas
 RUN apk add --no-cache \
@@ -144,12 +157,6 @@ COPY --from=builder --chown=nodejs:nextjs /app/apps/web/node_modules ./apps/web/
 USER nextjs
 
 WORKDIR /app/apps/web
-
-ENV HOSTNAME=0.0.0.0
-ENV KEEP_ALIVE_TIMEOUT=601000
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
-ENV PORT=8080
 
 EXPOSE 8080
 
