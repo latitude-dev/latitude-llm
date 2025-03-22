@@ -34,8 +34,6 @@ export const processScheduledTriggerJob = async (
     parameters = {},
   } = job.data
 
-  let documentJobEnqueued = false
-
   // Get the queues to enqueue the document run job
   const jobQueues = await setupQueues()
 
@@ -52,8 +50,6 @@ export const processScheduledTriggerJob = async (
 
   const docJob =
     await jobQueues.defaultQueue.jobs.enqueueRunDocumentJob(runJobData)
-
-  documentJobEnqueued = true
 
   // Create a trigger object with the ID for updating
   const trigger: Pick<DocumentTrigger, 'id' | 'uuid'> = {
