@@ -158,6 +158,7 @@ jobs:
             SENTRY_PROJECT=${{ matrix.private && secrets.SENTRY_PROJECT || '' }}
             NEXT_PUBLIC_POSTHOG_KEY=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_KEY || '' }}
             NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
+            NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ matrix.private && vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL || '' }}
 
   run-migrations:
     needs: [lint, test]

@@ -18,6 +18,7 @@ export enum ChainEventTypes {
   ChainCompleted = 'chain-completed',
   ChainError = 'chain-error',
   ToolsRequested = 'tools-requested',
+  IntegrationWakingUp = 'integration-waking-up',
 }
 
 interface GenericLatitudeEventData {
@@ -84,6 +85,12 @@ export interface LatitudeToolsRequestedEventData
   tools: ToolCall[]
 }
 
+export interface LatitudeIntegrationWakingUpEventData
+  extends GenericLatitudeEventData {
+  type: ChainEventTypes.IntegrationWakingUp
+  integrationName: string
+}
+
 export type LatitudeEventData =
   | LatitudeChainStartedEventData
   | LatitudeStepStartedEventData
@@ -95,6 +102,7 @@ export type LatitudeEventData =
   | LatitudeChainCompletedEventData
   | LatitudeChainErrorEventData
   | LatitudeToolsRequestedEventData
+  | LatitudeIntegrationWakingUpEventData
 
 // Just a type helper for ChainStreamManager. Omit<LatitudeEventData, 'messages' | 'uuid'> does not work.
 export type OmittedLatitudeEventData =
@@ -108,6 +116,7 @@ export type OmittedLatitudeEventData =
   | Omit<LatitudeChainCompletedEventData, 'messages' | 'uuid'>
   | Omit<LatitudeChainErrorEventData, 'messages' | 'uuid'>
   | Omit<LatitudeToolsRequestedEventData, 'messages' | 'uuid'>
+  | Omit<LatitudeIntegrationWakingUpEventData, 'messages' | 'uuid'>
 
 export type ChainEvent =
   | {

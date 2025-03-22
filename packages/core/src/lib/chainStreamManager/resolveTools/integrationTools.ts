@@ -6,13 +6,16 @@ import { ResolvedTools, ToolSource } from './types'
 import { IntegrationsRepository } from '../../../repositories'
 import { Workspace } from '../../../browser'
 import { listTools } from '../../../services/integrations'
+import { ChainStreamManager } from '..'
 
 export async function resolveIntegrationTools({
   workspace,
   config,
+  chainStreamManager,
 }: {
   workspace: Workspace
   config: PromptConfig
+  chainStreamManager?: ChainStreamManager
 }): PromisedResult<ResolvedTools, LatitudeError> {
   const tools = config.tools
   if (!tools) {
@@ -49,7 +52,7 @@ export async function resolveIntegrationTools({
       if (integrationResult.error) return integrationResult
       const integration = integrationResult.unwrap()
 
-      const toolsResult = await listTools(integration)
+      const toolsResult = await listTools(integration, chainStreamManager)
       if (toolsResult.error) return toolsResult
       const mcpTools = toolsResult.unwrap()
 

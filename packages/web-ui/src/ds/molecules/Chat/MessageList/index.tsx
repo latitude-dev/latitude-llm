@@ -55,6 +55,7 @@ export function MessageList({
           // message here, since the response will be rendered in the tool request itself.
           return null
         }
+
         return (
           <Message
             key={index}

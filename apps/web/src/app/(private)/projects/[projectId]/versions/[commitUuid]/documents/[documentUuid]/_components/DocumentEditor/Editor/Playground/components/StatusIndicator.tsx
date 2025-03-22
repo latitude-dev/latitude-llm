@@ -7,6 +7,7 @@ import { TokenUsage } from './TokenUsage'
 export function StatusIndicator({
   usage,
   isScrolledToBottom,
+  wakingUpIntegration,
   runningLatitudeTools = 0,
   isStreaming = false,
   stopStreaming,
@@ -14,11 +15,30 @@ export function StatusIndicator({
 }: {
   usage: LanguageModelUsage | undefined
   isScrolledToBottom: boolean
+  wakingUpIntegration?: string
   runningLatitudeTools?: number
   isStreaming: boolean
   stopStreaming?: () => void
   canStopStreaming?: boolean
 }) {
+  if (wakingUpIntegration) {
+    return (
+      <FloatingElement isScrolledToBottom={false}>
+        <div className='flex flex-row gap-2 p-1'>
+          <Icon
+            name='loader'
+            color='foregroundMuted'
+            className='animate-spin'
+          />
+          <Text.H6 color='foregroundMuted'>
+            Waking up <Text.H6B color='primary'>{wakingUpIntegration}</Text.H6B>{' '}
+            integration...
+          </Text.H6>
+        </div>
+      </FloatingElement>
+    )
+  }
+
   if (runningLatitudeTools > 0) {
     return (
       <FloatingElement isScrolledToBottom={false}>

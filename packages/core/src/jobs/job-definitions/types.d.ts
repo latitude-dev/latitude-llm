@@ -16,6 +16,8 @@ import type { GenerateDocumentSuggestionJobData } from './documentSuggestions/ge
 import type { RequestDocumentSuggestionsJobData } from './documentSuggestions/requestDocumentSuggestionsJob'
 import type { RunEvaluationV2JobData } from './evaluations/runEvaluationV2Job'
 import type { RunLiveEvaluationJobData } from './liveEvaluations/runLiveEvaluationJob'
+import type { AutoScaleJobData } from './mcpServers/autoScaleJob'
+import type { ScaleDownMcpServerJobData } from './mcpServers/scaleDownMcpServerJob'
 
 export type JobDataMap = {
   [Jobs.publishEventJob]: LatitudeEvent
@@ -35,6 +37,8 @@ export type JobDataMap = {
   [Jobs.requestDocumentSuggestionsJob]: RequestDocumentSuggestionsJobData
   [Jobs.cleanDocumentSuggestionsJob]: CleanDocumentSuggestionsJobData
   [Jobs.runEvaluationV2Job]: RunEvaluationV2JobData
+  [Jobs.autoScaleJob]: AutoScaleJobData
+  [Jobs.scaleDownMcpServerJob]: ScaleDownMcpServerJobData
 }
 
 type JobData<J extends Jobs> = J extends keyof JobDataMap
