@@ -67,7 +67,7 @@ export function EvaluationResultsTable<
             align='start'
             side='top'
           >
-            Results from the filtered versions of this evaluation and document.
+            Results from the filtered versions of this evaluation and document
           </Tooltip>
         </span>
         <div className='flex items-center gap-2'>

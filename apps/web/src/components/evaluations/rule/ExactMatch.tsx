@@ -53,7 +53,7 @@ function ConfigurationForm({
 function ResultBadge({
   result,
 }: ResultBadgeProps<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>) {
-  return <>{result.hasPassed ? 'Matched' : 'Unmatched'}</>
+  return <>{result.score === 1 ? 'Matched' : 'Unmatched'}</>
 }
 
 function ResultRowHeaders(

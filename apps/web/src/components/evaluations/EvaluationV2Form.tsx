@@ -196,7 +196,8 @@ export default function EvaluationV2Form<
             }
             disabled={disabled}
           />
-          <SwitchInput
+          {/* TODO: Uncomment when experiments are implemented */}
+          {/* <SwitchInput
             checked={!!options.autoApplySuggestions}
             name='autoApplySuggestions'
             label='Auto apply suggestions'
@@ -205,7 +206,7 @@ export default function EvaluationV2Form<
               setOptions({ ...options, autoApplySuggestions: value })
             }
             disabled={disabled}
-          />
+          /> */}
         </FormFieldGroup>
       </FormWrapper>
     </form>

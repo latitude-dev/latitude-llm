@@ -59,12 +59,13 @@ async function run(
     }
 
     const score = actualOutput === expectedOutput ? 1 : 0
+
     let normalizedScore = normalizeScore(score, 0, 1)
+    let hasPassed = score === 1
     if (evaluation.configuration.reverseScale) {
       normalizedScore = normalizeScore(score, 1, 0)
+      hasPassed = score === 0
     }
-
-    const hasPassed = score === 1
 
     return { score, normalizedScore, metadata, hasPassed }
   } catch (error) {

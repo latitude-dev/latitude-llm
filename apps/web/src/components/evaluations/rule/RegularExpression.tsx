@@ -58,7 +58,7 @@ function ResultBadge({
   EvaluationType.Rule,
   RuleEvaluationMetric.RegularExpression
 >) {
-  return <>{result.hasPassed ? 'Matched' : 'Unmatched'}</>
+  return <>{result.score === 1 ? 'Matched' : 'Unmatched'}</>
 }
 
 function ResultRowHeaders(
