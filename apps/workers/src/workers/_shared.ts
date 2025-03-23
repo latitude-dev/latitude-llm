@@ -4,6 +4,7 @@ import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { captureException } from '$/utils/sentry'
 import { Processor } from 'bullmq'
+import tracer from '../tracer'
 
 export const buildProcessor =
   (queues: Queues[]): Processor =>
@@ -17,7 +18,18 @@ export const buildProcessor =
               const jobFn = (jobs as unknown as Record<string, Function>)[j]
               if (jobFn) {
                 try {
-                  await jobFn(job)
+                  return await tracer.wrap(
+                    'bull.process',
+                    { resource: job.name },
+                    async () => {
+                      const span = tracer.scope().active()
+                      if (span) {
+                        span.addTags({ job_id: job.id })
+                      }
+
+                      return await jobFn(job)
+                    },
+                  )()
                 } catch (error) {
                   const unknownError = getUnknownError(error)
 
