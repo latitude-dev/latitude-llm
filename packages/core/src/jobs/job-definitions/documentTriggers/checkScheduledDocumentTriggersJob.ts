@@ -31,7 +31,7 @@ export const checkScheduledDocumentTriggersJob = async (
   const jobQueues = await setupQueues()
 
   // Enqueue individual jobs for each trigger
-  const jobPromises = triggers.map(async (trigger) => {
+  triggers.forEach(async (trigger) => {
     const jobData: ProcessScheduledTriggerJobData = {
       documentTriggerId: trigger.id,
       documentTriggerUuid: trigger.uuid,
@@ -42,25 +42,6 @@ export const checkScheduledDocumentTriggersJob = async (
       parameters: trigger.configuration.parameters,
     }
 
-    const job =
-      await jobQueues.defaultQueue.jobs.enqueueProcessScheduledTriggerJob(
-        jobData,
-      )
-
-    console.log(
-      `Enqueued job ${job.id} for trigger ${trigger.uuid} (document: ${trigger.documentUuid})`,
-    )
-
-    return { success: true, jobId: job.id }
+    await jobQueues.defaultQueue.jobs.enqueueProcessScheduledTriggerJob(jobData)
   })
-
-  // Wait for all enqueue operations to complete and count successes/failures
-  const results = await Promise.all(jobPromises)
-  const successCount = results.filter((r) => r.success).length
-  const failureCount = results.length - successCount
-
-  console.log(
-    `Successfully enqueued ${successCount} scheduled trigger jobs` +
-      (failureCount > 0 ? `, ${failureCount} failed` : ''),
-  )
 }
