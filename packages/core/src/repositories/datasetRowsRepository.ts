@@ -1,15 +1,6 @@
-import {
-  sql,
-  asc,
-  eq,
-  lt,
-  and,
-  getTableColumns,
-  count,
-  inArray,
-} from 'drizzle-orm'
+import { sql, asc, eq, lt, and, getTableColumns, count } from 'drizzle-orm'
 
-import { DatasetRow, DatasetV2, DEFAULT_PAGINATION_SIZE } from '../browser'
+import { DatasetRow, DEFAULT_PAGINATION_SIZE } from '../browser'
 import { datasetRows } from '../schema'
 import Repository from './repositoryV2'
 import { calculateOffset } from '../lib/pagination/calculateOffset'
@@ -28,25 +19,6 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
       .from(datasetRows)
       .where(this.scopeFilter)
       .$dynamic()
-  }
-
-  findManyByDataset({
-    dataset,
-    rowIds,
-  }: {
-    dataset: DatasetV2
-    rowIds: number[]
-  }) {
-    return this.db
-      .select(tt)
-      .from(datasetRows)
-      .where(
-        and(
-          this.scopeFilter,
-          inArray(datasetRows.id, rowIds),
-          eq(datasetRows.datasetId, dataset.id),
-        ),
-      )
   }
 
   findByDatasetPaginated({

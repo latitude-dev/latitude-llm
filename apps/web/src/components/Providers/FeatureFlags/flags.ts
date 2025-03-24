@@ -2,7 +2,6 @@ export const FEATURE_FLAGS = {
   datasetsV2: 'datasetsV2',
   datasetsV1ModificationBlocked: 'datasetsV1ModificationBlocked',
   evaluationsV2: 'evaluationsV2',
-  useDatagridInForDatasetRows: 'useDatagridInForDatasetRows',
 } as const
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS
@@ -15,7 +14,6 @@ export const FEATURE_FLAGS_CONDITIONS: Record<
   FeatureFlagCondition
 > = {
   datasetsV2: { workspaceIds: [1] },
-  useDatagridInForDatasetRows: { workspaceIds: [] },
   datasetsV1ModificationBlocked: { workspaceIds: [] },
   evaluationsV2: { workspaceIds: [1] },
 }

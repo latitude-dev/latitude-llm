@@ -1,17 +1,35 @@
-import type { DatasetV2 } from '@latitude-data/core/browser'
+import type { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { compact } from 'lodash-es'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { updateDatasetRowAction } from '$/actions/datasetRows/update'
 import {
-  ClientDatasetRow,
-  serializeRow,
-  serializeRows,
-} from './rowSerializationHelpers'
-import { useCallback } from 'react'
+  DatasetRowData,
+  type DatasetRowDataContent,
+} from '@latitude-data/core/schema'
+import { format, isValid, parseISO } from 'date-fns'
+
+export type ClientDatasetRow = DatasetRow & {
+  cells: DatasetRowData[keyof DatasetRowData][]
+}
+function formatMaybeIsoDate(value: string): string | null {
+  if (typeof value !== 'string') return null
+
+  try {
+    const date = parseISO(value)
+    if (!isValid(date)) return null
+
+    // If there's time info, include it
+    if (value.includes('T') && !value.endsWith('T00:00:00.000Z')) {
+      return format(date, 'dd MMM yyyy, HH:mm')
+    }
+
+    return format(date, 'dd MMM yyyy')
+  } catch {
+    return null
+  }
+}
 
 export function buildDatasetRowKey({
   datasetId,
@@ -80,44 +98,59 @@ export default function useDatasetRows(
     },
   )
 
-  const { execute: update, isPending: isUpdating } = useLatitudeAction(
-    updateDatasetRowAction,
-    {
-      onSuccess: ({ data: updatedRows }) => {
-        if (!updatedRows || !updatedRows.length || !dataset) return
-
-        const prevRows = data
-        const updatedRowsMap = new Map()
-
-        updatedRows.forEach((row) => {
-          updatedRowsMap.set(
-            row.id,
-            serializeRow({ row, columns: dataset.columns }),
-          )
-        })
-        mutate(prevRows.map((row) => updatedRowsMap.get(row.id) || row))
-      },
-    },
-  )
-  const updateRows = useCallback(
-    ({ rows }: { rows: ClientDatasetRow[] }) => {
-      if (!dataset) return
-
-      const serverRows = rows.map((row) => ({
-        rowId: row.id,
-        rowData: row.rowData,
-      }))
-
-      update({ datasetId: dataset.id, rows: serverRows })
-    },
-    [update],
-  )
-
   return {
     data,
     mutate,
-    updateRows,
-    isUpdating,
     ...rest,
   }
+}
+
+export const serializeRows =
+  (columns: DatasetV2['columns']) =>
+  (rows: DatasetRow[]): ClientDatasetRow[] => {
+    return rows.map((item) => {
+      return {
+        ...item,
+        cells: columns.map(({ identifier }) => {
+          const cell = item.rowData[identifier]
+          return parseRowCell({ cell, parseDates: true })
+        }),
+        createdAt: new Date(item.createdAt),
+        updatedAt: new Date(item.updatedAt),
+      }
+    })
+  }
+
+export function parseRowCell({
+  cell,
+  parseDates,
+}: {
+  cell: DatasetRowDataContent
+  parseDates: boolean
+}) {
+  if (cell === null || cell === undefined) {
+    return ''
+  }
+
+  if (
+    typeof cell === 'string' ||
+    typeof cell === 'number' ||
+    typeof cell === 'boolean'
+  ) {
+    if (typeof cell === 'string' && parseDates) {
+      const formattedDate = formatMaybeIsoDate(cell)
+      if (formattedDate) return formattedDate
+    }
+    return String(cell)
+  }
+
+  if (typeof cell === 'object') {
+    try {
+      return JSON.stringify(cell)
+    } catch {
+      return String(cell)
+    }
+  }
+
+  return String(cell)
 }

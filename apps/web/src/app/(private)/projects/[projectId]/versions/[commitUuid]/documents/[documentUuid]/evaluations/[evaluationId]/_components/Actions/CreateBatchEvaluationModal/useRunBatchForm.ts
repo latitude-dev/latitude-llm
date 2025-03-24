@@ -1,3 +1,4 @@
+import { DatasetHeadText } from '$/app/(private)/datasets/[datasetId]/DatasetDetailTable'
 import { useMappedParametersFromLocalStorage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/batch/_components/RunPromptInBatchModal/useMappedParametersFromLocalStorage'
 import {
   buildColumnList,
@@ -16,7 +17,6 @@ import { SelectOption, useCurrentCommit } from '@latitude-data/web-ui'
 import type { ConversationMetadata } from 'promptl-ai'
 import { useCallback, useMemo, useState } from 'react'
 import { RunBatchParameters } from './useRunBatch'
-import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
 
 export function buildEmptyParameters(parameters: string[]) {
   return parameters.reduce((acc, key) => {

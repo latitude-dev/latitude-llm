@@ -54,6 +54,11 @@ export default function useDatasets(
     executeFormAction: createFormAction,
   } = useLatitudeAction<typeof createDatasetAction>(createDatasetAction, {
     onSuccess: ({ data: dataset }) => {
+      toast({
+        title: 'Success',
+        description: 'Dataset uploaded successfully! 🎉',
+      })
+
       mutate([...data, dataset])
       onCreateSuccess?.(dataset)
     },

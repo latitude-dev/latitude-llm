@@ -10,7 +10,7 @@ type RoleStyles = {
 
 const ROLE_STYLES: RoleStyles = {
   label: { bgColor: 'accent' },
-  metadata: { bgColor: 'backgroundSecondary' },
+  metadata: { bgColor: 'backgroundCode' },
 }
 export function useDatasetRole() {
   const getStyleForRole = useCallback((role: DatasetColumnRole) => {
@@ -40,5 +40,3 @@ export function useDatasetRole() {
 
   return { getStyleForRole, backgroundCssClasses }
 }
-
-export type DatasetRoleStyle = ReturnType<typeof useDatasetRole>

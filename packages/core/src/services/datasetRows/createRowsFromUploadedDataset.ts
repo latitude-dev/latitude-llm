@@ -2,7 +2,12 @@ import { DatasetRow, DatasetV2 } from '../../browser'
 import { database } from '../../client'
 import { DatasetV2CreatedEvent } from '../../events/events'
 import { diskFactory, DiskWrapper, Result } from '../../lib'
-import { csvBatchGenerator, CSVRow, type CsvBatch } from '../../lib/readCsv'
+import {
+  csvBatchGenerator,
+  CSVRow,
+  DEFAULT_CSV_BATCH_SIZE,
+  type CsvBatch,
+} from '../../lib/readCsv'
 import { DatasetsV2Repository } from '../../repositories'
 import { Column, DatasetRowData } from '../../schema'
 import { updateDataset } from '../datasetsV2/update'
@@ -90,7 +95,7 @@ export async function createRowsFromUploadedDataset(
     onError,
     deleteFile = true,
     disk = diskFactory(),
-    batchSize = 200, // 200 rows per batch
+    batchSize = DEFAULT_CSV_BATCH_SIZE,
     hashAlgorithm = nanoidHashAlgorithm,
   }: {
     event: DatasetV2CreatedEvent

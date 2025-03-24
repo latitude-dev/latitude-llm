@@ -24,7 +24,7 @@ const inputVariants = cva(cn(INPUT_BASE_CLASSES), {
 export type TextAreaProps = TextareaAutosizeProps &
   Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'height'> &
   VariantProps<typeof inputVariants> &
-  Omit<FormFieldProps, 'children' | 'onKeyDown' | 'onFocus'> & {
+  Omit<FormFieldProps, 'children' | 'onKeyDown'> & {
     autoGrow?: boolean
   }
 const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(

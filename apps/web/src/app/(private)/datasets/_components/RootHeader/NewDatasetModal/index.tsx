@@ -5,18 +5,11 @@ import {
   FormWrapper,
   Input,
   Modal,
-  useToast,
 } from '@latitude-data/web-ui'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasetsV2'
 import DelimiterSelector from '$/app/(private)/datasets/_components/DelimiterSelector'
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
-import { useCallback, useState } from 'react'
-import { DatasetV2 } from '@latitude-data/core/browser'
 
 export function NewDatasetModalComponent({
   open,
@@ -49,7 +42,7 @@ export function NewDatasetModalComponent({
             form='createDatasetForm'
             type='submit'
           >
-            {isCreating ? 'Creating dataset...' : 'Create dataset'}
+            Create dataset
           </Button>
         </>
       }
@@ -96,56 +89,16 @@ export type NewDatasetModalProps = {
 }
 export function NewDatasetModal({ open, onOpenChange }: NewDatasetModalProps) {
   const navigate = useNavigate()
-  const { toast } = useToast()
-  const [createdDataset, setCreatedDataset] = useState<DatasetV2 | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
   const { createError, createFormAction, isCreating } = useDatasets({
-    onCreateSuccess: (dataset) => {
-      setCreatedDataset(dataset)
-      setIsProcessing(true)
-    },
+    onCreateSuccess: (dataset) =>
+      navigate.push(ROUTES.datasets.detail(dataset.id)),
   })
-
-  const createdDatasetId = createdDataset?.id
-  const [firstBatchCreated, setFirstBatchCreated] = useState<boolean>(false)
-  const onMessage = useCallback(
-    (event: EventArgs<'datasetRowsCreated'>) => {
-      if (event.datasetId !== createdDatasetId) return
-
-      if (event.error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error generating datasets',
-          description: event.error.message,
-        })
-        return
-      }
-
-      setFirstBatchCreated(true)
-
-      // Skip next events and go to dataset detail page now that we
-      // know it has rows
-      if (firstBatchCreated) return
-
-      toast({
-        title: 'Success',
-        description: 'Dataset uploaded successfully! 🎉',
-      })
-
-      const route = ROUTES.datasets.detail(createdDatasetId)
-      navigate.push(`${route}?initialRenderIsProcessing=true`)
-    },
-    [createdDatasetId, navigate, firstBatchCreated, setFirstBatchCreated],
-  )
-
-  useSockets({ event: 'datasetRowsCreated', onMessage })
-
   return (
     <NewDatasetModalComponent
       open={open}
       onOpenChange={onOpenChange}
       createFormAction={createFormAction}
-      isCreating={isCreating || isProcessing}
+      isCreating={isCreating}
       createError={createError}
     />
   )
