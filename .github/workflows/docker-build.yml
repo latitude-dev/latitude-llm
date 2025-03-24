@@ -153,14 +153,12 @@ jobs:
           cache-to: type=inline
           secrets: ${{ matrix.private && format('SENTRY_AUTH_TOKEN={0}', secrets.SENTRY_AUTH_TOKEN) || '' }}
           build-args: |
-            SENTRY_DSN=${{ matrix.private && secrets.SENTRY_DSN || '' }}
+            NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ matrix.private && vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL || '' }}
+            NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
+            NEXT_PUBLIC_POSTHOG_KEY=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_KEY || '' }}
+            SENTRY_WEB_DSN=${{ matrix.private && vars.SENTRY_WEB_DSN || '' }}
             SENTRY_ORG=${{ matrix.private && secrets.SENTRY_ORG || '' }}
             SENTRY_PROJECT=${{ matrix.private && secrets.SENTRY_PROJECT || '' }}
-            NEXT_PUBLIC_POSTHOG_KEY=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_KEY || '' }}
-            NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
-            DD_GIT_REPOSITORY_URL=${{ github.server_url }}/${{ github.repository }}
-            DD_GIT_COMMIT_SHA=${{ github.sha }}
-            NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ matrix.private && vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL || '' }}
 
   run-migrations:
     needs: [lint, test]
