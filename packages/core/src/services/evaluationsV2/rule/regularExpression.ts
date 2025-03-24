@@ -63,17 +63,20 @@ async function run(
   _: Database = database,
 ) {
   try {
-    let metadata = {}
+    let metadata = {
+      configuration: evaluation.configuration,
+      actualOutput: actualOutput,
+    }
 
-    const regex = new RegExp(evaluation.configuration.pattern, 'gm')
+    const regex = new RegExp(metadata.configuration.pattern, 'gm')
 
-    const matches = actualOutput.match(regex)
+    const matches = metadata.actualOutput.match(regex)
 
     const score = (matches?.length ?? 0) > 0 ? 1 : 0
 
     let normalizedScore = normalizeScore(score, 0, 1)
     let hasPassed = score === 1
-    if (evaluation.configuration.reverseScale) {
+    if (metadata.configuration.reverseScale) {
       normalizedScore = normalizeScore(score, 1, 0)
       hasPassed = score === 0
     }

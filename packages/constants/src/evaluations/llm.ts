@@ -22,15 +22,20 @@ const llmEvaluationResultError = BaseEvaluationResultError.extend({
 
 // BINARY
 
+const llmEvaluationBinaryConfiguration = llmEvaluationConfiguration.extend({
+  passDescription: z.string(),
+  failDescription: z.string(),
+})
+const llmEvaluationBinaryResultMetadata = llmEvaluationResultMetadata.extend({
+  configuration: llmEvaluationBinaryConfiguration,
+})
+const llmEvaluationBinaryResultError = llmEvaluationResultError.extend({})
 export const LlmEvaluationBinarySpecification = {
   name: 'Binary',
   description: 'Judges whether the response meets the criteria',
-  configuration: llmEvaluationConfiguration.extend({
-    passDescription: z.string(),
-    failDescription: z.string(),
-  }),
-  resultMetadata: llmEvaluationResultMetadata.extend({}),
-  resultError: llmEvaluationResultError.extend({}),
+  configuration: llmEvaluationBinaryConfiguration,
+  resultMetadata: llmEvaluationBinaryResultMetadata,
+  resultError: llmEvaluationBinaryResultError,
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
@@ -47,19 +52,24 @@ export type LlmEvaluationBinaryResultError = z.infer<
 
 // RATING
 
+const llmEvaluationRatingConfiguration = llmEvaluationConfiguration.extend({
+  minRating: z.number(),
+  minRatingDescription: z.string(),
+  maxRating: z.number(),
+  maxRatingDescription: z.string(),
+  minThreshold: z.number(),
+  maxThreshold: z.number(),
+})
+const llmEvaluationRatingResultMetadata = llmEvaluationResultMetadata.extend({
+  configuration: llmEvaluationRatingConfiguration,
+})
+const llmEvaluationRatingResultError = llmEvaluationResultError.extend({})
 export const LlmEvaluationRatingSpecification = {
   name: 'Rating',
   description: 'Judges the response by rating it under a criteria',
-  configuration: llmEvaluationConfiguration.extend({
-    minRating: z.number(),
-    minRatingDescription: z.string(),
-    maxRating: z.number(),
-    maxRatingDescription: z.string(),
-    minThreshold: z.number(),
-    maxThreshold: z.number(),
-  }),
-  resultMetadata: llmEvaluationResultMetadata.extend({}),
-  resultError: llmEvaluationResultError.extend({}),
+  configuration: llmEvaluationRatingConfiguration,
+  resultMetadata: llmEvaluationRatingResultMetadata,
+  resultError: llmEvaluationRatingResultError,
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
@@ -76,16 +86,22 @@ export type LlmEvaluationRatingResultError = z.infer<
 
 // COMPARISON
 
+const llmEvaluationComparisonConfiguration = llmEvaluationConfiguration.extend({
+  minThreshold: z.number(), // Threshold percentage
+  maxThreshold: z.number(), // Threshold percentage
+})
+const llmEvaluationComparisonResultMetadata =
+  llmEvaluationResultMetadata.extend({
+    configuration: llmEvaluationComparisonConfiguration,
+  })
+const llmEvaluationComparisonResultError = llmEvaluationResultError.extend({})
 export const LlmEvaluationComparisonSpecification = {
   name: 'Comparison',
   description:
     'Judges the response by comparing the criteria to the expected output',
-  configuration: llmEvaluationConfiguration.extend({
-    minThreshold: z.number(), // Threshold percentage
-    maxThreshold: z.number(), // Threshold percentage
-  }),
-  resultMetadata: llmEvaluationResultMetadata.extend({}),
-  resultError: llmEvaluationResultError.extend({}),
+  configuration: llmEvaluationComparisonConfiguration,
+  resultMetadata: llmEvaluationComparisonResultMetadata,
+  resultError: llmEvaluationComparisonResultError,
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,

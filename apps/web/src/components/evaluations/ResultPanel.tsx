@@ -59,6 +59,20 @@ function ResultPanelMetadata<
         />
       ) : (
         <>
+          <MetadataItem
+            label='Actual output'
+            tooltip='Last response from the model conversation'
+            value={result.metadata!.actualOutput}
+            stacked
+          />
+          {result.metadata!.expectedOutput && (
+            <MetadataItem
+              label='Expected output'
+              tooltip='Data from the dataset column'
+              value={result.metadata!.expectedOutput}
+              stacked
+            />
+          )}
           <MetadataItem label='Result'>
             <ResultBadge evaluation={evaluation} result={result} />
           </MetadataItem>
@@ -114,9 +128,11 @@ function evaluatedLogLink({
 function ResultPanelLoading() {
   return (
     <div className='flex flex-col gap-4'>
-      <MetadataItem label='Uuid' loading />
+      <MetadataItem label='Result uuid' loading />
       <MetadataItem label='Timestamp' loading />
       <MetadataItem label='Version' loading />
+      <MetadataItem label='Actual output' loading />
+      <MetadataItem label='Expected output' loading />
       <MetadataItem label='Result' loading />
     </div>
   )

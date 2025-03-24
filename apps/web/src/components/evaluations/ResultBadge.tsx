@@ -1,6 +1,5 @@
 import { EvaluationMetric, EvaluationType } from '@latitude-data/constants'
 import { Badge, Tooltip } from '@latitude-data/web-ui'
-import { capitalize } from 'lodash-es'
 import { EVALUATION_SPECIFICATIONS, ResultBadgeProps } from './index'
 
 export default function ResultBadge<
@@ -9,9 +8,6 @@ export default function ResultBadge<
 >({ evaluation, result }: ResultBadgeProps<T, M>) {
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) return null
-
-  const metricSpecification = typeSpecification.metrics[evaluation.metric]
-  if (!metricSpecification) return null
 
   if (result.error) {
     return (
@@ -35,9 +31,11 @@ export default function ResultBadge<
         </Badge>
       }
     >
-      {capitalize(metricSpecification.name)} evaluation {evaluation.name}, with
-      a normalized score of {result.normalizedScore}, did{' '}
-      {result.hasPassed ? 'pass' : 'not pass'}
+      Evaluation {evaluation.name}, with a score of {result.score} (
+      {result.metadata!.configuration.reverseScale
+        ? 'lower is better'
+        : 'higher is better'}
+      ), did {result.hasPassed ? 'pass' : 'not pass'}
     </Tooltip>
   )
 }

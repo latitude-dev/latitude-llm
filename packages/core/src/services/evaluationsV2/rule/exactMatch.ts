@@ -47,22 +47,26 @@ async function run(
   _: Database = database,
 ) {
   try {
-    let metadata = {}
+    let metadata = {
+      configuration: evaluation.configuration,
+      actualOutput: actualOutput,
+      expectedOutput: expectedOutput,
+    }
 
-    if (!expectedOutput) {
+    if (!metadata.expectedOutput) {
       throw new BadRequestError('Expected output is required')
     }
 
-    if (evaluation.configuration.caseInsensitive) {
-      actualOutput = actualOutput.toLowerCase()
-      expectedOutput = expectedOutput.toLowerCase()
+    if (metadata.configuration.caseInsensitive) {
+      metadata.actualOutput = metadata.actualOutput.toLowerCase()
+      metadata.expectedOutput = metadata.expectedOutput!.toLowerCase()
     }
 
-    const score = actualOutput === expectedOutput ? 1 : 0
+    const score = metadata.actualOutput === metadata.expectedOutput ? 1 : 0
 
     let normalizedScore = normalizeScore(score, 0, 1)
     let hasPassed = score === 1
-    if (evaluation.configuration.reverseScale) {
+    if (metadata.configuration.reverseScale) {
       normalizedScore = normalizeScore(score, 1, 0)
       hasPassed = score === 0
     }
