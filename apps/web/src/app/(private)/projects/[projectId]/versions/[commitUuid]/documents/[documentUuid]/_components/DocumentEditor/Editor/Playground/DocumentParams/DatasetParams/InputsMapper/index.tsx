@@ -1,9 +1,11 @@
+import { useCallback } from 'react'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import {
   Dataset,
   DocumentVersion,
   DatasetV2,
   DatasetVersion,
+  PlaygroundInput,
 } from '@latitude-data/core/browser'
 import {
   ClientOnly,
@@ -13,7 +15,6 @@ import {
 } from '@latitude-data/web-ui'
 
 import { InputsMapperItem, OnSelectRowCellFn } from './InputsMapperItem'
-import { useCallback } from 'react'
 import { type DatasetMappedValue } from '../useDatasetRowsForParameters'
 
 export function InputMapper({
@@ -35,14 +36,31 @@ export function InputMapper({
   selectedDataset: Dataset | DatasetV2 | undefined
   datasetVersion: DatasetVersion
 }) {
-  const { setSource } = useDocumentParameters({
+  const {
+    setSource,
+    manual: { setInputs: setManualInputs },
+  } = useDocumentParameters({
     document,
     commitVersionUuid: commit.uuid,
     datasetVersion,
   })
-  // TODO: Implement this
-  const copyToManual = useCallback(() => {}, [])
+  const copyToManual = useCallback(() => {
+    const manualInputs = parameters.reduce(
+      (acc, param) => {
+        const name = param.param
+        acc[name] = {
+          value: String(param.value),
+          metadata: { includeInPrompt: true },
+        }
+        return acc
+      },
+      {} as Record<string, PlaygroundInput<'manual'>>,
+    )
+
+    setManualInputs(manualInputs)
+  }, [parameters, setManualInputs])
   const disabled = !selectedDataset || isLoading
+
   return (
     <ClientOnly>
       <div className='flex flex-col gap-3'>
