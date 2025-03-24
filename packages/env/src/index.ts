@@ -154,7 +154,9 @@ export const env = createEnv({
     S3_BUCKET: z.string().optional(),
 
     // Sentry
-    SENTRY_DSN: z.string().optional(),
+    SENTRY_WEB_DSN: z.string().optional(),
+    SENTRY_GATEWAY_DSN: z.string().optional(),
+    SENTRY_WORKERS_DSN: z.string().optional(),
     SENTRY_ORG: z.string().optional(),
     SENTRY_PROJECT: z.string().optional(),
 

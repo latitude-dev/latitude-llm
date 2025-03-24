@@ -1,16 +1,16 @@
 import { env } from '@latitude-data/env'
 import * as Sentry from '@sentry/node'
 
-if (env.SENTRY_DSN) {
+if (env.SENTRY_GATEWAY_DSN) {
   Sentry.init({
-    dsn: env.SENTRY_DSN,
+    dsn: env.SENTRY_GATEWAY_DSN,
 
-    enabled: !!env.SENTRY_DSN,
+    enabled: !!env.SENTRY_GATEWAY_DSN,
   })
 }
 
 export const captureException = (error: Error) => {
-  if (env.SENTRY_DSN) {
+  if (env.SENTRY_GATEWAY_DSN) {
     Sentry.captureException(error)
   } else {
     console.error(error)
@@ -18,7 +18,7 @@ export const captureException = (error: Error) => {
 }
 
 export const captureMessage = (message: string) => {
-  if (env.SENTRY_DSN) {
+  if (env.SENTRY_GATEWAY_DSN) {
     Sentry.captureMessage(message)
   } else {
     console.log(message)
