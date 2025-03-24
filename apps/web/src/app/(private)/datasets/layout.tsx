@@ -14,7 +14,7 @@ export default async function DatasetsList({
   children: ReactNode
 }>) {
   return (
-    <Container>
+    <Container limitMaxHeight>
       <AppTabs />
       {children}
     </Container>
