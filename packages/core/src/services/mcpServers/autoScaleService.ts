@@ -5,6 +5,7 @@ import { database } from '../../client'
 import { and, eq, lt, inArray, gt } from 'drizzle-orm'
 import { SubscriptionPlan } from '../../plans'
 import { setupQueues } from '../../jobs'
+import { workspaces } from '../../schema'
 
 const INACTIVITY_THRESHOLD_MINUTES = 10
 const SCALE_DOWN_REPLICAS = 0
@@ -22,9 +23,10 @@ export async function autoScaleInactiveServers(db = database) {
     const inactiveServers = await db
       .select({ id: mcpServers.id })
       .from(mcpServers)
+      .innerJoin(workspaces, eq(mcpServers.workspaceId, workspaces.id))
       .innerJoin(
         subscriptions,
-        eq(mcpServers.workspaceId, subscriptions.workspaceId),
+        eq(workspaces.currentSubscriptionId, subscriptions.id),
       )
       .where(
         and(
