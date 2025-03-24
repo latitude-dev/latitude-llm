@@ -12,6 +12,7 @@ export function EvaluationStats<
   const metricSpecification = typeSpecification.metrics[evaluation.metric]
 
   // TODO
+  metricSpecification
 
   return <h1>Evaluation Stats</h1>
 }
