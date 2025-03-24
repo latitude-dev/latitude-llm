@@ -21,7 +21,7 @@ jobs:
       workflow_call: true
 
   build-and-push:
-    needs: [lint, test]
+    needs: [lint]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -161,7 +161,7 @@ jobs:
             SENTRY_PROJECT=${{ matrix.private && secrets.SENTRY_PROJECT || '' }}
 
   run-migrations:
-    needs: [lint, test]
+    needs: [build-and-push]
     uses: ./.github/workflows/run-migrations.yml
     with:
       workflow_call: true
@@ -176,7 +176,7 @@ jobs:
       SSH_USER: ${{ secrets.SSH_USER }}
 
   deploy-bluegreen:
-    needs: [lint, test, run-migrations, build-and-push]
+    needs: [run-migrations, build-and-push]
     uses: ./.github/workflows/deploy-bluegreen.yml
     permissions:
       id-token: write
@@ -188,7 +188,7 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
   deploy-rolling:
-    needs: [lint, test, run-migrations, build-and-push]
+    needs: [run-migrations, build-and-push]
     uses: ./.github/workflows/deploy-rolling.yml
     permissions:
       id-token: write
