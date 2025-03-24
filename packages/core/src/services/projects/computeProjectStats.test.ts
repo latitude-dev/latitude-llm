@@ -12,6 +12,7 @@ import {
   EvaluationMetadataType,
   EvaluationResultableType,
   EvaluationType,
+  EvaluationV2,
   LlmEvaluationMetric,
   Providers,
 } from '../../constants'
@@ -154,7 +155,7 @@ describe('computeProjectStats', () => {
     })
 
     // TODO: Use factory when LLM evaluations V2 are implemented
-    const evaluationV2 = await database
+    const evaluationV2 = (await database
       .insert(evaluationVersions)
       .values({
         workspaceId: workspace.id,
@@ -178,7 +179,7 @@ describe('computeProjectStats', () => {
         ...r[0]!,
         uuid: r[0]!.evaluationUuid,
         versionId: r[0]!.id,
-      }))
+      }))) as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
 
     const evaluationLogV2 = await factories.createProviderLog({
       workspace,
@@ -198,8 +199,13 @@ describe('computeProjectStats', () => {
       score: 1,
       normalizedScore: 100,
       metadata: {
+        configuration: evaluationV2.configuration,
+        actualOutput: 'actual output',
+        expectedOutput: 'expected output',
         evaluationLogId: evaluationLogV2.id,
-        reason: 'Pass',
+        reason: 'reason',
+        tokens: 100,
+        cost: 500,
       },
       hasPassed: true,
     })

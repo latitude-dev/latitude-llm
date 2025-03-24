@@ -15,7 +15,7 @@ export const FEATURE_FLAGS_CONDITIONS: Record<
 > = {
   datasetsV2: { workspaceIds: [1] },
   datasetsV1ModificationBlocked: { workspaceIds: [] },
-  evaluationsV2: { workspaceIds: [] },
+  evaluationsV2: { workspaceIds: [1] },
 }
 
 export type ResolvedFeatureFlags = Record<FeatureFlag, { enabled: boolean }>
