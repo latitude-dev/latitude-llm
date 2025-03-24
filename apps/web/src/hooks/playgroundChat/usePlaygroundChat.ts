@@ -1,12 +1,9 @@
-import { StreamEventTypes } from '@latitude-data/core/browser'
-import { LanguageModelUsage } from 'ai'
-import { useCallback, useRef, useState } from 'react'
 import {
   ContentType,
-  MessageRole,
-  ToolMessage,
   Message,
+  MessageRole,
   ToolCall,
+  ToolMessage,
 } from '@latitude-data/compiler'
 import {
   AGENT_RETURN_TOOL_NAME,
@@ -15,7 +12,10 @@ import {
   LatitudeChainCompletedEventData,
   LatitudeEventData,
 } from '@latitude-data/constants'
+import { StreamEventTypes } from '@latitude-data/core/browser'
+import { LanguageModelUsage } from 'ai'
 import { ParsedEvent } from 'eventsource-parser/stream'
+import { useCallback, useRef, useState } from 'react'
 
 function buildMessage({ input }: { input: string | ToolMessage[] }) {
   if (typeof input === 'string') {
@@ -134,10 +134,6 @@ export function usePlaygroundChat({
               setChainLength(data.messages.length)
               setTime((prev) => (prev ?? 0) + (performance.now() - start))
             }
-
-            if (onPromptRan) {
-              onPromptRan(documentLogUuid)
-            }
           }
           if (data.type === ChainEventTypes.ToolsRequested) {
             setUnresponedToolCalls(
@@ -152,6 +148,7 @@ export function usePlaygroundChat({
 
       setStreamingResponse(undefined)
       setIsLoading(false)
+      onPromptRan?.(documentLogUuid)
     },
     [],
   )
