@@ -26,20 +26,20 @@ export const runBatchEvaluationAction = withDataset
         .superRefine(async (parameters = {}, refineCtx) => {
           await refineParameters({ ctx, parameters, refineCtx })
         }),
-      datasetLabel: z.string().optional(),
+      datasetLabel: z
+        .string()
+        .optional()
+        .refine(
+          async (datasetLabel) => {
+            if (!datasetLabel) return true
+            if (!('columns' in ctx.dataset)) return true
+            return ctx.dataset.columns.find((c) => c.name === datasetLabel)
+          },
+          { message: 'Dataset column not present in the dataset' },
+        ),
     }),
   )
   .handler(async ({ input, ctx }) => {
-    if (
-      input.datasetLabel &&
-      'columns' in ctx.dataset &&
-      !ctx.dataset.columns.find((c) => c.name === input.datasetLabel)
-    ) {
-      throw new BadRequestError(
-        `${input.datasetLabel} is not a valid dataset column`,
-      )
-    }
-
     let evaluations = []
 
     if (input.evaluationUuids) {

@@ -115,12 +115,12 @@ export default function DatasetForm({
   wantAllLines: boolean
   fromLine: number | undefined
   toLine: number | undefined
-  datasetLabel: string | undefined
+  datasetLabel?: string | undefined
   onChangeFromLine: ReactStateDispatch<number>
   onChangeToLine: ReactStateDispatch<number | undefined>
-  onChangeDatasetLabel: ReactStateDispatch<string | undefined>
+  onChangeDatasetLabel?: ReactStateDispatch<string | undefined>
   headers: SelectOption<string>[]
-  labels: SelectOption<string>[]
+  labels?: SelectOption<string>[]
   selectedDataset: Dataset | DatasetV2 | null
   datasets: Dataset[] | DatasetV2[]
   isLoadingDatasets: boolean
@@ -276,11 +276,11 @@ export default function DatasetForm({
               <div className='flex flex-col gap-y-3'>
                 <Select
                   name='datasetLabel'
-                  disabled={labels.length === 0}
+                  disabled={labels!.length === 0}
                   errors={errors?.datasetLabel}
-                  options={labels}
-                  value={datasetLabel}
-                  onChange={onChangeDatasetLabel}
+                  options={labels!}
+                  value={datasetLabel!}
+                  onChange={onChangeDatasetLabel!}
                   placeholder='Select csv column'
                 />
               </div>
