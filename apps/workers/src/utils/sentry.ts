@@ -1,11 +1,16 @@
-import { env } from '@latitude-data/env'
 import * as Sentry from '@sentry/node'
+import { env } from '@latitude-data/env'
+import { nodeProfilingIntegration } from '@sentry/profiling-node'
 
 if (env.SENTRY_WORKERS_DSN) {
   Sentry.init({
     dsn: env.SENTRY_WORKERS_DSN,
-
     enabled: !!env.SENTRY_WORKERS_DSN,
+    integrations: [nodeProfilingIntegration],
+    tracesSampleRate: 1.0,
+    profilesSampleRate: 1.0,
+
+    environment: env.NODE_ENV,
   })
 }
 
