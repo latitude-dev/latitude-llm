@@ -66,6 +66,12 @@ ARG PROJECT_PATH
 
 ENV NODE_ENV=production
 
+# Install AWS CLI using Alpine package manager
+RUN apk add --no-cache \
+  aws-cli \
+  groff \
+  less
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 latitude
 USER latitude
