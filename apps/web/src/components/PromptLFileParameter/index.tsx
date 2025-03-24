@@ -8,7 +8,7 @@ export function PromptLFileParameter({ file }: { file: PromptLFile }) {
   const [isHovered, setIsHovered] = useState(false)
 
   return (
-    <Link href={file.url} passHref target='_blank' className='max-w-full'>
+    <Link href={file.url} passHref target='_blank' className='w-full'>
       <div
         className={cn(
           'flex flex-row gap-2 px-2 py-1.5 rounded-md items-center max-w-full',
