@@ -140,6 +140,10 @@ export function usePlaygroundChat({
               data.tools.filter((t) => t.name !== AGENT_RETURN_TOOL_NAME),
             )
           }
+
+          if (data.type === ChainEventTypes.ChainError) {
+            throw data.error
+          }
         }
       } catch (error) {
         onPromptRan?.(documentLogUuid, error as Error)
