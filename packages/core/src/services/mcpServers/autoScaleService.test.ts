@@ -6,6 +6,7 @@ import { SubscriptionPlan } from '../../plans'
 import { autoScaleInactiveServers } from './autoScaleService'
 import { createWorkspace, createMcpServer } from '../../tests/factories'
 import { setupQueues } from '../../jobs'
+import { workspaces } from '../../schema'
 
 vi.mock('../../jobs', () => ({
   setupQueues: vi.fn(),
@@ -87,10 +88,18 @@ describe('autoScaleInactiveServers', () => {
   it('should not enqueue jobs for servers on non-hobby plans', async () => {
     // Create a workspace with a team plan
     const { workspace } = await createWorkspace()
+
+    // Create a team subscription
+    const currentSubscription = await database
+      .insert(subscriptions)
+      .values({ workspaceId: workspace.id, plan: SubscriptionPlan.TeamV1 })
+      .returning()
+
+    // Assing the subscription to the workspace
     await database
-      .update(subscriptions)
-      .set({ plan: SubscriptionPlan.TeamV1 })
-      .where(eq(subscriptions.workspaceId, workspace.id))
+      .update(workspaces)
+      .set({ currentSubscriptionId: currentSubscription[0]!.id })
+      .where(eq(workspaces.id, workspace.id))
 
     // Create an inactive MCP server
     await createMcpServer({
