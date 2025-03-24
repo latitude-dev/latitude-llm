@@ -1,15 +1,21 @@
+import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useIntegrationTools from '$/stores/integrationTools'
 import { McpTool } from '@latitude-data/constants'
 import { IntegrationDto } from '@latitude-data/core/browser'
 import {
   Badge,
+  BlankSlate,
   Button,
+  DotIndicator,
+  FakeProgress,
   Skeleton,
   SwitchToogle,
   Text,
+  toast,
   Tooltip,
 } from '@latitude-data/web-ui'
-import { useCallback } from 'react'
+import Link from 'next/link'
+import { useCallback, useState } from 'react'
 
 function IntegrationToolItem({
   disabled,
@@ -105,7 +111,39 @@ export function IntegrationToolsList({
     toolNames: string[],
   ) => void
 }) {
-  const { data: tools, isLoading, error } = useIntegrationTools(integration)
+  const {
+    data: tools,
+    isLoading,
+    isValidating,
+    error,
+  } = useIntegrationTools(integration)
+  const [wakingUp, setWakingUp] = useState(false)
+
+  useSockets({
+    event: 'mcpServerScaleEvent',
+    onMessage: ({ mcpServerId, replicas }) => {
+      if (replicas < 1) return
+      if (mcpServerId !== integration?.mcpServerId) return
+
+      setWakingUp(true)
+    },
+  })
+
+  useSockets({
+    event: 'mcpServerConnected',
+    onMessage: ({ mcpServerId }) => {
+      if (mcpServerId !== integration?.mcpServerId) return
+
+      setWakingUp(false)
+
+      toast({
+        title: 'MCP server connected',
+        description:
+          'MCP servers in Hobby plans are automatically suspended after 10 minutes of inactivity.',
+        variant: 'default',
+      })
+    },
+  })
 
   const toggleTool = useCallback(
     (toolName: string) => {
@@ -139,7 +177,32 @@ export function IntegrationToolsList({
     }
   }
 
-  if (isLoading) {
+  if (isLoading || (isValidating && wakingUp)) {
+    if (wakingUp) {
+      return (
+        <BlankSlate>
+          <div className='flex flex-col items-center gap-4'>
+            <div className='flex flex-row items-center gap-4'>
+              <Text.H6B centered color='foreground'>
+                Waking up MCP server...
+              </Text.H6B>
+              <DotIndicator pulse variant='warning' />
+            </div>
+            <div className='w-full px-4'>
+              <FakeProgress delayIncrement={200} completed={!wakingUp} />
+            </div>
+            <Text.H6 centered color='foreground'>
+              If you want to avoid cold starts, please{' '}
+              <Link href='/' className='text-primary'>
+                upgrade
+              </Link>{' '}
+              to the Team plan.
+            </Text.H6>
+          </div>
+        </BlankSlate>
+      )
+    }
+
     return (
       <>
         <div className='flex flex-row items-center gap-2 p-4 justify-between'>

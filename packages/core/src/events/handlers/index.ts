@@ -15,6 +15,8 @@ import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
+import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
+import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
 
 export const EventHandlers: IEventsHandlers = {
   aiProviderCallCompleted: [],
@@ -72,4 +74,6 @@ export const EventHandlers: IEventsHandlers = {
   evaluationV2Created: [],
   evaluationV2Ran: [],
   evaluationResultV2Created: [notifyClientOfEvaluationResultV2Created],
+  scaleMcpServer: [notifyClientOfScaleUpMcpServer],
+  mcpServerConnected: [notifyClientOfMcpServerConnected],
 }

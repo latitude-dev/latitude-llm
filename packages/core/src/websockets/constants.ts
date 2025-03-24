@@ -123,6 +123,15 @@ export type WebServerToClientEvents = {
     traces: Trace[]
     spans: Span[]
   }) => void
+  mcpServerScaleEvent: (args: {
+    workspaceId: number
+    replicas: number
+    mcpServerId: number
+  }) => void
+  mcpServerConnected: (args: {
+    workspaceId: number
+    mcpServerId: number
+  }) => void
 }
 
 export type WebClientToServerEvents = {
@@ -164,6 +173,21 @@ export type WorkersClientToServerEvents = {
       workspaceId: number
       traces: Trace[]
       spans: Span[]
+    }
+  }) => void
+  mcpServerScaleEvent: (args: {
+    workspaceId: number
+    data: {
+      workspaceId: number
+      replicas: number
+      mcpServerId: number
+    }
+  }) => void
+  mcpServerConnected: (args: {
+    workspaceId: number
+    data: {
+      workspaceId: number
+      mcpServerId: number
     }
   }) => void
 }

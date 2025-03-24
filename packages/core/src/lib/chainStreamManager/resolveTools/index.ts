@@ -9,17 +9,20 @@ import { Result } from '../../Result'
 import { LatitudeError } from '../../errors'
 import { resolveAgentReturnTool } from './agentReturnTool'
 import { ResolvedTools } from './types'
+import { ChainStreamManager } from '..'
 
 export async function resolveToolsFromConfig({
   workspace,
   promptSource,
   config,
   injectAgentFinishTool,
+  chainStreamManager,
 }: {
   workspace: Workspace
   promptSource: PromptSource
   config: PromptConfig
   injectAgentFinishTool?: boolean
+  chainStreamManager?: ChainStreamManager
 }): PromisedResult<ResolvedTools, LatitudeError> {
   const clientToolsResult = resolveClientTools({ config })
   if (clientToolsResult.error) return clientToolsResult
@@ -37,6 +40,7 @@ export async function resolveToolsFromConfig({
   const integrationToolsResult = await resolveIntegrationTools({
     workspace,
     config,
+    chainStreamManager,
   })
   if (integrationToolsResult.error) return integrationToolsResult
 

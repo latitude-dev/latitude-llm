@@ -31,6 +31,9 @@ export enum Jobs {
   runEvaluationV2Job = 'runEvaluationV2Job',
   checkScheduledDocumentTriggersJob = 'checkScheduledDocumentTriggersJob',
   processScheduledTriggerJob = 'processScheduledTriggerJob',
+  autoScaleJob = 'autoScaleJob',
+  updateMcpServerLastUsedJob = 'updateMcpServerLastUsedJob',
+  scaleDownMcpServerJob = 'scaleDownMcpServerJob',
 }
 
 export const QUEUES = {
@@ -54,7 +57,12 @@ export const QUEUES = {
   },
   [Queues.maintenanceQueue]: {
     name: Queues.maintenanceQueue,
-    jobs: ['cleanDocumentSuggestionsJob'],
+    jobs: [
+      'cleanDocumentSuggestionsJob',
+      'autoScaleJob',
+      'updateMcpServerLastUsedJob',
+      'scaleDownMcpServerJob',
+    ],
   },
   [Queues.eventsQueue]: {
     name: Queues.eventsQueue,
@@ -71,6 +79,8 @@ export const QUEUES = {
       'notifyClientOfDocumentSuggestionCreated',
       'notifyClientOfEvaluationResultV2Created',
       'notifyToClientEvaluationResultCreatedJob',
+      'notifyClientOfScaleUpMcpServer',
+      'notifyClientOfMcpServerConnected',
       'runLiveEvaluationsJob',
       'sendInvitationToUserJob',
       'sendMagicLinkJob',

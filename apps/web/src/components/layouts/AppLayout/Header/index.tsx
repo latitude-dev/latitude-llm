@@ -65,7 +65,7 @@ export default function AppHeader({
         <nav className='flex flex-row gap-x-4 items-center'>
           {cloudInfo ? (
             <>
-              <UsageIndicator paymentUrl={cloudInfo.paymentUrl} />
+              <UsageIndicator />
               <RewardsButton />
             </>
           ) : null}

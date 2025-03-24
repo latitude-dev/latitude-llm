@@ -26,12 +26,14 @@ export default function useIntegrationTools(
   const {
     data = EMPTY_ARRAY,
     isLoading,
+    isValidating,
     error,
   } = useSWR<McpTool[]>(['integrationTools', integration?.name], fetcher, opts)
 
   return {
     data,
     isLoading,
+    isValidating,
     error,
   }
 }

@@ -1,0 +1,1 @@
+ALTER TYPE "latitude"."run_error_code_enum" ADD VALUE 'failed_to_wake_up_integration_error';

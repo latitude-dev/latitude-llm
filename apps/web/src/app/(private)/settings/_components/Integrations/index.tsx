@@ -1,6 +1,5 @@
 'use client'
 
-import { type IntegrationDto } from '@latitude-data/core/browser'
 import {
   Badge,
   Button,
@@ -43,9 +42,7 @@ export default function Integrations() {
       </div>
       <div className='flex flex-col gap-2'>
         {isLoading && <TableSkeleton cols={6} rows={3} />}
-        {!isLoading && integrations.length > 0 && (
-          <IntegrationsTable integrations={integrations} />
-        )}
+        {!isLoading && integrations.length > 0 && <IntegrationsTable />}
         {!isLoading && integrations.length === 0 && (
           <TableBlankSlate
             description='There are no integrations yet. Create one to start working with your prompts.'
@@ -63,12 +60,9 @@ export default function Integrations() {
   )
 }
 
-const IntegrationsTable = ({
-  integrations,
-}: {
-  integrations: IntegrationDto[]
-}) => {
+const IntegrationsTable = () => {
   const router = useRouter()
+  const { data: integrations, scaleDown, scaleUp } = useIntegrations()
 
   return (
     <Table>
@@ -124,6 +118,23 @@ const IntegrationsTable = ({
                           ROUTES.settings.integrations.details(integration.id)
                             .root,
                         ),
+                    },
+                    {
+                      label: 'Scale Up',
+                      hidden: integration.type !== IntegrationType.HostedMCP,
+                      disabled: integration.type !== IntegrationType.HostedMCP,
+                      onClick: () =>
+                        integration.mcpServerId &&
+                        scaleUp({ mcpServerId: integration.mcpServerId }),
+                    },
+                    {
+                      label: 'Scale Down',
+                      hidden: integration.type !== IntegrationType.HostedMCP,
+                      disabled: integration.type !== IntegrationType.HostedMCP,
+                      onClick: () =>
+                        integration.mcpServerId &&
+                        scaleDown({ mcpServerId: integration.mcpServerId }),
+                      type: 'destructive',
                     },
                     {
                       label: 'Remove',

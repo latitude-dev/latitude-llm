@@ -169,6 +169,18 @@ workers.on('connection', (socket) => {
     const workspace = buildWorkspaceRoom({ workspaceId })
     web.to(workspace).emit('datasetRowsCreated', data)
   })
+
+  socket.on('mcpServerScaleEvent', (args) => {
+    const { workspaceId, data } = args
+    const workspace = buildWorkspaceRoom({ workspaceId })
+    web.to(workspace).emit('mcpServerScaleEvent', data)
+  })
+
+  socket.on('mcpServerConnected', (args) => {
+    const { workspaceId, data } = args
+    const workspace = buildWorkspaceRoom({ workspaceId })
+    web.to(workspace).emit('mcpServerConnected', data)
+  })
 })
 
 const PORT = process.env.WEBSOCKETS_SERVER_PORT || 4002

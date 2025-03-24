@@ -61,6 +61,7 @@ export function usePlaygroundChat({
   })
   const [time, setTime] = useState<number | undefined>()
   const [runningLatitudeTools, setRunningLatitudeTools] = useState<number>(0)
+  const [wakingUpIntegration, setWakingUpIntegration] = useState<string>()
 
   const addMessages = useCallback(
     (m: Message[]) => {
@@ -91,6 +92,12 @@ export function usePlaygroundChat({
             setDocumentLogUuid(uuid)
           }
 
+          if (data.type === ChainEventTypes.IntegrationWakingUp) {
+            setWakingUpIntegration(data.integrationName)
+          } else {
+            setWakingUpIntegration(undefined)
+          }
+
           // Delta text from the provider
           if (event === StreamEventTypes.Provider) {
             if (data.type === 'text-delta') {
@@ -112,6 +119,7 @@ export function usePlaygroundChat({
             setStreamingResponse(undefined)
             setUsage(data.tokenUsage)
           }
+
           if (data.type === ChainEventTypes.ToolsStarted) {
             setRunningLatitudeTools(data.tools.length)
           }
@@ -221,6 +229,7 @@ export function usePlaygroundChat({
     error,
     streamingResponse,
     messages,
+    wakingUpIntegration,
     runningLatitudeTools,
     chainLength,
     usage,

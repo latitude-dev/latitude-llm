@@ -21,6 +21,7 @@ export const errorCodeEnum = latitudeSchema.enum('run_error_code_enum', [
   RunErrorCodes.EvaluationRunResponseJsonFormatError,
   RunErrorCodes.DefaultProviderInvalidModel,
   RunErrorCodes.MaxStepCountExceededError,
+  RunErrorCodes.FailedToWakeUpIntegrationError,
 ])
 
 export const runErrorEntities = latitudeSchema.enum('run_error_entity_enum', [
