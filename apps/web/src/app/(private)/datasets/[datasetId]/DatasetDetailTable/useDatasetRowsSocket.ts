@@ -2,7 +2,8 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
-import useDatasetRows, { serializeRows } from '$/stores/datasetRows'
+import useDatasetRows from '$/stores/datasetRows'
+import { serializeRows } from '$/stores/datasetRows/rowSerializationHelpers'
 import { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { useCallback, useRef, useState } from 'react'
@@ -48,11 +49,13 @@ function useCachedRows({
 }
 
 export function useDatasetRowsSocket({
+  initialRenderIsProcessing,
   dataset,
   mutate,
   pageSize,
   currentPage,
 }: {
+  initialRenderIsProcessing: boolean
   dataset: DatasetV2
   mutate: ReturnType<typeof useDatasetRows>['mutate']
   currentPage: number
@@ -60,7 +63,7 @@ export function useDatasetRowsSocket({
 }) {
   const { toast } = useToast()
   const setRowsInCache = useCachedRows({ dataset, currentPage, pageSize })
-  const [isProcessing, setIsProcessing] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(initialRenderIsProcessing)
   const [processedRowsCount, setProcessedRows] = useState<number>(0)
   const onMessage = useCallback(
     (event: EventArgs<'datasetRowsCreated'>) => {
