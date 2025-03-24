@@ -6,7 +6,6 @@ if (process.env.DD_TRACING_ENABLED === 'true') {
     logInjection: true,
     runtimeMetrics: true,
     env: env.NODE_ENV === 'production' ? 'prod' : 'dev',
-    profiling: true,
   })
 }
 
