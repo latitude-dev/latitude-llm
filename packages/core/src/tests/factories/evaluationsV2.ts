@@ -54,7 +54,6 @@ export async function createEvaluationV2<
         configuration: args.configuration ?? {
           reverseScale: false,
           caseInsensitive: false,
-          datasetLabel: 'expected',
         },
       },
       options: {

@@ -8,6 +8,9 @@ import {
   ConfigurationFormProps,
   EvaluationMetricFrontendSpecification,
   ResultBadgeProps,
+  ResultPanelProps,
+  ResultRowCellsProps,
+  ResultRowHeadersProps,
 } from '../index'
 import RuleEvaluationExactMatchSpecification from './ExactMatch'
 import RuleEvaluationRegularExpressionSpecification from './RegularExpression'
@@ -29,6 +32,11 @@ export default {
   icon: 'computer' as IconName,
   ConfigurationForm: ConfigurationForm,
   ResultBadge: ResultBadge,
+  ResultRowHeaders: ResultRowHeaders,
+  ResultRowCells: ResultRowCells,
+  resultPanelTabs: [],
+  ResultPanelMetadata: ResultPanelMetadata,
+  ResultPanelContent: ResultPanelContent,
   metrics: METRICS,
 }
 
@@ -60,6 +68,70 @@ function ResultBadge<M extends RuleEvaluationMetric>({
   return (
     <>
       <metricSpecification.ResultBadge {...rest} />
+    </>
+  )
+}
+
+function ResultRowHeaders<M extends RuleEvaluationMetric>({
+  metric,
+  ...rest
+}: ResultRowHeadersProps<EvaluationType.Rule, M> & {
+  metric: M
+}) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) return null
+
+  return (
+    <>
+      <metricSpecification.ResultRowHeaders {...rest} />
+    </>
+  )
+}
+
+function ResultRowCells<M extends RuleEvaluationMetric>({
+  metric,
+  ...rest
+}: ResultRowCellsProps<EvaluationType.Rule, M> & {
+  metric: M
+}) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) return null
+
+  return (
+    <>
+      <metricSpecification.ResultRowCells {...rest} />
+    </>
+  )
+}
+
+function ResultPanelMetadata<M extends RuleEvaluationMetric>({
+  metric,
+  ...rest
+}: ResultPanelProps<EvaluationType.Rule, M> & {
+  metric: M
+}) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) return null
+
+  return (
+    <>
+      <metricSpecification.ResultPanelMetadata {...rest} />
+    </>
+  )
+}
+
+function ResultPanelContent<M extends RuleEvaluationMetric>({
+  metric,
+  ...rest
+}: ResultPanelProps<EvaluationType.Rule, M> & {
+  metric: M
+}) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) return null
+
+  return (
+    <>
+      <metricSpecification.ResultPanelContent {...rest} />
     </>
   )
 }

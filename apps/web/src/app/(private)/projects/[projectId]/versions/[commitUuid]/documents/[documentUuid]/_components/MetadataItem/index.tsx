@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
-import { Icon, Skeleton, Text, Tooltip } from '@latitude-data/web-ui'
+import { Icon, Skeleton, Text, TextColor, Tooltip } from '@latitude-data/web-ui'
 import { FinishReason } from 'ai'
 
 const REASONS_FINISH: Record<FinishReason, string> = {
@@ -28,15 +28,19 @@ const ERROR_FINISH_REASON: FinishReason[] = [
 type MetadataItemProps = {
   stacked?: boolean
   label: string
+  tooltip?: string
   value?: string
+  color?: TextColor
   loading?: boolean
   children?: ReactNode
 }
 
 export function MetadataItem({
   label,
+  tooltip,
   stacked = false,
   value,
+  color = 'foregroundMuted',
   loading,
   children,
 }: MetadataItemProps) {
@@ -45,14 +49,31 @@ export function MetadataItem({
     : 'flex flex-row justify-between items-center gap-2'
   return (
     <div className={className}>
-      <Text.H5M color='foreground'>{label}</Text.H5M>
+      <span className='flex flex-row items-center gap-2'>
+        <Text.H5M color='foreground'>{label}</Text.H5M>
+        {tooltip && (
+          <Tooltip
+            asChild
+            trigger={
+              <span>
+                <Icon name='info' color='foreground' />
+              </span>
+            }
+            maxWidth='max-w-[400px]'
+            align='center'
+            side='top'
+          >
+            {tooltip}
+          </Tooltip>
+        )}
+      </span>
       <div>
         {loading ? (
           <Skeleton height='h4' className='w-12' />
         ) : (
           <>
             {value && (
-              <Text.H5 align='right' color='foregroundMuted'>
+              <Text.H5 align='right' color={color}>
                 {value}
               </Text.H5>
             )}

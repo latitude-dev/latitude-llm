@@ -34,12 +34,15 @@ export type EvaluationMetricRunArgs<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   evaluation: EvaluationV2<T, M>
+  actualOutput: string
+  expectedOutput?: string
   conversation: Message[]
-  dataset?: DatasetV2
-  row?: DatasetRow
   providerLog: ProviderLog
   documentLog: DocumentLog
   document: DocumentVersion
+  dataset?: DatasetV2
+  datasetLabel?: string
+  datasetRow?: DatasetRow
   commit: Commit
   workspace: Workspace
 }
@@ -80,6 +83,19 @@ export const EVALUATION_SPECIFICATIONS: {
   [EvaluationType.Rule]: RuleEvaluationSpecification,
   [EvaluationType.Llm]: LlmEvaluationSpecification,
   [EvaluationType.Human]: HumanEvaluationSpecification,
+}
+
+export function getEvaluationTypeSpecification<
+  T extends EvaluationType = EvaluationType,
+>(evaluation: EvaluationV2<T>) {
+  return EVALUATION_SPECIFICATIONS[evaluation.type]
+}
+
+export function getEvaluationMetricSpecification<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+>(evaluation: EvaluationV2<T, M>) {
+  return EVALUATION_SPECIFICATIONS[evaluation.type].metrics[evaluation.metric]
 }
 
 export function normalizeScore(score: number, lower: number, upper: number) {

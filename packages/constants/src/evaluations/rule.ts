@@ -11,17 +11,25 @@ const ruleEvaluationResultError = BaseEvaluationResultError.extend({})
 
 // EXACT MATCH
 
+const ruleEvaluationExactMatchConfiguration =
+  ruleEvaluationConfiguration.extend({
+    caseInsensitive: z.boolean(),
+  })
+const ruleEvaluationExactMatchResultMetadata =
+  ruleEvaluationResultMetadata.extend({
+    configuration: ruleEvaluationExactMatchConfiguration,
+  })
+const ruleEvaluationExactMatchResultError = ruleEvaluationResultError.extend({})
 export const RuleEvaluationExactMatchSpecification = {
   name: 'Exact Match',
   description:
-    'Checks if the response is exactly the same as the expected label',
-  configuration: ruleEvaluationConfiguration.extend({
-    caseInsensitive: z.boolean(),
-    datasetLabel: z.string(),
-  }),
-  resultMetadata: ruleEvaluationResultMetadata.extend({}),
-  resultError: ruleEvaluationResultError.extend({}),
+    'Checks if the response is exactly the same as the expected output',
+  configuration: ruleEvaluationExactMatchConfiguration,
+  resultMetadata: ruleEvaluationExactMatchResultMetadata,
+  resultError: ruleEvaluationExactMatchResultError,
+  requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationExactMatchConfiguration = z.infer<
   typeof RuleEvaluationExactMatchSpecification.configuration
@@ -35,15 +43,25 @@ export type RuleEvaluationExactMatchResultError = z.infer<
 
 // REGULAR EXPRESSION
 
+const ruleEvaluationRegularExpressionConfiguration =
+  ruleEvaluationConfiguration.extend({
+    pattern: z.string(),
+  })
+const ruleEvaluationRegularExpressionResultMetadata =
+  ruleEvaluationResultMetadata.extend({
+    configuration: ruleEvaluationRegularExpressionConfiguration,
+  })
+const ruleEvaluationRegularExpressionResultError =
+  ruleEvaluationResultError.extend({})
 export const RuleEvaluationRegularExpressionSpecification = {
   name: 'Regular Expression',
   description: 'Checks if the response matches the regular expression',
-  configuration: ruleEvaluationConfiguration.extend({
-    pattern: z.string(),
-  }),
-  resultMetadata: ruleEvaluationResultMetadata.extend({}),
-  resultError: ruleEvaluationResultError.extend({}),
+  configuration: ruleEvaluationRegularExpressionConfiguration,
+  resultMetadata: ruleEvaluationRegularExpressionResultMetadata,
+  resultError: ruleEvaluationRegularExpressionResultError,
+  requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationRegularExpressionConfiguration = z.infer<
   typeof RuleEvaluationRegularExpressionSpecification.configuration
@@ -57,17 +75,28 @@ export type RuleEvaluationRegularExpressionResultError = z.infer<
 
 // LENGTH COUNT
 
-export const RuleEvaluationLengthCountSpecification = {
-  name: 'Length Count',
-  description: 'Checks if the response is of a certain length',
-  configuration: ruleEvaluationConfiguration.extend({
+const ruleEvaluationLengthCountConfiguration =
+  ruleEvaluationConfiguration.extend({
     algorithm: z.enum(['character', 'word', 'sentence', 'paragraph']),
     minLength: z.number().optional(),
     maxLength: z.number().optional(),
-  }),
-  resultMetadata: ruleEvaluationResultMetadata.extend({}),
-  resultError: ruleEvaluationResultError.extend({}),
+  })
+const ruleEvaluationLengthCountResultMetadata =
+  ruleEvaluationResultMetadata.extend({
+    configuration: ruleEvaluationLengthCountConfiguration,
+  })
+const ruleEvaluationLengthCountResultError = ruleEvaluationResultError.extend(
+  {},
+)
+export const RuleEvaluationLengthCountSpecification = {
+  name: 'Length Count',
+  description: 'Checks if the response is of a certain length',
+  configuration: ruleEvaluationLengthCountConfiguration,
+  resultMetadata: ruleEvaluationLengthCountResultMetadata,
+  resultError: ruleEvaluationLengthCountResultError,
+  requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationLengthCountConfiguration = z.infer<
   typeof RuleEvaluationLengthCountSpecification.configuration
@@ -81,10 +110,8 @@ export type RuleEvaluationLengthCountResultError = z.infer<
 
 // LEXICAL OVERLAP
 
-export const RuleEvaluationLexicalOverlapSpecification = {
-  name: 'Lexical Overlap',
-  description: 'Checks if the response contains the expected label',
-  configuration: ruleEvaluationConfiguration.extend({
+const ruleEvaluationLexicalOverlapConfiguration =
+  ruleEvaluationConfiguration.extend({
     algorithm: z.enum([
       'substring',
       'levenshtein_distance',
@@ -94,11 +121,22 @@ export const RuleEvaluationLexicalOverlapSpecification = {
     ]),
     minOverlap: z.number().optional(), // Percentage of overlap
     maxOverlap: z.number().optional(), // Percentage of overlap
-    datasetLabel: z.string(),
-  }),
-  resultMetadata: ruleEvaluationResultMetadata.extend({}),
-  resultError: ruleEvaluationResultError.extend({}),
+  })
+const ruleEvaluationLexicalOverlapResultMetadata =
+  ruleEvaluationResultMetadata.extend({
+    configuration: ruleEvaluationLexicalOverlapConfiguration,
+  })
+const ruleEvaluationLexicalOverlapResultError =
+  ruleEvaluationResultError.extend({})
+export const RuleEvaluationLexicalOverlapSpecification = {
+  name: 'Lexical Overlap',
+  description: 'Checks if the response contains the expected output',
+  configuration: ruleEvaluationLexicalOverlapConfiguration,
+  resultMetadata: ruleEvaluationLexicalOverlapResultMetadata,
+  resultError: ruleEvaluationLexicalOverlapResultError,
+  requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationLexicalOverlapConfiguration = z.infer<
   typeof RuleEvaluationLexicalOverlapSpecification.configuration
@@ -112,20 +150,28 @@ export type RuleEvaluationLexicalOverlapResultError = z.infer<
 
 // SEMANTIC SIMILARITY
 
+const ruleEvaluationSemanticSimilarityConfiguration =
+  ruleEvaluationConfiguration.extend({
+    algorithm: z.literal('cosine_similarity'),
+    minSimilarity: z.number().optional(), // Percentage of similarity
+    maxSimilarity: z.number().optional(), // Percentage of similarity
+  })
+const ruleEvaluationSemanticSimilarityResultMetadata =
+  ruleEvaluationResultMetadata.extend({
+    configuration: ruleEvaluationSemanticSimilarityConfiguration,
+  })
+const ruleEvaluationSemanticSimilarityResultError =
+  ruleEvaluationResultError.extend({})
 export const RuleEvaluationSemanticSimilaritySpecification = {
   name: 'Semantic Similarity',
   description:
-    'Checks if the response is semantically similar to the expected label',
-  configuration: ruleEvaluationConfiguration.extend({
-    algorithm: z.literal('cosine_similarity'),
-    embeddingModel: z.enum(['openai_3_small', 'anthropic_voyage_3']),
-    minSimilarity: z.number().optional(), // Percentage of similarity
-    maxSimilarity: z.number().optional(), // Percentage of similarity
-    datasetLabel: z.string(),
-  }),
-  resultMetadata: ruleEvaluationResultMetadata.extend({}),
-  resultError: ruleEvaluationResultError.extend({}),
+    'Checks if the response is semantically similar to the expected output',
+  configuration: ruleEvaluationSemanticSimilarityConfiguration,
+  resultMetadata: ruleEvaluationSemanticSimilarityResultMetadata,
+  resultError: ruleEvaluationSemanticSimilarityResultError,
+  requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
 }
 export type RuleEvaluationSemanticSimilarityConfiguration = z.infer<
   typeof RuleEvaluationSemanticSimilaritySpecification.configuration

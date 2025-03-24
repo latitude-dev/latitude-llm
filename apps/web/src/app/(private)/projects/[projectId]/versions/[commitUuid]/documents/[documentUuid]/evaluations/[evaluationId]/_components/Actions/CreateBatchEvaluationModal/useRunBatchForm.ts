@@ -1,23 +1,22 @@
-import { useCallback, useMemo, useState } from 'react'
-
-import {
-  Dataset,
-  DatasetV2,
-  DatasetVersion,
-  DocumentVersion,
-} from '@latitude-data/core/browser'
-import type { ConversationMetadata } from 'promptl-ai'
-import { SelectOption, useCurrentCommit } from '@latitude-data/web-ui'
+import { DatasetHeadText } from '$/app/(private)/datasets/[datasetId]/DatasetDetailTable'
 import { useMappedParametersFromLocalStorage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/batch/_components/RunPromptInBatchModal/useMappedParametersFromLocalStorage'
-
-import { RunBatchParameters } from './useRunBatch'
-import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import {
   buildColumnList,
   getColumnIndex,
   getDatasetCount,
   useVersionedDatasets,
 } from '$/hooks/useVersionedDatasets'
+import useDatasetRowsCount from '$/stores/datasetRowsCount'
+import {
+  Dataset,
+  DatasetV2,
+  DatasetVersion,
+  DocumentVersion,
+} from '@latitude-data/core/browser'
+import { SelectOption, useCurrentCommit } from '@latitude-data/web-ui'
+import type { ConversationMetadata } from 'promptl-ai'
+import { useCallback, useMemo, useState } from 'react'
+import { RunBatchParameters } from './useRunBatch'
 
 export function buildEmptyParameters(parameters: string[]) {
   return parameters.reduce((acc, key) => {
@@ -50,6 +49,23 @@ export function useRunBatchForm({
     },
     [setHeaders, selectedDataset],
   )
+  const [labels, setLabels] = useState<SelectOption<string>[]>([])
+  const buildLabels = useCallback(
+    (dataset: DatasetV2) =>
+      setLabels([
+        ...dataset.columns
+          .filter((column) => column.role === 'label')
+          .map((column) => ({
+            icon: DatasetHeadText({ text: '', role: column.role }),
+            label: column.name,
+            value: column.name,
+          })),
+        ...dataset.columns
+          .filter((column) => column.role !== 'label')
+          .map((column) => ({ label: column.name, value: column.name })),
+      ]),
+    [setLabels, selectedDataset],
+  )
   const {
     data: datasets,
     isLoading: isLoadingDatasets,
@@ -63,8 +79,12 @@ export function useRunBatchForm({
 
       setSelectedDataset(selected)
       buildHeaders(selected)
+      if ('columns' in selected) buildLabels(selected)
     },
   })
+  const [datasetLabel, setDatasetLabel] = useState<string | undefined>(
+    undefined,
+  )
   const [wantAllLines, setAllRows] = useState(true)
   const [fromLine, setFromLine] = useState<number>(1)
   const [toLine, setToLine] = useState<number | undefined>(undefined)
@@ -98,8 +118,9 @@ export function useRunBatchForm({
       }
 
       buildHeaders(ds)
+      if ('columns' in ds) buildLabels(ds)
     },
-    [parametersList, datasets, buildHeaders],
+    [parametersList, datasets, buildHeaders, buildLabels],
   )
 
   const { commit } = useCurrentCommit()
@@ -137,7 +158,9 @@ export function useRunBatchForm({
     isLoadingDatasets,
     selectedDataset,
     datasetVersion,
+    datasetLabel,
     headers,
+    labels,
     wantAllLines,
     fromLine,
     toLine,
@@ -145,6 +168,7 @@ export function useRunBatchForm({
     parametersList,
     onParameterChange,
     onSelectDataset,
+    setDatasetLabel,
     setAllRows,
     setFromLine,
     setToLine,

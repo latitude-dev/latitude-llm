@@ -26,7 +26,8 @@ export type RunDocumentForEvaluationJobData = {
   | {
       evaluationUuid: string
       datasetId: number
-      rowId: number
+      datasetLabel?: string
+      datasetRowId: number
       version: 'v2'
     }
 )
@@ -70,7 +71,8 @@ export const runDocumentForEvaluationJob = async (
         evaluationUuid: job.data.evaluationUuid,
         providerLogUuid: providerLog.uuid,
         datasetId: job.data.datasetId,
-        rowId: job.data.rowId,
+        datasetLabel: job.data.datasetLabel,
+        datasetRowId: job.data.datasetRowId,
         batchId: batchId,
       }
 

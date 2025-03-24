@@ -31,8 +31,11 @@ export default function ResultBadge<
         </Badge>
       }
     >
-      Evaluation {evaluation.name} with a normalized score of{' '}
-      {result.normalizedScore} did {result.hasPassed ? 'pass' : 'not pass'}
+      Evaluation {evaluation.name}, with a score of {result.score} (
+      {result.metadata!.configuration.reverseScale
+        ? 'lower is better'
+        : 'higher is better'}
+      ), did {result.hasPassed ? 'pass' : 'not pass'}
     </Tooltip>
   )
 }

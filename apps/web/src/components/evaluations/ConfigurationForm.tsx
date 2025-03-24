@@ -3,7 +3,7 @@ import {
   EvaluationMetric,
   EvaluationType,
 } from '@latitude-data/constants'
-import { SwitchInput } from '@latitude-data/web-ui'
+import { SelectableSwitch } from '@latitude-data/web-ui'
 import { useEffect, useState } from 'react'
 import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
 
@@ -40,15 +40,15 @@ export default function ConfigurationForm<
         setConfiguration={setConfiguration}
         disabled={disabled}
       />
-      <SwitchInput
-        checked={configuration.reverseScale ?? false}
+      <SelectableSwitch
+        selected={!(configuration.reverseScale ?? false)}
         name='reverseScale'
-        label={
-          configuration.reverseScale ? 'Lower is better' : 'Higher is better'
-        }
+        label='Orientation'
+        trueLabel='Higher is better'
+        falseLabel='Lower is better'
         description='Orientation of the metric scale when normalizing the score for internal operations and to display evaluation results'
-        onCheckedChange={(value) =>
-          setConfiguration({ ...configuration, reverseScale: value })
+        onChange={(value) =>
+          setConfiguration({ ...configuration, reverseScale: !value })
         }
         disabled={disabled}
         required

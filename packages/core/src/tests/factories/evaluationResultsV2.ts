@@ -51,7 +51,11 @@ export async function createEvaluationResultV2<
       value: {
         score: args.score ?? 1,
         normalizedScore: args.normalizedScore ?? 100,
-        metadata: args.metadata ?? {},
+        metadata: args.metadata ?? {
+          configuration: args.evaluation.configuration,
+          actualOutput: 'actual output',
+          expectedOutput: 'expected output',
+        },
         hasPassed: args.hasPassed ?? true,
         error: args.error ?? null,
       } as EvaluationResultValue<T, M>,

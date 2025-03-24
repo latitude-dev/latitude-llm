@@ -5,7 +5,6 @@ import {
   getProviderApiKeyByIdCached,
   getProviderApiKeyByNameCached,
 } from '$/app/(private)/_data-access'
-import BreadcrumbLink from '$/components/BreadcrumbLink'
 import { ROUTES } from '$/services/routes'
 import { readMetadata } from '@latitude-data/compiler'
 import {
@@ -16,7 +15,6 @@ import { env } from '@latitude-data/env'
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbSeparator,
   ClickToCopyUuid,
   Icon,
   TableWithHeader,
@@ -90,19 +88,6 @@ export default async function ConnectedEvaluationLayout({
       <TableWithHeader
         title={
           <Breadcrumb>
-            <BreadcrumbItem noShrink>
-              <BreadcrumbLink
-                showBackIcon
-                name='Evaluations'
-                href={
-                  ROUTES.projects
-                    .detail({ id: Number(projectId) })
-                    .commits.detail({ uuid: commitUuid })
-                    .documents.detail({ uuid: documentUuid }).evaluations.root
-                }
-              />
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
             <BreadcrumbItem>
               <Text.H4M noWrap ellipsis>
                 {evaluation.name}

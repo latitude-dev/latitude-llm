@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
-import { isNumber } from 'lodash-es'
-
+import { RunBatchParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
+import { getEvaluationMetricSpecification } from '$/components/evaluations'
+import { ROUTES } from '$/services/routes'
 import {
   Dataset,
   DatasetV2,
   DocumentVersion,
+  EvaluationTmp,
 } from '@latitude-data/core/browser'
 import {
   FormFieldGroup,
@@ -18,9 +19,9 @@ import {
   SwitchInput,
   Text,
 } from '@latitude-data/web-ui'
-import { RunBatchParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
-import { ROUTES } from '$/services/routes'
+import { isNumber } from 'lodash-es'
 import Link from 'next/link'
+import { useMemo } from 'react'
 
 function findValue({
   headers,
@@ -85,15 +86,19 @@ function LineRangeInputs({
 
 export default function DatasetForm({
   document,
+  evaluation,
   onParametersChange,
   parameters,
   selectedDataset,
   headers,
+  labels,
   wantAllLines,
   fromLine,
   toLine,
+  datasetLabel,
   onChangeFromLine,
   onChangeToLine,
+  onChangeDatasetLabel,
   datasets,
   isLoadingDatasets,
   parametersList,
@@ -103,15 +108,19 @@ export default function DatasetForm({
   maxLineCount,
 }: {
   document: DocumentVersion
+  evaluation?: EvaluationTmp
   onParametersChange: (param: string) => (header: string) => void
   parameters: RunBatchParameters
   parametersList: string[]
   wantAllLines: boolean
   fromLine: number | undefined
   toLine: number | undefined
+  datasetLabel?: string | undefined
   onChangeFromLine: ReactStateDispatch<number>
   onChangeToLine: ReactStateDispatch<number | undefined>
+  onChangeDatasetLabel?: ReactStateDispatch<string | undefined>
   headers: SelectOption<string>[]
+  labels?: SelectOption<string>[]
   selectedDataset: Dataset | DatasetV2 | null
   datasets: Dataset[] | DatasetV2[]
   isLoadingDatasets: boolean
@@ -161,6 +170,12 @@ export default function DatasetForm({
       defaultValue={selectedDataset?.id}
     />
   )
+
+  const specification =
+    evaluation?.version === 'v2'
+      ? getEvaluationMetricSpecification(evaluation)
+      : undefined
+
   return (
     <>
       <NumeredList>
@@ -252,6 +267,26 @@ export default function DatasetForm({
             </div>
           ) : null}
         </NumeredList.Item>
+        {specification?.requiresExpectedOutput && (
+          <NumeredList.Item
+            title='Select the column that contains the expected output'
+            width='w-1/2'
+          >
+            {selectedDataset ? (
+              <div className='flex flex-col gap-y-3'>
+                <Select
+                  name='datasetLabel'
+                  disabled={labels!.length === 0}
+                  errors={errors?.datasetLabel}
+                  options={labels!}
+                  value={datasetLabel!}
+                  onChange={onChangeDatasetLabel!}
+                  placeholder='Select csv column'
+                />
+              </div>
+            ) : null}
+          </NumeredList.Item>
+        )}
       </NumeredList>
     </>
   )

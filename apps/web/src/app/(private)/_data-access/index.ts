@@ -1,7 +1,13 @@
 import { cache } from 'react'
 
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
-import { Workspace, type Commit } from '@latitude-data/core/browser'
+import {
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+  Workspace,
+  type Commit,
+} from '@latitude-data/core/browser'
 import { findAllEvaluationTemplates } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
@@ -227,6 +233,38 @@ export const getEvaluationsByDocumentUuidCached = cache(
     const scope = new EvaluationsRepository(workspace.id)
     const result = await scope.findByDocumentUuid(documentUuid)
     return result.unwrap()
+  },
+)
+
+export const getEvaluationV2AtCommitByDocumentCached = cache(
+  async <
+    T extends EvaluationType = EvaluationType,
+    M extends EvaluationMetric<T> = EvaluationMetric<T>,
+  >({
+    projectId,
+    commitUuid,
+    documentUuid,
+    evaluationUuid,
+  }: {
+    projectId?: number
+    commitUuid: string
+    documentUuid: string
+    evaluationUuid: string
+  }) => {
+    const { workspace } = await getCurrentUser()
+    const repository = new EvaluationsV2Repository(workspace.id)
+    const result = await repository.getAtCommitByDocument({
+      projectId: projectId,
+      commitUuid: commitUuid,
+      documentUuid: documentUuid,
+      evaluationUuid: evaluationUuid,
+    })
+    if (result.error) {
+      if (result.error instanceof NotFoundError) return notFound()
+      throw result.error
+    }
+
+    return result.unwrap() as EvaluationV2<T, M>
   },
 )
 

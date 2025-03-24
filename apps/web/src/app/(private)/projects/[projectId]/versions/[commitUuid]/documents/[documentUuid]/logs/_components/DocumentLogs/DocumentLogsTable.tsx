@@ -1,18 +1,22 @@
 'use client'
 
-import { forwardRef } from 'react'
-import { capitalize } from 'lodash-es'
-
+import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
+import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { SelectableRowsHook } from '$/hooks/useSelectableRows'
+import { relativeTime } from '$/lib/relativeTime'
+import { ROUTES } from '$/services/routes'
+import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import {
   DocumentLogFilterOptions,
+  EvaluationConfigurationNumerical,
   EvaluationResultableType,
   LOG_FILTERS_ENCODED_PARAMS,
+  ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import {
-  DocumentLogWithMetadataAndError,
-  ResultWithEvaluation,
-} from '@latitude-data/core/repositories'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
   Badge,
   Checkbox,
@@ -26,21 +30,12 @@ import {
   TableRow,
   Text,
   TextColor,
-  Tooltip,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
-import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
-import { SelectableRowsHook } from '$/hooks/useSelectableRows'
-import { relativeTime } from '$/lib/relativeTime'
-import { ROUTES } from '$/services/routes'
-import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
+import { capitalize } from 'lodash-es'
 import { useSearchParams } from 'next/navigation'
-
-import { ResultCellContent } from '../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
+import { forwardRef, useMemo } from 'react'
 
 const countLabel = (selected: number) => (count: number) => {
   return selected ? `${selected} of ${count} logs selected` : `${count} logs`
@@ -50,23 +45,41 @@ type DocumentLogRow = DocumentLogWithMetadataAndError & {
   realtimeAdded?: boolean
 }
 
-function EvaluationResultItem({ result, evaluation }: ResultWithEvaluation) {
-  if (result.resultableType === EvaluationResultableType.Text) {
-    return <Badge variant='outline'>text</Badge>
-  }
-
-  return <ResultCellContent evaluation={evaluation} value={result.result} />
-}
-
 function EvaluationsColumn({
   evaluationResults = [],
   color: cellColor,
   isLoading,
 }: {
-  evaluationResults?: ResultWithEvaluation[]
+  evaluationResults?: ResultWithEvaluationTmp[]
   color: TextColor
   isLoading: boolean
 }) {
+  const passedResults = useMemo(
+    () =>
+      evaluationResults.filter(({ evaluation, result, version }) => {
+        if (version === 'v2') return !!result.hasPassed
+
+        const value = result.result
+        if (value === undefined) return false
+
+        if (result.resultableType === EvaluationResultableType.Boolean) {
+          return typeof value === 'string' ? value === 'true' : Boolean(value)
+        }
+
+        if (result.resultableType === EvaluationResultableType.Number) {
+          return (
+            Number(value) >=
+            ((
+              evaluation.resultConfiguration as EvaluationConfigurationNumerical
+            )?.maxValue ?? 0)
+          )
+        }
+
+        return true
+      }).length,
+    [evaluationResults],
+  )
+
   if (isLoading) {
     return <Skeleton className='w-full h-4' />
   }
@@ -75,26 +88,19 @@ function EvaluationsColumn({
     return <Text.H5 color={cellColor}>-</Text.H5>
   }
 
-  const resultsToDisplay = evaluationResults.slice(0, 2)
-  const extraResults = evaluationResults.length - resultsToDisplay.length
-
   return (
-    <div className='flex flex-row gap-2 flex-shrink-0'>
-      {resultsToDisplay.map(({ result, evaluation }) => (
-        <Tooltip
-          key={result.uuid}
-          trigger={
-            <EvaluationResultItem result={result} evaluation={evaluation} />
-          }
-        >
-          {evaluation.name}
-        </Tooltip>
-      ))}
-      {extraResults > 0 && (
-        <Tooltip trigger={<Badge variant='outline'>+{extraResults}</Badge>}>
-          {extraResults} more evaluations
-        </Tooltip>
-      )}
+    <div className='flex justify-center items-center shrink-0'>
+      <Badge
+        variant={
+          passedResults
+            ? passedResults >= evaluationResults.length / 2
+              ? 'successMuted'
+              : 'warningMuted'
+            : 'destructiveMuted'
+        }
+      >
+        {passedResults}/{evaluationResults.length} passed
+      </Badge>
     </div>
   )
 }
@@ -102,7 +108,7 @@ function EvaluationsColumn({
 type Props = {
   documentLogs: DocumentLogRow[]
   documentLogFilterOptions: DocumentLogFilterOptions
-  evaluationResults: Record<number, ResultWithEvaluation[]>
+  evaluationResults: Record<string, ResultWithEvaluationTmp[]>
   selectedLog: DocumentLogWithMetadataAndError | undefined
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void
   isLoading: boolean
@@ -259,7 +265,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                 <TableCell>
                   <EvaluationsColumn
                     color={cellColor}
-                    evaluationResults={evaluationResults[documentLog.id]}
+                    evaluationResults={evaluationResults[documentLog.uuid]}
                     isLoading={isLoading}
                   />
                 </TableCell>

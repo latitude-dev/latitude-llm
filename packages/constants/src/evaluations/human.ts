@@ -15,16 +15,24 @@ const humanEvaluationResultError = BaseEvaluationResultError.extend({})
 
 // BINARY
 
+const humanEvaluationBinaryConfiguration = humanEvaluationConfiguration.extend({
+  passDescription: z.string(),
+  failDescription: z.string(),
+})
+const humanEvaluationBinaryResultMetadata =
+  humanEvaluationResultMetadata.extend({
+    configuration: humanEvaluationBinaryConfiguration,
+  })
+const humanEvaluationBinaryResultError = humanEvaluationResultError.extend({})
 export const HumanEvaluationBinarySpecification = {
   name: 'Binary',
   description: 'Judges whether the response meets the criteria',
-  configuration: humanEvaluationConfiguration.extend({
-    passDescription: z.string(),
-    failDescription: z.string(),
-  }),
-  resultMetadata: humanEvaluationResultMetadata.extend({}),
-  resultError: humanEvaluationResultError.extend({}),
+  configuration: humanEvaluationBinaryConfiguration,
+  resultMetadata: humanEvaluationBinaryResultMetadata,
+  resultError: humanEvaluationBinaryResultError,
+  requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: false,
 }
 export type HumanEvaluationBinaryConfiguration = z.infer<
   typeof HumanEvaluationBinarySpecification.configuration
@@ -38,20 +46,28 @@ export type HumanEvaluationBinaryResultError = z.infer<
 
 // RATING
 
+const humanEvaluationRatingConfiguration = humanEvaluationConfiguration.extend({
+  minRating: z.number(),
+  minRatingDescription: z.string(),
+  maxRating: z.number(),
+  maxRatingDescription: z.string(),
+  minThreshold: z.number(),
+  maxThreshold: z.number(),
+})
+const humanEvaluationRatingResultMetadata =
+  humanEvaluationResultMetadata.extend({
+    configuration: humanEvaluationRatingConfiguration,
+  })
+const humanEvaluationRatingResultError = humanEvaluationResultError.extend({})
 export const HumanEvaluationRatingSpecification = {
   name: 'Rating',
   description: 'Judges the response by rating it under a criteria',
-  configuration: humanEvaluationConfiguration.extend({
-    minRating: z.number(),
-    minRatingDescription: z.string(),
-    maxRating: z.number(),
-    maxRatingDescription: z.string(),
-    minThreshold: z.number(),
-    maxThreshold: z.number(),
-  }),
-  resultMetadata: humanEvaluationResultMetadata.extend({}),
-  resultError: humanEvaluationResultError.extend({}),
+  configuration: humanEvaluationRatingConfiguration,
+  resultMetadata: humanEvaluationRatingResultMetadata,
+  resultError: humanEvaluationRatingResultError,
+  requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: false,
 }
 export type HumanEvaluationRatingConfiguration = z.infer<
   typeof HumanEvaluationRatingSpecification.configuration
@@ -65,18 +81,28 @@ export type HumanEvaluationRatingResultError = z.infer<
 
 // COMPARISON
 
+const humanEvaluationComparisonConfiguration =
+  humanEvaluationConfiguration.extend({
+    minThreshold: z.number(), // Threshold percentage
+    maxThreshold: z.number(), // Threshold percentage
+  })
+const humanEvaluationComparisonResultMetadata =
+  humanEvaluationResultMetadata.extend({
+    configuration: humanEvaluationComparisonConfiguration,
+  })
+const humanEvaluationComparisonResultError = humanEvaluationResultError.extend(
+  {},
+)
 export const HumanEvaluationComparisonSpecification = {
   name: 'Comparison',
   description:
-    'Judges the response by comparing the criteria to the expected label',
-  configuration: humanEvaluationConfiguration.extend({
-    minThreshold: z.number(), // Threshold percentage
-    maxThreshold: z.number(), // Threshold percentage
-    datasetLabel: z.string(),
-  }),
-  resultMetadata: humanEvaluationResultMetadata.extend({}),
-  resultError: humanEvaluationResultError.extend({}),
+    'Judges the response by comparing the criteria to the expected output',
+  configuration: humanEvaluationComparisonConfiguration,
+  resultMetadata: humanEvaluationComparisonResultMetadata,
+  resultError: humanEvaluationComparisonResultError,
+  requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
+  supportsBatchEvaluation: false,
 }
 export type HumanEvaluationComparisonConfiguration = z.infer<
   typeof HumanEvaluationComparisonSpecification.configuration
