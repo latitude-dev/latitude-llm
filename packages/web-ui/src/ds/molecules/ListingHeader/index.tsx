@@ -48,7 +48,7 @@ export const TableWithHeader = ({
       </div>
       <div
         className={cn('flex', {
-          'relative min-h-0 min-w-0': takeVertialSpace,
+          'flex-grow min-h-0 min-w-0': takeVertialSpace,
         })}
       >
         {table}

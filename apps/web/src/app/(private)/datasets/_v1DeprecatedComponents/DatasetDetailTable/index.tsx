@@ -18,6 +18,7 @@ import {
 import useDatasetPreview from '$/stores/datasetPreviews'
 
 const VISIBLE_ROWS = 20
+const TABLE_MAX_HEIGHT = 450
 
 export function DatasetV1DetailTable({ dataset }: { dataset: Dataset }) {
   const { data, isLoading } = useDatasetPreview({ dataset })
@@ -31,11 +32,12 @@ export function DatasetV1DetailTable({ dataset }: { dataset: Dataset }) {
         <>
           {isLoading ? (
             <TableSkeleton
+              maxHeight={TABLE_MAX_HEIGHT}
               rows={rowCount}
               cols={dataset.fileMetadata.headers.length}
             />
           ) : (
-            <Table>
+            <Table maxHeight={TABLE_MAX_HEIGHT}>
               <TableHeader>
                 <TableRow verticalPadding hoverable={false}>
                   <TableHead>

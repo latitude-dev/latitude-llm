@@ -1,13 +1,3 @@
-// NOTE:: About CSS for DataGrid component
-//
-// Whenever you use `@latitude-data/web-ui/data-grid`,
-// you must also import the CSS file from the library we use.
-// I would rather prefer collocated CSS, but sometimes life is not perfect.
-//
-// If we found ourselves using data grid a lot maybe move this import
-// to root layout. But I think it's a shame to always load this CSS.
-import 'react-data-grid/lib/styles.css'
-
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import {
   DatasetRowsRepository,
@@ -16,7 +6,7 @@ import {
 } from '@latitude-data/core/repositories'
 import { notFound } from 'next/navigation'
 import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
-import { DatasetDetailTable } from './DatasetDetailTable'
+import { DatasetDetailTable, ROWS_PAGE_SIZE } from './DatasetDetailTable'
 import {
   Dataset,
   DatasetV2,
@@ -30,7 +20,6 @@ type GetDataResult =
   | { isV2: false; dataset: Dataset }
   | { isV2: true; dataset: DatasetV2; rows: DatasetRow[] }
 
-const ROWS_PAGE_SIZE = '100'
 async function getData({
   workspace,
   datasetId,
@@ -60,11 +49,10 @@ async function getData({
 
   const dataset = result.value
   const rowsRepo = new DatasetRowsRepository(workspace.id)
-  const size = pageSize ?? ROWS_PAGE_SIZE
   const rows = await rowsRepo.findByDatasetPaginated({
     datasetId: dataset.id,
     page,
-    pageSize: size,
+    pageSize: pageSize ?? ROWS_PAGE_SIZE,
   })
 
   return Result.ok({ dataset, rows, isV2: true })
@@ -76,17 +64,11 @@ export default async function DatasetDetail({
 }: {
   params: Promise<{ datasetId: string }>
   searchParams: Promise<{
-    isProcessing?: string
     pageSize: string
     page?: string
   }>
 }) {
-  const {
-    pageSize,
-    page: pageString,
-    isProcessing: isProcessingString,
-  } = await searchParams
-  const isProcessing = isProcessingString === 'true'
+  const { pageSize, page: pageString } = await searchParams
   const { datasetId } = await params
   const { workspace } = await getCurrentUser()
   const result = await getData({
@@ -108,7 +90,6 @@ export default async function DatasetDetail({
     <DatasetDetailTable
       dataset={result.value.dataset}
       rows={result.value.rows}
-      initialRenderIsProcessing={isProcessing}
     />
   )
 }

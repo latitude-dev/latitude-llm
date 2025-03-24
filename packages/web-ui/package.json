@@ -14,7 +14,6 @@
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./data-grid": "./src/ds/atoms/DataGrid/index.tsx",
     "./browser": "./src/browser.ts",
     "./styles.css": "./styles.css",
     "./tailwind.config.js": "./tailwind.config.js"
@@ -73,7 +72,6 @@
     "monaco-editor": "^0.50.0",
     "postcss": "^8.4.39",
     "promptl-ai": "^0.5.2",
-    "postcss-import": "^16.1.0",
     "react": "18.3.0",
     "react-dom": "18.3.0",
     "react-resizable": "^3.0.5",
@@ -109,7 +107,6 @@
     "lucide-react": "^0.468.0",
     "monaco-editor": "^0.50.0",
     "react": "18.3.0",
-    "react-data-grid": "7.0.0-beta.51",
     "react-dom": "18.3.0",
     "react-resizable": "^3.0.5",
     "react-textarea-autosize": "^8.5.3",

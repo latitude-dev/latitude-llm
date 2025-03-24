@@ -98,7 +98,7 @@ export function DatasetsTable({
             <TableRow key={dataset.id} verticalPadding hoverable={false}>
               <TableCell>
                 <Link href={ROUTES.datasets.detail(dataset.id)}>
-                  <Text.H5>{dataset.name}</Text.H5>
+                  <Text.H5 underline>{dataset.name}</Text.H5>
                 </Link>
               </TableCell>
               <TableCell>

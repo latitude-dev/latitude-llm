@@ -7,17 +7,6 @@ import useDatasetRows from './datasetRows'
 import { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
 import { type UseFetcherArgs } from '$/hooks/useFetcher'
 
-vi.mock('@latitude-data/web-ui', async (mod) => {
-  const originalModule = (await mod()) as typeof import('@latitude-data/web-ui')
-  return {
-    ...originalModule,
-    useToast: vi.fn(() => ({
-      state: {},
-      setState: vi.fn(),
-    })),
-  }
-})
-
 const MOCK_DATASET = {
   id: 1,
   columns: [
@@ -82,12 +71,6 @@ describe('useDatasetRows', () => {
         createdAt: new Date(row.createdAt),
         updatedAt: new Date(row.updatedAt),
         rowData: {
-          '7dagyMD': 'tortilla de patatas',
-          AGqIoHr: '["patatas", "huevos", "aceite", "sal"]',
-          FdBuNWV: '4',
-          KhdzZS0: 'Paco Merlo',
-        },
-        processedRowData: {
           '7dagyMD': 'tortilla de patatas',
           AGqIoHr: '["patatas", "huevos", "aceite", "sal"]',
           FdBuNWV: '4',

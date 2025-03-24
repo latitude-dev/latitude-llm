@@ -13,7 +13,8 @@ export default function DeleteDatasetModal({
   setDataset: ReactStateDispatch<DatasetV2 | null>
 }) {
   const router = useRouter()
-  const { destroy } = useDatasets()
+  const { data, destroy } = useDatasets()
+  const isLast = data?.length === 1
   if (!dataset) return null
 
   return (
@@ -25,7 +26,7 @@ export default function DeleteDatasetModal({
       submitStr='Delete dataset'
       model={dataset}
       onSuccess={() => {
-        router.refresh()
+        if (isLast) router.refresh()
 
         setDataset(null)
       }}
