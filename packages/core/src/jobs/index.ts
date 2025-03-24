@@ -16,4 +16,10 @@ export async function setupSchedules() {
     '0 0 2 * * *',
     { attempts: 1 },
   )
+
+  // Every minute
+  await queues.defaultQueue.jobs.scheduleCheckScheduledDocumentTriggersJob(
+    '* * * * *',
+    { attempts: 1 },
+  )
 }
