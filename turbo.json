@@ -45,7 +45,7 @@
     "npm_package_name",
     "DISABLE_EMAIL_AUTHENTICATION",
     "DD_TRACING_ENABLED",
-    "DEV_ROOT_PATH",
+    "FILE_STORAGE_ROOT_PATH",
     "EMAIL_TRIGGER_DOMAIN"
   ],
   "$schema": "https://turbo.build/schema.json",

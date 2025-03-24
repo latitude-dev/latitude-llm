@@ -16,20 +16,20 @@ const buildPublicWebPath = (rootPath: string) =>
  * Create a .env.development file in the root of the project if
  * you haven't already. Add the following line to the file:
  *
- * DEV_ROOT_PATH=/path/to/latitude
+ * FILE_STORAGE_ROOT_PATH=/path/to/latitude
  *
- * Example: DEV_ROOT_PATH=/Users/YOUR_MACHINE_NAME/your-path-to/latitude
+ * Example: FILE_STORAGE_ROOT_PATH=/Users/YOUR_MACHINE_NAME/your-path-to/latitude
  * It has to be an absolute path.
  */
 function buildDevStoragePaths() {
-  const devRootPath = process.env.DEV_ROOT_PATH
+  const devRootPath = process.env.FILE_STORAGE_ROOT_PATH
 
   if (!devRootPath) {
     console.warn(`
   \x1b[33m[WARNING]\x1b[0m 
-  \x1b[1mDEV_ROOT_PATH\x1b[0m is missing. Without it, file storage features will not work. 
-  Please add the \x1b[1mDEV_ROOT_PATH\x1b[0m environment variable in \x1b[36m.env.development\x1b[0m (located in the project root).
-  Example: DEV_ROOT_PATH=/Users/YOUR_MACHINE_NAME/your-path-to/latitude/tmp/data
+  \x1b[1mFILE_STORAGE_ROOT_PATH\x1b[0m is missing. Without it, file storage features will not work. 
+  Please add the \x1b[1mFILE_STORAGE_ROOT_PATH\x1b[0m environment variable in \x1b[36m.env.development\x1b[0m (located in the project root).
+  Example: FILE_STORAGE_ROOT_PATH=/Users/YOUR_MACHINE_NAME/your-path-to/latitude/tmp/data
   `)
 
     return {
