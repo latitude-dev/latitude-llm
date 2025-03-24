@@ -54,6 +54,7 @@
     "next-themes": "^0.3.0",
     "nextjs-toploader": "^1.6.12",
     "nprogress": "^0.2.0",
+    "react-data-grid": "7.0.0-beta.51",
     "oslo": "1.2.0",
     "pdfjs-dist": "^4.9.155",
     "posthog-js": "^1.161.6",
