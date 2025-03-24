@@ -135,14 +135,17 @@ export function usePlaygroundChat({
               setTime((prev) => (prev ?? 0) + (performance.now() - start))
             }
 
-            if (onPromptRan) {
-              onPromptRan(documentLogUuid)
-            }
+            onPromptRan?.(documentLogUuid)
           }
           if (data.type === ChainEventTypes.ToolsRequested) {
             setUnresponedToolCalls(
               data.tools.filter((t) => t.name !== AGENT_RETURN_TOOL_NAME),
             )
+          }
+
+          if (data.type === ChainEventTypes.ChainError) {
+            setError(data.error)
+            onPromptRan?.(documentLogUuid, data.error)
           }
         }
       } catch (error) {
