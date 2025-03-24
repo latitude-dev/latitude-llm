@@ -11,7 +11,7 @@
     "lint": "eslint src/",
     "start": "node -r module-alias/register ./dist --env=production",
     "tc": "tsc --noEmit",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org latitude-l5 --project latitude-llm-app ./dist && sentry-cli sourcemaps upload --org latitude-l5 --project latitude-workers ./dist"
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org latitude-l5 --project latitude-workers ./dist && sentry-cli sourcemaps upload --org latitude-l5 --project latitude-workers ./dist"
   },
   "dependencies": {
     "@bull-board/api": "^6.7.9",
