@@ -8,8 +8,9 @@ import { env } from '@latitude-data/env'
 
 const HOSTNAME = env.GATEWAY_BIND_ADDRESS
 const PORT = env.GATEWAY_BIND_PORT
+const SHUTDOWN_TIMEOUT = 600000 // 10 minutes
 
-serve(
+const server = serve(
   {
     fetch: app.fetch,
     overrideGlobalObjects: undefined,
@@ -27,8 +28,15 @@ serve(
 )
 
 function gracefulShutdown() {
-  console.log('Received termination signal. Shutting down gracefully...')
-  process.exit(0)
+  server.close(() => {
+    console.log('Received termination signal. Shutting down gracefully...')
+    process.exit(0)
+  })
+
+  setTimeout(() => {
+    console.error('Forcing shutdown due to pending connections.')
+    process.exit(1)
+  }, SHUTDOWN_TIMEOUT)
 }
 
 process.on('SIGTERM', gracefulShutdown)
