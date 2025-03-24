@@ -14,6 +14,7 @@ import {
   Button,
   ClickToCopy,
   Text,
+  TextArea,
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { format } from 'date-fns'
@@ -62,16 +63,33 @@ function ResultPanelMetadata<
           <MetadataItem
             label='Actual output'
             tooltip='Last response from the model conversation'
-            value={result.metadata!.actualOutput}
             stacked
-          />
+          >
+            <div className='pt-2'>
+              <TextArea
+                value={result.metadata!.actualOutput}
+                minRows={1}
+                maxRows={6}
+                disabled={true}
+              />
+            </div>
+          </MetadataItem>
+
           {result.metadata!.expectedOutput && (
             <MetadataItem
               label='Expected output'
-              tooltip='Data from the dataset column'
-              value={result.metadata!.expectedOutput}
+              tooltip='Batch data from the dataset column'
               stacked
-            />
+            >
+              <div className='pt-2'>
+                <TextArea
+                  value={result.metadata!.expectedOutput}
+                  minRows={1}
+                  maxRows={6}
+                  disabled={true}
+                />
+              </div>
+            </MetadataItem>
           )}
           <MetadataItem label='Result'>
             <ResultBadge evaluation={evaluation} result={result} />
