@@ -145,6 +145,12 @@ const { messages } = await sdk.prompts.renderChain({
 })
 ```
 
+<Note>
+  When using the `renderAgent` method, make sure to provide the `config.tools`
+  parameter to the LLM provider in your `onStep` implementation, otherwise the
+  AI will not be able to stop the Agent loop!
+</Note>
+
 If your prompt contains tools, you can also provide callbacks for each tool with the `tools` argument, and they will be automatically called when the LLM invokes them.
 
 ```typescript

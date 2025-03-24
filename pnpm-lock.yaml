@@ -308,7 +308,7 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       promptl-ai:
-        specifier: ^0.5.1
+        specifier: ^0.5.2
         version: 0.5.2
       rate-limiter-flexible:
         specifier: ^5.0.3
@@ -465,7 +465,7 @@ importers:
         specifier: ^1.161.6
         version: 1.232.3
       promptl-ai:
-        specifier: ^0.5.1
+        specifier: ^0.5.2
         version: 0.5.2
       rate-limiter-flexible:
         specifier: ^5.0.3
@@ -826,7 +826,7 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0
       promptl-ai:
-        specifier: ^0.5.1
+        specifier: ^0.5.2
         version: 0.5.2
       zod:
         specifier: ^3.23.8
@@ -869,7 +869,7 @@ importers:
         specifier: ^4.2.0
         version: 4.2.0
       promptl-ai:
-        specifier: ^0.5.1
+        specifier: ^0.5.2
         version: 0.5.2
       safe-regex:
         specifier: ^2.1.1
@@ -1110,7 +1110,7 @@ importers:
         specifier: 3.3.2
         version: 3.3.2
       promptl-ai:
-        specifier: ^0.5.1
+        specifier: ^0.5.2
         version: 0.5.2
       typescript:
         specifier: ^5.5.4
@@ -1452,7 +1452,7 @@ importers:
         specifier: ^8.4.39
         version: 8.5.3
       promptl-ai:
-        specifier: ^0.5.1
+        specifier: ^0.5.2
         version: 0.5.2
       react:
         specifier: 18.3.0
@@ -19861,7 +19861,7 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint@8.57.1)(typescript@5.8.2)
       '@typescript-eslint/parser': 6.21.0(eslint@8.57.1)(typescript@5.8.2)
       eslint-config-prettier: 9.1.0(eslint@8.57.1)
-      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint-import-resolver-typescript@3.9.1)(eslint@8.57.1))
+      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.31.0)
       eslint-import-resolver-typescript: 3.9.1(eslint-plugin-import@2.31.0)(eslint@8.57.1)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.57.1)
       eslint-plugin-import: 2.31.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.8.2))(eslint@8.57.1)
@@ -21787,7 +21787,7 @@ snapshots:
       eslint-plugin-turbo: 2.4.4(eslint@8.57.1)(turbo@2.4.4)
       turbo: 2.4.4
 
-  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint-import-resolver-typescript@3.9.1)(eslint@8.57.1)):
+  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.31.0):
     dependencies:
       eslint-plugin-import: 2.31.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.8.2))(eslint@8.57.1)
 
