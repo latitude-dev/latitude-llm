@@ -266,6 +266,15 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .where(filter)
       .groupBy(sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`)
+      .orderBy(asc(sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`))
+
+    let runningResults = 0
+    let runningScore = 0
+    for (let i = 0; i < dailyStats.length; i++) {
+      runningResults += dailyStats[i]!.totalResults
+      runningScore += dailyStats[i]!.averageScore * dailyStats[i]!.totalResults
+      dailyStats[i]!.averageScore = runningScore / runningResults
+    }
 
     const versionStats = await this.db
       .select({
@@ -276,6 +285,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .where(filter)
       .groupBy(commits.id)
+      .orderBy(asc(stats.totalResults))
 
     return Result.ok<EvaluationV2Stats>({
       ...totalStats,

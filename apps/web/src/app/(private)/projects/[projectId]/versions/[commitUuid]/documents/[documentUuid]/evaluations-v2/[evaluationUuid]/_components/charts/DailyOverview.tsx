@@ -49,7 +49,7 @@ export default function DailyOverviewChart<
   return (
     <ChartWrapper
       label='Results over time'
-      tooltip={`The daily overview (${evaluation.configuration.reverseScale ? 'lower' : 'higher'} is better) of results for this evaluation`}
+      tooltip={`The daily overview (${evaluation.configuration.reverseScale ? 'lower' : 'higher'} is better) of results for this evaluation. Take into account that the average is computed as the running average along previous days.`}
       loading={isLoading}
     >
       {data.length > 0 ? (

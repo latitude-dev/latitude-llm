@@ -84,18 +84,20 @@ export default function VersionOverviewChart<
             // @ts-expect-error typescript cannot infer the type from [key: string]: any
             tooltipLabel: (point: (typeof data)[number]) => {
               return (
-                <div className='flex flex-row gap-2 items-center'>
+                <div className='flex flex-row gap-2 items-center truncate min-w-0'>
                   <Badge
                     variant={point.version.mergedAt ? 'accent' : 'muted'}
                     shape='square'
                   >
-                    <Text.H6 noWrap>
+                    <Text.H6 noWrap ellipsis>
                       {point.version.mergedAt
                         ? `v${point.version.version}`
                         : 'Draft'}
                     </Text.H6>
                   </Badge>
-                  <Text.H5>{point.version.title}</Text.H5>
+                  <Text.H5 noWrap ellipsis>
+                    {point.version.title}
+                  </Text.H5>
                 </div>
               )
             },
