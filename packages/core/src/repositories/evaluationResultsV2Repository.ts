@@ -1,3 +1,4 @@
+import { parseISO } from 'date-fns'
 import {
   and,
   asc,
@@ -224,38 +225,62 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       })
       .then((r) => r.unwrap())
 
+    const stats = {
+      totalResults: sql`count(*)`.mapWith(Number).as('total_results'),
+      averageScore: sql`avg(${evaluationResultsV2.score})`
+        .mapWith(Number)
+        .as('average_score'),
+      totalTokens:
+        evaluation.type === EvaluationType.Llm
+          ? sql`sum((${evaluationResultsV2.metadata}->>'tokens')::bigint)`
+              .mapWith(Number)
+              .as('total_tokens')
+          : sql`0`.mapWith(Number),
+      totalCost:
+        evaluation.type === EvaluationType.Llm
+          ? sql`sum((${evaluationResultsV2.metadata}->>'cost')::bigint)`
+              .mapWith(Number)
+              .as('total_cost')
+          : sql`0`.mapWith(Number),
+    }
+
     const filter = this.listByEvaluationFilter({ evaluationUuid, params })
 
-    const stats = await this.db
-      .select({
-        totalResults: sql`count(*)`.mapWith(Number).as('total_results'),
-        averageScore: sql`avg(${evaluationResultsV2.score})`
-          .mapWith(Number)
-          .as('average_score'),
-        totalTokens:
-          evaluation.type === EvaluationType.Llm
-            ? sql`sum((${evaluationResultsV2.metadata}->>'tokens')::bigint)`
-                .mapWith(Number)
-                .as('total_tokens')
-            : sql`0`.mapWith(Number),
-        totalCost:
-          evaluation.type === EvaluationType.Llm
-            ? sql`sum((${evaluationResultsV2.metadata}->>'cost')::bigint)`
-                .mapWith(Number)
-                .as('total_cost')
-            : sql`0`.mapWith(Number),
-      })
+    const totalStats = await this.db
+      .select(stats)
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .where(filter)
       .then((r) => r[0])
 
-    if (!stats || stats.totalResults === 0) return Result.nil()
+    if (!totalStats || totalStats.totalResults === 0) return Result.nil()
+
+    const dailyStats = await this.db
+      .select({
+        date: sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`
+          .mapWith(parseISO)
+          .as('date'),
+        ...stats,
+      })
+      .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .where(filter)
+      .groupBy(sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`)
+
+    const versionStats = await this.db
+      .select({
+        version: commits,
+        ...stats,
+      })
+      .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .where(filter)
+      .groupBy(commits.id)
 
     return Result.ok<EvaluationV2Stats>({
-      ...stats,
-      dailyOverview: [],
-      versionOverview: [],
+      ...totalStats,
+      dailyOverview: dailyStats,
+      versionOverview: versionStats,
     })
   }
 

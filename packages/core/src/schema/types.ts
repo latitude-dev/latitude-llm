@@ -277,25 +277,20 @@ export type ResultWithEvaluationV2<
   evaluation: EvaluationV2<T, M>
 }
 
-export type EvaluationV2Stats = {
+type EvaluationV2BaseStats = {
   totalResults: number
   averageScore: number
   totalCost: number
   totalTokens: number
-  dailyOverview: {
+}
+
+export type EvaluationV2Stats = EvaluationV2BaseStats & {
+  dailyOverview: (EvaluationV2BaseStats & {
     date: Date
-    totalResults: number
-    averageScore: number
-    totalCost: number
-    totalTokens: number
-  }[]
-  versionOverview: {
+  })[]
+  versionOverview: (EvaluationV2BaseStats & {
     version: Commit
-    totalResults: number
-    averageScore: number
-    totalCost: number
-    totalTokens: number
-  }[]
+  })[]
 }
 
 // TODO: Remove when we migrate to v2

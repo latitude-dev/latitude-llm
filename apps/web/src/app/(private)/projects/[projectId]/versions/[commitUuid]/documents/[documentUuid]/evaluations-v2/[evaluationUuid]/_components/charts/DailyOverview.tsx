@@ -31,7 +31,7 @@ export default function DailyOverviewChart<
     return (
       stats?.dailyOverview.map((point) => ({
         ...point,
-        x: point.date.getTime(),
+        x: new Date(point.date).getTime(),
         y: configuration.scale(point.averageScore),
       })) || []
     )
