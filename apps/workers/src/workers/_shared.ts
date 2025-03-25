@@ -4,7 +4,7 @@ import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { captureException } from '$/utils/sentry'
 import { Processor } from 'bullmq'
-import tracer from '../tracer'
+import * as Sentry from '@sentry/node'
 
 export const buildProcessor =
   (queues: Queues[]): Processor =>
@@ -18,18 +18,16 @@ export const buildProcessor =
               const jobFn = (jobs as unknown as Record<string, Function>)[j]
               if (jobFn) {
                 try {
-                  return await tracer.wrap(
-                    'bull.process',
-                    { resource: job.name },
+                  Sentry.profiler.startProfiler()
+                  const result = await Sentry.startSpan(
+                    { name: job.name },
                     async () => {
-                      const span = tracer.scope().active()
-                      if (span) {
-                        span.addTags({ job_id: job.id })
-                      }
-
                       return await jobFn(job)
                     },
-                  )()
+                  )
+                  Sentry.profiler.stopProfiler()
+
+                  return result
                 } catch (error) {
                   const unknownError = getUnknownError(error)
 
