@@ -68,7 +68,7 @@ export function Modal({
     <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       <DialogContent
         dismissible={dismissible}
-        className={cn('flex flex-col', {
+        className={cn('flex flex-col z-50', {
           'max-w-modal-sm': size === 'small',
           'max-w-modal': size === 'regular',
           'max-w-modal-lg': size === 'large',

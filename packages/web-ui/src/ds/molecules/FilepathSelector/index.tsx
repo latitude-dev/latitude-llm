@@ -6,6 +6,7 @@ import {
   disambiguateFilePaths,
 } from '../../../lib/disambiguateFilePaths'
 
+// TODO: Deprecate this component in favor of MultiSelect
 export function FilePathSelector({
   filepaths,
   selected,

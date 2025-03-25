@@ -1,4 +1,4 @@
-import { SwitchToogle } from '@latitude-data/web-ui'
+import { SwitchToggle } from '@latitude-data/web-ui'
 import { ConfigElement, ConfigSection } from './_components/ConfigSection'
 import { PromptConfigurationProps, useConfigValue } from './utils'
 import { SubAgentSelector } from './_components/AgentSelector'
@@ -43,7 +43,7 @@ export function BehaviourSettings({
         description={`Agents allow prompts to run autonomously, handling multiple steps until a task is completed.
 Unlike regular prompts or predefined Chains, Agents can adapt dynamically, responding to user input and tool outputs in real time to achieve the desired result.`}
       >
-        <SwitchToogle
+        <SwitchToggle
           disabled={disabled}
           checked={agentValue === 'agent'}
           onCheckedChange={() =>
@@ -61,7 +61,7 @@ Unlike regular prompts or predefined Chains, Agents can adapt dynamically, respo
                 Otherwise, you will need to add custom prompting to avoid the AI falling into infinite loops and using the agent tools correctly.
                 This optimization is done without adding or modifying any SYSTEM or USER message from your prompt, it's all handled internally by Latitude.`}
           >
-            <SwitchToogle
+            <SwitchToggle
               disabled={disabled}
               checked={!disabledAgentOptimization}
               onCheckedChange={() =>

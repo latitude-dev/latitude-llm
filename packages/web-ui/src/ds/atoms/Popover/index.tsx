@@ -35,7 +35,7 @@ const PopoverContent = forwardRef<HTMLDivElement, Props>(function Content(
       className,
       'animate-in fade-in-0 slide-in-from-top-2',
       'bg-background shadow-lg rounded-md',
-      'mt-1 border border-border z-20',
+      'mt-1 border border-border z-[60]',
       'gap-y-4 flex flex-col',
       {
         'custom-scrollbar': scrollable,

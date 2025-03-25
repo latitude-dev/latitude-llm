@@ -8,5 +8,6 @@ export const publisher = {
     queues.eventsQueue.jobs.enqueueCreateEventJob(event)
     queues.eventsQueue.jobs.enqueuePublishEventJob(event)
     queues.eventsQueue.jobs.enqueuePublishToAnalyticsJob(event)
+    queues.eventsQueue.jobs.enqueueProcessWebhookJob(event)
   },
 }

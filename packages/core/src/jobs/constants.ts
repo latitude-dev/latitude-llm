@@ -1,11 +1,12 @@
 // TODO: Review if we can remove this declarations
 export enum Queues {
   defaultQueue = 'defaultQueue',
-  maintenanceQueue = 'maintenanceQueue',
-  eventsQueue = 'eventsQueue',
-  eventHandlersQueue = 'eventHandlersQueue',
-  liveEvaluationsQueue = 'liveEvaluationsQueue',
   evaluationsQueue = 'evaluationsQueue',
+  eventHandlersQueue = 'eventHandlersQueue',
+  eventsQueue = 'eventsQueue',
+  liveEvaluationsQueue = 'liveEvaluationsQueue',
+  maintenanceQueue = 'maintenanceQueue',
+  webhooksQueue = 'webhooksQueue',
 }
 
 // TODO: Review if we can remove this declarations
@@ -35,6 +36,8 @@ export enum Jobs {
   updateMcpServerLastUsedJob = 'updateMcpServerLastUsedJob',
   scaleDownMcpServerJob = 'scaleDownMcpServerJob',
   runEmailTriggerJob = 'runEmailTriggerJob',
+  processWebhookJob = 'processWebhookJob',
+  processIndividualWebhookJob = 'processIndividualWebhookJob',
 }
 
 export const QUEUES = {
@@ -68,7 +71,12 @@ export const QUEUES = {
   },
   [Queues.eventsQueue]: {
     name: Queues.eventsQueue,
-    jobs: ['publishEventJob', 'createEventJob', 'publishToAnalyticsJob'],
+    jobs: [
+      'publishEventJob',
+      'createEventJob',
+      'publishToAnalyticsJob',
+      'processWebhookJob',
+    ],
   },
   [Queues.eventHandlersQueue]: {
     name: Queues.eventHandlersQueue,
@@ -100,5 +108,9 @@ export const QUEUES = {
   [Queues.evaluationsQueue]: {
     name: Queues.evaluationsQueue,
     jobs: ['runEvaluationJob', 'runEvaluationV2Job'],
+  },
+  [Queues.webhooksQueue]: {
+    name: Queues.webhooksQueue,
+    jobs: ['processIndividualWebhookJob'],
   },
 } as const

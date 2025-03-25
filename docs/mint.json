@@ -113,19 +113,30 @@
     },
     {
       "group": "Traces",
-      "pages": ["guides/traces/overview"]
+      "pages": [
+        "guides/traces/overview"
+      ]
     },
     {
       "group": "Logs",
-      "pages": ["guides/logs/overview", "guides/logs/upload-logs"]
+      "pages": [
+        "guides/logs/overview",
+        "guides/logs/upload-logs"
+      ]
     },
     {
       "group": "Datasets",
-      "pages": ["guides/datasets/overview"]
+      "pages": [
+        "guides/datasets/overview"
+      ]
     },
     {
       "group": "HTTP API",
-      "pages": ["guides/api/api-access", "guides/api/streaming-events"]
+      "pages": [
+        "guides/api/api-access",
+        "guides/api/streaming-events",
+        "guides/api/webhooks"
+      ]
     },
     {
       "group": "Integrations",
@@ -161,13 +172,17 @@
         },
         {
           "group": "Community",
-          "pages": ["guides/sdk/rust"]
+          "pages": [
+            "guides/sdk/rust"
+          ]
         }
       ]
     },
     {
       "group": "Cookbook",
-      "pages": ["guides/cookbook/overview"]
+      "pages": [
+        "guides/cookbook/overview"
+      ]
     },
     {
       "group": "Self-hosting",
@@ -178,7 +193,9 @@
     },
     {
       "group": "Getting Started",
-      "pages": ["promptl/getting-started/introduction"]
+      "pages": [
+        "promptl/getting-started/introduction"
+      ]
     },
     {
       "group": "Syntax",
@@ -207,11 +224,16 @@
     },
     {
       "group": "Advanced",
-      "pages": ["promptl/advanced/chains", "promptl/advanced/snippets"]
+      "pages": [
+        "promptl/advanced/chains",
+        "promptl/advanced/snippets"
+      ]
     },
     {
       "group": "Changelog",
-      "pages": ["changelog/changelog"]
+      "pages": [
+        "changelog/changelog"
+      ]
     }
   ],
   "footerSocials": {

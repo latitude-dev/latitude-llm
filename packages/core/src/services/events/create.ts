@@ -10,7 +10,7 @@ export async function createEvent(event: LatitudeEvent, db = database) {
       workspaceId = event.data.workspaceId
     }
 
-    const result = await tx
+    const [createdEvent] = await tx
       .insert(events)
       .values({
         type: event.type,
@@ -19,6 +19,10 @@ export async function createEvent(event: LatitudeEvent, db = database) {
       })
       .returning()
 
-    return Result.ok(result[0]!)
+    if (!createdEvent) {
+      throw new Error('Failed to create event')
+    }
+
+    return Result.ok(createdEvent)
   }, db)
 }

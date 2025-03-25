@@ -9,6 +9,7 @@ import {
   useId,
 } from 'react'
 import * as SwitchPrimitives from '@radix-ui/react-switch'
+import React from 'react'
 
 import { cn } from '../../../lib/utils'
 import {
@@ -21,7 +22,7 @@ import { Label } from '../Label'
 type ToogleProps = ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> & {
   size?: 'normal'
 }
-const SwitchToogle = forwardRef<
+const SwitchToggle = forwardRef<
   ElementRef<typeof SwitchPrimitives.Root>,
   ToogleProps
 >(({ className, size = 'normal', ...props }, ref) => (
@@ -48,19 +49,25 @@ const SwitchToogle = forwardRef<
   </SwitchPrimitives.Root>
 ))
 
-SwitchToogle.displayName = SwitchPrimitives.Root.displayName
+SwitchToggle.displayName = SwitchPrimitives.Root.displayName
 
 type Props = ToogleProps &
   Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> & {
     label?: string
     description?: string | ReactNode
     errors?: string[] | null | undefined
+    name?: string
+    checked?: boolean
+    defaultChecked?: boolean
   }
 function SwitchInput({
   className,
   label,
   errors,
   description,
+  name,
+  checked,
+  defaultChecked,
   ...rest
 }: Props) {
   const error = errors?.[0]
@@ -68,6 +75,14 @@ function SwitchInput({
   const formItemId = `${id}-form-item`
   const formDescriptionId = `${id}-form-item-description`
   const formMessageId = `${id}-form-item-message`
+  const [isChecked, setIsChecked] = React.useState(!!defaultChecked)
+
+  React.useEffect(() => {
+    if (checked !== undefined) {
+      setIsChecked(checked)
+    }
+  }, [checked])
+
   return (
     <div
       className={cn('flex flex-col gap-y-2 w-full', className)}
@@ -85,7 +100,21 @@ function SwitchInput({
           formDescriptionId={formDescriptionId}
           formMessageId={formMessageId}
         >
-          <SwitchToogle {...rest} />
+          <div>
+            <input
+              type='hidden'
+              name={name}
+              value={isChecked ? 'true' : 'false'}
+            />
+            <SwitchToggle
+              {...rest}
+              checked={isChecked}
+              onCheckedChange={(checked) => {
+                setIsChecked(checked)
+                rest.onCheckedChange?.(checked)
+              }}
+            />
+          </div>
         </FormControl>
         {label ? (
           <Label
@@ -103,4 +132,4 @@ function SwitchInput({
   )
 }
 
-export { SwitchToogle, SwitchInput }
+export { SwitchToggle, SwitchInput }

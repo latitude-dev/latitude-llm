@@ -159,9 +159,9 @@ COPY --from=builder --chown=nodejs:nextjs /app/apps/web/node_modules ./apps/web/
 # Set permissions for local storage
 # User ID and Group ID 1001 is used to match the user 'nextjs' and group 'nodejs' in the runner image.
 RUN set -e; \
-    mkdir -p /app/storage/files; \
-    mkdir -p /app/apps/web/public/files; \
-    chown -R 1001:1001 /app/storage/files /app/apps/web/public/files
+  mkdir -p /app/storage/files; \
+  mkdir -p /app/apps/web/public/files; \
+  chown -R 1001:1001 /app/storage/files /app/apps/web/public/files
 
 USER nextjs
 

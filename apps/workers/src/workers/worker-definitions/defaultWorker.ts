@@ -8,6 +8,7 @@ const defaultWorkerQueues = [
   Queues.eventsQueue,
   Queues.liveEvaluationsQueue,
   Queues.maintenanceQueue,
+  Queues.webhooksQueue,
 ]
 
 export const defaultWorker = {

@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  Badge,
   Button,
   DropdownMenu,
   Icon,
@@ -30,10 +29,7 @@ export default function Integrations() {
   return (
     <div className='flex flex-col gap-4'>
       <div className='flex flex-row items-center justify-between'>
-        <div className='flex flex-row items-center gap-2'>
-          <Text.H4B>Integrations</Text.H4B>
-          <Badge variant='accent'>Beta</Badge>
-        </div>
+        <Text.H4B>Integrations</Text.H4B>
         <Link href={ROUTES.settings.integrations.new.root}>
           <Button fancy variant='outline'>
             Create Integration

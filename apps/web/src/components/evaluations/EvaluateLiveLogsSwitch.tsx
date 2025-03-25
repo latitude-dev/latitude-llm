@@ -6,7 +6,7 @@ import {
   EvaluationV2,
 } from '@latitude-data/constants'
 import {
-  SwitchToogle,
+  SwitchToggle,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
@@ -51,7 +51,7 @@ export default function EvaluateLiveLogsSwitch<
   )
 
   return (
-    <SwitchToogle
+    <SwitchToggle
       checked={!!evaluation.evaluateLiveLogs}
       onCheckedChange={setEvaluateLiveLogs}
       disabled={isDisabled}

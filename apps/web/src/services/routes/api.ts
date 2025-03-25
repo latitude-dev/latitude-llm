@@ -22,6 +22,12 @@ export const API_ROUTES = {
       },
     }),
   },
+  webhooks: {
+    root: '/api/webhooks',
+    detail: (id: number) => ({
+      root: `/api/webhooks/${id}`,
+    }),
+  },
   claimedRewards: {
     root: '/api/claimedRewards',
   },

@@ -17,6 +17,7 @@ import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
 import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
 import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
+import { updateWebhookLastTriggeredAt } from './webhooks'
 
 export const EventHandlers: IEventsHandlers = {
   aiProviderCallCompleted: [],
@@ -76,4 +77,5 @@ export const EventHandlers: IEventsHandlers = {
   evaluationResultV2Created: [notifyClientOfEvaluationResultV2Created],
   scaleMcpServer: [notifyClientOfScaleUpMcpServer],
   mcpServerConnected: [notifyClientOfMcpServerConnected],
+  webhookDeliveryCreated: [updateWebhookLastTriggeredAt],
 }
