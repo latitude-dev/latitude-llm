@@ -1,4 +1,4 @@
-import { parseISO } from 'date-fns'
+import { isAfter, isBefore, isToday, parseISO, startOfDay } from 'date-fns'
 import {
   and,
   asc,
@@ -255,37 +255,67 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     if (!totalStats || totalStats.totalResults === 0) return Result.nil()
 
-    const dailyStats = await this.db
-      .select({
-        date: sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`
-          .mapWith(parseISO)
-          .as('date'),
-        ...stats,
-      })
-      .from(evaluationResultsV2)
-      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
-      .where(filter)
-      .groupBy(sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`)
-      .orderBy(asc(sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`))
+    const [dailyStats, versionStats] = await Promise.all([
+      (async () => {
+        const dailyStats = await this.db
+          .select({
+            date: sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`
+              .mapWith(parseISO)
+              .as('date'),
+            ...stats,
+          })
+          .from(evaluationResultsV2)
+          .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+          .where(filter)
+          .groupBy(sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`)
+          .orderBy(
+            asc(sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`),
+          )
 
-    let runningResults = 0
-    let runningScore = 0
-    for (let i = 0; i < dailyStats.length; i++) {
-      runningResults += dailyStats[i]!.totalResults
-      runningScore += dailyStats[i]!.averageScore * dailyStats[i]!.totalResults
-      dailyStats[i]!.averageScore = runningScore / runningResults
-    }
+        // Note: average score is being computed as a running average
+        let runningResults = 0
+        let runningScore = 0
+        for (let i = 0; i < dailyStats.length; i++) {
+          runningResults += dailyStats[i]!.totalResults
+          runningScore +=
+            dailyStats[i]!.averageScore * dailyStats[i]!.totalResults
+          dailyStats[i]!.averageScore = runningScore / runningResults
+        }
 
-    const versionStats = await this.db
-      .select({
-        version: commits,
-        ...stats,
-      })
-      .from(evaluationResultsV2)
-      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
-      .where(filter)
-      .groupBy(commits.id)
-      .orderBy(asc(stats.totalResults))
+        // Note: extending the running average to today when applies
+        if (
+          (!dailyStats.at(-1)?.date || !isToday(dailyStats.at(-1)!.date)) &&
+          (!params.filters?.createdAt?.from ||
+            isBefore(params.filters.createdAt.from, new Date())) &&
+          (!params.filters?.createdAt?.to ||
+            isAfter(params.filters.createdAt.to, new Date()))
+        ) {
+          dailyStats.push({
+            date: startOfDay(new Date()),
+            totalResults: 0,
+            averageScore: runningScore / runningResults,
+            totalTokens: 0,
+            totalCost: 0,
+          })
+        }
+
+        return dailyStats
+      })(),
+      (async () => {
+        const versionStats = await this.db
+          .select({
+            version: commits,
+            ...stats,
+          })
+          .from(evaluationResultsV2)
+          .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+          .where(filter)
+          .groupBy(commits.id)
+          .orderBy(asc(stats.totalResults))
+
+        return versionStats
+      })(),
+    ])
 
     return Result.ok<EvaluationV2Stats>({
       ...totalStats,
