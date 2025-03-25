@@ -16,7 +16,7 @@ export const FEATURE_FLAGS_CONDITIONS: Record<
 > = {
   datasetsV2: { workspaceIds: [1] },
   useDatagridInForDatasetRows: { workspaceIds: [] },
-  datasetsV1ModificationBlocked: { workspaceIds: [] },
+  datasetsV1ModificationBlocked: { workspaceIds: 'all' },
   evaluationsV2: { workspaceIds: [1] },
 }
 
