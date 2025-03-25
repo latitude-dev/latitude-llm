@@ -1,4 +1,5 @@
 import './tracer'
+import './utils/sentry'
 
 import express from 'express'
 import { createBullBoard } from '@bull-board/api'

@@ -17,7 +17,6 @@ const nextConfig = {
     '@napi-rs/canvas',
     '@sentry/nextjs',
     '@sentry/profiling-node',
-    '@sentry/utils',
     'bullmq',
     'jose',
     'nodemailer-mailgun-transport',

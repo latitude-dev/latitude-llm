@@ -19,7 +19,7 @@
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "@sentry/cli": "^2.37.0",
-    "@sentry/node": "^8.30.0",
+    "@sentry/node": "^9.9.0",
     "@sentry/profiling-node": "^9.8.0",
     "@t3-oss/env-core": "*",
     "@tavily/core": "^0.3.1",

@@ -6,11 +6,10 @@ if (env.SENTRY_WORKERS_DSN) {
   Sentry.init({
     dsn: env.SENTRY_WORKERS_DSN,
     enabled: !!env.SENTRY_WORKERS_DSN,
-    integrations: [nodeProfilingIntegration],
-    tracesSampleRate: 1.0,
-    profilesSampleRate: 1.0,
-
     environment: env.NODE_ENV,
+    integrations: [nodeProfilingIntegration()],
+    profilesSampleRate: 1.0,
+    tracesSampleRate: 1.0,
   })
 }
 
