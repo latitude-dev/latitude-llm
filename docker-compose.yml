@@ -1,6 +1,9 @@
 x-common-service: &common-service
   env_file:
     - .env
+  volumes:
+    - shared-storage:/app/storage/files:rw
+    - shared-storage:/app/apps/web/public/files:rw
   depends_on:
     - db
     - redis
@@ -168,6 +171,8 @@ services:
     restart: always
     container_name: latitude-llm-web
     platform: linux/amd64
+    profiles:
+      - default
 
   migrations-local:
     <<: *common-service
@@ -175,7 +180,8 @@ services:
     build:
       context: .
       dockerfile: packages/core/docker/Dockerfile
-
+    labels:
+      - "traefik.enable=false"
     depends_on:
       - db
     profiles:
@@ -190,6 +196,8 @@ services:
       - "traefik.enable=false"
     depends_on:
       - db
+    profiles:
+      - default
 
   gateway-local:
     <<: *gateway-common
@@ -197,7 +205,6 @@ services:
     build:
       context: .
       dockerfile: apps/gateway/docker/Dockerfile
-
     profiles:
       - local
 
@@ -207,6 +214,8 @@ services:
     restart: always
     container_name: latitude-llm-gateway
     platform: linux/amd64
+    profiles:
+      - default
 
   workers-local:
     <<: *common-service
@@ -214,7 +223,6 @@ services:
     build:
       context: .
       dockerfile: apps/workers/docker/Dockerfile
-
     profiles:
       - local
 
@@ -224,6 +232,8 @@ services:
     restart: always
     container_name: latitude-llm-workers
     platform: linux/amd64
+    profiles:
+      - default
 
   websockets-local:
     <<: *websockets-common
@@ -231,7 +241,6 @@ services:
     build:
       context: .
       dockerfile: apps/websockets/docker/Dockerfile
-
     profiles:
       - local
 
@@ -241,8 +250,13 @@ services:
     restart: always
     container_name: latitude-llm-websockets
     platform: linux/amd64
+    profiles:
+      - default
 
 # You need to create external network for Traefik to work (docker network create web)
 networks:
   web:
     external: true
+
+volumes:
+  shared-storage:

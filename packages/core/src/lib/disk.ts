@@ -24,23 +24,35 @@ const generateUrl =
  * AWS_ACCESS_SECRET=[your-secret]
  */
 function getAwsConfig() {
-  const accessKeyId = env.AWS_ACCESS_KEY
   const bucket = env.S3_BUCKET
   const publicBucket = env.PUBLIC_S3_BUCKET
   const region = env.AWS_REGION
-  const secretAccessKey = env.AWS_ACCESS_SECRET
-
-  if (!accessKeyId || !secretAccessKey || !bucket || !publicBucket || !region) {
+  
+  if (!bucket || !publicBucket || !region) {
     throw new Error(
-      'AWS credentials not configured. Check you setup AWS_ACCESS_KEY, AWS_ACCESS_SECRET, (PUBLIC)_S3_BUCKET and AWS_REGION in your .env file.',
+      '(PUBLIC)_S3_BUCKET and AWS_REGION variables are required.',
     )
   }
 
+  const accessKeyId = env.AWS_ACCESS_KEY
+  const secretAccessKey = env.AWS_ACCESS_SECRET
+
+  if (accessKeyId && secretAccessKey) {
+    // Используем заданные ключи доступа
+    return {
+      region,
+      bucket,
+      publicBucket,
+      credentials: { accessKeyId, secretAccessKey },
+    }
+  }
+
+  // Если ключи не заданы — подразумеваем IAM-роль
   return {
     region,
     bucket,
     publicBucket,
-    credentials: { accessKeyId, secretAccessKey },
+    // не передаем credentials
   }
 }
 
@@ -97,20 +109,26 @@ export class DiskWrapper {
 
   async putStream(key: string, contents: Readable, options?: WriteOptions) {
     try {
+      console.log(`Uploading file: key=${key}, contentLength=${contents.readableLength}`)
+  
       await this.disk.putStream(key, contents, {
         ...options,
         contentLength: contents.readableLength,
       })
+  
+      console.log(`Successfully uploaded: key=${key}`)
       return Result.nil()
     } catch (e) {
+      console.error(`Error uploading file: key=${key}`, e)
+  
       if (e instanceof errors.E_CANNOT_WRITE_FILE) {
         return Result.error(new Error('Cannot write file'))
       }
-
-      const error = e as Error
-      return Result.error(error)
+  
+      return Result.error(e as Error)
     }
   }
+  
 
   async delete(key: string | null | undefined) {
     if (!key) return Result.nil()

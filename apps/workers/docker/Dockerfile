@@ -74,6 +74,11 @@ RUN apk add --no-cache \
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 latitude
+# Set permissions for local storage
+RUN set -e; \
+    mkdir -p /app/storage/files; \
+    mkdir -p /app/apps/web/public/files; \
+    chown -R 1001:1001 /app/storage/files /app/apps/web/public/files
 USER latitude
 
 WORKDIR /app

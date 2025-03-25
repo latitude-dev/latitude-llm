@@ -156,6 +156,11 @@ COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/static ./apps/web/
 # Copy all node_modules to ensure dependencies are available
 COPY --from=builder --chown=nodejs:nextjs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nextjs /app/apps/web/node_modules ./apps/web/node_modules
+# Set permissions for local storage
+RUN set -e; \
+    mkdir -p /app/storage/files; \
+    mkdir -p /app/apps/web/public/files; \
+    chown -R 1001:1001 /app/storage/files /app/apps/web/public/files
 
 USER nextjs
 
