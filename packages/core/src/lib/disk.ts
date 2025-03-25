@@ -38,7 +38,6 @@ function getAwsConfig() {
   const secretAccessKey = env.AWS_ACCESS_SECRET
 
   if (accessKeyId && secretAccessKey) {
-    // Используем заданные ключи доступа
     return {
       region,
       bucket,
@@ -47,12 +46,11 @@ function getAwsConfig() {
     }
   }
 
-  // Если ключи не заданы — подразумеваем IAM-роль
+  // If AWS_ACCESS_KEY and AWS_ACCESS_SECRET are not set, the SDK will use AWS IAM role.
   return {
     region,
     bucket,
     publicBucket,
-    // не передаем credentials
   }
 }
 
