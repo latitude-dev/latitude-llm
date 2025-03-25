@@ -109,26 +109,20 @@ export class DiskWrapper {
 
   async putStream(key: string, contents: Readable, options?: WriteOptions) {
     try {
-      console.log(`Uploading file: key=${key}, contentLength=${contents.readableLength}`)
-  
       await this.disk.putStream(key, contents, {
         ...options,
         contentLength: contents.readableLength,
       })
-  
-      console.log(`Successfully uploaded: key=${key}`)
       return Result.nil()
     } catch (e) {
-      console.error(`Error uploading file: key=${key}`, e)
-  
       if (e instanceof errors.E_CANNOT_WRITE_FILE) {
         return Result.error(new Error('Cannot write file'))
       }
-  
-      return Result.error(e as Error)
+
+      const error = e as Error
+      return Result.error(error)
     }
   }
-  
 
   async delete(key: string | null | undefined) {
     if (!key) return Result.nil()
