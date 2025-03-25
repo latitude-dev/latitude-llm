@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { Area, AreaChart as RechartsAreaChart, XAxis, YAxis } from 'recharts'
+import {
+  Area,
+  Label,
+  AreaChart as RechartsAreaChart,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import {
   NameType,
   Payload,
@@ -108,7 +115,16 @@ export function AreaChart({ config }: { config: AreaChartConfig }) {
               ? [config.xAxis.min ?? 'dataMin', config.xAxis.max ?? 'dataMax']
               : undefined
           }
-        />
+        >
+          {!!config.xAxis.legend && (
+            <Label
+              angle={0}
+              value={config.xAxis.legend}
+              position='top'
+              style={{ textAnchor: 'middle' }}
+            />
+          )}
+        </XAxis>
         <YAxis
           dataKey='y'
           tickLine={config.yAxis.tickLine ?? false}
@@ -121,22 +137,37 @@ export function AreaChart({ config }: { config: AreaChartConfig }) {
               ? [config.yAxis.min ?? 'dataMin', config.yAxis.max ?? 'dataMax']
               : undefined
           }
-        />
+        >
+          {!!config.yAxis.legend && (
+            <Label
+              angle={-90}
+              value={config.yAxis.legend}
+              position='insideLeft'
+              style={{ textAnchor: 'middle' }}
+            />
+          )}
+        </YAxis>
         <defs>
           <linearGradient id='chartGradient' x1='0' y1='0' x2='0' y2='1'>
             <stop offset='5%' stopColor={color} stopOpacity={0.8} />
             <stop offset='95%' stopColor={color} stopOpacity={0.1} />
           </linearGradient>
         </defs>
+        {config.yAxis.thresholds?.map((threshold, index) => (
+          <ReferenceLine
+            key={`y-threshold-${index}`}
+            y={threshold}
+            stroke='hsl(var(--muted-foreground))'
+            strokeDasharray='3 3'
+            strokeWidth={1}
+          />
+        ))}
         <Area
           dataKey='y'
           type='natural'
           stroke={color}
           fill='url(#chartGradient)'
-          data={config.data.map((item) => ({
-            x: item.x,
-            y: item.y,
-          }))}
+          data={config.data}
           dot={{
             fill: color,
           }}

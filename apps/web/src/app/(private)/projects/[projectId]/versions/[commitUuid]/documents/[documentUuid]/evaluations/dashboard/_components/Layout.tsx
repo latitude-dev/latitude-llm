@@ -3,7 +3,7 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
-import useEvaluationsV2 from '$/stores/evaluationsV2'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationDto,
   EvaluationResultableType,

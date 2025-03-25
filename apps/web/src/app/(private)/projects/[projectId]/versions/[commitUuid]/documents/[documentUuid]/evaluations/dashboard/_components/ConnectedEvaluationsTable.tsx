@@ -7,7 +7,7 @@ import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
-import useEvaluationsV2 from '$/stores/evaluationsV2'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationDto,
   EvaluationTmp,

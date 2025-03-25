@@ -11,17 +11,22 @@ import { ROUTES } from '$/services/routes'
 import {
   Commit,
   DocumentVersion,
+  EvaluationMetric,
   EvaluationOptions,
+  EvaluationResultsV2Search,
+  evaluationResultsV2SearchToQueryParams,
   EvaluationSettings,
+  EvaluationType,
   EvaluationV2,
+  EvaluationV2Stats,
   Project,
 } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { compact } from 'lodash-es'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
-export default function useEvaluationsV2(
+export function useEvaluationsV2(
   {
     project,
     commit,
@@ -191,6 +196,56 @@ export default function useEvaluationsV2(
     isDeletingEvaluation,
     isExecuting:
       isCreatingEvaluation || isUpdatingEvaluation || isDeletingEvaluation,
+    ...rest,
+  }
+}
+
+export function useEvaluationV2Stats<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+>(
+  {
+    project,
+    commit,
+    document,
+    evaluation,
+    search,
+  }: {
+    project: Pick<Project, 'id'>
+    commit: Pick<Commit, 'uuid'>
+    document: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
+    evaluation: Pick<EvaluationV2<T, M>, 'uuid'>
+    search?: EvaluationResultsV2Search
+  },
+  opts?: SWRConfiguration,
+) {
+  const route = ROUTES.api.projects
+    .detail(project.id)
+    .commits.detail(commit.uuid)
+    .documents.detail(document.documentUuid)
+    .evaluationsV2.detail(evaluation.uuid).stats.root
+  const query = useMemo(
+    () => (search ? evaluationResultsV2SearchToQueryParams(search) : ''),
+    [search],
+  )
+  const fetcher = useFetcher(`${route}?${query}`)
+
+  const { data = undefined, ...rest } = useSWR<EvaluationV2Stats>(
+    compact([
+      'evaluationV2Stats',
+      project.id,
+      commit.uuid,
+      document.commitId,
+      document.documentUuid,
+      evaluation.uuid,
+      query,
+    ]),
+    fetcher,
+    opts,
+  )
+
+  return {
+    data,
     ...rest,
   }
 }

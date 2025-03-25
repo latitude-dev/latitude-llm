@@ -1,16 +1,16 @@
 'use client'
 
-import { useCallback, useState, useMemo } from 'react'
 import { format } from 'date-fns'
+import { useCallback, useMemo, useState } from 'react'
 
+import { RelativeDate } from '@latitude-data/core/browser'
+import { DateRange } from 'react-day-picker'
 import { cn } from '../../../../lib/utils'
 import { Button } from '../../Button'
-import { Calendar } from '../Primitives'
 import { Popover } from '../../Popover'
 import { Select } from '../../Select'
-import { DateRange } from 'react-day-picker'
+import { Calendar } from '../Primitives'
 import { usePresets } from './usePresets'
-import { RelativeDate } from '@latitude-data/core/browser'
 
 export type DatePickerMode = 'single' | 'range'
 
@@ -42,6 +42,7 @@ export function DatePickerRange({
   onChange: onChangeProp,
   placeholder = 'Pick a date',
   closeOnPresetSelect = true,
+  disabled = false,
 }: {
   showPresets?: boolean
   initialRange?: DateRange
@@ -49,6 +50,7 @@ export function DatePickerRange({
   onCloseChange?: (range: DateRange | undefined) => void
   closeOnPresetSelect?: boolean
   placeholder?: string
+  disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [range, setRange] = useState<DateRange | undefined>(initialRange)
@@ -127,12 +129,20 @@ export function DatePickerRange({
             onChange={onPresetSelect}
             value={selectedPreset?.value}
             options={options}
+            disabled={disabled}
           />
         ) : null}
         <div>
-          <Calendar mode='range' selected={range} onSelect={setRange} />
+          <Calendar
+            mode='range'
+            selected={range}
+            onSelect={setRange}
+            disabled={disabled}
+          />
           <div className='flex justify-end gap-x-2' onClick={clearAndClose}>
-            <Button variant='ghost'>Clear dates</Button>
+            <Button variant='ghost' disabled={disabled}>
+              Clear dates
+            </Button>
           </div>
         </div>
       </Popover.Content>

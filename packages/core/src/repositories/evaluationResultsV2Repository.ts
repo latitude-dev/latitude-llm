@@ -8,6 +8,7 @@ import {
   gte,
   inArray,
   isNull,
+  lte,
   sql,
 } from 'drizzle-orm'
 import {
@@ -59,6 +60,14 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     if (filters?.commitIds?.length) {
       filter.push(inArray(evaluationResultsV2.commitId, filters.commitIds))
+    }
+
+    if (filters?.createdAt?.from) {
+      filter.push(gte(evaluationResultsV2.createdAt, filters.createdAt.from))
+    }
+
+    if (filters?.createdAt?.to) {
+      filter.push(lte(evaluationResultsV2.createdAt, filters.createdAt.to))
     }
 
     return and(...filter)

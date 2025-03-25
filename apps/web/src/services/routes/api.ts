@@ -143,6 +143,9 @@ export const API_ROUTES = {
                             root: `${evaluationRoot}/results/pagination`,
                           },
                         },
+                        stats: {
+                          root: `${evaluationRoot}/results/stats`,
+                        },
                       }
                     },
                     results: {

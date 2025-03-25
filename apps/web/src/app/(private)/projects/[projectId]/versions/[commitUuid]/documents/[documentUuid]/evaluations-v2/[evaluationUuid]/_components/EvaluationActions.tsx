@@ -2,7 +2,7 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
-import useEvaluationsV2 from '$/stores/evaluationsV2'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationMetric,
   EvaluationOptions,

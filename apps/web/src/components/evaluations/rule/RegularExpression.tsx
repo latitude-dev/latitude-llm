@@ -5,6 +5,7 @@ import {
 } from '@latitude-data/constants'
 import { IconName, Input } from '@latitude-data/web-ui'
 import {
+  ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
   ResultPanelProps,
@@ -23,6 +24,7 @@ export default {
   resultPanelTabs: [],
   ResultPanelMetadata: ResultPanelMetadata,
   ResultPanelContent: ResultPanelContent,
+  chartConfiguration: chartConfiguration,
 }
 
 function ConfigurationForm({
@@ -95,4 +97,20 @@ function ResultPanelContent(
   >,
 ) {
   return <></>
+}
+
+function chartConfiguration(
+  _args: ChartConfigurationArgs<
+    EvaluationType.Rule,
+    RuleEvaluationMetric.RegularExpression
+  >,
+) {
+  return {
+    min: 0,
+    max: 100,
+    thresholds: [50] as const,
+    scale: (point: number) => Math.min(Math.max(point * 100, 0), 100),
+    format: (point: number, short?: boolean) =>
+      short ? `${point.toFixed(0)}%` : `${point.toFixed(0)}% matches`,
+  }
 }

@@ -8,6 +8,7 @@ export interface CartesianDataItem {
 
 export interface CartesianAxisConfig {
   label: string
+  legend?: string
   type: 'number' | 'category'
   unit?: string
   min?: number | 'auto' | 'dataMin'
@@ -15,6 +16,7 @@ export interface CartesianAxisConfig {
   tickLine?: boolean
   axisLine?: boolean
   tickFormatter?: (value: string | number) => string
+  thresholds?: number[]
 }
 
 interface ICartesianChartConfig {
@@ -55,4 +57,9 @@ export type BarChartConfig = {
   yAxis: CartesianAxisConfig
   tooltipLabel?: (item: CartesianDataItem) => ReactNode
   tooltipContent?: (item: CartesianDataItem) => ReactNode
+}
+
+export type PanelChartConfig = {
+  data: string | number | boolean | ReactNode
+  asChild?: boolean
 }

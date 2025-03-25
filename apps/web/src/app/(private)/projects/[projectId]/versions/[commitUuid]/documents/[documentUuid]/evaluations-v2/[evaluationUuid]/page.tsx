@@ -62,10 +62,21 @@ export default async function EvaluationPage({
     (r) => r.uuid === search.pagination.resultUuid,
   )
 
+  // TODO: Load evaluation stats
+  const stats = {
+    totalResults: 0,
+    averageScore: 0,
+    totalCost: 0,
+    totalTokens: 0,
+    dailyOverview: [],
+    versionOverview: [],
+  }
+
   return (
     <ClientEvaluationPage
       results={results}
       selectedResult={selectedResult}
+      stats={stats}
       search={search}
     />
   )

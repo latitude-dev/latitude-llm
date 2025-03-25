@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from 'react'
 
+import { useCommits } from '$/stores/commitsStore'
 import { Commit } from '@latitude-data/core/browser'
 import { Button, Checkbox, Text } from '@latitude-data/web-ui'
-import { useCommits } from '$/stores/commitsStore'
 
 import { BadgeCommit } from '../../../../../../_components/Sidebar/CommitSelector/CommitItem'
 import { FilterButton, useFilterButtonColor } from '../FilterButton'
@@ -81,11 +81,13 @@ export function CommitFilter({
   onSelectCommits,
   isDefault,
   reset,
+  disabled,
 }: {
   selectedCommitsIds: number[]
   onSelectCommits: (selectedCommitsIds: number[]) => void
   isDefault: boolean
   reset: () => void
+  disabled?: boolean
 }) {
   const { data: commits } = useCommits()
 
@@ -141,9 +143,14 @@ export function CommitFilter({
               {selectedCommitsIds.length} selected
             </Text.H5>
           }
+          disabled={disabled}
         />
-
-        <Button size='none' variant='link' onClick={reset} disabled={isDefault}>
+        <Button
+          size='none'
+          variant='link'
+          onClick={reset}
+          disabled={disabled || isDefault}
+        >
           Reset
         </Button>
       </div>

@@ -5,6 +5,7 @@ import {
 } from '@latitude-data/constants'
 import { IconName } from '@latitude-data/web-ui'
 import {
+  ChartConfigurationArgs,
   ConfigurationFormProps,
   EvaluationMetricFrontendSpecification,
   ResultBadgeProps,
@@ -37,6 +38,7 @@ export default {
   resultPanelTabs: [],
   ResultPanelMetadata: ResultPanelMetadata,
   ResultPanelContent: ResultPanelContent,
+  chartConfiguration: chartConfiguration,
   metrics: METRICS,
 }
 
@@ -134,4 +136,18 @@ function ResultPanelContent<M extends RuleEvaluationMetric>({
       <metricSpecification.ResultPanelContent {...rest} />
     </>
   )
+}
+
+function chartConfiguration<M extends RuleEvaluationMetric>({
+  metric,
+  ...rest
+}: ChartConfigurationArgs<EvaluationType.Rule, M> & {
+  metric: M
+}) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) {
+    throw new Error('Invalid evaluation metric')
+  }
+
+  return metricSpecification.chartConfiguration(rest)
 }
