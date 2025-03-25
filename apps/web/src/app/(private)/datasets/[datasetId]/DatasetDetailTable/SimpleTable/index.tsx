@@ -51,7 +51,7 @@ export function SimpleTable({
                   className={backgroundCssClasses[role]}
                 >
                   <Text.H5 wordBreak='breakAll' ellipsis lineClamp={1}>
-                    {cell}
+                    {String(cell)}
                   </Text.H5>
                 </TableCell>
               )

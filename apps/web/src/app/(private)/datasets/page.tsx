@@ -12,6 +12,7 @@ import { Dataset, DatasetV2, Workspace } from '@latitude-data/core/browser'
 import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
 import { Result, TypedResult } from '@latitude-data/core/lib/Result'
 import { IDatasetSettingsModal } from '$/services/routes'
+import Layout from './_components/Layout'
 
 type GetDataResult =
   | { isV2: false; datasets: Dataset[] }
@@ -74,40 +75,41 @@ export default async function DatasetsRoot({
   const { datasets, isV2 } = await getData({ workspace, page, pageSize }).then(
     (r) => r.unwrap(),
   )
-
   return (
-    <TableWithHeader
-      title='Datasets'
-      description={
-        <>
-          {canNotModifyDatasets && !isV2 ? (
-            <Alert
-              variant='default'
-              title='Dataset creation disabled'
-              description="We're running some maintenance on datasets. At the moment is not possible to create or delete datasets. Please try again later."
-            />
-          ) : null}
-        </>
-      }
-      actions={
-        <RootDatasetHeader
-          isV2={isV2}
-          backUrl={backUrl}
-          isCloud={env.LATITUDE_CLOUD}
-          openNewDatasetModal={modal === 'new'}
-          openGenerateDatasetModal={modal === 'generate'}
-          generateInput={{ name, parameters, backUrl }}
-        />
-      }
-      table={
-        <>
-          {isV2 ? (
-            <DatasetsTable datasets={datasets} />
-          ) : (
-            <DatasetsV1Table datasets={datasets} />
-          )}
-        </>
-      }
-    />
+    <Layout>
+      <TableWithHeader
+        title='Datasets'
+        description={
+          <>
+            {canNotModifyDatasets && !isV2 ? (
+              <Alert
+                variant='default'
+                title='Dataset creation disabled'
+                description="We're running some maintenance on datasets. At the moment is not possible to create or delete datasets. Please try again later."
+              />
+            ) : null}
+          </>
+        }
+        actions={
+          <RootDatasetHeader
+            isV2={isV2}
+            backUrl={backUrl}
+            isCloud={env.LATITUDE_CLOUD}
+            openNewDatasetModal={modal === 'new'}
+            openGenerateDatasetModal={modal === 'generate'}
+            generateInput={{ name, parameters, backUrl }}
+          />
+        }
+        table={
+          <>
+            {isV2 ? (
+              <DatasetsTable datasets={datasets} />
+            ) : (
+              <DatasetsV1Table datasets={datasets} />
+            )}
+          </>
+        }
+      />
+    </Layout>
   )
 }

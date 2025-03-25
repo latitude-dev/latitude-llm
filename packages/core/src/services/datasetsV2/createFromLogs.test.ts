@@ -71,8 +71,8 @@ describe('createFromLogs', async () => {
         role: 'parameter',
       },
       {
-        identifier: 'expected_output_identifier',
-        name: 'expected_output',
+        identifier: 'output_identifier',
+        name: 'output',
         role: 'label',
       },
       {
@@ -92,7 +92,7 @@ describe('createFromLogs', async () => {
       {
         age_identifier: 25,
         location_identifier: 'San Francisco',
-        expected_output_identifier: '"Last provider response. Hello!"',
+        output_identifier: 'Last provider response. Hello!',
         document_log_id_identifier: documentLog.id,
         tokens_identifier: expect.any(Number),
       },
@@ -145,8 +145,8 @@ describe('createFromLogs', async () => {
         role: 'parameter',
       },
       {
-        identifier: 'expected_output_identifier',
-        name: 'expected_output',
+        identifier: 'output_identifier',
+        name: 'output',
         role: 'label',
       },
       {
@@ -174,8 +174,10 @@ describe('createFromLogs', async () => {
       {
         age_identifier: 25,
         location_identifier: 'San Francisco',
-        expected_output_identifier: '"Last provider response. Hello!"',
+        output_identifier: 'Last provider response. Hello!',
+        name_identifier: '',
         document_log_id_identifier: documentLog.id,
+        surname_identifier: '',
         tokens_identifier: expect.any(Number),
       },
     ])

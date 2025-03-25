@@ -12,6 +12,8 @@ import {
   serializeRows,
 } from './rowSerializationHelpers'
 import { useCallback } from 'react'
+import { deleteRowsAction } from '$/actions/datasetRows/delete'
+import { createDatasetRowAction } from '$/actions/datasetRows/create'
 
 export function buildDatasetRowKey({
   datasetId,
@@ -113,11 +115,43 @@ export default function useDatasetRows(
     [update],
   )
 
+  const { execute: deleteRows, isPending: isDeleting } = useLatitudeAction(
+    deleteRowsAction,
+    {
+      onSuccess: ({ data: deletedRows }) => {
+        if (!deletedRows || !deletedRows.length || !dataset) return
+
+        mutate(
+          data.filter(
+            (row) =>
+              !deletedRows.some((deletedRow) => deletedRow.id === row.id),
+          ),
+        )
+      },
+    },
+  )
+
+  const { execute: createRow, isPending: isCreating } = useLatitudeAction(
+    createDatasetRowAction,
+    {
+      onSuccess: ({ data: createdRow }) => {
+        if (!createdRow || !dataset) return
+
+        const row = serializeRow({ row: createdRow, columns: dataset.columns })
+        mutate([row, ...data])
+      },
+    },
+  )
+
   return {
     data,
     mutate,
+    createRow,
+    isCreating,
     updateRows,
     isUpdating,
+    deleteRows,
+    isDeleting,
     ...rest,
   }
 }

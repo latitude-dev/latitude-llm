@@ -1,12 +1,12 @@
 import {
   sql,
-  asc,
   eq,
   lt,
   and,
   getTableColumns,
   count,
   inArray,
+  desc,
 } from 'drizzle-orm'
 
 import { DatasetRow, DatasetV2, DEFAULT_PAGINATION_SIZE } from '../browser'
@@ -78,7 +78,7 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
       .from(datasetRows)
       .where(and(this.scopeFilter, eq(datasetRows.datasetId, datasetId)))
       .limit(limit)
-      .orderBy(asc(datasetRows.id))
+      .orderBy(desc(datasetRows.createdAt))
       .offset(offset)
 
     return query

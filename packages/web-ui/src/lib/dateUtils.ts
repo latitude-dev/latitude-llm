@@ -20,4 +20,4 @@ class DateFormatUtils {
 }
 
 // For now we fallback to en-US locale
-export const dateFormatter = new DateFormatUtils({ locale: 'en-US' })
+export const dateFormatter = new DateFormatUtils({ locale: 'en-DE' })

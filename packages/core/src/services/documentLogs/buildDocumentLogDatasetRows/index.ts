@@ -34,17 +34,39 @@ async function findLogs({
 // This should never happen
 const NO_RESPONSE_FOUND = 'NO RESPONSE FOUND'
 
-/**
- * TODO: Improve parsing here to handle all the rest of content cases: image, file, etc.
- */
+function isJsonString(str: string) {
+  try {
+    JSON.parse(str)
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
+function itemContentByType(item: MessageContent) {
+  switch (item.type) {
+    case ContentType.text:
+      return item.text
+    case ContentType.image:
+      return item.image.toString()
+    case ContentType.file:
+      return item.file.toString()
+    case ContentType.toolCall:
+      return JSON.stringify(item)
+    case ContentType.toolResult:
+      return JSON.stringify(item)
+    default:
+      return item
+  }
+}
+
 function parseContentItem(item: MessageContent | string) {
   try {
-    const content =
-      typeof item === 'string'
-        ? item
-        : item.type === ContentType.text
-          ? item.text
-          : item
+    const content = typeof item === 'string' ? item : itemContentByType(item)
+    const isJson = isJsonString(content)
+
+    if (!isJson) return content
+
     return JSON.stringify(content, null, 2)
   } catch (e) {
     return NO_RESPONSE_FOUND
@@ -135,16 +157,14 @@ function buildRow({
   if (!expectedOutput) return null
 
   const parameters = log.parameters ?? {}
-  const keys = Object.keys(parameters)
-  const logParameterColumns = keys.reduce((acc, key) => {
-    const column = parametersByName[key]
-    if (!column) return acc
 
-    acc[column.identifier] = parameters[
-      key
-    ] as DatasetRowData[keyof DatasetRowData]
-    return acc
-  }, {} as DatasetRowData)
+  const logParameterColumns: DatasetRowData = {}
+
+  for (const [name, column] of Object.entries(parametersByName)) {
+    const value = parameters[name]
+    logParameterColumns[column.identifier] =
+      value !== undefined ? (value as DatasetRowData[keyof DatasetRowData]) : ''
+  }
 
   return {
     ...logParameterColumns,

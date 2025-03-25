@@ -10,11 +10,9 @@ import {
   cn,
 } from '@latitude-data/web-ui'
 import { type OutputItem } from '../useSelectedLogs'
-import { Column, DatasetRowData } from '@latitude-data/core/schema'
+import { Column } from '@latitude-data/core/schema'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
-
-type Cell = DatasetRowData[keyof DatasetRowData]
 
 function PreviewCell({
   cell,
@@ -22,7 +20,7 @@ function PreviewCell({
   lineClamp,
   oldData = false,
 }: {
-  cell: Cell
+  cell: string
   column: Column
   lineClamp: 1 | 3
   oldData?: boolean

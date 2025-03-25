@@ -13,12 +13,11 @@ import {
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { SelectOption } from '@latitude-data/web-ui'
 import { ConversationMetadata } from 'promptl-ai'
-import { type DatasetRowDataContent } from '@latitude-data/core/schema'
 import { parseRowCell } from '$/stores/datasetRows/rowSerializationHelpers'
 
 export type DatasetMappedValue = {
   param: string
-  value: DatasetRowDataContent | undefined
+  value: string
   columnIdentifier: string | undefined
   isMapped: boolean
   isEmpty: boolean

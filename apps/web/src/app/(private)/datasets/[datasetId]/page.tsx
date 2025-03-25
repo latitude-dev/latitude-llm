@@ -17,6 +17,7 @@ import {
 import { notFound } from 'next/navigation'
 import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
 import { DatasetDetailTable } from './DatasetDetailTable'
+import Layout from '../_components/Layout'
 import {
   Dataset,
   DatasetV2,
@@ -28,7 +29,7 @@ import { DatasetV1DetailTable } from '$/app/(private)/datasets/_v1DeprecatedComp
 
 type GetDataResult =
   | { isV2: false; dataset: Dataset }
-  | { isV2: true; dataset: DatasetV2; rows: DatasetRow[] }
+  | { isV2: true; dataset: DatasetV2; rows: DatasetRow[]; count: number }
 
 const ROWS_PAGE_SIZE = '100'
 async function getData({
@@ -61,13 +62,15 @@ async function getData({
   const dataset = result.value
   const rowsRepo = new DatasetRowsRepository(workspace.id)
   const size = pageSize ?? ROWS_PAGE_SIZE
+  const resultCount = await rowsRepo.getCountByDataset(dataset.id)
+  const count = !resultCount[0] ? 0 : resultCount[0].count
   const rows = await rowsRepo.findByDatasetPaginated({
     datasetId: dataset.id,
     page,
     pageSize: size,
   })
 
-  return Result.ok({ dataset, rows, isV2: true })
+  return Result.ok({ dataset, rows, count, isV2: true })
 }
 
 export default async function DatasetDetail({
@@ -103,12 +106,14 @@ export default async function DatasetDetail({
   if (isV1) {
     return <DatasetV1DetailTable dataset={result.value.dataset} />
   }
-
   return (
-    <DatasetDetailTable
-      dataset={result.value.dataset}
-      rows={result.value.rows}
-      initialRenderIsProcessing={isProcessing}
-    />
+    <Layout size='full'>
+      <DatasetDetailTable
+        dataset={result.value.dataset}
+        rows={result.value.rows}
+        count={result.value.count}
+        initialRenderIsProcessing={isProcessing}
+      />
+    </Layout>
   )
 }

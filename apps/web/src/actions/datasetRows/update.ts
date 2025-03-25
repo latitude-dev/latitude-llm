@@ -12,7 +12,7 @@ import { DatasetRowDataContent } from '@latitude-data/core/schema'
 const rowDataSchema = z.record(
   z.custom<DatasetRowDataContent>((val) => {
     return (
-      ['string', 'number', 'boolean'].includes(typeof val) ||
+      ['string', 'number', 'boolean', 'object'].includes(typeof val) ||
       val === null ||
       val === undefined
     )

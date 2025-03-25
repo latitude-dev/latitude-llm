@@ -17,6 +17,7 @@ export function RegularMonacoEditor({
   editorRef,
   value,
   path,
+  language = 'document',
   readOnlyMessage,
   errorMarkers,
   onChange,
@@ -27,6 +28,7 @@ export function RegularMonacoEditor({
   value: string
   path?: string
   readOnlyMessage?: string
+  language?: string
   errorMarkers?: DocumentError[]
   onChange?: (value?: string) => void
   errorFixFn?: (errors: DocumentError[]) => void
@@ -80,7 +82,7 @@ export function RegularMonacoEditor({
         height='100%'
         width='100%'
         theme='latitude'
-        language='document'
+        language={language}
         keepCurrentModel={!!path}
         path={path}
         loading={<TextEditorPlaceholder />}

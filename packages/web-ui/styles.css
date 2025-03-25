@@ -189,6 +189,7 @@
       --rdg-background-color: hsl(var(--background));
       --rdg-color: hsl(var(--foreground));
       --rdg-border-color: hsl(var(--border));
+      --rdg-selection-color: hsl(var(--ring));
       --rdg-header-background-color: hsl(var(--background-gray));
       --rdg-header-draggable-background-color: hsl(var(--muted));
       --rdg-row-hover-background-color: hsl(var(--muted));
@@ -203,6 +204,7 @@
       --rdg-background-color: hsl(var(--background));
       --rdg-color: hsl(var(--foreground));
       --rdg-border-color: hsl(var(--border));
+      --rdg-selection-color: hsl(var(--ring));
       --rdg-header-background-color: hsl(var(--background-gray));
       --rdg-header-draggable-background-color: hsl(var(--muted));
       --rdg-row-hover-background-color: hsl(var(--muted));
@@ -213,7 +215,6 @@
   }
 }
 
-
 .latitude-data-grid .rdg-cell {
   border-inline-end: 1px solid var(--rdg-border-color);
   border-block-end: 1px solid var(--rdg-border-color);
@@ -222,8 +223,29 @@
 .latitude-data-grid .rdg-header-row .rdg-cell:first-child {
   @apply rounded-tl-lg;
 }
+.latitude-data-grid .rdg-cell[aria-selected='true'] {
+  outline-color: transparent;
+}
 
 .latitude-data-grid .rdg-header-row .rdg-cell:last-child,
 .latitude-data-grid .rdg-row .rdg-cell:last-child {
   border-inline-end: none;
+}
+
+[role='grid-wrapper'] .monaco-editor {
+  --vscode-editor-background: var(--rdg-background-color);
+  @apply text-foreground bg-background;
+  box-shadow:
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow),
+    var(--tw-shadow, 0 0 #0000);
+}
+[role='grid-wrapper'] .monaco-editor .margin {
+  --vscode-editorGutter-background: var(--rdg-background-color);
+}
+[role='grid-wrapper'] .monaco-editor .scroll-decoration {
+  display: none;
+}
+
+[role='grid-wrapper'] .monaco-editor .view-line .mtk1 {
+  color: var(--foreground);
 }

@@ -77,8 +77,8 @@ describe('buildDocumentLogDatasetRows', async () => {
             role: 'parameter',
           },
           {
-            identifier: 'expected_output_identifier',
-            name: 'expected_output',
+            identifier: 'output_identifier',
+            name: 'output',
             role: 'label',
           },
           {
@@ -92,7 +92,7 @@ describe('buildDocumentLogDatasetRows', async () => {
           {
             age_identifier: 25,
             location_identifier: 'San Francisco',
-            expected_output_identifier: '"Last provider response. Hello!"',
+            output_identifier: 'Last provider response. Hello!',
             document_log_id_identifier: documentLog.id,
             tokens_identifier: tokens,
           },
@@ -134,8 +134,8 @@ describe('buildDocumentLogDatasetRows', async () => {
             role: 'parameter',
           },
           {
-            identifier: 'expected_output_identifier',
-            name: 'expected_output',
+            identifier: 'output_identifier',
+            name: 'output',
             role: 'label',
           },
           {
@@ -149,14 +149,16 @@ describe('buildDocumentLogDatasetRows', async () => {
           {
             age_identifier: 49,
             nationality_identifier: 'Brazilian',
-            expected_output_identifier: expect.any(String),
+            output_identifier: expect.any(String),
+            location_identifier: '',
             document_log_id_identifier: anotherDocumentLog.id,
             tokens_identifier: expect.any(Number),
           },
           {
             age_identifier: 25,
             location_identifier: 'San Francisco',
-            expected_output_identifier: '"Last provider response. Hello!"',
+            nationality_identifier: '',
+            output_identifier: 'Last provider response. Hello!',
             document_log_id_identifier: documentLog.id,
             tokens_identifier: expect.any(Number),
           },
@@ -173,9 +175,9 @@ describe('buildDocumentLogDatasetRows', async () => {
             author: setup.user,
             hashAlgorithm: identityHashAlgorithm,
             fileContent: `
-        name,surname
-        Paco,Merlo
-        Frank,Merlo
+        age,name,surname
+        32,Paco,Merlo
+        58,Frank,Merlo
       `,
           })
           .then((r) => r.dataset)
@@ -191,6 +193,11 @@ describe('buildDocumentLogDatasetRows', async () => {
         expect(result.value).toEqual({
           columns: [
             {
+              identifier: 'age_identifier',
+              name: 'age',
+              role: 'parameter',
+            },
+            {
               identifier: 'name_identifier',
               name: 'name',
               role: 'parameter',
@@ -201,18 +208,13 @@ describe('buildDocumentLogDatasetRows', async () => {
               role: 'parameter',
             },
             {
-              identifier: 'age_identifier',
-              name: 'age',
-              role: 'parameter',
-            },
-            {
               identifier: 'location_identifier',
               name: 'location',
               role: 'parameter',
             },
             {
-              identifier: 'expected_output_identifier',
-              name: 'expected_output',
+              identifier: 'output_identifier',
+              name: 'output',
               role: 'label',
             },
             {
@@ -229,8 +231,10 @@ describe('buildDocumentLogDatasetRows', async () => {
           rows: [
             {
               age_identifier: 25,
+              name_identifier: '',
+              surname_identifier: '',
               location_identifier: 'San Francisco',
-              expected_output_identifier: '"Last provider response. Hello!"',
+              output_identifier: 'Last provider response. Hello!',
               document_log_id_identifier: documentLog.id,
               tokens_identifier: expect.any(Number),
             },
@@ -268,8 +272,8 @@ describe('buildDocumentLogDatasetRows', async () => {
     expect(result.value).toEqual({
       columns: [
         {
-          identifier: 'expected_output_identifier',
-          name: 'expected_output',
+          identifier: 'output_identifier',
+          name: 'output',
           role: 'label',
         },
         {
@@ -310,8 +314,8 @@ describe('buildDocumentLogDatasetRows', async () => {
     expect(result.value).toEqual({
       columns: [
         {
-          identifier: 'expected_output_identifier',
-          name: 'expected_output',
+          identifier: 'output_identifier',
+          name: 'output',
           role: 'label',
         },
         {

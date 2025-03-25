@@ -201,7 +201,7 @@ export const EvaluationOptionsSchema = z.object({
 
 export const EVALUATION_SCORE_SCALE = 100
 
-export const DEFAULT_DATASET_LABEL = 'expected_output'
+export const DEFAULT_DATASET_LABEL = 'output'
 
 // PROVISIONAL until migration to v2
 export enum DatasetVersion {

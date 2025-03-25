@@ -87,7 +87,7 @@ export function parseRowCell({
 
   if (typeof cell === 'object') {
     try {
-      return JSON.stringify(cell)
+      return JSON.stringify(cell, null, 2)
     } catch {
       return String(cell)
     }
