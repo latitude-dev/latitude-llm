@@ -14,6 +14,8 @@ import {
 import {
   EvaluationResultsV2Search,
   EvaluationResultV2,
+  EvaluationType,
+  EvaluationV2Stats,
   ResultWithEvaluationV2,
 } from '../browser'
 import { calculateOffset, Result } from '../lib'
@@ -194,6 +196,67 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const page = Math.ceil(position / params.pagination.pageSize)
 
     return Result.ok<number>(page)
+  }
+
+  async statsByEvaluation({
+    projectId,
+    commitUuid,
+    documentUuid,
+    evaluationUuid,
+    params,
+  }: {
+    projectId?: number
+    commitUuid: string
+    documentUuid: string
+    evaluationUuid: string
+    params: EvaluationResultsV2Search
+  }) {
+    const evaluationsRepository = new EvaluationsV2Repository(
+      this.workspaceId,
+      this.db,
+    )
+    const evaluation = await evaluationsRepository
+      .getAtCommitByDocument({
+        projectId: projectId,
+        commitUuid: commitUuid,
+        documentUuid: documentUuid,
+        evaluationUuid: evaluationUuid,
+      })
+      .then((r) => r.unwrap())
+
+    const filter = this.listByEvaluationFilter({ evaluationUuid, params })
+
+    const stats = await this.db
+      .select({
+        totalResults: sql`count(*)`.mapWith(Number).as('total_results'),
+        averageScore: sql`avg(${evaluationResultsV2.score})`
+          .mapWith(Number)
+          .as('average_score'),
+        totalTokens:
+          evaluation.type === EvaluationType.Llm
+            ? sql`sum((${evaluationResultsV2.metadata}->>'tokens')::bigint)`
+                .mapWith(Number)
+                .as('total_tokens')
+            : sql`0`.mapWith(Number),
+        totalCost:
+          evaluation.type === EvaluationType.Llm
+            ? sql`sum((${evaluationResultsV2.metadata}->>'cost')::bigint)`
+                .mapWith(Number)
+                .as('total_cost')
+            : sql`0`.mapWith(Number),
+      })
+      .from(evaluationResultsV2)
+      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .where(filter)
+      .then((r) => r[0])
+
+    if (!stats || stats.totalResults === 0) return Result.nil()
+
+    return Result.ok<EvaluationV2Stats>({
+      ...stats,
+      dailyOverview: [],
+      versionOverview: [],
+    })
   }
 
   async listByDocumentLogs({

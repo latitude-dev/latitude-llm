@@ -62,15 +62,15 @@ export default async function EvaluationPage({
     (r) => r.uuid === search.pagination.resultUuid,
   )
 
-  // TODO: Load evaluation stats
-  const stats = {
-    totalResults: 0,
-    averageScore: 0,
-    totalCost: 0,
-    totalTokens: 0,
-    dailyOverview: [],
-    versionOverview: [],
-  }
+  const stats = await repository
+    .statsByEvaluation({
+      projectId: Number(projectId),
+      commitUuid: commitUuid,
+      documentUuid: documentUuid,
+      evaluationUuid: evaluationUuid,
+      params: search,
+    })
+    .then((r) => r.unwrap())
 
   return (
     <ClientEvaluationPage

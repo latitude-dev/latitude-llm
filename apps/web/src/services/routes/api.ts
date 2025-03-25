@@ -144,7 +144,7 @@ export const API_ROUTES = {
                           },
                         },
                         stats: {
-                          root: `${evaluationRoot}/results/stats`,
+                          root: `${evaluationRoot}/stats`,
                         },
                       }
                     },

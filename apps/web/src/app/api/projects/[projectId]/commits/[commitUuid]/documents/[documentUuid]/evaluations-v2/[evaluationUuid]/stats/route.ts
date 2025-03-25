@@ -24,19 +24,23 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const { evaluationUuid } = params
+      const { projectId, commitUuid, documentUuid, evaluationUuid } = params
       const search = evaluationResultsV2SearchFromQueryParams(
         Object.fromEntries(request.nextUrl.searchParams.entries()),
       )
 
       const repository = new EvaluationResultsV2Repository(workspace.id)
-      const count = await repository
-        .countListByEvaluation({ evaluationUuid, params: search })
+      const stats = await repository
+        .statsByEvaluation({
+          projectId: projectId,
+          commitUuid: commitUuid,
+          documentUuid: documentUuid,
+          evaluationUuid: evaluationUuid,
+          params: search,
+        })
         .then((r) => r.unwrap())
 
-      // TODO: Return stats
-
-      return NextResponse.json(count, { status: 200 })
+      return NextResponse.json(stats ?? {}, { status: 200 })
     },
   ),
 )

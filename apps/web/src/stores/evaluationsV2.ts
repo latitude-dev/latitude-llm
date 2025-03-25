@@ -22,7 +22,7 @@ import {
   Project,
 } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
-import { compact } from 'lodash-es'
+import { compact, isEmpty } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
@@ -228,7 +228,9 @@ export function useEvaluationV2Stats<
     () => (search ? evaluationResultsV2SearchToQueryParams(search) : ''),
     [search],
   )
-  const fetcher = useFetcher(`${route}?${query}`)
+  const fetcher = useFetcher(`${route}?${query}`, {
+    serializer: (data) => (isEmpty(data) ? undefined : data),
+  })
 
   const { data = undefined, ...rest } = useSWR<EvaluationV2Stats>(
     compact([

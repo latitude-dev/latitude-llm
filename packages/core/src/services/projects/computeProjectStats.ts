@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNull, sql, sum } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, isNull, sql, sum } from 'drizzle-orm'
 
 import { Project } from '../../browser'
 import { database } from '../../client'
@@ -193,29 +193,42 @@ export async function computeProjectStats({ project }: { project: Project }) {
       ),
     )
 
+  const latestEvaluationsVersions = db.$with('latest_evaluations_versions').as(
+    db
+      .selectDistinctOn([evaluationVersions.evaluationUuid], {
+        uuid: evaluationVersions.evaluationUuid,
+        type: evaluationVersions.type,
+        name: evaluationVersions.name,
+      })
+      .from(evaluationVersions)
+      .innerJoin(commits, eq(commits.id, evaluationVersions.commitId))
+      .where(and(eq(commits.projectId, project.id), isNull(commits.deletedAt)))
+      .orderBy(desc(evaluationVersions.evaluationUuid), desc(commits.mergedAt)),
+  )
+
   const costPerEvaluationV2 = await db
+    .with(latestEvaluationsVersions)
     .select({
-      evaluation: evaluationVersions.name,
-      totalCost: sum(providerLogs.costInMillicents).mapWith(Number),
+      evaluation: latestEvaluationsVersions.name,
+      totalCost:
+        sql`sum((${evaluationResultsV2.metadata}->>'cost')::bigint)`.mapWith(
+          Number,
+        ),
     })
     .from(evaluationResultsV2)
     .innerJoin(
-      evaluationVersions,
-      eq(evaluationVersions.evaluationUuid, evaluationResultsV2.evaluationUuid),
-    )
-    .innerJoin(
-      providerLogs,
-      sql`${providerLogs.id} = (${evaluationResultsV2.metadata}->>'evaluationLogId')::bigint`,
+      latestEvaluationsVersions,
+      eq(latestEvaluationsVersions.uuid, evaluationResultsV2.evaluationUuid),
     )
     .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
     .where(
       and(
         eq(commits.projectId, project.id),
         isNull(commits.deletedAt),
-        eq(evaluationVersions.type, EvaluationType.Llm),
+        eq(latestEvaluationsVersions.type, EvaluationType.Llm),
       ),
     )
-    .groupBy(evaluationVersions.name)
+    .groupBy(latestEvaluationsVersions.name)
     .then((result) =>
       result.reduce<Record<string, number>>(
         (acc, stat) => ({

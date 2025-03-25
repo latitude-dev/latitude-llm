@@ -25,6 +25,7 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   ClickToCopyUuid,
+  Icon,
   TableWithHeader,
   Text,
   Tooltip,
@@ -98,7 +99,7 @@ export function EvaluationPage<
 }: {
   results: EvaluationResultV2<T, M>[]
   selectedResult?: EvaluationResultV2<T, M>
-  stats: EvaluationV2Stats
+  stats?: EvaluationV2Stats
   search: EvaluationResultsV2Search
 }) {
   const { project } = useCurrentProject()
@@ -144,8 +145,7 @@ export function EvaluationPage<
     { fallbackData: serverStats },
   )
 
-  const isLoading =
-    isLoadingResults || isLoadingStats || !stats || isLoadingCommits
+  const isLoading = isLoadingResults || isLoadingStats || isLoadingCommits
 
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full gap-4 p-6'>
@@ -188,10 +188,17 @@ export function EvaluationPage<
         actions={<EvaluationActions />}
       />
       <div className='w-full flex items-center justify-between'>
-        <Text.H4 color='foregroundMuted'>
-          A {evaluation.configuration.reverseScale ? 'lower' : 'higher'} score
-          is better
-        </Text.H4>
+        <span className='flex items-center gap-x-2'>
+          <Text.H4 color='foregroundMuted'>
+            A {evaluation.configuration.reverseScale ? 'lower' : 'higher'} score
+            is better
+          </Text.H4>
+          {evaluation.configuration.reverseScale ? (
+            <Icon name='arrowDown' color='foregroundMuted' />
+          ) : (
+            <Icon name='arrowUp' color='foregroundMuted' />
+          )}
+        </span>
         <EvaluationFilters
           commits={commits}
           search={search}
@@ -199,7 +206,7 @@ export function EvaluationPage<
           isLoading={isLoading}
         />
       </div>
-      <div className='h-64'>
+      <div className='min-h-64 h-64 max-h-64'>
         <EvaluationStats stats={stats} isLoading={isLoading} />
       </div>
       <EvaluationResultsTable

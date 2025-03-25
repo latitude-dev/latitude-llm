@@ -57,7 +57,7 @@ export function ChartWrapper({
         </span>
       )}
       {loading && (
-        <Skeleton className='min-h-20 h-full w-full bg-muted animate-pulse' />
+        <Skeleton className='min-h-10 h-full w-full bg-muted animate-pulse' />
       )}
       {error && (
         <>
