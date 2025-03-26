@@ -142,6 +142,7 @@ import Telegram from './custom-icons/logos/Telegram'
 import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
+import Apify from './custom-icons/logos/Apify'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -150,6 +151,7 @@ const Icons = {
   airtable: Airtable,
   alert: CircleAlert,
   alertCircle: AlertCircle,
+  apify: Apify,
   appWindow: AppWindow,
   arrowDown: ArrowDownIcon,
   arrowLeft: ArrowLeft,

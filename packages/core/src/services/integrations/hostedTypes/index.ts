@@ -31,6 +31,7 @@ import GHOST_MCP_CONFIG from './configs/ghost'
 import FIGMA_MCP_CONFIG from './configs/figma'
 import HYPERBROWSER_MCP_CONFIG from './configs/hyperbrowser'
 import AUDIENSE_MCP_CONFIG from './configs/audiense'
+import APIFY_MCP_CONFIG from './configs/apify'
 
 export const HOSTED_MCP_CONFIGS: Record<
   HostedIntegrationType,
@@ -68,4 +69,5 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.Figma]: FIGMA_MCP_CONFIG,
   [HostedIntegrationType.Hyperbrowser]: HYPERBROWSER_MCP_CONFIG,
   [HostedIntegrationType.Audiense]: AUDIENSE_MCP_CONFIG,
+  [HostedIntegrationType.Apify]: APIFY_MCP_CONFIG,
 }

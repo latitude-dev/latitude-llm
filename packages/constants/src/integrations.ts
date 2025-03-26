@@ -38,6 +38,7 @@ export enum HostedIntegrationType {
   Figma = 'figma',
   Hyperbrowser = 'hyperbrowser',
   Audiense = 'audiense',
+  Apify = 'apify',
 
   // Require all auth file :point_down:
   // Gmail = 'google_drive',
