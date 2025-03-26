@@ -1,6 +1,9 @@
 x-common-service: &common-service
   env_file:
     - .env
+  volumes:
+    - shared-storage:/app/storage/files:rw
+    - shared-storage:/app/apps/web/public/files:rw
   depends_on:
     - db
     - redis
@@ -175,7 +178,8 @@ services:
     build:
       context: .
       dockerfile: packages/core/docker/Dockerfile
-
+    labels:
+      - "traefik.enable=false"
     depends_on:
       - db
     profiles:
@@ -197,7 +201,6 @@ services:
     build:
       context: .
       dockerfile: apps/gateway/docker/Dockerfile
-
     profiles:
       - local
 
@@ -214,7 +217,6 @@ services:
     build:
       context: .
       dockerfile: apps/workers/docker/Dockerfile
-
     profiles:
       - local
 
@@ -231,7 +233,6 @@ services:
     build:
       context: .
       dockerfile: apps/websockets/docker/Dockerfile
-
     profiles:
       - local
 
@@ -246,3 +247,6 @@ services:
 networks:
   web:
     external: true
+
+volumes:
+  shared-storage:

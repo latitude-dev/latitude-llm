@@ -24,23 +24,32 @@ const generateUrl =
  * AWS_ACCESS_SECRET=[your-secret]
  */
 function getAwsConfig() {
-  const accessKeyId = env.AWS_ACCESS_KEY
   const bucket = env.S3_BUCKET
   const publicBucket = env.PUBLIC_S3_BUCKET
   const region = env.AWS_REGION
+
+  if (!bucket || !publicBucket || !region)
+    throw new Error(
+      `Missing required AWS configuration variables: ${[!bucket && 'S3_BUCKET', !publicBucket && 'PUBLIC_S3_BUCKET', !region && 'AWS_REGION'].filter(Boolean).join(', ')}.`,
+    )
+
+  const accessKeyId = env.AWS_ACCESS_KEY
   const secretAccessKey = env.AWS_ACCESS_SECRET
 
-  if (!accessKeyId || !secretAccessKey || !bucket || !publicBucket || !region) {
-    throw new Error(
-      'AWS credentials not configured. Check you setup AWS_ACCESS_KEY, AWS_ACCESS_SECRET, (PUBLIC)_S3_BUCKET and AWS_REGION in your .env file.',
-    )
+  if (accessKeyId && secretAccessKey) {
+    return {
+      region,
+      bucket,
+      publicBucket,
+      credentials: { accessKeyId, secretAccessKey },
+    }
   }
 
+  // If AWS_ACCESS_KEY and AWS_ACCESS_SECRET are not set, the SDK will use AWS IAM role.
   return {
     region,
     bucket,
     publicBucket,
-    credentials: { accessKeyId, secretAccessKey },
   }
 }
 

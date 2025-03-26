@@ -86,6 +86,12 @@ RUN apk add --no-cache \
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 latitude
+# Set permissions for local storage
+# User ID and Group ID 1001 is used to match the user 'latitude' and group 'nodejs' in the builder image.
+RUN set -e; \
+    mkdir -p /app/storage/files; \
+    mkdir -p /app/apps/web/public/files; \
+    chown -R 1001:1001 /app/storage/files /app/apps/web/public/files
 USER latitude
 
 WORKDIR /app
