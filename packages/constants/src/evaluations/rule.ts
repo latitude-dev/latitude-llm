@@ -110,7 +110,7 @@ export type RuleEvaluationSchemaValidationResultError = z.infer<
 
 const ruleEvaluationLengthCountConfiguration =
   ruleEvaluationConfiguration.extend({
-    algorithm: z.enum(['character', 'word', 'sentence', 'paragraph']),
+    algorithm: z.enum(['character', 'word', 'sentence']),
     minLength: z.number().optional(),
     maxLength: z.number().optional(),
   })

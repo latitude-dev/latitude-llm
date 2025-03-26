@@ -87,6 +87,7 @@ import {
   SearchIcon,
   SettingsIcon,
   Slack,
+  Space,
   Sparkles,
   SquareArrowRight,
   SquareDot,
@@ -284,6 +285,7 @@ const Icons = {
   wordpress: Wordpress,
   youtube: Youtube,
   clipboardCheck: ClipboardCheck,
+  space: Space,
 }
 
 export type IconName = keyof typeof Icons

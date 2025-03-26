@@ -12,6 +12,7 @@ import {
   EvaluationMetricValidateArgs,
 } from '../shared'
 import RuleEvaluationExactMatchSpecification from './exactMatch'
+import RuleEvaluationLengthCountSpecification from './lengthCount'
 import RuleEvaluationRegularExpressionSpecification from './regularExpression'
 import RuleEvaluationSchemaValidationSpecification from './schemaValidation'
 
@@ -22,7 +23,7 @@ const METRICS: {
   [RuleEvaluationMetric.ExactMatch]: RuleEvaluationExactMatchSpecification,
   [RuleEvaluationMetric.RegularExpression]: RuleEvaluationRegularExpressionSpecification,
   [RuleEvaluationMetric.SchemaValidation]: RuleEvaluationSchemaValidationSpecification,
-  [RuleEvaluationMetric.LengthCount]:  undefined as any, // TODO: Implement
+  [RuleEvaluationMetric.LengthCount]: RuleEvaluationLengthCountSpecification,
   [RuleEvaluationMetric.LexicalOverlap]:  undefined as any, // TODO: Implement
   [RuleEvaluationMetric.SemanticSimilarity]:  undefined as any, // TODO: Implement
 }

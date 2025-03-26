@@ -32,7 +32,7 @@ export default function DailyOverviewChart<
       stats?.dailyOverview.map((point) => ({
         ...point,
         x: new Date(point.date).getTime(),
-        y: configuration.scale(point.averageScore),
+        y: Number(configuration.scale(point.averageScore).toFixed(2)),
       })) || []
     )
   }, [stats])
@@ -85,7 +85,9 @@ export default function DailyOverviewChart<
                     <Text.H6B>Average score</Text.H6B>
                     <Text.H6>
                       {configuration.format(
-                        configuration.scale(point.averageScore),
+                        Number(
+                          configuration.scale(point.averageScore).toFixed(2),
+                        ),
                       )}
                     </Text.H6>
                   </div>

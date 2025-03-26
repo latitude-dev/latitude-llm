@@ -24,7 +24,9 @@ export default function AverageScoreChart<
 
   const configuration = metricSpecification.chartConfiguration({ evaluation })
 
-  const averageScore = configuration.scale(stats?.averageScore ?? 0)
+  const averageScore = Number(
+    configuration.scale(stats?.averageScore ?? 0).toFixed(2),
+  )
 
   const color = useMemo(() => {
     if (configuration.thresholds.length === 0) {

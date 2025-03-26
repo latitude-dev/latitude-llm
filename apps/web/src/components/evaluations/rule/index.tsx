@@ -14,6 +14,7 @@ import {
   ResultRowHeadersProps,
 } from '../index'
 import RuleEvaluationExactMatchSpecification from './ExactMatch'
+import RuleEvaluationLengthCountSpecification from './LengthCount'
 import RuleEvaluationRegularExpressionSpecification from './RegularExpression'
 import RuleEvaluationSchemaValidationSpecification from './SchemaValidation'
 
@@ -24,7 +25,7 @@ const METRICS: {
   [RuleEvaluationMetric.ExactMatch]: RuleEvaluationExactMatchSpecification,
   [RuleEvaluationMetric.RegularExpression]: RuleEvaluationRegularExpressionSpecification,
   [RuleEvaluationMetric.SchemaValidation]: RuleEvaluationSchemaValidationSpecification,
-  [RuleEvaluationMetric.LengthCount]:  undefined as any, // TODO: Implement
+  [RuleEvaluationMetric.LengthCount]: RuleEvaluationLengthCountSpecification,
   [RuleEvaluationMetric.LexicalOverlap]:  undefined as any, // TODO: Implement
   [RuleEvaluationMetric.SemanticSimilarity]:  undefined as any, // TODO: Implement
 }
