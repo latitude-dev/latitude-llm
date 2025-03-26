@@ -68,7 +68,7 @@ export async function createEvaluationResult(
 
   return Transaction.call<MaybeFailedEvaluationResultDto>(async (trx) => {
     // TODO: store the reason
-    if (result?.result && resultableTable) {
+    if (result?.result !== undefined && resultableTable) {
       const resultable = await trx
         .insert(resultableTable)
         .values({ result: result.result })

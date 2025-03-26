@@ -80,7 +80,7 @@ export default function DailyOverviewChart<
             // @ts-expect-error typescript cannot infer the type from [key: string]: any
             tooltipContent: (point: (typeof data)[number]) => {
               return (
-                <div className='flex flex-col gap-2'>
+                <div className='flex flex-col gap-2 w-full'>
                   <div className='flex w-full gap-2 justify-between'>
                     <Text.H6B>Average score</Text.H6B>
                     <Text.H6>
