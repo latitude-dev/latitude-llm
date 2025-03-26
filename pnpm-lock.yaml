@@ -877,6 +877,9 @@ importers:
       fastest-levenshtein:
         specifier: ^1.0.16
         version: 1.0.16
+      js-rouge:
+        specifier: ^3.0.0
+        version: 3.0.0
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.0
@@ -9559,6 +9562,10 @@ packages:
   js-cookie@3.0.5:
     resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}
     engines: {node: '>=14'}
+
+  js-rouge@3.0.0:
+    resolution: {integrity: sha512-+rXcOCf53xU0uR8y75OQVHWWQaNFGWa+3g7OjnP9/Pau4EyZ56lpAO2GpVi4pjMkMmNKHwcxkiHNqCkMZK3T7A==}
+    engines: {node: '>=18.0.0'}
 
   js-tiktoken@1.0.19:
     resolution: {integrity: sha512-XC63YQeEcS47Y53gg950xiZ4IWmkfMe4p2V9OSaBt26q+p47WHn18izuXzSclCI73B7yGqtfRsT6jcZQI0y08g==}
@@ -23627,6 +23634,8 @@ snapshots:
       nopt: 7.2.1
 
   js-cookie@3.0.5: {}
+
+  js-rouge@3.0.0: {}
 
   js-tiktoken@1.0.19:
     dependencies:

@@ -1,4 +1,5 @@
 import { distance } from 'fastest-levenshtein'
+import * as rouge from 'js-rouge'
 import {
   EvaluationType,
   RuleEvaluationLexicalOverlapSpecification,
@@ -125,7 +126,24 @@ async function run(
           score = (1 - edits / maxEdits) * 100
         }
         break
-
+      case 'rouge':
+        {
+          if (
+            metadata.actualOutput.trim().split(' ').length < 2 ||
+            metadata.expectedOutput.trim().split(' ').length < 2
+          ) {
+            score =
+              rouge.n(metadata.actualOutput, metadata.expectedOutput, {
+                n: 1,
+              }) * 100
+          } else {
+            score =
+              rouge.n(metadata.actualOutput, metadata.expectedOutput, {
+                n: 2,
+              }) * 100
+          }
+        }
+        break
       default:
         throw new Error('Invalid overlap algorithm')
     }
