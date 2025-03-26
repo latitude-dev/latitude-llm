@@ -145,13 +145,7 @@ export type RuleEvaluationLengthCountResultError = z.infer<
 
 const ruleEvaluationLexicalOverlapConfiguration =
   ruleEvaluationConfiguration.extend({
-    algorithm: z.enum([
-      'substring',
-      'levenshtein_distance',
-      'rouge',
-      'bleu',
-      'meteor',
-    ]),
+    algorithm: z.enum(['substring', 'levenshtein_distance', 'rouge']),
     minOverlap: z.number().optional(), // Percentage of overlap
     maxOverlap: z.number().optional(), // Percentage of overlap
   })

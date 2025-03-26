@@ -164,6 +164,8 @@
     "ajv": "^8.17.1",
     "date-fns": "^3.6.0",
     "diff-match-patch": "^1.0.5",
+    "fastest-levenshtein": "^1.0.16",
+    "js-rouge": "^3.0.0",
     "js-yaml": "^4.1.0",
     "mustache": "^4.2.0",
     "promptl-ai": "^0.5.2",

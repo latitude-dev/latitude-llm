@@ -874,6 +874,12 @@ importers:
       diff-match-patch:
         specifier: ^1.0.5
         version: 1.0.5
+      fastest-levenshtein:
+        specifier: ^1.0.16
+        version: 1.0.16
+      js-rouge:
+        specifier: ^3.0.0
+        version: 3.0.0
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.0
@@ -8535,6 +8541,10 @@ packages:
     resolution: {integrity: sha512-xkjOecfnKGkSsOwtZ5Pz7Us/T6mrbPQrq0nh+aCO5V9nk5NLWmasAHumTKjiPJPWANe+kAZ84Jc8ooJkzZ88Sw==}
     hasBin: true
 
+  fastest-levenshtein@1.0.16:
+    resolution: {integrity: sha512-eRnCtTTtGZFpQCwhJiUOuxPQWRXVKYDn0b2PeHfXL6/Zi53SLAzAHfVhVWK2AryC/WH05kGfxhFIPvTF0SXQzg==}
+    engines: {node: '>= 4.9.1'}
+
   fastq@1.19.1:
     resolution: {integrity: sha512-GwLTyxkCXjXbxqIhTsMI2Nui8huMPtnxg7krajPJAjnEG/iiOS7i+zCtWGZR9G0NBKbXKh6X9m9UIsYX/N6vvQ==}
 
@@ -9552,6 +9562,10 @@ packages:
   js-cookie@3.0.5:
     resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}
     engines: {node: '>=14'}
+
+  js-rouge@3.0.0:
+    resolution: {integrity: sha512-+rXcOCf53xU0uR8y75OQVHWWQaNFGWa+3g7OjnP9/Pau4EyZ56lpAO2GpVi4pjMkMmNKHwcxkiHNqCkMZK3T7A==}
+    engines: {node: '>=18.0.0'}
 
   js-tiktoken@1.0.19:
     resolution: {integrity: sha512-XC63YQeEcS47Y53gg950xiZ4IWmkfMe4p2V9OSaBt26q+p47WHn18izuXzSclCI73B7yGqtfRsT6jcZQI0y08g==}
@@ -22368,6 +22382,8 @@ snapshots:
     dependencies:
       strnum: 1.1.2
 
+  fastest-levenshtein@1.0.16: {}
+
   fastq@1.19.1:
     dependencies:
       reusify: 1.1.0
@@ -23618,6 +23634,8 @@ snapshots:
       nopt: 7.2.1
 
   js-cookie@3.0.5: {}
+
+  js-rouge@3.0.0: {}
 
   js-tiktoken@1.0.19:
     dependencies:

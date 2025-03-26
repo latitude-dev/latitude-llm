@@ -7,6 +7,7 @@ import {
   ArrowUpIcon,
   AtSign,
   BarChart4,
+  Blend,
   Blocks,
   Bot,
   Braces,
@@ -117,6 +118,7 @@ import {
   MCP,
 } from './custom-icons'
 import Airtable from './custom-icons/logos/Airtable'
+import Apify from './custom-icons/logos/Apify'
 import Attio from './custom-icons/logos/Attio'
 import Audiense from './custom-icons/logos/Audiense'
 import AwsBedrock from './custom-icons/logos/AwsBedrock'
@@ -143,7 +145,6 @@ import Telegram from './custom-icons/logos/Telegram'
 import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
-import Apify from './custom-icons/logos/Apify'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -286,6 +287,7 @@ const Icons = {
   youtube: Youtube,
   clipboardCheck: ClipboardCheck,
   space: Space,
+  blend: Blend,
 }
 
 export type IconName = keyof typeof Icons
