@@ -34,7 +34,7 @@ export default function VersionOverviewChart<
       stats?.versionOverview.map((point) => ({
         ...point,
         x: point.totalResults,
-        y: configuration.scale(point.averageScore),
+        y: Number(configuration.scale(point.averageScore).toFixed(2)),
         size: commit.id === point.version.id ? 10 : 5,
         color:
           commit.id === point.version.id
@@ -107,7 +107,9 @@ export default function VersionOverviewChart<
                     <Text.H6B>Average score</Text.H6B>
                     <Text.H6>
                       {configuration.format(
-                        configuration.scale(point.averageScore),
+                        Number(
+                          configuration.scale(point.averageScore).toFixed(2),
+                        ),
                       )}
                     </Text.H6>
                   </div>
