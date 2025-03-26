@@ -14,17 +14,19 @@ export type {
   CellMouseEvent,
   RowsChangeData,
   DataGridProps,
+  DataGridHandle,
 } from 'react-data-grid'
 
 import { cn } from '../../../lib/utils'
+import Text from '../Text'
 import { CheckboxAtom, CheckedState } from '../Checkbox/Primitive'
 
-const DEFAULT_ROW_HEIGHT = 31
+export const DEFAULT_ROW_HEIGHT = 31
 
-// TODO: style this better
 const NoRowsFallback = ({ fallbackText }: { fallbackText: string }) => (
-  <div>{fallbackText}</div>
+  <Text.H5>{fallbackText}</Text.H5>
 )
+
 const renderCheckbox = ({
   checked: isChecked,
   indeterminate,

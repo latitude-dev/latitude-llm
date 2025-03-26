@@ -4,13 +4,14 @@ import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../tests/factories'
 import { DocumentLog } from '../../browser'
-import { generateCsvFromLogs } from './generateCsvFromLogs'
+import { previewDatasetFromLogs } from './previewFromLogs'
 import { ProviderLogsRepository } from '../../repositories'
+import { identityHashAlgorithm } from './utils'
 
 let setup: FactoryCreateProjectReturn
 let documentLog: DocumentLog
 
-describe('buildDocumentLogDatasetRows', async () => {
+describe('previewDatasetFromLogs', async () => {
   beforeAll(async () => {
     setup = await factories.createProject({
       providers: [
@@ -28,7 +29,7 @@ describe('buildDocumentLogDatasetRows', async () => {
     })
   })
 
-  it('generate csv', async () => {
+  it('preview from logs', async () => {
     const { documentLog: dl } = await factories.createDocumentLog({
       document: setup.documents[0]!,
       commit: setup.commit,
@@ -46,15 +47,53 @@ describe('buildDocumentLogDatasetRows', async () => {
       providerType: Providers.OpenAI,
       responseText: 'Last provider response. Hello!',
     })
-    const result = await generateCsvFromLogs({
+    const result = await previewDatasetFromLogs({
       workspace: setup.workspace,
-      data: { documentLogIds: [documentLog.id] },
+      data: { name: 'paco', documentLogIds: [documentLog.id] },
+      hashAlgorithm: identityHashAlgorithm,
     })
 
     const repo = new ProviderLogsRepository(setup.workspace.id)
     const providers = await repo.findManyByDocumentLogUuid([documentLog.uuid])
     const tokens = sum(providers.map((p) => p.tokens ?? 0))
-    expect(result.value).toEqual(`age,location,output,document_log_id,tokens
-25,"San Francisco","Last provider response. Hello!",${documentLog.id},${tokens}`)
+    expect(result.value).toEqual({
+      columns: [
+        {
+          identifier: 'age_identifier',
+          name: 'age',
+          role: 'parameter',
+        },
+        {
+          identifier: 'location_identifier',
+          name: 'location',
+          role: 'parameter',
+        },
+        {
+          identifier: 'output_identifier',
+          name: 'output',
+          role: 'label',
+        },
+        {
+          identifier: 'document_log_id_identifier',
+          name: 'document_log_id',
+          role: 'metadata',
+        },
+        {
+          identifier: 'tokens_identifier',
+          name: 'tokens',
+          role: 'metadata',
+        },
+      ],
+      existingRows: [],
+      newRows: [
+        {
+          age_identifier: 25,
+          location_identifier: 'San Francisco',
+          output_identifier: 'Last provider response. Hello!',
+          document_log_id_identifier: documentLog.id,
+          tokens_identifier: tokens,
+        },
+      ],
+    })
   })
 })

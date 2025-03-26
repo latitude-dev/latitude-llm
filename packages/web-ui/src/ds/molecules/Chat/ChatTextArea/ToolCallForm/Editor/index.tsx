@@ -4,40 +4,42 @@ import { type editor } from 'monaco-editor'
 import { useMonacoSetup } from '../../../../DocumentTextEditor/Editor/useMonacoSetup'
 import { TextEditorProps } from './types'
 
-const LINE_HEIGHT = 18
-const CONTAINER_GUTTER = 10
-function useUpdateEditorHeight({ initialHeight }: { initialHeight: number }) {
+export function useUpdateEditorHeight({
+  initialHeight,
+  maxHeight = 200,
+  limitToInitialHeight = false,
+}: {
+  initialHeight: number
+  maxHeight?: number
+  limitToInitialHeight?: boolean
+}) {
   const [heightState, setHeight] = useState(initialHeight)
-  const prevLineCount = useRef(0)
   const updateHeight = useCallback((editor: editor.IStandaloneCodeEditor) => {
     const el = editor.getDomNode()
     if (!el) return
-    const codeContainer = el.getElementsByClassName(
-      'view-lines',
-    )[0] as HTMLDivElement | null
 
-    if (!codeContainer) return
-
-    setTimeout(() => {
-      const height =
-        codeContainer.childElementCount > prevLineCount.current
-          ? codeContainer.offsetHeight
-          : codeContainer.childElementCount * LINE_HEIGHT + CONTAINER_GUTTER // fold
-      prevLineCount.current = codeContainer.childElementCount
+    requestAnimationFrame(() => {
+      let height = editor.getContentHeight()
 
       // Max height
-      if (height >= 200) return
+      if (height >= maxHeight) {
+        height = maxHeight
+      }
+
+      if (limitToInitialHeight) {
+        height = height < initialHeight ? initialHeight : height
+      }
 
       setHeight(height)
       el.style.height = height + 'px'
 
       editor.layout()
-    }, 0)
+    })
   }, [])
   return { height: heightState, updateHeight }
 }
 
-function updatePlaceholder({
+export function updateMonacoPlaceholder({
   collection,
   decoration,
   editor,
@@ -91,7 +93,7 @@ export default function TextEditor({
       editor.focus()
 
       // Initial placeholder setup
-      hasPlaceholder = updatePlaceholder({
+      hasPlaceholder = updateMonacoPlaceholder({
         collection,
         decoration,
         editor,
@@ -102,7 +104,7 @@ export default function TextEditor({
       editor.onDidChangeModelContent(() => {
         if (!isMountedRef.current) return
 
-        hasPlaceholder = updatePlaceholder({
+        hasPlaceholder = updateMonacoPlaceholder({
           collection,
           decoration,
           editor,

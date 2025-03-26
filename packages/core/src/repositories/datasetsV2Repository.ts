@@ -1,4 +1,4 @@
-import { eq, and, sql, getTableColumns } from 'drizzle-orm'
+import { eq, and, sql, getTableColumns, desc } from 'drizzle-orm'
 
 import { DatasetV2, DEFAULT_PAGINATION_SIZE } from '../browser'
 import { datasetsV2, users } from '../schema'
@@ -47,5 +47,6 @@ export class DatasetsV2Repository extends Repository<DatasetV2> {
       .where(and(this.scopeFilter))
       .limit(parseInt(pageSize))
       .offset(offset)
+      .orderBy(desc(datasetsV2.createdAt))
   }
 }

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 import { cn } from '../../../lib/utils'
 
-type ContainerSize = 'xl' | '2xl'
+export type ContainerSize = 'xl' | '2xl' | 'full'
 
 export function Container({
   size = 'xl',

@@ -4,13 +4,13 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
+import { parseRowCell } from '$/stores/datasetRows/rowSerializationHelpers'
 import { DatasetV2 } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { DatasetRowData } from '@latitude-data/core/schema'
 import { useCallback, useState } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
-type Row = DatasetRowData[keyof DatasetRowData][]
 type InputItem = {
   columns: DatasetV2['columns']
   existingRows: DatasetRowData[]
@@ -19,27 +19,31 @@ type InputItem = {
 
 export type OutputItem = {
   columns: DatasetV2['columns']
-  datasetRows: Row[]
-  previewRows: Row[]
+  datasetRows: string[][]
+  previewRows: string[][]
+}
+
+function serializeRowData(rowData: DatasetRowData): string[] {
+  const keys = Object.keys(rowData)
+  return keys.map((key) => {
+    const cell = rowData[key]
+    return parseRowCell({ cell, parseDates: false })
+  })
 }
 
 function serializeRows(item: InputItem): OutputItem {
   const columns = item.columns
   return {
     columns,
-    datasetRows: item.existingRows.map((row) =>
-      columns.map(({ identifier }) => row[identifier] ?? null),
-    ),
-    previewRows: item.newRows.map((row) =>
-      columns.map(({ identifier }) => row[identifier] ?? null),
-    ),
+    datasetRows: item.existingRows.map(serializeRowData),
+    previewRows: item.newRows.map(serializeRowData),
   }
 }
 
 const EMPTY_DATA = {
   columns: [] as DatasetV2['columns'],
-  datasetRows: [] as Row[],
-  previewRows: [] as Row[],
+  datasetRows: [] as string[][],
+  previewRows: [] as string[][],
 }
 
 function usePreviewRowsStore(

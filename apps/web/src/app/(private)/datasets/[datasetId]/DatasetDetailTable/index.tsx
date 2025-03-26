@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
@@ -18,24 +18,70 @@ import {
   Text,
   TableBlankSlate,
   Button,
+  TableSkeleton,
 } from '@latitude-data/web-ui'
 
 const DataGrid = dynamic(() => import('./DataGrid'), {
   ssr: false,
+  loading: () => <TableSkeleton rows={8} cols={5} maxHeight={320} />,
 })
+
+function DatasetV1BlankSlate() {
+  return (
+    <TableBlankSlate
+      description='This dataset is empty'
+      link={
+        <Link href={ROUTES.datasets.root()}>
+          <Button variant='outline' fancy>
+            Back to dataset list
+          </Button>
+        </Link>
+      }
+    />
+  )
+}
+
+function DatasetBlankSlate({
+  onClick,
+  isCreating,
+}: {
+  onClick: () => Promise<void>
+  isCreating: boolean
+}) {
+  return (
+    <TableBlankSlate
+      description='This dataset is empty'
+      link={
+        <div className='flex flex-row items-center space-x-2'>
+          <Button fancy onClick={onClick} disabled={isCreating}>
+            {isCreating ? 'Creating...' : 'Create a row'}
+          </Button>
+          <Text.H5>or </Text.H5>
+          <Link href={ROUTES.datasets.root()}>
+            <Button variant='outline' fancy>
+              Back to dataset list
+            </Button>
+          </Link>
+        </div>
+      }
+    />
+  )
+}
 
 export const ROWS_PAGE_SIZE = '100'
 export function DatasetDetailTable({
   dataset,
   rows: serverDatasetRows,
+  count,
   initialRenderIsProcessing,
 }: {
   dataset: DatasetV2
   rows: DatasetRow[]
   initialRenderIsProcessing: boolean
+  count: number
 }) {
   const datasetCellRoleStyles = useDatasetRole()
-  const { enabled: showDataGrid } = useFeatureFlag({
+  const { enabled: datasetsV2Enabled } = useFeatureFlag({
     featureFlag: 'useDatagridInForDatasetRows',
   })
   const searchParams = useSearchParams()
@@ -45,6 +91,10 @@ export function DatasetDetailTable({
     data: rows,
     mutate,
     updateRows,
+    deleteRows,
+    createRow,
+    isCreating,
+    isDeleting,
   } = useDatasetRows(
     { dataset, page, pageSize },
     {
@@ -61,7 +111,7 @@ export function DatasetDetailTable({
   const pagination = useMemo(
     () =>
       buildPagination({
-        count: Infinity,
+        count,
         baseUrl: ROUTES.datasets.detail(dataset.id),
         page: Number(page),
         pageSize: Number(pageSize),
@@ -77,6 +127,9 @@ export function DatasetDetailTable({
     datasetCellRoleStyles,
   }
 
+  const onClick = useCallback(() => {
+    createRow({ datasetId: dataset.id })
+  }, [createRow, dataset.id])
   return (
     <TableWithHeader
       takeVertialSpace
@@ -97,29 +150,41 @@ export function DatasetDetailTable({
               </Text.H6>
             </div>
           ) : null}
+          {datasetsV2Enabled ? (
+            <Button
+              variant='outline'
+              fancy
+              onClick={onClick}
+              disabled={isCreating}
+            >
+              {isCreating ? 'Creating...' : 'Create a row'}
+            </Button>
+          ) : null}
         </>
       }
       table={
         <>
           {rows.length > 0 ? (
             <>
-              {showDataGrid ? (
-                <DataGrid {...props} updateRows={updateRows} />
+              {datasetsV2Enabled ? (
+                <DataGrid
+                  {...props}
+                  updateRows={updateRows}
+                  deleteRows={deleteRows}
+                  isDeleting={isDeleting}
+                />
               ) : (
                 <SimpleTable {...props} />
               )}
             </>
           ) : (
-            <TableBlankSlate
-              description='This dataset is empty'
-              link={
-                <Link href={ROUTES.datasets.root()}>
-                  <Button variant='outline' fancy>
-                    Back to dataset list
-                  </Button>
-                </Link>
-              }
-            />
+            <>
+              {datasetsV2Enabled ? (
+                <DatasetBlankSlate onClick={onClick} isCreating={isCreating} />
+              ) : (
+                <DatasetV1BlankSlate />
+              )}
+            </>
           )}
         </>
       }
