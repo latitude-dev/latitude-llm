@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation'
 import { integrationOptions } from '$/lib/integrationTypeOptions'
 import { IntegrationType } from '@latitude-data/constants'
 import { McpServerStatus } from '../../integrations/[integrationId]/details/_components/McpServerStatus'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
 
 export default function Integrations() {
   const { data: integrations, isLoading: isLoading } = useIntegrations()
@@ -59,6 +60,7 @@ export default function Integrations() {
 const IntegrationsTable = () => {
   const router = useRouter()
   const { data: integrations, scaleDown, scaleUp } = useIntegrations()
+  const { data: workspace } = useCurrentWorkspace()
 
   return (
     <Table>
@@ -117,16 +119,24 @@ const IntegrationsTable = () => {
                     },
                     {
                       label: 'Scale Up',
-                      hidden: integration.type !== IntegrationType.HostedMCP,
-                      disabled: integration.type !== IntegrationType.HostedMCP,
+                      hidden:
+                        integration.type !== IntegrationType.HostedMCP ||
+                        workspace?.id !== 1,
+                      disabled:
+                        integration.type !== IntegrationType.HostedMCP ||
+                        workspace?.id !== 1,
                       onClick: () =>
                         integration.mcpServerId &&
                         scaleUp({ mcpServerId: integration.mcpServerId }),
                     },
                     {
                       label: 'Scale Down',
-                      hidden: integration.type !== IntegrationType.HostedMCP,
-                      disabled: integration.type !== IntegrationType.HostedMCP,
+                      hidden:
+                        integration.type !== IntegrationType.HostedMCP ||
+                        workspace?.id !== 1,
+                      disabled:
+                        integration.type !== IntegrationType.HostedMCP ||
+                        workspace?.id !== 1,
                       onClick: () =>
                         integration.mcpServerId &&
                         scaleDown({ mcpServerId: integration.mcpServerId }),
