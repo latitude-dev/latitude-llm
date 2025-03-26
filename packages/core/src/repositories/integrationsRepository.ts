@@ -1,4 +1,4 @@
-import { eq, getTableColumns } from 'drizzle-orm'
+import { and, eq, getTableColumns } from 'drizzle-orm'
 
 import { IntegrationDto } from '../browser'
 import { LatitudeError, NotFoundError, PromisedResult, Result } from '../lib'
@@ -23,7 +23,9 @@ export class IntegrationsRepository extends Repository<IntegrationDto> {
   async findByName(
     name: string,
   ): PromisedResult<IntegrationDto, LatitudeError> {
-    const result = await this.scope.where(eq(integrations.name, name))
+    const result = await this.scope.where(
+      and(eq(integrations.name, name), this.scopeFilter),
+    )
 
     if (!result.length) {
       return Result.error(new NotFoundError('Integration not found'))
