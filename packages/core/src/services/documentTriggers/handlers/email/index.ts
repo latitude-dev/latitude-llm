@@ -10,11 +10,14 @@ import {
   EMAIL_TRIGGER_DOMAIN,
 } from '@latitude-data/constants'
 import { database } from '../../../../client'
-import { DocumentTrigger, HEAD_COMMIT } from '../../../../browser'
-import { DocumentTriggerMailer } from '../../../../mailers'
-import { getEmailResponse } from './getResponse'
+import { DocumentTrigger, HEAD_COMMIT, Workspace } from '../../../../browser'
 import { DocumentVersionsRepository } from '../../../../repositories'
 import { EmailTriggerConfiguration } from '../../helpers/schema'
+import { PromptLFile } from 'promptl-ai'
+import { uploadFile } from '../../../files'
+import { unsafelyFindWorkspace } from '../../../../data-access'
+import { setupQueues } from '../../../../jobs'
+import { RunEmailTriggerJobData } from '../../../../jobs/job-definitions/documentTriggers/runEmailTriggerJob'
 
 async function getTriggerName(
   trigger: DocumentTrigger,
@@ -67,6 +70,27 @@ export async function assertTriggerFilters({
   return Result.error(new BadRequestError('Sender is not in whitelist'))
 }
 
+export async function uploadAttachments({
+  workspace,
+  attachments,
+}: {
+  workspace: Workspace
+  attachments: File[]
+}): PromisedResult<PromptLFile[], LatitudeError> {
+  const results = await Promise.all(
+    attachments.map(async (file) => {
+      return await uploadFile({ file, workspace })
+    }),
+  )
+
+  const errors = results.filter((result) => result.error)
+  if (errors.length) {
+    return Result.error(errors[0]!.error! as LatitudeError)
+  }
+
+  return Result.ok(results.map((result) => result.unwrap()))
+}
+
 export async function handleEmailTrigger(
   {
     recipient,
@@ -110,56 +134,41 @@ export async function handleEmailTrigger(
   })
   if (assertFilterResult.error) return assertFilterResult
 
-  const name = await getTriggerName(trigger, db)
-  if (name.error) return name
-
-  const responseResult = await getEmailResponse(
-    {
-      documentUuid: documentUuid!,
-      trigger,
-      messageId,
-      parentMessageIds,
-      senderEmail,
-      senderName,
-      subject,
-      body,
-      attachments,
-    },
+  const workspace = (await unsafelyFindWorkspace(
+    trigger.workspaceId,
     db,
-  )
+  )) as Workspace
 
-  const configuration = trigger.configuration as EmailTriggerConfiguration
-  if (configuration.replyWithResponse === false) return Result.nil()
+  const nameResult = await getTriggerName(trigger, db)
+  if (nameResult.error) return nameResult
 
-  const from = `${JSON.stringify(name.unwrap())} <${trigger.documentUuid}@${EMAIL_TRIGGER_DOMAIN}>`
-
-  const references = [
-    ...(parentMessageIds ?? []),
-    ...(messageId ? [messageId] : []),
-  ].join(' ')
-
-  const headers = messageId
-    ? {
-        'In-Reply-To': messageId,
-        References: references,
-        // It seems like nodemailer-mailgun-transport is ignoring the "References" header.
-        // Maybe some of these will work:
-        'X-Mailgun-References': references,
-        'h:References': references,
-        'h:X-Mailgun-References': references,
-      }
-    : undefined
-
-  const mailer = new DocumentTriggerMailer(responseResult, {
-    to: senderEmail,
-    from,
-    inReplyTo: messageId,
-    references,
-    subject: 'Re: ' + subject,
-    headers,
+  const uploadResult = await uploadAttachments({
+    workspace,
+    attachments: attachments ?? [],
   })
+  if (uploadResult.error) return uploadResult
+  const uploadedFiles = uploadResult.unwrap()
 
-  const sendResult = await mailer.send()
-  if (sendResult.error) return sendResult
+  const jobQueues = await setupQueues()
+
+  const runJobData: RunEmailTriggerJobData = {
+    workspaceId: workspace.id,
+    triggerId: trigger.id,
+    recipient: recipient,
+    senderEmail: senderEmail,
+    senderName: senderName,
+    messageId: messageId,
+    parentMessageIds: parentMessageIds,
+    subject: subject,
+    body: body,
+    attachments: uploadedFiles,
+  }
+
+  const job =
+    await jobQueues.defaultQueue.jobs.enqueueRunEmailTriggerJob(runJobData)
+  if (!job.id) {
+    return Result.error(new LatitudeError('Failed to enqueue job'))
+  }
+
   return Result.nil()
 }

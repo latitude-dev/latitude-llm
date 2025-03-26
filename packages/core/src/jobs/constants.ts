@@ -34,6 +34,7 @@ export enum Jobs {
   autoScaleJob = 'autoScaleJob',
   updateMcpServerLastUsedJob = 'updateMcpServerLastUsedJob',
   scaleDownMcpServerJob = 'scaleDownMcpServerJob',
+  runEmailTriggerJob = 'runEmailTriggerJob',
 }
 
 export const QUEUES = {
@@ -53,6 +54,7 @@ export const QUEUES = {
       'requestDocumentSuggestionsJob',
       'checkScheduledDocumentTriggersJob',
       'processScheduledTriggerJob',
+      'runEmailTriggerJob',
     ],
   },
   [Queues.maintenanceQueue]: {
