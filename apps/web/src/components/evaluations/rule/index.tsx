@@ -15,6 +15,7 @@ import {
 } from '../index'
 import RuleEvaluationExactMatchSpecification from './ExactMatch'
 import RuleEvaluationRegularExpressionSpecification from './RegularExpression'
+import RuleEvaluationSchemaValidationSpecification from './SchemaValidation'
 
 // prettier-ignore
 const METRICS: {
@@ -22,6 +23,7 @@ const METRICS: {
 } = {
   [RuleEvaluationMetric.ExactMatch]: RuleEvaluationExactMatchSpecification,
   [RuleEvaluationMetric.RegularExpression]: RuleEvaluationRegularExpressionSpecification,
+  [RuleEvaluationMetric.SchemaValidation]: RuleEvaluationSchemaValidationSpecification,
   [RuleEvaluationMetric.LengthCount]:  undefined as any, // TODO: Implement
   [RuleEvaluationMetric.LexicalOverlap]:  undefined as any, // TODO: Implement
   [RuleEvaluationMetric.SemanticSimilarity]:  undefined as any, // TODO: Implement

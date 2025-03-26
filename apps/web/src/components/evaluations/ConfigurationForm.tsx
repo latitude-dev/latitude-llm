@@ -43,7 +43,7 @@ export default function ConfigurationForm<
       <SelectableSwitch
         selected={!(configuration.reverseScale ?? false)}
         name='reverseScale'
-        label='Orientation'
+        label='Scale orientation'
         trueLabel='Higher is better'
         falseLabel='Lower is better'
         description='Orientation of the metric scale when normalizing the score for internal operations and to display evaluation results'
