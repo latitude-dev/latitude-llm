@@ -98,7 +98,7 @@ export async function runEvaluation(
   const providerLog = response?.providerLog
   const responseError = await run.error
   let error: ChainError<RunErrorCodes> | undefined
-  if (!responseError && !response?.object) {
+  if (!responseError && response?.object?.result === undefined) {
     error = new ChainError({
       code: RunErrorCodes.EvaluationRunResponseJsonFormatError,
       message: `Provider with model [${providerLog?.config?.model ?? 'unknown'}] did not return a valid JSON object`,

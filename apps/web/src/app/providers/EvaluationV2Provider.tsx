@@ -1,6 +1,6 @@
 'use client'
 
-import useEvaluationsV2 from '$/stores/evaluationsV2'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationMetric,
   EvaluationType,

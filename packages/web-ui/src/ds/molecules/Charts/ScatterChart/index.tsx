@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
+  Label,
   ScatterChart as RechartsScatterChart,
+  ReferenceLine,
   Scatter,
   XAxis,
   YAxis,
@@ -131,7 +133,16 @@ export function ScatterChart({ config }: { config: ScatterChartConfig }) {
               ? [config.xAxis.min ?? 'dataMin', config.xAxis.max ?? 'dataMax']
               : undefined
           }
-        />
+        >
+          {!!config.xAxis.legend && (
+            <Label
+              angle={0}
+              value={config.xAxis.legend}
+              position='top'
+              style={{ textAnchor: 'middle' }}
+            />
+          )}
+        </XAxis>
         <YAxis
           dataKey='y'
           tickLine={config.yAxis.tickLine ?? false}
@@ -144,8 +155,26 @@ export function ScatterChart({ config }: { config: ScatterChartConfig }) {
               ? [config.yAxis.min ?? 'dataMin', config.yAxis.max ?? 'dataMax']
               : undefined
           }
-        />
+        >
+          {!!config.yAxis.legend && (
+            <Label
+              angle={-90}
+              value={config.yAxis.legend}
+              position='insideLeft'
+              style={{ textAnchor: 'middle' }}
+            />
+          )}
+        </YAxis>
         <ZAxis type='number' dataKey='size' range={[0, 100]} domain={[1, 10]} />
+        {config.yAxis.thresholds?.map((threshold, index) => (
+          <ReferenceLine
+            key={`y-threshold-${index}`}
+            y={threshold}
+            stroke='hsl(var(--muted-foreground))'
+            strokeDasharray='3 3'
+            strokeWidth={1}
+          />
+        ))}
         {dataGroups.map((group, idx) => (
           <Scatter
             key={idx}

@@ -93,8 +93,8 @@ function EvaluationResultsTableRow<
 
 const countLabel = (selected: number) => (count: number) => {
   return selected
-    ? `${selected} of ${count} evaluation results selected`
-    : `${count} evaluation results`
+    ? `${selected} of ${count} results selected`
+    : `${count} results`
 }
 
 export function EvaluationResultsTableBody<

@@ -350,6 +350,8 @@ export const resultConfigurationSchema = z.discriminatedUnion('type', [
 
 export const DEFAULT_PAGINATION_SIZE = 25
 
+export type DateRange = { from?: Date; to?: Date }
+
 export interface ProjectStats {
   totalTokens: number
   totalRuns: number

@@ -32,10 +32,8 @@ export default function ResultBadge<
       }
     >
       Evaluation {evaluation.name}, with a score of {result.score} (
-      {result.metadata!.configuration.reverseScale
-        ? 'lower is better'
-        : 'higher is better'}
-      ), did {result.hasPassed ? 'pass' : 'not pass'}
+      {result.metadata!.configuration.reverseScale ? 'lower' : 'higher'} is
+      better), did {result.hasPassed ? 'pass' : 'not pass'}
     </Tooltip>
   )
 }

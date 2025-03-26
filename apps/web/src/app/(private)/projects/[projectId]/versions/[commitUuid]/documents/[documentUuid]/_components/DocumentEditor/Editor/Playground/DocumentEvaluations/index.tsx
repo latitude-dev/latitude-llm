@@ -5,7 +5,7 @@ import {
 import useConnectedEvaluations from '$/stores/connectedEvaluations'
 import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
-import useEvaluationsV2 from '$/stores/evaluationsV2'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   ConnectedEvaluation,
   DocumentVersion,

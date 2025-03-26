@@ -59,6 +59,22 @@ export type ResultPanelProps<
   evaluatedLog?: ProviderLogDto
   panelRef: React.RefObject<HTMLDivElement>
   tableRef: React.RefObject<HTMLTableElement>
+  selectedTab: string
+}
+
+export type ChartConfigurationArgs<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> = {
+  evaluation: EvaluationV2<T, M>
+}
+
+export type ChartConfigurationResult = {
+  min: number
+  max: number
+  thresholds: readonly [] | readonly [number] | readonly [number, number]
+  scale: (point: number) => number
+  format: (point: number, short?: boolean) => string
 }
 
 export type EvaluationMetricFrontendSpecification<
@@ -73,6 +89,9 @@ export type EvaluationMetricFrontendSpecification<
   resultPanelTabs: TabSelectorOption<string>[]
   ResultPanelMetadata: (props: ResultPanelProps<T, M>) => React.ReactNode
   ResultPanelContent: (props: ResultPanelProps<T, M>) => React.ReactNode
+  chartConfiguration: (
+    args: ChartConfigurationArgs<T, M>,
+  ) => ChartConfigurationResult
 }
 
 export type EvaluationFrontendSpecification<
@@ -98,6 +117,9 @@ export type EvaluationFrontendSpecification<
   ResultPanelContent: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     props: ResultPanelProps<T, M> & { metric: M },
   ) => React.ReactNode
+  chartConfiguration: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
+    args: ChartConfigurationArgs<T, M> & { metric: M },
+  ) => ChartConfigurationResult
   metrics: {
     [M in EvaluationMetric<T>]: EvaluationMetricFrontendSpecification<T, M>
   }

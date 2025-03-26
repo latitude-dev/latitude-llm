@@ -166,7 +166,7 @@ export function ResultPanel<
   panelRef,
   tableRef,
   ...rest
-}: ResultPanelProps<T, M>) {
+}: Omit<ResultPanelProps<T, M>, 'selectedTab'>) {
   const ref = useRef<HTMLDivElement | null>(null)
   const [targetRef, setTargetRef] = useState<HTMLDivElement | null>(null)
   useEffect(() => {
@@ -213,6 +213,7 @@ export function ResultPanel<
                   evaluatedLog={evaluatedLog}
                   panelRef={panelRef}
                   tableRef={tableRef}
+                  selectedTab={selectedTab}
                   {...rest}
                 />
               )}
@@ -224,6 +225,7 @@ export function ResultPanel<
                 evaluatedLog={evaluatedLog}
                 panelRef={panelRef}
                 tableRef={tableRef}
+                selectedTab={selectedTab}
                 {...rest}
               />
               <div className='w-full flex justify-center pt-4'>

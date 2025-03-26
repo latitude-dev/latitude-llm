@@ -1,5 +1,5 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import useEvaluationsV2 from '$/stores/evaluationsV2'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationMetric,
   EvaluationType,

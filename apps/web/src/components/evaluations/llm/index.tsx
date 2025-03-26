@@ -26,5 +26,6 @@ export default {
   resultPanelTabs: [], // TODO: Implement
   ResultPanelMetadata: undefined as any, // TODO: Implement
   ResultPanelContent: undefined as any, // TODO: Implement
+  chartConfiguration: undefined as any, // TODO: Implement
   metrics: METRICS,
 }

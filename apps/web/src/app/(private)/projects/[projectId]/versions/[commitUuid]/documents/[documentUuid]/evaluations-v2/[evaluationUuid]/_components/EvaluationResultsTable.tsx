@@ -8,10 +8,8 @@ import {
   EvaluationResultV2,
   EvaluationType,
 } from '@latitude-data/core/browser'
-import { cn, Icon, TableBlankSlate, Text, Tooltip } from '@latitude-data/web-ui'
-import { isEqual } from 'lodash-es'
-import { useMemo, useRef } from 'react'
-import { CommitFilter } from '../../../logs/_components/Filters/CommitFilter'
+import { cn, TableBlankSlate } from '@latitude-data/web-ui'
+import { useRef } from 'react'
 import { EvaluationBatchIndicator } from './EvaluationBatchIndicator'
 import { EvaluationResultsTableBody } from './EvaluationResultsTableBody'
 
@@ -24,7 +22,6 @@ export function EvaluationResultsTable<
   setSelectedResult,
   commits,
   search,
-  setSearch,
   isLoading,
 }: {
   results: EvaluationResultV2<T, M>[]
@@ -44,64 +41,8 @@ export function EvaluationResultsTable<
     rowIds: results.filter((r) => !r.error).map((r) => r.uuid),
   })
 
-  const defaultSelectedCommits = useMemo(
-    () =>
-      Object.values(commits)
-        .filter((commit) => !!commit.mergedAt)
-        .map((commit) => commit.id),
-    [commits],
-  )
-
   return (
     <div className='flex flex-col gap-4 flex-grow min-h-0'>
-      <div className='w-full flex items-center justify-between'>
-        <span className='flex items-center gap-2'>
-          <Text.H4>Results</Text.H4>
-          <Tooltip
-            asChild
-            trigger={
-              <span>
-                <Icon name='info' color='foreground' />
-              </span>
-            }
-            align='start'
-            side='top'
-          >
-            Results from the filtered versions of this evaluation and document
-          </Tooltip>
-        </span>
-        <div className='flex items-center gap-2'>
-          <div className='flex flex-row gap-2 items-center'>
-            <CommitFilter
-              selectedCommitsIds={
-                search.filters?.commitIds ?? defaultSelectedCommits
-              }
-              onSelectCommits={(value) =>
-                setSearch({
-                  ...search,
-                  filters: {
-                    ...(search.filters ?? {}),
-                    commitIds: value,
-                  },
-                })
-              }
-              isDefault={
-                !search.filters?.commitIds ||
-                isEqual(search.filters?.commitIds, defaultSelectedCommits)
-              }
-              reset={() =>
-                setSearch({
-                  ...search,
-                  filters: {
-                    ...(search.filters ?? {}),
-                    commitIds: defaultSelectedCommits,
-                  },
-                })
-              }
-            />
-          </div>
-        </div>
-      </div>
       <EvaluationBatchIndicator />
       <div
         className={cn('gap-x-4 grid pb-6', {

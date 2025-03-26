@@ -9,6 +9,7 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useCommits } from '$/stores/commitsStore'
 import { useEvaluationResultsV2 } from '$/stores/evaluationResultsV2'
+import { useEvaluationV2Stats } from '$/stores/evaluationsV2'
 import {
   Commit,
   EvaluationMetric,
@@ -17,12 +18,14 @@ import {
   EvaluationResultV2,
   EvaluationType,
   EvaluationV2,
+  EvaluationV2Stats,
 } from '@latitude-data/core/browser'
 import {
   Badge,
   Breadcrumb,
   BreadcrumbItem,
   ClickToCopyUuid,
+  Icon,
   TableWithHeader,
   Text,
   Tooltip,
@@ -33,6 +36,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebounce } from 'use-debounce'
 import { EvaluationActions } from './EvaluationActions'
+import { EvaluationFilters } from './EvaluationFilters'
 import { EvaluationResultsTable } from './EvaluationResultsTable'
 import { EvaluationStats } from './EvaluationStats'
 
@@ -90,10 +94,12 @@ export function EvaluationPage<
 >({
   results: serverResults,
   selectedResult: serverSelectedResult,
+  stats: serverStats,
   search: serverSearch,
 }: {
   results: EvaluationResultV2<T, M>[]
   selectedResult?: EvaluationResultV2<T, M>
+  stats?: EvaluationV2Stats
   search: EvaluationResultsV2Search
 }) {
   const { project } = useCurrentProject()
@@ -134,10 +140,15 @@ export function EvaluationPage<
   useEvaluationResultsV2Socket({ evaluation, commits, mutate })
   const [selectedResult, setSelectedResult] = useState(serverSelectedResult)
 
-  const isLoading = isLoadingResults || isLoadingCommits
+  const { data: stats, isLoading: isLoadingStats } = useEvaluationV2Stats<T, M>(
+    { project, commit, document, evaluation, search: debouncedSearch },
+    { fallbackData: serverStats },
+  )
+
+  const isLoading = isLoadingResults || isLoadingStats || isLoadingCommits
 
   return (
-    <div className='flex flex-grow min-h-0 flex-col w-full gap-6 p-6'>
+    <div className='flex flex-grow min-h-0 flex-col w-full gap-4 p-6'>
       <TableWithHeader
         title={
           <Breadcrumb>
@@ -176,7 +187,28 @@ export function EvaluationPage<
         }
         actions={<EvaluationActions />}
       />
-      <EvaluationStats />
+      <div className='w-full flex items-center justify-between'>
+        <span className='flex items-center gap-x-2'>
+          <Text.H4 color='foregroundMuted'>
+            A {evaluation.configuration.reverseScale ? 'lower' : 'higher'} score
+            is better
+          </Text.H4>
+          {evaluation.configuration.reverseScale ? (
+            <Icon name='arrowDown' color='foregroundMuted' />
+          ) : (
+            <Icon name='arrowUp' color='foregroundMuted' />
+          )}
+        </span>
+        <EvaluationFilters
+          commits={commits}
+          search={search}
+          setSearch={setSearch}
+          isLoading={isLoading}
+        />
+      </div>
+      <div className='min-h-64 h-64 max-h-64'>
+        <EvaluationStats stats={stats} isLoading={isLoading} />
+      </div>
       <EvaluationResultsTable
         results={results}
         selectedResult={selectedResult}

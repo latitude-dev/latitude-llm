@@ -17,7 +17,7 @@ export const FEATURE_FLAGS_CONDITIONS: Record<
   datasetsV2: { workspaceIds: 'all' },
   useDatagridInForDatasetRows: { workspaceIds: [] },
   datasetsV1ModificationBlocked: { workspaceIds: [] },
-  evaluationsV2: { workspaceIds: [1] },
+  evaluationsV2: { workspaceIds: 'all' },
 }
 
 export type ResolvedFeatureFlags = Record<FeatureFlag, { enabled: boolean }>

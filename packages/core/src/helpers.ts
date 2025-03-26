@@ -4,7 +4,12 @@ import {
   ChainStepResponse,
   StreamType,
 } from '@latitude-data/constants'
-import { type CsvData, DEFAULT_PAGINATION_SIZE } from './constants'
+import { endOfDay, formatISO, parseISO, startOfDay } from 'date-fns'
+import {
+  DEFAULT_PAGINATION_SIZE,
+  type CsvData,
+  type DateRange,
+} from './constants'
 import { type QueryParams } from './lib'
 import type { ProviderLogDto } from './schema/types'
 
@@ -132,6 +137,7 @@ export function formatConversation(conversation: Message[]) {
 export type EvaluationResultsV2Search = {
   filters?: {
     commitIds?: number[]
+    createdAt?: DateRange
   }
   orders?: {
     recency?: 'asc' | 'desc'
@@ -159,6 +165,20 @@ export function evaluationResultsV2SearchFromQueryParams(params: QueryParams) {
     search.filters!.commitIds = [...new Set(params.commitIds.split(','))]
       .filter(Boolean)
       .map(Number)
+  }
+
+  if (params.fromCreatedAt && typeof params.fromCreatedAt === 'string') {
+    search.filters!.createdAt = {
+      ...(search.filters!.createdAt ?? {}),
+      from: startOfDay(parseISO(params.fromCreatedAt)),
+    }
+  }
+
+  if (params.toCreatedAt && typeof params.toCreatedAt === 'string') {
+    search.filters!.createdAt = {
+      ...(search.filters!.createdAt ?? {}),
+      to: endOfDay(parseISO(params.toCreatedAt)),
+    }
   }
 
   if (params.recency && params.recency === 'asc') {
@@ -192,6 +212,20 @@ export function evaluationResultsV2SearchToQueryParams(
   if (search.filters?.commitIds?.length) {
     const commitIds = [...new Set(search.filters?.commitIds)].filter(Boolean)
     params.set('commitIds', commitIds.join(','))
+  }
+
+  if (search.filters?.createdAt?.from) {
+    params.set(
+      'fromCreatedAt',
+      formatISO(search.filters.createdAt.from, { representation: 'date' }),
+    )
+  }
+
+  if (search.filters?.createdAt?.to) {
+    params.set(
+      'toCreatedAt',
+      formatISO(search.filters.createdAt.to, { representation: 'date' }),
+    )
   }
 
   if (search.orders?.recency === 'asc') {
