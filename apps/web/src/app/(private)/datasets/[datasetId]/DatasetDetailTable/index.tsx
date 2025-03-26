@@ -45,7 +45,7 @@ function DatasetBlankSlate({
   onClick,
   isCreating,
 }: {
-  onClick: () => Promise<void>
+  onClick: () => void
   isCreating: boolean
 }) {
   return (
