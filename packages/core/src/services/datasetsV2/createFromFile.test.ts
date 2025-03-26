@@ -56,7 +56,7 @@ describe('createDatasetFromFile', () => {
     expect(result.error).toBeUndefined()
     expect(result.value?.dataset).toMatchObject({
       name: 'Test Dataset',
-      tags: [],
+      isGolden: false,
       columns: [
         { identifier: 'name_identifier', name: 'name' },
         { identifier: 'surname_identifier', name: 'surname' },

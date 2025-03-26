@@ -6,6 +6,7 @@ import {
   text,
   uniqueIndex,
   varchar,
+  boolean,
 } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
@@ -13,7 +14,6 @@ import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 import { workspaces } from './workspaces'
 import { type DatasetColumnRole } from '../../constants'
-import { sql } from 'drizzle-orm'
 
 export type Column = {
   identifier: string
@@ -35,10 +35,7 @@ export const datasetsV2 = latitudeSchema.table(
     authorId: text('author_id').references(() => users.id, {
       onDelete: 'set null',
     }),
-    tags: varchar('tags', { length: 255 })
-      .array()
-      .notNull()
-      .default(sql`'{}'::varchar[]`),
+    isGolden: boolean('is_golden').notNull().default(false),
     columns: jsonb('columns').$type<Column[]>().notNull(),
     ...timestamps(),
   },

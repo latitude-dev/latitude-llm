@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import Link from 'next/link'
 import { DatasetV2 } from '@latitude-data/core/browser'
 import {
   Button,
   dateFormatter,
+  SwitchToggle,
   Table,
   TableBlankSlate,
   TableBody,
@@ -14,6 +15,7 @@ import {
   TableHeader,
   TableRow,
   Text,
+  Tooltip,
 } from '@latitude-data/web-ui'
 import useDatasets from '$/stores/datasetsV2'
 import { useToggleModal } from '$/hooks/useToogleModal'
@@ -24,6 +26,32 @@ import { LinkableTablePaginationFooter } from '$/components/TablePaginationFoote
 
 import DeleteDatasetModal from '../DeleteDatasetModal'
 import { NewDatasetModal } from '../RootHeader/NewDatasetModal'
+
+function ToggleGoldenDatasetCell({
+  dataset,
+  page,
+  pageSize,
+}: {
+  dataset: DatasetV2
+  page: string
+  pageSize: string
+}) {
+  const { toggleIsGolden, isUpdatingGolden } = useDatasets({ page, pageSize })
+  const onToggleGolden = useCallback(
+    ({ dataset }: { dataset: DatasetV2 }) =>
+      async () => {
+        await toggleIsGolden({ id: dataset.id })
+      },
+    [toggleIsGolden],
+  )
+  return (
+    <SwitchToggle
+      disabled={isUpdatingGolden}
+      checked={dataset.isGolden}
+      onCheckedChange={onToggleGolden({ dataset })}
+    />
+  )
+}
 
 export function DatasetsTable({
   datasets: serverDatasets,
@@ -71,7 +99,12 @@ export function DatasetsTable({
 
   return (
     <>
-      <DeleteDatasetModal dataset={deletable} setDataset={setDeletable} />
+      <DeleteDatasetModal
+        dataset={deletable}
+        setDataset={setDeletable}
+        page={page}
+        pageSize={pageSize}
+      />
       <Table
         externalFooter={
           <LinkableTablePaginationFooter
@@ -89,6 +122,12 @@ export function DatasetsTable({
             <TableHead>Name</TableHead>
             <TableHead>Columns</TableHead>
             <TableHead>Author</TableHead>
+            <TableHead>
+              <Tooltip trigger='Golden Dataset' triggerIcon={{ name: 'info' }}>
+                Golden datasets are datasets that are used as a reference for
+                evaluation of prompts.
+              </Tooltip>
+            </TableHead>
             <TableHead>Created at</TableHead>
             <TableHead />
           </TableRow>
@@ -106,6 +145,13 @@ export function DatasetsTable({
               </TableCell>
               <TableCell>
                 <Text.H5>{dataset.author?.name}</Text.H5>
+              </TableCell>
+              <TableCell>
+                <ToggleGoldenDatasetCell
+                  dataset={dataset}
+                  page={page}
+                  pageSize={pageSize}
+                />
               </TableCell>
               <TableCell>
                 <Text.H5 color='foregroundMuted'>

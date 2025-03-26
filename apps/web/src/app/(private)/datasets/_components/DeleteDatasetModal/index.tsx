@@ -7,13 +7,20 @@ import { useRouter } from 'next/navigation'
 
 export default function DeleteDatasetModal({
   dataset,
+  page,
+  pageSize,
   setDataset,
 }: {
   dataset: DatasetV2 | null
+  page: string
+  pageSize: string
   setDataset: ReactStateDispatch<DatasetV2 | null>
 }) {
   const router = useRouter()
-  const { destroy } = useDatasets()
+  const { destroy } = useDatasets({
+    page,
+    pageSize,
+  })
   if (!dataset) return null
 
   return (

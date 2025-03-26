@@ -8,6 +8,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { toggleDatasetAction } from '$/actions/datasetsV2/toggleGoldenDatasetAction'
 
 const EMPTY_ARRAY: DatasetV2[] = []
 export default function useDatasets(
@@ -68,10 +69,28 @@ export default function useDatasets(
         description: 'Dataset removed successfully',
       })
 
-      // FIXME: This does not work. WHY?
       mutate(data.filter((ds) => ds.id !== dataset.id))
     },
   })
+
+  const { execute: toggleIsGolden, isPending: isUpdatingGolden } =
+    useLatitudeAction<typeof toggleDatasetAction>(toggleDatasetAction, {
+      onSuccess: ({ data: dataset }) => {
+        if (!dataset) return
+
+        if (dataset.isGolden) {
+          toast({
+            title: 'Success',
+            description: 'Dataset converted to golden successfully',
+          })
+        }
+
+        const newData = data.map((prevDataset) =>
+          prevDataset.id === dataset.id ? deserialize(dataset) : prevDataset,
+        )
+        mutate(newData)
+      },
+    })
 
   return {
     data,
@@ -81,6 +100,8 @@ export default function useDatasets(
     createError,
     destroy,
     isDestroying,
+    toggleIsGolden,
+    isUpdatingGolden,
     ...rest,
   }
 }
