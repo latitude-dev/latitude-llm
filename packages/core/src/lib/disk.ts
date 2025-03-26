@@ -27,12 +27,11 @@ function getAwsConfig() {
   const bucket = env.S3_BUCKET
   const publicBucket = env.PUBLIC_S3_BUCKET
   const region = env.AWS_REGION
-  
-  if (!bucket || !publicBucket || !region) {
+
+  if (!bucket || !publicBucket || !region)
     throw new Error(
-      '(PUBLIC)_S3_BUCKET and AWS_REGION variables are required.',
+      `Missing required AWS configuration variables: ${[!bucket && 'S3_BUCKET', !publicBucket && 'PUBLIC_S3_BUCKET', !region && 'AWS_REGION'].filter(Boolean).join(', ')}.`,
     )
-  }
 
   const accessKeyId = env.AWS_ACCESS_KEY
   const secretAccessKey = env.AWS_ACCESS_SECRET
