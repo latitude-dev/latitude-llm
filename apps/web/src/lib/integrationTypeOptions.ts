@@ -160,6 +160,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Audiense',
     icon: 'audiense',
   },
+  [HostedIntegrationType.Apify]: {
+    label: 'Apify',
+    icon: 'apify',
+  },
 }
 
 export function integrationOptions(
