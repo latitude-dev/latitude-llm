@@ -100,6 +100,7 @@ export default function EditWebhook() {
 
           <div className='py-2'>
             <MultiSelect
+              maxCount={2}
               description='You can filter webhook events by project to limit the scope of the notifications.'
               info='Leave empty to apply to all projects'
               label='Projects'
