@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { publisher } from '@latitude-data/core/events/publisher'
+import { publisher } from '@latitude-data/core/events'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 

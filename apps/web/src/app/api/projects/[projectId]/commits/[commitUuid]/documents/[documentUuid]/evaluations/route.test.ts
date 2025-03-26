@@ -1,6 +1,6 @@
 import { Providers } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
-import { Result } from '@latitude-data/core/lib/Result'
+import { Result } from '@latitude-data/core/lib'
 import { ConnectedEvaluationsRepository } from '@latitude-data/core/repositories'
 import { NextRequest, NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'

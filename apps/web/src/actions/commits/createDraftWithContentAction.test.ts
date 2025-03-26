@@ -7,7 +7,7 @@ import {
 } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { helpers } from '@latitude-data/core/factories'
-import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
+import { generateUUIDIdentifier } from '@latitude-data/core/lib'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'

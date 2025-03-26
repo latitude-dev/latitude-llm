@@ -1,6 +1,6 @@
 import { EvaluationMetadataType, Workspace } from '@latitude-data/core/browser'
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
-import { getEvaluationPrompt } from '@latitude-data/core/services/evaluations/index'
+import { getEvaluationPrompt } from '@latitude-data/core/services'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'

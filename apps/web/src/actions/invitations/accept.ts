@@ -5,8 +5,8 @@ import {
   unsafelyFindWorkspace,
   unsafelyGetUser,
 } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { acceptInvitation } from '@latitude-data/core/services/invitations/accept'
+import { NotFoundError } from '@latitude-data/core/lib'
+import { acceptInvitation } from '@latitude-data/core/services'
 import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'

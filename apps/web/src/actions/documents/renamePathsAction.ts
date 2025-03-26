@@ -1,7 +1,7 @@
 'use server'
 
 import { CommitsRepository } from '@latitude-data/core/repositories'
-import { renameDocumentPaths } from '@latitude-data/core/services/documents/renameDocumentPaths'
+import { renameDocumentPaths } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

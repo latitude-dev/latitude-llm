@@ -1,7 +1,7 @@
 'use server'
 
-import { PublishedDocumentRepository } from '@latitude-data/core/repositories/publishedDocumentsRepository'
-import { updatePublishedDocument } from '@latitude-data/core/services/publishedDocuments/update'
+import { PublishedDocumentRepository } from '@latitude-data/core/repositories'
+import { updatePublishedDocument } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { withDocument } from '../../procedures'

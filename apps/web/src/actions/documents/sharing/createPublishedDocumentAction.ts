@@ -1,6 +1,6 @@
 'use server'
 
-import { createPublishedDocument } from '@latitude-data/core/services/publishedDocuments/create'
+import { createPublishedDocument } from '@latitude-data/core/services'
 
 import { withDocument } from '../../procedures'
 

@@ -1,5 +1,5 @@
 import { Workspace } from '@latitude-data/core/browser'
-import { fetchDocumentLogWithMetadata } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithMetadata'
+import { fetchDocumentLogWithMetadata } from '@latitude-data/core/services'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'

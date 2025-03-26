@@ -1,7 +1,7 @@
 import type {
   SearchToolArgs,
   SearchToolResult,
-} from '@latitude-data/core/services/latitudeTools/webSearch/types'
+} from '@latitude-data/core/services'
 import { ContentCard, ContentCardContainer } from '../ContentCard'
 import { Icon, Text } from '../../../../atoms'
 import { TruncatedTooltip } from '../../../TruncatedTooltip'

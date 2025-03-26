@@ -10,9 +10,9 @@ import {
 } from '@latitude-data/core/browser'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import { createProject } from '@latitude-data/core/factories'
-import { LatitudeError } from '@latitude-data/core/lib/errors'
-import { Result } from '@latitude-data/core/lib/Result'
-import { ChainError } from '@latitude-data/core/lib/chainStreamManager/ChainErrors/index'
+import { LatitudeError } from '@latitude-data/core/lib'
+import { Result } from '@latitude-data/core/lib'
+import { ChainError } from '@latitude-data/core/lib'
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { testConsumeStream } from 'test/helpers'
@@ -30,7 +30,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock(
-  '@latitude-data/core/services/documentLogs/index',
+  '@latitude-data/core/services'
   async (importOriginal) => {
     const original = (await importOriginal()) as typeof importOriginal
 

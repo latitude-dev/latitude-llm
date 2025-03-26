@@ -1,4 +1,4 @@
-import setupServiceFn from '@latitude-data/core/services/users/setupService'
+import { setupService as setupServiceFn } from '@latitude-data/core/services'
 import { env } from '@latitude-data/env'
 import { captureException } from '$/helpers/captureException'
 

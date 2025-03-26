@@ -15,7 +15,7 @@ import {
   evaluationResults,
   providerLogs,
 } from '../../schema'
-import serializeProviderLog from '../providerLogs/serialize'
+import { serializeProviderLog } from '../providerLogs/serialize'
 import { getCommitFilter } from './computeDocumentLogsWithMetadata'
 
 const DEFAULT_PAGE_SIZE = '25'

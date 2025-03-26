@@ -1,7 +1,7 @@
 'use server'
 
 import { DatasetsV2Repository } from '@latitude-data/core/repositories'
-import { destroyDataset } from '@latitude-data/core/services/datasetsV2/destroy'
+import { destroyDataset } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

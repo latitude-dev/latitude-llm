@@ -3,7 +3,7 @@ import useFetcher from '$/hooks/useFetcher'
 import { compact } from 'lodash-es'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
-import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { compactObject } from '@latitude-data/core/lib'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { updateDatasetRowAction } from '$/actions/datasetRows/update'
 import {

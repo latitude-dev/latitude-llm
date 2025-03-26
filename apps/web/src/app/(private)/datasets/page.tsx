@@ -10,7 +10,7 @@ import { DatasetsTable as DatasetsV1Table } from './_v1DeprecatedComponents/Data
 import { DatasetsTable } from './_components/DatasetsTable'
 import { Dataset, DatasetV2, Workspace } from '@latitude-data/core/browser'
 import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
-import { Result, TypedResult } from '@latitude-data/core/lib/Result'
+import { Result, TypedResult } from '@latitude-data/core/lib'
 import { IDatasetSettingsModal } from '$/services/routes'
 
 type GetDataResult =

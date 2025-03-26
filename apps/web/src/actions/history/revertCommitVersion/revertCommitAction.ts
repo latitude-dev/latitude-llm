@@ -3,7 +3,7 @@
 import { z } from 'zod'
 
 import { withProject } from '../../procedures'
-import { revertCommit } from '@latitude-data/core/services/history/revertCommit'
+import { revertCommit } from '@latitude-data/core/services'
 
 export const revertCommitChangesAction = withProject
   .createServerAction()

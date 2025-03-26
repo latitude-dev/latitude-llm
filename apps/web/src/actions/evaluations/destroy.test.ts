@@ -1,6 +1,6 @@
 import { ProviderApiKey, Providers } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
-import { Result } from '@latitude-data/core/lib/Result'
+import { Result } from '@latitude-data/core/lib'
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

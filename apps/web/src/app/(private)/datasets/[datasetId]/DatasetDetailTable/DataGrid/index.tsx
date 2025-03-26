@@ -10,7 +10,7 @@ import type {
 import { Text } from '@latitude-data/web-ui'
 import { DatasetRoleStyle } from '$/hooks/useDatasetRoles'
 import { DatasetV2 } from '@latitude-data/core/browser'
-import { ClientPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { ClientPagination } from '@latitude-data/core/lib'
 import { useCallback, useMemo, useState } from 'react'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { EditCell } from '$/app/(private)/datasets/[datasetId]/DatasetDetailTable/DataGrid/EditCell'

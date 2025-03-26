@@ -1,7 +1,7 @@
 'use server'
 
 import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
-import { publisher } from '@latitude-data/core/events/publisher'
+import { publisher } from '@latitude-data/core/events'
 import { type ChainEventDto, type Message } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { createStreamableValue } from 'ai/rsc'

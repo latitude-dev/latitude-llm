@@ -1,6 +1,6 @@
 'use server'
 
-import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
+import { createMagicLinkToken } from '@latitude-data/core/services'
 import { getFirstWorkspace, getUserFromCredentials } from '$/data-access'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
@@ -8,7 +8,7 @@ import { z } from 'zod'
 
 import { errorHandlingProcedure } from '../procedures'
 import { env } from '@latitude-data/env'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { NotFoundError } from '@latitude-data/core/lib'
 import { setSession } from '$/services/auth/setSession'
 
 export const loginAction = errorHandlingProcedure

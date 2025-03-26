@@ -5,8 +5,8 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
-import { createCommit } from '@latitude-data/core/services/commits/create'
-import { updateDocument } from '@latitude-data/core/services/documents/update'
+import { createCommit } from '@latitude-data/core/services'
+import { updateDocument } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

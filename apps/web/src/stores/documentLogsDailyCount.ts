@@ -1,4 +1,4 @@
-import { DailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
+import { DailyCount } from '@latitude-data/core/services'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'

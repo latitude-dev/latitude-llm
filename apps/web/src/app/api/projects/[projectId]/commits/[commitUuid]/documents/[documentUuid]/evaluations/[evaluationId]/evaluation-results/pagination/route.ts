@@ -1,10 +1,10 @@
 import { Workspace } from '@latitude-data/core/browser'
-import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { buildPagination } from '@latitude-data/core/lib'
 import {
   CommitsRepository,
   EvaluationsRepository,
 } from '@latitude-data/core/repositories'
-import { computeEvaluationResultsWithMetadataCount } from '@latitude-data/core/services/evaluationResults/computeEvaluationResultsWithMetadata'
+import { computeEvaluationResultsWithMetadataCount } from '@latitude-data/core/services'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { ROUTES } from '$/services/routes'

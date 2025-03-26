@@ -1,5 +1,5 @@
 import { Workspace } from '@latitude-data/core/browser'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { BadRequestError } from '@latitude-data/core/lib'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'

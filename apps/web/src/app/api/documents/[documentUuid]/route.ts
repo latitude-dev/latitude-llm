@@ -6,9 +6,9 @@ import {
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { documentVersionPresenter } from '@latitude-data/core/services/providerLogs/documentVersionPresenter'
+import { documentVersionPresenter } from '@latitude-data/core/services'
 import { findCommitById } from '@latitude-data/core/data-access/commits'
-import { BadRequestError, NotFoundError } from '@latitude-data/core/lib/errors'
+import { BadRequestError, NotFoundError } from '@latitude-data/core/lib'
 
 export const GET = errorHandler(
   authHandler(

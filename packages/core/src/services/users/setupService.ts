@@ -9,7 +9,7 @@ import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
 import { createUser } from './createUser'
 
-export default function setupService({
+export function setupService({
   email,
   name,
   companyName,

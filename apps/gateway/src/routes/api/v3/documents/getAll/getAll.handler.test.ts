@@ -6,7 +6,7 @@ import {
   helpers,
 } from '@latitude-data/core/factories'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
-import { mergeCommit } from '@latitude-data/core/services/commits/merge'
+import { mergeCommit } from '@latitude-data/core/services'
 import app from '$/routes/app'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { Commit } from '@latitude-data/core/browser'

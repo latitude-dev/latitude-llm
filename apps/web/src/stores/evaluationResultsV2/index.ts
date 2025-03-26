@@ -13,7 +13,7 @@ import {
   EvaluationV2,
   Project,
 } from '@latitude-data/core/browser'
-import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { IPagination } from '@latitude-data/core/lib'
 import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'

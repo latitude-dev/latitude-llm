@@ -1,4 +1,4 @@
-import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
+import { streamToGenerator } from '@latitude-data/core/lib'
 import { SSEStreamingApi } from 'hono/streaming'
 
 export async function pipeToStream(

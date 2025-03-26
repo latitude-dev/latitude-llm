@@ -18,7 +18,7 @@ import {
 import useDatasets from '$/stores/datasetsV2'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { useSearchParams } from 'next/navigation'
-import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { buildPagination } from '@latitude-data/core/lib'
 import { ROUTES } from '$/services/routes'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 

@@ -1,4 +1,4 @@
-import { DocumentLogsAggregations } from '@latitude-data/core/services/documentLogs/computeDocumentLogsAggregations'
+import { DocumentLogsAggregations } from '@latitude-data/core/services'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'

@@ -2,8 +2,8 @@
 
 import { z } from 'zod'
 import { authProcedure } from '../procedures'
-import { deleteWebhook } from '@latitude-data/core/services/webhooks/deleteWebhook'
-import { getWebhook } from '@latitude-data/core/services/webhooks/getWebhook'
+import { deleteWebhook } from '@latitude-data/core/services'
+import { getWebhook } from '@latitude-data/core/services'
 
 export const deleteWebhookAction = authProcedure
   .createServerAction()

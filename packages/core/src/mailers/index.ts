@@ -1,1 +1,2 @@
-export * from './mailers/mailers'
+export * from './emails'
+export * from './mailers'

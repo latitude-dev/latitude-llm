@@ -5,7 +5,7 @@ import {
   DatasetVersion,
   DocumentTriggerParameters,
 } from '@latitude-data/constants'
-import { EmailTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/helpers/schema'
+import { EmailTriggerConfiguration } from '@latitude-data/core/services'
 import {
   Badge,
   Button,

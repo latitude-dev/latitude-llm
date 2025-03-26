@@ -7,8 +7,8 @@ import {
   LogSources,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
-import { createDataset } from '@latitude-data/core/services/datasets/create'
+import { BadRequestError } from '@latitude-data/core/lib'
+import { createDataset } from '@latitude-data/core/services'
 import { env } from '@latitude-data/env'
 import { ChainEventDto } from '@latitude-data/sdk'
 import slugify from '@sindresorhus/slugify'

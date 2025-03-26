@@ -7,7 +7,7 @@ import {
   BadRequestError,
   NotFoundError,
   paginateQuery,
-} from '@latitude-data/core/lib/index'
+} from '@latitude-data/core/lib'
 import {
   CommitsRepository,
   ProjectsRepository,

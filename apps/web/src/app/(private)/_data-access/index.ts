@@ -9,8 +9,8 @@ import {
   type Commit,
 } from '@latitude-data/core/browser'
 import { findAllEvaluationTemplates } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
+import { NotFoundError } from '@latitude-data/core/lib'
+import { ApiKeysRepository } from '@latitude-data/core/repositories'
 import {
   CommitsRepository,
   ConnectedEvaluationsRepository,
@@ -21,7 +21,7 @@ import {
   ProjectsRepository,
   ProviderApiKeysRepository,
   ProviderLogsRepository,
-} from '@latitude-data/core/repositories/index'
+} from '@latitude-data/core/repositories'
 import { notFound } from 'next/navigation'
 
 export const getFirstProjectCached = cache(

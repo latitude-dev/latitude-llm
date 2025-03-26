@@ -31,7 +31,7 @@ export type ValidatedAgentStep = {
 }
 
 type JSONOverride = { schema: JSONSchema7; output: 'object' | 'array' }
-export type ConfigOverrides = JSONOverride | { output: 'no-schema' }
+export type AgentConfigOverrides = JSONOverride | { output: 'no-schema' }
 
 type ValidatorContext = {
   workspace: Workspace

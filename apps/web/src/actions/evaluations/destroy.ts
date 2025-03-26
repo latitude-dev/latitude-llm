@@ -1,7 +1,7 @@
 'use server'
 
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
-import { destroyEvaluation } from '@latitude-data/core/services/evaluations/destroy'
+import { destroyEvaluation } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

@@ -2,7 +2,7 @@ import type { Dataset, DatasetV2 } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
-import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { compactObject } from '@latitude-data/core/lib'
 
 export default function useDatasetRowsCount(
   {

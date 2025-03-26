@@ -4,7 +4,7 @@ import {
   DocumentVersionsRepository,
   ProjectsRepository,
 } from '@latitude-data/core/repositories'
-import { createNewDocument } from '@latitude-data/core/services/documents/create'
+import { createNewDocument } from '@latitude-data/core/services'
 import { documentPresenter } from '$/presenters/documentPresenter'
 import { AppRouteHandler } from '$/openApi/types'
 import { GetOrCreateRoute } from './getOrCreate.route'

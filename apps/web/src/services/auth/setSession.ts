@@ -1,5 +1,5 @@
-import { type TokenType } from '@latitude-data/core/websockets/constants'
-import { generateWebsocketToken } from '@latitude-data/core/websockets/utils'
+import { type TokenType } from '@latitude-data/core/websockets'
+import { generateWebsocketToken } from '@latitude-data/core/websockets'
 import { cookies } from 'next/headers'
 
 import { lucia } from '.'

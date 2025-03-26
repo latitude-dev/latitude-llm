@@ -11,7 +11,7 @@ import {
   convertToCronExpression,
   getScheduleDescription,
 } from './scheduleUtils'
-import { ScheduledTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/helpers/schema'
+import { ScheduledTriggerConfiguration } from '@latitude-data/core/services'
 
 // Convert ScheduledTriggerConfiguration to ScheduleConfig
 function convertToScheduleConfig(

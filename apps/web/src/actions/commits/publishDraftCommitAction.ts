@@ -1,8 +1,8 @@
 'use server'
 
-import { publisher } from '@latitude-data/core/events/publisher'
+import { publisher } from '@latitude-data/core/events'
 import { CommitsRepository } from '@latitude-data/core/repositories'
-import { updateAndMergeCommit } from '@latitude-data/core/services/commits/updateAndMerge'
+import { updateAndMergeCommit } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

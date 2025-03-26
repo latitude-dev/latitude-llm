@@ -1,4 +1,8 @@
+export * from './types'
+export * from './relations'
+export * from './schemaHelpers'
 export * from './db-schema'
+export * from './messages'
 
 // Tenancy tables
 export * from './models/users'

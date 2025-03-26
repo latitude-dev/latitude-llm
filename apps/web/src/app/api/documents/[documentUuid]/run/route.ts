@@ -2,7 +2,7 @@ import { LogSources } from '@latitude-data/core/browser'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { publisher } from '@latitude-data/core/events/publisher'
+import { publisher } from '@latitude-data/core/events'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 
 import { authHandler } from '$/middlewares/authHandler'

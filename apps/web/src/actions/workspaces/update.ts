@@ -1,7 +1,7 @@
 'use server'
 
 import { WorkspacesRepository } from '@latitude-data/core/repositories'
-import { updateWorkspace } from '@latitude-data/core/services/workspaces/update'
+import { updateWorkspace } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

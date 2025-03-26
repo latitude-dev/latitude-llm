@@ -19,7 +19,7 @@ import {
 } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { serializeForEvaluation as serializeProviderLog } from '../providerLogs'
-import { serialize } from './serialize'
+import { serializeEvaluationResult } from './serialize'
 
 describe('serialize', () => {
   let workspace: Workspace
@@ -98,7 +98,7 @@ describe('serialize', () => {
         evaluationProviderLog,
       )
 
-      const data = await serialize({ workspace, evaluationResult }).then((r) =>
+      const data = await serializeEvaluationResult({ workspace, evaluationResult }).then((r) =>
         r.unwrap(),
       )
       expect(data).toEqual({
@@ -136,7 +136,7 @@ describe('serialize', () => {
         .find(er.id)
         .then((r) => r.unwrap())
 
-      const data = await serialize({ workspace, evaluationResult }).then((r) =>
+      const data = await serializeEvaluationResult({ workspace, evaluationResult }).then((r) =>
         r.unwrap(),
       )
 

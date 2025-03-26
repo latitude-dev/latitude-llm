@@ -6,7 +6,7 @@ import {
   MAX_UPLOAD_SIZE_IN_MB,
 } from '@latitude-data/core/browser'
 import { CommitsRepository } from '@latitude-data/core/repositories'
-import { bulkUploadDocumentLogs } from '@latitude-data/core/services/documentLogs/bulkUpload'
+import { bulkUploadDocumentLogs } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { withDocument } from '../procedures'

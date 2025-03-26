@@ -1,4 +1,4 @@
-import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { IPagination } from '@latitude-data/core/lib'
 import { Button, Skeleton, Text } from '@latitude-data/web-ui'
 import { GoToPageInput } from '$/components/TablePaginationFooter/GoToPageInput'
 import Link from 'next/link'

@@ -1,6 +1,6 @@
 'use server'
 
-import { createIntegration } from '@latitude-data/core/services/integrations/create'
+import { createIntegration } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
@@ -8,7 +8,7 @@ import { IntegrationType } from '@latitude-data/constants'
 import {
   externalMcpIntegrationConfigurationSchema,
   hostedMcpIntegrationConfigurationFormSchema,
-} from '@latitude-data/core/services/integrations/helpers/schema'
+} from '@latitude-data/core/services'
 import { Workspace } from '@latitude-data/core/browser'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
 

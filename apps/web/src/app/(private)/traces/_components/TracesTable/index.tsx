@@ -3,8 +3,8 @@
 import { Key, useMemo, useState } from 'react'
 
 import { TraceWithSpans } from '@latitude-data/core/browser'
-import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { ListTracesResponse } from '@latitude-data/core/services/traces/list'
+import { buildPagination } from '@latitude-data/core/lib'
+import { ListTracesResponse } from '@latitude-data/core/services'
 import {
   Badge,
   cn,

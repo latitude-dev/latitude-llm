@@ -1,19 +1,19 @@
 'use server'
 
 import { ChainStepObjectResponse } from '@latitude-data/core/browser'
-import { BadRequestError, NotFoundError } from '@latitude-data/core/lib/errors'
+import { BadRequestError, NotFoundError } from '@latitude-data/core/lib'
 import {
   CommitsRepository,
   ProviderApiKeysRepository,
 } from '@latitude-data/core/repositories'
-import { createNewDocument } from '@latitude-data/core/services/documents/create'
+import { createNewDocument } from '@latitude-data/core/services'
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
 import { captureException, captureMessage } from '$/helpers/captureException'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
-import SpanRepository from '@latitude-data/core/repositories/spanRepository'
+import SpanRepository from '@latitude-data/core/repositories'
 import { unsafelyFindProject } from '@latitude-data/core/data-access'
 
 export const createDocumentVersionFromTraceAction = authProcedure

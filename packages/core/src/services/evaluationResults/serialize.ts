@@ -57,7 +57,7 @@ async function findEvaluationProviderLog(
   })
 }
 
-export async function serialize(
+export async function serializeEvaluationResult(
   {
     workspace,
     evaluationResult,

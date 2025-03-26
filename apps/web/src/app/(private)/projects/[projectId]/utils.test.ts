@@ -1,5 +1,5 @@
 import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { NotFoundError } from '@latitude-data/core/lib'
 import { describe, expect, it } from 'vitest'
 
 import { getRedirectUrl } from './utils'

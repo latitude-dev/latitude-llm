@@ -17,3 +17,5 @@ const pool = new Pool({
 
 export const dbUtils = drizzleDbUtils
 export const database = drizzle(pool, { schema })
+
+export * from './utils'

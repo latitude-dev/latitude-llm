@@ -14,7 +14,7 @@ import {
   EvaluationResultableType,
   EvaluationResultDto,
 } from '@latitude-data/core/browser'
-import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { buildPagination } from '@latitude-data/core/lib'
 import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import {
   Badge,

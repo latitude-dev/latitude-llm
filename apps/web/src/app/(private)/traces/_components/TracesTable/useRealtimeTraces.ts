@@ -8,7 +8,7 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { Span, Trace, TraceWithSpans } from '@latitude-data/core/browser'
 import { reverse, sortBy } from 'lodash-es'
-import { ListTracesResponse } from '@latitude-data/core/services/traces/list'
+import { ListTracesResponse } from '@latitude-data/core/services'
 
 export function useRealtimeTraces() {
   const { mutate } = useTracesPagination({

@@ -1,7 +1,7 @@
 'use server'
 
 import { CommitsRepository } from '@latitude-data/core/repositories'
-import { deleteCommitDraft } from '@latitude-data/core/services/commits/delete'
+import { deleteCommitDraft } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

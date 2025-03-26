@@ -8,13 +8,13 @@ import {
   DocumentLogFilterOptions,
   Workspace,
 } from '@latitude-data/core/browser'
-import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
-import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
-import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
+import { QueryParams } from '@latitude-data/core/lib'
+import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services'
+import { fetchDocumentLogWithPosition } from '@latitude-data/core/services'
 import { redirect } from 'next/navigation'
 
 import { DocumentLogsRepository } from '@latitude-data/core/repositories'
-import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs/index'
+import { parseLogFiltersParams } from '@latitude-data/core/services'
 import { DocumentLogsPage } from './_components'
 import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
 

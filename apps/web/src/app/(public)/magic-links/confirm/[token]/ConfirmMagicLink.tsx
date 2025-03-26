@@ -1,4 +1,4 @@
-import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
+import { confirmMagicLinkToken } from '@latitude-data/core/services'
 import { FocusHeader } from '@latitude-data/web-ui'
 import { FocusLayout } from '$/components/layouts'
 import { ROUTES } from '$/services/routes'

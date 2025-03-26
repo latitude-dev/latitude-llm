@@ -1,6 +1,6 @@
 'use server'
 
-import { createProject } from '@latitude-data/core/services/projects/create'
+import { createProject } from '@latitude-data/core/services'
 import { ROUTES } from '$/services/routes'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'

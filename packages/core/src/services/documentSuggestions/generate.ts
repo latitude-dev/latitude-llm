@@ -19,7 +19,7 @@ import {
 } from '../../repositories'
 import { documentSuggestions } from '../../schema'
 import { getCopilot, runCopilot } from '../copilot'
-import { serialize as serializeEvaluationResult } from '../evaluationResults'
+import { serializeEvaluationResult as serializeEvaluationResult } from '../evaluationResults'
 import { getEvaluationPrompt } from '../evaluations'
 
 async function checkSuggestionLimits(

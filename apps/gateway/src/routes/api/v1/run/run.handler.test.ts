@@ -13,8 +13,8 @@ import {
   createProject,
   helpers,
 } from '@latitude-data/core/factories'
-import { Result } from '@latitude-data/core/lib/Result'
-import { mergeCommit } from '@latitude-data/core/services/commits/merge'
+import { Result } from '@latitude-data/core/lib'
+import { mergeCommit } from '@latitude-data/core/services'
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { testConsumeStream } from 'test/helpers'
@@ -33,17 +33,14 @@ const mocks = vi.hoisted(() => ({
   },
 }))
 
-vi.mock(
-  '@latitude-data/core/services/commits/runDocumentAtCommit',
-  async (importOriginal) => {
-    const original = (await importOriginal()) as typeof importOriginal
+vi.mock('@latitude-data/core/services', async (importOriginal) => {
+  const original = (await importOriginal()) as typeof importOriginal
 
-    return {
-      ...original,
-      runDocumentAtCommit: mocks.runDocumentAtCommit,
-    }
-  },
-)
+  return {
+    ...original,
+    runDocumentAtCommit: mocks.runDocumentAtCommit,
+  }
+})
 
 vi.mock('$/jobs', () => ({
   queues: mocks.queues,

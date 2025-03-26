@@ -1,6 +1,6 @@
 import { Workspace } from '@latitude-data/core/browser'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
-import { generateCsvFromDocumentLogs } from '@latitude-data/core/services/documentLogs/generateCsvFromDocumentLogs'
+import { BadRequestError } from '@latitude-data/core/lib'
+import { generateCsvFromDocumentLogs } from '@latitude-data/core/services'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'

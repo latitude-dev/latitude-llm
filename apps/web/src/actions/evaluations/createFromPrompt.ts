@@ -4,7 +4,7 @@ import {
   EvaluationMetadataType,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
-import { createEvaluation } from '@latitude-data/core/services/evaluations/create'
+import { createEvaluation } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { withDocument } from '../procedures'

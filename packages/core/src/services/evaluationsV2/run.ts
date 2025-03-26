@@ -27,7 +27,7 @@ import {
 } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema'
 import { getColumnData } from '../datasetsV2/utils'
-import serializeProviderLog from '../providerLogs/serialize'
+import { serializeProviderLog } from '../providerLogs/serialize'
 import { EVALUATION_SPECIFICATIONS } from './shared'
 
 export async function runEvaluationV2<

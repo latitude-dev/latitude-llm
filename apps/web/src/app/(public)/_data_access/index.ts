@@ -5,9 +5,9 @@ import {
   unsafelyFindWorkspace,
   unsafelyGetUser,
 } from '@latitude-data/core/data-access'
-import { Result } from '@latitude-data/core/lib/Result'
-import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
-import { findSharedDocument } from '@latitude-data/core/services/publishedDocuments/findSharedDocument'
+import { Result } from '@latitude-data/core/lib'
+import { scanDocumentContent } from '@latitude-data/core/services'
+import { findSharedDocument } from '@latitude-data/core/services'
 
 export const findMembershipByTokenCache = cache(async (token: string) => {
   return await unsafelyFindMembershipByToken(token).then((r) => r.unwrap())

@@ -1,9 +1,9 @@
 'use server'
 
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { publisher } from '@latitude-data/core/events/publisher'
+import { publisher } from '@latitude-data/core/events'
 import { setupQueues } from '@latitude-data/core/jobs'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { BadRequestError } from '@latitude-data/core/lib'
 import {
   EvaluationsRepository,
   EvaluationsV2Repository,

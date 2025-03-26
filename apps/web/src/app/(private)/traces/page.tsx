@@ -1,4 +1,4 @@
-import { listTraces } from '@latitude-data/core/services/traces/list'
+import { listTraces } from '@latitude-data/core/services'
 import { TableWithHeader } from '@latitude-data/web-ui'
 import { getApiKeysCached } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'

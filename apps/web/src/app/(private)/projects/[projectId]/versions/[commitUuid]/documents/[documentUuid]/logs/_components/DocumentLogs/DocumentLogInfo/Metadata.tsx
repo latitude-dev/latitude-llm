@@ -20,7 +20,7 @@ import {
   MetadataItem,
   MetadataItemTooltip,
 } from '../../../../../[documentUuid]/_components/MetadataItem'
-import { getCostPer1M } from '@latitude-data/core/services/ai/estimateCost/index'
+import { getCostPer1M } from '@latitude-data/core/services'
 import {
   asPromptLFile,
   PromptLFileParameter,

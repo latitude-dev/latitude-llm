@@ -4,8 +4,8 @@ import {
   LOG_SOURCES,
   LogSources,
 } from '@latitude-data/core/browser'
-import { paramsToString } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
-import { formatDocumentLogCreatedAtParam } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
+import { paramsToString } from '@latitude-data/core/lib'
+import { formatDocumentLogCreatedAtParam } from '@latitude-data/core/services'
 import { ReactStateDispatch } from '@latitude-data/web-ui'
 import { endOfDay } from 'date-fns'
 import { usePathname, useRouter } from 'next/navigation'

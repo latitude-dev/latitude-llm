@@ -11,7 +11,7 @@ import {
   DocumentVersionsRepository,
   ProviderApiKeysRepository,
 } from '@latitude-data/core/repositories'
-import { mergeCommit } from '@latitude-data/core/services/commits/merge'
+import { mergeCommit } from '@latitude-data/core/services'
 import app from '$/routes/app'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

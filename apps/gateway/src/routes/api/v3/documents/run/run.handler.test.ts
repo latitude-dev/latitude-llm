@@ -18,10 +18,10 @@ import {
   createProject,
   helpers,
 } from '@latitude-data/core/factories'
-import { LatitudeError } from '@latitude-data/core/lib/errors'
-import { Result } from '@latitude-data/core/lib/Result'
-import { ChainError } from '@latitude-data/core/lib/chainStreamManager/ChainErrors/index'
-import { mergeCommit } from '@latitude-data/core/services/commits/merge'
+import { LatitudeError } from '@latitude-data/core/lib'
+import { Result } from '@latitude-data/core/lib'
+import { ChainError } from '@latitude-data/core/lib'
+import { mergeCommit } from '@latitude-data/core/services'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChainEventTypes } from '@latitude-data/constants'
@@ -48,17 +48,14 @@ vi.mock('$/common/sentry', async (importOriginal) => {
   }
 })
 
-vi.mock(
-  '@latitude-data/core/services/commits/runDocumentAtCommit',
-  async (importOriginal) => {
-    const original = (await importOriginal()) as typeof importOriginal
+vi.mock('@latitude-data/core/services', async (importOriginal) => {
+  const original = (await importOriginal()) as typeof importOriginal
 
-    return {
-      ...original,
-      runDocumentAtCommit: mocks.runDocumentAtCommit,
-    }
-  },
-)
+  return {
+    ...original,
+    runDocumentAtCommit: mocks.runDocumentAtCommit,
+  }
+})
 
 vi.mock('$/jobs', () => ({
   queues: mocks.queues,

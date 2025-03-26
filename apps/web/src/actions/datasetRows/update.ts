@@ -1,7 +1,7 @@
 'use server'
 
 import { z } from 'zod'
-import { updateDatasetRow } from '@latitude-data/core/services/datasetRows/update'
+import { updateDatasetRow } from '@latitude-data/core/services'
 import {
   DatasetRowsRepository,
   DatasetsV2Repository,

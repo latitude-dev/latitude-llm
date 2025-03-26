@@ -17,7 +17,13 @@ import { evaluationMetadataManual } from '../schema/models/evaluationMetadataDef
 import { getSharedTableColumns } from '../schema/schemaHelpers'
 import RepositoryLegacy from './repository'
 
-const tt = {
+type BaseTableColumns = ReturnType<typeof getTableColumns<typeof evaluations>>
+type EvaluationTableColumns = BaseTableColumns & {
+  metadata: ReturnType<typeof getSharedTableColumns>
+  resultConfiguration: ReturnType<typeof getSharedTableColumns>
+}
+
+const tt: EvaluationTableColumns = {
   ...getTableColumns(evaluations),
   metadata: omit(
     getSharedTableColumns(evaluations.metadataType, {

@@ -2,11 +2,11 @@ import { Suspense } from 'react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { ROUTES } from '$/services/routes'
-import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { buildPagination } from '@latitude-data/core/lib'
 import {
   getUsageOverview,
   GetUsageOverviewRow,
-} from '@latitude-data/core/services/workspaces/index'
+} from '@latitude-data/core/services'
 import {
   Table,
   Text,

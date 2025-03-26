@@ -3,7 +3,7 @@ import {
   CommitsRepository,
   EvaluationsRepository,
 } from '@latitude-data/core/repositories'
-import { computeEvaluationResultsWithMetadata } from '@latitude-data/core/services/evaluationResults/computeEvaluationResultsWithMetadata'
+import { computeEvaluationResultsWithMetadata } from '@latitude-data/core/services'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'

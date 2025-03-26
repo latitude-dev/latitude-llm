@@ -7,7 +7,7 @@ import {
   MAX_UPLOAD_SIZE_IN_MB,
 } from '@latitude-data/core/browser'
 import { DatasetsV2Repository as DatasetsRepository } from '@latitude-data/core/repositories'
-import { createDatasetFromFile } from '@latitude-data/core/services/datasetsV2/createFromFile'
+import { createDatasetFromFile } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

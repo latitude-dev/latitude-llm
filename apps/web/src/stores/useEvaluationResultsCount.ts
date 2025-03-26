@@ -1,5 +1,5 @@
-import { compactObject } from '@latitude-data/core/lib/compactObject'
-import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { compactObject } from '@latitude-data/core/lib'
+import { IPagination } from '@latitude-data/core/lib'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'

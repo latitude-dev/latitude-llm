@@ -1,8 +1,8 @@
 'use server'
 
 import { unsafelyGetUser } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
+import { NotFoundError } from '@latitude-data/core/lib'
+import { confirmMagicLinkToken } from '@latitude-data/core/services'
 import { getFirstWorkspace } from '$/data-access'
 import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'

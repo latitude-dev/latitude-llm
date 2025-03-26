@@ -1,6 +1,6 @@
 import { unsafelyFindUserByEmail, unsafelyGetUser } from '../../data-access'
 import { NotFoundError } from '../../lib'
-import { ReferralMailer } from '../../mailers'
+import { ReferralMailer } from '../../mailers/mailers/mailers/invitations/ReferralMailer'
 import { SendReferralInvitationEvent } from '../events'
 
 export const sendReferralInvitationJob = async ({

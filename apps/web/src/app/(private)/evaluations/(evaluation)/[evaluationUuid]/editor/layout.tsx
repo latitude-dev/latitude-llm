@@ -8,7 +8,7 @@ import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { EvaluationMetadataType } from '@latitude-data/core/browser'
-import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
+import { getFreeRuns } from '@latitude-data/core/services'
 import { redirect } from 'next/navigation'
 
 import EvaluationEditorLayout from './_components/EvaluationEditorLayout'

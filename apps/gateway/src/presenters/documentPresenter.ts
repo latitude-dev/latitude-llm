@@ -5,7 +5,7 @@ import {
   Workspace,
 } from '@latitude-data/core/browser'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
-import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
+import { scanDocumentContent } from '@latitude-data/core/services'
 import { z } from '@hono/zod-openapi'
 import { ConversationMetadata as CompilerConversationMetadata } from '@latitude-data/compiler'
 import { ConversationMetadata as PromptlConversationMetadata } from 'promptl-ai'

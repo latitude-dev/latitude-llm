@@ -6,7 +6,7 @@ import {
   evaluationResultsV2SearchFromQueryParams,
   evaluationResultsV2SearchToQueryParams,
 } from '@latitude-data/core/browser'
-import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { buildPagination } from '@latitude-data/core/lib'
 import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
 import { NextRequest, NextResponse } from 'next/server'
 

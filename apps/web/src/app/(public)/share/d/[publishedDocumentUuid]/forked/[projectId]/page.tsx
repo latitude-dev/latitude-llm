@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { findSharedDocumentCached } from '$/app/(public)/_data_access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
-import { findForkedDocument } from '@latitude-data/core/services/publishedDocuments/findForkedDocument'
+import { findForkedDocument } from '@latitude-data/core/services'
 import { ForkedDocument } from './_components/ForkedDocument'
 
 export default async function ForkedDocumentPage({

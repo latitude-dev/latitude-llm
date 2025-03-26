@@ -1,6 +1,6 @@
 'use server'
 
-import { deleteDocumentTrigger } from '@latitude-data/core/services/documentTriggers/delete'
+import { deleteDocumentTrigger } from '@latitude-data/core/services'
 
 import { withDocument } from '../../procedures'
 import { z } from 'zod'

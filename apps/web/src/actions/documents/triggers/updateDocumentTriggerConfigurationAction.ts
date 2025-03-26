@@ -1,13 +1,13 @@
 'use server'
 
-import { updateDocumentTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/update'
+import { updateDocumentTriggerConfiguration } from '@latitude-data/core/services'
 
 import { withDocument } from '../../procedures'
 import {
   DocumentTriggerConfiguration,
   emailTriggerConfigurationSchema,
   insertScheduledTriggerConfigurationSchema,
-} from '@latitude-data/core/services/documentTriggers/helpers/schema'
+} from '@latitude-data/core/services'
 import { z } from 'zod'
 import { DocumentTriggersRepository } from '@latitude-data/core/repositories'
 

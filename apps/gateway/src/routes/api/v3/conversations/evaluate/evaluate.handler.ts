@@ -1,10 +1,10 @@
 import { DocumentLog, EvaluationDto } from '@latitude-data/core/browser'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { NotFoundError } from '@latitude-data/core/lib'
 import {
   DocumentLogsRepository,
   EvaluationsRepository,
 } from '@latitude-data/core/repositories'
-import { evaluateDocumentLog } from '@latitude-data/core/services/documentLogs/evaluate'
+import { evaluateDocumentLog } from '@latitude-data/core/services'
 import { captureException } from '$/common/sentry'
 import { AppRouteHandler } from '$/openApi/types'
 import { EvaluateRoute } from './evaluate.route'

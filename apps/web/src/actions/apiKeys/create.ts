@@ -1,6 +1,6 @@
 'use server'
 
-import { createApiKey } from '@latitude-data/core/services/apiKeys/create'
+import { createApiKey } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

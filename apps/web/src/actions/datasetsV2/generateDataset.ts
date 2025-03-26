@@ -5,14 +5,14 @@ import {
   CLOUD_MESSAGES,
   LogSources,
 } from '@latitude-data/core/browser'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { BadRequestError } from '@latitude-data/core/lib'
 import { env } from '@latitude-data/env'
 import slugify from '@sindresorhus/slugify'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { authProcedure } from '$/actions/procedures'
 import { z } from 'zod'
-import { createDatasetFromFile } from '@latitude-data/core/services/datasetsV2/createFromFile'
+import { createDatasetFromFile } from '@latitude-data/core/services'
 
 export const generateDatasetAction = authProcedure
   .createServerAction()

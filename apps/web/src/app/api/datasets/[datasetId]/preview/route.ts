@@ -1,6 +1,6 @@
 import { Workspace } from '@latitude-data/core/browser'
 import { DatasetsRepository } from '@latitude-data/core/repositories'
-import { previewDataset } from '@latitude-data/core/services/datasets/preview'
+import { previewDataset } from '@latitude-data/core/services'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'

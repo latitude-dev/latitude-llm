@@ -1,5 +1,6 @@
 export * from './apiKeys'
 export * from './claimedRewards'
+export * from './commits'
 export * from './documentLogs'
 export * from './evaluationAdvancedTemplates'
 export * from './evaluationResults'

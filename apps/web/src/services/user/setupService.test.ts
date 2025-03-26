@@ -1,7 +1,7 @@
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
 import { Providers } from '@latitude-data/core/browser'
 import { database } from '@latitude-data/core/client'
-import { publisher } from '@latitude-data/core/events/publisher'
+import { publisher } from '@latitude-data/core/events'
 import * as factories from '@latitude-data/core/factories'
 import {
   apiKeys,
@@ -22,7 +22,7 @@ const mocks = vi.hoisted(() => ({
 }))
 const publisherSpy = vi.spyOn(publisher, 'publishLater')
 
-vi.mock('@latitude-data/core/services/claimedRewards/claim', () => ({
+vi.mock('@latitude-data/core/services', () => ({
   claimReward: mocks.claimReward,
 }))
 

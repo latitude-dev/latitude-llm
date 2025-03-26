@@ -1,7 +1,7 @@
 'use server'
 
 import { ClaimedReward, RewardType } from '@latitude-data/core/browser'
-import { claimReward } from '@latitude-data/core/services/claimedRewards/claim'
+import { claimReward } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

@@ -23,7 +23,7 @@ import {
   DatasetRow,
   Workspace,
 } from '@latitude-data/core/browser'
-import { Result, TypedResult } from '@latitude-data/core/lib/Result'
+import { Result, TypedResult } from '@latitude-data/core/lib'
 import { DatasetV1DetailTable } from '$/app/(private)/datasets/_v1DeprecatedComponents/DatasetDetailTable'
 
 type GetDataResult =

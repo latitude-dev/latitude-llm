@@ -3,8 +3,8 @@ import {
   type UsageSubscription,
 } from '$/components/UsageIndicatorPopover'
 import { calcualteUsage } from '$/lib/usageUtils'
-import { computeWorkspaceUsage } from '@latitude-data/core/services/workspaces/usage'
-import type { GetUsageOverviewRow } from '@latitude-data/core/services/workspaces/usageOverview/getUsageOverview'
+import { computeWorkspaceUsage } from '@latitude-data/core/services'
+import type { GetUsageOverviewRow } from '@latitude-data/core/services'
 export async function UsageCell({
   usageOverview,
   subscription,

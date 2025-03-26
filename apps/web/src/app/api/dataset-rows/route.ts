@@ -6,7 +6,7 @@ import {
   DatasetRowsRepository,
   DatasetsV2Repository,
 } from '@latitude-data/core/repositories'
-import { parsePage } from '@latitude-data/core/services/documentLogs/index'
+import { parsePage } from '@latitude-data/core/services'
 
 export const GET = errorHandler(
   authHandler(

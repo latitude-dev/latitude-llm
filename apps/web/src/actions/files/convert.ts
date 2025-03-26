@@ -1,7 +1,7 @@
 'use server'
 
 import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/browser'
-import { convertFile } from '@latitude-data/core/services/files/convert'
+import { convertFile } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

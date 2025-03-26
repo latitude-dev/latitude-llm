@@ -1,6 +1,6 @@
 'use server'
 
-import { publisher } from '@latitude-data/core/events/publisher'
+import { publisher } from '@latitude-data/core/events'
 import { setupQueues } from '@latitude-data/core/jobs'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { z } from 'zod'

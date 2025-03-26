@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { NotFoundError } from '@latitude-data/core/lib'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { findProjectCached } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'

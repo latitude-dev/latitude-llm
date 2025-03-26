@@ -4,7 +4,7 @@ import {
   CommitsRepository,
   DocumentSuggestionsRepository,
 } from '@latitude-data/core/repositories'
-import { applyDocumentSuggestion } from '@latitude-data/core/services/documentSuggestions/apply'
+import { applyDocumentSuggestion } from '@latitude-data/core/services'
 import { z } from 'zod'
 import { withDocument } from '../procedures'
 

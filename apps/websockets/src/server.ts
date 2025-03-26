@@ -11,7 +11,7 @@ import {
   buildWorkspaceRoom,
   verifyWebsocketToken,
   verifyWorkerWebsocketToken,
-} from '@latitude-data/core/websockets/utils'
+} from '@latitude-data/core/websockets'
 import { env } from '@latitude-data/env'
 import cookieParser from 'cookie-parser'
 import express from 'express'

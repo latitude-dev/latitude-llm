@@ -4,9 +4,9 @@ import {
   unsafelyFindWorkspacesFromUser,
   unsafelyGetUser,
 } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { Result } from '@latitude-data/core/lib/Result'
-import { PromisedResult } from '@latitude-data/core/lib/Transaction'
+import { NotFoundError } from '@latitude-data/core/lib'
+import { Result } from '@latitude-data/core/lib'
+import { PromisedResult } from '@latitude-data/core/lib'
 import { users } from '@latitude-data/core/schema'
 import { getFirstWorkspace } from '$/data-access/workspaces'
 import { eq } from 'drizzle-orm'

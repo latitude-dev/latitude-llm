@@ -8,16 +8,16 @@ import {
   type Workspace,
 } from '@latitude-data/core/browser'
 import { findFirstUserInWorkspace } from '@latitude-data/core/data-access'
-import { publisher } from '@latitude-data/core/events/publisher'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
-import { Result } from '@latitude-data/core/lib/Result'
+import { publisher } from '@latitude-data/core/events'
+import { BadRequestError } from '@latitude-data/core/lib'
+import { Result } from '@latitude-data/core/lib'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
   ProjectsRepository,
   ProviderApiKeysRepository,
 } from '@latitude-data/core/repositories'
-import { Config } from '@latitude-data/core/services/ai/helpers'
+import { Config } from '@latitude-data/core/services'
 import {
   ChainCallResponseDto,
   LegacyChainEvent,
@@ -27,7 +27,7 @@ import {
   Providers,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { getDocumentMetadata } from '@latitude-data/core/services/documents/scan'
+import { getDocumentMetadata } from '@latitude-data/core/services'
 import { documentPresenterWithProviderAndMetadata } from '$/presenters/documentPresenter'
 
 async function getProjectByVersionData({

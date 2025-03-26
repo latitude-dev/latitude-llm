@@ -14,7 +14,7 @@ import {
   createProject,
   helpers,
 } from '@latitude-data/core/factories'
-import { Result } from '@latitude-data/core/lib/Result'
+import { Result } from '@latitude-data/core/lib'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -28,7 +28,7 @@ const mocks = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('@latitude-data/core/services/documentLogs/evaluate', () => ({
+vi.mock('@latitude-data/core/services', () => ({
   evaluateDocumentLog: mocks.evaluateDocumentLog,
 }))
 

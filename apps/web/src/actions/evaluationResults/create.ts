@@ -2,13 +2,13 @@
 
 import { EvaluationResultableType } from '@latitude-data/core/browser'
 import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
+import { NotFoundError } from '@latitude-data/core/lib'
+import { generateUUIDIdentifier } from '@latitude-data/core/lib'
 import {
   DocumentLogsRepository,
   EvaluationsRepository,
 } from '@latitude-data/core/repositories'
-import { createEvaluationResult } from '@latitude-data/core/services/evaluationResults/create'
+import { createEvaluationResult } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

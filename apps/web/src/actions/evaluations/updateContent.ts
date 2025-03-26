@@ -5,7 +5,7 @@ import {
   resultConfigurationSchema,
 } from '@latitude-data/core/browser'
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
-import { updateEvaluation } from '@latitude-data/core/services/evaluations/update'
+import { updateEvaluation } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

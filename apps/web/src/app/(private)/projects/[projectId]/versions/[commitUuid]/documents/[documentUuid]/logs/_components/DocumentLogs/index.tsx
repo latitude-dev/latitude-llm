@@ -10,7 +10,7 @@ import {
   ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import { DocumentLogsAggregations } from '@latitude-data/core/services/documentLogs/computeDocumentLogsAggregations'
+import { DocumentLogsAggregations } from '@latitude-data/core/services'
 import {
   Button,
   cn,

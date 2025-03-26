@@ -5,8 +5,8 @@ import { CommitsRepository } from '@latitude-data/core/repositories'
 import {
   createNewDocument,
   defaultDocumentContent,
-} from '@latitude-data/core/services/documents/create'
-import { convertFile } from '@latitude-data/core/services/files/convert'
+} from '@latitude-data/core/services'
+import { convertFile } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

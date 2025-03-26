@@ -1,10 +1,7 @@
 import { Workspace } from '@latitude-data/core/browser'
 import { McpServerRepository } from '@latitude-data/core/repositories'
-import {
-  getLogs,
-  LogOptions,
-} from '@latitude-data/core/services/mcpServers/getLogs'
-import { Result } from '@latitude-data/core/lib/Result'
+import { getLogs, LogOptions } from '@latitude-data/core/services'
+import { Result } from '@latitude-data/core/lib'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'

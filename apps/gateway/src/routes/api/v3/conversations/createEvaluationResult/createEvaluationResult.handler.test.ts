@@ -16,7 +16,7 @@ import {
   createProject,
   helpers,
 } from '@latitude-data/core/factories'
-import { Result } from '@latitude-data/core/lib/Result'
+import { Result } from '@latitude-data/core/lib'
 import app from '$/routes/app'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -36,7 +36,7 @@ vi.mock('@latitude-data/core/data-access', async (importOriginal) => {
   }
 })
 
-vi.mock('@latitude-data/core/services/evaluationResults/create', () => ({
+vi.mock('@latitude-data/core/services', () => ({
   createEvaluationResult: mocks.createEvaluationResult,
 }))
 

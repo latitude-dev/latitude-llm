@@ -1,6 +1,6 @@
 import { Providers, User, Workspace } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
-import { createProviderApiKey } from '@latitude-data/core/services/providerApiKeys/create'
+import { createProviderApiKey } from '@latitude-data/core/services'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

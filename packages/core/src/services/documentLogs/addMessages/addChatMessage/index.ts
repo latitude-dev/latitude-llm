@@ -14,7 +14,7 @@ import { unsafelyFindProviderApiKey } from '../../../../data-access'
 import { NotFoundError, Result, TypedResult } from '../../../../lib'
 import { ChainError } from '../../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
-import serializeProviderLog from '../../../providerLogs/serialize'
+import { serializeProviderLog } from '../../../providerLogs/serialize'
 import { ChainStreamManager } from '../../../../lib/chainStreamManager'
 import { PromptConfig } from '@latitude-data/constants'
 

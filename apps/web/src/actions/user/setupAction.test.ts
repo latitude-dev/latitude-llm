@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => {
   }
 })
 
-vi.mock('@latitude-data/core/services/magicLinkTokens/create', () => ({
+vi.mock('@latitude-data/core/services', () => ({
   createMagicLinkToken: mocks.createMagicLinkToken,
 }))
 

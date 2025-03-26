@@ -10,7 +10,7 @@ import {
   WorkspaceDto,
 } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
-import { createRunError } from '@latitude-data/core/services/runErrors/create'
+import { createRunError } from '@latitude-data/core/services'
 import { NextRequest } from 'next/server'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 

@@ -1,8 +1,8 @@
 'use server'
 
 import { ClaimedReward } from '@latitude-data/core/browser'
-import { UnauthorizedError } from '@latitude-data/core/lib/errors'
-import { updateRewardClaim } from '@latitude-data/core/services/claimedRewards/update'
+import { UnauthorizedError } from '@latitude-data/core/lib'
+import { updateRewardClaim } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

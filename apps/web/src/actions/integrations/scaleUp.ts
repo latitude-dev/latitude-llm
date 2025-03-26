@@ -1,7 +1,7 @@
 'use server'
 
 import { McpServerRepository } from '@latitude-data/core/repositories'
-import { scaleMcpServer } from '@latitude-data/core/services/mcpServers/scaleService'
+import { scaleMcpServer } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

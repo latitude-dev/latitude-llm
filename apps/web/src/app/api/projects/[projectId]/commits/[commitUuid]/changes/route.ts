@@ -5,7 +5,7 @@ import { CommitsRepository } from '@latitude-data/core/repositories'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { getCommitChanges } from '@latitude-data/core/services/commits/getChanges'
+import { getCommitChanges } from '@latitude-data/core/services'
 
 export const GET = errorHandler(
   authHandler(

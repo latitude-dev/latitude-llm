@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { Providers } from '@latitude-data/core/browser'
-import { vertexConfigurationSchema } from '@latitude-data/core/services/ai/providers/helpers/vertex'
+import { vertexConfigurationSchema } from '@latitude-data/core/services'
 
 const WITH_CONFIG = [Providers.GoogleVertex, Providers.AnthropicVertex]
 const NO_CONFIGURATION_PROVIDERS = (

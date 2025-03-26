@@ -3,7 +3,7 @@ import { DatasetsV2Repository } from '@latitude-data/core/repositories'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { parsePage } from '@latitude-data/core/services/documentLogs/index'
+import { parsePage } from '@latitude-data/core/services'
 
 export const GET = errorHandler(
   authHandler(

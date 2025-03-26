@@ -3,15 +3,15 @@ import {
   EvaluationDto,
   EvaluationMetadataType,
 } from '@latitude-data/core/browser'
-import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
+import { QueryParams } from '@latitude-data/core/lib'
 import {
   fetchDocumentLogsWithEvaluationResults,
   findDocumentLogWithEvaluationResultPage,
-} from '@latitude-data/core/services/documentLogs/fetchDocumentLogsWithEvaluationResults'
+} from '@latitude-data/core/services'
 import {
   computeEvaluationResultsWithMetadata,
   findEvaluationResultWithMetadataPage,
-} from '@latitude-data/core/services/evaluationResults/computeEvaluationResultsWithMetadata'
+} from '@latitude-data/core/services'
 import { findCommitCached } from '$/app/(private)/_data-access'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'

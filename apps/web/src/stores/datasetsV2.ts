@@ -7,7 +7,7 @@ import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
-import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { compactObject } from '@latitude-data/core/lib'
 
 const EMPTY_ARRAY: DatasetV2[] = []
 export default function useDatasets(

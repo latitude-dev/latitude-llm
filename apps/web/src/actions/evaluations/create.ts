@@ -4,8 +4,8 @@ import {
   EvaluationMetadataType,
   resultConfigurationSchema,
 } from '@latitude-data/core/browser'
-import { connectEvaluations } from '@latitude-data/core/services/evaluations/connect'
-import { createEvaluation } from '@latitude-data/core/services/evaluations/create'
+import { connectEvaluations } from '@latitude-data/core/services'
+import { createEvaluation } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

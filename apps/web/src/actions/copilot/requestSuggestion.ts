@@ -5,8 +5,8 @@ import {
   CLOUD_MESSAGES,
   PROVIDER_MODELS,
 } from '@latitude-data/core/browser'
-import { publisher } from '@latitude-data/core/events/publisher'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { publisher } from '@latitude-data/core/events'
+import { BadRequestError } from '@latitude-data/core/lib'
 import {
   DocumentVersionsRepository,
   ProviderApiKeysRepository,

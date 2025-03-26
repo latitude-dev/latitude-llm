@@ -5,7 +5,7 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
-import { destroyDocument } from '@latitude-data/core/services/documents/destroyDocument'
+import { destroyDocument } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 export const destroyDocumentAction = withProject

@@ -6,7 +6,7 @@ import {
   evaluationResultsV2SearchFromQueryParams,
   evaluationResultsV2SearchToQueryParams,
 } from '@latitude-data/core/browser'
-import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
+import { QueryParams } from '@latitude-data/core/lib'
 import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
 import { redirect } from 'next/navigation'
 import { EvaluationPage as ClientEvaluationPage } from './_components/EvaluationPage'

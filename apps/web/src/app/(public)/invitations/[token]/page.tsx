@@ -1,4 +1,4 @@
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { NotFoundError } from '@latitude-data/core/lib'
 import { Card, CardContent, FocusHeader } from '@latitude-data/web-ui'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { FocusLayout } from '$/components/layouts'

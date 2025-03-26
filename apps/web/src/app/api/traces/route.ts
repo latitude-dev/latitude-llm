@@ -1,5 +1,5 @@
 import { Workspace } from '@latitude-data/core/browser'
-import { listTraces } from '@latitude-data/core/services/traces/list'
+import { listTraces } from '@latitude-data/core/services'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest } from 'next/server'

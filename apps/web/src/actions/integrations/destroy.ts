@@ -1,7 +1,7 @@
 'use server'
 
-import { IntegrationsRepository } from '@latitude-data/core/repositories/integrationsRepository'
-import { destroyIntegration } from '@latitude-data/core/services/integrations/destroy'
+import { IntegrationsRepository } from '@latitude-data/core/repositories'
+import { destroyIntegration } from '@latitude-data/core/services'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

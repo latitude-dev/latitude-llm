@@ -444,3 +444,4 @@ export class ChainStreamManager {
 }
 
 export { convertToLegacyChainStream } from './legacyStreamConverter'
+export { ChainError } from './ChainErrors'

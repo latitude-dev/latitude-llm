@@ -853,85 +853,45 @@ importers:
 
   packages/core:
     dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^1.0.5
+        version: 1.2.0(zod@3.24.2)
+      '@ai-sdk/azure':
+        specifier: ^1.0.10
+        version: 1.3.0(zod@3.24.2)
+      '@ai-sdk/google':
+        specifier: ^1.0.10
+        version: 1.2.1(zod@3.24.2)
       '@ai-sdk/google-vertex':
         specifier: ^2.1.12
         version: 2.2.1(zod@3.24.2)
-      '@codesandbox/sdk':
-        specifier: ^0.6.2
-        version: 0.6.2
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.6.0
-        version: 1.7.0
-      '@tavily/core':
-        specifier: ^0.3.1
-        version: 0.3.3
-      ajv:
-        specifier: ^8.17.1
-        version: 8.17.1
-      date-fns:
-        specifier: ^3.6.0
-        version: 3.6.0
-      diff-match-patch:
-        specifier: ^1.0.5
-        version: 1.0.5
-      js-yaml:
-        specifier: ^4.1.0
-        version: 4.1.0
-      mustache:
-        specifier: ^4.2.0
-        version: 4.2.0
-      promptl-ai:
-        specifier: ^0.5.2
-        version: 0.5.3
-      safe-regex:
-        specifier: ^2.1.1
-        version: 2.1.1
-    devDependencies:
-      '@ai-sdk/anthropic':
-        specifier: ^1.1.0
-        version: 1.2.0(zod@3.24.2)
-      '@ai-sdk/azure':
-        specifier: ^1.1.0
-        version: 1.3.0(zod@3.24.2)
-      '@ai-sdk/google':
-        specifier: ^1.1.0
-        version: 1.2.1(zod@3.24.2)
       '@ai-sdk/mistral':
-        specifier: ^1.1.0
+        specifier: ^1.0.5
         version: 1.2.0(zod@3.24.2)
       '@ai-sdk/openai':
-        specifier: ^1.1.0
+        specifier: ^1.0.8
         version: 1.3.0(zod@3.24.2)
-      '@anthropic-ai/sdk':
-        specifier: ^0.32.1
-        version: 0.32.1
       '@aws-sdk/client-s3':
         specifier: ^3.645.0
         version: 3.772.0
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.679.0
         version: 3.772.0
-      '@faker-js/faker':
-        specifier: ^8.4.1
-        version: 8.4.1
+      '@codesandbox/sdk':
+        specifier: ^0.6.2
+        version: 0.6.2
       '@kubernetes/client-node':
         specifier: ^1.0.0
         version: 1.1.0
       '@latitude-data/compiler':
         specifier: workspace:^
         version: link:../compiler
-      '@latitude-data/constants':
-        specifier: workspace:*
-        version: link:../constants
       '@latitude-data/env':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../env
-      '@latitude-data/eslint-config':
-        specifier: workspace:*
-        version: link:../../tools/eslint
-      '@latitude-data/typescript-config':
-        specifier: workspace:*
-        version: link:../../tools/typescript
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.6.0
+        version: 1.7.0
       '@napi-rs/canvas':
         specifier: ^0.1.65
         version: 0.1.68
@@ -947,24 +907,9 @@ importers:
       '@t3-oss/env-core':
         specifier: ^0.11.1
         version: 0.11.1(typescript@5.8.2)(zod@3.24.2)
-      '@types/diff-match-patch':
-        specifier: ^1.0.36
-        version: 1.0.36
-      '@types/js-yaml':
-        specifier: ^4.0.9
-        version: 4.0.9
-      '@types/json-schema':
-        specifier: ^7.0.15
-        version: 7.0.15
-      '@types/lodash-es':
-        specifier: ^4.17.12
-        version: 4.17.12
-      '@types/mustache':
-        specifier: ^4.2.5
-        version: 4.2.5
-      '@types/node':
-        specifier: ^22.5.0
-        version: 22.13.13
+      '@tavily/core':
+        specifier: ^0.3.1
+        version: 0.3.3
       '@types/nodemailer':
         specifier: ^6.4.15
         version: 6.4.17
@@ -974,24 +919,18 @@ importers:
       '@types/nodemailer-mailgun-transport':
         specifier: ^1.4.6
         version: 1.4.6
-      '@types/pg':
-        specifier: ^8.11.6
-        version: 8.11.11
       '@types/react':
         specifier: 18.3.0
         version: 18.3.0
       '@types/react-dom':
         specifier: 18.3.0
         version: 18.3.0
-      '@types/safe-regex':
-        specifier: ^1.1.6
-        version: 1.1.6
-      '@types/uuid':
-        specifier: ^10.0.0
-        version: 10.0.0
       ai:
-        specifier: ^4.1.36
+        specifier: ^4.0.18
         version: 4.2.1(react@18.3.1)(zod@3.24.2)
+      ajv:
+        specifier: ^8.17.1
+        version: 8.17.1
       argon2:
         specifier: ^0.41.0
         version: 0.41.1
@@ -1001,18 +940,15 @@ importers:
       csv-parse:
         specifier: ^5.5.6
         version: 5.6.0
-      drizzle-kit:
-        specifier: ^0.22.8
-        version: 0.22.8
+      date-fns:
+        specifier: ^3.6.0
+        version: 3.6.0
+      diff-match-patch:
+        specifier: ^1.0.5
+        version: 1.0.5
       drizzle-orm:
         specifier: ^0.33.0
         version: 0.33.0(@opentelemetry/api@1.9.0)(@types/pg@8.11.11)(@types/react@18.3.0)(pg@8.14.1)(react@18.3.1)
-      eslint:
-        specifier: '8'
-        version: 8.57.1
-      eslint-plugin-drizzle:
-        specifier: ^0.2.3
-        version: 0.2.3(eslint@8.57.1)
       flydrive:
         specifier: ^1.1.0
         version: 1.1.1(@aws-sdk/client-s3@3.772.0)(@aws-sdk/s3-request-presigner@3.772.0)
@@ -1022,17 +958,20 @@ importers:
       jose:
         specifier: ^5.8.0
         version: 5.10.0
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.0
       json-schema:
         specifier: ^0.4.0
         version: 0.4.0
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
-      loops:
-        specifier: ^3.3.0
-        version: 3.4.1
+      mustache:
+        specifier: ^4.2.0
+        version: 4.2.0
       nanoid:
-        specifier: ^5.0.8
+        specifier: ^5.0.7
         version: 5.1.5
       nodemailer:
         specifier: ^6.9.14
@@ -1052,42 +991,103 @@ importers:
       pg:
         specifier: ^8.12.0
         version: 8.14.1
-      pg-transactional-tests:
-        specifier: ^1.0.9
-        version: 1.2.0(pg@8.14.1)
       posthog-node:
         specifier: ^4.2.0
         version: 4.10.1
+      promptl-ai:
+        specifier: ^0.5.2
+        version: 0.5.3
       react:
         specifier: ^18.3.1
         version: 18.3.1
       react-email:
         specifier: ^3.0.1
         version: 3.0.7(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      safe-regex:
+        specifier: ^2.1.1
+        version: 2.1.1
       socket.io-client:
         specifier: ^4.7.5
         version: 4.8.1
-      supertest:
-        specifier: ^7.0.0
-        version: 7.1.0
-      svelte:
-        specifier: ^4.2.19
-        version: 4.2.19
       uuid:
         specifier: ^10.0.0
         version: 10.0.0
-      vitest:
-        specifier: ^2.0.3
-        version: 2.1.9(@types/node@22.13.13)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.2))(terser@5.39.0)
-      vue:
-        specifier: ^3.4.38
-        version: 3.5.13(typescript@5.8.2)
-      yaml:
-        specifier: ^2.4.5
-        version: 2.7.0
       zod:
         specifier: ^3.23.8
         version: 3.24.2
+    devDependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.32.1
+        version: 0.32.1
+      '@faker-js/faker':
+        specifier: ^8.4.1
+        version: 8.4.1
+      '@latitude-data/constants':
+        specifier: workspace:*
+        version: link:../constants
+      '@latitude-data/eslint-config':
+        specifier: workspace:*
+        version: link:../../tools/eslint
+      '@latitude-data/typescript-config':
+        specifier: workspace:*
+        version: link:../../tools/typescript
+      '@types/diff-match-patch':
+        specifier: ^1.0.36
+        version: 1.0.36
+      '@types/js-yaml':
+        specifier: ^4.0.9
+        version: 4.0.9
+      '@types/json-schema':
+        specifier: ^7.0.15
+        version: 7.0.15
+      '@types/lodash-es':
+        specifier: ^4.17.12
+        version: 4.17.12
+      '@types/mustache':
+        specifier: ^4.2.5
+        version: 4.2.5
+      '@types/node':
+        specifier: ^22.5.0
+        version: 22.13.13
+      '@types/pg':
+        specifier: ^8.11.6
+        version: 8.11.11
+      '@types/safe-regex':
+        specifier: ^1.1.6
+        version: 1.1.6
+      '@types/uuid':
+        specifier: ^10.0.0
+        version: 10.0.0
+      '@types/yaml':
+        specifier: ^1.9.7
+        version: 1.9.7
+      drizzle-kit:
+        specifier: ^0.22.8
+        version: 0.22.8
+      eslint:
+        specifier: '8'
+        version: 8.57.1
+      eslint-plugin-drizzle:
+        specifier: ^0.2.3
+        version: 0.2.3(eslint@8.57.1)
+      loops:
+        specifier: ^3.3.0
+        version: 3.4.1
+      pg-transactional-tests:
+        specifier: ^1.0.9
+        version: 1.2.0(pg@8.14.1)
+      supertest:
+        specifier: ^7.0.0
+        version: 7.1.0
+      tsup:
+        specifier: ^8.2.4
+        version: 8.4.0(jiti@1.21.7)(postcss@8.5.3)(tsx@4.19.3)(typescript@5.8.2)(yaml@2.7.0)
+      vitest:
+        specifier: ^2.0.3
+        version: 2.1.9(@types/node@22.13.13)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.2))(terser@5.39.0)
+      yaml:
+        specifier: ^2.4.5
+        version: 2.7.0
 
   packages/env:
     devDependencies:
@@ -2128,7 +2128,7 @@ packages:
   '@dnd-kit/utilities@3.2.2':
     resolution: {integrity: sha512-+MKAJEOfaBe5SmV6t34p80MMKhjvUz0vRrvVJbPT0WElzaOJ/1xs+D+KDv+tD/NE5ujfrChEcshd4fLn0wpiqg==}
     peerDependencies:
-      react: '>=16.8.0'
+      react: '>=16.8.0 || >=18.x'
 
   '@emnapi/core@0.45.0':
     resolution: {integrity: sha512-DPWjcUDQkCeEM4VnljEOEcXdAD7pp8zSZsgOujk/LGIwCXWbXJngin+MO4zbH429lzeC3WbYLGjE2MaUOwzpyw==}
@@ -2859,7 +2859,7 @@ packages:
     resolution: {integrity: sha512-soEIOALTfTK6EjmKMMoLugwaP0rzkad90iIWd1hMO9ARkSAyjfMfkRRhLvD5qH7vvM0Cg72pieUfR6yh6XxC4w==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     peerDependencies:
-      eslint: ^6.0.0 || ^7.0.0 || >=8.0.0
+      eslint: ^6.0.0 || ^7.0.0 || >=8.0.0 || >=8.x
 
   '@eslint-community/regexpp@4.12.1':
     resolution: {integrity: sha512-CCZCDJuduB9OUkFkY2IgppNZMi2lBQgD2qzwXkEia16cge2pijY/aXi96CJMquDMn3nJdlPV1A5KrJEXwfLNzQ==}
@@ -2890,8 +2890,8 @@ packages:
   '@floating-ui/react-dom@2.1.2':
     resolution: {integrity: sha512-06okr5cgPzMNBy+Ycse2A6udMi4bqwW/zgBF/rwjcNqWkyr82Mcg8b0vjX8OJpZFy/FKjJmw6wV7t44kK6kW7A==}
     peerDependencies:
-      react: '>=16.8.0'
-      react-dom: '>=16.8.0'
+      react: '>=16.8.0 || >=18.x'
+      react-dom: '>=16.8.0 || >=18.x'
 
   '@floating-ui/utils@0.2.9':
     resolution: {integrity: sha512-MDWhGtE+eHw5JW7lq4qhc5yRLS11ERl1c7Z6Xd0a58DozHES6EnNNwUWbMiG4J9Cgj053Bhk8zvlhFYKVhULwg==}
@@ -3366,7 +3366,7 @@ packages:
   '@mdx-js/react@2.3.0':
     resolution: {integrity: sha512-zQH//gdOmuu7nt2oJR29vFhDv88oGPmVw6BggmrHeMI+xgEkp1B2dX9/bMBSYtK0dyLX/aOmesKS09g222K1/g==}
     peerDependencies:
-      react: '>=16'
+      react: '>=16 || >=18.x'
 
   '@microsoft/tsdoc-config@0.16.2':
     resolution: {integrity: sha512-OGiIzzoBLgWWR0UdRJX98oYO+XKGf7tiK4Zk6tQ/E4IJqGCe7dvkTvgDZV5cFJUzLGDOjeAXrnZoA6QkVySuxw==}
@@ -4900,7 +4900,7 @@ packages:
     resolution: {integrity: sha512-RcBoffx2IZG6quLBXo5sj3fF47rKmmkiMhG1ZBua4nFjHYlmW8j1uUMyO5HNglxIF9E52NYq4sF7XeZRp9jYjg==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      react: ^18.0 || ^19.0 || ^19.0.0-rc
+      react: ^18.0 || ^19.0 || ^19.0.0-rc || >=18.x
 
   '@react-email/container@0.0.14':
     resolution: {integrity: sha512-NgoaJJd9tTtsrveL86Ocr/AYLkGyN3prdXKd/zm5fQpfDhy/NXezyT3iF6VlwAOEUIu64ErHpAJd+P6ygR+vjg==}
@@ -5789,8 +5789,8 @@ packages:
     engines: {node: '>=12'}
     peerDependencies:
       '@types/react': ^16.9.0 || ^17.0.0
-      react: ^16.9.0 || ^17.0.0
-      react-dom: ^16.9.0 || ^17.0.0
+      react: ^16.9.0 || ^17.0.0 || >=18.x
+      react-dom: ^16.9.0 || ^17.0.0 || >=18.x
       react-test-renderer: ^16.9.0 || ^17.0.0
     peerDependenciesMeta:
       '@types/react':
@@ -6172,6 +6172,10 @@ packages:
   '@types/ws@8.18.0':
     resolution: {integrity: sha512-8svvI3hMyvN0kKCJMvTJP/x6Y/EoQbepff882wL+Sn5QsXb3etnamgrJq4isrBxSJj5L2AuXcI0+bgkoAXGUJw==}
 
+  '@types/yaml@1.9.7':
+    resolution: {integrity: sha512-8WMXRDD1D+wCohjfslHDgICd2JtMATZU8CkhH8LVJqcJs6dyYj5TGptzP8wApbmEullGBSsCEzzap73DQ1HJaA==}
+    deprecated: This is a stub types definition. yaml provides its own type definitions, so you do not need this installed.
+
   '@types/yauzl@2.10.3':
     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
 
@@ -6211,7 +6215,7 @@ packages:
     resolution: {integrity: sha512-4Z+L8I2OqhZV8qA132M4wNL30ypZGYOQVBfMgxDH/K5UX0PNqTu1c6za9ST5r9+tavvHiTWmBnKzpCJ/GlVFtg==}
     engines: {node: ^18.18.0 || >=20.0.0}
     peerDependencies:
-      eslint: ^8.56.0
+      eslint: ^8.56.0 || >=8.x
       typescript: '*'
     peerDependenciesMeta:
       typescript:
@@ -6292,7 +6296,7 @@ packages:
     resolution: {integrity: sha512-n8oxjeb5aIbPFEtmQxQYOLI0i9n5ySBEY/ZEHHZqKQSFnxio1rv6dthascc9dLuwrL0RC5mPCxB7vnAVGAYWAQ==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     peerDependencies:
-      eslint: ^6.0.0 || ^7.0.0 || ^8.0.0
+      eslint: ^6.0.0 || ^7.0.0 || ^8.0.0 || >=8.x
 
   '@typescript-eslint/utils@6.21.0':
     resolution: {integrity: sha512-NfWVaC8HP9T8cbKQxHcsJBY5YE1O33+jpMwN45qzWWaPDZgLIbo12toGMWnmhvCpd3sIxkpDw3Wv1B3dYrbDQQ==}
@@ -7968,7 +7972,7 @@ packages:
       pg: '>=8'
       postgres: '>=3'
       prisma: '*'
-      react: '>=18'
+      react: '>=18 || >=18.x'
       sql.js: '>=1'
       sqlite3: '>=5'
     peerDependenciesMeta:
@@ -11629,7 +11633,7 @@ packages:
     engines: {node: '>=10'}
     peerDependencies:
       '@types/react': '*'
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc || >=18.x
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -19712,6 +19716,10 @@ snapshots:
     dependencies:
       '@types/node': 22.13.13
 
+  '@types/yaml@1.9.7':
+    dependencies:
+      yaml: 2.7.0
+
   '@types/yauzl@2.10.3':
     dependencies:
       '@types/node': 22.13.13
@@ -20091,11 +20099,13 @@ snapshots:
       entities: 4.5.0
       estree-walker: 2.0.2
       source-map-js: 1.2.1
+    optional: true
 
   '@vue/compiler-dom@3.5.13':
     dependencies:
       '@vue/compiler-core': 3.5.13
       '@vue/shared': 3.5.13
+    optional: true
 
   '@vue/compiler-sfc@3.5.13':
     dependencies:
@@ -20108,20 +20118,24 @@ snapshots:
       magic-string: 0.30.17
       postcss: 8.5.3
       source-map-js: 1.2.1
+    optional: true
 
   '@vue/compiler-ssr@3.5.13':
     dependencies:
       '@vue/compiler-dom': 3.5.13
       '@vue/shared': 3.5.13
+    optional: true
 
   '@vue/reactivity@3.5.13':
     dependencies:
       '@vue/shared': 3.5.13
+    optional: true
 
   '@vue/runtime-core@3.5.13':
     dependencies:
       '@vue/reactivity': 3.5.13
       '@vue/shared': 3.5.13
+    optional: true
 
   '@vue/runtime-dom@3.5.13':
     dependencies:
@@ -20129,14 +20143,17 @@ snapshots:
       '@vue/runtime-core': 3.5.13
       '@vue/shared': 3.5.13
       csstype: 3.1.3
+    optional: true
 
   '@vue/server-renderer@3.5.13(vue@3.5.13(typescript@5.8.2))':
     dependencies:
       '@vue/compiler-ssr': 3.5.13
       '@vue/shared': 3.5.13
       vue: 3.5.13(typescript@5.8.2)
+    optional: true
 
-  '@vue/shared@3.5.13': {}
+  '@vue/shared@3.5.13':
+    optional: true
 
   '@webassemblyjs/ast@1.14.1':
     dependencies:
@@ -21168,6 +21185,7 @@ snapshots:
     dependencies:
       mdn-data: 2.0.30
       source-map-js: 1.2.1
+    optional: true
 
   css-what@6.1.0: {}
 
@@ -24429,7 +24447,8 @@ snapshots:
 
   mdast@3.0.0: {}
 
-  mdn-data@2.0.30: {}
+  mdn-data@2.0.30:
+    optional: true
 
   media-typer@0.3.0: {}
 
@@ -27654,6 +27673,7 @@ snapshots:
       locate-character: 3.0.0
       magic-string: 0.30.17
       periscopic: 3.1.0
+    optional: true
 
   swr@2.3.3(react@18.3.1):
     dependencies:
@@ -28607,6 +28627,7 @@ snapshots:
       '@vue/shared': 3.5.13
     optionalDependencies:
       typescript: 5.8.2
+    optional: true
 
   w3c-xmlserializer@5.0.0:
     dependencies:
