@@ -17,9 +17,9 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   ChevronsDownUpIcon,
   ChevronsUpDown,
+  ChevronUp,
   CircleAlert,
   CircleArrowUp,
   CircleChevronLeft,
@@ -29,6 +29,7 @@ import {
   CircleIcon,
   CirclePlus,
   CircleUser,
+  ClipboardCheck,
   Clock,
   Code,
   Code2,
@@ -116,6 +117,7 @@ import {
 } from './custom-icons'
 import Airtable from './custom-icons/logos/Airtable'
 import Attio from './custom-icons/logos/Attio'
+import Audiense from './custom-icons/logos/Audiense'
 import AwsBedrock from './custom-icons/logos/AwsBedrock'
 import Brave from './custom-icons/logos/Brave'
 import Browserbase from './custom-icons/logos/Browserbase'
@@ -123,6 +125,7 @@ import Discord from './custom-icons/logos/Discord'
 import Figma from './custom-icons/logos/Figma'
 import Ghost from './custom-icons/logos/Ghost'
 import Google from './custom-icons/logos/Google'
+import Hyperbrowser from './custom-icons/logos/Hyperbrowser'
 import Intercom from './custom-icons/logos/Intercom'
 import Jira from './custom-icons/logos/Jira'
 import Linear from './custom-icons/logos/Linear'
@@ -139,8 +142,6 @@ import Telegram from './custom-icons/logos/Telegram'
 import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
-import Hyperbrowser from './custom-icons/logos/Hyperbrowser'
-import Audiense from './custom-icons/logos/Audiense'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -280,6 +281,7 @@ const Icons = {
   wholeWord: WholeWord,
   wordpress: Wordpress,
   youtube: Youtube,
+  clipboardCheck: ClipboardCheck,
 }
 
 export type IconName = keyof typeof Icons

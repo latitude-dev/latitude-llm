@@ -73,6 +73,39 @@ export type RuleEvaluationRegularExpressionResultError = z.infer<
   typeof RuleEvaluationRegularExpressionSpecification.resultError
 >
 
+// SCHEMA VALIDATION
+
+const ruleEvaluationSchemaValidationConfiguration =
+  ruleEvaluationConfiguration.extend({
+    format: z.enum(['json']),
+    schema: z.string(),
+  })
+const ruleEvaluationSchemaValidationResultMetadata =
+  ruleEvaluationResultMetadata.extend({
+    configuration: ruleEvaluationSchemaValidationConfiguration,
+  })
+const ruleEvaluationSchemaValidationResultError =
+  ruleEvaluationResultError.extend({})
+export const RuleEvaluationSchemaValidationSpecification = {
+  name: 'Schema Validation',
+  description: 'Checks if the response follows the schema',
+  configuration: ruleEvaluationSchemaValidationConfiguration,
+  resultMetadata: ruleEvaluationSchemaValidationResultMetadata,
+  resultError: ruleEvaluationSchemaValidationResultError,
+  requiresExpectedOutput: false,
+  supportsLiveEvaluation: true,
+  supportsBatchEvaluation: true,
+}
+export type RuleEvaluationSchemaValidationConfiguration = z.infer<
+  typeof RuleEvaluationSchemaValidationSpecification.configuration
+>
+export type RuleEvaluationSchemaValidationResultMetadata = z.infer<
+  typeof RuleEvaluationSchemaValidationSpecification.resultMetadata
+>
+export type RuleEvaluationSchemaValidationResultError = z.infer<
+  typeof RuleEvaluationSchemaValidationSpecification.resultError
+>
+
 // LENGTH COUNT
 
 const ruleEvaluationLengthCountConfiguration =
@@ -188,6 +221,7 @@ export type RuleEvaluationSemanticSimilarityResultError = z.infer<
 export enum RuleEvaluationMetric {
   ExactMatch = 'exact_match',
   RegularExpression = 'regular_expression',
+  SchemaValidation = 'schema_validation',
   LengthCount = 'length_count',
   LexicalOverlap = 'lexical_overlap',
   SemanticSimilarity = 'semantic_similarity',
@@ -197,6 +231,7 @@ export enum RuleEvaluationMetric {
 export type RuleEvaluationConfiguration<M extends RuleEvaluationMetric = RuleEvaluationMetric> = 
   M extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchConfiguration :
   M extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionConfiguration :
+  M extends RuleEvaluationMetric.SchemaValidation ? RuleEvaluationSchemaValidationConfiguration :
   M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountConfiguration :
   M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapConfiguration :
   M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityConfiguration :
@@ -206,6 +241,7 @@ export type RuleEvaluationConfiguration<M extends RuleEvaluationMetric = RuleEva
 export type RuleEvaluationResultMetadata<M extends RuleEvaluationMetric = RuleEvaluationMetric> = 
   M extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchResultMetadata :
   M extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionResultMetadata :
+  M extends RuleEvaluationMetric.SchemaValidation ? RuleEvaluationSchemaValidationResultMetadata :
   M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountResultMetadata :
   M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapResultMetadata :
   M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityResultMetadata :
@@ -215,6 +251,7 @@ export type RuleEvaluationResultMetadata<M extends RuleEvaluationMetric = RuleEv
 export type RuleEvaluationResultError<M extends RuleEvaluationMetric = RuleEvaluationMetric> = 
   M extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchResultError :
   M extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionResultError :
+  M extends RuleEvaluationMetric.SchemaValidation ? RuleEvaluationSchemaValidationResultError :
   M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountResultError :
   M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapResultError :
   M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityResultError :
@@ -230,6 +267,7 @@ export const RuleEvaluationSpecification = {
   metrics: {
     [RuleEvaluationMetric.ExactMatch]: RuleEvaluationExactMatchSpecification,
     [RuleEvaluationMetric.RegularExpression]: RuleEvaluationRegularExpressionSpecification,
+    [RuleEvaluationMetric.SchemaValidation]: RuleEvaluationSchemaValidationSpecification,
     [RuleEvaluationMetric.LengthCount]: RuleEvaluationLengthCountSpecification,
     [RuleEvaluationMetric.LexicalOverlap]: RuleEvaluationLexicalOverlapSpecification,
     [RuleEvaluationMetric.SemanticSimilarity]: RuleEvaluationSemanticSimilaritySpecification,
