@@ -16,7 +16,7 @@ import { useFormAction } from '$/hooks/useFormAction'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import { useState } from 'react'
-import { testWebhookAction } from '$/actions/webhooks/testWebhook'
+import { useTestWebhook } from '$/hooks/useTestWebhook'
 
 export default function NewWebhook() {
   const router = useRouter()
@@ -24,35 +24,9 @@ export default function NewWebhook() {
   const { data: projects } = useProjects()
   const { toast } = useToast()
   const [url, setUrl] = useState('')
-  const [isTestingEndpoint, setIsTestingEndpoint] = useState(false)
-
-  const handleTestEndpoint = async () => {
-    if (!url) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a URL first',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    setIsTestingEndpoint(true)
-    try {
-      await testWebhookAction({ url })
-      toast({
-        title: 'Success',
-        description: 'Test webhook was sent successfully',
-      })
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to test webhook',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsTestingEndpoint(false)
-    }
-  }
+  const { isTestingEndpoint, testEndpoint } = useTestWebhook({
+    getUrl: () => url,
+  })
 
   const { action: createAction } = useFormAction(create, {
     onSuccess: () => {
@@ -92,7 +66,7 @@ export default function NewWebhook() {
               fancy
               variant='outline'
               type='button'
-              onClick={handleTestEndpoint}
+              onClick={testEndpoint}
               disabled={!url || isTestingEndpoint}
             >
               {isTestingEndpoint ? 'Testing...' : 'Test Endpoint'}

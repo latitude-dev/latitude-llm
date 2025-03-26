@@ -15,8 +15,8 @@ import { useFormAction } from '$/hooks/useFormAction'
 import useProjects from '$/stores/projects'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
-import { useState, useRef } from 'react'
-import { testWebhookAction } from '$/actions/webhooks/testWebhook'
+import { useRef } from 'react'
+import { useTestWebhook } from '$/hooks/useTestWebhook'
 
 export default function EditWebhook() {
   const router = useRouter()
@@ -24,45 +24,13 @@ export default function EditWebhook() {
   const { data: webhooks, update, isUpdating } = useWebhooks()
   const { data: projects } = useProjects()
   const { toast } = useToast()
-  const [isTestingEndpoint, setIsTestingEndpoint] = useState(false)
+
   const formRef = useRef<HTMLFormElement>(null)
+  const { isTestingEndpoint, testEndpoint } = useTestWebhook({
+    getUrl: () => formRef.current?.url?.value || null,
+  })
 
   const webhook = webhooks?.find((w) => w.id === Number(params.id))
-
-  const handleTestEndpoint = async () => {
-    if (!formRef.current) return
-
-    const formData = new FormData(formRef.current)
-    const url = formData.get('url') as string
-
-    if (!url) {
-      toast({
-        title: 'Error',
-        description: 'No URL available to test',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    setIsTestingEndpoint(true)
-    try {
-      const [_, error] = await testWebhookAction({ url })
-      if (error) throw error
-
-      toast({
-        title: 'Success',
-        description: 'Test webhook was sent successfully',
-      })
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to test webhook',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsTestingEndpoint(false)
-    }
-  }
 
   const { action: updateAction } = useFormAction(update, {
     onSuccess: () => {
@@ -123,7 +91,7 @@ export default function EditWebhook() {
               fancy
               variant='outline'
               type='button'
-              onClick={handleTestEndpoint}
+              onClick={testEndpoint}
               disabled={isTestingEndpoint}
             >
               {isTestingEndpoint ? 'Testing...' : 'Test Endpoint'}
