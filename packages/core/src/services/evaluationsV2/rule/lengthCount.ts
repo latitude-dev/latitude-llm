@@ -29,13 +29,13 @@ async function validate(
 ) {
   if (configuration.minLength !== undefined && configuration.minLength < 0) {
     return Result.error(
-      new BadRequestError('Minimum length must be a positive integer'),
+      new BadRequestError('Minimum length must be a positive number'),
     )
   }
 
   if (configuration.maxLength !== undefined && configuration.maxLength < 0) {
     return Result.error(
-      new BadRequestError('Maximum length must be a positive integer'),
+      new BadRequestError('Maximum length must be a positive number'),
     )
   }
 

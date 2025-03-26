@@ -102,5 +102,5 @@ export function normalizeScore(score: number, lower: number, upper: number) {
   const range = Math.abs(upper - lower)
   const value = Math.abs(score - lower)
   const map = (value * EVALUATION_SCORE_SCALE) / range
-  return Math.min(Math.max(0, map), EVALUATION_SCORE_SCALE)
+  return Math.min(Math.max(Number(map.toFixed(0)), 0), EVALUATION_SCORE_SCALE)
 }

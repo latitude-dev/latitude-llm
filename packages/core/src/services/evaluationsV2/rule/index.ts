@@ -13,6 +13,7 @@ import {
 } from '../shared'
 import RuleEvaluationExactMatchSpecification from './exactMatch'
 import RuleEvaluationLengthCountSpecification from './lengthCount'
+import RuleEvaluationLexicalOverlapSpecification from './lexicalOverlap'
 import RuleEvaluationRegularExpressionSpecification from './regularExpression'
 import RuleEvaluationSchemaValidationSpecification from './schemaValidation'
 
@@ -24,8 +25,8 @@ const METRICS: {
   [RuleEvaluationMetric.RegularExpression]: RuleEvaluationRegularExpressionSpecification,
   [RuleEvaluationMetric.SchemaValidation]: RuleEvaluationSchemaValidationSpecification,
   [RuleEvaluationMetric.LengthCount]: RuleEvaluationLengthCountSpecification,
-  [RuleEvaluationMetric.LexicalOverlap]:  undefined as any, // TODO: Implement
-  [RuleEvaluationMetric.SemanticSimilarity]:  undefined as any, // TODO: Implement
+  [RuleEvaluationMetric.LexicalOverlap]: RuleEvaluationLexicalOverlapSpecification,
+  [RuleEvaluationMetric.SemanticSimilarity]: undefined as any, // TODO: Implement
 }
 
 const specification = RuleEvaluationSpecification
