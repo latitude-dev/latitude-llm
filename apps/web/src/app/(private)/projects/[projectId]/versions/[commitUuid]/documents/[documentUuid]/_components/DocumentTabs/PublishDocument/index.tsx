@@ -99,7 +99,7 @@ function PublishedDocumentSettings({
     setCanChat(undefined)
   }, [isUpdating])
 
-  const url = `/${ROUTES.share.document(data!.uuid!).root}`
+  const url = `${window.location.origin}${ROUTES.share.document(data!.uuid!).root}`
 
   const onSaveChanges = useCallback(() => {
     if (isUpdating) return
