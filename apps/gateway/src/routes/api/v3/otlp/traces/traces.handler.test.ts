@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
         enqueueCreateEventJob: vi.fn(),
         enqueuePublishEventJob: vi.fn(),
         enqueuePublishToAnalyticsJob: vi.fn(),
+        enqueueProcessWebhookJob: vi.fn(),
       },
     },
   },

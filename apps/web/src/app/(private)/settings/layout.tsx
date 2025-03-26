@@ -9,6 +9,7 @@ import ProviderApiKeys from './_components/ProviderApiKeys'
 import WorkspaceApiKeys from './_components/WorkspaceApiKeys'
 import WorkspaceName from './_components/WorkspaceName'
 import Integrations from './_components/Integrations'
+import Webhooks from './_components/Webhooks'
 
 export const metadata = buildMetatags({
   title: 'Settings',
@@ -29,6 +30,7 @@ export default async function SettingsLayout({
       <WorkspaceApiKeys />
       <ProviderApiKeys />
       <Integrations />
+      <Webhooks />
     </Container>
   )
 }

@@ -1,4 +1,4 @@
-import { ClientOnly, SwitchToogle, Text } from '@latitude-data/web-ui'
+import { ClientOnly, SwitchToggle, Text } from '@latitude-data/web-ui'
 
 export type ActionsState = {
   expandParameters: boolean
@@ -9,7 +9,7 @@ export default function Actions(state: ActionsState) {
   return (
     <ClientOnly className='flex flex-row gap-2 items-center'>
       <Text.H6M>Expand parameters</Text.H6M>
-      <SwitchToogle
+      <SwitchToggle
         checked={state.expandParameters}
         onCheckedChange={state.setExpandParameters}
       />

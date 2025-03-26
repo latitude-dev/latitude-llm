@@ -5,7 +5,7 @@ import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositorie
 import {
   AppLocalStorage,
   MessageList,
-  SwitchToogle,
+  SwitchToggle,
   Text,
   useLocalStorage,
 } from '@latitude-data/web-ui'
@@ -45,7 +45,7 @@ export function DocumentLogMessages({
         {sourceMapAvailable && (
           <div className='flex flex-row gap-2 items-center'>
             <Text.H6M>Expand parameters</Text.H6M>
-            <SwitchToogle
+            <SwitchToggle
               checked={expandParameters}
               onCheckedChange={setExpandParameters}
             />

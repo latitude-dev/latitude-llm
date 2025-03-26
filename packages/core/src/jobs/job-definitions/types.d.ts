@@ -18,6 +18,7 @@ import type { RunEvaluationV2JobData } from './evaluations/runEvaluationV2Job'
 import type { RunLiveEvaluationJobData } from './liveEvaluations/runLiveEvaluationJob'
 import type { AutoScaleJobData } from './mcpServers/autoScaleJob'
 import type { ScaleDownMcpServerJobData } from './mcpServers/scaleDownMcpServerJob'
+import type { ProcessWebhookJobData } from './webhooks/processWebhookJob'
 
 export type JobDataMap = {
   [Jobs.publishEventJob]: LatitudeEvent
@@ -39,6 +40,7 @@ export type JobDataMap = {
   [Jobs.runEvaluationV2Job]: RunEvaluationV2JobData
   [Jobs.autoScaleJob]: AutoScaleJobData
   [Jobs.scaleDownMcpServerJob]: ScaleDownMcpServerJobData
+  [Jobs.processWebhookJob]: ProcessWebhookJobData
 }
 
 type JobData<J extends Jobs> = J extends keyof JobDataMap

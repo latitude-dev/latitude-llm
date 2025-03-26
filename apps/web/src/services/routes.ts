@@ -70,6 +70,11 @@ export const ROUTES = {
   },
   settings: {
     root: '/settings',
+    webhooks: {
+      new: {
+        root: '/settings/webhooks/new',
+      },
+    },
     providerApiKeys: {
       new: {
         root: '/settings/apikeys/new',

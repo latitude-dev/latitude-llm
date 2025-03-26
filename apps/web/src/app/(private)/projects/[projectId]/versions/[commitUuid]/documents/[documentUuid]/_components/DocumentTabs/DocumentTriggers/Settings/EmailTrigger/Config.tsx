@@ -14,7 +14,7 @@ import {
   IconName,
   Input,
   Select,
-  SwitchToogle,
+  SwitchToggle,
   Text,
   useCurrentCommit,
 } from '@latitude-data/web-ui'
@@ -332,7 +332,7 @@ export function EmailTriggerConfig({
             </div>
             <div className='flex gap-2 justify-between'>
               <Text.H5>Reply with response</Text.H5>
-              <SwitchToogle
+              <SwitchToggle
                 disabled={!canEdit}
                 checked={replyWithResponse}
                 onClick={() => setReplyWithResponse((prev) => !prev)}

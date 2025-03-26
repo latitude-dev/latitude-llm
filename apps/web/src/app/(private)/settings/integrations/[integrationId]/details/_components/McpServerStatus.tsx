@@ -49,12 +49,12 @@ export function McpServerStatus({
   return (
     <div className={`flex flex-col gap-1 ${isValidating ? 'opacity-50' : ''}`}>
       <div className='flex items-center gap-2'>
+        <DotIndicator pulse variant={statusVariant} />
         <StatusText
           short={short}
           status={mcpServer.status}
           replicas={mcpServer.replicas}
         />
-        <DotIndicator pulse variant={statusVariant} />
       </div>
 
       {!short && mcpServer.status === 'failed' && (

@@ -61,3 +61,5 @@ export * from './models/documentTriggers'
 // Integrations
 export * from './models/integrations'
 export * from './models/mcpServers'
+
+export * from './models/webhooks'

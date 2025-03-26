@@ -6,7 +6,7 @@ import {
   EvaluationMetadataType,
 } from '@latitude-data/core/browser'
 import {
-  SwitchToogle,
+  SwitchToggle,
   useCurrentCommit,
   useCurrentProject,
   useToast,
@@ -72,7 +72,7 @@ export default function LiveEvaluationToggle({
   }, [isDisabled, evaluation, update])
 
   return (
-    <SwitchToogle
+    <SwitchToggle
       disabled={isDisabled}
       checked={evaluation?.live}
       onCheckedChange={toggleLive}

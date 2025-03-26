@@ -73,6 +73,7 @@ export type Events =
   | 'evaluationResultV2Created'
   | 'mcpServerConnected'
   | 'scaleMcpServer'
+  | 'webhookDeliveryCreated'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -546,6 +547,19 @@ export type McpServerConnectedEvent = LatitudeEventGeneric<
   }
 >
 
+export type WebhookDeliveryCreatedEvent = LatitudeEventGeneric<
+  'webhookDeliveryCreated',
+  {
+    webhookId: number
+    eventType: Events
+    status: 'success' | 'failed'
+    responseStatus?: number
+    responseBody?: string
+    errorMessage?: string
+    nextRetryAt?: Date
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -591,6 +605,7 @@ export type LatitudeEvent =
   | EvaluationResultV2CreatedEvent
   | ScaleMcpServerEvent
   | McpServerConnectedEvent
+  | WebhookDeliveryCreatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -637,4 +652,5 @@ export interface IEventsHandlers {
   evaluationResultV2Created: EventHandler<EvaluationResultV2CreatedEvent>[]
   scaleMcpServer: EventHandler<ScaleMcpServerEvent>[]
   mcpServerConnected: EventHandler<McpServerConnectedEvent>[]
+  webhookDeliveryCreated: EventHandler<WebhookDeliveryCreatedEvent>[]
 }

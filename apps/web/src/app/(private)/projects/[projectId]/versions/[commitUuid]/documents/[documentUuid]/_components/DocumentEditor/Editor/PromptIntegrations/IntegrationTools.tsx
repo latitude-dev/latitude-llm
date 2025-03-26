@@ -9,7 +9,7 @@ import {
   DotIndicator,
   FakeProgress,
   Skeleton,
-  SwitchToogle,
+  SwitchToggle,
   Text,
   toast,
   Tooltip,
@@ -35,7 +35,7 @@ function IntegrationToolItem({
     >
       <div className='flex flex-row items-center gap-2 justify-between'>
         <Text.H6B color='foreground'>{tool.name}</Text.H6B>
-        <SwitchToogle
+        <SwitchToggle
           checked={isActive}
           onClick={onToggle}
           disabled={disabled}
@@ -242,7 +242,7 @@ export function IntegrationToolsList({
     <>
       <div className='flex flex-row gap-2 p-4 items-center justify-between'>
         <Text.H6B color='foreground'>Enable all</Text.H6B>
-        <SwitchToogle
+        <SwitchToggle
           checked={allEnabled}
           onClick={toggleAllEnabled}
           disabled={disabled}

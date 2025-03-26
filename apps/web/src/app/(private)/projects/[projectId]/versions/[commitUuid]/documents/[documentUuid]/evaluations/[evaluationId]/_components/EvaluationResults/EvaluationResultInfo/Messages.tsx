@@ -8,7 +8,7 @@ import {
 import {
   AppLocalStorage,
   MessageList,
-  SwitchToogle,
+  SwitchToggle,
   Text,
   useLocalStorage,
 } from '@latitude-data/web-ui'
@@ -60,7 +60,7 @@ export function EvaluationResultMessages({
         {sourceMapAvailable && (
           <div className='flex flex-row gap-2 items-center'>
             <Text.H6M>Expand parameters</Text.H6M>
-            <SwitchToogle
+            <SwitchToggle
               checked={expandParameters}
               onCheckedChange={setExpandParameters}
             />

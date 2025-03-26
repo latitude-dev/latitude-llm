@@ -75,6 +75,7 @@ describe('runDocumentJob', () => {
           enqueueCreateEventJob: vi.fn(),
           enqueuePublishEventJob: vi.fn(),
           enqueuePublishToAnalyticsJob: vi.fn(),
+          enqueueProcessWebhookJob: vi.fn(),
         },
       },
     } as any)
