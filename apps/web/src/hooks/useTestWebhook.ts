@@ -12,7 +12,7 @@ export function useTestWebhook({ getUrl }: UseTestWebhookOptions) {
 
   const testEndpoint = async () => {
     const url = getUrl()
-    
+
     if (!url) {
       toast({
         title: 'Error',
@@ -47,4 +47,3 @@ export function useTestWebhook({ getUrl }: UseTestWebhookOptions) {
     testEndpoint,
   }
 }
-
