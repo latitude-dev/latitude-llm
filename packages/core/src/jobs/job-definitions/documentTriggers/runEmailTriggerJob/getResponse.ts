@@ -16,7 +16,7 @@ import {
   DocumentVersionsRepository,
 } from '../../../../repositories'
 import { database } from '../../../../client'
-import { runDocumentAtCommit } from '../../../commits/runDocumentAtCommit'
+import { runDocumentAtCommit } from '../../../../services/commits'
 import { unsafelyFindWorkspace } from '../../../../data-access'
 import { DocumentTrigger, Workspace } from '../../../../browser'
 import {
@@ -25,9 +25,9 @@ import {
   type AssistantMessage,
   type UserMessage,
 } from '@latitude-data/compiler'
-import { addMessages } from '../../../documentLogs'
-import { uploadFile } from '../../../files'
-import { EmailTriggerConfiguration } from '../../helpers/schema'
+import { addMessages } from '../../../../services/documentLogs'
+import { uploadFile } from '../../../../services/files'
+import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
 
 async function getNewTriggerResponse(
   {
@@ -216,7 +216,7 @@ export async function getEmailResponse(
     senderName,
     subject,
     body,
-    attachments: attachedFiles,
+    attachments,
   }: {
     documentUuid: string
     trigger: DocumentTrigger
@@ -226,7 +226,7 @@ export async function getEmailResponse(
     senderName: string | undefined
     subject: string
     body: string
-    attachments?: File[]
+    attachments?: PromptLFile[]
   },
   db = database,
 ): PromisedResult<AssistantMessage, LatitudeError> {
@@ -234,13 +234,6 @@ export async function getEmailResponse(
     trigger.workspaceId,
     db,
   )) as Workspace
-
-  const attachmentsResult = await uploadAttachments({
-    workspace,
-    attachments: attachedFiles ?? [],
-  })
-  if (attachmentsResult.error) return attachmentsResult
-  const attachments = attachmentsResult.unwrap()
 
   const referencedLogResult = await findReferencedLog(
     {
