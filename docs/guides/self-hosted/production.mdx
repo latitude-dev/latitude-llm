@@ -71,7 +71,67 @@ Make sure this network is created before running the containers with  `docker co
 - **Storage Configuration**:
 
   - `DRIVE_DISK`: Choose between `local` or `s3` for file storage
-  - AWS S3 credentials (if using S3 storage)
+    1. `local` file storage configuration:
+      - Files are stored locally on the host machine using Docker volumes.
+      - Default variables used:
+
+        ```bash
+        # Paths for local storage (optional)
+        FILE_STORAGE_ROOT_PATH="/app/storage/files" # e.g /app/storage/files
+        FILE_PUBLIC_PATH="files" # e.g files
+        FILES_STORAGE_PATH="/app/storage/files" # e.g /app/storage/files
+        PUBLIC_FILES_STORAGE_PATH="/app/apps/web/public/files" # e.g /app/storage/public/files (IMPORTANT: has to be in nextjs's public folder)
+        ```
+
+    2. `s3` AWS S3 storage configuration:
+      - With environment variables (for convenience/legacy):
+        You explicitly provide AWS credentials (AWS_ACCESS_KEY and AWS_ACCESS_SECRET) via .env file.
+        Required variables:
+
+        ```bash
+        AWS_ACCESS_KEY=your-access-key-here
+        AWS_ACCESS_SECRET=your-secret-here
+        AWS_REGION=us-east-1
+        S3_BUCKET=app-files-bucket
+        PUBLIC_S3_BUCKET=public-files-bucket
+        ```
+      - AWS S3 with IAM Roles (recommended):
+        No explicit AWS keys needed!
+        Use IAM Roles attached to your AWS services (ECS, EC2, Lambda).
+        Ensure AWS resource has proper IAM Role with S3 access (GetObject, PutObject, DeleteObject).
+        Only required environment variables (no keys explicitly stored):
+
+        ```bash
+        AWS_REGION=us-east-1
+        S3_BUCKET=app-files-bucket
+        PUBLIC_S3_BUCKET=public-files-bucket
+        ```
+        How to configure IAM Role (example):
+        1. Go to AWS IAM → Create Role.
+        2. Select trusted entity type (e.g., AWS Service).
+        3. Attach policy that allows access to required S3 buckets.
+
+        ```json
+        {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Action": [
+              "s3:GetObject",
+              "s3:PutObject",
+              "s3:DeleteObject",
+              "s3:ListBucket"
+            ],
+            "Resource": [
+              "arn:aws:s3:::your-bucket-name-here",
+              "arn:aws:s3:::your-bucket-name-here/*"
+            ]
+          }]
+        }
+        ```
+        4. Attach this IAM role to AWS infrastructure (EC2 Instance / ECS Task Definition / Lambda function).
+
+        AWS SDK automatically handles credentials from attached IAM roles.
 
 - **Optional Features**:
   - Sentry integration for error tracking
