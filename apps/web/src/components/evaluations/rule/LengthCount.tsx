@@ -67,6 +67,7 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, minLength: value })
         }
+        defaultAppearance
         className='w-full'
         disabled={disabled}
         required
@@ -81,6 +82,7 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, maxLength: value })
         }
+        defaultAppearance
         className='w-full'
         disabled={disabled}
         required

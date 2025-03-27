@@ -67,6 +67,7 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, minSimilarity: value })
         }
+        defaultAppearance
         className='w-full'
         disabled={disabled}
         required
@@ -82,6 +83,7 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, maxSimilarity: value })
         }
+        defaultAppearance
         className='w-full'
         disabled={disabled}
         required
