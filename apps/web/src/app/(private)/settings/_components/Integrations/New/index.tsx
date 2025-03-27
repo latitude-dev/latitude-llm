@@ -88,12 +88,6 @@ export default function NewIntegration() {
     if (integrationName.includes('/')) {
       errors.push('Name cannot contain slashes')
     }
-    if (
-      integrationName === 'latitude' ||
-      integrations?.some((integration) => integration.name === integrationName)
-    ) {
-      errors.push('An integration with this name already exists')
-    }
     return errors.length ? errors : undefined
   }, [integrationName, integrations])
 

@@ -1,8 +1,11 @@
 import { HostedIntegrationConfig } from '../types'
+import { npxCommand } from '../utils'
 
 export default {
   description: 'Integration for interacting with Audiense',
-  command: 'node mcps/mcp-audiense-insights/build/index.js',
+  command: npxCommand({
+    package: 'github:AudienseCo/mcp-audiense-insights',
+  }),
   env: {
     AUDIENSE_CLIENT_ID: {
       label: 'Audiense Client ID',
