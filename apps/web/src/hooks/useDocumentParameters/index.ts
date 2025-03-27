@@ -133,8 +133,19 @@ function getLinkedDatasetV2({
   const datasetId = document.datasetV2Id
   if (!datasetId) return EMPTY_LINKED_DATASET_ROW
 
-  const all = document.linkedDatasetAndRow ?? {}
   const local = localInputs ?? EMPTY_LINKED_DATASET_ROW
+
+  const all = document.linkedDatasetAndRow ?? {}
+  const isEmpty = Object.keys(all).length === 0
+
+  if (isEmpty) {
+    return {
+      datasetRowId: local.datasetRowId,
+      inputs: local.inputs,
+      mappedInputs: local.mappedInputs,
+    }
+  }
+
   return all[datasetId]
     ? {
       ...EMPTY_LINKED_DATASET_ROW,
@@ -508,7 +519,7 @@ export function useDocumentParameters<
           metadata,
         })
         // Store in local while not stored in the DB
-        setInputs('dataset', datasetInputs)
+        setInputs('datasetV2', datasetInputs)
 
         if (document.datasetV2Id && linkedDatasetV2) {
           setDatasetV2({
