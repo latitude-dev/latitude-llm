@@ -66,7 +66,7 @@ export function EvaluationActions<
           asChild
           trigger={
             <span>
-              <TableWithHeader.Button variant='default' disabled>
+              <TableWithHeader.Button disabled>
                 Edit evaluation
               </TableWithHeader.Button>
             </span>
@@ -76,7 +76,6 @@ export function EvaluationActions<
         </Tooltip>
       ) : (
         <TableWithHeader.Button
-          variant='default'
           onClick={() => setOpenUpdateModal(true)}
           disabled={isExecuting}
         >
@@ -106,7 +105,10 @@ export function EvaluationActions<
       </ConfirmModal>
       {metricSpecification.supportsBatchEvaluation && (
         <>
-          <TableWithHeader.Button onClick={() => setOpenBatchModal(true)}>
+          <TableWithHeader.Button
+            variant='default'
+            onClick={() => setOpenBatchModal(true)}
+          >
             Run batch evaluation
           </TableWithHeader.Button>
           <CreateBatchEvaluationModal
