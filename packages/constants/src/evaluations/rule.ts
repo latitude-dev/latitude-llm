@@ -179,7 +179,7 @@ export type RuleEvaluationLexicalOverlapResultError = z.infer<
 
 const ruleEvaluationSemanticSimilarityConfiguration =
   ruleEvaluationConfiguration.extend({
-    algorithm: z.literal('cosine_similarity'),
+    algorithm: z.enum(['cosine_distance']),
     minSimilarity: z.number().optional(), // Percentage of similarity
     maxSimilarity: z.number().optional(), // Percentage of similarity
   })

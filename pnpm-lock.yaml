@@ -868,6 +868,9 @@ importers:
       ajv:
         specifier: ^8.17.1
         version: 8.17.1
+      compute-cosine-similarity:
+        specifier: ^1.1.0
+        version: 1.1.0
       date-fns:
         specifier: ^3.6.0
         version: 3.6.0
@@ -7295,6 +7298,15 @@ packages:
   component-emitter@1.3.1:
     resolution: {integrity: sha512-T0+barUSQRTUQASh8bx02dl+DhF54GtIDY13Y3m9oWTklKbb3Wv974meRpeZ3lp1JpLVECWWNHC4vaG2XHXouQ==}
 
+  compute-cosine-similarity@1.1.0:
+    resolution: {integrity: sha512-FXhNx0ILLjGi9Z9+lglLzM12+0uoTnYkHm7GiadXDAr0HGVLm25OivUS1B/LPkbzzvlcXz/1EvWg9ZYyJSdhTw==}
+
+  compute-dot@1.1.0:
+    resolution: {integrity: sha512-L5Ocet4DdMrXboss13K59OK23GXjiSia7+7Ukc7q4Bl+RVpIXK2W9IHMbWDZkh+JUEvJAwOKRaJDiFUa1LTnJg==}
+
+  compute-l2norm@1.1.0:
+    resolution: {integrity: sha512-6EHh1Elj90eU28SXi+h2PLnTQvZmkkHWySpoFz+WOlVNLz3DQoC4ISUHSV9n5jMxPHtKGJ01F4uu2PsXBB8sSg==}
+
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
 
@@ -13049,6 +13061,12 @@ packages:
 
   validate-npm-package-license@3.0.4:
     resolution: {integrity: sha512-DpKm2Ui/xN7/HQKCtpZxoRWBhZ9Z0kqtygG8XCgNQ8ZlDnxuQmWhj566j8fN4Cu3/JmbhsDo7fcAJq4s9h27Ew==}
+
+  validate.io-array@1.0.6:
+    resolution: {integrity: sha512-DeOy7CnPEziggrOO5CZhVKJw6S3Yi7e9e65R1Nl/RTN1vTQKnzjfvks0/8kQ40FP/dsjRAOd4hxmJ7uLa6vxkg==}
+
+  validate.io-function@1.0.2:
+    resolution: {integrity: sha512-LlFybRJEriSuBnUhQyG5bwglhh50EpTL2ul23MPIuR1odjO7XaMLFV8vHGwp7AZciFxtYOeiSCT5st+XSPONiQ==}
 
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
@@ -21062,6 +21080,23 @@ snapshots:
 
   component-emitter@1.3.1: {}
 
+  compute-cosine-similarity@1.1.0:
+    dependencies:
+      compute-dot: 1.1.0
+      compute-l2norm: 1.1.0
+      validate.io-array: 1.0.6
+      validate.io-function: 1.0.2
+
+  compute-dot@1.1.0:
+    dependencies:
+      validate.io-array: 1.0.6
+      validate.io-function: 1.0.2
+
+  compute-l2norm@1.1.0:
+    dependencies:
+      validate.io-array: 1.0.6
+      validate.io-function: 1.0.2
+
   concat-map@0.0.1: {}
 
   concat-stream@2.0.0:
@@ -28375,6 +28410,10 @@ snapshots:
     dependencies:
       spdx-correct: 3.2.0
       spdx-expression-parse: 3.0.1
+
+  validate.io-array@1.0.6: {}
+
+  validate.io-function@1.0.2: {}
 
   vary@1.1.2: {}
 

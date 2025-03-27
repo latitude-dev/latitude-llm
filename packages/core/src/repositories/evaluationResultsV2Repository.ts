@@ -244,7 +244,10 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
           : sql`0`.mapWith(Number),
     }
 
-    const filter = this.listByEvaluationFilter({ evaluationUuid, params })
+    const filter = and(
+      this.listByEvaluationFilter({ evaluationUuid, params }),
+      isNull(evaluationResultsV2.error),
+    )
 
     const totalStats = await this.db
       .select(stats)
