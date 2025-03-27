@@ -1,6 +1,5 @@
+import { normalizeNumber } from '$/lib/normalizeNumber'
 import { ROUTES } from '$/services/routes'
-import { useMemo } from 'react'
-
 import {
   EvaluationResultableType,
   EvaluationResultDto,
@@ -8,7 +7,7 @@ import {
 } from '@latitude-data/core/browser'
 import { Badge, Button, Skeleton, Text } from '@latitude-data/web-ui'
 import Link from 'next/link'
-
+import { useMemo } from 'react'
 import EvaluationItem from './EvaluationItem'
 import { Props } from './shared'
 
@@ -107,7 +106,11 @@ export function CollapsedContentHeader({
 
         if (evaluation.resultType === EvaluationResultableType.Number) {
           value = Number(value)
-          return value >= evaluation.resultConfiguration.maxValue
+          return normalizeNumber(
+            value,
+            evaluation.resultConfiguration.minValue,
+            evaluation.resultConfiguration.maxValue,
+          ) >= 0.75
             ? { ...acc, passed: acc.passed + 1 }
             : acc
         }

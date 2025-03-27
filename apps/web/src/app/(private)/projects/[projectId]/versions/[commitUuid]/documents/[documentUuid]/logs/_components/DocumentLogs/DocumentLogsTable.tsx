@@ -5,6 +5,7 @@ import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
+import { normalizeNumber } from '$/lib/normalizeNumber'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
@@ -67,12 +68,13 @@ function EvaluationsColumn({
         }
 
         if (result.resultableType === EvaluationResultableType.Number) {
-          return (
-            Number(value) >=
-            ((
-              evaluation.resultConfiguration as EvaluationConfigurationNumerical
-            )?.maxValue ?? 0)
-          )
+          const minValue = (
+            evaluation.resultConfiguration as EvaluationConfigurationNumerical
+          )?.minValue
+          const maxValue = (
+            evaluation.resultConfiguration as EvaluationConfigurationNumerical
+          )?.maxValue
+          return normalizeNumber(Number(value), minValue, maxValue) >= 0.75
         }
 
         return true
