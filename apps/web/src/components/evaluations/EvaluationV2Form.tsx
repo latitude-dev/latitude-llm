@@ -152,25 +152,23 @@ export default function EvaluationV2Form<
             required
           />
         )}
-        <FormFieldGroup layout='vertical'>
-          <ConfigurationForm
-            mode={mode}
-            type={settings.type}
-            metric={settings.metric}
-            configuration={settings.configuration}
-            onChange={(value) =>
-              setSettings({ ...settings, configuration: value })
-            }
-            disabled={disabled}
+        <ConfigurationForm
+          mode={mode}
+          type={settings.type}
+          metric={settings.metric}
+          configuration={settings.configuration}
+          onChange={(value) =>
+            setSettings({ ...settings, configuration: value })
+          }
+          disabled={disabled}
+        />
+        {mode === 'create' && metricSpecification?.requiresExpectedOutput && (
+          <Alert
+            variant='default'
+            title='This evaluation requires an expected output'
+            description='You will configure the column that contains the expected output when you run a batch evaluation'
           />
-          {mode === 'create' && metricSpecification?.requiresExpectedOutput && (
-            <Alert
-              variant='default'
-              title='This evaluation requires an expected output'
-              description='You will configure the column that contains the expected output when you run a batch evaluation'
-            />
-          )}
-        </FormFieldGroup>
+        )}
         {mode === 'update' && (
           <FormFieldGroup label='Options' layout='vertical'>
             {metricSpecification?.supportsLiveEvaluation && (

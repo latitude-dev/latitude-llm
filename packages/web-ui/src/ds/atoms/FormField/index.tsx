@@ -20,7 +20,7 @@ export function FormDescription({
 }) {
   if (typeof children !== 'string') return children
 
-  return <Text.H6 color='foregroundMuted'>{children}</Text.H6>
+  return <Text.H6 color='foregroundMuted' display='block'>{children}</Text.H6>
 }
 
 function TooltipMessage({ error }: { error: string | undefined }) {

@@ -43,10 +43,10 @@ export default function ConfigurationForm<
       <SelectableSwitch
         selected={!(configuration.reverseScale ?? false)}
         name='reverseScale'
-        label='Scale orientation'
-        trueLabel='Higher is better'
-        falseLabel='Lower is better'
-        description='Orientation of the metric scale when normalizing the score for internal operations and to display evaluation results'
+        label='Optimize for'
+        trueLabel='Higher score'
+        falseLabel='Lower score'
+        description='The refiner will use this to decide whether to choose higher or lower score evaluation results when optimizing your prompt'
         onChange={(value) =>
           setConfiguration({ ...configuration, reverseScale: !value })
         }

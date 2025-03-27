@@ -47,7 +47,7 @@ function ConfigurationForm({
         value={configuration.algorithm ?? ''}
         name='algorithm'
         label='Algorithm'
-        description='How to measure percentage of similarity'
+        description='How to measure similarity'
         placeholder='Select an algorithm'
         options={ALGORITHM_OPTIONS}
         onChange={(value) =>

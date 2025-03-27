@@ -47,7 +47,7 @@ function ConfigurationForm({
         value={configuration.algorithm ?? ''}
         name='algorithm'
         label='Algorithm'
-        description='How to measure percentage of overlap'
+        description='How to measure overlap'
         placeholder='Select an algorithm'
         options={ALGORITHM_OPTIONS}
         onChange={(value) =>
