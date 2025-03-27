@@ -32,7 +32,7 @@ export default function useDocumentLogs<T extends MaybeBoolean = boolean>(
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<LogResult<T>[], LogResult<T>[]>(
     documentUuid
       ? ROUTES.api.projects
           .detail(projectId)
@@ -45,7 +45,7 @@ export default function useDocumentLogs<T extends MaybeBoolean = boolean>(
           })
       : undefined,
     {
-      serializer: (rows) => rows.map(documentLogPresenter),
+      serializer: (rows) => rows.map(documentLogPresenter<T>),
     },
   )
 
@@ -67,8 +67,8 @@ export default function useDocumentLogs<T extends MaybeBoolean = boolean>(
   return { data, mutate, isLoading }
 }
 
-export function documentLogPresenter(
-  documentLog: DocumentLogWithMetadataAndError,
+export function documentLogPresenter<T extends MaybeBoolean = boolean>(
+  documentLog: LogResult<T>,
 ) {
   return {
     ...documentLog,

@@ -9,7 +9,10 @@ import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useWorkspaceUsage(opts?: SWRConfiguration) {
   const { data: users } = useUsers()
-  const fetcher = useFetcher(ROUTES.api.workspaces.usage, { fallback: null })
+  const fetcher = useFetcher<WorkspaceUsage | undefined>(
+    ROUTES.api.workspaces.usage,
+    { fallback: null },
+  )
   const {
     mutate,
     data = undefined,

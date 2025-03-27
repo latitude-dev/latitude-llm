@@ -123,6 +123,7 @@ export default {
         'modal-lg': '720px',
       },
       minWidth: {
+        '1/2': '50%',
         modal: '580px',
         'modal-lg': '720px',
       },

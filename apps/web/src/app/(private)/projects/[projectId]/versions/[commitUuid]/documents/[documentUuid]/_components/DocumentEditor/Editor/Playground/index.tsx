@@ -17,6 +17,7 @@ import Chat from './Chat'
 import DocumentEvaluations from './DocumentEvaluations'
 import DocumentParams from './DocumentParams'
 import Preview from './Preview'
+import DocumentParamsLoading from './DocumentParams/DocumentParamsLoading'
 
 const COLLAPSED_SIZE = COLLAPSED_BOX_HEIGHT * 2 + 12
 const GAP_PADDING = 26
@@ -44,13 +45,11 @@ export default function Playground({
   useEffect(() => {
     setForcedSize(collapsed ? COLLAPSED_SIZE : undefined)
   }, [collapsed])
-  const { parameters, parametersLoading, source, setSource } =
-    useDocumentParameters({
-      isMountedOnRoot: true,
-      commitVersionUuid: commit.uuid,
-      document,
-      datasetVersion,
-    })
+  const { parameters, source, setSource } = useDocumentParameters({
+    commitVersionUuid: commit.uuid,
+    document,
+    datasetVersion,
+  })
 
   const { value: expandParameters, setValue: setExpandParameters } =
     useLocalStorage({
@@ -89,17 +88,23 @@ export default function Playground({
             'grid-rows-2': expandedParameters && expandedEvaluations,
           })}
         >
-          <DocumentParams
-            metadata={metadata}
-            commit={commit}
-            document={document}
-            prompt={prompt}
-            source={source}
-            setSource={setSource}
-            setPrompt={setPrompt}
-            onExpand={setExpandedParameters}
-            datasetVersion={datasetVersion}
-          />
+          {!parameters ? (
+            <DocumentParamsLoading
+              source={source}
+              onExpand={setExpandedParameters}
+            />
+          ) : (
+            <DocumentParams
+              commit={commit}
+              document={document}
+              prompt={prompt}
+              source={source}
+              setSource={setSource}
+              setPrompt={setPrompt}
+              onExpand={setExpandedParameters}
+              datasetVersion={datasetVersion}
+            />
+          )}
           <DocumentEvaluations
             documentLog={documentLog}
             commit={commit}
@@ -116,7 +121,6 @@ export default function Playground({
             <Preview
               metadata={metadata}
               parameters={parameters}
-              parametersLoading={parametersLoading}
               runPrompt={() => setMode('chat')}
               expandParameters={expandParameters}
               setExpandParameters={setExpandParameters}

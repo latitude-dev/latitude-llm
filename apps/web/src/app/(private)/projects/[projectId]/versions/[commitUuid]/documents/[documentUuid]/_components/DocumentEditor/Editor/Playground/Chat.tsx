@@ -30,7 +30,7 @@ export default function Chat({
   setExpandParameters,
 }: {
   document: DocumentVersion
-  parameters: Record<string, unknown>
+  parameters: Record<string, unknown> | undefined
   clearChat: () => void
   onPromptRan?: (documentLogUuid?: string, error?: Error) => void
 } & ActionsState) {
@@ -72,7 +72,7 @@ export default function Chat({
           body: JSON.stringify({
             path: document.path,
             commitUuid: commit.uuid,
-            parameters,
+            parameters: parameters ?? {},
             projectId: project.id,
             stream: true, // Explicitly request streaming
           }),
@@ -182,7 +182,7 @@ export default function Chat({
         {/* Prompt messages */}
         <MessageList
           messages={messages.slice(0, chainLength - 1) ?? []}
-          parameters={Object.keys(parameters)}
+          parameters={Object.keys(parameters ?? {})}
           collapseParameters={!expandParameters}
           agentToolsMap={agentToolsMap}
           toolContentMap={toolContentMap}

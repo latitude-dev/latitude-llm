@@ -1,5 +1,6 @@
 import { DatasetRow, DatasetV2 } from '../../browser'
 import { DatasetRowsRepository } from '../../repositories'
+import { DatasetRowDataContent } from '../../schema'
 
 async function getToLine({
   toLine,
@@ -16,23 +17,11 @@ async function getToLine({
   return !result[0] ? 0 : result[0].count
 }
 
-function extractValue(
-  value: DatasetRow['rowData'][keyof DatasetRow['rowData']],
-) {
-  if (value === null || value === undefined) return ''
-
-  try {
-    return JSON.stringify(value)
-  } catch {
-    return String(value)
-  }
-}
-
 function extractValues(row: DatasetRow) {
-  const values: Record<string, string> = {}
+  const values: Record<string, DatasetRowDataContent> = {}
 
   for (const [id, value] of Object.entries(row.rowData)) {
-    values[id] = extractValue(value)
+    values[id] = value
   }
 
   return { id: row.id, values }

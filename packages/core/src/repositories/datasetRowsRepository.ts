@@ -1,7 +1,6 @@
 import {
   sql,
   eq,
-  lt,
   and,
   getTableColumns,
   count,
@@ -13,7 +12,6 @@ import { DatasetRow, DatasetV2, DEFAULT_PAGINATION_SIZE } from '../browser'
 import { datasetRows } from '../schema'
 import Repository from './repositoryV2'
 import { calculateOffset } from '../lib/pagination/calculateOffset'
-import { Result } from '../lib'
 
 const tt = getTableColumns(datasetRows)
 
@@ -47,6 +45,7 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
           eq(datasetRows.datasetId, dataset.id),
         ),
       )
+      .orderBy(desc(datasetRows.createdAt), desc(datasetRows.id))
   }
 
   findByDatasetPaginated({
@@ -78,7 +77,7 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
       .from(datasetRows)
       .where(and(this.scopeFilter, eq(datasetRows.datasetId, datasetId)))
       .limit(limit)
-      .orderBy(desc(datasetRows.createdAt))
+      .orderBy(desc(datasetRows.createdAt), desc(datasetRows.id))
       .offset(offset)
 
     return query
@@ -91,25 +90,13 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
     datasetId: number
     datasetRowId: number
   }) {
-    const rows = await this.db
-      .select(tt)
-      .from(datasetRows)
-      .where(
-        and(
-          this.scopeFilter,
-          eq(datasetRows.datasetId, datasetId),
-          eq(datasetRows.id, datasetRowId),
-        ),
-      )
+    const rowResult = await this.find(datasetRowId)
 
-    const row = rows[0]
-
-    if (!row) {
-      return Result.error(
-        new Error(`Dataset row not found with id ${datasetRowId}`),
-      )
+    if (rowResult.error) {
+      return { position: 0, page: 1 }
     }
 
+    const row = rowResult.value
     const countResult = await this.db
       .select({
         count: sql`count(*)`.mapWith(Number).as('total_count'),
@@ -119,15 +106,14 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
         and(
           this.scopeFilter,
           eq(datasetRows.datasetId, datasetId),
-          lt(datasetRows.id, row.id),
+          sql`(${datasetRows.id}) >= (${row.id})`,
         ),
       )
 
-    const position = Number(countResult[0]?.count) + 1
-
+    const position = Number(countResult[0]?.count ?? 0)
     const page = Math.ceil(position / DEFAULT_PAGINATION_SIZE)
 
-    return Result.ok({ position, page })
+    return { position, page }
   }
 
   getCountByDataset(datasetId: number) {

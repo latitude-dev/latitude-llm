@@ -22,7 +22,7 @@ export default function useDocumentLogsPagination(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<IPagination>(
     documentUuid
       ? ROUTES.api.projects
           .detail(projectId)

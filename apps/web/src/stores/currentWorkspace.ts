@@ -11,7 +11,7 @@ import { useServerAction } from 'zsa-react'
 
 export default function useCurrentWorkspace() {
   const { toast } = useToast()
-  const fetcher = useFetcher(ROUTES.api.workspaces.current)
+  const fetcher = useFetcher<Workspace>(ROUTES.api.workspaces.current)
 
   const { mutate, data, ...rest } = useSWR<Workspace, Error>(
     'api/workspaces/current',

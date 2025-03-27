@@ -6,9 +6,11 @@ const ParameterTypes = Object.values(ParameterType) as string[]
 
 export function recalculateInputs<S extends InputSource>({
   inputs,
+  fallbackInputs,
   metadata: prompt,
 }: {
   inputs: Inputs<S>
+  fallbackInputs?: Inputs<S>
   metadata: ConversationMetadata
 }): Inputs<S> {
   const config = (prompt.config.parameters || {}) as Record<
@@ -25,7 +27,8 @@ export function recalculateInputs<S extends InputSource>({
 
   return Object.fromEntries(
     Array.from(prompt.parameters).map((param) => {
-      const input = inputs[param] || firstChangedInput
+      const input =
+        inputs[param] ?? fallbackInputs?.[param] ?? firstChangedInput
       let type = config[param]?.type
 
       if (type && !ParameterTypes.includes(type)) {

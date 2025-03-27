@@ -4,7 +4,7 @@ import { Job } from 'bullmq'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as jobsModule from '../../'
-import { Dataset, DatasetV2, Providers } from '../../../browser'
+import { DatasetV2, Providers } from '../../../browser'
 import * as datasetsPreview from '../../../services/datasets/preview'
 import { identityHashAlgorithm } from '../../../services/datasetsV2/utils'
 import * as factories from '../../../tests/factories'
@@ -132,8 +132,6 @@ describe('runBatchEvaluationJob', () => {
     }
   })
 
-  let mockJob: Job<RunBatchEvaluationJobParams>
-
   describe('with V2 dataset', () => {
     let dataset: DatasetV2
 
@@ -242,7 +240,7 @@ describe('runBatchEvaluationJob', () => {
         ),
       ).toHaveBeenCalledWith(
         expect.objectContaining({
-          parameters: { name: '"John"', secondName: '"Doe"' },
+          parameters: { name: 'Paco', secondName: 'Merlo' },
           version: 'v1',
         }),
       )
@@ -260,18 +258,18 @@ describe('runBatchEvaluationJob', () => {
           evaluationId: 1,
           workspaceId: setup.workspace.id,
           documentUuid: setup.documents[0]!.documentUuid,
-          parameters: { name: '"Paco"', secondName: '"Merlo"' },
+          parameters: { name: 'Paco', secondName: 'Merlo' },
           version: 'v1',
         }),
       )
       expect(runDocumentForEvaluationMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          parameters: { name: '"Frank"', secondName: '"Merlo"' },
+          parameters: { name: 'John', secondName: 'Doe' },
         }),
       )
       expect(runDocumentForEvaluationMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          parameters: { name: '"John"', secondName: '"Doe"' },
+          parameters: { name: 'Frank', secondName: 'Merlo' },
         }),
       )
     })
@@ -290,57 +288,6 @@ describe('runBatchEvaluationJob', () => {
           mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
         ),
       ).toHaveBeenCalledTimes(2)
-    })
-  })
-
-  describe('with V1 dataset (DEPRECATED)', () => {
-    beforeEach(() => {
-      vi.clearAllMocks()
-
-      // @ts-ignore
-      mockJob = buildFakeJob({
-        ...commonJobData,
-        dataset: { fileMetadata: { rowCount: 3 } } as unknown as Dataset,
-        parametersMap: { param1: 0, param2: 1 },
-      })
-    })
-
-    it('should process all rows and enqueue jobs', async () => {
-      await runBatchEvaluationJob(mockJob)
-
-      expect(
-        mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-      ).toHaveBeenCalledTimes(3)
-      expect(
-        mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          workspaceId: setup.workspace.id,
-          parameters: { param1: 'value1', param2: 'value2' },
-          evaluationId: 1,
-          batchId: expect.any(String),
-          version: 'v1',
-        }),
-      )
-    })
-
-    it('should use provided fromLine and toLine', async () => {
-      mockJob.data.fromLine = 1
-      mockJob.data.toLine = 3
-
-      await runBatchEvaluationJob(mockJob)
-
-      expect(previewDatasetSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          fromLine: 1,
-          toLine: 3,
-        }),
-      )
-      expect(
-        vi.mocked(
-          mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-        ),
-      ).toHaveBeenCalledTimes(3)
     })
   })
 })

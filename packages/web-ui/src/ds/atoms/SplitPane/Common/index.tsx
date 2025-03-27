@@ -74,6 +74,7 @@ export function ResizablePane({
   minSize,
   children,
   paneSize,
+  widthClassWhileNoPaneWidth,
   onResizePane,
   onResizeStop,
   dragDisabled,
@@ -85,6 +86,7 @@ export function ResizablePane({
   paneSize: number
   onResizePane: (size: number) => void
   onResizeStop?: (size: number) => void
+  widthClassWhileNoPaneWidth?: string
   dragDisabled?: boolean
 }) {
   const onResize = (_: SyntheticEvent, data: ResizeCallbackData) => {
@@ -112,7 +114,10 @@ export function ResizablePane({
         axis='x'
         minConstraints={[minSize, Infinity]}
         resizeHandles={dragDisabled ? [] : ['e']}
-        className='flex relative flex-shrink-0 flex-grow-0'
+        className={cn('flex relative flex-shrink-0 flex-grow-0', {
+          [`${widthClassWhileNoPaneWidth}`]:
+            !paneSize && widthClassWhileNoPaneWidth,
+        })}
         handle={SplitHandle(visibleHandle)}
         onResize={onResize}
         onResizeStop={onStop}

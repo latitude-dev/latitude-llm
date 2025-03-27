@@ -37,7 +37,7 @@ export function Actions({
         </div>
       </div>
       <TableWithHeader.Button onClick={onOpen}>
-        Run batch evaluation
+        Run experiment
       </TableWithHeader.Button>
       <CreateBatchEvaluationModal
         open={open}

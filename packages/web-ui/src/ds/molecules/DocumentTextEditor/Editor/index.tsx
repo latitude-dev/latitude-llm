@@ -21,14 +21,15 @@ import { RegularMonacoEditor } from './RegularEditor'
 export function DocumentTextEditor({
   value,
   path,
-  metadata,
   onChange,
   readOnlyMessage,
   isSaved,
   actionButtons,
   diff,
   copilot,
+  compileErrors,
 }: DocumentTextEditorProps) {
+  const errors = compileErrors ?? []
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null)
 
@@ -48,7 +49,7 @@ export function DocumentTextEditor({
 
   const errorMarkers = useMemo<DocumentError[]>(
     () =>
-      metadata?.errors.map((error: CompileError) => {
+      errors.map((error: CompileError) => {
         return {
           startLineNumber: error.start?.line ?? 0,
           startColumn: error.start?.column ?? 0,
@@ -58,7 +59,7 @@ export function DocumentTextEditor({
           severity: MarkerSeverity.Error,
         }
       }) ?? [],
-    [metadata?.errors],
+    [errors],
   )
 
   const handleValueChange = useCallback(
@@ -79,7 +80,7 @@ export function DocumentTextEditor({
     const newValue = diffEditorRef.current.getModifiedEditor().getValue()
 
     setIsApplyingDiff(true)
-    await diff.onAccept(newValue)
+    diff.onAccept(newValue)
     setIsApplyingDiff(false)
   }, [diff])
 
@@ -88,7 +89,7 @@ export function DocumentTextEditor({
     if (!diffEditorRef.current) return
 
     setIsDiscardingDiff(true)
-    await diff.onReject()
+    diff.onReject()
     setIsDiscardingDiff(false)
   }, [diff])
 
@@ -192,7 +193,7 @@ export function DocumentTextEditor({
               )}
             </div>
           )}
-          {!diff && (metadata?.errors.length ?? 0) > 0 && (
+          {!diff && (errors.length ?? 0) > 0 && (
             <Button
               variant='outline'
               onClick={focusNextError}
@@ -205,9 +206,7 @@ export function DocumentTextEditor({
               }}
               className='group-hover:border-destructive'
             >
-              <Text.H6 color='destructive'>
-                {metadata!.errors.length} errors
-              </Text.H6>
+              <Text.H6 color='destructive'>{errors.length} errors</Text.H6>
             </Button>
           )}
         </div>

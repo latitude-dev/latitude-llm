@@ -164,14 +164,6 @@ describe('createFromLogs', async () => {
     })
     expect(rows.map((r) => r.rowData)).toEqual([
       {
-        name_identifier: 'Paco',
-        surname_identifier: 'Merlo',
-      },
-      {
-        name_identifier: 'Frank',
-        surname_identifier: 'Merlo',
-      },
-      {
         age_identifier: 25,
         location_identifier: 'San Francisco',
         output_identifier: 'Last provider response. Hello!',
@@ -179,6 +171,14 @@ describe('createFromLogs', async () => {
         document_log_id_identifier: documentLog.id,
         surname_identifier: '',
         tokens_identifier: expect.any(Number),
+      },
+      {
+        name_identifier: 'Frank',
+        surname_identifier: 'Merlo',
+      },
+      {
+        name_identifier: 'Paco',
+        surname_identifier: 'Merlo',
       },
     ])
   })

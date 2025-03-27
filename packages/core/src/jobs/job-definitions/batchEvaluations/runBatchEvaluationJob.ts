@@ -4,9 +4,7 @@ import { Job } from 'bullmq'
 
 import { setupQueues } from '../..'
 import {
-  Dataset,
   DatasetV2,
-  DatasetVersion,
   DocumentVersion,
   EvaluationTmp,
   User,
@@ -16,13 +14,12 @@ import { publisher } from '../../../events/publisher'
 import { queuesConnection } from '../../../queues'
 import { CommitsRepository } from '../../../repositories'
 import { getRowsFromRange } from '../../../services/datasetRows/getRowsFromRange'
-import { previewDataset } from '../../../services/datasets/preview'
 import { getEvaluationMetricSpecification } from '../../../services/evaluationsV2'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 
 type GetDatasetsProps = {
-  dataset: Dataset | DatasetV2
+  dataset: DatasetV2
   fromLine: number | undefined
   toLine: number | undefined
 }
@@ -33,22 +30,6 @@ async function getDatasetRows({
   toLine: to,
 }: GetDatasetsProps) {
   const fromLine = from ? Math.abs(from) : 1
-  const datasetVersion = 'columns' in ds ? DatasetVersion.V2 : DatasetVersion.V1
-
-  // DEPRECATED: Used in old datasets
-  if (datasetVersion === DatasetVersion.V1) {
-    const dataset = ds as Dataset
-    const fileMetadata = dataset.fileMetadata
-    const result = await previewDataset({
-      dataset,
-      fromLine,
-      toLine: to || fileMetadata.rowCount,
-    }).then((r) => r.unwrap())
-
-    const rows = result.rows.map((row, index) => ({ id: index, values: row }))
-    return { rows }
-  }
-
   return getRowsFromRange({ dataset: ds as DatasetV2, fromLine, toLine: to })
 }
 
@@ -69,15 +50,12 @@ export async function getBatchRows({
       id: row.id,
       parameters: Object.fromEntries(
         Object.entries(parametersMap!).map(([parameter, index]) => {
-          if ('columns' in dataset) {
-            return [
-              parameter,
-              (row.values as Record<string, string>)[
-                dataset.columns[index]!.identifier
-              ]!,
-            ]
-          }
-          return [parameter, (row.values as string[])[index]!]
+          return [
+            parameter,
+            (row.values as Record<string, string>)[
+              dataset.columns[index]!.identifier
+            ]!,
+          ]
         }),
       ),
     }
@@ -88,7 +66,7 @@ export type RunBatchEvaluationJobParams = {
   workspace: Workspace
   user: User
   evaluation: EvaluationTmp
-  dataset: Dataset | DatasetV2
+  dataset: DatasetV2
   datasetLabel?: string
   document: DocumentVersion
   commitUuid: string

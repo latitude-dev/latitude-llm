@@ -20,11 +20,7 @@ async function getWorkerUrl(): Promise<string | null> {
     })
 }
 
-export function useMetadata({
-  onMetadataProcessed,
-}: {
-  onMetadataProcessed?: (metadata: ConversationMetadata) => void
-} = {}) {
+export function useMetadata() {
   const workerRef = useRef<Worker | null>(null)
   const [metadata, setMetadata] = useState<ConversationMetadata>()
 
@@ -43,7 +39,6 @@ export function useMetadata({
 
       worker.onmessage = (event) => {
         setMetadata(event.data)
-        onMetadataProcessed?.(event.data)
       }
     }
 
@@ -52,7 +47,7 @@ export function useMetadata({
     return () => {
       workerRef.current?.terminate()
     }
-  }, [onMetadataProcessed])
+  }, [])
 
   const runReadMetadata = useDebouncedCallback(
     async (props: ReadMetadataWorkerProps) => {

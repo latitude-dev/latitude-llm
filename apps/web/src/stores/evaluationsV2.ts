@@ -40,7 +40,7 @@ export function useEvaluationsV2(
 ) {
   const { toast } = useToast()
 
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<EvaluationV2[]>(
     ROUTES.api.projects
       .detail(project.id)
       .commits.detail(commit.uuid)
@@ -225,11 +225,14 @@ export function useEvaluationV2Stats<
     () => (search ? evaluationResultsV2SearchToQueryParams(search) : ''),
     [search],
   )
-  const fetcher = useFetcher(`${route}?${query}`, {
-    serializer: (data) => (isEmpty(data) ? undefined : data),
-  })
+  const fetcher = useFetcher<EvaluationV2Stats | undefined, EvaluationV2Stats>(
+    `${route}?${query}`,
+    {
+      serializer: (data) => (isEmpty(data) ? undefined : data),
+    },
+  )
 
-  const { data = undefined, ...rest } = useSWR<EvaluationV2Stats>(
+  const { data = undefined, ...rest } = useSWR(
     compact([
       'evaluationV2Stats',
       project.id,

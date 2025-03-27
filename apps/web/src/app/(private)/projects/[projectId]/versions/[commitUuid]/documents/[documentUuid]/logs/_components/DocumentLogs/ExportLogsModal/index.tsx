@@ -45,7 +45,7 @@ export function ExportLogsModal({
 
   const { data: datasets, mutate, isLoading: isDatasetsLoading } = useDatasets()
 
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<CsvData>(
     selectedLogsIds.length
       ? ROUTES.api.documentLogs.generateCsv.detail({
           documentLogIds: selectedLogsIds,
@@ -56,7 +56,7 @@ export function ExportLogsModal({
     },
   )
 
-  const { data: csvData, isLoading: isCsvDataLoading } = useSWR<CsvData>(
+  const { data: csvData, isLoading: isCsvDataLoading } = useSWR(
     ['documentLogCsv', selectedLogsIds],
     fetcher,
   )

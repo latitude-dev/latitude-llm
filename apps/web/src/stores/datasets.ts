@@ -21,9 +21,12 @@ export default function useDatasets(
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
-  const fetcher = useFetcher(enabled ? ROUTES.api.datasets.root : undefined, {
-    serializer: (rows) => rows.map(deserialize),
-  })
+  const fetcher = useFetcher<Dataset[], Dataset[]>(
+    enabled ? ROUTES.api.datasets.root : undefined,
+    {
+      serializer: (rows) => rows.map(deserialize),
+    },
+  )
   const {
     data = EMPTY_ARRAY,
     mutate,

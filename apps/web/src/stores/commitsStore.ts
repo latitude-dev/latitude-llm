@@ -31,7 +31,7 @@ export function useCommitsFromProject(
   const route = projectId
     ? ROUTES.api.projects.detail(projectId).commits.root
     : undefined
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<Commit[], Commit[]>(
     route
       ? commitStatus
         ? `${route}?status=${commitStatus}`
