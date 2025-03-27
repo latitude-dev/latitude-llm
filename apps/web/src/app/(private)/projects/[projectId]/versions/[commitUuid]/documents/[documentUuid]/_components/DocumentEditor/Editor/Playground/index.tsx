@@ -44,9 +44,8 @@ export default function Playground({
   useEffect(() => {
     setForcedSize(collapsed ? COLLAPSED_SIZE : undefined)
   }, [collapsed])
-  const { parameters, parametersLoading, source, setSource } =
+  const { parameters, source, setSource } =
     useDocumentParameters({
-      isMountedOnRoot: true,
       commitVersionUuid: commit.uuid,
       document,
       datasetVersion,
@@ -90,7 +89,6 @@ export default function Playground({
           })}
         >
           <DocumentParams
-            metadata={metadata}
             commit={commit}
             document={document}
             prompt={prompt}
@@ -116,7 +114,6 @@ export default function Playground({
             <Preview
               metadata={metadata}
               parameters={parameters}
-              parametersLoading={parametersLoading}
               runPrompt={() => setMode('chat')}
               expandParameters={expandParameters}
               setExpandParameters={setExpandParameters}

@@ -15,7 +15,6 @@ import {
 } from '@latitude-data/web-ui'
 
 import { InputsMapperItem, OnSelectRowCellFn } from './InputsMapperItem'
-import { type DatasetMappedValue } from '../useDatasetRowsForParameters'
 
 function getTooltipValue(input: PlaygroundInput<'datasetV2'>) {
   if (input === undefined || input === null) {
@@ -33,7 +32,6 @@ function getTooltipValue(input: PlaygroundInput<'datasetV2'>) {
 export function InputMapper({
   document,
   commit,
-  parameters,
   rowCellOptions,
   isLoading,
   onSelectRowCell,
@@ -42,7 +40,6 @@ export function InputMapper({
 }: {
   document: DocumentVersion
   commit: ICommitContextType['commit']
-  parameters: DatasetMappedValue[]
   rowCellOptions: SelectOption<string>[]
   onSelectRowCell: OnSelectRowCellFn<string>
   isLoading: boolean
@@ -73,7 +70,7 @@ export function InputMapper({
     // )
     //
     // setManualInputs(manualInputs)
-  }, [parameters, setManualInputs])
+  }, [setManualInputs])
   const inputs = ds.inputs
   const mappedInputs = ds.mappedInputs
   const inputKeys = Object.entries(inputs)

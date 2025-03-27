@@ -22,10 +22,6 @@ import {
   useLocalStorage,
 } from '@latitude-data/web-ui'
 import useDocumentVersions from '$/stores/documentVersions'
-import {
-  getLocalStorageInputsBySource,
-  useAsyncDocumentParameters,
-} from './useAsyncDocumentParameters'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 const EMPTY_LINKED_DATASET = {
@@ -154,12 +150,10 @@ export function useDocumentParameters<
   document,
   commitVersionUuid,
   datasetVersion,
-  isMountedOnRoot = false,
 }: {
   document: DocumentVersion
   datasetVersion: V
   commitVersionUuid: string
-  isMountedOnRoot?: boolean
 }) {
   const { enabled: useDatasetsV2 } = useFeatureFlag({
     featureFlag: 'datasetsV2',
@@ -194,14 +188,6 @@ export function useDocumentParameters<
       : source === INPUT_SOURCE.datasetV2
         ? linkedDatasetV2.inputs
         : inputs[source].inputs
-
-  const { asyncParameters, onParametersChange } = useAsyncDocumentParameters({
-    isMountedOnRoot,
-    source,
-    inputs,
-    datasetVersion,
-    datasetV1Deprecated: linkedDataset,
-  })
 
   const setInputs = useCallback(
     <S extends LocalInputSource>(source: S, newInputs: LocalInputs<S>) => {
@@ -242,26 +228,19 @@ export function useDocumentParameters<
       value: PlaygroundInput<S>,
       param: string,
     ) => {
+      const prev = inputsBySource[currentSource]
       switch (currentSource) {
         case INPUT_SOURCE.manual: {
-          const prev = getLocalStorageInputsBySource({
-            source: currentSource,
-            inputs,
-          })
           setManualInputs({ ...prev, [param]: value })
           break
         }
         case INPUT_SOURCE.history: {
-          const prev = getLocalStorageInputsBySource({
-            source: currentSource,
-            inputs,
-          })
           setHistoryInputs({ ...prev, [param]: value })
           break
         }
       }
     },
-    [source, inputs, setInputs],
+    [source, inputsBySource, setInputs],
   )
 
   const setManualInput = useCallback(
@@ -555,10 +534,7 @@ export function useDocumentParameters<
   )
 
   return {
-    onParametersChange,
     parameters,
-    setParametersLoading: asyncParameters.setLoading,
-    parametersLoading: asyncParameters.loading,
     onMetadataProcessed,
     source,
     setSource,

@@ -14,16 +14,7 @@ import {
 } from './useDatasetRowsWithPosition'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { SelectOption } from '@latitude-data/web-ui'
-import { ConversationMetadata } from 'promptl-ai'
 import { parseRowCell } from '$/stores/datasetRows/rowSerializationHelpers'
-
-export type DatasetMappedValue = {
-  param: string
-  value: string
-  columnIdentifier: string | undefined
-  isMapped: boolean
-  isEmpty: boolean
-}
 
 function getInitialPosition(
   selectedDatasetRowId: number | undefined,
@@ -103,7 +94,6 @@ export function useDatasetRowsForParameters({
     useDatasetRowsCount({ dataset })
 
   const {
-    setParametersLoading,
     datasetV2: ds,
   } = useDocumentParameters({
     document,
@@ -224,7 +214,6 @@ export function useDatasetRowsForParameters({
         mappedInputs: mapped,
         row: datasetRow,
       })
-      setParametersLoading()
       ds.setDataset({
         datasetId: dataset.id,
         datasetVersion: DatasetVersion.V2,
@@ -236,7 +225,6 @@ export function useDatasetRowsForParameters({
       })
     },
     [
-      setParametersLoading,
       ds.setDataset,
       ds.inputs,
       ds.mappedInputs,

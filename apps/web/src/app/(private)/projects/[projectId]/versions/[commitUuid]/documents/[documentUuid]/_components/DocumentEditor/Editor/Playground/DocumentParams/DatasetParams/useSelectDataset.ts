@@ -12,17 +12,14 @@ import useDocumentVersions from '$/stores/documentVersions'
 import { useVersionedDatasets } from '$/hooks/useVersionedDatasets'
 import { useDatasetRowsForParameters } from './useDatasetRowsForParameters'
 import { useDatasetV1RowsForParamaters } from './useDatasetRowsForParameters/useDatasetV1RowsForParamaters'
-import { ConversationMetadata } from 'promptl-ai'
 
 export function useSelectDataset({
   document,
   commitVersionUuid,
-  metadata,
 }: {
   document: DocumentVersion
   commitVersionUuid: string
   source: InputSource
-  metadata: ConversationMetadata | undefined
 }) {
   const [selectedDataset, setSelectedDataset] = useState<
     Dataset | DatasetV2 | undefined
@@ -83,7 +80,6 @@ export function useSelectDataset({
     document,
     commitVersionUuid,
     dataset: !isV1 ? (selectedDataset as DatasetV2) : undefined,
-    metadata,
     datasetIsReady: datasetsLoadedAtLeastOnce,
   })
 
@@ -92,8 +88,6 @@ export function useSelectDataset({
 
   return {
     ...rowsData,
-    // TODO: Remove after datasets 2 migration
-    parameters: isV1 ? [] : rowsV2.parameters,
     datasetOptions,
     selectedDataset,
     onSelectDataset,
