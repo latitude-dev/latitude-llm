@@ -89,25 +89,24 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
     datasetRowId,
   }: {
     datasetId: number
-    datasetRowId: number
+    datasetRowId?: number
   }) {
+    let filters = [this.scopeFilter, eq(datasetRows.datasetId, datasetId)]
+
+    if (datasetRowId) {
+      filters.push(eq(datasetRows.id, datasetRowId))
+    }
+
     const rows = await this.db
       .select(tt)
       .from(datasetRows)
-      .where(
-        and(
-          this.scopeFilter,
-          eq(datasetRows.datasetId, datasetId),
-          eq(datasetRows.id, datasetRowId),
-        ),
-      )
+      .where(and(...filters))
 
     const row = rows[0]
 
-    if (!row) {
-      return Result.error(
-        new Error(`Dataset row not found with id ${datasetRowId}`),
-      )
+    // Either we don't have row Id or there are 0 rows
+    if (!datasetRowId || !row) {
+      return { position: 1, page: 1 }
     }
 
     const countResult = await this.db
@@ -127,7 +126,7 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
 
     const page = Math.ceil(position / DEFAULT_PAGINATION_SIZE)
 
-    return Result.ok({ position, page })
+    return { position, page }
   }
 
   getCountByDataset(datasetId: number) {

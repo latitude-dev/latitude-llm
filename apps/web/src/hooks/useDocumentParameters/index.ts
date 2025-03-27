@@ -31,7 +31,7 @@ const EMPTY_LINKED_DATASET = {
 }
 
 const EMPTY_LINKED_DATASET_ROW: LinkedDatasetRow = {
-  datasetRowId: 0, // This is wrong. This is an ID in DB. But allows to have this attribute as non optional
+  datasetRowId: undefined,
   inputs: {} as LinkedDatasetRow['inputs'],
   mappedInputs: {} as LinkedDatasetRow['mappedInputs'],
 }
@@ -136,7 +136,11 @@ function getLinkedDatasetV2({
   const all = document.linkedDatasetAndRow ?? {}
   const local = localInputs ?? EMPTY_LINKED_DATASET_ROW
   return all[datasetId]
-    ? all[datasetId]
+    ? {
+      ...EMPTY_LINKED_DATASET_ROW,
+      ...local,
+      ...all[datasetId],
+    }
     : {
       datasetRowId: local.datasetRowId,
       inputs: local.inputs,
@@ -228,7 +232,7 @@ export function useDocumentParameters<
       value: PlaygroundInput<S>,
       param: string,
     ) => {
-      const prev = inputsBySource[currentSource]
+      const prev = inputsBySource[currentSource] ?? {}
       switch (currentSource) {
         case INPUT_SOURCE.manual: {
           setManualInputs({ ...prev, [param]: value })
@@ -285,6 +289,18 @@ export function useDocumentParameters<
 
     setManualInputs(linkedDataset.inputs)
   }, [linkedDataset?.inputs, inputs])
+
+  const copyDatasetV2InputsToManual = useCallback(() => {
+    if (
+      !linkedDatasetV2 ||
+      !('inputs' in linkedDatasetV2) ||
+      !linkedDataset?.inputs
+    ) {
+      return
+    }
+
+    setManualInputs(linkedDataset.inputs)
+  }, [linkedDatasetV2?.inputs, inputs])
 
   const setHistoryLog = useCallback(
     (logUuid: string) => {
@@ -562,6 +578,7 @@ export function useDocumentParameters<
       inputs: linkedDatasetV2.inputs,
       mappedInputs: linkedDatasetV2.mappedInputs,
       setDataset: setDatasetV2,
+      copyToManual: copyDatasetV2InputsToManual,
     },
     history: {
       logUuid: inputs['history'].logUuid,

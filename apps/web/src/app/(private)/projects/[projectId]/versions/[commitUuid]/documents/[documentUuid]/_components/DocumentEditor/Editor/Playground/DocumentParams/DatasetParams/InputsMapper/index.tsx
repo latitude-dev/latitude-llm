@@ -46,31 +46,11 @@ export function InputMapper({
   selectedDataset: Dataset | DatasetV2 | undefined
   datasetVersion: DatasetVersion
 }) {
-  const {
-    setSource,
-    datasetV2: ds,
-    manual: { setInputs: setManualInputs },
-  } = useDocumentParameters({
+  const { setSource, datasetV2: ds } = useDocumentParameters({
     document,
     commitVersionUuid: commit.uuid,
     datasetVersion,
   })
-  const copyToManual = useCallback(() => {
-    // TODO: Move to useDocumentParameters
-    // const manualInputs = parameters.reduce(
-    //   (acc, param) => {
-    //     const name = param.param
-    //     acc[name] = {
-    //       value: String(param.value),
-    //       metadata: { includeInPrompt: true },
-    //     }
-    //     return acc
-    //   },
-    //   {} as Record<string, PlaygroundInput<'manual'>>,
-    // )
-    //
-    // setManualInputs(manualInputs)
-  }, [setManualInputs])
   const inputs = ds.inputs
   const mappedInputs = ds.mappedInputs
   const inputKeys = Object.entries(inputs)
@@ -98,7 +78,7 @@ export function InputMapper({
                   rowCellOptions={rowCellOptions as SelectOption<string>[]}
                   setSource={setSource}
                   tooltipValue={inputTooltipValue}
-                  copyToManual={copyToManual}
+                  copyToManual={ds.copyToManual}
                 />
               )
             })}

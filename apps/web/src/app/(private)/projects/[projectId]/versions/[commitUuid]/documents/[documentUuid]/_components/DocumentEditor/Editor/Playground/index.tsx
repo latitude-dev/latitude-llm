@@ -44,12 +44,11 @@ export default function Playground({
   useEffect(() => {
     setForcedSize(collapsed ? COLLAPSED_SIZE : undefined)
   }, [collapsed])
-  const { parameters, source, setSource } =
-    useDocumentParameters({
-      commitVersionUuid: commit.uuid,
-      document,
-      datasetVersion,
-    })
+  const { parameters, source, setSource } = useDocumentParameters({
+    commitVersionUuid: commit.uuid,
+    document,
+    datasetVersion,
+  })
 
   const { value: expandParameters, setValue: setExpandParameters } =
     useLocalStorage({

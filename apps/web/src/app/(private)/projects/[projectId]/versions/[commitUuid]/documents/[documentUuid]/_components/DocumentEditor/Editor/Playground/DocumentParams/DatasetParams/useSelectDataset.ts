@@ -24,8 +24,6 @@ export function useSelectDataset({
   const [selectedDataset, setSelectedDataset] = useState<
     Dataset | DatasetV2 | undefined
   >()
-  const [datasetsLoadedAtLeastOnce, setDatasetsLoadedAtLeastOnce] =
-    useState<boolean>(false)
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { assignDataset } = useDocumentVersions({})
@@ -37,7 +35,6 @@ export function useSelectDataset({
     onFetched: (data, datasetVersion) => {
       const isV1 = datasetVersion === DatasetVersion.V1
       const documentAttr = isV1 ? 'datasetId' : 'datasetV2Id'
-      setDatasetsLoadedAtLeastOnce(true)
       setSelectedDataset(data.find((ds) => ds.id === document[documentAttr]))
     },
   })
@@ -80,7 +77,6 @@ export function useSelectDataset({
     document,
     commitVersionUuid,
     dataset: !isV1 ? (selectedDataset as DatasetV2) : undefined,
-    datasetIsReady: datasetsLoadedAtLeastOnce,
   })
 
   const rowsData = isV1 ? rowsV1 : rowsV2

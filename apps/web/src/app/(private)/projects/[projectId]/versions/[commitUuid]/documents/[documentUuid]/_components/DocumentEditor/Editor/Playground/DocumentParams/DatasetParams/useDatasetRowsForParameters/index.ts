@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import useDatasetRows from '$/stores/datasetRows'
 import {
@@ -15,25 +15,6 @@ import {
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { SelectOption } from '@latitude-data/web-ui'
 import { parseRowCell } from '$/stores/datasetRows/rowSerializationHelpers'
-
-function getInitialPosition(
-  selectedDatasetRowId: number | undefined,
-): WithPositionData | undefined {
-  return selectedDatasetRowId ? undefined : { position: 1, page: 1 }
-}
-
-function getDocumentMappedInputs({
-  document,
-  dataset,
-}: {
-  document: DocumentVersion
-  dataset: DatasetV2 | null | undefined
-}) {
-  if (!dataset) return {}
-  if (!document.linkedDatasetAndRow) return {}
-
-  return document.linkedDatasetAndRow[dataset.id]?.mappedInputs ?? {}
-}
 
 function mappedToInputs({
   inputs,
@@ -56,13 +37,33 @@ function mappedToInputs({
     return acc
   }, {} as Inputs<'datasetV2'>)
 
-  // Recalculate inputs
   return Object.entries(inputs).reduce((acc, [key, value]) => {
     const newInput = mapped[key]
     const newValue = newInput ? newInput : value
     acc[key] = newValue
     return acc
   }, {} as Inputs<'datasetV2'>)
+}
+
+function usePositionPerDataset(datasetId: number | undefined) {
+  const [positions, setPositions] = useState(
+    () => new Map<number, WithPositionData>(),
+  )
+  const current = datasetId
+    ? (positions.get(datasetId) ?? { position: 1, page: 1 })
+    : undefined
+
+  const update = (newPosition: WithPositionData) => {
+    if (!datasetId) return
+
+    setPositions((prev) => {
+      const next = new Map(prev)
+      next.set(datasetId, newPosition)
+      return next
+    })
+  }
+
+  return { position: current, setPosition: update }
 }
 
 /**
@@ -74,16 +75,13 @@ export function useDatasetRowsForParameters({
   document,
   commitVersionUuid,
   dataset,
-  datasetIsReady,
 }: {
   document: DocumentVersion
   commitVersionUuid: string
   dataset: DatasetV2 | null | undefined
-  datasetIsReady: boolean
 }) {
-  const hasInitialized = useRef(false)
-  const datasetIdRef = useRef(dataset?.id)
-  const [fetchedPosition, setFetchedPosition] = useState(false)
+  const { position, setPosition } = usePositionPerDataset(dataset?.id)
+  const lastRowIdRef = useRef(new Map<number | undefined, number | undefined>())
   const rowCellOptions = useMemo<SelectOption<string>[]>(
     () =>
       dataset?.columns.map((c) => ({ value: c.identifier, label: c.name })) ??
@@ -93,72 +91,37 @@ export function useDatasetRowsForParameters({
   const { data: count, isLoading: isLoadingDatasetRowsCount } =
     useDatasetRowsCount({ dataset })
 
-  const {
-    datasetV2: ds,
-  } = useDocumentParameters({
+  const { datasetV2: ds } = useDocumentParameters({
     document,
     commitVersionUuid,
     datasetVersion: DatasetVersion.V2,
   })
-  const [selectedDatasetRowId, setSelectedDatasetRowId] = useState<
-    number | undefined
-  >(ds.datasetRowId)
-
-  const [position, setPosition] = useState<WithPositionData | undefined>(
-    getInitialPosition(selectedDatasetRowId),
-  )
-
-  const resetPosition = useCallback((datasetId: number | undefined) => {
-    datasetIdRef.current = datasetId
-    setFetchedPosition(false)
-    setPosition(getInitialPosition(undefined))
-    setSelectedDatasetRowId(undefined)
-  }, [])
-
-  useEffect(() => {
-    // Important useEffect
-    // Takes care of reseting the state of the hook when the dataset changes
-    if (!datasetIsReady) return
-
-    const currentId = dataset?.id
-    const previousId = datasetIdRef.current
-
-    // First run → set the ref but don't reset
-    if (!hasInitialized.current) {
-      datasetIdRef.current = currentId
-      hasInitialized.current = true
-      return
-    }
-
-    // If it changed (even from undefined), reset
-    if (currentId !== previousId) {
-      resetPosition(currentId)
-    }
-  }, [datasetIsReady, dataset?.id, resetPosition])
 
   const onFetchPosition = useCallback(
     (data: WithPositionData) => {
-      setFetchedPosition(true)
       setPosition(data)
     },
-    [selectedDatasetRowId, document.datasetV2Id],
+    [setPosition],
   )
 
   const { isLoading: isLoadingPosition } = useDatasetRowWithPosition({
-    dataset: dataset ? dataset : undefined,
-    enabled:
-      !fetchedPosition && !!selectedDatasetRowId && selectedDatasetRowId > 0,
-    datasetRowId: selectedDatasetRowId,
+    dataset,
+    datasetRowId: ds.datasetRowId,
     onFetched: onFetchPosition,
   })
 
   const { data: datasetRows, isLoading: isLoadingRow } = useDatasetRows({
-    dataset: position && dataset ? (dataset as DatasetV2) : undefined,
-    page: String(position?.position),
+    dataset: position === undefined ? undefined : dataset,
+    page: position === undefined ? undefined : String(position.position),
     pageSize: '1', // Paginatinate one by one in document parameters
     onFetched: async (data) => {
       const row = data[0]
       if (!row || !dataset) return
+
+      const lastRowId = lastRowIdRef.current.get(dataset.id)
+      if (lastRowId === ds.datasetRowId) return
+
+      lastRowIdRef.current.set(dataset.id, ds.datasetRowId)
 
       const inputs = mappedToInputs({
         inputs: ds.inputs,
@@ -174,17 +137,15 @@ export function useDatasetRowsForParameters({
           datasetRowId: row.id,
         },
       })
-      setSelectedDatasetRowId(row.id)
     },
   })
+
   const datasetRow = datasetRows?.[0]
   const updatePosition = useCallback(
     (position: number) => {
       if (isLoadingRow) return
 
-      setPosition((prev) => {
-        return prev ? { ...prev, position } : { position, page: 1 }
-      })
+      setPosition({ position, page: 1 })
     },
     [isLoadingRow],
   )
@@ -199,15 +160,11 @@ export function useDatasetRowsForParameters({
     [updatePosition],
   )
 
-  const mappedInputs = useMemo(
-    () => getDocumentMappedInputs({ document, dataset }),
-    [document, dataset],
-  )
   const onSelectRowCell = useCallback(
     (param: string) => (columnIdentifier: string) => {
       if (!dataset || !datasetRow) return
 
-      const prevMapped = mappedInputs ?? {}
+      const prevMapped = ds.mappedInputs ?? {}
       const mapped = { ...prevMapped, [param]: columnIdentifier }
       const inputs = mappedToInputs({
         inputs: ds.inputs,
@@ -224,13 +181,7 @@ export function useDatasetRowsForParameters({
         },
       })
     },
-    [
-      ds.setDataset,
-      ds.inputs,
-      ds.mappedInputs,
-      dataset?.id,
-      datasetRow,
-    ],
+    [ds.setDataset, ds.inputs, ds.mappedInputs, dataset?.id, datasetRow],
   )
 
   const isLoading =
@@ -238,7 +189,6 @@ export function useDatasetRowsForParameters({
 
   return {
     isLoading,
-    mappedInputs: mappedInputs ?? {},
     rowCellOptions,
     onSelectRowCell,
     position: position?.position,
