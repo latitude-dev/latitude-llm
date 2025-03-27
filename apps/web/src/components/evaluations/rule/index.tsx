@@ -18,6 +18,7 @@ import RuleEvaluationLengthCountSpecification from './LengthCount'
 import RuleEvaluationLexicalOverlapSpecification from './LexicalOverlap'
 import RuleEvaluationRegularExpressionSpecification from './RegularExpression'
 import RuleEvaluationSchemaValidationSpecification from './SchemaValidation'
+import RuleEvaluationSemanticSimilaritySpecification from './SemanticSimilarity'
 
 // prettier-ignore
 const METRICS: {
@@ -28,7 +29,7 @@ const METRICS: {
   [RuleEvaluationMetric.SchemaValidation]: RuleEvaluationSchemaValidationSpecification,
   [RuleEvaluationMetric.LengthCount]: RuleEvaluationLengthCountSpecification,
   [RuleEvaluationMetric.LexicalOverlap]: RuleEvaluationLexicalOverlapSpecification,
-  [RuleEvaluationMetric.SemanticSimilarity]:  undefined as any, // TODO: Implement
+  [RuleEvaluationMetric.SemanticSimilarity]: RuleEvaluationSemanticSimilaritySpecification,
 }
 
 const specification = RuleEvaluationSpecification

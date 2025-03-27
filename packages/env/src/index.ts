@@ -188,6 +188,7 @@ export const env = createEnv({
     CODESANDBOX_API_KEY: z.string().optional(),
     TAVILY_API_KEY: z.string().optional(),
     HANDINGER_API_KEY: z.string().optional(),
+    OPENAI_API_KEY: z.string().optional(),
 
     // Mail settings
     FROM_MAILER_EMAIL: z.string(),
