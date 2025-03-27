@@ -15,8 +15,8 @@ import {
 import { SelectOption, useCurrentCommit } from '@latitude-data/web-ui'
 import type { ConversationMetadata } from 'promptl-ai'
 import { useCallback, useMemo, useState } from 'react'
+import LabelIndicator from './LabelIndicator'
 import { RunBatchParameters } from './useRunBatch'
-import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
 
 export function buildEmptyParameters(parameters: string[]) {
   return parameters.reduce((acc, key) => {
@@ -56,7 +56,7 @@ export function useRunBatchForm({
         ...dataset.columns
           .filter((column) => column.role === 'label')
           .map((column) => ({
-            icon: DatasetHeadText({ text: '', role: column.role }),
+            icon: LabelIndicator(),
             label: column.name,
             value: column.name,
           })),
