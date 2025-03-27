@@ -125,14 +125,13 @@ async function run(
 
     score = Math.min(Math.max(Number(score.toFixed(0)), 0), 100)
 
-    const minSimilarity = metadata.configuration.minSimilarity ?? 0
-    const maxSimilarity = metadata.configuration.maxSimilarity ?? 100
-
-    let normalizedScore = normalizeScore(score, minSimilarity, maxSimilarity)
+    let normalizedScore = normalizeScore(score, 0, 100)
     if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, maxSimilarity, minSimilarity)
+      normalizedScore = normalizeScore(score, 100, 0)
     }
 
+    const minSimilarity = metadata.configuration.minSimilarity ?? 0
+    const maxSimilarity = metadata.configuration.maxSimilarity ?? 100
     const hasPassed = score >= minSimilarity && score <= maxSimilarity
 
     return { score, normalizedScore, metadata, hasPassed }
