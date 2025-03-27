@@ -35,13 +35,11 @@ export function getDatasetCount(
  */
 export function useVersionedDatasets({
   onFetched,
-  enabled = true,
 }: {
   onFetched?: (
     datasets: (Dataset | DatasetV2)[],
     datasetVersion: DatasetVersion,
   ) => void
-  enabled?: boolean
 } = {}) {
   const { enabled: hasDatasetsV2 } = useFeatureFlag({
     featureFlag: 'datasetsV2',
@@ -51,14 +49,14 @@ export function useVersionedDatasets({
   const isV1 = datasetVersion === DatasetVersion.V1
 
   const { data: datasetsV1, isLoading: isLoadingDatasetsV1 } = useDatasets({
-    enabled: enabled && isV1,
+    enabled: isV1,
     onFetched: (datasets) => {
       onFetched?.(datasets, DatasetVersion.V1)
     },
   })
 
   const { data: datasetsV2, isLoading: isLoadingDatasetsV2 } = useDatasetsV2({
-    enabled: enabled && !isV1,
+    enabled: !isV1,
     onFetched: (datasets) => {
       onFetched?.(datasets, DatasetVersion.V2)
     },

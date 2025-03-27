@@ -6,7 +6,6 @@ import {
   DatasetV2,
   DatasetVersion,
   PlaygroundInput,
-  LinkedDatasetRow,
 } from '@latitude-data/core/browser'
 import {
   ClientOnly,
@@ -17,6 +16,19 @@ import {
 
 import { InputsMapperItem, OnSelectRowCellFn } from './InputsMapperItem'
 import { type DatasetMappedValue } from '../useDatasetRowsForParameters'
+
+function getTooltipValue(input: PlaygroundInput<'datasetV2'>) {
+  if (input === undefined || input === null) {
+    return { isEmpty: true, value: 'No value found' }
+  }
+
+  const value = typeof input === 'string' ? input : input.value
+  const isEmpty = value === ''
+  return {
+    isEmpty,
+    value: isEmpty ? 'Empty value' : value,
+  }
+}
 
 export function InputMapper({
   document,
@@ -39,7 +51,7 @@ export function InputMapper({
 }) {
   const {
     setSource,
-    dataset: ds,
+    datasetV2: ds,
     manual: { setInputs: setManualInputs },
   } = useDocumentParameters({
     document,
@@ -47,46 +59,48 @@ export function InputMapper({
     datasetVersion,
   })
   const copyToManual = useCallback(() => {
-    const manualInputs = parameters.reduce(
-      (acc, param) => {
-        const name = param.param
-        acc[name] = {
-          value: String(param.value),
-          metadata: { includeInPrompt: true },
-        }
-        return acc
-      },
-      {} as Record<string, PlaygroundInput<'manual'>>,
-    )
-
-    setManualInputs(manualInputs)
+    // TODO: Move to useDocumentParameters
+    // const manualInputs = parameters.reduce(
+    //   (acc, param) => {
+    //     const name = param.param
+    //     acc[name] = {
+    //       value: String(param.value),
+    //       metadata: { includeInPrompt: true },
+    //     }
+    //     return acc
+    //   },
+    //   {} as Record<string, PlaygroundInput<'manual'>>,
+    // )
+    //
+    // setManualInputs(manualInputs)
   }, [parameters, setManualInputs])
-  const inputs = ds.inputs as LinkedDatasetRow['inputs']
+  const inputs = ds.inputs
+  const mappedInputs = ds.mappedInputs
   const inputKeys = Object.entries(inputs)
   const disabled = !selectedDataset || isLoading
 
   return (
     <ClientOnly>
       <div className='flex flex-col gap-3'>
-        {parameters.length > 0 ? (
+        {inputKeys.length > 0 ? (
           <div className='grid grid-cols-[auto_1fr] gap-y-3'>
             {inputKeys.map(([param, input], idx) => {
+              const identifier = mappedInputs[param]
+              const inputTooltipValue = getTooltipValue(input)
+              const isMapped = identifier !== undefined
               return (
                 <InputsMapperItem
                   key={idx}
-                  value={mapped.columnIdentifier}
+                  value={identifier}
                   isLoading={isLoading}
                   datasetVersion={DatasetVersion.V2}
                   disabled={disabled}
-                  isMapped={mapped.isMapped}
-                  param={mapped.param}
+                  isMapped={isMapped}
+                  param={param}
                   onSelectRowCell={onSelectRowCell}
                   rowCellOptions={rowCellOptions as SelectOption<string>[]}
                   setSource={setSource}
-                  tooltipValue={{
-                    value: mapped.value,
-                    isEmpty: mapped.isEmpty,
-                  }}
+                  tooltipValue={inputTooltipValue}
                   copyToManual={copyToManual}
                 />
               )

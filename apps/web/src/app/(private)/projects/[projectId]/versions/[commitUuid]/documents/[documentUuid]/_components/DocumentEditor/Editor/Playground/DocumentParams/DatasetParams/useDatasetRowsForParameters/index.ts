@@ -51,8 +51,7 @@ function mappedToInputs({
 }: {
   row: DatasetRow
   inputs: Inputs<'datasetV2'>
-  mappedInputs: Record<string, number>
-  rowIndex: number
+  mappedInputs: Record<string, string>
 }) {
   const mapped = Object.entries(mappedInputs).reduce((acc, [key, value]) => {
     const rawCell = row.rowData[value] ?? ''
@@ -84,15 +83,11 @@ export function useDatasetRowsForParameters({
   document,
   commitVersionUuid,
   dataset,
-  enabled,
-  metadata,
   datasetIsReady,
 }: {
   document: DocumentVersion
   commitVersionUuid: string
   dataset: DatasetV2 | null | undefined
-  enabled?: boolean
-  metadata: ConversationMetadata | undefined
   datasetIsReady: boolean
 }) {
   const hasInitialized = useRef(false)
@@ -105,14 +100,11 @@ export function useDatasetRowsForParameters({
     [dataset],
   )
   const { data: count, isLoading: isLoadingDatasetRowsCount } =
-    useDatasetRowsCount({
-      dataset: enabled && dataset ? dataset : undefined,
-    })
+    useDatasetRowsCount({ dataset })
 
   const {
-    onParametersChange,
     setParametersLoading,
-    datasetV2: { setDataset, datasetRowId },
+    datasetV2: ds,
   } = useDocumentParameters({
     document,
     commitVersionUuid,
@@ -120,7 +112,7 @@ export function useDatasetRowsForParameters({
   })
   const [selectedDatasetRowId, setSelectedDatasetRowId] = useState<
     number | undefined
-  >(datasetRowId)
+  >(ds.datasetRowId)
 
   const [position, setPosition] = useState<WithPositionData | undefined>(
     getInitialPosition(selectedDatasetRowId),
@@ -163,7 +155,7 @@ export function useDatasetRowsForParameters({
   )
 
   const { isLoading: isLoadingPosition } = useDatasetRowWithPosition({
-    dataset: enabled && !!dataset ? dataset : undefined,
+    dataset: dataset ? dataset : undefined,
     enabled:
       !fetchedPosition && !!selectedDatasetRowId && selectedDatasetRowId > 0,
     datasetRowId: selectedDatasetRowId,
@@ -178,10 +170,17 @@ export function useDatasetRowsForParameters({
       const row = data[0]
       if (!row || !dataset) return
 
-      await setDataset({
+      const inputs = mappedToInputs({
+        inputs: ds.inputs,
+        mappedInputs: ds.mappedInputs,
+        row,
+      })
+      await ds.setDataset({
         datasetId: dataset.id,
         datasetVersion: DatasetVersion.V2,
         data: {
+          inputs,
+          mappedInputs: ds.mappedInputs,
           datasetRowId: row.id,
         },
       })
@@ -220,73 +219,38 @@ export function useDatasetRowsForParameters({
 
       const prevMapped = mappedInputs ?? {}
       const mapped = { ...prevMapped, [param]: columnIdentifier }
+      const inputs = mappedToInputs({
+        inputs: ds.inputs,
+        mappedInputs: mapped,
+        row: datasetRow,
+      })
       setParametersLoading()
-      setDataset({
+      ds.setDataset({
         datasetId: dataset.id,
         datasetVersion: DatasetVersion.V2,
         data: {
           datasetRowId: datasetRow.id,
+          inputs,
           mappedInputs: mapped,
         },
       })
     },
-    [setParametersLoading, setDataset, mappedInputs, dataset?.id, datasetRow],
+    [
+      setParametersLoading,
+      ds.setDataset,
+      ds.inputs,
+      ds.mappedInputs,
+      dataset?.id,
+      datasetRow,
+    ],
   )
-
-  const colsByName = useMemo(() => {
-    const cols = dataset?.columns ?? []
-    return cols.reduce((map, col) => {
-      map.set(col.name, col.identifier)
-      return map
-    }, new Map<string, string>())
-  }, [dataset?.columns])
 
   const isLoading =
     isLoadingRow || isLoadingDatasetRowsCount || isLoadingPosition
-  const parametersReady = !!metadata && !isLoading && !!datasetRow
-  const parameters = useMemo<DatasetMappedValue[]>(() => {
-    if (!parametersReady) return []
-
-    return Array.from(metadata.parameters).map((param) => {
-      const cells = datasetRow.rowData
-      const columnIdentifier = mappedInputs[param] ?? colsByName.get(param)
-      const rawValue = columnIdentifier ? cells[columnIdentifier] : undefined
-      const value = parseRowCell({ cell: rawValue, parseDates: false })
-      const isEmpty = value === ''
-      return {
-        param,
-        value,
-        isEmpty,
-        columnIdentifier,
-        isMapped: !!columnIdentifier,
-      }
-    })
-  }, [
-    metadata,
-    onParametersChange,
-    mappedInputs,
-    parametersReady,
-    datasetRow,
-    colsByName,
-  ])
-
-  useEffect(() => {
-    if (!parametersReady) return
-
-    const mappedValues = parameters.reduce(
-      (acc, { param, value }) => {
-        acc[param] = String(value)
-        return acc
-      },
-      {} as Record<string, string>,
-    )
-    onParametersChange(mappedValues)
-  }, [parameters])
 
   return {
     isLoading,
     mappedInputs: mappedInputs ?? {},
-    parameters,
     rowCellOptions,
     onSelectRowCell,
     position: position?.position,

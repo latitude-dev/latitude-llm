@@ -61,15 +61,13 @@ export function useDatasetV1RowsForParamaters({
   document,
   commitVersionUuid,
   dataset,
-  enabled,
 }: {
   document: DocumentVersion
   commitVersionUuid: string
   dataset?: Dataset
-  enabled?: boolean
 }) {
   const { data: rows, isLoading: isLoadingCsv } = useDatasetPreview({
-    dataset: enabled ? dataset : undefined,
+    dataset,
   })
   const { dataset: ds } = useDocumentParameters({
     document,
@@ -123,7 +121,7 @@ export function useDatasetV1RowsForParamaters({
         },
       })
     },
-    [enabled, inputs, setDataset, datasetPreview.rows, dataset, mappedInputs],
+    [inputs, setDataset, datasetPreview.rows, dataset, mappedInputs],
   )
 
   const onSelectRowCell = useCallback(

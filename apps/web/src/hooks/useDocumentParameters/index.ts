@@ -420,9 +420,9 @@ export function useDocumentParameters<
       datasetId: number
       datasetVersion: DatasetVersion
       data: {
-        mappedInputs?: LinkedDatasetRow['mappedInputs'] | undefined
+        datasetRowId: number | undefined
+        mappedInputs: LinkedDatasetRow['mappedInputs']
         inputs: LinkedDatasetRow['inputs']
-        datasetRowId?: number | undefined
       }
     }) => {
       const { doc } = getDocState(allInputs, key)
@@ -583,6 +583,8 @@ export function useDocumentParameters<
       datasetRowId: document.datasetV2Id
         ? document.linkedDatasetAndRow?.[document.datasetV2Id]?.datasetRowId
         : undefined,
+      inputs: linkedDatasetV2.inputs,
+      mappedInputs: linkedDatasetV2.mappedInputs,
       setDataset: setDatasetV2,
     },
     history: {

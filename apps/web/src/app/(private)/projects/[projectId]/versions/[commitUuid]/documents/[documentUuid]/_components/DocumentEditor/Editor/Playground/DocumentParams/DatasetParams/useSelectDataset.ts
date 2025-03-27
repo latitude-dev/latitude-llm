@@ -5,7 +5,6 @@ import {
   DocumentVersion,
   DatasetV2,
   InputSource,
-  INPUT_SOURCE,
   DatasetVersion,
 } from '@latitude-data/core/browser'
 import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
@@ -18,7 +17,6 @@ import { ConversationMetadata } from 'promptl-ai'
 export function useSelectDataset({
   document,
   commitVersionUuid,
-  source,
   metadata,
 }: {
   document: DocumentVersion
@@ -34,13 +32,11 @@ export function useSelectDataset({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { assignDataset } = useDocumentVersions({})
-  const isEnabled = source === INPUT_SOURCE.dataset
   const {
     data: datasets,
     isLoading: isLoadingDatasets,
     datasetVersion,
   } = useVersionedDatasets({
-    enabled: isEnabled,
     onFetched: (data, datasetVersion) => {
       const isV1 = datasetVersion === DatasetVersion.V1
       const documentAttr = isV1 ? 'datasetId' : 'datasetV2Id'
@@ -50,7 +46,7 @@ export function useSelectDataset({
   })
   const datasetOptions = useMemo(
     () => datasets.map((ds) => ({ value: ds.id, label: ds.name })),
-    [datasets, isEnabled],
+    [datasets],
   )
   const onSelectDataset = useCallback(
     async (value: number) => {
@@ -82,13 +78,11 @@ export function useSelectDataset({
     document,
     commitVersionUuid,
     dataset: isV1 ? (selectedDataset as Dataset) : undefined,
-    enabled: isEnabled,
   })
   const rowsV2 = useDatasetRowsForParameters({
     document,
     commitVersionUuid,
     dataset: !isV1 ? (selectedDataset as DatasetV2) : undefined,
-    enabled: isEnabled,
     metadata,
     datasetIsReady: datasetsLoadedAtLeastOnce,
   })
