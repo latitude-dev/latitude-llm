@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { recalculateInputs } from '$/hooks/useDocumentParameters/recalculateInputs'
 import {
@@ -36,6 +36,7 @@ const EMPTY_LINKED_DATASET = {
 
 const EMPTY_LINKED_DATASET_ROW: LinkedDatasetRow = {
   datasetRowId: 0, // This is wrong. This is an ID in DB. But allows to have this attribute as non optional
+  inputs: {} as LinkedDatasetRow['inputs'],
   mappedInputs: {} as LinkedDatasetRow['mappedInputs'],
 }
 
@@ -88,6 +89,18 @@ function mapLogParametersToInputs({
 
 type InputsByDocument = Record<string, PlaygroundInputs<InputSource>>
 
+function convertToParams(inputs: Inputs<InputSource>) {
+  return Object.fromEntries(
+    Object.entries(inputs).map(([key, input]) => {
+      try {
+        return [key, JSON.parse(input.value)]
+      } catch (e) {
+        return [key, input?.value?.toString?.()]
+      }
+    }),
+  )
+}
+
 // DEPRECATED: Remove after datasets V2 migration
 function getLinkedDataset({
   document,
@@ -112,6 +125,27 @@ function getLinkedDataset({
   }
 
   return all[datasetId] ? all[datasetId] : (localInputs ?? EMPTY_LINKED_DATASET)
+}
+
+function getLinkedDatasetV2({
+  document,
+  localInputs,
+}: {
+  document: DocumentVersion
+  localInputs: PlaygroundInputs<'datasetV2'>['datasetV2']
+}) {
+  const datasetId = document.datasetV2Id
+  if (!datasetId) return EMPTY_LINKED_DATASET_ROW
+
+  const all = document.linkedDatasetAndRow ?? {}
+  const local = localInputs ?? EMPTY_LINKED_DATASET_ROW
+  return all[datasetId]
+    ? all[datasetId]
+    : {
+      datasetRowId: local.datasetRowId,
+      inputs: local.inputs,
+      mappedInputs: local.mappedInputs,
+    }
 }
 
 export function useDocumentParameters<
@@ -149,6 +183,17 @@ export function useDocumentParameters<
     document,
     localInputs: inputs.dataset,
   })
+  const linkedDatasetV2 = getLinkedDatasetV2({
+    document,
+    localInputs: inputs.datasetV2,
+  })
+
+  let inputsBySource =
+    source === INPUT_SOURCE.dataset
+      ? linkedDataset.inputs
+      : source === INPUT_SOURCE.datasetV2
+        ? linkedDatasetV2.inputs
+        : inputs[source].inputs
 
   const { asyncParameters, onParametersChange } = useAsyncDocumentParameters({
     isMountedOnRoot,
@@ -329,9 +374,11 @@ export function useDocumentParameters<
     ({
       datasetId,
       datasetRowId: nextDatasetRowId,
+      inputs: nextInputs,
       mappedInputs: nextMappedInputs,
     }: {
       datasetId: number
+      inputs: LinkedDatasetRow['inputs'] | undefined
       mappedInputs: LinkedDatasetRow['mappedInputs'] | undefined
       datasetRowId: number | undefined
     }) => {
@@ -339,11 +386,13 @@ export function useDocumentParameters<
         const { state, doc } = getDocState(oldState, key)
         const prevSource = doc['datasetV2'] ?? {
           datasetId,
+          inputs: nextInputs ?? {},
           mappedInputs: nextMappedInputs ?? {},
           datasetRowId: nextDatasetRowId,
         }
-        const mappedInputs = nextMappedInputs ?? prevSource.mappedInputs
         const datasetRowId = nextDatasetRowId ?? prevSource.datasetRowId
+        const mappedInputs = nextMappedInputs ?? prevSource.mappedInputs
+        const inputs = nextInputs ?? prevSource.inputs
 
         return {
           ...state,
@@ -351,6 +400,7 @@ export function useDocumentParameters<
             ...doc,
             datasetV2: {
               ...prevSource,
+              inputs,
               mappedInputs,
               datasetRowId,
             },
@@ -371,21 +421,25 @@ export function useDocumentParameters<
       datasetVersion: DatasetVersion
       data: {
         mappedInputs?: LinkedDatasetRow['mappedInputs'] | undefined
+        inputs: LinkedDatasetRow['inputs']
         datasetRowId?: number | undefined
       }
     }) => {
       const { doc } = getDocState(allInputs, key)
       const datasetDoc = doc['datasetV2'] ?? {
         datasetId,
-        mappedInputs: data.mappedInputs ?? {},
         datasetRowId: data.datasetRowId,
+        inputs: data.inputs,
+        mappedInputs: data.mappedInputs ?? {},
       }
       const prevDatasetRowId = datasetDoc.datasetRowId
+      const prevInputs = datasetDoc.inputs
       const prevMappedInputs = datasetDoc.mappedInputs
 
       // Optimistic update in local storage
       setDatasetMappedInputs({
         datasetId,
+        inputs: data.inputs,
         mappedInputs: data.mappedInputs,
         datasetRowId: data.datasetRowId,
       })
@@ -403,6 +457,7 @@ export function useDocumentParameters<
       if (error) {
         setDatasetMappedInputs({
           datasetId,
+          inputs: prevInputs,
           mappedInputs: prevMappedInputs,
           datasetRowId: prevDatasetRowId,
         })
@@ -452,6 +507,27 @@ export function useDocumentParameters<
         }
       }
 
+      if (datasetVersion === DatasetVersion.V2) {
+        const datasetInputs = recalculateInputs<'datasetV2'>({
+          inputs: linkedDatasetV2.inputs,
+          metadata,
+        })
+        // Store in local while not stored in the DB
+        setInputs('dataset', datasetInputs)
+
+        if (document.datasetV2Id && linkedDatasetV2) {
+          setDatasetV2({
+            datasetId: document.datasetV2Id,
+            datasetVersion,
+            data: {
+              inputs: datasetInputs,
+              mappedInputs: linkedDatasetV2.mappedInputs,
+              datasetRowId: linkedDatasetV2.datasetRowId,
+            } as LinkedDatasetRow,
+          })
+        }
+      }
+
       setInputs(
         'history',
         recalculateInputs({
@@ -466,14 +542,21 @@ export function useDocumentParameters<
       source,
       document.datasetId,
       linkedDataset,
+      linkedDatasetV2,
+      setDatasetV2,
       datasetVersion,
       useDatasetsV2,
     ],
   )
 
+  const parameters = useMemo(
+    () => convertToParams(inputsBySource),
+    [inputsBySource],
+  )
+
   return {
     onParametersChange,
-    parameters: asyncParameters.parameters,
+    parameters,
     setParametersLoading: asyncParameters.setLoading,
     parametersLoading: asyncParameters.loading,
     onMetadataProcessed,

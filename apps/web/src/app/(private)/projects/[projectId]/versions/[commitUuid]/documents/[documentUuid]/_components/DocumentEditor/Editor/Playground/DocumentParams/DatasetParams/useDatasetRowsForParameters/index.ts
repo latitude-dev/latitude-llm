@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import useDatasetRows from '$/stores/datasetRows'
 import {
+  DatasetRow,
   DatasetV2,
   DatasetVersion,
   DocumentVersion,
+  Inputs,
 } from '@latitude-data/core/browser'
 import {
   useDatasetRowWithPosition,
@@ -40,6 +42,37 @@ function getDocumentMappedInputs({
   if (!document.linkedDatasetAndRow) return {}
 
   return document.linkedDatasetAndRow[dataset.id]?.mappedInputs ?? {}
+}
+
+function mappedToInputs({
+  inputs,
+  mappedInputs,
+  row,
+}: {
+  row: DatasetRow
+  inputs: Inputs<'datasetV2'>
+  mappedInputs: Record<string, number>
+  rowIndex: number
+}) {
+  const mapped = Object.entries(mappedInputs).reduce((acc, [key, value]) => {
+    const rawCell = row.rowData[value] ?? ''
+    const cell = parseRowCell({ cell: rawCell, parseDates: false })
+    acc[key] = {
+      value: cell,
+      metadata: {
+        includeInPrompt: true,
+      },
+    }
+    return acc
+  }, {} as Inputs<'datasetV2'>)
+
+  // Recalculate inputs
+  return Object.entries(inputs).reduce((acc, [key, value]) => {
+    const newInput = mapped[key]
+    const newValue = newInput ? newInput : value
+    acc[key] = newValue
+    return acc
+  }, {} as Inputs<'datasetV2'>)
 }
 
 /**

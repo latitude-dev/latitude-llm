@@ -6,6 +6,7 @@ import {
   DatasetV2,
   DatasetVersion,
   PlaygroundInput,
+  LinkedDatasetRow,
 } from '@latitude-data/core/browser'
 import {
   ClientOnly,
@@ -38,6 +39,7 @@ export function InputMapper({
 }) {
   const {
     setSource,
+    dataset: ds,
     manual: { setInputs: setManualInputs },
   } = useDocumentParameters({
     document,
@@ -59,6 +61,8 @@ export function InputMapper({
 
     setManualInputs(manualInputs)
   }, [parameters, setManualInputs])
+  const inputs = ds.inputs as LinkedDatasetRow['inputs']
+  const inputKeys = Object.entries(inputs)
   const disabled = !selectedDataset || isLoading
 
   return (
@@ -66,25 +70,27 @@ export function InputMapper({
       <div className='flex flex-col gap-3'>
         {parameters.length > 0 ? (
           <div className='grid grid-cols-[auto_1fr] gap-y-3'>
-            {parameters.map((mapped, idx) => (
-              <InputsMapperItem
-                key={idx}
-                value={mapped.columnIdentifier}
-                isLoading={isLoading}
-                datasetVersion={DatasetVersion.V2}
-                disabled={disabled}
-                isMapped={mapped.isMapped}
-                param={mapped.param}
-                onSelectRowCell={onSelectRowCell}
-                rowCellOptions={rowCellOptions as SelectOption<string>[]}
-                setSource={setSource}
-                tooltipValue={{
-                  value: mapped.value,
-                  isEmpty: mapped.isEmpty,
-                }}
-                copyToManual={copyToManual}
-              />
-            ))}
+            {inputKeys.map(([param, input], idx) => {
+              return (
+                <InputsMapperItem
+                  key={idx}
+                  value={mapped.columnIdentifier}
+                  isLoading={isLoading}
+                  datasetVersion={DatasetVersion.V2}
+                  disabled={disabled}
+                  isMapped={mapped.isMapped}
+                  param={mapped.param}
+                  onSelectRowCell={onSelectRowCell}
+                  rowCellOptions={rowCellOptions as SelectOption<string>[]}
+                  setSource={setSource}
+                  tooltipValue={{
+                    value: mapped.value,
+                    isEmpty: mapped.isEmpty,
+                  }}
+                  copyToManual={copyToManual}
+                />
+              )
+            })}
           </div>
         ) : (
           <Text.H6 color='foregroundMuted'>

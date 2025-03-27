@@ -26,20 +26,22 @@ type LocalPlaygroundInput<_S extends LocalInputSource = 'manual'> = {
 }
 export type PlaygroundInput<S extends Omit<InputSource, 'datasetV2'>> =
   S extends 'dataset'
-    ? {
-        value: string
-        metadata: PlaygroundInputMetadata & { includeInPrompt: boolean }
-      }
-    : LocalPlaygroundInput<LocalInputSource>
+  ? {
+    value: string
+    metadata: PlaygroundInputMetadata & { includeInPrompt: boolean }
+  }
+  : S extends 'datasetV2'
+  ? {
+    value: string
+    metadata: PlaygroundInputMetadata & { includeInPrompt: boolean }
+  }
+  : LocalPlaygroundInput<LocalInputSource>
 
 type ManualInput = PlaygroundInput<'manual'>
 type DatasetInput = PlaygroundInput<'dataset'>
 type HistoryInput = PlaygroundInput<'history'>
 
-export type Inputs<S extends Omit<InputSource, 'datasetV2'>> = Record<
-  string,
-  PlaygroundInput<S>
->
+export type Inputs<S extends InputSource> = Record<string, PlaygroundInput<S>>
 export type LocalInputs<S extends LocalInputSource> = Record<
   string,
   LocalPlaygroundInput<S>
@@ -53,6 +55,7 @@ export type LinkedDataset = {
 
 export type LinkedDatasetRow = {
   datasetRowId: number | undefined
+  inputs: Record<string, DatasetInput>
   mappedInputs: Record<string, string>
 }
 
