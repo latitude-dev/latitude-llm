@@ -10,6 +10,7 @@ import {
 export type {
   RenderCellProps,
   RenderEditCellProps,
+  RenderHeaderCellProps,
   CellClickArgs,
   CellMouseEvent,
   RowsChangeData,
@@ -21,6 +22,7 @@ import { cn } from '../../../lib/utils'
 import Text from '../Text'
 import { CheckboxAtom, CheckedState } from '../Checkbox/Primitive'
 
+export const DEFAULT_HEADER_ROW_HEIGHT = 40
 export const DEFAULT_ROW_HEIGHT = 31
 
 const NoRowsFallback = ({ fallbackText }: { fallbackText: string }) => (
@@ -64,7 +66,7 @@ export type Props<R, SR = unknown, K extends Key = Key> = DataGridProps<
 // NOTE: .latitude-data-grid is used to override css variables.
 export default function DataGrid<R, SR = unknown, K extends Key = Key>({
   className,
-  headerRowHeight = DEFAULT_ROW_HEIGHT,
+  headerRowHeight = DEFAULT_HEADER_ROW_HEIGHT,
   rowHeight = DEFAULT_ROW_HEIGHT,
   fallbackText = 'No rows.',
   renderers,

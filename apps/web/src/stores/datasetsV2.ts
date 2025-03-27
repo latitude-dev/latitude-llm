@@ -8,6 +8,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { updateDatasetColumnAction } from '$/actions/datasetsV2/updateColumn'
 
 const EMPTY_ARRAY: DatasetV2[] = []
 export default function useDatasets(
@@ -73,6 +74,16 @@ export default function useDatasets(
     },
   })
 
+  const { execute: updateColumn, isPending: isUpdatingColumn } =
+    useLatitudeAction<typeof updateDatasetColumnAction>(
+      updateDatasetColumnAction,
+      {
+        onSuccess: ({ data: dataset }) => {
+          mutate(data.map((ds) => (ds.id === dataset.id ? dataset : ds)))
+        },
+      },
+    )
+
   return {
     data,
     mutate,
@@ -81,6 +92,8 @@ export default function useDatasets(
     createError,
     destroy,
     isDestroying,
+    updateColumn,
+    isUpdatingColumn,
     ...rest,
   }
 }

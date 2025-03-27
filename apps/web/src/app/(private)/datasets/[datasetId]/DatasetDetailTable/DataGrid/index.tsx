@@ -6,16 +6,27 @@ import type {
   RowsChangeData,
   CellClickArgs,
   CellMouseEvent,
+  RenderHeaderCellProps,
 } from '@latitude-data/web-ui/data-grid'
-import { DataGridCellEditor, type EditorCellProps } from '@latitude-data/web-ui'
-import { Text, FloatingPanel, Button } from '@latitude-data/web-ui'
+import {
+  DataGridCellEditor,
+  type EditorCellProps,
+  ReactStateDispatch,
+  Text,
+  FloatingPanel,
+  Button,
+  cn,
+} from '@latitude-data/web-ui'
+import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
 import { DatasetRoleStyle } from '$/hooks/useDatasetRoles'
 import { DatasetV2 } from '@latitude-data/core/browser'
 import { ClientPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { useCallback, useMemo, useState } from 'react'
+import { Suspense, useCallback, useMemo, useState } from 'react'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
 import useDatasetRows from '$/stores/datasetRows'
+import useDatasets from '$/stores/datasetsV2'
+import { UpdateColumnModal } from '$/app/(private)/datasets/[datasetId]/DatasetDetailTable/DataGrid/UpdateColumnModal'
 
 function rowKeyGetter(row: ClientDatasetRow) {
   return row.id
@@ -66,13 +77,40 @@ function renderEditCell(props: RenderEditCellProps<ClientDatasetRow, unknown>) {
   const initialValue = rawValue === undefined ? '' : String(rawValue)
   const valueType = typeof storedRowValue === 'object' ? 'json' : 'text'
   return (
-    <DataGridCellEditor
-      valueType={valueType}
-      value={initialValue}
-      onChange={onChange}
-    />
+    <Suspense fallback={null}>
+      <DataGridCellEditor
+        valueType={valueType}
+        value={initialValue}
+        onChange={onChange}
+      />
+    </Suspense>
   )
 }
+
+const renderHeaderCell =
+  ({
+    setEditColumnKey,
+    column,
+  }: {
+    setEditColumnKey: ReactStateDispatch<string | null>
+    column: DatasetV2['columns'][0]
+  }) =>
+  (props: RenderHeaderCellProps<ClientDatasetRow>) => {
+    const onClickEdit = useCallback(() => {
+      setEditColumnKey(props.column.key)
+    }, [props.column.key, setEditColumnKey])
+    return (
+      <div className='flex items-center gap-x-2'>
+        <DatasetHeadText text={column.name} role={column.role} />
+        <Button
+          className='opacity-30 group-hover/cell-header:opacity-100'
+          variant='nope'
+          iconProps={{ name: 'pencil', color: 'foregroundMuted' }}
+          onClick={onClickEdit}
+        />
+      </div>
+    )
+  }
 
 type Props = DatasetRowsTableProps & {
   updateRows: ReturnType<typeof useDatasetRows>['updateRows']
@@ -82,14 +120,21 @@ type Props = DatasetRowsTableProps & {
 
 const countLabel = (count: number) => `${count} rows`
 export default function DataGrid({
-  dataset,
+  dataset: serverDataset,
   rows,
   updateRows,
   deleteRows,
   isDeleting,
   pagination,
+  datasetCellRoleStyles,
 }: Props) {
+  const { data } = useDatasets({}, { fallbackData: [serverDataset] })
+  const dataset = useMemo(() => {
+    return data.find((d) => d.id === serverDataset.id) ?? serverDataset
+  }, [data, serverDataset.id])
+  const { backgroundCssClasses } = datasetCellRoleStyles
   const [selectedRows, setSelectedRows] = useState(() => new Set<number>())
+  const [editColumnKey, setEditColumnKey] = useState<string | null>(null)
   const columns = useMemo<DataGridProps<ClientDatasetRow>['columns']>(() => {
     const dataColumns: DataGridProps<ClientDatasetRow>['columns'] =
       dataset.columns.map((col) => ({
@@ -98,7 +143,16 @@ export default function DataGrid({
         resizable: true,
         selectable: true,
         minWidth: 80,
+        headerCellClass: cn(
+          'group/cell-header',
+          backgroundCssClasses[col.role],
+        ),
         renderEditCell,
+        renderHeaderCell: renderHeaderCell({
+          column: col,
+          setEditColumnKey,
+        }),
+        cellClass: backgroundCssClasses[col.role],
         renderCell,
       }))
 
@@ -136,6 +190,13 @@ export default function DataGrid({
 
   return (
     <>
+      {editColumnKey ? (
+        <UpdateColumnModal
+          dataset={dataset}
+          columnKey={editColumnKey}
+          onClose={() => setEditColumnKey(null)}
+        />
+      ) : null}
       <BaseDataGrid<ClientDatasetRow, unknown, number>
         rowKeyGetter={rowKeyGetter}
         rows={rows}
