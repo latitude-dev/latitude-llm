@@ -164,6 +164,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Apify',
     icon: 'apify',
   },
+  [HostedIntegrationType.Exa]: {
+    label: 'Exa',
+    icon: 'exa',
+  },
 }
 
 export function integrationOptions(

@@ -39,6 +39,7 @@ export enum HostedIntegrationType {
   Hyperbrowser = 'hyperbrowser',
   Audiense = 'audiense',
   Apify = 'apify',
+  Exa = 'exa',
 
   // Require all auth file :point_down:
   // Gmail = 'google_drive',
