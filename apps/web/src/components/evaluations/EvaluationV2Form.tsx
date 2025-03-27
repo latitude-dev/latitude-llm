@@ -171,43 +171,45 @@ export default function EvaluationV2Form<
             />
           )}
         </FormFieldGroup>
-        <FormFieldGroup label='Options' layout='vertical'>
-          {metricSpecification?.supportsLiveEvaluation && (
+        {mode === 'update' && (
+          <FormFieldGroup label='Options' layout='vertical'>
+            {metricSpecification?.supportsLiveEvaluation && (
+              <SwitchInput
+                checked={!!options.evaluateLiveLogs}
+                name='evaluateLiveLogs'
+                label='Evaluate live logs'
+                description='Evaluate production and playground logs automatically'
+                onCheckedChange={(value) =>
+                  setOptions({ ...options, evaluateLiveLogs: value })
+                }
+                disabled={
+                  disabled || !metricSpecification?.supportsLiveEvaluation
+                }
+              />
+            )}
             <SwitchInput
-              checked={!!options.evaluateLiveLogs}
-              name='evaluateLiveLogs'
-              label='Evaluate live logs'
-              description='Evaluate production and playground logs automatically'
+              checked={!!options.enableSuggestions}
+              name='enableSuggestions'
+              label='Prompt suggestions'
+              description='Generate suggestions to improve your prompt based on the latest evaluations results'
               onCheckedChange={(value) =>
-                setOptions({ ...options, evaluateLiveLogs: value })
+                setOptions({ ...options, enableSuggestions: value })
               }
-              disabled={
-                disabled || !metricSpecification?.supportsLiveEvaluation
-              }
+              disabled={disabled}
             />
-          )}
-          <SwitchInput
-            checked={!!options.enableSuggestions}
-            name='enableSuggestions'
-            label='Prompt suggestions'
-            description='Generate suggestions to improve your prompt based on the latest evaluations results'
-            onCheckedChange={(value) =>
-              setOptions({ ...options, enableSuggestions: value })
-            }
-            disabled={disabled}
-          />
-          {/* TODO: Uncomment when experiments are implemented */}
-          {/* <SwitchInput
-            checked={!!options.autoApplySuggestions}
-            name='autoApplySuggestions'
-            label='Auto apply suggestions'
-            description='Automatically apply the generated suggestions to your prompt'
-            onCheckedChange={(value) =>
-              setOptions({ ...options, autoApplySuggestions: value })
-            }
-            disabled={disabled}
-          /> */}
-        </FormFieldGroup>
+            {/* TODO: Uncomment when experiments are implemented */}
+            {/* <SwitchInput
+                  checked={!!options.autoApplySuggestions}
+                  name='autoApplySuggestions'
+                  label='Auto apply suggestions'
+                  description='Automatically apply the generated suggestions to your prompt'
+                  onCheckedChange={(value) =>
+                    setOptions({ ...options, autoApplySuggestions: value })
+                  }
+                  disabled={disabled}
+                /> */}
+          </FormFieldGroup>
+        )}
       </FormWrapper>
     </form>
   )
