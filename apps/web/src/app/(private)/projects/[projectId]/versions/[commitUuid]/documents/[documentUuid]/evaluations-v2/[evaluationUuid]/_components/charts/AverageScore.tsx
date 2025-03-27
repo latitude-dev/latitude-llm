@@ -29,24 +29,18 @@ export default function AverageScoreChart<
   )
 
   const color = useMemo(() => {
-    if (configuration.thresholds.length === 0) {
-      return 'successMutedForeground'
+    const color = 'successMutedForeground'
+
+    if (
+      (configuration.thresholds.lower &&
+        averageScore < configuration.thresholds.lower) ||
+      (configuration.thresholds.upper &&
+        averageScore > configuration.thresholds.upper)
+    ) {
+      return 'destructiveMutedForeground'
     }
 
-    if (configuration.thresholds.length === 1) {
-      return averageScore >= configuration.thresholds[0]!
-        ? evaluation.configuration.reverseScale
-          ? 'destructiveMutedForeground'
-          : 'successMutedForeground'
-        : evaluation.configuration.reverseScale
-          ? 'successMutedForeground'
-          : 'destructiveMutedForeground'
-    }
-
-    return averageScore >= configuration.thresholds[0]! &&
-      averageScore <= configuration.thresholds[1]!
-      ? 'successMutedForeground'
-      : 'destructiveMutedForeground'
+    return color
   }, [averageScore, configuration])
 
   return (

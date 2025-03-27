@@ -68,7 +68,7 @@ export default function DailyOverviewChart<
               type: 'number',
               min: Math.min(configuration.min, minY),
               max: Math.max(configuration.max, maxY),
-              thresholds: [...configuration.thresholds],
+              thresholds: configuration.thresholds,
               tickFormatter: (score) =>
                 configuration.format(Number(score), true),
             },

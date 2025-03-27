@@ -146,14 +146,10 @@ function chartConfiguration({
   return {
     min: evaluation.configuration.minLength ?? 0,
     max: evaluation.configuration.maxLength ?? Infinity,
-    thresholds: [
-      ...(evaluation.configuration.minLength
-        ? [evaluation.configuration.minLength]
-        : []),
-      ...(evaluation.configuration.maxLength
-        ? [evaluation.configuration.maxLength]
-        : []),
-    ] as const,
+    thresholds: {
+      lower: evaluation.configuration.minLength,
+      upper: evaluation.configuration.maxLength,
+    },
     scale: (point: number) => point,
     format: (point: number, short?: boolean) =>
       short

@@ -143,14 +143,10 @@ function chartConfiguration({
   return {
     min: 0,
     max: 100,
-    thresholds: [
-      ...(evaluation.configuration.minOverlap
-        ? [evaluation.configuration.minOverlap]
-        : []),
-      ...(evaluation.configuration.maxOverlap
-        ? [evaluation.configuration.maxOverlap]
-        : []),
-    ] as const,
+    thresholds: {
+      lower: evaluation.configuration.minOverlap,
+      upper: evaluation.configuration.maxOverlap,
+    },
     scale: (point: number) => point,
     format: (point: number, short?: boolean) =>
       short ? `${point.toFixed(0)}%` : `${point.toFixed(0)}% overlap`,

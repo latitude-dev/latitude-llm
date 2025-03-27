@@ -94,16 +94,19 @@ function ResultPanelContent(
   return <></>
 }
 
-function chartConfiguration(
-  _args: ChartConfigurationArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.ExactMatch
-  >,
-) {
+function chartConfiguration({
+  evaluation,
+}: ChartConfigurationArgs<
+  EvaluationType.Rule,
+  RuleEvaluationMetric.ExactMatch
+>) {
   return {
     min: 0,
     max: 100,
-    thresholds: [50] as const,
+    thresholds: {
+      lower: evaluation.configuration.reverseScale ? undefined : 50,
+      upper: evaluation.configuration.reverseScale ? 50 : undefined,
+    },
     scale: (point: number) => Math.min(Math.max(point * 100, 0), 100),
     format: (point: number, short?: boolean) =>
       short ? `${point.toFixed(0)}%` : `${point.toFixed(0)}% matches`,

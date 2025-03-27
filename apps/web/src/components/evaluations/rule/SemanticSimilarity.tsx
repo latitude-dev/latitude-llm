@@ -146,14 +146,10 @@ function chartConfiguration({
   return {
     min: 0,
     max: 100,
-    thresholds: [
-      ...(evaluation.configuration.minSimilarity
-        ? [evaluation.configuration.minSimilarity]
-        : []),
-      ...(evaluation.configuration.maxSimilarity
-        ? [evaluation.configuration.maxSimilarity]
-        : []),
-    ] as const,
+    thresholds: {
+      lower: evaluation.configuration.minSimilarity,
+      upper: evaluation.configuration.maxSimilarity,
+    },
     scale: (point: number) => point,
     format: (point: number, short?: boolean) =>
       short ? `${point.toFixed(0)}%` : `${point.toFixed(0)}% similar`,

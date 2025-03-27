@@ -72,7 +72,10 @@ export type ChartConfigurationArgs<
 export type ChartConfigurationResult = {
   min: number
   max: number
-  thresholds: readonly number[]
+  thresholds: {
+    lower?: number
+    upper?: number
+  }
   scale: (point: number) => number
   format: (point: number, short?: boolean) => string
 }

@@ -153,15 +153,30 @@ export function AreaChart({ config }: { config: AreaChartConfig }) {
             <stop offset='95%' stopColor={color} stopOpacity={0.1} />
           </linearGradient>
         </defs>
-        {config.yAxis.thresholds?.map((threshold, index) => (
+        {config.yAxis.thresholds?.lower !== undefined && (
           <ReferenceLine
-            key={`y-threshold-${index}`}
-            y={threshold}
+            y={config.yAxis.thresholds.lower}
             stroke='hsl(var(--muted-foreground))'
             strokeDasharray='3 3'
             strokeWidth={1}
+            label={{
+              value: 'lower threshold',
+              position: 'insideBottomRight',
+            }}
           />
-        ))}
+        )}
+        {config.yAxis.thresholds?.upper !== undefined && (
+          <ReferenceLine
+            y={config.yAxis.thresholds.upper}
+            stroke='hsl(var(--muted-foreground))'
+            strokeDasharray='3 3'
+            strokeWidth={1}
+            label={{
+              value: 'upper threshold',
+              position: 'insideBottomRight',
+            }}
+          />
+        )}
         <Area
           dataKey='y'
           type='natural'
