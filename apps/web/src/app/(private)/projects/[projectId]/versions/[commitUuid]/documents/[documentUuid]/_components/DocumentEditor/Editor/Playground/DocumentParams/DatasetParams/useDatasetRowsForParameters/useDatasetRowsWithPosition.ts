@@ -1,3 +1,4 @@
+import { compact } from 'lodash-es'
 import useSWR, { SWRConfiguration } from 'swr'
 import { DatasetV2 } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
@@ -14,19 +15,17 @@ export function useDatasetRowWithPosition(
     dataset,
     datasetRowId,
     onFetched,
-    enabled = true,
   }: {
-    dataset?: DatasetV2
-    enabled?: boolean
+    dataset?: DatasetV2 | null
     datasetRowId?: string | number
     onFetched?: (data: WithPositionData) => void
   },
   opts?: SWRConfiguration,
 ) {
-  const isEnabled = enabled && dataset && datasetRowId
+  const rowId = datasetRowId ? +datasetRowId : undefined
   const fetcher = useFetcher(
-    isEnabled
-      ? ROUTES.api.datasetsRows.withPosition(+datasetRowId).root
+    dataset
+      ? ROUTES.api.datasetsRows.withPosition(rowId).root
       : undefined,
     {
       searchParams: compactObject({
@@ -35,8 +34,8 @@ export function useDatasetRowWithPosition(
     },
   )
   const { data, isLoading } = useSWR<WithPositionData>(
-    isEnabled
-      ? ['datasetRowWithPosition', dataset?.id, datasetRowId]
+    dataset
+      ? compact(['datasetRowWithPosition', dataset?.id, datasetRowId])
       : undefined,
     fetcher,
     {

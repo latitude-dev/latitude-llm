@@ -66,6 +66,34 @@ export async function handleResponse<
   }
 }
 
+export async function executeFetch<
+  Raw extends boolean = false,
+  I extends unknown = unknown,
+  R extends unknown = unknown,
+>({
+  route,
+  searchParams,
+  toast,
+  serializer,
+  navigate,
+}: {
+  route: string
+  searchParams?: ISearchParams
+  toast: ReturnType<typeof useToast>['toast']
+  serializer?: (item: any) => any
+  navigate: ReturnType<typeof useNavigate>
+}) {
+  const response = await fetch(buildRoute(route, searchParams), {
+    credentials: 'include',
+  })
+  return handleResponse<Raw, I, R>({
+    response,
+    toast,
+    navigate,
+    serializer,
+  })
+}
+
 export default function useFetcher(
   route?: string,
   {
@@ -84,15 +112,7 @@ export default function useFetcher(
   return async () => {
     if (!route) return fallback
 
-    const response = await fetch(buildRoute(route, searchParams), {
-      credentials: 'include',
-    })
-    return handleResponse({
-      response,
-      toast,
-      navigate,
-      serializer,
-    })
+    return executeFetch({ route, searchParams, toast, serializer, navigate })
   }
 }
 

@@ -38,6 +38,7 @@ export default abstract class Repository<T extends Record<string, unknown>> {
     const result = await this.scope
       .where(and(this.scopeFilter, eq(this.scope._.selectedFields.id, id)))
       .limit(1)
+
     if (!result[0]) {
       const table = this.scope._.tableName
       return Result.error(

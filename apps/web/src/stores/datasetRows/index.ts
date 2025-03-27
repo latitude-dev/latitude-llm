@@ -40,7 +40,7 @@ export default function useDatasetRows(
     onFetched,
     enabled = true,
   }: {
-    dataset?: DatasetV2
+    dataset?: DatasetV2 | null
     page?: string | null | undefined
     pageSize?: string | null
     onFetched?: (datasets: ClientDatasetRow[]) => void
@@ -48,7 +48,9 @@ export default function useDatasetRows(
   },
   opts?: SWRConfiguration,
 ) {
+  console.log("SERVER_ROWS", opts?.fallbackData)
   const isEnabled = dataset && enabled
+  console.log("IS_ENABLED", isEnabled)
   const fetcher = useFetcher(
     isEnabled ? ROUTES.api.datasetsRows.root : undefined,
     {

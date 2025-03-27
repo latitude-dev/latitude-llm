@@ -43,10 +43,10 @@ export const saveLinkedDatasetAction = withDataset
       data: {
         datasetRowId: input.datasetRowId,
         mappedInputs: input.mappedInputs,
+        inputs: input.inputs,
 
         // DEPRECATED: Remove when migrated to datasets V2
         rowIndex: input.rowIndex,
-        inputs: input.inputs,
       },
     }).then((r) => r.unwrap())
   })

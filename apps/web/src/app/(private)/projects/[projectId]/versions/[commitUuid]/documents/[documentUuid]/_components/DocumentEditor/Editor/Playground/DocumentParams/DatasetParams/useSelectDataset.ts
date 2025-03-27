@@ -5,7 +5,6 @@ import {
   DocumentVersion,
   DatasetV2,
   InputSource,
-  INPUT_SOURCE,
   DatasetVersion,
 } from '@latitude-data/core/browser'
 import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
@@ -13,44 +12,53 @@ import useDocumentVersions from '$/stores/documentVersions'
 import { useVersionedDatasets } from '$/hooks/useVersionedDatasets'
 import { useDatasetRowsForParameters } from './useDatasetRowsForParameters'
 import { useDatasetV1RowsForParamaters } from './useDatasetRowsForParameters/useDatasetV1RowsForParamaters'
-import { ConversationMetadata } from 'promptl-ai'
+import { useDatasetRowPosition } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/DocumentParams/DatasetParams/useRowPosition'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 
 export function useSelectDataset({
   document,
   commitVersionUuid,
-  source,
-  metadata,
 }: {
   document: DocumentVersion
   commitVersionUuid: string
   source: InputSource
-  metadata: ConversationMetadata | undefined
 }) {
   const [selectedDataset, setSelectedDataset] = useState<
     Dataset | DatasetV2 | undefined
   >()
-  const [datasetsLoadedAtLeastOnce, setDatasetsLoadedAtLeastOnce] =
-    useState<boolean>(false)
+  const { position, getPosition, setPosition, isLoadingPosition } =
+    useDatasetRowPosition()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { assignDataset } = useDocumentVersions({})
-  const isEnabled = source === INPUT_SOURCE.dataset
+  const { datasetV2: localDatasetData } = useDocumentParameters({
+    document,
+    commitVersionUuid,
+    datasetVersion: DatasetVersion.V2,
+  })
   const {
     data: datasets,
     isLoading: isLoadingDatasets,
     datasetVersion,
   } = useVersionedDatasets({
-    enabled: isEnabled,
-    onFetched: (data, datasetVersion) => {
+    onFetched: async (data, datasetVersion) => {
       const isV1 = datasetVersion === DatasetVersion.V1
       const documentAttr = isV1 ? 'datasetId' : 'datasetV2Id'
-      setDatasetsLoadedAtLeastOnce(true)
-      setSelectedDataset(data.find((ds) => ds.id === document[documentAttr]))
+      const selectedDs = data.find((ds) => ds.id === document[documentAttr])
+
+      if (!isV1) {
+        await getPosition({
+          dataset: selectedDs as DatasetV2,
+          datasetRowId: localDatasetData.datasetRowId,
+        })
+      }
+
+      setSelectedDataset(selectedDs)
     },
   })
   const datasetOptions = useMemo(
     () => datasets.map((ds) => ({ value: ds.id, label: ds.name })),
-    [datasets, isEnabled],
+    [datasets],
   )
   const onSelectDataset = useCallback(
     async (value: number) => {
@@ -64,6 +72,13 @@ export function useSelectDataset({
         datasetId: ds.id,
         datasetVersion,
       })
+
+      if (datasetVersion === DatasetVersion.V2) {
+        await getPosition({
+          dataset: ds as DatasetV2,
+          datasetRowId: localDatasetData.datasetRowId,
+        })
+      }
 
       setSelectedDataset(ds)
     },
@@ -82,24 +97,22 @@ export function useSelectDataset({
     document,
     commitVersionUuid,
     dataset: isV1 ? (selectedDataset as Dataset) : undefined,
-    enabled: isEnabled,
   })
+
   const rowsV2 = useDatasetRowsForParameters({
     document,
     commitVersionUuid,
     dataset: !isV1 ? (selectedDataset as DatasetV2) : undefined,
-    enabled: isEnabled,
-    metadata,
-    datasetIsReady: datasetsLoadedAtLeastOnce,
+    position,
+    setPosition,
   })
 
   const rowsData = isV1 ? rowsV1 : rowsV2
-  const isLoading = isLoadingDatasets || rowsData.isLoading
+  // TODO: Split loading into loadingState: { isLoading, isLoadingRows, isLoadingPosition }
+  const isLoading = isLoadingDatasets || isLoadingPosition || rowsData.isLoading
 
   return {
     ...rowsData,
-    // TODO: Remove after datasets 2 migration
-    parameters: isV1 ? [] : rowsV2.parameters,
     datasetOptions,
     selectedDataset,
     onSelectDataset,

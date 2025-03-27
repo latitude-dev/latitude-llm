@@ -59,7 +59,9 @@ export function serializeRow({
 export const serializeRows =
   (columns: DatasetV2['columns']) =>
   (rows: DatasetRow[]): ClientDatasetRow[] => {
-    return rows.map((item) => serializeRow({ row: item, columns }))
+    const mappedRows = rows.map((item) => serializeRow({ row: item, columns }))
+    console.log("MAPPED_ROWS", mappedRows)
+    return mappedRows
   }
 
 export function parseRowCell({

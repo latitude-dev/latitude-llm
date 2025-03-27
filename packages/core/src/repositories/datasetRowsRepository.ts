@@ -1,19 +1,21 @@
 import {
   sql,
   eq,
+  gt,
   lt,
+  or,
   and,
   getTableColumns,
   count,
   inArray,
   desc,
+  asc,
 } from 'drizzle-orm'
 
 import { DatasetRow, DatasetV2, DEFAULT_PAGINATION_SIZE } from '../browser'
 import { datasetRows } from '../schema'
 import Repository from './repositoryV2'
 import { calculateOffset } from '../lib/pagination/calculateOffset'
-import { Result } from '../lib'
 
 const tt = getTableColumns(datasetRows)
 
@@ -78,7 +80,7 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
       .from(datasetRows)
       .where(and(this.scopeFilter, eq(datasetRows.datasetId, datasetId)))
       .limit(limit)
-      .orderBy(desc(datasetRows.createdAt))
+      .orderBy(desc(datasetRows.createdAt), desc(datasetRows.id))
       .offset(offset)
 
     return query
@@ -91,25 +93,13 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
     datasetId: number
     datasetRowId: number
   }) {
-    const rows = await this.db
-      .select(tt)
-      .from(datasetRows)
-      .where(
-        and(
-          this.scopeFilter,
-          eq(datasetRows.datasetId, datasetId),
-          eq(datasetRows.id, datasetRowId),
-        ),
-      )
+    const rowResult = await this.find(datasetRowId)
 
-    const row = rows[0]
-
-    if (!row) {
-      return Result.error(
-        new Error(`Dataset row not found with id ${datasetRowId}`),
-      )
+    if (rowResult.error) {
+      return { position: 1, page: 1 }
     }
 
+    const row = rowResult.value
     const countResult = await this.db
       .select({
         count: sql`count(*)`.mapWith(Number).as('total_count'),
@@ -119,15 +109,16 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
         and(
           this.scopeFilter,
           eq(datasetRows.datasetId, datasetId),
-          lt(datasetRows.id, row.id),
+          sql`(${datasetRows.createdAt}, ${datasetRows.id}) >= (${new Date(row.createdAt).toISOString()}, ${row.id})`,
         ),
       )
 
-    const position = Number(countResult[0]?.count) + 1
+    console.log('COUNT_RESULT', countResult)
+    const position = Number(countResult[0]?.count ?? 0)
 
     const page = Math.ceil(position / DEFAULT_PAGINATION_SIZE)
 
-    return Result.ok({ position, page })
+    return { position, page }
   }
 
   getCountByDataset(datasetId: number) {
