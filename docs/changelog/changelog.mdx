@@ -3,6 +3,52 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-03-28'>
+
+## New evaluation types
+
+We've added a new evaluation type called "Rule-based evaluation". This new evaluation type allows you to create custom evaluations by defining a set of rules. Each rule can have a threshold and a metric.
+
+Within this new evaluation type, we've added the following metrics:
+
+- Exact Match: Checks if the response is exactly the same as the expected output. The resulting score is "matched" or "unmatched".
+- Regular Expression: Checks if the response matches the regular expression. The resulting score is "matched" or "unmatched".
+- Schema Validation: Checks if the response follows the schema. The resulting score is "valid" or "invalid".
+- Length Count: Checks if the response is of a certain length. The resulting score is the length of the response.
+- Lexical Overlap: Checks if the response contains the expected output. The resulting score is the percentage of overlap.
+- Semantic Similarity: Checks if the response is semantically similar to the expected output. The resulting score is the percentage of similarity.
+
+![](/assets/changelog/250328/evaluations.png)
+
+## Revamped dataset management
+
+We've completely revamped the dataset management section to allow you to create, edit, and delete rows. You can also mark a column as a label or parameter and change its name.
+
+Additionally, now it's very easy to create a dataset from a set of logs. Just go to the logs section, select the logs you want to add to the dataset and click on the "Save logs to dataset" button. You can also add rows to an existing dataset from the logs section.
+
+![](/assets/changelog/250328/datasets.png)
+
+## Webhooks
+
+We've added a new webhooks section in the settings page. This section allows you to create webhooks that are triggered when certain events happen in Latitude. Currently, we support the following event but we'll be adding more in the future:
+
+- `commitPublished`: Triggered when a commit is published in a project. The webhook payload includes details about the commit, such as the commit ID, message, and project information.
+
+## Other stuff
+
+- We added support for new MCP servers:
+  - Exa
+  - Apify
+  - Audiense
+  - Redis
+  - Jira
+  - Attio
+  - Supabase
+
+If you're interested in adding support for a new MCP server, please let us know!
+
+</Update>
+
 <Update label='2025-03-17'>
 ## Integrations
 
