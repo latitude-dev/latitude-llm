@@ -97,7 +97,6 @@ export function DatasetParams({
             key={selectedId}
             document={document}
             commit={commit}
-            parameters={data.parameters}
             isLoading={data.isLoading}
             rowCellOptions={data.rowCellOptions as SelectOption<string>[]}
             onSelectRowCell={data.onSelectRowCell as OnSelectRowCellFn<string>}

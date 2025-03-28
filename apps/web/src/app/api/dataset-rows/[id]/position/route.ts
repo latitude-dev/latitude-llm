@@ -13,7 +13,7 @@ export const GET = errorHandler(
         workspace,
       }: {
         params: {
-          id: string
+          id?: string
         }
         workspace: Workspace
       },
@@ -23,17 +23,10 @@ export const GET = errorHandler(
       const repo = new DatasetRowsRepository(workspace.id)
       const result = await repo.fetchDatasetRowWithPosition({
         datasetId: Number(datasetId),
-        datasetRowId: Number(id),
+        datasetRowId: id ? Number(id) : undefined,
       })
 
-      if (result.error) {
-        return NextResponse.json(
-          { message: `Dataset Row not found with id: ${id}` },
-          { status: 404 },
-        )
-      }
-
-      return NextResponse.json(result.value, { status: 200 })
+      return NextResponse.json(result, { status: 200 })
     },
   ),
 )

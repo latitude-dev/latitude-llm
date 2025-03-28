@@ -40,7 +40,7 @@ export default function useDatasetRows(
     onFetched,
     enabled = true,
   }: {
-    dataset?: DatasetV2
+    dataset?: DatasetV2 | null
     page?: string | null | undefined
     pageSize?: string | null
     onFetched?: (datasets: ClientDatasetRow[]) => void
