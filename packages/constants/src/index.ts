@@ -45,4 +45,5 @@ export * from './mcp'
 export * from './evaluations'
 export * from './integrations'
 
-export const EMAIL_TRIGGER_DOMAIN = 'run.latitude.so' as const // TODO: Move to env
+// TODO: Move to env
+export const EMAIL_TRIGGER_DOMAIN = 'run.latitude.so' as const
