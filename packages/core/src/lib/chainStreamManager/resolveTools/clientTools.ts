@@ -2,7 +2,6 @@ import { PromptConfig, ToolDefinition } from '@latitude-data/constants'
 import { LatitudeError } from '../../errors'
 import { Result, TypedResult } from '../../Result'
 import { ResolvedTools, ToolSource } from './types'
-
 export function resolveClientTools({
   config,
 }: {
@@ -27,7 +26,8 @@ export function resolveClientTools({
 
   // New schema
   const clientToolDefinitions: Record<string, ToolDefinition> = Object.assign(
-    tools.filter((t) => typeof t !== 'string'),
+    {},
+    ...tools.filter((t) => typeof t !== 'string'),
   )
 
   return Result.ok(
