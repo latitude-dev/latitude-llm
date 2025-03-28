@@ -16,6 +16,7 @@ export type NumberInputProps = {
   onChange?: (value: number | undefined) => void
   min?: number
   max?: number
+  defaultAppearance?: boolean
 } & Omit<
   InputProps,
   'defaultValue' | 'value' | 'onChange' | 'min' | 'max' | 'type'
@@ -29,6 +30,7 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       onChange,
       min = -Infinity,
       max = Infinity,
+      defaultAppearance,
       disabled,
       className,
       label,
@@ -117,45 +119,50 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
             type='number'
             max={max}
             min={min}
-            className='w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-r-none relative focus-visible:ring-0'
+            className={cn('w-full relative focus-visible:ring-0', {
+              '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-r-none':
+                !defaultAppearance,
+            })}
             ref={internalRef}
             disabled={disabled}
             {...props}
           />
-          <div className='flex flex-col'>
-            <Button
-              aria-label='Increase value'
-              className='px-2 h-4 rounded-l-none rounded-br-none border-l-0 focus-visible:relative focus-visible:ring-0'
-              variant='outline'
-              iconProps={{
-                name: 'chevronUp',
-                color: 'foregroundMuted',
-              }}
-              onClick={(event) => {
-                event.preventDefault()
-                increment()
-              }}
-              onBlur={() => setFocused(false)}
-              onFocus={() => setFocused(true)}
-              disabled={disabled || (value !== undefined && value >= max)}
-            />
-            <Button
-              aria-label='Decrease value'
-              className='px-2 h-4 rounded-l-none rounded-tr-none border-l-0 border-t-0 focus-visible:relative focus-visible:ring-0'
-              variant='outline'
-              iconProps={{
-                name: 'chevronDown',
-                color: 'foregroundMuted',
-              }}
-              onClick={(event) => {
-                event.preventDefault()
-                decrement()
-              }}
-              onBlur={() => setFocused(false)}
-              onFocus={() => setFocused(true)}
-              disabled={disabled || (value !== undefined && value <= min)}
-            />
-          </div>
+          {!defaultAppearance && (
+            <div className='flex flex-col'>
+              <Button
+                aria-label='Increase value'
+                className='px-2 h-4 rounded-l-none rounded-br-none border-l-0 focus-visible:relative focus-visible:ring-0'
+                variant='outline'
+                iconProps={{
+                  name: 'chevronUp',
+                  color: 'foregroundMuted',
+                }}
+                onClick={(event) => {
+                  event.preventDefault()
+                  increment()
+                }}
+                onBlur={() => setFocused(false)}
+                onFocus={() => setFocused(true)}
+                disabled={disabled || (value !== undefined && value >= max)}
+              />
+              <Button
+                aria-label='Decrease value'
+                className='px-2 h-4 rounded-l-none rounded-tr-none border-l-0 border-t-0 focus-visible:relative focus-visible:ring-0'
+                variant='outline'
+                iconProps={{
+                  name: 'chevronDown',
+                  color: 'foregroundMuted',
+                }}
+                onClick={(event) => {
+                  event.preventDefault()
+                  decrement()
+                }}
+                onBlur={() => setFocused(false)}
+                onFocus={() => setFocused(true)}
+                disabled={disabled || (value !== undefined && value <= min)}
+              />
+            </div>
+          )}
         </div>
       </FormField>
     )

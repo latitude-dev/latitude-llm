@@ -26,7 +26,8 @@ const humanEvaluationBinaryResultMetadata =
 const humanEvaluationBinaryResultError = humanEvaluationResultError.extend({})
 export const HumanEvaluationBinarySpecification = {
   name: 'Binary',
-  description: 'Judges whether the response meets the criteria',
+  description:
+    'Judges whether the response meets the criteria. The resulting score is "passed" or "failed"',
   configuration: humanEvaluationBinaryConfiguration,
   resultMetadata: humanEvaluationBinaryResultMetadata,
   resultError: humanEvaluationBinaryResultError,
@@ -61,7 +62,8 @@ const humanEvaluationRatingResultMetadata =
 const humanEvaluationRatingResultError = humanEvaluationResultError.extend({})
 export const HumanEvaluationRatingSpecification = {
   name: 'Rating',
-  description: 'Judges the response by rating it under a criteria',
+  description:
+    'Judges the response by rating it under a criteria. The resulting score is the rating',
   configuration: humanEvaluationRatingConfiguration,
   resultMetadata: humanEvaluationRatingResultMetadata,
   resultError: humanEvaluationRatingResultError,
@@ -96,7 +98,7 @@ const humanEvaluationComparisonResultError = humanEvaluationResultError.extend(
 export const HumanEvaluationComparisonSpecification = {
   name: 'Comparison',
   description:
-    'Judges the response by comparing the criteria to the expected output',
+    'Judges the response by comparing the criteria to the expected output. The resulting score is the percentage of the compared criteria that is met',
   configuration: humanEvaluationComparisonConfiguration,
   resultMetadata: humanEvaluationComparisonResultMetadata,
   resultError: humanEvaluationComparisonResultError,

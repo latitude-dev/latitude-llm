@@ -23,7 +23,7 @@ export default {
   ResultBadge: undefined as any, // TODO: Implement
   ResultRowHeaders: undefined as any, // TODO: Implement
   ResultRowCells: undefined as any, // TODO: Implement
-  resultPanelTabs: [], // TODO: Implement
+  resultPanelTabs: undefined as any, // TODO: Implement
   ResultPanelMetadata: undefined as any, // TODO: Implement
   ResultPanelContent: undefined as any, // TODO: Implement
   chartConfiguration: undefined as any, // TODO: Implement

@@ -21,6 +21,7 @@ export type ConfigurationFormProps<
   mode: 'create' | 'update'
   configuration: EvaluationConfiguration<T, M>
   setConfiguration: (configuration: EvaluationConfiguration<T, M>) => void
+  errors?: Record<string, string[]>
   disabled?: boolean
 }
 
@@ -72,7 +73,10 @@ export type ChartConfigurationArgs<
 export type ChartConfigurationResult = {
   min: number
   max: number
-  thresholds: readonly number[]
+  thresholds: {
+    lower?: number
+    upper?: number
+  }
   scale: (point: number) => number
   format: (point: number, short?: boolean) => string
 }
@@ -84,11 +88,11 @@ export type EvaluationMetricFrontendSpecification<
   icon: IconName
   ConfigurationForm: (props: ConfigurationFormProps<T, M>) => React.ReactNode
   ResultBadge: (props: ResultBadgeProps<T, M>) => React.ReactNode
-  ResultRowHeaders: (props: ResultRowHeadersProps<T, M>) => React.ReactNode
-  ResultRowCells: (props: ResultRowCellsProps<T, M>) => React.ReactNode
-  resultPanelTabs: TabSelectorOption<string>[]
-  ResultPanelMetadata: (props: ResultPanelProps<T, M>) => React.ReactNode
-  ResultPanelContent: (props: ResultPanelProps<T, M>) => React.ReactNode
+  ResultRowHeaders?: (props: ResultRowHeadersProps<T, M>) => React.ReactNode
+  ResultRowCells?: (props: ResultRowCellsProps<T, M>) => React.ReactNode
+  resultPanelTabs?: TabSelectorOption<string>[]
+  ResultPanelMetadata?: (props: ResultPanelProps<T, M>) => React.ReactNode
+  ResultPanelContent?: (props: ResultPanelProps<T, M>) => React.ReactNode
   chartConfiguration: (
     args: ChartConfigurationArgs<T, M>,
   ) => ChartConfigurationResult
@@ -110,7 +114,9 @@ export type EvaluationFrontendSpecification<
   ResultRowCells: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     props: ResultRowCellsProps<T, M> & { metric: M },
   ) => React.ReactNode
-  resultPanelTabs: TabSelectorOption<string>[]
+  resultPanelTabs: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(args: {
+    metric: M
+  }) => TabSelectorOption<string>[]
   ResultPanelMetadata: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     props: ResultPanelProps<T, M> & { metric: M },
   ) => React.ReactNode

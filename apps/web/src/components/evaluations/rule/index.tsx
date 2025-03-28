@@ -40,7 +40,7 @@ export default {
   ResultBadge: ResultBadge,
   ResultRowHeaders: ResultRowHeaders,
   ResultRowCells: ResultRowCells,
-  resultPanelTabs: [],
+  resultPanelTabs: resultPanelTabs,
   ResultPanelMetadata: ResultPanelMetadata,
   ResultPanelContent: ResultPanelContent,
   chartConfiguration: chartConfiguration,
@@ -88,6 +88,8 @@ function ResultRowHeaders<M extends RuleEvaluationMetric>({
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
+  if (!metricSpecification.ResultRowHeaders) return <></>
+
   return (
     <>
       <metricSpecification.ResultRowHeaders {...rest} />
@@ -104,11 +106,28 @@ function ResultRowCells<M extends RuleEvaluationMetric>({
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
+  if (!metricSpecification.ResultRowCells) return <></>
+
   return (
     <>
       <metricSpecification.ResultRowCells {...rest} />
     </>
   )
+}
+
+function resultPanelTabs<M extends RuleEvaluationMetric>({
+  metric,
+}: {
+  metric: M
+}) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) {
+    throw new Error('Invalid evaluation metric')
+  }
+
+  if (!metricSpecification.resultPanelTabs) return []
+
+  return metricSpecification.resultPanelTabs
 }
 
 function ResultPanelMetadata<M extends RuleEvaluationMetric>({
@@ -119,6 +138,8 @@ function ResultPanelMetadata<M extends RuleEvaluationMetric>({
 }) {
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
+
+  if (!metricSpecification.ResultPanelMetadata) return <></>
 
   return (
     <>
@@ -135,6 +156,8 @@ function ResultPanelContent<M extends RuleEvaluationMetric>({
 }) {
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
+
+  if (!metricSpecification.ResultPanelContent) return <></>
 
   return (
     <>

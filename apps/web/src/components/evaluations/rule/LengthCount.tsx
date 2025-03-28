@@ -9,9 +9,6 @@ import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
-  ResultPanelProps,
-  ResultRowCellsProps,
-  ResultRowHeadersProps,
 } from '../index'
 
 const specification = RuleEvaluationLengthCountSpecification
@@ -20,11 +17,6 @@ export default {
   icon: 'space' as IconName,
   ConfigurationForm: ConfigurationForm,
   ResultBadge: ResultBadge,
-  ResultRowHeaders: ResultRowHeaders,
-  ResultRowCells: ResultRowCells,
-  resultPanelTabs: [],
-  ResultPanelMetadata: ResultPanelMetadata,
-  ResultPanelContent: ResultPanelContent,
   chartConfiguration: chartConfiguration,
 }
 
@@ -37,6 +29,7 @@ const ALGORITHM_OPTIONS =
 function ConfigurationForm({
   configuration,
   setConfiguration,
+  errors,
   disabled,
 }: ConfigurationFormProps<
   EvaluationType.Rule,
@@ -54,6 +47,7 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, algorithm: value })
         }
+        errors={errors?.['algorithm']}
         disabled={disabled}
         required
       />
@@ -67,6 +61,8 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, minLength: value })
         }
+        errors={errors?.['minLength']}
+        defaultAppearance
         className='w-full'
         disabled={disabled}
         required
@@ -81,6 +77,8 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, maxLength: value })
         }
+        errors={errors?.['maxLength']}
+        defaultAppearance
         className='w-full'
         disabled={disabled}
         required
@@ -99,42 +97,6 @@ function ResultBadge({
   )
 }
 
-function ResultRowHeaders(
-  _props: ResultRowHeadersProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LengthCount
-  >,
-) {
-  return <></>
-}
-
-function ResultRowCells(
-  _props: ResultRowCellsProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LengthCount
-  >,
-) {
-  return <></>
-}
-
-function ResultPanelMetadata(
-  _props: ResultPanelProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LengthCount
-  >,
-) {
-  return <></>
-}
-
-function ResultPanelContent(
-  _props: ResultPanelProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LengthCount
-  >,
-) {
-  return <></>
-}
-
 function chartConfiguration({
   evaluation,
 }: ChartConfigurationArgs<
@@ -144,14 +106,10 @@ function chartConfiguration({
   return {
     min: evaluation.configuration.minLength ?? 0,
     max: evaluation.configuration.maxLength ?? Infinity,
-    thresholds: [
-      ...(evaluation.configuration.minLength
-        ? [evaluation.configuration.minLength]
-        : []),
-      ...(evaluation.configuration.maxLength
-        ? [evaluation.configuration.maxLength]
-        : []),
-    ] as const,
+    thresholds: {
+      lower: evaluation.configuration.minLength,
+      upper: evaluation.configuration.maxLength,
+    },
     scale: (point: number) => point,
     format: (point: number, short?: boolean) =>
       short

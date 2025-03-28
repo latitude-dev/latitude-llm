@@ -16,7 +16,10 @@ export interface CartesianAxisConfig {
   tickLine?: boolean
   axisLine?: boolean
   tickFormatter?: (value: string | number) => string
-  thresholds?: number[]
+  thresholds?: {
+    lower?: number
+    upper?: number
+  }
 }
 
 interface ICartesianChartConfig {

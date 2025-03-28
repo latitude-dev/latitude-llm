@@ -32,7 +32,8 @@ const llmEvaluationBinaryResultMetadata = llmEvaluationResultMetadata.extend({
 const llmEvaluationBinaryResultError = llmEvaluationResultError.extend({})
 export const LlmEvaluationBinarySpecification = {
   name: 'Binary',
-  description: 'Judges whether the response meets the criteria',
+  description:
+    'Judges whether the response meets the criteria. The resulting score is "passed" or "failed"',
   configuration: llmEvaluationBinaryConfiguration,
   resultMetadata: llmEvaluationBinaryResultMetadata,
   resultError: llmEvaluationBinaryResultError,
@@ -66,7 +67,8 @@ const llmEvaluationRatingResultMetadata = llmEvaluationResultMetadata.extend({
 const llmEvaluationRatingResultError = llmEvaluationResultError.extend({})
 export const LlmEvaluationRatingSpecification = {
   name: 'Rating',
-  description: 'Judges the response by rating it under a criteria',
+  description:
+    'Judges the response by rating it under a criteria. The resulting score is the rating',
   configuration: llmEvaluationRatingConfiguration,
   resultMetadata: llmEvaluationRatingResultMetadata,
   resultError: llmEvaluationRatingResultError,
@@ -98,7 +100,7 @@ const llmEvaluationComparisonResultError = llmEvaluationResultError.extend({})
 export const LlmEvaluationComparisonSpecification = {
   name: 'Comparison',
   description:
-    'Judges the response by comparing the criteria to the expected output',
+    'Judges the response by comparing the criteria to the expected output. The resulting score is the percentage of the compared criteria that is met',
   configuration: llmEvaluationComparisonConfiguration,
   resultMetadata: llmEvaluationComparisonResultMetadata,
   resultError: llmEvaluationComparisonResultError,

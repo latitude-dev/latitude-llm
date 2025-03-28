@@ -150,14 +150,13 @@ async function run(
 
     score = Math.min(Math.max(Number(score.toFixed(0)), 0), 100)
 
-    const minOverlap = metadata.configuration.minOverlap ?? 0
-    const maxOverlap = metadata.configuration.maxOverlap ?? 100
-
-    let normalizedScore = normalizeScore(score, minOverlap, maxOverlap)
+    let normalizedScore = normalizeScore(score, 0, 100)
     if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, maxOverlap, minOverlap)
+      normalizedScore = normalizeScore(score, 100, 0)
     }
 
+    const minOverlap = metadata.configuration.minOverlap ?? 0
+    const maxOverlap = metadata.configuration.maxOverlap ?? 100
     const hasPassed = score >= minOverlap && score <= maxOverlap
 
     return { score, normalizedScore, metadata, hasPassed }

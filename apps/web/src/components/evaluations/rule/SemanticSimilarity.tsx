@@ -1,16 +1,16 @@
+'use client'
+
 import {
   EvaluationType,
   RuleEvaluationMetric,
   RuleEvaluationSemanticSimilaritySpecification,
 } from '@latitude-data/constants'
-import { IconName, NumberInput, Select } from '@latitude-data/web-ui'
+import { IconName, NumberInput } from '@latitude-data/web-ui'
+import { useEffect } from 'react'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
-  ResultPanelProps,
-  ResultRowCellsProps,
-  ResultRowHeadersProps,
 } from '../index'
 
 const specification = RuleEvaluationSemanticSimilaritySpecification
@@ -19,43 +19,47 @@ export default {
   icon: 'equalApproximately' as IconName,
   ConfigurationForm: ConfigurationForm,
   ResultBadge: ResultBadge,
-  ResultRowHeaders: ResultRowHeaders,
-  ResultRowCells: ResultRowCells,
-  resultPanelTabs: [],
-  ResultPanelMetadata: ResultPanelMetadata,
-  ResultPanelContent: ResultPanelContent,
   chartConfiguration: chartConfiguration,
 }
 
-const ALGORITHM_OPTIONS =
-  specification.configuration.shape.algorithm.options.map((option) => ({
-    label: option.toUpperCase().split('_').join(' '),
-    value: option,
-  }))
+// TODO: Uncomment when more algorithms are implemented
+// const ALGORITHM_OPTIONS =
+//   specification.configuration.shape.algorithm.options.map((option) => ({
+//     label: option.toUpperCase().split('_').join(' '),
+//     value: option,
+//   }))
 
 function ConfigurationForm({
   configuration,
   setConfiguration,
+  errors,
   disabled,
 }: ConfigurationFormProps<
   EvaluationType.Rule,
   RuleEvaluationMetric.SemanticSimilarity
 >) {
+  // TODO: Remove this default when more algorithms are implemented
+  useEffect(() => {
+    setConfiguration({ ...configuration, algorithm: 'cosine_distance' })
+  }, [])
+
   return (
     <>
-      <Select
+      {/* TODO: Uncomment when more algorithms are implemented */}
+      {/* <Select
         value={configuration.algorithm ?? ''}
         name='algorithm'
         label='Algorithm'
-        description='How to measure percentage of similarity'
+        description='How to measure similarity'
         placeholder='Select an algorithm'
         options={ALGORITHM_OPTIONS}
         onChange={(value) =>
           setConfiguration({ ...configuration, algorithm: value })
         }
+        errors={errors?.['algorithm']}
         disabled={disabled}
         required
-      />
+      /> */}
       <NumberInput
         value={configuration.minSimilarity ?? undefined}
         name='minSimilarity'
@@ -67,6 +71,8 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, minSimilarity: value })
         }
+        errors={errors?.['minSimilarity']}
+        defaultAppearance
         className='w-full'
         disabled={disabled}
         required
@@ -82,6 +88,8 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, maxSimilarity: value })
         }
+        errors={errors?.['maxSimilarity']}
+        defaultAppearance
         className='w-full'
         disabled={disabled}
         required
@@ -99,42 +107,6 @@ function ResultBadge({
   return <>{result.score!.toFixed(0)}% similar</>
 }
 
-function ResultRowHeaders(
-  _props: ResultRowHeadersProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.SemanticSimilarity
-  >,
-) {
-  return <></>
-}
-
-function ResultRowCells(
-  _props: ResultRowCellsProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.SemanticSimilarity
-  >,
-) {
-  return <></>
-}
-
-function ResultPanelMetadata(
-  _props: ResultPanelProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.SemanticSimilarity
-  >,
-) {
-  return <></>
-}
-
-function ResultPanelContent(
-  _props: ResultPanelProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.SemanticSimilarity
-  >,
-) {
-  return <></>
-}
-
 function chartConfiguration({
   evaluation,
 }: ChartConfigurationArgs<
@@ -144,14 +116,10 @@ function chartConfiguration({
   return {
     min: 0,
     max: 100,
-    thresholds: [
-      ...(evaluation.configuration.minSimilarity
-        ? [evaluation.configuration.minSimilarity]
-        : []),
-      ...(evaluation.configuration.maxSimilarity
-        ? [evaluation.configuration.maxSimilarity]
-        : []),
-    ] as const,
+    thresholds: {
+      lower: evaluation.configuration.minSimilarity,
+      upper: evaluation.configuration.maxSimilarity,
+    },
     scale: (point: number) => point,
     format: (point: number, short?: boolean) =>
       short ? `${point.toFixed(0)}%` : `${point.toFixed(0)}% similar`,

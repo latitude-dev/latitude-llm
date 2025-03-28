@@ -16,6 +16,7 @@ export default function ConfigurationForm<
   metric,
   configuration: defaultConfiguration,
   onChange,
+  errors,
   disabled,
 }: Omit<ConfigurationFormProps<T, M>, 'configuration' | 'setConfiguration'> & {
   type: T
@@ -38,21 +39,25 @@ export default function ConfigurationForm<
         metric={metric}
         configuration={configuration}
         setConfiguration={setConfiguration}
+        errors={errors}
         disabled={disabled}
       />
-      <SelectableSwitch
-        selected={!(configuration.reverseScale ?? false)}
-        name='reverseScale'
-        label='Scale orientation'
-        trueLabel='Higher is better'
-        falseLabel='Lower is better'
-        description='Orientation of the metric scale when normalizing the score for internal operations and to display evaluation results'
-        onChange={(value) =>
-          setConfiguration({ ...configuration, reverseScale: !value })
-        }
-        disabled={disabled}
-        required
-      />
+      {mode === 'update' && (
+        <SelectableSwitch
+          selected={!(configuration.reverseScale ?? false)}
+          name='reverseScale'
+          label='Optimize for'
+          trueLabel='Higher score'
+          falseLabel='Lower score'
+          description='The refiner will use this to decide whether to choose higher or lower score evaluation results when optimizing your prompt'
+          onChange={(value) =>
+            setConfiguration({ ...configuration, reverseScale: !value })
+          }
+          errors={errors?.['reverseScale']}
+          disabled={disabled}
+          required
+        />
+      )}
     </>
   )
 }

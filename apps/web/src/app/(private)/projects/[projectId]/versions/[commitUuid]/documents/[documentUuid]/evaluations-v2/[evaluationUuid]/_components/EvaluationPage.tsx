@@ -34,7 +34,7 @@ import {
 } from '@latitude-data/web-ui'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useDebounce } from 'use-debounce'
+import { DebouncedState, useDebounce, useDebouncedCallback } from 'use-debounce'
 import { EvaluationActions } from './EvaluationActions'
 import { EvaluationFilters } from './EvaluationFilters'
 import { EvaluationResultsTable } from './EvaluationResultsTable'
@@ -47,10 +47,14 @@ const useEvaluationResultsV2Socket = <
   evaluation,
   commits,
   mutate,
+  refetchStats,
 }: {
   evaluation: EvaluationV2<T, M>
   commits: Record<number, Commit>
   mutate: ReturnType<typeof useEvaluationResultsV2<T, M>>['mutate']
+  refetchStats: DebouncedState<
+    ReturnType<typeof useEvaluationV2Stats<T, M>>['mutate']
+  >
 }) => {
   const onMessage = useCallback(
     (args: EventArgs<'evaluationResultV2Created'>) => {
@@ -81,8 +85,10 @@ const useEvaluationResultsV2Socket = <
           { revalidate: false },
         )
       }, 5000)
+
+      refetchStats()
     },
-    [evaluation, commits, mutate],
+    [evaluation, commits, mutate, refetchStats],
   )
 
   useSockets({ event: 'evaluationResultV2Created', onMessage })
@@ -137,13 +143,20 @@ export function EvaluationPage<
     { project, commit, document, evaluation, search: debouncedSearch },
     { fallbackData: serverResults },
   )
-  useEvaluationResultsV2Socket({ evaluation, commits, mutate })
+
   const [selectedResult, setSelectedResult] = useState(serverSelectedResult)
 
-  const { data: stats, isLoading: isLoadingStats } = useEvaluationV2Stats<T, M>(
+  const {
+    data: stats,
+    mutate: mutateStats,
+    isLoading: isLoadingStats,
+  } = useEvaluationV2Stats<T, M>(
     { project, commit, document, evaluation, search: debouncedSearch },
     { fallbackData: serverStats },
   )
+  const refetchStats = useDebouncedCallback(mutateStats, 1000)
+
+  useEvaluationResultsV2Socket({ evaluation, commits, mutate, refetchStats })
 
   const isLoading = isLoadingResults || isLoadingStats || isLoadingCommits
 

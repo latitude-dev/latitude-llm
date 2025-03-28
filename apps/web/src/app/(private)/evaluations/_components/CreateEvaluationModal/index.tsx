@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { ActionErrors } from '$/hooks/useLatitudeAction'
 import useEvaluations from '$/stores/evaluations'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
@@ -128,6 +129,10 @@ export default function CreateEvaluationModal({
     useState<EvaluationSettings>(DEFAULT_SETTINGS_V2)
   const [optionsV2, setOptionsV2] =
     useState<Partial<EvaluationOptions>>(DEFAULT_OPTIONS_V2)
+  const [errorsV2, setErrorsV2] =
+    useState<ActionErrors<typeof useEvaluationsV2, 'createEvaluation'>>(
+      undefined,
+    )
 
   const {
     createEvaluation: createEvaluationV2,
@@ -140,11 +145,14 @@ export default function CreateEvaluationModal({
     if (isLoading || isCreating) return
 
     if (metadataType === 'evaluationV2') {
-      const result = await createEvaluationV2({
+      const [_, errors] = await createEvaluationV2({
         settings: settingsV2,
         options: optionsV2,
       })
-      if (result) {
+
+      if (errors) {
+        setErrorsV2(errors)
+      } else {
         setSettingsV2(DEFAULT_SETTINGS_V2)
         setOptionsV2(DEFAULT_OPTIONS_V2)
         onClose(null)
@@ -269,6 +277,7 @@ export default function CreateEvaluationModal({
             onSettingsChange={setSettingsV2}
             options={optionsV2}
             onOptionsChange={setOptionsV2}
+            errors={errorsV2}
           />
         </>
       ) : (

@@ -166,15 +166,30 @@ export function ScatterChart({ config }: { config: ScatterChartConfig }) {
           )}
         </YAxis>
         <ZAxis type='number' dataKey='size' range={[0, 100]} domain={[1, 10]} />
-        {config.yAxis.thresholds?.map((threshold, index) => (
+        {config.yAxis.thresholds?.lower !== undefined && (
           <ReferenceLine
-            key={`y-threshold-${index}`}
-            y={threshold}
+            y={config.yAxis.thresholds.lower}
             stroke='hsl(var(--muted-foreground))'
             strokeDasharray='3 3'
             strokeWidth={1}
+            label={{
+              value: 'lower threshold',
+              position: 'insideBottomRight',
+            }}
           />
-        ))}
+        )}
+        {config.yAxis.thresholds?.upper !== undefined && (
+          <ReferenceLine
+            y={config.yAxis.thresholds.upper}
+            stroke='hsl(var(--muted-foreground))'
+            strokeDasharray='3 3'
+            strokeWidth={1}
+            label={{
+              value: 'upper threshold',
+              position: 'insideBottomRight',
+            }}
+          />
+        )}
         {dataGroups.map((group, idx) => (
           <Scatter
             key={idx}

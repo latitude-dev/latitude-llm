@@ -196,7 +196,7 @@ export function ResultPanel<
       <MetadataInfoTabs
         tabs={[
           { label: 'Metadata', value: 'metadata' },
-          ...typeSpecification.resultPanelTabs,
+          ...typeSpecification.resultPanelTabs({ metric: evaluation.metric }),
         ]}
         className='w-full'
       >

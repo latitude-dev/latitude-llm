@@ -1,3 +1,5 @@
+import { ActionErrors, parseActionErrors } from '$/hooks/useLatitudeAction'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationMetric,
   EvaluationOptions,
@@ -15,7 +17,7 @@ import {
   SwitchInput,
   TextArea,
 } from '@latitude-data/web-ui'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ConfigurationForm from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
 
@@ -59,6 +61,7 @@ export default function EvaluationV2Form<
   options: defaultOptions,
   onSettingsChange,
   onOptionsChange,
+  errors: actionErrors,
   disabled,
 }: {
   mode: 'create' | 'update'
@@ -66,6 +69,10 @@ export default function EvaluationV2Form<
   onSettingsChange?: (settings: EvaluationSettings<T, M>) => void
   options?: Partial<EvaluationOptions>
   onOptionsChange?: (options: Partial<EvaluationOptions>) => void
+  errors?: ActionErrors<
+    typeof useEvaluationsV2,
+    'createEvaluation' | 'updateEvaluation'
+  >
   disabled?: boolean
 }) {
   const [settings, setSettings] = useState({
@@ -87,6 +94,8 @@ export default function EvaluationV2Form<
   } as EvaluationOptions)
   useEffect(() => onOptionsChange?.(options), [options])
 
+  const errors = useMemo(() => parseActionErrors(actionErrors), [actionErrors])
+
   const typeSpecification = EVALUATION_SPECIFICATIONS[settings.type]
   const metricSpecification = typeSpecification?.metrics[settings.metric]
 
@@ -107,6 +116,7 @@ export default function EvaluationV2Form<
           label='Name'
           placeholder='Give your evaluation a name'
           onChange={(e) => setSettings({ ...settings, name: e.target.value })}
+          errors={errors?.['name']}
           className='w-full'
           disabled={disabled}
           required
@@ -121,6 +131,7 @@ export default function EvaluationV2Form<
           onChange={(e) =>
             setSettings({ ...settings, description: e.target.value })
           }
+          errors={errors?.['description']}
           className='w-full'
           disabled={disabled}
           required
@@ -134,6 +145,7 @@ export default function EvaluationV2Form<
           placeholder='Select an evaluation type'
           options={EVALUATION_TYPE_OPTIONS}
           onChange={(value) => setSettings({ ...settings, type: value as T })}
+          errors={errors?.['type']}
           disabled={disabled}
           required
         />)} */}
@@ -148,66 +160,71 @@ export default function EvaluationV2Form<
             onChange={(value) =>
               setSettings({ ...settings, metric: value as M })
             }
+            errors={errors?.['metric']}
             disabled={disabled}
             required
           />
         )}
-        <FormFieldGroup layout='vertical'>
-          <ConfigurationForm
-            mode={mode}
-            type={settings.type}
-            metric={settings.metric}
-            configuration={settings.configuration}
-            onChange={(value) =>
-              setSettings({ ...settings, configuration: value })
-            }
-            disabled={disabled}
+        <ConfigurationForm
+          mode={mode}
+          type={settings.type}
+          metric={settings.metric}
+          configuration={settings.configuration}
+          onChange={(value) =>
+            setSettings({ ...settings, configuration: value })
+          }
+          errors={errors}
+          disabled={disabled}
+        />
+        {mode === 'create' && metricSpecification?.requiresExpectedOutput && (
+          <Alert
+            variant='default'
+            title='This evaluation requires an expected output'
+            description='You will configure the column that contains the expected output when you run a batch evaluation'
           />
-          {mode === 'create' && metricSpecification?.requiresExpectedOutput && (
-            <Alert
-              variant='default'
-              title='This evaluation requires an expected output'
-              description='You will configure the column that contains the expected output when you run a batch evaluation'
-            />
-          )}
-        </FormFieldGroup>
-        <FormFieldGroup label='Options' layout='vertical'>
-          {metricSpecification?.supportsLiveEvaluation && (
+        )}
+        {mode === 'update' && (
+          <FormFieldGroup label='Options' layout='vertical'>
+            {metricSpecification?.supportsLiveEvaluation && (
+              <SwitchInput
+                checked={!!options.evaluateLiveLogs}
+                name='evaluateLiveLogs'
+                label='Evaluate live logs'
+                description='Evaluate production and playground logs automatically'
+                onCheckedChange={(value) =>
+                  setOptions({ ...options, evaluateLiveLogs: value })
+                }
+                errors={errors?.['evaluateLiveLogs']}
+                disabled={
+                  disabled || !metricSpecification?.supportsLiveEvaluation
+                }
+              />
+            )}
             <SwitchInput
-              checked={!!options.evaluateLiveLogs}
-              name='evaluateLiveLogs'
-              label='Evaluate live logs'
-              description='Evaluate production and playground logs automatically'
+              checked={!!options.enableSuggestions}
+              name='enableSuggestions'
+              label='Prompt suggestions'
+              description='Generate suggestions to improve your prompt based on the latest evaluations results'
               onCheckedChange={(value) =>
-                setOptions({ ...options, evaluateLiveLogs: value })
+                setOptions({ ...options, enableSuggestions: value })
               }
-              disabled={
-                disabled || !metricSpecification?.supportsLiveEvaluation
-              }
+              errors={errors?.['enableSuggestions']}
+              disabled={disabled}
             />
-          )}
-          <SwitchInput
-            checked={!!options.enableSuggestions}
-            name='enableSuggestions'
-            label='Prompt suggestions'
-            description='Generate suggestions to improve your prompt based on the latest evaluations results'
-            onCheckedChange={(value) =>
-              setOptions({ ...options, enableSuggestions: value })
-            }
-            disabled={disabled}
-          />
-          {/* TODO: Uncomment when experiments are implemented */}
-          {/* <SwitchInput
-            checked={!!options.autoApplySuggestions}
-            name='autoApplySuggestions'
-            label='Auto apply suggestions'
-            description='Automatically apply the generated suggestions to your prompt'
-            onCheckedChange={(value) =>
-              setOptions({ ...options, autoApplySuggestions: value })
-            }
-            disabled={disabled}
-          /> */}
-        </FormFieldGroup>
+            {/* TODO: Uncomment when experiments are implemented */}
+            {/* <SwitchInput
+                  checked={!!options.autoApplySuggestions}
+                  name='autoApplySuggestions'
+                  label='Auto apply suggestions'
+                  description='Automatically apply the generated suggestions to your prompt'
+                  onCheckedChange={(value) =>
+                    setOptions({ ...options, autoApplySuggestions: value })
+                  }
+                  errors={errors?.['autoApplySuggestions']}
+                  disabled={disabled}
+                /> */}
+          </FormFieldGroup>
+        )}
       </FormWrapper>
     </form>
   )

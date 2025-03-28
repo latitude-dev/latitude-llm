@@ -23,7 +23,7 @@ const ruleEvaluationExactMatchResultError = ruleEvaluationResultError.extend({})
 export const RuleEvaluationExactMatchSpecification = {
   name: 'Exact Match',
   description:
-    'Checks if the response is exactly the same as the expected output',
+    'Checks if the response is exactly the same as the expected output. The resulting score is "matched" or "unmatched"',
   configuration: ruleEvaluationExactMatchConfiguration,
   resultMetadata: ruleEvaluationExactMatchResultMetadata,
   resultError: ruleEvaluationExactMatchResultError,
@@ -55,7 +55,8 @@ const ruleEvaluationRegularExpressionResultError =
   ruleEvaluationResultError.extend({})
 export const RuleEvaluationRegularExpressionSpecification = {
   name: 'Regular Expression',
-  description: 'Checks if the response matches the regular expression',
+  description:
+    'Checks if the response matches the regular expression. The resulting score is "matched" or "unmatched"',
   configuration: ruleEvaluationRegularExpressionConfiguration,
   resultMetadata: ruleEvaluationRegularExpressionResultMetadata,
   resultError: ruleEvaluationRegularExpressionResultError,
@@ -88,7 +89,8 @@ const ruleEvaluationSchemaValidationResultError =
   ruleEvaluationResultError.extend({})
 export const RuleEvaluationSchemaValidationSpecification = {
   name: 'Schema Validation',
-  description: 'Checks if the response follows the schema',
+  description:
+    'Checks if the response follows the schema. The resulting score is "valid" or "invalid"',
   configuration: ruleEvaluationSchemaValidationConfiguration,
   resultMetadata: ruleEvaluationSchemaValidationResultMetadata,
   resultError: ruleEvaluationSchemaValidationResultError,
@@ -123,7 +125,8 @@ const ruleEvaluationLengthCountResultError = ruleEvaluationResultError.extend(
 )
 export const RuleEvaluationLengthCountSpecification = {
   name: 'Length Count',
-  description: 'Checks if the response is of a certain length',
+  description:
+    'Checks if the response is of a certain length. The resulting score is the length of the response',
   configuration: ruleEvaluationLengthCountConfiguration,
   resultMetadata: ruleEvaluationLengthCountResultMetadata,
   resultError: ruleEvaluationLengthCountResultError,
@@ -157,7 +160,8 @@ const ruleEvaluationLexicalOverlapResultError =
   ruleEvaluationResultError.extend({})
 export const RuleEvaluationLexicalOverlapSpecification = {
   name: 'Lexical Overlap',
-  description: 'Checks if the response contains the expected output',
+  description:
+    'Checks if the response contains the expected output. The resulting score is the percentage of overlap',
   configuration: ruleEvaluationLexicalOverlapConfiguration,
   resultMetadata: ruleEvaluationLexicalOverlapResultMetadata,
   resultError: ruleEvaluationLexicalOverlapResultError,
@@ -192,7 +196,7 @@ const ruleEvaluationSemanticSimilarityResultError =
 export const RuleEvaluationSemanticSimilaritySpecification = {
   name: 'Semantic Similarity',
   description:
-    'Checks if the response is semantically similar to the expected output',
+    'Checks if the response is semantically similar to the expected output. The resulting score is the percentage of similarity',
   configuration: ruleEvaluationSemanticSimilarityConfiguration,
   resultMetadata: ruleEvaluationSemanticSimilarityResultMetadata,
   resultError: ruleEvaluationSemanticSimilarityResultError,
