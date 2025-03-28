@@ -7,7 +7,11 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/constants'
-import { Commit, ProviderLogDto } from '@latitude-data/core/browser'
+import {
+  Commit,
+  DocumentLog,
+  ProviderLogDto,
+} from '@latitude-data/core/browser'
 import { IconName, TabSelectorOption, TextColor } from '@latitude-data/web-ui'
 import React from 'react'
 import HumanEvaluationSpecification from './human'
@@ -57,7 +61,8 @@ export type ResultPanelProps<
   evaluation: EvaluationV2<T, M>
   result: EvaluationResultV2<T, M>
   commit: Commit
-  evaluatedLog?: ProviderLogDto
+  evaluatedProviderLog: ProviderLogDto
+  evaluatedDocumentLog: DocumentLog
   panelRef: React.RefObject<HTMLDivElement>
   tableRef: React.RefObject<HTMLTableElement>
   selectedTab: string

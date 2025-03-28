@@ -1,33 +1,50 @@
 import { MetadataInfoTabs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataInfoTabs'
 import { MetadataItem } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataItem'
+import { DocumentLogParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/logs/_components/DocumentLogs/DocumentLogInfo/Metadata'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
+import useDocumentLog from '$/stores/documentLogWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
 import {
   EvaluationMetric,
   EvaluationResultV2,
   EvaluationType,
 } from '@latitude-data/constants'
-import { Commit, ProviderLogDto } from '@latitude-data/core/browser'
 import {
+  Commit,
+  DocumentLog,
+  ProviderLogDto,
+  buildConversation,
+} from '@latitude-data/core/browser'
+import {
+  AppLocalStorage,
   Button,
   ClickToCopy,
+  MessageList,
+  SwitchToggle,
   Text,
   TextArea,
   useCurrentProject,
+  useLocalStorage,
 } from '@latitude-data/web-ui'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
 
 function ResultPanelMetadata<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
->({ evaluation, result, commit, ...rest }: ResultPanelProps<T, M>) {
+>({
+  evaluation,
+  result,
+  commit,
+  evaluatedDocumentLog,
+  ...rest
+}: ResultPanelProps<T, M>) {
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) return null
 
@@ -60,6 +77,9 @@ function ResultPanelMetadata<
         />
       ) : (
         <>
+          {Object.keys(evaluatedDocumentLog.parameters).length > 0 && (
+            <DocumentLogParameters documentLog={evaluatedDocumentLog} />
+          )}
           <MetadataItem
             label='Actual output'
             tooltip='Last response from the model conversation'
@@ -74,7 +94,6 @@ function ResultPanelMetadata<
               />
             </div>
           </MetadataItem>
-
           {result.metadata!.expectedOutput && (
             <MetadataItem
               label='Expected output'
@@ -115,24 +134,83 @@ function ResultPanelMetadata<
         evaluation={evaluation}
         result={result}
         commit={commit}
+        evaluatedDocumentLog={evaluatedDocumentLog}
         {...rest}
       />
     </div>
   )
 }
 
-function evaluatedLogLink({
+function ResultPanelMessages({
+  providerLog,
+  documentLog,
+}: {
+  providerLog: ProviderLogDto
+  documentLog: DocumentLog
+}) {
+  const conversation = useMemo(
+    () => buildConversation(providerLog),
+    [providerLog],
+  )
+
+  const sourceMapAvailable = useMemo(
+    () =>
+      conversation.some((message) => {
+        if (typeof message.content !== 'object') return false
+        return message.content.some((content) => '_promptlSourceMap' in content)
+      }),
+    [conversation],
+  )
+
+  const { value: expandParameters, setValue: setExpandParameters } =
+    useLocalStorage({
+      key: AppLocalStorage.expandParameters,
+      defaultValue: false,
+    })
+
+  if (!conversation.length) {
+    return (
+      <Text.H5 color='foregroundMuted' centered>
+        There are no messages generated for this evaluated log
+      </Text.H5>
+    )
+  }
+
+  return (
+    <>
+      <div className='flex flex-row items-center justify-between w-full sticky top-0 bg-background pb-2'>
+        <Text.H6M>Messages</Text.H6M>
+        {sourceMapAvailable && (
+          <div className='flex flex-row gap-2 items-center'>
+            <Text.H6M>Expand parameters</Text.H6M>
+            <SwitchToggle
+              checked={expandParameters}
+              onCheckedChange={setExpandParameters}
+            />
+          </div>
+        )}
+      </div>
+      <MessageList
+        messages={conversation}
+        parameters={Object.keys(documentLog.parameters)}
+        collapseParameters={!expandParameters}
+      />
+    </>
+  )
+}
+
+function evaluatedDocumentLogLink({
   commit,
-  evaluatedLog,
+  documentLog,
 }: {
   commit: Commit
-  evaluatedLog: ProviderLogDto
+  documentLog: DocumentLog
 }) {
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
 
   const query = new URLSearchParams()
-  query.set('logUuid', evaluatedLog.documentLogUuid!)
+  query.set('logUuid', documentLog.uuid)
 
   return (
     ROUTES.projects
@@ -166,7 +244,10 @@ export function ResultPanel<
   panelRef,
   tableRef,
   ...rest
-}: Omit<ResultPanelProps<T, M>, 'selectedTab'>) {
+}: Omit<
+  ResultPanelProps<T, M>,
+  'evaluatedProviderLog' | 'evaluatedDocumentLog' | 'selectedTab'
+>) {
   const ref = useRef<HTMLDivElement | null>(null)
   const [targetRef, setTargetRef] = useState<HTMLDivElement | null>(null)
   useEffect(() => {
@@ -183,19 +264,31 @@ export function ResultPanel<
     offset: { top: 12, bottom: 12 },
   })
 
-  const { data: evaluatedLog, isLoading: isLoadingEvaluatedLog } =
-    useProviderLog(result.evaluatedLogId)
+  const {
+    data: evaluatedProviderLog,
+    isLoading: isLoadingEvaluatedProviderLog,
+  } = useProviderLog(result.evaluatedLogId)
+
+  const {
+    data: evaluatedDocumentLog,
+    isLoading: isLoadingEvaluatedDocumentLog,
+  } = useDocumentLog({ documentLogUuid: evaluatedProviderLog?.documentLogUuid })
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) return null
 
-  const isLoading = isLoadingEvaluatedLog || !evaluatedLog
+  const isLoading =
+    isLoadingEvaluatedProviderLog ||
+    isLoadingEvaluatedDocumentLog ||
+    !evaluatedProviderLog ||
+    !evaluatedDocumentLog
 
   return (
     <div ref={ref} className='flex flex-col'>
       <MetadataInfoTabs
         tabs={[
           { label: 'Metadata', value: 'metadata' },
+          { label: 'Messages', value: 'messages' },
           ...typeSpecification.resultPanelTabs({ metric: evaluation.metric }),
         ]}
         className='w-full'
@@ -210,11 +303,18 @@ export function ResultPanel<
                   evaluation={evaluation}
                   result={result}
                   commit={commit}
-                  evaluatedLog={evaluatedLog}
+                  evaluatedProviderLog={evaluatedProviderLog}
+                  evaluatedDocumentLog={evaluatedDocumentLog}
                   panelRef={panelRef}
                   tableRef={tableRef}
                   selectedTab={selectedTab}
                   {...rest}
+                />
+              )}
+              {selectedTab === 'messages' && (
+                <ResultPanelMessages
+                  providerLog={evaluatedProviderLog}
+                  documentLog={evaluatedDocumentLog}
                 />
               )}
               <typeSpecification.ResultPanelContent
@@ -222,7 +322,8 @@ export function ResultPanel<
                 evaluation={evaluation}
                 result={result}
                 commit={commit}
-                evaluatedLog={evaluatedLog}
+                evaluatedProviderLog={evaluatedProviderLog}
+                evaluatedDocumentLog={evaluatedDocumentLog}
                 panelRef={panelRef}
                 tableRef={tableRef}
                 selectedTab={selectedTab}
@@ -230,9 +331,9 @@ export function ResultPanel<
               />
               <div className='w-full flex justify-center pt-4'>
                 <Link
-                  href={evaluatedLogLink({
+                  href={evaluatedDocumentLogLink({
                     commit: commit,
-                    evaluatedLog: evaluatedLog,
+                    documentLog: evaluatedDocumentLog,
                   })}
                   target='_blank'
                 >

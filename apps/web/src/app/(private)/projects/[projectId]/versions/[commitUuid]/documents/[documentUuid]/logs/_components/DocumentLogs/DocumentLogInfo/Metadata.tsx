@@ -4,7 +4,11 @@ import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { Message } from '@latitude-data/compiler'
-import { ProviderApiKey, ProviderLogDto } from '@latitude-data/core/browser'
+import {
+  DocumentLog,
+  ProviderApiKey,
+  ProviderLogDto,
+} from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
   Badge,
@@ -16,15 +20,15 @@ import {
 import { format } from 'date-fns'
 
 import {
+  asPromptLFile,
+  PromptLFileParameter,
+} from '$/components/PromptLFileParameter'
+import { getCostPer1M } from '@latitude-data/core/services/ai/estimateCost/index'
+import {
   FinishReasonItem,
   MetadataItem,
   MetadataItemTooltip,
 } from '../../../../../[documentUuid]/_components/MetadataItem'
-import { getCostPer1M } from '@latitude-data/core/services/ai/estimateCost/index'
-import {
-  asPromptLFile,
-  PromptLFileParameter,
-} from '$/components/PromptLFileParameter'
 
 function costNotCalculatedReason({
   provider,
@@ -221,10 +225,10 @@ function ProviderLogsMetadata({
   )
 }
 
-function DocumentLogParameters({
+export function DocumentLogParameters({
   documentLog,
 }: {
-  documentLog: DocumentLogWithMetadataAndError
+  documentLog: DocumentLog
 }) {
   const parameters = useMemo(() => {
     return Object.entries(documentLog.parameters).map(([parameter, value]) => {
