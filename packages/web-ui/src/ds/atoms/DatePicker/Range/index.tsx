@@ -129,6 +129,7 @@ export function DatePickerRange({
             onChange={onPresetSelect}
             value={selectedPreset?.value}
             options={options}
+            zIndex={100}
             disabled={disabled}
           />
         ) : null}
