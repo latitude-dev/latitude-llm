@@ -7,12 +7,22 @@ import {
   InputSource,
   DatasetVersion,
 } from '@latitude-data/core/browser'
-import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+  useToast,
+} from '@latitude-data/web-ui'
 import { useVersionedDatasets } from '$/hooks/useVersionedDatasets'
 import { useDatasetRowsForParameters } from './useDatasetRowsForParameters'
 import { useDatasetRowPosition } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/DocumentParams/DatasetParams/useRowPosition'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { buildDatasetRowsFetcher } from '$/stores/datasetRows'
+import { executeFetch } from '$/hooks/useFetcher'
+import {
+  ClientDatasetRow,
+  serializeRows,
+} from '$/stores/datasetRows/rowSerializationHelpers'
+import { DATASET_ROWS_ROUTE } from '$/stores/datasetRows'
+import { useNavigate } from '$/hooks/useNavigate'
 
 export function useSelectDataset({
   document,
@@ -25,6 +35,8 @@ export function useSelectDataset({
   const [selectedDataset, setSelectedDataset] = useState<
     Dataset | DatasetV2 | undefined
   >()
+  const { toast } = useToast()
+  const navigate = useNavigate()
   const { position, getPosition, setPosition, isLoadingPosition } =
     useDatasetRowPosition()
   const { project } = useCurrentProject()
@@ -65,16 +77,21 @@ export function useSelectDataset({
 
       const all = localDatasetData.assignedDatasets
       const datasetRowId = all[ds.id]?.datasetRowId
+      const selectedDs = ds as DatasetV2
       const dsPosition = await getPosition({
-        dataset: ds as DatasetV2,
+        dataset: selectedDs,
         datasetRowId,
       })
-      const datasetRowFetcher = buildDatasetRowsFetcher({
-        dataset: ds as DatasetV2,
-        page: dsPosition === undefined ? undefined : String(dsPosition),
-        pageSize: '1', // Paginatinate one by one in document parameters
+      const rows = await executeFetch<ClientDatasetRow[]>({
+        navigate,
+        toast,
+        route: DATASET_ROWS_ROUTE,
+        serializer: serializeRows(selectedDs.columns),
+        searchParams: {
+          page: dsPosition === undefined ? undefined : String(dsPosition),
+          pageSize: '1', // Paginatinate one by one in document parameters
+        } as Record<string, string>,
       })
-      const rows = await datasetRowFetcher()
       const row = rows?.[0]
       const inputsForDataset = all[ds.id]?.inputs ?? {}
       const mappedInputsForDataset = all[ds.id]?.mappedInputs ?? {}
@@ -92,7 +109,14 @@ export function useSelectDataset({
 
       setSelectedDataset(ds)
     },
-    [datasets, datasetVersion, project.id, document.documentUuid, commit.uuid],
+    [
+      navigate,
+      datasets,
+      datasetVersion,
+      project.id,
+      document.documentUuid,
+      commit.uuid,
+    ],
   )
 
   const rowsData = useDatasetRowsForParameters({

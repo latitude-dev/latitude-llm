@@ -15,6 +15,7 @@ import { useCallback, useMemo } from 'react'
 import { deleteRowsAction } from '$/actions/datasetRows/delete'
 import { createDatasetRowAction } from '$/actions/datasetRows/create'
 
+export const DATASET_ROWS_ROUTE = ROUTES.api.datasetsRows.root
 export function buildDatasetRowKey({
   datasetId,
   page,
@@ -30,42 +31,6 @@ export function buildDatasetRowKey({
     page ? +page : undefined,
     pageSize ? +pageSize : undefined,
   ]).join(':')
-}
-
-export function buildDatasetRowsFetcher({
-  enabled,
-  dataset,
-  page,
-  pageSize,
-}: {
-  enabled?: boolean
-  dataset?: DatasetV2 | null
-  page?: string | null | undefined
-  pageSize?: string | null
-}) {
-  const serializer = useMemo(() => {
-    return dataset ? serializeRows(dataset.columns) : undefined
-  }, [dataset])
-  const datasetId = dataset?.id
-  const pageStr = page ? String(page) : undefined
-  const pageSizeStr = pageSize ? String(pageSize) : undefined
-  const searchParams = useMemo(
-    () =>
-      compactObject({
-        datasetId,
-        page: pageStr,
-        pageSize: pageSizeStr,
-      }) as Record<string, string>,
-    [datasetId, pageStr, pageSizeStr],
-  )
-  const isEnabled = dataset && enabled
-  return useFetcher<ClientDatasetRow[], DatasetRow[]>(
-    isEnabled ? ROUTES.api.datasetsRows.root : undefined,
-    {
-      serializer,
-      searchParams,
-    },
-  )
 }
 
 const EMPTY_ARRAY: ClientDatasetRow[] = []
@@ -85,11 +50,28 @@ export default function useDatasetRows(
   },
   opts?: SWRConfiguration,
 ) {
-  const isEnabled = !!dataset && enabled
-  const fetcher = useMemo(
+  const serializer = useMemo(() => {
+    return dataset ? serializeRows(dataset.columns) : undefined
+  }, [dataset])
+  const datasetId = dataset?.id
+  const pageStr = page ? String(page) : undefined
+  const pageSizeStr = pageSize ? String(pageSize) : undefined
+  const searchParams = useMemo(
     () =>
-      buildDatasetRowsFetcher({ enabled: isEnabled, dataset, page, pageSize }),
-    [isEnabled, dataset, page, pageSize],
+      compactObject({
+        datasetId,
+        page: pageStr,
+        pageSize: pageSizeStr,
+      }) as Record<string, string>,
+    [datasetId, pageStr, pageSizeStr],
+  )
+  const isEnabled = dataset && enabled
+  const fetcher = useFetcher<ClientDatasetRow[], DatasetRow[]>(
+    isEnabled ? DATASET_ROWS_ROUTE : undefined,
+    {
+      serializer,
+      searchParams,
+    },
   )
   const key = buildDatasetRowKey({ datasetId: dataset?.id, page, pageSize })
   const onSuccess = useCallback(

@@ -17,9 +17,9 @@ type ConditionalResponse<
 > = Raw extends true ? Response | void : R | void
 
 export async function handleResponse<
-  Raw extends boolean = false,
-  I extends unknown = unknown,
   R extends unknown = unknown,
+  I extends unknown = unknown,
+  Raw extends boolean = false,
 >({
   response,
   toast,
@@ -68,9 +68,9 @@ export async function handleResponse<
 }
 
 export async function executeFetch<
-  Raw extends boolean = false,
-  I extends unknown = unknown,
   R extends unknown = unknown,
+  I extends unknown = unknown,
+  Raw extends boolean = false,
 >({
   route,
   searchParams,
@@ -81,13 +81,13 @@ export async function executeFetch<
   route: string
   searchParams?: ISearchParams
   toast: ReturnType<typeof useToast>['toast']
-  serializer?: (item: any) => any
   navigate: ReturnType<typeof useNavigate>
+  serializer?: (item: any) => any
 }) {
   const response = await fetch(buildRoute(route, searchParams), {
     credentials: 'include',
   })
-  return handleResponse<Raw, I, R>({
+  return handleResponse<R, I, Raw>({
     response,
     toast,
     navigate,
@@ -117,7 +117,7 @@ export default function useFetcher<
   return useCallback(async () => {
     if (!route) return fallback as R
 
-    const response = executeFetch<Raw, I, R>({
+    const response = executeFetch<R, I, Raw>({
       route,
       searchParams,
       toast,
