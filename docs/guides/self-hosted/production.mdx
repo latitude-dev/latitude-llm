@@ -30,8 +30,7 @@ You can create the network using the following command:
 docker network create web
 ```
 
-Make sure this network is created before running the containers with  `docker compose`.
-
+Make sure this network is created before running the containers with `docker compose`.
 
 3. Configure your `.env` file with your production settings. The following key configurations are available:
 
@@ -71,50 +70,57 @@ Make sure this network is created before running the containers with  `docker co
 - **Storage Configuration**:
 
   - `DRIVE_DISK`: Choose between `local` or `s3` for file storage
-    1. `local` file storage configuration:
-      - Files are stored locally on the host machine using Docker volumes.
-      - Default variables used:
 
-        ```bash
-        # Paths for local storage (optional)
-        FILE_STORAGE_ROOT_PATH="/app/storage/files" # e.g /app/storage/files
-        FILE_PUBLIC_PATH="files" # e.g files
-        FILES_STORAGE_PATH="/app/storage/files" # e.g /app/storage/files
-        PUBLIC_FILES_STORAGE_PATH="/app/apps/web/public/files" # e.g /app/storage/public/files (IMPORTANT: has to be in nextjs's public folder)
-        ```
+    1. `local` file storage configuration:
+
+    - Files are stored locally on the host machine using Docker volumes.
+    - Default variables used:
+
+      ```bash
+      # Paths for local storage (optional)
+      FILE_STORAGE_ROOT_PATH="/app/storage/files" # e.g /app/storage/files
+      FILE_PUBLIC_PATH="files" # e.g files
+      FILES_STORAGE_PATH="/app/storage/files" # e.g /app/storage/files
+      PUBLIC_FILES_STORAGE_PATH="/app/apps/web/public/files" # e.g /app/storage/public/files (IMPORTANT: has to be in nextjs's public folder)
+      ```
 
     2. `s3` AWS S3 storage configuration:
-      - With environment variables (for convenience/legacy):
-        You explicitly provide AWS credentials (AWS_ACCESS_KEY and AWS_ACCESS_SECRET) via .env file.
-        Required variables:
 
-        ```bash
-        AWS_ACCESS_KEY=your-access-key-here
-        AWS_ACCESS_SECRET=your-secret-here
-        AWS_REGION=us-east-1
-        S3_BUCKET=app-files-bucket
-        PUBLIC_S3_BUCKET=public-files-bucket
-        ```
-      - AWS S3 with IAM Roles (recommended):
-        No explicit AWS keys needed!
-        Use IAM Roles attached to your AWS services (ECS, EC2, Lambda).
-        Ensure AWS resource has proper IAM Role with S3 access (GetObject, PutObject, DeleteObject).
-        Only required environment variables (no keys explicitly stored):
+    - With environment variables (for convenience/legacy):
+      You explicitly provide AWS credentials (AWS_ACCESS_KEY and AWS_ACCESS_SECRET) via .env file.
+      Required variables:
 
-        ```bash
-        AWS_REGION=us-east-1
-        S3_BUCKET=app-files-bucket
-        PUBLIC_S3_BUCKET=public-files-bucket
-        ```
-        How to configure IAM Role (example):
-        1. Go to AWS IAM → Create Role.
-        2. Select trusted entity type (e.g., AWS Service).
-        3. Attach policy that allows access to required S3 buckets.
+      ```bash
+      AWS_ACCESS_KEY=your-access-key-here
+      AWS_ACCESS_SECRET=your-secret-here
+      AWS_REGION=us-east-1
+      S3_BUCKET=app-files-bucket
+      PUBLIC_S3_BUCKET=public-files-bucket
+      ```
 
-        ```json
-        {
-          "Version": "2012-10-17",
-          "Statement": [{
+    - AWS S3 with IAM Roles (recommended):
+      No explicit AWS keys needed!
+      Use IAM Roles attached to your AWS services (ECS, EC2, Lambda).
+      Ensure AWS resource has proper IAM Role with S3 access (GetObject, PutObject, DeleteObject).
+      Only required environment variables (no keys explicitly stored):
+
+      ```bash
+      AWS_REGION=us-east-1
+      S3_BUCKET=app-files-bucket
+      PUBLIC_S3_BUCKET=public-files-bucket
+      ```
+
+      How to configure IAM Role (example):
+
+      1. Go to AWS IAM → Create Role.
+      2. Select trusted entity type (e.g., AWS Service).
+      3. Attach policy that allows access to required S3 buckets.
+
+      ```json
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
             "Effect": "Allow",
             "Action": [
               "s3:GetObject",
@@ -126,12 +132,14 @@ Make sure this network is created before running the containers with  `docker co
               "arn:aws:s3:::your-bucket-name-here",
               "arn:aws:s3:::your-bucket-name-here/*"
             ]
-          }]
-        }
-        ```
-        4. Attach this IAM role to AWS infrastructure (EC2 Instance / ECS Task Definition / Lambda function).
+          }
+        ]
+      }
+      ```
 
-        AWS SDK automatically handles credentials from attached IAM roles.
+      4. Attach this IAM role to AWS infrastructure (EC2 Instance / ECS Task Definition / Lambda function).
+
+      AWS SDK automatically handles credentials from attached IAM roles.
 
 - **Optional Features**:
   - Sentry integration for error tracking
@@ -188,12 +196,22 @@ docker compose top
 3. If you're using local file storage, note that it requires additional configuration for multi-container setups, and S3 is recommended for production environments.
 4. Make sure docker/init-db.sh has execution permissions or otherwise the database container will not start appropiately.
 5. For a more robust production environment, make sure to:
-
    - Set strong passwords in your `.env` file
-   - Configure proper SSL certificates
    - Use appropriate storage configuration (S3 recommended)
    - Set up proper monitoring and logging
-   - We recommend using a container orchestration tool like k8s and handle env variables at runtime
+   - Use a container orchestrator like Kubernetes, GCP or AWS ECS
+
+## Running in localhost
+
+You might want to run the services in localhost for development purposes. To do so, you can use the following command:
+
+```bash
+docker compose -f docker-compose.local.yml up
+```
+
+This will start the same services as in production mode but SSL/HTTPS disabled,
+which allows you to use local tlds such as `localhost`. Remember to configure
+your `.env` file accordingly.
 
 ## Building Your Own Images
 
