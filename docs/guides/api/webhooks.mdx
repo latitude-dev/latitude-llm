@@ -47,9 +47,7 @@ Each webhook request includes:
 1. HTTP Headers:
 
    ```
-   Content-Type: application/json
-   X-Latitude-Signature: <signature>
-   X-Latitude-Event: commitPublished
+   X-Webhook-Signature: <signature>
    ```
 
 2. Request Body:
@@ -101,7 +99,7 @@ function verifyWebhookSignature(payload, signature, secret) {
 
 // In your webhook handler
 app.post('/webhook', (req, res) => {
-  const signature = req.headers['x-latitude-signature']
+  const signature = req.headers['x-webhook-signature']
   const payload = JSON.stringify(req.body)
 
   if (!verifyWebhookSignature(payload, signature, WEBHOOK_SECRET)) {
