@@ -109,12 +109,11 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
         and(
           this.scopeFilter,
           eq(datasetRows.datasetId, datasetId),
-          sql`(${datasetRows.createdAt}, ${datasetRows.id}) >= (${new Date(row.createdAt).toISOString()}, ${row.id})`,
+          sql`(${datasetRows.id}, ${datasetRows.createdAt}) >= (${row.id}, ${new Date(row.createdAt).toISOString()})`,
         ),
       )
 
     const position = Number(countResult[0]?.count ?? 0)
-
     const page = Math.ceil(position / DEFAULT_PAGINATION_SIZE)
 
     return { position, page }
