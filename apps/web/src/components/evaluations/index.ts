@@ -21,6 +21,7 @@ export type ConfigurationFormProps<
   mode: 'create' | 'update'
   configuration: EvaluationConfiguration<T, M>
   setConfiguration: (configuration: EvaluationConfiguration<T, M>) => void
+  errors?: Record<string, string[]>
   disabled?: boolean
 }
 

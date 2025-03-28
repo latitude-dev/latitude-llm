@@ -8,6 +8,34 @@ import {
 } from 'zsa'
 import { useServerAction } from 'zsa-react'
 
+export type ActionErrors<
+  THook extends (...args: any[]) => any,
+  TActionKey extends keyof ReturnType<THook>,
+> = Awaited<ReturnType<ReturnType<THook>[TActionKey]>>[1] | null | undefined
+
+export function parseActionErrors<
+  THook extends (...args: any[]) => any,
+  TActionKey extends keyof ReturnType<THook>,
+>(errors: ActionErrors<THook, TActionKey>) {
+  try {
+    const issues: { path: string[]; message: string }[] =
+      JSON.parse(errors?.data ?? '{}').issues ?? []
+
+    return issues.reduce(
+      (acc, issue) => {
+        acc[issue.path.join('.')] = [
+          ...(acc[issue.path.join('.')] ?? []),
+          issue.message,
+        ]
+        return acc
+      },
+      {} as Record<string, string[]>,
+    )
+  } catch (error) {
+    return {}
+  }
+}
+
 export default function useLatitudeAction<
   const TServerAction extends TAnyZodSafeFunctionHandler,
 >(

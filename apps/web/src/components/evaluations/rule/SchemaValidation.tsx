@@ -37,6 +37,7 @@ const FORMAT_OPTIONS = specification.configuration.shape.format.options.map(
 function ConfigurationForm({
   configuration,
   setConfiguration,
+  errors,
   disabled,
 }: ConfigurationFormProps<
   EvaluationType.Rule,
@@ -54,6 +55,7 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, format: value })
         }
+        errors={errors?.['format']}
         disabled={disabled}
         required
       />
@@ -70,6 +72,7 @@ function ConfigurationForm({
         onChange={(e) =>
           setConfiguration({ ...configuration, schema: e.target.value })
         }
+        errors={errors?.['schema']}
         minRows={3}
         disabled={disabled}
         required

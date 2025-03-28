@@ -2,6 +2,7 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
+import { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationMetric,
@@ -34,6 +35,10 @@ export function EvaluationActions<
   const [openUpdateModal, setOpenUpdateModal] = useState(false)
   const [settings, setSettings] = useState<EvaluationSettings<T, M>>(evaluation)
   const [options, setOptions] = useState<EvaluationOptions>(evaluation)
+  const [errors, setErrors] =
+    useState<ActionErrors<typeof useEvaluationsV2, 'updateEvaluation'>>(
+      undefined,
+    )
   const { updateEvaluation, isExecuting } = useEvaluationsV2({
     project: project,
     commit: commit,
@@ -41,12 +46,13 @@ export function EvaluationActions<
   })
   const onUpdate = useCallback(async () => {
     if (isExecuting || !!commit.mergedAt) return
-    const result = await updateEvaluation({
+    const [_, errors] = await updateEvaluation({
       evaluationUuid: evaluation.uuid,
       settings: settings,
       options: options,
     })
-    if (result) setOpenUpdateModal(false)
+    if (errors) setErrors(errors)
+    else setOpenUpdateModal(false)
   }, [
     isExecuting,
     commit,
@@ -101,6 +107,7 @@ export function EvaluationActions<
           onSettingsChange={setSettings}
           options={options}
           onOptionsChange={setOptions}
+          errors={errors}
         />
       </ConfirmModal>
       {metricSpecification.supportsBatchEvaluation && (

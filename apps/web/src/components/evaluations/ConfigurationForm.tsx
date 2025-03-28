@@ -16,6 +16,7 @@ export default function ConfigurationForm<
   metric,
   configuration: defaultConfiguration,
   onChange,
+  errors,
   disabled,
 }: Omit<ConfigurationFormProps<T, M>, 'configuration' | 'setConfiguration'> & {
   type: T
@@ -38,6 +39,7 @@ export default function ConfigurationForm<
         metric={metric}
         configuration={configuration}
         setConfiguration={setConfiguration}
+        errors={errors}
         disabled={disabled}
       />
       <SelectableSwitch
@@ -50,6 +52,7 @@ export default function ConfigurationForm<
         onChange={(value) =>
           setConfiguration({ ...configuration, reverseScale: !value })
         }
+        errors={errors?.['reverseScale']}
         disabled={disabled}
         required
       />

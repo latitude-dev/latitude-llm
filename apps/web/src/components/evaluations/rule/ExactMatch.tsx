@@ -30,6 +30,7 @@ export default {
 function ConfigurationForm({
   configuration,
   setConfiguration,
+  errors,
   disabled,
 }: ConfigurationFormProps<
   EvaluationType.Rule,
@@ -45,6 +46,7 @@ function ConfigurationForm({
         onCheckedChange={(value) =>
           setConfiguration({ ...configuration, caseInsensitive: value })
         }
+        errors={errors?.['caseInsensitive']}
         disabled={disabled}
         required
       />

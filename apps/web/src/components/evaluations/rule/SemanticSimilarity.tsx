@@ -36,6 +36,7 @@ const ALGORITHM_OPTIONS =
 function ConfigurationForm({
   configuration,
   setConfiguration,
+  errors,
   disabled,
 }: ConfigurationFormProps<
   EvaluationType.Rule,
@@ -53,6 +54,7 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, algorithm: value })
         }
+        errors={errors?.['algorithm']}
         disabled={disabled}
         required
       />
@@ -67,6 +69,7 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, minSimilarity: value })
         }
+        errors={errors?.['minSimilarity']}
         defaultAppearance
         className='w-full'
         disabled={disabled}
@@ -83,6 +86,7 @@ function ConfigurationForm({
         onChange={(value) =>
           setConfiguration({ ...configuration, maxSimilarity: value })
         }
+        errors={errors?.['maxSimilarity']}
         defaultAppearance
         className='w-full'
         disabled={disabled}

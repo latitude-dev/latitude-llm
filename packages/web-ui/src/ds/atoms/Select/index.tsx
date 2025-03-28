@@ -2,7 +2,9 @@
 
 import { ReactNode, useEffect, useState } from 'react'
 
+import { cn } from '../../../lib/utils'
 import { FormField, type FormFieldProps } from '../FormField'
+import { IconName } from '../Icons'
 import {
   SelectContent,
   SelectGroup,
@@ -11,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from './Primitives'
-import { IconName } from '../Icons'
 
 export type SelectOption<V extends unknown = unknown> = {
   label: string
@@ -99,7 +100,12 @@ export function Select<V extends unknown = unknown>({
           {trigger ? (
             trigger
           ) : (
-            <SelectTrigger autoFocus={autoFocus}>
+            <SelectTrigger
+              autoFocus={autoFocus}
+              className={cn({
+                'border-red-500 focus:ring-red-500': errors,
+              })}
+            >
               <SelectValue
                 selected={selectedValue}
                 options={options}

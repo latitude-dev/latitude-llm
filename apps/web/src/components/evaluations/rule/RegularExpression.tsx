@@ -30,6 +30,7 @@ export default {
 function ConfigurationForm({
   configuration,
   setConfiguration,
+  errors,
   disabled,
 }: ConfigurationFormProps<
   EvaluationType.Rule,
@@ -46,6 +47,7 @@ function ConfigurationForm({
         onChange={(e) =>
           setConfiguration({ ...configuration, pattern: e.target.value })
         }
+        errors={errors?.['pattern']}
         className='w-full'
         disabled={disabled}
         required

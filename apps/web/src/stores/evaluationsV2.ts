@@ -75,6 +75,7 @@ export function useEvaluationsV2(
       })
     },
     onError: async (error) => {
+      if (error?.err?.name === 'ZodError') return
       toast({
         title: 'Error creating evaluation',
         description: error?.err?.message,
@@ -90,15 +91,13 @@ export function useEvaluationsV2(
       settings: EvaluationSettings
       options?: Partial<EvaluationOptions>
     }) => {
-      const [result, error] = await executeCreateEvaluationV2({
+      return await executeCreateEvaluationV2({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
         settings: settings,
         options: options,
       })
-      if (error) return
-      return result
     },
     [project, commit, document, executeCreateEvaluationV2],
   )
@@ -121,6 +120,7 @@ export function useEvaluationsV2(
       })
     },
     onError: async (error) => {
+      if (error?.err?.name === 'ZodError') return
       toast({
         title: 'Error updating evaluation',
         description: error?.err?.message,
@@ -138,7 +138,7 @@ export function useEvaluationsV2(
       settings?: Partial<Omit<EvaluationSettings, 'type' | 'metric'>>
       options?: Partial<EvaluationOptions>
     }) => {
-      const [result, error] = await executeUpdateEvaluationV2({
+      return await executeUpdateEvaluationV2({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
@@ -146,8 +146,6 @@ export function useEvaluationsV2(
         settings: settings,
         options: options,
       })
-      if (error) return
-      return result
     },
     [project, commit, document, executeUpdateEvaluationV2],
   )
@@ -164,6 +162,7 @@ export function useEvaluationsV2(
       })
     },
     onError: async (error) => {
+      if (error?.err?.name === 'ZodError') return
       toast({
         title: 'Error deleting evaluation',
         description: error?.err?.message,
@@ -173,14 +172,12 @@ export function useEvaluationsV2(
   })
   const deleteEvaluation = useCallback(
     async ({ evaluationUuid }: { evaluationUuid: string }) => {
-      const [result, error] = await executeDeleteEvaluationV2({
+      return await executeDeleteEvaluationV2({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
         evaluationUuid: evaluationUuid,
       })
-      if (error) return
-      return result
     },
     [project, commit, document, executeDeleteEvaluationV2],
   )
