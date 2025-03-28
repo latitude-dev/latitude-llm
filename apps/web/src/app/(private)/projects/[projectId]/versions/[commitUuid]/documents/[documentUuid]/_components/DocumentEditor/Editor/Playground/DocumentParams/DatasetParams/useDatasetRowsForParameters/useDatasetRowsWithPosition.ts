@@ -24,9 +24,7 @@ export function useDatasetRowWithPosition(
 ) {
   const rowId = datasetRowId ? +datasetRowId : undefined
   const fetcher = useFetcher(
-    dataset
-      ? ROUTES.api.datasetsRows.withPosition(rowId).root
-      : undefined,
+    dataset ? ROUTES.api.datasetsRows.withPosition(rowId).root : undefined,
     {
       searchParams: compactObject({
         datasetId: dataset?.id,

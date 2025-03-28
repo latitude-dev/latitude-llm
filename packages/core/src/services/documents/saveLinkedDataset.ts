@@ -49,8 +49,8 @@ function getCurrentDatasetLinkedData({
 
 type LinkedColumn<V extends DatasetVersion = DatasetVersion> =
   V extends DatasetVersion.V1
-  ? Record<number, LinkedDataset>
-  : Record<number, LinkedDatasetRow>
+    ? Record<number, LinkedDataset>
+    : Record<number, LinkedDatasetRow>
 export async function saveLinkedDataset<V extends DatasetVersion>(
   {
     document,

@@ -60,7 +60,7 @@ export const serializeRows =
   (columns: DatasetV2['columns']) =>
   (rows: DatasetRow[]): ClientDatasetRow[] => {
     const mappedRows = rows.map((item) => serializeRow({ row: item, columns }))
-    console.log("MAPPED_ROWS", mappedRows)
+    console.log('MAPPED_ROWS', mappedRows)
     return mappedRows
   }
 

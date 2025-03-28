@@ -148,15 +148,15 @@ function getLinkedDatasetV2({
 
   return all[datasetId]
     ? {
-      ...EMPTY_LINKED_DATASET_ROW,
-      ...local,
-      ...all[datasetId],
-    }
+        ...EMPTY_LINKED_DATASET_ROW,
+        ...local,
+        ...all[datasetId],
+      }
     : {
-      datasetRowId: local.datasetRowId,
-      inputs: local.inputs,
-      mappedInputs: local.mappedInputs,
-    }
+        datasetRowId: local.datasetRowId,
+        inputs: local.inputs,
+        mappedInputs: local.mappedInputs,
+      }
 }
 
 export function useDocumentParameters<

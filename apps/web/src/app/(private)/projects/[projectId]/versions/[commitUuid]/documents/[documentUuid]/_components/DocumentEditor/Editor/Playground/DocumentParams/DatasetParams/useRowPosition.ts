@@ -18,27 +18,31 @@ const buildFetcher =
     toast: ReturnType<typeof useToast>['toast']
     navigate: ReturnType<typeof useNavigate>
   }) =>
-    async ({
-      dataset,
-      datasetRowId,
-    }: {
-      dataset: DatasetV2 | null
-      datasetRowId?: number
-    }) => {
-      if (!dataset) return undefined
-      if (!dataset || !datasetRowId) return { position: 1, page: 1}
+  async ({
+    dataset,
+    datasetRowId,
+  }: {
+    dataset: DatasetV2 | null
+    datasetRowId?: number
+  }) => {
+    if (!dataset) return undefined
+    if (!dataset || !datasetRowId) return { position: 1, page: 1 }
 
-      const route = ROUTES.api.datasetsRows.withPosition(datasetRowId).root
-      const response = await executeFetch<false, unknown, WithPositionData | undefined>({
-        route,
-        searchParams: compactObject({
-          datasetId: dataset.id,
-        }) as Record<string, string>,
-        toast,
-        navigate,
-      })
-      return response ?? { position: 1, page: 1 }
-    }
+    const route = ROUTES.api.datasetsRows.withPosition(datasetRowId).root
+    const response = await executeFetch<
+      false,
+      unknown,
+      WithPositionData | undefined
+    >({
+      route,
+      searchParams: compactObject({
+        datasetId: dataset.id,
+      }) as Record<string, string>,
+      toast,
+      navigate,
+    })
+    return response ?? { position: 1, page: 1 }
+  }
 
 export function useDatasetRowPosition() {
   const { toast } = useToast()

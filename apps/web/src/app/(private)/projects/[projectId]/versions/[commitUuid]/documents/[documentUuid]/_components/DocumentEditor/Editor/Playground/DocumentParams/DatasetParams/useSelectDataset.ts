@@ -108,7 +108,7 @@ export function useSelectDataset({
   })
 
   const rowsData = isV1 ? rowsV1 : rowsV2
-  // TODO: Split loading into loadingState: { isLoading, isLoadingRows, isLoadingPosition }
+  // TODO: Legacy. Remove after delete v1 code
   const isLoading = isLoadingDatasets || isLoadingPosition || rowsData.isLoading
 
   return {
@@ -117,6 +117,12 @@ export function useSelectDataset({
     selectedDataset,
     onSelectDataset,
     isLoading,
+    loadingState: {
+      datasets: isLoadingDatasets,
+      position: isLoadingPosition,
+      rows: rowsData.loadingState?.rows ?? false,
+      count: rowsData.loadingState?.count ?? false,
+    },
   }
 }
 

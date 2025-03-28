@@ -143,10 +143,12 @@ export function useDatasetRowsForParameters({
     [ds.setDataset, ds.inputs, ds.mappedInputs, dataset?.id, datasetRow],
   )
 
-  const isLoading = isLoadingRow || isLoadingDatasetRowsCount
-
   return {
-    isLoading,
+    isLoading: isLoadingDatasetRowsCount || isLoadingRow,
+    loadingState: {
+      rows: isLoadingRow,
+      count: isLoadingDatasetRowsCount,
+    },
     rowCellOptions,
     onSelectRowCell,
     position,
