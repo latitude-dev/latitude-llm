@@ -1,3 +1,4 @@
+import { Slot } from '@radix-ui/react-slot'
 import {
   ComponentPropsWithRef,
   ElementRef,
@@ -6,7 +7,6 @@ import {
   ReactNode,
   useId,
 } from 'react'
-import { Slot } from '@radix-ui/react-slot'
 
 import { cn } from '../../../lib/utils'
 import { TooltipLabel } from '../Label'
@@ -20,7 +20,11 @@ export function FormDescription({
 }) {
   if (typeof children !== 'string') return children
 
-  return <Text.H6 color='foregroundMuted' display='block'>{children}</Text.H6>
+  return (
+    <Text.H6 color='foregroundMuted' display='block'>
+      {children}
+    </Text.H6>
+  )
 }
 
 function TooltipMessage({ error }: { error: string | undefined }) {
