@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import useDatasetRows from '$/stores/datasetRows'
 import {
@@ -10,7 +10,10 @@ import {
 } from '@latitude-data/core/browser'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { ReactStateDispatch, SelectOption } from '@latitude-data/web-ui'
-import { parseRowCell } from '$/stores/datasetRows/rowSerializationHelpers'
+import {
+  ClientDatasetRow,
+  parseRowCell,
+} from '$/stores/datasetRows/rowSerializationHelpers'
 
 function mappedToInputs({
   inputs,
@@ -49,7 +52,7 @@ function mappedToInputs({
 export function useDatasetRowsForParameters({
   document,
   commitVersionUuid,
-  dataset,
+  dataset: originalDataset,
   position,
   setPosition,
 }: {
@@ -59,6 +62,7 @@ export function useDatasetRowsForParameters({
   commitVersionUuid: string
   dataset: DatasetV2 | null | undefined
 }) {
+  const dataset = useMemo(() => originalDataset, [originalDataset?.id])
   const rowCellOptions = useMemo<SelectOption<string>[]>(
     () =>
       dataset?.columns.map((c) => ({ value: c.identifier, label: c.name })) ??
@@ -74,11 +78,8 @@ export function useDatasetRowsForParameters({
     datasetVersion: DatasetVersion.V2,
   })
 
-  const { data: datasetRows, isLoading: isLoadingRow } = useDatasetRows({
-    dataset: position === undefined ? undefined : dataset,
-    page: position === undefined ? undefined : String(position),
-    pageSize: '1', // Paginatinate one by one in document parameters
-    onFetched: async (data) => {
+  const onRowsFetched = useCallback(
+    async (data: ClientDatasetRow[]) => {
       const row = data[0]
       if (!row || !dataset) return
 
@@ -97,7 +98,20 @@ export function useDatasetRowsForParameters({
         },
       })
     },
-  })
+    [ds.setDataset, ds.inputs, ds.mappedInputs, dataset?.id],
+  )
+
+  const { data: datasetRows, isLoading: isLoadingRow } = useDatasetRows(
+    {
+      dataset: position === undefined ? undefined : dataset,
+      page: position === undefined ? undefined : String(position),
+      pageSize: '1', // Paginatinate one by one in document parameters
+    },
+    {
+      keepPreviousData: true,
+      revalidateIfStale: false,
+    },
+  )
 
   const datasetRow = datasetRows?.[0]
   const updatePosition = useCallback(
@@ -142,6 +156,11 @@ export function useDatasetRowsForParameters({
     },
     [ds.setDataset, ds.inputs, ds.mappedInputs, dataset?.id, datasetRow],
   )
+
+  useEffect(() => {
+    // React to fresh fetched rows
+    onRowsFetched(datasetRows ?? [])
+  }, [datasetRows])
 
   return {
     isLoading: isLoadingDatasetRowsCount || isLoadingRow,

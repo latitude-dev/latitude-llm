@@ -123,42 +123,6 @@ function getLinkedDataset({
   return all[datasetId] ? all[datasetId] : (localInputs ?? EMPTY_LINKED_DATASET)
 }
 
-function getLinkedDatasetV2({
-  document,
-  localInputs,
-}: {
-  document: DocumentVersion
-  localInputs: PlaygroundInputs<'datasetV2'>['datasetV2']
-}) {
-  const datasetId = document.datasetV2Id
-  if (!datasetId) return EMPTY_LINKED_DATASET_ROW
-
-  const local = localInputs ?? EMPTY_LINKED_DATASET_ROW
-
-  const all = document.linkedDatasetAndRow ?? {}
-  const isEmpty = Object.keys(all).length === 0
-
-  if (isEmpty) {
-    return {
-      datasetRowId: local.datasetRowId,
-      inputs: local.inputs,
-      mappedInputs: local.mappedInputs,
-    }
-  }
-
-  return all[datasetId]
-    ? {
-        ...EMPTY_LINKED_DATASET_ROW,
-        ...local,
-        ...all[datasetId],
-      }
-    : {
-        datasetRowId: local.datasetRowId,
-        inputs: local.inputs,
-        mappedInputs: local.mappedInputs,
-      }
-}
-
 export function useDocumentParameters<
   V extends DatasetVersion = DatasetVersion,
 >({
@@ -192,17 +156,10 @@ export function useDocumentParameters<
     document,
     localInputs: inputs.dataset,
   })
-  const linkedDatasetV2 = getLinkedDatasetV2({
-    document,
-    localInputs: inputs.datasetV2,
-  })
-
   let inputsBySource =
     source === INPUT_SOURCE.dataset
       ? linkedDataset.inputs
-      : source === INPUT_SOURCE.datasetV2
-        ? linkedDatasetV2.inputs
-        : inputs[source].inputs
+      : inputs[source]?.inputs ?? {}
 
   const setInputs = useCallback(
     <S extends LocalInputSource>(source: S, newInputs: LocalInputs<S>) => {
@@ -302,16 +259,8 @@ export function useDocumentParameters<
   }, [linkedDataset?.inputs, inputs])
 
   const copyDatasetV2InputsToManual = useCallback(() => {
-    if (
-      !linkedDatasetV2 ||
-      !('inputs' in linkedDatasetV2) ||
-      !linkedDataset?.inputs
-    ) {
-      return
-    }
-
-    setManualInputs(linkedDataset.inputs)
-  }, [linkedDatasetV2?.inputs, inputs])
+    setManualInputs(inputs.datasetV2?.inputs ?? {})
+  }, [inputs.datasetV2?.inputs])
 
   const setHistoryLog = useCallback(
     (logUuid: string) => {
@@ -450,7 +399,7 @@ export function useDocumentParameters<
         datasetRowId: data?.datasetRowId,
       })
 
-      const [_, error] = await saveLinkedDataset({
+      saveLinkedDataset({
         projectId,
         commitUuid,
         documentUuid: document.documentUuid,
@@ -459,16 +408,16 @@ export function useDocumentParameters<
         mappedInputs: data?.mappedInputs,
         datasetRowId: data?.datasetRowId,
         inputs: data?.inputs,
+      }).then(([_, error]) => {
+        if (error) {
+          setDatasetMappedInputs({
+            datasetId,
+            inputs: prevInputs,
+            mappedInputs: prevMappedInputs,
+            datasetRowId: prevDatasetRowId,
+          })
+        }
       })
-
-      if (error) {
-        setDatasetMappedInputs({
-          datasetId,
-          inputs: prevInputs,
-          mappedInputs: prevMappedInputs,
-          datasetRowId: prevDatasetRowId,
-        })
-      }
     },
     [
       saveLinkedDataset,
@@ -490,47 +439,24 @@ export function useDocumentParameters<
         }),
       )
 
-      // TODO: Remove after a dataset V2 migration
-      // This is not needed with new datasets. We don't store the values
-      // of the cells viewed because they can be modified now.
-      if (datasetVersion === DatasetVersion.V1) {
-        const datasetInputs = recalculateInputs<'dataset'>({
-          inputs: linkedDataset.inputs,
-          metadata,
-        })
-        // Store in local while not stored in the DB
-        setInputs('dataset', datasetInputs)
-
-        if (document.datasetId && linkedDataset) {
-          setDataset({
-            datasetId: document.datasetId,
-            datasetVersion,
-            data: {
-              inputs: datasetInputs,
-              mappedInputs: linkedDataset.mappedInputs,
-              rowIndex: linkedDataset.rowIndex,
-            } as LinkedDataset,
-          })
-        }
-      }
-
       if (datasetVersion === DatasetVersion.V2) {
         const datasetInputs = recalculateInputs<'datasetV2'>({
-          inputs: linkedDatasetV2.inputs,
+          inputs: inputs.datasetV2?.inputs ?? {},
           metadata,
         })
-        // Store in local while not stored in the DB
+        // set data from metadata in localStorage
         setInputs('datasetV2', datasetInputs)
 
-        if (document.datasetV2Id && linkedDatasetV2) {
+        const rowId = inputs.datasetV2?.datasetRowId
+        if (document.datasetV2Id && rowId !== undefined) {
           setDatasetV2({
             datasetId: document.datasetV2Id,
             datasetVersion,
             data: {
               inputs: datasetInputs,
-              mappedInputs: linkedDatasetV2.mappedInputs,
-              datasetRowId: linkedDatasetV2.datasetRowId,
-            } as LinkedDatasetRow,
+              mappedInputs: inputs.datasetV2?.mappedInputs ?? {},
+              datasetRowId: rowId,
+            }
           })
         }
       }
@@ -549,7 +475,6 @@ export function useDocumentParameters<
       source,
       document.datasetId,
       linkedDataset,
-      linkedDatasetV2,
       setDatasetV2,
       datasetVersion,
       useDatasetsV2,
@@ -584,11 +509,9 @@ export function useDocumentParameters<
       copyToManual: copyDatasetInputsToManual,
     },
     datasetV2: {
-      datasetRowId: document.datasetV2Id
-        ? document.linkedDatasetAndRow?.[document.datasetV2Id]?.datasetRowId
-        : undefined,
-      inputs: linkedDatasetV2.inputs,
-      mappedInputs: linkedDatasetV2.mappedInputs,
+      datasetRowId: inputs?.datasetV2?.datasetRowId,
+      inputs: inputs.datasetV2?.inputs ?? {},
+      mappedInputs: inputs.datasetV2?.mappedInputs ?? {},
       setDataset: setDatasetV2,
       copyToManual: copyDatasetV2InputsToManual,
     },

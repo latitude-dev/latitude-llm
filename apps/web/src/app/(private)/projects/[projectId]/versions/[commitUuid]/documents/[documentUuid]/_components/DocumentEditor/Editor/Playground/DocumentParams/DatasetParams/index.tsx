@@ -2,7 +2,6 @@ import { ROUTES } from '$/services/routes'
 import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
 import {
   Button,
-  cn,
   Select,
   SelectOption,
   Skeleton,
@@ -40,20 +39,21 @@ export function DatasetParams({
   datasetVersion: DatasetVersion
 }) {
   const selectedId = data.selectedDataset?.id
+  const isLoading = data.loadingState.datasets || data.loadingState.position
   return (
     <div className='flex flex-col gap-y-4'>
       <div className='flex flex-row items-center justify-between gap-x-4 border-b border-border pb-4'>
         <Select
           width='auto'
           name='datasetId'
-          placeholder={data.isLoading ? 'Loading...' : 'Select dataset'}
-          disabled={data.isLoading || !data.datasetOptions.length}
+          placeholder={data.loadingState.datasets ? 'Loading...' : 'Select dataset'}
+          disabled={data.loadingState.datasets || !data.datasetOptions.length}
           options={data.datasetOptions}
           onChange={data.onSelectDataset}
           value={selectedId}
         />
         <div className='min-w-0'>
-          {data.loadingState.position ? (
+          {isLoading ? (
             <Skeleton height='h5' className='w-40 min-w-0' />
           ) : (
             <>

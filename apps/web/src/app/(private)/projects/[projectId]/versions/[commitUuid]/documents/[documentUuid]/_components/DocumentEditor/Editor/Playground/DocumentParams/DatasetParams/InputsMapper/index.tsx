@@ -48,6 +48,7 @@ export function InputMapper({
     datasetVersion,
   })
   const inputs = ds.inputs
+  console.log("INPUTS", inputs)
   const mappedInputs = ds.mappedInputs
   const inputKeys = Object.entries(inputs)
   return (

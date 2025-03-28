@@ -151,7 +151,6 @@ export default function DocumentParams({
     source,
   })
 
-  // TODO: Improve. Pass source and only fetch logs when in logs tab
   const historyInfo = useLogHistoryParams({
     document: props.document,
     commitVersionUuid: commit.uuid,

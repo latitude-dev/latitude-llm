@@ -92,11 +92,10 @@ export function useSelectDataset({
     ],
   )
 
-  const isV1 = datasetVersion === DatasetVersion.V1
   const rowsData = useDatasetRowsForParameters({
     document,
     commitVersionUuid,
-    dataset: !isV1 ? (selectedDataset as DatasetV2) : undefined,
+    dataset: selectedDataset as DatasetV2 | undefined,
     position,
     setPosition,
   })

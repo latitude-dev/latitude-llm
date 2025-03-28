@@ -56,7 +56,7 @@ export function InputsMapperItem<V extends DatasetVersion = DatasetVersion>({
         <div className='flex flex-col flex-grow min-w-0 gap-y-1'>
           <Select<SelectValueType<V>>
             name='datasetId'
-            placeholder={isLoading ? 'Loading...' : 'Choose row header'}
+            placeholder='Choose row header'
             options={rowCellOptions}
             onChange={onSelectRowCell(param)}
             value={value}

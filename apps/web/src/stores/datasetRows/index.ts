@@ -1,4 +1,4 @@
-import type { DatasetV2 } from '@latitude-data/core/browser'
+import type { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { compact } from 'lodash-es'
 import { ROUTES } from '$/services/routes'
@@ -11,7 +11,7 @@ import {
   serializeRow,
   serializeRows,
 } from './rowSerializationHelpers'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { deleteRowsAction } from '$/actions/datasetRows/delete'
 import { createDatasetRowAction } from '$/actions/datasetRows/create'
 
@@ -20,7 +20,7 @@ export function buildDatasetRowKey({
   page,
   pageSize,
 }: {
-  datasetId: number | undefined
+  datasetId?: number | undefined
   page?: string | null | undefined
   pageSize?: string | null
 }) {
@@ -29,9 +29,10 @@ export function buildDatasetRowKey({
     datasetId,
     page ? +page : undefined,
     pageSize ? +pageSize : undefined,
-  ])
+  ]).join(':')
 }
 
+const EMPTY_ARRAY: ClientDatasetRow[] = []
 export default function useDatasetRows(
   {
     dataset,
@@ -49,38 +50,48 @@ export default function useDatasetRows(
   opts?: SWRConfiguration,
 ) {
   const isEnabled = dataset && enabled
-  const fetcher = useFetcher(
+  const serializer = useMemo(() => {
+    return dataset ? serializeRows(dataset.columns) : undefined
+  }, [dataset])
+  const datasetId = dataset?.id
+  const pageStr = page ? String(page) : undefined
+  const pageSizeStr = pageSize ? String(pageSize) : undefined
+  const searchParams = useMemo(
+    () =>
+      compactObject({
+        datasetId,
+        page: pageStr,
+        pageSize: pageSizeStr,
+      }) as Record<string, string>,
+    [datasetId, pageStr, pageSizeStr],
+  )
+  const fetcher = useFetcher<false, DatasetRow[], ClientDatasetRow[]>(
     isEnabled ? ROUTES.api.datasetsRows.root : undefined,
     {
-      serializer: dataset ? serializeRows(dataset.columns) : undefined,
-      searchParams: compactObject({
-        datasetId: dataset?.id,
-        page: page ? String(page) : undefined,
-        pageSize: pageSize ? String(pageSize) : undefined,
-      }) as Record<string, string>,
+      serializer,
+      searchParams,
     },
+  )
+  const key = buildDatasetRowKey({ datasetId: dataset?.id, page, pageSize })
+  const onSuccess = useCallback(
+    (data: ClientDatasetRow[]) => {
+      onFetched?.(data)
+    },
+    [onFetched],
   )
   const {
-    data = [],
+    data = EMPTY_ARRAY,
     mutate,
     ...rest
-  } = useSWR<ClientDatasetRow[]>(
-    isEnabled
-      ? buildDatasetRowKey({ datasetId: dataset.id, page, pageSize })
+  } = useSWR<ClientDatasetRow[]>(key, fetcher, {
+    ...opts,
+    fallbackData: opts?.fallbackData
+      ? dataset
+        ? serializeRows(dataset.columns)(opts.fallbackData)
+        : undefined
       : undefined,
-    fetcher,
-    {
-      ...opts,
-      fallbackData: opts?.fallbackData
-        ? dataset
-          ? serializeRows(dataset.columns)(opts.fallbackData)
-          : undefined
-        : undefined,
-      onSuccess: (data) => {
-        onFetched?.(data)
-      },
-    },
-  )
+    onSuccess,
+  })
 
   const { execute: update, isPending: isUpdating } = useLatitudeAction(
     updateDatasetRowAction,
