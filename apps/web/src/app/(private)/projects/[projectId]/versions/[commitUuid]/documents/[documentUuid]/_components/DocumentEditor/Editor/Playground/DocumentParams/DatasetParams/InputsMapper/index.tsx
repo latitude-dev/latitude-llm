@@ -1,9 +1,6 @@
-import { useCallback } from 'react'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import {
-  Dataset,
   DocumentVersion,
-  DatasetV2,
   DatasetVersion,
   PlaygroundInput,
 } from '@latitude-data/core/browser'
@@ -15,6 +12,7 @@ import {
 } from '@latitude-data/web-ui'
 
 import { InputsMapperItem, OnSelectRowCellFn } from './InputsMapperItem'
+import { UseSelectDataset } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/DocumentParams/DatasetParams/useSelectDataset'
 
 function getTooltipValue(input: PlaygroundInput<'datasetV2'>) {
   if (input === undefined || input === null) {
@@ -33,17 +31,15 @@ export function InputMapper({
   document,
   commit,
   rowCellOptions,
-  isLoading,
+  loadingState,
   onSelectRowCell,
-  selectedDataset,
   datasetVersion,
 }: {
   document: DocumentVersion
   commit: ICommitContextType['commit']
   rowCellOptions: SelectOption<string>[]
   onSelectRowCell: OnSelectRowCellFn<string>
-  isLoading: boolean
-  selectedDataset: Dataset | DatasetV2 | undefined
+  loadingState: UseSelectDataset['loadingState']
   datasetVersion: DatasetVersion
 }) {
   const { setSource, datasetV2: ds } = useDocumentParameters({
@@ -54,8 +50,6 @@ export function InputMapper({
   const inputs = ds.inputs
   const mappedInputs = ds.mappedInputs
   const inputKeys = Object.entries(inputs)
-  const disabled = !selectedDataset || isLoading
-
   return (
     <ClientOnly>
       <div className='flex flex-col gap-3'>
@@ -69,12 +63,11 @@ export function InputMapper({
                 <InputsMapperItem
                   key={idx}
                   value={identifier}
-                  isLoading={isLoading}
                   datasetVersion={DatasetVersion.V2}
-                  disabled={disabled}
                   isMapped={isMapped}
                   param={param}
                   onSelectRowCell={onSelectRowCell}
+                  loadingState={loadingState}
                   rowCellOptions={rowCellOptions as SelectOption<string>[]}
                   setSource={setSource}
                   tooltipValue={inputTooltipValue}

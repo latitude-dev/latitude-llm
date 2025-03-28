@@ -158,6 +158,7 @@ export function useDatasetV1RowsForParamaters({
 
   return {
     isLoading: isLoadingCsv,
+    loadingState: { rows: false, count: false },
     mappedInputs: mappedInputs ?? {},
     rowCellOptions: datasetPreview?.rowCellOptions ?? [],
     onSelectRowCell,

@@ -4,11 +4,11 @@ import {
   Icon,
   Select,
   SelectOption,
-  Skeleton,
   Text,
   Tooltip,
 } from '@latitude-data/web-ui'
 import { DatasetVersion, InputSource } from '@latitude-data/core/browser'
+import { UseSelectDataset } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/DocumentParams/DatasetParams/useSelectDataset'
 
 type SelectValueType<V extends DatasetVersion> = V extends DatasetVersion.V1
   ? number
@@ -19,8 +19,6 @@ export type OnSelectRowCellFn<T> = (
 
 export function InputsMapperItem<V extends DatasetVersion = DatasetVersion>({
   value,
-  isLoading,
-  disabled,
   isMapped,
   param,
   rowCellOptions,
@@ -28,11 +26,11 @@ export function InputsMapperItem<V extends DatasetVersion = DatasetVersion>({
   setSource,
   tooltipValue: inputTooltipValue,
   copyToManual,
+  loadingState,
 }: {
   datasetVersion: V
   value: SelectValueType<V> | undefined
-  isLoading: boolean
-  disabled: boolean
+  loadingState: UseSelectDataset['loadingState']
   isMapped: boolean
   param: string
   onSelectRowCell: OnSelectRowCellFn<SelectValueType<V>>
@@ -41,6 +39,7 @@ export function InputsMapperItem<V extends DatasetVersion = DatasetVersion>({
   tooltipValue: { isEmpty: boolean; value: string }
   copyToManual: () => void
 }) {
+  const isLoading = loadingState.rows || loadingState.position
   return (
     <div className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'>
       <div className='flex flex-row items-center gap-x-2 min-h-8'>
@@ -58,19 +57,14 @@ export function InputsMapperItem<V extends DatasetVersion = DatasetVersion>({
           <Select<SelectValueType<V>>
             name='datasetId'
             placeholder={isLoading ? 'Loading...' : 'Choose row header'}
-            disabled={disabled}
             options={rowCellOptions}
             onChange={onSelectRowCell(param)}
             value={value}
           />
           <div className='flex flex-row items-center gap-x-2 flex-grow min-w-0'>
-            {isLoading ? (
-              <Skeleton height='h6' className='w-40 min-w-0' />
-            ) : (
-              <Text.H6 color='foregroundMuted' ellipsis noWrap>
-                {inputTooltipValue.value}
-              </Text.H6>
-            )}
+            <Text.H6 color='foregroundMuted' ellipsis noWrap>
+              {isLoading ? 'Loading...' : inputTooltipValue.value}
+            </Text.H6>
           </div>
         </div>
         <div className='min-h-8 flex flex-row items-center'>
@@ -79,7 +73,7 @@ export function InputsMapperItem<V extends DatasetVersion = DatasetVersion>({
             trigger={
               <Button
                 variant='ghost'
-                disabled={disabled || value === undefined || value === null}
+                disabled={isLoading || value === undefined || value === null}
                 onClick={() => {
                   copyToManual()
                   setSource('manual')

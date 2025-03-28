@@ -11,7 +11,6 @@ import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useVersionedDatasets } from '$/hooks/useVersionedDatasets'
 import { useDatasetRowsForParameters } from './useDatasetRowsForParameters'
-import { useDatasetV1RowsForParamaters } from './useDatasetRowsForParameters/useDatasetV1RowsForParamaters'
 import { useDatasetRowPosition } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/DocumentParams/DatasetParams/useRowPosition'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 
@@ -74,9 +73,10 @@ export function useSelectDataset({
       })
 
       if (datasetVersion === DatasetVersion.V2) {
+        const datasetRowId = document.linkedDatasetAndRow?.[ds.id]?.datasetRowId
         await getPosition({
           dataset: ds as DatasetV2,
-          datasetRowId: localDatasetData.datasetRowId,
+          datasetRowId,
         })
       }
 
@@ -93,13 +93,7 @@ export function useSelectDataset({
   )
 
   const isV1 = datasetVersion === DatasetVersion.V1
-  const rowsV1 = useDatasetV1RowsForParamaters({
-    document,
-    commitVersionUuid,
-    dataset: isV1 ? (selectedDataset as Dataset) : undefined,
-  })
-
-  const rowsV2 = useDatasetRowsForParameters({
+  const rowsData = useDatasetRowsForParameters({
     document,
     commitVersionUuid,
     dataset: !isV1 ? (selectedDataset as DatasetV2) : undefined,
@@ -107,21 +101,16 @@ export function useSelectDataset({
     setPosition,
   })
 
-  const rowsData = isV1 ? rowsV1 : rowsV2
-  // TODO: Legacy. Remove after delete v1 code
-  const isLoading = isLoadingDatasets || isLoadingPosition || rowsData.isLoading
-
   return {
     ...rowsData,
     datasetOptions,
     selectedDataset,
     onSelectDataset,
-    isLoading,
     loadingState: {
       datasets: isLoadingDatasets,
       position: isLoadingPosition,
-      rows: rowsData.loadingState?.rows ?? false,
-      count: rowsData.loadingState?.count ?? false,
+      rows: rowsData.loadingState.rows,
+      count: rowsData.loadingState.count,
     },
   }
 }

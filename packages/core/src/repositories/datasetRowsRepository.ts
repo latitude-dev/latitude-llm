@@ -96,7 +96,7 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
     const rowResult = await this.find(datasetRowId)
 
     if (rowResult.error) {
-      return { position: 1, page: 1 }
+      return { position: 0, page: 1 }
     }
 
     const row = rowResult.value
@@ -113,7 +113,6 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
         ),
       )
 
-    console.log('COUNT_RESULT', countResult)
     const position = Number(countResult[0]?.count ?? 0)
 
     const page = Math.ceil(position / DEFAULT_PAGINATION_SIZE)
