@@ -8,9 +8,6 @@ import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
-  ResultPanelProps,
-  ResultRowCellsProps,
-  ResultRowHeadersProps,
 } from '../index'
 
 const specification = RuleEvaluationRegularExpressionSpecification
@@ -19,11 +16,6 @@ export default {
   icon: 'regex' as IconName,
   ConfigurationForm: ConfigurationForm,
   ResultBadge: ResultBadge,
-  ResultRowHeaders: ResultRowHeaders,
-  ResultRowCells: ResultRowCells,
-  resultPanelTabs: [],
-  ResultPanelMetadata: ResultPanelMetadata,
-  ResultPanelContent: ResultPanelContent,
   chartConfiguration: chartConfiguration,
 }
 
@@ -63,42 +55,6 @@ function ResultBadge({
   RuleEvaluationMetric.RegularExpression
 >) {
   return <>{result.score === 1 ? 'Matched' : 'Unmatched'}</>
-}
-
-function ResultRowHeaders(
-  _props: ResultRowHeadersProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.RegularExpression
-  >,
-) {
-  return <></>
-}
-
-function ResultRowCells(
-  _props: ResultRowCellsProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.RegularExpression
-  >,
-) {
-  return <></>
-}
-
-function ResultPanelMetadata(
-  _props: ResultPanelProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.RegularExpression
-  >,
-) {
-  return <></>
-}
-
-function ResultPanelContent(
-  _props: ResultPanelProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.RegularExpression
-  >,
-) {
-  return <></>
 }
 
 function chartConfiguration({

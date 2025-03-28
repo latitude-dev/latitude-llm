@@ -9,9 +9,6 @@ import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
-  ResultPanelProps,
-  ResultRowCellsProps,
-  ResultRowHeadersProps,
 } from '../index'
 
 const specification = RuleEvaluationLengthCountSpecification
@@ -20,11 +17,6 @@ export default {
   icon: 'space' as IconName,
   ConfigurationForm: ConfigurationForm,
   ResultBadge: ResultBadge,
-  ResultRowHeaders: ResultRowHeaders,
-  ResultRowCells: ResultRowCells,
-  resultPanelTabs: [],
-  ResultPanelMetadata: ResultPanelMetadata,
-  ResultPanelContent: ResultPanelContent,
   chartConfiguration: chartConfiguration,
 }
 
@@ -103,42 +95,6 @@ function ResultBadge({
       {formatCount(result.score!)} {result.metadata!.configuration.algorithm}s
     </>
   )
-}
-
-function ResultRowHeaders(
-  _props: ResultRowHeadersProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LengthCount
-  >,
-) {
-  return <></>
-}
-
-function ResultRowCells(
-  _props: ResultRowCellsProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LengthCount
-  >,
-) {
-  return <></>
-}
-
-function ResultPanelMetadata(
-  _props: ResultPanelProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LengthCount
-  >,
-) {
-  return <></>
-}
-
-function ResultPanelContent(
-  _props: ResultPanelProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LengthCount
-  >,
-) {
-  return <></>
 }
 
 function chartConfiguration({

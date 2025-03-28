@@ -8,9 +8,6 @@ import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
-  ResultPanelProps,
-  ResultRowCellsProps,
-  ResultRowHeadersProps,
 } from '../index'
 
 const specification = RuleEvaluationLexicalOverlapSpecification
@@ -19,11 +16,6 @@ export default {
   icon: 'blend' as IconName,
   ConfigurationForm: ConfigurationForm,
   ResultBadge: ResultBadge,
-  ResultRowHeaders: ResultRowHeaders,
-  ResultRowCells: ResultRowCells,
-  resultPanelTabs: [],
-  ResultPanelMetadata: ResultPanelMetadata,
-  ResultPanelContent: ResultPanelContent,
   chartConfiguration: chartConfiguration,
 }
 
@@ -100,42 +92,6 @@ function ResultBadge({
   result,
 }: ResultBadgeProps<EvaluationType.Rule, RuleEvaluationMetric.LexicalOverlap>) {
   return <>{result.score!.toFixed(0)}% overlap</>
-}
-
-function ResultRowHeaders(
-  _props: ResultRowHeadersProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LexicalOverlap
-  >,
-) {
-  return <></>
-}
-
-function ResultRowCells(
-  _props: ResultRowCellsProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LexicalOverlap
-  >,
-) {
-  return <></>
-}
-
-function ResultPanelMetadata(
-  _props: ResultPanelProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LexicalOverlap
-  >,
-) {
-  return <></>
-}
-
-function ResultPanelContent(
-  _props: ResultPanelProps<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LexicalOverlap
-  >,
-) {
-  return <></>
 }
 
 function chartConfiguration({
