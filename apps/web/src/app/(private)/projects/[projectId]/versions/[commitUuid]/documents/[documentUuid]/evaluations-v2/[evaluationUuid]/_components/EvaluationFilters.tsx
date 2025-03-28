@@ -1,8 +1,6 @@
 import { Commit, EvaluationResultsV2Search } from '@latitude-data/core/browser'
-import { DatePickerRange } from '@latitude-data/web-ui'
-import { endOfDay, startOfDay } from 'date-fns'
 import { isEqual } from 'lodash-es'
-import { ComponentProps, useMemo } from 'react'
+import { useMemo } from 'react'
 import { CommitFilter } from '../../../logs/_components/Filters/CommitFilter'
 
 export function EvaluationFilters({
@@ -23,7 +21,8 @@ export function EvaluationFilters({
 
   return (
     <div className='flex items-center gap-2'>
-      <DatePickerRange
+      {/* NOTE: TEMPORARILY DISABLED BECAUSE OF A TIMEZONE BUG */}
+      {/* <DatePickerRange
         showPresets
         initialRange={
           search.filters?.createdAt as ComponentProps<
@@ -43,7 +42,7 @@ export function EvaluationFilters({
           })
         }}
         disabled={isLoading}
-      />
+      /> */}
       <CommitFilter
         selectedCommitsIds={search.filters?.commitIds ?? defaultSelectedCommits}
         onSelectCommits={(value) =>
