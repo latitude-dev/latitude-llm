@@ -1,9 +1,12 @@
+'use client'
+
 import {
   EvaluationType,
   RuleEvaluationMetric,
   RuleEvaluationSemanticSimilaritySpecification,
 } from '@latitude-data/constants'
-import { IconName, NumberInput, Select } from '@latitude-data/web-ui'
+import { IconName, NumberInput } from '@latitude-data/web-ui'
+import { useEffect } from 'react'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
@@ -19,11 +22,12 @@ export default {
   chartConfiguration: chartConfiguration,
 }
 
-const ALGORITHM_OPTIONS =
-  specification.configuration.shape.algorithm.options.map((option) => ({
-    label: option.toUpperCase().split('_').join(' '),
-    value: option,
-  }))
+// TODO: Uncomment when more algorithms are implemented
+// const ALGORITHM_OPTIONS =
+//   specification.configuration.shape.algorithm.options.map((option) => ({
+//     label: option.toUpperCase().split('_').join(' '),
+//     value: option,
+//   }))
 
 function ConfigurationForm({
   configuration,
@@ -34,9 +38,15 @@ function ConfigurationForm({
   EvaluationType.Rule,
   RuleEvaluationMetric.SemanticSimilarity
 >) {
+  // TODO: Remove this default when more algorithms are implemented
+  useEffect(() => {
+    setConfiguration({ ...configuration, algorithm: 'cosine_distance' })
+  }, [])
+
   return (
     <>
-      <Select
+      {/* TODO: Uncomment when more algorithms are implemented */}
+      {/* <Select
         value={configuration.algorithm ?? ''}
         name='algorithm'
         label='Algorithm'
@@ -49,7 +59,7 @@ function ConfigurationForm({
         errors={errors?.['algorithm']}
         disabled={disabled}
         required
-      />
+      /> */}
       <NumberInput
         value={configuration.minSimilarity ?? undefined}
         name='minSimilarity'

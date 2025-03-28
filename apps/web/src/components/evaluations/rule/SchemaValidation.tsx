@@ -1,9 +1,12 @@
+'use client'
+
 import {
   EvaluationType,
   RuleEvaluationMetric,
   RuleEvaluationSchemaValidationSpecification,
 } from '@latitude-data/constants'
-import { IconName, Select, TextArea } from '@latitude-data/web-ui'
+import { IconName, TextArea } from '@latitude-data/web-ui'
+import { useEffect } from 'react'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
@@ -19,12 +22,13 @@ export default {
   chartConfiguration: chartConfiguration,
 }
 
-const FORMAT_OPTIONS = specification.configuration.shape.format.options.map(
-  (option) => ({
-    label: option.toUpperCase().split('_').join(' '),
-    value: option,
-  }),
-)
+// TODO: Uncomment when more formats are implemented
+// const FORMAT_OPTIONS = specification.configuration.shape.format.options.map(
+//   (option) => ({
+//     label: option.toUpperCase().split('_').join(' '),
+//     value: option,
+//   }),
+// )
 
 function ConfigurationForm({
   configuration,
@@ -35,9 +39,15 @@ function ConfigurationForm({
   EvaluationType.Rule,
   RuleEvaluationMetric.SchemaValidation
 >) {
+  // TODO: Remove this default when more formats are implemented
+  useEffect(() => {
+    setConfiguration({ ...configuration, format: 'json' })
+  }, [])
+
   return (
     <>
-      <Select
+      {/* TODO: Uncomment when more formats are implemented */}
+      {/* <Select
         value={configuration.format ?? ''}
         name='format'
         label='Schema format'
@@ -50,7 +60,7 @@ function ConfigurationForm({
         errors={errors?.['format']}
         disabled={disabled}
         required
-      />
+      /> */}
       <TextArea
         value={configuration.schema ?? ''}
         name='schema'
