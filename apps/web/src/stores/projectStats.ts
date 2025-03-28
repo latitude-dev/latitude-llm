@@ -1,5 +1,6 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import { ProjectStats } from '@latitude-data/core/browser'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useProjectStats(
@@ -10,7 +11,9 @@ export default function useProjectStats(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(ROUTES.api.projects.detail(projectId).stats.root)
+  const fetcher = useFetcher<ProjectStats>(
+    ROUTES.api.projects.detail(projectId).stats.root,
+  )
 
   const { data, isLoading, error, mutate } = useSWR(
     ['projectStats', projectId],

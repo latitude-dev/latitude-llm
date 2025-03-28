@@ -28,13 +28,16 @@ export default function useDatasets(
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
-  const fetcher = useFetcher(enabled ? ROUTES.api.datasetsV2.root : undefined, {
-    serializer: (rows) => rows.map(deserialize),
-    searchParams: compactObject({
-      page: page ? String(page) : undefined,
-      pageSize: pageSize ? String(pageSize) : undefined,
-    }) as Record<string, string>,
-  })
+  const fetcher = useFetcher<DatasetV2[], DatasetV2[]>(
+    enabled ? ROUTES.api.datasetsV2.root : undefined,
+    {
+      serializer: (rows) => rows.map(deserialize),
+      searchParams: compactObject({
+        page: page ? String(page) : undefined,
+        pageSize: pageSize ? String(pageSize) : undefined,
+      }) as Record<string, string>,
+    },
+  )
   const {
     data = EMPTY_ARRAY,
     mutate,

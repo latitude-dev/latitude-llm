@@ -22,7 +22,7 @@ export default function useEvaluationResultsPagination(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<IPagination>(
     ROUTES.api.projects
       .detail(projectId)
       .commits.detail(commitUuid)

@@ -46,7 +46,7 @@ const useDocumentLogSocket = (
 
           return [
             {
-              ...documentLogPresenter(args.documentLogWithMetadata),
+              ...documentLogPresenter<false>(args.documentLogWithMetadata),
               realtimeAdded: true,
             },
             ...data,

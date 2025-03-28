@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react'
+import { useCallback } from 'react'
 import { useToast } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 
@@ -96,9 +96,9 @@ export async function executeFetch<
 }
 
 export default function useFetcher<
-  Raw extends boolean = false,
-  I extends unknown = unknown,
   R extends unknown = unknown,
+  I extends unknown = unknown,
+  Raw extends boolean = false,
 >(
   route?: string,
   {
@@ -107,7 +107,7 @@ export default function useFetcher<
     searchParams,
   }: {
     fallback?: any
-    serializer?: (item: any) => any
+    serializer?: (item: I) => R
     searchParams?: ISearchParams
   } = { fallback: [] },
 ) {
@@ -115,15 +115,16 @@ export default function useFetcher<
   const navigate = useNavigate()
 
   return useCallback(async () => {
-    if (!route) return fallback
+    if (!route) return fallback as R
 
-    return executeFetch<Raw, I, R>({
+    const response = executeFetch<Raw, I, R>({
       route,
       searchParams,
       toast,
       serializer,
       navigate,
     })
+    return response as R
   }, [route, searchParams, toast, serializer, navigate])
 }
 

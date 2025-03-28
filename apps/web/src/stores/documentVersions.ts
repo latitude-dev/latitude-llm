@@ -38,7 +38,7 @@ export default function useDocumentVersions(
   const { toast } = useToast()
   const { onSuccessCreate } = opts
   const enabled = !!projectId && !!commitUuid
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<DocumentVersion[]>(
     enabled
       ? ROUTES.api.projects.detail(projectId).commits.detail(commitUuid).root
       : undefined,

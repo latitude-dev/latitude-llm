@@ -7,18 +7,33 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
-const EMPTY_ARRAY: ProviderApiKey[] = []
+type SerializedProviderApiKey = Omit<
+  ProviderApiKey,
+  'createdAt' | 'updatedAt' | 'lastUsedAt'
+> & {
+  createdAt: Date
+  updatedAt: Date
+  lastUsedAt: Date | null
+}
+const EMPTY_ARRAY: SerializedProviderApiKey[] = []
 
 export default function useProviderApiKeys(opts?: SWRConfiguration) {
   const { toast } = useToast()
-  const fetcher = useFetcher(ROUTES.api.providerApiKeys.root, {
-    serializer: (rows) => rows.map(deserialize),
-  })
+  const fetcher = useFetcher<SerializedProviderApiKey[], ProviderApiKey[]>(
+    ROUTES.api.providerApiKeys.root,
+    {
+      serializer: (rows) => rows.map(deserialize),
+    },
+  )
   const {
     data = EMPTY_ARRAY,
     mutate,
     ...rest
-  } = useSWR<ProviderApiKey[]>('api/providerApiKeys', fetcher, opts)
+  } = useSWR<SerializedProviderApiKey[], ProviderApiKey[]>(
+    'api/providerApiKeys',
+    fetcher,
+    opts,
+  )
   const { execute: create } = useLatitudeAction(createProviderApiKeyAction, {
     onSuccess: async ({ data: apikey }) => {
       toast({

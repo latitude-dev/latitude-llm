@@ -21,7 +21,7 @@ export default function usePublishedDocument(
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<PublishedDocument[]>(
     ROUTES.api.projects.detail(projectId).publishedDocuments.root,
   )
 

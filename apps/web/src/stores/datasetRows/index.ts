@@ -32,6 +32,42 @@ export function buildDatasetRowKey({
   ]).join(':')
 }
 
+export function buildDatasetRowsFetcher({
+  enabled,
+  dataset,
+  page,
+  pageSize,
+}: {
+  enabled?: boolean
+  dataset?: DatasetV2 | null
+  page?: string | null | undefined
+  pageSize?: string | null
+}) {
+  const serializer = useMemo(() => {
+    return dataset ? serializeRows(dataset.columns) : undefined
+  }, [dataset])
+  const datasetId = dataset?.id
+  const pageStr = page ? String(page) : undefined
+  const pageSizeStr = pageSize ? String(pageSize) : undefined
+  const searchParams = useMemo(
+    () =>
+      compactObject({
+        datasetId,
+        page: pageStr,
+        pageSize: pageSizeStr,
+      }) as Record<string, string>,
+    [datasetId, pageStr, pageSizeStr],
+  )
+  const isEnabled = dataset && enabled
+  return useFetcher<ClientDatasetRow[], DatasetRow[]>(
+    isEnabled ? ROUTES.api.datasetsRows.root : undefined,
+    {
+      serializer,
+      searchParams,
+    },
+  )
+}
+
 const EMPTY_ARRAY: ClientDatasetRow[] = []
 export default function useDatasetRows(
   {
@@ -49,28 +85,11 @@ export default function useDatasetRows(
   },
   opts?: SWRConfiguration,
 ) {
-  const isEnabled = dataset && enabled
-  const serializer = useMemo(() => {
-    return dataset ? serializeRows(dataset.columns) : undefined
-  }, [dataset])
-  const datasetId = dataset?.id
-  const pageStr = page ? String(page) : undefined
-  const pageSizeStr = pageSize ? String(pageSize) : undefined
-  const searchParams = useMemo(
+  const isEnabled = !!dataset && enabled
+  const fetcher = useMemo(
     () =>
-      compactObject({
-        datasetId,
-        page: pageStr,
-        pageSize: pageSizeStr,
-      }) as Record<string, string>,
-    [datasetId, pageStr, pageSizeStr],
-  )
-  const fetcher = useFetcher<false, DatasetRow[], ClientDatasetRow[]>(
-    isEnabled ? ROUTES.api.datasetsRows.root : undefined,
-    {
-      serializer,
-      searchParams,
-    },
+      buildDatasetRowsFetcher({ enabled: isEnabled, dataset, page, pageSize }),
+    [isEnabled, dataset, page, pageSize],
   )
   const key = buildDatasetRowKey({ datasetId: dataset?.id, page, pageSize })
   const onSuccess = useCallback(
@@ -83,7 +102,7 @@ export default function useDatasetRows(
     data = EMPTY_ARRAY,
     mutate,
     ...rest
-  } = useSWR<ClientDatasetRow[]>(key, fetcher, {
+  } = useSWR(key, fetcher, {
     ...opts,
     fallbackData: opts?.fallbackData
       ? dataset

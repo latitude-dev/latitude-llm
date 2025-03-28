@@ -1,22 +1,18 @@
 import { useMemo } from 'react'
 
-import {
-  EvaluationResultWithMetadata,
-  type EvaluationResultByDocument,
-} from '@latitude-data/core/repositories'
+import { type EvaluationResultByDocument } from '@latitude-data/core/repositories'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 type SerializedEvaluationResult = Omit<
-  EvaluationResultWithMetadata,
+  EvaluationResultByDocument,
   'createdAt' | 'updatedAt'
 > & {
-  createdAt: string
-  updatedAt: string
+  createdAt: Date
 }
 
-const EMPTY_ROWS: EvaluationResultByDocument[] = []
+const EMPTY_ROWS: SerializedEvaluationResult[] = []
 export default function useEvaluationResultsByDocumentContent(
   {
     evaluationId,
@@ -50,12 +46,18 @@ export default function useEvaluationResultsByDocumentContent(
     return route.toString() + '?' + params.toString()
   }, [projectId, commitUuid, documentUuid, evaluationId, page, pageSize])
 
-  const fetcher = useFetcher(route, {
+  const fetcher = useFetcher<
+    SerializedEvaluationResult[],
+    EvaluationResultByDocument[]
+  >(route, {
     serializer: (rows) => rows.map(deserialize),
     fallback: [],
   })
 
-  const { data, isLoading, mutate } = useSWR<EvaluationResultByDocument[]>(
+  const { data, isLoading, mutate } = useSWR<
+    EvaluationResultByDocument[],
+    SerializedEvaluationResult[]
+  >(
     [
       'evaluationResultsByDocumentContent',
       evaluationId,
@@ -72,7 +74,7 @@ export default function useEvaluationResultsByDocumentContent(
   return { data: data ?? EMPTY_ROWS, isLoading, mutate }
 }
 
-function deserialize(item: SerializedEvaluationResult) {
+function deserialize(item: EvaluationResultByDocument) {
   return {
     ...item,
     createdAt: new Date(item.createdAt),

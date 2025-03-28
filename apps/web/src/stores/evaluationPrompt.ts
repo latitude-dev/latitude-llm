@@ -10,7 +10,7 @@ export default function useEvaluationPrompt(
   },
   opts: SWRConfiguration = {},
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<string>(
     ROUTES.api.evaluations.detail(evaluationId).prompt.root,
   )
   const { data, ...rest } = useSWR<string>(

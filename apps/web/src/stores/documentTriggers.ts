@@ -19,7 +19,7 @@ export default function useDocumentTriggers(
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<DocumentTrigger[]>(
     ROUTES.api.projects.detail(projectId).documents.detail(documentUuid)
       .triggers.root,
   )

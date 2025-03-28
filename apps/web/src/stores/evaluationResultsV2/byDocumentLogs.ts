@@ -38,11 +38,10 @@ export default function useEvaluationResultsV2ByDocumentLogs(
     }
     return query.toString()
   }, [documentLogUuids])
-  const fetcher = useFetcher(`${route}?${query}`)
-
-  const { data = {}, ...rest } = useSWR<
-    Record<string, ResultWithEvaluationV2[]>
-  >(
+  const fetcher = useFetcher<Record<string, ResultWithEvaluationV2[]>>(
+    `${route}?${query}`,
+  )
+  const { data = {}, ...rest } = useSWR(
     compact([
       'evaluationResultsV2ByDocumentLogs',
       project.id,

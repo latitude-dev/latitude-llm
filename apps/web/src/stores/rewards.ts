@@ -17,7 +17,7 @@ export default function useRewards(opts?: SWRConfiguration) {
   const { mutate: mutateUsage } = useWorkspaceUsage()
 
   const { toast } = useToast()
-  const fetcher = useFetcher(ROUTES.api.claimedRewards.root)
+  const fetcher = useFetcher<ClaimedReward[]>(ROUTES.api.claimedRewards.root)
   const {
     mutate,
     data = EMPTY_ARRAY,

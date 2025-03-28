@@ -10,7 +10,7 @@ import useSWR, { SWRConfiguration } from 'swr'
 export default function useApiKeys(opts?: SWRConfiguration) {
   const { toast } = useToast()
   const key = 'api/apiKeys'
-  const fetcher = useFetcher(ROUTES.api.apiKeys.root)
+  const fetcher = useFetcher<ApiKey[]>(ROUTES.api.apiKeys.root)
   const { data = [], mutate, ...rest } = useSWR<ApiKey[]>(key, fetcher, opts)
 
   const { execute: create } = useLatitudeAction(createApiKeyAction, {

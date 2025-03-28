@@ -46,7 +46,9 @@ export function DatasetParams({
         <Select
           width='auto'
           name='datasetId'
-          placeholder={data.loadingState.datasets ? 'Loading...' : 'Select dataset'}
+          placeholder={
+            data.loadingState.datasets ? 'Loading...' : 'Select dataset'
+          }
           disabled={data.loadingState.datasets || !data.datasetOptions.length}
           options={data.datasetOptions}
           onChange={data.onSelectDataset}

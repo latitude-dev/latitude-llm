@@ -7,16 +7,21 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
+type SerializedUser = Omit<User, 'createdAt' | 'updatedAt' | 'confirmedAt'> & {
+  createdAt: Date
+  updatedAt: Date
+  confirmedAt: Date | null
+}
 export default function useUsers(opts?: SWRConfiguration) {
   const { toast } = useToast()
-  const fetcher = useFetcher(ROUTES.api.users.root, {
+  const fetcher = useFetcher<SerializedUser[], User[]>(ROUTES.api.users.root, {
     serializer: (rows) => rows.map(deserialize),
   })
   const {
     data = [],
     mutate,
     ...rest
-  } = useSWR<User[]>('api/users', fetcher, opts)
+  } = useSWR<SerializedUser[], User[]>('api/users', fetcher, opts)
   const { execute: invite } = useLatitudeAction(inviteUserAction, {
     onSuccess: ({ data: user }) => {
       toast({

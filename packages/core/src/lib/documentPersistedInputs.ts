@@ -55,7 +55,7 @@ export type LinkedDataset = {
 }
 
 export type LinkedDatasetRow = {
-  datasetRowId: number | undefined
+  datasetRowId: number
   inputs: Record<string, DatasetInput>
   mappedInputs: Record<string, string>
 }
@@ -67,7 +67,7 @@ export type PlaygroundInputs<S extends InputSource> = {
   }
   // DEPRECATED: Remove after a while
   dataset: LinkedDataset & { datasetId: number | undefined }
-  datasetV2: (LinkedDatasetRow & { datasetId: number | undefined }) | undefined
+  datasetV2: Record<number, LinkedDatasetRow>
   history: {
     logUuid: string | undefined
     inputs: Record<string, HistoryInput>

@@ -11,7 +11,7 @@ export default function useDocumentLogWithMetadata(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<DocumentLogWithMetadata>(
     documentLogUuid
       ? ROUTES.api.documentLogs.uuids.detail({ uuid: documentLogUuid }).root
       : undefined,

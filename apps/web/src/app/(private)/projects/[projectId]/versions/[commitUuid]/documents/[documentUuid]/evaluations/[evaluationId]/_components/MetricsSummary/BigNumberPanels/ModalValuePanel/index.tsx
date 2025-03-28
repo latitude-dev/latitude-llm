@@ -45,7 +45,7 @@ export default function ModalValuePanel({
       label='Value more repeated'
       additionalInfo={
         data?.percentage
-          ? `It appeared in ${data?.percentage}% of instances`
+          ? `It appeared in ${data.percentage}% of instances`
           : undefined
       }
     >

@@ -13,7 +13,7 @@ export default function useConnectedDocuments(
   },
   opts: SWRConfiguration = {},
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<DocumentVersion[]>(
     ROUTES.api.evaluations.detail(evaluation.id).connectedDocuments.root,
   )
 

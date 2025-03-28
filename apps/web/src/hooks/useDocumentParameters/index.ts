@@ -30,12 +30,6 @@ const EMPTY_LINKED_DATASET = {
   mappedInputs: {} as LinkedDataset['mappedInputs'],
 }
 
-const EMPTY_LINKED_DATASET_ROW: LinkedDatasetRow = {
-  datasetRowId: undefined,
-  inputs: {} as LinkedDatasetRow['inputs'],
-  mappedInputs: {} as LinkedDatasetRow['mappedInputs'],
-}
-
 const EMPTY_INPUTS: PlaygroundInputs<'manual'> = {
   source: INPUT_SOURCE.manual,
   manual: { inputs: {} },
@@ -43,10 +37,7 @@ const EMPTY_INPUTS: PlaygroundInputs<'manual'> = {
     datasetId: undefined,
     ...EMPTY_LINKED_DATASET,
   },
-  datasetV2: {
-    datasetId: undefined,
-    ...EMPTY_LINKED_DATASET_ROW,
-  },
+  datasetV2: {},
   history: { logUuid: undefined, inputs: {} },
 }
 
@@ -140,7 +131,7 @@ export function useDocumentParameters<
   const { project } = useCurrentProject()
   const projectId = project.id
   const commitUuid = commitVersionUuid
-  const { saveLinkedDataset } = useDocumentVersions({
+  const { saveLinkedDataset, assignDataset } = useDocumentVersions({
     projectId,
     commitUuid,
   })
@@ -156,10 +147,15 @@ export function useDocumentParameters<
     document,
     localInputs: inputs.dataset,
   })
+  const dsId = document.datasetV2Id
   let inputsBySource =
     source === INPUT_SOURCE.dataset
       ? linkedDataset.inputs
-      : inputs[source]?.inputs ?? {}
+      : source === INPUT_SOURCE.datasetV2
+        ? dsId
+          ? (inputs.datasetV2?.[dsId]?.inputs ?? {})
+          : {}
+        : inputs[source].inputs
 
   const setInputs = useCallback(
     <S extends LocalInputSource>(source: S, newInputs: LocalInputs<S>) => {
@@ -259,8 +255,9 @@ export function useDocumentParameters<
   }, [linkedDataset?.inputs, inputs])
 
   const copyDatasetV2InputsToManual = useCallback(() => {
-    setManualInputs(inputs.datasetV2?.inputs ?? {})
-  }, [inputs.datasetV2?.inputs])
+    const dsInputs = dsId ? (inputs.datasetV2?.[dsId]?.inputs ?? {}) : {}
+    setManualInputs(dsInputs)
+  }, [inputs.datasetV2, dsId])
 
   const setHistoryLog = useCallback(
     (logUuid: string) => {
@@ -333,17 +330,17 @@ export function useDocumentParameters<
       mappedInputs: nextMappedInputs,
     }: {
       datasetId: number
+      datasetRowId: number
       inputs: LinkedDatasetRow['inputs'] | undefined
       mappedInputs: LinkedDatasetRow['mappedInputs'] | undefined
-      datasetRowId: number | undefined
     }) => {
       setValue((oldState) => {
         const { state, doc } = getDocState(oldState, key)
-        const prevSource = doc['datasetV2'] ?? {
-          datasetId,
+        const prevDatasetState = doc['datasetV2'] ?? {}
+        const prevSource = doc['datasetV2'][datasetId] ?? {
+          datasetRowId: nextDatasetRowId,
           inputs: nextInputs ?? {},
           mappedInputs: nextMappedInputs ?? {},
-          datasetRowId: nextDatasetRowId,
         }
         const datasetRowId = nextDatasetRowId ?? prevSource.datasetRowId
         const mappedInputs = nextMappedInputs ?? prevSource.mappedInputs
@@ -354,10 +351,12 @@ export function useDocumentParameters<
           [key]: {
             ...doc,
             datasetV2: {
-              ...prevSource,
-              inputs,
-              mappedInputs,
-              datasetRowId,
+              ...prevDatasetState,
+              [datasetId]: {
+                datasetRowId,
+                mappedInputs,
+                inputs,
+              },
             },
           },
         }
@@ -376,13 +375,24 @@ export function useDocumentParameters<
       datasetVersion: DatasetVersion
       data?: {
         datasetRowId: number
-        mappedInputs: LinkedDatasetRow['mappedInputs']
-        inputs: LinkedDatasetRow['inputs']
+        mappedInputs: LinkedDatasetRow['mappedInputs'] | undefined
+        inputs: LinkedDatasetRow['inputs'] | undefined
       }
     }) => {
+      if (datasetId !== document.datasetV2Id) {
+        await assignDataset({
+          documentUuid: document.documentUuid,
+          projectId,
+          commitUuid,
+          datasetId,
+          datasetVersion: DatasetVersion.V2,
+        })
+      }
+
+      if (!data || !data?.datasetRowId) return
+
       const { doc } = getDocState(allInputs, key)
-      const datasetDoc = doc['datasetV2'] ?? {
-        datasetId,
+      const datasetDoc = doc['datasetV2'][datasetId] ?? {
         datasetRowId: data?.datasetRowId,
         inputs: data?.inputs ?? {},
         mappedInputs: data?.mappedInputs ?? {},
@@ -394,8 +404,8 @@ export function useDocumentParameters<
       // Optimistic update in local storage
       setDatasetMappedInputs({
         datasetId,
-        inputs: data?.inputs,
-        mappedInputs: data?.mappedInputs,
+        inputs: data.inputs,
+        mappedInputs: data.mappedInputs,
         datasetRowId: data?.datasetRowId,
       })
 
@@ -405,9 +415,9 @@ export function useDocumentParameters<
         documentUuid: document.documentUuid,
         datasetId,
         datasetVersion,
-        mappedInputs: data?.mappedInputs,
         datasetRowId: data?.datasetRowId,
-        inputs: data?.inputs,
+        mappedInputs: data?.mappedInputs ?? {},
+        inputs: data?.inputs ?? {},
       }).then(([_, error]) => {
         if (error) {
           setDatasetMappedInputs({
@@ -421,6 +431,7 @@ export function useDocumentParameters<
     },
     [
       saveLinkedDataset,
+      assignDataset,
       projectId,
       commitUuid,
       document.documentUuid,
@@ -440,23 +451,28 @@ export function useDocumentParameters<
       )
 
       if (datasetVersion === DatasetVersion.V2) {
+        const dsId = document.datasetV2Id
+        const rowId = dsId ? inputs.datasetV2?.[dsId]?.datasetRowId : undefined
+        const dsInputs = dsId ? (inputs.datasetV2?.[dsId]?.inputs ?? {}) : {}
+        const dsMappedInputs = dsId
+          ? (inputs.datasetV2?.[dsId]?.mappedInputs ?? {})
+          : {}
         const datasetInputs = recalculateInputs<'datasetV2'>({
-          inputs: inputs.datasetV2?.inputs ?? {},
+          inputs: dsInputs,
           metadata,
         })
         // set data from metadata in localStorage
         setInputs('datasetV2', datasetInputs)
 
-        const rowId = inputs.datasetV2?.datasetRowId
-        if (document.datasetV2Id && rowId !== undefined) {
+        if (dsId && rowId !== undefined) {
           setDatasetV2({
-            datasetId: document.datasetV2Id,
+            datasetId: dsId,
             datasetVersion,
             data: {
               inputs: datasetInputs,
-              mappedInputs: inputs.datasetV2?.mappedInputs ?? {},
+              mappedInputs: dsMappedInputs,
               datasetRowId: rowId,
-            }
+            },
           })
         }
       }
@@ -509,9 +525,10 @@ export function useDocumentParameters<
       copyToManual: copyDatasetInputsToManual,
     },
     datasetV2: {
-      datasetRowId: inputs?.datasetV2?.datasetRowId,
-      inputs: inputs.datasetV2?.inputs ?? {},
-      mappedInputs: inputs.datasetV2?.mappedInputs ?? {},
+      assignedDatasets: inputs.datasetV2,
+      datasetRowId: dsId ? inputs?.datasetV2?.[dsId]?.datasetRowId : undefined,
+      inputs: dsId ? (inputs.datasetV2?.[dsId]?.inputs ?? {}) : {},
+      mappedInputs: dsId ? (inputs.datasetV2?.[dsId]?.mappedInputs ?? {}) : {},
       setDataset: setDatasetV2,
       copyToManual: copyDatasetV2InputsToManual,
     },

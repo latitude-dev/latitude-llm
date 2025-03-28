@@ -17,12 +17,10 @@ const datasetInputSchema = z.object({
   value: z.string(),
   metadata: datasetInputMetadataSchema,
 })
-const inputsSchema = z.record(datasetInputSchema).optional()
+const inputsSchema = z.record(datasetInputSchema)
 
 // TODO: Remove number when migrated to datasets V2
-const mappedInputsSchema = z
-  .record(z.union([z.number(), z.string()]))
-  .optional()
+const mappedInputsSchema = z.record(z.union([z.number(), z.string()]))
 
 export const saveLinkedDatasetAction = withDataset
   .createServerAction()

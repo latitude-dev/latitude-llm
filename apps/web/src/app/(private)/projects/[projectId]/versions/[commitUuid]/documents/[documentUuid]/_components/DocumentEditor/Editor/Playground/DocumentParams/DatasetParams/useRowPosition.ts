@@ -29,11 +29,7 @@ const buildFetcher =
     if (!dataset || !datasetRowId) return { position: 1, page: 1 }
 
     const route = ROUTES.api.datasetsRows.withPosition(datasetRowId).root
-    const response = await executeFetch<
-      false,
-      unknown,
-      WithPositionData | undefined
-    >({
+    const response = await executeFetch<false, unknown, WithPositionData>({
       route,
       searchParams: compactObject({
         datasetId: dataset.id,
@@ -41,6 +37,7 @@ const buildFetcher =
       toast,
       navigate,
     })
+
     return response ?? { position: 1, page: 1 }
   }
 
@@ -62,6 +59,7 @@ export function useDatasetRowPosition() {
       const position = await fetchPosition({ dataset, datasetRowId })
       setPosition(position?.position)
       setIsLoadingPosition(false)
+      return position?.position
     },
     [fetchPosition, setPosition],
   )

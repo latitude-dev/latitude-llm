@@ -19,7 +19,7 @@ export default function useProviderLogs(
   } = {},
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<ProviderLogDto[], ProviderLogDto[]>(
     buildRoute({ documentUuid, documentLogUuid, documentLogId }),
     {
       serializer: (rows) => rows.map(deserialize),
@@ -46,7 +46,7 @@ export function useProviderLog(
   providerLogId?: number | null,
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<ProviderLogDto | undefined>(
     providerLogId ? `/api/providerLogs/${providerLogId}` : undefined,
     {
       fallback: null,

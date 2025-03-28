@@ -15,7 +15,9 @@ export default function useEvaluationTemplates(
   opts: SWRConfiguration & { params?: Record<string, unknown> } = {},
 ) {
   const { toast } = useToast()
-  const fetcher = useFetcher(ROUTES.api.evaluationTemplates.root)
+  const fetcher = useFetcher<EvaluationTemplateWithCategory[]>(
+    ROUTES.api.evaluationTemplates.root,
+  )
 
   const {
     data = [],

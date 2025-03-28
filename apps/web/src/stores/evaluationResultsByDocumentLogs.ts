@@ -19,7 +19,9 @@ export default function useEvaluationResultsByDocumentLogs(
   // generate a problem. But we are not using this for that many ids.
   const route = ROUTES.api.documentLogs.evaluationResults.root
   const query = `ids=${[...new Set(documentLogIds)].join(',')}`
-  const fetcher = useFetcher(`${route}?${query}`)
+  const fetcher = useFetcher<Record<number, ResultWithEvaluation[]>>(
+    `${route}?${query}`,
+  )
 
   const { data = {}, ...rest } = useSWR<Record<number, ResultWithEvaluation[]>>(
     compact(['evaluationResultsByDocumentLogs', query]),

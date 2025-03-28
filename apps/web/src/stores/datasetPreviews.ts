@@ -16,7 +16,7 @@ export default function useDatasetPreview(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<CsvParsedData>(
     dataset ? ROUTES.api.datasets.detail(dataset.id).preview.root : undefined,
     {
       fallback: EMPTY_PREVIEW,

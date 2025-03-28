@@ -18,7 +18,7 @@ export default function useConnectedEvaluations(
   },
   opts: SWRConfiguration = {},
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<ConnectedEvaluationWithDetails[]>(
     ROUTES.api.projects
       .detail(projectId)
       .commits.detail(commitUuid)

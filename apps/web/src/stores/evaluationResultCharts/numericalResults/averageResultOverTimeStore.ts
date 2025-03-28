@@ -17,7 +17,7 @@ export default function useAverageResultOverTime(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<AverageResultOverTime[], AverageResultOverTime[]>(
     ROUTES.api.projects
       .detail(projectId)
       .commits.detail(commitUuid)
@@ -26,9 +26,11 @@ export default function useAverageResultOverTime(
       .average,
     { serializer: (rows) => rows.map(deserialize) },
   )
-  const { data, isValidating, isLoading, error, mutate } = useSWR<
-    AverageResultOverTime[]
-  >(['averageResultOverTime', evaluation.id, documentUuid], fetcher, opts)
+  const { data, isValidating, isLoading, error, mutate } = useSWR(
+    ['averageResultOverTime', evaluation.id, documentUuid],
+    fetcher,
+    opts,
+  )
 
   return {
     data,

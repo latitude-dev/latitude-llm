@@ -11,7 +11,7 @@ export default function useDocumentsForImport(
   { projectId }: { projectId?: number },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<DocumentForImport[]>(
     projectId
       ? ROUTES.api.projects.detail(projectId).forImport.root
       : undefined,

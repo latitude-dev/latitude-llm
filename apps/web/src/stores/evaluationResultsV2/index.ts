@@ -46,9 +46,9 @@ export function useEvaluationResultsV2<
     () => (search ? evaluationResultsV2SearchToQueryParams(search) : ''),
     [search],
   )
-  const fetcher = useFetcher(`${route}?${query}`)
+  const fetcher = useFetcher<EvaluationResultV2<T, M>[]>(`${route}?${query}`)
 
-  const { data = [], ...rest } = useSWR<EvaluationResultV2<T, M>[]>(
+  const { data = [], ...rest } = useSWR(
     compact([
       'evaluationResultsV2',
       project.id,
@@ -96,9 +96,9 @@ export function useEvaluationResultsV2Pagination<
     () => (search ? evaluationResultsV2SearchToQueryParams(search) : ''),
     [search],
   )
-  const fetcher = useFetcher(`${route}?${query}`)
+  const fetcher = useFetcher<IPagination>(`${route}?${query}`)
 
-  const { data = undefined, ...rest } = useSWR<IPagination>(
+  const { data = undefined, ...rest } = useSWR(
     compact([
       'evaluationResultsV2Pagination',
       project.id,

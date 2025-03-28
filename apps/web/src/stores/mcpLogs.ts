@@ -20,7 +20,7 @@ export default function useMcpLogs(
   options: McpLogOptions = {},
   swrConfig?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<McpLogsResponse>(
     mcpServerId ? ROUTES.api.mcpServers.logs(mcpServerId, options) : undefined,
     { fallback: { logs: '' } },
   )

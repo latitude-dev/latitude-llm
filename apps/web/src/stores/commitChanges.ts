@@ -13,7 +13,7 @@ export function useCommitsChanges(
         .changes.root
     : undefined
 
-  const fetcher = useFetcher(route)
+  const fetcher = useFetcher<ChangedDocument[]>(route)
 
   const { data = [], ...rest } = useSWR<ChangedDocument[]>(
     ['commitChanges', commit?.projectId, commit?.uuid],
