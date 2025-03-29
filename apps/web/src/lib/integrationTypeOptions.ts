@@ -168,6 +168,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Exa',
     icon: 'exa',
   },
+  [HostedIntegrationType.YepCode]: {
+    label: 'YepCode',
+    icon: 'yepcode',
+  },
 }
 
 export function integrationOptions(
