@@ -1,7 +1,9 @@
-import { PROVIDER_MODELS, Providers, SpanKind } from '../../constants'
+import { Providers } from '@latitude-data/constants'
+import { SpanKind } from '../../constants'
 import { spans } from '../../schema'
 import { estimateCost } from '../ai'
 import { extractInputOutput } from './extractInputOutput'
+import { PROVIDER_MODELS } from '../../browser'
 
 // Types
 // ----------------------------------------

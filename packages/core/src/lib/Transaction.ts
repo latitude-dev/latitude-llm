@@ -24,7 +24,7 @@ const DB_ERROR_CODES = {
   TRANSACTION_ABORTED: '25P02',
 }
 
-export default class Transaction {
+export class Transaction {
   public static async call<ResultType>(
     callback: (trx: Database) => PromisedResult<ResultType>,
     db = database,

@@ -218,3 +218,7 @@ export {
   vertexConfigurationSchema,
   type VertexConfiguration,
 } from './providers/helpers/vertex'
+export {
+  listModelsForProvider,
+  findFirstModelForProvider,
+} from './providers/models'

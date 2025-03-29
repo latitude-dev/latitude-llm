@@ -28,7 +28,7 @@ import {
 import { evaluationResultsV2 } from '../../schema'
 import { getColumnData } from '../datasetsV2/utils'
 import { serializeProviderLog } from '../providerLogs/serialize'
-import { EVALUATION_SPECIFICATIONS } from './shared'
+import { EVALUATION_V2_SPECIFICATIONS } from './shared'
 
 export async function runEvaluationV2<
   T extends EvaluationType,
@@ -91,7 +91,7 @@ export async function runEvaluationV2<
 
   const actualOutput = formatMessage(conversation.at(-1)!)
 
-  const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
+  const typeSpecification = EVALUATION_V2_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) {
     return Result.error(new BadRequestError('Invalid evaluation type'))
   }

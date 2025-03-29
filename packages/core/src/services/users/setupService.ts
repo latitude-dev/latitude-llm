@@ -1,4 +1,4 @@
-import { Providers } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { SessionData } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { PromisedResult, Result, Transaction } from '../../lib'

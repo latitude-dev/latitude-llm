@@ -1,5 +1,5 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
-import * as factories from '@latitude-data/core/factories'
+import * as factories from '../../../tests/factories'
 import { LanguageModelUsage, TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it } from 'vitest'
 

@@ -8,11 +8,10 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { type Message, MessageRole } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
-import { Providers } from '../../constants'
 import { Result } from '../../lib'
 import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 
-import { PartialPromptConfig } from '@latitude-data/constants'
+import { PartialPromptConfig, Providers } from '@latitude-data/constants'
 import type { ModelCost } from './estimateCost'
 import { ProviderApiKey } from '../../browser'
 import { vertexConfigurationSchema } from './providers/helpers/vertex'

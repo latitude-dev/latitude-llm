@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import * as factories from '@latitude-data/core/factories'
+import * as factories from '../../tests/factories'
 import { Workspace, User, Providers } from '../../browser'
 import { createProvider as createProviderGlobal } from './helpers'
 import { Result } from '../../lib'

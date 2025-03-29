@@ -16,7 +16,7 @@ export * from './getUnknownError'
 export * from './commonTypes'
 export * from './Result'
 export {
-  default as Transaction,
+  Transaction,
   type ITransaction,
   type PromisedResult,
 } from './Transaction'

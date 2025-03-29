@@ -12,7 +12,7 @@ import {
 import { database } from '../../../client'
 import { providerApiKeys } from '../../../schema'
 import * as factories from '../../../tests/factories'
-import setupService from '../../users/setupService'
+import { setupService } from '../../users/setupService'
 import { forkDocument } from '../forkDocument'
 import { buildProjects } from './testHelpers/buildProjects'
 import { generateDocumentsOutput } from './testHelpers/generateDocumentsOutput'

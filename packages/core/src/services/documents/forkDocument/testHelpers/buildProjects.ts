@@ -1,4 +1,4 @@
-import { Providers } from '../../../../constants'
+import { Providers } from '@latitude-data/constants'
 import * as factories from '../../../../tests/factories'
 
 export async function buildProjects() {

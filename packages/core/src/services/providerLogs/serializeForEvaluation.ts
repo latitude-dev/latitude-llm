@@ -10,7 +10,7 @@ import {
 import { buildProviderLogResponse } from './buildResponse'
 import { objectToString } from '@latitude-data/constants'
 
-export function formatConversation(
+export function formatProviderLogConversation(
   providerLog: ProviderLogDto | ProviderLog,
 ): SerializedConversation {
   const messages: Message[] = [...(providerLog.messages || [])]
@@ -109,7 +109,7 @@ export function serializeForEvaluation(
   const response = buildProviderLogResponse(providerLog)
 
   return {
-    messages: formatConversation(providerLog),
+    messages: formatProviderLogConversation(providerLog),
     context: formatContext(providerLog),
     toolCalls: providerLog.toolCalls,
     response,

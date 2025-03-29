@@ -3,8 +3,8 @@ import { Result } from '../../lib'
 import {
   EvaluationResultsRepository,
   EvaluationsRepository,
-  ResultWithEvaluation,
 } from '../../repositories'
+import { ResultWithEvaluation } from '../../schema'
 
 export async function fetchEvaluationResultsByDocumentLogs(
   {

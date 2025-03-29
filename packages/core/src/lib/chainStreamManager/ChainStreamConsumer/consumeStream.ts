@@ -11,13 +11,13 @@ import {
 
 import {
   LegacyChainEvent,
-  Providers,
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
 import { streamToGenerator } from '../../streamToGenerator'
 import { AIReturn } from '../../../services/ai'
 import { ChainError } from '../ChainErrors'
+import { Providers } from '@latitude-data/constants'
 
 type StreamChunk =
   | TextStreamPart<Record<string, CoreTool>>

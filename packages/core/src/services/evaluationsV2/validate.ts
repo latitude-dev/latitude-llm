@@ -11,7 +11,7 @@ import {
 import { database, Database } from '../../client'
 import { BadRequestError, Result } from '../../lib'
 import { EvaluationsV2Repository } from '../../repositories'
-import { EVALUATION_SPECIFICATIONS } from './shared'
+import { EVALUATION_V2_SPECIFICATIONS } from './shared'
 
 export async function validateEvaluationV2<
   T extends EvaluationType,
@@ -38,7 +38,7 @@ export async function validateEvaluationV2<
     return Result.error(new BadRequestError('Name is required'))
   }
 
-  const typeSpecification = EVALUATION_SPECIFICATIONS[settings.type]
+  const typeSpecification = EVALUATION_V2_SPECIFICATIONS[settings.type]
   if (!typeSpecification) {
     return Result.error(new BadRequestError('Invalid type'))
   }

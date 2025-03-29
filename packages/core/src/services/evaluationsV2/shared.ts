@@ -77,7 +77,7 @@ export type EvaluationBackendSpecification<
   }
 }
 
-export const EVALUATION_SPECIFICATIONS: {
+export const EVALUATION_V2_SPECIFICATIONS: {
   [T in EvaluationType]: EvaluationBackendSpecification<T>
 } = {
   [EvaluationType.Rule]: RuleEvaluationSpecification,
@@ -88,14 +88,16 @@ export const EVALUATION_SPECIFICATIONS: {
 export function getEvaluationTypeSpecification<
   T extends EvaluationType = EvaluationType,
 >(evaluation: EvaluationV2<T>) {
-  return EVALUATION_SPECIFICATIONS[evaluation.type]
+  return EVALUATION_V2_SPECIFICATIONS[evaluation.type]
 }
 
 export function getEvaluationMetricSpecification<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 >(evaluation: EvaluationV2<T, M>) {
-  return EVALUATION_SPECIFICATIONS[evaluation.type].metrics[evaluation.metric]
+  return EVALUATION_V2_SPECIFICATIONS[evaluation.type].metrics[
+    evaluation.metric
+  ]
 }
 
 export function normalizeScore(score: number, lower: number, upper: number) {

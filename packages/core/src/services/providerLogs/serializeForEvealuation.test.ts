@@ -2,7 +2,7 @@ import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { describe, expect, it } from 'vitest'
 
 import { ProviderLog, ProviderLogDto } from '../../browser'
-import { formatContext, formatConversation } from './serializeForEvaluation'
+import { formatContext, formatProviderLogConversation } from './serializeForEvaluation'
 
 describe('serialize', () => {
   it('should format a ProviderLogDto with response correctly', () => {
@@ -19,7 +19,7 @@ describe('serialize', () => {
       toolCalls: [],
     }
 
-    const result = formatConversation(providerLogDto)
+    const result = formatProviderLogConversation(providerLogDto)
 
     expect(result).toEqual({
       all: [
@@ -108,7 +108,7 @@ describe('serialize', () => {
       toolCalls: [],
     }
 
-    const result = formatConversation(providerLog)
+    const result = formatProviderLogConversation(providerLog)
 
     expect(result).toEqual({
       all: [
@@ -220,7 +220,7 @@ describe('serialize', () => {
       toolCalls: [],
     }
 
-    const result = formatConversation(providerLog)
+    const result = formatProviderLogConversation(providerLog)
 
     expect(result).toEqual({
       all: [
@@ -296,7 +296,7 @@ describe('serialize', () => {
       toolCalls: [],
     }
 
-    const result = formatConversation(providerLog)
+    const result = formatProviderLogConversation(providerLog)
 
     expect(result).toEqual({
       all: [{ role: MessageRole.assistant, content: 'Hello!', toolCalls: [] }],
@@ -346,7 +346,7 @@ describe('serialize', () => {
       toolCalls: [],
     }
 
-    const result = formatConversation(providerLogDto)
+    const result = formatProviderLogConversation(providerLogDto)
 
     expect(result).toEqual({
       all: [

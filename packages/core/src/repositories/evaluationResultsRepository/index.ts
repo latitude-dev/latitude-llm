@@ -18,7 +18,6 @@ import {
   Commit,
   ErrorableEntity,
   EVALUATION_RESULT_RECENCY_DAYS,
-  EvaluationDto,
   EvaluationResultableType,
   EvaluationResultDto,
   MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
@@ -61,11 +60,6 @@ export type EvaluationResultWithMetadata = EvaluationResultDto & {
   tokens: number | null
   costInMillicents: number | null
   documentContentHash: string
-}
-
-export type ResultWithEvaluation = {
-  result: EvaluationResultDto
-  evaluation: EvaluationDto
 }
 
 export class EvaluationResultsRepository extends Repository<EvaluationResultDto> {

@@ -1,4 +1,4 @@
-import * as factories from '@latitude-data/core/factories'
+import * as factories from '../../../tests/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Workspace } from '../../../browser'

@@ -1,4 +1,4 @@
-import * as factories from '@latitude-data/core/factories'
+import * as factories from '../../tests/factories'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
