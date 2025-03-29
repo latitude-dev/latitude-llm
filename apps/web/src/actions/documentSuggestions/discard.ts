@@ -1,7 +1,7 @@
 'use server'
 
-import { DocumentSuggestionsRepository } from '@latitude-data/core/repositories'
-import { discardDocumentSuggestion } from '@latitude-data/core/services'
+import { DocumentSuggestionsRepository } from '@latitude-data/core'
+import { discardDocumentSuggestion } from '@latitude-data/core'
 import { z } from 'zod'
 import { withDocument } from '../procedures'
 

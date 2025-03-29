@@ -1,7 +1,7 @@
 'use client'
 
 import { PromptHeader } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Header'
-import { PublishedDocument } from '@latitude-data/core/browser'
+import { PublishedDocument } from '@latitude-data/core'
 import { Container } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Container'
 import {
   Card,

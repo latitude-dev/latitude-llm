@@ -1,6 +1,6 @@
 'use server'
 
-import { assignDataset } from '@latitude-data/core/services'
+import { assignDataset } from '@latitude-data/core'
 import { withDataset } from '$/actions/evaluations/_helpers'
 
 export const assignDatasetAction = withDataset

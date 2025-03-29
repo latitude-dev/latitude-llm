@@ -1,4 +1,4 @@
-import useTestDatabase from '@latitude-data/core/test'
+import { useTestDatabase } from '@latitude-data/core/tests'
 import { vi } from 'vitest'
 
 useTestDatabase()

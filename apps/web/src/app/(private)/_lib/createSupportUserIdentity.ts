@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 
-import { User } from '@latitude-data/core/browser'
+import { User } from '@latitude-data/core'
 import { env } from '@latitude-data/env'
 
 function getCredentials() {

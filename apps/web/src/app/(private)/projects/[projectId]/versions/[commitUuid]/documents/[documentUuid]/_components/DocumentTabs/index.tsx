@@ -7,7 +7,7 @@ import { Button } from '@latitude-data/web-ui'
 import { DocumentationContext } from '../DocumentationModal'
 import { DocumentTriggersButton } from './DocumentTriggers'
 import { DocumentTabSelector } from './tabs'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core'
 import { PublishDocumentButton } from './PublishDocument'
 
 export default function DocumentTabs({

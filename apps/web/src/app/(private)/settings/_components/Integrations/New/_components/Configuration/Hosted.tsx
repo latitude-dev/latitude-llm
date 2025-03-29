@@ -2,8 +2,8 @@
 import { Button, Input, Text } from '@latitude-data/web-ui'
 import { buildConfigFieldName } from '../../buildIntegrationPayload'
 import { HostedIntegrationType } from '@latitude-data/constants'
-import { HOSTED_MCP_CONFIGS } from '@latitude-data/core/services'
 import Link from 'next/link'
+import { HOSTED_MCP_CONFIGS } from '@latitude-data/core'
 
 export function HostedIntegrationConfiguration({
   type,

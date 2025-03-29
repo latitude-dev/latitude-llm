@@ -1,7 +1,7 @@
 'use server'
 
-import { ConnectedEvaluationsRepository } from '@latitude-data/core/repositories'
-import { updateConnectedEvaluation } from '@latitude-data/core/services'
+import { ConnectedEvaluationsRepository } from '@latitude-data/core'
+import { updateConnectedEvaluation } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

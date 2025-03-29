@@ -1,7 +1,7 @@
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useIntegrationTools from '$/stores/integrationTools'
 import { McpTool } from '@latitude-data/constants'
-import { IntegrationDto } from '@latitude-data/core/browser'
+import { IntegrationDto } from '@latitude-data/core'
 import {
   Badge,
   BlankSlate,

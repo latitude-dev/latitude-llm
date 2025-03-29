@@ -1,11 +1,11 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { Workspace } from '@latitude-data/core/browser'
+import { Workspace } from '@latitude-data/core'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
-} from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(

@@ -1,5 +1,5 @@
-import { User, Workspace } from '@latitude-data/core/browser'
-import { createWorkspace } from '@latitude-data/core/factories'
+import { User, Workspace } from '@latitude-data/core'
+import { createWorkspace } from '@latitude-data/core/tests/factories'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

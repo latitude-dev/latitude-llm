@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 
-import { LOG_SOURCES, LogSources } from '@latitude-data/core/browser'
+import { LOG_SOURCES, LogSources } from '@latitude-data/core'
 import { Button, Checkbox, Text } from '@latitude-data/web-ui'
 
 import { FilterButton, useFilterButtonColor } from '../FilterButton'

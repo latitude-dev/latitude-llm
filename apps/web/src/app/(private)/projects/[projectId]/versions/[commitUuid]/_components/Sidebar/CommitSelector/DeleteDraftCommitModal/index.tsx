@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { CommitStatus } from '@latitude-data/core/browser'
+import { CommitStatus } from '@latitude-data/core'
 import {
   ConfirmModal,
   ReactStateDispatch,

@@ -4,12 +4,11 @@ import {
   DatasetV2,
   DatasetVersion,
   EvaluationDto,
-  Providers,
-} from '@latitude-data/core/browser'
-import * as factories from '@latitude-data/core/factories'
-import { type FactoryCreateProjectReturn } from '@latitude-data/core/factories'
+} from '@latitude-data/core'
+import * as factories from '@latitude-data/core/tests/factories'
 
 import { runBatchEvaluationAction } from './runBatch'
+import { Providers } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -38,7 +37,7 @@ vi.mock('@latitude-data/core/jobs', () => ({
   setupQueues: vi.fn().mockImplementation(() => mocks.queues),
 }))
 
-let setup: FactoryCreateProjectReturn
+let setup: factories.FactoryCreateProjectReturn
 let evaluation: EvaluationDto
 describe('runBatchAction', () => {
   describe('unauthorized', () => {

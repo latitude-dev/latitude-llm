@@ -8,8 +8,8 @@ import {
   Text,
   Tooltip,
 } from '@latitude-data/web-ui'
-import { DatasetVersion, InputSource } from '@latitude-data/core/browser'
-import { DatasetRowDataContent } from '@latitude-data/core/schema'
+import { DatasetVersion, InputSource } from '@latitude-data/core'
+import { DatasetRowDataContent } from '@latitude-data/core'
 
 type SelectValueType<V extends DatasetVersion> = V extends DatasetVersion.V1
   ? number

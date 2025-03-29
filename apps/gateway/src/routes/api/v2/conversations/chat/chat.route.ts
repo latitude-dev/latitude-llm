@@ -8,7 +8,7 @@ import {
 import { ROUTES } from '$/routes'
 import { conversationsParamsSchema } from '$/routes/api/v2/conversations/paramsSchema'
 import { createRoute, z } from '@hono/zod-openapi'
-import { messageSchema } from '@latitude-data/core/browser'
+import { messageSchema } from '@latitude-data/core'
 
 export const chatRoute = createRoute({
   operationId: 'createChat',

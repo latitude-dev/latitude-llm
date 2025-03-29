@@ -1,4 +1,4 @@
-import { Commit } from '@latitude-data/core/browser'
+import { Commit } from '@latitude-data/core'
 import { BadgeCommit } from '../../../_components/Sidebar/CommitSelector/CommitItem'
 import {
   cn,

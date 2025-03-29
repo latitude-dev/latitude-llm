@@ -7,16 +7,16 @@ import {
   Providers,
   User,
   Workspace,
-} from '@latitude-data/core/browser'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
+} from '@latitude-data/core'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core'
 import {
   createDocumentLog,
   createEvaluation,
   createLlmAsJudgeEvaluation,
   createProject,
   helpers,
-} from '@latitude-data/core/factories'
-import { Result } from '@latitude-data/core/lib'
+} from '@latitude-data/core'
+import { Result } from '@latitude-data/core'
 import app from '$/routes/app'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

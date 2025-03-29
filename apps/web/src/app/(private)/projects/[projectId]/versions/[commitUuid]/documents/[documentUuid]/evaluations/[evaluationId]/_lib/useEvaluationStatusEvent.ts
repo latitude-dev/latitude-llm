@@ -4,7 +4,7 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
-import { EvaluationTmp } from '@latitude-data/core/browser'
+import { EvaluationTmp } from '@latitude-data/core'
 
 export function useEvaluationStatusEvent({
   evaluation,

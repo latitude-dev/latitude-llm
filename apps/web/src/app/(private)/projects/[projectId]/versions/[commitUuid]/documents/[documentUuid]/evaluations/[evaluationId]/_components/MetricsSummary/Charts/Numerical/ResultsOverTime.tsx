@@ -6,7 +6,7 @@ import useAverageResultOverTime from '$/stores/evaluationResultCharts/numericalR
 import {
   EvaluationConfigurationNumerical,
   EvaluationDto,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   AreaChart,
   Text,

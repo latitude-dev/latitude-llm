@@ -1,4 +1,4 @@
-import { TraceWithSpans } from '@latitude-data/core/browser'
+import { TraceWithSpans } from '@latitude-data/core'
 
 export function calculateTraceMetrics(trace: TraceWithSpans) {
   let totalCost = 0

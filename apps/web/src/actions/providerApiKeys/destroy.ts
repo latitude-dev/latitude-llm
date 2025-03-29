@@ -1,7 +1,7 @@
 'use server'
 
-import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
-import { destroyProviderApiKey } from '@latitude-data/core/services'
+import { ProviderApiKeysRepository } from '@latitude-data/core'
+import { destroyProviderApiKey } from '@latitude-data/core'
 import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { z } from 'zod'
 

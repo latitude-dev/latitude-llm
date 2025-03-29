@@ -9,7 +9,7 @@ import {
   EvaluationResultV2,
   EvaluationType,
 } from '@latitude-data/constants'
-import { Commit, ProviderLogDto } from '@latitude-data/core/browser'
+import { Commit, ProviderLogDto } from '@latitude-data/core'
 import {
   Button,
   ClickToCopy,

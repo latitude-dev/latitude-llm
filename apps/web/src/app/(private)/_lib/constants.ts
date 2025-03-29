@@ -1,7 +1,7 @@
 import {
   LATITUDE_DOCS_URL,
   LATITUDE_HELP_URL,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { ROUTES } from '$/services/routes'
 
 export const NAV_LINKS = [

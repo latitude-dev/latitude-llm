@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react'
 import {
   EvaluationDto,
   EvaluationMetadataLlmAsJudgeAdvanced,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { Alert, Button, Icon, Modal, Text } from '@latitude-data/web-ui'
 import Link from 'next/link'
 

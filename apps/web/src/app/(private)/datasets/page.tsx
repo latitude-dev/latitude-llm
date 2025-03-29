@@ -1,16 +1,16 @@
 import {
   DatasetsRepository,
   DatasetsV2Repository,
-} from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
 import { Alert, TableWithHeader } from '@latitude-data/web-ui'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { env } from '@latitude-data/env'
 import { RootDatasetHeader } from './_components/RootHeader'
 import { DatasetsTable as DatasetsV1Table } from './_v1DeprecatedComponents/DatasetsTable'
 import { DatasetsTable } from './_components/DatasetsTable'
-import { Dataset, DatasetV2, Workspace } from '@latitude-data/core/browser'
+import { Dataset, DatasetV2, Workspace } from '@latitude-data/core'
 import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
-import { Result, TypedResult } from '@latitude-data/core/lib'
+import { Result, TypedResult } from '@latitude-data/core'
 import { IDatasetSettingsModal } from '$/services/routes'
 
 type GetDataResult =

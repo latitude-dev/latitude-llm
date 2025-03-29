@@ -1,11 +1,11 @@
 import { type Message } from '@latitude-data/sdk'
-import { LogSources } from '@latitude-data/core/browser'
+import { LogSources } from '@latitude-data/core'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { publisher } from '@latitude-data/core/events'
+import { publisher } from '@latitude-data/core'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 

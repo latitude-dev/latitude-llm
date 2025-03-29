@@ -1,4 +1,4 @@
-import { Commit, EvaluationResultsV2Search } from '@latitude-data/core/browser'
+import { Commit, EvaluationResultsV2Search } from '@latitude-data/core'
 import { DatePickerRange } from '@latitude-data/web-ui'
 import { endOfDay, startOfDay } from 'date-fns'
 import { isEqual } from 'lodash-es'

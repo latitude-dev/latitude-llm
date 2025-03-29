@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 
 import { Message as ConversationMessage } from '@latitude-data/compiler'
-import { TraceWithSpans } from '@latitude-data/core/browser'
+import { TraceWithSpans } from '@latitude-data/core'
 import { Badge, MessageList, Text } from '@latitude-data/web-ui'
 
 function getUniqueSpanAttributes(

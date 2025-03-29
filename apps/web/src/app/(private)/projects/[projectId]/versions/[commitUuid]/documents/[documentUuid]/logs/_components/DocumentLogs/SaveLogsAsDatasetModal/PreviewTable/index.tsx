@@ -10,7 +10,7 @@ import {
   cn,
 } from '@latitude-data/web-ui'
 import { type OutputItem } from '../useSelectedLogs'
-import { Column, DatasetRowData } from '@latitude-data/core/schema'
+import { Column, DatasetRowData } from '@latitude-data/core'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
 

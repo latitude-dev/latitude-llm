@@ -6,8 +6,8 @@ import { capitalize } from 'lodash-es'
 import {
   EvaluationDto,
   EvaluationResultableType,
-} from '@latitude-data/core/browser'
-import { EvaluationResultByDocument } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import { EvaluationResultByDocument } from '@latitude-data/core'
 import {
   Checkbox,
   cn,

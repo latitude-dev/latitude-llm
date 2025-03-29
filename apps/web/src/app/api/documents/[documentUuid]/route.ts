@@ -1,14 +1,14 @@
-import { Commit, Workspace } from '@latitude-data/core/browser'
+import { Commit, Workspace } from '@latitude-data/core'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-} from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { documentVersionPresenter } from '@latitude-data/core/services'
-import { findCommitById } from '@latitude-data/core/data-access/commits'
-import { BadRequestError, NotFoundError } from '@latitude-data/core/lib'
+import { documentVersionPresenter } from '@latitude-data/core'
+import { findCommitById } from '@latitude-data/core'
+import { BadRequestError, NotFoundError } from '@latitude-data/core'
 
 export const GET = errorHandler(
   authHandler(

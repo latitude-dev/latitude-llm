@@ -7,10 +7,10 @@ import {
   EvaluationV2,
   Workspace,
   type Commit,
-} from '@latitude-data/core/browser'
-import { findAllEvaluationTemplates } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib'
-import { ApiKeysRepository } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import { findAllEvaluationTemplates } from '@latitude-data/core'
+import { NotFoundError } from '@latitude-data/core'
+import { ApiKeysRepository } from '@latitude-data/core'
 import {
   CommitsRepository,
   ConnectedEvaluationsRepository,
@@ -21,7 +21,7 @@ import {
   ProjectsRepository,
   ProviderApiKeysRepository,
   ProviderLogsRepository,
-} from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
 import { notFound } from 'next/navigation'
 
 export const getFirstProjectCached = cache(

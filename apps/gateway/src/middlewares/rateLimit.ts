@@ -1,5 +1,5 @@
-import { cache } from '@latitude-data/core/cache'
-import { RateLimitError } from '@latitude-data/core/lib'
+import { cache } from '@latitude-data/core'
+import { RateLimitError } from '@latitude-data/core'
 import { createMiddleware } from 'hono/factory'
 import { ReplyError } from 'ioredis'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'

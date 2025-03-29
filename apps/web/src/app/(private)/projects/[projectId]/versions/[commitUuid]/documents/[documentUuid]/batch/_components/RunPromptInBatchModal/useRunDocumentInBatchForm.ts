@@ -5,7 +5,7 @@ import {
   DatasetV2,
   DatasetVersion,
   DocumentVersion,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { scan, type ConversationMetadata } from 'promptl-ai'
 import { SelectOption } from '@latitude-data/web-ui'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'

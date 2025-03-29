@@ -6,7 +6,7 @@ import useAverageResultsAndCostOverCommit from '$/stores/evaluationResultCharts/
 import {
   EvaluationConfigurationNumerical,
   EvaluationDto,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Badge,
   ScatterChart,

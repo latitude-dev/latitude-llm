@@ -2,7 +2,7 @@ import { IntegrationType } from '@latitude-data/constants'
 import {
   externalMcpIntegrationConfigurationSchema,
   hostedMcpIntegrationConfigurationFormSchema,
-} from '@latitude-data/core/services'
+} from '@latitude-data/core'
 import { z } from 'zod'
 
 const baseSchema = z.object({

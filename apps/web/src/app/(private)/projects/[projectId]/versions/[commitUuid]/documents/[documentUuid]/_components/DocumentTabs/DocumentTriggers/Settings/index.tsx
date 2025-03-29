@@ -1,4 +1,4 @@
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core'
 import { DotIndicator, TabSelector, Text } from '@latitude-data/web-ui'
 import { useState } from 'react'
 import { EmailTriggerSettings } from './EmailTrigger'

@@ -1,13 +1,13 @@
-import { LogSources } from '@latitude-data/core/browser'
-import { streamToGenerator } from '@latitude-data/core/lib'
-import { addMessages } from '@latitude-data/core/services'
+import { LogSources } from '@latitude-data/core'
+import { streamToGenerator } from '@latitude-data/core'
+import { addMessages } from '@latitude-data/core'
 import { captureException } from '@sentry/node'
 import { streamSSE } from 'hono/streaming'
 
 import { AppRouteHandler } from '$/openApi/types'
 import { ChatRoute } from '$/routes/api/v1/chat/chat.route'
 import { legacyChainEventPresenter } from '$/common/documents/getData'
-import { convertToLegacyChainStream } from '@latitude-data/core/lib'
+import { convertToLegacyChainStream } from '@latitude-data/core'
 
 // @ts-expect-error: streamSSE has type issues
 export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {

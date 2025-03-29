@@ -6,7 +6,7 @@ import {
   DocumentVersion,
   Project,
   PublishedDocument,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { Container } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Container'
 import {
   Card,

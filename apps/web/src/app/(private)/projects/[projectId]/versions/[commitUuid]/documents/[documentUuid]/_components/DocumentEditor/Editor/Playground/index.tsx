@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
-import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
+import { DatasetVersion, DocumentVersion } from '@latitude-data/core'
 import {
   AppLocalStorage,
   cn,

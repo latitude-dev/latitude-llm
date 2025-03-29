@@ -1,10 +1,10 @@
 import { streamSSE } from 'hono/streaming'
 import { AppRouteHandler } from '$/openApi/types'
 import { RunRoute } from '$/routes/api/v2/documents/run/run.route'
-import { LogSources } from '@latitude-data/core/browser'
-import { runDocumentAtCommit } from '@latitude-data/core/services'
-import { streamToGenerator } from '@latitude-data/core/lib'
-import { getUnknownError } from '@latitude-data/core/lib'
+import { LogSources } from '@latitude-data/core'
+import { runDocumentAtCommit } from '@latitude-data/core'
+import { streamToGenerator } from '@latitude-data/core'
+import { getUnknownError } from '@latitude-data/core'
 import { captureException } from '$/common/sentry'
 import {
   legacyChainEventPresenter,
@@ -12,7 +12,7 @@ import {
   publishDocumentRunRequestedEvent,
 } from '$/common/documents/getData'
 import { v2RunPresenter } from '$/presenters/runPresenter'
-import { convertToLegacyChainStream } from '@latitude-data/core/lib'
+import { convertToLegacyChainStream } from '@latitude-data/core'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735

@@ -7,7 +7,7 @@ import {
   DocumentVersion,
   Project,
   ResultWithEvaluationV2,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'

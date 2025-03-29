@@ -11,7 +11,7 @@ import {
   DatasetV2,
   DatasetVersion,
   DocumentVersion,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { SelectOption, useCurrentCommit } from '@latitude-data/web-ui'
 import type { ConversationMetadata } from 'promptl-ai'
 import { useCallback, useMemo, useState } from 'react'

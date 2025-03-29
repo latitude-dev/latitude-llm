@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 
-import { SubscriptionPlan, FREE_PLANS } from '@latitude-data/core/browser'
+import { SubscriptionPlan, FREE_PLANS } from '@latitude-data/core'
 import { Button, useSession } from '@latitude-data/web-ui'
 import useWorkspaceUsage from '$/stores/workspaceUsage'
 import { UsageIndicatorPopover } from '$/components/UsageIndicatorPopover'

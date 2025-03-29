@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useState } from 'react'
 
-import { Providers } from '@latitude-data/core/browser'
+import { Providers } from '@latitude-data/constants'
 import {
   Button,
   CloseTrigger,

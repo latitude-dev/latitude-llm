@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 import { Message } from '@latitude-data/compiler'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core'
 import {
   AppLocalStorage,
   MessageList,

@@ -7,7 +7,7 @@ import useEvaluationResultsCounters from '$/stores/evaluationResultCharts/evalua
 import {
   EvaluationDto,
   EvaluationMetadataType,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { useDebouncedCallback } from 'use-debounce'
 
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'

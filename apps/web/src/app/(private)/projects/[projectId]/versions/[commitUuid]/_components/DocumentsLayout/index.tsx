@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 
-import type { DocumentVersion } from '@latitude-data/core/browser'
-import { NotFoundError } from '@latitude-data/core/lib'
+import type { DocumentVersion } from '@latitude-data/core'
+import { NotFoundError } from '@latitude-data/core'
 import { DocumentDetailWrapper } from '@latitude-data/web-ui'
 import {
   getResizablePanelGroupData,

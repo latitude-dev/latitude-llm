@@ -7,7 +7,7 @@ import {
   EvaluationResultsV2Search,
   EvaluationResultV2,
   EvaluationType,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { cn, TableBlankSlate } from '@latitude-data/web-ui'
 import { useRef } from 'react'
 import { EvaluationBatchIndicator } from './EvaluationBatchIndicator'

@@ -1,4 +1,4 @@
-import type { Dataset } from '@latitude-data/core/browser'
+import type { Dataset } from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { createDatasetAction } from '$/actions/datasets/create'
 import { destroyDatasetAction } from '$/actions/datasets/destroy'

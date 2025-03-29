@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 
 import { useCommits } from '$/stores/commitsStore'
-import { Commit } from '@latitude-data/core/browser'
+import { Commit } from '@latitude-data/core'
 import { Button, Checkbox, Text } from '@latitude-data/web-ui'
 
 import { BadgeCommit } from '../../../../../../_components/Sidebar/CommitSelector/CommitItem'

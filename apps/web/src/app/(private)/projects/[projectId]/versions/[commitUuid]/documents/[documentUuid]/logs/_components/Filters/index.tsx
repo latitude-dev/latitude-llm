@@ -1,7 +1,7 @@
 import {
   DocumentLogFilterOptions,
   LOG_SOURCES,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 
 import { useProcessLogFilters } from '$/hooks/logFilters/useProcessLogFilters'
 import {

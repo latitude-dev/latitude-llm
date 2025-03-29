@@ -1,6 +1,6 @@
 'use client'
 
-import { PublishedDocument } from '@latitude-data/core/browser'
+import { PublishedDocument } from '@latitude-data/core'
 import {
   Avatar,
   getUserInfoFromSession,

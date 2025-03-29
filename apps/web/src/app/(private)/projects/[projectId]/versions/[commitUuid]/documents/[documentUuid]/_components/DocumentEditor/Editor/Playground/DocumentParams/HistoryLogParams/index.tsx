@@ -4,7 +4,7 @@ import {
   DatasetVersion,
   DocumentLog,
   DocumentVersion,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Badge,
   ClientOnly,

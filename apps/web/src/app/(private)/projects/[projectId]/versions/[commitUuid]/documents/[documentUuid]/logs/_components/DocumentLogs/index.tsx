@@ -8,9 +8,9 @@ import useProviderLogs from '$/stores/providerLogs'
 import {
   DocumentLogFilterOptions,
   ResultWithEvaluationTmp,
-} from '@latitude-data/core/browser'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import { DocumentLogsAggregations } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core'
+import { DocumentLogsAggregations } from '@latitude-data/core'
 import {
   Button,
   cn,

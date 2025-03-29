@@ -1,7 +1,7 @@
 'use server'
 
-import { MembershipsRepository } from '@latitude-data/core/repositories'
-import { destroyMembership } from '@latitude-data/core/services'
+import { MembershipsRepository } from '@latitude-data/core'
+import { destroyMembership } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

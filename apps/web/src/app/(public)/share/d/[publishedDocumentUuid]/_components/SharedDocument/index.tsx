@@ -3,7 +3,7 @@
 import { capitalize } from 'lodash-es'
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 
-import { PublishedDocument } from '@latitude-data/core/browser'
+import { PublishedDocument } from '@latitude-data/core'
 import {
   Button,
   Card,

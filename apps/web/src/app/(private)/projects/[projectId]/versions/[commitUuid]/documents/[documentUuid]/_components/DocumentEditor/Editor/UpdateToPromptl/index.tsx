@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core'
 import {
   Button,
   ConfirmModal,

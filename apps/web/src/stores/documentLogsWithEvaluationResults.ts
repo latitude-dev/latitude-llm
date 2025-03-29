@@ -1,4 +1,4 @@
-import { compactObject } from '@latitude-data/core/lib'
+import { compactObject } from '@latitude-data/core'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'

@@ -12,8 +12,8 @@ import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import useEvaluationResultsWithMetadata from '$/stores/evaluationResultsWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
-import { EvaluationDto } from '@latitude-data/core/browser'
-import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
+import { EvaluationDto } from '@latitude-data/core'
+import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core'
 import {
   cn,
   TableBlankSlate,

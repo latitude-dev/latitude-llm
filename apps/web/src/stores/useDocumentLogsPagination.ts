@@ -1,5 +1,5 @@
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
-import { IPagination } from '@latitude-data/core/lib'
+import { DocumentLogFilterOptions } from '@latitude-data/core'
+import { IPagination } from '@latitude-data/core'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'

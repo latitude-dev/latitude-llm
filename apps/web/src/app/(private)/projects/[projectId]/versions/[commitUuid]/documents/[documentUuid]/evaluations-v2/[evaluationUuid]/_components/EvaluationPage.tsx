@@ -19,7 +19,7 @@ import {
   EvaluationType,
   EvaluationV2,
   EvaluationV2Stats,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Badge,
   Breadcrumb,

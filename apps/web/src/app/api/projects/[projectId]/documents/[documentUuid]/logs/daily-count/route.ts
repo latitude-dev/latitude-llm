@@ -1,9 +1,9 @@
-import { Workspace } from '@latitude-data/core/browser'
-import { computeDocumentLogsDailyCount } from '@latitude-data/core/services'
+import { Workspace } from '@latitude-data/core'
+import { computeDocumentLogsDailyCount } from '@latitude-data/core'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { parseApiDocumentLogParams } from '@latitude-data/core/services'
+import { parseApiDocumentLogParams } from '@latitude-data/core'
 
 export const GET = errorHandler(
   authHandler(

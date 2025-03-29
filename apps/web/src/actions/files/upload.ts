@@ -1,8 +1,8 @@
 'use server'
 
 import { getUnsafeIp } from '$/helpers/ip'
-import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/browser'
-import { uploadFile } from '@latitude-data/core/services'
+import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core'
+import { uploadFile } from '@latitude-data/core'
 import { createHash } from 'crypto'
 import { headers } from 'next/headers'
 import { z } from 'zod'

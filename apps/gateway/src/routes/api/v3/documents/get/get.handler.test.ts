@@ -1,12 +1,12 @@
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core'
 import {
   createDocumentVersion,
   createDraft,
   createProject,
   helpers,
-} from '@latitude-data/core/factories'
-import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
-import { mergeCommit } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { DocumentVersionsRepository } from '@latitude-data/core'
+import { mergeCommit } from '@latitude-data/core'
 import app from '$/routes/app'
 import { describe, expect, it, vi } from 'vitest'
 

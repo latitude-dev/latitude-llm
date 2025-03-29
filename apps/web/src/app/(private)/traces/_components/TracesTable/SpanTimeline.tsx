@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 
-import { TraceWithSpans } from '@latitude-data/core/browser'
+import { TraceWithSpans } from '@latitude-data/core'
 import { Text } from '@latitude-data/web-ui'
 import { formatDuration } from '$/app/_lib/formatUtils'
 

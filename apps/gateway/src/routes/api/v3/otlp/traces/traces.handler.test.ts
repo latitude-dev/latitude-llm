@@ -1,9 +1,9 @@
-import { Workspace } from '@latitude-data/core/browser'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
-import { createProject } from '@latitude-data/core/factories'
+import { Workspace } from '@latitude-data/core'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core'
+import { createProject } from '@latitude-data/core'
 import app from '$/routes/app'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import * as jobsModule from '@latitude-data/core/jobs'
+import * as jobsModule from '@latitude-data/core'
 
 const mocks = vi.hoisted(() => ({
   queues: {

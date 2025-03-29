@@ -7,7 +7,7 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/constants'
-import { Commit, ProviderLogDto } from '@latitude-data/core/browser'
+import { Commit, ProviderLogDto } from '@latitude-data/core'
 import { IconName, TabSelectorOption, TextColor } from '@latitude-data/web-ui'
 import React from 'react'
 import HumanEvaluationSpecification from './human'

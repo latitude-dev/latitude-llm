@@ -3,7 +3,7 @@ import {
   LegacyChainEventTypes,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { messageSchema } from '@latitude-data/core/browser'
+import { messageSchema } from '@latitude-data/core'
 
 export const languageModelUsageSchema = z.object({
   completionTokens: z.number().optional(),

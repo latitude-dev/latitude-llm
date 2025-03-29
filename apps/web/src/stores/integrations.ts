@@ -1,4 +1,4 @@
-import type { IntegrationDto } from '@latitude-data/core/browser'
+import type { IntegrationDto } from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { createIntegrationAction } from '$/actions/integrations/create'
 import { destroyIntegrationAction } from '$/actions/integrations/destroy'

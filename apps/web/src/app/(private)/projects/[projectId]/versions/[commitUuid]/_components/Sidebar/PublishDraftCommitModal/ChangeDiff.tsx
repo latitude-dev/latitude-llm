@@ -1,6 +1,6 @@
 import useDocumentVersion from '$/stores/useDocumentVersion'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
-import { ChangedDocument } from '@latitude-data/core/repositories'
+import { ModifiedDocumentType } from '@latitude-data/core'
+import { ChangedDocument } from '@latitude-data/core'
 import {
   DiffViewer,
   TextEditorPlaceholder,

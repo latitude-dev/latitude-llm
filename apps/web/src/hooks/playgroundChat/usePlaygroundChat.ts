@@ -12,7 +12,7 @@ import {
   LatitudeChainCompletedEventData,
   LatitudeEventData,
 } from '@latitude-data/constants'
-import { StreamEventTypes } from '@latitude-data/core/browser'
+import { StreamEventTypes } from '@latitude-data/core'
 import { LanguageModelUsage } from 'ai'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useRef, useState } from 'react'

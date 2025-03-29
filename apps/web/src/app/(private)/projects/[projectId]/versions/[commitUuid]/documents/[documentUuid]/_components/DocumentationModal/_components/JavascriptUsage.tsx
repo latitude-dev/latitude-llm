@@ -1,4 +1,4 @@
-import { HEAD_COMMIT } from '@latitude-data/core/browser'
+import { HEAD_COMMIT } from '@latitude-data/core'
 import { CodeBlock, Text } from '@latitude-data/web-ui'
 import { UsedToolsDoc } from '../index'
 

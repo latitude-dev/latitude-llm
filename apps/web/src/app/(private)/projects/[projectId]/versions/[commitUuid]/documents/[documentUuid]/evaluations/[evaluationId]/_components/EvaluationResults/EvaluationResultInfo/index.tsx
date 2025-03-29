@@ -6,8 +6,8 @@ import {
   EvaluationDto,
   EvaluationMetadataType,
   ProviderLogDto,
-} from '@latitude-data/core/browser'
-import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core'
 import {
   Button,
   cn,

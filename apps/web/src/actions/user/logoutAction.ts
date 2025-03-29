@@ -1,6 +1,6 @@
 'use server'
 
-import { type TokenType } from '@latitude-data/core/websockets'
+import { type TokenType } from '@latitude-data/core'
 import { authProcedure } from '$/actions/procedures'
 import { removeSession } from '$/services/auth/removeSession'
 import { ROUTES } from '$/services/routes'

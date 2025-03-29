@@ -1,12 +1,12 @@
-import { Workspace } from '@latitude-data/core/browser'
-import { buildPagination } from '@latitude-data/core/lib'
-import { computeDocumentLogsCount } from '@latitude-data/core/services'
-import { computeDocumentLogsWithMetadataCount } from '@latitude-data/core/services'
+import { Workspace } from '@latitude-data/core'
+import { buildPagination } from '@latitude-data/core'
+import { computeDocumentLogsCount } from '@latitude-data/core'
+import { computeDocumentLogsWithMetadataCount } from '@latitude-data/core'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { ROUTES } from '$/services/routes'
 import { NextRequest, NextResponse } from 'next/server'
-import { parseApiDocumentLogParams } from '@latitude-data/core/services'
+import { parseApiDocumentLogParams } from '@latitude-data/core'
 
 function pageUrl(params: {
   projectId: string

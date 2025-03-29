@@ -1,6 +1,6 @@
-import { unsafelyFindWorkspacesFromUser } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib'
-import { Result } from '@latitude-data/core/lib'
+import { unsafelyFindWorkspacesFromUser } from '@latitude-data/core'
+import { NotFoundError } from '@latitude-data/core'
+import { Result } from '@latitude-data/core'
 
 export async function getFirstWorkspace({ userId }: { userId: string }) {
   const workspaces = await unsafelyFindWorkspacesFromUser(userId)

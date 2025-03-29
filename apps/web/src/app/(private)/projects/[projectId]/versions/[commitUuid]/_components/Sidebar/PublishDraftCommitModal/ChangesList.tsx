@@ -1,5 +1,5 @@
-import { Commit, ModifiedDocumentType } from '@latitude-data/core/browser'
-import { ChangedDocument } from '@latitude-data/core/repositories'
+import { Commit, ModifiedDocumentType } from '@latitude-data/core'
+import { ChangedDocument } from '@latitude-data/core'
 import {
   cn,
   Icon,

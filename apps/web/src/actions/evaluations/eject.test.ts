@@ -2,14 +2,14 @@ import {
   EvaluationMetadataType,
   EvaluationResultableType,
   ProviderApiKey,
-  Providers,
-} from '@latitude-data/core/browser'
-import * as factories from '@latitude-data/core/factories'
-import { Result } from '@latitude-data/core/lib'
-import { EvaluationsRepository } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import * as factories from '@latitude-data/core/tests/factories'
+import { Result } from '@latitude-data/core'
+import { EvaluationsRepository } from '@latitude-data/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ejectEvaluationAction } from './eject'
+import { Providers } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => {
   return {

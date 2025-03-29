@@ -6,7 +6,7 @@ import {
   DatasetV2,
   DocumentVersion,
   EvaluationTmp,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   FormFieldGroup,
   Icon,

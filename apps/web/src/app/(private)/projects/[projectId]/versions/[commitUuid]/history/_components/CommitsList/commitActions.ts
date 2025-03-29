@@ -1,4 +1,4 @@
-import { Commit } from '@latitude-data/core/browser'
+import { Commit } from '@latitude-data/core'
 import { useCurrentCommit } from '@latitude-data/web-ui/browser'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '$/services/routes'

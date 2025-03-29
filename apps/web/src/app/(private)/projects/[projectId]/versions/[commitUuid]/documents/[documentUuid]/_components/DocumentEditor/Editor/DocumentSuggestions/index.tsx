@@ -3,7 +3,7 @@ import {
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useDocumentSuggestions from '$/stores/documentSuggestions'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core'
 import {
   Button,
   ICommitContextType,

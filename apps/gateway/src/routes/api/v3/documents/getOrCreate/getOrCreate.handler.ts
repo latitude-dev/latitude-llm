@@ -1,10 +1,10 @@
-import { Commit, Workspace } from '@latitude-data/core/browser'
+import { Commit, Workspace } from '@latitude-data/core'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
   ProjectsRepository,
-} from '@latitude-data/core/repositories'
-import { createNewDocument } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { createNewDocument } from '@latitude-data/core'
 import { documentPresenter } from '$/presenters/documentPresenter'
 import { AppRouteHandler } from '$/openApi/types'
 import { GetOrCreateRoute } from './getOrCreate.route'

@@ -10,7 +10,7 @@ import {
   DocumentSuggestionWithDetails,
   DocumentVersion,
   Project,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { compact } from 'lodash-es'
 import { useCallback } from 'react'

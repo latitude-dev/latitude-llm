@@ -1,8 +1,8 @@
 'use server'
 
-import { buildCsvFile } from '@latitude-data/core/browser'
-import { createDataset } from '@latitude-data/core/services'
-import { generateCsvFromDocumentLogs } from '@latitude-data/core/services'
+import { buildCsvFile } from '@latitude-data/core'
+import { createDataset } from '@latitude-data/core'
+import { generateCsvFromDocumentLogs } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

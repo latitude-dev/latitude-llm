@@ -3,7 +3,7 @@ import {
   EvaluationMetadataLlmAsJudgeAdvanced,
   EvaluationMetadataType,
   ProviderApiKey,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 
 import AdvancedEvaluationEditor from './Advanced'
 import SimpleEvaluationEditor from './Simple'

@@ -2,7 +2,7 @@
 
 import { compact, flatten } from 'lodash-es'
 
-import { EvaluationTemplateWithCategory } from '@latitude-data/core/browser'
+import { EvaluationTemplateWithCategory } from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { createEvaluationTemplateAction } from '$/actions/evaluationTemplates/create'
 import { destroyEvaluationTemplateAction } from '$/actions/evaluationTemplates/destroy'

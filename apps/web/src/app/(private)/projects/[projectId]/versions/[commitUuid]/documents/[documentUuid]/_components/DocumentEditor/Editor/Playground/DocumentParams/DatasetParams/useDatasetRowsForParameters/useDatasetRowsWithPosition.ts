@@ -1,8 +1,8 @@
 import useSWR, { SWRConfiguration } from 'swr'
-import { DatasetV2 } from '@latitude-data/core/browser'
+import { DatasetV2 } from '@latitude-data/core'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { compactObject } from '@latitude-data/core/lib'
+import { compactObject } from '@latitude-data/core'
 
 export type WithPositionData = {
   position: number

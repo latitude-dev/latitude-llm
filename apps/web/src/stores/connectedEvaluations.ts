@@ -2,8 +2,8 @@ import { updateConnectedEvaluationAction } from '$/actions/connectedEvaluations/
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { ConnectedEvaluation } from '@latitude-data/core/browser'
-import { ConnectedEvaluationWithDetails } from '@latitude-data/core/repositories'
+import { ConnectedEvaluation } from '@latitude-data/core'
+import { ConnectedEvaluationWithDetails } from '@latitude-data/core'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useConnectedEvaluations(

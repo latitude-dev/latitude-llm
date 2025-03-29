@@ -8,7 +8,7 @@ import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
   findFirstModelForProvider,
   ProviderApiKey,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import type { ConversationMetadata } from 'promptl-ai'
 import {
   AppLocalStorage,

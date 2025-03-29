@@ -1,10 +1,10 @@
 'use server'
 
-import { CommitsRepository } from '@latitude-data/core/repositories'
+import { CommitsRepository } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'
-import { getCommitChanges } from '@latitude-data/core/services'
+import { getCommitChanges } from '@latitude-data/core'
 
 export const getChangedDocumentsInDraftAction = withProject
   .createServerAction()

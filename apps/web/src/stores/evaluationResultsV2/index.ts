@@ -12,8 +12,8 @@ import {
   EvaluationType,
   EvaluationV2,
   Project,
-} from '@latitude-data/core/browser'
-import { IPagination } from '@latitude-data/core/lib'
+} from '@latitude-data/core'
+import { IPagination } from '@latitude-data/core'
 import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'

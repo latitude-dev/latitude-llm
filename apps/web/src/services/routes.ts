@@ -1,4 +1,4 @@
-import { HEAD_COMMIT } from '@latitude-data/core/browser'
+import { HEAD_COMMIT } from '@latitude-data/core'
 
 import { API_ROUTES } from './routes/api'
 

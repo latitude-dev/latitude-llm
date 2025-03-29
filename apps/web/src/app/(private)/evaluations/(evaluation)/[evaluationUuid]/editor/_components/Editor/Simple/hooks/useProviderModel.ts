@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   EvaluationMetadataLlmAsJudgeSimple,
   findFirstModelForProvider,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { IProviderByName } from '$/components/EditorHeader'
 import { envClient } from '$/envClient'
 import useModelOptions from '$/hooks/useModelOptions'

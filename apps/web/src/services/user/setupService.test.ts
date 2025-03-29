@@ -1,21 +1,11 @@
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
-import { Providers } from '@latitude-data/core/browser'
-import { database } from '@latitude-data/core/client'
-import { publisher } from '@latitude-data/core/events'
-import * as factories from '@latitude-data/core/factories'
-import {
-  apiKeys,
-  commits,
-  documentVersions,
-  memberships,
-  projects,
-  providerApiKeys,
-  users,
-  workspaces,
-} from '@latitude-data/core/schema'
+import { database, documentVersions } from '@latitude-data/core'
+import { publisher } from '@latitude-data/core'
+import * as factories from '@latitude-data/core/tests/factories'
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 import setupServiceGlobal from './setupService'
+import { Providers } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => ({
   claimReward: vi.fn(),

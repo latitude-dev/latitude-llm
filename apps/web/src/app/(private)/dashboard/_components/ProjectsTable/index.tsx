@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { Project } from '@latitude-data/core/browser'
+import { Project } from '@latitude-data/core'
 import {
   DropdownMenu,
   Table,

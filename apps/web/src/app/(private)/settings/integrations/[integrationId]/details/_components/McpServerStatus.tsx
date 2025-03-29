@@ -3,7 +3,7 @@
 import { Text, DotIndicator, Tooltip } from '@latitude-data/web-ui'
 import { capitalize } from 'lodash-es'
 import { useMcpServer } from '$/stores/mcpServer'
-import { McpServer } from '@latitude-data/core/browser'
+import { McpServer } from '@latitude-data/core'
 import { UpgradeLink } from '$/components/UpgradeLink'
 
 interface McpServerStatusProps {

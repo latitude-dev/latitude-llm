@@ -1,7 +1,7 @@
 'use client'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersion from '$/stores/useDocumentVersion'
-import { Commit } from '@latitude-data/core/browser'
+import { Commit } from '@latitude-data/core'
 import {
   Button,
   Icon,

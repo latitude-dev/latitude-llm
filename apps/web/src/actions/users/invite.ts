@@ -1,6 +1,6 @@
 'use server'
 
-import { inviteUser } from '@latitude-data/core/services'
+import { inviteUser } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

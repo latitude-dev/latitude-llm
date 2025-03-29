@@ -1,7 +1,7 @@
 'use server'
 
-import { DatasetsRepository } from '@latitude-data/core/repositories'
-import { previewDataset } from '@latitude-data/core/services'
+import { DatasetsRepository } from '@latitude-data/core'
+import { previewDataset } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

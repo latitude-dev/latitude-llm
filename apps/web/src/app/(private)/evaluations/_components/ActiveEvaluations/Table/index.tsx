@@ -1,7 +1,7 @@
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 
 export const evaluationMetadataTypes = {
   [EvaluationMetadataType.LlmAsJudgeSimple]: 'LLM as judge',

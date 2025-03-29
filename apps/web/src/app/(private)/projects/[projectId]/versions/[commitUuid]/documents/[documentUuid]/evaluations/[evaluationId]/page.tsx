@@ -2,16 +2,16 @@ import {
   Commit,
   EvaluationDto,
   EvaluationMetadataType,
-} from '@latitude-data/core/browser'
-import { QueryParams } from '@latitude-data/core/lib'
+} from '@latitude-data/core'
+import { QueryParams } from '@latitude-data/core'
 import {
   fetchDocumentLogsWithEvaluationResults,
   findDocumentLogWithEvaluationResultPage,
-} from '@latitude-data/core/services'
+} from '@latitude-data/core'
 import {
   computeEvaluationResultsWithMetadata,
   findEvaluationResultWithMetadataPage,
-} from '@latitude-data/core/services'
+} from '@latitude-data/core'
 import { findCommitCached } from '$/app/(private)/_data-access'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'

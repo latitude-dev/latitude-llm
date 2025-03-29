@@ -1,19 +1,19 @@
-import { database } from '@latitude-data/core/client'
+import { database } from '@latitude-data/core'
 import {
   SessionData,
   unsafelyFindWorkspacesFromUser,
   unsafelyGetUser,
-} from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib'
-import { Result } from '@latitude-data/core/lib'
-import { PromisedResult } from '@latitude-data/core/lib'
-import { users } from '@latitude-data/core/schema'
+} from '@latitude-data/core'
+import { NotFoundError } from '@latitude-data/core'
+import { Result } from '@latitude-data/core'
+import { PromisedResult } from '@latitude-data/core'
+import { users } from '@latitude-data/core'
 import { getFirstWorkspace } from '$/data-access/workspaces'
 import { eq } from 'drizzle-orm'
 import {
   SubscriptionPlan,
   SubscriptionPlans,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 
 function notFoundWithEmail(email: string | undefined | null) {
   return Result.error(new NotFoundError(`Not found user with email: ${email}`))

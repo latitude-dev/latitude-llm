@@ -4,7 +4,7 @@ import {
   EvaluationDto,
   EvaluationResultableType,
   EvaluationResultDto,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Button,
   FormField,

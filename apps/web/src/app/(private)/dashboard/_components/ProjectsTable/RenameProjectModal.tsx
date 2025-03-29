@@ -1,6 +1,6 @@
 'use client'
 
-import { Project } from '@latitude-data/core/browser'
+import { Project } from '@latitude-data/core'
 import {
   Button,
   CloseTrigger,

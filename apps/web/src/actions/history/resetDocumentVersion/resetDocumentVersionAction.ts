@@ -3,7 +3,7 @@
 import { z } from 'zod'
 
 import { withProject } from '../../procedures'
-import { resetDocumentToVersion } from '@latitude-data/core/services'
+import { resetDocumentToVersion } from '@latitude-data/core'
 
 export const resetDocumentVersionAction = withProject
   .createServerAction()

@@ -1,5 +1,5 @@
-import { compactObject } from '@latitude-data/core/lib'
-import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
+import { compactObject } from '@latitude-data/core'
+import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'

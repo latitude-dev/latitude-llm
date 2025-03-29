@@ -1,4 +1,4 @@
-import { ModifiedDocumentType, DraftChange } from '@latitude-data/core/browser'
+import { ModifiedDocumentType, DraftChange } from '@latitude-data/core'
 import {
   Alert,
   Button,

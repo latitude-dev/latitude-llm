@@ -5,7 +5,7 @@ import {
   InputSource,
   LinkedDataset,
   PlaygroundInputs,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { useCallback, useEffect } from 'react'
 import { create as createZustandStore } from 'zustand'
 

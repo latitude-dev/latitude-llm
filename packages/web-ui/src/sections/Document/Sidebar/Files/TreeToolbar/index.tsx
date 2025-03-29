@@ -8,7 +8,7 @@ import { Button, Text, Tooltip } from '../../../../../ds/atoms'
 import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import { ModifiedDocumentType } from '@latitude-data/core'
 
 export enum EntityType {
   File = 'file',

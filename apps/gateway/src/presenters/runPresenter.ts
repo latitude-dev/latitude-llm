@@ -1,5 +1,5 @@
-import { LatitudeError } from '@latitude-data/core/lib'
-import { Result, TypedResult } from '@latitude-data/core/lib'
+import { LatitudeError } from '@latitude-data/core'
+import { Result, TypedResult } from '@latitude-data/core'
 import { captureException } from '$/common/sentry'
 import {
   ChainStepObjectResponse,

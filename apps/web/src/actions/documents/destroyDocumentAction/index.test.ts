@@ -1,21 +1,21 @@
 import {
   Commit,
+  database,
   DocumentVersion,
   Project,
-  Providers,
   User,
-} from '@latitude-data/core/browser'
-import { database } from '@latitude-data/core/client'
-import {
-  createDraft,
-  createProject,
-  helpers,
-} from '@latitude-data/core/factories'
-import { documentVersions } from '@latitude-data/core/schema'
+} from '@latitude-data/core'
+import { documentVersions } from '@latitude-data/core'
 import { and, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { destroyDocumentAction } from './index'
+import {
+  createDraft,
+  createProject,
+  helpers,
+} from '@latitude-data/core/tests/factories'
+import { Providers } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => {
   return {

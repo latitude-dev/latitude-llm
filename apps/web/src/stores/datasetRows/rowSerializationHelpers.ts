@@ -1,10 +1,10 @@
 import { format, isValid, parseISO } from 'date-fns'
 
-import type { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
+import type { DatasetRow, DatasetV2 } from '@latitude-data/core'
 import {
   DatasetRowData,
   type DatasetRowDataContent,
-} from '@latitude-data/core/schema'
+} from '@latitude-data/core'
 
 export type ClientDatasetRow = DatasetRow & {
   cells: DatasetRowData[keyof DatasetRowData][]

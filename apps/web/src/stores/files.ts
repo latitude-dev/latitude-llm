@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/browser'
+import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 
 import { convertFileAction } from '$/actions/files/convert'

@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { TraceWithSpans } from '@latitude-data/core/browser'
+import { TraceWithSpans } from '@latitude-data/core'
 import {
   Button,
   CloseTrigger,

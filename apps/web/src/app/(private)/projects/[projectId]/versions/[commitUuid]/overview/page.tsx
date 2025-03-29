@@ -1,4 +1,4 @@
-import { computeProjectStats } from '@latitude-data/core/services'
+import { computeProjectStats } from '@latitude-data/core'
 import { TableWithHeader, Text } from '@latitude-data/web-ui'
 import { findProjectCached } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'

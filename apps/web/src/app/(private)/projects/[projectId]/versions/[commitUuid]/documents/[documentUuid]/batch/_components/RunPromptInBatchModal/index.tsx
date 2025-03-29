@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react'
 
-import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
+import { DatasetVersion, DocumentVersion } from '@latitude-data/core'
 import {
   Button,
   CloseTrigger,

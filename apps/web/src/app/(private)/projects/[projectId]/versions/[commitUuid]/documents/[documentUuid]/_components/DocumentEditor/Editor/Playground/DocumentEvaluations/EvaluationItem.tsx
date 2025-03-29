@@ -9,7 +9,7 @@ import {
   EvaluationResultV2,
   EvaluationResultableType,
   EvaluationType,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Badge,
   Button,

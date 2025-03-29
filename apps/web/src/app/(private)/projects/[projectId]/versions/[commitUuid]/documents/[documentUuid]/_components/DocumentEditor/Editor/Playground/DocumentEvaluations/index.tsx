@@ -14,8 +14,8 @@ import {
   EvaluationResultTmp,
   EvaluationResultV2,
   EvaluationV2,
-} from '@latitude-data/core/browser'
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import { DocumentLogWithMetadata } from '@latitude-data/core'
 import {
   ClientOnly,
   CollapsibleBox,

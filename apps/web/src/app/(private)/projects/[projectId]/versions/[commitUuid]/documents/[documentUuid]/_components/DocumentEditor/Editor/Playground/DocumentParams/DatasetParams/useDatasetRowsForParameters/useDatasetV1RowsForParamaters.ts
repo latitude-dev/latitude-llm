@@ -6,7 +6,7 @@ import {
   type DocumentVersion,
   DatasetVersion,
   LinkedDataset,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { SelectOption } from '@latitude-data/web-ui'
 import { useCallback, useMemo } from 'react'
 

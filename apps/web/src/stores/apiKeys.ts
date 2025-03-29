@@ -1,4 +1,4 @@
-import type { ApiKey } from '@latitude-data/core/browser'
+import type { ApiKey } from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { createApiKeyAction } from '$/actions/apiKeys/create'
 import { destroyApiKeyAction } from '$/actions/apiKeys/destroy'

@@ -4,7 +4,7 @@ import {
   EvaluationDto,
   EvaluationResultableType,
   ProviderLogDto,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { StickyOffset } from '$/hooks/useStickyNested'
 
 import { DocumentLogWithMetadataAndErrorAndEvaluationResult } from '..'

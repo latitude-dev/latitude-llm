@@ -6,7 +6,7 @@ import {
   Commit,
   CommitStatus,
   DocumentVersion,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { Text } from '@latitude-data/web-ui'
 import { useCommits } from '$/stores/commitsStore'
 

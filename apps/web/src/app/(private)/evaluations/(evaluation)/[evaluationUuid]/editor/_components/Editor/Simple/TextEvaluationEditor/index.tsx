@@ -8,7 +8,7 @@ import {
   EvaluationMetadataLlmAsJudgeSimple,
   EvaluationMetadataType,
   EvaluationResultableType,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { FormField, Input, Label, useToast } from '@latitude-data/web-ui'
 import { ProviderModelSelector } from '$/components/EditorHeader'
 import useEvaluations from '$/stores/evaluations'

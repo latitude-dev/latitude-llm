@@ -4,7 +4,7 @@ import { Button, Markdown, Text } from '../../../../atoms'
 import type {
   ExtractToolArgs,
   ExtractToolResult,
-} from '@latitude-data/core/services'
+} from '@latitude-data/core'
 import { useEffect, useRef, useState } from 'react'
 import { ToolContent } from '@latitude-data/compiler'
 import { ToolResultContent, ToolResultFooter } from '../ToolResult'

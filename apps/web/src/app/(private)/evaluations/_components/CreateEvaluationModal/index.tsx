@@ -14,7 +14,7 @@ import {
   EvaluationType,
   RuleEvaluationMetric,
   RuleEvaluationSpecification,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   ConfirmModal,
   FormField,

@@ -12,7 +12,7 @@ import {
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useDocumentVersions from '$/stores/documentVersions'
 import { readMetadata } from '@latitude-data/compiler'
-import { ApiKey } from '@latitude-data/core/browser'
+import { ApiKey } from '@latitude-data/core'
 import { Modal } from '@latitude-data/web-ui'
 import { scan, type ConversationMetadata } from 'promptl-ai'
 

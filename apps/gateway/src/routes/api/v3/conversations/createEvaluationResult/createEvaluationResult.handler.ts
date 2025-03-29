@@ -2,16 +2,16 @@ import {
   EvaluationDto,
   EvaluationMetadataType,
   EvaluationResultableType,
-} from '@latitude-data/core/browser'
-import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core/data-access'
-import { BadRequestError, NotFoundError } from '@latitude-data/core/lib'
-import { generateUUIDIdentifier } from '@latitude-data/core/lib'
+} from '@latitude-data/core'
+import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core'
+import { BadRequestError, NotFoundError } from '@latitude-data/core'
+import { generateUUIDIdentifier } from '@latitude-data/core'
 import {
   ConnectedEvaluationsRepository,
   DocumentLogsRepository,
   EvaluationsRepository,
-} from '@latitude-data/core/repositories'
-import { createEvaluationResult } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { createEvaluationResult } from '@latitude-data/core'
 import { CreateEvaluationResultRoute } from './createEvaluationResult.route'
 import { AppRouteHandler } from '$/openApi/types'
 

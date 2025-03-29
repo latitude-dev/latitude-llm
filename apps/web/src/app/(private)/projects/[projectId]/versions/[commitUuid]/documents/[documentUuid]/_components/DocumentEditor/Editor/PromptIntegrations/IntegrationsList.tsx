@@ -1,4 +1,4 @@
-import { IntegrationDto } from '@latitude-data/core/browser'
+import { IntegrationDto } from '@latitude-data/core'
 import { cn, Icon, Text } from '@latitude-data/web-ui'
 import { useState } from 'react'
 import { ActiveIntegrations } from './utils'

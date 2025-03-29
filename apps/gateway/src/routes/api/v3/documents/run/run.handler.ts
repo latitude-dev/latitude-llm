@@ -1,10 +1,10 @@
 import { streamSSE } from 'hono/streaming'
 import { AppRouteHandler } from '$/openApi/types'
 import { RunRoute } from '$/routes/api/v3/documents/run/run.route'
-import { LogSources } from '@latitude-data/core/browser'
-import { runDocumentAtCommit } from '@latitude-data/core/services'
-import { streamToGenerator } from '@latitude-data/core/lib'
-import { getUnknownError } from '@latitude-data/core/lib'
+import { LogSources } from '@latitude-data/core'
+import { runDocumentAtCommit } from '@latitude-data/core'
+import { streamToGenerator } from '@latitude-data/core'
+import { getUnknownError } from '@latitude-data/core'
 import { captureException } from '$/common/sentry'
 import {
   getData,

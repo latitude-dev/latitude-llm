@@ -7,14 +7,14 @@ import { ROUTES } from '$/services/routes'
 import {
   DocumentLogFilterOptions,
   Workspace,
-} from '@latitude-data/core/browser'
-import { QueryParams } from '@latitude-data/core/lib'
-import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services'
-import { fetchDocumentLogWithPosition } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { QueryParams } from '@latitude-data/core'
+import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core'
+import { fetchDocumentLogWithPosition } from '@latitude-data/core'
 import { redirect } from 'next/navigation'
 
-import { DocumentLogsRepository } from '@latitude-data/core/repositories'
-import { parseLogFiltersParams } from '@latitude-data/core/services'
+import { DocumentLogsRepository } from '@latitude-data/core'
+import { parseLogFiltersParams } from '@latitude-data/core'
 import { DocumentLogsPage } from './_components'
 import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
 

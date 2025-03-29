@@ -5,7 +5,7 @@ import {
   Inputs,
   InputSource,
   PlaygroundInput,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Icon,
   Select,

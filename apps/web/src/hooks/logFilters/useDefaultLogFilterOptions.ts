@@ -1,5 +1,5 @@
 import { useCommits } from '$/stores/commitsStore'
-import { LOG_SOURCES } from '@latitude-data/core/browser'
+import { LOG_SOURCES } from '@latitude-data/core'
 import { useCurrentCommit } from '@latitude-data/web-ui'
 import { useMemo } from 'react'
 

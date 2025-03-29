@@ -5,16 +5,16 @@ import {
   ErrorableEntity,
   LOG_SOURCES,
   Project,
-  Providers,
   User,
   WorkspaceDto,
-} from '@latitude-data/core/browser'
-import * as factories from '@latitude-data/core/factories'
-import { createRunError } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import * as factories from '@latitude-data/core/tests/factories'
+import { createRunError } from '@latitude-data/core'
 import { NextRequest } from 'next/server'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
+import { Providers } from '@latitude-data/constants'
 
 const LOG_SOURCES_LIST = LOG_SOURCES.join(',')
 const mocks = vi.hoisted(() => {

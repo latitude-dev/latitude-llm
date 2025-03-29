@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback } from 'react'
 
-import { buildPaginatedUrl } from '@latitude-data/core/lib'
+import { buildPaginatedUrl } from '@latitude-data/core'
 import { Input } from '@latitude-data/web-ui'
 import { useNavigate } from '$/hooks/useNavigate'
 

@@ -6,7 +6,7 @@ import useEvaluationResultsModalValue from '$/stores/evaluationResultCharts/eval
 import { Skeleton, Text } from '@latitude-data/web-ui'
 import { useDebouncedCallback } from 'use-debounce'
 
-import { EvaluationDto } from '@latitude-data/core/browser'
+import { EvaluationDto } from '@latitude-data/core'
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import Panel from '../Panel'
 

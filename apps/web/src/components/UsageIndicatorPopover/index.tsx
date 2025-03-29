@@ -15,7 +15,7 @@ import {
   SubscriptionPlan,
   FREE_PLANS,
   WorkspaceUsage,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 
 export function SubscriptionBadge({
   subscription: { name, plan },

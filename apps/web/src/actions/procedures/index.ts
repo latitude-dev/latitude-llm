@@ -1,17 +1,17 @@
 import { getUnsafeIp } from '$/helpers/ip'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
-import { cache } from '@latitude-data/core/cache'
+import { cache } from '@latitude-data/core'
 import {
   LatitudeError,
   RateLimitError,
   UnauthorizedError,
-} from '@latitude-data/core/lib'
+} from '@latitude-data/core'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
   ProjectsRepository,
-} from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
 import * as Sentry from '@sentry/nextjs'
 import { ReplyError } from 'ioredis'
 import { headers } from 'next/headers'

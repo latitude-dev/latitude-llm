@@ -1,4 +1,4 @@
-import { TraceWithSpans } from '@latitude-data/core/browser'
+import { TraceWithSpans } from '@latitude-data/core'
 import { Badge, ClickToCopyUuid, Text, CodeBlock } from '@latitude-data/web-ui'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { format } from 'date-fns'

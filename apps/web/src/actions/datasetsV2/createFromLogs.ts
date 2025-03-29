@@ -1,6 +1,6 @@
 'use server'
 
-import { createDatasetFromLogs } from '@latitude-data/core/services'
+import { createDatasetFromLogs } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

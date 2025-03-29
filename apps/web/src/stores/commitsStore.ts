@@ -1,4 +1,4 @@
-import { Commit, CommitStatus } from '@latitude-data/core/browser'
+import { Commit, CommitStatus } from '@latitude-data/core'
 import { useCurrentProject, useToast } from '@latitude-data/web-ui'
 import { createDraftCommitAction } from '$/actions/commits/create'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'

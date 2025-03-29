@@ -4,7 +4,7 @@ import { omit } from 'lodash-es'
 import { describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import useDatasetRows from './datasetRows'
-import { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
+import { DatasetRow, DatasetV2 } from '@latitude-data/core'
 import { type UseFetcherArgs } from '$/hooks/useFetcher'
 
 vi.mock('@latitude-data/web-ui', async (mod) => {

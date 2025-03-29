@@ -1,4 +1,4 @@
-import type { DatasetV2 } from '@latitude-data/core/browser'
+import type { DatasetV2 } from '@latitude-data/core'
 import { compact } from 'lodash-es'
 import { useToast } from '@latitude-data/web-ui'
 import { createDatasetAction } from '$/actions/datasetsV2/create'
@@ -7,7 +7,7 @@ import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
-import { compactObject } from '@latitude-data/core/lib'
+import { compactObject } from '@latitude-data/core'
 
 const EMPTY_ARRAY: DatasetV2[] = []
 export default function useDatasets(

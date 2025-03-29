@@ -1,6 +1,6 @@
 'use server'
 
-import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access'
+import { unsafelyFindUserByEmail } from '@latitude-data/core'
 import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'

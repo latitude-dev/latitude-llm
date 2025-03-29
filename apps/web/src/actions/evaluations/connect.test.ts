@@ -5,8 +5,8 @@ import {
   Providers,
   User,
   Workspace,
-} from '@latitude-data/core/browser'
-import * as factories from '@latitude-data/core/factories'
+} from '@latitude-data/core'
+import * as factories from '@latitude-data/core/tests/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { connectEvaluationsAction } from './connect'

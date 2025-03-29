@@ -1,4 +1,4 @@
-import { Dataset, DatasetV2, DatasetVersion } from '@latitude-data/core/browser'
+import { Dataset, DatasetV2, DatasetVersion } from '@latitude-data/core'
 import useDatasets from '$/stores/datasets'
 import useDatasetsV2 from '$/stores/datasetsV2'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'

@@ -3,7 +3,7 @@ import { useCallback, useMemo } from 'react'
 import {
   HEAD_COMMIT,
   type PublishedDocument,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { createPublishedDocumentAction } from '$/actions/documents/sharing/createPublishedDocumentAction'
 import {

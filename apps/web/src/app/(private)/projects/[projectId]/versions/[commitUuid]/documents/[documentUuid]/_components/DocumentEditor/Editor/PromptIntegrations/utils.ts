@@ -1,5 +1,5 @@
 import { PromptConfig, ToolsItem } from '@latitude-data/constants'
-import { IntegrationDto } from '@latitude-data/core/browser'
+import { IntegrationDto } from '@latitude-data/core'
 import { omit } from 'lodash-es'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'

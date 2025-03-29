@@ -1,5 +1,5 @@
-import { Providers } from '@latitude-data/core/browser'
-import * as factories from '@latitude-data/core/factories'
+import { Providers } from '@latitude-data/constants'
+import * as factories from '@latitude-data/core/tests/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { updateEvaluationResultAction } from './update'

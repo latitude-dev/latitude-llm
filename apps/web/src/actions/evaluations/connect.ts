@@ -1,6 +1,6 @@
 'use server'
 
-import { connectEvaluations } from '@latitude-data/core/services'
+import { connectEvaluations } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

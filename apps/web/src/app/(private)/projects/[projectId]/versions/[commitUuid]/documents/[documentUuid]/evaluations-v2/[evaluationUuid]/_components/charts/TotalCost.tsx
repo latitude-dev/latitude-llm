@@ -1,5 +1,5 @@
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
-import { EvaluationV2Stats } from '@latitude-data/core/browser'
+import { EvaluationV2Stats } from '@latitude-data/core'
 import {
   ChartBlankSlate,
   ChartWrapper,

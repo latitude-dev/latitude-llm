@@ -7,7 +7,7 @@ import {
   DocumentVersion,
   INPUT_SOURCE,
   InputSource,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   ClientOnly,
   CollapsibleBox,

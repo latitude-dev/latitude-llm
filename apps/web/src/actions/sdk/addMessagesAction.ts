@@ -1,7 +1,7 @@
 'use server'
 
-import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
-import { publisher } from '@latitude-data/core/events'
+import { LogSources, StreamEventTypes } from '@latitude-data/core'
+import { publisher } from '@latitude-data/core'
 import {
   type ChainEventDto,
   type Message,

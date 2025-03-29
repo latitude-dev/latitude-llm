@@ -1,8 +1,8 @@
-import type { ApiKey, Workspace } from '@latitude-data/core/browser'
+import type { ApiKey, Workspace } from '@latitude-data/core'
 import {
   unsafelyFindWorkspace,
   unsafelyGetApiKeyByToken,
-} from '@latitude-data/core/data-access'
+} from '@latitude-data/core'
 import { bearerAuth } from 'hono/bearer-auth'
 
 declare module 'hono' {

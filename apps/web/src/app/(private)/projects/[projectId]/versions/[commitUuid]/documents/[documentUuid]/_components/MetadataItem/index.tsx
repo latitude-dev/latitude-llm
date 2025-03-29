@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { ProviderLogDto } from '@latitude-data/core/browser'
+import { ProviderLogDto } from '@latitude-data/core'
 import { Icon, Skeleton, Text, TextColor, Tooltip } from '@latitude-data/web-ui'
 import { FinishReason } from 'ai'
 

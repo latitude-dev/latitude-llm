@@ -13,7 +13,7 @@ import {
   DatasetRowsRepository,
   DatasetsRepository,
   DatasetsV2Repository,
-} from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
 import { notFound } from 'next/navigation'
 import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
 import { DatasetDetailTable } from './DatasetDetailTable'
@@ -22,8 +22,8 @@ import {
   DatasetV2,
   DatasetRow,
   Workspace,
-} from '@latitude-data/core/browser'
-import { Result, TypedResult } from '@latitude-data/core/lib'
+} from '@latitude-data/core'
+import { Result, TypedResult } from '@latitude-data/core'
 import { DatasetV1DetailTable } from '$/app/(private)/datasets/_v1DeprecatedComponents/DatasetDetailTable'
 
 type GetDataResult =

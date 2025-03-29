@@ -6,7 +6,7 @@ import {
   CommitStatus,
   DocumentVersion,
   type Commit,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { ReactStateDispatch } from '@latitude-data/web-ui'
 import { useCommits } from '$/stores/commitsStore'
 

@@ -1,6 +1,6 @@
 'use server'
 
-import { createProviderApiKey } from '@latitude-data/core/services'
+import { createProviderApiKey } from '@latitude-data/core'
 import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { authProcedure } from '../procedures'
 import { inputSchema } from './inputSchema'

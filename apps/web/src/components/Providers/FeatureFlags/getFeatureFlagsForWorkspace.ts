@@ -1,6 +1,6 @@
 import { cache } from 'react'
 
-import { Workspace } from '@latitude-data/core/browser'
+import { Workspace } from '@latitude-data/core'
 import {
   FEATURE_FLAGS_CONDITIONS,
   FeatureFlag,

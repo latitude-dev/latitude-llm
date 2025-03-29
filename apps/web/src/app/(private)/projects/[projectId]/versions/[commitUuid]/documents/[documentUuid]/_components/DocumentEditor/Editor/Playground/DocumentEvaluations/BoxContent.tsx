@@ -5,7 +5,7 @@ import {
   EvaluationResultableType,
   EvaluationResultDto,
   EvaluationResultV2,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { Badge, Button, Skeleton, Text } from '@latitude-data/web-ui'
 import Link from 'next/link'
 

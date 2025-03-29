@@ -1,6 +1,6 @@
 'use client'
 
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core'
 import {
   AppLocalStorage,
   Button,

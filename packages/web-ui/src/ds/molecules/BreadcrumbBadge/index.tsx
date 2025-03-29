@@ -1,6 +1,6 @@
 'use client'
 
-import { HEAD_COMMIT } from '@latitude-data/core/browser'
+import { HEAD_COMMIT } from '@latitude-data/core'
 
 import { Badge, Text } from '../../atoms'
 import { ClickToCopy } from '../ClicktoCopy'

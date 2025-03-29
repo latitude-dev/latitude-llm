@@ -7,7 +7,7 @@ import {
   HEAD_COMMIT,
   User,
   type Commit,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Badge,
   Button,

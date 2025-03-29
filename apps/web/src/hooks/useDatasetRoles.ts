@@ -1,4 +1,4 @@
-import { type DatasetColumnRole } from '@latitude-data/core/browser'
+import { type DatasetColumnRole } from '@latitude-data/core'
 import { BackgroundColor, colors } from '@latitude-data/web-ui'
 import { useCallback, useMemo } from 'react'
 

@@ -1,4 +1,4 @@
-import { Project } from '@latitude-data/core/browser'
+import { Project } from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { createProjectAction } from '$/actions/projects/create'
 import { destroyProjectAction } from '$/actions/projects/destroy'

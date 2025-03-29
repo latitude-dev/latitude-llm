@@ -3,7 +3,7 @@ import {
   DatasetVersion,
   DocumentVersion,
   LinkedDataset,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Button,
   cn,

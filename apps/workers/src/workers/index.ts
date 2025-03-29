@@ -1,9 +1,9 @@
 import { captureException } from '$/utils/sentry'
-import { setupSchedules } from '@latitude-data/core/jobs'
+import { setupSchedules } from '@latitude-data/core'
 import { Worker } from 'bullmq'
 
 import { defaultWorker } from './worker-definitions/defaultWorker'
-import { buildRedisConnection } from '@latitude-data/core/redis'
+import { buildRedisConnection } from '@latitude-data/core'
 import { env } from '@latitude-data/env'
 import { evaluationsWorker } from './worker-definitions/evaluationsWorker'
 

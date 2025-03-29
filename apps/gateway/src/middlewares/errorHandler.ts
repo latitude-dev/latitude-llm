@@ -2,11 +2,11 @@ import { ApiErrorCodes } from '@latitude-data/constants/errors'
 import {
   LatitudeError,
   UnprocessableEntityError,
-} from '@latitude-data/core/lib'
+} from '@latitude-data/core'
 import http from '$/common/http'
 import { captureException } from '$/common/sentry'
 import { HTTPException } from 'hono/http-exception'
-import { ChainError } from '@latitude-data/core/lib'
+import { ChainError } from '@latitude-data/core'
 
 function unprocessableExtraParameters(error: UnprocessableEntityError) {
   const isChainError = error instanceof ChainError

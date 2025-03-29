@@ -6,7 +6,7 @@ import useEvaluationResultsMeanValue from '$/stores/evaluationResultCharts/evalu
 import {
   EvaluationConfigurationNumerical,
   EvaluationDto,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { RangeBadge } from '@latitude-data/web-ui'
 import { useDebouncedCallback } from 'use-debounce'
 

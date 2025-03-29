@@ -3,7 +3,7 @@
 import {
   SubscriptionPlanContent,
   WorkspaceDto,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { createContext, ReactNode, useContext } from 'react'
 
 export type SessionUser = {

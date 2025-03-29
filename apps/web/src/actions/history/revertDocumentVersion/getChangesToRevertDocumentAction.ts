@@ -2,7 +2,7 @@
 
 import { z } from 'zod'
 import { withProject } from '../../procedures'
-import { getChangesToRevertDocumentChanges } from '@latitude-data/core/services'
+import { getChangesToRevertDocumentChanges } from '@latitude-data/core'
 
 export const getChangesToRevertDocumentAction = withProject
   .createServerAction()

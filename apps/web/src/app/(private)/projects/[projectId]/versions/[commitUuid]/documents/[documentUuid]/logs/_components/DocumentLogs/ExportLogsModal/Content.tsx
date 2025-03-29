@@ -1,5 +1,5 @@
 import { CsvPreviewTable } from '$/components/CsvPreviewTable'
-import { CsvData } from '@latitude-data/core/browser'
+import { CsvData } from '@latitude-data/core'
 import { Input, TableSkeleton, Text } from '@latitude-data/web-ui'
 
 function LogsCsvPreview({

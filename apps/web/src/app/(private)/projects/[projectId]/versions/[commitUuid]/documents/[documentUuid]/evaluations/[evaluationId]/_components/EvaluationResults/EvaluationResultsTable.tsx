@@ -13,9 +13,9 @@ import {
   EvaluationDto,
   EvaluationResultableType,
   EvaluationResultDto,
-} from '@latitude-data/core/browser'
-import { buildPagination } from '@latitude-data/core/lib'
-import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import { buildPagination } from '@latitude-data/core'
+import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core'
 import {
   Badge,
   Checkbox,

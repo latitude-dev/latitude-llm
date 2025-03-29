@@ -8,7 +8,7 @@ import {
 import {
   PublishedDocument,
   StreamEventTypes,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { runSharedPromptAction } from '$/actions/sdk/runSharedPromptAction'
 import { readStreamableValue } from 'ai/rsc'
 import { SetStateAction } from '@latitude-data/web-ui'

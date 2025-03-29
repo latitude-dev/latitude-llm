@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-import { EvaluationResultableType } from '@latitude-data/core/browser'
+import { EvaluationResultableType } from '@latitude-data/core'
 import {
   Button,
   cn,

@@ -3,9 +3,9 @@
 import {
   EvaluationMetadataType,
   resultConfigurationSchema,
-} from '@latitude-data/core/browser'
-import { EvaluationsRepository } from '@latitude-data/core/repositories'
-import { updateEvaluation } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { EvaluationsRepository } from '@latitude-data/core'
+import { updateEvaluation } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

@@ -4,7 +4,7 @@ import {
   EvaluationMetric,
   EvaluationType,
   EvaluationV2Stats,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   ChartBlankSlate,
   ChartWrapper,

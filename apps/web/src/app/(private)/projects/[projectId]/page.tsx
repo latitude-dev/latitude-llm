@@ -1,5 +1,5 @@
-import { type Project } from '@latitude-data/core/browser'
-import { NotFoundError } from '@latitude-data/core/lib'
+import { type Project } from '@latitude-data/core'
+import { NotFoundError } from '@latitude-data/core'
 import {
   findCommitsByProjectCached,
   findProjectCached,

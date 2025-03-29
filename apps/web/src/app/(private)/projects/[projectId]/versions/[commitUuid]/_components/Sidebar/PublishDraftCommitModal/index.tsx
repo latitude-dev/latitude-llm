@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { CommitStatus } from '@latitude-data/core/browser'
-import { ChangedDocument } from '@latitude-data/core/repositories'
+import { CommitStatus } from '@latitude-data/core'
+import { ChangedDocument } from '@latitude-data/core'
 import {
   ConfirmModal,
   FormWrapper,

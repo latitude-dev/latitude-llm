@@ -13,7 +13,7 @@ import {
   WebClientToServerEvents,
   WebServerToClientEvents,
   Workspace,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { IoProvider, useSocket } from '@latitude-data/socket.io-react-hook'
 import { useSession, useToast } from '@latitude-data/web-ui'
 import * as Sentry from '@sentry/nextjs'

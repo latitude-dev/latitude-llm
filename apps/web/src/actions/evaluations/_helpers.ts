@@ -1,7 +1,7 @@
 import {
   DatasetsRepository,
   DatasetsV2Repository,
-} from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
 import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'
 
@@ -9,7 +9,7 @@ import { scan } from 'promptl-ai'
 import { readMetadata } from '@latitude-data/compiler'
 import { withDocument } from '../procedures'
 import { DatasetVersion, DocumentVersion } from '@latitude-data/constants'
-import { Dataset, DatasetV2 } from '@latitude-data/core/browser'
+import { Dataset, DatasetV2 } from '@latitude-data/core'
 
 export const withDataset = createServerActionProcedure(withDocument)
   .input(

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { ApiKey, DocumentVersion } from '@latitude-data/core/browser'
+import { ApiKey, DocumentVersion } from '@latitude-data/core'
 import { Tabs, type TabItem } from '@latitude-data/web-ui'
 
 import { APIUsage } from './APIUsage'

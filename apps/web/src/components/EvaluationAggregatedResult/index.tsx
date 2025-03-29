@@ -3,7 +3,7 @@
 import {
   EvaluationDto,
   EvaluationResultableType,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { RangeBadge, Skeleton, Text } from '@latitude-data/web-ui'
 import useEvaluationResultsMeanValue from '$/stores/evaluationResultCharts/evaluationResultsMeanValue'
 import useEvaluationResultsModalValue from '$/stores/evaluationResultCharts/evaluationResultsModalValue'

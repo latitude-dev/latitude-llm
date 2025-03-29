@@ -4,13 +4,13 @@ import {
   ChainStepResponse,
   CLOUD_MESSAGES,
   PROVIDER_MODELS,
-} from '@latitude-data/core/browser'
-import { publisher } from '@latitude-data/core/events'
-import { BadRequestError } from '@latitude-data/core/lib'
+} from '@latitude-data/core'
+import { publisher } from '@latitude-data/core'
+import { BadRequestError } from '@latitude-data/core'
 import {
   DocumentVersionsRepository,
   ProviderApiKeysRepository,
-} from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
 import { env } from '@latitude-data/env'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { z } from 'zod'

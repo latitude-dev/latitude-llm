@@ -4,7 +4,7 @@ import useConnectedEvaluations from '$/stores/connectedEvaluations'
 import {
   EvaluationDto,
   EvaluationMetadataType,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   SwitchToggle,
   useCurrentCommit,

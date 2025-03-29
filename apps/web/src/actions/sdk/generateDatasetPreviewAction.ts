@@ -1,10 +1,10 @@
 'use server'
 
-import { CLOUD_MESSAGES, LogSources } from '@latitude-data/core/browser'
-import { BadRequestError } from '@latitude-data/core/lib'
+import { CLOUD_MESSAGES, LogSources } from '@latitude-data/core'
+import { BadRequestError } from '@latitude-data/core'
 import { env } from '@latitude-data/env'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
-import { syncReadCsv } from '@latitude-data/core/lib'
+import { syncReadCsv } from '@latitude-data/core'
 import { authProcedure } from '$/actions/procedures'
 import { z } from 'zod'
 

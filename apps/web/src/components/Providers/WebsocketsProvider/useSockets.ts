@@ -1,4 +1,4 @@
-import { WebServerToClientEvents } from '@latitude-data/core/browser'
+import { WebServerToClientEvents } from '@latitude-data/core'
 import { useSocketEvent } from '@latitude-data/socket.io-react-hook'
 
 import { useWebsocketConfig } from './index'

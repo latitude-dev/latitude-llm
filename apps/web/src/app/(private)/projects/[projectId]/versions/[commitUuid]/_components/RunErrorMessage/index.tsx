@@ -1,4 +1,4 @@
-import { RunErrorField } from '@latitude-data/core/repositories'
+import { RunErrorField } from '@latitude-data/core'
 import { Alert } from '@latitude-data/web-ui'
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 

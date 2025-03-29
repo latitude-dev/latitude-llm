@@ -1,4 +1,4 @@
-import { CommitStatus } from '@latitude-data/core/browser'
+import { CommitStatus } from '@latitude-data/core'
 import {
   Button,
   CloseTrigger,

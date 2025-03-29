@@ -2,7 +2,7 @@ import {
   HostedIntegrationType,
   IntegrationType,
 } from '@latitude-data/constants'
-import { IntegrationDto } from '@latitude-data/core/browser'
+import { IntegrationDto } from '@latitude-data/core'
 import { IconName } from '@latitude-data/web-ui'
 
 export type IntegrationTypeOption = {

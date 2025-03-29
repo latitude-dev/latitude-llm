@@ -1,4 +1,4 @@
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core'
 import { Button, DotIndicator, Popover, Text } from '@latitude-data/web-ui'
 
 import { TriggerSettings } from './Settings'

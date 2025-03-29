@@ -14,9 +14,9 @@ import {
   EvaluationResultableType,
   LOG_FILTERS_ENCODED_PARAMS,
   ResultWithEvaluationTmp,
-} from '@latitude-data/core/browser'
-import { buildPagination } from '@latitude-data/core/lib'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import { buildPagination } from '@latitude-data/core'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core'
 import {
   Badge,
   Checkbox,

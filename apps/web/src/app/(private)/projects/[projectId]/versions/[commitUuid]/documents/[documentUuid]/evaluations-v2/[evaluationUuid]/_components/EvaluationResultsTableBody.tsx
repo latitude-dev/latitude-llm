@@ -15,7 +15,7 @@ import {
   EvaluationResultV2,
   EvaluationType,
   EvaluationV2,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Checkbox,
   cn,

@@ -13,7 +13,7 @@ import {
   EvaluationTmp,
   EvaluationV2,
   RuleEvaluationSpecification,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   ConfirmModal,
   DropdownMenu,

@@ -4,9 +4,9 @@ import {
   type ProviderApiKey,
   type User,
   type Workspace,
-} from '@latitude-data/core/browser'
-import * as factories from '@latitude-data/core/factories'
-import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import * as factories from '@latitude-data/core/tests/factories'
+import { DocumentVersionsRepository } from '@latitude-data/core'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

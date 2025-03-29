@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-import { Workspace } from '@latitude-data/core/browser'
+import { Workspace } from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { setDefaultProviderAction } from '$/actions/workspaces/setDefaultProvider'
 import { updateWorkspaceAction } from '$/actions/workspaces/update'

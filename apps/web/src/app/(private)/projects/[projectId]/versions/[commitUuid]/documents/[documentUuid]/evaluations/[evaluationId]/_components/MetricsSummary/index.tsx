@@ -1,6 +1,6 @@
 'use client'
 
-import { Commit, EvaluationDto } from '@latitude-data/core/browser'
+import { Commit, EvaluationDto } from '@latitude-data/core'
 
 import { BigNumberPanels } from './BigNumberPanels'
 import { EvaluationResultsCharts } from './Charts'

@@ -1,4 +1,4 @@
-import { RewardType } from '@latitude-data/core/browser'
+import { RewardType } from '@latitude-data/core'
 import { Text } from '@latitude-data/web-ui'
 import { z } from 'zod'
 

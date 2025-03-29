@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
-import { type EvaluationResultByDocument } from '@latitude-data/core/repositories'
+import { DocumentVersion, EvaluationDto } from '@latitude-data/core'
+import { type EvaluationResultByDocument } from '@latitude-data/core'
 import {
   Button,
   FakeProgress,

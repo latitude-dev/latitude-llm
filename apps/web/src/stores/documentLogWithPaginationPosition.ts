@@ -1,7 +1,7 @@
 import {
   DocumentLogFilterOptions,
   DocumentVersion,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'

@@ -1,7 +1,7 @@
 'use server'
 
-import { ProjectsRepository } from '@latitude-data/core/repositories'
-import { destroyProject } from '@latitude-data/core/services'
+import { ProjectsRepository } from '@latitude-data/core'
+import { destroyProject } from '@latitude-data/core'
 import { ROUTES } from '$/services/routes'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'

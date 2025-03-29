@@ -10,18 +10,18 @@ import {
   ProviderLog,
   StreamEventTypes,
   Workspace,
-} from '@latitude-data/core/browser'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
+} from '@latitude-data/core'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core'
 import {
   createDocumentVersion,
   createDraft,
   createProject,
   helpers,
-} from '@latitude-data/core/factories'
-import { LatitudeError } from '@latitude-data/core/lib'
-import { Result } from '@latitude-data/core/lib'
-import { ChainError } from '@latitude-data/core/lib'
-import { mergeCommit } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { LatitudeError } from '@latitude-data/core'
+import { Result } from '@latitude-data/core'
+import { ChainError } from '@latitude-data/core'
+import { mergeCommit } from '@latitude-data/core'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChainEventTypes } from '@latitude-data/constants'

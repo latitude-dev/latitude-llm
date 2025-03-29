@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 
-import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
+import { DocumentVersion, EvaluationDto } from '@latitude-data/core'
 import {
   Button,
   TableBlankSlate,

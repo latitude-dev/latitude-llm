@@ -5,7 +5,7 @@ import {
   DatasetV2,
   DatasetVersion,
   DocumentVersion,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   useDatasetRowWithPosition,
   type WithPositionData,
@@ -13,7 +13,7 @@ import {
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { SelectOption } from '@latitude-data/web-ui'
 import { ConversationMetadata } from 'promptl-ai'
-import { type DatasetRowDataContent } from '@latitude-data/core/schema'
+import { type DatasetRowDataContent } from '@latitude-data/core'
 import { parseRowCell } from '$/stores/datasetRows/rowSerializationHelpers'
 
 export type DatasetMappedValue = {

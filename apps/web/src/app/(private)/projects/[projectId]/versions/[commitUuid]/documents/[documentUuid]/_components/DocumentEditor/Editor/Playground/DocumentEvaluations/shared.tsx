@@ -4,8 +4,8 @@ import {
   EvaluationDto,
   EvaluationResultTmp,
   EvaluationV2,
-} from '@latitude-data/core/browser'
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import { DocumentLogWithMetadata } from '@latitude-data/core'
 import {
   type ICommitContextType,
   type IProjectContextType,

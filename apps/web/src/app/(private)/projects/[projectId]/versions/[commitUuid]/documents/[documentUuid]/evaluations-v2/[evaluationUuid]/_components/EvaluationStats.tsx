@@ -3,7 +3,7 @@ import {
   EvaluationMetric,
   EvaluationType,
   EvaluationV2Stats,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { cn } from '@latitude-data/web-ui'
 import AverageScoreChart from './charts/AverageScore'
 import DailyOverviewChart from './charts/DailyOverview'

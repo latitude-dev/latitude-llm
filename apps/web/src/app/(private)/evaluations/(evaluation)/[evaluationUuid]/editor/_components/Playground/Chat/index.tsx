@@ -9,7 +9,7 @@ import {
   EvaluationDto,
   EvaluationMetadataType,
   StreamEventTypes,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Button,
   ErrorMessage,

@@ -1,6 +1,6 @@
 import { ReactNode, useCallback, useMemo, useState } from 'react'
 
-import { ClaimedReward, RewardType } from '@latitude-data/core/browser'
+import { ClaimedReward, RewardType } from '@latitude-data/core'
 import { Button, cn, Icon, Input, Text } from '@latitude-data/web-ui'
 import Link from 'next/link'
 import { ZodType } from 'zod'

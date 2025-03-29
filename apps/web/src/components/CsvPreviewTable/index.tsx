@@ -1,4 +1,4 @@
-import { CsvData } from '@latitude-data/core/browser'
+import { CsvData } from '@latitude-data/core'
 import {
   Table,
   TableBody,

@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi'
-import { LogSources } from '@latitude-data/core/browser'
+import { LogSources } from '@latitude-data/core'
 
 export const internalInfoSchema = z.object({
   __internal: z

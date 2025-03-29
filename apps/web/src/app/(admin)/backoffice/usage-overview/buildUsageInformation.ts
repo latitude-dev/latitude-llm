@@ -1,6 +1,6 @@
 import { getPlanFromSubscriptionSlug } from '$/data-access'
-import { SubscriptionPlanContent } from '@latitude-data/core/browser'
-import { GetUsageOverviewRow } from '@latitude-data/core/services'
+import { SubscriptionPlanContent } from '@latitude-data/core'
+import { GetUsageOverviewRow } from '@latitude-data/core'
 import { IconName } from '@latitude-data/web-ui'
 
 const TOLERANCE_PERCENT = 0.05

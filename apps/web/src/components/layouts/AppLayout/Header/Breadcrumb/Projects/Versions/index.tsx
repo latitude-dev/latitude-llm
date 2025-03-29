@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
+import { Commit, HEAD_COMMIT } from '@latitude-data/core'
 import {
   Badge,
   BreadcrumbItem,

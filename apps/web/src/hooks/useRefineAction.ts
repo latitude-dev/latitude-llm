@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
+import { Commit, DocumentVersion, Project } from '@latitude-data/core'
 import { CheckedState } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import { useRouter } from 'next/navigation'

@@ -19,7 +19,7 @@ import {
   EvaluationDto,
   EvaluationResult,
   ProviderApiKey,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Button,
   ClickToCopyUuid,

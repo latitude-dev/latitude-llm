@@ -4,7 +4,7 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useDatasetRows from '$/stores/datasetRows'
 import { serializeRows } from '$/stores/datasetRows/rowSerializationHelpers'
-import { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
+import { DatasetRow, DatasetV2 } from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { useCallback, useRef, useState } from 'react'
 import { useSWRConfig } from 'swr'

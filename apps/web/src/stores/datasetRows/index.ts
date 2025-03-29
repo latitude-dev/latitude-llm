@@ -1,9 +1,9 @@
-import type { DatasetV2 } from '@latitude-data/core/browser'
+import type { DatasetV2 } from '@latitude-data/core'
 import useFetcher from '$/hooks/useFetcher'
 import { compact } from 'lodash-es'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
-import { compactObject } from '@latitude-data/core/lib'
+import { compactObject } from '@latitude-data/core'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { updateDatasetRowAction } from '$/actions/datasetRows/update'
 import {

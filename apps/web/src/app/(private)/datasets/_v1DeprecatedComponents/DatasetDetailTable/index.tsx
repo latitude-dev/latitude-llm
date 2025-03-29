@@ -1,6 +1,6 @@
 'use client'
 
-import { Dataset } from '@latitude-data/core/browser'
+import { Dataset } from '@latitude-data/core'
 
 import '@latitude-data/web-ui'
 

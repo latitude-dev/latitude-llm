@@ -1,8 +1,8 @@
 import { forwardRef } from 'react'
 import { capitalize } from 'lodash-es'
 
-import { EvaluationDto } from '@latitude-data/core/browser'
-import { buildPagination } from '@latitude-data/core/lib'
+import { EvaluationDto } from '@latitude-data/core'
+import { buildPagination } from '@latitude-data/core'
 import {
   Badge,
   Checkbox,

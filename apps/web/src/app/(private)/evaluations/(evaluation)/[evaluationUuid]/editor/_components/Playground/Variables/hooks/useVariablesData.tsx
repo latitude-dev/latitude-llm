@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
-import { ProviderLogDto } from '@latitude-data/core/browser'
-import { formatContext, formatConversation } from '@latitude-data/core/services'
+import { ProviderLogDto } from '@latitude-data/core'
+import { formatContext, formatConversation } from '@latitude-data/core'
 import { Button, Icon, Tooltip } from '@latitude-data/web-ui'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
 

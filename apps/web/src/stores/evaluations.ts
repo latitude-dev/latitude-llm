@@ -9,7 +9,7 @@ import { updateEvaluationContentAction } from '$/actions/evaluations/updateConte
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import type { EvaluationDto } from '@latitude-data/core/browser'
+import type { EvaluationDto } from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import useSWR, { SWRConfiguration } from 'swr'
 

@@ -1,10 +1,6 @@
 'use client'
 
-import {
-  Providers,
-  Workspace,
-  type ProviderApiKey,
-} from '@latitude-data/core/browser'
+import { Workspace, type ProviderApiKey } from '@latitude-data/core'
 import {
   Badge,
   Button,
@@ -26,6 +22,7 @@ import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Providers } from '@latitude-data/constants'
 
 export default function ProviderApiKeys() {
   const { data: providerApiKeys, isLoading: isProviderApiKeysLoading } =

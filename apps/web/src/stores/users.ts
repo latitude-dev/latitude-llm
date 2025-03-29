@@ -1,4 +1,4 @@
-import type { User } from '@latitude-data/core/browser'
+import type { User } from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { destroyMembershipAction } from '$/actions/memberships/destroy'
 import { inviteUserAction } from '$/actions/users/invite'

@@ -2,7 +2,7 @@ import {
   Commit,
   EvaluationDto,
   EvaluationResultableType,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 
 import MeanValuePanel from './MeanValuePanel'
 import ModalValuePanel from './ModalValuePanel'

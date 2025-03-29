@@ -3,7 +3,7 @@
 import { useRef } from 'react'
 import { MonacoDiffEditor } from './DiffEditor'
 import { editor } from 'monaco-editor'
-import { DiffValue } from '@latitude-data/core/browser'
+import { DiffValue } from '@latitude-data/core'
 
 const SCROLLBAR_SIZE = 10
 

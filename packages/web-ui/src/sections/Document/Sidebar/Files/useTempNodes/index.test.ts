@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { Node } from '../useTree'
 import { useTempNodes } from './index'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import { ModifiedDocumentType } from '@latitude-data/core'
 
 describe('useTempNodes', () => {
   afterEach(() => {

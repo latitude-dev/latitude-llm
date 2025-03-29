@@ -2,7 +2,7 @@
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useToggleModal } from '$/hooks/useToogleModal'
-import { EvaluationDto } from '@latitude-data/core/browser'
+import { EvaluationDto } from '@latitude-data/core'
 import { Label, TableWithHeader } from '@latitude-data/web-ui'
 import DefaultProviderBanner from '../DefaulProviderBanner'
 import CreateBatchEvaluationModal from './CreateBatchEvaluationModal'

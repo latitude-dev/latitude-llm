@@ -3,8 +3,8 @@
 import {
   EvaluationOptionsSchema,
   EvaluationSettingsSchema,
-} from '@latitude-data/core/browser'
-import { createEvaluationV2 } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { createEvaluationV2 } from '@latitude-data/core'
 import { z } from 'zod'
 import { withDocument } from '../procedures'
 

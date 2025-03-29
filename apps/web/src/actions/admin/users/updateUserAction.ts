@@ -3,9 +3,9 @@
 import { z } from 'zod'
 
 import { withAdmin } from '../../procedures'
-import { updateUser } from '@latitude-data/core/services'
-import { unsafelyGetUserByEmail } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib'
+import { updateUser } from '@latitude-data/core'
+import { unsafelyGetUserByEmail } from '@latitude-data/core'
+import { NotFoundError } from '@latitude-data/core'
 
 export const updateUserAction = withAdmin
   .createServerAction()

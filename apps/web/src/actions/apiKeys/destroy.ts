@@ -1,7 +1,7 @@
 'use server'
 
-import { ApiKeysRepository } from '@latitude-data/core/repositories'
-import { destroyApiKey } from '@latitude-data/core/services'
+import { ApiKeysRepository } from '@latitude-data/core'
+import { destroyApiKey } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

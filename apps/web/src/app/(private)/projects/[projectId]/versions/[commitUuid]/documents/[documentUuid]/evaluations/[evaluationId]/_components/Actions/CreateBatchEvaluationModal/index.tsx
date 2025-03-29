@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react'
 
-import { DocumentVersion, EvaluationTmp } from '@latitude-data/core/browser'
+import { DocumentVersion, EvaluationTmp } from '@latitude-data/core'
 import { Button, CloseTrigger, Modal } from '@latitude-data/web-ui'
 
 import { useMetadata } from '$/hooks/useMetadata'

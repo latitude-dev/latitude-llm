@@ -1,5 +1,5 @@
-import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
-import { NotFoundError } from '@latitude-data/core/lib'
+import { Commit, HEAD_COMMIT } from '@latitude-data/core'
+import { NotFoundError } from '@latitude-data/core'
 
 type GetCommitUrlParams = {
   commits: Commit[]

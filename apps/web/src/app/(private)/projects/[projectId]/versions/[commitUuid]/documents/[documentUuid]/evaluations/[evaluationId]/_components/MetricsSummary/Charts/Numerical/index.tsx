@@ -1,4 +1,4 @@
-import { EvaluationDto } from '@latitude-data/core/browser'
+import { EvaluationDto } from '@latitude-data/core'
 
 import { CostOverResultsChart } from './CostOverResults'
 import { ResultOverTimeChart } from './ResultsOverTime'

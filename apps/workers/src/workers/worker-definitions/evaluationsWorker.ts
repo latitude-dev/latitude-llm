@@ -1,4 +1,4 @@
-import { Queues } from '@latitude-data/core/jobs/constants'
+import { Queues } from '@latitude-data/core'
 
 import { buildProcessor } from '../_shared'
 

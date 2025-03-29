@@ -1,6 +1,6 @@
 'use server'
 
-import { deleteEvaluationV2 } from '@latitude-data/core/services'
+import { deleteEvaluationV2 } from '@latitude-data/core'
 import { z } from 'zod'
 import { withEvaluation } from '../procedures'
 

@@ -1,9 +1,9 @@
 import { isEqual } from 'lodash-es'
 import { useEffect, useState } from 'react'
-import { type DocumentVersion, HEAD_COMMIT } from '@latitude-data/core/browser'
+import { type DocumentVersion, HEAD_COMMIT } from '@latitude-data/core'
 import { SWRConfiguration } from 'swr'
 import useDocumentVersions from './documentVersions'
-import { getAgentToolName } from '@latitude-data/core/services'
+import { getAgentToolName } from '@latitude-data/core'
 import { AgentToolsMap } from '@latitude-data/constants'
 
 function buildAgentsToolMap(data: DocumentVersion[] = []) {

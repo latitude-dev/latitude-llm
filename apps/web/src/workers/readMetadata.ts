@@ -7,7 +7,7 @@ import {
   promptConfigSchema,
   resolveRelativePath,
 } from '@latitude-data/constants'
-import type { DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core'
 
 import { CompileError as PromptlCompileError, scan } from 'promptl-ai'
 

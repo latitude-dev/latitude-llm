@@ -1,4 +1,4 @@
-import { DocumentTrigger, HEAD_COMMIT } from '@latitude-data/core/browser'
+import { DocumentTrigger, HEAD_COMMIT } from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
@@ -9,7 +9,7 @@ import { deleteDocumentTriggerAction } from '$/actions/documents/triggers/delete
 import {
   DocumentTriggerConfiguration,
   DocumentTriggerWithConfiguration,
-} from '@latitude-data/core/services'
+} from '@latitude-data/core'
 import { useCallback } from 'react'
 import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/triggers/updateDocumentTriggerConfigurationAction'
 

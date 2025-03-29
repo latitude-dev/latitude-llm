@@ -2,7 +2,7 @@
 
 import { compact } from 'lodash-es'
 
-import { ResultWithEvaluation } from '@latitude-data/core/repositories'
+import { ResultWithEvaluation } from '@latitude-data/core'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'

@@ -1,8 +1,8 @@
-import { IntegrationDto, Workspace } from '@latitude-data/core/browser'
+import { IntegrationDto, Workspace } from '@latitude-data/core'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { IntegrationsRepository } from '@latitude-data/core/repositories'
+import { IntegrationsRepository } from '@latitude-data/core'
 import { IntegrationType } from '@latitude-data/constants'
 
 export const GET = errorHandler(

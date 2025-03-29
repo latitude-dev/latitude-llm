@@ -1,15 +1,15 @@
 import {
   DocumentVersion,
+  findCommitById,
   Project,
-  Providers,
   User,
-} from '@latitude-data/core/browser'
-import { findCommitById } from '@latitude-data/core/data-access/commits'
-import * as factories from '@latitude-data/core/factories'
-import { updateDocument } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import * as factories from '@latitude-data/core/tests/factories'
+import { updateDocument } from '@latitude-data/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { updateDocumentContentAction } from './updateContent'
+import { Providers } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => {
   return {

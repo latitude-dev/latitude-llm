@@ -5,7 +5,7 @@ import { FormEvent } from 'react'
 import {
   EvaluationResultableType,
   EvaluationTemplateWithCategory,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Button,
   FormField,

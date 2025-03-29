@@ -1,14 +1,14 @@
 'use server'
 
-import { EvaluationResultableType } from '@latitude-data/core/browser'
-import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib'
-import { generateUUIDIdentifier } from '@latitude-data/core/lib'
+import { EvaluationResultableType } from '@latitude-data/core'
+import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core'
+import { NotFoundError } from '@latitude-data/core'
+import { generateUUIDIdentifier } from '@latitude-data/core'
 import {
   DocumentLogsRepository,
   EvaluationsRepository,
-} from '@latitude-data/core/repositories'
-import { createEvaluationResult } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { createEvaluationResult } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

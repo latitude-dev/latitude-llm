@@ -1,7 +1,7 @@
 'use server'
 
-import { EvaluationsRepository } from '@latitude-data/core/repositories'
-import { ejectEvaluation } from '@latitude-data/core/services'
+import { EvaluationsRepository } from '@latitude-data/core'
+import { ejectEvaluation } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

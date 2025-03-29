@@ -1,8 +1,8 @@
-import { DocumentLogsAggregations } from '@latitude-data/core/services'
+import { DocumentLogsAggregations } from '@latitude-data/core'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
+import { DocumentLogFilterOptions } from '@latitude-data/core'
 
 export default function useDocumentLogsAggregations(
   {

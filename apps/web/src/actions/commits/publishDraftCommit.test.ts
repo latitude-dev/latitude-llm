@@ -1,16 +1,15 @@
 import {
-  Providers,
   type Commit,
   type DocumentVersion,
   type Project,
   type User,
   type Workspace,
-} from '@latitude-data/core/browser'
-import * as factories from '@latitude-data/core/factories'
-import { helpers } from '@latitude-data/core/factories'
-import { updateDocument } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import * as factories from '@latitude-data/core/tests/factories'
+import { updateDocument } from '@latitude-data/core'
 import { publishDraftCommitAction } from '$/actions/commits/publishDraftCommitAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Providers } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => {
   return {
@@ -37,7 +36,10 @@ describe('publishDraftCommitAction', () => {
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
-        doc1: helpers.createPrompt({ provider: 'openai', content: 'content' }),
+        doc1: factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'content',
+        }),
       },
     })
     user = usr

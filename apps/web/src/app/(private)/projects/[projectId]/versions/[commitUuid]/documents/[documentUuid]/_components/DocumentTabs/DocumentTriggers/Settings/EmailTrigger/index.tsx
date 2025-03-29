@@ -3,8 +3,8 @@ import {
   DocumentTriggerType,
   EMAIL_TRIGGER_DOMAIN,
 } from '@latitude-data/constants'
-import { DocumentVersion } from '@latitude-data/core/browser'
-import { EmailTriggerConfiguration } from '@latitude-data/core/services'
+import { DocumentVersion } from '@latitude-data/core'
+import { EmailTriggerConfiguration } from '@latitude-data/core'
 import { Text } from '@latitude-data/web-ui'
 import { useCallback, useMemo } from 'react'
 import { EmailTriggerConfig } from './Config'

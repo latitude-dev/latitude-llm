@@ -1,5 +1,5 @@
 'use client'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import { ModifiedDocumentType } from '@latitude-data/core'
 import { Button, DropdownMenu, Icon, MenuOption, Text } from '../../atoms'
 import { colors } from '../../tokens'
 import { useHover } from '../../../browser'

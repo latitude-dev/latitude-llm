@@ -3,7 +3,7 @@ import { ChangeEvent, useCallback, useEffect, useState } from 'react'
 import {
   EvaluationResultableType,
   EvaluationResultConfiguration,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 
 export function useEvaluationConfiguration(
   init?: EvaluationResultConfiguration,

@@ -4,8 +4,8 @@ import {
   DocumentVersion,
   EvaluationDto,
   EvaluationResult,
-} from '@latitude-data/core/browser'
-import { type EvaluationResultByDocument } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import { type EvaluationResultByDocument } from '@latitude-data/core'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
 import { useRouter } from 'next/navigation'

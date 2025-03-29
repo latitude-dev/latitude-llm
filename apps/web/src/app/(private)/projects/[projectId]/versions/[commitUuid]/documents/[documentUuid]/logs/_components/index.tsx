@@ -16,8 +16,8 @@ import {
   DocumentLogFilterOptions,
   ResultWithEvaluation,
   ResultWithEvaluationTmp,
-} from '@latitude-data/core/browser'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core'
 import {
   Button,
   TableWithHeader,

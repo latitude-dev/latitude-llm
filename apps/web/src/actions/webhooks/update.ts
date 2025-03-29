@@ -2,9 +2,9 @@
 
 import { z } from 'zod'
 import { authProcedure } from '../procedures'
-import { updateWebhook } from '@latitude-data/core/services'
-import { getWebhook } from '@latitude-data/core/services'
-import { BadRequestError } from '@latitude-data/core/lib'
+import { updateWebhook } from '@latitude-data/core'
+import { getWebhook } from '@latitude-data/core'
+import { BadRequestError } from '@latitude-data/core'
 
 export const updateWebhookAction = authProcedure
   .createServerAction()

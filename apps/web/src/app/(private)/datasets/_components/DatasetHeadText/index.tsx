@@ -1,4 +1,4 @@
-import { DatasetColumnRole } from '@latitude-data/core/browser'
+import { DatasetColumnRole } from '@latitude-data/core'
 import { Text, Tooltip } from '@latitude-data/web-ui'
 
 export function DatasetHeadText({

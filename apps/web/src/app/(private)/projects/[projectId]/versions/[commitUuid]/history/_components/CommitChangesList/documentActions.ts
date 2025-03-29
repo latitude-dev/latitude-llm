@@ -1,5 +1,5 @@
-import { Commit } from '@latitude-data/core/browser'
-import { ChangedDocument } from '@latitude-data/core/repositories'
+import { Commit } from '@latitude-data/core'
+import { ChangedDocument } from '@latitude-data/core'
 import { useCurrentCommit } from '@latitude-data/web-ui/browser'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '$/services/routes'

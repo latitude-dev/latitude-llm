@@ -1,6 +1,6 @@
 import { chunk } from 'lodash-es'
 
-import { setupQueues } from '@latitude-data/core/jobs'
+import { setupQueues } from '@latitude-data/core'
 import { AppRouteHandler } from '$/openApi/types'
 import { CreateTracesRoute } from './traces.route'
 

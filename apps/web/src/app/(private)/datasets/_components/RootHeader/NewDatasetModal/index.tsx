@@ -16,7 +16,7 @@ import {
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useCallback, useState } from 'react'
-import { DatasetV2 } from '@latitude-data/core/browser'
+import { DatasetV2 } from '@latitude-data/core'
 
 export function NewDatasetModalComponent({
   open,

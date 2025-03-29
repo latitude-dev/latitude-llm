@@ -1,7 +1,7 @@
 import {
   EvaluationDto,
   EvaluationResultableType,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 
 import { NumericalCharts } from './Numerical'
 

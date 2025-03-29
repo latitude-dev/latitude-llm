@@ -3,7 +3,7 @@
 import { z } from 'zod'
 
 import { withProject } from '../../procedures'
-import { getChangesToResetProjectToCommit } from '@latitude-data/core/services'
+import { getChangesToResetProjectToCommit } from '@latitude-data/core'
 
 export const getChangesToResetCommitAction = withProject
   .createServerAction()

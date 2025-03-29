@@ -10,7 +10,7 @@ import NodeHeaderWrapper, {
 } from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
-import { DocumentType } from '@latitude-data/core/browser'
+import { DocumentType } from '@latitude-data/core'
 import { IconName } from '../../../../../ds/atoms'
 
 export default function DocumentHeader({

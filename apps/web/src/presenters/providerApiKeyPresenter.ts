@@ -1,4 +1,4 @@
-import type { ProviderApiKey } from '@latitude-data/core/browser'
+import type { ProviderApiKey } from '@latitude-data/core'
 
 export default function providerApiKeyPresenter(
   providerApiKey: ProviderApiKey,

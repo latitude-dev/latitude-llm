@@ -6,9 +6,9 @@ import {
   EvaluationDto,
   EvaluationResultDto,
   ProviderLogDto,
-} from '@latitude-data/core/browser'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import { fetchDocumentLogsWithEvaluationResults } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core'
+import { fetchDocumentLogsWithEvaluationResults } from '@latitude-data/core'
 import {
   cn,
   TableBlankSlate,

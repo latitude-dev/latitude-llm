@@ -8,7 +8,7 @@ import {
   EvaluationMetadataLlmAsJudgeSimple,
   EvaluationMetadataType,
   EvaluationResultableType,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   FormField,
   FormFieldGroup,

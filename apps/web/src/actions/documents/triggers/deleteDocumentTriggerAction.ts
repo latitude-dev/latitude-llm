@@ -1,10 +1,10 @@
 'use server'
 
-import { deleteDocumentTrigger } from '@latitude-data/core/services'
+import { deleteDocumentTrigger } from '@latitude-data/core'
 
 import { withDocument } from '../../procedures'
 import { z } from 'zod'
-import { DocumentTriggersRepository } from '@latitude-data/core/repositories'
+import { DocumentTriggersRepository } from '@latitude-data/core'
 
 export const deleteDocumentTriggerAction = withDocument
   .createServerAction()

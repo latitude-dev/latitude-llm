@@ -1,4 +1,4 @@
-import { EvaluationTemplateWithCategory } from '@latitude-data/core/browser'
+import { EvaluationTemplateWithCategory } from '@latitude-data/core'
 import { Text } from '@latitude-data/web-ui'
 
 import { TemplateEvaluationsTable } from './Table'

@@ -1,5 +1,5 @@
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
-import { generateDocumentLogsApiRouteWithParams } from '@latitude-data/core/services'
+import { DocumentLogFilterOptions } from '@latitude-data/core'
+import { generateDocumentLogsApiRouteWithParams } from '@latitude-data/core'
 
 type PaginationParameters = { page: number; pageSize: number }
 

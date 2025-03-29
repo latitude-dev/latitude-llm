@@ -5,7 +5,7 @@ import {
   DatasetV2,
   DatasetVersion,
   DocumentVersion,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { RunBatchParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'

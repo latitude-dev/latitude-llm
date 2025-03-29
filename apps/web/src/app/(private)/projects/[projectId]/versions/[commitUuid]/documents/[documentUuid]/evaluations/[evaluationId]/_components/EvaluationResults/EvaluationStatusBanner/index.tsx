@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { type EventArgs } from '$/components/Providers/WebsocketsProvider/useSockets'
-import { EvaluationDto } from '@latitude-data/core/browser'
+import { EvaluationDto } from '@latitude-data/core'
 import { Badge, Text } from '@latitude-data/web-ui'
 
 import { isEvaluationRunDone } from '../../../_lib/isEvaluationRunDone'

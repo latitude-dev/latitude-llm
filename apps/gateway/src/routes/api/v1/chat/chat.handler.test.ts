@@ -4,10 +4,10 @@ import {
   LogSources,
   StreamEventTypes,
   Workspace,
-} from '@latitude-data/core/browser'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
-import { createProject } from '@latitude-data/core/factories'
-import { Result } from '@latitude-data/core/lib'
+} from '@latitude-data/core'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core'
+import { createProject } from '@latitude-data/core'
+import { Result } from '@latitude-data/core'
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { testConsumeStream } from 'test/helpers'

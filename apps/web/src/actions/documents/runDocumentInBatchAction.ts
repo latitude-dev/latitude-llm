@@ -1,8 +1,8 @@
 'use server'
 
-import { publisher } from '@latitude-data/core/events'
-import { setupQueues } from '@latitude-data/core/jobs'
-import { CommitsRepository } from '@latitude-data/core/repositories'
+import { publisher } from '@latitude-data/core'
+import { setupQueues } from '@latitude-data/core'
+import { CommitsRepository } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { refineParameters, withDataset } from '../evaluations/_helpers'

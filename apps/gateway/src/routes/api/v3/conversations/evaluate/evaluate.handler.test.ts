@@ -5,16 +5,16 @@ import {
   Providers,
   User,
   Workspace,
-} from '@latitude-data/core/browser'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
+} from '@latitude-data/core'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core'
 import {
   createConnectedEvaluation,
   createDocumentLog,
   createLlmAsJudgeEvaluation,
   createProject,
   helpers,
-} from '@latitude-data/core/factories'
-import { Result } from '@latitude-data/core/lib'
+} from '@latitude-data/core'
+import { Result } from '@latitude-data/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({

@@ -5,9 +5,9 @@ import {
   Workspace,
   evaluationResultsV2SearchFromQueryParams,
   evaluationResultsV2SearchToQueryParams,
-} from '@latitude-data/core/browser'
-import { buildPagination } from '@latitude-data/core/lib'
-import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import { buildPagination } from '@latitude-data/core'
+import { EvaluationResultsV2Repository } from '@latitude-data/core'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(

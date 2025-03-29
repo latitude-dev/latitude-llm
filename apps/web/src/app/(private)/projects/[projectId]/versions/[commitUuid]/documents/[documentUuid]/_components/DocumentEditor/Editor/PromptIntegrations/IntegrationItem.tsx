@@ -1,5 +1,5 @@
 import { integrationOptions } from '$/lib/integrationTypeOptions'
-import { IntegrationDto } from '@latitude-data/core/browser'
+import { IntegrationDto } from '@latitude-data/core'
 import { cn, Icon, Skeleton, Text } from '@latitude-data/web-ui'
 
 export function IntegrationItemPlaceholder() {

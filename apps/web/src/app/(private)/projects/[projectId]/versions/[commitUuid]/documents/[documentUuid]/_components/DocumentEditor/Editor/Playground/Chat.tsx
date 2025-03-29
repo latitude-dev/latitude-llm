@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Message as ConversationMessage } from '@latitude-data/compiler'
-import { type DocumentVersion } from '@latitude-data/core/browser'
+import { type DocumentVersion } from '@latitude-data/core'
 import {
   ChatTextArea,
   ErrorMessage,

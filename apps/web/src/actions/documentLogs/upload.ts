@@ -4,9 +4,9 @@ import {
   DELIMITERS_KEYS,
   MAX_SIZE,
   MAX_UPLOAD_SIZE_IN_MB,
-} from '@latitude-data/core/browser'
-import { CommitsRepository } from '@latitude-data/core/repositories'
-import { bulkUploadDocumentLogs } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { CommitsRepository } from '@latitude-data/core'
+import { bulkUploadDocumentLogs } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { withDocument } from '../procedures'

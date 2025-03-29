@@ -1,10 +1,10 @@
 'use server'
 
-import { forkDocument } from '@latitude-data/core/services'
+import { forkDocument } from '@latitude-data/core'
 
 import { z } from 'zod'
 import { authProcedure } from '../../procedures'
-import { findSharedDocument } from '@latitude-data/core/services'
+import { findSharedDocument } from '@latitude-data/core'
 import { env } from '@latitude-data/env'
 
 export const forkDocumentAction = authProcedure

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import type { User } from '@latitude-data/core/browser'
+import type { User } from '@latitude-data/core'
 import {
   Button,
   Icon,

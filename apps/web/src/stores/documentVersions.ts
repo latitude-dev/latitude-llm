@@ -19,7 +19,7 @@ import {
   MAX_SIZE,
   MAX_UPLOAD_SIZE_IN_MB,
   type DocumentVersion,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { useRouter } from 'next/navigation'
 import useSWR, { SWRConfiguration } from 'swr'

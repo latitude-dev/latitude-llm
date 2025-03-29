@@ -4,9 +4,9 @@ import { createHash } from 'crypto'
 
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { SuggestedEvaluation } from '$/stores/suggestedEvaluations'
-import { ChainStepResponse, CLOUD_MESSAGES } from '@latitude-data/core/browser'
-import { cache } from '@latitude-data/core/cache'
-import { BadRequestError } from '@latitude-data/core/lib'
+import { ChainStepResponse, CLOUD_MESSAGES } from '@latitude-data/core'
+import { cache } from '@latitude-data/core'
+import { BadRequestError } from '@latitude-data/core'
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
 

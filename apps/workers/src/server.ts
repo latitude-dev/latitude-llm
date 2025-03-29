@@ -5,7 +5,7 @@ import express from 'express'
 import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js'
 import { ExpressAdapter } from '@bull-board/express'
-import { setupQueues } from '@latitude-data/core/jobs'
+import { setupQueues } from '@latitude-data/core'
 
 import { captureException, captureMessage } from './utils/sentry'
 import startWorkers from './workers'

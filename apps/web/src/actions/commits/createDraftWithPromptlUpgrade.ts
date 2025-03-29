@@ -1,12 +1,12 @@
 'use server'
 
-import { Commit } from '@latitude-data/core/browser'
+import { Commit } from '@latitude-data/core'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-} from '@latitude-data/core/repositories'
-import { createCommit } from '@latitude-data/core/services'
-import { updateDocument } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { createCommit } from '@latitude-data/core'
+import { updateDocument } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

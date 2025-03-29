@@ -1,5 +1,5 @@
 import usePublishedDocument from '$/stores/publishedDocument'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core'
 import {
   Button,
   CopyButton,

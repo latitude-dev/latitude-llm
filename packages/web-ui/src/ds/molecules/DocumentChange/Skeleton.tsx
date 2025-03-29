@@ -1,4 +1,4 @@
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import { ModifiedDocumentType } from '@latitude-data/core'
 import { MODIFICATION_ICONS } from './colors'
 import { Icon, IconName, Skeleton } from '../../atoms'
 

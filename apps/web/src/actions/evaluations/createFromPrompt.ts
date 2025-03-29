@@ -3,8 +3,8 @@
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
-} from '@latitude-data/core/browser'
-import { createEvaluation } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { createEvaluation } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { withDocument } from '../procedures'

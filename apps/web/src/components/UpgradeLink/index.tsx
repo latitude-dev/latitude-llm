@@ -1,5 +1,5 @@
 import { envClient } from '$/envClient'
-import { FREE_PLANS } from '@latitude-data/core/browser'
+import { FREE_PLANS } from '@latitude-data/core'
 import { useSession } from '@latitude-data/web-ui'
 import Link from 'next/link'
 import { ReactNode } from 'react'

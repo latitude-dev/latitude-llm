@@ -1,13 +1,13 @@
 'use server'
 
 import { z } from 'zod'
-import { updateDatasetRow } from '@latitude-data/core/services'
+import { updateDatasetRow } from '@latitude-data/core'
 import {
   DatasetRowsRepository,
   DatasetsV2Repository,
-} from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
 import { authProcedure } from '$/actions/procedures'
-import { DatasetRowDataContent } from '@latitude-data/core/schema'
+import { DatasetRowDataContent } from '@latitude-data/core'
 
 const rowDataSchema = z.record(
   z.custom<DatasetRowDataContent>((val) => {

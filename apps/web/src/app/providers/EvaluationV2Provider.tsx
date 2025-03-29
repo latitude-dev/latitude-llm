@@ -5,7 +5,7 @@ import {
   EvaluationMetric,
   EvaluationType,
   EvaluationV2,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
 import { createContext, ReactNode, useContext, useMemo } from 'react'
 import { useCurrentDocument } from './DocumentProvider'

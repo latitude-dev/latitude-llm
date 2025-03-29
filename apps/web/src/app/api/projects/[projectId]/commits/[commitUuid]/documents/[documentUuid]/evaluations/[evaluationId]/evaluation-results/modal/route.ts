@@ -1,9 +1,9 @@
-import { Workspace } from '@latitude-data/core/browser'
+import { Workspace } from '@latitude-data/core'
 import {
   CommitsRepository,
   EvaluationsRepository,
-} from '@latitude-data/core/repositories'
-import { getEvaluationModalValueQuery } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { getEvaluationModalValueQuery } from '@latitude-data/core'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'

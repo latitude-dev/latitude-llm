@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-import { ClaimedRewardWithUserInfo } from '@latitude-data/core/browser'
+import { ClaimedRewardWithUserInfo } from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { fetchPendingRewardClaimsAction } from '$/actions/rewards/fetchPendingRewardClaimsAction'
 import { updateRewardClaimValidityAction } from '$/actions/rewards/updateRewardClaimValidityAction'

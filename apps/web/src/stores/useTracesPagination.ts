@@ -1,4 +1,4 @@
-import { SearchFilter } from '@latitude-data/core/browser'
+import { SearchFilter } from '@latitude-data/core'
 import useSWR, { SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'

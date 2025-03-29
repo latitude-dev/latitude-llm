@@ -20,7 +20,7 @@ import {
   EvaluationV2,
   EvaluationV2Stats,
   Project,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { useToast } from '@latitude-data/web-ui'
 import { compact, isEmpty } from 'lodash-es'
 import { useCallback, useMemo } from 'react'

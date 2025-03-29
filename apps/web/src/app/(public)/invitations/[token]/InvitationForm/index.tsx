@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react'
 
-import { Membership, User } from '@latitude-data/core/browser'
+import { Membership, User } from '@latitude-data/core'
 import { Button, FormWrapper, Input, useToast } from '@latitude-data/web-ui'
 import { acceptInvitationAction } from '$/actions/invitations/accept'
 import { useServerAction } from 'zsa-react'

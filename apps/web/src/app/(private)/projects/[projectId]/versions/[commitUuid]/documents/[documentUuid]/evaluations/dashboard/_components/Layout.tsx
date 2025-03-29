@@ -9,7 +9,7 @@ import {
   EvaluationResultableType,
   EvaluationTemplateWithCategory,
   EvaluationV2,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   BlankSlateStep,
   BlankSlateWithSteps,

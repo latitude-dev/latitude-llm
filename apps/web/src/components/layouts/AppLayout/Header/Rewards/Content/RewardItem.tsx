@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 
-import { REWARD_VALUES, RewardType } from '@latitude-data/core/browser'
+import { REWARD_VALUES, RewardType } from '@latitude-data/core'
 import { Button, cn, Icon, Text } from '@latitude-data/web-ui'
 import useRewards from '$/stores/rewards'
 

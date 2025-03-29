@@ -6,7 +6,7 @@ import {
   PlaygroundInput,
   DatasetV2,
   DatasetVersion,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   ClientOnly,
   SelectOption,

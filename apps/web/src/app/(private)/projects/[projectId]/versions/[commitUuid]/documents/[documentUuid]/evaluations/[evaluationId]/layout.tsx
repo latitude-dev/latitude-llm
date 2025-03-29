@@ -10,7 +10,7 @@ import { readMetadata } from '@latitude-data/compiler'
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import { env } from '@latitude-data/env'
 import {
   Breadcrumb,

@@ -4,8 +4,8 @@ import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { Message } from '@latitude-data/compiler'
-import { ProviderApiKey, ProviderLogDto } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import { ProviderApiKey, ProviderLogDto } from '@latitude-data/core'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core'
 import {
   Badge,
   ClickToCopy,
@@ -20,7 +20,7 @@ import {
   MetadataItem,
   MetadataItemTooltip,
 } from '../../../../../[documentUuid]/_components/MetadataItem'
-import { getCostPer1M } from '@latitude-data/core/services'
+import { getCostPer1M } from '@latitude-data/core'
 import {
   asPromptLFile,
   PromptLFileParameter,

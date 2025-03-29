@@ -13,7 +13,7 @@ import {
   applyProviderRules,
   LATITUDE_DOCS_URL,
   ProviderRules,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Adapters,
   ConversationMetadata,

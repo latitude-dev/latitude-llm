@@ -7,7 +7,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
-import { PublishedDocument } from '@latitude-data/core/browser'
+import { PublishedDocument } from '@latitude-data/core'
 import {
   Button,
   ButtonProps,

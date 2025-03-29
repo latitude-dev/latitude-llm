@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { compact } from 'lodash-es'
 import Link from 'next/link'
 
-import { Dataset } from '@latitude-data/core/browser'
+import { Dataset } from '@latitude-data/core'
 import {
   Button,
   dateFormatter,

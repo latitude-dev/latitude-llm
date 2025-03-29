@@ -5,9 +5,9 @@ import {
   DELIMITERS_KEYS,
   MAX_SIZE,
   MAX_UPLOAD_SIZE_IN_MB,
-} from '@latitude-data/core/browser'
-import { DatasetsV2Repository as DatasetsRepository } from '@latitude-data/core/repositories'
-import { createDatasetFromFile } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { DatasetsV2Repository as DatasetsRepository } from '@latitude-data/core'
+import { createDatasetFromFile } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

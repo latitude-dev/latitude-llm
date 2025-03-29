@@ -1,6 +1,6 @@
 'use client'
 
-import { LATITUDE_DOCS_URL } from '@latitude-data/core/browser'
+import { LATITUDE_DOCS_URL } from '@latitude-data/core'
 import {
   Alert,
   Button,

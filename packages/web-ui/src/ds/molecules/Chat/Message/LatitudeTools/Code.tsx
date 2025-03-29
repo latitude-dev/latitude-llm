@@ -1,4 +1,4 @@
-import { CodeToolArgs } from '@latitude-data/core/services'
+import { CodeToolArgs } from '@latitude-data/core'
 import { ContentCard } from '../ContentCard'
 import { CodeBlock } from '../../../../atoms'
 import { ToolContent } from '@latitude-data/compiler'

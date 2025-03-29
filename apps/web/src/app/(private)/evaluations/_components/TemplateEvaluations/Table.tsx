@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { EvaluationTemplateWithCategory } from '@latitude-data/core/browser'
+import { EvaluationTemplateWithCategory } from '@latitude-data/core'
 import {
   Button,
   cn,

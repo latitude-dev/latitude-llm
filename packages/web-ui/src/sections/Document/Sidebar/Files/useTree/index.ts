@@ -1,4 +1,4 @@
-import { DocumentType, ModifiedDocumentType } from '@latitude-data/core/browser'
+import { DocumentType, ModifiedDocumentType } from '@latitude-data/core'
 import { useMemo } from 'react'
 
 export type SidebarDocument = {

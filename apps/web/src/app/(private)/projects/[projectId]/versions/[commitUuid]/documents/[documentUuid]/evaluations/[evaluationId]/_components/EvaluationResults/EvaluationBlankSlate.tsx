@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { EvaluationDto } from '@latitude-data/core/browser'
+import { EvaluationDto } from '@latitude-data/core'
 import {
   CodeBlock,
   TabSelector,

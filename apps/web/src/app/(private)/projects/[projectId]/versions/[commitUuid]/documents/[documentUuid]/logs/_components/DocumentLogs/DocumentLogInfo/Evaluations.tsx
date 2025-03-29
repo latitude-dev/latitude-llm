@@ -16,7 +16,7 @@ import {
   ResultWithEvaluation,
   ResultWithEvaluationTmp,
   ResultWithEvaluationV2,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Button,
   Text,

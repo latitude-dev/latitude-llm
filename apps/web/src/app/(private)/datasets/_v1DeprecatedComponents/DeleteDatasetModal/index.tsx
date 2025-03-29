@@ -1,4 +1,4 @@
-import { Dataset } from '@latitude-data/core/browser'
+import { Dataset } from '@latitude-data/core'
 import { ReactStateDispatch } from '@latitude-data/web-ui'
 import { destroyDatasetAction } from '$/actions/datasets/destroy'
 import DestroyModal from '$/components/modals/DestroyModal'

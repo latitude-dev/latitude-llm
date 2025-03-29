@@ -1,6 +1,6 @@
 import { cache } from 'react'
 
-import { User, Workspace } from '@latitude-data/core/browser'
+import { User, Workspace } from '@latitude-data/core'
 import {
   getCurrentUserFromDB,
   unsafelyGetCurrentUserFromDb,

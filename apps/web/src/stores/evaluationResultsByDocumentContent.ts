@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import {
   EvaluationResultWithMetadata,
   type EvaluationResultByDocument,
-} from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'

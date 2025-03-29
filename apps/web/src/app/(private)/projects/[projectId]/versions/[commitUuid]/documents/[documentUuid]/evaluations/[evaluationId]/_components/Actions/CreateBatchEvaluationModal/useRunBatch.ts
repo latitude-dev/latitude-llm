@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 
 import { runBatchEvaluationAction } from '$/actions/evaluations/runBatch'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
+import { DatasetVersion, DocumentVersion } from '@latitude-data/core'
 
 export type RunBatchParameters = Record<string, number | undefined>
 export function useRunBatch({

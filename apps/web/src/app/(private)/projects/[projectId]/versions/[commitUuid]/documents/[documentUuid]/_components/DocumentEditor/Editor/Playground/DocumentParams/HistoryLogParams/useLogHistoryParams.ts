@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 
-import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
+import { DatasetVersion, DocumentVersion } from '@latitude-data/core'
 import { useCurrentProject } from '@latitude-data/web-ui'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogs from '$/stores/documentLogs'

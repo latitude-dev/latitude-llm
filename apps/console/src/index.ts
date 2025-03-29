@@ -1,6 +1,6 @@
 import repl from 'node:repl'
-import { database, dbUtils } from '@latitude-data/core/client'
-import * as models from '@latitude-data/core/schema'
+import { database, dbUtils } from '@latitude-data/core'
+import * as models from '@latitude-data/core'
 import { setupReplHistory } from './replHistory'
 import * as loadModules from './replReload'
 

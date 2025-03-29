@@ -9,7 +9,7 @@ import { Input } from '../../../../../ds/atoms/Input'
 import Text from '../../../../../ds/atoms/Text'
 import { cn } from '../../../../../lib/utils'
 import { useNodeValidator } from './useNodeValidator'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import { ModifiedDocumentType } from '@latitude-data/core'
 import {
   MODIFICATION_BACKGROUNDS,
   MODIFICATION_COLORS,

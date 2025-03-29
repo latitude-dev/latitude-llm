@@ -8,7 +8,7 @@ import {
   EvaluationMetadataType,
   ProviderApiKey,
   SERIALIZED_DOCUMENT_LOG_FIELDS,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Button,
   DocumentTextEditor,

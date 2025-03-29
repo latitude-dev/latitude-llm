@@ -1,6 +1,6 @@
 'use server'
 
-import { publisher } from '@latitude-data/core/events'
+import { publisher } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

@@ -1,4 +1,4 @@
-import { DOCUMENT_PATH_REGEXP } from '@latitude-data/core/browser'
+import { DOCUMENT_PATH_REGEXP } from '@latitude-data/core'
 import {
   ChangeEventHandler,
   KeyboardEvent,

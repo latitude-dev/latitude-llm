@@ -5,9 +5,9 @@ import { ROUTES } from '$/services/routes'
 import {
   evaluationResultsV2SearchFromQueryParams,
   evaluationResultsV2SearchToQueryParams,
-} from '@latitude-data/core/browser'
-import { QueryParams } from '@latitude-data/core/lib'
-import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import { QueryParams } from '@latitude-data/core'
+import { EvaluationResultsV2Repository } from '@latitude-data/core'
 import { redirect } from 'next/navigation'
 import { EvaluationPage as ClientEvaluationPage } from './_components/EvaluationPage'
 

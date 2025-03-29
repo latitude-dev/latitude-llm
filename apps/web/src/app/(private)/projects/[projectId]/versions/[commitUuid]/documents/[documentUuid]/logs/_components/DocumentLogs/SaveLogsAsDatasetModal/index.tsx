@@ -10,7 +10,7 @@ import {
 import { type PreviewLogsState as Props } from './useSelectedLogs'
 import { PreviewTable } from './PreviewTable'
 import useDatasets from '$/stores/datasetsV2'
-import { DatasetV2 } from '@latitude-data/core/browser'
+import { DatasetV2 } from '@latitude-data/core'
 
 function ExistingDatasetSelector({
   selectedDataset,

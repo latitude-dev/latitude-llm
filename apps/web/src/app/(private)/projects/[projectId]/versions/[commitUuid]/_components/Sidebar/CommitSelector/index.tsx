@@ -13,7 +13,7 @@ import {
   DocumentVersion,
   HELP_CENTER,
   type Commit,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Button,
   ReactStateDispatch,

@@ -4,7 +4,7 @@ import { AssistantMessage, Message, MessageRole } from '@latitude-data/compiler'
 import {
   ProviderLogDto,
   SERIALIZED_DOCUMENT_LOG_FIELDS,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   AppLocalStorage,
   MessageList,

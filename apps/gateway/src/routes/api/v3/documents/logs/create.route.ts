@@ -1,5 +1,5 @@
 import http from '$/common/http'
-import { LogSources, messageSchema } from '@latitude-data/core/browser'
+import { LogSources, messageSchema } from '@latitude-data/core'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import { ROUTES } from '$/routes'
 import { documentParamsSchema } from '$/routes/api/v2/documents/paramsSchema'

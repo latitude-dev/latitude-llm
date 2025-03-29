@@ -1,4 +1,4 @@
-import { McpServer } from '@latitude-data/core/browser'
+import { McpServer } from '@latitude-data/core'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useState } from 'react'
 

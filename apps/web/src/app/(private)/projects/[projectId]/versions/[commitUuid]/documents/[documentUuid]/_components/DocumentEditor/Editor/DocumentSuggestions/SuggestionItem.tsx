@@ -3,7 +3,7 @@ import useDocumentSuggestions from '$/stores/documentSuggestions'
 import {
   DocumentSuggestionWithDetails,
   DocumentVersion,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   Button,
   ConfirmModal,

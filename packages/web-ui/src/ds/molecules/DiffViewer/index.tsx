@@ -3,7 +3,7 @@
 import React, { lazy, useEffect, useState } from 'react'
 
 import { TextEditorPlaceholder } from '../TextEditorPlaceholder'
-import { DiffValue } from '@latitude-data/core/browser'
+import { DiffValue } from '@latitude-data/core'
 
 const DiffViewer = lazy(() =>
   import('./Editor/index').then(

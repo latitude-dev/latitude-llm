@@ -1,6 +1,6 @@
 'use client'
 
-import type { DocumentVersion, Evaluation } from '@latitude-data/core/browser'
+import type { DocumentVersion, Evaluation } from '@latitude-data/core'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'

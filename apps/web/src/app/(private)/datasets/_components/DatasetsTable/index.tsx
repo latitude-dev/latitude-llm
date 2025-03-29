@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { DatasetV2 } from '@latitude-data/core/browser'
+import { DatasetV2 } from '@latitude-data/core'
 import {
   Button,
   dateFormatter,
@@ -18,7 +18,7 @@ import {
 import useDatasets from '$/stores/datasetsV2'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { useSearchParams } from 'next/navigation'
-import { buildPagination } from '@latitude-data/core/lib'
+import { buildPagination } from '@latitude-data/core'
 import { ROUTES } from '$/services/routes'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 

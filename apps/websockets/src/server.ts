@@ -6,12 +6,12 @@ import {
   WebServerToClientEvents,
   WebSocketData,
   WorkersClientToServerEvents,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core'
 import {
   buildWorkspaceRoom,
   verifyWebsocketToken,
   verifyWorkerWebsocketToken,
-} from '@latitude-data/core/websockets'
+} from '@latitude-data/core'
 import { env } from '@latitude-data/env'
 import cookieParser from 'cookie-parser'
 import express from 'express'

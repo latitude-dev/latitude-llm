@@ -4,9 +4,9 @@ import {
   DocumentVersion,
   Project,
   ULTRA_LARGE_PAGE_SIZE,
-} from '@latitude-data/core/browser'
-import { paginateQuery } from '@latitude-data/core/lib'
-import { CommitsRepository } from '@latitude-data/core/repositories'
+} from '@latitude-data/core'
+import { paginateQuery } from '@latitude-data/core'
+import { CommitsRepository } from '@latitude-data/core'
 import { DocumentSidebar } from '@latitude-data/web-ui'
 import {
   getDocumentsAtCommitCached,

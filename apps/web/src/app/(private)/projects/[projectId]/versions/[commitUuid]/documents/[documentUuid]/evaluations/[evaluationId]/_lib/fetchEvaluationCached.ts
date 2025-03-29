@@ -1,6 +1,6 @@
 import { cache } from 'react'
 
-import { EvaluationsRepository } from '@latitude-data/core/repositories'
+import { EvaluationsRepository } from '@latitude-data/core'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 export const fetchEvaluationCached = cache(async (id: number) => {

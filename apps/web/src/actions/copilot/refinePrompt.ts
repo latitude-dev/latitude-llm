@@ -1,16 +1,16 @@
 'use server'
 
 import { createSdk } from '$/app/(private)/_lib/createSdk'
-import { CLOUD_MESSAGES } from '@latitude-data/core/browser'
-import { publisher } from '@latitude-data/core/events'
-import { BadRequestError } from '@latitude-data/core/lib'
+import { CLOUD_MESSAGES } from '@latitude-data/core'
+import { publisher } from '@latitude-data/core'
+import { BadRequestError } from '@latitude-data/core'
 import {
   DocumentVersionsRepository,
   EvaluationResultsRepository,
   EvaluationsRepository,
-} from '@latitude-data/core/repositories'
-import { serialize } from '@latitude-data/core/services'
-import { getEvaluationPrompt } from '@latitude-data/core/services'
+} from '@latitude-data/core'
+import { serialize } from '@latitude-data/core'
+import { getEvaluationPrompt } from '@latitude-data/core'
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
 import { authProcedure } from '../procedures'

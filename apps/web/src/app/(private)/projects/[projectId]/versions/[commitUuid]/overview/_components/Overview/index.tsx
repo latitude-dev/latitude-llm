@@ -1,6 +1,6 @@
 'use client'
 
-import { Project, ProjectStats } from '@latitude-data/core/browser'
+import { Project, ProjectStats } from '@latitude-data/core'
 import useProjectStats from '$/stores/projectStats'
 
 import { StatsPanels } from './StatsPanels'

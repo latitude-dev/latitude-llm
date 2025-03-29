@@ -1,6 +1,6 @@
 'use server'
 
-import { createCommit } from '@latitude-data/core/services'
+import { createCommit } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

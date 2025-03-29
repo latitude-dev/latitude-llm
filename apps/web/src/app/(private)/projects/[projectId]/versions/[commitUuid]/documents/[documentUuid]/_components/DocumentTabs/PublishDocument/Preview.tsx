@@ -1,4 +1,4 @@
-import { DocumentVersion, PublishedDocument } from '@latitude-data/core/browser'
+import { DocumentVersion, PublishedDocument } from '@latitude-data/core'
 import { Skeleton, Text } from '@latitude-data/web-ui'
 
 function Dot() {

@@ -1,7 +1,7 @@
 import { ChangeEvent, useCallback, useMemo } from 'react'
 
 import useFiles from '$/stores/files'
-import { SUPPORTED_IMAGE_TYPES } from '@latitude-data/core/browser'
+import { SUPPORTED_IMAGE_TYPES } from '@latitude-data/core'
 import { DropzoneInput, Skeleton, TextArea } from '@latitude-data/web-ui'
 import { ParameterType } from '@latitude-data/constants'
 import { isPromptLFile } from 'promptl-ai'

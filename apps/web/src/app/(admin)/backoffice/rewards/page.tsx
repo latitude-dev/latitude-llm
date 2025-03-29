@@ -1,6 +1,6 @@
 'use client'
 
-import { RewardType } from '@latitude-data/core/browser'
+import { RewardType } from '@latitude-data/core'
 import {
   Button,
   ClickToCopy,

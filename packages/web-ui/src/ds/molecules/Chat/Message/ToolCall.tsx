@@ -5,9 +5,9 @@ import { ToolCallContent as PromptlToolCall } from 'promptl-ai'
 import { CodeLatitudeToolCallContent } from './LatitudeTools/Code'
 import { WebSearchLatitudeToolCallContent } from './LatitudeTools/Search'
 import { WebExtractLatitudeToolCallContent } from './LatitudeTools/Extract'
-import type { CodeToolArgs } from '@latitude-data/core/services'
-import type { SearchToolArgs } from '@latitude-data/core/services'
-import type { ExtractToolArgs } from '@latitude-data/core/services'
+import type { CodeToolArgs } from '@latitude-data/core'
+import type { SearchToolArgs } from '@latitude-data/core'
+import type { ExtractToolArgs } from '@latitude-data/core'
 import { SubAgentToolCallContent } from './LatitudeTools/SubAgent'
 import {
   AGENT_RETURN_TOOL_NAME,

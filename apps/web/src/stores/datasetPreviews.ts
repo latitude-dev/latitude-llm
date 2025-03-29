@@ -1,5 +1,5 @@
-import type { Dataset } from '@latitude-data/core/browser'
-import { CsvParsedData } from '@latitude-data/core/lib'
+import type { Dataset } from '@latitude-data/core'
+import { CsvParsedData } from '@latitude-data/core'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import { SWRConfiguration } from 'swr'
