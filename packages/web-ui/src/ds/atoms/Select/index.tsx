@@ -50,7 +50,6 @@ export type SelectProps<V extends unknown = unknown> = Omit<
   required?: boolean
   onChange?: (value: V) => void
   width?: 'auto' | 'full'
-  zIndex?: number
 }
 export function Select<V extends unknown = unknown>({
   name,
@@ -67,7 +66,6 @@ export function Select<V extends unknown = unknown>({
   info,
   onChange,
   width = 'full',
-  zIndex,
   disabled = false,
   required = false,
 }: SelectProps<V>) {
@@ -115,7 +113,7 @@ export function Select<V extends unknown = unknown>({
               />
             </SelectTrigger>
           )}
-          <SelectContent className={cn({ 'z-[100]': zIndex === 100 })}>
+          <SelectContent className='z-[70]'>
             <SelectGroup>
               <Options options={options as SelectOption<V>[]} />
             </SelectGroup>
