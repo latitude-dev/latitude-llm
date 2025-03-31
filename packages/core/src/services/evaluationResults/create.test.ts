@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
-import { EvaluationResultableType, Providers } from '../../constants'
+import { EvaluationResultableType } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { generateUUIDIdentifier } from '../../lib'
 import {
   evaluationResultableBooleans,

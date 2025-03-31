@@ -8,7 +8,8 @@ import {
   User,
   Workspace,
 } from '../../browser'
-import { EvaluationMetadataType, Providers } from '../../constants'
+import { EvaluationMetadataType } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { EvaluationResultByDocument } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { updateDocument } from '../documents'

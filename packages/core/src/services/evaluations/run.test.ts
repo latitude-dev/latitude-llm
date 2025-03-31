@@ -20,12 +20,8 @@ import {
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
-import {
-  ChainStepResponse,
-  ErrorableEntity,
-  LogSources,
-  Providers,
-} from '../../constants'
+import { ChainStepResponse, ErrorableEntity, LogSources } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib'
 import * as generateUUIDModule from '../../lib/generateUUID'

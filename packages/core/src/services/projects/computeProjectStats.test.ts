@@ -14,8 +14,8 @@ import {
   EvaluationType,
   EvaluationV2,
   LlmEvaluationMetric,
-  Providers,
 } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { evaluationVersions } from '../../schema'
 import * as factories from '../../tests/factories'
 import { computeProjectStats } from './computeProjectStats'

@@ -4,7 +4,8 @@ import { LanguageModelUsage, TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { processResponse } from '.'
-import { LogSources, Providers } from '../../../constants'
+import { LogSources } from '../../../constants'
+import { Providers } from '@latitude-data/constants'
 import { generateUUIDIdentifier } from '../../../lib'
 import {
   AsyncStreamIteable,

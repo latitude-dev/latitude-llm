@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { Dataset, DocumentVersion } from '../../browser'
-import { DatasetVersion, Providers } from '../../constants'
+import { DatasetVersion } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { saveLinkedDataset } from './saveLinkedDataset'
 import { DocumentVersionsRepository } from '../../repositories'

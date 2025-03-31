@@ -12,9 +12,9 @@ import {
   ErrorableEntity,
   LogSources,
   PromptSource,
-  Providers,
   StreamEventTypes,
 } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { Result, TypedResult } from '../../lib'
 import * as factories from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'

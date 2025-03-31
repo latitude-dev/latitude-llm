@@ -6,9 +6,9 @@ import { ProviderApiKey, User } from '../../../browser'
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
-  Providers,
   SERIALIZED_DOCUMENT_LOG_FIELDS,
 } from '../../../constants'
+import { Providers } from '@latitude-data/constants'
 import * as factories from '../../../tests/factories'
 import { createEvaluation } from '../create'
 

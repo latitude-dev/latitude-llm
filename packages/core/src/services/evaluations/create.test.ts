@@ -9,8 +9,8 @@ import {
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
-  Providers,
 } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { EvaluationsRepository, WorkspacesRepository } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { createAdvancedEvaluation, createEvaluation } from './create'

@@ -9,10 +9,10 @@ import { ChainStreamConsumer } from '.'
 import {
   LegacyChainEventTypes,
   ChainStepResponse,
-  Providers,
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
+import { Providers } from '@latitude-data/constants'
 import * as factories from '../../../tests/factories'
 import { ChainError } from '../ChainErrors'
 import { ValidatedChainStep } from '../../../services/chains/ChainValidator'
