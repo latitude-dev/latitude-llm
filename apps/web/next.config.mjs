@@ -3,7 +3,6 @@ import { withSentryConfig } from '@sentry/nextjs'
 const INTERNAL_PACKAGES = [
   '@latitude-data/web-ui',
   '@latitude-data/env',
-  '@latitude-data/core',
   '@latitude-data/constants',
 ]
 

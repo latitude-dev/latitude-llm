@@ -10,8 +10,8 @@ const dependencies = getDependencies('./package.json')
 const common = ['src/index.ts', 'src/browser.ts']
 const entries =
   process.env.NODE_ENV === 'test'
-    ? common
-    : [...common, 'src/tests/factories/index.ts', 'src/tests/index.ts']
+    ? [...common, 'src/tests/factories/index.ts', 'src/tests/index.ts']
+    : common
 
 export default defineConfig({
   entry: entries,
