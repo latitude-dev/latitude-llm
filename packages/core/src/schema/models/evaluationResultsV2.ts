@@ -13,6 +13,8 @@ import {
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
+import { datasetRows } from './datasetRows'
+import { datasetsV2 } from './datasetsV2'
 import { providerLogs } from './providerLogs'
 import { workspaces } from './workspaces'
 
@@ -30,6 +32,14 @@ export const evaluationResultsV2 = latitudeSchema.table(
     evaluationUuid: uuid('evaluation_uuid').notNull(),
     experimentId: bigint('experiment_id', { mode: 'number' }),
     // .references(() => experiments.id, { onDelete: 'restrict' }), // TODO: Add this when experiment table is created
+    datasetId: bigint('dataset_id', { mode: 'number' }).references(
+      () => datasetsV2.id,
+      { onDelete: 'set null' },
+    ),
+    evaluatedRowId: bigint('evaluated_row_id', { mode: 'number' }).references(
+      () => datasetRows.id,
+      { onDelete: 'set null' },
+    ),
     evaluatedLogId: bigint('evaluated_log_id', { mode: 'number' })
       .notNull()
       .references(() => providerLogs.id, { onDelete: 'cascade' }),
@@ -54,6 +64,12 @@ export const evaluationResultsV2 = latitudeSchema.table(
     ),
     experimentIdIdx: index('evaluation_results_v2_experiment_id_idx').on(
       table.experimentId,
+    ),
+    datasetIdIdx: index('evaluation_results_v2_dataset_id_idx').on(
+      table.datasetId,
+    ),
+    evaluatedRowIdIdx: index('evaluation_results_v2_evaluated_row_id_idx').on(
+      table.evaluatedRowId,
     ),
     evaluatedLogIdIdx: index('evaluation_results_v2_evaluated_log_id_idx').on(
       table.evaluatedLogId,

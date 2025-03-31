@@ -1,4 +1,5 @@
-import { pgTable, jsonb, bigserial, bigint, index } from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, jsonb } from 'drizzle-orm/pg-core'
+import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { datasetsV2 } from './datasetsV2'
 import { workspaces } from './workspaces'
@@ -14,7 +15,7 @@ export type DatasetRowData = {
   [key: string]: DatasetRowDataContent
 }
 
-export const datasetRows = pgTable(
+export const datasetRows = latitudeSchema.table(
   'dataset_rows',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
