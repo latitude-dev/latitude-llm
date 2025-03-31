@@ -1,13 +1,10 @@
 'use client'
-
-import {
-  Button,
-  CloseTrigger,
-  FormWrapper,
-  Input,
-  Modal,
-  useToast,
-} from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { useFormAction } from '$/hooks/useFormAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'

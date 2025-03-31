@@ -1,4 +1,7 @@
-import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 

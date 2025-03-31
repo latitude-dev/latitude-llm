@@ -1,7 +1,9 @@
 import { useCallback, useEffect } from 'react'
 
 import { DocumentVersion, EvaluationTmp } from '@latitude-data/core/browser'
-import { Button, CloseTrigger, Modal } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 
 import { useMetadata } from '$/hooks/useMetadata'
 import DatasetForm from './DatasetForm'

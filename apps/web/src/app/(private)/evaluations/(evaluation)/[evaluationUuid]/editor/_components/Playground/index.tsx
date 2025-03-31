@@ -1,5 +1,4 @@
 'use client'
-
 import { useMemo, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
@@ -7,7 +6,10 @@ import {
   formatContext,
   formatConversation,
 } from '@latitude-data/core/services/providerLogs/serializeForEvaluation'
-import { Button, Icon, TableBlankSlate, Text } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ROUTES } from '$/services/routes'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
 import useEvaluations from '$/stores/evaluations'

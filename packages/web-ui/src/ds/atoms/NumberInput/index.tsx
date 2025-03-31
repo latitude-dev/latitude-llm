@@ -1,5 +1,4 @@
 'use client'
-
 import {
   forwardRef,
   useCallback,
@@ -8,7 +7,9 @@ import {
   useRef,
   useState,
 } from 'react'
-import { Button, FormField, Input, InputProps, type FormFieldProps } from '..'
+import { Button } from '../Button'
+import { FormField, FormFieldProps } from '../FormField'
+import { Input, InputProps } from '../Input'
 import { cn } from '../../../lib/utils'
 
 export type NumberInputProps = {

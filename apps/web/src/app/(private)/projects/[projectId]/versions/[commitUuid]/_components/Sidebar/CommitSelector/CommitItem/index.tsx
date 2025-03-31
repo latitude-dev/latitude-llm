@@ -1,5 +1,4 @@
 'use client'
-
 import { useMemo } from 'react'
 
 import {
@@ -8,15 +7,15 @@ import {
   User,
   type Commit,
 } from '@latitude-data/core/browser'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
-  Badge,
-  Button,
-  cn,
-  ReactStateDispatch,
-  Text,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { useSelectedLayoutSegment } from 'next/navigation'

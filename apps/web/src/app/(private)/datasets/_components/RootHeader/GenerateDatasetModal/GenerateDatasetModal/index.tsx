@@ -1,7 +1,7 @@
 import { FormEvent } from 'react'
 
 import { useServerAction } from 'zsa-react'
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { generateDatasetAction } from '$/actions/datasetsV2/generateDataset'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'

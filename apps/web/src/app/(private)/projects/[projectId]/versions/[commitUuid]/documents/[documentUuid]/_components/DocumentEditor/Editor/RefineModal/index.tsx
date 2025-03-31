@@ -2,7 +2,7 @@ import { ReactNode, useMemo, useState } from 'react'
 
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
 import { type EvaluationResultByDocument } from '@latitude-data/core/repositories'
-import { Modal } from '@latitude-data/web-ui'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 
 import { SelectEvaluation } from './steps/1_SelectEvaluation'
 import { SelectEvaluationResults } from './steps/2_SelectEvaluationResults'

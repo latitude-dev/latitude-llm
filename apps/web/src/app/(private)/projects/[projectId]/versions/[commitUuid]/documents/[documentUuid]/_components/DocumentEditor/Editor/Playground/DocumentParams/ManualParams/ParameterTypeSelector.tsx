@@ -6,12 +6,10 @@ import {
   InputSource,
   PlaygroundInput,
 } from '@latitude-data/core/browser'
-import {
-  Icon,
-  Select,
-  SelectTriggerPrimitive,
-  Tooltip,
-} from '@latitude-data/web-ui'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { SelectTriggerPrimitive } from '@latitude-data/web-ui/atoms/Select'
 import { ParameterType } from '@latitude-data/constants'
 
 const ParameterTypes = Object.values(ParameterType) as string[]

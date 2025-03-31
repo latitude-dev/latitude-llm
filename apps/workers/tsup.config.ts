@@ -2,8 +2,12 @@ import { readFileSync } from 'fs'
 
 import { defineConfig } from 'tsup'
 
-const getDependencies = (path: string) =>
-  Object.keys(JSON.parse(readFileSync(path, 'utf-8')).dependencies)
+const getDependencies = (path: string) => {
+  const deps = JSON.parse(readFileSync(path, 'utf-8')).dependencies
+  if (!deps) return []
+
+  return Object.keys(deps)
+}
 
 const rootDependencies = getDependencies('../../package.json')
 const dependencies = getDependencies('./package.json')
@@ -22,7 +26,7 @@ export default defineConfig({
     // So we just tell it to ignore it using 'empty' loader
     '.html': 'empty',
   },
-  external: [...rootDependencies, ...dependencies],
+  external: [...rootDependencies, ...dependencies, 'consolidate'],
   noExternal: [
     '@latitude-data/env',
     '@latitude-data/core',

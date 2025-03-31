@@ -4,11 +4,9 @@ import {
   ModifiedDocumentType,
 } from '@latitude-data/core/browser'
 import { ChangedDocument } from '@latitude-data/core/repositories'
-import {
-  DocumentChange,
-  DocumentChangeSkeleton,
-  Text,
-} from '@latitude-data/web-ui'
+import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { DocumentChangeSkeleton } from '@latitude-data/web-ui/molecules/DocumentChange'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import { useCommitsChanges } from '$/stores/commitChanges'
 import {

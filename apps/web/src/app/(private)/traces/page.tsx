@@ -1,5 +1,5 @@
 import { listTraces } from '@latitude-data/core/services/traces/list'
-import { TableWithHeader } from '@latitude-data/web-ui'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { getApiKeysCached } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { TracesTable } from './_components/TracesTable'

@@ -8,7 +8,7 @@ import {
   ToolMessage,
 } from '@latitude-data/compiler'
 
-import { Message } from '../Message'
+import { Message } from '..'
 import type { AgentToolsMap } from '@latitude-data/constants'
 import { useToolContentMap } from '../../../../lib/hooks/useToolContentMap'
 

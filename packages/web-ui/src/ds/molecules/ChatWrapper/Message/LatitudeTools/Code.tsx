@@ -1,6 +1,6 @@
 import { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
 import { ContentCard } from '../ContentCard'
-import { CodeBlock } from '../../../../atoms'
+import { CodeBlock } from '../../../../atoms/CodeBlock'
 import { ToolContent } from '@latitude-data/compiler'
 import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 

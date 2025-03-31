@@ -337,4 +337,4 @@ namespace Text {
   })
 }
 
-export default Text
+export { Text }

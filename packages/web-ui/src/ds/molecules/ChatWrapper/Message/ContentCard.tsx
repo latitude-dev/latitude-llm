@@ -1,5 +1,7 @@
 import { cn } from '../../../../lib/utils'
-import { Button, Icon, IconName, Text } from '../../../atoms'
+import { Button } from '../../../atoms/Button'
+import { Icon, IconName } from '../../../atoms/Icons'
+import { Text } from '../../../atoms/Text'
 import { TruncatedTooltip } from '../../TruncatedTooltip'
 import { ReactNode } from 'react'
 import { BackgroundColor, colors, TextColor } from '../../../tokens'

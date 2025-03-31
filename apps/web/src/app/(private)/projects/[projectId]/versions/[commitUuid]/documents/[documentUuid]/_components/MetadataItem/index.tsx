@@ -1,7 +1,11 @@
 import { ReactNode } from 'react'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
-import { Icon, Skeleton, Text, TextColor, Tooltip } from '@latitude-data/web-ui'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextColor } from '@latitude-data/web-ui/tokens'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { FinishReason } from 'ai'
 
 const REASONS_FINISH: Record<FinishReason, string> = {

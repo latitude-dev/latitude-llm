@@ -1,6 +1,7 @@
 import { ButtonHTMLAttributes, ReactNode } from 'react'
 
-import { Button, Text } from '../../atoms'
+import { Button } from '../../atoms/Button'
+import { Text } from '../../atoms/Text'
 
 export function LinkButtonStyle({
   children,

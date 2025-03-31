@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 
 import { TraceWithSpans } from '@latitude-data/core/browser'
-import { Text } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { formatDuration } from '$/app/_lib/formatUtils'
 
 type SpanNode = {

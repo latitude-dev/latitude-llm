@@ -5,10 +5,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Text,
-  TableSkeleton,
-  cn,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { cn } from '@latitude-data/web-ui/utils'
 import { type OutputItem } from '../useSelectedLogs'
 import { Column } from '@latitude-data/core/schema'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'

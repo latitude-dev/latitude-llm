@@ -1,5 +1,4 @@
 'use client'
-
 import { useCallback, useMemo } from 'react'
 
 import useAverageResultOverTime from '$/stores/evaluationResultCharts/numericalResults/averageResultOverTimeStore'
@@ -7,12 +6,12 @@ import {
   EvaluationConfigurationNumerical,
   EvaluationDto,
 } from '@latitude-data/core/browser'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
-  AreaChart,
-  Text,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
+import { AreaChart } from '@latitude-data/web-ui/molecules/Charts'
 import { useDebouncedCallback } from 'use-debounce'
 
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'

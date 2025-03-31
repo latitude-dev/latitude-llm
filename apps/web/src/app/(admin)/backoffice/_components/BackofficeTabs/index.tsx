@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react'
 
-import { TabSelector } from '@latitude-data/web-ui'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { useNavigate } from '$/hooks/useNavigate'
 import { BackofficeRoutes, ROUTES } from '$/services/routes'
 import { useSelectedLayoutSegment } from 'next/navigation'

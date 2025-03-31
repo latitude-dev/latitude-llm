@@ -1,7 +1,8 @@
 import { useCommitsChanges } from '$/stores/commitChanges'
 import { useDocumentDiff } from '$/stores/documentDiff'
 import { Commit } from '@latitude-data/core/browser'
-import { DiffViewer, TextEditorPlaceholder } from '@latitude-data/web-ui'
+import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
+import { DiffViewer } from '@latitude-data/web-ui/molecules/DiffViewer'
 
 export function ChangeDiffViewer({
   commit,

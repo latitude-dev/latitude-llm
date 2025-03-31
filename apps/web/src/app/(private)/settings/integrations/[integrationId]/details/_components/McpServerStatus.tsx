@@ -1,6 +1,7 @@
 'use client'
-
-import { Text, DotIndicator, Tooltip } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { capitalize } from 'lodash-es'
 import { useMcpServer } from '$/stores/mcpServer'
 import { McpServer } from '@latitude-data/core/browser'

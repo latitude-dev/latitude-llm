@@ -1,8 +1,8 @@
 'use client'
-
 import { ReactNode, useEffect, useState } from 'react'
-
-import { Icon, IconName, Text, cn } from '@latitude-data/web-ui'
+import { Icon, IconName } from '../../atoms/Icons'
+import { Text } from '../../atoms/Text'
+import { cn } from '../../../lib/utils'
 
 export const COLLAPSED_BOX_HEIGHT = 56
 

@@ -4,7 +4,11 @@ import { Props } from '../index'
 
 import { ParameterInput } from '$/components/ParameterInput'
 import { ParameterType } from '@latitude-data/constants'
-import { Badge, ClientOnly, Icon, Text, Tooltip } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ParameterTypeSelector } from './ParameterTypeSelector'
 
 export function ManualParams({

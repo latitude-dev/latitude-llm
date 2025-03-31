@@ -7,12 +7,10 @@ import {
   EvaluationType,
   EvaluationV2Stats,
 } from '@latitude-data/core/browser'
-import {
-  AreaChart,
-  ChartBlankSlate,
-  ChartWrapper,
-  Text,
-} from '@latitude-data/web-ui'
+import { ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
+import { AreaChart } from '@latitude-data/web-ui/molecules/Charts'
 import { format } from 'date-fns'
 import { useMemo } from 'react'
 

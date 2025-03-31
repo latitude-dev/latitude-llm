@@ -6,8 +6,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Text,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 interface CsvPreviewTableProps {
   csvData: CsvData

@@ -1,16 +1,15 @@
 'use client'
-
 import { useCallback } from 'react'
 
 import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import {
-  Button,
-  CloseTrigger,
-  Modal,
   useCurrentCommit,
   useCurrentProject,
-  useToast,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { runDocumentInBatchAction } from '$/actions/documents/runDocumentInBatchAction'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useLatitudeAction from '$/hooks/useLatitudeAction'

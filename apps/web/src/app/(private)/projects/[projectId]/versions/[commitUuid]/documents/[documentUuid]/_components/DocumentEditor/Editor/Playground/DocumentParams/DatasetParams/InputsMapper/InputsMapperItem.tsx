@@ -1,13 +1,10 @@
-import {
-  Badge,
-  Button,
-  Icon,
-  Select,
-  SelectOption,
-  Skeleton,
-  Text,
-  Tooltip,
-} from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { DatasetVersion, InputSource } from '@latitude-data/core/browser'
 
 type SelectValueType<V extends DatasetVersion> = V extends DatasetVersion.V1

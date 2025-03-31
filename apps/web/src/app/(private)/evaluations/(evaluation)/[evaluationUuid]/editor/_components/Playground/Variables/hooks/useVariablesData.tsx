@@ -5,7 +5,9 @@ import {
   formatContext,
   formatConversation,
 } from '@latitude-data/core/services/providerLogs/serializeForEvaluation'
-import { Button, Icon, Tooltip } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
 
 import { PinnedDocumentation } from '../components/PinnedDocumentation'

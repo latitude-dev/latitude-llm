@@ -5,12 +5,10 @@ import NextTopLoader from 'nextjs-toploader'
 
 import '@latitude-data/web-ui/styles.css'
 
-import {
-  ThemeProvider,
-  THEMES,
-  ToastProvider,
-  TooltipProvider,
-} from '@latitude-data/web-ui'
+import { ThemeProvider } from '@latitude-data/web-ui/providers'
+import { TooltipProvider } from '@latitude-data/web-ui/atoms/Tooltip'
+import { THEMES } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
+import { ToastProvider } from '@latitude-data/web-ui/atoms/Toast'
 import { fontMono, fontSans } from '$/helpers/fonts'
 import { SWRProvider } from '$/components/Providers/SWRProvider'
 

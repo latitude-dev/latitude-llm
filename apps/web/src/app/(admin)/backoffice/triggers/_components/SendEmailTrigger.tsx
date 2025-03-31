@@ -1,8 +1,10 @@
 'use client'
-
 import { manualEmailTriggerAction } from '$/actions/admin/documentTriggers/manualTrigger/email'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { Button, FormWrapper, Input, TextArea } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { ChangeEvent, FormEvent, useCallback, useState } from 'react'
 
 export default function SendEmailTrigger() {

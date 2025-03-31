@@ -1,17 +1,16 @@
 'use client'
-
 import {
   EvaluationDto,
   EvaluationMetadataType,
 } from '@latitude-data/core/browser'
 import {
   AppLocalStorage,
-  Button,
-  Icon,
-  Modal,
-  Text,
   useLocalStorage,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
 
 export function PromptlNotificationModal({

@@ -6,7 +6,7 @@ import Editor, { Monaco } from '@monaco-editor/react'
 import { MarkerSeverity, type editor } from 'monaco-editor'
 
 import { TextEditorPlaceholder } from '../../TextEditorPlaceholder'
-import type { DocumentError } from '../types'
+import { DocumentError } from '../types'
 import { registerActions } from './actions'
 import { EditorWrapper } from './EditorWrapper'
 import { useEditorOptions } from './useEditorOptions'

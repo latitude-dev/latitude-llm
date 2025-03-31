@@ -1,4 +1,6 @@
-import { cn, CopyButton, Text } from '@latitude-data/web-ui'
+import { cn } from '@latitude-data/web-ui/utils'
+import { CopyButton } from '@latitude-data/web-ui/atoms/CopyButton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { MessagesList } from './MessagesList'
 

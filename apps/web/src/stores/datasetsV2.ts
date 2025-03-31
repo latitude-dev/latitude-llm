@@ -1,6 +1,6 @@
 import type { DatasetV2 } from '@latitude-data/core/browser'
 import { compact } from 'lodash-es'
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createDatasetAction } from '$/actions/datasetsV2/create'
 import { destroyDatasetAction } from '$/actions/datasetsV2/destroy'
 import useFetcher from '$/hooks/useFetcher'

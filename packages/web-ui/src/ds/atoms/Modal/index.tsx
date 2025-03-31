@@ -5,7 +5,7 @@ import { ReactNode } from 'react'
 import { cn } from '../../../lib/utils'
 import { Alert } from '../Alert'
 import { Button } from '../Button'
-import Text from '../Text'
+import { Text } from '../Text'
 import {
   Dialog,
   DialogClose,

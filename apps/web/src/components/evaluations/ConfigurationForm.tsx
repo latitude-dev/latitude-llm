@@ -3,7 +3,7 @@ import {
   EvaluationMetric,
   EvaluationType,
 } from '@latitude-data/constants'
-import { SelectableSwitch } from '@latitude-data/web-ui'
+import { SelectableSwitch } from '@latitude-data/web-ui/molecules/SelectableSwitch'
 import { useEffect, useState } from 'react'
 import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
 

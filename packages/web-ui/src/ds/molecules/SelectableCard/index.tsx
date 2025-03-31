@@ -1,6 +1,6 @@
 import { cn } from '../../../lib/utils'
 import { Icon } from '../../atoms/Icons'
-import Text from '../../atoms/Text'
+import { Text } from '../../atoms/Text'
 
 export function SelectableCard({
   title,

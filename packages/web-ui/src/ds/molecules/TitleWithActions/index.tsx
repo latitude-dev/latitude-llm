@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { Text } from '../../atoms'
+import { Text } from '../../atoms/Text'
 
 export const TitleWithActions = ({
   title,

@@ -1,12 +1,10 @@
 import { FormEvent, useCallback, useMemo, useState } from 'react'
-import {
-  Modal,
-  Button,
-  Select,
-  CloseTrigger,
-  RadioButtonsInput,
-  Input,
-} from '@latitude-data/web-ui'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { RadioButtonsInput } from '@latitude-data/web-ui/atoms/RadioButtonsInput'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { type PreviewLogsState as Props } from './useSelectedLogs'
 import { PreviewTable } from './PreviewTable'
 import useDatasets from '$/stores/datasetsV2'

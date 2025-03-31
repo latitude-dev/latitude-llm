@@ -1,6 +1,6 @@
 'use client'
 
-import { Text } from '@latitude-data/web-ui'
+import { Text } from '../../../atoms/Text'
 import { PanelChartConfig } from '../types'
 
 export function PanelChart({ data, asChild }: PanelChartConfig) {

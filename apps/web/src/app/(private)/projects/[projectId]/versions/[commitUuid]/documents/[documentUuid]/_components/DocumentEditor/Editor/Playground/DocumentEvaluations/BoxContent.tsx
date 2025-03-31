@@ -5,7 +5,10 @@ import {
   EvaluationResultDto,
   EvaluationResultV2,
 } from '@latitude-data/core/browser'
-import { Badge, Button, Skeleton, Text } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
 import { useMemo } from 'react'
 import EvaluationItem from './EvaluationItem'

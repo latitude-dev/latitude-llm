@@ -1,4 +1,6 @@
-import { Badge, Button, Icon } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { CompletedSearch } from '../types'
 
 type CompletedSearchBadgeProps = {

@@ -2,7 +2,7 @@
 
 import { ReactNode, useContext } from 'react'
 
-import { Button } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 
 import { DocumentationContext } from '../DocumentationModal'
 import { DocumentTriggersButton } from './DocumentTriggers'

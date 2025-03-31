@@ -1,8 +1,9 @@
 'use client'
-
 import React from 'react'
 
-import { FormField, Input, Skeleton } from '@latitude-data/web-ui'
+import { FormField } from '@latitude-data/web-ui/atoms/FormField'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { useDebouncedCallback } from 'use-debounce'
 

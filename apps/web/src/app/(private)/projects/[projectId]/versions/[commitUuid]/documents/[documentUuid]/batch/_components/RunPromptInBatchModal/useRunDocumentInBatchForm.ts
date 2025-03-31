@@ -7,7 +7,7 @@ import {
   DocumentVersion,
 } from '@latitude-data/core/browser'
 import { scan, type ConversationMetadata } from 'promptl-ai'
-import { SelectOption } from '@latitude-data/web-ui'
+import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import { buildEmptyParameters } from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatchForm'
 import { useMappedParametersFromLocalStorage } from './useMappedParametersFromLocalStorage'

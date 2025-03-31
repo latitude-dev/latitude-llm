@@ -1,4 +1,6 @@
-import { Button, Input, Label } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Label } from '@latitude-data/web-ui/atoms/Label'
 import { ScheduleConfig, WeekDay, WEEKDAYS } from './scheduleUtils'
 
 interface SpecificScheduleFormProps {

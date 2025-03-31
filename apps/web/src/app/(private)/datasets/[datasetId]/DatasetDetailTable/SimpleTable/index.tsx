@@ -1,14 +1,14 @@
 import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
+import { dateFormatter } from '@latitude-data/web-ui/dateUtils'
 import {
-  dateFormatter,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Text,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { DatasetRowsTableProps } from '../DataGrid'
 

@@ -15,12 +15,12 @@ import { env } from '@latitude-data/env'
 import {
   Breadcrumb,
   BreadcrumbItem,
-  ClickToCopyUuid,
-  Icon,
-  TableWithHeader,
-  Text,
-  Tooltip,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import Link from 'next/link'
 import { scan } from 'promptl-ai'
 

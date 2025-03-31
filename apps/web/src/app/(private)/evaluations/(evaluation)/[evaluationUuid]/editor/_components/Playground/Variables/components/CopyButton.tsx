@@ -1,4 +1,6 @@
-import { Button, Icon, toast } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { toast } from '@latitude-data/web-ui/atoms/Toast'
 
 export const CopyButton = ({ text }: { text: string }) => (
   <Button

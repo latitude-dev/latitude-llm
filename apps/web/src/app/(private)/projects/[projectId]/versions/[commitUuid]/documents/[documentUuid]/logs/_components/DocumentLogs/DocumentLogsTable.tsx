@@ -1,5 +1,4 @@
 'use client'
-
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
@@ -18,22 +17,24 @@ import {
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
-  Badge,
-  Checkbox,
-  cn,
-  Skeleton,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Text,
-  TextColor,
+} from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextColor } from '@latitude-data/web-ui/tokens'
+import {
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { capitalize } from 'lodash-es'
 import { useSearchParams } from 'next/navigation'
 import { forwardRef, useMemo } from 'react'

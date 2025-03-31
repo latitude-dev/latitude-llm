@@ -8,7 +8,7 @@ import {
   PublishedDocument,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
-import { ReactStateDispatch } from '@latitude-data/web-ui'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCallback } from 'react'
 import { readStreamableValue } from 'ai/rsc'
 import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'

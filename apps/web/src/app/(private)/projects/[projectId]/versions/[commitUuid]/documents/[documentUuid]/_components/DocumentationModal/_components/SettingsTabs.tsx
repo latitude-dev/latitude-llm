@@ -1,9 +1,9 @@
 'use client'
-
 import { useState } from 'react'
 
 import { ApiKey, DocumentVersion } from '@latitude-data/core/browser'
-import { Tabs, type TabItem } from '@latitude-data/web-ui'
+import { Tabs } from '@latitude-data/web-ui/molecules/Tabs'
+import { TabItem } from '@latitude-data/web-ui/molecules/Tabs'
 
 import { APIUsage } from './APIUsage'
 import { JavascriptUsage } from './JavascriptUsage'

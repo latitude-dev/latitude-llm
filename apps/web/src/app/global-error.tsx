@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 
-import { Button } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ErrorComponent } from '@latitude-data/web-ui/browser'
 import * as Sentry from '@sentry/nextjs'
 import { fontMono, fontSans } from '$/helpers/fonts'

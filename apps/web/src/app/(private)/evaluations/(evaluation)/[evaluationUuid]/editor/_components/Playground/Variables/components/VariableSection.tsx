@@ -1,6 +1,11 @@
 import { ReactNode } from 'react'
 
-import { Badge, Button, cn, Icon, Popover, Text } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { PinnedDocumentation } from './PinnedDocumentation'
 import { TooltipInfo } from './TooltipInfo'

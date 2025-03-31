@@ -2,7 +2,7 @@ import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'
-import { ConfirmModal } from '@latitude-data/web-ui'
+import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import {
   NewDatasetModalComponent,
   type NewDatasetModalProps,

@@ -5,7 +5,7 @@ import {
 } from '@latitude-data/constants'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import { EmailTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/helpers/schema'
-import { Text } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useMemo } from 'react'
 import { EmailTriggerConfig } from './Config'
 

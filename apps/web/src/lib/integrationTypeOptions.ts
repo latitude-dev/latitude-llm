@@ -3,7 +3,7 @@ import {
   IntegrationType,
 } from '@latitude-data/constants'
 import { IntegrationDto } from '@latitude-data/core/browser'
-import { IconName } from '@latitude-data/web-ui'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 
 export type IntegrationTypeOption = {
   label: string

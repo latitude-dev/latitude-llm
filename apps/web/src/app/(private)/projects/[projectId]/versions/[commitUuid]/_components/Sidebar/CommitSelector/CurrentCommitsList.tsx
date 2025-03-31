@@ -7,7 +7,7 @@ import {
   DocumentVersion,
   type Commit,
 } from '@latitude-data/core/browser'
-import { ReactStateDispatch } from '@latitude-data/web-ui'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCommits } from '$/stores/commitsStore'
 
 import { CommitItem, CommitItemSkeleton, SimpleUser } from './CommitItem'

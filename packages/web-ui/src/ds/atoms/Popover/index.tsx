@@ -1,12 +1,12 @@
 'use client'
-
 import { forwardRef, ReactNode, Ref } from 'react'
 import * as RadixPopover from '@radix-ui/react-popover'
 
 import { cn } from '../../../lib/utils'
 import { Button, ButtonProps } from '../Button'
-import { Icon, IconProps } from '../Icons'
-import Text from '../Text'
+import { Icon } from '../Icons'
+import { IconProps } from '../Icons'
+import { Text } from '../Text'
 import { TextColor } from '../../tokens'
 import { isString } from 'lodash-es'
 

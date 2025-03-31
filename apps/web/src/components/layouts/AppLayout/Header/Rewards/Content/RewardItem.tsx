@@ -1,9 +1,11 @@
 'use client'
-
 import { useMemo } from 'react'
 
 import { REWARD_VALUES, RewardType } from '@latitude-data/core/browser'
-import { Button, cn, Icon, Text } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useRewards from '$/stores/rewards'
 
 export function RewardItem({

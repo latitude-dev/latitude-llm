@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 
 import { RewardType } from '@latitude-data/core/browser'
-import { Text } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useRewards from '$/stores/rewards'
 
 import { RewardItem } from './RewardItem'

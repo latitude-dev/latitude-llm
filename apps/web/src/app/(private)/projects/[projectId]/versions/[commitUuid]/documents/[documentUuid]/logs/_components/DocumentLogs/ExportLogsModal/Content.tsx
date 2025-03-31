@@ -1,6 +1,8 @@
 import { CsvPreviewTable } from '$/components/CsvPreviewTable'
 import { CsvData } from '@latitude-data/core/browser'
-import { Input, TableSkeleton, Text } from '@latitude-data/web-ui'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 function LogsCsvPreview({
   csvData,

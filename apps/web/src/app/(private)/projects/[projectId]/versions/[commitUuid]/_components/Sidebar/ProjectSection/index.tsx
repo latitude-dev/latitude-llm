@@ -1,7 +1,8 @@
 'use client'
-
 import { Commit, Project } from '@latitude-data/core/browser'
-import { cn, Icon, IconName, Text } from '@latitude-data/web-ui'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'

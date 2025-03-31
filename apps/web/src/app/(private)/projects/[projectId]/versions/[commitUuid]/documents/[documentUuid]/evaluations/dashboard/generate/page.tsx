@@ -1,20 +1,19 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 
 import { EvaluationResultableType } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
+import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { TypewriterText } from '@latitude-data/web-ui/atoms/TypewriterText'
 import {
-  Button,
-  cn,
-  FakeProgress,
-  Modal,
-  Text,
-  Tooltip,
-  TypewriterText,
   useCurrentCommit,
   useCurrentProject,
-  useToast,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createEvaluationFromPromptAction } from '$/actions/evaluations/createFromPrompt'
 import { generateSuggestedEvaluationsAction } from '$/actions/evaluations/generateSuggestedEvaluations'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'

@@ -10,7 +10,7 @@ import {
 
 import { cn } from '../../../lib/utils'
 import { TooltipLabel } from '../Label'
-import Text from '../Text'
+import { Text } from '../Text'
 import { Tooltip } from '../Tooltip'
 
 export function FormDescription({

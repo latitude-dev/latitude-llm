@@ -1,8 +1,10 @@
 'use client'
-
 import { ReactNode } from 'react'
 
-import { cn, SessionUser, Text, TripleThemeToggle } from '@latitude-data/web-ui'
+import { cn } from '@latitude-data/web-ui/utils'
+import { SessionUser } from '@latitude-data/web-ui/providers'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TripleThemeToggle } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
 
 import AvatarDropdown from './AvatarDropdown'
 import { HeaderBreadcrumb } from './Breadcrumb'

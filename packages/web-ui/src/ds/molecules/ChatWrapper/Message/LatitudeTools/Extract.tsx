@@ -1,6 +1,8 @@
 'use client'
 import { ContentCard, ContentCardContainer } from '../ContentCard'
-import { Button, Markdown, Text } from '../../../../atoms'
+import { Button } from '../../../../atoms/Button'
+import { Markdown } from '../../../../atoms/Markdown'
+import { Text } from '../../../../atoms/Text'
 import type {
   ExtractToolArgs,
   ExtractToolResult,

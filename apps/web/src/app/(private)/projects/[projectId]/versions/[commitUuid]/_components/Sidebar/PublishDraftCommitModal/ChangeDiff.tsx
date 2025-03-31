@@ -1,12 +1,10 @@
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import { ModifiedDocumentType } from '@latitude-data/core/browser'
 import { ChangedDocument } from '@latitude-data/core/repositories'
-import {
-  DiffViewer,
-  TextEditorPlaceholder,
-  Text,
-  useCurrentCommit,
-} from '@latitude-data/web-ui'
+import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { DiffViewer } from '@latitude-data/web-ui/molecules/DiffViewer'
 
 function ChangeDiffPlaceholder() {
   return (

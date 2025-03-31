@@ -1,9 +1,9 @@
 'use client'
-
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Button, Text } from '../../atoms'
+import { Button } from '../../atoms/Button'
+import { Text } from '../../atoms/Text'
 
 export type TabSelectorOption<T> = {
   label: ReactNode | string

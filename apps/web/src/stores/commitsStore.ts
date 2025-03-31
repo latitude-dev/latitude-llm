@@ -1,5 +1,6 @@
 import { Commit, CommitStatus } from '@latitude-data/core/browser'
-import { useCurrentProject, useToast } from '@latitude-data/web-ui'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createDraftCommitAction } from '$/actions/commits/create'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
 import { publishDraftCommitAction } from '$/actions/commits/publishDraftCommitAction'

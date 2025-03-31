@@ -130,4 +130,4 @@ const SplitPane = ({
 
 SplitPane.Pane = memo(Pane)
 
-export default SplitPane
+export { SplitPane }

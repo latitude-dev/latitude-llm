@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { Skeleton } from '../../atoms'
+import { Skeleton } from '../../atoms/Skeleton'
 import {
   Table,
   TableBody,
@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../atoms/Table'
-import Text from '../../atoms/Text'
+import { Text } from '../../atoms/Text'
 
 export function TableSkeleton({
   rows,

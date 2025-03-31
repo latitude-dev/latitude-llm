@@ -1,6 +1,7 @@
-import { Icon, Text } from '../../atoms'
+import { Icon } from '../../atoms/Icons'
+import { Text } from '../../atoms/Text'
 
-export default function FocusHeader({
+export function FocusHeader({
   title,
   description,
 }: {

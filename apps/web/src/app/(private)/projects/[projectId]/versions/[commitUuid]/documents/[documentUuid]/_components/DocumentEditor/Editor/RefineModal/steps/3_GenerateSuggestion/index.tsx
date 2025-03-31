@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
 import { type EvaluationResultByDocument } from '@latitude-data/core/repositories'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
+import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
-  Button,
-  FakeProgress,
-  LoadingText,
-  Text,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { refinePromptAction } from '$/actions/copilot/refinePrompt'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 

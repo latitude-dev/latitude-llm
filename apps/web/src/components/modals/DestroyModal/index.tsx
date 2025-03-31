@@ -1,10 +1,8 @@
-import {
-  AnimatedDots,
-  Button,
-  CloseTrigger,
-  Modal,
-  useToast,
-} from '@latitude-data/web-ui'
+import { AnimatedDots } from '@latitude-data/web-ui/molecules/AnimatedDots'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { useFormAction } from '$/hooks/useFormAction'
 import {
   inferServerActionError,

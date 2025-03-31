@@ -7,7 +7,7 @@ import {
   EvaluationConfigurationNumerical,
   EvaluationDto,
 } from '@latitude-data/core/browser'
-import { RangeBadge } from '@latitude-data/web-ui'
+import { RangeBadge } from '@latitude-data/web-ui/molecules/RangeBadge'
 import { useDebouncedCallback } from 'use-debounce'
 
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'

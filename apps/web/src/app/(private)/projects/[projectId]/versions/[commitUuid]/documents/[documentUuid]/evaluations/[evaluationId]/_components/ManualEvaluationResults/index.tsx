@@ -1,5 +1,4 @@
 'use client'
-
 import { useMemo, useRef, useState } from 'react'
 
 import {
@@ -9,13 +8,13 @@ import {
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { fetchDocumentLogsWithEvaluationResults } from '@latitude-data/core/services/documentLogs/fetchDocumentLogsWithEvaluationResults'
+import { cn } from '@latitude-data/web-ui/utils'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
-  cn,
-  TableBlankSlate,
-  Text,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useRefineAction } from '$/hooks/useRefineAction'
 import { useSelectableRows } from '$/hooks/useSelectableRows'

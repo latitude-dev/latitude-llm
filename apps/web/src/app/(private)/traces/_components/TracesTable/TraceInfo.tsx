@@ -1,17 +1,14 @@
 'use client'
-
 import { useMemo, useState } from 'react'
 import { TraceWithSpans } from '@latitude-data/core/browser'
-import {
-  Button,
-  CloseTrigger,
-  FakeProgress,
-  FormWrapper,
-  Modal,
-  Select,
-  Text,
-  Tooltip,
-} from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { SpanTimeline } from './SpanTimeline'
 import { TraceMessages } from './TraceMessages'
 import { TraceMetadata } from './TraceMetadata'

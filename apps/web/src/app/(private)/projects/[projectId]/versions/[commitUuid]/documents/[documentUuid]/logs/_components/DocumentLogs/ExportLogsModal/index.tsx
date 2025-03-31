@@ -5,13 +5,11 @@ import {
   CsvData,
   DocumentVersion,
 } from '@latitude-data/core/browser'
-import {
-  Alert,
-  Button,
-  Modal,
-  useCurrentProject,
-  useToast,
-} from '@latitude-data/web-ui'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { saveDocumentLogsAsDataset } from '$/actions/documentLogs/saveAsDataset'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useFetcher from '$/hooks/useFetcher'

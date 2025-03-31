@@ -1,4 +1,4 @@
-import { Badge } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 
 import { TooltipInfo } from './TooltipInfo'
 

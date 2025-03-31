@@ -1,7 +1,8 @@
 import { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Badge, Text } from '../../atoms'
+import { Badge } from '../../atoms/Badge'
+import { Text } from '../../atoms/Text'
 import { Skeleton } from '../../atoms/Skeleton'
 
 export function BlankSlateStep({

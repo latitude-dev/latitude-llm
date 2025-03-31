@@ -1,5 +1,4 @@
 'use client'
-
 import {
   ComponentPropsWithoutRef,
   ElementRef,
@@ -9,10 +8,12 @@ import {
 import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 
 import { cn } from '../../../lib/utils'
-import Text from '../../atoms/Text'
+import { Text } from '../Text'
 import { TextColor } from '../../tokens'
-import { Icon, IconProps } from '../Icons'
-import { BadgeProps, Badge } from '../Badge'
+import { Icon } from '../Icons'
+import { IconProps } from '../Icons'
+import { Badge } from '../Badge'
+import { BadgeProps } from '../Badge'
 
 const TooltipProvider = TooltipPrimitive.Provider
 

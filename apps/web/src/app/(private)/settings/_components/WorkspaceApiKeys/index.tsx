@@ -1,20 +1,19 @@
 'use client'
-
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import {
-  Button,
-  Icon,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  TableSkeleton,
-  TableWithHeader,
-  Text,
-  Tooltip,
-  useToast,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useApiKeys from '$/stores/apiKeys'
 
 export default function WorkspaceApiKeys() {

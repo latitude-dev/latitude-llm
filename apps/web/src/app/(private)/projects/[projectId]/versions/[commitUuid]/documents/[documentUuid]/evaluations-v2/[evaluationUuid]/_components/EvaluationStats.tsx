@@ -4,7 +4,7 @@ import {
   EvaluationType,
   EvaluationV2Stats,
 } from '@latitude-data/core/browser'
-import { cn } from '@latitude-data/web-ui'
+import { cn } from '@latitude-data/web-ui/utils'
 import AverageScoreChart from './charts/AverageScore'
 import DailyOverviewChart from './charts/DailyOverview'
 import TotalCostChart from './charts/TotalCost'

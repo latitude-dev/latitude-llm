@@ -1,16 +1,13 @@
 'use client'
-
 import { FormEvent, ReactNode, useCallback, useMemo, useState } from 'react'
 
-import {
-  Button,
-  CloseTrigger,
-  FormWrapper,
-  Icon,
-  Input,
-  Modal,
-  Select,
-} from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useIntegrations from '$/stores/integrations'

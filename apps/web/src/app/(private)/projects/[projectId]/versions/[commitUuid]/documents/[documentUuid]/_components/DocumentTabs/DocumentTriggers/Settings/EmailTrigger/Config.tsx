@@ -6,18 +6,15 @@ import {
   DocumentTriggerParameters,
 } from '@latitude-data/constants'
 import { EmailTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/helpers/schema'
-import {
-  Badge,
-  Button,
-  CopyButton,
-  Icon,
-  IconName,
-  Input,
-  Select,
-  SwitchToggle,
-  Text,
-  useCurrentCommit,
-} from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { CopyButton } from '@latitude-data/web-ui/atoms/CopyButton'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { ReactNode, useCallback, useState } from 'react'
 
 enum EmailAvailabilityOptions {

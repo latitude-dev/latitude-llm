@@ -12,14 +12,14 @@ import {
 import type { ConversationMetadata } from 'promptl-ai'
 import {
   AppLocalStorage,
-  DropdownMenu,
-  FormFieldGroup,
-  Icon,
-  Select,
-  Text,
-  Tooltip,
   useLocalStorage,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import Link from 'next/link'
 import { PromptConfiguration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptConfiguration'
 import { PromptIntegrations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptIntegrations'

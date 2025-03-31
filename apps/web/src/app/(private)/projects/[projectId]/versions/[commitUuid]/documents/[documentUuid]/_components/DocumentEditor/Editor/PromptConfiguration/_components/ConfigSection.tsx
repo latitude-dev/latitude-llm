@@ -1,4 +1,6 @@
-import { Icon, IconName, Text, Tooltip } from '@latitude-data/web-ui'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ReactNode } from 'react'
 
 export function ConfigSection({

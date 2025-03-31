@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Skeleton } from '../../atoms'
+import { Skeleton } from '../../atoms/Skeleton'
 
 export function BreadcrumbItem({
   children,

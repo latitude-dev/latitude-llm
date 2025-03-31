@@ -1,10 +1,11 @@
 'use client'
-
 import {
   EvaluationDto,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
-import { RangeBadge, Skeleton, Text } from '@latitude-data/web-ui'
+import { RangeBadge } from '@latitude-data/web-ui/molecules/RangeBadge'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useEvaluationResultsMeanValue from '$/stores/evaluationResultCharts/evaluationResultsMeanValue'
 import useEvaluationResultsModalValue from '$/stores/evaluationResultCharts/evaluationResultsModalValue'
 

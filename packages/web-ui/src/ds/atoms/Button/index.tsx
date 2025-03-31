@@ -4,8 +4,10 @@ import { ButtonHTMLAttributes, forwardRef, ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { font } from '../../tokens'
-import { DotIndicator, DotIndicatorProps } from '../DotIndicator'
-import { Icon, IconProps } from '../Icons'
+import { DotIndicator } from '../DotIndicator'
+import { DotIndicatorProps } from '../DotIndicator'
+import { Icon } from '../Icons'
+import { IconProps } from '../Icons'
 
 const buttonContainerVariants = cva(
   cn(

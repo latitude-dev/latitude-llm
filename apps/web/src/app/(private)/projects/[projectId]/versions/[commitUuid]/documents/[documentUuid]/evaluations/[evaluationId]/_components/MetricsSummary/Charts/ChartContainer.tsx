@@ -1,6 +1,8 @@
 import { ReactNode } from 'react'
 
-import { cn, Skeleton, Text } from '@latitude-data/web-ui'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export function ChartWrapper({
   label,

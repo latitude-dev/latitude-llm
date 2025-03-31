@@ -1,13 +1,13 @@
 import { useCallback, useState } from 'react'
 
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import {
-  Button,
-  TableBlankSlate,
-  TableSkeleton,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
 import Link from 'next/link'

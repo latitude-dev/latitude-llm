@@ -1,7 +1,7 @@
 'use client'
 
 import { ComponentType, lazy, useEffect, useState } from 'react'
-import { EditorCellProps } from './types'
+import { EditorCellProps } from '..'
 
 const CellTextEditorLazy = lazy(() =>
   import('./Editor').then(

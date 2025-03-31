@@ -1,11 +1,11 @@
 'use client'
-
 import {
   EvaluationType,
   RuleEvaluationMetric,
   RuleEvaluationSemanticSimilaritySpecification,
 } from '@latitude-data/constants'
-import { IconName, NumberInput } from '@latitude-data/web-ui'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { useEffect } from 'react'
 import {
   ChartConfigurationArgs,

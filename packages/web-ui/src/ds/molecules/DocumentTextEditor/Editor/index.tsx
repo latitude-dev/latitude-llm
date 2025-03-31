@@ -1,5 +1,4 @@
 'use client'
-
 import { CheckCircle2, LoaderCircle } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
@@ -11,7 +10,9 @@ import {
   useLocalStorage,
 } from '../../../../lib/hooks/useLocalStorage'
 import { cn } from '../../../../lib/utils'
-import { Button, Icon, Text } from '../../../atoms'
+import { Button } from '../../../atoms/Button'
+import { Icon } from '../../../atoms/Icons'
+import { Text } from '../../../atoms/Text'
 import { type DocumentError, type DocumentTextEditorProps } from '../types'
 import { CopilotSection } from './CopilotSection'
 import { MonacoDiffEditor } from './DiffEditor'

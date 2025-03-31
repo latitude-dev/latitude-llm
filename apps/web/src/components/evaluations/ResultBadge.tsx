@@ -1,5 +1,6 @@
 import { EvaluationMetric, EvaluationType } from '@latitude-data/constants'
-import { Badge, Tooltip } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { EVALUATION_SPECIFICATIONS, ResultBadgeProps } from './index'
 
 export default function ResultBadge<

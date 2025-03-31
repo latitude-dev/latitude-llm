@@ -1,5 +1,6 @@
 import { DocumentVersion, PublishedDocument } from '@latitude-data/core/browser'
-import { Skeleton, Text } from '@latitude-data/web-ui'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 function Dot() {
   return <div className='w-1 h-1 bg-border rounded-full' />

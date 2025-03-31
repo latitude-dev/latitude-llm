@@ -1,7 +1,8 @@
 import { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Icon, Text } from '../../atoms'
+import { Icon } from '../../atoms/Icons'
+import { Text } from '../../atoms/Text'
 
 export function ErrorComponent({
   message,

@@ -1,5 +1,7 @@
 'use client'
-import { cn, Icon, Text } from '@latitude-data/web-ui'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
 import { isPromptLFile, PromptLFile } from 'promptl-ai'
 import { useState } from 'react'

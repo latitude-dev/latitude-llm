@@ -1,4 +1,6 @@
-import { Button, Icon, Popover } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { useState } from 'react'
 import { GenerationSettings } from './GenerationSettings'
 import { BehaviourSettings } from './BehaviourSettings'

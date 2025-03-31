@@ -7,18 +7,15 @@ import {
   DocumentVersion,
   EvaluationTmp,
 } from '@latitude-data/core/browser'
-import {
-  FormFieldGroup,
-  Icon,
-  Input,
-  NumeredList,
-  ReactStateDispatch,
-  Select,
-  SelectOption,
-  Skeleton,
-  SwitchInput,
-  Text,
-} from '@latitude-data/web-ui'
+import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { NumeredList } from '@latitude-data/web-ui/molecules/NumeredList'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { isNumber } from 'lodash-es'
 import Link from 'next/link'
 import { useMemo } from 'react'

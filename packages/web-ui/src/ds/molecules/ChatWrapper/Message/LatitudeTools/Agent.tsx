@@ -1,6 +1,6 @@
 import { ToolRequestContent } from '@latitude-data/compiler'
 import { CardTextContent, ContentCard } from '../ContentCard'
-import { CodeBlock } from '../../../../atoms'
+import { CodeBlock } from '../../../../atoms/CodeBlock'
 
 export function AgentToolCallContent({ value }: { value: ToolRequestContent }) {
   const isDefaultSchema =

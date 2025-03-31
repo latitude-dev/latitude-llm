@@ -3,7 +3,7 @@ import {
   Message as ConversationMessage,
   MessageRole,
 } from '@latitude-data/compiler'
-import { Message } from '@latitude-data/web-ui'
+import { Message } from '@latitude-data/web-ui/molecules/ChatWrapper'
 
 export function StreamMessage({
   responseStream,

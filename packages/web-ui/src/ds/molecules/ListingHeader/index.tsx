@@ -1,7 +1,8 @@
 import { ButtonHTMLAttributes, ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Button, ButtonProps, Text } from '../../atoms'
+import { Button, ButtonProps } from '../../atoms/Button'
+import { Text } from '../../atoms/Text'
 import { TitleWithActions } from '../TitleWithActions'
 
 export function ListingButton({

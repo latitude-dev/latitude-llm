@@ -11,7 +11,7 @@ import NodeHeaderWrapper, {
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
 import { DocumentType } from '@latitude-data/core/browser'
-import { IconName } from '../../../../../ds/atoms'
+import { IconName } from '../../../../../ds/atoms/Icons'
 
 export default function DocumentHeader({
   open,

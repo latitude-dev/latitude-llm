@@ -1,4 +1,4 @@
-import { Button } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ErrorComponent } from '@latitude-data/web-ui/browser'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'

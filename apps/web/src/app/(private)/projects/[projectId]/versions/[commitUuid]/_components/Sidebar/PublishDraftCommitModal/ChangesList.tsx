@@ -1,14 +1,12 @@
 import { Commit, ModifiedDocumentType } from '@latitude-data/core/browser'
 import { ChangedDocument } from '@latitude-data/core/repositories'
-import {
-  cn,
-  Icon,
-  ReactStateDispatch,
-  Text,
-  DocumentChange,
-  DocumentChangeSkeleton,
-  TruncatedTooltip,
-} from '@latitude-data/web-ui'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
+import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
+import { DocumentChangeSkeleton } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { useCurrentTheme } from '$/hooks/useCurrentTheme'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'

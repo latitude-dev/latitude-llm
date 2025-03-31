@@ -1,9 +1,9 @@
 'use client'
-
 import { useMemo } from 'react'
 
 import { SubscriptionPlan, FREE_PLANS } from '@latitude-data/core/browser'
-import { Button, useSession } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { useSession } from '@latitude-data/web-ui/providers'
 import useWorkspaceUsage from '$/stores/workspaceUsage'
 import { UsageIndicatorPopover } from '$/components/UsageIndicatorPopover'
 import { calcualteUsage } from '$/lib/usageUtils'

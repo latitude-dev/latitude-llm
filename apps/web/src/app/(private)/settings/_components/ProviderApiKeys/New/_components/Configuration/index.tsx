@@ -1,6 +1,8 @@
 import { buildConfigFieldName } from '$/app/(private)/settings/_components/ProviderApiKeys/New/buildProviderPayload'
 import { Providers } from '@latitude-data/constants'
-import { Input, FormFieldGroup, TextArea } from '@latitude-data/web-ui'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 
 const PROVIDERS_WITHOUT_API_KEY = [
   Providers.GoogleVertex,

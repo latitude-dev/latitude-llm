@@ -1,12 +1,13 @@
 'use client'
-
 import { useDraggable } from '@dnd-kit/core'
 import { RefObject, useEffect, useRef, useState } from 'react'
 
-import { Button, Icon, IconName, Tooltip } from '../../../../../ds/atoms'
+import { Button } from '../../../../../ds/atoms/Button'
+import { Icon, IconName } from '../../../../../ds/atoms/Icons'
+import { Tooltip } from '../../../../../ds/atoms/Tooltip'
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
 import { Input } from '../../../../../ds/atoms/Input'
-import Text from '../../../../../ds/atoms/Text'
+import { Text } from '../../../../../ds/atoms/Text'
 import { cn } from '../../../../../lib/utils'
 import { useNodeValidator } from './useNodeValidator'
 import { ModifiedDocumentType } from '@latitude-data/core/browser'
@@ -16,7 +17,7 @@ import {
   MODIFICATION_ICONS,
 } from '../../../../../ds/molecules/DocumentChange/colors'
 import { useHover } from '../../../../../browser'
-import { TruncatedTooltip } from '../../../../../ds/molecules'
+import { TruncatedTooltip } from '../../../../../ds/molecules/TruncatedTooltip'
 
 export type IndentType = { isLast: boolean }
 function IndentationBar({

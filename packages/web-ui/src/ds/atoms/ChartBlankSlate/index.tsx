@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Text } from '../../atoms'
+import { Text } from '../Text'
 
 type Props = {
   children: ReactNode

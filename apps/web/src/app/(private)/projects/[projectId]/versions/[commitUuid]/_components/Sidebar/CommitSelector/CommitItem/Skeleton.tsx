@@ -1,4 +1,4 @@
-import { Skeleton } from '@latitude-data/web-ui'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 
 export function CommitItemSkeleton() {
   return (

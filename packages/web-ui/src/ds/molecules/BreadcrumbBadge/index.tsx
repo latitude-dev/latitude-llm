@@ -1,9 +1,9 @@
 'use client'
-
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
 
-import { Badge, Text } from '../../atoms'
-import { ClickToCopy } from '../ClicktoCopy'
+import { Badge } from '../../atoms/Badge'
+import { Text } from '../../atoms/Text'
+import { ClickToCopy } from '../ClickToCopy'
 
 export function BreadcrumbBadge({
   uuid: fullUuid,

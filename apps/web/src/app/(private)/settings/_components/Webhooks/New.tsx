@@ -1,14 +1,11 @@
 'use client'
-
-import {
-  Button,
-  FormWrapper,
-  Input,
-  Modal,
-  MultiSelect,
-  SwitchInput,
-  useToast,
-} from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
+import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useRouter } from 'next/navigation'
 import useWebhooks from '$/stores/webhooks'
 import useProjects from '$/stores/projects'

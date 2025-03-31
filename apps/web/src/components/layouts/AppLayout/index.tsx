@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 
-import { cn, SessionUser } from '@latitude-data/web-ui'
+import { cn } from '@latitude-data/web-ui/utils'
+import { SessionUser } from '@latitude-data/web-ui/providers'
 
 import AppHeader, { AppHeaderProps } from './Header'
 

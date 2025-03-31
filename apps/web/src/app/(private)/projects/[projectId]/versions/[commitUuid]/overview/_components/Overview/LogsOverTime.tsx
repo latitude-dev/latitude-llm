@@ -1,8 +1,9 @@
 'use client'
-
 import { useMemo } from 'react'
 
-import { BarChart, ChartBlankSlate, Text } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { BarChart } from '@latitude-data/web-ui/molecules/Charts'
+import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 
 import { ChartWrapper } from '../../../documents/[documentUuid]/evaluations/[evaluationId]/_components/MetricsSummary/Charts/ChartContainer'
 

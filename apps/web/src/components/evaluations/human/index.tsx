@@ -3,7 +3,7 @@ import {
   HumanEvaluationMetric,
   HumanEvaluationSpecification,
 } from '@latitude-data/constants'
-import { IconName } from '@latitude-data/web-ui'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { EvaluationMetricFrontendSpecification } from '../index'
 
 // prettier-ignore

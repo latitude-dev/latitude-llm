@@ -4,14 +4,14 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useDocumentSuggestions from '$/stores/documentSuggestions'
 import { DocumentVersion } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
-  Button,
   ICommitContextType,
   IProjectContextType,
-  Popover,
-  Text,
-  Tooltip,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
 import { useCallback, useEffect, useState } from 'react'
 import { SuggestionItem } from './SuggestionItem'

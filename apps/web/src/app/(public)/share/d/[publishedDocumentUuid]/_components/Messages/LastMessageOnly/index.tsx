@@ -6,12 +6,12 @@ import {
 import { ExpandMessages } from '../ExpandMessages'
 import {
   ErrorMessage,
-  MessageItem,
-  ReactStateDispatch,
-  LoadingText,
-  MessageItemContent,
   Message,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
+import { MessageItem } from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { MessageItemContent } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { useEffect, useState } from 'react'
 
 const streamBuilder = (chunks: string[]) => {

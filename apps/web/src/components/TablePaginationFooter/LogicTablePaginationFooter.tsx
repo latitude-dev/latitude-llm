@@ -1,8 +1,8 @@
 'use client'
-
 import { useMemo } from 'react'
 
-import { Button, Text } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { GoToPageInput } from '$/components/TablePaginationFooter/GoToPageInput'
 
 export function LogicTablePaginationFooter({

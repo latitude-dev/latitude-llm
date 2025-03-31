@@ -7,7 +7,7 @@ import {
   DatasetVersion,
   LinkedDataset,
 } from '@latitude-data/core/browser'
-import { SelectOption } from '@latitude-data/web-ui'
+import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { useCallback, useMemo } from 'react'
 
 type DatasetPreview = {

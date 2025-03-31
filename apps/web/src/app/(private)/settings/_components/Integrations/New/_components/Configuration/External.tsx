@@ -1,7 +1,9 @@
 'use client'
-
 import { McpTool } from '@latitude-data/constants'
-import { Input, Button, Text, Alert } from '@latitude-data/web-ui'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { buildConfigFieldName } from '../../buildIntegrationPayload'
 import { useState } from 'react'
 import useLatitudeAction from '$/hooks/useLatitudeAction'

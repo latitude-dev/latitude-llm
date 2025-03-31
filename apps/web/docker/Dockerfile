@@ -150,11 +150,9 @@ RUN mkdir -p apps/web/.next/cache
 RUN chown nextjs:nodejs apps/web/.next
 RUN chown nextjs:nodejs apps/web/.next/cache
 
-# Copy the standalone server and all node_modules
+# Copy the standalone server and node_modules
 COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/static ./apps/web/.next/static
-# Copy all node_modules to ensure dependencies are available
-COPY --from=builder --chown=nodejs:nextjs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nextjs /app/apps/web/node_modules ./apps/web/node_modules
 # Set permissions for local storage
 # User ID and Group ID 1001 is used to match the user 'nextjs' and group 'nodejs' in the runner image.

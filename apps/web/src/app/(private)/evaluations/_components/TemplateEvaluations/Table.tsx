@@ -1,18 +1,18 @@
 import { useState } from 'react'
 
 import { EvaluationTemplateWithCategory } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import {
-  Button,
-  cn,
-  Icon,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Text,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export const TemplateEvaluationsTableRow = ({
   template,

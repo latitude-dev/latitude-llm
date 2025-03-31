@@ -1,7 +1,7 @@
 'use client'
-
 import { ProviderLogDto } from '@latitude-data/core/browser'
-import { Badge, CollapsibleBox } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 
 import { InputSection } from './components/InputSection'
 import { VariableSection } from './components/VariableSection'

@@ -1,4 +1,6 @@
-import BaseDataGrid, { SelectColumn } from '@latitude-data/web-ui/data-grid'
+import BaseDataGrid, {
+  SelectColumn,
+} from '@latitude-data/web-ui/atoms/DataGrid'
 import type {
   RenderCellProps,
   RenderEditCellProps,
@@ -7,16 +9,14 @@ import type {
   CellClickArgs,
   CellMouseEvent,
   RenderHeaderCellProps,
-} from '@latitude-data/web-ui/data-grid'
-import {
-  DataGridCellEditor,
-  type EditorCellProps,
-  ReactStateDispatch,
-  Text,
-  FloatingPanel,
-  Button,
-  cn,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/DataGrid'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
+import { DataGridCellEditor } from '@latitude-data/web-ui/atoms/DataGrid'
+import { EditorCellProps } from '@latitude-data/web-ui/atoms/DataGrid'
 import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
 import { DatasetRoleStyle } from '$/hooks/useDatasetRoles'
 import { DatasetV2 } from '@latitude-data/core/browser'

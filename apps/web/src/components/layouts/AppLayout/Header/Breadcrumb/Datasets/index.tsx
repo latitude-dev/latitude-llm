@@ -2,10 +2,10 @@ import useDatasets from '$/stores/datasetsV2'
 import useDatasetsV1 from '$/stores/datasets'
 import {
   BreadcrumbItem,
-  BreadcrumbItemSkeleton,
   BreadcrumbSeparator,
-  Text,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { BreadcrumbItemSkeleton } from '@latitude-data/web-ui/molecules/Breadcrumb'
 import { useMemo } from 'react'
 
 export function DatasetBreadcrumbItems({ segments }: { segments: string[] }) {

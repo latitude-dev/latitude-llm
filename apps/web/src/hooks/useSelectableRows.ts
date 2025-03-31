@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 
-import { CheckedState } from '@latitude-data/web-ui'
+import { CheckedState } from '@latitude-data/web-ui/atoms/Checkbox'
 
 export function useSelectableRows<T extends string | number>({
   rowIds,

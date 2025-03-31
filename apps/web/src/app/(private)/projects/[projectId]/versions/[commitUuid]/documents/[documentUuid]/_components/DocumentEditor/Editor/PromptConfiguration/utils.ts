@@ -4,7 +4,10 @@ import {
   createRelativePath,
   resolveRelativePath,
 } from '@latitude-data/constants'
-import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export type PromptConfigurationProps = {

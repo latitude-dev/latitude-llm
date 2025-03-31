@@ -16,21 +16,23 @@ import {
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
+import { cn } from '@latitude-data/web-ui/utils'
+import { RangeBadge } from '@latitude-data/web-ui/molecules/RangeBadge'
 import {
-  Badge,
-  Checkbox,
-  cn,
-  RangeBadge,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Text,
+} from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import {
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { useSearchParams } from 'next/navigation'
 
 const countLabel = (selected: number) => (count: number) => {

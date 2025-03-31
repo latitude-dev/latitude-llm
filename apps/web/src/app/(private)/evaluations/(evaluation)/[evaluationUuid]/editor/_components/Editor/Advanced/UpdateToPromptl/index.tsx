@@ -4,7 +4,11 @@ import {
   EvaluationDto,
   EvaluationMetadataLlmAsJudgeAdvanced,
 } from '@latitude-data/core/browser'
-import { Alert, Button, Icon, Modal, Text } from '@latitude-data/web-ui'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
 
 function UpgradeToPromptlModal({

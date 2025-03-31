@@ -5,15 +5,15 @@ import {
   EvaluationResultableType,
   EvaluationResultDto,
 } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FormField } from '@latitude-data/web-ui/atoms/FormField'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import {
-  Button,
-  FormField,
-  FormWrapper,
-  Text,
-  TextArea,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useDocumentLogsWithEvaluationResults } from '$/stores/documentLogsWithEvaluationResults'
 import useEvaluationResults from '$/stores/evaluationResults'

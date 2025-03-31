@@ -1,4 +1,5 @@
-import { Button, Text } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 const INDEX_ZERO_LIST = 1
 export function ParametersPaginationNav({

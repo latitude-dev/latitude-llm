@@ -9,20 +9,20 @@ import {
 } from '@latitude-data/core/services/workspaces/index'
 import {
   Table,
-  Text,
   TableBody,
   TableHead,
   TableHeader,
   TableRow,
-  TableWithHeader,
-  ServerSideTableCell,
-  TableBlankSlate,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { ServerSideTableCell } from '@latitude-data/web-ui/atoms/Table'
 import { SubscriptionBadge } from '$/components/UsageIndicatorPopover'
 import { buildUsageInformation } from '$/app/(admin)/backoffice/usage-overview/buildUsageInformation'
 import { TrendCell } from './_components/TrendCell'
 import { UsageCell } from './_components/UsageCell'
-import { EmailsCell } from '$/app/(admin)/backoffice/usage-overview/_components/EmailsCell/index.tsx'
+import { EmailsCell } from '$/app/(admin)/backoffice/usage-overview/_components/EmailsCell'
 
 /**
  * All workspaces should have subscription

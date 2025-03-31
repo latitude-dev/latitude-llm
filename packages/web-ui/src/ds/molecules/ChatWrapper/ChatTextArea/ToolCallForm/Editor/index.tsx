@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Editor, { Monaco } from '@monaco-editor/react'
 import { type editor } from 'monaco-editor'
-import { useMonacoSetup } from '../../../../DocumentTextEditor/Editor/useMonacoSetup'
+import { useMonacoSetup } from '../../../../DiffViewer/Editor/useMonacoSetup'
 import { TextEditorProps } from './types'
 
 export function useUpdateEditorHeight({

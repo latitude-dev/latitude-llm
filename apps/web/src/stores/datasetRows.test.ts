@@ -7,8 +7,9 @@ import useDatasetRows from './datasetRows'
 import { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
 import { type UseFetcherArgs } from '$/hooks/useFetcher'
 
-vi.mock('@latitude-data/web-ui', async (mod) => {
-  const originalModule = (await mod()) as typeof import('@latitude-data/web-ui')
+vi.mock('@latitude-data/web-ui/atoms/Toast', async (mod) => {
+  const originalModule =
+    (await mod()) as typeof import('@latitude-data/web-ui/atoms/Toast')
   return {
     ...originalModule,
     useToast: vi.fn(() => ({

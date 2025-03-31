@@ -1,9 +1,9 @@
 'use client'
-
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { ClientOnly, ConfirmModal } from '../../../../ds/atoms'
+import { ClientOnly } from '../../../../ds/atoms/ClientOnly'
+import { ConfirmModal } from '../../../../ds/atoms/Modal'
 import { cn } from '../../../../lib/utils'
 import DocumentHeader from './DocumentHeader'
 import { FileTreeProvider, useFileTreeContext } from './FilesProvider'

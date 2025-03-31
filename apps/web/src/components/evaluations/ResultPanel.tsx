@@ -19,15 +19,15 @@ import {
 } from '@latitude-data/core/browser'
 import {
   AppLocalStorage,
-  Button,
-  ClickToCopy,
-  MessageList,
-  SwitchToggle,
-  Text,
-  TextArea,
-  useCurrentProject,
   useLocalStorage,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'

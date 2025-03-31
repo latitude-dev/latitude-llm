@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { noop } from 'lodash-es'
 
 import { ClaimedReward } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { claimRewardAction } from '$/actions/rewards/claimRewardAction'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'

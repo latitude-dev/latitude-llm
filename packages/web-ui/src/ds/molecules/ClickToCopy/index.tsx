@@ -1,9 +1,10 @@
 'use client'
-
 import { ReactNode, useCallback } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Icon, toast, Tooltip } from '../../atoms'
+import { Icon } from '../../atoms/Icons'
+import { toast } from '../../atoms/Toast'
+import { Tooltip } from '../../atoms/Tooltip'
 
 export function ClickToCopy({
   copyValue,

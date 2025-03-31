@@ -1,5 +1,4 @@
 'use client'
-
 import { useCallback, useMemo, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
@@ -18,12 +17,12 @@ import {
   ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import {
-  Button,
-  TableWithHeader,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
