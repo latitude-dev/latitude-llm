@@ -7,6 +7,7 @@ import {
 } from '@latitude-data/constants'
 import {
   SwitchToggle,
+  Tooltip,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
@@ -50,7 +51,20 @@ export default function EvaluateLiveLogsSwitch<
     [isDisabled, evaluation, updateEvaluation],
   )
 
-  return (
+  return !metricSpecification?.supportsLiveEvaluation ? (
+    <Tooltip
+      asChild
+      trigger={
+        <div>
+          <SwitchToggle checked={false} disabled={true} />
+        </div>
+      }
+      align='center'
+      side='top'
+    >
+      {metricSpecification?.name} evaluations do not support live evaluation
+    </Tooltip>
+  ) : (
     <SwitchToggle
       checked={!!evaluation.evaluateLiveLogs}
       onCheckedChange={setEvaluateLiveLogs}
