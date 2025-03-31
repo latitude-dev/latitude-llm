@@ -227,6 +227,7 @@ function ResultPanelLoading() {
       <MetadataItem label='Result uuid' loading />
       <MetadataItem label='Timestamp' loading />
       <MetadataItem label='Version' loading />
+      <MetadataItem label='Parameters' loading />
       <MetadataItem label='Actual output' loading />
       <MetadataItem label='Expected output' loading />
       <MetadataItem label='Result' loading />
