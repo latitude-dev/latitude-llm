@@ -1,6 +1,5 @@
 'use server'
 
-import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { setupQueues } from '@latitude-data/core/jobs'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
@@ -8,6 +7,7 @@ import {
   EvaluationsRepository,
   EvaluationsV2Repository,
 } from '@latitude-data/core/repositories'
+import { getEvaluationMetricSpecification } from '@latitude-data/core/services/evaluationsV2/shared'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 import { refineParameters, withDataset } from './_helpers'

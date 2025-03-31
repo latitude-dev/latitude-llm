@@ -1,11 +1,5 @@
 import { NON_LIVE_EVALUABLE_LOG_SOURCES } from '@latitude-data/constants'
-import {
-  EVALUATION_SPECIFICATIONS,
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2,
-  LogSources,
-} from '../../browser'
+import { LogSources } from '../../browser'
 import {
   findLastProviderLogFromDocumentLogUuid,
   findWorkspaceFromDocumentLog,
@@ -14,6 +8,7 @@ import { setupQueues } from '../../jobs'
 import { runEvaluationV2JobKey } from '../../jobs/job-definitions'
 import { NotFoundError } from '../../lib'
 import { CommitsRepository, EvaluationsV2Repository } from '../../repositories'
+import { getEvaluationMetricSpecification } from '../../services/evaluationsV2'
 import { DocumentLogCreatedEvent } from '../events'
 
 export const evaluateLiveLogJob = async ({
@@ -57,12 +52,9 @@ export const evaluateLiveLogJob = async ({
     .then((r) => r.unwrap())
 
   evaluations = evaluations.filter(
-    <T extends EvaluationType, M extends EvaluationMetric<T>>(
-      evaluation: EvaluationV2<T, M>,
-    ) =>
+    (evaluation) =>
       evaluation.evaluateLiveLogs &&
-      EVALUATION_SPECIFICATIONS[evaluation.type].metrics[evaluation.metric]
-        .supportsLiveEvaluation,
+      getEvaluationMetricSpecification(evaluation).supportsLiveEvaluation,
   )
 
   for (const evaluation of evaluations) {

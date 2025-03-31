@@ -4,7 +4,7 @@ import {
   ChainStepResponse,
   StreamType,
 } from '@latitude-data/constants'
-import { endOfDay, formatISO, parseISO, startOfDay } from 'date-fns'
+import { parseISO } from 'date-fns'
 import {
   DEFAULT_PAGINATION_SIZE,
   type CsvData,
@@ -170,14 +170,14 @@ export function evaluationResultsV2SearchFromQueryParams(params: QueryParams) {
   if (params.fromCreatedAt && typeof params.fromCreatedAt === 'string') {
     search.filters!.createdAt = {
       ...(search.filters!.createdAt ?? {}),
-      from: startOfDay(parseISO(params.fromCreatedAt)),
+      from: parseISO(params.fromCreatedAt),
     }
   }
 
   if (params.toCreatedAt && typeof params.toCreatedAt === 'string') {
     search.filters!.createdAt = {
       ...(search.filters!.createdAt ?? {}),
-      to: endOfDay(parseISO(params.toCreatedAt)),
+      to: parseISO(params.toCreatedAt),
     }
   }
 
@@ -215,17 +215,11 @@ export function evaluationResultsV2SearchToQueryParams(
   }
 
   if (search.filters?.createdAt?.from) {
-    params.set(
-      'fromCreatedAt',
-      formatISO(search.filters.createdAt.from, { representation: 'date' }),
-    )
+    params.set('fromCreatedAt', search.filters.createdAt.from.toISOString())
   }
 
   if (search.filters?.createdAt?.to) {
-    params.set(
-      'toCreatedAt',
-      formatISO(search.filters.createdAt.to, { representation: 'date' }),
-    )
+    params.set('toCreatedAt', search.filters.createdAt.to.toISOString())
   }
 
   if (search.orders?.recency === 'asc') {
