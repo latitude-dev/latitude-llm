@@ -1,11 +1,9 @@
-import {
-  EvaluationResultableType,
-  Providers,
-} from '@latitude-data/core'
+import { EvaluationResultableType } from '@latitude-data/core'
 import * as factories from '@latitude-data/core/tests/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createEvaluationResultAction } from './create'
+import { Providers } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => {
   return {

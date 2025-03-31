@@ -1,10 +1,10 @@
-import { Queues, QUEUES } from '@latitude-data/core'
+import * as Sentry from '@sentry/node'
 import * as jobs from '@latitude-data/core'
 import { NotFoundError } from '@latitude-data/core'
-import { getUnknownError } from '@latitude-data/core'
-import { captureException } from '$/utils/sentry'
 import { Processor } from 'bullmq'
-import * as Sentry from '@sentry/node'
+import { Queues, QUEUES } from '@latitude-data/core'
+import { captureException } from '$/utils/sentry'
+import { getUnknownError } from '@latitude-data/core'
 
 export const buildProcessor =
   (queues: Queues[]): Processor =>

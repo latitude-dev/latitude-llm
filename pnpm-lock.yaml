@@ -563,6 +563,9 @@ importers:
       '@tavily/core':
         specifier: ^0.3.1
         version: 0.3.3
+      bullmq:
+        specifier: ^5.41.3
+        version: 5.44.4
       dd-trace:
         specifier: ^5.37.1
         version: 5.43.0

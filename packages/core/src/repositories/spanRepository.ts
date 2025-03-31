@@ -3,7 +3,7 @@ import { Span } from '../browser'
 import { spans, traces } from '../schema'
 import Repository from './repositoryV2'
 
-export default class SpanRepository extends Repository<Span> {
+export class SpanRepository extends Repository<Span> {
   get scopeFilter() {
     return eq(traces.workspaceId, this.workspaceId)
   }

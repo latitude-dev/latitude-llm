@@ -6,7 +6,7 @@ import {
   createDraft,
   createProject,
   helpers,
-} from '@latitude-data/core'
+} from '@latitude-data/core/tests/factories'
 import {
   DocumentVersionsRepository,
   ProviderApiKeysRepository,

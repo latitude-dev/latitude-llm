@@ -2,10 +2,6 @@
 
 import { ChainStepObjectResponse } from '@latitude-data/core'
 import { BadRequestError, NotFoundError } from '@latitude-data/core'
-import {
-  CommitsRepository,
-  ProviderApiKeysRepository,
-} from '@latitude-data/core'
 import { createNewDocument } from '@latitude-data/core'
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
@@ -13,7 +9,11 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 import { captureException, captureMessage } from '$/helpers/captureException'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
-import SpanRepository from '@latitude-data/core'
+import {
+  ProviderApiKeysRepository,
+  CommitsRepository,
+  SpanRepository,
+} from '@latitude-data/core'
 import { unsafelyFindProject } from '@latitude-data/core'
 
 export const createDocumentVersionFromTraceAction = authProcedure

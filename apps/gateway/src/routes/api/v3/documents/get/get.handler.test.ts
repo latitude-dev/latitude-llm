@@ -4,7 +4,7 @@ import {
   createDraft,
   createProject,
   helpers,
-} from '@latitude-data/core'
+} from '@latitude-data/core/tests/factories'
 import { DocumentVersionsRepository } from '@latitude-data/core'
 import { mergeCommit } from '@latitude-data/core'
 import app from '$/routes/app'

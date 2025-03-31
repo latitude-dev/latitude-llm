@@ -17,7 +17,7 @@ import {
   User,
   Workspace,
 } from '../../browser'
-import { Providers } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import {
   EvaluationResultsRepository,
   EvaluationsRepository,

@@ -1,6 +1,5 @@
 import { AppRouteHandler } from '$/openApi/types'
-import { handleEmailTrigger } from '../../../../../../packages/core/src/services/documentTriggers/handlers/email'
-import { verifyWebhookSignature } from '@latitude-data/core'
+import { handleEmailTrigger, verifyWebhookSignature } from '@latitude-data/core'
 import { extractEmailSender } from '@latitude-data/core'
 import { EmailWebhookRoute } from './webhook.route'
 import { env } from '@latitude-data/env'

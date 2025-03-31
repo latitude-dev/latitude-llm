@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { Providers } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { BadRequestError } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 import * as factories from '../../tests/factories'

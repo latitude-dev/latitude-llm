@@ -2,10 +2,10 @@ import {
   DocumentVersion,
   Project,
   ProviderApiKey,
-  Providers,
   User,
   Workspace,
 } from '@latitude-data/core'
+import { Providers } from '@latitude-data/constants'
 import * as factories from '@latitude-data/core/tests/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

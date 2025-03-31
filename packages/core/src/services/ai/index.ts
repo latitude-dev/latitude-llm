@@ -222,3 +222,7 @@ export {
   listModelsForProvider,
   findFirstModelForProvider,
 } from './providers/models'
+
+export { applyProviderRules } from './providers/rules'
+
+export { type AppliedRules, ProviderRules } from './providers/rules/types'

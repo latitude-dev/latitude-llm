@@ -12,7 +12,7 @@ import {
   createDraft,
   createProject,
   helpers,
-} from '@latitude-data/core'
+} from '@latitude-data/core/tests/factories'
 import { Result } from '@latitude-data/core'
 import { mergeCommit } from '@latitude-data/core'
 import { parseSSEvent } from '$/common/parseSSEEvent'

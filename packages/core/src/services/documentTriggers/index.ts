@@ -1,15 +1,7 @@
-export { handleEmailTrigger } from './handlers/email'
+export * from './handlers'
 export * from './create'
-export {
-  emailTriggerConfigurationSchema,
-  insertScheduledTriggerConfigurationSchema,
-  scheduledTriggerConfigurationSchema,
-  documentTriggerConfigurationSchema,
-  insertDocumentTriggerConfigurationSchema,
-  type EmailTriggerConfiguration,
-  type InsertScheduledTriggerConfiguration,
-  type ScheduledTriggerConfiguration,
-  type DocumentTriggerConfiguration,
-  type DocumentTriggerWithConfiguration,
-  type InsertDocumentTriggerWithConfiguration,
-} from './helpers/schema'
+export * from './helpers'
+export * from './update'
+export * from './delete'
+
+export type * from './helpers/schema'

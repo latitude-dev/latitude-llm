@@ -1,10 +1,6 @@
-import {
-  Commit,
-  DocumentVersion,
-  Providers,
-  Workspace,
-} from '@latitude-data/core'
+import { Commit, DocumentVersion, Workspace } from '@latitude-data/core'
 import { ProviderApiKeysRepository } from '@latitude-data/core'
+import { Providers } from '@latitude-data/constants'
 import { scanDocumentContent } from '@latitude-data/core'
 import { z } from '@hono/zod-openapi'
 import { ConversationMetadata as CompilerConversationMetadata } from '@latitude-data/compiler'

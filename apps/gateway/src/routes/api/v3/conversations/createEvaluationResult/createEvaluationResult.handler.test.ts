@@ -4,10 +4,10 @@ import {
   EvaluationMetadataType,
   EvaluationResultableType,
   ProviderLog,
-  Providers,
   User,
   Workspace,
 } from '@latitude-data/core'
+import { Providers } from '@latitude-data/constants'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core'
 import {
   createDocumentLog,
@@ -15,7 +15,7 @@ import {
   createLlmAsJudgeEvaluation,
   createProject,
   helpers,
-} from '@latitude-data/core'
+} from '@latitude-data/core/tests/factories'
 import { Result } from '@latitude-data/core'
 import app from '$/routes/app'
 import { beforeEach, describe, expect, it, vi } from 'vitest'

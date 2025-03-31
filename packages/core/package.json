@@ -12,6 +12,8 @@
   "scripts": {
     "build": "tsup",
     "build:watch": "tsup --watch",
+    "build:types": "tsc -p tsconfig.build.json",
+    "build:types:watch": "tsc --watch -p tsconfig.build.json",
     "db:generate": "drizzle-kit generate",
     "db:generate:custom": "pnpm run db:generate --custom",
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",

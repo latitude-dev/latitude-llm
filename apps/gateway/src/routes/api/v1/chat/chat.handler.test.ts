@@ -6,7 +6,7 @@ import {
   Workspace,
 } from '@latitude-data/core'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core'
-import { createProject } from '@latitude-data/core'
+import { createProject } from '@latitude-data/core/tests/factories'
 import { Result } from '@latitude-data/core'
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'

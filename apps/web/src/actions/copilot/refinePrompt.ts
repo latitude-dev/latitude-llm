@@ -9,7 +9,7 @@ import {
   EvaluationResultsRepository,
   EvaluationsRepository,
 } from '@latitude-data/core'
-import { serialize } from '@latitude-data/core'
+import { serializeEvaluationResult } from '@latitude-data/core'
 import { getEvaluationPrompt } from '@latitude-data/core'
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
@@ -74,7 +74,7 @@ export const refinePromptAction = authProcedure
       .then((r) => r.unwrap())
     const serializedEvaluationResults = await Promise.all(
       evaluationResults.map((r) =>
-        serialize({
+        serializeEvaluationResult({
           workspace: ctx.workspace,
           evaluationResult: r,
         }).then((r) => r.unwrap()),

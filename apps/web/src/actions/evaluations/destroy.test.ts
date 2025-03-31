@@ -1,4 +1,5 @@
-import { ProviderApiKey, Providers } from '@latitude-data/core'
+import { ProviderApiKey } from '@latitude-data/core'
+import { Providers } from '@latitude-data/constants'
 import * as factories from '@latitude-data/core/tests/factories'
 import { Result } from '@latitude-data/core'
 import { EvaluationsRepository } from '@latitude-data/core'

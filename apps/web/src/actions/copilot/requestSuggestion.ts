@@ -1,12 +1,9 @@
 'use server'
 
-import {
-  ChainStepResponse,
-  CLOUD_MESSAGES,
-  PROVIDER_MODELS,
-} from '@latitude-data/core'
+import { ChainStepResponse, CLOUD_MESSAGES } from '@latitude-data/core'
 import { publisher } from '@latitude-data/core'
 import { BadRequestError } from '@latitude-data/core'
+import { PROVIDER_MODELS } from '@latitude-data/core/browser'
 import {
   DocumentVersionsRepository,
   ProviderApiKeysRepository,

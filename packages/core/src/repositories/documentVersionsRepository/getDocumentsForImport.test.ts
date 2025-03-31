@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { Providers } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { createCommit } from '../../services/commits'
 import { updateDocument } from '../../services/documents'
 import { createProject, helpers } from '../../tests/factories'

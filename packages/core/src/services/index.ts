@@ -50,6 +50,7 @@ export * from './workspaces'
 export * from './agents'
 export * from './latitudeTools'
 export * from './mcpServers'
+export * from './prompts/run'
 
 export type { CodeToolArgs } from './latitudeTools/runCode/types'
 export type {

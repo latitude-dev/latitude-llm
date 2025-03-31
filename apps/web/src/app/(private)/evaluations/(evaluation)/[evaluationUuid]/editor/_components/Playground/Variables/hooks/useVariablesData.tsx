@@ -1,7 +1,10 @@
 import { useState } from 'react'
 
-import { ProviderLogDto } from '@latitude-data/core'
-import { formatContext, formatConversation } from '@latitude-data/core'
+import {
+  formatProviderLogConversation,
+  ProviderLogDto,
+} from '@latitude-data/core'
+import { formatContext } from '@latitude-data/core'
 import { Button, Icon, Tooltip } from '@latitude-data/web-ui'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
 
@@ -17,7 +20,11 @@ export const useVariablesData = (providerLog: ProviderLogDto) => {
   const variableSections = [
     {
       title: 'messages',
-      content: JSON.stringify(formatConversation(providerLog), null, 2),
+      content: JSON.stringify(
+        formatProviderLogConversation(providerLog),
+        null,
+        2,
+      ),
       height: '36',
       tooltip: 'The full conversation including the last assistant response',
       popover: (

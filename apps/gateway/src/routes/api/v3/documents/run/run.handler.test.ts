@@ -17,7 +17,7 @@ import {
   createDraft,
   createProject,
   helpers,
-} from '@latitude-data/core'
+} from '@latitude-data/core/tests/factories'
 import { LatitudeError } from '@latitude-data/core'
 import { Result } from '@latitude-data/core'
 import { ChainError } from '@latitude-data/core'

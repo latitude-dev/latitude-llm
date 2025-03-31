@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
-import { Providers } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { documentVersions, evaluationVersions } from '../../schema'
 import * as factories from '../../tests/factories'
 import { updateEvaluationV2 } from '../evaluationsV2'

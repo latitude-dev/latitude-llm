@@ -17,7 +17,7 @@ import {
   createDraft,
   createProject,
   helpers,
-} from '@latitude-data/core'
+} from '@latitude-data/core/tests/factories'
 import { LatitudeError } from '@latitude-data/core'
 import { Result } from '@latitude-data/core'
 import { ChainError } from '@latitude-data/core'
@@ -48,17 +48,14 @@ vi.mock('$/common/sentry', async (importOriginal) => {
   }
 })
 
-vi.mock(
-  '@latitude-data/core'
-  async (importOriginal) => {
-    const original = (await importOriginal()) as typeof importOriginal
+vi.mock('@latitude-data/core', async (importOriginal) => {
+  const original = (await importOriginal()) as typeof importOriginal
 
-    return {
-      ...original,
-      runDocumentAtCommit: mocks.runDocumentAtCommit,
-    }
-  },
-)
+  return {
+    ...original,
+    runDocumentAtCommit: mocks.runDocumentAtCommit,
+  }
+})
 
 vi.mock('$/jobs', () => ({
   queues: mocks.queues,

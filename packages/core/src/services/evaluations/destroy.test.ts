@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { Providers } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { EvaluationsRepository } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { connectEvaluations } from './connect'

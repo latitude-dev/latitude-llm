@@ -21,9 +21,7 @@ export const publishEventAction = authProcedure
       ...(payload || {}),
     }
     publisher.publishLater({
-      // @ts-expect-error - Type not typed in this action
       type: eventType,
-      // @ts-expect-error - Type not typed in this action
       data: data,
     })
   })

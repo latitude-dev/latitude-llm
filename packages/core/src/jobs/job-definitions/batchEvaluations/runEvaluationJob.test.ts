@@ -8,7 +8,7 @@ import {
   ProviderLog,
   Workspace,
 } from '../../../browser'
-import { Providers } from '../../../constants'
+import { Providers } from '@latitude-data/constants'
 import { Result } from '../../../lib'
 import * as queues from '../../../queues'
 import { EvaluationsRepository } from '../../../repositories'

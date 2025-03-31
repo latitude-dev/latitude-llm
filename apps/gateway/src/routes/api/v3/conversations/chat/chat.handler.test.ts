@@ -9,7 +9,7 @@ import {
   Workspace,
 } from '@latitude-data/core'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core'
-import { createProject } from '@latitude-data/core'
+import { createProject } from '@latitude-data/core/tests/factories'
 import { LatitudeError } from '@latitude-data/core'
 import { Result } from '@latitude-data/core'
 import { ChainError } from '@latitude-data/core'
@@ -29,17 +29,14 @@ const mocks = vi.hoisted(() => ({
   },
 }))
 
-vi.mock(
-  '@latitude-data/core'
-  async (importOriginal) => {
-    const original = (await importOriginal()) as typeof importOriginal
+vi.mock('@latitude-data/core', async (importOriginal) => {
+  const original = (await importOriginal()) as typeof importOriginal
 
-    return {
-      ...original,
-      addMessages: mocks.addMessages,
-    }
-  },
-)
+  return {
+    ...original,
+    addMessages: mocks.addMessages,
+  }
+})
 
 vi.mock('$/common/sentry', async (importOriginal) => {
   const original = (await importOriginal()) as typeof importOriginal

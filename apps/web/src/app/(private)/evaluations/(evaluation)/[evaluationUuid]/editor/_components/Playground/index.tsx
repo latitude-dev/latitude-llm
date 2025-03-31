@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core'
-import { formatContext, formatConversation } from '@latitude-data/core'
+import { formatContext } from '@latitude-data/core'
 import { Button, Icon, TableBlankSlate, Text } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
@@ -16,6 +16,7 @@ import Chat from './Chat'
 import { Header } from './Header'
 import Preview from './Preview'
 import { Variables } from './Variables'
+import { formatProviderLogConversation } from 'node_modules/@latitude-data/core/src/services/providerLogs'
 
 const BlankSlate = ({ evaluation }: { evaluation: EvaluationDto }) => (
   <>
@@ -70,7 +71,7 @@ export default function Playground({
     }
 
     return {
-      messages: formatConversation(providerLog),
+      messages: formatProviderLogConversation(providerLog),
       context: formatContext(providerLog),
       response: providerLog.response,
       toolCalls: providerLog.toolCalls,

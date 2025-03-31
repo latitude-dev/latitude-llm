@@ -1,11 +1,6 @@
 import app from '$/routes/app'
-import {
-  ApiKey,
-  DocumentLog,
-  Providers,
-  User,
-  Workspace,
-} from '@latitude-data/core'
+import { ApiKey, DocumentLog, User, Workspace } from '@latitude-data/core'
+import { Providers } from '@latitude-data/constants'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core'
 import {
   createConnectedEvaluation,
@@ -13,7 +8,7 @@ import {
   createLlmAsJudgeEvaluation,
   createProject,
   helpers,
-} from '@latitude-data/core'
+} from '@latitude-data/core/tests/factories'
 import { Result } from '@latitude-data/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

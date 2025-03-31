@@ -17,7 +17,7 @@ export default defineConfig({
   outDir: 'dist',
   sourcemap: true,
   clean: true,
-  dts: true,
+  dts: false,
   format: ['esm'],
   target: 'node20',
   platform: 'node',

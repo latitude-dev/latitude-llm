@@ -9,7 +9,7 @@ import {
   User,
   Workspace,
 } from '../../browser'
-import { Providers } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
 import { destroyOrSoftDeleteDocuments } from '../../services/documents/destroyOrSoftDeleteDocuments'
