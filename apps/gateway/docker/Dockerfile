@@ -97,19 +97,7 @@ USER latitude
 
 WORKDIR /app
 
-# Only copy necessary files from builder
-COPY --from=builder --chown=nodejs:latitude /app/apps/gateway/dist ./dist
-COPY --from=builder --chown=nodejs:latitude /app/apps/gateway/package.json ./package.json
-COPY --from=builder --chown=nodejs:latitude /app/apps/gateway/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:latitude /app/packages/core/src ./packages/core/src
-COPY --from=builder --chown=nodejs:latitude /app/packages/core/package.json ./packages/core/package.json
-COPY --from=builder --chown=nodejs:latitude /app/packages/core/node_modules ./packages/core/node_modules
-COPY --from=builder --chown=nodejs:latitude /app/packages/env/src ./packages/env/src
-COPY --from=builder --chown=nodejs:latitude /app/packages/env/package.json ./packages/env/package.json
-COPY --from=builder --chown=nodejs:latitude /app/packages/env/node_modules ./packages/env/node_modules
-COPY --from=builder --chown=nodejs:latitude /app/packages/constants/src ./packages/constants/src
-COPY --from=builder --chown=nodejs:latitude /app/packages/constants/package.json ./packages/constants/package.json
-COPY --from=builder --chown=nodejs:latitude /app/packages/constants/node_modules ./packages/constants/node_modules
+COPY --from=builder --chown=nodejs:latitude /app .
 
 ARG PORT=8080
 
