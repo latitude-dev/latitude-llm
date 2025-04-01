@@ -25,6 +25,11 @@ Each webhook is assigned a unique secret key that is used to sign webhook payloa
 
 When you receive a webhook request, you can verify its authenticity by checking the `X-Latitude-Signature` header. The signature is generated using HMAC SHA-256 with your webhook's secret key.
 
+<Note>
+  The `X-Latitude-Signature` header is **not** included when testing the
+  endpoint using the "Test Endpoint" button from the Latitude UI.
+</Note>
+
 ## Webhook Events
 
 Currently, Latitude webhooks support the following event:
