@@ -22,19 +22,6 @@ export default function YepCode(props: LucideProps) {
           fill='url(#8b94f3da)'
         ></path>
       </g>
-      <defs>
-        <linearGradient
-          id='8b94f3da'
-          x1='4.70512'
-          y1='24.8069'
-          x2='12.6042'
-          y2='17.1379'
-          gradientUnits='userSpaceOnUse'
-        >
-          <stop stop-color='#04AFF9'></stop>
-          <stop offset='1' stop-color='#24E6D3'></stop>
-        </linearGradient>
-      </defs>
     </svg>
   )
 }
