@@ -1,10 +1,10 @@
-import { uvxCommand } from '../utils'
+import { npxCommand } from '../utils'
 
 export default {
   description: 'Integration for interacting with Figma',
-  command: uvxCommand({
-    name: 'figma-mcp',
-    args: '--figma-api-key=$FIGMA_API_KEY',
+  command: npxCommand({
+    package: 'figma-developer-mcp',
+    args: '--figma-api-key=$FIGMA_API_KEY --stdio',
   }),
   env: {
     FIGMA_API_KEY: {
