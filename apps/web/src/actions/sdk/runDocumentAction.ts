@@ -7,6 +7,7 @@ import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 import { ChainEvent } from '@latitude-data/constants'
+import { captureException } from '$/helpers/captureException'
 
 type RunDocumentActionProps = {
   documentPath: string
@@ -59,6 +60,8 @@ export async function runDocumentAction({
       stream.update(event)
     },
     onError: (error) => {
+      captureException(error)
+
       stream.error({
         name: error.name,
         message: error.message,
