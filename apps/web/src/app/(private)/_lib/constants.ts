@@ -6,7 +6,7 @@ import { ROUTES } from '$/services/routes'
 
 export const NAV_LINKS = [
   { label: 'Docs', href: LATITUDE_DOCS_URL },
-  { label: 'Help', href: LATITUDE_HELP_URL },
+  { label: 'Community', href: LATITUDE_HELP_URL },
 ]
 
 export const MAIN_NAV_LINKS = [
