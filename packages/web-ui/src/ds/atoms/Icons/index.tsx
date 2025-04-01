@@ -147,6 +147,7 @@ import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import Exa from './custom-icons/logos/Exa'
 import YepCode from './custom-icons/logos/YepCode'
+import Monday from './custom-icons/logos/Monday'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -292,6 +293,7 @@ const Icons = {
   blend: Blend,
   exa: Exa,
   yepcode: YepCode,
+  monday: Monday,
 }
 
 export type IconName = keyof typeof Icons
