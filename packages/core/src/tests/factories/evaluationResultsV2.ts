@@ -1,26 +1,34 @@
 import { eq } from 'drizzle-orm'
 import {
   Commit,
+  DatasetRow,
+  DatasetV2,
+  DEFAULT_DATASET_LABEL,
   EvaluationMetric,
   EvaluationResultV2,
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
   ProviderLog,
+  ProviderLogDto,
   RuleEvaluationMetric,
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { evaluationResultsV2 } from '../../schema'
 import * as services from '../../services/evaluationsV2'
+import serializeProviderLog from '../../services/providerLogs/serialize'
 
 type CreateEvaluationResultV2Args<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   evaluation: EvaluationV2<T, M>
-  providerLog: ProviderLog
+  providerLog: ProviderLog | ProviderLogDto
   commit: Commit
+  dataset?: DatasetV2
+  datasetLabel?: string
+  datasetRow?: DatasetRow
   usedForSuggestion?: boolean
   workspace: Workspace
   createdAt?: Date
@@ -46,8 +54,13 @@ export async function createEvaluationResultV2<
   const { result } = await services
     .createEvaluationResultV2({
       evaluation: args.evaluation,
-      providerLog: args.providerLog,
+      providerLog:
+        'response' in args.providerLog
+          ? args.providerLog
+          : serializeProviderLog(args.providerLog),
       commit: args.commit,
+      dataset: args.dataset,
+      datasetRow: args.datasetRow,
       value: {
         score: args.score ?? 1,
         normalizedScore: args.normalizedScore ?? 100,
@@ -55,6 +68,7 @@ export async function createEvaluationResultV2<
           configuration: args.evaluation.configuration,
           actualOutput: 'actual output',
           expectedOutput: 'expected output',
+          datasetLabel: args.datasetLabel ?? DEFAULT_DATASET_LABEL,
         },
         hasPassed: args.hasPassed ?? true,
         error: args.error ?? null,

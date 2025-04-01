@@ -13,7 +13,7 @@ import {
   EvaluationSpecification,
   EvaluationType,
   EvaluationV2,
-  ProviderLog,
+  ProviderLogDto,
   Workspace,
 } from '../../browser'
 import { Database } from '../../client'
@@ -37,7 +37,7 @@ export type EvaluationMetricRunArgs<
   actualOutput: string
   expectedOutput?: string
   conversation: Message[]
-  providerLog: ProviderLog
+  providerLog: ProviderLogDto
   documentLog: DocumentLog
   document: DocumentVersion
   dataset?: DatasetV2

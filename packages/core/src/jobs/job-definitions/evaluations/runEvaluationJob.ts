@@ -11,6 +11,7 @@ import {
   ProviderLogsRepository,
 } from '../../../repositories'
 import { runEvaluationV2 } from '../../../services/evaluationsV2'
+import serializeProviderLog from '../../../services/providerLogs/serialize'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 
@@ -61,6 +62,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
   const providerLog = await providerLogsRepository
     .findByUuid(providerLogUuid)
     .then((r) => r.unwrap())
+    .then((r) => serializeProviderLog(r))
 
   const documentLogsRepository = new DocumentLogsRepository(workspace.id)
   const documentLog = await documentLogsRepository

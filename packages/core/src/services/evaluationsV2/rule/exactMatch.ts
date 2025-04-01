@@ -40,6 +40,7 @@ async function run(
     evaluation,
     actualOutput,
     expectedOutput,
+    datasetLabel,
   }: EvaluationMetricRunArgs<
     EvaluationType.Rule,
     RuleEvaluationMetric.ExactMatch
@@ -51,6 +52,7 @@ async function run(
       configuration: evaluation.configuration,
       actualOutput: actualOutput,
       expectedOutput: expectedOutput,
+      datasetLabel: datasetLabel,
     }
 
     if (!metadata.expectedOutput) {

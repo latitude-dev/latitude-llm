@@ -201,7 +201,6 @@ describe('computeProjectStats', () => {
       metadata: {
         configuration: evaluationV2.configuration,
         actualOutput: 'actual output',
-        expectedOutput: 'expected output',
         evaluationLogId: evaluationLogV2.id,
         reason: 'reason',
         tokens: 100,

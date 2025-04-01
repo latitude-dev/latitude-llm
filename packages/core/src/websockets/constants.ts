@@ -6,10 +6,11 @@
 import {
   Commit,
   DatasetRow,
+  DatasetV2,
   DocumentSuggestionWithDetails,
   EvaluationResultV2,
   EvaluationV2,
-  ProviderLog,
+  ProviderLogDto,
   Span,
   Trace,
 } from '../browser'
@@ -106,7 +107,9 @@ type EvaluationResultV2CreatedArgs = {
   result: EvaluationResultV2
   evaluation: EvaluationV2
   commit: Commit
-  providerLog: ProviderLog
+  providerLog: ProviderLogDto
+  dataset?: DatasetV2
+  datasetRow?: DatasetRow
 }
 
 export type WebServerToClientEvents = {

@@ -277,6 +277,16 @@ export type ResultWithEvaluationV2<
   evaluation: EvaluationV2<T, M>
 }
 
+export type EvaluationResultV2WithDetails<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> = EvaluationResultV2<T, M> & {
+  commit: Commit
+  dataset?: DatasetV2
+  evaluatedRow?: DatasetRow
+  evaluatedLog: ProviderLogDto
+}
+
 type EvaluationV2BaseStats = {
   totalResults: number
   averageScore: number

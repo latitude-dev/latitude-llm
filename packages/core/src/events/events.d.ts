@@ -4,6 +4,8 @@ import type {
   ChainStepResponse,
   Commit,
   Dataset,
+  DatasetRow,
+  DatasetV2,
   DocumentLog,
   DocumentSuggestion,
   DocumentVersion,
@@ -19,6 +21,7 @@ import type {
   Project,
   ProviderApiKey,
   ProviderLog,
+  ProviderLogDto,
   Providers,
   Span,
   StreamType,
@@ -515,7 +518,7 @@ export type EvaluationV2RanEvent = LatitudeEventGeneric<
     workspaceId: number
     evaluation: EvaluationV2
     commit: Commit
-    providerLog: ProviderLog
+    providerLog: ProviderLogDto
   }
 >
 
@@ -526,7 +529,9 @@ export type EvaluationResultV2CreatedEvent = LatitudeEventGeneric<
     result: EvaluationResultV2
     evaluation: EvaluationV2
     commit: Commit
-    providerLog: ProviderLog
+    providerLog: ProviderLogDto
+    dataset?: DatasetV2
+    datasetRow?: DatasetRow
   }
 >
 

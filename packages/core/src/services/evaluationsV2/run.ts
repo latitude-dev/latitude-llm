@@ -10,7 +10,7 @@ import {
   EvaluationType,
   EvaluationV2,
   formatMessage,
-  ProviderLog,
+  ProviderLogDto,
   Workspace,
 } from '../../browser'
 import { database, Database } from '../../client'
@@ -27,7 +27,6 @@ import {
 } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema'
 import { getColumnData } from '../datasetsV2/utils'
-import serializeProviderLog from '../providerLogs/serialize'
 import { EVALUATION_SPECIFICATIONS } from './shared'
 
 export async function runEvaluationV2<
@@ -44,7 +43,7 @@ export async function runEvaluationV2<
     workspace,
   }: {
     evaluation: EvaluationV2<T, M>
-    providerLog: ProviderLog
+    providerLog: ProviderLogDto
     dataset?: DatasetV2
     datasetLabel?: string
     datasetRow?: DatasetRow
@@ -80,7 +79,7 @@ export async function runEvaluationV2<
     )
   }
 
-  const conversation = buildConversation(serializeProviderLog(providerLog))
+  const conversation = buildConversation(providerLog)
   if (conversation.at(-1)?.role != 'assistant') {
     return Result.error(
       new UnprocessableEntityError(
@@ -158,6 +157,8 @@ export async function runEvaluationV2<
         evaluation: evaluation,
         providerLog: providerLog,
         commit: commit,
+        dataset: dataset,
+        datasetRow: datasetRow,
         value: value as EvaluationResultValue<T, M>,
         workspace: workspace,
       },
@@ -186,13 +187,17 @@ export async function createEvaluationResultV2<
     evaluation,
     providerLog,
     commit,
+    dataset,
+    datasetRow,
     value,
     usedForSuggestion,
     workspace,
   }: {
     evaluation: EvaluationV2<T, M>
-    providerLog: ProviderLog
+    providerLog: ProviderLogDto
     commit: Commit
+    dataset?: DatasetV2
+    datasetRow?: DatasetRow
     value: EvaluationResultValue<T, M>
     usedForSuggestion?: boolean
     workspace: Workspace
@@ -206,6 +211,8 @@ export async function createEvaluationResultV2<
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
+        datasetId: dataset?.id,
+        evaluatedRowId: datasetRow?.id,
         evaluatedLogId: providerLog.id,
         ...value,
         usedForSuggestion: usedForSuggestion,
@@ -221,6 +228,8 @@ export async function createEvaluationResultV2<
         evaluation: evaluation,
         commit: commit,
         providerLog: providerLog,
+        dataset: dataset,
+        datasetRow: datasetRow,
       },
     })
 

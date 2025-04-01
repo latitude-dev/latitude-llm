@@ -166,6 +166,8 @@ export type EvaluationResultV2<
   commitId: number
   evaluationUuid: string
   experimentId?: number | null
+  datasetId?: number | null
+  evaluatedRowId?: number | null
   evaluatedLogId: number
   usedForSuggestion?: boolean | null
   createdAt: Date

@@ -15,6 +15,7 @@ import {
 import {
   EvaluationResultsV2Search,
   EvaluationResultV2,
+  EvaluationResultV2WithDetails,
   EvaluationType,
   EvaluationV2Stats,
   ResultWithEvaluationV2,
@@ -22,10 +23,13 @@ import {
 import { calculateOffset, Result } from '../lib'
 import {
   commits,
+  datasetRows,
+  datasetsV2,
   evaluationResultsV2,
   evaluationVersions,
   providerLogs,
 } from '../schema'
+import serializeProviderLog from '../services/providerLogs/serialize'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'
 
@@ -76,7 +80,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return and(...filter)
   }
 
-  listByEvaluationQuery({
+  async listByEvaluation({
     evaluationUuid,
     params,
   }: {
@@ -86,9 +90,24 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const filter = this.listByEvaluationFilter({ evaluationUuid, params })
 
     let query = this.db
-      .select(tt)
+      .select({
+        ...tt,
+        commit: commits,
+        dataset: datasetsV2,
+        evaluatedRow: datasetRows,
+        evaluatedLog: providerLogs,
+      })
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
+      .leftJoin(datasetsV2, eq(datasetsV2.id, evaluationResultsV2.datasetId))
+      .leftJoin(
+        datasetRows,
+        eq(datasetRows.id, evaluationResultsV2.evaluatedRowId),
+      )
+      .innerJoin(
+        providerLogs,
+        eq(providerLogs.id, evaluationResultsV2.evaluatedLogId),
+      )
       .where(filter)
       .$dynamic()
 
@@ -112,19 +131,16 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         calculateOffset(params.pagination.page, params.pagination.pageSize),
       )
 
-    return query
-  }
+    const results = await query.then((results) =>
+      results.map((result) => ({
+        ...result,
+        evaluatedLog: serializeProviderLog(result.evaluatedLog),
+      })),
+    )
 
-  async listByEvaluation({
-    evaluationUuid,
-    params,
-  }: {
-    evaluationUuid: string
-    params: EvaluationResultsV2Search
-  }) {
-    const results = await this.listByEvaluationQuery({ evaluationUuid, params })
-
-    return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
+    return Result.ok<EvaluationResultV2WithDetails[]>(
+      results as EvaluationResultV2WithDetails[],
+    )
   }
 
   async countListByEvaluation({
