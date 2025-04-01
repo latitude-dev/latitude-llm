@@ -1,5 +1,8 @@
 import { Message as ConversationMessage } from '@latitude-data/compiler'
-import { ErrorMessage, MessageList } from '@latitude-data/web-ui'
+import {
+  ErrorMessage,
+  MessageList,
+} from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { StreamMessage } from './StreamMessage'
 import { Timer } from './Timer'
 

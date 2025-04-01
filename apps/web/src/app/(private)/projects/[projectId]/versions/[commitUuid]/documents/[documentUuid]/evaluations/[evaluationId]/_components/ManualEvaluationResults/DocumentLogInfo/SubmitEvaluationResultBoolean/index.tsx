@@ -5,7 +5,8 @@ import {
   EvaluationResultableType,
   EvaluationResultDto,
 } from '@latitude-data/core/browser'
-import { Icon, TabSelector } from '@latitude-data/web-ui'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 
 import { DocumentLogWithMetadataAndErrorAndEvaluationResult } from '../..'
 import { BaseEvaluationResult } from '../BaseEvaluationResult'

@@ -1,4 +1,4 @@
-import Text from '../../atoms/Text'
+import { Text } from '../../atoms/Text'
 import { TextColor } from '../../tokens'
 
 export function AnimatedDots(

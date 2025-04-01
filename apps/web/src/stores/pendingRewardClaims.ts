@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 
 import { ClaimedRewardWithUserInfo } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { fetchPendingRewardClaimsAction } from '$/actions/rewards/fetchPendingRewardClaimsAction'
 import { updateRewardClaimValidityAction } from '$/actions/rewards/updateRewardClaimValidityAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'

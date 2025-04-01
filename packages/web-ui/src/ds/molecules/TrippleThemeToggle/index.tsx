@@ -1,8 +1,8 @@
 'use client'
-
 import { useTheme } from 'next-themes'
 import { useCallback } from 'react'
-import { Button, ClientOnly } from '../../atoms'
+import { Button } from '../../atoms/Button'
+import { ClientOnly } from '../../atoms/ClientOnly'
 import { cn } from '../../../lib/utils'
 import {
   AppLocalStorage,

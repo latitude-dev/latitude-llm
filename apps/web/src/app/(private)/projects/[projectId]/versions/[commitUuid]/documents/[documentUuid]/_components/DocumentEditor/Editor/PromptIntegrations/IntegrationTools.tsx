@@ -2,18 +2,16 @@ import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets
 import useIntegrationTools from '$/stores/integrationTools'
 import { McpTool } from '@latitude-data/constants'
 import { IntegrationDto } from '@latitude-data/core/browser'
-import {
-  Badge,
-  BlankSlate,
-  Button,
-  DotIndicator,
-  FakeProgress,
-  Skeleton,
-  SwitchToggle,
-  Text,
-  toast,
-  Tooltip,
-} from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
+import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import Link from 'next/link'
 import { useCallback, useState } from 'react'
 

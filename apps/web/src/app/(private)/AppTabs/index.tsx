@@ -1,6 +1,6 @@
 'use client'
 
-import { TabSelector } from '@latitude-data/web-ui'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useSelectedPath } from '$/hooks/useSelectedPath'
 import { DocumentRoutes } from '$/services/routes'

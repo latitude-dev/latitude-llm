@@ -3,20 +3,22 @@ import { capitalize } from 'lodash-es'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
+import { cn } from '@latitude-data/web-ui/utils'
 import {
-  Badge,
-  Checkbox,
-  cn,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Text,
+} from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import {
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'

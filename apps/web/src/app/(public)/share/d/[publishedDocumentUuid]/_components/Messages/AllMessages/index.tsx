@@ -1,9 +1,9 @@
 import {
   ErrorMessage,
   MessageList,
-  MessageSkeleton,
-  ReactStateDispatch,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { MessageSkeleton } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import {
   Conversation,
   Message as ConversationMessage,

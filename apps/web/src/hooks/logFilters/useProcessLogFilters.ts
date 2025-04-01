@@ -6,7 +6,7 @@ import {
 } from '@latitude-data/core/browser'
 import { paramsToString } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { formatDocumentLogCreatedAtParam } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
-import { ReactStateDispatch } from '@latitude-data/web-ui'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { endOfDay } from 'date-fns'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'

@@ -1,17 +1,13 @@
 'use client'
-
 import { capitalize } from 'lodash-es'
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 
 import { PublishedDocument } from '@latitude-data/core/browser'
-import {
-  Button,
-  Card,
-  CardContent,
-  cn,
-  FormField,
-  useToast,
-} from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
+import { cn } from '@latitude-data/web-ui/utils'
+import { FormField } from '@latitude-data/web-ui/atoms/FormField'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { ConversationMetadata } from 'promptl-ai'
 
 import { ParameterInput } from '$/components/ParameterInput'

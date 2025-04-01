@@ -3,20 +3,17 @@ import { useMemo } from 'react'
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import useProviderApiKeys from '$/stores/providerApiKeys'
-import { Message } from '@latitude-data/compiler'
 import {
   DocumentLog,
   ProviderApiKey,
   ProviderLogDto,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import {
-  Badge,
-  ClickToCopy,
-  Message as MessageComponent,
-  Text,
-  TextArea,
-} from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Message as MessageComponent } from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { format } from 'date-fns'
 
 import {
@@ -29,6 +26,7 @@ import {
   MetadataItem,
   MetadataItemTooltip,
 } from '../../../../../[documentUuid]/_components/MetadataItem'
+import { Message } from '@latitude-data/compiler'
 
 function costNotCalculatedReason({
   provider,

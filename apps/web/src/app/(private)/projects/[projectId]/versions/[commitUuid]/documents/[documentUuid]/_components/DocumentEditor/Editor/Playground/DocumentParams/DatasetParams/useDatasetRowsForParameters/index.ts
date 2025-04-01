@@ -11,7 +11,7 @@ import {
   type WithPositionData,
 } from './useDatasetRowsWithPosition'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { SelectOption } from '@latitude-data/web-ui'
+import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { ConversationMetadata } from 'promptl-ai'
 import { parseRowCell } from '$/stores/datasetRows/rowSerializationHelpers'
 

@@ -1,13 +1,10 @@
 'use client'
-
 import { useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
-import {
-  CodeBlock,
-  TabSelector,
-  useCurrentProject,
-} from '@latitude-data/web-ui'
+import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useApiKeys from '$/stores/apiKeys'
 

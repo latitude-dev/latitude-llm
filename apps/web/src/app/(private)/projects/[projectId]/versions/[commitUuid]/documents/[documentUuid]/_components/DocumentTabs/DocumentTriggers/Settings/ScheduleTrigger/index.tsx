@@ -1,6 +1,6 @@
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentVersion } from '@latitude-data/core/browser'
-import { Text } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useMemo } from 'react'
 import { ScheduleTriggerConfig } from './Config'
 import { DocumentTriggerType } from '@latitude-data/constants'

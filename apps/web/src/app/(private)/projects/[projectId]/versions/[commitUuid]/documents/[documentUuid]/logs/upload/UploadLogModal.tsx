@@ -1,16 +1,13 @@
 'use client'
-
 import { LATITUDE_DOCS_URL } from '@latitude-data/core/browser'
-import {
-  Alert,
-  Button,
-  CloseTrigger,
-  DropzoneInput,
-  FormWrapper,
-  Modal,
-  Text,
-  useToast,
-} from '@latitude-data/web-ui'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { DropzoneInput } from '@latitude-data/web-ui/atoms/DropzoneInput'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { uploadDocumentLogsAction } from '$/actions/documentLogs/upload'
 import { useFormAction } from '$/hooks/useFormAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'

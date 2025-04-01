@@ -8,12 +8,10 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
 import { PublishedDocument } from '@latitude-data/core/browser'
-import {
-  Button,
-  ButtonProps,
-  Modal,
-  useMaybeSession,
-} from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { ButtonProps } from '@latitude-data/web-ui/atoms/Button'
+import { useMaybeSession } from '@latitude-data/web-ui/providers'
 import { MouseEvent, useCallback, useState } from 'react'
 
 export function ForkButton({

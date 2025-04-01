@@ -12,7 +12,9 @@ import {
   DocumentLog,
   ProviderLogDto,
 } from '@latitude-data/core/browser'
-import { IconName, TabSelectorOption, TextColor } from '@latitude-data/web-ui'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
+import { TextColor } from '@latitude-data/web-ui/tokens'
 import React from 'react'
 import HumanEvaluationSpecification from './human'
 import LlmEvaluationSpecification from './llm'

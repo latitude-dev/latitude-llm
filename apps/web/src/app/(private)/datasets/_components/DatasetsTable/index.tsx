@@ -1,20 +1,19 @@
 'use client'
-
 import { useState } from 'react'
 import Link from 'next/link'
 import { DatasetV2 } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { dateFormatter } from '@latitude-data/web-ui/dateUtils'
 import {
-  Button,
-  dateFormatter,
   Table,
-  TableBlankSlate,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Text,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useDatasets from '$/stores/datasetsV2'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { useSearchParams } from 'next/navigation'

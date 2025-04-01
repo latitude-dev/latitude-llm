@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { Badge } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 
 export function Step({
   number,

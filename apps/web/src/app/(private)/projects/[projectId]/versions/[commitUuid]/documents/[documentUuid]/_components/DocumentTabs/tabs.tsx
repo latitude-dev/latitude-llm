@@ -2,7 +2,7 @@
 
 import { useNavigate } from '$/hooks/useNavigate'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
-import { TabSelector } from '@latitude-data/web-ui'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { useSelectedLayoutSegment } from 'next/navigation'
 
 const evaluationsV2Route = 'evaluations-v2' as DocumentRoutes.evaluationsV2

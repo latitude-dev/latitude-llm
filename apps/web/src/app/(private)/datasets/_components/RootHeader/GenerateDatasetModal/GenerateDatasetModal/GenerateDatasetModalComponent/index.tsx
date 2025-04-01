@@ -1,22 +1,20 @@
 import { ChangeEvent, FormEvent } from 'react'
 import Link from 'next/link'
-import {
-  Alert,
-  Badge,
-  Button,
-  CloseTrigger,
-  cn,
-  FormField,
-  FormWrapper,
-  Icon,
-  Input,
-  LoadingText,
-  Modal,
-  TableSkeleton,
-  Text,
-  TextArea,
-  Tooltip,
-} from '@latitude-data/web-ui'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
+import { FormField } from '@latitude-data/web-ui/atoms/FormField'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { CsvPreviewTable } from '$/components/CsvPreviewTable'
 import type { PreviewCsv } from '../useDatasetPreviewModal'
 

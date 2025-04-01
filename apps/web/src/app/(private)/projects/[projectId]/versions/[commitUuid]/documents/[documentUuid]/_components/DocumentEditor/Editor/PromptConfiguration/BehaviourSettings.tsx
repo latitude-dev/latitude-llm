@@ -1,4 +1,4 @@
-import { SwitchToggle } from '@latitude-data/web-ui'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { ConfigElement, ConfigSection } from './_components/ConfigSection'
 import { PromptConfigurationProps, useConfigValue } from './utils'
 import { SubAgentSelector } from './_components/AgentSelector'

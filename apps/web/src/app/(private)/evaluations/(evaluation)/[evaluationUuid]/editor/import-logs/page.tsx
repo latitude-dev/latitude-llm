@@ -1,24 +1,23 @@
 'use client'
-
 import { use, useMemo, useState } from 'react'
 import { capitalize } from 'lodash-es'
 
 import { MessageContent } from '@latitude-data/compiler'
 import { ProviderLogDto } from '@latitude-data/core/browser'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import {
-  Badge,
-  Button,
-  CloseTrigger,
-  Modal,
-  roleVariant,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Text,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
+import { roleVariant } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { ProjectDocumentSelector } from '$/components/ProjectDocumentSelector'
 import { useNavigate } from '$/hooks/useNavigate'
 import { relativeTime } from '$/lib/relativeTime'

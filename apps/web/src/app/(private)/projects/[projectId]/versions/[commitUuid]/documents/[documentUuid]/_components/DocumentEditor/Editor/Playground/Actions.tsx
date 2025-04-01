@@ -1,4 +1,6 @@
-import { ClientOnly, SwitchToggle, Text } from '@latitude-data/web-ui'
+import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export type ActionsState = {
   expandParameters: boolean

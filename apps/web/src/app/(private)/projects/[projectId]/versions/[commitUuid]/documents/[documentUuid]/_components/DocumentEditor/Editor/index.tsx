@@ -1,5 +1,4 @@
 'use client'
-
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 
 import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
@@ -20,17 +19,17 @@ import {
   EvaluationResult,
   ProviderApiKey,
 } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
+import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
+import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import {
-  Button,
-  ClickToCopyUuid,
-  DocumentTextEditor,
-  SplitPane,
-  Text,
-  TextEditorPlaceholder,
-  Tooltip,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { useRouter } from 'next/navigation'
 import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
 import { useDebouncedCallback } from 'use-debounce'

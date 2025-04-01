@@ -1,6 +1,6 @@
 'use client'
-
-import { EditableText, Text } from '@latitude-data/web-ui'
+import { EditableText } from '@latitude-data/web-ui/molecules/EditableText'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useProjects from '$/stores/projects'
 import { useDebouncedCallback } from 'use-debounce'
 

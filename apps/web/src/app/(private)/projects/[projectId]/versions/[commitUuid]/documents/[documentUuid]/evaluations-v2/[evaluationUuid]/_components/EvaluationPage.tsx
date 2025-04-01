@@ -1,5 +1,4 @@
 'use client'
-
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
@@ -20,18 +19,20 @@ import {
   EvaluationV2,
   EvaluationV2Stats,
 } from '@latitude-data/core/browser'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import {
-  Badge,
   Breadcrumb,
   BreadcrumbItem,
-  ClickToCopyUuid,
-  Icon,
-  TableWithHeader,
-  Text,
-  Tooltip,
+} from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import {
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DebouncedState, useDebounce, useDebouncedCallback } from 'use-debounce'

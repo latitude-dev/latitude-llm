@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import {
   inferServerActionError,
   inferServerActionReturnData,

@@ -1,14 +1,11 @@
 'use client'
-
 import { useState } from 'react'
 
 import useApiKeys from '$/stores/apiKeys'
-import {
-  CodeBlock,
-  Tabs,
-  useCurrentProject,
-  type TabItem,
-} from '@latitude-data/web-ui'
+import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { Tabs } from '@latitude-data/web-ui/molecules/Tabs'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { TabItem } from '@latitude-data/web-ui/molecules/Tabs'
 
 const tabs: TabItem[] = [
   { id: 'javascript', label: 'Javascript' },

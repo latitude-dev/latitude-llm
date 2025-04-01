@@ -1,5 +1,8 @@
 import { ROUTES } from '$/services/routes'
-import { BreadcrumbItem, BreadcrumbSeparator } from '@latitude-data/web-ui'
+import {
+  BreadcrumbItem,
+  BreadcrumbSeparator,
+} from '@latitude-data/web-ui/molecules/Breadcrumb'
 import { ProjectBreadcrumbItems } from '../Projects'
 import { DatasetBreadcrumbItems, DatasetV1BreadcrumbItems } from '../Datasets'
 import { BreadcrumbSelector, BreadcrumbSelectorOption } from '../Selector'

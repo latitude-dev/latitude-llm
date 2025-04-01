@@ -1,7 +1,8 @@
 'use client'
-
 import type { UsageTrend } from '$/app/(admin)/backoffice/usage-overview/buildUsageInformation'
-import { Text, Icon, Tooltip } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export function TrendCell({ trend }: { trend: UsageTrend }) {
   const color =

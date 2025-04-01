@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 
 import { Workspace } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { setDefaultProviderAction } from '$/actions/workspaces/setDefaultProvider'
 import { updateWorkspaceAction } from '$/actions/workspaces/update'
 import useFetcher from '$/hooks/useFetcher'

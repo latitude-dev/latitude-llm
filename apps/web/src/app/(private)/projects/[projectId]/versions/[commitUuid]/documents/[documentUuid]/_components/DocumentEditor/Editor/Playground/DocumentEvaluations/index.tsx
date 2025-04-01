@@ -16,13 +16,13 @@ import {
   EvaluationV2,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
+import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
+import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import {
-  ClientOnly,
-  CollapsibleBox,
-  OnExpandFn,
   useCurrentProject,
-  type ICommitContextType,
-} from '@latitude-data/web-ui'
+  ICommitContextType,
+} from '@latitude-data/web-ui/providers'
+import { OnExpandFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CollapsedContentHeader,

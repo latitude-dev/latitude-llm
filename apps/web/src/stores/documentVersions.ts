@@ -20,7 +20,7 @@ import {
   MAX_UPLOAD_SIZE_IN_MB,
   type DocumentVersion,
 } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useRouter } from 'next/navigation'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'

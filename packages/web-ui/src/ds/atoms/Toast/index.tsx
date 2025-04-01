@@ -143,3 +143,7 @@ export {
   ToastClose,
   ToastAction,
 }
+
+export { toast, useToast } from './useToast'
+
+export * from './ToastProvider'

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { SessionProvider } from '@latitude-data/web-ui'
+import { SessionProvider } from '@latitude-data/web-ui/providers'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'

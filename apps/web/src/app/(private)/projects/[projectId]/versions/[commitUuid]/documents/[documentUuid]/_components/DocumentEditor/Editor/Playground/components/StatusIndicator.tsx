@@ -1,5 +1,8 @@
 import { LanguageModelUsage } from 'ai'
-import { AnimatedDots, Icon, Text, Tooltip } from '@latitude-data/web-ui'
+import { AnimatedDots } from '@latitude-data/web-ui/molecules/AnimatedDots'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 import { FloatingElement } from './FloatingElement'
 import { TokenUsage } from './TokenUsage'

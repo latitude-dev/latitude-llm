@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom'
 import { Active, DragOverlay, useDndContext } from '@dnd-kit/core'
-import { Icon, IconName, Text } from '../../../../../../ds/atoms'
+import { Icon, IconName } from '../../../../../../ds/atoms/Icons'
+import { Text } from '../../../../../../ds/atoms/Text'
 import { cn } from '../../../../../../lib/utils'
 
 export type DraggableAndDroppableData = {

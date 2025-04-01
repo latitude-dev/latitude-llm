@@ -3,7 +3,7 @@
 import { ReactNode } from 'react'
 
 import { EvaluationDto, ProviderApiKey } from '@latitude-data/core/browser'
-import { Button } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 

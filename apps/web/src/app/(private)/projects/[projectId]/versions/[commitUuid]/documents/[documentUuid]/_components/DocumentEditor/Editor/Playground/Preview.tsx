@@ -19,17 +19,19 @@ import {
   ConversationMetadata,
   Chain as PromptlChain,
 } from 'promptl-ai'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
-  Alert,
-  Button,
   ErrorMessage,
   Message,
-  Text,
-  Tooltip,
-  useAutoScroll,
+} from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
+import {
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 
 import Actions, { ActionsState } from './Actions'

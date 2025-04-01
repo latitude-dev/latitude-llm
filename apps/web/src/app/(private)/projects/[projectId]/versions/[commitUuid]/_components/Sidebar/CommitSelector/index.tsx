@@ -1,5 +1,4 @@
 'use client'
-
 import {
   RefObject,
   useCallback,
@@ -14,16 +13,16 @@ import {
   HELP_CENTER,
   type Commit,
 } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
-  Button,
-  ReactStateDispatch,
   SelectContent,
   SelectRoot,
   SelectTrigger,
   SelectValueWithIcon,
-  TabSelector,
-  Text,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Select'
 import useUsers from '$/stores/users'
 
 import CreateDraftCommitModal from '../CreateDraftCommitModal'

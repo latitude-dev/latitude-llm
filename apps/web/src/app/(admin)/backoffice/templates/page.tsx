@@ -1,28 +1,27 @@
 'use client'
-
 import { FormEvent } from 'react'
 
 import {
   EvaluationResultableType,
   EvaluationTemplateWithCategory,
 } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FormField } from '@latitude-data/web-ui/atoms/FormField'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
 import {
-  Button,
-  FormField,
-  FormWrapper,
-  Icon,
-  Input,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  TableWithHeader,
-  TabSelector,
-  Text,
-  TextArea,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { useEvaluationConfiguration } from '$/app/(private)/evaluations/_components/CreateEvaluationModal/useEvaluationConfiguration'
 import useEvaluationTemplates from '$/stores/evaluationTemplates'
 

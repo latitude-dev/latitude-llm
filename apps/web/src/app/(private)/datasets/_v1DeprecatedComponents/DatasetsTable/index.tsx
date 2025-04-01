@@ -1,23 +1,22 @@
 'use client'
-
 import { useState } from 'react'
 import { compact } from 'lodash-es'
 import Link from 'next/link'
 
 import { Dataset } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { dateFormatter } from '@latitude-data/web-ui/dateUtils'
 import {
-  Button,
-  dateFormatter,
   Table,
-  TableBlankSlate,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Text,
-  Tooltip,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'

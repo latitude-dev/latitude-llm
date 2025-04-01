@@ -1,5 +1,5 @@
 import { ToolRequestContent, ToolContent } from '@latitude-data/compiler'
-import { CodeBlock } from '../../../atoms'
+import { CodeBlock } from '../../../atoms/CodeBlock'
 import { ContentCard } from './ContentCard'
 import { ToolCallContent as PromptlToolCall } from 'promptl-ai'
 import { CodeLatitudeToolCallContent } from './LatitudeTools/Code'

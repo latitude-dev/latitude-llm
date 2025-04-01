@@ -7,14 +7,12 @@ import {
   EvaluationType,
   EvaluationV2Stats,
 } from '@latitude-data/core/browser'
-import {
-  Badge,
-  ChartBlankSlate,
-  ChartWrapper,
-  ScatterChart,
-  Text,
-  useCurrentCommit,
-} from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
+import { ScatterChart } from '@latitude-data/web-ui/molecules/Charts'
 import { useMemo } from 'react'
 
 export default function VersionOverviewChart<

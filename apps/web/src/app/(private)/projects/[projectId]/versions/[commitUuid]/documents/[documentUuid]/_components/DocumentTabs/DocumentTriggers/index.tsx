@@ -1,5 +1,8 @@
 import { DocumentVersion } from '@latitude-data/core/browser'
-import { Button, DotIndicator, Popover, Text } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { TriggerSettings } from './Settings'
 import useDocumentTriggers from '$/stores/documentTriggers'

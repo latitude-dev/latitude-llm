@@ -4,13 +4,13 @@ import {
   DocumentSuggestionWithDetails,
   DocumentVersion,
 } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import {
-  Button,
-  ConfirmModal,
   ICommitContextType,
   IProjectContextType,
-  Text,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import DiffMatchPatch from 'diff-match-patch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'

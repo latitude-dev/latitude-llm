@@ -1,22 +1,21 @@
 'use client'
-
 import { Key, useMemo, useState } from 'react'
 
 import { TraceWithSpans } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { ListTracesResponse } from '@latitude-data/core/services/traces/list'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { cn } from '@latitude-data/web-ui/utils'
 import {
-  Badge,
-  cn,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  TableSkeleton,
-  Text,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { relativeTime } from '$/lib/relativeTime'

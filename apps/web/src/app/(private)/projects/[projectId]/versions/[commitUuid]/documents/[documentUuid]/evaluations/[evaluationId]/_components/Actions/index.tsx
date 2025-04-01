@@ -1,9 +1,9 @@
 'use client'
-
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { EvaluationDto } from '@latitude-data/core/browser'
-import { Label, TableWithHeader } from '@latitude-data/web-ui'
+import { Label } from '@latitude-data/web-ui/atoms/Label'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import DefaultProviderBanner from '../DefaulProviderBanner'
 import CreateBatchEvaluationModal from './CreateBatchEvaluationModal'
 import LiveEvaluationToggle from './LiveEvaluationToggle'

@@ -4,7 +4,7 @@ import {
   PromptlVersion,
   VersionedMessage,
   extractToolContents,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/versionedMessagesHelpers'
 import { Message as CompilerMessage } from '@latitude-data/compiler'
 import { useCallback, useState } from 'react'
 import {

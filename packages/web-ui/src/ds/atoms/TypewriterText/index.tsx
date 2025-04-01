@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
-
-import { cn } from '@latitude-data/web-ui'
+import { cn } from '../../../lib/utils'
 
 interface TypewriterTextProps {
   text: string

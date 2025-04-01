@@ -12,7 +12,8 @@ import {
   DatasetVersion,
   DocumentVersion,
 } from '@latitude-data/core/browser'
-import { SelectOption, useCurrentCommit } from '@latitude-data/web-ui'
+import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import type { ConversationMetadata } from 'promptl-ai'
 import { useCallback, useMemo, useState } from 'react'
 import LabelIndicator from './LabelIndicator'

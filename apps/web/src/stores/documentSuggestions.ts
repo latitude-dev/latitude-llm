@@ -11,7 +11,7 @@ import {
   DocumentVersion,
   Project,
 } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact } from 'lodash-es'
 import { useCallback } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'

@@ -1,5 +1,4 @@
 'use client'
-
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
@@ -12,13 +11,13 @@ import {
   ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import {
-  Alert,
-  Button,
-  Tooltip,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { useRouter } from 'next/navigation'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
 import {

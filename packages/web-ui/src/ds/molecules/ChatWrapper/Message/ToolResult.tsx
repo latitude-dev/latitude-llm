@@ -1,5 +1,7 @@
 import { ToolContent } from '@latitude-data/compiler'
-import { CodeBlock, Icon, Text } from '../../../atoms'
+import { CodeBlock } from '../../../atoms/CodeBlock'
+import { Icon } from '../../../atoms/Icons'
+import { Text } from '../../../atoms/Text'
 import { CardTextContent, ContentCard } from './ContentCard'
 import { ReactNode, useMemo } from 'react'
 import { cn } from '../../../../lib/utils'

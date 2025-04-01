@@ -1,9 +1,9 @@
 import { Commit, EvaluationResultsV2Search } from '@latitude-data/core/browser'
-import { DatePickerRange } from '@latitude-data/web-ui'
 import { endOfDay, startOfDay } from 'date-fns'
 import { isEqual } from 'lodash-es'
 import { ComponentProps, useMemo } from 'react'
 import { CommitFilter } from '../../../logs/_components/Filters/CommitFilter'
+import { DatePickerRange } from '@latitude-data/web-ui/atoms/DatePicker'
 
 export function EvaluationFilters({
   commits,

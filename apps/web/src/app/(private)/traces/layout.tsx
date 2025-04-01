@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { Container } from '@latitude-data/web-ui'
+import { Container } from '@latitude-data/web-ui/atoms/Container'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { AppTabs } from '$/app/(private)/AppTabs'
 

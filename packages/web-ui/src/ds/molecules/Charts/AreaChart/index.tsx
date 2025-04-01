@@ -16,13 +16,13 @@ import {
   ValueType,
 } from 'recharts/types/component/DefaultTooltipContent'
 
+import { Text } from '../../../atoms/Text'
+import { AreaChartConfig, CartesianDataItem } from '../types'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  Text,
-} from '../../../atoms'
-import { AreaChartConfig, CartesianDataItem } from '../types'
+} from '../../../atoms/Charts'
 
 export function AreaChart({ config }: { config: AreaChartConfig }) {
   const containerRef = useRef<HTMLDivElement>(null)

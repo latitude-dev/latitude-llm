@@ -6,7 +6,8 @@ import TextareaAutosize, {
 } from 'react-textarea-autosize'
 
 import { cn } from '../../../lib/utils'
-import { FormField, type FormFieldProps } from '../FormField'
+import { FormField } from '../FormField'
+import { type FormFieldProps } from '../FormField'
 import { INPUT_BASE_CLASSES, INPUT_VARIANT_SIZE } from '../Input'
 
 const inputVariants = cva(cn(INPUT_BASE_CLASSES), {

@@ -1,4 +1,5 @@
-import { Icon, Text } from '@latitude-data/web-ui'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
 
 export default function BreadcrumbLink({

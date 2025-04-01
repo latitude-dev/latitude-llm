@@ -1,10 +1,11 @@
 'use client'
-
 import { ChangeEvent, useCallback, useRef } from 'react'
 
 import { create } from 'zustand'
 
-import { Button, Text, Tooltip } from '../../../../../ds/atoms'
+import { Button } from '../../../../../ds/atoms/Button'
+import { Text } from '../../../../../ds/atoms/Text'
+import { Tooltip } from '../../../../../ds/atoms/Tooltip'
 import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'

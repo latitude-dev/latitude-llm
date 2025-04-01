@@ -8,7 +8,10 @@ import {
   INPUT_SOURCE,
   DatasetVersion,
 } from '@latitude-data/core/browser'
-import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useVersionedDatasets } from '$/hooks/useVersionedDatasets'
 import { useDatasetRowsForParameters } from './useDatasetRowsForParameters'

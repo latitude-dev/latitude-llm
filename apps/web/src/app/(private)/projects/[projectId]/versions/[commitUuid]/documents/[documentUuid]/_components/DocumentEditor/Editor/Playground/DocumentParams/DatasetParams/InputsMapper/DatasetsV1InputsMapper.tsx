@@ -7,12 +7,10 @@ import {
   DatasetV2,
   DatasetVersion,
 } from '@latitude-data/core/browser'
-import {
-  ClientOnly,
-  SelectOption,
-  Text,
-  type ICommitContextType,
-} from '@latitude-data/web-ui'
+import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
+import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ICommitContextType } from '@latitude-data/web-ui/providers'
 
 import { InputsMapperItem, OnSelectRowCellFn } from './InputsMapperItem'
 

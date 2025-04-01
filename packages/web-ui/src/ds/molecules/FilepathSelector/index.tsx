@@ -1,5 +1,10 @@
 'use client'
-import { Button, Icon, Input, Popover, Text, Tooltip } from '../../atoms'
+import { Button } from '../../atoms/Button'
+import { Icon } from '../../atoms/Icons'
+import { Input } from '../../atoms/Input'
+import { Popover } from '../../atoms/Popover'
+import { Text } from '../../atoms/Text'
+import { Tooltip } from '../../atoms/Tooltip'
 import { useMemo, useState } from 'react'
 import {
   DisambiguatedFilePath,

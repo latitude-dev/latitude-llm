@@ -2,7 +2,8 @@ import {
   DatasetsRepository,
   DatasetsV2Repository,
 } from '@latitude-data/core/repositories'
-import { Alert, TableWithHeader } from '@latitude-data/web-ui'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { env } from '@latitude-data/env'
 import { RootDatasetHeader } from './_components/RootHeader'

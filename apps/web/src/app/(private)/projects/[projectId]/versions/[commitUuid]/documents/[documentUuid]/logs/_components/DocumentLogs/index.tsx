@@ -1,5 +1,4 @@
 'use client'
-
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
@@ -11,13 +10,11 @@ import {
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { DocumentLogsAggregations } from '@latitude-data/core/services/documentLogs/computeDocumentLogsAggregations'
-import {
-  Button,
-  cn,
-  FloatingPanel,
-  TableBlankSlate,
-  useCurrentProject,
-} from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
+import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useMemo, useRef, useState } from 'react'
 import { LogsOverTime } from '../../../../../overview/_components/Overview/LogsOverTime'
 import { AggregationPanels } from './AggregationPanels'

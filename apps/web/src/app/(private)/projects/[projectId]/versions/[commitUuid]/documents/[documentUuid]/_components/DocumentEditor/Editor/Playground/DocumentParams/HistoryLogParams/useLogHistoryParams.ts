@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 
 import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
-import { useCurrentProject } from '@latitude-data/web-ui'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogs from '$/stores/documentLogs'
 import useDocumentLogWithPaginationPosition, {

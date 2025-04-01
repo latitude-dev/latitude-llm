@@ -1,13 +1,11 @@
 import { useCallback } from 'react'
 
-import {
-  Avatar,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  getUserInfoFromSession,
-  MenuOption,
-  SessionUser,
-} from '@latitude-data/web-ui'
+import { Avatar } from '@latitude-data/web-ui/atoms/Avatar'
+import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { SessionUser } from '@latitude-data/web-ui/providers'
+import { getUserInfoFromSession } from '@latitude-data/web-ui/getUserInfoFromSession'
+import { DropdownMenuTrigger } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { logoutAction } from '$/actions/user/logoutAction'
 
 export default function AvatarDropdown({

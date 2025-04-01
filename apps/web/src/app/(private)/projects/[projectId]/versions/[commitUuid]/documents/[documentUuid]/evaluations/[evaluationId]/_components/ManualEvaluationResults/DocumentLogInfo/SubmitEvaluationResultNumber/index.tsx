@@ -6,7 +6,8 @@ import {
   EvaluationResultableType,
   EvaluationResultDto,
 } from '@latitude-data/core/browser'
-import { Input, TabSelector } from '@latitude-data/web-ui'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 
 import { DocumentLogWithMetadataAndErrorAndEvaluationResult } from '../..'
 import { BaseEvaluationResult } from '../BaseEvaluationResult'

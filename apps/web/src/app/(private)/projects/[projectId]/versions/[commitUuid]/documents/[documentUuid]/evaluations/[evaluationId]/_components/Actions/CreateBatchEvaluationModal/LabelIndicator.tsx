@@ -1,4 +1,5 @@
-import { DotIndicator, Tooltip } from '@latitude-data/web-ui'
+import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export default function LabelIndicator() {
   return (

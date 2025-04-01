@@ -5,7 +5,7 @@ import {
   EvaluationResultableType,
   EvaluationResultDto,
 } from '@latitude-data/core/browser'
-import { TextArea } from '@latitude-data/web-ui'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 
 import { DocumentLogWithMetadataAndErrorAndEvaluationResult } from '../..'
 import { BaseEvaluationResult } from '../BaseEvaluationResult'

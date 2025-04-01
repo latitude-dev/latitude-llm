@@ -1,7 +1,11 @@
 import { ReactNode, useCallback, useMemo, useState } from 'react'
 
 import { ClaimedReward, RewardType } from '@latitude-data/core/browser'
-import { Button, cn, Icon, Input, Text } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
 import { ZodType } from 'zod'
 

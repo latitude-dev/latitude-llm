@@ -2,7 +2,7 @@
 
 import { use, useEffect } from 'react'
 
-import { FocusHeader } from '@latitude-data/web-ui'
+import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 import { confirmMagicLinkTokenAction } from '$/actions/magicLinkTokens/confirm'
 import { FocusLayout } from '$/components/layouts'
 import useLatitudeAction from '$/hooks/useLatitudeAction'

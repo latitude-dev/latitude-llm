@@ -1,4 +1,4 @@
-import { Button } from '../../../../atoms'
+import { Button } from '../../../../atoms/Button'
 
 export function ToolBar({
   onSubmit,

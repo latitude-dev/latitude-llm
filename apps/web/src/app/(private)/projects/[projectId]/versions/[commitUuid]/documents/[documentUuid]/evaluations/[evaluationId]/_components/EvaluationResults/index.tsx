@@ -1,5 +1,4 @@
 'use client'
-
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
@@ -14,13 +13,13 @@ import useEvaluationResultsWithMetadata from '$/stores/evaluationResultsWithMeta
 import { useProviderLog } from '$/stores/providerLogs'
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
+import { cn } from '@latitude-data/web-ui/utils'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
-  cn,
-  TableBlankSlate,
-  Text,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { useSearchParams } from 'next/navigation'
 
 import CreateBatchEvaluationModal from '../Actions/CreateBatchEvaluationModal'

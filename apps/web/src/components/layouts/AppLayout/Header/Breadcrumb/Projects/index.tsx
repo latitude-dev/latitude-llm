@@ -2,10 +2,10 @@ import { useMemo } from 'react'
 
 import {
   BreadcrumbItem,
-  BreadcrumbItemSkeleton,
   BreadcrumbSeparator,
-  ClickToCopy,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { BreadcrumbItemSkeleton } from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { ROUTES } from '$/services/routes'
 import useProjects from '$/stores/projects'
 

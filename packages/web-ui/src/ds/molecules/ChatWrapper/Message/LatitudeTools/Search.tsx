@@ -3,7 +3,8 @@ import type {
   SearchToolResult,
 } from '@latitude-data/core/services/latitudeTools/webSearch/types'
 import { ContentCard, ContentCardContainer } from '../ContentCard'
-import { Icon, Text } from '../../../../atoms'
+import { Icon } from '../../../../atoms/Icons'
+import { Text } from '../../../../atoms/Text'
 import { TruncatedTooltip } from '../../../TruncatedTooltip'
 import { ToolContent } from '@latitude-data/compiler'
 import { ToolResultContent, ToolResultFooter } from '../ToolResult'

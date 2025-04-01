@@ -1,5 +1,4 @@
 'use client'
-
 import { Suspense, useCallback, useEffect, useState } from 'react'
 
 import {
@@ -9,11 +8,9 @@ import {
   ProviderApiKey,
   SERIALIZED_DOCUMENT_LOG_FIELDS,
 } from '@latitude-data/core/browser'
-import {
-  Button,
-  DocumentTextEditor,
-  TextEditorPlaceholder,
-} from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
+import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import EditorHeader from '$/components/EditorHeader'
 import { useMetadata } from '$/hooks/useMetadata'
 import useEvaluations from '$/stores/evaluations'

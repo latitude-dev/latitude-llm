@@ -8,7 +8,10 @@ import {
   type Project,
 } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { CommitProvider, ProjectProvider } from '@latitude-data/web-ui'
+import {
+  CommitProvider,
+  ProjectProvider,
+} from '@latitude-data/web-ui/providers'
 import {
   findCommitsByProjectCached,
   findProjectCached,

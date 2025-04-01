@@ -1,5 +1,5 @@
 import type { Dataset } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createDatasetAction } from '$/actions/datasets/create'
 import { destroyDatasetAction } from '$/actions/datasets/destroy'
 import useFetcher from '$/hooks/useFetcher'

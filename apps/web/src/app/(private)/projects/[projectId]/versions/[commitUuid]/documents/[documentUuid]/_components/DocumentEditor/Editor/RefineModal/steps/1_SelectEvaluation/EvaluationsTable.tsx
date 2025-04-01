@@ -1,17 +1,17 @@
 import { useCallback, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
+import { cn } from '@latitude-data/web-ui/utils'
 import {
-  cn,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Text,
-  useCurrentCommit,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import EvaluationAggregatedResult from '$/components/EvaluationAggregatedResult'
 
 export default function EvaluationsTable({

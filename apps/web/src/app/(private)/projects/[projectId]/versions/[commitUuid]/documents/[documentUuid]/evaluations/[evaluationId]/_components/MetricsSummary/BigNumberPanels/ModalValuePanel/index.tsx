@@ -1,9 +1,9 @@
 'use client'
-
 import { useCallback } from 'react'
 
 import useEvaluationResultsModalValue from '$/stores/evaluationResultCharts/evaluationResultsModalValue'
-import { Skeleton, Text } from '@latitude-data/web-ui'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useDebouncedCallback } from 'use-debounce'
 
 import { EvaluationDto } from '@latitude-data/core/browser'

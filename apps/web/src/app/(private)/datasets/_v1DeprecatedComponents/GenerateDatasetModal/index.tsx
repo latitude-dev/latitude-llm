@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react'
 
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { generateDatasetAction } from '$/actions/datasets/generateDataset'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useStreamableAction } from '$/hooks/useStreamableAction'

@@ -10,13 +10,13 @@ import {
   EvaluationSettings,
   EvaluationType,
 } from '@latitude-data/constants'
+import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import {
-  ConfirmModal,
-  TableWithHeader,
-  Tooltip,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
 import CreateBatchEvaluationModal from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal'
 

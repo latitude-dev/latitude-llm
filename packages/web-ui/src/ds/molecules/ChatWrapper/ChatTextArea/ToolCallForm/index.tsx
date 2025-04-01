@@ -1,15 +1,12 @@
 'use client'
-
 import { MouseEvent, lazy, useState, useCallback, useMemo } from 'react'
 import { ToolMessage, Message, ToolCall } from '@latitude-data/compiler'
-import {
-  Badge,
-  Icon,
-  Text,
-  CodeBlock,
-  Tooltip,
-  ClientOnly,
-} from '../../../../atoms'
+import { Badge } from '../../../../atoms/Badge'
+import { Icon } from '../../../../atoms/Icons'
+import { Text } from '../../../../atoms/Text'
+import { CodeBlock } from '../../../../atoms/CodeBlock'
+import { Tooltip } from '../../../../atoms/Tooltip'
+import { ClientOnly } from '../../../../atoms/ClientOnly'
 import { ToolBar } from '../ToolBar'
 import { buildResponseMessage } from '@latitude-data/constants'
 

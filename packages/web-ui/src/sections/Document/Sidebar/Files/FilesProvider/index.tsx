@@ -17,7 +17,7 @@ import {
   DraggableOverlayNode,
 } from './DragOverlayNode'
 import { useOpenPaths } from '../useOpenPaths'
-import { ClientOnly } from '../../../../../ds/atoms'
+import { ClientOnly } from '../../../../../ds/atoms/ClientOnly'
 import { useDragEndFile } from './useDragEndFile'
 
 type IFilesContext = {

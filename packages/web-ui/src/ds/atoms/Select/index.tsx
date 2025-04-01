@@ -1,18 +1,17 @@
 'use client'
-
 import { ReactNode, useEffect, useState } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { FormField, type FormFieldProps } from '../FormField'
+import { FormField } from '../FormField'
+import { type FormFieldProps } from '../FormField'
 import { IconName } from '../Icons'
 import {
   SelectContent,
-  SelectGroup,
-  SelectItem,
   SelectRoot,
   SelectTrigger,
   SelectValue,
 } from './Primitives'
+import { SelectGroup, SelectItem } from './Primitives'
 
 export type SelectOption<V extends unknown = unknown> = {
   label: string
@@ -123,3 +122,5 @@ export function Select<V extends unknown = unknown>({
     </FormField>
   )
 }
+
+export * from './Primitives'

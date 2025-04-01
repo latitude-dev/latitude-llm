@@ -1,5 +1,4 @@
 'use client'
-
 import { Key, MouseEvent, ReactNode, useCallback, useRef } from 'react'
 import {
   DataGrid as ReactDataGrid,
@@ -19,11 +18,16 @@ export type {
 } from 'react-data-grid'
 
 import { cn } from '../../../lib/utils'
-import Text from '../Text'
-import { CheckboxAtom, CheckedState } from '../Checkbox/Primitive'
+import { Text } from '../Text'
+import { CheckedState } from '../Checkbox'
+import { CheckboxAtom } from '../Checkbox/Primitive'
 
 export const DEFAULT_HEADER_ROW_HEIGHT = 40
 export const DEFAULT_ROW_HEIGHT = 31
+
+export { type EditorCellProps } from './EditCell/types'
+export * from './EditCell/Editor'
+export * from './EditCell/EditorWrapper'
 
 const NoRowsFallback = ({ fallbackText }: { fallbackText: string }) => (
   <Text.H5>{fallbackText}</Text.H5>

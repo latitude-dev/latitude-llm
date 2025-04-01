@@ -1,5 +1,6 @@
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
-import { CodeBlock, Text } from '@latitude-data/web-ui'
+import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { UsedToolsDoc } from '../index'
 
 export function PythonUsage({

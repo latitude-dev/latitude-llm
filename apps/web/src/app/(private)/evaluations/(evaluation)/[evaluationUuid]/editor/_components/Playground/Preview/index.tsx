@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 
-import { Button, useAutoScroll } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 
 export default function Preview({ runPrompt }: { runPrompt: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null)

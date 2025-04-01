@@ -1,5 +1,5 @@
 import { RewardType } from '@latitude-data/core/browser'
-import { Text } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { z } from 'zod'
 
 import { RewardConfig } from './RewardMenuBase'

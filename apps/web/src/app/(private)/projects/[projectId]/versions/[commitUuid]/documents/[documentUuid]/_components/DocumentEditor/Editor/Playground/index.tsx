@@ -5,12 +5,12 @@ import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
 import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
 import {
   AppLocalStorage,
-  cn,
-  COLLAPSED_BOX_HEIGHT,
-  SplitPane,
-  useCurrentCommit,
   useLocalStorage,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { cn } from '@latitude-data/web-ui/utils'
+import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
+import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { COLLAPSED_BOX_HEIGHT } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import type { ConversationMetadata } from 'promptl-ai'
 
 import Chat from './Chat'

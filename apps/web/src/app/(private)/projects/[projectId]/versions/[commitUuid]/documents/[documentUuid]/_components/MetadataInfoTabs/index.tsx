@@ -1,6 +1,10 @@
 import { forwardRef, ReactNode, useState } from 'react'
 
-import { cn, TabSelector, type TabSelectorOption } from '@latitude-data/web-ui'
+import { cn } from '@latitude-data/web-ui/utils'
+import {
+  TabSelector,
+  TabSelectorOption,
+} from '@latitude-data/web-ui/molecules/TabSelector'
 
 export const DEFAULT_TABS = [
   { label: 'Metadata', value: 'metadata' },

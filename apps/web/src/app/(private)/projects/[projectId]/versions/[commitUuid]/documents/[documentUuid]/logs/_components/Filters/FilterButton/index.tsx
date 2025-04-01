@@ -1,6 +1,6 @@
 import { ReactNode, useMemo, useState } from 'react'
 
-import { Popover } from '@latitude-data/web-ui'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 
 type AllowedColors = 'primary' | 'foregroundMuted' | 'destructive'
 

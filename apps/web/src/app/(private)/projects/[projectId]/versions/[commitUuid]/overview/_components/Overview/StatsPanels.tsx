@@ -1,6 +1,6 @@
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { ProjectStats } from '@latitude-data/core/browser'
-import { Text } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import Panel from '../../../documents/[documentUuid]/evaluations/[evaluationId]/_components/MetricsSummary/BigNumberPanels/Panel'
 import { EvaluationStats } from './EvaluationStats'

@@ -1,4 +1,6 @@
-import { Button, Popover, Text } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { RewardsContent } from './Content'
 

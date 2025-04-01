@@ -1,19 +1,18 @@
 'use client'
-
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import {
-  Button,
-  DropdownMenu,
-  Icon,
   Table,
-  TableBlankSlate,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  TableSkeleton,
-  Text,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import useIntegrations from '$/stores/integrations'

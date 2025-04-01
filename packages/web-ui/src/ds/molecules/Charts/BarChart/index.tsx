@@ -1,5 +1,4 @@
 'use client'
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { Bar, BarChart as RechartsBarChart, XAxis, YAxis } from 'recharts'
@@ -9,13 +8,13 @@ import {
   ValueType,
 } from 'recharts/types/component/DefaultTooltipContent'
 
+import { Text } from '../../../atoms/Text'
+import { BarChartConfig, CartesianDataItem } from '../types'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  Text,
-} from '../../../atoms'
-import { BarChartConfig, CartesianDataItem } from '../types'
+} from '../../../atoms/Charts'
 
 export function BarChart({ config }: { config: BarChartConfig }) {
   const containerRef = useRef<HTMLDivElement>(null)

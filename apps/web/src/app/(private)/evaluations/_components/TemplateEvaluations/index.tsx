@@ -1,5 +1,5 @@
 import { EvaluationTemplateWithCategory } from '@latitude-data/core/browser'
-import { Text } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { TemplateEvaluationsTable } from './Table'
 

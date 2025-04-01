@@ -7,8 +7,8 @@ import {
   ToastProviderPrimitive,
   ToastTitle,
   ToastViewport,
+  useToast,
 } from './index'
-import { useToast } from './useToast'
 
 export function ToastProvider({ duration }: { duration: number }) {
   const { toasts } = useToast()

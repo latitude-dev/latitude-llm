@@ -1,6 +1,8 @@
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { ProjectStats } from '@latitude-data/core/browser'
-import { BarChart, ChartBlankSlate, Text } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { BarChart } from '@latitude-data/web-ui/molecules/Charts'
+import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 
 import { useMemo } from 'react'
 import Panel from '../../../documents/[documentUuid]/evaluations/[evaluationId]/_components/MetricsSummary/BigNumberPanels/Panel'

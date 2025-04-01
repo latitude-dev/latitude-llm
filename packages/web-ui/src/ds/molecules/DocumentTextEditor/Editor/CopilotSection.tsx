@@ -1,7 +1,8 @@
 import { KeyboardEvent, useState } from 'react'
 
 import { cn } from '../../../../lib/utils'
-import { Button, TextArea } from '../../../atoms'
+import { Button } from '../../../atoms/Button'
+import { TextArea } from '../../../atoms/TextArea'
 
 export function CopilotSection({
   isLoading,

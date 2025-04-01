@@ -1,5 +1,4 @@
 'use client'
-
 import { PromptHeader } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Header'
 import {
   Commit,
@@ -8,15 +7,14 @@ import {
   PublishedDocument,
 } from '@latitude-data/core/browser'
 import { Container } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Container'
+import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
-  Card,
   CardDescription,
   CardTitle,
-  Button,
-  Text,
-  CardContent,
   CardHeader,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Card'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 

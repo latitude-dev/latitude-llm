@@ -1,5 +1,4 @@
 'use client'
-
 import { FormEvent } from 'react'
 
 import {
@@ -9,12 +8,10 @@ import {
   EvaluationMetadataType,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
-import {
-  FormFieldGroup,
-  Input,
-  TextArea,
-  useToast,
-} from '@latitude-data/web-ui'
+import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { ProviderModelSelector } from '$/components/EditorHeader'
 import useEvaluations from '$/stores/evaluations'
 

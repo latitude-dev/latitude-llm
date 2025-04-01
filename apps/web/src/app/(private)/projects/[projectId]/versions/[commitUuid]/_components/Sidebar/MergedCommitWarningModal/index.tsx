@@ -1,4 +1,5 @@
-import { ConfirmModal, ReactStateDispatch } from '@latitude-data/web-ui'
+import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 export default function MergedCommitWarningModal({
   open,

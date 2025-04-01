@@ -1,5 +1,4 @@
 'use client'
-
 import { Dispatch, SetStateAction, useCallback } from 'react'
 import { capitalize } from 'lodash-es'
 
@@ -8,19 +7,19 @@ import {
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
 import { EvaluationResultByDocument } from '@latitude-data/core/repositories'
+import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { RangeBadge } from '@latitude-data/web-ui/molecules/RangeBadge'
 import {
-  Checkbox,
-  cn,
-  Icon,
-  RangeBadge,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Text,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { LogicTablePaginationFooterWithoutCount } from '$/components/TablePaginationFooter/TablePaginationFooterWithoutCount'
 import { relativeTime } from '$/lib/relativeTime'
 

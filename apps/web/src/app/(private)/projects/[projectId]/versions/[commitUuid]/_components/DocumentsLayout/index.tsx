@@ -2,7 +2,7 @@ import { ReactNode } from 'react'
 
 import type { DocumentVersion } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { DocumentDetailWrapper } from '@latitude-data/web-ui'
+import { DocumentDetailWrapper } from '@latitude-data/web-ui/sections'
 import {
   getResizablePanelGroupData,
   MIN_SIDEBAR_WIDTH_PX,

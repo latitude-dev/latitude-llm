@@ -1,16 +1,15 @@
 'use client'
-
 import { ReactNode, useEffect, useId, useRef, useState } from 'react'
 
 import { cn } from '../../../lib/utils'
+import { Button } from '../../atoms/Button'
+import { Label } from '../../atoms/Label'
+import { Text } from '../../atoms/Text'
 import {
-  Button,
   FormControl,
   FormDescription,
   InlineFormErrorMessage,
-  Label,
-  Text,
-} from '../../atoms'
+} from '../../atoms/FormField'
 
 const ButtonBaseClassName =
   'w-full h-8 flex items-center justify-center gap-1 px-3 rounded-md'

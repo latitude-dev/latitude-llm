@@ -1,5 +1,4 @@
 'use client'
-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
@@ -17,13 +16,13 @@ import {
   ValueType,
 } from 'recharts/types/component/DefaultTooltipContent'
 
+import { Text } from '../../../atoms/Text'
+import { ScatterChartConfig, ScatterDataItem } from '../types'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  Text,
-} from '../../../atoms'
-import { ScatterChartConfig, ScatterDataItem } from '../types'
+} from '../../../atoms/Charts'
 
 export function ScatterChart({ config }: { config: ScatterChartConfig }) {
   const containerRef = useRef<HTMLDivElement>(null)

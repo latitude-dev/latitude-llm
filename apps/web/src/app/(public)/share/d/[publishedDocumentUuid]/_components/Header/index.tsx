@@ -1,14 +1,10 @@
 'use client'
-
 import { PublishedDocument } from '@latitude-data/core/browser'
-import {
-  Avatar,
-  getUserInfoFromSession,
-  Icon,
-  Text,
-  TripleThemeToggle,
-  useMaybeSession,
-} from '@latitude-data/web-ui'
+import { Avatar } from '@latitude-data/web-ui/atoms/Avatar'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TripleThemeToggle } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
+import { useMaybeSession } from '@latitude-data/web-ui/providers'
 import { AppHeaderWrapper } from '$/components/layouts/AppLayout/Header'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
@@ -16,6 +12,7 @@ import Link from 'next/link'
 import { Container } from '../Container'
 import { ForkButton } from '../ForkButton'
 import { ReactNode } from 'react'
+import { getUserInfoFromSession } from '@latitude-data/web-ui/getUserInfo'
 
 export function PromptHeader({
   shared,

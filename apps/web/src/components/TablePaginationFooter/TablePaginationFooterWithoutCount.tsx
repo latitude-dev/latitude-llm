@@ -1,6 +1,6 @@
 'use client'
-
-import { Button, Text } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export function LogicTablePaginationFooterWithoutCount({
   page,

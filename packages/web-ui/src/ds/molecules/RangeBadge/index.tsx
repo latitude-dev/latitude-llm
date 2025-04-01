@@ -1,5 +1,7 @@
-import { Skeleton, Text } from '../../atoms'
-import { Badge, BadgeProps } from '../../atoms/Badge'
+import { Skeleton } from '../../atoms/Skeleton'
+import { Text } from '../../atoms/Text'
+import { Badge } from '../../atoms/Badge'
+import { BadgeProps } from '../../atoms/Badge'
 
 type RangeBadgeProps = {
   value: number

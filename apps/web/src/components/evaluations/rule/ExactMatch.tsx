@@ -3,7 +3,8 @@ import {
   RuleEvaluationExactMatchSpecification,
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
-import { IconName, SwitchInput } from '@latitude-data/web-ui'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,

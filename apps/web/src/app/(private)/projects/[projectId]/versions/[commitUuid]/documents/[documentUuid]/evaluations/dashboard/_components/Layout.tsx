@@ -1,5 +1,4 @@
 'use client'
-
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
@@ -10,16 +9,16 @@ import {
   EvaluationTemplateWithCategory,
   EvaluationV2,
 } from '@latitude-data/core/browser'
+import { BlankSlateWithSteps } from '@latitude-data/web-ui/molecules/BlankSlateWithSteps'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import {
-  BlankSlateStep,
-  BlankSlateWithSteps,
-  Button,
-  cn,
-  TableSkeleton,
-  TableWithHeader,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
+import { BlankSlateStep } from '@latitude-data/web-ui/molecules/BlankSlateWithSteps'
 import Link from 'next/link'
 
 import CreateEvaluationModal, {

@@ -1,21 +1,20 @@
 'use client'
-
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
-  Button,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  TableSkeleton,
-  TableWithHeader,
-  TableBlankSlate,
-  Text,
-  DropdownMenu,
-  DotIndicator,
-  ClickToCopy,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
+import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { useRouter } from 'next/navigation'
 import useWebhooks, { type Webhook } from '$/stores/webhooks'
 import useProjects from '$/stores/projects'

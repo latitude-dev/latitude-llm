@@ -22,11 +22,9 @@
     "@sentry/node": "^9.9.0",
     "@sentry/profiling-node": "^9.8.0",
     "@t3-oss/env-core": "*",
-    "@tavily/core": "^0.3.1",
+    "bullmq": "^5.41.3",
     "dd-trace": "^5.37.1",
-    "express": "^4.21.2",
-    "yaml": "^2.4.5",
-    "zod": "^3.23.8"
+    "express": "^4.21.2"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:^",

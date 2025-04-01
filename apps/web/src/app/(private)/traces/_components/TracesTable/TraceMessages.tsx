@@ -1,10 +1,11 @@
 'use client'
-
 import { useMemo } from 'react'
 
 import { Message as ConversationMessage } from '@latitude-data/compiler'
 import { TraceWithSpans } from '@latitude-data/core/browser'
-import { Badge, MessageList, Text } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 function getUniqueSpanAttributes(
   span: TraceWithSpans['spans'][0],

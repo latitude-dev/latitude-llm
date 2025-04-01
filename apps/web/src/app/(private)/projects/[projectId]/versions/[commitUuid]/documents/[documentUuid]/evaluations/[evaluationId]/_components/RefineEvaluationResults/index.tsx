@@ -1,4 +1,5 @@
-import { Button, FloatingPanel } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
 
 export function RefineEvaluationResults({
   onClickRefine,

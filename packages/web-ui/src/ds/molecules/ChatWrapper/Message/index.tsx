@@ -1,5 +1,4 @@
 'use client'
-
 import { ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
@@ -14,19 +13,16 @@ import {
 } from '@latitude-data/compiler'
 
 import { cn } from '../../../../lib/utils'
-import {
-  Badge,
-  BadgeProps,
-  CodeBlock,
-  Icon,
-  IconName,
-  Image,
-  Skeleton,
-  Text,
-  Tooltip,
-} from '../../../atoms'
+import { Badge, BadgeProps } from '../../../atoms/Badge'
+import { CodeBlock } from '../../../atoms/CodeBlock'
+import { Icon, IconName } from '../../../atoms/Icons'
+import { Image } from '../../../atoms/Image'
+import { Skeleton } from '../../../atoms/Skeleton'
+import { Text } from '../../../atoms/Text'
+import { Tooltip } from '../../../atoms/Tooltip'
 import { colors, font, TextColor } from '../../../tokens'
-import { isAgentToolResponse, roleToString, roleVariant } from './helpers'
+import { roleVariant } from '..'
+import { isAgentToolResponse, roleToString } from './helpers'
 import { ToolCallContent } from './ToolCall'
 import { UnresolvedToolResultContent } from './ToolResult'
 import { AgentToolsMap } from '@latitude-data/constants'

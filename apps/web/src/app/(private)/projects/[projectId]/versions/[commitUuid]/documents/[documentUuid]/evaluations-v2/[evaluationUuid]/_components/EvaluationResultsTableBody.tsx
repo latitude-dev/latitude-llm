@@ -16,19 +16,21 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/core/browser'
+import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
-  Checkbox,
-  cn,
-  Skeleton,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
+} from '@latitude-data/web-ui/atoms/Table'
+import {
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { Ref } from 'react'
 
 function EvaluationResultsTableRow<

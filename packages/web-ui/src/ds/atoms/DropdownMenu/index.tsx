@@ -1,20 +1,21 @@
 'use client'
-
 import { MouseEvent, ReactNode, useCallback, useState } from 'react'
 import { Check } from 'lucide-react'
 
-import { Button, type ButtonProps } from '../Button'
-import { Icon, type IconProps } from '../Icons'
-import Text from '../Text'
+import { Button, ButtonProps } from '../Button'
+import { Icon } from '../Icons'
+import { type IconProps } from '../Icons'
+import { Text } from '../Text'
+
 import {
+  DropdownMenu as DropdownMenuRoot,
   DropdownMenuContent,
+  DropdownMenuTrigger,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuPortal,
-  DropdownMenu as DropdownMenuRoot,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuTrigger,
   type ContentProps,
 } from './Primitives'
 

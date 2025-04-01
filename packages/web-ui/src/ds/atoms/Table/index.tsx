@@ -8,7 +8,7 @@ import {
 
 import { cn } from '../../../lib/utils'
 import { Icon } from '../Icons'
-import Text from '../Text'
+import { Text } from '../Text'
 import { Tooltip } from '../Tooltip'
 
 type TableProps = HTMLAttributes<HTMLTableElement> & {

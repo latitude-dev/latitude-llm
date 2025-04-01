@@ -1,5 +1,7 @@
 'use client'
-import { Button, Input, Text } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { buildConfigFieldName } from '../../buildIntegrationPayload'
 import { HostedIntegrationType } from '@latitude-data/constants'
 import { HOSTED_MCP_CONFIGS } from '@latitude-data/core/services/integrations/hostedTypes/index'

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { testWebhookAction } from '$/actions/webhooks/testWebhook'
 
 interface UseTestWebhookOptions {

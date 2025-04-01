@@ -1,6 +1,6 @@
 'use client'
 
-import { TableWithHeader } from '@latitude-data/web-ui'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { useToggleModal } from '$/hooks/useToogleModal'
 
 import NewDatasetV1Modal from '$/app/(private)/datasets/_v1DeprecatedComponents/NewDatasetModal'

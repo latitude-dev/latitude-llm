@@ -4,14 +4,11 @@ import {
   DocumentVersion,
   LinkedDataset,
 } from '@latitude-data/core/browser'
-import {
-  Button,
-  cn,
-  Select,
-  SelectOption,
-  Skeleton,
-  type ICommitContextType,
-} from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { ICommitContextType } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 
 import { ParametersPaginationNav } from '../PaginationNav'

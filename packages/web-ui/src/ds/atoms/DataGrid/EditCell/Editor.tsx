@@ -10,9 +10,9 @@ import { type editor } from 'monaco-editor'
 import MonacoReactEditor, { Monaco } from '@monaco-editor/react'
 
 import { useCellPosition } from './useCellPosition'
-import { useUpdateEditorHeight } from '../../../molecules/Chat/ChatTextArea/ToolCallForm/Editor'
+import { useUpdateEditorHeight } from '../../../molecules/ChatWrapper/ChatTextArea/ToolCallForm/Editor'
 import { DEFAULT_ROW_HEIGHT } from '..'
-import { type EditorCellProps } from './types'
+import { EditorCellProps } from '..'
 
 type Props = EditorCellProps & {
   onHeightChange: (height: number) => void

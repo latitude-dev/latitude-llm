@@ -1,4 +1,5 @@
-import { Icon, Tooltip } from '@latitude-data/web-ui'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export const TooltipInfo = ({ text }: { text: string }) => (
   <Tooltip

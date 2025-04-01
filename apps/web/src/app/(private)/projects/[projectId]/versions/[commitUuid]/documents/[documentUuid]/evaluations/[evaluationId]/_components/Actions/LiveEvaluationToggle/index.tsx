@@ -5,12 +5,12 @@ import {
   EvaluationDto,
   EvaluationMetadataType,
 } from '@latitude-data/core/browser'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import {
-  SwitchToggle,
   useCurrentCommit,
   useCurrentProject,
-  useToast,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 
 export default function LiveEvaluationToggle({
   documentUuid,

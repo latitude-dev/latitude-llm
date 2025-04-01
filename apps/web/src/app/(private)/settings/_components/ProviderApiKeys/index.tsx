@@ -1,25 +1,24 @@
 'use client'
-
 import {
   Providers,
   Workspace,
   type ProviderApiKey,
 } from '@latitude-data/core/browser'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import {
-  Badge,
-  Button,
-  DropdownMenu,
   Table,
-  TableBlankSlate,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  TableSkeleton,
-  Text,
-  Tooltip,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import useCurrentWorkspace from '$/stores/currentWorkspace'

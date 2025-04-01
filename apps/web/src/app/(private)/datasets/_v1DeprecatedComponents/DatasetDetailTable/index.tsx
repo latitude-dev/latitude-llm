@@ -2,8 +2,6 @@
 
 import { Dataset } from '@latitude-data/core/browser'
 
-import '@latitude-data/web-ui'
-
 import {
   Table,
   TableBody,
@@ -11,10 +9,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableSkeleton,
-  TableWithHeader,
-  Text,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/atoms/Table'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useDatasetPreview from '$/stores/datasetPreviews'
 
 const VISIBLE_ROWS = 20

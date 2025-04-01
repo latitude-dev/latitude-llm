@@ -1,5 +1,7 @@
 import { DocumentVersion } from '@latitude-data/core/browser'
-import { DotIndicator, TabSelector, Text } from '@latitude-data/web-ui'
+import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useState } from 'react'
 import { EmailTriggerSettings } from './EmailTrigger'
 import useDocumentTriggers from '$/stores/documentTriggers'

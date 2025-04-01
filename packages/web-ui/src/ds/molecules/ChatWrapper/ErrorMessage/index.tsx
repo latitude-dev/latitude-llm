@@ -1,6 +1,7 @@
 import { CompileError } from '@latitude-data/compiler'
 
-import { Alert, Text } from '../../../atoms'
+import { Alert } from '../../../atoms/Alert'
+import { Text } from '../../../atoms/Text'
 
 export function ErrorMessage({ error }: { error: Error }) {
   return (

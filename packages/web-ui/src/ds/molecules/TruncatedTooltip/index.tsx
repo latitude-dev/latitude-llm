@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, useEffect, useRef, useState } from 'react'
-import { Tooltip } from '../../atoms'
+import { Tooltip } from '../../atoms/Tooltip'
 import { cn } from '../../../lib/utils'
 
 export function TruncatedTooltip({

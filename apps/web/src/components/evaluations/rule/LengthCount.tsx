@@ -4,7 +4,9 @@ import {
   RuleEvaluationLengthCountSpecification,
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
-import { IconName, NumberInput, Select } from '@latitude-data/web-ui'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,

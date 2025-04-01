@@ -7,16 +7,14 @@ import {
   EvaluationType,
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
-import {
-  Alert,
-  FormFieldGroup,
-  FormWrapper,
-  IconName,
-  Input,
-  Select,
-  SwitchInput,
-  TextArea,
-} from '@latitude-data/web-ui'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { useEffect, useMemo, useState } from 'react'
 import ConfigurationForm from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
@@ -34,6 +32,7 @@ import { EVALUATION_SPECIFICATIONS } from './index'
 const EVALUATION_METRIC_OPTIONS = (_type: EvaluationType) => {
   // TODO: Add other evaluation types with a switch type
   return (
+    // TODO: Remove type assertion when all metrics are implemented
     Object.values(RuleEvaluationMetric)
       // TODO: Remove undefined filter when all metrics are implemented
       .filter(
@@ -48,7 +47,7 @@ const EVALUATION_METRIC_OPTIONS = (_type: EvaluationType) => {
           value: metric,
           icon: specification.icon,
         }
-      }) as { label: string; value: EvaluationMetric; icon: IconName }[] // TODO: Remove type assertion when all metrics are implemented
+      }) as { label: string; value: EvaluationMetric; icon: IconName }[]
   )
 }
 

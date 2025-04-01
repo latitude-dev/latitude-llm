@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Progress } from '../../atoms'
+import { Progress } from '../../atoms/Progress'
 
 export function FakeProgress({
   completed,

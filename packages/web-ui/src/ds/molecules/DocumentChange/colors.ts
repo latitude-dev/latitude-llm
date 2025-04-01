@@ -1,5 +1,5 @@
 import { ModifiedDocumentType } from '@latitude-data/core/browser'
-import { IconName } from '../../atoms'
+import { IconName } from '../../atoms/Icons'
 import { TextColor } from '../../tokens'
 
 export const MODIFICATION_ICONS: Record<ModifiedDocumentType, IconName> = {

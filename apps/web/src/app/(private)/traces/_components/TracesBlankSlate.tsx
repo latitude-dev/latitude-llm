@@ -1,8 +1,10 @@
 'use client'
-
 import { useState } from 'react'
 
-import { CodeBlock, Tabs, Text, type TabItem } from '@latitude-data/web-ui'
+import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { Tabs } from '@latitude-data/web-ui/molecules/Tabs'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TabItem } from '@latitude-data/web-ui/molecules/Tabs'
 import { DocumentBlankSlateLayout } from '../../projects/[projectId]/versions/[commitUuid]/documents/_components/DocumentBlankSlateLayout'
 
 const tabs: TabItem[] = [

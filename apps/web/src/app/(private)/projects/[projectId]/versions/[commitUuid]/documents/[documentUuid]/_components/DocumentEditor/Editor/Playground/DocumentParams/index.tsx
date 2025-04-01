@@ -8,14 +8,14 @@ import {
   INPUT_SOURCE,
   InputSource,
 } from '@latitude-data/core/browser'
+import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
+import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import {
-  ClientOnly,
-  CollapsibleBox,
-  OnExpandFn,
   TabSelector,
-  type ICommitContextType,
-  type TabSelectorOption,
-} from '@latitude-data/web-ui'
+  TabSelectorOption,
+} from '@latitude-data/web-ui/molecules/TabSelector'
+import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import { OnExpandFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 
 import { DatasetParams } from './DatasetParams'
 import {

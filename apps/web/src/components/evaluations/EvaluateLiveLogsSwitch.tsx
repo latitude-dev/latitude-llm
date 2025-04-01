@@ -5,14 +5,14 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/constants'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import {
-  SwitchToggle,
-  Tooltip,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { useCallback } from 'react'
 import { EVALUATION_SPECIFICATIONS } from './index'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export default function EvaluateLiveLogsSwitch<
   T extends EvaluationType,

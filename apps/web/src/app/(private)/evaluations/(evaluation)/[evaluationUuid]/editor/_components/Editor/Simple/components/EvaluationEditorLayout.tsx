@@ -1,12 +1,10 @@
 import { FormEvent, ReactNode, useState } from 'react'
 
-import {
-  Button,
-  ConfirmModal,
-  Icon,
-  Text,
-  useToast,
-} from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { ejectEvaluationAction } from '$/actions/evaluations/eject'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useRouter } from 'next/navigation'

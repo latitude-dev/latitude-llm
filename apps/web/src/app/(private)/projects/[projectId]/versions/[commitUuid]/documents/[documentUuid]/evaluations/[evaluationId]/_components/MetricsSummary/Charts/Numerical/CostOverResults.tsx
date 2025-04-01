@@ -1,5 +1,4 @@
 'use client'
-
 import { useCallback, useMemo } from 'react'
 
 import useAverageResultsAndCostOverCommit from '$/stores/evaluationResultCharts/numericalResults/averageResultAndCostOverCommitStore'
@@ -7,13 +6,13 @@ import {
   EvaluationConfigurationNumerical,
   EvaluationDto,
 } from '@latitude-data/core/browser'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
-  Badge,
-  ScatterChart,
-  Text,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
+import { ScatterChart } from '@latitude-data/web-ui/molecules/Charts'
 import { useDebouncedCallback } from 'use-debounce'
 
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'

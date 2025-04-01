@@ -1,4 +1,5 @@
-import { LineSeparator, ReactStateDispatch } from '@latitude-data/web-ui'
+import { LineSeparator } from '@latitude-data/web-ui/atoms/LineSeparator'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 export function ExpandMessages({
   isExpanded,

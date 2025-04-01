@@ -5,7 +5,10 @@ export * from './ScatterChart'
 export * from './types'
 import { ReactNode } from 'react'
 import { cn } from '../../../lib/utils'
-import { Icon, Skeleton, Text, Tooltip } from '../../atoms'
+import { Icon } from '../../atoms/Icons'
+import { Skeleton } from '../../atoms/Skeleton'
+import { Text } from '../../atoms/Text'
+import { Tooltip } from '../../atoms/Tooltip'
 
 export function ChartWrapper({
   label,

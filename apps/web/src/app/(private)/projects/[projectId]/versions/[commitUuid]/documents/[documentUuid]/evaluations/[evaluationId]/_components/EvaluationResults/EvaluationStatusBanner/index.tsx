@@ -1,10 +1,10 @@
 'use client'
-
 import { useEffect, useRef, useState } from 'react'
 
 import { type EventArgs } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { EvaluationDto } from '@latitude-data/core/browser'
-import { Badge, Text } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { isEvaluationRunDone } from '../../../_lib/isEvaluationRunDone'
 import { useEvaluationStatusEvent } from '../../../_lib/useEvaluationStatusEvent'

@@ -1,5 +1,4 @@
 'use client'
-
 import { useCallback, useState } from 'react'
 
 import { useNavigate } from '$/hooks/useNavigate'
@@ -7,12 +6,11 @@ import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import {
-  FilesTree,
   useCurrentCommit,
   useCurrentProject,
-  useToast,
-  type SidebarDocument,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { FilesTree, SidebarDocument } from '@latitude-data/web-ui/sections'
 
 import CreateDraftCommitModal from '../CreateDraftCommitModal'
 import MergedCommitWarningModal from '../MergedCommitWarningModal'

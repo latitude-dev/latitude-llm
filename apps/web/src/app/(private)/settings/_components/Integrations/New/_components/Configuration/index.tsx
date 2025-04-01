@@ -3,7 +3,7 @@ import {
   HostedIntegrationType,
   IntegrationType,
 } from '@latitude-data/constants'
-import { FormFieldGroup } from '@latitude-data/web-ui'
+import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { ExternalIntegrationConfiguration } from './External'
 import { HostedIntegrationConfiguration } from './Hosted'
 

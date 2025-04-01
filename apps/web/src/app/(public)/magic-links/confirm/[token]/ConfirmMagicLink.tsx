@@ -1,5 +1,5 @@
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
-import { FocusHeader } from '@latitude-data/web-ui'
+import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 import { FocusLayout } from '$/components/layouts'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'

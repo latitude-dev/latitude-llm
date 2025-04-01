@@ -1,6 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useState } from 'react'
 import { useServerAction } from 'zsa-react'
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { generateDatasetPreviewAction } from '$/actions/sdk/generateDatasetPreviewAction'
 
 function usePreviewCsv() {

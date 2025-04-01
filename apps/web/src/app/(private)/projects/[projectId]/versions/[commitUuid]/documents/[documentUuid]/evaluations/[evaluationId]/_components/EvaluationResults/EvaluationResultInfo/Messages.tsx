@@ -7,11 +7,11 @@ import {
 } from '@latitude-data/core/browser'
 import {
   AppLocalStorage,
-  MessageList,
-  SwitchToggle,
-  Text,
   useLocalStorage,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 const EVALUATION_PARAMETERS = SERIALIZED_DOCUMENT_LOG_FIELDS
 

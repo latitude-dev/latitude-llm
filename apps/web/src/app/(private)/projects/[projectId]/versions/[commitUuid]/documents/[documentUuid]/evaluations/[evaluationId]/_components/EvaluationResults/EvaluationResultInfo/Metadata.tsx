@@ -5,7 +5,8 @@ import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { EvaluationDto, ProviderLogDto } from '@latitude-data/core/browser'
 import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
-import { ClickToCopy, Text } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { format } from 'date-fns'
 
 import {

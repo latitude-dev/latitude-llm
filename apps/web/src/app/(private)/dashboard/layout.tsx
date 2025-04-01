@@ -1,10 +1,8 @@
 import { ReactNode } from 'react'
 
-import {
-  Container,
-  TableBlankSlate,
-  TableWithHeader,
-} from '@latitude-data/web-ui'
+import { Container } from '@latitude-data/web-ui/atoms/Container'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { AppTabs } from '$/app/(private)/AppTabs'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'

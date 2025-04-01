@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-import { Text } from '../../atoms'
+import { Text } from '../../atoms/Text'
 import { cn } from '../../../lib/utils'
 
 const loadingTexts = [

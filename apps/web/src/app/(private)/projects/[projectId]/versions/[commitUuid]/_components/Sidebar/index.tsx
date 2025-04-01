@@ -7,7 +7,7 @@ import {
 } from '@latitude-data/core/browser'
 import { paginateQuery } from '@latitude-data/core/lib/index'
 import { CommitsRepository } from '@latitude-data/core/repositories/index'
-import { DocumentSidebar } from '@latitude-data/web-ui'
+import { DocumentSidebar } from '@latitude-data/web-ui/sections'
 import {
   getDocumentsAtCommitCached,
   getHeadCommitCached,

@@ -1,4 +1,5 @@
-import { Button, Tooltip } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export function ExportLogsModalFooter({
   datasetAlreadyExists,

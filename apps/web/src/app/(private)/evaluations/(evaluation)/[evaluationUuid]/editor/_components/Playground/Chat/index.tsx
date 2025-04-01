@@ -10,13 +10,13 @@ import {
   EvaluationMetadataType,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
-  Button,
   ErrorMessage,
   MessageList,
-  Text,
-  useAutoScroll,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { runEvaluationPromptAction } from '$/actions/prompts/run'
 import useEvaluationPrompt from '$/stores/evaluationPrompt'
 import { LanguageModelUsage } from 'ai'

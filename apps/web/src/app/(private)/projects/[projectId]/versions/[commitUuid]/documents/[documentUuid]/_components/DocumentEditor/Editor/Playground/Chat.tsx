@@ -2,14 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Message as ConversationMessage } from '@latitude-data/compiler'
 import { type DocumentVersion } from '@latitude-data/core/browser'
 import {
-  ChatTextArea,
   ErrorMessage,
   MessageList,
-  Text,
-  useAutoScroll,
+} from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
+import {
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
+import { ChatTextArea } from '@latitude-data/web-ui/molecules/ChatWrapper'
 
 import Actions, { ActionsState } from './Actions'
 import { StatusIndicator, StreamMessage, Timer } from './components'

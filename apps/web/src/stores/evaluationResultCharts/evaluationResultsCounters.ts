@@ -1,4 +1,4 @@
-import { useCurrentProject } from '@latitude-data/web-ui'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'

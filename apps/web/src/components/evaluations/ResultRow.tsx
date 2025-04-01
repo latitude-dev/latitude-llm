@@ -1,6 +1,8 @@
 import { relativeTime } from '$/lib/relativeTime'
 import { EvaluationMetric, EvaluationType } from '@latitude-data/constants'
-import { Badge, TableCell, TableHead, Text } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { TableCell, TableHead } from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   EVALUATION_SPECIFICATIONS,
   ResultRowCellsProps,

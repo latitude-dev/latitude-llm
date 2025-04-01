@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 
 import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
-import { CheckedState } from '@latitude-data/web-ui'
+import { CheckedState } from '@latitude-data/web-ui/atoms/Checkbox'
 import { ROUTES } from '$/services/routes'
 import { useRouter } from 'next/navigation'
 

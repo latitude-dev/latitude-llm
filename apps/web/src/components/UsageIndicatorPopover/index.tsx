@@ -1,16 +1,13 @@
 'use client'
-
 import { ReactNode, useMemo } from 'react'
-import {
-  Badge,
-  Button,
-  CircularProgress,
-  CircularProgressProps,
-  Icon,
-  Popover,
-  Skeleton,
-  Text,
-} from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { CircularProgress } from '@latitude-data/web-ui/atoms/CircularProgress'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { CircularProgressProps } from '@latitude-data/web-ui/atoms/CircularProgress'
 import {
   SubscriptionPlan,
   FREE_PLANS,

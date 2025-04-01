@@ -1,13 +1,14 @@
 'use client'
-
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Button } from '../Button'
-import { Dropzone, type DropzoneProps } from '../Dropzone'
-import { FormField, type FormFieldProps } from '../FormField'
+import { Dropzone } from '../Dropzone'
+import { type DropzoneProps } from '../Dropzone'
+import { FormField } from '../FormField'
+import { type FormFieldProps } from '../FormField'
 import { Icon, IconName } from '../Icons'
-import Text from '../Text'
+import { Text } from '../Text'
 
 type Props = Omit<DropzoneProps, 'children'> &
   Omit<FormFieldProps, 'children'> & {

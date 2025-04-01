@@ -14,19 +14,21 @@ import {
   EvaluationV2,
   RuleEvaluationSpecification,
 } from '@latitude-data/core/browser'
+import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
+import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import {
-  ConfirmModal,
-  DropdownMenu,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Text,
+} from '@latitude-data/web-ui/atoms/Table'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import {
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import { useMemo, useState } from 'react'
 
 export default function ConnectedEvaluationsTable({

@@ -1,7 +1,7 @@
 import { Children, ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
-import Text from '../../atoms/Text'
+import { Text } from '../../atoms/Text'
 
 const NumeredList = ({ children }: { children: ReactNode }) => {
   return (

@@ -1,5 +1,7 @@
 import { LanguageModelUsage } from 'ai'
-import { Icon, Text, Tooltip } from '@latitude-data/web-ui'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export function TokenUsage({ usage }: { usage?: LanguageModelUsage }) {
   return (

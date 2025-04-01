@@ -1,11 +1,11 @@
 'use client'
-
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { handleResponse } from '$/hooks/useFetcher'
 import { useNavigate } from '$/hooks/useNavigate'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { ROUTES } from '$/services/routes'
-import { Button, useToast } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useState } from 'react'
 
 export function DownloadLogsButton({

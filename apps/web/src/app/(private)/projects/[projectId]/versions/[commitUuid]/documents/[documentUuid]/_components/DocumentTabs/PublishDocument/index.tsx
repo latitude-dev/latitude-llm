@@ -1,16 +1,14 @@
 import usePublishedDocument from '$/stores/publishedDocument'
 import { DocumentVersion } from '@latitude-data/core/browser'
-import {
-  Button,
-  CopyButton,
-  DotIndicator,
-  Input,
-  Popover,
-  SwitchInput,
-  Text,
-  TextArea,
-  useCurrentCommit,
-} from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { CopyButton } from '@latitude-data/web-ui/atoms/CopyButton'
+import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
+import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { PublishedDocumentPreview } from './Preview'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'

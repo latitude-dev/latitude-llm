@@ -3,20 +3,20 @@
 import * as React from 'react'
 
 import { cn } from '../../../lib/utils'
+import { Badge } from '../../atoms/Badge'
+import { Checkbox } from '../../atoms/Checkbox'
 import {
-  Badge,
-  Checkbox,
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-  FormField,
-  Popover,
-  Separator,
-} from '../../..'
-import Text from '../../atoms/Text'
+} from '../../atoms/Command'
+import { FormField } from '../../atoms/FormField'
+import { Popover } from '../../atoms/Popover'
+import { Separator } from '../../atoms/Separator'
+import { Text } from '../../atoms/Text'
 import { Icon } from '../../atoms/Icons'
 
 interface MultiSelectProps extends Omit<typeof FormField, 'children'> {

@@ -1,7 +1,7 @@
 'use client'
-
 import { useState, useRef, KeyboardEvent, useMemo } from 'react'
-import { Badge, Input } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { useSearchParams } from 'next/navigation'
 import { SearchColumn, Operator, ActiveSearch, CompletedSearch } from '../types'
 import { SEARCH_COLUMNS } from './constants'

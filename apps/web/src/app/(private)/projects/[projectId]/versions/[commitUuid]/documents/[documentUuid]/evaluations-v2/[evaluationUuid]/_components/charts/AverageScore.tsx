@@ -5,12 +5,10 @@ import {
   EvaluationType,
   EvaluationV2Stats,
 } from '@latitude-data/core/browser'
-import {
-  ChartBlankSlate,
-  ChartWrapper,
-  PanelChart,
-  Text,
-} from '@latitude-data/web-ui'
+import { ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
+import { PanelChart } from '@latitude-data/web-ui/molecules/Charts'
 import { useMemo } from 'react'
 
 export default function AverageScoreChart<

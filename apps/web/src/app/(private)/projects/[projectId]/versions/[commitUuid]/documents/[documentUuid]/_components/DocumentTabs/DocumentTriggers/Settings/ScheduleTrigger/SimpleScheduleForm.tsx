@@ -1,4 +1,5 @@
-import { Input, Select } from '@latitude-data/web-ui'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { ScheduleConfig, SimpleInterval } from './scheduleUtils'
 
 interface SimpleScheduleFormProps {

@@ -1,4 +1,4 @@
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { ROUTES } from '$/services/routes'
 
 import { useNavigate } from './useNavigate'

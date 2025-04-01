@@ -7,9 +7,9 @@ import {
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
-  type ICommitContextType,
-  type IProjectContextType,
-} from '@latitude-data/web-ui'
+  ICommitContextType,
+  IProjectContextType,
+} from '@latitude-data/web-ui/providers'
 
 export type EvaluationTmp =
   | (EvaluationDto & { live: ConnectedEvaluation['live']; version: 'v1' })

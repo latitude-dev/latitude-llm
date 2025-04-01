@@ -1,5 +1,4 @@
 'use client'
-
 import { useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
@@ -12,14 +11,12 @@ import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { useDatasetRowsSocket } from './useDatasetRowsSocket'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { SimpleTable } from './SimpleTable'
-import {
-  TableWithHeader,
-  Icon,
-  Text,
-  TableBlankSlate,
-  Button,
-  TableSkeleton,
-} from '@latitude-data/web-ui'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 
 const DataGrid = dynamic(() => import('./DataGrid'), {
   ssr: false,

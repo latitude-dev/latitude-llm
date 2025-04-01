@@ -1,4 +1,5 @@
-import { Slider, Text } from '@latitude-data/web-ui'
+import { Slider } from '@latitude-data/web-ui/atoms/Slider'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ConfigElement, ConfigSection } from './_components/ConfigSection'
 import { PromptConfigurationProps, useConfigValue } from './utils'
 

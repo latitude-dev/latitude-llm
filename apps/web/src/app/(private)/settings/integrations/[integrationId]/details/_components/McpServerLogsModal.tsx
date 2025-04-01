@@ -1,15 +1,12 @@
 'use client'
-
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  Modal,
-  Text,
-  CodeBlock,
-  AnimatedDots,
-  CloseTrigger,
-  Button,
-} from '@latitude-data/web-ui'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { AnimatedDots } from '@latitude-data/web-ui/molecules/AnimatedDots'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { ROUTES } from '$/services/routes'
 import useMcpLogs from '$/stores/mcpLogs'
 import useIntegrations from '$/stores/integrations'

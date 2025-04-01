@@ -1,4 +1,7 @@
-import { Badge, ButtonWithBadge, Icon, Popover } from '@latitude-data/web-ui'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { ButtonWithBadge } from '@latitude-data/web-ui/molecules/ButtonWithBadge'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { useState } from 'react'
 import { useActiveIntegrations } from './utils'
 import useIntegrations from '$/stores/integrations'

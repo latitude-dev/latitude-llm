@@ -1,4 +1,4 @@
-import { Input } from '@latitude-data/web-ui'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { ScheduleConfig } from './scheduleUtils'
 
 interface CustomScheduleFormProps {

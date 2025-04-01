@@ -1,5 +1,5 @@
 import type { ProviderApiKey } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createProviderApiKeyAction } from '$/actions/providerApiKeys/create'
 import { destroyProviderApiKeyAction } from '$/actions/providerApiKeys/destroy'
 import useFetcher from '$/hooks/useFetcher'

@@ -2,7 +2,9 @@ import { useCallback, useMemo } from 'react'
 
 import { useCommits } from '$/stores/commitsStore'
 import { Commit } from '@latitude-data/core/browser'
-import { Button, Checkbox, Text } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { BadgeCommit } from '../../../../../../_components/Sidebar/CommitSelector/CommitItem'
 import { FilterButton, useFilterButtonColor } from '../FilterButton'

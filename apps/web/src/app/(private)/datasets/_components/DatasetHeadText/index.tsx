@@ -1,5 +1,6 @@
 import { DatasetColumnRole } from '@latitude-data/core/browser'
-import { Text, Tooltip } from '@latitude-data/web-ui'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export function DatasetHeadText({
   text,

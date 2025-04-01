@@ -8,7 +8,8 @@ import {
   EvaluationResultV2,
   EvaluationType,
 } from '@latitude-data/core/browser'
-import { cn, TableBlankSlate } from '@latitude-data/web-ui'
+import { cn } from '@latitude-data/web-ui/utils'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { useRef } from 'react'
 import { EvaluationBatchIndicator } from './EvaluationBatchIndicator'
 import { EvaluationResultsTableBody } from './EvaluationResultsTableBody'

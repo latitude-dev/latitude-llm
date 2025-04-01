@@ -2,15 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { CommitStatus } from '@latitude-data/core/browser'
 import { ChangedDocument } from '@latitude-data/core/repositories'
-import {
-  ConfirmModal,
-  FormWrapper,
-  Input,
-  ReactStateDispatch,
-  TextArea,
-  useCurrentProject,
-  useToast,
-} from '@latitude-data/web-ui'
+import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { getChangedDocumentsInDraftAction } from '$/actions/commits/getChangedDocumentsInDraftAction'
 import { ROUTES } from '$/services/routes'
 import { useCommits } from '$/stores/commitsStore'

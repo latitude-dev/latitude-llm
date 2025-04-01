@@ -1,5 +1,5 @@
 import { type DatasetColumnRole } from '@latitude-data/core/browser'
-import { BackgroundColor, colors } from '@latitude-data/web-ui'
+import { BackgroundColor, colors } from '@latitude-data/web-ui/tokens'
 import { useCallback, useMemo } from 'react'
 
 type RoleStyle = { bgColor: BackgroundColor }

@@ -2,7 +2,9 @@ import { updateUserAction } from '$/actions/admin/users/updateUserAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import { Button, FormWrapper, Input } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { FormEvent, useCallback } from 'react'
 export function UpdateUserEmail() {
   const router = useNavigate()

@@ -17,12 +17,12 @@ import {
   ResultWithEvaluationTmp,
   ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
-  Button,
-  Text,
   useCurrentCommit,
   useCurrentProject,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 import { MetadataItem } from '../../../../_components/MetadataItem'
 import { ResultCellContent } from '../../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'

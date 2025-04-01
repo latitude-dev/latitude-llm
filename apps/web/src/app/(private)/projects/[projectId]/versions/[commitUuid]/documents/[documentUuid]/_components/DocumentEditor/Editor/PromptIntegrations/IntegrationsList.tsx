@@ -1,5 +1,7 @@
 import { IntegrationDto } from '@latitude-data/core/browser'
-import { cn, Icon, Text } from '@latitude-data/web-ui'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useState } from 'react'
 import { ActiveIntegrations } from './utils'
 import Link from 'next/link'

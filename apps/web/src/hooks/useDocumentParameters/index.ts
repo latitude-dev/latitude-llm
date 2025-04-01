@@ -18,9 +18,9 @@ import {
 import type { ConversationMetadata } from 'promptl-ai'
 import {
   AppLocalStorage,
-  useCurrentProject,
   useLocalStorage,
-} from '@latitude-data/web-ui'
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import useDocumentVersions from '$/stores/documentVersions'
 import {
   getLocalStorageInputsBySource,

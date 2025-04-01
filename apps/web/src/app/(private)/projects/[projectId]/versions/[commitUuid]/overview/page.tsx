@@ -1,5 +1,6 @@
 import { computeProjectStats } from '@latitude-data/core/services/projects/computeProjectStats'
-import { TableWithHeader, Text } from '@latitude-data/web-ui'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { findProjectCached } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 

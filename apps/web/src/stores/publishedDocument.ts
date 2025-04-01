@@ -4,7 +4,7 @@ import {
   HEAD_COMMIT,
   type PublishedDocument,
 } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createPublishedDocumentAction } from '$/actions/documents/sharing/createPublishedDocumentAction'
 import {
   updatePublishedDocumentAction,

@@ -3,7 +3,8 @@ import {
   RuleEvaluationMetric,
   RuleEvaluationRegularExpressionSpecification,
 } from '@latitude-data/constants'
-import { IconName, Input } from '@latitude-data/web-ui'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
