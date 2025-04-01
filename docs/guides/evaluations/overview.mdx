@@ -1,11 +1,33 @@
 ---
 title: Overview
-description: 'Learn how to create and connect evaluations to your prompts.'
+description: 'Learn how to create and use evaluations for your prompts.'
 ---
 
 ## What is an evaluation?
 
-Evaluations help you assess the quality of your LLM outputs. Latitude supports two types of evaluations:
+Evaluations help you assess the quality of your LLM responses. Each prompt in your project has its own evaluations. Latitude supports three types of evaluations, each type has its own strengths and use cases:
 
-- [**LLM evaluations**](/guides/evaluations/llm_as_judge_evaluations): Use LLM evaluators to score your LLM outputs.
-- [**Manual evaluations (HITL)**](/guides/evaluations/manual_evaluations): Evaluate your LLM output with human feedback or code-based evaluations, and push the results to Latitude.
+- [**LLM-as-judge**](/guides/evaluations/llm_as_judge_evaluations): Large language models are used to evaluate the output of other models. This is useful when the evaluated criteria is subjective and complex.
+- [**Programmatic rules**](/guides/evaluations/programmatic_rules): Simple, algorithmic rules, that evaluate your prompt based on a metric. Perfect for ground truth testing and objective criterias, such as enforcing specific lengths or validating formats.
+- [**Human-in-the-loop**](/guides/evaluations/manual_evaluations): You (or your team) manually review the logs and evaluate them based on your criteria. This is ideal when you need human verification.
+
+### Negative evaluations
+
+Usually, a higher score is always better in an evaluation. However, if you want to measure negative traits such as hallucinations or perplexity, you may want to use negative evaluations. Negative evaluations are evaluations that measure a negative criteria, where a lower score is better.
+
+You can define whether a higher or lower score is better in the evaluation's settings at any time. The refiner will use this to decide whether to choose higher or lower score evaluation results when optimizing your prompt.
+
+## Running evaluations
+
+Once you've defined your evaluations, you can run them in two ways:
+
+- [**Live mode**](/guides/evaluations/running-evaluations#running-evaluations-in-live-mode): Continuously evaluate new logs as they are generated.
+- [**Batch mode**](/guides/evaluations/running-evaluations#running-evaluations-in-batch-mode): Run evaluations on a set of logs, either from a dataset or existing logs.
+
+<Note>
+  Some evaluation types and/or metrics may not support live or batch evaluation.
+</Note>
+
+## Prompt suggestions
+
+Latitude automatically analyzes your evaluation results to generate [prompt suggestions](/guides/evaluations/prompt-suggestions) that help improve your prompts. These suggestions are based on patterns in your evaluation results and provide actionable recommendations for enhancing your prompt's performance.

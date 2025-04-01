@@ -92,7 +92,7 @@
       "pages": [
         "guides/evaluations/overview",
         {
-          "group": "LLM as judge evaluations",
+          "group": "LLM as Judge",
           "pages": [
             "guides/evaluations/llm_as_judge_evaluations",
             "guides/evaluations/evaluation-templates",
@@ -107,8 +107,10 @@
             }
           ]
         },
+        "guides/evaluations/programmatic_rules",
         "guides/evaluations/manual_evaluations",
-        "guides/evaluations/running-evaluations"
+        "guides/evaluations/running-evaluations",
+        "guides/evaluations/prompt-suggestions"
       ]
     },
     {
