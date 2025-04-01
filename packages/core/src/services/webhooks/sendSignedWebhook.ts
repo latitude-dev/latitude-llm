@@ -22,6 +22,7 @@ export async function sendSignedWebhook({
     url,
     payload,
     headers: {
+      'X-Latitude-Signature': signature,
       'X-Webhook-Signature': signature,
       ...additionalHeaders,
     },
