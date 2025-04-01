@@ -1,50 +1,36 @@
 ---
-title: LLM as judge evaluations
-description: 'Learn how to create and connect evaluations to your prompts.'
+title: LLM as Judge
+description: 'Learn how to use LLMs as judges to evaluate the quality of your prompts.'
 ---
 
 ## What are LLM as judge evaluations?
 
-LLM as judge evaluations are a powerful tool for evaluating the quality of LLM outputs. They allow you to connect an evaluation to a prompt and run it in real-time or in batch mode. This means you can get immediate feedback on the quality of your LLM outputs and make informed decisions about how to improve them.
+LLM as judge evaluations use large language models to evaluate the quality of other LLM responses. This approach is particularly powerful when you need to assess subjective, complex, or flexible criteria that are difficult to evaluate with simple rules or metrics.
 
-## How do they work?
+## Using LLMs to judge
 
-A Latitude project can have any number of evaluations that will be available to connect to prompts. You can create evaluations in the **Evaluations** tab of your workspace. Latitude comes with a set of built-in evaluations that you can use to get started, it's as simple as importing them into your project.
+### Use cases
 
-Once you've created an evaluation, you can connect it to a prompt by navigating to the prompt and clicking on the **Evaluations** tab. Then you can select the evaluation you want to connect to the prompt.
+LLM as judge evaluations are best suited for scenarios where:
 
-After connecting an evaluation to a prompt, you can:
+- **Subjective Assessment**: You need to evaluate qualities like faithfulness, coherence, or helpfulness that require nuanced understanding
+- **Complex Criteria**: The evaluation criteria involve multiple factors or require contextual understanding
+- **Flexible Requirements**: The expected output can vary in form or content while still meeting quality standards
+- **Natural Language Understanding**: You need to assess how well the response understands and addresses the user's intent
 
-- Activate a live evaluation: This will start evaluating the prompt in real-time. For every new log, the evaluation will be run and the result will be displayed in the evaluation's page.
-- Run in batch: You can choose whether to run the evaluation on existing logs or automatically generate a batch of logs to run the evaluation on.
+### Trade-offs
 
-To learn more about how to connect and run evaluations, check out the [Running evaluations](/guides/evaluations/running-evaluations) guide.
+While LLM as judge evaluations are powerful, they come with some considerations:
 
-## How do I create an LLM-as-judge evaluation?
+- **Token Usage**: Each evaluation consumes tokens, which can impact your costs
+- **Latency**: Evaluations may take longer than programmatic rules
+- **Consistency**: Results may vary slightly between runs due to the inherent nature of LLMs
 
-You can create an evaluation from scratch or import an existing one and edit it.
+For simpler, objective criteria (like format validation or exact matches), consider using [Programmatic rule evaluations](/guides/evaluations/programmatic_rules) instead.
+For user-given feedback or required human verification, consider using [Human-in-the-loop evaluations](/guides/evaluations/manual_evaluations).
 
-### Creating an evaluation from scratch
+## Creating an LLM as judge evaluation
 
-Go to the **Evaluations** tab of your project and click on the **Create evaluation** button. You'll have to provide a name for the evaluation and select the type of evaluation you want to create. We support three types of evaluations, depending on the output you expect:
+You can either leverage the catalog of built-in [evaluations templates](/guides/evaluations/evaluation-templates) that Latitude comes with, to get started faster; or create your own [custom evaluations](/guides/evaluations/custom-evaluations) from scratch.
 
-- **Number**: This is helpful when you want to score outputs on a range, for example a score between 0 and 10. You'll have to provide a minimum and maximum value for the evaluation.
-- **Boolean**: Useful for true/false questions. For example, you can use this to evaluate if the output contains harmful content.
-- **Text**: A free-form text evaluation. For example, you can use this to generate feedback on the output of a prompt.
-
-Number and Boolean evaluations expect a specific format for the evaluation result. You have to make sure your evaluation prompt returns either a score or a boolean value (true/false) and that the output is a JSON object with the following format:
-
-```json
-{
-  "result": <result>,
-  "reason": <reason>
-}
-```
-
-We use this format to parse the evaluation result and display aggregated metrics in the evaluations page. Make sure to include this format in your evaluation prompt. If you're not sure how to do this, all of our templates include this format, so you can use them as a reference.
-
-### Importing an evaluation
-
-Importing an evaluation is really simple, just navigate to the **Evaluations** tab of your project and you'll see a few templates to get you started. Simply click on the template you want to import and the evaluation will be created for you.
-
-You can edit an imported evaluation just like you would edit an evaluation from scratch, so feel free to customize it to your needs.
+To learn more about how to run evaluations, check out the [Running evaluations](/guides/evaluations/running-evaluations) guide.

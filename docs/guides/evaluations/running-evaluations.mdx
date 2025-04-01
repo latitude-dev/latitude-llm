@@ -3,43 +3,35 @@ title: Running Evaluations
 description: 'Learn how to run evaluations on your prompts.'
 ---
 
-Once you've created evaluations and connected them to any of your prompts, you can run them on live logs or in batch mode. This guide will walk you through the process of running evaluations.
+Once you've defined evaluations for your prompts, you can run them on the playground, live logs or in batch through datasets.
 
-## Prerequisites
+## Running evaluations in the playground
 
-- You have already connected one or more evaluations to your prompt.
-- To run evaluations in batch mode, you need to have a dataset created in your project. Learn more about [creating datasets](/guides/datasets/overview).
+The [Playground](/guides/prompt-manager/playground) is a powerful tool where you can see the results of your evaluations after running a prompt. This simplifies the workflow of iterating on both your prompts and your evaluations. You can also access the evaluation's editor directly with that log already imported.
 
-## Steps to run evaluations
+![Playground evaluations](/assets/playground_evaluations.png)
 
-1. **Navigate to the document**
-   Go to the specific document where you've connected the evaluations.
-
-2. **Access the evaluations tab**
-   Look for the "Evaluations" tab or section within the document view. This is where you'll find all the connected evaluations.
-
-3. **Select evaluations to run**
-   You should see a list of connected evaluations. Click on the one you want to run.
-
-4. **Run the evaluation in batch mode**
-   Click on the "Run in batch" button to start the evaluation process. Learn more about [running evaluations in batch mode](/guides/evaluations/running-evaluations#running-evaluations-in-batch-mode).
-
-5. **Run the evaluation in live mode**
-   Activate the "Evaluate production logs" toggle in the top right corner to turn on live evaluation. Learn more about [running evaluations in live mode](/guides/evaluations/running-evaluations#running-evaluations-in-live-mode).
-
-By following these steps, you should be able to successfully run your connected evaluations and gain valuable insights into the performance of your prompts.
-
-## Running evaluations in batch mode
-
-When you run evaluations in batch mode, you can either create new logs from a dataset or use existing logs.
-
-- **Create new logs from a dataset**: Select the option "Generate from dataset" as the source for the logs. Choose the dataset you want to use, the number of logs to generate, and how the prompt parameters map to the dataset columns.
-- **Use existing logs [Coming soon]**: Select the option "Use existing logs" as the source for the logs. Choose how many logs you want to use, and the evaluation will run on the logs you selected.
-
-Click the "Run evaluation" button to start the evaluation process. You'll see the status of the batch evaluation just above the logs table. Once it's finished, the charts will update with the results of the evaluation, and you can check the evaluation logs to drill down into the results.
+<Note>Evaluations that do not support live evaluation will be skipped.</Note>
 
 ## Running evaluations in live mode
 
-Evaluations running in live mode will run on all new logs generated in your project. This is useful if you want to monitor the performance of your prompts in real-time.
+Evaluations in live mode will run automatically on all new logs generated in your project, including from the playground and API, but not from datasets. This is useful if you want to monitor the performance of your prompts in real-time.
 
 We recommend keeping a few key evaluations running in live mode to spot degradations in response quality as soon as they happen. Sometimes new model releases or changes in parameters can lead to a drop in response quality, so this is a good way to catch those issues early.
+
+You can enable or disable live evaluation in the evaluation's settings at any time.
+
+<Note>
+  Evaluations that require an expected output, or human verification, do not
+  support live evaluation.
+</Note>
+
+## Running evaluations in batch mode
+
+In order to asses the performance of your prompt over a larger set of predefined use cases, you can run evaluations in batch mode. You can either run batch evaluations from a dataset, or use existing production logs, by [creating a dataset](/guides/datasets/overview) from the logs you want to use.
+
+On the evaluation's dashboard, click the "Run batch evaluation" button to start the evaluation process. You'll see the status of the batch evaluation just above the results table. Once it's finished, the statistics will update with the results of the evaluation, and you can later check the evaluation logs to drill down into the results.
+
+<Note>
+  Evaluations that require human intervention do not support batch evaluation.
+</Note>

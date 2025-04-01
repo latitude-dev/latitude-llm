@@ -1,0 +1,79 @@
+---
+title: Programmatic Rules
+description: 'Learn how to leverage algorithmic metrics to evaluate the quality of your prompts.'
+---
+
+## What are programmatic rule evaluations?
+
+Programmatic rule evaluations use algorithmic metrics to evaluate the quality of LLM responses. This approach is particularly powerful when you need to enforce specific requirements, validate formats, or check against predefined criteria.
+
+## Using algorithms to judge
+
+### Use cases
+
+Programmatic rule evaluations are best suited for scenarios where:
+
+- **Format Validation**: You need to ensure responses follow specific formats or schemas
+- **Expected Output Comparison**: You want to compare responses to expected outputs
+- **Constraint Requirements**: You need to enforce specific constraints on responses, like length or avoiding specific words
+- **Fast, Zero Cost Evaluation**: You need to evaluate a large number of responses quickly
+
+### Trade-offs
+
+While programmatic rule evaluations are powerful, they come with some considerations:
+
+- **Rigidity**: Rules may not account for valid variations in responses
+- **Limited Context**: Rules may not understand nuanced differences or contextual similarities
+- **Simple Criteria**: Custom rules may be needed to evaluate complex criteria
+
+For subjective or complex criteria that require understanding, consider using [LLM as judge evaluations](/guides/evaluations/llm_as_judge_evaluations) instead.
+For user-given feedback or required human verification, consider using [Human-in-the-loop evaluations](/guides/evaluations/manual_evaluations).
+
+## Available metrics
+
+Latitude provides a complete suite of built-in metrics for evaluating prompts programmatically.
+
+### Exact Match
+
+Checks if the response is exactly the same as the expected output. The resulting score is "matched" or "unmatched".
+
+<Note>
+  Exact Match evaluation require an expected output, so it does not support live
+  evaluation.
+</Note>
+
+### Regular Expression
+
+Checks if the response matches the regular expression. The resulting score is "matched" or "unmatched".
+
+### Schema Validation
+
+Checks if the response follows the schema. The resulting score is "valid" or "invalid". Right now only JSON schemas are supported.
+
+### Length Count
+
+Checks if the response is of a certain length. The resulting score is the length of the response. The length can be counted by characters, words or sentences.
+
+### Lexical Overlap
+
+Checks if the response contains the expected output. The resulting score is the percentage of overlap. Overlap can be measured with substring, Levenshtein distance and ROUGE algorithms.
+
+<Note>
+  Lexical Overlap evaluation require an expected output, so it does not support
+  live evaluation.
+</Note>
+
+### Semantic Similarity
+
+Checks if the response is semantically similar to the expected output. The resulting score is the percentage of similarity. Similarity is measured by computing the cosine similarity.
+
+<Note>
+  Semantic Similarity evaluation require an expected output, so it does not
+  support live evaluation.
+</Note>
+
+## Creating a programmatic rule evaluation
+
+You can create programmatic rule evaluations by clicking the button "Add evaluation" in the **Evaluations** tab of your prompt. Select "Programmatic Rule" as the evaluation type and configure the metric and its parameters.
+
+To learn more about how to run evaluations, check out the [Running evaluations](/guides/evaluations/running-evaluations) guide.

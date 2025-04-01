@@ -1,38 +1,40 @@
 ---
-title: Code / Manual evaluations
-description: 'Evaluate your LLM output with human feedback or code-based evaluations, and push the results to Latitude.'
+title: Human-in-the-Loop
+description: 'Learn how to use human verification or user-given feedback to evaluate the quality of your prompts.'
 ---
 
-## What are manual evaluations?
+## What are human-in-the-loop evaluations?
 
-Manual evaluations give you full control over how you evaluate your LLM outputs. You can use them to evaluate your LLM outputs with human feedback or code-based evaluations, and push the results to Latitude.
+Human-in-the-loop (HITL) evaluations give you full control over assessing the quality of your LLM outputs by incorporating manual, human-generated feedback. Unlike automated methods, these evaluations require direct human intervention and thus, do not support live or batch evaluation modes.
 
-## How do they work?
+## Using humans to judge
 
-A Latitude project can have any number of evaluations that will be available to
-connect to prompts. You can create evaluations in the **Evaluations** tab of
-your workspace.
+### Use cases
 
-Once you've created an evaluation, you can connect it to a prompt by navigating
-to the prompt and clicking on the **Evaluations** tab. Then you can select the
-evaluation you want to connect to the prompt.
+Human-in-the-loop evaluations are best suited for scenarios where:
 
-## How do I create a manual evaluation?
+- **Hard Verification**: You require detailed, human insight to judge response quality, accuracy, or appropriateness.
+- **User Feedback**: The evaluation criteria involve unique, user-specific feedback that cannot be automated.
+- **Complex Criteria**: The criteria are too nuanced or multifaceted for algorithmic or LLM-based evaluations.
 
-Go to the **Evaluations** tab of your project and click on the **Create
-evaluation** button. You'll have to provide a name for the evaluation, a
-description, select the manual evaluation type, andand select the type of
-evaluation result you expect. We support three result types of, depending on
-the output you expect:
+### Trade-offs
 
-- **Number**: This is helpful when you want to score outputs on a range, for example a score between 0 and 10. You'll have to provide a minimum and maximum value for the evaluation.
-- **Boolean**: Useful for true/false questions. For example, you can use this to evaluate if the output contains harmful content.
-- **Text**: A free-form text evaluation. For example, you can use this to generate feedback on the output of a prompt.
+While human-in-the-loop evaluations provide valuable and nuanced insights, they come with certain considerations:
 
-## How do I push the results to Latitude?
+- **Manual Intervention**: These evaluations do not support live or batch modes.
+- **Subjectivity**: Feedback may vary between evaluators.
+- **Resource Intensive**: They are slower and require more resources compared to automated methods.
 
-Once you've created a manual evaluation, you can push the results to Latitude
-with our SDKs or our HTTP API. You can find more information about how to push
-the results to Latitude in our [SDK
-documentation](/guides/sdk/javascript-typescript-sdk) and/or [API
-section](/guides/api/api-access)
+## Creating a human-in-the-loop evaluation
+
+You can create human-in-the-loop evaluations by clicking the button "Add evaluation" in the **Evaluations** tab of your prompt. Select "Human-in-the-loop" as the evaluation type and configure the evaluation result you expect.
+
+To learn more about how to run evaluations, check out the [Running evaluations](/guides/evaluations/running-evaluations) guide.
+
+## Submitting evaluation results through the dashboard
+
+Every log, whether it comes from the API, playground or from datasets, will appear in the evaluation's dashboard. You can then review the log and submit the evaluation result from there.
+
+## Submitting evaluation results through the API or SDK
+
+You can push evaluation results using Latitude's [API](/guides/api/api-access) or [SDK](/guides/sdk/typescript), allowing you to integrate custom user feedback into your evaluation workflow.
