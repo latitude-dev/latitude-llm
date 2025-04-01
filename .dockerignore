@@ -7,6 +7,4 @@ dist
 node_modules
 npm-debug.log
 out
-!.next/standalone
-!.next/static
 *.md

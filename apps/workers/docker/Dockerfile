@@ -40,6 +40,7 @@ COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
+  --shamefully-hoist \
   --frozen-lockfile \
   --filter "${PROJECT}..."
 
@@ -54,11 +55,19 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 # Run sentry:sourcemaps if SENTRY_AUTH_TOKEN secret is present and not empty
 RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
   if [ -s /run/secrets/SENTRY_AUTH_TOKEN ]; then \
-  cd apps/workers && \
+  cd ${PROJECT_PATH} && \
   SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN)" pnpm sentry:sourcemaps; \
   fi
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
+# Since `pnpm prune` doesn't handle recursive dependencies effectively,
+# we follow pnpm's recommended approach: remove node_modules entirely
+# and perform a fresh production install with --frozen-lockfile
+RUN rm -fr node_modules
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
+  --prod \
+  --frozen-lockfile \
+  --shamefully-hoist \
+  --filter "${PROJECT}..."
 
 FROM alpine AS runner
 
@@ -77,14 +86,16 @@ RUN adduser --system --uid 1001 latitude
 # Set permissions for local storage
 # User ID and Group ID 1001 is used to match the user 'latitude' and group 'nodejs' in the runner image.
 RUN set -e; \
-    mkdir -p /app/storage/files; \
-    mkdir -p /app/apps/web/public/files; \
-    chown -R 1001:1001 /app/storage/files /app/apps/web/public/files
+  mkdir -p /app/storage/files; \
+  mkdir -p /app/apps/web/public/files; \
+  chown -R 1001:1001 /app/storage/files /app/apps/web/public/files
 USER latitude
 
 WORKDIR /app
 
-COPY --from=builder --chown=nodejs:latitude /app .
+COPY --from=builder --chown=nodejs:latitude /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:latitude /app/${PROJECT_PATH} ./${PROJECT_PATH}
+COPY --from=builder --chown=nodejs:latitude /app/packages/compiler ./packages/compiler
 
 WORKDIR /app/${PROJECT_PATH}
 

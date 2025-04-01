@@ -53,6 +53,7 @@ COPY --from=pruner /app/out/json/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --frozen-lockfile \
+  --shamefully-hoist \
   --filter "${PROJECT}..."
 
 COPY --from=pruner /app/out/full/ .
@@ -66,11 +67,22 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 # Run sentry:sourcemaps if SENTRY_AUTH_TOKEN secret is present and not empty
 RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
   if [ -s /run/secrets/SENTRY_AUTH_TOKEN ]; then \
-  cd apps/gateway && \
+  cd ${PROJECT_PATH} && \
   SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN)" pnpm sentry:sourcemaps; \
   fi
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
+# Since `pnpm prune` doesn't handle recursive dependencies effectively,
+# we follow pnpm's recommended approach: remove node_modules entirely
+# and perform a fresh production install with --frozen-lockfile
+RUN rm -fr node_modules
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
+  --prod \
+  --frozen-lockfile \
+  # This flag produces a single flat node_moduels directory ensuring the app
+  # has access to packages' dependencies (e.g think the dependencies of
+  # packages/core) without having to bundle packages with the output build
+  --shamefully-hoist \
+  --filter "${PROJECT}..."
 
 FROM alpine AS runner
 
@@ -97,7 +109,12 @@ USER latitude
 
 WORKDIR /app
 
-COPY --from=builder --chown=nodejs:latitude /app .
+COPY --from=builder --chown=nodejs:latitude /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:latitude /app/${PROJECT_PATH} ./${PROJECT_PATH}
+COPY --from=builder --chown=nodejs:latitude /app/packages/compiler ./packages/compiler
+COPY --from=builder --chown=nodejs:latitude /app/packages/sdks/typescript ./packages/sdks/typescript
+
+WORKDIR /app/${PROJECT_PATH}
 
 ARG PORT=8080
 
