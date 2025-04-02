@@ -57,6 +57,7 @@
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
       "env": [
         "SENTRY_DSN",
+        "SENTRY_WEB_DSN",
         "SENTRY_ORG",
         "SENTRY_PROJECT",
         "SENTRY_AUTH_TOKEN",

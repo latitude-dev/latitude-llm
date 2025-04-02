@@ -1,1 +1,3 @@
 public/workers/**/*
+# Sentry Config File
+.env.sentry-build-plugin

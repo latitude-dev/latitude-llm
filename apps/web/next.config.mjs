@@ -16,7 +16,6 @@ const nextConfig = {
     '@latitude-data/sdk',
     '@napi-rs/canvas',
     '@sentry/nextjs',
-    '@sentry/profiling-node',
     'bullmq',
     'nodemailer-mailgun-transport',
     'openid-client',
