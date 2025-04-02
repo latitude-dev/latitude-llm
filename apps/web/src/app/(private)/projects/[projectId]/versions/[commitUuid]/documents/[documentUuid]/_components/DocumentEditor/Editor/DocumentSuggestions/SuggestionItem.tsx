@@ -51,11 +51,19 @@ export function SuggestionItem({
   const [isDiscarding, setIsDiscarding] = useState(false)
 
   const evaluationLink = useMemo(() => {
+    if (suggestion.evaluation.version === 'v2') {
+      return ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({ uuid: commit.uuid })
+        .documents.detail({ uuid: document.documentUuid })
+        .evaluationsV2.detail({ uuid: suggestion.evaluation.uuid }).root
+    }
+
     return ROUTES.projects
       .detail({ id: project.id })
       .commits.detail({ uuid: commit.uuid })
       .documents.detail({ uuid: document.documentUuid })
-      .evaluations.detail(suggestion.evaluationId).root
+      .evaluations.detail(suggestion.evaluation.id).root
   }, [project, commit, document, suggestion])
 
   const onApply = useCallback(() => {
@@ -98,7 +106,7 @@ export function SuggestionItem({
       <div className='w-full flex flex-col items-start justify-center gap-y-1'>
         <Link href={evaluationLink} target='_blank'>
           <Button variant='link' size='none'>
-            <Text.H5>{suggestion.evaluationName}</Text.H5>
+            <Text.H5>{suggestion.evaluation.name}</Text.H5>
           </Button>
         </Link>
         <Text.H6
@@ -131,7 +139,7 @@ export function SuggestionItem({
         <ConfirmModal
           dismissible
           open={isDiscarding}
-          title={`Remove ${suggestion.evaluationName} suggestion`}
+          title={`Remove ${suggestion.evaluation.name} suggestion`}
           type='destructive'
           onConfirm={onDiscard}
           onCancel={() => setIsDiscarding(false)}

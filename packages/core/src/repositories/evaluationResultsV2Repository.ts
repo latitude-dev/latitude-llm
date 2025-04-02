@@ -1,4 +1,11 @@
-import { isAfter, isBefore, isToday, parseISO, startOfDay } from 'date-fns'
+import {
+  isAfter,
+  isBefore,
+  isToday,
+  parseISO,
+  startOfDay,
+  subDays,
+} from 'date-fns'
 import {
   and,
   asc,
@@ -13,11 +20,13 @@ import {
   sql,
 } from 'drizzle-orm'
 import {
+  EVALUATION_RESULT_RECENCY_DAYS,
   EvaluationResultsV2Search,
   EvaluationResultV2,
   EvaluationResultV2WithDetails,
   EvaluationType,
   EvaluationV2Stats,
+  MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
   ResultWithEvaluationV2,
 } from '../browser'
 import { calculateOffset, Result } from '../lib'
@@ -453,5 +462,39 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .then((r) => r[0]!)
 
     return Result.ok<number>(result.count)
+  }
+
+  async selectForDocumentSuggestion({
+    commitId,
+    evaluationUuid,
+  }: {
+    commitId: number
+    evaluationUuid: string
+  }) {
+    const results = await this.db
+      .select(tt)
+      .from(evaluationResultsV2)
+      .where(
+        and(
+          this.scopeFilter,
+          eq(evaluationResultsV2.commitId, commitId),
+          eq(evaluationResultsV2.evaluationUuid, evaluationUuid),
+          sql`${evaluationResultsV2.usedForSuggestion} IS NOT TRUE`,
+          isNull(evaluationResultsV2.error),
+          sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
+          gte(
+            evaluationResultsV2.createdAt,
+            subDays(new Date(), EVALUATION_RESULT_RECENCY_DAYS),
+          ),
+        ),
+      )
+      .orderBy(
+        asc(evaluationResultsV2.normalizedScore),
+        desc(evaluationResultsV2.createdAt),
+        desc(evaluationResultsV2.id),
+      )
+      .limit(MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION)
+
+    return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
   }
 }

@@ -57,13 +57,21 @@ describe('inheritDocumentRelations', () => {
 
     suggestions = [
       await factories.createDocumentSuggestion({
+        commit: fromCommit,
         document: fromVersion,
-        evaluation: await factories.createEvaluation({ workspace, user }),
+        evaluation: {
+          ...(await factories.createEvaluation({ workspace, user })),
+          version: 'v1',
+        },
         workspace: workspace,
       }),
       await factories.createDocumentSuggestion({
+        commit: fromCommit,
         document: fromVersion,
-        evaluation: await factories.createEvaluation({ workspace, user }),
+        evaluation: {
+          ...(await factories.createEvaluation({ workspace, user })),
+          version: 'v1',
+        },
         workspace: workspace,
       }),
     ]

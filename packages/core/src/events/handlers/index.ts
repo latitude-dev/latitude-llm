@@ -7,16 +7,19 @@ import { evaluateLiveLogJob } from './evaluateLiveLog'
 import { notifyClientOfBulkCreateTracesAndSpans } from './notifyClientOfBulkCreateTracesAndSpans'
 import { notifyClientOfDocumentSuggestionCreated } from './notifyClientOfDocumentSuggestionCreated'
 import { notifyClientOfEvaluationResultV2Created } from './notifyClientOfEvaluationResultV2Created'
+import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
+import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { notifyToClientEvaluationResultCreatedJob } from './notifyToClientEvaluationResultCreatedJob'
-import { requestDocumentSuggestionJob } from './requestDocumentSuggestionJob'
+import {
+  requestDocumentSuggestionJob,
+  requestDocumentSuggestionJobV2,
+} from './requestDocumentSuggestionJob'
 import { runLiveEvaluationsJob } from './runLiveEvaluationsJob'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
-import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
-import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
 import { updateWebhookLastTriggeredAt } from './webhooks'
 
 export const EventHandlers: IEventsHandlers = {
@@ -74,7 +77,10 @@ export const EventHandlers: IEventsHandlers = {
   ],
   evaluationV2Created: [],
   evaluationV2Ran: [],
-  evaluationResultV2Created: [notifyClientOfEvaluationResultV2Created],
+  evaluationResultV2Created: [
+    requestDocumentSuggestionJobV2,
+    notifyClientOfEvaluationResultV2Created,
+  ],
   scaleMcpServer: [notifyClientOfScaleUpMcpServer],
   mcpServerConnected: [notifyClientOfMcpServerConnected],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],

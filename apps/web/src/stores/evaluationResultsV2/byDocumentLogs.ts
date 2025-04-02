@@ -41,7 +41,10 @@ export default function useEvaluationResultsV2ByDocumentLogs(
   const fetcher = useFetcher<Record<string, ResultWithEvaluationV2[]>>(
     `${route}?${query}`,
   )
-  const { data = {}, ...rest } = useSWR(
+
+  const { data = {}, ...rest } = useSWR<
+    Record<string, ResultWithEvaluationV2[]>
+  >(
     compact([
       'evaluationResultsV2ByDocumentLogs',
       project.id,

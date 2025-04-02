@@ -1,7 +1,7 @@
 import { setupQueues } from './queues'
 
-export { setupQueues } from './queues'
 export { Worker } from 'bullmq'
+export { setupQueues } from './queues'
 
 export async function setupSchedules() {
   const queues = await setupQueues()
@@ -11,6 +11,7 @@ export async function setupSchedules() {
     '0 0 8 * * *',
     { attempts: 1 },
   )
+
   // Every day at 2 AM
   await queues.maintenanceQueue.jobs.scheduleCleanDocumentSuggestionsJob(
     '0 0 2 * * *',

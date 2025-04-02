@@ -8,7 +8,7 @@ export const notifyClientOfDocumentSuggestionCreated = async ({
 }: {
   data: DocumentSuggestionCreatedEvent
 }) => {
-  const { workspaceId, suggestion, evaluation } = event.data
+  const { workspaceId, ...rest } = event.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
@@ -16,13 +16,6 @@ export const notifyClientOfDocumentSuggestionCreated = async ({
   const websockets = await WebsocketClient.getSocket()
   websockets.emit('documentSuggestionCreated', {
     workspaceId: workspace.id,
-    data: {
-      workspaceId: workspace.id,
-      suggestion: {
-        ...suggestion,
-        evaluationUuid: evaluation.uuid,
-        evaluationName: evaluation.name,
-      },
-    },
+    data: { workspaceId: workspace.id, ...rest },
   })
 }

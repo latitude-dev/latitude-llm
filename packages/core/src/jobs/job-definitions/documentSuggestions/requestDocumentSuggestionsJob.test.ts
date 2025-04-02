@@ -86,8 +86,9 @@ describe('requestDocumentSuggestionsJob', () => {
 
     if (withSuggestion) {
       await factories.createDocumentSuggestion({
+        commit: commit,
         document: document,
-        evaluation: evaluation,
+        evaluation: { ...evaluation, version: 'v1' },
         workspace: workspace,
         createdAt: suggestionCreatedAt,
       })

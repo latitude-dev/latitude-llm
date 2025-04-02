@@ -232,7 +232,7 @@ export function useEvaluationV2Stats<
     },
   )
 
-  const { data = undefined, ...rest } = useSWR(
+  const { data = undefined, ...rest } = useSWR<EvaluationV2Stats | undefined>(
     compact([
       'evaluationV2Stats',
       project.id,

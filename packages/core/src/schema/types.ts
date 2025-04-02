@@ -252,8 +252,7 @@ export type SpanLink = {
 export type TraceAttributes = Record<string, string | number | boolean>
 
 export type DocumentSuggestionWithDetails = DocumentSuggestion & {
-  evaluationUuid: string
-  evaluationName: string
+  evaluation: EvaluationTmp
 }
 
 export type Integration = InferSelectModel<typeof integrations>

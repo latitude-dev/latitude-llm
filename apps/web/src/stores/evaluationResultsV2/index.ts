@@ -48,7 +48,7 @@ export function useEvaluationResultsV2<
   )
   const fetcher = useFetcher<EvaluationResultV2<T, M>[]>(`${route}?${query}`)
 
-  const { data = [], ...rest } = useSWR(
+  const { data = [], ...rest } = useSWR<EvaluationResultV2<T, M>[]>(
     compact([
       'evaluationResultsV2',
       project.id,
@@ -98,7 +98,7 @@ export function useEvaluationResultsV2Pagination<
   )
   const fetcher = useFetcher<IPagination>(`${route}?${query}`)
 
-  const { data = undefined, ...rest } = useSWR(
+  const { data = undefined, ...rest } = useSWR<IPagination>(
     compact([
       'evaluationResultsV2Pagination',
       project.id,

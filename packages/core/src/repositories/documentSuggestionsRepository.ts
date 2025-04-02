@@ -1,12 +1,16 @@
 import { subDays } from 'date-fns'
-import { and, count, desc, eq, getTableColumns, gte, isNull } from 'drizzle-orm'
+import { and, count, desc, eq, getTableColumns, gte } from 'drizzle-orm'
 import {
+  Commit,
   DOCUMENT_SUGGESTION_EXPIRATION_DAYS,
   DocumentSuggestion,
   DocumentSuggestionWithDetails,
+  DocumentVersion,
 } from '../browser'
 import { Result } from '../lib'
-import { documentSuggestions, evaluations } from '../schema'
+import { documentSuggestions } from '../schema'
+import { EvaluationsRepository } from './evaluationsRepository'
+import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(documentSuggestions)
@@ -35,26 +39,36 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
   async countByDocumentVersionAndEvaluation({
     commitId,
     documentUuid,
+    evaluationUuid,
     evaluationId,
   }: {
     commitId: number
     documentUuid: string
-    evaluationId: number
+    evaluationUuid?: string
+    evaluationId?: number
   }) {
+    const filter = [
+      this.scopeFilter,
+      eq(documentSuggestions.commitId, commitId),
+      eq(documentSuggestions.documentUuid, documentUuid),
+      this.expirationFilter,
+    ]
+
+    if (evaluationUuid) {
+      filter.push(eq(documentSuggestions.evaluationUuid, evaluationUuid))
+    }
+
+    if (evaluationId) {
+      filter.push(eq(documentSuggestions.evaluationId, evaluationId))
+    }
+
     const result = await this.db
       .select({ count: count() })
       .from(documentSuggestions)
-      .where(
-        and(
-          this.scopeFilter,
-          eq(documentSuggestions.commitId, commitId),
-          eq(documentSuggestions.documentUuid, documentUuid),
-          eq(documentSuggestions.evaluationId, evaluationId),
-          this.expirationFilter,
-        ),
-      )
+      .where(and(...filter))
+      .then((r) => r[0]?.count ?? 0)
 
-    return Result.ok<number>(result[0]!.count)
+    return Result.ok<number>(result)
   }
 
   async listByDocumentVersion({
@@ -77,34 +91,65 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
   }
 
   async listByDocumentVersionWithDetails({
-    commitId,
-    documentUuid,
+    commit,
+    document,
   }: {
-    commitId: number
-    documentUuid: string
+    commit: Pick<Commit, 'uuid'>
+    document: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
   }) {
-    const result = await this.db
-      .select({
-        ...tt,
-        evaluationUuid: evaluations.uuid,
-        evaluationName: evaluations.name,
-      })
-      .from(documentSuggestions)
-      .innerJoin(
-        evaluations,
-        eq(evaluations.id, documentSuggestions.evaluationId),
-      )
-      .where(
-        and(
-          this.scopeFilter,
-          eq(documentSuggestions.commitId, commitId),
-          eq(documentSuggestions.documentUuid, documentUuid),
-          isNull(evaluations.deletedAt),
-          this.expirationFilter,
-        ),
-      )
-      .orderBy(desc(documentSuggestions.createdAt))
+    const suggestions = await this.listByDocumentVersion({
+      commitId: document.commitId,
+      documentUuid: document.documentUuid,
+    }).then((r) => r.unwrap())
 
-    return Result.ok<DocumentSuggestionWithDetails[]>(result)
+    const evaluationsV2Repository = new EvaluationsV2Repository(
+      this.workspaceId,
+      this.db,
+    )
+    const evaluationsV2 = await evaluationsV2Repository
+      .listAtCommitByDocument({
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+      })
+      .then((r) => r.unwrap())
+
+    const evaluationIds = [
+      ...new Set(
+        suggestions.filter((s) => s.evaluationId).map((s) => s.evaluationId!),
+      ),
+    ]
+    const evaluationsRepository = new EvaluationsRepository(
+      this.workspaceId,
+      this.db,
+    )
+    const evaluationsV1 =
+      evaluationIds.length > 0
+        ? await evaluationsRepository
+            .filterById(evaluationIds)
+            .then((r) => r.unwrap())
+        : []
+
+    const suggestionsWithDetails = []
+    for (const suggestion of suggestions) {
+      let evaluation
+
+      if (suggestion.evaluationUuid) {
+        const evaluationV2 = evaluationsV2.find(
+          (e) => e.uuid === suggestion.evaluationUuid,
+        )
+        if (!evaluationV2) continue
+        evaluation = { ...evaluationV2, version: 'v2' as const }
+      } else {
+        const evaluationV1 = evaluationsV1.find(
+          (e) => e.id === suggestion.evaluationId,
+        )
+        if (!evaluationV1) continue
+        evaluation = { ...evaluationV1, version: 'v1' as const }
+      }
+
+      suggestionsWithDetails.push({ ...suggestion, evaluation })
+    }
+
+    return Result.ok<DocumentSuggestionWithDetails[]>(suggestionsWithDetails)
   }
 }

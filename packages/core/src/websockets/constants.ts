@@ -7,8 +7,9 @@ import {
   Commit,
   DatasetRow,
   DatasetV2,
-  DocumentSuggestionWithDetails,
+  DocumentSuggestion,
   EvaluationResultV2,
+  EvaluationTmp,
   EvaluationV2,
   ProviderLogDto,
   Span,
@@ -89,7 +90,8 @@ type DocumentLogCreatedArgs = {
 
 type DocumentSuggestionCreatedArgs = {
   workspaceId: number
-  suggestion: DocumentSuggestionWithDetails
+  suggestion: DocumentSuggestion
+  evaluation: EvaluationTmp
 }
 
 type DatasetRowsCreatedArgs =

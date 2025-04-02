@@ -6,6 +6,7 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
   EvaluationsRepository,
+  EvaluationsV2Repository,
 } from '../../../repositories'
 import { generateDocumentSuggestion } from '../../../services/documentSuggestions'
 
@@ -13,16 +14,18 @@ export type GenerateDocumentSuggestionJobData = {
   workspaceId: number
   commitId: number
   documentUuid: string
-  evaluationId: number
+  evaluationUuid?: string
+  evaluationId?: number
 }
 
 export function generateDocumentSuggestionJobKey({
   workspaceId,
   commitId,
   documentUuid,
+  evaluationUuid,
   evaluationId,
 }: GenerateDocumentSuggestionJobData) {
-  return `generateDocumentSuggestionJob-${workspaceId}-${commitId}-${documentUuid}-${evaluationId}`
+  return `generateDocumentSuggestionJob-${workspaceId}-${commitId}-${documentUuid}-${evaluationUuid}-${evaluationId}`
 }
 
 export const generateDocumentSuggestionJob = async (
@@ -30,7 +33,8 @@ export const generateDocumentSuggestionJob = async (
 ) => {
   if (!env.LATITUDE_CLOUD) return // Avoid spamming errors locally
 
-  const { workspaceId, commitId, documentUuid, evaluationId } = job.data
+  const { workspaceId, commitId, documentUuid, evaluationUuid, evaluationId } =
+    job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
@@ -48,14 +52,29 @@ export const generateDocumentSuggestionJob = async (
     })
     .then((r) => r.unwrap())
 
-  const evaluationsRepository = new EvaluationsRepository(workspace.id)
-  const evaluation = await evaluationsRepository
-    .find(evaluationId)
-    .then((r) => r.unwrap())
+  let evaluation
+  if (evaluationUuid) {
+    const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
+    evaluation = await evaluationsRepository
+      .getAtCommitByDocument({
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+        evaluationUuid: evaluationUuid,
+      })
+      .then((r) => r.unwrap())
+      .then((e) => ({ ...e, version: 'v2' as const }))
+  } else {
+    const evaluationsRepository = new EvaluationsRepository(workspace.id)
+    evaluation = await evaluationsRepository
+      .find(evaluationId)
+      .then((r) => r.unwrap())
+      .then((e) => ({ ...e, version: 'v1' as const }))
+  }
 
   const result = await generateDocumentSuggestion({
     document: document,
     evaluation: evaluation,
+    commit: commit,
     workspace: workspace,
   })
 
