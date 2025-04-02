@@ -10,7 +10,7 @@ import useSWR from 'swr'
 
 export default function useProjects() {
   const { toast } = useToast()
-  const fetcher = useFetcher(ROUTES.api.projects.root)
+  const fetcher = useFetcher<Project[]>(ROUTES.api.projects.root)
 
   const {
     data = [],

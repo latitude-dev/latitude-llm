@@ -21,8 +21,7 @@ export function useDocumentDiff(
           .changes.detail(documentUuid).root
       : undefined
 
-  const fetcher = useFetcher(route)
-
+  const fetcher = useFetcher<DiffValue>(route)
   const { data, ...rest } = useSWR<DiffValue>(
     ['documentDiff', commit?.id, documentUuid],
     fetcher,

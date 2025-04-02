@@ -10,7 +10,7 @@ export default function useDocumentVersion(
   { commitUuid }: { commitUuid?: string } = {},
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<DocumentVersionDto>(
     documentUuid
       ? `${ROUTES.api.documents.detail(documentUuid).root}${
           commitUuid ? `?commitUuid=${commitUuid}` : ''

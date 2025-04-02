@@ -22,26 +22,14 @@ function getLinkedData({
   datasetVersion: DatasetVersion
   rowIndex: number | undefined
   datasetRowId: number | undefined
-  inputs?: LinkedDataset['inputs']
+  inputs: LinkedDataset['inputs'] | LinkedDatasetRow['inputs']
   mappedInputs: Record<string, number | string> | undefined
 }) {
   if (datasetVersion === DatasetVersion.V1) {
     return { inputs, mappedInputs, rowIndex }
   }
 
-  if (mappedInputs !== undefined && datasetRowId !== undefined) {
-    return { mappedInputs, datasetRowId }
-  }
-
-  if (mappedInputs !== undefined) {
-    return { mappedInputs }
-  }
-
-  if (datasetRowId !== undefined) {
-    return { datasetRowId }
-  }
-
-  return undefined
+  return { inputs, mappedInputs, datasetRowId }
 }
 
 function getCurrentDatasetLinkedData({
@@ -76,10 +64,10 @@ export async function saveLinkedDataset<V extends DatasetVersion>(
     data: {
       datasetRowId: number | undefined
       mappedInputs: Record<string, number | string> | undefined
+      inputs: LinkedDataset['inputs'] | LinkedDatasetRow['inputs']
 
       // DEPRECATED: Remove when migrated to datasets V2
       rowIndex: number | undefined
-      inputs?: LinkedDataset['inputs']
     }
   },
   trx = database,

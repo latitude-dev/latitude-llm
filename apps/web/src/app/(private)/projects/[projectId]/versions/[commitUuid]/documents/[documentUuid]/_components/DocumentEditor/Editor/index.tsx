@@ -1,8 +1,8 @@
 'use client'
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
-import { requestSuggestionAction } from '$/actions/copilot/requestSuggestion'
 import { publishEventAction } from '$/actions/events/publishEventAction'
 import EditorHeader from '$/components/EditorHeader'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
@@ -21,10 +21,7 @@ import {
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
-import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import {
   useCurrentCommit,
@@ -35,52 +32,14 @@ import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules
 import { useDebouncedCallback } from 'use-debounce'
 
 import Link from 'next/link'
-import { DocumentSuggestions } from './DocumentSuggestions'
 import Playground from './Playground'
 import RefineDocumentModal from './RefineModal'
 import { UpdateToPromptLButton } from './UpdateToPromptl'
-import { RefinementHook, useRefinement } from './useRefinement'
+import { useRefinement } from './useRefinement'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import useIntegrations from '$/stores/integrations'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
-
-function RefineButton({
-  refinement,
-  document,
-  copilotEnabled,
-}: {
-  refinement: RefinementHook
-  document: DocumentVersion
-  copilotEnabled: boolean
-}) {
-  if (!copilotEnabled) return null
-
-  const RefinementButton = (
-    <Button
-      disabled={document.promptlVersion === 0}
-      className='bg-background'
-      variant='outline'
-      size='small'
-      iconProps={{
-        name: 'sparkles',
-        size: 'small',
-      }}
-      onClick={refinement.modal.onOpen}
-    >
-      <Text.H6>Refine</Text.H6>
-    </Button>
-  )
-
-  if (document.promptlVersion === 0) {
-    return (
-      <Tooltip trigger={RefinementButton} asChild>
-        Upgrade the syntax of the document to use the Refine feature.
-      </Tooltip>
-    )
-  }
-
-  return <>{RefinementButton}</>
-}
+import { PlaygroundTextEditor } from './TextEditor'
 
 export default function DocumentEditor({
   document: _document,
@@ -213,13 +172,12 @@ export default function DocumentEditor({
   })
   const datasetVersion = hasDatasetsV2 ? DatasetVersion.V2 : DatasetVersion.V1
 
-  const { onMetadataProcessed } = useDocumentParameters({
+  const { metadata, runReadMetadata } = useMetadata()
+  useDocumentParameters({
     commitVersionUuid: commit.uuid,
     document,
     datasetVersion,
-  })
-  const { metadata, runReadMetadata } = useMetadata({
-    onMetadataProcessed: onMetadataProcessed,
+    metadata,
   })
   const { data: agentToolsMap } = useAgentToolsMap({
     projectId: project.id,
@@ -265,54 +223,9 @@ export default function DocumentEditor({
     ],
   )
 
-  const {
-    execute: executeRequestSuggestionAction,
-    isPending: isCopilotLoading,
-  } = useLatitudeAction(requestSuggestionAction, {
-    onSuccess: ({
-      data: suggestion,
-    }: {
-      data: { code: string; response: string } | null
-    }) => {
-      if (!suggestion) return
-
-      setDiff({
-        newValue: suggestion.code,
-        description: suggestion.response,
-        onAccept: (newValue: string) => {
-          setDiff(undefined)
-          publishEvent({
-            eventType: 'copilotSuggestionApplied',
-            payload: {
-              projectId: project.id,
-              commitUuid: commit.uuid,
-              documentUuid: document.documentUuid,
-            },
-          })
-          onChange(newValue)
-        },
-        onReject: () => {
-          setDiff(undefined)
-        },
-      })
-    },
-  })
-  const requestSuggestion = useCallback(
-    (prompt: string) => {
-      executeRequestSuggestionAction({
-        projectId: project.id,
-        commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
-        request: prompt,
-      })
-    },
-    [executeRequestSuggestionAction],
-  )
-
   const isMerged = commit.mergedAt !== null
 
   const name = document.path.split('/').pop() ?? document.path
-
   return (
     <>
       {refinement.modal.open ? (
@@ -329,6 +242,7 @@ export default function DocumentEditor({
         direction='horizontal'
         gap={4}
         initialPercentage={52}
+        initialWidthClass='min-w-1/2'
         minSize={300}
         firstPane={
           <SplitPane.Pane>
@@ -381,47 +295,20 @@ export default function DocumentEditor({
                 freeRunsCount={freeRunsCount}
                 showCopilotSetting={copilotEnabled}
               />
-              <Suspense fallback={<TextEditorPlaceholder />}>
-                <DocumentTextEditor
-                  value={value}
-                  metadata={metadata}
-                  onChange={onChange}
-                  diff={diff}
-                  readOnlyMessage={
-                    isMerged ? 'Create a draft to edit documents.' : undefined
-                  }
-                  isSaved={isSaved}
-                  actionButtons={
-                    <>
-                      <DocumentSuggestions
-                        project={project}
-                        commit={commit}
-                        document={document}
-                        prompt={value}
-                        setDiff={setDiff}
-                        setPrompt={onChange}
-                      />
-                      <RefineButton
-                        refinement={refinement}
-                        document={document}
-                        copilotEnabled={copilotEnabled}
-                      />
-                    </>
-                  }
-                  copilot={
-                    copilotEnabled
-                      ? {
-                          isLoading: isCopilotLoading,
-                          requestSuggestion,
-                          disabledMessage:
-                            document.promptlVersion === 0
-                              ? 'Copilot is disabled for prompts using the old syntax. Upgrade to use Copilot.'
-                              : undefined,
-                        }
-                      : undefined
-                  }
-                />
-              </Suspense>
+              <PlaygroundTextEditor
+                refinement={refinement}
+                compileErrors={metadata?.errors}
+                project={project}
+                document={document}
+                commit={commit}
+                setDiff={setDiff}
+                diff={diff}
+                value={value}
+                copilotEnabled={copilotEnabled}
+                isMerged={isMerged}
+                isSaved={isSaved}
+                onChange={onChange}
+              />
             </div>
           </SplitPane.Pane>
         }

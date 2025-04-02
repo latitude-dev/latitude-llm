@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { ROUTES } from '$/services/routes'
 
@@ -16,9 +17,9 @@ type ConditionalResponse<
 > = Raw extends true ? Response | void : R | void
 
 export async function handleResponse<
-  Raw extends boolean = false,
-  I extends unknown = unknown,
   R extends unknown = unknown,
+  I extends unknown = unknown,
+  Raw extends boolean = false,
 >({
   response,
   toast,
@@ -66,7 +67,39 @@ export async function handleResponse<
   }
 }
 
-export default function useFetcher(
+export async function executeFetch<
+  R extends unknown = unknown,
+  I extends unknown = unknown,
+  Raw extends boolean = false,
+>({
+  route,
+  searchParams,
+  toast,
+  serializer,
+  navigate,
+}: {
+  route: string
+  searchParams?: ISearchParams
+  toast: ReturnType<typeof useToast>['toast']
+  navigate: ReturnType<typeof useNavigate>
+  serializer?: (item: any) => any
+}) {
+  const response = await fetch(buildRoute(route, searchParams), {
+    credentials: 'include',
+  })
+  return handleResponse<R, I, Raw>({
+    response,
+    toast,
+    navigate,
+    serializer,
+  })
+}
+
+export default function useFetcher<
+  R extends unknown = unknown,
+  I extends unknown = unknown,
+  Raw extends boolean = false,
+>(
   route?: string,
   {
     fallback = [],
@@ -74,26 +107,25 @@ export default function useFetcher(
     searchParams,
   }: {
     fallback?: any
-    serializer?: (item: any) => any
+    serializer?: (item: I) => R
     searchParams?: ISearchParams
   } = { fallback: [] },
 ) {
   const { toast } = useToast()
   const navigate = useNavigate()
 
-  return async () => {
-    if (!route) return fallback
+  return useCallback(async () => {
+    if (!route) return fallback as R
 
-    const response = await fetch(buildRoute(route, searchParams), {
-      credentials: 'include',
-    })
-    return handleResponse({
-      response,
+    const response = executeFetch<R, I, Raw>({
+      route,
+      searchParams,
       toast,
-      navigate,
       serializer,
+      navigate,
     })
-  }
+    return response as R
+  }, [route, searchParams, toast, serializer, navigate])
 }
 
 function buildRoute(route: string, searchParams?: ISearchParams) {

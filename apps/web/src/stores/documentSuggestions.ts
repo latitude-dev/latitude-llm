@@ -30,7 +30,7 @@ export default function useDocumentSuggestions(
 ) {
   const { toast } = useToast()
 
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<DocumentSuggestionWithDetails[]>(
     ROUTES.api.projects
       .detail(project.id)
       .commits.detail(commit.uuid)

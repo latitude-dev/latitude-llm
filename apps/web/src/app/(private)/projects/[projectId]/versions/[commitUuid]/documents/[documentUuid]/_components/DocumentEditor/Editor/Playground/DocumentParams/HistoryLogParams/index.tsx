@@ -1,12 +1,15 @@
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import {
+  UseDocumentParameters,
+  useDocumentParameters,
+} from '$/hooks/useDocumentParameters'
 import { useGenerateDocumentLogDetailUrl } from '$/hooks/useGenerateDocumentLogDetailUrl'
 import {
   DatasetVersion,
   DocumentLog,
   DocumentVersion,
+  PlaygroundInput,
 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -23,6 +26,9 @@ import {
   asPromptLFile,
   PromptLFileParameter,
 } from '$/components/PromptLFileParameter'
+import { ChangeEvent, useCallback, useEffect, useState } from 'react'
+import { useDebouncedCallback } from 'use-debounce'
+import { ParametersWrapper } from '../ParametersWrapper'
 
 function usePaginatedDocumentLogUrl({
   page,
@@ -48,6 +54,49 @@ function usePaginatedDocumentLogUrl({
     shortCode,
     createdAt,
   }
+}
+
+function DebouncedTextArea({
+  input,
+  setInput,
+  param,
+  disabled,
+}: {
+  param: string
+  input: PlaygroundInput<'history'>
+  setInput: UseDocumentParameters['history']['setInput']
+  disabled: boolean
+}) {
+  const [localValue, setLocalValue] = useState(input.value ?? '')
+  const setInputDebounced = useDebouncedCallback(
+    async (value: string) => {
+      setInput(param, { ...input, value })
+    },
+    100,
+    { trailing: true },
+  )
+  const onChange = useCallback(
+    (e: ChangeEvent<HTMLTextAreaElement>) => {
+      const value = e.target.value
+      setLocalValue(value)
+      setInputDebounced(value)
+    },
+    [setInput, input],
+  )
+
+  useEffect(() => {
+    setLocalValue(input.value ?? '')
+  }, [input.value])
+
+  return (
+    <TextArea
+      value={localValue}
+      minRows={1}
+      maxRows={6}
+      onChange={onChange}
+      disabled={disabled}
+    />
+  )
 }
 
 export function HistoryLogParams({
@@ -121,60 +170,49 @@ export function HistoryLogParams({
         )}
       </div>
       <div className={cn({ 'opacity-50': data.isLoading })}>
-        <ClientOnly>
-          <div className='flex flex-col gap-3'>
-            {Object.keys(inputs).length > 0 ? (
-              <div className='grid grid-cols-[auto_1fr] gap-y-3'>
-                {Object.entries(inputs).map(([param, input], idx) => {
-                  const includedInPrompt =
-                    input.metadata.includeInPrompt ?? true
+        <ParametersWrapper document={document} commit={commit}>
+          {({ metadataParameters }) =>
+            metadataParameters.map((param, idx) => {
+              const input = inputs?.[param]
 
-                  const file = asPromptLFile(input.value)
+              if (!input) return null
 
-                  return (
-                    <div
-                      className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
-                      key={idx}
-                    >
-                      <div className='flex flex-row items-center gap-x-2 min-h-8'>
-                        <Badge variant={includedInPrompt ? 'accent' : 'muted'}>
-                          &#123;&#123;{param}&#125;&#125;
-                        </Badge>
-                        {!includedInPrompt && (
-                          <Tooltip trigger={<Icon name='info' />}>
-                            This variable is not included in the current prompt
-                          </Tooltip>
-                        )}
-                      </div>
-                      <div className='flex flex-grow w-full min-w-0'>
-                        {file ? (
-                          <PromptLFileParameter file={file} />
-                        ) : (
-                          <TextArea
-                            value={input.value ?? ''}
-                            minRows={1}
-                            maxRows={6}
-                            onChange={(e) => {
-                              setInput?.(param, {
-                                ...input,
-                                value: e.target.value,
-                              })
-                            }}
-                            disabled={data.isLoading}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <Text.H6 color='foregroundMuted'>
-                No inputs. Use &#123;&#123;input_name&#125;&#125; to insert.
-              </Text.H6>
-            )}
-          </div>
-        </ClientOnly>
+              const includedInPrompt = input.metadata.includeInPrompt ?? true
+
+              const file = asPromptLFile(input.value)
+
+              return (
+                <div
+                  className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
+                  key={idx}
+                >
+                  <div className='flex flex-row items-center gap-x-2 min-h-8'>
+                    <Badge variant={includedInPrompt ? 'accent' : 'muted'}>
+                      &#123;&#123;{param}&#125;&#125;
+                    </Badge>
+                    {!includedInPrompt && (
+                      <Tooltip trigger={<Icon name='info' />}>
+                        This variable is not included in the current prompt
+                      </Tooltip>
+                    )}
+                  </div>
+                  <div className='flex flex-grow w-full min-w-0'>
+                    {file ? (
+                      <PromptLFileParameter file={file} />
+                    ) : (
+                      <DebouncedTextArea
+                        param={param}
+                        input={input}
+                        setInput={setInput}
+                        disabled={data.isLoading}
+                      />
+                    )}
+                  </div>
+                </div>
+              )
+            })
+          }
+        </ParametersWrapper>
       </div>
     </div>
   )

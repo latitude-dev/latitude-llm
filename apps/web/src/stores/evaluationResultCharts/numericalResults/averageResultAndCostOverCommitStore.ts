@@ -20,7 +20,7 @@ export default function useAverageResultsAndCostOverCommit(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<AverageResultAndCostOverCommit[]>(
     ROUTES.api.projects
       .detail(projectId)
       .commits.detail(commitUuid)
@@ -28,9 +28,7 @@ export default function useAverageResultsAndCostOverCommit(
       .evaluations.detail({ evaluationId: evaluation.id }).evaluationResults
       .averageAndCost,
   )
-  const { data, isValidating, isLoading, error, mutate } = useSWR<
-    AverageResultAndCostOverCommit[]
-  >(
+  const { data, isValidating, isLoading, error, mutate } = useSWR(
     ['averageResultAndCostOverCommit', evaluation.id, documentUuid],
     fetcher,
     opts,

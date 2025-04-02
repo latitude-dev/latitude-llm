@@ -14,7 +14,6 @@ import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
 import DocumentEditor from './_components/DocumentEditor/Editor'
-import { PromptlNotificationModal } from './_components/PromptlNotificationModal'
 import { env } from '@latitude-data/env'
 
 export default async function DocumentPage({
@@ -70,7 +69,6 @@ export default async function DocumentPage({
         evaluation={refinementResult.evaluation}
         copilotEnabled={env.LATITUDE_CLOUD}
       />
-      <PromptlNotificationModal documents={documents} />
     </>
   )
 }

@@ -16,7 +16,6 @@ import { useMetadata } from '$/hooks/useMetadata'
 import useEvaluations from '$/stores/evaluations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
-import { PromptlNotificationModal } from './PromptlNotificationModal'
 import { UpdateToPromptLButton } from './UpdateToPromptl'
 
 type AdvancedEvaluationDto = EvaluationDto & {
@@ -97,7 +96,6 @@ export default function AdvancedEvaluationEditor({
 
   return (
     <>
-      <PromptlNotificationModal evaluation={evaluation} />
       <EditorHeader
         freeRunsCount={freeRunsCount}
         providers={providers}
@@ -129,7 +127,7 @@ export default function AdvancedEvaluationEditor({
       <Suspense fallback={<TextEditorPlaceholder />}>
         <DocumentTextEditor
           value={value}
-          metadata={metadata}
+          compileErrors={metadata?.errors}
           onChange={onChange}
         />
       </Suspense>

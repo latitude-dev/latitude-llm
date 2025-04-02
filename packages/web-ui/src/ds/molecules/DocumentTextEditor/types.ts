@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import type { ConversationMetadata } from 'promptl-ai'
+import type { CompileError } from 'promptl-ai'
 
 export type DiffOptions = {
   newValue: string
@@ -12,7 +12,7 @@ export type DiffOptions = {
 export type DocumentTextEditorProps = {
   value: string
   path?: string
-  metadata?: ConversationMetadata
+  compileErrors?: CompileError[]
   onChange?: (value: string) => void
   readOnlyMessage?: string
   isSaved?: boolean

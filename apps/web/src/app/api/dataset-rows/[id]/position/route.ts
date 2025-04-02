@@ -26,14 +26,7 @@ export const GET = errorHandler(
         datasetRowId: Number(id),
       })
 
-      if (result.error) {
-        return NextResponse.json(
-          { message: `Dataset Row not found with id: ${id}` },
-          { status: 404 },
-        )
-      }
-
-      return NextResponse.json(result.value, { status: 200 })
+      return NextResponse.json(result, { status: 200 })
     },
   ),
 )

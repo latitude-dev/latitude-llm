@@ -3,6 +3,11 @@ import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
+type CountersResult = {
+  totalCount: number
+  costInMillicents: number
+  tokens: number
+}
 export default function useEvaluationResultsCounters(
   {
     commitUuid,
@@ -17,7 +22,7 @@ export default function useEvaluationResultsCounters(
 ) {
   // TODO: remove this hook, pass the project id as a parameter
   const { project } = useCurrentProject()
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<CountersResult>(
     ROUTES.api.projects
       .detail(project.id)
       .commits.detail(commitUuid)

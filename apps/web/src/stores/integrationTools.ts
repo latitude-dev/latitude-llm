@@ -6,11 +6,15 @@ import { McpTool } from '@latitude-data/constants'
 
 const EMPTY_ARRAY: McpTool[] = []
 
+type ToolResponse =
+  | { data: McpTool[]; ok: true }
+  | { errorMessage: string; ok: false }
+
 export default function useIntegrationTools(
   integration?: IntegrationDto,
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<McpTool[], ToolResponse>(
     integration
       ? ROUTES.api.integrations.detail(integration.name).listTools.root
       : undefined,

@@ -25,14 +25,17 @@ export function useDocumentLogsWithEvaluationResults(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<
+    DocumentLogWithMetadataAndErrorAndEvaluationResult[],
+    DocumentLogWithMetadataAndErrorAndEvaluationResult[]
+  >(
     ROUTES.api.projects
       .detail(projectId)
       .commits.detail(commitUuid)
       .documents.detail(documentUuid)
       .evaluations.detail({ evaluationId }).logs.root,
     {
-      serializer: (rows) => rows.map(documentLogPresenter),
+      serializer: (rows) => rows.map(documentLogPresenter<false>),
       searchParams: compactObject({
         page: page ? String(page) : undefined,
         pageSize: pageSize ? String(pageSize) : undefined,

@@ -22,7 +22,7 @@ export interface Webhook {
 
 export default function useWebhooks(opts?: SWRConfiguration) {
   const { toast } = useToast()
-  const fetcher = useFetcher(ROUTES.api.webhooks.root, {
+  const fetcher = useFetcher<Webhook[], Webhook[]>(ROUTES.api.webhooks.root, {
     serializer: (rows) => rows.map(deserialize),
   })
   const {

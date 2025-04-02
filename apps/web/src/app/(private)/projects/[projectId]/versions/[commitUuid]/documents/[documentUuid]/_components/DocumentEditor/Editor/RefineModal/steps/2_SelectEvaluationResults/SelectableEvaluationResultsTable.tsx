@@ -1,4 +1,3 @@
-'use client'
 import { Dispatch, SetStateAction, useCallback } from 'react'
 import { capitalize } from 'lodash-es'
 

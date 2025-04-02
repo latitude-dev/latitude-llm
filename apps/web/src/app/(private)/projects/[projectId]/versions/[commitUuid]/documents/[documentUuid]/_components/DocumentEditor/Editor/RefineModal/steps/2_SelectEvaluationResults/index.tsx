@@ -97,7 +97,7 @@ export function SelectEvaluationResults({
                   [DocumentRoutes.evaluations].detail(evaluation.id).root
               }
             >
-              <Button>Run batch evaluations</Button>
+              <Button>Run experiment</Button>
             </Link>
           }
         />

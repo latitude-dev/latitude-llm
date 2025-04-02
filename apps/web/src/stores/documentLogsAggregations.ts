@@ -16,7 +16,7 @@ export default function useDocumentLogsAggregations(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<DocumentLogsAggregations>(
     documentUuid
       ? ROUTES.api.projects
           .detail(projectId)

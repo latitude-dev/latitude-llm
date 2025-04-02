@@ -14,8 +14,6 @@ export enum AppLocalStorage {
   editorMinimap = 'editorMinimap',
   editorCopilot = 'editorCopilot',
   playgroundParameters = 'playgroundParameters',
-  dismissedDocumentPromptlNotification = 'dismissedDocumentPromptlNotification',
-  dismissedEvaluationPromptlNotification = 'dismissedEvaluationPromptlNotification',
   expandParameters = 'expandParameters',
 }
 
@@ -62,7 +60,11 @@ const useLocalStorageStore = create<LocalStorageStore>(
         }
 
         if (isLocalStorageAvailable) {
-          localStorage.setItem(key, JSON.stringify(value))
+          try {
+            localStorage.setItem(key, JSON.stringify(value))
+          } catch {
+            // Do nothing, if too large or localStorage is not available
+          }
         }
 
         set((state) => ({

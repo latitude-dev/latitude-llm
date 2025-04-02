@@ -23,7 +23,10 @@ export default function useEvaluationResultsWithMetadata(
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<
+    EvaluationResultWithMetadataAndErrors[],
+    EvaluationResultWithMetadataAndErrors[]
+  >(
     ROUTES.api.projects
       .detail(projectId)
       .commits.detail(commitUuid)

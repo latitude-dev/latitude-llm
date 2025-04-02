@@ -116,7 +116,7 @@ export function EvaluationActions<
             variant='default'
             onClick={() => setOpenBatchModal(true)}
           >
-            Run batch evaluation
+            Run experiment
           </TableWithHeader.Button>
           <CreateBatchEvaluationModal
             open={openBatchModal}

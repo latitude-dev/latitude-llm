@@ -30,7 +30,7 @@ export default function useEvaluations(
         : ROUTES.api.evaluations.root,
     [documentUuid],
   )
-  const fetcher = useFetcher(route)
+  const fetcher = useFetcher<EvaluationDto[]>(route)
   const {
     data = [],
     mutate,

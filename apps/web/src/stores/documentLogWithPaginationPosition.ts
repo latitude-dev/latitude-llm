@@ -29,7 +29,7 @@ export default function useDocumentLogWithPaginationPosition(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<LogWithPosition>(
     documentLogUuid
       ? ROUTES.api.projects
           .detail(projectId)

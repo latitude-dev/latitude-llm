@@ -15,6 +15,7 @@ export function HorizontalSplit({
   forcedWidth,
   onResizeStop,
   classNamePanelWrapper,
+  initialWidthClass,
   className,
   gap,
   autoResize,
@@ -23,6 +24,7 @@ export function HorizontalSplit({
   rightPane: ReactNode
   visibleHandle?: boolean
   initialWidth?: number
+  initialWidthClass?: string
   initialPercentage?: number
   minWidth: number
   forcedWidth?: number
@@ -76,6 +78,7 @@ export function HorizontalSplit({
         visibleHandle={visibleHandle}
         minSize={minWidth}
         paneSize={forcedWidth !== undefined ? forcedWidth : paneWidth}
+        widthClassWhileNoPaneWidth={initialWidthClass}
         onResizePane={setPaneWidth}
         onResizeStop={onResizeStop}
       >

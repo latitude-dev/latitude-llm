@@ -1,4 +1,3 @@
-'use client'
 import { useCallback } from 'react'
 
 import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
@@ -11,14 +10,13 @@ import {
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { runDocumentInBatchAction } from '$/actions/documents/runDocumentInBatchAction'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+
+import { RunBatchParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
+import DatasetForm from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/DatasetForm'
+import { useRunDocumentInBatchForm } from './useRunDocumentInBatchForm'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-
-import DatasetForm from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/DatasetForm'
-import { RunBatchParameters } from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
-import { useRunDocumentInBatchForm } from './useRunDocumentInBatchForm'
 
 function useRunDocumentInBatch({
   document,
@@ -74,17 +72,42 @@ function useRunDocumentInBatch({
   }
 }
 
-export default function RunPromptInBatchModal() {
+export default function RunPromptInBatchModal({
+  document,
+  onClose,
+  onOpenChange,
+}: {
+  document: DocumentVersion
+  onClose: () => void
+  onOpenChange: (open: boolean) => void
+}) {
   const navigate = useNavigate()
-  const { document } = useCurrentDocument()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { toast } = useToast()
+  const removeModalQueryParam = useCallback(() => {
+    const route = ROUTES.projects
+      .detail({ id: project.id })
+      .commits.detail({ uuid: commit.uuid })
+      .documents.detail({ uuid: document.documentUuid }).editor.root
+    navigate.replace(route)
+  }, [navigate])
 
-  const form = useRunDocumentInBatchForm({
-    document,
-    commitVersionUuid: commit.uuid,
-  })
+  const onCloseModal = useCallback(() => {
+    removeModalQueryParam()
+    onClose()
+  }, [onClose, removeModalQueryParam])
+  const onOpenChangeModal = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        removeModalQueryParam()
+      }
+      onOpenChange(open)
+    },
+    [onOpenChange, removeModalQueryParam],
+  )
+
+  const form = useRunDocumentInBatchForm({ document })
   const { runBatch, errors, isRunningBatch } = useRunDocumentInBatch({
     document,
     projectId: project.id,
@@ -95,12 +118,7 @@ export default function RunPromptInBatchModal() {
         description: 'Batch run started successfully',
       })
 
-      navigate.push(
-        ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid })
-          .documents.detail({ uuid: document.documentUuid }).logs.root,
-      )
+      onCloseModal()
     },
   })
 
@@ -119,7 +137,7 @@ export default function RunPromptInBatchModal() {
     <Modal
       open
       dismissible
-      onOpenChange={() => navigate.back()}
+      onOpenChange={onOpenChangeModal}
       size='large'
       title='Select the dataset that contains the data to generate the logs'
       description='Select the dataset you want to analyze and map the parameters with dataset columns.'

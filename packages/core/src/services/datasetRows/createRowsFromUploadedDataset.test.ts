@@ -85,40 +85,10 @@ describe('createRowsFromUploadedDataset', () => {
     expect(onFinishedMock).toHaveBeenCalled()
     expect(rowData).toEqual([
       {
-        [name]: 'Paco',
+        [name]: 'Franz',
         [surname]: 'Merlo',
-        [age]: 43,
-        [nationality]: 'Spanish',
-      },
-      {
-        [name]: 'Frank',
-        [surname]: 'Merlo',
-        [age]: 11,
-        [nationality]: 'North American',
-      },
-      {
-        [name]: 'François',
-        [surname]: 'Merlo',
-        [age]: 84,
-        [nationality]: 'French',
-      },
-      {
-        [name]: 'Francesco',
-        [surname]: 'Merlo',
-        [age]: 19,
-        [nationality]: 'Italian',
-      },
-      {
-        [name]: 'Francisco',
-        [surname]: 'Merlo',
-        [age]: 9,
-        [nationality]: 'Portuguese',
-      },
-      {
-        [name]: 'Frančišek',
-        [surname]: 'Merlo',
-        [age]: 89,
-        [nationality]: 'Slovenian',
+        [age]: 48,
+        [nationality]: 'German',
       },
       {
         [name]: 'Francis',
@@ -127,10 +97,40 @@ describe('createRowsFromUploadedDataset', () => {
         [nationality]: 'British',
       },
       {
-        [name]: 'Franz',
+        [name]: 'Frančišek',
         [surname]: 'Merlo',
-        [age]: 48,
-        [nationality]: 'German',
+        [age]: 89,
+        [nationality]: 'Slovenian',
+      },
+      {
+        [name]: 'Francisco',
+        [surname]: 'Merlo',
+        [age]: 9,
+        [nationality]: 'Portuguese',
+      },
+      {
+        [name]: 'Francesco',
+        [surname]: 'Merlo',
+        [age]: 19,
+        [nationality]: 'Italian',
+      },
+      {
+        [name]: 'François',
+        [surname]: 'Merlo',
+        [age]: 84,
+        [nationality]: 'French',
+      },
+      {
+        [name]: 'Frank',
+        [surname]: 'Merlo',
+        [age]: 11,
+        [nationality]: 'North American',
+      },
+      {
+        [name]: 'Paco',
+        [surname]: 'Merlo',
+        [age]: 43,
+        [nationality]: 'Spanish',
       },
     ])
   })
@@ -230,12 +230,15 @@ describe('createRowsFromUploadedDataset', () => {
     ])
     expect(rowData).toEqual([
       {
-        [name]: 'Paco',
+        [name]: 'Francesco',
         [surname]: 'Merlo',
-      },
-      {
-        [name]: 'Frank',
-        [surname]: 'Merlo',
+        [age]: 29,
+        [jsonCol]: { name: 'valueFrancesco', age: 29 },
+        [nullCol]: '',
+        [emptyCol]: '',
+        [booleanCol]: false,
+        [dateCol]: '2025-01-01T00:00:00.000Z',
+        [floatCol]: 3.3,
       },
       {
         [name]: 'François',
@@ -249,15 +252,12 @@ describe('createRowsFromUploadedDataset', () => {
         [floatCol]: 1.1,
       },
       {
-        [name]: 'Francesco',
+        [name]: 'Frank',
         [surname]: 'Merlo',
-        [age]: 29,
-        [jsonCol]: { name: 'valueFrancesco', age: 29 },
-        [nullCol]: '',
-        [emptyCol]: '',
-        [booleanCol]: false,
-        [dateCol]: '2025-01-01T00:00:00.000Z',
-        [floatCol]: 3.3,
+      },
+      {
+        [name]: 'Paco',
+        [surname]: 'Merlo',
       },
     ])
   })

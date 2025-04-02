@@ -67,6 +67,7 @@ const SplitPane = ({
   initialSize,
   forcedSize,
   initialPercentage,
+  initialWidthClass,
   minSize,
   gap,
   onResizeStop,
@@ -82,6 +83,7 @@ const SplitPane = ({
   initialSize?: number
   forcedSize?: number
   initialPercentage?: number
+  initialWidthClass?: string
   minSize: number
   gap?: SplitGap
   onResizeStop?: (size: number) => void
@@ -101,6 +103,7 @@ const SplitPane = ({
         rightPane={secondPane}
         initialWidth={initialSize}
         initialPercentage={initialPercentage}
+        initialWidthClass={initialWidthClass}
         minWidth={minSize}
         gap={gap}
         onResizeStop={onResizeStop}

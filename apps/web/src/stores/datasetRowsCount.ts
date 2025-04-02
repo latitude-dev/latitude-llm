@@ -18,7 +18,7 @@ export default function useDatasetRowsCount(
     selectedDataset && 'columns' in selectedDataset
       ? selectedDataset
       : undefined
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<number>(
     dataset ? ROUTES.api.datasetsRows.count : undefined,
     {
       searchParams: compactObject({

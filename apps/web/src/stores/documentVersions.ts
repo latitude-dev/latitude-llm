@@ -38,7 +38,7 @@ export default function useDocumentVersions(
   const { toast } = useToast()
   const { onSuccessCreate } = opts
   const enabled = !!projectId && !!commitUuid
-  const fetcher = useFetcher(
+  const fetcher = useFetcher<DocumentVersion[]>(
     enabled
       ? ROUTES.api.projects.detail(projectId).commits.detail(commitUuid).root
       : undefined,
@@ -274,22 +274,8 @@ export default function useDocumentVersions(
     },
   )
 
-  const { execute: assignDataset } = useLatitudeAction(assignDatasetAction, {
-    onSuccess: ({ data: document }) => {
-      if (!document) return
-
-      const prevDocuments = data || []
-      mutate(
-        prevDocuments.map((d) =>
-          d.documentUuid === document.documentUuid ? document : d,
-        ),
-      )
-    },
-  })
-
-  const { execute: saveLinkedDataset } = useLatitudeAction(
-    saveLinkedDatasetAction,
-    {
+  const { execute: assignDataset, isPending: isAssigningDataset } =
+    useLatitudeAction(assignDatasetAction, {
       onSuccess: ({ data: document }) => {
         if (!document) return
 
@@ -300,8 +286,21 @@ export default function useDocumentVersions(
           ),
         )
       },
-    },
-  )
+    })
+
+  const { execute: saveLinkedDataset, isPending: isLinkingDataset } =
+    useLatitudeAction(saveLinkedDatasetAction, {
+      onSuccess: ({ data: document }) => {
+        if (!document) return
+
+        const prevDocuments = data || []
+        mutate(
+          prevDocuments.map((d) =>
+            d.documentUuid === document.documentUuid ? document : d,
+          ),
+        )
+      },
+    })
 
   const { execute: createFromTrace } = useLatitudeAction(
     createDocumentVersionFromTraceAction,
@@ -338,6 +337,7 @@ export default function useDocumentVersions(
     assignDataset,
     saveLinkedDataset,
     mutate,
+    isAssigning: isAssigningDataset || isLinkingDataset,
     isDestroying: isDestroyingFile || isDestroyingFolder,
   }
 }

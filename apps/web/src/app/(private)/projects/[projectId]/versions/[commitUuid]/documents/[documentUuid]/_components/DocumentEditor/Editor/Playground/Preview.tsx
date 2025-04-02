@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
+import { useSearchParams } from 'next/navigation'
 import {
   Conversation,
   Message as ConversationMessage,
@@ -28,13 +28,12 @@ import {
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 
+import { useToggleModal } from '$/hooks/useToogleModal'
 import Actions, { ActionsState } from './Actions'
+import RunPromptInBatchModal from './RunPromptInBatchModal'
+import { BATCH_MODAL_NAME } from '../../../constants'
 
 function WarningLink({ providerRule }: { providerRule: ProviderRules }) {
   const docPath = providerRule.startsWith('vertex') ? 'vertex' : providerRule
@@ -68,20 +67,19 @@ function Warnings({ warnings }: { warnings: AppliedRules }) {
 export default function Preview({
   metadata,
   parameters,
-  parametersLoading,
   runPrompt,
   expandParameters,
   setExpandParameters,
 }: {
   metadata: ConversationMetadata | undefined
-  parameters: Record<string, unknown>
-  parametersLoading: boolean
+  parameters: Record<string, unknown> | undefined
   runPrompt: () => void
 } & ActionsState) {
+  const params = useSearchParams()
+  const openBatch = params.get('modal') === BATCH_MODAL_NAME
+  const runModal = useToggleModal({ initialState: openBatch })
   const { data: providers } = useProviderApiKeys()
-  const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-  const { project } = useCurrentProject()
   const [conversation, setConversation] = useState<Conversation>()
   const provider = useMemo(() => {
     if (!conversation) return undefined
@@ -102,8 +100,8 @@ export default function Preview({
   useEffect(() => {
     if (!document) return
     if (!metadata) return
+    if (!parameters) return
     if (metadata.errors.length > 0) return
-    if (parametersLoading) return
 
     const usePromptl = document.promptlVersion !== 0
     const chain = usePromptl
@@ -135,7 +133,7 @@ export default function Preview({
         setCompleted(true)
         setError(error)
       })
-  }, [metadata, parameters, parametersLoading])
+  }, [metadata, parameters])
 
   useEffect(() => {
     if (!conversation) return
@@ -156,72 +154,71 @@ export default function Preview({
   }, [provider, conversation])
 
   return (
-    <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
-      {warningRule ? <Warnings warnings={warningRule} /> : null}
-      <div className='flex flex-row items-center justify-between w-full'>
-        <Text.H6M>Preview</Text.H6M>
-        <Actions
-          expandParameters={expandParameters}
-          setExpandParameters={setExpandParameters}
-        />
-      </div>
-      <div
-        ref={containerRef}
-        className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar scrollable-indicator'
-      >
-        <div className='flex flex-col gap-2'>
-          {(fixedMessages ?? []).map((message, index) => (
-            <Message
-              key={index}
-              role={message.role}
-              content={message.content}
-              parameters={Object.keys(parameters)}
-              collapseParameters={!expandParameters}
-            />
-          ))}
+    <>
+      <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
+        {warningRule ? <Warnings warnings={warningRule} /> : null}
+        <div className='flex flex-row items-center justify-between w-full'>
+          <Text.H6M>Preview</Text.H6M>
+          <Actions
+            expandParameters={expandParameters}
+            setExpandParameters={setExpandParameters}
+          />
         </div>
-        {error !== undefined && <ErrorMessage error={error} />}
-        {!completed && metadata?.isChain && (
-          <div className='w-full py-1 px-4 bg-secondary rounded-lg'>
-            <Text.H6 color='foregroundMuted'>
-              Showing the first step. Other steps will show after running.
-            </Text.H6>
-          </div>
-        )}
-      </div>
-
-      <div className='flex flex-row w-full items-center justify-center gap-2'>
-        {error || (metadata?.errors.length ?? 0) > 0 ? (
-          <Tooltip
-            side='bottom'
-            asChild
-            trigger={
-              <Button iconProps={{ name: 'play' }} fancy disabled>
-                Run
-              </Button>
-            }
-          >
-            There are errors in your prompt. Please fix them before running.
-          </Tooltip>
-        ) : (
-          <Button iconProps={{ name: 'play' }} fancy onClick={runPrompt}>
-            Run
-          </Button>
-        )}
-        <Link
-          href={
-            ROUTES.projects
-              .detail({ id: project.id })
-              .commits.detail({ uuid: commit.uuid })
-              .documents.detail({ uuid: document.documentUuid }).editor.runBatch
-              .root
-          }
+        <div
+          ref={containerRef}
+          className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar scrollable-indicator'
         >
-          <Button fancy variant='outline'>
-            Run batch
+          <div className='flex flex-col gap-2'>
+            {(fixedMessages ?? []).map((message, index) => (
+              <Message
+                key={index}
+                role={message.role}
+                content={message.content}
+                parameters={Object.keys(parameters ?? {})}
+                collapseParameters={!expandParameters}
+              />
+            ))}
+          </div>
+          {error !== undefined && <ErrorMessage error={error} />}
+          {!completed && metadata?.isChain && (
+            <div className='w-full py-1 px-4 bg-secondary rounded-lg'>
+              <Text.H6 color='foregroundMuted'>
+                Showing the first step. Other steps will show after running.
+              </Text.H6>
+            </div>
+          )}
+        </div>
+
+        <div className='flex flex-row w-full items-center justify-center gap-2'>
+          {error || (metadata?.errors.length ?? 0) > 0 ? (
+            <Tooltip
+              side='bottom'
+              asChild
+              trigger={
+                <Button iconProps={{ name: 'play' }} fancy disabled>
+                  Run
+                </Button>
+              }
+            >
+              There are errors in your prompt. Please fix them before running.
+            </Tooltip>
+          ) : (
+            <Button iconProps={{ name: 'play' }} fancy onClick={runPrompt}>
+              Run
+            </Button>
+          )}
+          <Button fancy variant='outline' onClick={runModal.onOpen}>
+            Run experiment
           </Button>
-        </Link>
+        </div>
       </div>
-    </div>
+      {runModal.open ? (
+        <RunPromptInBatchModal
+          document={document}
+          onClose={runModal.onClose}
+          onOpenChange={runModal.onOpenChange}
+        />
+      ) : null}
+    </>
   )
 }

@@ -184,9 +184,6 @@ export const ROUTES = {
                     root,
                     [DocumentRoutes.editor]: {
                       root,
-                      runBatch: {
-                        root: `${root}/batch`,
-                      },
                     },
                     [DocumentRoutes.evaluations]: {
                       root: evaluationsRoot,

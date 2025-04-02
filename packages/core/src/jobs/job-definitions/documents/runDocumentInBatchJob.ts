@@ -1,13 +1,13 @@
 import { Job } from 'bullmq'
 
 import { setupQueues } from '../..'
-import { Commit, Dataset, DocumentVersion, Workspace } from '../../../browser'
+import { Commit, DatasetV2, DocumentVersion, Workspace } from '../../../browser'
 import { getBatchRows } from '../batchEvaluations'
 
 export type RunDocumentInBatchJobProps = {
   commit: Commit
   document: DocumentVersion
-  dataset: Dataset
+  dataset: DatasetV2
   workspace: Workspace
   fromLine?: number
   toLine?: number
