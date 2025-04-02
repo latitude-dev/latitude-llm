@@ -114,6 +114,7 @@ COPY --from=builder --chown=nodejs:latitude /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:latitude /app/${PROJECT_PATH} ./${PROJECT_PATH}
 COPY --from=builder --chown=nodejs:latitude /app/packages/compiler ./packages/compiler
 COPY --from=builder --chown=nodejs:latitude /app/packages/sdks/typescript ./packages/sdks/typescript
+COPY --from=builder --chown=nodejs:latitude /app/packages/core/src/assets/eu-central-1-bundle.pem ./packages/core/src/assets/eu-central-1-bundle.pem
 
 WORKDIR /app/${PROJECT_PATH}
 
