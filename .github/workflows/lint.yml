@@ -12,8 +12,14 @@ on:
         default: false
 
 jobs:
-  setup:
+  lint:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x]
+        python-version: [3.13.x]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -23,7 +29,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 22.x
+          node-version: ${{ matrix.node-version }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -44,101 +55,40 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-      - name: Install Node.js dependencies
-        run: pnpm install
-
-      - name: Use Turbo to build affected packages
-        run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
-
-      - name: Cache workspace
-        uses: actions/cache/save@v3
-        with:
-          path: |
-            ./*
-            .turbo
-          key: ${{ runner.os }}-workspace-${{ github.sha }}
-
-  prettier:
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 9
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 22.x
-          cache: 'pnpm'
-      - name: Restore workspace from cache
-        uses: actions/cache/restore@v3
-        with:
-          path: |
-            ./*
-            .turbo
-          key: ${{ runner.os }}-workspace-${{ github.sha }}
-      - run: pnpm prettier:check
-
-  eslint:
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 9
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 22.x
-          cache: 'pnpm'
-      - name: Restore workspace from cache
-        uses: actions/cache/restore@v3
-        with:
-          path: |
-            ./*
-            .turbo
-          key: ${{ runner.os }}-workspace-${{ github.sha }}
-      - run: pnpm lint
-
-  typescript:
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 9
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 22.x
-          cache: 'pnpm'
-      - name: Restore workspace from cache
-        uses: actions/cache/restore@v3
-        with:
-          path: |
-            ./*
-            .turbo
-          key: ${{ runner.os }}-workspace-${{ github.sha }}
-      - run: pnpm tc --cache-dir=.turbo
-
-  python-lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.13.x
-      - uses: astral-sh/setup-uv@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
           version: '0.5.10'
           enable-cache: true
-      - name: Install and Run Python Linters
+
+      - name: Install Node.js dependencies
+        run: pnpm install
+
+      # TODO: We should probably separate node from python jobs
+      - name: Install Python dependencies
         run: |
           cd packages/sdks/python
           uv venv
           uv sync --all-extras --all-groups
-          uv run scripts/lint.py
           cd ../../telemetry/python
           uv venv
           uv sync --all-extras --all-groups
+
+      - name: Use Turbo to build affected packages
+        run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
+
+      - name: Prettier
+        run: pnpm prettier:check
+
+      - name: Node.js Lint
+        run: pnpm lint
+
+      - name: Python Lint
+        run: |
+          cd packages/sdks/python
           uv run scripts/lint.py
+          cd ../../telemetry/python
+          uv run scripts/lint.py
+
+      - name: TypeScript
+        run: pnpm tc --cache-dir=.turbo
