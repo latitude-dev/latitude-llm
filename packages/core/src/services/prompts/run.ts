@@ -1,10 +1,4 @@
 import {
-  createChain,
-  ConversationMetadata as LegacyMetadata,
-  Chain as LegacyChain,
-  readMetadata,
-} from '@latitude-data/compiler'
-import {
   ConversationMetadata as PromptlMetadata,
   Chain as PromptlChain,
   scan,
@@ -35,22 +29,12 @@ export async function runPrompt({
   promptSource: PromptSource
   abortSignal?: AbortSignal
 }) {
-  let chain: PromptlChain | LegacyChain
-  let metadata: LegacyMetadata | PromptlMetadata
+  let chain: PromptlChain
+  let metadata: PromptlMetadata
   if (promptlVersion === 0) {
-    try {
-      metadata = await readMetadata({
-        prompt,
-      })
-    } catch (error) {
-      return Result.error(error as Error)
-    }
-
-    chain = createChain({
-      prompt: metadata.resolvedPrompt,
-      parameters,
-      includeSourceMap: true,
-    })
+    return Result.error(
+      new Error('Chains with promptl version 0 are not supported anymore'),
+    )
   } else {
     metadata = await scan({
       prompt,

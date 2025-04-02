@@ -1,5 +1,5 @@
 import { StreamMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/components'
-import { Conversation } from '@latitude-data/compiler'
+import { Conversation } from '@latitude-data/constants'
 import {
   ErrorMessage,
   MessageList,

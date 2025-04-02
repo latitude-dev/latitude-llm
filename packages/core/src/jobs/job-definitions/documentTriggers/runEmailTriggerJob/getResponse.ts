@@ -13,7 +13,7 @@ import { database } from '../../../../client'
 import { runDocumentAtCommit } from '../../../../services/commits'
 import { unsafelyFindWorkspace } from '../../../../data-access'
 import { DocumentTrigger, Workspace } from '../../../../browser'
-import { type AssistantMessage } from '@latitude-data/compiler'
+import { type AssistantMessage } from '@latitude-data/constants'
 import { uploadFile } from '../../../../services/files'
 import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
 import { BadRequestError } from './../../../../lib/errors'
@@ -100,7 +100,7 @@ async function getNewTriggerResponse(
     customIdentifier: messageId,
   })
 
-  if (runResult.error) return Result.error(runResult.error)
+  if (runResult.error) return Result.error(runResult.error as LatitudeError)
   const run = runResult.unwrap()
 
   const runError = await run.error

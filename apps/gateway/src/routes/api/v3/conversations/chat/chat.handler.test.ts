@@ -1,4 +1,4 @@
-import { MessageRole } from '@latitude-data/compiler'
+import { MessageRole } from '@latitude-data/constants'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   LegacyChainEventTypes,

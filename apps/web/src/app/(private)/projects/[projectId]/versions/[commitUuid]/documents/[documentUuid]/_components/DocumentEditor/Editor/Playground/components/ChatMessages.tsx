@@ -1,4 +1,4 @@
-import { Message as ConversationMessage } from '@latitude-data/compiler'
+import { Message as ConversationMessage } from '@latitude-data/constants'
 import {
   ErrorMessage,
   MessageList,

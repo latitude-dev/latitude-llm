@@ -11,7 +11,6 @@ import {
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useDocumentVersions from '$/stores/documentVersions'
-import { readMetadata } from '@latitude-data/compiler'
 import { ApiKey } from '@latitude-data/core/browser'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { scan, type ConversationMetadata } from 'promptl-ai'
@@ -55,10 +54,7 @@ export default function DocumentationModal({
       // TODO: Include referenceFn, otherwise it will fail if the prompt contains references
       const metadata =
         document.promptlVersion === 0
-          ? await readMetadata({
-              prompt: document.content ?? '',
-              fullPath: document.path,
-            })
+          ? undefined
           : await scan({
               prompt: document.content ?? '',
               fullPath: document.path,

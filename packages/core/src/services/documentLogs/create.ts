@@ -1,4 +1,4 @@
-import type { Message, ToolCall } from '@latitude-data/compiler'
+import type { Message, ToolCall } from '@latitude-data/constants'
 
 import { Commit, DocumentLog, LogSources } from '../../browser'
 import { database } from '../../client'

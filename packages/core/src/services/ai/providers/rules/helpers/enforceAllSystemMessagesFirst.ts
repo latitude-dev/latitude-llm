@@ -1,4 +1,8 @@
-import type { ContentType, Message, MessageRole } from '@latitude-data/compiler'
+import type {
+  ContentType,
+  Message,
+  MessageRole,
+} from '@latitude-data/constants'
 
 import { AppliedRules, ProviderRules } from '../types'
 
