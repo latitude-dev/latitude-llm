@@ -9,7 +9,7 @@ import {
 import { Result } from '../../../../lib'
 import { runChain } from '../../../chains/run'
 import { buildProvidersMap } from '../../../providerApiKeys/buildMap'
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants'
 import { Chain as PromptlChain } from 'promptl-ai'
 import { getResolvedContent } from '../../../documents'
 import { deleteCachedChain } from '../../../chains/chainCache'

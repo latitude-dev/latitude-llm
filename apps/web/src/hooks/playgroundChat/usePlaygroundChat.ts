@@ -4,7 +4,7 @@ import {
   MessageRole,
   ToolCall,
   ToolMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import {
   AGENT_RETURN_TOOL_NAME,
   ChainEvent,

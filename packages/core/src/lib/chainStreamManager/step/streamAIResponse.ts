@@ -1,5 +1,5 @@
 import { JSONSchema7 } from 'json-schema'
-import { Conversation } from '@latitude-data/compiler'
+import { Conversation } from '@latitude-data/constants'
 import { LogSources, ProviderApiKey, Workspace } from '../../../browser'
 import {
   buildProviderLogDto,

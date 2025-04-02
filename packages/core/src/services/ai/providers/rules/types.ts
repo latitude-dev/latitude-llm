@@ -1,4 +1,4 @@
-import type { Config, Message } from '@latitude-data/compiler'
+import type { Config, Message } from '@latitude-data/constants'
 
 export enum ProviderRules {
   Anthropic = 'anthropic',

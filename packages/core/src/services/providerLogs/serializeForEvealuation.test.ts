@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { ContentType, MessageRole } from '@latitude-data/constants'
 import { describe, expect, it } from 'vitest'
 
 import { ProviderLog, ProviderLogDto } from '../../browser'

@@ -1,5 +1,5 @@
 import { Chain as PromptlChain } from 'promptl-ai'
-import { AssistantMessage, type Message } from '@latitude-data/compiler'
+import { AssistantMessage, type Message } from '@latitude-data/constants'
 import { LogSources } from '../../../constants'
 import {
   ConfigOverrides,

@@ -50,7 +50,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@latitude-data/compiler": "workspace:^",
     "@latitude-data/constants": "workspace:*",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:^",

@@ -1,10 +1,6 @@
-import {
-  Conversation,
-  Chain as LegacyChain,
-  Message,
-} from '@latitude-data/compiler'
+import { Conversation, Message } from '@latitude-data/constants'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { Chain as PromptlChain } from 'promptl-ai'
+import { Chain, Chain as PromptlChain } from 'promptl-ai'
 
 import { ProviderApiKey, Workspace } from '../../browser'
 import {
@@ -27,7 +23,7 @@ import { LanguageModelUsage } from 'ai'
 import { MAX_STEPS_CONFIG_NAME, PromptConfig } from '@latitude-data/constants'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
-export type SomeChain = LegacyChain | PromptlChain
+export type SomeChain = PromptlChain
 
 export const stepLimitExceededErrorMessage = (maxSteps: number) =>
   `Limit of ${maxSteps} steps exceeded. Configure the '${MAX_STEPS_CONFIG_NAME}' setting in your prompt configuration to allow for more steps.`
@@ -36,7 +32,7 @@ export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
   ChainError<RunErrorCodes>
 >
-type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
+type CommonArgs<T extends boolean = true, C extends SomeChain = Chain> = {
   workspace: Workspace
   providersMap: CachedApiKeys
   source: LogSources

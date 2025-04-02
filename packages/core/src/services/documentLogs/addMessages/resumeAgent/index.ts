@@ -9,7 +9,7 @@ import {
   MessageContent,
   MessageRole,
   ToolRequestContent,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { PromptSource } from '../../../../constants'
 import { runAgentStep } from '../../../agents/runStep'
 import { ChainStreamManager } from '../../../../lib/chainStreamManager'

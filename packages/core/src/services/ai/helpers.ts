@@ -5,7 +5,7 @@ import { createVertex } from '@ai-sdk/google-vertex/edge'
 import { createVertexAnthropic } from '@ai-sdk/google-vertex/anthropic/edge'
 import { createMistral } from '@ai-sdk/mistral'
 import { createOpenAI } from '@ai-sdk/openai'
-import { type Message, MessageRole } from '@latitude-data/compiler'
+import { type Message, MessageRole } from '@latitude-data/constants'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { Providers } from '../../constants'

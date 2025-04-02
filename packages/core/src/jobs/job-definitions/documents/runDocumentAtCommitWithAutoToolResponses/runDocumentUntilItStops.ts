@@ -1,7 +1,7 @@
 import { LogSources } from '@latitude-data/constants'
 import { runDocumentAtCommit as runDocumentAtCommitFn } from '../../../../services/commits/runDocumentAtCommit'
 import { Commit, Workspace, DocumentVersion } from '../../../../browser'
-import { ToolCall } from '@latitude-data/compiler'
+import { ToolCall } from '@latitude-data/constants'
 import { Result } from '../../../../lib'
 import { respondToToolCalls } from './respondToToolCalls'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'

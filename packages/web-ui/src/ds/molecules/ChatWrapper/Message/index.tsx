@@ -10,7 +10,7 @@ import {
   PromptlSourceRef,
   TextContent,
   ToolContent,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 
 import { cn } from '../../../../lib/utils'
 import { Badge, BadgeProps } from '../../../atoms/Badge'

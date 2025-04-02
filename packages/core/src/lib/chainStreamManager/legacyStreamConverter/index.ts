@@ -12,7 +12,7 @@ import {
   Message,
   MessageRole,
   ToolCall,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 
 function getAssistantMessageToolCallIds(message?: Message): unknown[] {
   if (message?.role !== 'assistant') return []

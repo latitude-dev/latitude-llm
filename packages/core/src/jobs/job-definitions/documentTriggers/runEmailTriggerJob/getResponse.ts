@@ -24,7 +24,7 @@ import {
   ContentType,
   type AssistantMessage,
   type UserMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { addMessages } from '../../../../services/documentLogs'
 import { uploadFile } from '../../../../services/files'
 import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
@@ -108,7 +108,7 @@ async function getNewTriggerResponse(
     customIdentifier: messageId,
   })
 
-  if (runResult.error) return Result.error(runResult.error)
+  if (runResult.error) return Result.error(runResult.error as LatitudeError)
   const run = runResult.unwrap()
 
   const runError = await run.error

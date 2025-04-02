@@ -1,4 +1,4 @@
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants'
 import { Result, TypedResult } from '../../../Result'
 import { injectFakeStartAutonomousWorkflowMessages } from '../../../../services/agents/promptInjection'
 import { LatitudeError } from '../../../errors'

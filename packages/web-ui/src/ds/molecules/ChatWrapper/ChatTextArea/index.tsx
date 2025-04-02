@@ -5,7 +5,7 @@ import { KeyboardEvent, useCallback, useState } from 'react'
 import TextareaAutosize from 'react-textarea-autosize'
 
 import { ToolCallForm } from './ToolCallForm'
-import { Message, ToolMessage, ToolCall } from '@latitude-data/compiler'
+import { Message, ToolMessage, ToolCall } from '@latitude-data/constants'
 import { cn } from '../../../../lib/utils'
 import { ToolBar } from './ToolBar'
 
