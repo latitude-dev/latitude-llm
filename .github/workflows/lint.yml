@@ -12,14 +12,8 @@ on:
         default: false
 
 jobs:
-  lint:
+  setup:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [22.x]
-        python-version: [3.13.x]
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -29,12 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+          node-version: 22.x
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -55,40 +44,76 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: '0.5.10'
-          enable-cache: true
-
       - name: Install Node.js dependencies
         run: pnpm install
-
-      # TODO: We should probably separate node from python jobs
-      - name: Install Python dependencies
-        run: |
-          cd packages/sdks/python
-          uv venv
-          uv sync --all-extras --all-groups
-          cd ../../telemetry/python
-          uv venv
-          uv sync --all-extras --all-groups
 
       - name: Use Turbo to build affected packages
         run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
 
-      - name: Prettier
-        run: pnpm prettier:check
+  prettier:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm prettier:check
 
-      - name: Node.js Lint
-        run: pnpm lint
+  eslint:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm lint
 
-      - name: Python Lint
+  typescript:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm tc --cache-dir=.turbo
+
+  python-lint:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.13.x
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: '0.5.10'
+          enable-cache: true
+      - name: Install and Run Python Linters
         run: |
           cd packages/sdks/python
+          uv venv
+          uv sync --all-extras --all-groups
           uv run scripts/lint.py
           cd ../../telemetry/python
+          uv venv
+          uv sync --all-extras --all-groups
           uv run scripts/lint.py
-
-      - name: TypeScript
-        run: pnpm tc --cache-dir=.turbo
