@@ -12,6 +12,10 @@ export const PROVIDER_TO_METADATA_KEY: Record<Providers, string> = {
   [Providers.Custom]: 'custom',
   [Providers.GoogleVertex]: 'google',
   [Providers.AnthropicVertex]: 'anthropic',
+  [Providers.XAI]: 'xai',
+  [Providers.DeepSeek]: 'deepseek',
+  [Providers.Perplexity]: 'perplexity',
+  [Providers.AmazonBedrock]: 'amazon_bedrock',
 }
 
 const CONTENT_DEFINED_ATTRIBUTES = [

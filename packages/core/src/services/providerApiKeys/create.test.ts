@@ -117,6 +117,101 @@ describe('createProviderApiKey', () => {
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
+  it('creates an Amazon Bedrock provider with valid configuration', async () => {
+    const result = await createProviderApiKey({
+      workspace,
+      provider: Providers.AmazonBedrock,
+      token: 'fake-access-key',
+      name: 'Bedrock Provider',
+      defaultModel: 'anthropic.claude-v2',
+      author: user,
+      configuration: {
+        region: 'us-east-1',
+        accessKeyId: 'fake-access-key',
+        secretAccessKey: 'fake-secret-key',
+      },
+    })
+
+    expect(result.ok).toEqual(true)
+
+    const provider = result.unwrap()
+
+    expect(provider.provider).toEqual(Providers.AmazonBedrock)
+    expect(provider.name).toEqual('Bedrock Provider')
+    expect(provider.token).toEqual('fake-access-key')
+    expect(provider.defaultModel).toEqual('anthropic.claude-v2')
+    expect(provider.configuration).toEqual({
+      region: 'us-east-1',
+      accessKeyId: 'fake-access-key',
+      secretAccessKey: 'fake-secret-key',
+    })
+
+    const providersScope = new ProviderApiKeysRepository(workspace.id)
+    const providers = await providersScope.findAll().then((r) => r.unwrap())
+
+    expect(providers.map((p) => p.id)).toEqual([provider.id])
+
+    expect(mocks.publisher).toHaveBeenCalledOnce()
+    expect(mocks.publisher).toHaveBeenCalledWith({
+      type: 'providerApiKeyCreated',
+      data: {
+        providerApiKey: provider,
+        workspaceId: workspace.id,
+        userEmail: user.email,
+      },
+    })
+  })
+
+  it('does not allow to create an Amazon Bedrock provider without configuration', async () => {
+    const result = await createProviderApiKey({
+      workspace,
+      provider: Providers.AmazonBedrock,
+      token: 'fake-access-key',
+      name: 'Bedrock Provider',
+      defaultModel: 'anthropic.claude-v2',
+      author: user,
+    })
+
+    expect(result.ok).toEqual(false)
+    expect(result.error).toBeInstanceOf(BadRequestError)
+    expect(result.error!.message).toEqual(
+      'AmazonBedrock provider requires configuration',
+    )
+
+    const providersScope = new ProviderApiKeysRepository(workspace.id)
+    const providers = await providersScope.findAll().then((r) => r.unwrap())
+
+    expect(providers.map((p) => p.id)).toEqual([])
+
+    expect(mocks.publisher).not.toHaveBeenCalled()
+  })
+
+  it('does not allow to create an Amazon Bedrock provider with invalid configuration', async () => {
+    const result = await createProviderApiKey({
+      workspace,
+      provider: Providers.AmazonBedrock,
+      token: 'fake-access-key',
+      name: 'Bedrock Provider',
+      defaultModel: 'anthropic.claude-v2',
+      author: user,
+      // @ts-expect-error - we are testing Zod validation
+      configuration: {
+        region: 'us-east-1',
+        // Missing required accessKeyId and secretAccessKey
+      },
+    })
+
+    expect(result.ok).toEqual(false)
+    expect(result.error).toBeDefined()
+
+    const providersScope = new ProviderApiKeysRepository(workspace.id)
+    const providers = await providersScope.findAll().then((r) => r.unwrap())
+
+    expect(providers.map((p) => p.id)).toEqual([])
+
+    expect(mocks.publisher).not.toHaveBeenCalled()
+  })
+
   it('creates a custom provider with URL', async () => {
     const result = await createProviderApiKey({
       workspace,

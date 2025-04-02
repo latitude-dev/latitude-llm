@@ -10,6 +10,7 @@ import { vercelSdkRules } from './vercel'
 import { applyOpenAiRules } from './openai'
 import { applyVertexAnthropicRules } from './vertexAnthropic'
 import { applyVertexGoogleRules } from './vertexGoogle'
+import { applyPerplexityRules } from './perplexity'
 
 type Props = {
   providerType: Providers
@@ -19,11 +20,12 @@ type Props = {
 
 const RULES: Partial<Record<Providers, (props: AppliedRules) => AppliedRules>> =
   {
+    [Providers.AnthropicVertex]: applyVertexAnthropicRules,
     [Providers.Anthropic]: applyAnthropicRules,
+    [Providers.GoogleVertex]: applyVertexGoogleRules,
     [Providers.Google]: applyGoogleRules,
     [Providers.OpenAI]: applyOpenAiRules,
-    [Providers.AnthropicVertex]: applyVertexAnthropicRules,
-    [Providers.GoogleVertex]: applyVertexGoogleRules,
+    [Providers.Perplexity]: applyPerplexityRules,
   }
 
 export function applyProviderRules({

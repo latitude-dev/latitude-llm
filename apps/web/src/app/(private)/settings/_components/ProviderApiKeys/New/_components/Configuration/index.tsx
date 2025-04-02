@@ -3,10 +3,12 @@ import { Providers } from '@latitude-data/constants'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { AmazonBedrockConfiguration } from './AmazonBedrock'
 
 const PROVIDERS_WITHOUT_API_KEY = [
   Providers.GoogleVertex,
   Providers.AnthropicVertex,
+  Providers.AmazonBedrock,
 ]
 
 function VertexConfiguration() {
@@ -92,6 +94,9 @@ export function ProviderConfigurationForm({
 
       {provider === Providers.GoogleVertex ? <VertexConfiguration /> : null}
       {provider === Providers.AnthropicVertex ? <VertexConfiguration /> : null}
+      {provider === Providers.AmazonBedrock ? (
+        <AmazonBedrockConfiguration />
+      ) : null}
     </FormFieldGroup>
   )
 }

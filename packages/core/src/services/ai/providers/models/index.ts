@@ -7,6 +7,10 @@ import { MISTRAL_MODELS } from '../../estimateCost/mistral'
 import { OPENAI_MODELS } from '../../estimateCost/openai'
 import { VERTEX_GOOGLE_MODELS } from '../../estimateCost/vertexGoogle'
 import { VERTEX_ANTHROPIC_MODELS } from '../../estimateCost/vertexAnthropic'
+import { XAI_MODELS } from '../../estimateCost/xai'
+import { AMAZON_BEDROCK_MODELS } from '../../estimateCost/amazonBedrock'
+import { DEEPSEEK_MODELS } from '../../estimateCost/deepseek'
+import { PERPLEXITY_MODELS } from '../../estimateCost/perplexity'
 
 export { Providers } from '@latitude-data/constants'
 
@@ -22,6 +26,10 @@ export const PROVIDER_MODELS: Partial<
   [Providers.Google]: GOOGLE_MODELS.uiList,
   [Providers.GoogleVertex]: VERTEX_GOOGLE_MODELS.uiList,
   [Providers.AnthropicVertex]: VERTEX_ANTHROPIC_MODELS.uiList,
+  [Providers.XAI]: XAI_MODELS.uiList,
+  [Providers.AmazonBedrock]: AMAZON_BEDROCK_MODELS.uiList,
+  [Providers.DeepSeek]: DEEPSEEK_MODELS.uiList,
+  [Providers.Perplexity]: PERPLEXITY_MODELS.uiList,
   [Providers.Azure]: {},
   [Providers.Custom]: {},
 }

@@ -20,6 +20,10 @@ export enum Providers {
   GoogleVertex = 'google_vertex',
   AnthropicVertex = 'anthropic_vertex',
   Custom = 'custom',
+  XAI = 'xai',
+  AmazonBedrock = 'amazon_bedrock',
+  DeepSeek = 'deepseek',
+  Perplexity = 'perplexity',
 }
 
 export enum DocumentTriggerType {

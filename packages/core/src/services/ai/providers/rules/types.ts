@@ -8,6 +8,10 @@ export enum ProviderRules {
   VertexAntropic = 'vertex_anthropic',
   VertexGoogle = 'vertex_google',
   Custom = 'custom',
+  XAI = 'xai',
+  AmazonBedrock = 'amazon_bedrock',
+  DeepSeek = 'deepseek',
+  Perplexity = 'perplexity',
 }
 
 type ProviderRule = { rule: ProviderRules; ruleMessage: string }
