@@ -1,7 +1,7 @@
 'use client'
 import { useMemo } from 'react'
 
-import { Message as ConversationMessage } from '@latitude-data/compiler'
+import { Message as ConversationMessage } from '@latitude-data/constants'
 import { TraceWithSpans } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'

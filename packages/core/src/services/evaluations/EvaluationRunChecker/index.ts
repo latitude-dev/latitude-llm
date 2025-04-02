@@ -1,7 +1,3 @@
-import {
-  createChain as createChainFn,
-  readMetadata,
-} from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
 import { JSONSchema7 } from 'json-schema'
@@ -141,19 +137,9 @@ export class EvaluationRunChecker {
           config: metadata.config,
         })
       } else {
-        const metadata = await readMetadata({
-          prompt: evaluationPrompt,
-        })
-        return Result.ok({
-          chain: createChainFn({
-            prompt: evaluationPrompt,
-            parameters: {
-              ...serializedLogResult.value,
-            },
-            includeSourceMap: true,
-          }),
-          config: metadata.config,
-        })
+        return Result.error(
+          new Error('Chains with promptl version 0 are not supported anymore'),
+        )
       }
     } catch (e) {
       const err = e as Error

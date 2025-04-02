@@ -1,4 +1,4 @@
-import type { Config, Message } from '@latitude-data/compiler'
+import type { Config, Message } from '@latitude-data/constants'
 
 import { PartialConfig } from '../../helpers'
 import { Providers } from '../models'

@@ -6,7 +6,6 @@ import {
   getProviderApiKeyByNameCached,
 } from '$/app/(private)/_data-access'
 import { ROUTES } from '$/services/routes'
-import { readMetadata } from '@latitude-data/compiler'
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
@@ -57,16 +56,14 @@ export default async function ConnectedEvaluationLayout({
   if (evaluation.metadataType == EvaluationMetadataType.LlmAsJudgeAdvanced) {
     const metadata =
       evaluation.metadata.promptlVersion === 0
-        ? await readMetadata({
-            prompt: evaluation.metadata.prompt,
-          })
+        ? undefined
         : await scan({
             prompt: evaluation.metadata.prompt,
           })
 
     if (
-      metadata.config.provider &&
-      typeof metadata.config.provider === 'string'
+      metadata?.config.provider &&
+      typeof metadata?.config.provider === 'string'
     ) {
       try {
         provider = await getProviderApiKeyByNameCached(metadata.config.provider)

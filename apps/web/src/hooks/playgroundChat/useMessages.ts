@@ -5,7 +5,7 @@ import {
   VersionedMessage,
   extractToolContents,
 } from '@latitude-data/web-ui/versionedMessagesHelpers'
-import { Message as CompilerMessage } from '@latitude-data/compiler'
+import { Message as CompilerMessage } from '@latitude-data/constants'
 import { useCallback, useState } from 'react'
 import {
   AGENT_RETURN_TOOL_NAME,

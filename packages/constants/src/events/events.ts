@@ -1,4 +1,4 @@
-import { Config, Message, ToolCall } from '@latitude-data/compiler'
+import { Config, Message, ToolCall } from './compiler'
 import {
   ChainStepResponse,
   ProviderData,

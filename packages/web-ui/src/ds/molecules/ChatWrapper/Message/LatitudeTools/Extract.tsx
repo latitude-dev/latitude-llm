@@ -8,7 +8,7 @@ import type {
   ExtractToolResult,
 } from '@latitude-data/core/services/latitudeTools/webExtract/types'
 import { useEffect, useRef, useState } from 'react'
-import { ToolContent } from '@latitude-data/compiler'
+import { ToolContent } from '@latitude-data/constants'
 import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 
 export function WebExtractLatitudeToolCallContent({

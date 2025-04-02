@@ -3,7 +3,7 @@ import { bulkCreateTracesAndSpans } from './bulkCreateTracesAndSpans'
 import { SpanKind } from '../../constants'
 import { createProject } from '../../tests/factories'
 import { Workspace } from '../../browser'
-import { ToolCall } from '@latitude-data/compiler'
+import { ToolCall } from '@latitude-data/constants'
 
 describe('bulkCreateTracesAndSpans', async () => {
   let workspace: Workspace

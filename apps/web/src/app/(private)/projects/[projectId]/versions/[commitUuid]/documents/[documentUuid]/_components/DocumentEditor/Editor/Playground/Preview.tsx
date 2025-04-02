@@ -6,8 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import {
   Conversation,
   Message as ConversationMessage,
-  Chain as LegacyChain,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import {
   AppliedRules,
   applyProviderRules,
@@ -111,19 +110,14 @@ export default function Preview({
           adapter: Adapters.default,
           includeSourceMap: true,
         })
-      : new LegacyChain({
-          prompt: metadata.resolvedPrompt,
-          parameters,
-          includeSourceMap: true,
-        })
+      : undefined
+
+    if (!chain) return
 
     chain
       .step()
       .then(({ completed, ...rest }) => {
-        const conversation =
-          document.promptlVersion === 0
-            ? (rest as { conversation: Conversation }).conversation
-            : (rest as unknown as Conversation)
+        const conversation = rest as unknown as Conversation
         setError(undefined)
         setConversation(conversation)
         setCompleted(completed)

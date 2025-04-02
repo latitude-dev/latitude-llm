@@ -1,6 +1,6 @@
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { ContentType, MessageRole } from '@latitude-data/constants'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   LegacyChainEventTypes,

@@ -1,9 +1,4 @@
-import {
-  CompileError,
-  Conversation,
-  Chain as LegacyChain,
-  Message,
-} from '@latitude-data/compiler'
+import { Conversation, Message } from '@latitude-data/constants'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
@@ -16,7 +11,7 @@ import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
 
-type SomeChain = LegacyChain | PromptlChain
+type SomeChain = PromptlChain
 
 export type ValidatedChainStep = {
   provider: ProviderApiKey
@@ -75,28 +70,6 @@ const getOutputType = ({
   return configSchema.type === 'array' ? 'array' : 'object'
 }
 
-/*
- * Legacy compiler wants a string as response for the next step
- * But new Promptl can handle an array of messages
- */
-function getTextFromMessages(
-  prevContent: Message[] | string | undefined,
-): string | undefined {
-  if (!prevContent) return undefined
-  if (typeof prevContent === 'string') return prevContent
-
-  try {
-    return prevContent
-      .flatMap((message) => {
-        if (typeof message.content === 'string') return message.content
-        return JSON.stringify(message.content)
-      })
-      .join('\n')
-  } catch {
-    return ''
-  }
-}
-
 const safeChain = async ({
   promptlVersion,
   chain,
@@ -108,11 +81,7 @@ const safeChain = async ({
 }) => {
   try {
     if (promptlVersion === 0) {
-      let prevText = getTextFromMessages(newMessages)
-      const { completed, conversation } = await (chain as LegacyChain).step(
-        prevText,
-      )
-      return Result.ok({ chainCompleted: completed, conversation })
+      throw new Error('Chains with promptl version 0 are not supported anymore')
     }
 
     const { completed, messages, config } = await (chain as PromptlChain).step(
@@ -124,13 +93,13 @@ const safeChain = async ({
       conversation: { messages, config },
     })
   } catch (e) {
-    const error = e as CompileError
+    const error = e as Error
     return Result.error(
       new ChainError({
         message: 'Error validating chain',
         code: RunErrorCodes.ChainCompileError,
         details: {
-          compileCode: error.code ?? 'unknown_compile_error',
+          compileCode: 'unknown_compile_error',
           message: error.message,
         },
       }),
@@ -219,6 +188,7 @@ export const validateChain = async ({
 
   const rule = applyProviderRules({
     providerType: provider.provider,
+    // @ts-expect-error - TODO: fix type incompats
     messages: conversation.messages as Message[],
     config,
   })

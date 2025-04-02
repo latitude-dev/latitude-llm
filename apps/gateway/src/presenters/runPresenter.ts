@@ -6,7 +6,7 @@ import {
   ChainStepTextResponse,
   RunSyncAPIResponse,
 } from '@latitude-data/constants'
-import { ToolCall } from '@latitude-data/compiler'
+import { ToolCall } from '@latitude-data/constants'
 
 type DocumentResponse = ChainStepObjectResponse | ChainStepTextResponse
 export function v2RunPresenter(

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Message as ConversationMessage } from '@latitude-data/compiler'
+import { Message as ConversationMessage } from '@latitude-data/constants'
 import { type DocumentVersion } from '@latitude-data/core/browser'
 import {
   ErrorMessage,

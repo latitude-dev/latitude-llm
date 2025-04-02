@@ -26,7 +26,7 @@ import {
   MetadataItem,
   MetadataItemTooltip,
 } from '../../../../../[documentUuid]/_components/MetadataItem'
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants'
 
 function costNotCalculatedReason({
   provider,

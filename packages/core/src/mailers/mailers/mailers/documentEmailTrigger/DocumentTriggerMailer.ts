@@ -5,7 +5,7 @@ import SMTPTransport from 'nodemailer/lib/smtp-transport'
 import { TypedResult } from '../../../../lib/Result'
 import Mailer from '../../Mailer'
 import { LatitudeError } from '../../../../lib'
-import type { AssistantMessage } from '@latitude-data/compiler'
+import type { AssistantMessage } from '@latitude-data/constants'
 import DocumentTriggerResponseMail from '../../../emails/documentTrigger/DocumentTriggerResponseMail'
 
 export class DocumentTriggerMailer extends Mailer {
