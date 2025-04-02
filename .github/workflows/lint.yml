@@ -54,49 +54,21 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 9
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 22.x
-          cache: 'pnpm'
-      - run: pnpm install
       - run: pnpm prettier:check
 
   eslint:
     needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 9
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 22.x
-          cache: 'pnpm'
-      - run: pnpm install
       - run: pnpm lint
 
   typescript:
     needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 9
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 22.x
-          cache: 'pnpm'
-      - run: pnpm install
       - run: pnpm tc --cache-dir=.turbo
 
   python-lint:
-    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
