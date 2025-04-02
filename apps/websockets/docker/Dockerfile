@@ -41,6 +41,7 @@ COPY --from=pruner /app/out/json/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --frozen-lockfile \
+  --shamefully-hoist \
   --filter "${PROJECT}..."
 
 COPY --from=pruner /app/out/full/ .
@@ -49,7 +50,15 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   BUILDING_CONTAINER=true \
   pnpm turbo build --filter="${PROJECT}..."
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
+# Since `pnpm prune` doesn't handle recursive dependencies effectively,
+# we follow pnpm's recommended approach: remove node_modules entirely
+# and perform a fresh production install with --frozen-lockfile
+RUN rm -fr node_modules
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
+  --prod \
+  --frozen-lockfile \
+  --shamefully-hoist \
+  --filter "${PROJECT}..."
 
 FROM alpine AS runner
 
@@ -63,7 +72,8 @@ USER latitude
 
 WORKDIR /app
 
-COPY --from=builder --chown=nodejs:latitude /app .
+COPY --from=builder --chown=nodejs:latitude /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:latitude /app/${PROJECT_PATH} ./${PROJECT_PATH}
 
 WORKDIR /app/${PROJECT_PATH}
 

@@ -917,13 +917,7 @@ importers:
         version: 2.7.0
 
   packages/env:
-    devDependencies:
-      '@latitude-data/eslint-config':
-        specifier: workspace:*
-        version: link:../../tools/eslint
-      '@latitude-data/typescript-config':
-        specifier: workspace:*
-        version: link:../../tools/typescript
+    dependencies:
       '@t3-oss/env-core':
         specifier: ^0.11.1
         version: 0.11.1(typescript@5.8.2)(zod@3.24.2)
@@ -933,6 +927,13 @@ importers:
       zod:
         specifier: ^3.23.8
         version: 3.24.2
+    devDependencies:
+      '@latitude-data/eslint-config':
+        specifier: workspace:*
+        version: link:../../tools/eslint
+      '@latitude-data/typescript-config':
+        specifier: workspace:*
+        version: link:../../tools/typescript
 
   packages/sdks/typescript:
     dependencies:

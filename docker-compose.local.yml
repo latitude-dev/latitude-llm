@@ -122,6 +122,8 @@ services:
     restart: always
     container_name: latitude-llm-web
     platform: linux/amd64
+    profiles:
+      - production
 
   migrations-local:
     <<: *common-service
@@ -145,6 +147,8 @@ services:
       - "traefik.enable=false"
     depends_on:
       - db
+    profiles:
+      - production
 
   gateway-local:
     <<: *gateway-common
@@ -152,6 +156,7 @@ services:
     build:
       context: .
       dockerfile: apps/gateway/docker/Dockerfile
+    platform: linux/amd64
     profiles:
       - local
 
@@ -161,6 +166,8 @@ services:
     restart: always
     container_name: latitude-llm-gateway
     platform: linux/amd64
+    profiles:
+      - production
 
   workers-local:
     <<: *common-service
@@ -168,6 +175,7 @@ services:
     build:
       context: .
       dockerfile: apps/workers/docker/Dockerfile
+    platform: linux/amd64
     profiles:
       - local
 
@@ -177,6 +185,8 @@ services:
     restart: always
     container_name: latitude-llm-workers
     platform: linux/amd64
+    profiles:
+      - production
 
   websockets-local:
     <<: *websockets-common
@@ -193,6 +203,8 @@ services:
     restart: always
     container_name: latitude-llm-websockets
     platform: linux/amd64
+    profiles:
+      - production
 
 # You need to create external network for Traefik to work (docker network create web)
 networks:
