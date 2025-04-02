@@ -18,5 +18,5 @@ export default {
       required: true,
     },
   },
-  envSource: 'https://api.slack.com/apps',
+  envSource: 'https://api.slack.com/tutorials/tracks/getting-a-token',
 } as HostedIntegrationConfig
