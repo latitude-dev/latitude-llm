@@ -44,6 +44,7 @@ RUN turbo prune "${PROJECT}" --docker
 FROM base AS builder
 
 ARG PROJECT
+ARG PROJECT_PATH
 
 WORKDIR /app
 
