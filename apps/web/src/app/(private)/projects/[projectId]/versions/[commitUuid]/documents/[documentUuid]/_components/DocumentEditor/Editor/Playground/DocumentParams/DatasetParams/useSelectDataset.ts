@@ -96,7 +96,14 @@ export function useSelectDataset({
       })
       setSelectedDataset(ds)
     },
-    [datasets, datasetVersion, project.id, document.documentUuid, commit.uuid],
+    [
+      datasets,
+      datasetVersion,
+      project.id,
+      document.documentUuid,
+      commit.uuid,
+      localDatasetData.assignedDatasets,
+    ],
   )
 
   const rowsData = useDatasetRowsForParameters({

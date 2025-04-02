@@ -35,9 +35,13 @@ export function buildKey(key: AppLocalStorage): string {
 export function getStorageValue(key: string, defaultValue: unknown) {
   if (!isLocalStorageAvailable) return defaultValue
 
-  const saved = localStorage.getItem(key)
-  if (saved == 'undefined') return undefined
-  return saved ? JSON.parse(saved) : defaultValue
+  try {
+    const saved = localStorage.getItem(key)
+    if (saved == 'undefined') return undefined
+    return saved ? JSON.parse(saved) : defaultValue
+  } catch {
+    return defaultValue
+  }
 }
 
 type LocalStorageStore = {
