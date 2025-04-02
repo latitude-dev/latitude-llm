@@ -50,22 +50,75 @@ jobs:
       - name: Use Turbo to build affected packages
         run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
 
+      - name: Cache workspace
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            ./*
+            .turbo
+          key: ${{ runner.os }}-workspace-${{ github.sha }}
+
   prettier:
     needs: setup
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+      - name: Restore workspace from cache
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            ./*
+            .turbo
+          key: ${{ runner.os }}-workspace-${{ github.sha }}
       - run: pnpm prettier:check
 
   eslint:
     needs: setup
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+      - name: Restore workspace from cache
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            ./*
+            .turbo
+          key: ${{ runner.os }}-workspace-${{ github.sha }}
       - run: pnpm lint
 
   typescript:
     needs: setup
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+      - name: Restore workspace from cache
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            ./*
+            .turbo
+          key: ${{ runner.os }}-workspace-${{ github.sha }}
       - run: pnpm tc --cache-dir=.turbo
 
   python-lint:
