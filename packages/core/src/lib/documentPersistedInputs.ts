@@ -67,7 +67,7 @@ export type PlaygroundInputs<S extends InputSource> = {
   }
   // DEPRECATED: Remove after a while
   dataset: LinkedDataset & { datasetId: number | undefined }
-  datasetV2: Record<number, LinkedDatasetRow>
+  datasetV2: Record<number, LinkedDatasetRow> | undefined
   history: {
     logUuid: string | undefined
     inputs: Record<string, HistoryInput>

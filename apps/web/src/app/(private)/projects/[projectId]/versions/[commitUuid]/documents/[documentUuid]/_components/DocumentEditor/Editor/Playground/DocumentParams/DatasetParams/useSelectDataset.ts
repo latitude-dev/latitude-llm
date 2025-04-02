@@ -23,10 +23,10 @@ function getDatasetRowId({
   local,
 }: {
   datasetId: number
-  local: Record<number, LinkedDatasetRow>
+  local: Record<number, LinkedDatasetRow> | undefined
   document: DocumentVersion
 }) {
-  const localData = local[datasetId]
+  const localData = local?.[datasetId]
   const serverData = document.linkedDatasetAndRow?.[datasetId]
 
   const serverRowId = serverData?.datasetRowId

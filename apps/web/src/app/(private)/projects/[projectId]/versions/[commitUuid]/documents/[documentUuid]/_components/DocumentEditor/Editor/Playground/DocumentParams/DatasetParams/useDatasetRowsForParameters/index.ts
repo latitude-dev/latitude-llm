@@ -114,7 +114,7 @@ export function useDatasetRowsForParameters({
       const row = data[0]
       if (!row || !dataset) return
 
-      const localData = ds.assignedDatasets[row.datasetId]
+      const localData = ds.assignedDatasets?.[row.datasetId]
       const serverData = document.linkedDatasetAndRow?.[row.datasetId]
       const resolvedData = resolveDatasetDataRow({
         datasetRowId: row.id,

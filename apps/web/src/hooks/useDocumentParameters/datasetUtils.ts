@@ -50,7 +50,7 @@ export function useDatasetUtils({
       setValue((oldState) => {
         const { state, doc } = getDocState(oldState, key)
         const prevDatasetState = doc['datasetV2'] ?? {}
-        const prevSource = doc['datasetV2'][datasetId] ?? {
+        const prevSource = doc['datasetV2']?.[datasetId] ?? {
           datasetRowId: nextDatasetRowId,
           inputs: nextInputs ?? {},
           mappedInputs: nextMappedInputs ?? {},
@@ -105,7 +105,7 @@ export function useDatasetUtils({
       if (!data || !data?.datasetRowId) return
 
       const { doc } = getDocState(allInputs, key)
-      const datasetDoc = doc['datasetV2'][datasetId] ?? {
+      const datasetDoc = doc['datasetV2']?.[datasetId] ?? {
         datasetRowId: data?.datasetRowId,
         inputs: data?.inputs ?? {},
         mappedInputs: data?.mappedInputs ?? {},

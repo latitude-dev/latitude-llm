@@ -168,7 +168,7 @@ export function recalculateAllInputs({
 
   let dsId = config.datasetV2?.datasetId
   dsId = dsId !== undefined && dsId !== null ? dsId : undefined
-  const row = dsId ? doc.datasetV2[dsId] : undefined
+  const row = dsId ? doc.datasetV2?.[dsId] : undefined
   if (dsId && doc.datasetV2?.[dsId] && row?.datasetRowId) {
     const inputs = row.inputs ?? {}
     const updatedRow: LinkedDatasetRow = {
