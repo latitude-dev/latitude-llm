@@ -172,6 +172,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'YepCode',
     icon: 'yepcode',
   },
+  [HostedIntegrationType.Monday]: {
+    label: 'Monday',
+    icon: 'monday',
+  },
 }
 
 export function integrationOptions(
