@@ -33,6 +33,7 @@ import HYPERBROWSER_MCP_CONFIG from './configs/hyperbrowser'
 import AUDIENSE_MCP_CONFIG from './configs/audiense'
 import APIFY_MCP_CONFIG from './configs/apify'
 import EXA_MCP_CONFIG from './configs/exa'
+import YEPCODE_MCP_CONFIG from './configs/yepcode'
 
 export const HOSTED_MCP_CONFIGS: Record<
   HostedIntegrationType,
@@ -72,4 +73,5 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.Audiense]: AUDIENSE_MCP_CONFIG,
   [HostedIntegrationType.Apify]: APIFY_MCP_CONFIG,
   [HostedIntegrationType.Exa]: EXA_MCP_CONFIG,
+  [HostedIntegrationType.YepCode]: YEPCODE_MCP_CONFIG,
 }

@@ -40,6 +40,7 @@ export enum HostedIntegrationType {
   Audiense = 'audiense',
   Apify = 'apify',
   Exa = 'exa',
+  YepCode = 'yepcode',
 
   // Require all auth file :point_down:
   // Gmail = 'google_drive',

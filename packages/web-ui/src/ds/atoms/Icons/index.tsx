@@ -146,6 +146,7 @@ import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import Exa from './custom-icons/logos/Exa'
+import YepCode from './custom-icons/logos/YepCode'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -290,6 +291,7 @@ const Icons = {
   space: Space,
   blend: Blend,
   exa: Exa,
+  yepcode: YepCode,
 }
 
 export type IconName = keyof typeof Icons
