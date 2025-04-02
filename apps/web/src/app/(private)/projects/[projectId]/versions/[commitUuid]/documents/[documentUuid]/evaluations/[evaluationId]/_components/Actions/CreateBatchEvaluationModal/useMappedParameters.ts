@@ -81,8 +81,9 @@ export function useMappedParameters({
       setSelectedDataset(selectedDataset)
       buildHeaders(selectedDataset)
       buildSelectedParameters(selectedDataset)
+      onFetched?.(selectedDataset)
     },
-    [buildHeaders, buildSelectedParameters, setSelectedDataset],
+    [buildHeaders, buildSelectedParameters, setSelectedDataset, onFetched],
   )
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets({
     onFetched: (datasets) => {
