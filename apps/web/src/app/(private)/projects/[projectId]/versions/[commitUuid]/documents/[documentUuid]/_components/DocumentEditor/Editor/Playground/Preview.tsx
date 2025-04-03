@@ -34,6 +34,7 @@ import { useToggleModal } from '$/hooks/useToogleModal'
 import Actions, { ActionsState } from './Actions'
 import RunPromptInBatchModal from './RunPromptInBatchModal'
 import { BATCH_MODAL_NAME } from '../../../constants'
+import { ToolBarWrapper } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/ChatWrapper/ChatTextArea/ToolBar'
 
 function WarningLink({ providerRule }: { providerRule: ProviderRules }) {
   const docPath = providerRule.startsWith('vertex') ? 'vertex' : providerRule
@@ -189,27 +190,29 @@ export default function Preview({
           )}
         </div>
 
-        <div className='flex flex-row w-full items-center justify-center gap-2'>
-          {error || (metadata?.errors.length ?? 0) > 0 ? (
-            <Tooltip
-              side='bottom'
-              asChild
-              trigger={
-                <Button iconProps={{ name: 'play' }} fancy disabled>
-                  Run
-                </Button>
-              }
-            >
-              There are errors in your prompt. Please fix them before running.
-            </Tooltip>
-          ) : (
-            <Button iconProps={{ name: 'play' }} fancy onClick={runPrompt}>
-              Run
+        <div className='relative flex flex-row items-center justify-center w-full'>
+          <ToolBarWrapper>
+            {error || (metadata?.errors.length ?? 0) > 0 ? (
+              <Tooltip
+                side='bottom'
+                asChild
+                trigger={
+                  <Button iconProps={{ name: 'play' }} fancy disabled>
+                    Run
+                  </Button>
+                }
+              >
+                There are errors in your prompt. Please fix them before running.
+              </Tooltip>
+            ) : (
+              <Button iconProps={{ name: 'play' }} fancy onClick={runPrompt}>
+                Run
+              </Button>
+            )}
+            <Button fancy variant='outline' onClick={runModal.onOpen}>
+              Run experiment
             </Button>
-          )}
-          <Button fancy variant='outline' onClick={runModal.onOpen}>
-            Run experiment
-          </Button>
+          </ToolBarWrapper>
         </div>
       </div>
       {runModal.open ? (

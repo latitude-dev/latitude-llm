@@ -41,7 +41,7 @@ function UnpublishedDocumentSettings({
   return (
     <div className='flex flex-col items-center w-full gap-4 p-4'>
       <div className='flex flex-col w-full items-center'>
-        <Text.H5B>Publish to web</Text.H5B>
+        <Text.H5B>Share to the web</Text.H5B>
         <Text.H5 color='foregroundMuted'>
           Create a public chatbot with Latitude
         </Text.H5>
@@ -59,7 +59,7 @@ function UnpublishedDocumentSettings({
           disabled={!canEdit}
           onClick={onPublish}
         >
-          Publish
+          Share prompt
         </Button>
       </div>
     </div>
@@ -193,7 +193,7 @@ export function PublishDocumentButton({
       <Popover.Trigger asChild>
         <Button fancy variant='outline'>
           <div className='flex flex-row items-center gap-2'>
-            <Text.H5>Publish Prompt</Text.H5>
+            <Text.H5>Share</Text.H5>
             <DotIndicator
               variant={isPublished ? 'success' : 'muted'}
               pulse={isPublished}
@@ -202,7 +202,7 @@ export function PublishDocumentButton({
         </Button>
       </Popover.Trigger>
       <Popover.Content maxHeight='none' width={500} align='end'>
-        <NotEditableBanner description='Publish settings cannot be modified in a Draft.' />
+        <NotEditableBanner description='Share settings cannot be modified in a Draft.' />
         {isPublished ? (
           <PublishedDocumentSettings
             document={document}

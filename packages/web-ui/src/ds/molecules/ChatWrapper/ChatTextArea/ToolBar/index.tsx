@@ -1,4 +1,19 @@
+import { ReactNode } from 'react'
 import { Button } from '../../../../atoms/Button'
+import { FloatingPanel } from '../../../../atoms/FloatingPanel'
+
+export function ToolBarWrapper({
+  children,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <FloatingPanel visible>
+      <div className='flex flex-row gap-2 items-center'>{children}</div>
+    </FloatingPanel>
+  )
+}
 
 export function ToolBar({
   onSubmit,
@@ -14,7 +29,7 @@ export function ToolBar({
   disableReset?: boolean
 }) {
   return (
-    <div className='flex flex-row gap-2 items-center'>
+    <ToolBarWrapper>
       <Button
         fancy
         variant='outline'
@@ -26,6 +41,6 @@ export function ToolBar({
       <Button fancy disabled={disabled} onClick={onSubmit}>
         {submitLabel}
       </Button>
-    </div>
+    </ToolBarWrapper>
   )
 }
