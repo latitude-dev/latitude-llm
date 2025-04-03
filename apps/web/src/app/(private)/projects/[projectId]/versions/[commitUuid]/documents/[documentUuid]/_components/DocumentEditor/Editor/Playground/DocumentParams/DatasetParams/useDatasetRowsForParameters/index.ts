@@ -136,7 +136,7 @@ export function useDatasetRowsForParameters({
   const onRowsFetched = useCallback(
     async (data: ClientDatasetRow[]) => {
       const row = data[0]
-      if (!row || !dataset | !metadataParameters) return
+      if (!row || !dataset || !metadataParameters) return
 
       const localData = ds.assignedDatasets?.[row.datasetId]
       const serverData = document.linkedDatasetAndRow?.[row.datasetId]
