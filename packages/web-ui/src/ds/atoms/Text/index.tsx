@@ -132,11 +132,7 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
         },
       )}
     >
-      {Children.count(children) > 1 ? (
-        <span className='inline-flex'>{children}</span>
-      ) : (
-        children
-      )}
+      {Children.count(children) > 1 ? <span>{children}</span> : children}
     </Comp>
   )
 })
