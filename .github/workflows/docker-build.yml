@@ -156,7 +156,7 @@ jobs:
             NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ matrix.private && vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL || '' }}
             NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
             NEXT_PUBLIC_POSTHOG_KEY=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_KEY || '' }}
-            SENTRY_WEB_DSN=${{ matrix.private && vars.SENTRY_WEB_DSN || '' }}
+            NEXT_PUBLIC_SENTRY_WEB_DSN=${{ matrix.private && vars.SENTRY_WEB_DSN || '' }}
             SENTRY_ORG=${{ matrix.private && secrets.SENTRY_ORG || '' }}
             SENTRY_PROJECT=${{ matrix.private && secrets.SENTRY_PROJECT || '' }}
 

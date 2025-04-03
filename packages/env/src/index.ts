@@ -224,6 +224,7 @@ export const env = createEnv({
     NEXT_PUBLIC_EMAIL_TRIGGER_DOMAIN: z.string().optional(),
     MAILGUN_WEBHOOK_SIGNING_KEY: z.string().optional(),
 
+    // Encryption
     ENCRYPTION_KEY: z.string().optional(),
 
     SECURE_COOKIES: z.coerce.boolean().optional().default(false),
