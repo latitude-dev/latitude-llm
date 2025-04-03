@@ -8,16 +8,14 @@ import { LinkableTablePaginationFooter } from '$/components/TablePaginationFoote
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { useEvaluationResultsV2Pagination } from '$/stores/evaluationResultsV2'
 import {
-  Commit,
   DEFAULT_PAGINATION_SIZE,
   EvaluationMetric,
   EvaluationResultsV2Search,
-  EvaluationResultV2,
+  EvaluationResultV2WithDetails,
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/core/browser'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
-import { cn } from '@latitude-data/web-ui/utils'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
   Table,
@@ -31,6 +29,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import { cn } from '@latitude-data/web-ui/utils'
 import { Ref } from 'react'
 
 function EvaluationResultsTableRow<
@@ -41,14 +40,12 @@ function EvaluationResultsTableRow<
   result,
   selectedResult,
   setSelectedResult,
-  commits,
   selectableState: { isSelected, toggleRow },
 }: {
   evaluation: EvaluationV2<T, M>
-  result: EvaluationResultV2<T, M>
-  selectedResult?: EvaluationResultV2<T, M>
-  setSelectedResult: (result?: EvaluationResultV2<T, M>) => void
-  commits: Record<number, Commit>
+  result: EvaluationResultV2WithDetails<T, M>
+  selectedResult?: EvaluationResultV2WithDetails<T, M>
+  setSelectedResult: (result?: EvaluationResultV2WithDetails<T, M>) => void
   selectableState: ReturnType<typeof useSelectableRows>
 }) {
   return (
@@ -80,7 +77,7 @@ function EvaluationResultsTableRow<
       <ResultRowCells
         evaluation={evaluation}
         result={result}
-        commit={commits[result.commitId]!}
+        commit={result.commit}
         color={
           result.error
             ? 'destructiveMutedForeground'
@@ -106,16 +103,14 @@ export function EvaluationResultsTableBody<
   results,
   selectedResult,
   setSelectedResult,
-  commits,
   selectableState,
   search,
   isLoading,
   ref,
 }: {
-  results: EvaluationResultV2<T, M>[]
-  selectedResult?: EvaluationResultV2<T, M>
-  setSelectedResult: (result?: EvaluationResultV2<T, M>) => void
-  commits: Record<number, Commit>
+  results: EvaluationResultV2WithDetails<T, M>[]
+  selectedResult?: EvaluationResultV2WithDetails<T, M>
+  setSelectedResult: (result?: EvaluationResultV2WithDetails<T, M>) => void
   selectableState: ReturnType<typeof useSelectableRows>
   search: EvaluationResultsV2Search
   isLoading: boolean
@@ -179,7 +174,6 @@ export function EvaluationResultsTableBody<
               result={result}
               selectedResult={selectedResult}
               setSelectedResult={setSelectedResult}
-              commits={commits}
               selectableState={selectableState}
             />
           ))}

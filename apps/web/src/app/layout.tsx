@@ -1,16 +1,14 @@
-import { ReactNode } from 'react'
-
 import buildMetatags from '$/app/_lib/buildMetatags'
-import NextTopLoader from 'nextjs-toploader'
-
-import '@latitude-data/web-ui/styles.css'
-
-import { ThemeProvider } from '@latitude-data/web-ui/providers'
+import { SWRProvider } from '$/components/Providers/SWRProvider'
+import { fontMono, fontSans } from '$/helpers/fonts'
+import { ToastProvider } from '@latitude-data/web-ui/atoms/Toast'
 import { TooltipProvider } from '@latitude-data/web-ui/atoms/Tooltip'
 import { THEMES } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
-import { ToastProvider } from '@latitude-data/web-ui/atoms/Toast'
-import { fontMono, fontSans } from '$/helpers/fonts'
-import { SWRProvider } from '$/components/Providers/SWRProvider'
+import { ThemeProvider } from '@latitude-data/web-ui/providers'
+import '@latitude-data/web-ui/styles.css'
+import NextTopLoader from 'nextjs-toploader'
+import { ReactNode } from 'react'
+import 'react-data-grid/lib/styles.css'
 
 export const metadata = buildMetatags({
   title: 'The Open-Source LLM Development Platform',

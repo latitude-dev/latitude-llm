@@ -1,4 +1,5 @@
 'use client'
+
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
@@ -10,31 +11,30 @@ import { useCommits } from '$/stores/commitsStore'
 import { useEvaluationResultsV2 } from '$/stores/evaluationResultsV2'
 import { useEvaluationV2Stats } from '$/stores/evaluationsV2'
 import {
-  Commit,
   EvaluationMetric,
   EvaluationResultsV2Search,
   evaluationResultsV2SearchToQueryParams,
-  EvaluationResultV2,
+  EvaluationResultV2WithDetails,
   EvaluationType,
   EvaluationV2,
   EvaluationV2Stats,
 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import {
   Breadcrumb,
   BreadcrumbItem,
 } from '@latitude-data/web-ui/molecules/Breadcrumb'
-import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { DebouncedState, useDebounce, useDebouncedCallback } from 'use-debounce'
 import { EvaluationActions } from './EvaluationActions'
 import { EvaluationFilters } from './EvaluationFilters'
@@ -46,12 +46,10 @@ const useEvaluationResultsV2Socket = <
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 >({
   evaluation,
-  commits,
   mutate,
   refetchStats,
 }: {
   evaluation: EvaluationV2<T, M>
-  commits: Record<number, Commit>
   mutate: ReturnType<typeof useEvaluationResultsV2<T, M>>['mutate']
   refetchStats: DebouncedState<
     ReturnType<typeof useEvaluationV2Stats<T, M>>['mutate']
@@ -61,14 +59,17 @@ const useEvaluationResultsV2Socket = <
     (args: EventArgs<'evaluationResultV2Created'>) => {
       if (!args) return
       if (args.result.evaluationUuid !== evaluation.uuid) return
-      if (!commits[args.result.commitId]) return
 
       mutate(
         (prev) => [
           {
             ...args.result,
+            commit: args.commit,
+            dataset: args.dataset,
+            evaluatedRow: args.datasetRow,
+            evaluatedLog: args.providerLog,
             realtimeAdded: true,
-          } as unknown as EvaluationResultV2<T, M>,
+          } as unknown as EvaluationResultV2WithDetails<T, M>,
           ...(prev ?? []),
         ],
         { revalidate: false },
@@ -89,7 +90,7 @@ const useEvaluationResultsV2Socket = <
 
       refetchStats()
     },
-    [evaluation, commits, mutate, refetchStats],
+    [evaluation, mutate, refetchStats],
   )
 
   useSockets({ event: 'evaluationResultV2Created', onMessage })
@@ -104,8 +105,8 @@ export function EvaluationPage<
   stats: serverStats,
   search: serverSearch,
 }: {
-  results: EvaluationResultV2<T, M>[]
-  selectedResult?: EvaluationResultV2<T, M>
+  results: EvaluationResultV2WithDetails<T, M>[]
+  selectedResult?: EvaluationResultV2WithDetails<T, M>
   stats?: EvaluationV2Stats
   search: EvaluationResultsV2Search
 }) {
@@ -130,11 +131,7 @@ export function EvaluationPage<
     }
   }, [debouncedSearch])
 
-  const { data: commitList, isLoading: isLoadingCommits } = useCommits()
-  const commits = useMemo(
-    () => Object.fromEntries(commitList.map((c) => [c.id, c])),
-    [commitList],
-  )
+  const { data: commits, isLoading: isLoadingCommits } = useCommits()
 
   const {
     data: results,
@@ -157,7 +154,7 @@ export function EvaluationPage<
   )
   const refetchStats = useDebouncedCallback(mutateStats, 1000)
 
-  useEvaluationResultsV2Socket({ evaluation, commits, mutate, refetchStats })
+  useEvaluationResultsV2Socket({ evaluation, mutate, refetchStats })
 
   const isLoading = isLoadingResults || isLoadingStats || isLoadingCommits
 
@@ -227,7 +224,6 @@ export function EvaluationPage<
         results={results}
         selectedResult={selectedResult}
         setSelectedResult={setSelectedResult}
-        commits={commits}
         search={search}
         setSearch={setSearch}
         isLoading={isLoading}

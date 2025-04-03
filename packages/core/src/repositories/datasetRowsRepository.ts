@@ -1,17 +1,17 @@
 import {
-  sql,
-  eq,
   and,
-  getTableColumns,
   count,
-  inArray,
   desc,
+  eq,
+  getTableColumns,
+  inArray,
+  sql,
 } from 'drizzle-orm'
 
 import { DatasetRow, DatasetV2, DEFAULT_PAGINATION_SIZE } from '../browser'
+import { calculateOffset } from '../lib/pagination/calculateOffset'
 import { datasetRows } from '../schema'
 import Repository from './repositoryV2'
-import { calculateOffset } from '../lib/pagination/calculateOffset'
 
 const tt = getTableColumns(datasetRows)
 
@@ -86,9 +86,11 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
   async fetchDatasetRowWithPosition({
     datasetId,
     datasetRowId,
+    pageSize,
   }: {
     datasetId: number
     datasetRowId: number
+    pageSize?: number
   }) {
     const rowResult = await this.find(datasetRowId)
 
@@ -111,7 +113,7 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
       )
 
     const position = Number(countResult[0]?.count ?? 0)
-    const page = Math.ceil(position / DEFAULT_PAGINATION_SIZE)
+    const page = Math.ceil(position / (pageSize ?? DEFAULT_PAGINATION_SIZE))
 
     return { position, page }
   }

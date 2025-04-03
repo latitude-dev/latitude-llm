@@ -2,14 +2,13 @@ import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { ResultPanel } from '$/components/evaluations/ResultPanel'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import {
-  Commit,
   EvaluationMetric,
   EvaluationResultsV2Search,
-  EvaluationResultV2,
+  EvaluationResultV2WithDetails,
   EvaluationType,
 } from '@latitude-data/core/browser'
-import { cn } from '@latitude-data/web-ui/utils'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { cn } from '@latitude-data/web-ui/utils'
 import { useRef } from 'react'
 import { EvaluationBatchIndicator } from './EvaluationBatchIndicator'
 import { EvaluationResultsTableBody } from './EvaluationResultsTableBody'
@@ -21,14 +20,12 @@ export function EvaluationResultsTable<
   results,
   selectedResult,
   setSelectedResult,
-  commits,
   search,
   isLoading,
 }: {
-  results: EvaluationResultV2<T, M>[]
-  selectedResult?: EvaluationResultV2<T, M>
-  setSelectedResult: (result?: EvaluationResultV2<T, M>) => void
-  commits: Record<number, Commit>
+  results: EvaluationResultV2WithDetails<T, M>[]
+  selectedResult?: EvaluationResultV2WithDetails<T, M>
+  setSelectedResult: (result?: EvaluationResultV2WithDetails<T, M>) => void
   search: EvaluationResultsV2Search
   setSearch: (search: EvaluationResultsV2Search) => void
   isLoading: boolean
@@ -58,7 +55,6 @@ export function EvaluationResultsTable<
               results={results}
               selectedResult={selectedResult}
               setSelectedResult={setSelectedResult}
-              commits={commits}
               selectableState={selectableState}
               search={search}
               isLoading={isLoading}
@@ -72,7 +68,10 @@ export function EvaluationResultsTable<
             <ResultPanel
               evaluation={evaluation}
               result={selectedResult}
-              commit={commits[selectedResult.commitId]!}
+              commit={selectedResult.commit}
+              dataset={selectedResult.dataset}
+              evaluatedDatasetRow={selectedResult.evaluatedRow}
+              evaluatedProviderLog={selectedResult.evaluatedLog}
               panelRef={panelRef}
               tableRef={tabelRef}
             />
