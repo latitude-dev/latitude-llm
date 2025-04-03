@@ -30,6 +30,7 @@
     "@latitude-data/typescript-config": "workspace:^",
     "@types/express": "^4.17.21",
     "@types/node": "^22.5.1",
+    "heapdump": "^0.3.15",
     "tsup": "^8.2.4",
     "tsx": "^4.16.2"
   }

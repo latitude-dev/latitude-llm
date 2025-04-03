@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "build": "tsup --config tsup.config.ts",
-    "dev": "DEBUG=socket* tsx watch src/server",
+    "dev": "tsx watch src/server",
     "dev:debug": "tsx watch --inspect-brk src/server",
     "lint": "eslint src/",
     "start": "node ./dist/server.js",

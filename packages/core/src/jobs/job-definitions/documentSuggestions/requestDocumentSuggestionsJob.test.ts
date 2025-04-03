@@ -1,5 +1,5 @@
 import { subDays } from 'date-fns'
-import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   Commit,
   DOCUMENT_SUGGESTION_EXPIRATION_DAYS,
@@ -13,15 +13,15 @@ import {
   User,
   Workspace,
 } from '../../../browser'
-import * as jobs from '../../../jobs'
 import { mergeCommit } from '../../../services/commits'
 import * as factories from '../../../tests/factories'
 import { requestDocumentSuggestionsJob } from './requestDocumentSuggestionsJob'
+import { defaultQueue } from '../../queues'
 
 describe('requestDocumentSuggestionsJob', () => {
-  let mocks: {
-    enqueueGenerateDocumentSuggestionJob: MockInstance
-  }
+  const mocks = vi.hoisted(() => ({
+    defaultQueue: vi.fn(),
+  }))
 
   let candidate1: Awaited<ReturnType<typeof prepareCandidate>>[]
   let candidate2: Awaited<ReturnType<typeof prepareCandidate>>[]
@@ -367,15 +367,7 @@ describe('requestDocumentSuggestionsJob', () => {
       }),
     ]
 
-    mocks = { enqueueGenerateDocumentSuggestionJob: vi.fn() }
-    vi.spyOn(jobs, 'setupQueues').mockResolvedValue({
-      defaultQueue: {
-        jobs: {
-          enqueueGenerateDocumentSuggestionJob:
-            mocks.enqueueGenerateDocumentSuggestionJob,
-        },
-      },
-    } as any)
+    vi.spyOn(defaultQueue, 'add').mockImplementation(mocks.defaultQueue)
   })
 
   it('requests suggestions for candidate documents', async () => {
@@ -383,13 +375,13 @@ describe('requestDocumentSuggestionsJob', () => {
 
     const options = { attempts: 1, deduplication: { id: expect.any(String) } }
     const expectedCalls = [
-      [candidate1[0]!, options],
-      [candidate1[1]!, options],
-      [candidate2[0]!, options],
-      [candidate3[0]!, options],
+      ['generateDocumentSuggestionJob', candidate1[0]!, options],
+      ['generateDocumentSuggestionJob', candidate1[1]!, options],
+      ['generateDocumentSuggestionJob', candidate2[0]!, options],
+      ['generateDocumentSuggestionJob', candidate3[0]!, options],
     ]
 
-    const actualCalls = mocks.enqueueGenerateDocumentSuggestionJob.mock.calls
+    const actualCalls = mocks.defaultQueue.mock.calls
     expect(actualCalls).toHaveLength(expectedCalls.length)
     expect(actualCalls).toEqual(expect.arrayContaining(expectedCalls))
   })

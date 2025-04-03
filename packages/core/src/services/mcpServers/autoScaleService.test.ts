@@ -5,26 +5,18 @@ import { eq } from 'drizzle-orm'
 import { SubscriptionPlan } from '../../plans'
 import { autoScaleInactiveServers } from './autoScaleService'
 import { createWorkspace, createMcpServer } from '../../tests/factories'
-import { setupQueues } from '../../jobs'
 import { workspaces } from '../../schema'
+import { maintenanceQueue } from '../../jobs/queues'
 
-vi.mock('../../jobs', () => ({
-  setupQueues: vi.fn(),
+const mocks = vi.hoisted(() => ({
+  maintenanceQueue: vi.fn(),
 }))
 
 describe('autoScaleInactiveServers', () => {
-  const mockEnqueueJob = vi.fn()
+  vi.spyOn(maintenanceQueue, 'add').mockImplementation(mocks.maintenanceQueue)
 
   beforeEach(() => {
-    vi.resetAllMocks()
-    // Mock the queues setup
-    vi.mocked(setupQueues).mockResolvedValue({
-      maintenanceQueue: {
-        jobs: {
-          enqueueScaleDownMcpServerJob: mockEnqueueJob,
-        },
-      },
-    } as any)
+    vi.clearAllMocks()
   })
 
   it('should enqueue scale down jobs for inactive servers on hobby plan workspaces', async () => {
@@ -51,9 +43,12 @@ describe('autoScaleInactiveServers', () => {
     expect(result.value).toBe(1)
 
     // Verify job was enqueued with correct parameters
-    expect(mockEnqueueJob).toHaveBeenCalledWith({
-      mcpServerId: server.id,
-    })
+    expect(mocks.maintenanceQueue).toHaveBeenCalledWith(
+      'scaleDownMcpServerJob',
+      {
+        mcpServerId: server.id,
+      },
+    )
   })
 
   it('should enqueue scale down jobs for inactive servers on hobby v2 plan workspaces', async () => {
@@ -80,9 +75,12 @@ describe('autoScaleInactiveServers', () => {
     expect(result.value).toBe(1)
 
     // Verify job was enqueued with correct parameters
-    expect(mockEnqueueJob).toHaveBeenCalledWith({
-      mcpServerId: server.id,
-    })
+    expect(mocks.maintenanceQueue).toHaveBeenCalledWith(
+      'scaleDownMcpServerJob',
+      {
+        mcpServerId: server.id,
+      },
+    )
   })
 
   it('should not enqueue jobs for servers on non-hobby plans', async () => {
@@ -117,7 +115,7 @@ describe('autoScaleInactiveServers', () => {
     expect(result.value).toBe(0)
 
     // Verify no jobs were enqueued
-    expect(mockEnqueueJob).not.toHaveBeenCalled()
+    expect(mocks.maintenanceQueue).not.toHaveBeenCalled()
   })
 
   it('should not enqueue jobs for non-deployed servers', async () => {
@@ -144,7 +142,7 @@ describe('autoScaleInactiveServers', () => {
     expect(result.value).toBe(0)
 
     // Verify no jobs were enqueued
-    expect(mockEnqueueJob).not.toHaveBeenCalled()
+    expect(mocks.maintenanceQueue).not.toHaveBeenCalled()
   })
 
   it('should not enqueue jobs for servers that are already at 0 replicas', async () => {
@@ -171,7 +169,7 @@ describe('autoScaleInactiveServers', () => {
     expect(result.value).toBe(0)
 
     // Verify no jobs were enqueued
-    expect(mockEnqueueJob).not.toHaveBeenCalled()
+    expect(mocks.maintenanceQueue).not.toHaveBeenCalled()
   })
 
   it('should not enqueue jobs for servers that have been used recently', async () => {
@@ -198,7 +196,7 @@ describe('autoScaleInactiveServers', () => {
     expect(result.value).toBe(0)
 
     // Verify no jobs were enqueued
-    expect(mockEnqueueJob).not.toHaveBeenCalled()
+    expect(mocks.maintenanceQueue).not.toHaveBeenCalled()
   })
 
   it('should handle job queue errors gracefully', async () => {
@@ -218,7 +216,9 @@ describe('autoScaleInactiveServers', () => {
     })
 
     // Mock job queue to throw an error
-    mockEnqueueJob.mockRejectedValueOnce(new Error('Failed to enqueue job'))
+    mocks.maintenanceQueue.mockRejectedValueOnce(
+      new Error('Failed to enqueue job'),
+    )
 
     // Run the auto-scale function
     const result = await autoScaleInactiveServers()
@@ -242,6 +242,6 @@ describe('autoScaleInactiveServers', () => {
     expect(result.error?.message).toBe('Database error')
 
     // Verify no jobs were enqueued
-    expect(mockEnqueueJob).not.toHaveBeenCalled()
+    expect(mocks.maintenanceQueue).not.toHaveBeenCalled()
   })
 })

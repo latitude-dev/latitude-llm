@@ -10,32 +10,21 @@ import * as factories from '@latitude-data/core/factories'
 import { type FactoryCreateProjectReturn } from '@latitude-data/core/factories'
 
 import { runBatchEvaluationAction } from './runBatch'
+import { defaultQueue, eventsQueue } from '@latitude-data/core/queues'
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   queues: {
-    defaultQueue: {
-      jobs: {
-        enqueueRunBatchEvaluationJob: vi.fn(),
-      },
-    },
-    eventsQueue: {
-      jobs: {
-        enqueueCreateEventJob: vi.fn(),
-        enqueuePublishEventJob: vi.fn(),
-        enqueuePublishToAnalyticsJob: vi.fn(),
-        enqueueProcessWebhookJob: vi.fn(),
-      },
-    },
+    defaultQueue: vi.fn(),
+    eventsQueue: vi.fn(),
   },
 }))
 
+vi.spyOn(defaultQueue, 'add').mockImplementation(mocks.queues.defaultQueue)
+vi.spyOn(eventsQueue, 'add').mockImplementation(mocks.queues.eventsQueue)
+
 vi.mock('$/services/auth/getSession', () => ({
   getSession: mocks.getSession,
-}))
-
-vi.mock('@latitude-data/core/jobs', () => ({
-  setupQueues: vi.fn().mockImplementation(() => mocks.queues),
 }))
 
 let setup: FactoryCreateProjectReturn
@@ -138,9 +127,8 @@ describe('runBatchAction', () => {
           success: true,
         })
 
-        expect(
-          mocks.queues.defaultQueue.jobs.enqueueRunBatchEvaluationJob,
-        ).toHaveBeenCalledWith(
+        expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+          'runBatchEvaluationJob',
           expect.objectContaining({
             fromLine: 10,
             toLine: 20,
@@ -190,9 +178,8 @@ describe('runBatchAction', () => {
           success: true,
         })
 
-        expect(
-          mocks.queues.defaultQueue.jobs.enqueueRunBatchEvaluationJob,
-        ).toHaveBeenCalledWith(
+        expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+          'runBatchEvaluationJob',
           expect.objectContaining({
             evaluation: expect.objectContaining({ id: evaluation.id }),
             dataset: expect.objectContaining({ id: dataset.id }),
@@ -231,21 +218,17 @@ describe('runBatchAction', () => {
           success: true,
         })
 
-        expect(
-          mocks.queues.defaultQueue.jobs.enqueueRunBatchEvaluationJob,
-        ).toHaveBeenCalledTimes(2)
+        expect(mocks.queues.defaultQueue).toHaveBeenCalledTimes(2)
 
-        expect(
-          mocks.queues.defaultQueue.jobs.enqueueRunBatchEvaluationJob,
-        ).toHaveBeenCalledWith(
+        expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+          'runBatchEvaluationJob',
           expect.objectContaining({
             evaluation: expect.objectContaining({ id: evaluation.id }),
           }),
         )
 
-        expect(
-          mocks.queues.defaultQueue.jobs.enqueueRunBatchEvaluationJob,
-        ).toHaveBeenCalledWith(
+        expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+          'runBatchEvaluationJob',
           expect.objectContaining({
             evaluation: expect.objectContaining({ id: evaluation2.id }),
           }),
@@ -286,9 +269,8 @@ describe('runBatchAction', () => {
           success: true,
         })
 
-        expect(
-          mocks.queues.defaultQueue.jobs.enqueueRunBatchEvaluationJob,
-        ).toHaveBeenCalledWith(
+        expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+          'runBatchEvaluationJob',
           expect.objectContaining({
             evaluation: expect.objectContaining({ id: evaluation.id }),
             dataset: expect.objectContaining({ id: dataset.id }),

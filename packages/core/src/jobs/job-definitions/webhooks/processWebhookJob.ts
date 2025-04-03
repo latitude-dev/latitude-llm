@@ -3,7 +3,7 @@ import { eq, and } from 'drizzle-orm'
 import { database } from '../../../client'
 import { webhooks } from '../../../schema/models/webhooks'
 import { Events, LatitudeEvent } from '../../../events/events'
-import { setupQueues } from '../../queues'
+import { webhooksQueue } from '../../queues'
 
 const WEBHOOK_EVENTS: Array<Events> = ['commitPublished']
 
@@ -30,12 +30,10 @@ export async function processWebhookJob({
       ),
     )
 
-  const queues = await setupQueues()
-
   // Enqueue a job for each webhook
   await Promise.all(
     activeWebhooks.map((webhook) =>
-      queues.webhooksQueue.jobs.enqueueProcessIndividualWebhookJob({
+      webhooksQueue.add('processIndividualWebhookJob', {
         event,
         webhookId: webhook.id,
       }),

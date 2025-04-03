@@ -3,29 +3,15 @@ import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-ac
 import { createProject } from '@latitude-data/core/factories'
 import app from '$/routes/app'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import * as jobsModule from '@latitude-data/core/jobs'
+import { defaultQueue, eventsQueue } from '@latitude-data/core/queues'
 
 const mocks = vi.hoisted(() => ({
-  queues: {
-    defaultQueue: {
-      jobs: {
-        enqueueProcessOtlpTracesJob: vi.fn(),
-      },
-    },
-    eventsQueue: {
-      jobs: {
-        enqueueCreateEventJob: vi.fn(),
-        enqueuePublishEventJob: vi.fn(),
-        enqueuePublishToAnalyticsJob: vi.fn(),
-        enqueueProcessWebhookJob: vi.fn(),
-      },
-    },
-  },
+  defaultQueue: vi.fn(),
+  events: vi.fn(),
 }))
 
-// Replace the mock setup with spies
-// @ts-ignore
-vi.spyOn(jobsModule, 'setupQueues').mockResolvedValue(mocks.queues)
+vi.spyOn(defaultQueue, 'add').mockImplementation(mocks.defaultQueue)
+vi.spyOn(eventsQueue, 'add').mockImplementation(mocks.events)
 
 describe('POST /api/v2/otlp/v1/traces', () => {
   let workspace: Workspace
@@ -115,28 +101,27 @@ describe('POST /api/v2/otlp/v1/traces', () => {
 
       expect(response.status).toBe(200)
       expect(await response.json()).toEqual({ status: 'ok' })
-      expect(
-        mocks.queues.defaultQueue.jobs.enqueueProcessOtlpTracesJob,
-      ).toHaveBeenCalledTimes(1)
-      expect(
-        mocks.queues.defaultQueue.jobs.enqueueProcessOtlpTracesJob,
-      ).toHaveBeenCalledWith({
-        spans: [
-          {
-            span: expect.objectContaining({
-              spanId: '1234567890123456',
-              traceId: '12345678901234567890123456789012',
-            }),
-            resourceAttributes: expect.arrayContaining([
-              expect.objectContaining({
-                key: 'service.name',
-                value: { stringValue: 'test-service' },
+      expect(mocks.defaultQueue).toHaveBeenCalledTimes(1)
+      expect(mocks.defaultQueue).toHaveBeenCalledWith(
+        'createDocumentLogFromSpanJob',
+        {
+          spans: [
+            {
+              span: expect.objectContaining({
+                spanId: '1234567890123456',
+                traceId: '12345678901234567890123456789012',
               }),
-            ]),
-          },
-        ],
-        workspace: expect.objectContaining({ id: workspace.id }),
-      })
+              resourceAttributes: expect.arrayContaining([
+                expect.objectContaining({
+                  key: 'service.name',
+                  value: { stringValue: 'test-service' },
+                }),
+              ]),
+            },
+          ],
+          workspace: expect.objectContaining({ id: workspace.id }),
+        },
+      )
     })
 
     it('handles batch of spans', async () => {
@@ -155,19 +140,18 @@ describe('POST /api/v2/otlp/v1/traces', () => {
 
       expect(response.status).toBe(200)
       expect(await response.json()).toEqual({ status: 'ok' })
-      expect(
-        mocks.queues.defaultQueue.jobs.enqueueProcessOtlpTracesJob,
-      ).toHaveBeenCalledTimes(1)
-      expect(
-        mocks.queues.defaultQueue.jobs.enqueueProcessOtlpTracesJob,
-      ).toHaveBeenCalledWith({
-        spans: expect.arrayContaining([
-          expect.objectContaining({
-            span: expect.objectContaining({ spanId: '0000000000000000' }),
-          }),
-        ]),
-        workspace: expect.objectContaining({ id: workspace.id }),
-      })
+      expect(mocks.defaultQueue).toHaveBeenCalledTimes(1)
+      expect(mocks.defaultQueue).toHaveBeenCalledWith(
+        'createDocumentLogFromSpanJob',
+        {
+          spans: expect.arrayContaining([
+            expect.objectContaining({
+              span: expect.objectContaining({ spanId: '0000000000000000' }),
+            }),
+          ]),
+          workspace: expect.objectContaining({ id: workspace.id }),
+        },
+      )
     })
 
     it('processes multiple traces', async () => {
@@ -186,9 +170,7 @@ describe('POST /api/v2/otlp/v1/traces', () => {
 
       expect(response.status).toBe(200)
       expect(await response.json()).toEqual({ status: 'ok' })
-      expect(
-        mocks.queues.defaultQueue.jobs.enqueueProcessOtlpTracesJob,
-      ).toHaveBeenCalledTimes(1)
+      expect(mocks.defaultQueue).toHaveBeenCalledTimes(1)
     })
 
     it('handles empty spans array', async () => {
@@ -200,9 +182,7 @@ describe('POST /api/v2/otlp/v1/traces', () => {
 
       expect(response.status).toBe(200)
       expect(await response.json()).toEqual({ status: 'ok' })
-      expect(
-        mocks.queues.defaultQueue.jobs.enqueueProcessOtlpTracesJob,
-      ).not.toHaveBeenCalled()
+      expect(mocks.defaultQueue).not.toHaveBeenCalled()
     })
 
     it('processes spans in batches when exceeding batch size', async () => {
@@ -221,10 +201,7 @@ describe('POST /api/v2/otlp/v1/traces', () => {
 
       expect(response.status).toBe(200)
       expect(await response.json()).toEqual({ status: 'ok' })
-      // With BATCH_SIZE = 50, we expect 2 batches (50 + 25 spans)
-      expect(
-        mocks.queues.defaultQueue.jobs.enqueueProcessOtlpTracesJob,
-      ).toHaveBeenCalledTimes(2)
+      expect(mocks.defaultQueue).toHaveBeenCalledTimes(2)
     })
 
     it('returns 400 for invalid OTLP data', async () => {

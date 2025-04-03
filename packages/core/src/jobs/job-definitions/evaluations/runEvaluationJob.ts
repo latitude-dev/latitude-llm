@@ -1,7 +1,6 @@
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { NotFoundError } from '../../../lib'
-import { queuesConnection } from '../../../queues'
 import {
   CommitsRepository,
   DatasetRowsRepository,
@@ -100,27 +99,30 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     workspace: workspace,
   }).then((r) => r.unwrap())
 
+  const websockets = await WebsocketClient.getSocket()
+
   // TODO: Replace with experiments when they exists
   if (batchId) {
-    const websockets = await WebsocketClient.getSocket()
-    const tracker = new ProgressTracker(await queuesConnection(), batchId)
-    if (!tracker) return
+    const tracker = new ProgressTracker(batchId)
+    try {
+      if (result.error) await tracker.incrementErrors()
+      else await tracker.incrementCompleted()
 
-    if (result.error) await tracker.incrementErrors()
-    else await tracker.incrementCompleted()
+      const progress = await tracker.getProgress()
 
-    const progress = await tracker.getProgress()
-
-    websockets.emit('evaluationStatus', {
-      workspaceId,
-      data: {
-        batchId: batchId,
-        commitId: commit.id,
-        documentUuid: documentLog.documentUuid,
-        evaluationUuid: evaluation.uuid,
-        version: 'v2',
-        ...progress,
-      },
-    })
+      websockets.emit('evaluationStatus', {
+        workspaceId,
+        data: {
+          batchId,
+          commitId: commit.id,
+          documentUuid: documentLog.documentUuid,
+          evaluationUuid: evaluation.uuid,
+          version: 'v2',
+          ...progress,
+        },
+      })
+    } finally {
+      await tracker.cleanup()
+    }
   }
 }

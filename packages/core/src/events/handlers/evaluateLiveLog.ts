@@ -4,12 +4,12 @@ import {
   findLastProviderLogFromDocumentLogUuid,
   findWorkspaceFromDocumentLog,
 } from '../../data-access'
-import { setupQueues } from '../../jobs'
 import { runEvaluationV2JobKey } from '../../jobs/job-definitions'
 import { NotFoundError } from '../../lib'
 import { CommitsRepository, EvaluationsV2Repository } from '../../repositories'
 import { getEvaluationMetricSpecification } from '../../services/evaluationsV2'
 import { DocumentLogCreatedEvent } from '../events'
+import { evaluationsQueue } from '../../jobs/queues'
 
 export const evaluateLiveLogJob = async ({
   data: event,
@@ -65,8 +65,7 @@ export const evaluateLiveLogJob = async ({
       providerLogUuid: providerLog.uuid,
     }
 
-    const queues = await setupQueues()
-    queues.evaluationsQueue.jobs.enqueueRunEvaluationV2Job(payload, {
+    evaluationsQueue.add('runEvaluationV2Job', payload, {
       deduplication: { id: runEvaluationV2JobKey(payload) },
     })
   }

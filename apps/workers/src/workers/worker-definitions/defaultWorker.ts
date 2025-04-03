@@ -1,17 +1,24 @@
-import { Queues } from '@latitude-data/core/jobs/constants'
+import { Queues } from '@latitude-data/core/queues/types'
+import * as jobs from '@latitude-data/core/jobs/definitions'
+import { createWorker } from '../utils/createWorker'
 
-import { buildProcessor } from '../_shared'
+const jobMappings = {
+  createDocumentLogFromSpan: jobs.createDocumentLogFromSpanJob,
+  createDocumentLog: jobs.createDocumentLogJob,
+  createProviderLog: jobs.createProviderLogJob,
+  processOtlpTraces: jobs.processOtlpTracesJob,
+  runBatchEvaluation: jobs.runBatchEvaluationJob,
+  runDocumentForEvaluation: jobs.runDocumentForEvaluationJob,
+  runDocumentInBatch: jobs.runDocumentInBatchJob,
+  runDocument: jobs.runDocumentJob,
+  uploadDocumentLogs: jobs.uploadDocumentLogsJob,
+  generateDocumentSuggestion: jobs.generateDocumentSuggestionJob,
+  requestDocumentSuggestions: jobs.requestDocumentSuggestionsJob,
+  checkScheduledDocumentTriggers: jobs.checkScheduledDocumentTriggersJob,
+  processScheduledTrigger: jobs.processScheduledTriggerJob,
+  runEmailTrigger: jobs.runEmailTriggerJob,
+}
 
-const defaultWorkerQueues = [
-  Queues.defaultQueue,
-  Queues.eventHandlersQueue,
-  Queues.eventsQueue,
-  Queues.liveEvaluationsQueue,
-  Queues.maintenanceQueue,
-  Queues.webhooksQueue,
-]
-
-export const defaultWorker = {
-  processor: buildProcessor(defaultWorkerQueues),
-  queues: defaultWorkerQueues,
+export function startDefaultWorker() {
+  return createWorker(Queues.defaultQueue, jobMappings)
 }

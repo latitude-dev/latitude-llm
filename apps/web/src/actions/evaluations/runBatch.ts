@@ -1,7 +1,6 @@
 'use server'
 
 import { publisher } from '@latitude-data/core/events/publisher'
-import { setupQueues } from '@latitude-data/core/jobs'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import {
   EvaluationsRepository,
@@ -11,6 +10,7 @@ import { getEvaluationMetricSpecification } from '@latitude-data/core/services/e
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 import { refineParameters, withDataset } from './_helpers'
+import { defaultQueue } from '@latitude-data/core/queues'
 
 export const runBatchEvaluationAction = withDataset
   .createServerAction()
@@ -111,11 +111,10 @@ export const runBatchEvaluationAction = withDataset
       })
     }
 
-    const queues = await setupQueues()
     evaluations.forEach((evaluation) => {
       const batchId = `evaluation:${evaluation.uuid}:${nanoid(5)}`
 
-      queues.defaultQueue.jobs.enqueueRunBatchEvaluationJob({
+      defaultQueue.add('runBatchEvaluationJob', {
         workspace: ctx.workspace,
         user: ctx.user,
         evaluation,

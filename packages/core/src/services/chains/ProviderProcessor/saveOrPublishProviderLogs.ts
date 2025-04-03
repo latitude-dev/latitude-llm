@@ -5,10 +5,10 @@ import { ProviderApiKey, ProviderLog, Workspace } from '../../../browser'
 import { ChainStepResponse, LogSources, StreamType } from '../../../constants'
 import { AIProviderCallCompletedData } from '../../../events/events'
 import { publisher } from '../../../events/publisher'
-import { setupQueues } from '../../../jobs'
 import { generateUUIDIdentifier } from '../../../lib'
 import { PartialConfig } from '../../ai'
 import { createProviderLog } from '../../providerLogs'
+import { defaultQueue } from '../../../jobs/queues'
 
 export async function saveOrPublishProviderLogs<
   S extends boolean,
@@ -49,8 +49,7 @@ export async function saveOrPublishProviderLogs<
     return providerLog as P
   }
 
-  const queues = await setupQueues()
-  queues.defaultQueue.jobs.enqueueCreateProviderLogJob({
+  defaultQueue.add('createProviderLogJob', {
     ...providerLogsData,
     generatedAt: data.generatedAt.toISOString(),
   })

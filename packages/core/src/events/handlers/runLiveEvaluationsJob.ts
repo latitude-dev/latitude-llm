@@ -3,10 +3,10 @@ import {
   NON_LIVE_EVALUABLE_LOG_SOURCES,
 } from '@latitude-data/constants'
 import { findWorkspaceFromDocumentLog } from '../../data-access'
-import { setupQueues } from '../../jobs'
 import { NotFoundError } from '../../lib'
 import { EvaluationsRepository } from '../../repositories'
 import { DocumentLogCreatedEvent } from '../events'
+import { liveEvaluationsQueue } from '../../jobs/queues'
 
 export function isLiveEvaluableSource(source: LogSources | null | undefined) {
   if (!source) return true
@@ -31,11 +31,10 @@ export const runLiveEvaluationsJob = async ({
     .findByDocumentUuid(documentLog.documentUuid)
     .then((r) => r.unwrap())
 
-  const queues = await setupQueues()
   evaluations
     .filter((ev) => !!ev.live)
     .forEach((ev) => {
-      queues.liveEvaluationsQueue.jobs.enqueueRunLiveEvaluationJob({
+      liveEvaluationsQueue.add('runLiveEvaluationJob', {
         evaluation: ev,
         documentLog,
         documentUuid: documentLog.documentUuid,

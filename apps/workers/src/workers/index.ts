@@ -1,45 +1,68 @@
-import { captureException } from '$/utils/sentry'
-import { setupSchedules } from '@latitude-data/core/jobs'
-import { Worker } from 'bullmq'
+import { defaultQueue, maintenanceQueue } from '@latitude-data/core/queues'
+import { startMaintenanceWorker } from './worker-definitions/maintenanceWorker'
+import {
+  startEventsWorker,
+  startEventHandlersWorker,
+} from './worker-definitions/eventsWorker'
+import { startEvaluationsWorker } from './worker-definitions/evaluationsWorker'
+import { startWebhooksWorker } from './worker-definitions/webhooksWorker'
+import { startDefaultWorker } from './worker-definitions/defaultWorker'
+import { startLiveEvaluationsWorker } from './worker-definitions/liveEvaluationsWorker'
 
-import { defaultWorker } from './worker-definitions/defaultWorker'
-import { buildRedisConnection } from '@latitude-data/core/redis'
-import { env } from '@latitude-data/env'
-import { evaluationsWorker } from './worker-definitions/evaluationsWorker'
+export async function startWorkers() {
+  const defaultWorker = startDefaultWorker()
+  const evaluationsWorker = startEvaluationsWorker()
+  const eventsWorker = startEventsWorker()
+  const eventHandlersWorker = startEventHandlersWorker()
+  const liveEvaluationsWorker = startLiveEvaluationsWorker()
+  const maintenanceWorker = startMaintenanceWorker()
+  const webhooksWorker = startWebhooksWorker()
 
-const WORKER_OPTS = {
-  concurrency: 5,
-  autorun: true,
-  removeOnComplete: { count: 0 },
-  removeOnFail: { count: 0 },
+  return {
+    defaultWorker,
+    evaluationsWorker,
+    eventsWorker,
+    eventHandlersWorker,
+    liveEvaluationsWorker,
+    maintenanceWorker,
+    webhooksWorker,
+  }
 }
-const WORKERS = [defaultWorker, evaluationsWorker]
 
-export default async function startWorkers() {
-  await setupSchedules()
+export async function setupSchedules() {
+  // Every day at 8 AM
+  await defaultQueue.upsertJobScheduler(
+    'requestDocumentSuggestionsJob',
+    {
+      pattern: '0 0 8 * * *',
+    },
+    { opts: { attempts: 1 } },
+  )
 
-  const connection = await buildRedisConnection({
-    host: env.QUEUE_HOST,
-    port: env.QUEUE_PORT,
-    password: env.QUEUE_PASSWORD,
-    enableOfflineQueue: true,
-    maxRetriesPerRequest: null,
-    retryStrategy: (times: number) =>
-      Math.max(Math.min(Math.exp(times), 20000), 1000), // Exponential backoff with a max of 20 seconds and a min of 1 second
-  })
+  // Every 10 minutes
+  await maintenanceQueue.upsertJobScheduler(
+    'autoScaleJob',
+    {
+      pattern: '*/10 * * * *',
+    },
+    { opts: { attempts: 1 } },
+  )
 
-  return WORKERS.flatMap((w) =>
-    w.queues.map((q) => {
-      const worker = new Worker(q, w.processor, {
-        ...WORKER_OPTS,
-        connection,
-      })
+  // Every day at 2 AM
+  await maintenanceQueue.upsertJobScheduler(
+    'cleanDocumentSuggestionsJob',
+    {
+      pattern: '0 0 2 * * *',
+    },
+    { opts: { attempts: 1 } },
+  )
 
-      worker.on('error', (error: Error) => {
-        captureException(error)
-      })
-
-      return worker
-    }),
+  // Every minute
+  await maintenanceQueue.upsertJobScheduler(
+    'checkScheduledDocumentTriggersJob',
+    {
+      pattern: '* * * * *',
+    },
+    { opts: { attempts: 1 } },
   )
 }

@@ -1,10 +1,12 @@
-import { Queues } from '@latitude-data/core/jobs/constants'
+import { Queues } from '@latitude-data/core/queues/types'
+import * as jobs from '@latitude-data/core/jobs/definitions'
+import { createWorker } from '../utils/createWorker'
 
-import { buildProcessor } from '../_shared'
+const jobMappings = {
+  runEvaluationV2Job: jobs.runEvaluationV2Job,
+  runBatchEvaluationJob: jobs.runBatchEvaluationJob,
+}
 
-const evaluationsWorkerQueues = [Queues.evaluationsQueue]
-
-export const evaluationsWorker = {
-  processor: buildProcessor(evaluationsWorkerQueues),
-  queues: evaluationsWorkerQueues,
+export function startEvaluationsWorker() {
+  return createWorker(Queues.evaluationsQueue, jobMappings)
 }
