@@ -18,6 +18,7 @@ import DocumentEvaluations from './DocumentEvaluations'
 import DocumentParams from './DocumentParams'
 import Preview from './Preview'
 import DocumentParamsLoading from './DocumentParams/DocumentParamsLoading'
+import { useExpandParametersOrEvaluations } from './hooks/useExpandParametersOrEvaluations'
 
 const COLLAPSED_SIZE = COLLAPSED_BOX_HEIGHT * 2 + 12
 const GAP_PADDING = 26
@@ -37,11 +38,11 @@ export default function Playground({
 }) {
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const { commit } = useCurrentCommit()
-
   const [forcedSize, setForcedSize] = useState<number | undefined>()
-  const [expandedParameters, setExpandedParameters] = useState(false)
-  const [expandedEvaluations, setExpandedEvaluations] = useState(false)
-  const collapsed = !expandedParameters && !expandedEvaluations
+  const expander = useExpandParametersOrEvaluations({
+    initialExpanded: 'parameters',
+  })
+  const collapsed = expander.expandedSection === null
   useEffect(() => {
     setForcedSize(collapsed ? COLLAPSED_SIZE : undefined)
   }, [collapsed])
@@ -81,18 +82,9 @@ export default function Playground({
       minSize={COLLAPSED_SIZE + GAP_PADDING}
       dragDisabled={collapsed}
       firstPane={
-        <div
-          className={cn('grid gap-2 w-full pr-0.5', {
-            'grid-rows-[1fr,auto]': expandedParameters && !expandedEvaluations,
-            'grid-rows-[auto,1fr]': !expandedParameters && expandedEvaluations,
-            'grid-rows-2': expandedParameters && expandedEvaluations,
-          })}
-        >
+        <div className={cn('grid gap-2 w-full pr-0.5', expander.cssClass)}>
           {!parameters ? (
-            <DocumentParamsLoading
-              source={source}
-              onExpand={setExpandedParameters}
-            />
+            <DocumentParamsLoading source={source} />
           ) : (
             <DocumentParams
               commit={commit}
@@ -101,7 +93,8 @@ export default function Playground({
               source={source}
               setSource={setSource}
               setPrompt={setPrompt}
-              onExpand={setExpandedParameters}
+              onToggle={expander.onToggle('parameters')}
+              isExpanded={expander.parametersExpanded}
               datasetVersion={datasetVersion}
             />
           )}
@@ -110,7 +103,8 @@ export default function Playground({
             commit={commit}
             document={document}
             runCount={runCount}
-            onExpand={setExpandedEvaluations}
+            isExpanded={expander.evaluationsExpanded}
+            onToggle={expander.onToggle('evaluations')}
             isLoading={isDocumentLogLoading}
           />
         </div>

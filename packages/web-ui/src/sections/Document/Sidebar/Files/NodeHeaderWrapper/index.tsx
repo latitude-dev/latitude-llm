@@ -103,7 +103,6 @@ function NodeHeaderWrapper({
   const { error, inputValue, onInputChange, onInputKeyDown } = useNodeValidator(
     {
       name,
-      nodeRef: nodeRef as RefObject<HTMLDivElement>,
       inputRef: inputRef as RefObject<HTMLInputElement>,
       isEditing,
       setIsEditing,

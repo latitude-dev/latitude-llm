@@ -8,10 +8,7 @@ import { ParameterInputSkeleton } from '$/components/ParameterInput'
 import { ParameterTypeSelector } from '../ManualParams/ParameterTypeSelector'
 import { ParameterType } from '@latitude-data/constants'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
-import {
-  CollapsibleBox,
-  OnExpandFn,
-} from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 
@@ -68,10 +65,8 @@ function LoadingContent({ source }: { source: InputSource }) {
 
 export default function DocumentParamsLoading({
   source,
-  onExpand,
 }: {
   source: InputSource
-  onExpand: OnExpandFn
 }) {
   return (
     <ClientOnly>
@@ -80,7 +75,6 @@ export default function DocumentParamsLoading({
         title='Parameters'
         icon='braces'
         expandedContent={<LoadingContent source={source} />}
-        onExpand={onExpand}
       />
     </ClientOnly>
   )

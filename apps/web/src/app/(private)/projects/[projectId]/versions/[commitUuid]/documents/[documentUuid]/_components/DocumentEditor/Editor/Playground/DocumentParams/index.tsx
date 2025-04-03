@@ -15,7 +15,7 @@ import {
   TabSelectorOption,
 } from '@latitude-data/web-ui/molecules/TabSelector'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
-import { OnExpandFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { OnToggleFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 
 import { DatasetParams } from './DatasetParams'
 import {
@@ -42,7 +42,8 @@ export type Props = {
   commit: ICommitContextType['commit']
   prompt: string
   setPrompt: (prompt: string) => void
-  onExpand?: OnExpandFn
+  onToggle?: OnToggleFn
+  isExpanded?: boolean
 }
 type ContentProps = Props & {
   source: InputSource
@@ -139,7 +140,8 @@ type DocumentParamsProps = Props & {
   setSource: UseDocumentParameters['setSource']
 }
 export default function DocumentParams({
-  onExpand,
+  onToggle,
+  isExpanded,
   setSource,
   source,
   ...props
@@ -171,10 +173,10 @@ export default function DocumentParams({
       <CollapsibleBox
         title='Parameters'
         icon='braces'
-        initialExpanded={true}
+        isExpanded={isExpanded}
+        onToggle={onToggle}
         collapsedContentHeader={<CollapsedContentHeader {...contentProps} />}
         expandedContent={<ParamsTabs {...contentProps} />}
-        onExpand={onExpand}
       />
     </ClientOnly>
   )

@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { ClientOnly } from '../../../../ds/atoms/ClientOnly'
@@ -178,6 +178,13 @@ type DeletableElement<T extends DeletableType> = T extends DeletableType.File
       name: string
     }
 
+function thereisOnlyOneFolder(rootNode: Node) {
+  const onlyOne = rootNode.children.length === 1
+  const node = rootNode.children[0]
+
+  return onlyOne && node && !node.isFile ? node : undefined
+}
+
 export function FilesTree({
   isLoading,
   isMerged,
@@ -207,6 +214,7 @@ export function FilesTree({
   navigateToDocument: (documentUuid: string) => void
   isDestroying: boolean
 }) {
+  const isMount = useRef(false)
   const togglePath = useOpenPaths((state) => state.togglePath)
   const rootNode = useTree({ documents, liveDocuments })
   const [deletableNode, setDeletable] =
@@ -214,6 +222,7 @@ export function FilesTree({
 
   const currentPath = useMemo(() => {
     if (!currentUuid) return undefined
+
     const currentDocument = documents.find(
       (d) => d.documentUuid === currentUuid,
     )
@@ -221,10 +230,19 @@ export function FilesTree({
   }, [currentUuid, documents])
 
   useEffect(() => {
+    if (!isMount.current) {
+      const oneFolder = thereisOnlyOneFolder(rootNode)
+      if (!oneFolder) return
+
+      togglePath(oneFolder.path)
+      isMount.current = true
+      return
+    }
+
     if (currentPath) {
       togglePath(currentPath)
     }
-  }, [currentPath, togglePath])
+  }, [currentPath, togglePath, rootNode])
 
   const onConfirmDelete = useCallback(
     async <T extends DeletableType>(deletable: DeletableElement<T>) => {

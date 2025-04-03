@@ -4,40 +4,9 @@ import {
   KeyboardEvent,
   RefObject,
   useCallback,
-  useEffect,
   useState,
 } from 'react'
-
-function useOnClickOutside<E extends HTMLElement>({
-  enabled,
-  ref,
-  handler,
-}: {
-  enabled: boolean
-  ref: RefObject<E>
-  handler: (event: MouseEvent | TouchEvent) => void
-}) {
-  useEffect(() => {
-    const listener = (event: MouseEvent | TouchEvent) => {
-      if (!(event.target instanceof Node)) return
-
-      const insideWrapper = ref.current?.contains?.(event.target)
-      if (insideWrapper) return
-
-      handler(event)
-    }
-
-    if (!enabled) return
-
-    document.addEventListener('mousedown', listener)
-    document.addEventListener('touchstart', listener)
-
-    return () => {
-      document.removeEventListener('mousedown', listener)
-      document.removeEventListener('touchstart', listener)
-    }
-  }, [ref, handler, enabled])
-}
+import { useOnClickOutside } from '../../../../../../lib/hooks/useOnClickOutside'
 
 const INVALID_MSG =
   "Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'"
@@ -45,7 +14,6 @@ const INVALID_MSG =
 export function useNodeValidator({
   name,
   inputRef,
-  nodeRef,
   isEditing,
   setIsEditing,
   leaveWithoutSave,
@@ -54,7 +22,6 @@ export function useNodeValidator({
 }: {
   name: string | undefined
   inputRef: RefObject<HTMLInputElement>
-  nodeRef: RefObject<HTMLDivElement>
   isEditing: boolean
   setIsEditing: (isEditing: boolean) => void
   saveValue: (args: { path: string }) => Promise<void> | void
@@ -96,7 +63,7 @@ export function useNodeValidator({
   }, [inputRef, validationError, saveValue, leaveWithoutSave])
 
   useOnClickOutside({
-    ref: nodeRef,
+    ref: inputRef,
     handler: onClickOutside,
     enabled: isEditing,
   })
