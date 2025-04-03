@@ -139,7 +139,8 @@ export async function runStep({
       schema: step.schema,
       output: step.output,
       abortSignal,
-      injectFakeAgentStartTool: isAgent && enableAgentOptimization,
+      injectFakeAgentStartTool:
+        isAgent && injectAgentFinishTool && enableAgentOptimization,
       injectAgentFinishTool: isAgent && injectAgentFinishTool,
     })
 
