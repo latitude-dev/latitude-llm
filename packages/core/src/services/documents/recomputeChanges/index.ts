@@ -78,7 +78,7 @@ async function resolveDocumentChanges({
           referenceFn: getDocumentContent,
           configSchema,
         })
-        if (metadata.errors.length > 0) {
+        if (!d.deletedAt && metadata.errors.length > 0) {
           errors[d.documentUuid] = metadata.errors
         }
 
@@ -95,7 +95,7 @@ async function resolveDocumentChanges({
         configSchema,
       })
 
-      if (metadata.errors.length > 0) {
+      if (!d.deletedAt && metadata.errors.length > 0) {
         errors[d.documentUuid] = metadata.errors as CompileError[]
       }
 

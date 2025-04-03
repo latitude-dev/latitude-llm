@@ -17,6 +17,7 @@ import {
   helpers,
 } from '../../tests/factories'
 import { getCommitChanges } from './getChanges'
+import { mergeCommit } from './merge'
 
 let project: Project
 let draftCommit: Commit
@@ -165,6 +166,59 @@ describe('publishDraftCommit', () => {
         documentUuid: documents['folder1/doc1']!.documentUuid,
         path: 'folder1/doc1',
         changeType: ModifiedDocumentType.Updated,
+        errors: 0,
+      },
+    ])
+  })
+
+  it('does not include errors from deleted documents', async () => {
+    await updateDocument({
+      document: documents['folder1/doc1']!,
+      content: helpers.createPrompt({
+        provider: 'openai',
+        content: '<prompt path="../doc2" />',
+      }),
+      commit: draftCommit,
+    }).then((r) => r.unwrap())
+
+    await mergeCommit(draftCommit).then((r) => r.unwrap())
+
+    const { commit: newCommit } = await createDraft({
+      project: project,
+      user: user,
+    })
+
+    // Renaming the doc2 will make the doc1 to contain errors
+    await updateDocument({
+      document: documents['doc2']!,
+      path: 'new-doc2',
+      commit: newCommit,
+    }).then((r) => r.unwrap())
+
+    // Now this doc contains errors, but we remove it anyways
+    await destroyDocument({
+      document: documents['folder1/doc1']!,
+      commit: newCommit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    const changes = await getCommitChanges({
+      commit: newCommit,
+      workspace,
+    }).then((r) => r.unwrap())
+
+    // There should be no errors from deleted documents
+    expect(changes).toEqual([
+      {
+        documentUuid: documents['doc2']!.documentUuid,
+        path: 'new-doc2',
+        changeType: ModifiedDocumentType.UpdatedPath,
+        errors: 0,
+      },
+      {
+        documentUuid: documents['folder1/doc1']!.documentUuid,
+        path: 'folder1/doc1',
+        changeType: ModifiedDocumentType.Deleted,
         errors: 0,
       },
     ])
