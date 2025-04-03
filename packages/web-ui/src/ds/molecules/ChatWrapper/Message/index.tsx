@@ -609,10 +609,10 @@ const ContentImage = ({
 
   return (
     <TextComponent
+      key={index}
       color={color}
       whiteSpace='preWrap'
       wordBreak='breakAll'
-      key={`${index}`}
     >
       {typeof segment === 'string' ? (
         segment
