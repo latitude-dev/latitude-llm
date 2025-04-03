@@ -81,7 +81,7 @@ export type ToolSchema<
 }
 
 export async function ai({
-  provider: apiProvider,
+  provider,
   prompt,
   messages: originalMessages,
   config: originalConfig,
@@ -116,7 +116,7 @@ export async function ai({
   }
   try {
     const rule = applyAllRules({
-      providerType: apiProvider.provider,
+      providerType: provider.provider,
       messages: originalMessages,
       config: originalConfig,
     })
@@ -132,28 +132,30 @@ export async function ai({
       )
     }
 
-    const { provider, token: apiKey, url } = apiProvider
+    const { provider: providerType, token: apiKey, url } = provider
     const config = rule.config as VercelConfig
     const messages = rule.messages
     const model = config.model
     const tools = config.tools
-    const llmProvider = createProvider({
+    const providerAdapterResult = createProvider({
       messages,
-      provider: apiProvider,
+      provider: provider,
       apiKey,
       url: url ?? undefined,
       config,
     })
+    if (providerAdapterResult.error) return providerAdapterResult
 
-    if (llmProvider.error) return llmProvider
-
+    const providerAdapter = providerAdapterResult.value
     const languageModel = customLanguageModel
       ? customLanguageModel
-      : llmProvider.value(model, {
+      : // @ts-expect-error - Some provider adapters don't accept a second argument
+        providerAdapter(model, {
           cacheControl: config.cacheControl ?? false,
           // Propagate provider config options for this language model
           ...config,
         })
+
     const toolsResult = buildTools(tools)
     if (toolsResult.error) return toolsResult
 
@@ -185,7 +187,7 @@ export async function ai({
           fullStream: result.fullStream,
           object: result.object,
           usage: result.usage,
-          providerName: provider,
+          providerName: providerType,
           providerMetadata: result.providerMetadata,
         },
       })
@@ -203,7 +205,7 @@ export async function ai({
         text: result.text,
         usage: result.usage,
         toolCalls: result.toolCalls,
-        providerName: provider,
+        providerName: providerType,
         providerMetadata: result.providerMetadata,
       },
     })
@@ -218,3 +220,7 @@ export {
   vertexConfigurationSchema,
   type VertexConfiguration,
 } from './providers/helpers/vertex'
+export {
+  amazonBedrockConfigurationSchema,
+  type AmazonBedrockConfiguration,
+} from './providers/helpers/amazonBedrock'

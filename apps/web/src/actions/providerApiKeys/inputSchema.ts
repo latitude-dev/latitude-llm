@@ -1,8 +1,13 @@
 import { z } from 'zod'
 import { Providers } from '@latitude-data/core/browser'
 import { vertexConfigurationSchema } from '@latitude-data/core/services/ai/providers/helpers/vertex'
+import { amazonBedrockConfigurationSchema } from '@latitude-data/core/services/ai/providers/helpers/amazonBedrock'
 
-const WITH_CONFIG = [Providers.GoogleVertex, Providers.AnthropicVertex]
+const WITH_CONFIG = [
+  Providers.GoogleVertex,
+  Providers.AnthropicVertex,
+  Providers.AmazonBedrock,
+]
 const NO_CONFIGURATION_PROVIDERS = (
   Object.values(Providers) as Providers[]
 ).filter((p) => !WITH_CONFIG.includes(p))
@@ -26,6 +31,12 @@ const vertexAnthropicProviderSchema = z.object({
   token: z.string().optional().default('NO_TOKEN_PROVIDED'),
   configuration: vertexConfigurationSchema,
 })
+const amazonBedrockProviderSchema = z.object({
+  provider: z.literal(Providers.AmazonBedrock),
+  ...baseSchema.shape,
+  token: z.string().optional().default('NO_TOKEN_PROVIDED'),
+  configuration: amazonBedrockConfigurationSchema,
+})
 
 const nonConfigurationSchemas = NO_CONFIGURATION_PROVIDERS.map((p) =>
   z.object({
@@ -38,6 +49,7 @@ const nonConfigurationSchemas = NO_CONFIGURATION_PROVIDERS.map((p) =>
 export const inputSchema = z.discriminatedUnion('provider', [
   vertexProviderSchema,
   vertexAnthropicProviderSchema,
+  amazonBedrockProviderSchema,
   ...nonConfigurationSchemas,
 ])
 

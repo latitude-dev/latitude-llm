@@ -11,6 +11,7 @@ import {
   Transaction,
 } from '../../lib'
 import { providerApiKeys, ProviderConfiguration } from '../../schema'
+import { amazonBedrockConfigurationSchema } from '../ai'
 
 export type Props = {
   workspace: Workspace
@@ -42,6 +43,20 @@ export function createProviderApiKey(
 
     if (defaultModel === '') {
       return Result.error(new BadRequestError('Default model cannot be empty'))
+    }
+
+    if (provider === Providers.AmazonBedrock) {
+      if (!configuration) {
+        return Result.error(
+          new BadRequestError('AmazonBedrock provider requires configuration'),
+        )
+      } else {
+        const result = amazonBedrockConfigurationSchema.safeParse(configuration)
+
+        if (!result.success) {
+          return Result.error(result.error)
+        }
+      }
     }
 
     try {

@@ -1,3 +1,4 @@
+import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createAzure } from '@ai-sdk/azure'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
@@ -5,6 +6,9 @@ import { createVertex } from '@ai-sdk/google-vertex/edge'
 import { createVertexAnthropic } from '@ai-sdk/google-vertex/anthropic/edge'
 import { createMistral } from '@ai-sdk/mistral'
 import { createOpenAI } from '@ai-sdk/openai'
+import { createXai } from '@ai-sdk/xai'
+import { createDeepSeek } from '@ai-sdk/deepseek'
+import { createPerplexity } from '@ai-sdk/perplexity'
 import { type Message, MessageRole } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
@@ -16,6 +20,10 @@ import { PartialPromptConfig } from '@latitude-data/constants'
 import type { ModelCost } from './estimateCost'
 import { ProviderApiKey } from '../../browser'
 import { vertexConfigurationSchema } from './providers/helpers/vertex'
+import {
+  AmazonBedrockConfiguration,
+  amazonBedrockConfigurationSchema,
+} from './providers/helpers/amazonBedrock'
 export {
   type PromptConfig as Config,
   type PartialPromptConfig as PartialConfig,
@@ -34,6 +42,31 @@ function isFirstMessageOfUserType(messages: Message[]) {
     new ChainError({
       code: RunErrorCodes.AIProviderConfigError,
       message: 'Google provider requires at least one user message',
+    }),
+  )
+}
+
+function createAmazonBedrockProvider(
+  config: AmazonBedrockConfiguration,
+  name: string,
+) {
+  const result = amazonBedrockConfigurationSchema.safeParse(config)
+
+  if (!result.success) {
+    return Result.error(
+      new ChainError({
+        code: RunErrorCodes.AIProviderConfigError,
+        message: `Provider '${name}' is not properly configured. Details: ${result.error.message}`,
+      }),
+    )
+  }
+
+  return Result.ok(
+    createAmazonBedrock({
+      region: config.region,
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+      sessionToken: config.sessionToken,
     }),
   )
 }
@@ -145,6 +178,24 @@ export function createProvider({
         ? result
         : Result.ok(createVertexAnthropic(result.value))
     }
+    case Providers.XAI:
+      return Result.ok(
+        createXai({
+          apiKey: apiKey!,
+        }),
+      )
+    case Providers.DeepSeek:
+      return Result.ok(
+        createDeepSeek({
+          apiKey: apiKey!,
+        }),
+      )
+    case Providers.Perplexity:
+      return Result.ok(
+        createPerplexity({
+          apiKey: apiKey!,
+        }),
+      )
     case Providers.Custom:
       return Result.ok(
         createOpenAI({
@@ -152,6 +203,11 @@ export function createProvider({
           compatibility: 'compatible',
           baseURL: url,
         }),
+      )
+    case Providers.AmazonBedrock:
+      return createAmazonBedrockProvider(
+        provider.configuration as AmazonBedrockConfiguration,
+        provider.name,
       )
     default:
       return Result.error(

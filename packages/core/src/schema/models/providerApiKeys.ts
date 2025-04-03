@@ -14,7 +14,10 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 import { workspaces } from './workspaces'
-import { VertexConfiguration } from '../../services/ai'
+import {
+  AmazonBedrockConfiguration,
+  VertexConfiguration,
+} from '../../services/ai'
 
 export const providersEnum = latitudeSchema.enum('provider', [
   Providers.OpenAI,
@@ -25,11 +28,19 @@ export const providersEnum = latitudeSchema.enum('provider', [
   Providers.Google,
   Providers.GoogleVertex,
   Providers.AnthropicVertex,
+  Providers.XAI,
+  Providers.DeepSeek,
+  Providers.Perplexity,
   Providers.Custom,
+  Providers.AmazonBedrock,
 ])
 
 export type ProviderConfiguration<P extends Providers> =
-  P extends Providers.GoogleVertex ? VertexConfiguration : never
+  P extends Providers.GoogleVertex
+    ? VertexConfiguration
+    : P extends Providers.AmazonBedrock
+      ? AmazonBedrockConfiguration
+      : never
 
 export const providerApiKeys = latitudeSchema.table(
   'provider_api_keys',

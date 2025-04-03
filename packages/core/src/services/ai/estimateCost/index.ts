@@ -8,6 +8,10 @@ import { MISTRAL_MODELS } from './mistral'
 import { GOOGLE_MODELS } from './google'
 import { VERTEX_GOOGLE_MODELS } from './vertexGoogle'
 import { VERTEX_ANTHROPIC_MODELS } from './vertexAnthropic'
+import { XAI_MODELS } from './xai'
+import { AMAZON_BEDROCK_MODELS } from './amazonBedrock'
+import { DEEPSEEK_MODELS } from './deepseek'
+import { PERPLEXITY_MODELS } from './perplexity'
 import { NON_IMPLEMENTED_COST } from './helpers'
 
 export type ModelCost = {
@@ -42,6 +46,14 @@ export function getCostPer1M({
       return VERTEX_GOOGLE_MODELS.getCost(model)
     case Providers.AnthropicVertex:
       return VERTEX_ANTHROPIC_MODELS.getCost(model)
+    case Providers.XAI:
+      return XAI_MODELS.getCost(model)
+    case Providers.AmazonBedrock:
+      return AMAZON_BEDROCK_MODELS.getCost(model)
+    case Providers.DeepSeek:
+      return DEEPSEEK_MODELS.getCost(model)
+    case Providers.Perplexity:
+      return PERPLEXITY_MODELS.getCost(model)
     case Providers.Azure:
       return NON_IMPLEMENTED_COST
     case Providers.Custom:
@@ -95,9 +107,9 @@ function computeCost({
  * Given the usage (number of input and output tokens), a provider and a model name,
  * this function returns the estimated cost by applying the proper cost rates.
  *
- * If the model’s cost is defined as an array then we assume it contains multiple tiers.
+ * If the model's cost is defined as an array then we assume it contains multiple tiers.
  * In that case, the first tier applies from token 0 (or from tokensRangeStart=undefined, assumed to be 0)
- * up to the next tier’s starting threshold, and so on.
+ * up to the next tier's starting threshold, and so on.
  */
 export function estimateCost({
   usage,
