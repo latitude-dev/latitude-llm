@@ -4,7 +4,7 @@ import {
   PromisedResult,
   Result,
 } from '../../../../lib'
-import { type PromptLFile, promptLFileToMessageContent } from 'promptl-ai'
+import { type PromptLFile } from 'promptl-ai'
 import {
   DocumentLog,
   DocumentTriggerParameters,
@@ -19,13 +19,7 @@ import { database } from '../../../../client'
 import { runDocumentAtCommit } from '../../../../services/commits'
 import { unsafelyFindWorkspace } from '../../../../data-access'
 import { DocumentTrigger, Workspace } from '../../../../browser'
-import {
-  MessageRole,
-  ContentType,
-  type AssistantMessage,
-  type UserMessage,
-} from '@latitude-data/compiler'
-import { addMessages } from '../../../../services/documentLogs'
+import { type AssistantMessage } from '@latitude-data/compiler'
 import { uploadFile } from '../../../../services/files'
 import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
 
@@ -119,43 +113,6 @@ async function getNewTriggerResponse(
   return Result.ok(messages.at(-1) as AssistantMessage)
 }
 
-async function getFollowUpTriggerResponse({
-  workspace,
-  parentLog,
-  body,
-  attachments,
-}: {
-  workspace: Workspace
-  parentLog: DocumentLog
-  body: string
-  attachments?: PromptLFile[]
-}): PromisedResult<AssistantMessage, LatitudeError> {
-  const runResult = await addMessages({
-    workspace,
-    documentLogUuid: parentLog.uuid,
-    messages: [
-      {
-        role: MessageRole.user,
-        content: [
-          { type: ContentType.text, text: body },
-          ...(attachments ?? []).map(promptLFileToMessageContent),
-        ],
-      } as UserMessage,
-    ],
-    source: LogSources.EmailTrigger,
-  })
-
-  if (runResult.error) return Result.error(runResult.error as LatitudeError)
-  const run = runResult.unwrap()
-
-  const runError = await run.error
-  if (runError) return Result.error(runError)
-
-  const messages = await run.messages
-
-  return Result.ok(messages.at(-1) as AssistantMessage)
-}
-
 export async function findReferencedLog(
   {
     workspace,
@@ -208,10 +165,8 @@ export async function uploadAttachments({
 
 export async function getEmailResponse(
   {
-    documentUuid,
     trigger,
     messageId,
-    parentMessageIds,
     senderEmail,
     senderName,
     subject,
@@ -235,26 +190,10 @@ export async function getEmailResponse(
     db,
   )) as Workspace
 
-  const referencedLogResult = await findReferencedLog(
-    {
-      workspace,
-      documentUuid: documentUuid!,
-      parentMessageIds,
-    },
-    db,
-  )
-
-  if (referencedLogResult.error) return referencedLogResult
-  const parentLog = referencedLogResult.unwrap()
-
-  if (parentLog) {
-    return await getFollowUpTriggerResponse({
-      workspace,
-      parentLog,
-      body,
-      attachments,
-    })
-  }
+  // TODO: Re-enable "follow-up" when we successfully include the References header into the response email.
+  // Until then, it does not work for conversation threads, and it is working unexpectedly for
+  // emails resent to the prompt from the same thread, which should just re-run the original prompt,
+  // but instead it is triggering a "follow up" response.
 
   return await getNewTriggerResponse({
     workspace,
