@@ -1,12 +1,12 @@
 'use client'
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useCallback, useState } from 'react'
 import { Icon, IconName } from '../../atoms/Icons'
 import { Text } from '../../atoms/Text'
 import { cn } from '../../../lib/utils'
 
 export const COLLAPSED_BOX_HEIGHT = 56
 
-export type OnExpandFn = (expanded: boolean) => void
+export type OnToggleFn = (expanded: boolean) => void
 export function CollapsibleBox({
   title,
   icon,
@@ -16,7 +16,8 @@ export function CollapsibleBox({
   expandedContentHeader,
   expandedHeight,
   initialExpanded = false,
-  onExpand,
+  onToggle,
+  isExpanded: isExpandedProp,
 }: {
   title: string
   icon?: IconName
@@ -26,12 +27,20 @@ export function CollapsibleBox({
   expandedContentHeader?: ReactNode
   expandedHeight?: string
   initialExpanded?: boolean
-  onExpand?: OnExpandFn
+  onToggle?: OnToggleFn
+  isExpanded?: boolean
 }) {
-  const [isExpanded, setIsExpanded] = useState(initialExpanded)
-  useEffect(() => {
-    onExpand?.(isExpanded)
-  }, [isExpanded])
+  const [internalExpanded, setInternalExpanded] = useState(initialExpanded)
+  const isControlled = isExpandedProp !== undefined
+  const isExpanded = isControlled ? isExpandedProp : internalExpanded
+  const handleToggle = useCallback(() => {
+    const next = !isExpanded
+    if (isControlled) {
+      onToggle?.(next)
+    } else {
+      setInternalExpanded(next)
+    }
+  }, [isControlled, isExpanded, onToggle])
 
   return (
     <div
@@ -42,7 +51,7 @@ export function CollapsibleBox({
     >
       <div
         className='flex flex-col cursor-pointer sticky top-0 z-10 bg-background'
-        onClick={() => setIsExpanded((prev) => !prev)}
+        onClick={handleToggle}
       >
         <div className='min-h-14 flex flex-shrink-0 justify-between items-center py-3.5 px-4 gap-x-4'>
           <div className='flex flex-row items-center gap-x-2'>

@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   EventArgs,
   useSockets,
@@ -17,13 +18,14 @@ import {
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
-import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import {
+  CollapsibleBox,
+  OnToggleFn,
+} from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import {
   useCurrentProject,
   ICommitContextType,
 } from '@latitude-data/web-ui/providers'
-import { OnExpandFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
-import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CollapsedContentHeader,
   ExpandedContent,
@@ -99,14 +101,16 @@ export default function DocumentEvaluations({
   document,
   commit,
   runCount,
-  onExpand,
+  isExpanded,
+  onToggle,
   isLoading: isDocumentLogLoading,
 }: {
   documentLog?: DocumentLogWithMetadata
   document: DocumentVersion
   commit: ICommitContextType['commit']
   runCount: number
-  onExpand?: OnExpandFn
+  isExpanded?: boolean
+  onToggle?: OnToggleFn
   isLoading: boolean
 }) {
   const { project } = useCurrentProject()
@@ -241,11 +245,11 @@ export default function DocumentEvaluations({
       <CollapsibleBox
         title='Evaluations'
         icon='listCheck'
-        initialExpanded={false}
+        isExpanded={isExpanded}
+        onToggle={onToggle}
         collapsedContentHeader={<CollapsedContentHeader {...props} />}
         expandedContent={<ExpandedContent {...props} />}
         expandedContentHeader={<ExpandedContentHeader {...props} />}
-        onExpand={onExpand}
       />
     </ClientOnly>
   )
