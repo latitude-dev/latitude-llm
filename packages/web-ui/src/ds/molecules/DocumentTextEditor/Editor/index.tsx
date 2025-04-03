@@ -28,6 +28,7 @@ export function DocumentTextEditor({
   diff,
   copilot,
   compileErrors,
+  autoFocus = false,
 }: DocumentTextEditorProps) {
   const errors = compileErrors ?? []
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
@@ -123,6 +124,7 @@ export function DocumentTextEditor({
         />
       ) : (
         <RegularMonacoEditor
+          autoFocus={autoFocus}
           editorRef={editorRef}
           value={value}
           path={path}

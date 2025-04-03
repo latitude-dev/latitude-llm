@@ -231,7 +231,6 @@ export function FilesTree({
 
   useEffect(() => {
     if (!isMount.current) {
-
       const oneFolder = thereisOnlyOneFolder(rootNode)
       if (!oneFolder) return
 

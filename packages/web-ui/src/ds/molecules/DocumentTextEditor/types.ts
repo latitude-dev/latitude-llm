@@ -14,6 +14,7 @@ export type DocumentTextEditorProps = {
   path?: string
   compileErrors?: CompileError[]
   onChange?: (value: string) => void
+  autoFocus?: boolean
   readOnlyMessage?: string
   isSaved?: boolean
   actionButtons?: ReactNode

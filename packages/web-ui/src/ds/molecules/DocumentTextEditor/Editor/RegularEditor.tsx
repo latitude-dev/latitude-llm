@@ -3,7 +3,7 @@
 import { MutableRefObject, useCallback, useEffect, useState } from 'react'
 
 import Editor, { Monaco } from '@monaco-editor/react'
-import { MarkerSeverity, type editor } from 'monaco-editor'
+import { MarkerSeverity, Range, Selection, type editor } from 'monaco-editor'
 
 import { TextEditorPlaceholder } from '../../TextEditorPlaceholder'
 import { DocumentError } from '../types'
@@ -11,6 +11,38 @@ import { registerActions } from './actions'
 import { EditorWrapper } from './EditorWrapper'
 import { useEditorOptions } from './useEditorOptions'
 import { useMonacoSetup } from './useMonacoSetup'
+
+function getEditorLine({ model }: { model: editor.ITextModel }): number {
+  const lastLine = model.getLineCount()
+  const lastLineText = model.getLineContent(lastLine)
+
+  if (lastLineText.trim() !== '---') return lastLine
+
+  model.pushEditOperations(
+    [],
+    [
+      {
+        range: new Range(lastLine + 1, 1, lastLine + 1, 1),
+        text: '\n',
+        forceMoveMarkers: true,
+      },
+    ],
+    () => null,
+  )
+  return lastLine + 1
+}
+
+function moveFocusAtEnd(editor: editor.IStandaloneCodeEditor) {
+  editor.focus()
+
+  const model = editor.getModel()
+  if (!model) return
+
+  const lastLine = getEditorLine({ model })
+  const lastColumn = model.getLineMaxColumn(lastLine)
+
+  editor.setSelection(new Selection(lastLine, lastColumn, lastLine, lastColumn))
+}
 
 export function RegularMonacoEditor({
   className,
@@ -22,6 +54,7 @@ export function RegularMonacoEditor({
   errorMarkers,
   onChange,
   errorFixFn,
+  autoFocus = false,
 }: {
   className?: string
   editorRef: MutableRefObject<editor.IStandaloneCodeEditor | null>
@@ -32,6 +65,7 @@ export function RegularMonacoEditor({
   errorMarkers?: DocumentError[]
   onChange?: (value?: string) => void
   errorFixFn?: (errors: DocumentError[]) => void
+  autoFocus?: boolean
 }) {
   const { monacoRef, handleEditorWillMount } = useMonacoSetup({ errorFixFn })
 
@@ -51,11 +85,14 @@ export function RegularMonacoEditor({
       monacoRef.current = monaco
       editorRef.current = editor
 
-      registerActions(editor, monaco)
+      if (autoFocus) {
+        moveFocusAtEnd(editor)
+      }
 
+      registerActions(editor, monaco)
       setIsEditorMounted(true)
     },
-    [],
+    [autoFocus, editorRef, monacoRef, setIsEditorMounted],
   )
 
   useEffect(() => {

@@ -132,6 +132,7 @@ export function PlaygroundTextEditor({
   return (
     <Suspense fallback={<TextEditorPlaceholder />}>
       <DocumentTextEditor
+        autoFocus
         value={value}
         compileErrors={compileErrors}
         onChange={onChange}
