@@ -127,9 +127,7 @@ function Tooltip({
       disableHoverableContent={disableHoverableContent}
     >
       {!triggerIcon && !triggerBadge ? (
-        <TooltipTrigger asChild={asChild} className='flex items-center gap-x-2'>
-          {trigger}
-        </TooltipTrigger>
+        <TooltipTrigger asChild={asChild}>{trigger}</TooltipTrigger>
       ) : (
         <TooltipTrigger asChild={asChild} className='flex items-center gap-x-2'>
           {trigger}

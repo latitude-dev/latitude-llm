@@ -27,12 +27,6 @@ export function FormDescription({
   )
 }
 
-function TooltipMessage({ error }: { error: string | undefined }) {
-  if (!error) return null
-
-  return error
-}
-
 export function InlineFormErrorMessage({
   error,
   id,
@@ -82,7 +76,7 @@ function DescriptionAndError({
   description: ReactNode | string | undefined
   error: string | undefined
   formMessageId: string
-  errorStyle: ErrorStyle
+  errorStyle?: ErrorStyle
 }) {
   return (
     <>
@@ -122,6 +116,7 @@ function InlineInput({
   description,
   formDescriptionId,
   formMessageId,
+  errorStyle,
 }: InputWrapperProps) {
   if (!label) {
     return (
@@ -137,7 +132,7 @@ function InlineInput({
         <DescriptionAndError
           description={description}
           error={error}
-          errorStyle='inline'
+          errorStyle={errorStyle}
           formMessageId={formMessageId}
         />
       </div>
@@ -191,6 +186,7 @@ function StackInput({
   formDescriptionId,
   formMessageId,
   description,
+  errorStyle,
 }: InputWrapperProps) {
   return (
     <>
@@ -215,7 +211,7 @@ function StackInput({
       <DescriptionAndError
         description={description}
         error={error}
-        errorStyle='inline'
+        errorStyle={errorStyle}
         formMessageId={formMessageId}
       />
     </>
@@ -291,8 +287,15 @@ function FormField({
   if (errorStyle !== 'tooltip') return input
 
   return (
-    <Tooltip side='bottom' align='start' asChild open={!!error} trigger={input}>
-      <TooltipMessage error={error} />
+    <Tooltip
+      variant='destructive'
+      side='bottom'
+      align='start'
+      asChild
+      open={!!error}
+      trigger={input}
+    >
+      {error}
     </Tooltip>
   )
 }
