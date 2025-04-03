@@ -1,19 +1,19 @@
-import type { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
-import useFetcher from '$/hooks/useFetcher'
-import { compact } from 'lodash-es'
-import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
-import { compactObject } from '@latitude-data/core/lib/compactObject'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { createDatasetRowAction } from '$/actions/datasetRows/create'
+import { deleteRowsAction } from '$/actions/datasetRows/delete'
 import { updateDatasetRowAction } from '$/actions/datasetRows/update'
+import useFetcher from '$/hooks/useFetcher'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
+import type { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
+import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { compact } from 'lodash-es'
+import { useCallback, useMemo } from 'react'
+import useSWR, { SWRConfiguration } from 'swr'
 import {
   ClientDatasetRow,
   serializeRow,
   serializeRows,
 } from './rowSerializationHelpers'
-import { useCallback, useMemo } from 'react'
-import { deleteRowsAction } from '$/actions/datasetRows/delete'
-import { createDatasetRowAction } from '$/actions/datasetRows/create'
 
 export const DATASET_ROWS_ROUTE = ROUTES.api.datasetsRows.root
 export function buildDatasetRowKey({
@@ -22,8 +22,8 @@ export function buildDatasetRowKey({
   pageSize,
 }: {
   datasetId?: number | undefined
-  page?: string | null | undefined
-  pageSize?: string | null
+  page?: string | number | null | undefined
+  pageSize?: string | number | null
 }) {
   return compact([
     'datasetRows',
@@ -43,8 +43,8 @@ export default function useDatasetRows(
     enabled = true,
   }: {
     dataset?: DatasetV2 | null
-    page?: string | null | undefined
-    pageSize?: string | null
+    page?: string | number | null | undefined
+    pageSize?: string | number | null
     onFetched?: (datasets: ClientDatasetRow[]) => void
     enabled?: boolean
   },

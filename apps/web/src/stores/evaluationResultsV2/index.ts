@@ -8,7 +8,7 @@ import {
   EvaluationMetric,
   EvaluationResultsV2Search,
   evaluationResultsV2SearchToQueryParams,
-  EvaluationResultV2,
+  EvaluationResultV2WithDetails,
   EvaluationType,
   EvaluationV2,
   Project,
@@ -46,9 +46,11 @@ export function useEvaluationResultsV2<
     () => (search ? evaluationResultsV2SearchToQueryParams(search) : ''),
     [search],
   )
-  const fetcher = useFetcher<EvaluationResultV2<T, M>[]>(`${route}?${query}`)
+  const fetcher = useFetcher<EvaluationResultV2WithDetails<T, M>[]>(
+    `${route}?${query}`,
+  )
 
-  const { data = [], ...rest } = useSWR<EvaluationResultV2<T, M>[]>(
+  const { data = [], ...rest } = useSWR<EvaluationResultV2WithDetails<T, M>[]>(
     compact([
       'evaluationResultsV2',
       project.id,

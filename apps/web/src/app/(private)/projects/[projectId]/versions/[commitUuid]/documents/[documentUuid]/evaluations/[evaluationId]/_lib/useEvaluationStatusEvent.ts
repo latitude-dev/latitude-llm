@@ -17,18 +17,12 @@ export function useEvaluationStatusEvent({
 }) {
   const onMessage = useCallback(
     (args: EventArgs<'evaluationStatus'>) => {
-      if (!args) return
+      if (evaluation.version !== 'v1') return
 
-      if (evaluation.version === 'v1' && args.version === 'v1') {
-        if (evaluation.id !== args.evaluationId) return
-        if (documentUuid !== args.documentUuid) return
-      } else if (evaluation.version === 'v2' && args.version === 'v2') {
-        if (evaluation.commitId !== args.commitId) return
-        if (evaluation.documentUuid !== args.documentUuid) return
-        if (evaluation.uuid !== args.evaluationUuid) return
-      } else {
-        return
-      }
+      if (!args) return
+      if (args.version !== 'v1') return
+      if (evaluation.id !== args.evaluationId) return
+      if (documentUuid !== args.documentUuid) return
 
       onStatusChange(args)
     },

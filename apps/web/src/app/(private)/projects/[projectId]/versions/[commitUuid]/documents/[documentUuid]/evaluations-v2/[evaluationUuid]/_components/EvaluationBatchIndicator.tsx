@@ -1,27 +1,48 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
-import { type EventArgs } from '$/components/Providers/WebsocketsProvider/useSockets'
-import { EvaluationMetric, EvaluationType } from '@latitude-data/constants'
+import {
+  EventArgs,
+  useSockets,
+} from '$/components/Providers/WebsocketsProvider/useSockets'
+import {
+  DocumentVersion,
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+} from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
-import { useState } from 'react'
-import { useEvaluationStatusEvent } from '../../../evaluations/[evaluationId]/_lib/useEvaluationStatusEvent'
+import {
+  ICommitContextType,
+  useCurrentCommit,
+} from '@latitude-data/web-ui/providers'
+import { Dispatch, SetStateAction, useCallback, useState } from 'react'
 
-export function EvaluationBatchIndicator<
+const useEvaluationStatusSocket = <
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
->() {
-  const { document } = useCurrentDocument()
-  const { evaluation } = useCurrentEvaluationV2<T, M>()
+>({
+  commit,
+  document,
+  evaluation,
+  setBatches,
+}: {
+  commit: ICommitContextType['commit']
+  document: DocumentVersion
+  evaluation: EvaluationV2<T, M>
+  setBatches: Dispatch<
+    SetStateAction<Record<string, EventArgs<'evaluationStatus'>>>
+  >
+}) => {
+  const onMessage = useCallback(
+    (event: EventArgs<'evaluationStatus'>) => {
+      if (!event) return
+      if (event.version !== 'v2') return
+      if (event.commitId !== commit.id) return
+      if (event.documentUuid !== document.documentUuid) return
+      if (event.evaluationUuid !== evaluation.uuid) return
 
-  const [batches, setBatches] = useState<
-    Record<string, EventArgs<'evaluationStatus'>>
-  >({})
-  useEvaluationStatusEvent({
-    evaluation: { ...evaluation, version: 'v2' },
-    documentUuid: document.documentUuid,
-    onStatusChange: (event) => {
       setBatches((prev) => {
         if (event.total === event.completed + event.errors) {
           setTimeout(
@@ -39,7 +60,24 @@ export function EvaluationBatchIndicator<
         return { ...prev, [event.batchId]: event }
       })
     },
-  })
+    [commit, document, evaluation, setBatches],
+  )
+
+  useSockets({ event: 'evaluationStatus', onMessage })
+}
+
+export function EvaluationBatchIndicator<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+>() {
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+  const { evaluation } = useCurrentEvaluationV2<T, M>()
+
+  const [batches, setBatches] = useState<
+    Record<string, EventArgs<'evaluationStatus'>>
+  >({})
+  useEvaluationStatusSocket({ commit, document, evaluation, setBatches })
 
   return Object.values(batches).map((batch) => (
     <div

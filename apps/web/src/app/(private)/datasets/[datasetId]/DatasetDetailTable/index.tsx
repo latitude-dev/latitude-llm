@@ -1,22 +1,23 @@
 'use client'
-import { useCallback, useMemo } from 'react'
-import dynamic from 'next/dynamic'
-import Link from 'next/link'
-import { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
-import { useSearchParams } from 'next/navigation'
-import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { ROUTES } from '$/services/routes'
 import useDatasetRows from '$/stores/datasetRows'
-import { useDatasetRole } from '$/hooks/useDatasetRoles'
-import { useDatasetRowsSocket } from './useDatasetRowsSocket'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
-import { SimpleTable } from './SimpleTable'
-import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
+import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import dynamic from 'next/dynamic'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { useCallback, useMemo } from 'react'
+import { SimpleTable } from './SimpleTable'
+import { useDatasetRowsSocket } from './useDatasetRowsSocket'
 
 const DataGrid = dynamic(() => import('./DataGrid'), {
   ssr: false,
@@ -84,6 +85,7 @@ export function DatasetDetailTable({
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
   const pageSize = searchParams.get('pageSize') ?? ROWS_PAGE_SIZE
+  const selectedRowId = Number(searchParams.get('rowId') ?? 0) || undefined
   const {
     data: rows,
     mutate,
@@ -115,9 +117,14 @@ export function DatasetDetailTable({
       }),
     [page, pageSize, dataset.id],
   )
+  const selectedRow = useMemo(
+    () => rows.find((row) => row.id === selectedRowId),
+    [rows, selectedRowId],
+  )
   const props = {
     dataset,
     rows,
+    selectedRow,
     pagination,
     isProcessing,
     processedRowsCount,

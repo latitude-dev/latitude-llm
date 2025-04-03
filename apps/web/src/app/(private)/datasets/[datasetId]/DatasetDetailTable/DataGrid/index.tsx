@@ -1,32 +1,32 @@
-import BaseDataGrid, {
-  SelectColumn,
-} from '@latitude-data/web-ui/atoms/DataGrid'
-import type {
-  RenderCellProps,
-  RenderEditCellProps,
-  Props as DataGridProps,
-  RowsChangeData,
-  CellClickArgs,
-  CellMouseEvent,
-  RenderHeaderCellProps,
-} from '@latitude-data/web-ui/atoms/DataGrid'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { cn } from '@latitude-data/web-ui/utils'
-import { DataGridCellEditor } from '@latitude-data/web-ui/atoms/DataGrid'
-import { EditorCellProps } from '@latitude-data/web-ui/atoms/DataGrid'
+import { UpdateColumnModal } from '$/app/(private)/datasets/[datasetId]/DatasetDetailTable/DataGrid/UpdateColumnModal'
 import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
+import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { DatasetRoleStyle } from '$/hooks/useDatasetRoles'
+import useDatasetRows from '$/stores/datasetRows'
+import { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
+import useDatasets from '$/stores/datasetsV2'
 import { DatasetV2 } from '@latitude-data/core/browser'
 import { ClientPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import type {
+  CellClickArgs,
+  CellMouseEvent,
+  Props as DataGridProps,
+  RenderCellProps,
+  RenderEditCellProps,
+  RenderHeaderCellProps,
+  RowsChangeData,
+} from '@latitude-data/web-ui/atoms/DataGrid'
+import BaseDataGrid, {
+  DataGridCellEditor,
+  EditorCellProps,
+  SelectColumn,
+} from '@latitude-data/web-ui/atoms/DataGrid'
+import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { cn } from '@latitude-data/web-ui/utils'
 import { Suspense, useCallback, useMemo, useState } from 'react'
-import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
-import { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
-import useDatasetRows from '$/stores/datasetRows'
-import useDatasets from '$/stores/datasetsV2'
-import { UpdateColumnModal } from '$/app/(private)/datasets/[datasetId]/DatasetDetailTable/DataGrid/UpdateColumnModal'
 
 function rowKeyGetter(row: ClientDatasetRow) {
   return row.id
@@ -35,6 +35,7 @@ function rowKeyGetter(row: ClientDatasetRow) {
 export type DatasetRowsTableProps = {
   dataset: DatasetV2
   rows: ClientDatasetRow[]
+  selectedRow?: ClientDatasetRow
   pagination: ClientPagination
   datasetCellRoleStyles: DatasetRoleStyle
 }
@@ -122,6 +123,7 @@ const countLabel = (count: number) => `${count} rows`
 export default function DataGrid({
   dataset: serverDataset,
   rows,
+  selectedRow,
   updateRows,
   deleteRows,
   isDeleting,
@@ -133,7 +135,9 @@ export default function DataGrid({
     return data.find((d) => d.id === serverDataset.id) ?? serverDataset
   }, [data, serverDataset.id])
   const { backgroundCssClasses } = datasetCellRoleStyles
-  const [selectedRows, setSelectedRows] = useState(() => new Set<number>())
+  const [selectedRows, setSelectedRows] = useState(
+    () => new Set<number>(selectedRow ? [selectedRow.id] : []),
+  )
   const [editColumnKey, setEditColumnKey] = useState<string | null>(null)
   const columns = useMemo<DataGridProps<ClientDatasetRow>['columns']>(() => {
     const dataColumns: DataGridProps<ClientDatasetRow>['columns'] =

@@ -9,6 +9,8 @@ import {
 } from '@latitude-data/constants'
 import {
   Commit,
+  DatasetRow,
+  DatasetV2,
   DocumentLog,
   ProviderLogDto,
 } from '@latitude-data/core/browser'
@@ -63,6 +65,8 @@ export type ResultPanelProps<
   evaluation: EvaluationV2<T, M>
   result: EvaluationResultV2<T, M>
   commit: Commit
+  dataset?: DatasetV2
+  evaluatedDatasetRow?: DatasetRow
   evaluatedProviderLog: ProviderLogDto
   evaluatedDocumentLog: DocumentLog
   panelRef: React.RefObject<HTMLDivElement>

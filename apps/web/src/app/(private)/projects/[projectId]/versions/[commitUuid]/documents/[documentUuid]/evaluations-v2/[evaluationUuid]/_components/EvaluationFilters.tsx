@@ -1,9 +1,9 @@
 import { Commit, EvaluationResultsV2Search } from '@latitude-data/core/browser'
+import { DatePickerRange } from '@latitude-data/web-ui/atoms/DatePicker'
 import { endOfDay, startOfDay } from 'date-fns'
 import { isEqual } from 'lodash-es'
 import { ComponentProps, useMemo } from 'react'
 import { CommitFilter } from '../../../logs/_components/Filters/CommitFilter'
-import { DatePickerRange } from '@latitude-data/web-ui/atoms/DatePicker'
 
 export function EvaluationFilters({
   commits,
@@ -11,13 +11,13 @@ export function EvaluationFilters({
   setSearch,
   isLoading,
 }: {
-  commits: Record<number, Commit>
+  commits: Commit[]
   search: EvaluationResultsV2Search
   setSearch: (search: EvaluationResultsV2Search) => void
   isLoading: boolean
 }) {
   const defaultSelectedCommits = useMemo(
-    () => Object.values(commits).map((c) => c.id),
+    () => commits.map((c) => c.id),
     [commits],
   )
 

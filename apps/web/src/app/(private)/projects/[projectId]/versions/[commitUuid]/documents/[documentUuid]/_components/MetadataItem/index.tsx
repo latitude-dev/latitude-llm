@@ -1,12 +1,11 @@
-import { ReactNode } from 'react'
-
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TextColor } from '@latitude-data/web-ui/tokens'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { TextColor } from '@latitude-data/web-ui/tokens'
 import { FinishReason } from 'ai'
+import { ReactNode } from 'react'
 
 const REASONS_FINISH: Record<FinishReason, string> = {
   stop: 'This indicates that the response ended because it reached a stopping point naturally.',
@@ -33,6 +32,7 @@ type MetadataItemProps = {
   stacked?: boolean
   label: string
   tooltip?: string
+  action?: ReactNode
   value?: string
   color?: TextColor
   loading?: boolean
@@ -42,6 +42,7 @@ type MetadataItemProps = {
 export function MetadataItem({
   label,
   tooltip,
+  action,
   stacked = false,
   value,
   color = 'foregroundMuted',
@@ -53,23 +54,26 @@ export function MetadataItem({
     : 'flex flex-row justify-between items-center gap-2'
   return (
     <div className={className}>
-      <span className='flex flex-row items-center gap-2'>
-        <Text.H5M color='foreground'>{label}</Text.H5M>
-        {tooltip && (
-          <Tooltip
-            asChild
-            trigger={
-              <span>
-                <Icon name='info' color='foreground' />
-              </span>
-            }
-            maxWidth='max-w-[400px]'
-            align='center'
-            side='top'
-          >
-            {tooltip}
-          </Tooltip>
-        )}
+      <span className='flex flex-row items-center justify-between gap-4'>
+        <span className='flex flex-row items-center gap-2'>
+          <Text.H5M color='foreground'>{label}</Text.H5M>
+          {tooltip && (
+            <Tooltip
+              asChild
+              trigger={
+                <span>
+                  <Icon name='info' color='foreground' />
+                </span>
+              }
+              maxWidth='max-w-[400px]'
+              align='center'
+              side='top'
+            >
+              {tooltip}
+            </Tooltip>
+          )}
+        </span>
+        {stacked && action}
       </span>
       <div>
         {loading ? (
