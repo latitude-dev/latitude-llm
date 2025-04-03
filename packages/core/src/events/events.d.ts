@@ -13,6 +13,7 @@ import type {
   EvaluationDto,
   EvaluationResultDto,
   EvaluationResultV2,
+  EvaluationTmp,
   EvaluationV2,
   LogSources,
   MagicLinkToken,
@@ -215,7 +216,7 @@ export type DocumentSuggestionCreatedEvent = LatitudeEventGeneric<
   {
     workspaceId: number
     suggestion: DocumentSuggestion
-    evaluation: Evaluation
+    evaluation: EvaluationTmp
   }
 >
 

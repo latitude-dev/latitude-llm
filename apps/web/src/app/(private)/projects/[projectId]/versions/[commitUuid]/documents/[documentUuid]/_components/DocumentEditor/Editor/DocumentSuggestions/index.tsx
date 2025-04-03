@@ -36,14 +36,15 @@ const useDocumentSuggestionsSocket = ({
       }
 
       mutate(
-        (prev) => {
-          if (prev?.find((s) => s.id === event.suggestion.id)) return prev
-          return [event.suggestion, ...(prev ?? [])]
-        },
+        (prev) => [
+          { ...event.suggestion, evaluation: event.evaluation },
+          ...(prev ?? []),
+        ],
         {
           revalidate: false,
         },
       )
+
       notify()
     },
     [document, mutate, notify],

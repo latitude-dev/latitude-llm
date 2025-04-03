@@ -3,7 +3,7 @@ import {
   Commit,
   DocumentSuggestion,
   DocumentVersion,
-  Evaluation,
+  EvaluationDto,
   EvaluationMetadataType,
   Project,
   ProviderApiKey,
@@ -31,7 +31,7 @@ describe('applyDocumentSuggestion', () => {
   let user: User
   let commit: Commit
   let document: DocumentVersion
-  let evaluation: Evaluation
+  let evaluation: EvaluationDto
   let suggestion: DocumentSuggestion
 
   beforeEach(async () => {
@@ -78,8 +78,9 @@ describe('applyDocumentSuggestion', () => {
     })
 
     suggestion = await factories.createDocumentSuggestion({
+      commit: commit,
       document: document,
-      evaluation: evaluation,
+      evaluation: { ...evaluation, version: 'v1' },
       workspace: workspace,
       prompt: 'suggested prompt',
     })

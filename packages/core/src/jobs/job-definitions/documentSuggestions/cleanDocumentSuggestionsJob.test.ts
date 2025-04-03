@@ -82,26 +82,30 @@ describe('cleanDocumentSuggestionsJob', () => {
 
     suggestions = [
       await factories.createDocumentSuggestion({
+        commit: commit,
         document: document,
-        evaluation: evaluations[0]!,
+        evaluation: { ...evaluations[0]!, version: 'v1' },
         workspace: workspace,
         createdAt: new Date(),
       }),
       await factories.createDocumentSuggestion({
+        commit: commit,
         document: document,
-        evaluation: evaluations[0]!,
+        evaluation: { ...evaluations[0]!, version: 'v1' },
         workspace: workspace,
         createdAt: subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS + 1),
       }),
       await factories.createDocumentSuggestion({
+        commit: commit,
         document: document,
-        evaluation: evaluations[1]!,
+        evaluation: { ...evaluations[1]!, version: 'v1' },
         workspace: workspace,
         createdAt: subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS + 9),
       }),
       await factories.createDocumentSuggestion({
+        commit: commit,
         document: document,
-        evaluation: evaluations[2]!,
+        evaluation: { ...evaluations[2]!, version: 'v1' },
         workspace: workspace,
         createdAt: subDays(new Date(), 3),
       }),

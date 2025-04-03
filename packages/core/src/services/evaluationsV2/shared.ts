@@ -99,6 +99,9 @@ export function getEvaluationMetricSpecification<
 }
 
 export function normalizeScore(score: number, lower: number, upper: number) {
+  if (lower === upper) return score === lower ? EVALUATION_SCORE_SCALE : 0
+  else if (lower < upper) score = Math.min(Math.max(score, lower), upper)
+  else score = Math.min(Math.max(score, upper), lower)
   const range = Math.abs(upper - lower)
   const value = Math.abs(score - lower)
   const map = (value * EVALUATION_SCORE_SCALE) / range

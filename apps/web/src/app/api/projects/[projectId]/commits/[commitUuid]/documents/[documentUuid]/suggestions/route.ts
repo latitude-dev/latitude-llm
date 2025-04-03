@@ -2,6 +2,7 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { Workspace } from '@latitude-data/core/browser'
 import {
+  CommitsRepository,
   DocumentSuggestionsRepository,
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
@@ -25,6 +26,11 @@ export const GET = errorHandler(
     ) => {
       const { projectId, commitUuid, documentUuid } = params
 
+      const commitsRepository = new CommitsRepository(workspace.id)
+      const commit = await commitsRepository
+        .getCommitByUuid({ projectId, uuid: commitUuid })
+        .then((r) => r.unwrap())
+
       const documentsRepository = new DocumentVersionsRepository(workspace.id)
       const document = await documentsRepository
         .getDocumentAtCommit({
@@ -38,10 +44,7 @@ export const GET = errorHandler(
         workspace.id,
       )
       const suggestions = await suggestionsRepository
-        .listByDocumentVersionWithDetails({
-          commitId: document.commitId,
-          documentUuid: document.documentUuid,
-        })
+        .listByDocumentVersionWithDetails({ commit, document })
         .then((r) => r.unwrap())
 
       return NextResponse.json(suggestions, { status: 200 })

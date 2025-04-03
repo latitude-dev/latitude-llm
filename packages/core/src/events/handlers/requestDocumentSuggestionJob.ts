@@ -4,7 +4,12 @@ import { setupQueues } from '../../jobs'
 import { generateDocumentSuggestionJobKey } from '../../jobs/job-definitions'
 import { NotFoundError } from '../../lib'
 import { hasEvaluationResultPassed } from '../../services/evaluationResults'
-import { EvaluationResultCreatedEvent } from '../events'
+import {
+  EvaluationResultCreatedEvent,
+  EvaluationResultV2CreatedEvent,
+} from '../events'
+
+const LIVE_SUGGESTION_SOURCES = [LogSources.Playground, LogSources.Evaluation]
 
 export const requestDocumentSuggestionJob = async ({
   data: event,
@@ -21,7 +26,10 @@ export const requestDocumentSuggestionJob = async ({
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
-  if (documentLog.source !== LogSources.Playground) return
+  if (!LIVE_SUGGESTION_SOURCES.includes(documentLog.source ?? LogSources.API)) {
+    return
+  }
+
   if (hasEvaluationResultPassed({ result, evaluation })) return
 
   const queues = await setupQueues()
@@ -40,6 +48,42 @@ export const requestDocumentSuggestionJob = async ({
           commitId: documentLog.commitId,
           documentUuid: documentLog.documentUuid,
           evaluationId: evaluation.id,
+        }),
+      },
+    },
+  )
+}
+
+export const requestDocumentSuggestionJobV2 = async ({
+  data: event,
+}: {
+  data: EvaluationResultV2CreatedEvent
+}) => {
+  const { workspaceId, result, evaluation, commit, providerLog } = event.data
+
+  const workspace = await unsafelyFindWorkspace(workspaceId)
+  if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
+
+  if (!LIVE_SUGGESTION_SOURCES.includes(providerLog.source)) return
+  if (result.hasPassed || result.error || result.usedForSuggestion) return
+  if (!evaluation.enableSuggestions) return
+
+  const queues = await setupQueues()
+  queues.defaultQueue.jobs.enqueueGenerateDocumentSuggestionJob(
+    {
+      workspaceId: workspace.id,
+      commitId: commit.id,
+      documentUuid: evaluation.documentUuid,
+      evaluationUuid: evaluation.uuid,
+    },
+    {
+      attempts: 1,
+      deduplication: {
+        id: generateDocumentSuggestionJobKey({
+          workspaceId: workspace.id,
+          commitId: commit.id,
+          documentUuid: evaluation.documentUuid,
+          evaluationUuid: evaluation.uuid,
         }),
       },
     },

@@ -97,6 +97,7 @@ export const QUEUES = {
       'sendReferralInvitationJob',
       'sendSuggestionNotification',
       'requestDocumentSuggestionJob',
+      'requestDocumentSuggestionJobV2',
       'createDatasetRowsJob',
       'evaluateLiveLogJob',
     ],

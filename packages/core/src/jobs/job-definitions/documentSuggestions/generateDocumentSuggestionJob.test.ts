@@ -1,6 +1,7 @@
 import * as env from '@latitude-data/env'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
+  Commit,
   DocumentLog,
   DocumentVersion,
   EvaluationDto,
@@ -21,6 +22,7 @@ describe('generateDocumentSuggestionJob', () => {
   }
 
   let workspace: Workspace
+  let commit: Commit
   let document: DocumentVersion
   let evaluation: EvaluationDto
   let result: EvaluationResultDto
@@ -40,7 +42,7 @@ describe('generateDocumentSuggestionJob', () => {
     workspace = w
     const provider = providers[0]!
 
-    const commit = await factories.createCommit({
+    commit = await factories.createCommit({
       projectId: project.id,
       user: user,
     })
@@ -113,7 +115,7 @@ describe('generateDocumentSuggestionJob', () => {
       generateDocumentSuggestionJob({
         data: {
           workspaceId: workspace.id,
-          commitId: documentLog.commitId,
+          commitId: commit.id,
           documentUuid: documentLog.documentUuid,
           evaluationId: result.evaluationId,
         },
@@ -123,6 +125,7 @@ describe('generateDocumentSuggestionJob', () => {
     expect(mocks.generateDocumentSuggestion).toHaveBeenCalledOnce()
     expect(mocks.generateDocumentSuggestion).toHaveBeenCalledWith({
       workspace: expect.objectContaining({ id: workspace.id }),
+      commit: expect.objectContaining({ id: commit.id }),
       document: expect.objectContaining({ id: document.id }),
       evaluation: expect.objectContaining({ id: evaluation.id }),
     })
@@ -136,7 +139,7 @@ describe('generateDocumentSuggestionJob', () => {
     await generateDocumentSuggestionJob({
       data: {
         workspaceId: workspace.id,
-        commitId: documentLog.commitId,
+        commitId: commit.id,
         documentUuid: documentLog.documentUuid,
         evaluationId: result.evaluationId,
       },
@@ -145,6 +148,7 @@ describe('generateDocumentSuggestionJob', () => {
     expect(mocks.generateDocumentSuggestion).toHaveBeenCalledOnce()
     expect(mocks.generateDocumentSuggestion).toHaveBeenCalledWith({
       workspace: expect.objectContaining({ id: workspace.id }),
+      commit: expect.objectContaining({ id: commit.id }),
       document: expect.objectContaining({ id: document.id }),
       evaluation: expect.objectContaining({ id: evaluation.id }),
     })
@@ -156,7 +160,7 @@ describe('generateDocumentSuggestionJob', () => {
     await generateDocumentSuggestionJob({
       data: {
         workspaceId: workspace.id,
-        commitId: documentLog.commitId,
+        commitId: commit.id,
         documentUuid: documentLog.documentUuid,
         evaluationId: result.evaluationId,
       },
@@ -165,6 +169,7 @@ describe('generateDocumentSuggestionJob', () => {
     expect(mocks.generateDocumentSuggestion).toHaveBeenCalledOnce()
     expect(mocks.generateDocumentSuggestion).toHaveBeenCalledWith({
       workspace: expect.objectContaining({ id: workspace.id }),
+      commit: expect.objectContaining({ id: commit.id }),
       document: expect.objectContaining({ id: document.id }),
       evaluation: expect.objectContaining({ id: evaluation.id }),
     })

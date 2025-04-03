@@ -153,8 +153,9 @@ describe('generateDocumentSuggestion', () => {
     await expect(
       generateDocumentSuggestion({
         workspace: workspace,
+        commit: commit,
         document: document,
-        evaluation: anotherEvaluation,
+        evaluation: { ...anotherEvaluation, version: 'v1' },
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new UnprocessableEntityError(
@@ -164,10 +165,7 @@ describe('generateDocumentSuggestion', () => {
 
     const repository = new DocumentSuggestionsRepository(workspace.id)
     const suggestions = await repository
-      .listByDocumentVersionWithDetails({
-        commitId: document.commitId,
-        documentUuid: document.documentUuid,
-      })
+      .listByDocumentVersionWithDetails({ commit, document })
       .then((r) => r.unwrap())
     expect(suggestions).toEqual([])
     expect(mocks.getCopilot).toHaveBeenCalledOnce()
@@ -184,8 +182,9 @@ describe('generateDocumentSuggestion', () => {
     await expect(
       generateDocumentSuggestion({
         workspace: workspace,
+        commit: commit,
         document: document,
-        evaluation: evaluation,
+        evaluation: { ...evaluation, version: 'v1' },
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new UnprocessableEntityError(
@@ -195,10 +194,7 @@ describe('generateDocumentSuggestion', () => {
 
     const repository = new DocumentSuggestionsRepository(workspace.id)
     const suggestions = await repository
-      .listByDocumentVersionWithDetails({
-        commitId: document.commitId,
-        documentUuid: document.documentUuid,
-      })
+      .listByDocumentVersionWithDetails({ commit, document })
       .then((r) => r.unwrap())
     expect(suggestions).toEqual([])
     expect(mocks.getCopilot).toHaveBeenCalledOnce()
@@ -208,8 +204,9 @@ describe('generateDocumentSuggestion', () => {
 
   it('not generates document suggestion when limits are exceeded', async () => {
     const anotherSuggestion = await factories.createDocumentSuggestion({
+      commit: commit,
       document: document,
-      evaluation: evaluation,
+      evaluation: { ...evaluation, version: 'v1' },
       workspace: workspace,
     })
     mocks.publisher.mockClear()
@@ -217,8 +214,9 @@ describe('generateDocumentSuggestion', () => {
     await expect(
       generateDocumentSuggestion({
         workspace: workspace,
+        commit: commit,
         document: document,
-        evaluation: evaluation,
+        evaluation: { ...evaluation, version: 'v1' },
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new UnprocessableEntityError(
@@ -228,10 +226,7 @@ describe('generateDocumentSuggestion', () => {
 
     const repository = new DocumentSuggestionsRepository(workspace.id)
     const suggestions = await repository
-      .listByDocumentVersionWithDetails({
-        commitId: document.commitId,
-        documentUuid: document.documentUuid,
-      })
+      .listByDocumentVersionWithDetails({ commit, document })
       .then((r) => r.unwrap())
     expect(suggestions).toEqual([
       expect.objectContaining({ id: anotherSuggestion.id }),
@@ -249,8 +244,9 @@ describe('generateDocumentSuggestion', () => {
     await expect(
       generateDocumentSuggestion({
         workspace: workspace,
+        commit: commit,
         document: document,
-        evaluation: evaluation,
+        evaluation: { ...evaluation, version: 'v1' },
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new UnprocessableEntityError('Not enough evaluation results found'),
@@ -258,10 +254,32 @@ describe('generateDocumentSuggestion', () => {
 
     const repository = new DocumentSuggestionsRepository(workspace.id)
     const suggestions = await repository
-      .listByDocumentVersionWithDetails({
-        commitId: document.commitId,
-        documentUuid: document.documentUuid,
-      })
+      .listByDocumentVersionWithDetails({ commit, document })
+      .then((r) => r.unwrap())
+    expect(suggestions).toEqual([])
+    expect(mocks.getCopilot).toHaveBeenCalledOnce()
+    expect(mocks.runCopilot).not.toHaveBeenCalled()
+    expect(mocks.publisher).not.toHaveBeenCalled()
+  })
+
+  it('not generates document suggestion when results are invalid', async () => {
+    results = results.map((r) => ({ ...r, result: undefined }))
+
+    await expect(
+      generateDocumentSuggestion({
+        workspace: workspace,
+        commit: commit,
+        document: document,
+        evaluation: { ...evaluation, version: 'v1' },
+        results: results.map((result) => ({ ...result, version: 'v1' })),
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new UnprocessableEntityError('Cannot use this result for a suggestion'),
+    )
+
+    const repository = new DocumentSuggestionsRepository(workspace.id)
+    const suggestions = await repository
+      .listByDocumentVersionWithDetails({ commit, document })
       .then((r) => r.unwrap())
     expect(suggestions).toEqual([])
     expect(mocks.getCopilot).toHaveBeenCalledOnce()
@@ -272,16 +290,14 @@ describe('generateDocumentSuggestion', () => {
   it('generates document suggestion when there are none', async () => {
     const { suggestion } = await generateDocumentSuggestion({
       workspace: workspace,
+      commit: commit,
       document: document,
-      evaluation: evaluation,
+      evaluation: { ...evaluation, version: 'v1' },
     }).then((r) => r.unwrap())
 
     const repository = new DocumentSuggestionsRepository(workspace.id)
     const suggestions = await repository
-      .listByDocumentVersionWithDetails({
-        commitId: document.commitId,
-        documentUuid: document.documentUuid,
-      })
+      .listByDocumentVersionWithDetails({ commit, document })
       .then((r) => r.unwrap())
 
     expect(suggestion).toEqual(
@@ -316,15 +332,16 @@ describe('generateDocumentSuggestion', () => {
       data: {
         workspaceId: workspace.id,
         suggestion: suggestion,
-        evaluation: evaluation,
+        evaluation: { ...evaluation, version: 'v1' },
       },
     })
   })
 
   it('generates document suggestion when another are expired', async () => {
     await factories.createDocumentSuggestion({
+      commit: commit,
       document: document,
-      evaluation: evaluation,
+      evaluation: { ...evaluation, version: 'v1' },
       workspace: workspace,
       prompt: 'another prompt',
       summary: 'another summary',
@@ -334,16 +351,14 @@ describe('generateDocumentSuggestion', () => {
 
     const { suggestion } = await generateDocumentSuggestion({
       workspace: workspace,
+      commit: commit,
       document: document,
-      evaluation: evaluation,
+      evaluation: { ...evaluation, version: 'v1' },
     }).then((r) => r.unwrap())
 
     const repository = new DocumentSuggestionsRepository(workspace.id)
     const suggestions = await repository
-      .listByDocumentVersionWithDetails({
-        commitId: document.commitId,
-        documentUuid: document.documentUuid,
-      })
+      .listByDocumentVersionWithDetails({ commit, document })
       .then((r) => r.unwrap())
 
     expect(suggestion).toEqual(
@@ -378,7 +393,7 @@ describe('generateDocumentSuggestion', () => {
       data: {
         workspaceId: workspace.id,
         suggestion: suggestion,
-        evaluation: evaluation,
+        evaluation: { ...evaluation, version: 'v1' },
       },
     })
   })

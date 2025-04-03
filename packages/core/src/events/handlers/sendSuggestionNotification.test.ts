@@ -78,8 +78,9 @@ describe('sendSuggestionNotification', () => {
     })
 
     suggestion = await factories.createDocumentSuggestion({
+      commit: commit,
       document: document,
-      evaluation: evaluation,
+      evaluation: { ...evaluation, version: 'v1' },
       workspace: workspace,
     })
 
@@ -108,7 +109,7 @@ describe('sendSuggestionNotification', () => {
         data: {
           workspaceId: workspace.id,
           suggestion: suggestion,
-          evaluation: evaluation,
+          evaluation: { ...evaluation, version: 'v1' },
         },
       },
     })
@@ -134,7 +135,7 @@ describe('sendSuggestionNotification', () => {
         data: {
           workspaceId: workspace.id,
           suggestion: suggestion,
-          evaluation: evaluation,
+          evaluation: { ...evaluation, version: 'v1' },
         },
       },
     })
@@ -162,7 +163,7 @@ describe('sendSuggestionNotification', () => {
         data: {
           workspaceId: workspace.id,
           suggestion: suggestion,
-          evaluation: evaluation,
+          evaluation: { ...evaluation, version: 'v1' },
         },
       },
     })

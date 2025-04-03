@@ -99,7 +99,7 @@ describe('requestDocumentSuggestionJob', () => {
     } as any)
   })
 
-  it('not enqueues generate suggestion job when result is not from playground', async () => {
+  it('not enqueues generate suggestion job when result is not live', async () => {
     documentLog.source = LogSources.API
     result.source = LogSources.API
 

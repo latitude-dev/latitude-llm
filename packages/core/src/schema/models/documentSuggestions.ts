@@ -6,9 +6,9 @@ import {
   text,
   uuid,
 } from 'drizzle-orm/pg-core'
-
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
+import { commits } from './commits'
 import { documentVersions } from './documentVersions'
 import { evaluations } from './evaluations'
 import { workspaces } from './workspaces'
@@ -20,11 +20,15 @@ export const documentSuggestions = latitudeSchema.table(
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
-    commitId: bigint('commit_id', { mode: 'number' }).notNull(),
-    documentUuid: uuid('document_uuid').notNull(),
-    evaluationId: bigint('evaluation_id', { mode: 'number' })
+    commitId: bigint('commit_id', { mode: 'number' })
       .notNull()
-      .references(() => evaluations.id, { onDelete: 'cascade' }),
+      .references(() => commits.id, { onDelete: 'restrict' }),
+    documentUuid: uuid('document_uuid').notNull(),
+    evaluationUuid: uuid('evaluation_uuid'), // TODO: Add .notNull() when evaluations v1 are deprecated
+    evaluationId: bigint('evaluation_id', { mode: 'number' }).references(
+      () => evaluations.id,
+      { onDelete: 'cascade' },
+    ), // TODO: Remove this when evaluations v1 are deprecated
     oldPrompt: text('old_prompt').notNull(),
     newPrompt: text('new_prompt').notNull(),
     summary: text('summary').notNull(),

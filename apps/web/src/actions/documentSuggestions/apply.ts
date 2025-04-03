@@ -1,9 +1,6 @@
 'use server'
 
-import {
-  CommitsRepository,
-  DocumentSuggestionsRepository,
-} from '@latitude-data/core/repositories'
+import { DocumentSuggestionsRepository } from '@latitude-data/core/repositories'
 import { applyDocumentSuggestion } from '@latitude-data/core/services/documentSuggestions/apply'
 import { z } from 'zod'
 import { withDocument } from '../procedures'
@@ -24,17 +21,9 @@ export const applyDocumentSuggestionAction = withDocument
       .find(input.suggestionId)
       .then((r) => r.unwrap())
 
-    const commitsRepository = new CommitsRepository(ctx.workspace.id)
-    const commit = await commitsRepository
-      .getCommitByUuid({
-        projectId: ctx.project.id,
-        uuid: ctx.currentCommitUuid,
-      })
-      .then((r) => r.unwrap())
-
     const result = await applyDocumentSuggestion({
       suggestion: suggestion,
-      commit: commit,
+      commit: ctx.commit,
       prompt: input.prompt,
       workspace: ctx.workspace,
       project: ctx.project,
