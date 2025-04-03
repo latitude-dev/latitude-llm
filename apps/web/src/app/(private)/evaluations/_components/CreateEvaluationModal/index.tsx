@@ -16,14 +16,14 @@ import {
   RuleEvaluationMetric,
   RuleEvaluationSpecification,
 } from '@latitude-data/core/browser'
-import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { FormField } from '@latitude-data/web-ui/atoms/FormField'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { SelectableCard } from '@latitude-data/web-ui/molecules/SelectableCard'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import {
   useCurrentCommit,
   useCurrentProject,
@@ -246,7 +246,7 @@ export default function CreateEvaluationModal({
       onOpenChange={() => onClose(null)}
       onConfirm={onConfirm}
       confirm={{
-        label: isLoading ? 'Creating...' : 'Create evaluation',
+        label: isCreating ? 'Creating...' : 'Create evaluation',
         description:
           prompt &&
           'A prompt is included with this template. You can edit it once you create the evaluation.',
@@ -278,6 +278,7 @@ export default function CreateEvaluationModal({
             options={optionsV2}
             onOptionsChange={setOptionsV2}
             errors={errorsV2}
+            disabled={isCreating}
           />
         </>
       ) : (

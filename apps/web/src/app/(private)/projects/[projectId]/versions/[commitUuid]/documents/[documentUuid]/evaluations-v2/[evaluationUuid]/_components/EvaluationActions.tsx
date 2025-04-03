@@ -12,7 +12,6 @@ import {
 } from '@latitude-data/constants'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import {
   useCurrentCommit,
   useCurrentProject,
@@ -67,32 +66,21 @@ export function EvaluationActions<
 
   return (
     <div className='flex flex-row items-center gap-4'>
-      {commit.mergedAt ? (
-        <Tooltip
-          asChild
-          trigger={
-            <span>
-              <TableWithHeader.Button disabled>
-                Edit evaluation
-              </TableWithHeader.Button>
-            </span>
-          }
-        >
-          Merged commits cannot be edited.
-        </Tooltip>
-      ) : (
-        <TableWithHeader.Button
-          onClick={() => setOpenUpdateModal(true)}
-          disabled={isExecuting}
-        >
-          Edit evaluation
-        </TableWithHeader.Button>
-      )}
+      <TableWithHeader.Button
+        onClick={() => setOpenUpdateModal(true)}
+        disabled={isExecuting}
+      >
+        Edit evaluation
+      </TableWithHeader.Button>
       <ConfirmModal
         dismissible
         open={openUpdateModal}
         title={`Update ${evaluation.name}`}
-        description='Not all settings and options can be updated once the evaluation is created.'
+        description={
+          commit.mergedAt
+            ? 'Merged commits cannot be edited.'
+            : 'Not all settings and options can be updated once the evaluation is created.'
+        }
         onOpenChange={setOpenUpdateModal}
         onConfirm={onUpdate}
         confirm={{
@@ -108,6 +96,7 @@ export function EvaluationActions<
           options={options}
           onOptionsChange={setOptions}
           errors={errors}
+          disabled={isExecuting || !!commit.mergedAt}
         />
       </ConfirmModal>
       {metricSpecification.supportsBatchEvaluation && (
