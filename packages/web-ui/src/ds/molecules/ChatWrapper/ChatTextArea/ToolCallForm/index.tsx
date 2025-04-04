@@ -224,7 +224,7 @@ export function ToolCallForm({
         currentToolRequest={currentToolRequestIndex}
         totalToolRequests={toolRequests.length}
       />
-      <div className='absolute w-full -bottom-7 flex justify-center'>
+      <div className='absolute w-full -bottom-3 flex justify-center'>
         <ToolBar
           disabled={disabled ?? getValue(value) === ''}
           clearChat={clearChat}

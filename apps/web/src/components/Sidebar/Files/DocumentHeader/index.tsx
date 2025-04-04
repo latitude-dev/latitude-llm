@@ -1,8 +1,8 @@
-'use client'
-
 import { useCallback, useMemo, useState } from 'react'
 
-import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
+import { DocumentType } from '@latitude-data/core/browser'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper, {
   IndentType,
@@ -10,8 +10,7 @@ import NodeHeaderWrapper, {
 } from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
-import { DocumentType } from '@latitude-data/core/browser'
-import { IconName } from '../../../../../ds/atoms/Icons'
+import { ROUTES } from '$/services/routes'
 
 export default function DocumentHeader({
   open,
@@ -32,10 +31,10 @@ export default function DocumentHeader({
     isLoading,
     isMerged,
     onMergeCommitClick,
-    onNavigateToDocument,
     onDeleteFile,
     onCreateFile,
     onRenameFile,
+    sidebarLinkContext,
   } = useFileTreeContext()
   const { deleteTmpFolder, reset } = useTempNodes((state) => ({
     reset: state.reset,
@@ -55,12 +54,16 @@ export default function DocumentHeader({
     },
     [reset, onCreateFile, onRenameFile, node.path, node.isPersisted],
   )
-  const handleClick = useCallback(() => {
-    if (selected) return
-    if (!node.isPersisted) return
+  const url = useMemo(() => {
+    if (selected) return undefined
+    if (!node.isPersisted) return undefined
+    if (!node.doc?.documentUuid) return undefined
 
-    onNavigateToDocument(node.doc!.documentUuid)
-  }, [node.doc!.documentUuid, selected, node.isPersisted, onNavigateToDocument])
+    return ROUTES.projects
+      .detail({ id: sidebarLinkContext.projectId })
+      .commits.detail({ uuid: sidebarLinkContext.commitUuid })
+      .documents.detail({ uuid: node.doc.documentUuid }).root
+  }, [node.doc!.documentUuid, selected, node.isPersisted, sidebarLinkContext])
   const [isEditing, setIsEditing] = useState(node.name === ' ')
   const actions = useMemo<MenuOption[]>(
     () => [
@@ -111,6 +114,7 @@ export default function DocumentHeader({
   return (
     <NodeHeaderWrapper
       isFile
+      url={url}
       open={open}
       name={node.name}
       canDrag={canDrag}
@@ -122,7 +126,6 @@ export default function DocumentHeader({
       selected={selected}
       changeType={node.changeType}
       indentation={indentation}
-      onClick={handleClick}
       onSaveValue={onSaveValue}
       onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
       icons={[icon]}

@@ -24,9 +24,10 @@ export function StatusIndicator({
   stopStreaming?: () => void
   canStopStreaming?: boolean
 }) {
+  const floatingProps = { isScrolledToBottom: false }
   if (wakingUpIntegration) {
     return (
-      <FloatingElement isScrolledToBottom={false}>
+      <FloatingElement {...floatingProps}>
         <div className='flex flex-row gap-2 p-1'>
           <Icon
             name='loader'
@@ -44,7 +45,7 @@ export function StatusIndicator({
 
   if (runningLatitudeTools > 0) {
     return (
-      <FloatingElement isScrolledToBottom={false}>
+      <FloatingElement {...floatingProps}>
         <div className='flex flex-row gap-2 p-1'>
           <Icon
             name='loader'
@@ -62,7 +63,7 @@ export function StatusIndicator({
 
   if (isStreaming) {
     return (
-      <FloatingElement isScrolledToBottom={false}>
+      <FloatingElement {...floatingProps}>
         <div className='flex flex-row gap-1 p-1'>
           <AnimatedDots color='success' />
           {canStopStreaming && stopStreaming && (

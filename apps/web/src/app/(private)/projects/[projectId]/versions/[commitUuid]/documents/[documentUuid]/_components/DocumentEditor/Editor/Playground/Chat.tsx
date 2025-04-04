@@ -164,9 +164,9 @@ export default function Chat({
   }, [start])
 
   return (
-    <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
+    <div className='flex flex-col flex-1 h-full overflow-hidden'>
       {/* Header */}
-      <div className='flex flex-row items-center justify-between w-full'>
+      <div className='flex flex-row items-center justify-between w-full pb-3'>
         <Text.H6M>Prompt</Text.H6M>
         <Actions
           expandParameters={expandParameters}

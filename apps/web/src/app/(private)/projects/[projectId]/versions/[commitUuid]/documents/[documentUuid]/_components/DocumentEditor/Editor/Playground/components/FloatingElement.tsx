@@ -7,6 +7,7 @@ export function FloatingElement({
 }: {
   isScrolledToBottom: boolean
   children: ReactNode
+  topCssClass?: string
 }) {
   return (
     <div

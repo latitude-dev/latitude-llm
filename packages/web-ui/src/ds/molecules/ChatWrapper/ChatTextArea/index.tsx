@@ -50,7 +50,7 @@ function SimpleTextArea({
         minRows={1}
         maxRows={5}
       />
-      <div className='absolute w-full -bottom-7 flex justify-center'>
+      <div className='absolute w-full -bottom-3 flex justify-center'>
         <ToolBar
           onSubmit={onSubmit}
           clearChat={clearChat}
@@ -84,7 +84,7 @@ export function ChatTextArea({
   return (
     <div
       className={cn(
-        'flex relative w-full border border-border bg-secondary mb-7',
+        'flex relative w-full border border-border bg-secondary mb-6',
         'dark:bg-foreground/10 rounded-md',
       )}
     >

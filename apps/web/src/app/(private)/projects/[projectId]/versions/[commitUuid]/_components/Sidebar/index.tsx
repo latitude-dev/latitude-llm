@@ -7,7 +7,6 @@ import {
 } from '@latitude-data/core/browser'
 import { paginateQuery } from '@latitude-data/core/lib/index'
 import { CommitsRepository } from '@latitude-data/core/repositories/index'
-import { DocumentSidebar } from '@latitude-data/web-ui/sections'
 import {
   getDocumentsAtCommitCached,
   getHeadCommitCached,
@@ -17,6 +16,7 @@ import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import ClientFilesTree from './ClientFilesTree'
 import CommitSelector from './CommitSelector'
 import ProjectSection from './ProjectSection'
+import DocumentSidebar from '$/components/Sidebar'
 
 export default async function Sidebar({
   project,

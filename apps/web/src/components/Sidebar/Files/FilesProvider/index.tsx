@@ -1,15 +1,15 @@
 'use client'
 import {
-  DataRef,
-  DndContext,
-  DragOverEvent,
+  type DataRef,
+  type DragOverEvent,
   MouseSensor,
+  DndContext,
   useSensor,
   useSensors,
-} from '@dnd-kit/core'
+  restrictToFirstScrollableAncestor,
+} from '@latitude-data/web-ui/hooks/useDnD'
 
 import { createContext, ReactNode, useCallback, useContext } from 'react'
-import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers'
 
 import { Node } from '../useTree'
 import {
@@ -17,8 +17,9 @@ import {
   DraggableOverlayNode,
 } from './DragOverlayNode'
 import { useOpenPaths } from '../useOpenPaths'
-import { ClientOnly } from '../../../../../ds/atoms/ClientOnly'
 import { useDragEndFile } from './useDragEndFile'
+import { type SidebarLinkContext } from '../index'
+import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 
 type IFilesContext = {
   isLoading: boolean
@@ -30,7 +31,7 @@ type IFilesContext = {
   onMergeCommitClick: () => void
   currentUuid?: string
   onDeleteFolder: (args: { node: Node; path: string }) => void
-  onNavigateToDocument: (documentUuid: string) => void
+  sidebarLinkContext: SidebarLinkContext
 }
 
 const FileTreeContext = createContext({} as IFilesContext)
@@ -47,7 +48,7 @@ const FileTreeProvider = ({
   renamePaths,
   onDeleteFile,
   onDeleteFolder,
-  onNavigateToDocument,
+  sidebarLinkContext,
 }: IFilesContext & {
   children: ReactNode
   renamePaths: (args: { oldPath: string; newPath: string }) => Promise<void>
@@ -100,7 +101,7 @@ const FileTreeProvider = ({
           onRenameFile,
           onDeleteFile,
           onDeleteFolder,
-          onNavigateToDocument,
+          sidebarLinkContext,
         }}
       >
         {children}

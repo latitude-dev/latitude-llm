@@ -6,7 +6,7 @@ import {
   useCallback,
   useState,
 } from 'react'
-import { useOnClickOutside } from '../../../../../../lib/hooks/useOnClickOutside'
+import { useOnClickOutside } from '@latitude-data/web-ui/hooks/useOnClickOutside'
 
 const INVALID_MSG =
   "Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'"

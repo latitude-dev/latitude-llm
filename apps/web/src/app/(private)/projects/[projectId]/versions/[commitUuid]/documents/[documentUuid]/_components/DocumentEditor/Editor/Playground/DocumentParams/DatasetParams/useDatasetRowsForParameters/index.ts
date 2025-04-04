@@ -18,15 +18,33 @@ import {
   parseRowCell,
 } from '$/stores/datasetRows/rowSerializationHelpers'
 
+function mapDatasetColumnsToParameters({
+  parameters,
+  dataset,
+}: {
+  parameters: string[]
+  dataset: DatasetV2
+}) {
+  return Object.fromEntries(
+    dataset.columns
+      .filter((col) => parameters.includes(col.name))
+      .map((col) => [col.name, col.identifier]),
+  )
+}
+
 function resolveDatasetDataRow({
+  parameters,
   datasetRowId,
   localData,
   serverData,
+  dataset,
   emptyInputs,
 }: {
+  parameters: string[]
   datasetRowId: number
   serverData: LinkedDatasetRow | undefined
   localData: LinkedDatasetRow | undefined
+  dataset: DatasetV2
   emptyInputs: Inputs<'datasetV2'> | undefined
 }): LinkedDatasetRow {
   let linkedDatasetRow: LinkedDatasetRow = {
@@ -35,10 +53,16 @@ function resolveDatasetDataRow({
     mappedInputs: {},
   }
   const inputs = localData?.inputs ?? serverData?.inputs ?? emptyInputs ?? {}
+  const mappedInputsFromDataset = mapDatasetColumnsToParameters({
+    parameters,
+    dataset,
+  })
+
   return {
     ...linkedDatasetRow,
     inputs,
     mappedInputs: {
+      ...mappedInputsFromDataset,
       ...(serverData?.mappedInputs ?? {}),
       ...(localData?.mappedInputs ?? {}),
     },
@@ -103,7 +127,7 @@ export function useDatasetRowsForParameters({
   const { data: count, isLoading: isLoadingDatasetRowsCount } =
     useDatasetRowsCount({ dataset })
 
-  const { datasetV2: ds } = useDocumentParameters({
+  const { metadataParameters, datasetV2: ds } = useDocumentParameters({
     document,
     commitVersionUuid,
     datasetVersion: DatasetVersion.V2,
@@ -112,15 +136,17 @@ export function useDatasetRowsForParameters({
   const onRowsFetched = useCallback(
     async (data: ClientDatasetRow[]) => {
       const row = data[0]
-      if (!row || !dataset) return
+      if (!row || !dataset || !metadataParameters) return
 
       const localData = ds.assignedDatasets?.[row.datasetId]
       const serverData = document.linkedDatasetAndRow?.[row.datasetId]
       const resolvedData = resolveDatasetDataRow({
+        parameters: metadataParameters,
         datasetRowId: row.id,
         localData,
         serverData,
         emptyInputs,
+        dataset,
       })
       const inputs = mapInputs({
         inputs: resolvedData.inputs,
@@ -144,6 +170,7 @@ export function useDatasetRowsForParameters({
       ds.assignedDatasets,
       document.linkedDatasetAndRow,
       dataset?.id,
+      metadataParameters,
     ],
   )
 

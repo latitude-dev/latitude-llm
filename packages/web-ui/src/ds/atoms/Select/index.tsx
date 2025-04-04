@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from './Primitives'
 import { SelectGroup, SelectItem } from './Primitives'
+import { zIndex } from '../../tokens/zIndex'
 
 export type SelectOption<V extends unknown = unknown> = {
   label: string
@@ -112,7 +113,7 @@ export function Select<V extends unknown = unknown>({
               />
             </SelectTrigger>
           )}
-          <SelectContent className='z-[70]'>
+          <SelectContent className={zIndex.dropdown}>
             <SelectGroup>
               <Options options={options as SelectOption<V>[]} />
             </SelectGroup>

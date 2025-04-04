@@ -20,6 +20,7 @@ import {
   Chain as PromptlChain,
 } from 'promptl-ai'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
   ErrorMessage,
@@ -167,7 +168,10 @@ export default function Preview({
         </div>
         <div
           ref={containerRef}
-          className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar scrollable-indicator'
+          className={cn(
+            'flex flex-col gap-3 flex-grow flex-shrink',
+            'min-h-0 custom-scrollbar scrollable-indicator pb-20',
+          )}
         >
           <div className='flex flex-col gap-2'>
             {(fixedMessages ?? []).map((message, index) => (
@@ -190,7 +194,7 @@ export default function Preview({
           )}
         </div>
 
-        <div className='relative flex flex-row items-center justify-center w-full'>
+        <div className='absolute bottom-3 flex flex-row items-center justify-center w-full'>
           <ToolBarWrapper>
             {error || (metadata?.errors.length ?? 0) > 0 ? (
               <Tooltip
