@@ -13,6 +13,7 @@ export type SessionData = {
   session: Session
   user: User
   workspace: Workspace
+  impersonating?: true
 }
 
 /**
