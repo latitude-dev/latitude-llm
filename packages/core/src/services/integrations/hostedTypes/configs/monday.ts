@@ -8,10 +8,10 @@ const MONDAY_MCP_CONFIG: HostedIntegrationConfig = {
     repository: 'https://github.com/sakce/mcp-server-monday',
   }),
   env: {
-    MONDAY_API_TOKEN: {
-      label: 'API Token',
-      description: 'Your Monday.com API token',
-      placeholder: 'your-monday-api-token',
+    MONDAY_API_KEY: {
+      label: 'API Key',
+      description: 'Your Monday.com API key',
+      placeholder: 'your-monday-api-key',
       required: true,
     },
     MONDAY_WORKSPACE_NAME: {
