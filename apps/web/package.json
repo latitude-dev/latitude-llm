@@ -22,7 +22,7 @@
     "@latitude-data/constants": "workspace:*",
     "@latitude-data/core": "workspace:*",
     "@latitude-data/env": "workspace:^",
-    "@latitude-data/sdk": "workspace:*",
+    "@latitude-data/sdk": "^2.2.1",
     "@latitude-data/socket.io-react-hook": "^2.4.5",
     "@latitude-data/web-ui": "workspace:*",
     "@lucia-auth/adapter-drizzle": "^1.0.7",

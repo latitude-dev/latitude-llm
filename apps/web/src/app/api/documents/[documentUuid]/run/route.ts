@@ -71,9 +71,48 @@ export const POST = errorHandler(
         const writer = writable.getWriter()
         const encoder = new TextEncoder()
 
-        req.signal.addEventListener('abort', () => {
+        // Track if the writer has been closed to prevent multiple close attempts
+        let isWriterClosed = false
+
+        // Helper function to safely close the writer
+        const safeCloseWriter = async () => {
+          if (!isWriterClosed) {
+            isWriterClosed = true
+            try {
+              await writer.close()
+            } catch (error) {
+              captureException(error as Error)
+            }
+          }
+        }
+
+        // Helper function to write error to stream
+        const writeErrorToStream = async (error: Error | unknown) => {
+          try {
+            await writer.write(
+              encoder.encode(
+                `event: error\ndata: ${JSON.stringify({
+                  name: error instanceof Error ? error.name : 'UnknownError',
+                  message:
+                    error instanceof Error
+                      ? error.message
+                      : 'An unexpected error occurred',
+                  stack: error instanceof Error ? error.stack : undefined,
+                })}\n\n`,
+              ),
+            )
+          } catch (writeError) {
+            captureException(writeError as Error)
+          } finally {
+            await safeCloseWriter()
+          }
+        }
+
+        // Set up abort handler and store the handler function for later removal
+        const abortHandler = () => {
           writer.abort()
-        })
+        }
+        req.signal.addEventListener('abort', abortHandler)
 
         try {
           sdk.prompts.run(path, {
@@ -90,62 +129,34 @@ export const POST = errorHandler(
               } catch (error) {
                 captureException(error as Error)
                 // Try to send error to client before closing
-                try {
-                  await writer.write(
-                    encoder.encode(
-                      `event: error\ndata: ${JSON.stringify({
-                        name: 'StreamWriteError',
-                        message: 'Failed to write to stream',
-                      })}\n\n`,
-                    ),
-                  )
-                } finally {
-                  writer.close()
-                }
+                await writeErrorToStream(new Error('Failed to write to stream'))
               }
             },
             onError: async (error) => {
               captureException(error)
-
+              await writeErrorToStream(error)
+            },
+            onFinished: async () => {
               try {
                 await writer.write(
                   encoder.encode(
-                    `event: error\ndata: ${JSON.stringify({
-                      name: error?.name || 'UnknownError',
-                      message: error?.message || 'An unexpected error occurred',
-                      stack: error?.stack,
-                    })}\n\n`,
+                    `event: finished\ndata: ${JSON.stringify({ success: true })}\n\n`,
                   ),
                 )
-              } catch (writeError) {
-                captureException(writeError as Error)
+              } catch (error) {
+                captureException(error as Error)
               } finally {
-                writer.close()
+                await safeCloseWriter()
               }
-            },
-            onFinished: () => {
-              writer.close().catch((error) => {
-                captureException(error)
-              })
             },
             signal: req.signal,
           })
         } catch (error) {
           captureException(error as Error)
-          try {
-            await writer.write(
-              encoder.encode(
-                `event: error\ndata: ${JSON.stringify({
-                  name: 'ExecutionError',
-                  message: 'Failed to execute prompt',
-                })}\n\n`,
-              ),
-            )
-          } catch (writeError) {
-            captureException(writeError as Error)
-          } finally {
-            writer.close()
-          }
+          await writeErrorToStream(new Error('Failed to execute prompt'))
+        } finally {
+          // Clean up the abort event listener
+          req.signal.removeEventListener('abort', abortHandler)
         }
 
         return new NextResponse(readable, {
