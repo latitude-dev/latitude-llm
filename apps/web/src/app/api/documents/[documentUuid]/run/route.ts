@@ -7,6 +7,7 @@ import { createSdk } from '$/app/(private)/_lib/createSdk'
 
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
+import { captureException } from '$/helpers/captureException'
 
 const inputSchema = z.object({
   path: z.string(),
@@ -74,34 +75,78 @@ export const POST = errorHandler(
           writer.abort()
         })
 
-        sdk.prompts.run(path, {
-          stream: true,
-          versionUuid: commitUuid,
-          parameters,
-          onEvent: async (event) => {
-            await writer.write(
-              encoder.encode(
-                `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
-              ),
-            )
-          },
-          onError: async (error) => {
+        try {
+          sdk.prompts.run(path, {
+            stream: true,
+            versionUuid: commitUuid,
+            parameters,
+            onEvent: async (event) => {
+              try {
+                await writer.write(
+                  encoder.encode(
+                    `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
+                  ),
+                )
+              } catch (error) {
+                captureException(error as Error)
+                // Try to send error to client before closing
+                try {
+                  await writer.write(
+                    encoder.encode(
+                      `event: error\ndata: ${JSON.stringify({
+                        name: 'StreamWriteError',
+                        message: 'Failed to write to stream',
+                      })}\n\n`,
+                    ),
+                  )
+                } finally {
+                  writer.close()
+                }
+              }
+            },
+            onError: async (error) => {
+              captureException(error)
+
+              try {
+                await writer.write(
+                  encoder.encode(
+                    `event: error\ndata: ${JSON.stringify({
+                      name: error?.name || 'UnknownError',
+                      message: error?.message || 'An unexpected error occurred',
+                      stack: error?.stack,
+                    })}\n\n`,
+                  ),
+                )
+              } catch (writeError) {
+                captureException(writeError as Error)
+              } finally {
+                writer.close()
+              }
+            },
+            onFinished: () => {
+              writer.close().catch((error) => {
+                captureException(error)
+              })
+            },
+            signal: req.signal,
+          })
+        } catch (error) {
+          captureException(error as Error)
+          try {
             await writer.write(
               encoder.encode(
                 `event: error\ndata: ${JSON.stringify({
-                  name: error.name,
-                  message: error.message,
-                  stack: error.stack,
+                  name: 'ExecutionError',
+                  message: 'Failed to execute prompt',
                 })}\n\n`,
               ),
             )
+          } catch (writeError) {
+            captureException(writeError as Error)
+          } finally {
             writer.close()
-          },
-          onFinished: () => {
-            writer.close()
-          },
-          signal: req.signal,
-        })
+          }
+        }
 
         return new NextResponse(readable, {
           headers: {
@@ -111,6 +156,8 @@ export const POST = errorHandler(
           },
         })
       } catch (error) {
+        captureException(error as Error)
+
         if (error instanceof z.ZodError) {
           return NextResponse.json(
             { message: 'Invalid input', details: error.errors },
@@ -119,10 +166,17 @@ export const POST = errorHandler(
         }
 
         // When client closes the connection, the SDK will throw an undefined
-        // error (?)
-        if (!error) return
+        // error or AbortError which we can safely ignore
+        if (!error || (error as Error).name === 'AbortError') return
 
-        throw error
+        // For any other error, return a 500 response
+        return NextResponse.json(
+          {
+            message: 'An unexpected error occurred',
+            error: error instanceof Error ? error.message : String(error),
+          },
+          { status: 500 },
+        )
       }
     },
   ),
