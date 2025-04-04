@@ -2,8 +2,9 @@ import type { Message } from '@latitude-data/compiler'
 import { describe, expect, it } from 'vitest'
 
 import { applyCustomRules } from './custom'
-import { ProviderRules } from './types'
+import { AppliedRules, ProviderRules } from './types'
 
+let config = {} as AppliedRules['config']
 describe('applyCustomRules', () => {
   it('not warns when no rules are violated', () => {
     const messages = [
@@ -52,7 +53,7 @@ describe('applyCustomRules', () => {
     ] as Message[]
 
     const rules = applyCustomRules({
-      config: {},
+      config,
       messages: messages,
       rules: [],
     })
@@ -113,7 +114,7 @@ describe('applyCustomRules', () => {
     const rules = applyCustomRules({
       rules: [],
       messages,
-      config: {},
+      config,
     })
 
     expect(rules).toEqual({
@@ -191,7 +192,7 @@ describe('applyCustomRules', () => {
     const rules = applyCustomRules({
       rules: [],
       messages,
-      config: {},
+      config,
     })
 
     expect(rules).toEqual({
@@ -256,7 +257,7 @@ describe('applyCustomRules', () => {
     const rules = applyCustomRules({
       rules: [],
       messages,
-      config: {},
+      config,
     })
 
     expect(rules).toEqual({

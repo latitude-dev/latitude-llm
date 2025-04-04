@@ -1,13 +1,12 @@
 import { type Message, MessageRole } from '@latitude-data/compiler'
 import { describe, expect, it } from 'vitest'
 
-import { PartialConfig } from '../../helpers'
 import { Providers } from '../models'
-import { ProviderRules } from './types'
+import { AppliedRules, ProviderRules } from './types'
 import { applyProviderRules } from '.'
 
 let model = 'o1-mini'
-let config = { model } as PartialConfig
+let config = { model } as AppliedRules['config']
 describe('applyOpenAIRules', () => {
   it('Warns when model is in the o1 family and has system messages', () => {
     const messages = [
@@ -60,7 +59,7 @@ describe('applyOpenAIRules', () => {
 
   it('does not warn when model official o1', () => {
     model = 'o1'
-    config = { model } as PartialConfig
+    config = { model } as AppliedRules['config']
 
     const messages = [
       {
@@ -84,7 +83,7 @@ describe('applyOpenAIRules', () => {
 
   it('does not warn when model is not in the o1 family', () => {
     model = 'gpt-3.5-turbo'
-    config = { model } as PartialConfig
+    config = { model } as AppliedRules['config']
 
     const messages = [
       {

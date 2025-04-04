@@ -1,4 +1,5 @@
 import type { Config, Message } from '@latitude-data/compiler'
+import { PartialConfig } from '../../helpers'
 
 export enum ProviderRules {
   Anthropic = 'anthropic',
@@ -16,8 +17,14 @@ export enum ProviderRules {
 
 type ProviderRule = { rule: ProviderRules; ruleMessage: string }
 
+type AnyConfig = Config | PartialConfig
 export type AppliedRules = {
   rules: ProviderRule[]
   messages: Message[]
-  config: Config
+  config: AnyConfig & {
+    // This is here because provider configs are not typed
+    // in Vercel SDK so we don't exactly what are passed.
+    // We just pass everything under `config.providerOptions[NAME_OF_PROVIDER]`
+    [key: string]: unknown
+  }
 }

@@ -1,6 +1,5 @@
-import type { Config, Message } from '@latitude-data/compiler'
+import type { Message } from '@latitude-data/compiler'
 
-import { PartialConfig } from '../../helpers'
 import { Providers } from '../models'
 import { applyAnthropicRules } from './anthropic'
 import { applyCustomRules } from './custom'
@@ -11,11 +10,14 @@ import { applyOpenAiRules } from './openai'
 import { applyVertexAnthropicRules } from './vertexAnthropic'
 import { applyVertexGoogleRules } from './vertexGoogle'
 import { applyPerplexityRules } from './perplexity'
+import { getProviderMetadataKey } from './providerMetadata'
+import { JSONValue } from 'ai'
+import { VercelConfig } from '@latitude-data/constants'
 
 type Props = {
   providerType: Providers
   messages: Message[]
-  config: Config | PartialConfig
+  config: AppliedRules['config']
 }
 
 const RULES: Partial<Record<Providers, (props: AppliedRules) => AppliedRules>> =
@@ -49,19 +51,29 @@ export function applyProviderRules({
   return rules
 }
 
-export function applyAllRules({
-  providerType,
-  messages,
-  config,
-}: Props): AppliedRules {
+type VercelConfigWithProviderRules = VercelConfig & {
+  providerOptions: {
+    [key: string]: Record<string, JSONValue>
+  }
+}
+
+export function applyAllRules({ providerType, messages, config }: Props) {
   let rules: AppliedRules = {
     rules: [],
     messages,
     config,
   }
 
-  rules = applyProviderRules({ providerType, messages, config })
+  rules = applyProviderRules({ providerType, messages, config: rules.config })
   rules = vercelSdkRules(rules, providerType)
 
-  return rules
+  return {
+    ...rules,
+    config: {
+      ...rules.config,
+      providerOptions: {
+        [getProviderMetadataKey(providerType)]: config,
+      },
+    } as VercelConfigWithProviderRules,
+  }
 }

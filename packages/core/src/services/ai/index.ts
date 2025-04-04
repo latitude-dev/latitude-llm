@@ -133,7 +133,7 @@ export async function ai({
     }
 
     const { provider: providerType, token: apiKey, url } = provider
-    const config = rule.config as VercelConfig
+    const config = rule.config
     const messages = rule.messages
     const model = config.model
     const tools = config.tools
@@ -159,13 +159,15 @@ export async function ai({
     const toolsResult = buildTools(tools)
     if (toolsResult.error) return toolsResult
 
+    const schemaLessConfig = omit(config, ['schema'])
     const commonOptions = {
-      ...omit(config, ['schema']),
+      ...schemaLessConfig,
       model: languageModel,
       prompt,
       messages: messages as CoreMessage[],
       tools: toolsResult.value,
       abortSignal,
+      providerOptions: config.providerOptions,
       experimental_telemetry: {
         isEnabled: true,
       },
