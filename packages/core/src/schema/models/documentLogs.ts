@@ -12,6 +12,7 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { logSourcesEnum } from './providerLogs'
+import { LogSources } from '@latitude-data/constants'
 
 export const documentLogs = latitudeSchema.table(
   'document_logs',
@@ -30,7 +31,7 @@ export const documentLogs = latitudeSchema.table(
     parameters: jsonb('parameters').$type<Record<string, unknown>>().notNull(),
     customIdentifier: text('custom_identifier'),
     duration: bigint('duration', { mode: 'number' }),
-    source: logSourcesEnum('source'),
+    source: logSourcesEnum('source').$type<LogSources>(),
     ...timestamps(),
   },
   (table) => ({

@@ -51,6 +51,8 @@ export * from './models/evaluationResultableNumbers'
 export * from './models/evaluationResultableTexts'
 export * from './models/evaluationResultableBooleans'
 
+export * from './models/experiments'
+
 export * from './models/traces'
 export * from './models/spans'
 

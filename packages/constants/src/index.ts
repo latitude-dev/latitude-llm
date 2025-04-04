@@ -1,15 +1,19 @@
 export enum LogSources {
   API = 'api',
   Playground = 'playground',
-  Evaluation = 'evaluation',
+  Evaluation = 'evaluation', // This is actually for "batch" evaluations (now Experiments)
+  Experiment = 'experiment',
   User = 'user',
   SharedPrompt = 'shared_prompt',
   AgentAsTool = 'agent_as_tool',
   EmailTrigger = 'email_trigger',
   ScheduledTrigger = 'scheduled_trigger',
 }
+export const NON_LIVE_EVALUABLE_LOG_SOURCES = [
+  LogSources.Evaluation,
+  LogSources.Experiment,
+]
 
-export const NON_LIVE_EVALUABLE_LOG_SOURCES = [LogSources.Evaluation]
 export enum Providers {
   OpenAI = 'openai',
   Anthropic = 'anthropic',
@@ -37,6 +41,12 @@ export enum DocumentTriggerParameters {
   Subject = 'subject',
   Body = 'body',
   Attachments = 'attachments',
+}
+
+export type ExperimentMetadata = {
+  resolvedPrompt: string
+  promptHash: string
+  count: number // Total number of to generate logs in the experiment
 }
 
 export * from './models'
