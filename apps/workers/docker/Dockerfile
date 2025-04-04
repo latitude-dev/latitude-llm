@@ -4,7 +4,7 @@ ARG PROJECT_PATH="apps/workers"
 FROM node:22-alpine AS alpine
 
 # Install build dependencies
-RUN apk add --no-cache libc6-compat curl
+RUN apk add --no-cache libc6-compat curl python3 make g++ gcc
 
 FROM alpine AS base
 
