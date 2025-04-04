@@ -3,10 +3,10 @@ import * as jobs from '@latitude-data/core/jobs/definitions'
 import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
-  autoScale: jobs.autoScaleJob,
-  cleanDocumentSuggestions: jobs.cleanDocumentSuggestionsJob,
-  scaleDownMcpServer: jobs.scaleDownMcpServerJob,
-  updateMcpServerLastUsed: jobs.updateMcpServerLastUsedJob,
+  autoScaleJob: jobs.autoScaleJob,
+  cleanDocumentSuggestionsJob: jobs.cleanDocumentSuggestionsJob,
+  scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,
+  updateMcpServerLastUsedJob: jobs.updateMcpServerLastUsedJob,
 }
 
 export function startMaintenanceWorker() {

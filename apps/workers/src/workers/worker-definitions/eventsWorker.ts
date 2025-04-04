@@ -4,34 +4,34 @@ import { createWorker } from '../utils/createWorker'
 
 // Events Queue job mappings
 const eventsJobMappings = {
-  publishEvent: jobs.publishEventJob,
-  createEvent: jobs.createEventJob,
-  publishToAnalytics: jobs.publishToAnalyticsJob,
+  publishEventJob: jobs.publishEventJob,
+  createEventJob: jobs.createEventJob,
+  publishToAnalyticsJob: jobs.publishToAnalyticsJob,
 }
 
 // Event Handlers Queue job mappings
 const eventHandlersJobMappings = {
-  createClaimInvitationReferral: jobs.createClaimInvitationReferralJob,
-  createDocumentLogsFromSpans: jobs.createDocumentLogsFromSpansJob,
+  createClaimInvitationReferralJob: jobs.createClaimInvitationReferralJob,
+  createDocumentLogsFromSpansJob: jobs.createDocumentLogsFromSpansJob,
   createLoopsContact: jobs.createLoopsContact,
   notifyClientOfBulkCreateTracesAndSpans:
     jobs.notifyClientOfBulkCreateTracesAndSpans,
-  notifyToClientDocumentLogCreated: jobs.notifyToClientDocumentLogCreatedJob,
+  notifyToClientDocumentLogCreatedJob: jobs.notifyToClientDocumentLogCreatedJob,
   notifyClientOfDocumentSuggestionCreated:
     jobs.notifyClientOfDocumentSuggestionCreated,
   notifyClientOfEvaluationResultV2Created:
     jobs.notifyClientOfEvaluationResultV2Created,
-  notifyToClientEvaluationResultCreated:
+  notifyToClientEvaluationResultCreatedJob:
     jobs.notifyToClientEvaluationResultCreatedJob,
   notifyClientOfScaleUpMcpServer: jobs.notifyClientOfScaleUpMcpServer,
   notifyClientOfMcpServerConnected: jobs.notifyClientOfMcpServerConnected,
-  sendInvitationToUser: jobs.sendInvitationToUserJob,
-  sendMagicLink: jobs.sendMagicLinkJob,
-  sendReferralInvitation: jobs.sendReferralInvitationJob,
+  sendInvitationToUserJob: jobs.sendInvitationToUserJob,
+  sendMagicLinkJob: jobs.sendMagicLinkJob,
+  sendReferralInvitationJob: jobs.sendReferralInvitationJob,
   sendSuggestionNotification: jobs.sendSuggestionNotification,
-  requestDocumentSuggestion: jobs.requestDocumentSuggestionJob,
-  requestDocumentSuggestionV2: jobs.requestDocumentSuggestionJobV2,
-  createDatasetRows: jobs.createDatasetRowsJob,
+  requestDocumentSuggestionJob: jobs.requestDocumentSuggestionJob,
+  requestDocumentSuggestionJobV2: jobs.requestDocumentSuggestionJobV2,
+  createDatasetRowsJob: jobs.createDatasetRowsJob,
 }
 
 export function startEventsWorker() {
