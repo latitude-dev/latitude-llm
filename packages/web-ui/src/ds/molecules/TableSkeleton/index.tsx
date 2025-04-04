@@ -18,13 +18,15 @@ export function TableSkeleton({
   verticalPadding = false,
 }: {
   rows: number
-  cols: number
+  cols: number | string[]
   maxHeight?: number
   verticalPadding?: boolean
 }) {
+  const fakeCols = typeof cols === 'number'
   const { data, headers } = useMemo(() => {
     const rowList = Array.from(Array(rows).keys())
-    const headers = Array.from(Array(cols).keys())
+    const headers =
+      typeof cols === 'number' ? Array.from(Array(cols).keys()) : cols
     const data = rowList.map((_) => headers)
     return { data, headers }
   }, [rows, cols])
@@ -34,11 +36,15 @@ export function TableSkeleton({
         <TableRow hoverable={false}>
           {headers.map((header) => (
             <TableHead key={header}>
-              <Skeleton className='bg-white'>
-                <div className='opacity-0 h-4'>
-                  <Text.H4>{header}</Text.H4>
-                </div>
-              </Skeleton>
+              {fakeCols ? (
+                <Skeleton className='bg-white' height='h5'>
+                  <div className='opacity-0'>
+                    <Text.H5>{header}</Text.H5>
+                  </div>
+                </Skeleton>
+              ) : (
+                <Text.H5>{header}</Text.H5>
+              )}
             </TableHead>
           ))}
         </TableRow>

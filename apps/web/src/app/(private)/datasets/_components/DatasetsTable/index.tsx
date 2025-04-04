@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import Link from 'next/link'
 import { DatasetV2 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { dateFormatter } from '@latitude-data/web-ui/dateUtils'
@@ -23,12 +22,15 @@ import { LinkableTablePaginationFooter } from '$/components/TablePaginationFoote
 
 import DeleteDatasetModal from '../DeleteDatasetModal'
 import { NewDatasetModal } from '../RootHeader/NewDatasetModal'
+import { useNavigate } from '$/hooks/useNavigate'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 
 export function DatasetsTable({
   datasets: serverDatasets,
 }: {
   datasets: DatasetV2[]
 }) {
+  const navigate = useNavigate()
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
   const pageSize = searchParams.get('pageSize') ?? '25'
@@ -70,7 +72,12 @@ export function DatasetsTable({
 
   return (
     <>
-      <DeleteDatasetModal dataset={deletable} setDataset={setDeletable} />
+      <DeleteDatasetModal
+        dataset={deletable}
+        setDataset={setDeletable}
+        page={page}
+        pageSize={pageSize}
+      />
       <Table
         externalFooter={
           <LinkableTablePaginationFooter
@@ -94,11 +101,14 @@ export function DatasetsTable({
         </TableHeader>
         <TableBody>
           {datasets.map((dataset) => (
-            <TableRow key={dataset.id} verticalPadding hoverable={false}>
+            <TableRow
+              key={dataset.id}
+              verticalPadding
+              className='cursor-pointer'
+              onClick={() => navigate.push(ROUTES.datasets.detail(dataset.id))}
+            >
               <TableCell>
-                <Link href={ROUTES.datasets.detail(dataset.id)}>
-                  <Text.H5>{dataset.name}</Text.H5>
-                </Link>
+                <Text.H5>{dataset.name}</Text.H5>
               </TableCell>
               <TableCell>
                 <Text.H5>{dataset.columns.length}</Text.H5>
@@ -112,15 +122,13 @@ export function DatasetsTable({
                 </Text.H5>
               </TableCell>
               <TableCell align='center'>
-                <div className='flex flex-row gap-4'>
-                  <Link href={ROUTES.datasets.detail(dataset.id)}>
-                    <Button
-                      variant='nope'
-                      iconProps={{ name: 'eye', color: 'foregroundMuted' }}
-                    />
-                  </Link>
+                <div className='flex flex-row items-center gap-4'>
+                  <Icon name='eye' color='foregroundMuted' />
                   <Button
-                    onClick={() => setDeletable(dataset)}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setDeletable(dataset)
+                    }}
                     variant='nope'
                     iconProps={{ name: 'trash', color: 'foregroundMuted' }}
                   />
