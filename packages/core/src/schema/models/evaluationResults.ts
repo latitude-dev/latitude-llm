@@ -7,7 +7,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-import { EvaluationResultableType } from '../../constants'
+import { EvaluationResultableType, LogSources } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { documentLogs } from '../models/documentLogs'
 import { logSourcesEnum, providerLogs } from '../models/providerLogs'
@@ -44,7 +44,7 @@ export const evaluationResults = latitudeSchema.table(
     }).references(() => providerLogs.id),
     resultableType: evaluationResultTypes('resultable_type'),
     resultableId: bigint('resultable_id', { mode: 'number' }),
-    source: logSourcesEnum('source'),
+    source: logSourcesEnum('source').$type<LogSources>(),
     reason: text('reason'),
     ...timestamps(),
   },

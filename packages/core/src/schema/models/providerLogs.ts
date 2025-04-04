@@ -18,17 +18,12 @@ import { latitudeSchema } from '../db-schema'
 import { apiKeys } from '../models/apiKeys'
 import { timestamps } from '../schemaHelpers'
 import { providerApiKeys } from './providerApiKeys'
+import { experiments } from './experiments'
 
-export const logSourcesEnum = latitudeSchema.enum('log_source', [
-  LogSources.Playground,
-  LogSources.API,
-  LogSources.Evaluation,
-  LogSources.User,
-  LogSources.SharedPrompt,
-  LogSources.AgentAsTool,
-  LogSources.EmailTrigger,
-  LogSources.ScheduledTrigger,
-])
+export const logSourcesEnum = latitudeSchema.enum(
+  'log_source',
+  Object.values(LogSources) as [string, ...string[]],
+)
 
 export const providerLogs = latitudeSchema.table(
   'provider_logs',
@@ -37,6 +32,13 @@ export const providerLogs = latitudeSchema.table(
     workspaceId: bigint('workspace_id', { mode: 'number' }),
     uuid: uuid('uuid').notNull().unique(),
     documentLogUuid: uuid('document_log_uuid'),
+    experimentId: bigint('experiment_id', { mode: 'number' }).references(
+      () => experiments.id,
+      {
+        onDelete: 'restrict',
+        onUpdate: 'cascade',
+      },
+    ),
     providerId: bigint('provider_id', { mode: 'number' }).references(
       () => providerApiKeys.id,
       {
@@ -54,7 +56,7 @@ export const providerLogs = latitudeSchema.table(
     tokens: bigint('tokens', { mode: 'number' }),
     costInMillicents: integer('cost_in_millicents').notNull().default(0),
     duration: bigint('duration', { mode: 'number' }), // in milliseconds!
-    source: logSourcesEnum('source').notNull(),
+    source: logSourcesEnum('source').$type<LogSources>().notNull(),
     apiKeyId: bigint('apiKeyId', { mode: 'number' }).references(
       () => apiKeys.id,
       {

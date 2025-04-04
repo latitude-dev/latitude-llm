@@ -37,6 +37,7 @@ describe('promptCache', async () => {
       workspaceId: 1,
       uuid: '0df332f6-8c70-4888-a381-63114818d7bf',
       documentLogUuid: 'c242aee1-084e-4b52-b837-06e6983fcc4b',
+      experimentId: null,
       providerId: 2,
       model: 'gpt-4o-mini',
       finishReason: 'stop',
