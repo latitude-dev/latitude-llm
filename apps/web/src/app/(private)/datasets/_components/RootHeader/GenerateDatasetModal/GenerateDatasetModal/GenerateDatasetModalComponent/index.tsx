@@ -186,7 +186,7 @@ export function GenerateDatasetModalComponent({
         )}
         {previewIsLoading && !previewDone && (
           <div className='animate-in fade-in slide-in-from-top-5 duration-300 overflow-y-hidden'>
-            <TableSkeleton rows={10} cols={parameters.length} maxHeight={320} />
+            <TableSkeleton rows={10} cols={parameters} maxHeight={320} />
           </div>
         )}
         {previewDone &&
