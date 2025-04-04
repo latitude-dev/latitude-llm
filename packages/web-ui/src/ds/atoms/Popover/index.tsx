@@ -9,6 +9,7 @@ import { IconProps } from '../Icons'
 import { Text } from '../Text'
 import { TextColor } from '../../tokens'
 import { isString } from 'lodash-es'
+import { zIndex } from '../../tokens/zIndex'
 
 type Props = RadixPopover.PopoverContentProps & {
   inPortal?: boolean
@@ -35,8 +36,9 @@ const PopoverContent = forwardRef<HTMLDivElement, Props>(function Content(
       className,
       'animate-in fade-in-0 slide-in-from-top-2',
       'bg-background shadow-lg rounded-md',
-      'mt-1 border border-border z-[60]',
+      'mt-1 border border-border',
       'gap-y-4 flex flex-col',
+      zIndex.popover,
       {
         'custom-scrollbar': scrollable,
         'max-w-80 p-2': size === 'small',

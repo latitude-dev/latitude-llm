@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from './Primitives'
+import { zIndex } from '../../tokens/zIndex'
 
 export const ModalTrigger = DialogTrigger
 
@@ -68,7 +69,7 @@ export function Modal({
     <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       <DialogContent
         dismissible={dismissible}
-        className={cn('flex flex-col z-50', {
+        className={cn('flex flex-col', zIndex.modal, {
           'max-w-modal-sm': size === 'small',
           'max-w-modal': size === 'regular',
           'max-w-modal-lg': size === 'large',
