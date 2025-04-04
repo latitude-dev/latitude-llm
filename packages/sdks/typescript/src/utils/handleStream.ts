@@ -44,16 +44,18 @@ export async function handleStream({
     .pipeThrough(new TextDecoderStream())
     .pipeThrough(parser)
 
+  const reader = eventStream.getReader()
   try {
-    for await (const event of eventStream as unknown as AsyncIterable<
-      ParsedEvent | ReconnectInterval
-    >) {
-      const parsedEvent = event as ParsedEvent | ReconnectInterval
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
 
+      // Skip empty values
+      if (!value) continue
+
+      const parsedEvent = value as ParsedEvent | ReconnectInterval
       if (parsedEvent.type === 'event') {
         const data = parseJSON(parsedEvent.data) as LatitudeEventData
-        onEvent?.({ event: parsedEvent.event as StreamEventTypes, data })
-
         if (!data) {
           throw new LatitudeApiError({
             status: 402,
@@ -62,6 +64,8 @@ export async function handleStream({
             errorCode: ApiErrorCodes.InternalServerError,
           })
         }
+
+        onEvent?.({ event: parsedEvent.event as StreamEventTypes, data })
 
         if (parsedEvent.event === StreamEventTypes.Latitude) {
           uuid = data.uuid
@@ -101,7 +105,6 @@ export async function handleStream({
     return finalResponse
   } catch (e) {
     let error = e as LatitudeApiError
-
     if (!(e instanceof LatitudeApiError)) {
       const err = e as Error
       error = new LatitudeApiError({
@@ -111,6 +114,19 @@ export async function handleStream({
         errorCode: ApiErrorCodes.InternalServerError,
       })
     }
-    return Promise.reject(error)
+
+    onError?.(error)
+
+    throw error
+  } finally {
+    try {
+      reader.releaseLock()
+    } catch (e) {
+      // Ignore errors during cleanup
+      console.warn(
+        'Error releasing stream reader lock:',
+        e instanceof Error ? e.message : String(e),
+      )
+    }
   }
 }

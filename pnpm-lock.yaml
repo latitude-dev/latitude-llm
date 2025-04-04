@@ -163,7 +163,7 @@ importers:
         specifier: workspace:^
         version: link:../../packages/env
       '@latitude-data/sdk':
-        specifier: workspace:*
+        specifier: ^2.2.1
         version: link:../../packages/sdks/typescript
       '@latitude-data/socket.io-react-hook':
         specifier: ^2.4.5
