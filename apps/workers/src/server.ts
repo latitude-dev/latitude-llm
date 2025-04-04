@@ -1,6 +1,5 @@
 import './tracer'
 import './utils/sentry'
-import * as heapdump from 'heapdump'
 
 import express from 'express'
 import { createBullBoard } from '@bull-board/api'
@@ -58,33 +57,6 @@ const host = env.WORKERS_HOST || 'localhost'
 app.get('/health', (_req, res) => {
   res.json({ status: 'OK', message: 'Workers are healthy' })
 })
-
-// Memory profiling endpoint
-if (env.NODE_ENV === 'development') {
-  app.get('/debug/memory', (_req, res) => {
-    const filename = `/tmp/heapdump-${Date.now()}.heapsnapshot`
-    heapdump.writeSnapshot(filename, (err: Error | null) => {
-      if (err) {
-        console.error('Error taking heap snapshot:', err)
-        return res.status(500).json({ error: 'Failed to take heap snapshot' })
-      }
-      res.json({ message: `Heap snapshot written to ${filename}` })
-    })
-  })
-}
-
-// Memory usage monitoring
-if (env.NODE_ENV === 'development') {
-  setInterval(() => {
-    const used = process.memoryUsage()
-    console.log('Memory Usage:', {
-      rss: `${Math.round(used.rss / 1024 / 1024)}MB`,
-      heapTotal: `${Math.round(used.heapTotal / 1024 / 1024)}MB`,
-      heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)}MB`,
-      external: `${Math.round(used.external / 1024 / 1024)}MB`,
-    })
-  }, 60000) // Log every minute
-}
 
 // Handle 404s
 app.use((_req, res) => {
