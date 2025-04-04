@@ -78,9 +78,13 @@ export default async function ConnectedEvaluationLayout({
   } else if (
     evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeSimple
   ) {
-    provider = await getProviderApiKeyByIdCached(
-      evaluation.metadata.providerApiKeyId,
-    )
+    try {
+      provider = await getProviderApiKeyByIdCached(
+        evaluation.metadata.providerApiKeyId,
+      )
+    } catch (error) {
+      // do nothing
+    }
   }
 
   return (
