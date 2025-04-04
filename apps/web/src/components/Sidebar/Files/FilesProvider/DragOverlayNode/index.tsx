@@ -1,8 +1,12 @@
 import { createPortal } from 'react-dom'
-import { Active, DragOverlay, useDndContext } from '@dnd-kit/core'
-import { Icon, IconName } from '../../../../../../ds/atoms/Icons'
-import { Text } from '../../../../../../ds/atoms/Text'
-import { cn } from '../../../../../../lib/utils'
+import {
+  type Active,
+  DragOverlay,
+  useDndContext,
+} from '@latitude-data/web-ui/hooks/useDnD'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export type DraggableAndDroppableData = {
   nodeId: string

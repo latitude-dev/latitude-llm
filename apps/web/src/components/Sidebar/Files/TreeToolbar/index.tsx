@@ -1,15 +1,14 @@
 'use client'
 import { ChangeEvent, useCallback, useRef } from 'react'
-
 import { create } from 'zustand'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
-import { Button } from '../../../../../ds/atoms/Button'
-import { Text } from '../../../../../ds/atoms/Text'
-import { Tooltip } from '../../../../../ds/atoms/Tooltip'
 import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
 
 export enum EntityType {
   File = 'file',

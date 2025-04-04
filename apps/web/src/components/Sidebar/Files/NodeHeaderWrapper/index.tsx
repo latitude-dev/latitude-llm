@@ -1,23 +1,23 @@
 'use client'
-import { useDraggable } from '@dnd-kit/core'
+import { useDraggable } from '@latitude-data/web-ui/hooks/useDnD'
 import { RefObject, useEffect, useRef, useState } from 'react'
-
-import { Button } from '../../../../../ds/atoms/Button'
-import { Icon, IconName } from '../../../../../ds/atoms/Icons'
-import { Tooltip } from '../../../../../ds/atoms/Tooltip'
-import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
-import { Input } from '../../../../../ds/atoms/Input'
-import { Text } from '../../../../../ds/atoms/Text'
-import { cn } from '../../../../../lib/utils'
-import { useNodeValidator } from './useNodeValidator'
+import Link from 'next/link'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { cn } from '@latitude-data/web-ui/utils'
 import { ModifiedDocumentType } from '@latitude-data/core/browser'
 import {
   MODIFICATION_BACKGROUNDS,
   MODIFICATION_COLORS,
   MODIFICATION_ICONS,
-} from '../../../../../ds/molecules/DocumentChange/colors'
-import { useHover } from '../../../../../browser'
-import { TruncatedTooltip } from '../../../../../ds/molecules/TruncatedTooltip'
+} from '@latitude-data/web-ui/molecules/DocumentChange'
+import { useHover } from '@latitude-data/web-ui/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
+import { useNodeValidator } from './useNodeValidator'
 
 export type IndentType = { isLast: boolean }
 function IndentationBar({
@@ -69,9 +69,10 @@ export type NodeHeaderWrapperProps = {
   isEditing: boolean
   changeType?: ModifiedDocumentType
   setIsEditing: (isEditing: boolean) => void
-  onClick?: () => void
   actions?: MenuOption[]
   icons: IconName[]
+  url?: string | undefined
+  onClick?: () => void
   indentation: IndentType[]
   onSaveValue: (args: { path: string }) => void
   onSaveValueAndTab?: (args: { path: string }) => void
@@ -89,13 +90,14 @@ function NodeHeaderWrapper({
   onSaveValueAndTab,
   onLeaveWithoutSave,
   selected = false,
-  onClick,
   icons,
   indentation,
   actions,
   changeType,
   canDrag,
   draggble,
+  url,
+  onClick,
 }: NodeHeaderWrapperProps) {
   const [tmpName, setTmpName] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -133,6 +135,7 @@ function NodeHeaderWrapper({
     ? MODIFICATION_BACKGROUNDS[changeType]
     : 'bg-accent'
   const changeIcon = changeType ? MODIFICATION_ICONS[changeType] : undefined
+  const ItemComponent = url ? Link : 'div'
   return (
     <div
       tabIndex={0}
@@ -146,7 +149,8 @@ function NodeHeaderWrapper({
         },
       )}
     >
-      <div
+      <ItemComponent
+        href={url ?? '#'}
         onClick={onClick}
         className={cn(
           'relative min-w-0 flex-grow flex flex-row items-center py-0.5',
@@ -206,7 +210,7 @@ function NodeHeaderWrapper({
             </TruncatedTooltip>
           </div>
         )}
-      </div>
+      </ItemComponent>
       {showActions && isHovered ? (
         <div className={cn('flex items-center gap-x-2')}>
           {actions.map((action, index) => (

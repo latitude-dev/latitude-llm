@@ -1,14 +1,13 @@
-'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { cn } from '@latitude-data/web-ui/utils'
+import { useDraggable, useDroppable } from '@latitude-data/web-ui/hooks/useDnD'
+import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
+import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 
-import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { ClientOnly } from '../../../../ds/atoms/ClientOnly'
-import { ConfirmModal } from '../../../../ds/atoms/Modal'
-import { cn } from '../../../../lib/utils'
+import { type IndentType } from './NodeHeaderWrapper'
 import DocumentHeader from './DocumentHeader'
 import { FileTreeProvider, useFileTreeContext } from './FilesProvider'
 import FolderHeader from './FolderHeader'
-import { type IndentType } from './NodeHeaderWrapper'
 import { TreeToolbar } from './TreeToolbar'
 import { useOpenPaths } from './useOpenPaths'
 import { useTempNodes } from './useTempNodes'
@@ -185,14 +184,19 @@ function thereisOnlyOneFolder(rootNode: Node) {
   return onlyOne && node && !node.isFile ? node : undefined
 }
 
+export type SidebarLinkContext = {
+  projectId: number
+  commitUuid: string
+}
+
 export function FilesTree({
+  sidebarLinkContext,
   isLoading,
   isMerged,
   currentUuid,
   documents,
   liveDocuments,
   onMergeCommitClick,
-  navigateToDocument,
   createFile,
   uploadFile,
   renamePaths,
@@ -200,6 +204,7 @@ export function FilesTree({
   destroyFolder,
   isDestroying,
 }: {
+  sidebarLinkContext: SidebarLinkContext
   isLoading: boolean
   isMerged: boolean
   createFile: (args: { path: string }) => Promise<void>
@@ -211,7 +216,6 @@ export function FilesTree({
   documents: SidebarDocument[]
   liveDocuments?: SidebarDocument[]
   currentUuid: string | undefined
-  navigateToDocument: (documentUuid: string) => void
   isDestroying: boolean
 }) {
   const isMount = useRef(false)
@@ -267,11 +271,11 @@ export function FilesTree({
   return (
     <ClientOnly>
       <FileTreeProvider
+        sidebarLinkContext={sidebarLinkContext}
         isLoading={isLoading}
         isMerged={isMerged}
         onMergeCommitClick={onMergeCommitClick}
         currentUuid={currentUuid}
-        onNavigateToDocument={navigateToDocument}
         renamePaths={renamePaths}
         onCreateFile={(path) => {
           createFile({ path })

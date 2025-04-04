@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
@@ -10,10 +10,11 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { FilesTree, SidebarDocument } from '@latitude-data/web-ui/sections'
 
 import CreateDraftCommitModal from '../CreateDraftCommitModal'
 import MergedCommitWarningModal from '../MergedCommitWarningModal'
+import { FilesTree } from '$/components/Sidebar/Files'
+import { SidebarDocument } from '$/components/Sidebar/Files/useTree'
 
 export default function ClientFilesTree({
   documents: serverDocuments,
@@ -31,16 +32,23 @@ export default function ClientFilesTree({
   const isMerged = !!commit.mergedAt
   const { project } = useCurrentProject()
   const documentUuid = currentDocument?.documentUuid
+  const sidebarLinkContext = useMemo(
+    () => ({
+      projectId: project.id,
+      commitUuid: isHead ? HEAD_COMMIT : commit.uuid,
+    }),
+    [project.id, commit.uuid, isHead],
+  )
   const navigateToDocument = useCallback(
     (documentUuid: string) => {
       const documentDetails = ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({ uuid: isHead ? HEAD_COMMIT : commit.uuid })
+        .detail({ id: sidebarLinkContext.projectId })
+        .commits.detail({ uuid: sidebarLinkContext.commitUuid })
         .documents.detail({ uuid: documentUuid })
 
       return router.push(documentDetails.root)
     },
-    [project.id, commit.uuid, isHead],
+    [sidebarLinkContext],
   )
   const { toast } = useToast()
 
@@ -85,11 +93,11 @@ export default function ClientFilesTree({
   return (
     <>
       <FilesTree
+        sidebarLinkContext={sidebarLinkContext}
         isLoading={isLoading}
         isMerged={isMerged}
         documents={data}
         currentUuid={documentUuid}
-        navigateToDocument={navigateToDocument}
         onMergeCommitClick={onMergeCommitClick}
         createFile={createFile}
         uploadFile={uploadFile}

@@ -1,8 +1,10 @@
 'use client'
+import {
+  EntityType,
+  useNodeInput,
+} from '$/components/Sidebar/Files/TreeToolbar'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useNodeInput } from '@latitude-data/web-ui/sections'
-import { EntityType } from '@latitude-data/web-ui/sections'
 
 export function AddFileButton() {
   const { setNodeInput } = useNodeInput()
