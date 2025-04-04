@@ -23,8 +23,13 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '../../../atoms/Charts'
+import { CurveType } from 'recharts/types/shape/Curve'
 
-export function AreaChart({ config }: { config: AreaChartConfig }) {
+export function AreaChart({
+  config: { curveType, ...config },
+}: {
+  config: AreaChartConfig & { curveType?: CurveType }
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState<{
     width: number
@@ -179,7 +184,7 @@ export function AreaChart({ config }: { config: AreaChartConfig }) {
         )}
         <Area
           dataKey='y'
-          type='natural'
+          type={curveType ?? 'linear'}
           stroke={color}
           fill='url(#chartGradient)'
           data={config.data}
