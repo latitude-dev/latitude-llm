@@ -1,12 +1,12 @@
 import type { Message } from '@latitude-data/compiler'
 import { describe, expect, it } from 'vitest'
 
-import { PartialConfig } from '../../helpers'
 import { Providers } from '../models'
 import { vercelSdkRules } from './vercel'
+import { AppliedRules } from './types'
 
 let messages: Message[]
-let config = {} as PartialConfig
+let config = {} as AppliedRules['config']
 
 describe('applyVercelSdkRules', () => {
   it('modify plain text messages to object', () => {
