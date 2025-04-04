@@ -14,14 +14,15 @@
   },
   "devDependencies": {
     "@babel/parser": "^7.26.10",
+    "@types/heapdump": "^0.3.4",
     "@types/node": "^22.13.10",
     "eslint": "^8.57.1",
     "glob": "^11.0.1",
     "mintlify": "4.0.233",
     "prettier": "^3.5.3",
     "recast": "^0.23.11",
-    "turbo": "^2.4.4",
     "tsx": "^4.16.2",
+    "turbo": "^2.4.4",
     "typescript": "^5.8.2"
   },
   "packageManager": "pnpm@9.8.0+sha512.8e4c3550fb500e808dbc30bb0ce4dd1eb614e30b1c55245f211591ec2cdf9c611cabd34e1364b42f564bd54b3945ed0f49d61d1bbf2ec9bd74b866fcdc723276",

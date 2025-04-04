@@ -1,3 +1,5 @@
+export * from '../../events/handlers/createProviderLogJob'
+export * from '../../events/handlers/createClaimInvitationReferralJob'
 export * from '../../events/handlers/createDatasetRowsJobs'
 export * from '../../events/handlers/createDocumentLogsFromSpansJob'
 export * from '../../events/handlers/createLoopsContact'

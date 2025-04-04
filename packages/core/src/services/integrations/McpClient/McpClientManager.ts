@@ -3,7 +3,6 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { IntegrationDto, McpServer } from '../../../browser'
 import { Result, TypedResult } from '../../../lib'
 import { McpServerRepository } from '../../../repositories'
-import { setupQueues } from '../../../jobs'
 import { scaleMcpServer } from '../../mcpServers/scaleService'
 import {
   McpConnectionError,
@@ -16,6 +15,7 @@ import { publisher } from '../../../events/publisher'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+import { maintenanceQueue } from '../../../jobs/queues'
 
 // Public Types
 export interface McpClientManager {
@@ -163,8 +163,7 @@ async function updateMcpServerLastUsed(
   }
 
   try {
-    const queues = await setupQueues()
-    await queues.maintenanceQueue.jobs.enqueueUpdateMcpServerLastUsedJob({
+    await maintenanceQueue.add('updateMcpServerLastUsedJob', {
       workspaceId: integration.workspaceId,
       mcpServerId: mcpServerResult.value.id,
     })

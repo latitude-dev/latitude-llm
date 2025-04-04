@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import * as factories from '@latitude-data/core/factories'
+import * as factories from '../../../../tests/factories'
 import { Commit, Providers, User, Workspace } from '../../../../browser'
 import {
   AGENT_RETURN_TOOL_NAME,

@@ -3,7 +3,6 @@ import { randomUUID } from 'crypto'
 import { Job } from 'bullmq'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import * as jobsModule from '../../'
 import { DatasetV2, Providers } from '../../../browser'
 import * as datasetsPreview from '../../../services/datasets/preview'
 import { identityHashAlgorithm } from '../../../services/datasetsV2/utils'
@@ -16,6 +15,7 @@ import {
   runBatchEvaluationJob,
   RunBatchEvaluationJobParams,
 } from './runBatchEvaluationJob'
+import { defaultQueue, eventsQueue } from '../../queues'
 
 const testDrive = getTestDisk()
 const mocks = vi.hoisted(() => ({
@@ -23,19 +23,8 @@ const mocks = vi.hoisted(() => ({
     emit: vi.fn(),
   },
   queues: {
-    defaultQueue: {
-      jobs: {
-        enqueueRunDocumentForEvaluationJob: vi.fn(),
-      },
-    },
-    eventsQueue: {
-      jobs: {
-        enqueueCreateEventJob: vi.fn(),
-        enqueuePublishEventJob: vi.fn(),
-        enqueuePublishToAnalyticsJob: vi.fn(),
-        enqueueProcessWebhookJob: vi.fn(),
-      },
-    },
+    defaultQueue: vi.fn(),
+    eventsQueue: vi.fn(),
   },
 }))
 
@@ -52,10 +41,8 @@ previewDatasetSpy.mockResolvedValue({
   }),
 })
 
-// Replace the mock of setupQueues with a spy
-const setupQueuesSpy = vi.spyOn(jobsModule, 'setupQueues')
-// @ts-ignore
-setupQueuesSpy.mockResolvedValue(mocks.queues)
+vi.spyOn(defaultQueue, 'add').mockImplementation(mocks.queues.defaultQueue)
+vi.spyOn(eventsQueue, 'add').mockImplementation(mocks.queues.eventsQueue)
 
 // Replace the mock for ProgressTracker with a spy
 const progressTrackerSpy = {
@@ -164,12 +151,6 @@ describe('runBatchEvaluationJob', () => {
       }
     })
 
-    it('should setup jobs', async () => {
-      await runBatchEvaluationJob(buildFakeJob(commonJobData))
-
-      expect(setupQueuesSpy).toHaveBeenCalled()
-    })
-
     it('should use provided batchId', async () => {
       const batchId = randomUUID()
       const job = buildFakeJob(commonJobData)
@@ -177,11 +158,8 @@ describe('runBatchEvaluationJob', () => {
 
       await runBatchEvaluationJob(job)
 
-      expect(
-        vi.mocked(
-          mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-        ),
-      ).toHaveBeenCalledWith(
+      expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+        'runDocumentForEvaluationJob',
         expect.objectContaining({
           batchId,
           version: 'v1',
@@ -229,16 +207,9 @@ describe('runBatchEvaluationJob', () => {
 
       await runBatchEvaluationJob(job)
 
-      expect(
-        vi.mocked(
-          mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-        ),
-      ).toHaveBeenCalledTimes(1)
-      expect(
-        vi.mocked(
-          mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-        ),
-      ).toHaveBeenCalledWith(
+      expect(mocks.queues.defaultQueue).toHaveBeenCalledTimes(1)
+      expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+        'runDocumentForEvaluationJob',
         expect.objectContaining({
           parameters: { name: 'Paco', secondName: 'Merlo' },
           version: 'v1',
@@ -250,9 +221,8 @@ describe('runBatchEvaluationJob', () => {
       const job = buildFakeJob(commonJobData)
       await runBatchEvaluationJob(job)
 
-      const runDocumentForEvaluationMock =
-        mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob
-      expect(runDocumentForEvaluationMock).toHaveBeenCalledWith(
+      expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+        'runDocumentForEvaluationJob',
         expect.objectContaining({
           batchId: expect.any(String),
           evaluationId: 1,
@@ -262,12 +232,14 @@ describe('runBatchEvaluationJob', () => {
           version: 'v1',
         }),
       )
-      expect(runDocumentForEvaluationMock).toHaveBeenCalledWith(
+      expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+        'runDocumentForEvaluationJob',
         expect.objectContaining({
           parameters: { name: 'John', secondName: 'Doe' },
         }),
       )
-      expect(runDocumentForEvaluationMock).toHaveBeenCalledWith(
+      expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+        'runDocumentForEvaluationJob',
         expect.objectContaining({
           parameters: { name: 'Frank', secondName: 'Merlo' },
         }),
@@ -283,11 +255,7 @@ describe('runBatchEvaluationJob', () => {
 
       await runBatchEvaluationJob(job)
 
-      expect(
-        vi.mocked(
-          mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-        ),
-      ).toHaveBeenCalledTimes(2)
+      expect(mocks.queues.defaultQueue).toHaveBeenCalledTimes(2)
     })
   })
 })

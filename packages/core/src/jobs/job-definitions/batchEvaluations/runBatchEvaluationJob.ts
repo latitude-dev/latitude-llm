@@ -2,7 +2,6 @@ import { randomUUID } from 'crypto'
 
 import { Job } from 'bullmq'
 
-import { setupQueues } from '../..'
 import {
   DatasetV2,
   DocumentVersion,
@@ -10,13 +9,13 @@ import {
   User,
   Workspace,
 } from '../../../browser'
-import { publisher } from '../../../events/publisher'
-import { queuesConnection } from '../../../queues'
 import { CommitsRepository } from '../../../repositories'
 import { getRowsFromRange } from '../../../services/datasetRows/getRowsFromRange'
 import { getEvaluationMetricSpecification } from '../../../services/evaluationsV2'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
+import { publisher } from '../../../events/publisher'
+import { defaultQueue } from '../../queues'
 
 type GetDatasetsProps = {
   dataset: DatasetV2
@@ -151,96 +150,99 @@ export const runBatchEvaluationJob = async (
     toLine,
   })
 
-  const progressTracker = new ProgressTracker(await queuesConnection(), batchId)
-  const firstAttempt = job.attemptsMade === 0
+  const progressTracker = new ProgressTracker(batchId)
+  try {
+    const firstAttempt = job.attemptsMade === 0
 
-  if (firstAttempt) {
-    await progressTracker.initializeProgress(rows.length)
-  }
-
-  let progress = await progressTracker.getProgress()
-  const queues = await setupQueues()
-
-  if (firstAttempt && rows.length > 0) {
-    if (evaluation.version === 'v2') {
-      websockets.emit('evaluationStatus', {
-        workspaceId: workspace.id,
-        data: {
-          batchId,
-          commitId: commit.id,
-          documentUuid: document.documentUuid,
-          evaluationUuid: evaluation.uuid,
-          version: 'v2',
-          ...progress,
-        },
-      })
-    } else {
-      websockets.emit('evaluationStatus', {
-        workspaceId: workspace.id,
-        data: {
-          batchId,
-          evaluationId: evaluation.id,
-          documentUuid: document.documentUuid,
-          version: 'v1',
-          ...progress,
-        },
-      })
+    if (firstAttempt) {
+      await progressTracker.initializeProgress(rows.length)
     }
-  }
 
-  // Enqueue runDocumentJob for each set of parameters, starting from the last
-  // enqueued job. This allows us to resume the batch if the job fails.
-  for (let i = progress.enqueued; i < rows.length; i++) {
-    progressTracker.incrementEnqueued()
+    let progress = await progressTracker.getProgress()
 
-    // NOTE: This is running jobs for the document with different parameters
-    // then the result is evaluated with `runEvaluationJob`
-    await queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob({
-      workspaceId: workspace.id,
-      documentUuid: document.documentUuid,
-      commitUuid: commit.uuid,
-      commitId: commit.id,
-      projectId: commit.projectId,
-      parameters: rows[i]!.parameters,
-      ...(evaluation.version === 'v2'
-        ? {
+    if (firstAttempt && rows.length > 0) {
+      if (evaluation.version === 'v2') {
+        websockets.emit('evaluationStatus', {
+          workspaceId: workspace.id,
+          data: {
+            batchId,
+            commitId: commit.id,
+            documentUuid: document.documentUuid,
             evaluationUuid: evaluation.uuid,
-            datasetId: dataset.id,
-            datasetLabel: datasetLabel,
-            datasetRowId: rows[i]!.id,
-          }
-        : { evaluationId: evaluation.id }),
-      version: evaluation.version,
-      batchId,
-    })
-
-    progress = await progressTracker.getProgress()
-
-    if (evaluation.version === 'v2') {
-      websockets.emit('evaluationStatus', {
-        workspaceId: workspace.id,
-        data: {
-          batchId,
-          commitId: commit.id,
-          documentUuid: document.documentUuid,
-          evaluationUuid: evaluation.uuid,
-          version: 'v2',
-          ...progress,
-        },
-      })
-    } else {
-      websockets.emit('evaluationStatus', {
-        workspaceId: workspace.id,
-        data: {
-          batchId,
-          evaluationId: evaluation.id,
-          documentUuid: document.documentUuid,
-          version: 'v1',
-          ...progress,
-        },
-      })
+            version: 'v2',
+            ...progress,
+          },
+        })
+      } else {
+        websockets.emit('evaluationStatus', {
+          workspaceId: workspace.id,
+          data: {
+            batchId,
+            evaluationId: evaluation.id,
+            documentUuid: document.documentUuid,
+            version: 'v1',
+            ...progress,
+          },
+        })
+      }
     }
-  }
 
-  return { batchId }
+    // Enqueue runDocumentJob for each set of parameters, starting from the last
+    // enqueued job. This allows us to resume the batch if the job fails.
+    for (let i = progress.enqueued; i < rows.length; i++) {
+      await progressTracker.incrementEnqueued()
+
+      // NOTE: This is running jobs for the document with different parameters
+      // then the result is evaluated with `runEvaluationJob`
+      await defaultQueue.add('runDocumentForEvaluationJob', {
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        commitId: commit.id,
+        projectId: commit.projectId,
+        parameters: rows[i]!.parameters,
+        ...(evaluation.version === 'v2'
+          ? {
+              evaluationUuid: evaluation.uuid,
+              datasetId: dataset.id,
+              datasetLabel: datasetLabel,
+              datasetRowId: rows[i]!.id,
+            }
+          : { evaluationId: evaluation.id }),
+        version: evaluation.version,
+        batchId,
+      })
+
+      progress = await progressTracker.getProgress()
+
+      if (evaluation.version === 'v2') {
+        websockets.emit('evaluationStatus', {
+          workspaceId: workspace.id,
+          data: {
+            batchId,
+            commitId: commit.id,
+            documentUuid: document.documentUuid,
+            evaluationUuid: evaluation.uuid,
+            version: 'v2',
+            ...progress,
+          },
+        })
+      } else {
+        websockets.emit('evaluationStatus', {
+          workspaceId: workspace.id,
+          data: {
+            batchId,
+            evaluationId: evaluation.id,
+            documentUuid: document.documentUuid,
+            version: 'v1',
+            ...progress,
+          },
+        })
+      }
+    }
+
+    return { batchId }
+  } finally {
+    await progressTracker.cleanup()
+  }
 }

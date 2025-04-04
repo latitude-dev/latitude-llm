@@ -10,7 +10,6 @@ import {
 } from '../../../browser'
 import { Providers } from '../../../constants'
 import { Result } from '../../../lib'
-import * as queues from '../../../queues'
 import { EvaluationsRepository } from '../../../repositories'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { ChainResponse } from '../../../services/chains/run'
@@ -20,7 +19,9 @@ import * as websockets from '../../../websockets/workers'
 import * as progressTracker from '../../utils/progressTracker'
 import { runEvaluationJob, type RunEvaluationJobData } from './runEvaluationJob'
 
-vi.spyOn(queues, 'queuesConnection').mockResolvedValue({} as any)
+vi.mock('../../../redis', () => ({
+  buildRedisConnection: vi.fn().mockResolvedValue({}),
+}))
 const runEvaluationSpy = vi.spyOn(evaluations, 'runEvaluation')
 
 const FAKE_ERRORABLE_UUID = '12345678-1234-1234-1234-123456789012'
@@ -44,6 +45,7 @@ vi.spyOn(progressTracker, 'ProgressTracker').mockImplementation(() => ({
   incrementErrors: incrementErrorsSpy,
   // @ts-ignore
   getProgress: vi.fn(() => Promise.resolve({ completed: 1, total: 1 })),
+  cleanup: vi.fn(),
 }))
 
 let jobData: Job<RunEvaluationJobData>

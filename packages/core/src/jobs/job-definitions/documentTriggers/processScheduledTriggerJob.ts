@@ -1,8 +1,8 @@
 import { Job } from 'bullmq'
 import { DocumentTrigger, HEAD_COMMIT } from '../../../browser'
 import { updateScheduledTriggerLastRun } from '../../../services/documentTriggers/handlers/scheduled'
-import { setupQueues } from '../../../jobs'
 import { RunDocumentJobData } from '../documents/runDocumentJob'
+import { defaultQueue } from '../../queues'
 
 export type ProcessScheduledTriggerJobData = {
   documentTriggerId: number
@@ -35,8 +35,6 @@ export const processScheduledTriggerJob = async (
   } = job.data
 
   // Get the queues to enqueue the document run job
-  const jobQueues = await setupQueues()
-
   // Prepare data for the document run job
   const runJobData: RunDocumentJobData = {
     workspaceId,
@@ -48,8 +46,7 @@ export const processScheduledTriggerJob = async (
     batchId: `scheduled-${documentTriggerUuid}-${Date.now()}`,
   }
 
-  const docJob =
-    await jobQueues.defaultQueue.jobs.enqueueRunDocumentJob(runJobData)
+  const docJob = await defaultQueue.add('runDocumentJob', runJobData)
 
   // Create a trigger object with the ID for updating
   const trigger: Pick<DocumentTrigger, 'id' | 'uuid'> = {

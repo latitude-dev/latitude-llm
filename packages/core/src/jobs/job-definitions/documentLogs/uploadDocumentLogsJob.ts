@@ -1,8 +1,8 @@
 import { Job } from 'bullmq'
 
-import { setupQueues } from '../..'
 import { Commit } from '../../../browser'
 import { LogSources, messagesSchema } from '../../../constants'
+import { defaultQueue } from '../../queues'
 
 export type UploadDocumentLogsJobData = {
   workspaceId: number
@@ -16,7 +16,6 @@ export const uploadDocumentLogsJob = async (
   job: Job<UploadDocumentLogsJobData>,
 ) => {
   const { workspaceId, source, documentUuid, commit, csv } = job.data
-  const queues = await setupQueues()
 
   csv.data.forEach((row) => {
     const messages = JSON.parse(row.record[0]!)
@@ -27,7 +26,7 @@ export const uploadDocumentLogsJob = async (
       return
     }
 
-    queues.defaultQueue.jobs.enqueueCreateDocumentLogJob({
+    defaultQueue.add('createDocumentLogJob', {
       workspaceId,
       documentUuid,
       commit,

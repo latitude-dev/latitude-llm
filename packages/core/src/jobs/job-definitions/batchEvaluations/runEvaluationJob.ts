@@ -1,7 +1,6 @@
 import { Job } from 'bullmq'
 
 import { getUnknownError, Result } from '../../../lib'
-import { queuesConnection } from '../../../queues'
 import {
   EvaluationsRepository,
   ProviderLogsRepository,
@@ -55,47 +54,52 @@ async function isSuccessful(run: Awaited<ReturnType<typeof runEvaluation>>) {
 export async function runEvaluationJob(job: Job<RunEvaluationJobData>) {
   const { workspaceId, batchId, documentUuid, providerLogUuid, evaluationId } =
     job.data
-  const websockets = await WebsocketClient.getSocket()
   let progressTracker: ProgressTracker | undefined
   if (batchId) {
-    progressTracker = new ProgressTracker(await queuesConnection(), batchId)
-  }
-  const { providerLog, evaluation } = await fetchData({
-    workspaceId,
-    evaluationId,
-    providerLogUuid,
-  }).then((r) => r.unwrap())
-
-  const run = await runEvaluation({
-    providerLog,
-    evaluation,
-    documentUuid,
-  })
-
-  const { ok, error } = await isSuccessful(run)
-
-  if (ok) {
-    await progressTracker?.incrementCompleted()
-  } else {
-    await progressTracker?.incrementErrors()
+    progressTracker = new ProgressTracker(batchId)
   }
 
-  const progress = await progressTracker?.getProgress()
-
-  if (batchId && progress) {
-    websockets.emit('evaluationStatus', {
+  try {
+    const websockets = await WebsocketClient.getSocket()
+    const { providerLog, evaluation } = await fetchData({
       workspaceId,
-      data: {
-        batchId,
-        evaluationId,
-        documentUuid,
-        version: 'v1',
-        ...progress,
-      },
+      evaluationId,
+      providerLogUuid,
+    }).then((r) => r.unwrap())
+
+    const run = await runEvaluation({
+      providerLog,
+      evaluation,
+      documentUuid,
     })
+
+    const { ok, error } = await isSuccessful(run)
+
+    if (ok) {
+      await progressTracker?.incrementCompleted()
+    } else {
+      await progressTracker?.incrementErrors()
+    }
+
+    const progress = await progressTracker?.getProgress()
+
+    if (batchId && progress) {
+      websockets.emit('evaluationStatus', {
+        workspaceId,
+        data: {
+          batchId,
+          evaluationId,
+          documentUuid,
+          version: 'v1',
+          ...progress,
+        },
+      })
+    }
+
+    const unknownError = getUnknownError(error)
+
+    if (unknownError) throw unknownError
+  } finally {
+    progressTracker?.cleanup()
   }
-
-  const unknownError = getUnknownError(error)
-
-  if (unknownError) throw unknownError
 }

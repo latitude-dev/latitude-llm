@@ -1,6 +1,6 @@
 import { chunk } from 'lodash-es'
 
-import { setupQueues } from '@latitude-data/core/jobs'
+import { defaultQueue } from '@latitude-data/core/queues'
 import { AppRouteHandler } from '$/openApi/types'
 import { CreateTracesRoute } from './traces.route'
 
@@ -23,11 +23,10 @@ export const tracesHandler: AppRouteHandler<CreateTracesRoute> = async (c) => {
 
   // Process spans in batches
   const batches = chunk(allSpans, BATCH_SIZE)
-  const queues = await setupQueues()
 
   await Promise.all(
     batches.map((batch) =>
-      queues.defaultQueue.jobs.enqueueProcessOtlpTracesJob({
+      defaultQueue.add('createDocumentLogFromSpanJob', {
         spans: batch,
         workspace,
       }),

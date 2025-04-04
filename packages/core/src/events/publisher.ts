@@ -1,13 +1,12 @@
-import { setupQueues } from '../jobs'
 import { LatitudeEvent } from './events'
+import { eventsQueue, webhooksQueue } from '../jobs/queues'
 
 export const publisher = {
   publishLater: async (event: LatitudeEvent) => {
-    const queues = await setupQueues()
+    eventsQueue.add('createEventJob', event)
+    eventsQueue.add('publishEventJob', event)
+    eventsQueue.add('publishToAnalyticsJob', event)
 
-    queues.eventsQueue.jobs.enqueueCreateEventJob(event)
-    queues.eventsQueue.jobs.enqueuePublishEventJob(event)
-    queues.eventsQueue.jobs.enqueuePublishToAnalyticsJob(event)
-    queues.eventsQueue.jobs.enqueueProcessWebhookJob(event)
+    webhooksQueue.add('processWebhookJob', event)
   },
 }

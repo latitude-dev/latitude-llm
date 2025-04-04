@@ -1,17 +1,19 @@
 import './tracer'
 import './utils/sentry'
+import * as heapdump from 'heapdump'
 
 import express from 'express'
 import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js'
 import { ExpressAdapter } from '@bull-board/express'
-import { setupQueues } from '@latitude-data/core/jobs'
 
 import { captureException, captureMessage } from './utils/sentry'
-import startWorkers from './workers'
+import { startWorkers, setupSchedules } from './workers'
 import { env } from '@latitude-data/env'
+import * as queues from '@latitude-data/core/queues'
 
-const queues = await setupQueues()
+setupSchedules()
+
 const app = express()
 const workers = await startWorkers()
 
@@ -20,7 +22,7 @@ const serverAdapter = new ExpressAdapter()
 serverAdapter.setBasePath('/admin/queues')
 
 createBullBoard({
-  queues: Object.values(queues).map((q) => new BullMQAdapter(q.queue)),
+  queues: Object.values(queues).map((q) => new BullMQAdapter(q)),
   serverAdapter,
 })
 
@@ -57,6 +59,33 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'OK', message: 'Workers are healthy' })
 })
 
+// Memory profiling endpoint
+if (env.NODE_ENV === 'development') {
+  app.get('/debug/memory', (_req, res) => {
+    const filename = `/tmp/heapdump-${Date.now()}.heapsnapshot`
+    heapdump.writeSnapshot(filename, (err: Error | null) => {
+      if (err) {
+        console.error('Error taking heap snapshot:', err)
+        return res.status(500).json({ error: 'Failed to take heap snapshot' })
+      }
+      res.json({ message: `Heap snapshot written to ${filename}` })
+    })
+  })
+}
+
+// Memory usage monitoring
+if (env.NODE_ENV === 'development') {
+  setInterval(() => {
+    const used = process.memoryUsage()
+    console.log('Memory Usage:', {
+      rss: `${Math.round(used.rss / 1024 / 1024)}MB`,
+      heapTotal: `${Math.round(used.heapTotal / 1024 / 1024)}MB`,
+      heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)}MB`,
+      external: `${Math.round(used.external / 1024 / 1024)}MB`,
+    })
+  }, 60000) // Log every minute
+}
+
 // Handle 404s
 app.use((_req, res) => {
   res.status(404).json({ status: 'Not Found' })
@@ -69,7 +98,7 @@ const server = app.listen(port, host, () => {
 const gracefulShutdown = async (signal: string) => {
   console.log(`Received ${signal}, closing workers and server...`)
 
-  await Promise.all(workers.map((w) => w.close()))
+  await Promise.all(Object.values(workers).map((w) => w.close()))
 
   server.close(() => process.exit(0))
 }

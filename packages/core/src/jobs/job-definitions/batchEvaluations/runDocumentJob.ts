@@ -2,13 +2,12 @@ import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
 import { LogSources } from '@latitude-data/constants'
-import { setupQueues } from '../../'
 import { NotFoundError } from '../../../lib/errors'
-import { queuesConnection } from '../../../queues'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
 import { runEvaluationV2JobKey } from '../evaluations'
+import { evaluationsQueue } from '../../queues'
 
 export type RunDocumentForEvaluationJobData = {
   workspaceId: number
@@ -45,10 +44,10 @@ export const runDocumentForEvaluationJob = async (
     version,
     batchId,
   } = job.data
-  const progressTracker = new ProgressTracker(await queuesConnection(), batchId)
+
+  const progressTracker = new ProgressTracker(batchId)
 
   try {
-    const queues = await setupQueues()
     const result = await runDocumentAtCommitWithAutoToolResponses({
       workspaceId,
       projectId,
@@ -66,21 +65,21 @@ export const runDocumentForEvaluationJob = async (
 
     if (version === 'v2') {
       const payload = {
-        workspaceId: workspaceId,
-        commitId: commitId,
+        workspaceId,
+        commitId,
         evaluationUuid: job.data.evaluationUuid,
         providerLogUuid: providerLog.uuid,
         datasetId: job.data.datasetId,
         datasetLabel: job.data.datasetLabel,
         datasetRowId: job.data.datasetRowId,
-        batchId: batchId,
+        batchId,
       }
 
-      queues.evaluationsQueue.jobs.enqueueRunEvaluationV2Job(payload, {
+      evaluationsQueue.add('runEvaluationV2Job', payload, {
         deduplication: { id: runEvaluationV2JobKey(payload) },
       })
     } else {
-      await queues.evaluationsQueue.jobs.enqueueRunEvaluationJob({
+      await evaluationsQueue.add('runEvaluationJob', {
         workspaceId,
         documentUuid,
         providerLogUuid: providerLog.uuid,
@@ -103,8 +102,8 @@ export const runDocumentForEvaluationJob = async (
         workspaceId,
         data: {
           batchId,
-          commitId: commitId,
-          documentUuid: documentUuid,
+          commitId,
+          documentUuid,
           evaluationUuid: job.data.evaluationUuid,
           version: 'v2',
           ...progress,
@@ -122,5 +121,7 @@ export const runDocumentForEvaluationJob = async (
         },
       })
     }
+  } finally {
+    await progressTracker.cleanup()
   }
 }

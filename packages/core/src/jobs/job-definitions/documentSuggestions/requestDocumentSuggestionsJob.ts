@@ -16,7 +16,6 @@ import {
   EVALUATION_RESULT_RECENCY_DAYS,
 } from '../../../browser'
 import { database } from '../../../client'
-import { setupQueues } from '../../../jobs'
 import {
   commits,
   connectedEvaluations,
@@ -28,6 +27,7 @@ import {
   projects,
 } from '../../../schema'
 import { generateDocumentSuggestionJobKey } from './generateDocumentSuggestionJob'
+import { defaultQueue } from '../../queues'
 
 export type RequestDocumentSuggestionsJobData = {}
 
@@ -243,9 +243,9 @@ export const requestDocumentSuggestionsJob = async (
       ),
     )
 
-  const queues = await setupQueues()
   for (const candidate of [...candidates, ...candidatesV2]) {
-    queues.defaultQueue.jobs.enqueueGenerateDocumentSuggestionJob(
+    defaultQueue.add(
+      'generateDocumentSuggestionJob',
       {
         workspaceId: candidate.workspaceId,
         commitId: candidate.commitId,

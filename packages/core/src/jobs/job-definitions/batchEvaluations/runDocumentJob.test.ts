@@ -2,15 +2,14 @@ import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import * as jobs from '../../'
 import { LogSources, Providers } from '../../../browser'
 import { Result } from '../../../lib/Result'
-import * as queues from '../../../queues'
 import * as commits from '../../../services/commits/runDocumentAtCommit'
 import * as factories from '../../../tests/factories'
 import { mockToolRequestsCopilot } from '../../../tests/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
 import * as utils from '../../utils/progressTracker'
+import { defaultQueue, evaluationsQueue, eventsQueue } from '../../queues'
 
 const incrementErrorsMock = vi.hoisted(() => vi.fn())
 
@@ -21,6 +20,32 @@ describe('runDocumentJob', () => {
   let document: any
   let commit: any
   let evaluation: any
+
+  // Set up spies
+  vi.spyOn(WebsocketClient, 'getSocket').mockResolvedValue({
+    emit: vi.fn(),
+  } as any)
+  const mocks = vi.hoisted(() => ({
+    defaultQueue: vi.fn(),
+    eventsQueue: vi.fn(),
+    evaluationsQueue: vi.fn(),
+  }))
+
+  vi.spyOn(defaultQueue, 'add').mockImplementation(mocks.defaultQueue)
+  vi.spyOn(eventsQueue, 'add').mockImplementation(mocks.eventsQueue)
+  vi.spyOn(evaluationsQueue, 'add').mockImplementation(mocks.evaluationsQueue)
+
+  vi.mock('../../../redis', () => ({
+    buildRedisConnection: vi.fn().mockResolvedValue({} as any),
+  }))
+  vi.spyOn(commits, 'runDocumentAtCommit')
+  // @ts-ignore
+  vi.spyOn(utils, 'ProgressTracker').mockImplementation(() => ({
+    incrementCompleted: vi.fn(),
+    incrementErrors: incrementErrorsMock,
+    getProgress: vi.fn(),
+    cleanup: vi.fn(),
+  }))
 
   beforeAll(async () => {
     await mockToolRequestsCopilot()
@@ -58,36 +83,6 @@ describe('runDocumentJob', () => {
         batchId: 'batch1',
       },
     } as Job<any>
-
-    // Set up spies
-    vi.spyOn(WebsocketClient, 'getSocket').mockResolvedValue({
-      emit: vi.fn(),
-    } as any)
-
-    vi.spyOn(jobs, 'setupQueues').mockResolvedValue({
-      evaluationsQueue: {
-        jobs: {
-          enqueueRunEvaluationJob: vi.fn(),
-        },
-      },
-      eventsQueue: {
-        jobs: {
-          enqueueCreateEventJob: vi.fn(),
-          enqueuePublishEventJob: vi.fn(),
-          enqueuePublishToAnalyticsJob: vi.fn(),
-          enqueueProcessWebhookJob: vi.fn(),
-        },
-      },
-    } as any)
-
-    vi.spyOn(queues, 'queuesConnection').mockResolvedValue({} as any)
-    vi.spyOn(commits, 'runDocumentAtCommit')
-    // @ts-ignore
-    vi.spyOn(utils, 'ProgressTracker').mockImplementation(() => ({
-      incrementCompleted: vi.fn(),
-      incrementErrors: incrementErrorsMock,
-      getProgress: vi.fn(),
-    }))
   })
 
   it('should run document and enqueue evaluation job on success', async () => {
@@ -114,10 +109,7 @@ describe('runDocumentJob', () => {
       }),
     )
 
-    const setupQueuesResult = await jobs.setupQueues()
-    expect(
-      setupQueuesResult.evaluationsQueue.jobs.enqueueRunEvaluationJob,
-    ).toHaveBeenCalledWith({
+    expect(mocks.evaluationsQueue).toHaveBeenCalledWith('runEvaluationJob', {
       workspaceId: workspace.id,
       documentUuid: document.documentUuid,
       providerLogUuid: 'log1',
@@ -150,11 +142,7 @@ describe('runDocumentJob', () => {
     })
 
     expect(commits.runDocumentAtCommit).toHaveBeenCalled()
-    const setupQueuesResult = await jobs.setupQueues()
-    expect(
-      setupQueuesResult.evaluationsQueue.jobs.enqueueRunEvaluationJob,
-    ).not.toHaveBeenCalled()
-
+    expect(mocks.evaluationsQueue).not.toHaveBeenCalled()
     expect(incrementErrorsMock).toHaveBeenCalled()
   })
 

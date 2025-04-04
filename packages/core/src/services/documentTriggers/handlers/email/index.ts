@@ -16,8 +16,8 @@ import { EmailTriggerConfiguration } from '../../helpers/schema'
 import { PromptLFile } from 'promptl-ai'
 import { uploadFile } from '../../../files'
 import { unsafelyFindWorkspace } from '../../../../data-access'
-import { setupQueues } from '../../../../jobs'
 import { RunEmailTriggerJobData } from '../../../../jobs/job-definitions/documentTriggers/runEmailTriggerJob'
+import { defaultQueue } from '../../../../jobs/queues'
 
 async function getTriggerName(
   trigger: DocumentTrigger,
@@ -149,8 +149,6 @@ export async function handleEmailTrigger(
   if (uploadResult.error) return uploadResult
   const uploadedFiles = uploadResult.unwrap()
 
-  const jobQueues = await setupQueues()
-
   const runJobData: RunEmailTriggerJobData = {
     workspaceId: workspace.id,
     triggerId: trigger.id,
@@ -164,8 +162,7 @@ export async function handleEmailTrigger(
     attachments: uploadedFiles,
   }
 
-  const job =
-    await jobQueues.defaultQueue.jobs.enqueueRunEmailTriggerJob(runJobData)
+  const job = await defaultQueue.add('runEmailTriggerJob', runJobData)
   if (!job.id) {
     return Result.error(new LatitudeError('Failed to enqueue job'))
   }

@@ -1,16 +1,16 @@
-import * as factories from '@latitude-data/core/factories'
+import * as factories from '../../../tests/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Workspace } from '../../../browser'
 import { LogSources, Providers } from '../../../constants'
 import { publisher } from '../../../events/publisher'
-import * as jobsModule from '../../../jobs'
 import { generateUUIDIdentifier } from '../../../lib'
 import * as createProviderLogService from '../../providerLogs/create'
 import {
   buildProviderLogDto,
   saveOrPublishProviderLogs,
 } from './saveOrPublishProviderLogs'
+import { defaultQueue } from '../../../jobs/queues'
 
 const publisherSpy = vi.spyOn(publisher, 'publishLater')
 const createProviderLogSpy = vi.spyOn(
@@ -19,17 +19,10 @@ const createProviderLogSpy = vi.spyOn(
 )
 
 const mocks = vi.hoisted(() => ({
-  queues: {
-    defaultQueue: {
-      jobs: {
-        enqueueCreateProviderLogJob: vi.fn(),
-      },
-    },
-  },
+  defaultQueue: vi.fn(),
 }))
-const setupQueuesSpy = vi.spyOn(jobsModule, 'setupQueues')
-// @ts-expect-error - mock implementation
-setupQueuesSpy.mockResolvedValue(mocks.queues)
+
+vi.spyOn(defaultQueue, 'add').mockImplementation(mocks.defaultQueue)
 
 let data: ReturnType<typeof buildProviderLogDto>
 let workspace: Workspace
@@ -122,9 +115,7 @@ describe('saveOrPublishProviderLogs', () => {
       workspace,
     })
 
-    expect(
-      mocks.queues.defaultQueue.jobs.enqueueCreateProviderLogJob,
-    ).toHaveBeenCalledWith({
+    expect(mocks.defaultQueue).toHaveBeenCalledWith('createProviderLogJob', {
       ...data,
       workspace,
       generatedAt: data.generatedAt.toISOString(),

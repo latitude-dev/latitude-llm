@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DocumentLog,
   EvaluationDto,
@@ -8,14 +8,14 @@ import {
   LogSources,
   Workspace,
 } from '../../browser'
-import * as jobs from '../../jobs'
+import { defaultQueue } from '../../jobs/queues'
 import * as factories from '../../tests/factories'
 import { requestDocumentSuggestionJob } from './requestDocumentSuggestionJob'
 
 describe('requestDocumentSuggestionJob', () => {
-  let mocks: {
-    enqueueGenerateDocumentSuggestionJob: MockInstance
-  }
+  const mocks = vi.hoisted(() => ({
+    defaultQueue: vi.fn(),
+  }))
 
   let workspace: Workspace
   let evaluation: EvaluationDto
@@ -88,15 +88,7 @@ describe('requestDocumentSuggestionJob', () => {
     })
     result = r
 
-    mocks = { enqueueGenerateDocumentSuggestionJob: vi.fn() }
-    vi.spyOn(jobs, 'setupQueues').mockResolvedValue({
-      defaultQueue: {
-        jobs: {
-          enqueueGenerateDocumentSuggestionJob:
-            mocks.enqueueGenerateDocumentSuggestionJob,
-        },
-      },
-    } as any)
+    vi.spyOn(defaultQueue, 'add').mockImplementation(mocks.defaultQueue)
   })
 
   it('not enqueues generate suggestion job when result is not live', async () => {
@@ -115,7 +107,7 @@ describe('requestDocumentSuggestionJob', () => {
       },
     })
 
-    expect(mocks.enqueueGenerateDocumentSuggestionJob).not.toHaveBeenCalled()
+    expect(mocks.defaultQueue).not.toHaveBeenCalled()
   })
 
   it('not enqueues generate suggestion job when result has passed', async () => {
@@ -133,7 +125,7 @@ describe('requestDocumentSuggestionJob', () => {
       },
     })
 
-    expect(mocks.enqueueGenerateDocumentSuggestionJob).not.toHaveBeenCalled()
+    expect(mocks.defaultQueue).not.toHaveBeenCalled()
   })
 
   it('enqueues generate suggestion job', async () => {
@@ -149,8 +141,9 @@ describe('requestDocumentSuggestionJob', () => {
       },
     })
 
-    expect(mocks.enqueueGenerateDocumentSuggestionJob).toHaveBeenCalledOnce()
-    expect(mocks.enqueueGenerateDocumentSuggestionJob).toHaveBeenCalledWith(
+    expect(mocks.defaultQueue).toHaveBeenCalledOnce()
+    expect(mocks.defaultQueue).toHaveBeenCalledWith(
+      'generateDocumentSuggestionJob',
       {
         workspaceId: workspace.id,
         commitId: documentLog.commitId,
