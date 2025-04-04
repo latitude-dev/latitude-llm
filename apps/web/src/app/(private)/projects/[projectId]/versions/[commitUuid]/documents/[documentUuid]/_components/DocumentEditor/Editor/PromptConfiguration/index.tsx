@@ -5,7 +5,6 @@ import { useState } from 'react'
 import { GenerationSettings } from './GenerationSettings'
 import { BehaviourSettings } from './BehaviourSettings'
 import { PromptConfigurationProps, useReactiveConfig } from './utils'
-import Link from 'next/link'
 import { LimitSettings } from './LimitSettings'
 
 export function PromptConfiguration({
@@ -49,11 +48,14 @@ export function PromptConfiguration({
             setConfig={setConfig}
             disabled={disabled}
           />
-          <Link href='https://docs.latitude.so/guides/prompt-manager/configuration#configuration-options'>
+          <a
+            target='_blank'
+            href='https://docs.latitude.so/guides/prompt-manager/configuration#configuration-options'
+          >
             <Button variant='link' className='p-0'>
               More configuration
             </Button>
-          </Link>
+          </a>
         </div>
       </Popover.Content>
     </Popover.Root>

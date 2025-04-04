@@ -93,9 +93,7 @@ export function StatusIndicator({
   }
 
   return (
-    <FloatingElement
-      isScrolledToBottom={isScrolledToBottom}
-    >
+    <FloatingElement isScrolledToBottom={isScrolledToBottom}>
       <div className='p-2'>
         <TokenUsage usage={usage} />
       </div>
