@@ -7,7 +7,7 @@ import { createSdk } from '$/app/(private)/_lib/createSdk'
 
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { captureException, captureMessage } from '$/helpers/captureException'
+import { captureException } from '$/helpers/captureException'
 import { ChainEventTypes } from '@latitude-data/constants'
 
 const inputSchema = z.object({
