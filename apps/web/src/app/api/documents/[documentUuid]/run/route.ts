@@ -7,7 +7,8 @@ import { createSdk } from '$/app/(private)/_lib/createSdk'
 
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { captureException } from '$/helpers/captureException'
+import { captureException, captureMessage } from '$/helpers/captureException'
+import { ChainEventTypes } from '@latitude-data/constants'
 
 const inputSchema = z.object({
   path: z.string(),
@@ -121,6 +122,10 @@ export const POST = errorHandler(
             parameters,
             onEvent: async (event) => {
               try {
+                if (event.data.type === ChainEventTypes.ChainError) {
+                  await captureException(event.data.error)
+                }
+
                 await writer.write(
                   encoder.encode(
                     `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
