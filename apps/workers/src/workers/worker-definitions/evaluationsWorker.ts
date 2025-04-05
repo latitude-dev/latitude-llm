@@ -3,6 +3,7 @@ import * as jobs from '@latitude-data/core/jobs/definitions'
 import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
+  runEvaluationJob: jobs.runEvaluationJob,
   runEvaluationV2Job: jobs.runEvaluationV2Job,
   runBatchEvaluationJob: jobs.runBatchEvaluationJob,
 }
