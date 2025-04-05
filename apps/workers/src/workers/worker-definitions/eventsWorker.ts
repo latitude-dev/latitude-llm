@@ -32,6 +32,9 @@ const eventHandlersJobMappings = {
   requestDocumentSuggestionJob: jobs.requestDocumentSuggestionJob,
   requestDocumentSuggestionJobV2: jobs.requestDocumentSuggestionJobV2,
   createDatasetRowsJob: jobs.createDatasetRowsJob,
+  runLiveEvaluationsJob: jobs.runLiveEvaluationsJob,
+  evaluateLiveLogJob: jobs.evaluateLiveLogJob,
+  runLiveEvaluationJob: jobs.runLiveEvaluationJob,
 }
 
 export function startEventsWorker() {
