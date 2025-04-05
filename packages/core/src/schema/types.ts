@@ -46,6 +46,7 @@ import { subscriptions } from './models/subscriptions'
 import { traces } from './models/traces'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
+import { experiments } from './models/experiments'
 
 export type {
   DocumentLog,
@@ -316,3 +317,5 @@ export type EvaluationResultTmp =
 export type ResultWithEvaluationTmp =
   | (ResultWithEvaluation & { version: 'v1' })
   | (ResultWithEvaluationV2 & { version: 'v2' })
+
+export type Experiment = InferSelectModel<typeof experiments>

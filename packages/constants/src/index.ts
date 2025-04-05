@@ -1,7 +1,8 @@
 export enum LogSources {
   API = 'api',
   Playground = 'playground',
-  Evaluation = 'evaluation',
+  Evaluation = 'evaluation', // This is actually for "batch" evaluations (now Experiments)
+  Experiment = 'experiment',
   User = 'user',
   SharedPrompt = 'shared_prompt',
   AgentAsTool = 'agent_as_tool',
@@ -37,6 +38,16 @@ export enum DocumentTriggerParameters {
   Subject = 'subject',
   Body = 'body',
   Attachments = 'attachments',
+}
+
+export type ExperimentMetadata = {
+  resolvedPrompt: string
+  count: number // Total number of to generate logs in the experiment
+}
+
+export type ExperimentResults = {
+  passed: number // Number of logs with "passed" evaluations
+  failed: number // Number of logs that returned an error
 }
 
 export * from './models'
