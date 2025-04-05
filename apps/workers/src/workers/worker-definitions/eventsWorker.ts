@@ -34,7 +34,7 @@ const eventHandlersJobMappings = {
   createDatasetRowsJob: jobs.createDatasetRowsJob,
   runLiveEvaluationsJob: jobs.runLiveEvaluationsJob,
   evaluateLiveLogJob: jobs.evaluateLiveLogJob,
-  runLiveEvaluationJob: jobs.runLiveEvaluationJob,
+  updateWebhookLastTriggeredAt: jobs.updateWebhookLastTriggeredAt,
 }
 
 export function startEventsWorker() {
