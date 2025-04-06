@@ -152,8 +152,8 @@ export async function ai({
       : // @ts-expect-error - Some provider adapters don't accept a second argument
         providerAdapter(model, {
           cacheControl: config.cacheControl ?? false,
-          // Propagate provider config options for this language model
-          ...config,
+          // providerOptions are passed to streamText or streamObject not to the adapter
+          ...omit(config, ['providerOptions']),
         })
 
     const toolsResult = buildTools(tools)

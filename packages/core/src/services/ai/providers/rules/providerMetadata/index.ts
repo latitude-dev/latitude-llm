@@ -1,6 +1,7 @@
 import type { Message } from '@latitude-data/compiler'
 
 import { Providers } from '../../models'
+import { toCamelCaseDeep } from '../../../../../lib'
 
 export const PROVIDER_TO_METADATA_KEY: Record<Providers, string> = {
   [Providers.OpenAI]: 'openai',
@@ -31,32 +32,18 @@ const CONTENT_DEFINED_ATTRIBUTES = [
   'result',
 ] as const
 
-type AttrArgs = { attributes: string[]; content: Record<string, unknown> }
-
-function genericAttributesProcessor({ attributes, content }: AttrArgs) {
-  return attributes.reduce((acc, key) => ({ ...acc, [key]: content[key] }), {})
-}
-
-function anthropicAttributesProcessor({ attributes, content }: AttrArgs) {
-  return attributes.reduce((acc, key) => {
+function processAttributes({
+  attributes,
+  content,
+}: {
+  attributes: string[]
+  content: Record<string, unknown>
+}) {
+  const data = attributes.reduce((acc, key) => {
     const safeKey = key === 'cache_control' ? 'cacheControl' : key
     return { ...acc, [safeKey]: content[key] }
   }, {})
-}
-
-function processAttributes({
-  attributes,
-  provider,
-  content,
-}: AttrArgs & {
-  provider: Providers
-}) {
-  switch (provider) {
-    case Providers.Anthropic:
-      return anthropicAttributesProcessor({ attributes, content })
-    default:
-      return genericAttributesProcessor({ attributes, content })
-  }
+  return toCamelCaseDeep(data)
 }
 
 export function getProviderMetadataKey(provider: Providers) {
@@ -97,7 +84,6 @@ export function extractContentMetadata({
     providerOptions: {
       [getProviderMetadataKey(provider)]: processAttributes({
         attributes: providerAttributes,
-        provider,
         content,
       }),
     },
@@ -160,7 +146,6 @@ export function extractMessageMetadata({
     providerOptions: {
       [getProviderMetadataKey(provider)]: processAttributes({
         attributes: Object.keys(attributes),
-        provider,
         content: attributes,
       }),
     },

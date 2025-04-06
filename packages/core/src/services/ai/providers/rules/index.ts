@@ -13,6 +13,7 @@ import { applyPerplexityRules } from './perplexity'
 import { getProviderMetadataKey } from './providerMetadata'
 import { JSONValue } from 'ai'
 import { VercelConfig } from '@latitude-data/constants'
+import { toCamelCaseDeep } from '../../../../lib'
 
 type Props = {
   providerType: Providers
@@ -67,12 +68,13 @@ export function applyAllRules({ providerType, messages, config }: Props) {
   rules = applyProviderRules({ providerType, messages, config: rules.config })
   rules = vercelSdkRules(rules, providerType)
 
+  const providerOptions = toCamelCaseDeep(config)
   return {
     ...rules,
     config: {
       ...rules.config,
       providerOptions: {
-        [getProviderMetadataKey(providerType)]: config,
+        [getProviderMetadataKey(providerType)]: providerOptions,
       },
     } as VercelConfigWithProviderRules,
   }
