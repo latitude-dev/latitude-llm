@@ -8,6 +8,7 @@ import {
 } from '@latitude-data/core/browser'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
+import { env } from '@latitude-data/env'
 import { redirect } from 'next/navigation'
 import { EvaluationPage as ClientEvaluationPage } from './_components/EvaluationPage'
 
@@ -27,6 +28,7 @@ export default async function EvaluationPage({
   const search = evaluationResultsV2SearchFromQueryParams(await searchParams)
 
   const { workspace } = await getCurrentUser()
+
   const repository = new EvaluationResultsV2Repository(workspace.id)
 
   if (search.pagination.resultUuid) {
@@ -78,6 +80,7 @@ export default async function EvaluationPage({
       selectedResult={selectedResult}
       stats={stats}
       search={search}
+      refinementEnabled={env.LATITUDE_CLOUD}
     />
   )
 }

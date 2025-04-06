@@ -11,6 +11,7 @@ import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate
 import { cn } from '@latitude-data/web-ui/utils'
 import { useRef } from 'react'
 import { EvaluationBatchIndicator } from './EvaluationBatchIndicator'
+import { EvaluationResultsTableActions } from './EvaluationResultsTableActions'
 import { EvaluationResultsTableBody } from './EvaluationResultsTableBody'
 
 export function EvaluationResultsTable<
@@ -21,6 +22,7 @@ export function EvaluationResultsTable<
   selectedResult,
   setSelectedResult,
   search,
+  refinementEnabled,
   isLoading,
 }: {
   results: EvaluationResultV2WithDetails<T, M>[]
@@ -28,6 +30,7 @@ export function EvaluationResultsTable<
   setSelectedResult: (result?: EvaluationResultV2WithDetails<T, M>) => void
   search: EvaluationResultsV2Search
   setSearch: (search: EvaluationResultsV2Search) => void
+  refinementEnabled: boolean
   isLoading: boolean
 }) {
   const { evaluation } = useCurrentEvaluationV2<T, M>()
@@ -57,6 +60,11 @@ export function EvaluationResultsTable<
               setSelectedResult={setSelectedResult}
               selectableState={selectableState}
               search={search}
+              isLoading={isLoading}
+            />
+            <EvaluationResultsTableActions
+              selectableState={selectableState}
+              refinementEnabled={refinementEnabled}
               isLoading={isLoading}
             />
           </div>

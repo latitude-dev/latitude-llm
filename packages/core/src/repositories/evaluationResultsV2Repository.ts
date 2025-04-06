@@ -29,7 +29,7 @@ import {
   MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
   ResultWithEvaluationV2,
 } from '../browser'
-import { calculateOffset, Result } from '../lib'
+import { calculateOffset, NotFoundError, Result } from '../lib'
 import {
   commits,
   datasetRows,
@@ -59,6 +59,31 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         desc(evaluationResultsV2.id),
       )
       .$dynamic()
+  }
+
+  async findByUuid(uuid: string) {
+    const result = await this.scope
+      .where(and(this.scopeFilter, eq(evaluationResultsV2.uuid, uuid)))
+      .limit(1)
+      .then((r) => r[0])
+
+    if (!result) {
+      return Result.error(
+        new NotFoundError(
+          `Record with uuid ${uuid} not found in ${this.scope._.tableName}`,
+        ),
+      )
+    }
+
+    return Result.ok<EvaluationResultV2>(result as EvaluationResultV2)
+  }
+
+  async findManyByUuid(uuids: string[]) {
+    const results = await this.scope
+      .where(and(this.scopeFilter, inArray(evaluationResultsV2.uuid, uuids)))
+      .limit(uuids.length)
+
+    return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
   }
 
   listByEvaluationFilter({

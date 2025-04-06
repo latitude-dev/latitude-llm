@@ -6,11 +6,11 @@ import {
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   ICommitContextType,
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import DiffMatchPatch from 'diff-match-patch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -94,12 +94,12 @@ export function SuggestionItem({
     })
 
     close()
-  }, [project, suggestion, prompt, setDiff, setPrompt, apply, close])
+  }, [suggestion, prompt, setDiff, setPrompt, apply, close, router])
 
   const onDiscard = useCallback(async () => {
     await discard({ suggestionId: suggestion.id })
     setIsDiscarding(false)
-  }, [project, suggestion, discard, setIsDiscarding])
+  }, [suggestion, discard, setIsDiscarding])
 
   return (
     <li className='w-full flex flex-col p-4 gap-y-2 hover:bg-accent/50'>

@@ -18,8 +18,8 @@ export default function useEvaluationResultsWithMetadata(
     documentUuid: string
     commitUuid: string
     projectId: number
-    page: string | null
-    pageSize: string | null
+    page?: string | null
+    pageSize?: string | null
   },
   { fallbackData }: SWRConfiguration = {},
 ) {

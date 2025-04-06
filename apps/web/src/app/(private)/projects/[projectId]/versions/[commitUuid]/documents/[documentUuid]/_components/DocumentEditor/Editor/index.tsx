@@ -1,87 +1,51 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-
-import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
-import { publishEventAction } from '$/actions/events/publishEventAction'
 import EditorHeader from '$/components/EditorHeader'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useMetadata } from '$/hooks/useMetadata'
 import { ROUTES } from '$/services/routes'
+import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import useDocumentVersions from '$/stores/documentVersions'
+import useIntegrations from '$/stores/integrations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
-  Commit,
   DatasetVersion,
   DocumentVersion,
-  EvaluationDto,
-  EvaluationResult,
   ProviderApiKey,
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useRouter } from 'next/navigation'
-import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
-import { useDebouncedCallback } from 'use-debounce'
-
 import Link from 'next/link'
+import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useDebouncedCallback } from 'use-debounce'
 import Playground from './Playground'
-import RefineDocumentModal from './RefineModal'
-import { UpdateToPromptLButton } from './UpdateToPromptl'
-import { useRefinement } from './useRefinement'
-import { useAgentToolsMap } from '$/stores/agentToolsMap'
-import useIntegrations from '$/stores/integrations'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { PlaygroundTextEditor } from './TextEditor'
+import { UpdateToPromptLButton } from './UpdateToPromptl'
 
 export default function DocumentEditor({
   document: _document,
   documents: _documents,
   providerApiKeys,
   freeRunsCount,
-  evaluation: serverEvaluation,
-  evaluationResults: serverEvaluationResults,
   copilotEnabled,
 }: {
   document: DocumentVersion
   documents: DocumentVersion[]
   providerApiKeys?: ProviderApiKey[]
   freeRunsCount?: number
-  evaluation: EvaluationDto | undefined
-  evaluationResults: EvaluationResult[]
   copilotEnabled: boolean
 }) {
-  const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const router = useRouter()
-  const refinement = useRefinement({
-    projectId: project.id,
-    commitUuid: commit.uuid,
-    document: _document,
-    serverEvaluation,
-    serverEvaluationResults,
-  })
-  const { execute: createDraftWithContent } = useLatitudeAction(
-    createDraftWithContentAction,
-    {
-      onSuccess: ({ data: draft }: { data: Commit }) => {
-        router.push(
-          ROUTES.projects
-            .detail({ id: project.id })
-            .commits.detail({ uuid: draft.uuid })
-            .documents.detail({ uuid: _document.documentUuid }).root,
-        )
-      },
-    },
-  )
+
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
@@ -105,53 +69,7 @@ export default function DocumentEditor({
 
   const [value, setValue] = useState(_document.content)
   const [isSaved, setIsSaved] = useState(true)
-
   const [diff, setDiff] = useState<DiffOptions>()
-  const handleSuggestion = useCallback(
-    (suggestion: string) => {
-      const onAccept = (newValue: string) => {
-        setDiff(undefined)
-        publishEvent({
-          eventType: 'copilotRefinerApplied',
-          payload: {
-            projectId: project.id,
-            commitUuid: commit.uuid,
-            documentUuid: _document.documentUuid,
-          },
-        })
-
-        if (!commit.mergedAt) {
-          onChange(newValue)
-          return
-        }
-
-        createDraftWithContent({
-          title: `Refined '${document.path.split('/').pop()}'`,
-          content: newValue,
-          documentUuid: document.documentUuid,
-          projectId: project.id,
-        })
-      }
-
-      setDiff({
-        newValue: suggestion,
-        description: 'Generated suggestion',
-        onAccept,
-        onReject: () => {
-          setDiff(undefined)
-        },
-      })
-    },
-    [
-      document.documentUuid,
-      document.path,
-      commit.mergedAt,
-      publishEvent,
-      project.id,
-      commit.uuid,
-    ],
-  )
-
   const debouncedSave = useDebouncedCallback(
     (val: string) => {
       updateContent({
@@ -228,15 +146,6 @@ export default function DocumentEditor({
   const name = document.path.split('/').pop() ?? document.path
   return (
     <>
-      {refinement.modal.open ? (
-        <RefineDocumentModal
-          onClose={refinement.modal.onClose}
-          serverEvaluation={refinement.server.evaluation}
-          serverEvaluationResults={refinement.server.evaluationResults}
-          documentVersion={document}
-          setDocumentContent={handleSuggestion}
-        />
-      ) : null}
       <SplitPane
         className='p-6'
         direction='horizontal'
@@ -296,7 +205,6 @@ export default function DocumentEditor({
                 showCopilotSetting={copilotEnabled}
               />
               <PlaygroundTextEditor
-                refinement={refinement}
                 compileErrors={metadata?.errors}
                 project={project}
                 document={document}

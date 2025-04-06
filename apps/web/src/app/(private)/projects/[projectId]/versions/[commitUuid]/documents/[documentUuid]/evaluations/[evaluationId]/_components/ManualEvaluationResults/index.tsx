@@ -1,6 +1,12 @@
 'use client'
-import { useMemo, useRef, useState } from 'react'
 
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import {
+  PlaygroundAction,
+  usePlaygroundAction,
+} from '$/hooks/usePlaygroundAction'
+import { useSelectableRows } from '$/hooks/useSelectableRows'
+import { useDocumentLogsWithEvaluationResults } from '$/stores/documentLogsWithEvaluationResults'
 import {
   EvaluationDto,
   EvaluationResultDto,
@@ -8,23 +14,19 @@ import {
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { fetchDocumentLogsWithEvaluationResults } from '@latitude-data/core/services/documentLogs/fetchDocumentLogsWithEvaluationResults'
-import { cn } from '@latitude-data/web-ui/utils'
-import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useRefineAction } from '$/hooks/useRefineAction'
-import { useSelectableRows } from '$/hooks/useSelectableRows'
-import { useDocumentLogsWithEvaluationResults } from '$/stores/documentLogsWithEvaluationResults'
+import { cn } from '@latitude-data/web-ui/utils'
 import { useSearchParams } from 'next/navigation'
-
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { SubmitEvaluationDocumentation } from '../EvaluationResults/EvaluationBlankSlate'
+import { RefineEvaluationResults } from '../RefineEvaluationResults'
 import { DocumentLogInfoForManualEvaluation } from './DocumentLogInfo'
 import { DocumentLogsTable } from './DocumentLogsTable'
-import { RefineEvaluationResults } from '../RefineEvaluationResults'
 
 type DocumentLogWithEvaluationResults = Awaited<
   ReturnType<typeof fetchDocumentLogsWithEvaluationResults>
@@ -75,15 +77,23 @@ export function ManualEvaluationResultsClient({
     [documentLogs],
   )
 
+  const { setPlaygroundAction } = usePlaygroundAction({
+    action: PlaygroundAction.RefinePrompt,
+    project: project,
+    commit: commit,
+    document: document,
+  })
+
   const selectableState = useSelectableRows({
     rowIds: evaluatedResultIds,
   })
-  const onClickRefine = useRefineAction({
-    project,
-    commit,
-    document,
-    getSelectedRowIds: selectableState.getSelectedRowIds,
-  })
+  const onClickRefine = useCallback(async () => {
+    setPlaygroundAction({
+      evaluationId: evaluation.id,
+      resultIds: selectableState.getSelectedRowIds(),
+      version: 'v1',
+    })
+  }, [setPlaygroundAction, evaluation, selectableState])
 
   if (documentLogs.length === 0) {
     return (

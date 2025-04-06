@@ -274,7 +274,7 @@ describe('generateDocumentSuggestion', () => {
         results: results.map((result) => ({ ...result, version: 'v1' })),
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new UnprocessableEntityError('Cannot use this result for a suggestion'),
+      new UnprocessableEntityError('Cannot use these results for a suggestion'),
     )
 
     const repository = new DocumentSuggestionsRepository(workspace.id)
