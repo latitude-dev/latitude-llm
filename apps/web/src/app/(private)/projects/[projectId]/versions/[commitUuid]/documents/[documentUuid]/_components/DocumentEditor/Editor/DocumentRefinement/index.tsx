@@ -165,7 +165,7 @@ export function DocumentRefinement({
         number: 3,
         title: 'Generating prompt suggestion',
         description:
-          'We are reviewing evaluations with poor results to identify why the prompt failed and propose suitable modifications.',
+          'We are reviewing evaluations with poor results, to identify why the prompt failed, and propose suitable modifications.',
         content: (
           <Step3
             project={project}
@@ -199,7 +199,7 @@ export function DocumentRefinement({
       number: 1,
       title: 'Select evaluation',
       description:
-        'Select an evaluation and our system will take the results where it is not performing well to improve the prompt.',
+        'Select an evaluation and our system will take the results, where it is not performing well, to improve the prompt.',
       content: (
         <Step1
           project={project}

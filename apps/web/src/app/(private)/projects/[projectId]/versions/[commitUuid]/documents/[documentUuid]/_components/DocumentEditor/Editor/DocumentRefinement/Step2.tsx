@@ -22,5 +22,6 @@ export function Step2({
   setResults: (results: EvaluationResultTmp[]) => void
 }) {
   // TODO
+  // - Add filter to results exluding errored results
   return <div>Step2</div>
 }
