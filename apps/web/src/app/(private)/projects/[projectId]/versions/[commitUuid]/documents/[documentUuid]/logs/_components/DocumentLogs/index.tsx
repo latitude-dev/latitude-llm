@@ -1,6 +1,5 @@
 'use client'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
 import useProviderLogs from '$/stores/providerLogs'
@@ -21,7 +20,6 @@ import { AggregationPanels } from './AggregationPanels'
 import { DocumentLogInfo } from './DocumentLogInfo'
 import { DocumentLogsTable } from './DocumentLogsTable'
 import { DownloadLogsButton } from './DownloadLogsButton'
-import { ExportLogsModal } from './ExportLogsModal'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
 import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
 
@@ -42,9 +40,6 @@ export function DocumentLogs({
   evaluationResults: Record<string, ResultWithEvaluationTmp[]>
   isEvaluationResultsLoading: boolean
 }) {
-  const { enabled: hasNewDatasets } = useFeatureFlag({
-    featureFlag: 'datasetsV2',
-  })
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
   const { document } = useCurrentDocument()
@@ -72,7 +67,6 @@ export function DocumentLogs({
     () => documentLogs.map((r) => r.id),
     [documentLogs],
   )
-  const [selectedLogsIds, setSelectedLogsIds] = useState<number[]>([])
   const selectableState = useSelectableRows({
     rowIds: documentLogIds,
   })
@@ -140,30 +134,14 @@ export function DocumentLogs({
           <FloatingPanel visible={selectableState.selectedCount > 0}>
             <div className='flex flex-row justify-between gap-x-4'>
               <>
-                {hasNewDatasets ? (
-                  <>
-                    <Button
-                      fancy
-                      disabled={selectableState.selectedCount === 0}
-                      onClick={previewLogsState.onClickShowPreview}
-                    >
-                      Save logs to dataset
-                    </Button>
-                    <DownloadLogsButton selectableState={selectableState} />
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      disabled={selectableState.selectedCount === 0}
-                      fancy
-                      onClick={() =>
-                        setSelectedLogsIds(selectableState.getSelectedRowIds())
-                      }
-                    >
-                      Export selected logs
-                    </Button>
-                  </>
-                )}
+                <Button
+                  fancy
+                  disabled={selectableState.selectedCount === 0}
+                  onClick={previewLogsState.onClickShowPreview}
+                >
+                  Save logs to dataset
+                </Button>
+                <DownloadLogsButton selectableState={selectableState} />
               </>
               <Button
                 fancy
@@ -175,11 +153,6 @@ export function DocumentLogs({
             </div>
           </FloatingPanel>
         </div>
-        {/* DEPRECATED: This is for old datasets */}
-        <ExportLogsModal
-          selectedLogsIds={selectedLogsIds}
-          close={() => setSelectedLogsIds([])}
-        />
         <SaveLogsAsDatasetModal {...previewLogsState} />
       </div>
     </div>

@@ -8,15 +8,13 @@ import {
   DocumentVersion,
   Inputs,
   LinkedDatasetRow,
+  parseRowCell,
 } from '@latitude-data/core/browser'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useMetadataParameters } from '$/hooks/useDocumentParameters/metadataParametersStore'
-import {
-  ClientDatasetRow,
-  parseRowCell,
-} from '$/stores/datasetRows/rowSerializationHelpers'
+import { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
 
 function mapDatasetColumnsToParameters({
   parameters,

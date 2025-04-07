@@ -3,7 +3,7 @@ import { useServerAction } from 'zsa-react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { generateDatasetPreviewAction } from '$/actions/sdk/generateDatasetPreviewAction'
 
-function usePreviewCsv() {
+function usePreviewData() {
   const { toast } = useToast()
   const {
     data,
@@ -22,14 +22,14 @@ function usePreviewCsv() {
 
   return {
     explanation: data?.explanation,
-    previewCsv: data?.parsedCsv,
+    previewData: data,
     runPreviewAction,
     previewIsLoading,
     previewError,
   }
 }
 
-export type PreviewCsv = ReturnType<typeof usePreviewCsv>['previewCsv']
+export type PreviewData = ReturnType<typeof usePreviewData>['previewData']
 
 export function useDatasetPreviewModal({
   defaultName,
@@ -40,7 +40,7 @@ export function useDatasetPreviewModal({
   defaultParameters: string[]
   generateErrorMessage?: string
 }) {
-  const preview = usePreviewCsv()
+  const preview = usePreviewData()
   const [parameters, setParameters] = useState<string[]>(defaultParameters)
 
   const handleParametersChange = useCallback(
@@ -91,7 +91,7 @@ export function useDatasetPreviewModal({
     defaultParameters,
     parameters,
     explanation: preview.explanation,
-    previewCsv: preview.previewCsv,
+    previewData: preview.previewData,
     previewIsLoading: preview.previewIsLoading,
     errorMessage: preview.previewError?.message || generateErrorMessage,
 

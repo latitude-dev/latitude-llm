@@ -393,6 +393,7 @@ export type TraceWithSpans = Trace & {
 
 export type SpanMetadataTypes = 'default' | 'generation'
 
+// TODO: Review if it's used
 export type CsvData = {
   headers: string[]
   data: {

@@ -4,7 +4,7 @@ import { CLOUD_MESSAGES, LogSources } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { env } from '@latitude-data/env'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
-import { syncReadCsv } from '@latitude-data/core/lib/readCsv/index'
+import { generatePreviewRowsFromJson } from '@latitude-data/core/services/datasetRows/generatePreviewRowsFromJson'
 import { authProcedure } from '$/actions/procedures'
 import { z } from 'zod'
 
@@ -63,12 +63,15 @@ export const generateDatasetPreviewAction = authProcedure
       )
     }
 
-    const parsedCsv = await syncReadCsv(response.object.csv, {
-      delimiter: ',',
-    }).then((r) => r.unwrap())
+    const parseResult = generatePreviewRowsFromJson({
+      rows: response.object.rows,
+    })
+    const { headers, rows } = parseResult.unwrap()
+
     const explanation = response.object.explanation as string
     return {
-      parsedCsv,
+      headers,
+      rows,
       explanation,
     }
   })

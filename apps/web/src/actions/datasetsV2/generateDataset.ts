@@ -1,5 +1,6 @@
 'use server'
 
+import { z } from 'zod'
 import {
   ChainStepResponse,
   CLOUD_MESSAGES,
@@ -7,12 +8,10 @@ import {
 } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { env } from '@latitude-data/env'
-import slugify from '@sindresorhus/slugify'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { authProcedure } from '$/actions/procedures'
-import { z } from 'zod'
-import { createDatasetFromFile } from '@latitude-data/core/services/datasetsV2/createFromFile'
+import { createDatasetFromJson } from '@latitude-data/core/services/datasetsV2/createFromJson'
 
 export const generateDatasetAction = authProcedure
   .createServerAction()
@@ -63,19 +62,18 @@ export const generateDatasetAction = authProcedure
 
     if (!sdkResult) {
       throw new BadRequestError(
-        'Something went wrong generating the CSV preview',
+        'Something went wrong generating the Dataset preview',
       )
     }
 
-    const csv = (sdkResult?.response! as ChainStepResponse<'object'>).object.csv
+    const response = sdkResult.response as ChainStepResponse<'object'>
     const name = input.name
-    const result = await createDatasetFromFile({
+    const result = await createDatasetFromJson({
       author: user,
       workspace,
       data: {
         name,
-        file: new File([csv], `${slugify(name)}.csv`, { type: 'text/csv' }),
-        csvDelimiter: ',',
+        rows: response.object.rows,
       },
     })
 
@@ -83,5 +81,5 @@ export const generateDatasetAction = authProcedure
       throw result.error
     }
 
-    return result.value.dataset
+    return result.value
   })

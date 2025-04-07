@@ -73,7 +73,6 @@ export function RootDatasetHeader({
 
       <NewModal open={newDataset.open} onOpenChange={onOpenChange('new')} />
       <GenerateDatasetCloudModal
-        isV2={isV2}
         isCloud={isCloud}
         open={generateModal.open}
         canNotModify={canNotModify}
