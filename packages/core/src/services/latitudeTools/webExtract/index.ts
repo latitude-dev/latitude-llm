@@ -1,3 +1,7 @@
+import {
+  LatitudeTool,
+  LatitudeToolInternalName,
+} from '@latitude-data/constants'
 import { env } from '@latitude-data/env'
 import { LatitudeToolDefinition } from '../../../constants'
 import {
@@ -7,10 +11,6 @@ import {
   Result,
 } from '../../../lib'
 import { ExtractToolArgs, ExtractToolResult } from './types'
-import {
-  LatitudeTool,
-  LatitudeToolInternalName,
-} from '@latitude-data/constants'
 
 const HANDINGER_API_URL = 'https://api.handinger.com/markdown'
 
@@ -45,7 +45,7 @@ async function webExtract({
     return Result.error(new BadRequestError('Invalid URL'))
   }
 
-  const requestParams = new URLSearchParams({ url: url.toString() })
+  const requestParams = new URLSearchParams({ url: url.toString(), fresh: '1' })
   const requestHeaders = new Headers({
     Authorization: `Bearer ${env.HANDINGER_API_KEY}`,
   })
