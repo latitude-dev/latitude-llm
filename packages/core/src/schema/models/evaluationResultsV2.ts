@@ -17,6 +17,7 @@ import { datasetRows } from './datasetRows'
 import { datasetsV2 } from './datasetsV2'
 import { providerLogs } from './providerLogs'
 import { workspaces } from './workspaces'
+import { experiments } from './experiments'
 
 export const evaluationResultsV2 = latitudeSchema.table(
   'evaluation_results_v2',
@@ -30,8 +31,10 @@ export const evaluationResultsV2 = latitudeSchema.table(
       .notNull()
       .references(() => commits.id, { onDelete: 'restrict' }),
     evaluationUuid: uuid('evaluation_uuid').notNull(),
-    experimentId: bigint('experiment_id', { mode: 'number' }),
-    // .references(() => experiments.id, { onDelete: 'restrict' }), // TODO: Add this when experiment table is created
+    experimentId: bigint('experiment_id', { mode: 'number' }).references(
+      () => experiments.id,
+      { onDelete: 'restrict', onUpdate: 'cascade' },
+    ),
     datasetId: bigint('dataset_id', { mode: 'number' }).references(
       () => datasetsV2.id,
       { onDelete: 'set null' },

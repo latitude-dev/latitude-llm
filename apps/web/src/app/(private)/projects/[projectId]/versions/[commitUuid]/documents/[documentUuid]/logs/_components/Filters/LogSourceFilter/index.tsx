@@ -16,6 +16,7 @@ const LogSourceLabel: { [key in LogSources]: string } = {
   [LogSources.AgentAsTool]: 'Sub agents',
   [LogSources.EmailTrigger]: 'Email trigger',
   [LogSources.ScheduledTrigger]: 'Scheduled trigger',
+  [LogSources.Experiment]: 'Experiment',
 }
 
 function LogSourceCheckbox({
