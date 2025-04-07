@@ -1,7 +1,7 @@
-import { Worker } from 'bullmq'
+import { Worker, WorkerOptions } from 'bullmq'
 import { Queues } from '@latitude-data/core/queues/types'
 import { captureException } from '$/utils/sentry'
-import { connectionConfig } from './connectionConfig'
+import { WORKER_OPTIONS } from './connectionConfig'
 import { createJobHandler } from './createJobHandler'
 
 /**
@@ -13,12 +13,9 @@ import { createJobHandler } from './createJobHandler'
 export function createWorker<T extends Record<string, Function>>(
   queue: Queues,
   jobMappings: T,
+  workerOptions: WorkerOptions = WORKER_OPTIONS,
 ): Worker {
-  const worker = new Worker(
-    queue,
-    createJobHandler(jobMappings),
-    connectionConfig,
-  )
+  const worker = new Worker(queue, createJobHandler(jobMappings), workerOptions)
 
   worker.on('error', (error: Error) => {
     captureException(error)
