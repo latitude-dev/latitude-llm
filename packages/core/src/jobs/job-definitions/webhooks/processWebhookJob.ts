@@ -32,11 +32,11 @@ export async function processWebhookJob({
 
   // Enqueue a job for each webhook
   await Promise.all(
-    activeWebhooks.map((webhook) =>
+    activeWebhooks.map((webhook) => {
       webhooksQueue.add('processIndividualWebhookJob', {
         event,
         webhookId: webhook.id,
-      }),
-    ),
+      })
+    }),
   )
 }

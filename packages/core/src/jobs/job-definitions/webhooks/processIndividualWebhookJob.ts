@@ -9,7 +9,9 @@ import {
   sendSignedWebhook,
 } from '../../../services/webhooks'
 import { type WebhookPayload } from '../../../services/webhooks/types'
-import { Events } from '../../../events/events'
+import { Events, LatitudeEvent } from '../../../events/events'
+
+const WEBHOOK_EVENTS: Array<Events> = ['commitPublished']
 
 export type ProcessIndividualWebhookJobData = {
   event: typeof events.$inferSelect
@@ -31,16 +33,20 @@ export const processIndividualWebhookJob = async (
     throw new Error(`Webhook not found or inactive: ${webhookId}`)
   }
 
-  // Skip if webhook has project filter and event is not for that project
+  // Extract projectId from the event
+  const projectId = fetchProjectIdFromEvent(event as LatitudeEvent)
+  if (!projectId) {
+    throw new Error(`No project id found in event ${event.type}`)
+  }
+
+  // Check if the webhook has project filters and if the event's projectId matches
   if (
     webhook.projectIds &&
     webhook.projectIds.length > 0 &&
-    event.data &&
-    typeof event.data === 'object' &&
-    'projectId' in event.data &&
-    !webhook.projectIds.includes(event.data.projectId as number)
+    !webhook.projectIds.includes(projectId)
   ) {
-    return // Skip silently as this is an expected condition
+    // Skip this webhook as it doesn't match the project filter
+    return
   }
 
   // Create webhook payload
@@ -83,5 +89,18 @@ export const processIndividualWebhookJob = async (
       status: 'failed',
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
     })
+  }
+}
+
+function fetchProjectIdFromEvent(event: LatitudeEvent) {
+  if (!WEBHOOK_EVENTS.includes(event.type as Events)) {
+    return
+  }
+
+  switch (event.type) {
+    case 'commitPublished':
+      return event.data.commit.projectId
+    default:
+      return
   }
 }
