@@ -195,7 +195,21 @@ export function DocumentRefinement({
         />
       ),
     }
-  }, [document, evaluationId, evaluationUuid, resultIds, resultUuids])
+  }, [
+    project,
+    commit,
+    document,
+    evaluationId,
+    evaluationUuid,
+    resultIds,
+    resultUuids,
+    setEvaluationId,
+    setEvaluationUuid,
+    setResultIds,
+    setResultUuids,
+    refine,
+    reset,
+  ])
 
   return (
     <>
