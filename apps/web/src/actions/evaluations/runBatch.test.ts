@@ -10,17 +10,17 @@ import * as factories from '@latitude-data/core/factories'
 import { type FactoryCreateProjectReturn } from '@latitude-data/core/factories'
 
 import { runBatchEvaluationAction } from './runBatch'
-import { defaultQueue, eventsQueue } from '@latitude-data/core/queues'
+import { evaluationsQueue, eventsQueue } from '@latitude-data/core/queues'
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   queues: {
-    defaultQueue: vi.fn(),
+    evaluationsQueue: vi.fn(),
     eventsQueue: vi.fn(),
   },
 }))
 
-vi.spyOn(defaultQueue, 'add').mockImplementation(mocks.queues.defaultQueue)
+vi.spyOn(evaluationsQueue, 'add').mockImplementation(mocks.queues.evaluationsQueue)
 vi.spyOn(eventsQueue, 'add').mockImplementation(mocks.queues.eventsQueue)
 
 vi.mock('$/services/auth/getSession', () => ({
@@ -127,7 +127,7 @@ describe('runBatchAction', () => {
           success: true,
         })
 
-        expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+        expect(mocks.queues.evaluationsQueue).toHaveBeenCalledWith(
           'runBatchEvaluationJob',
           expect.objectContaining({
             fromLine: 10,
@@ -178,7 +178,7 @@ describe('runBatchAction', () => {
           success: true,
         })
 
-        expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+        expect(mocks.queues.evaluationsQueue).toHaveBeenCalledWith(
           'runBatchEvaluationJob',
           expect.objectContaining({
             evaluation: expect.objectContaining({ id: evaluation.id }),
@@ -218,16 +218,16 @@ describe('runBatchAction', () => {
           success: true,
         })
 
-        expect(mocks.queues.defaultQueue).toHaveBeenCalledTimes(2)
+        expect(mocks.queues.evaluationsQueue).toHaveBeenCalledTimes(2)
 
-        expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+        expect(mocks.queues.evaluationsQueue).toHaveBeenCalledWith(
           'runBatchEvaluationJob',
           expect.objectContaining({
             evaluation: expect.objectContaining({ id: evaluation.id }),
           }),
         )
 
-        expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+        expect(mocks.queues.evaluationsQueue).toHaveBeenCalledWith(
           'runBatchEvaluationJob',
           expect.objectContaining({
             evaluation: expect.objectContaining({ id: evaluation2.id }),
@@ -269,7 +269,7 @@ describe('runBatchAction', () => {
           success: true,
         })
 
-        expect(mocks.queues.defaultQueue).toHaveBeenCalledWith(
+        expect(mocks.queues.evaluationsQueue).toHaveBeenCalledWith(
           'runBatchEvaluationJob',
           expect.objectContaining({
             evaluation: expect.objectContaining({ id: evaluation.id }),
