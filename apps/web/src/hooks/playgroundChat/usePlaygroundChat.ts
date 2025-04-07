@@ -81,9 +81,17 @@ export function usePlaygroundChat({
       let accumulatedTextDelta = ''
       let documentLogUuid: string | undefined
 
+      const reader = stream.getReader()
+
       try {
-        for await (const parsedEvent of stream as unknown as AsyncIterable<ParsedEvent>) {
-          const { event } = parsedEvent
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          if (!value) continue
+
+          const parsedEvent = value as ParsedEvent
+          if (parsedEvent.type !== 'event') continue
+
           const data = JSON.parse(parsedEvent.data) as ChainEvent['data']
           const { uuid } = data as LatitudeChainCompletedEventData
 
@@ -99,7 +107,7 @@ export function usePlaygroundChat({
           }
 
           // Delta text from the provider
-          if (event === StreamEventTypes.Provider) {
+          if (parsedEvent.event === StreamEventTypes.Provider) {
             if (data.type === 'text-delta') {
               accumulatedTextDelta += data.textDelta
               setStreamingResponse(accumulatedTextDelta)
