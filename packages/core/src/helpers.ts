@@ -120,6 +120,8 @@ export function formatMessage(message: Message) {
       .join('\n')
   }
 
+  result = result.trim()
+
   return result
 }
 
@@ -130,6 +132,8 @@ export function formatConversation(conversation: Message[]) {
     const speaker = message.role.charAt(0).toUpperCase() + message.role.slice(1)
     result += `${speaker}: ${formatMessage(message)}\n\n`
   }
+
+  result = result.trim()
 
   return result
 }
