@@ -3,6 +3,36 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-04-07'>
+
+## Documents Queue/Worker
+
+Introduced a queue and worker with higher concurrency for faster document processing, optimizing I/O bound tasks. This enhancement significantly speeds up document handling.
+
+## Experiments Schema
+
+A new schema for experiments has been introduced, improving the structure and organization of experimental data. This change facilitates better management and analysis of experiments.
+
+## Stream Error Handling in SDK
+
+Enhanced error handling in the SDK to address silent failures, improving reliability and debugging capabilities.
+
+## New Providers Added
+
+Integrated new providers including xai, Amazon Bedrock, Perplexity, and Deepseek, expanding the range of available services and enhancing flexibility for users.
+
+## Package Management and Docker Image Optimization
+
+Improved package management and significantly reduced Docker image sizes, leading to more efficient builds and deployments.
+
+## Other Updates
+
+- **Provider Options Adjustment**: Adjusted provider options to be camelCase as expected by Vercel SDK, ensuring compatibility and smooth integration.
+
+- **Jobs Refactoring**: Refactored jobs to remove meta programming, enabling server minification and potentially fixing memory leaks, contributing to overall system stability.
+
+</Update>
+
 <Update label='2025-03-28'>
 
 ## New evaluation types
