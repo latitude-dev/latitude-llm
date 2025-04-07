@@ -129,6 +129,7 @@ export class EvaluationRunChecker {
         const metadata = await scan({
           prompt: evaluationPrompt,
         })
+
         return Result.ok({
           chain: new PromptlChain({
             prompt: evaluationPrompt,

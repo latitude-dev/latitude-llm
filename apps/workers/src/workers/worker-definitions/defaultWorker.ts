@@ -11,10 +11,6 @@ const jobMappings = {
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   processScheduledTriggerJob: jobs.processScheduledTriggerJob,
   runEmailTriggerJob: jobs.runEmailTriggerJob,
-
-  // TODO: temporary until we have processed all remaining jobs, will be removed
-  runDocumentJob: jobs.runDocumentJob,
-  requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
 }
 
 export function startDefaultWorker() {

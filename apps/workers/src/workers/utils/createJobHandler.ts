@@ -1,3 +1,4 @@
+import { captureException } from '$/utils/sentry'
 import { Job } from 'bullmq'
 
 /**
@@ -15,6 +16,12 @@ export function createJobHandler<T extends Record<string, Function>>(
       throw new Error(`Job function not found: ${jobName}`)
     }
 
-    return await jobFunction(job)
+    try {
+      return await jobFunction(job)
+    } catch (error) {
+      captureException(error as Error)
+
+      throw error
+    }
   }
 }
