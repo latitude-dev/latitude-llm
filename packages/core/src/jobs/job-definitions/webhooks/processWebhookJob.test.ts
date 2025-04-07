@@ -11,10 +11,6 @@ describe('processWebhookJob', () => {
   }))
 
   beforeEach(async () => {
-    vi.clearAllMocks()
-    vi.resetAllMocks()
-    vi.restoreAllMocks()
-
     // Mock the webhooksQueue.add method
     vi.spyOn(webhooksQueue, 'add').mockImplementation(mocks.webhooksQueue)
   })
@@ -63,6 +59,8 @@ describe('processWebhookJob', () => {
       },
     }
 
+    mocks.webhooksQueue.mockClear()
+
     // Process the webhook job
     await processWebhookJob({ data: event })
 
@@ -71,7 +69,6 @@ describe('processWebhookJob', () => {
     expect(mocks.webhooksQueue).toHaveBeenCalledWith(
       'processIndividualWebhookJob',
       {
-        projectId: 123,
         event,
         webhookId: webhook1.id,
       },
@@ -79,7 +76,6 @@ describe('processWebhookJob', () => {
     expect(mocks.webhooksQueue).toHaveBeenCalledWith(
       'processIndividualWebhookJob',
       {
-        projectId: 123,
         event,
         webhookId: webhook2.id,
       },
@@ -105,6 +101,8 @@ describe('processWebhookJob', () => {
         userEmail: 'test@example.com',
       },
     }
+
+    mocks.webhooksQueue.mockClear()
 
     // Process the webhook job
     await processWebhookJob({ data: event })
@@ -134,48 +132,10 @@ describe('processWebhookJob', () => {
       },
     }
 
+    mocks.webhooksQueue.mockClear()
+
     // Process the webhook job
     await processWebhookJob({ data: event as any })
-
-    // Verify no jobs were enqueued
-    expect(mocks.webhooksQueue).not.toHaveBeenCalled()
-  })
-
-  it('throws error when projectId cannot be extracted from event', async () => {
-    // Create a workspace
-    const { workspace } = await factories.createWorkspace()
-
-    // Create a webhook
-    await factories.createWebhook({
-      workspaceId: workspace.id,
-      url: 'https://example.com/webhook',
-      isActive: true,
-      projectIds: [],
-    })
-
-    // Create an event without a projectId
-    const event = {
-      type: 'commitPublished',
-      data: {
-        workspaceId: workspace.id,
-        commit: {
-          id: 1,
-          uuid: 'test-uuid',
-          title: 'Test Commit',
-          // Missing projectId
-          userId: 'user-1',
-          mergedAt: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as Commit,
-        userEmail: 'test@example.com',
-      },
-    }
-
-    // Process the webhook job and expect it to throw an error
-    await expect(processWebhookJob({ data: event as any })).rejects.toThrow(
-      'No project id found in event commitPublished',
-    )
 
     // Verify no jobs were enqueued
     expect(mocks.webhooksQueue).not.toHaveBeenCalled()

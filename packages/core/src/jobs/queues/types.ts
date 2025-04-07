@@ -6,4 +6,5 @@ export enum Queues {
   liveEvaluationsQueue = 'liveEvaluations',
   maintenanceQueue = 'maintenance',
   webhooksQueue = 'webhooks',
+  documentsQueue = 'documentsQueue',
 }

@@ -31,3 +31,4 @@ export const liveEvaluationsQueue = new Queue(
 )
 export const maintenanceQueue = new Queue(Queues.maintenanceQueue, options)
 export const webhooksQueue = new Queue(Queues.webhooksQueue, options)
+export const documentsQueue = new Queue(Queues.documentsQueue, options)

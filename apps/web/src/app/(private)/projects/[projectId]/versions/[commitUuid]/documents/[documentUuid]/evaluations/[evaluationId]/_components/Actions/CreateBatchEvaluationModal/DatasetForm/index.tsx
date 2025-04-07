@@ -19,6 +19,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { isNumber } from 'lodash-es'
 import Link from 'next/link'
 import { useMemo } from 'react'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 
 function findValue({
   headers,
@@ -237,31 +238,39 @@ export default function DatasetForm({
         </NumeredList.Item>
         <NumeredList.Item
           title='Select the columns that contain the data to fill out the variables'
-          width='w-1/2'
+          width='w-full'
         >
           {selectedDataset ? (
-            <div className='flex flex-col gap-y-3'>
-              {parametersList.map((param) => {
-                return (
-                  <Select
-                    key={param}
-                    name={`parameter[${param}]`}
-                    disabled={filteredHeaders.length === 0}
-                    errors={paramaterErrors[param]}
-                    badgeLabel
-                    label={param}
-                    options={filteredHeaders}
-                    value={findValue({
-                      headers: filteredHeaders,
-                      parameters,
-                      param,
-                    })}
-                    onChange={onParametersChange(param)}
-                    placeholder='Select csv column'
-                  />
-                )
-              })}
-            </div>
+            parametersList.length > 0 ? (
+              <div className='flex flex-col gap-y-3 w-1/2'>
+                {parametersList.map((param) => {
+                  return (
+                    <Select
+                      key={param}
+                      name={`parameter[${param}]`}
+                      disabled={filteredHeaders.length === 0}
+                      errors={paramaterErrors[param]}
+                      badgeLabel
+                      label={param}
+                      options={filteredHeaders}
+                      value={findValue({
+                        headers: filteredHeaders,
+                        parameters,
+                        param,
+                      })}
+                      onChange={onParametersChange(param)}
+                      placeholder='Select csv column'
+                    />
+                  )
+                })}
+              </div>
+            ) : (
+              <Alert
+                variant='default'
+                title='No parameters to map'
+                description='Please add parameters to the prompt.'
+              />
+            )
           ) : null}
         </NumeredList.Item>
         {specification?.requiresExpectedOutput && (

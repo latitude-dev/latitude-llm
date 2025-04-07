@@ -8,13 +8,13 @@ import {
   LogSources,
   Workspace,
 } from '../../browser'
-import { defaultQueue } from '../../jobs/queues'
+import { documentsQueue } from '../../jobs/queues'
 import * as factories from '../../tests/factories'
 import { requestDocumentSuggestionJob } from './requestDocumentSuggestionJob'
 
 describe('requestDocumentSuggestionJob', () => {
   const mocks = vi.hoisted(() => ({
-    defaultQueue: vi.fn(),
+    documentsQueue: vi.fn(),
   }))
 
   let workspace: Workspace
@@ -88,7 +88,7 @@ describe('requestDocumentSuggestionJob', () => {
     })
     result = r
 
-    vi.spyOn(defaultQueue, 'add').mockImplementation(mocks.defaultQueue)
+    vi.spyOn(documentsQueue, 'add').mockImplementation(mocks.documentsQueue)
   })
 
   it('not enqueues generate suggestion job when result is not live', async () => {
@@ -107,7 +107,7 @@ describe('requestDocumentSuggestionJob', () => {
       },
     })
 
-    expect(mocks.defaultQueue).not.toHaveBeenCalled()
+    expect(mocks.documentsQueue).not.toHaveBeenCalled()
   })
 
   it('not enqueues generate suggestion job when result has passed', async () => {
@@ -125,7 +125,7 @@ describe('requestDocumentSuggestionJob', () => {
       },
     })
 
-    expect(mocks.defaultQueue).not.toHaveBeenCalled()
+    expect(mocks.documentsQueue).not.toHaveBeenCalled()
   })
 
   it('enqueues generate suggestion job', async () => {
@@ -141,8 +141,8 @@ describe('requestDocumentSuggestionJob', () => {
       },
     })
 
-    expect(mocks.defaultQueue).toHaveBeenCalledOnce()
-    expect(mocks.defaultQueue).toHaveBeenCalledWith(
+    expect(mocks.documentsQueue).toHaveBeenCalledOnce()
+    expect(mocks.documentsQueue).toHaveBeenCalledWith(
       'generateDocumentSuggestionJob',
       {
         workspaceId: workspace.id,

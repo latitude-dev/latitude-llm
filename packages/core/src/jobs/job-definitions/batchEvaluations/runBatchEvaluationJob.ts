@@ -15,7 +15,7 @@ import { getEvaluationMetricSpecification } from '../../../services/evaluationsV
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { publisher } from '../../../events/publisher'
-import { defaultQueue } from '../../queues'
+import { documentsQueue } from '../../queues'
 
 type GetDatasetsProps = {
   dataset: DatasetV2
@@ -194,7 +194,7 @@ export const runBatchEvaluationJob = async (
 
       // NOTE: This is running jobs for the document with different parameters
       // then the result is evaluated with `runEvaluationJob`
-      await defaultQueue.add('runDocumentForEvaluationJob', {
+      await documentsQueue.add('runDocumentForEvaluationJob', {
         workspaceId: workspace.id,
         documentUuid: document.documentUuid,
         commitUuid: commit.uuid,
