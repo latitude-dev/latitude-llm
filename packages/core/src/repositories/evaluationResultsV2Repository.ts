@@ -15,6 +15,7 @@ import {
   getTableColumns,
   gte,
   inArray,
+  isNotNull,
   isNull,
   lte,
   sql,
@@ -101,6 +102,11 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     if (filters?.commitIds?.length) {
       filter.push(inArray(evaluationResultsV2.commitId, filters.commitIds))
+    }
+
+    if (filters?.errored !== undefined) {
+      if (filters.errored) filter.push(isNotNull(evaluationResultsV2.error))
+      else filter.push(isNull(evaluationResultsV2.error))
     }
 
     if (filters?.createdAt?.from) {

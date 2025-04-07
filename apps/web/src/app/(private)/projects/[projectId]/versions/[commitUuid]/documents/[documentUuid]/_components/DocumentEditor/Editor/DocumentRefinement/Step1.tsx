@@ -36,12 +36,14 @@ export function Step1({
   project,
   commit,
   document,
-  setEvaluation,
+  setEvaluationId,
+  setEvaluationUuid,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
-  setEvaluation: (evaluation: EvaluationTmp) => void
+  setEvaluationId: (id: number) => void
+  setEvaluationUuid: (uuid: string) => void
 }) {
   const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationTmp>()
 
@@ -67,7 +69,9 @@ export function Step1({
   }, [evaluationsV1, evaluationsV2])
 
   if (isEvaluationsV1Loading || isEvaluationsV2Loading) {
-    return <TableSkeleton rows={7} cols={3} />
+    return (
+      <TableSkeleton rows={7} cols={['Name', 'Description', 'Average score']} />
+    )
   }
 
   if (!evaluations.length) {
@@ -142,10 +146,14 @@ export function Step1({
           ))}
         </TableBody>
       </Table>
-      <div className='w-full flex justify-end'>
+      <div className='w-full flex justify-end gap-4'>
         <Button
           fancy
-          onClick={() => setEvaluation(selectedEvaluation!)}
+          onClick={() => {
+            if (selectedEvaluation!.version === 'v2') {
+              setEvaluationUuid(selectedEvaluation!.uuid)
+            } else setEvaluationId(selectedEvaluation!.id)
+          }}
           disabled={!selectedEvaluation}
         >
           Select evaluation

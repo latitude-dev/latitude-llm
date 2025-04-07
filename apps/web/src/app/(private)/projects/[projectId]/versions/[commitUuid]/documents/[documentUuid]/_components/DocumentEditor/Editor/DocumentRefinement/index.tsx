@@ -4,11 +4,7 @@ import {
 } from '$/hooks/usePlaygroundAction'
 import { useRefiner } from '$/hooks/useRefiner'
 import { ROUTES } from '$/services/routes'
-import {
-  DocumentVersion,
-  EvaluationResultTmp,
-  EvaluationTmp,
-} from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -18,7 +14,7 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useRouter } from 'next/navigation'
 import type { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { Step1 } from './Step1'
 import { Step2 } from './Step2'
 import { Step3 } from './Step3'
@@ -47,13 +43,14 @@ export function DocumentRefinement({
     document: document,
   })
 
-  const { refinePrompt, refineApply } = useRefiner({
-    project: project,
-    commit: commit,
-    document: document,
-  })
-
   const [openModal, setOpenModal] = useState(!!playgroundAction)
+  const cancelled = useRef(!openModal)
+  cancelled.current = !openModal
+
+  const { refinePrompt, refineApply } = useRefiner(
+    { project, commit, document },
+    cancelled,
+  )
 
   const [evaluationId, setEvaluationId] = useState<number | undefined>(
     playgroundAction?.version === 'v1'
@@ -73,33 +70,13 @@ export function DocumentRefinement({
     playgroundAction?.version === 'v2' ? playgroundAction.resultUuids : [],
   )
 
-  const setEvaluation = useCallback(
-    (evaluation: EvaluationTmp) => {
-      if (evaluation.version === 'v2') {
-        setEvaluationUuid(evaluation.uuid)
-      } else setEvaluationId(evaluation.id)
-    },
-    [setEvaluationId, setEvaluationUuid],
-  )
-
-  const setResults = useCallback(
-    (results: EvaluationResultTmp[]) => {
-      if (results[0]!.version === 'v2') {
-        setResultUuids(results.map((r) => r.uuid))
-      } else setResultIds(results.map((r) => r.id))
-    },
-    [setResultIds, setResultUuids],
-  )
-
-  const close = useCallback(() => {
-    setOpenModal(false)
+  const reset = useCallback(() => {
     resetPlaygroundAction()
     setEvaluationId(undefined)
     setResultIds([])
     setEvaluationUuid(undefined)
     setResultUuids([])
   }, [
-    setOpenModal,
     resetPlaygroundAction,
     setEvaluationId,
     setResultIds,
@@ -114,6 +91,8 @@ export function DocumentRefinement({
       resultIds: resultIds,
       resultUuids: resultUuids,
     })
+
+    if (cancelled.current) return
 
     if (!error) {
       setDiff({
@@ -140,17 +119,20 @@ export function DocumentRefinement({
       })
     }
 
-    close()
+    setOpenModal(false)
+    reset()
   }, [
     evaluationId,
     evaluationUuid,
     resultIds,
     resultUuids,
     refinePrompt,
+    cancelled,
     setDiff,
     setPrompt,
     refineApply,
-    close,
+    setOpenModal,
+    reset,
     project,
     document,
     router,
@@ -188,8 +170,11 @@ export function DocumentRefinement({
             project={project}
             commit={commit}
             document={document}
-            setEvaluation={setEvaluation}
-            setResults={setResults}
+            evaluationId={evaluationId}
+            setResultIds={setResultIds}
+            evaluationUuid={evaluationUuid}
+            setResultUuids={setResultUuids}
+            reset={reset}
           />
         ),
       }
@@ -205,7 +190,8 @@ export function DocumentRefinement({
           project={project}
           commit={commit}
           document={document}
-          setEvaluation={setEvaluation}
+          setEvaluationId={setEvaluationId}
+          setEvaluationUuid={setEvaluationUuid}
         />
       ),
     }
@@ -231,8 +217,8 @@ export function DocumentRefinement({
           size='large'
           open={openModal}
           onOpenChange={(open) => {
-            if (!open) close()
-            else setOpenModal(open)
+            setOpenModal(open)
+            if (!open) reset()
           }}
           steps={{ current: step.number, total: 3 }}
           dismissible
