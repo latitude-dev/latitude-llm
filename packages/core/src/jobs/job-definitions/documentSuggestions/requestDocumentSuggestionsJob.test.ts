@@ -16,11 +16,11 @@ import {
 import { mergeCommit } from '../../../services/commits'
 import * as factories from '../../../tests/factories'
 import { requestDocumentSuggestionsJob } from './requestDocumentSuggestionsJob'
-import { defaultQueue } from '../../queues'
+import { documentsQueue } from '../../queues'
 
 describe('requestDocumentSuggestionsJob', () => {
   const mocks = vi.hoisted(() => ({
-    defaultQueue: vi.fn(),
+    documentsQueue: vi.fn(),
   }))
 
   let candidate1: Awaited<ReturnType<typeof prepareCandidate>>[]
@@ -367,7 +367,7 @@ describe('requestDocumentSuggestionsJob', () => {
       }),
     ]
 
-    vi.spyOn(defaultQueue, 'add').mockImplementation(mocks.defaultQueue)
+    vi.spyOn(documentsQueue, 'add').mockImplementation(mocks.documentsQueue)
   })
 
   it('requests suggestions for candidate documents', async () => {
@@ -381,7 +381,7 @@ describe('requestDocumentSuggestionsJob', () => {
       ['generateDocumentSuggestionJob', candidate3[0]!, options],
     ]
 
-    const actualCalls = mocks.defaultQueue.mock.calls
+    const actualCalls = mocks.documentsQueue.mock.calls
     expect(actualCalls).toHaveLength(expectedCalls.length)
     expect(actualCalls).toEqual(expect.arrayContaining(expectedCalls))
   })

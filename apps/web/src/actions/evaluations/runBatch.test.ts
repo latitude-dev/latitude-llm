@@ -20,7 +20,9 @@ const mocks = vi.hoisted(() => ({
   },
 }))
 
-vi.spyOn(evaluationsQueue, 'add').mockImplementation(mocks.queues.evaluationsQueue)
+vi.spyOn(evaluationsQueue, 'add').mockImplementation(
+  mocks.queues.evaluationsQueue,
+)
 vi.spyOn(eventsQueue, 'add').mockImplementation(mocks.queues.eventsQueue)
 
 vi.mock('$/services/auth/getSession', () => ({

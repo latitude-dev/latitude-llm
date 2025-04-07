@@ -27,7 +27,7 @@ import {
   projects,
 } from '../../../schema'
 import { generateDocumentSuggestionJobKey } from './generateDocumentSuggestionJob'
-import { defaultQueue } from '../../queues'
+import { documentsQueue } from '../../queues'
 
 export type RequestDocumentSuggestionsJobData = {}
 
@@ -244,7 +244,7 @@ export const requestDocumentSuggestionsJob = async (
     )
 
   for (const candidate of [...candidates, ...candidatesV2]) {
-    defaultQueue.add(
+    documentsQueue.add(
       'generateDocumentSuggestionJob',
       {
         workspaceId: candidate.workspaceId,

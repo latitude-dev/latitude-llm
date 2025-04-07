@@ -2,7 +2,7 @@ import { Job } from 'bullmq'
 
 import { Commit, DatasetV2, DocumentVersion, Workspace } from '../../../browser'
 import { getBatchRows } from '../batchEvaluations'
-import { defaultQueue } from '../../queues'
+import { documentsQueue } from '../../queues'
 
 export type RunDocumentInBatchJobProps = {
   commit: Commit
@@ -34,7 +34,7 @@ export const runDocumentInBatchJob = async (
   })
 
   for (let i = 0; i < rows.length; i++) {
-    await defaultQueue.add('runDocumentJob', {
+    await documentsQueue.add('runDocumentJob', {
       workspaceId: workspace.id,
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
