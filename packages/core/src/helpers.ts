@@ -137,6 +137,7 @@ export function formatConversation(conversation: Message[]) {
 export type EvaluationResultsV2Search = {
   filters?: {
     commitIds?: number[]
+    errored?: boolean
     createdAt?: DateRange
   }
   orders?: {
@@ -165,6 +166,10 @@ export function evaluationResultsV2SearchFromQueryParams(params: QueryParams) {
     search.filters!.commitIds = [...new Set(params.commitIds.split(','))]
       .filter(Boolean)
       .map(Number)
+  }
+
+  if (params.errored !== undefined && typeof params.errored === 'string') {
+    search.filters!.errored = params.errored === 'true'
   }
 
   if (params.fromCreatedAt && typeof params.fromCreatedAt === 'string') {
@@ -210,8 +215,12 @@ export function evaluationResultsV2SearchToQueryParams(
   const params = new URLSearchParams()
 
   if (search.filters?.commitIds?.length) {
-    const commitIds = [...new Set(search.filters?.commitIds)].filter(Boolean)
+    const commitIds = [...new Set(search.filters.commitIds)].filter(Boolean)
     params.set('commitIds', commitIds.join(','))
+  }
+
+  if (search.filters?.errored !== undefined) {
+    params.set('errored', search.filters.errored.toString())
   }
 
   if (search.filters?.createdAt?.from) {

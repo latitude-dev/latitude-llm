@@ -1,64 +1,21 @@
-import { Suspense, useCallback } from 'react'
-import { CompileError } from 'promptl-ai'
+import { requestSuggestionAction } from '$/actions/copilot/requestSuggestion'
 import { publishEventAction } from '$/actions/events/publishEventAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { requestSuggestionAction } from '$/actions/copilot/requestSuggestion'
 import { DocumentVersion } from '@latitude-data/core/browser'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
+import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import {
   ICommitContextType,
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-
-import { RefinementHook } from '../useRefinement'
-import { DocumentSuggestions } from '../DocumentSuggestions'
 import type { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
-import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
-
-function RefineButton({
-  refinement,
-  document,
-  copilotEnabled,
-}: {
-  refinement: RefinementHook
-  document: DocumentVersion
-  copilotEnabled: boolean
-}) {
-  if (!copilotEnabled) return null
-
-  const RefinementButton = (
-    <Button
-      disabled={document.promptlVersion === 0}
-      className='bg-background'
-      variant='outline'
-      size='small'
-      iconProps={{
-        name: 'sparkles',
-        size: 'small',
-      }}
-      onClick={refinement.modal.onOpen}
-    >
-      <Text.H6>Refine</Text.H6>
-    </Button>
-  )
-
-  if (document.promptlVersion === 0) {
-    return (
-      <Tooltip trigger={RefinementButton} asChild>
-        Upgrade the syntax of the document to use the Refine feature.
-      </Tooltip>
-    )
-  }
-
-  return <>{RefinementButton}</>
-}
+import { CompileError } from 'promptl-ai'
+import { Suspense, useCallback } from 'react'
+import { DocumentRefinement } from '../DocumentRefinement'
+import { DocumentSuggestions } from '../DocumentSuggestions'
 
 export function PlaygroundTextEditor({
-  refinement,
   compileErrors,
   project,
   document,
@@ -71,7 +28,6 @@ export function PlaygroundTextEditor({
   isMerged,
   isSaved,
 }: {
-  refinement: RefinementHook
   compileErrors: CompileError[] | undefined
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
@@ -151,10 +107,13 @@ export function PlaygroundTextEditor({
               setDiff={setDiff}
               setPrompt={onChange}
             />
-            <RefineButton
-              refinement={refinement}
+            <DocumentRefinement
+              project={project}
+              commit={commit}
               document={document}
-              copilotEnabled={copilotEnabled}
+              setDiff={setDiff}
+              setPrompt={onChange}
+              refinementEnabled={copilotEnabled}
             />
           </>
         }

@@ -14,6 +14,7 @@ export enum AppLocalStorage {
   editorMinimap = 'editorMinimap',
   editorCopilot = 'editorCopilot',
   playgroundParameters = 'playgroundParameters',
+  playgroundActions = 'playgroundActions',
   expandParameters = 'expandParameters',
 }
 

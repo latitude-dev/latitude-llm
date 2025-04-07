@@ -9,7 +9,6 @@ import {
   TableHeader,
   TableRow,
 } from '../../atoms/Table'
-import { Text } from '../../atoms/Text'
 
 export function TableSkeleton({
   rows,
@@ -18,13 +17,14 @@ export function TableSkeleton({
   verticalPadding = false,
 }: {
   rows: number
-  cols: number
+  cols: string[] | number
   maxHeight?: number
   verticalPadding?: boolean
 }) {
   const { data, headers } = useMemo(() => {
     const rowList = Array.from(Array(rows).keys())
-    const headers = Array.from(Array(cols).keys())
+    const headers =
+      typeof cols === 'number' ? Array.from(Array(cols).keys()) : cols
     const data = rowList.map((_) => headers)
     return { data, headers }
   }, [rows, cols])
@@ -34,11 +34,11 @@ export function TableSkeleton({
         <TableRow hoverable={false}>
           {headers.map((header) => (
             <TableHead key={header}>
-              <Skeleton className='bg-white'>
-                <div className='opacity-0 h-4'>
-                  <Text.H4>{header}</Text.H4>
-                </div>
-              </Skeleton>
+              {typeof header === 'string' ? (
+                header
+              ) : (
+                <Skeleton className='w-20 h-4' />
+              )}
             </TableHead>
           ))}
         </TableRow>
@@ -52,9 +52,7 @@ export function TableSkeleton({
           >
             {row.map((cell) => (
               <TableCell key={cell} className='py-2'>
-                <Skeleton className='w-full h-4'>
-                  <div className='opacity-0'>{row}</div>
-                </Skeleton>
+                <Skeleton className='w-full h-4' />
               </TableCell>
             ))}
           </TableRow>

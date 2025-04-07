@@ -1,7 +1,7 @@
-import { compactObject } from '@latitude-data/core/lib/compactObject'
-import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import useSWR, { SWRConfiguration } from 'swr'
 
 const EMPTY_ARRAY: [] = []
@@ -18,8 +18,8 @@ export default function useEvaluationResultsWithMetadata(
     documentUuid: string
     commitUuid: string
     projectId: number
-    page: string | null
-    pageSize: string | null
+    page?: string | number | null
+    pageSize?: string | number | null
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
@@ -40,9 +40,11 @@ export default function useEvaluationResultsWithMetadata(
       }) as Record<string, string>,
     },
   )
-  const { data = EMPTY_ARRAY, mutate } = useSWR<
-    EvaluationResultWithMetadataAndErrors[]
-  >(
+  const {
+    data = EMPTY_ARRAY,
+    mutate,
+    ...rest
+  } = useSWR<EvaluationResultWithMetadataAndErrors[]>(
     [
       'evaluationResults',
       evaluationId,
@@ -56,7 +58,7 @@ export default function useEvaluationResultsWithMetadata(
     { fallbackData },
   )
 
-  return { data, mutate }
+  return { data, mutate, ...rest }
 }
 
 function deserialize(item: EvaluationResultWithMetadataAndErrors) {

@@ -448,22 +448,30 @@ export type RunDocumentInBatchRequestedEvent = LatitudeEventGeneric<
 export type CopilotRefinerGenerated = LatitudeEventGeneric<
   'copilotRefinerGenerated',
   {
-    userEmail: string
     workspaceId: number
     projectId: number
     commitUuid: string
     documentUuid: string
-    evaluationId: number
-  }
+    userEmail: string
+  } & (
+    | {
+        evaluationId: number
+        version: 'v1'
+      }
+    | {
+        evaluationUuid: string
+        version: 'v2'
+      }
+  )
 >
 export type CopilotRefinerApplied = LatitudeEventGeneric<
   'copilotRefinerApplied',
   {
-    userEmail: string
     workspaceId: number
     projectId: number
     commitUuid: string
     documentUuid: string
+    userEmail: string
   }
 >
 

@@ -1,27 +1,29 @@
 'use client'
-import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
-import { useRefineAction } from '$/hooks/useRefineAction'
+import {
+  PlaygroundAction,
+  usePlaygroundAction,
+} from '$/hooks/usePlaygroundAction'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import useEvaluationResultsWithMetadata from '$/stores/evaluationResultsWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
-import { cn } from '@latitude-data/web-ui/utils'
-import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import { cn } from '@latitude-data/web-ui/utils'
 import { useSearchParams } from 'next/navigation'
-
+import { useCallback, useMemo, useRef, useState } from 'react'
 import CreateBatchEvaluationModal from '../Actions/CreateBatchEvaluationModal'
 import { RefineEvaluationResults } from '../RefineEvaluationResults'
 import { EvaluationResultInfo } from './EvaluationResultInfo'
@@ -122,15 +124,24 @@ export function EvaluationResults({
     [evaluationResults],
   )
 
+  const { setPlaygroundAction } = usePlaygroundAction({
+    action: PlaygroundAction.RefinePrompt,
+    project: project,
+    commit: commit,
+    document: document,
+  })
+
   const selectableState = useSelectableRows({
     rowIds: evaluatedResultIds,
   })
-  const onClickRefine = useRefineAction({
-    project,
-    commit,
-    document,
-    getSelectedRowIds: selectableState.getSelectedRowIds,
-  })
+  const onClickRefine = useCallback(() => {
+    setPlaygroundAction({
+      evaluationId: evaluation.id,
+      resultIds: selectableState.getSelectedRowIds(),
+      version: 'v1',
+    })
+  }, [setPlaygroundAction, evaluation, selectableState])
+
   useEvaluationResultsSocket(evaluation, document, mutate)
 
   return (

@@ -5,10 +5,12 @@ import {
   EvaluationType,
   EvaluationV2Stats,
 } from '@latitude-data/core/browser'
-import { ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
-import { PanelChart } from '@latitude-data/web-ui/molecules/Charts'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import {
+  ChartWrapper,
+  PanelChart,
+} from '@latitude-data/web-ui/molecules/Charts'
 import { useMemo } from 'react'
 
 export default function AverageScoreChart<
@@ -27,8 +29,6 @@ export default function AverageScoreChart<
   )
 
   const color = useMemo(() => {
-    const color = 'successMutedForeground'
-
     if (
       (configuration.thresholds.lower &&
         averageScore < configuration.thresholds.lower) ||
@@ -38,7 +38,7 @@ export default function AverageScoreChart<
       return 'destructiveMutedForeground'
     }
 
-    return color
+    return 'successMutedForeground'
   }, [averageScore, configuration])
 
   return (

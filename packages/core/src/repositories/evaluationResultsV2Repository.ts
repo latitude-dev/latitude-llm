@@ -15,6 +15,7 @@ import {
   getTableColumns,
   gte,
   inArray,
+  isNotNull,
   isNull,
   lte,
   sql,
@@ -29,7 +30,7 @@ import {
   MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
   ResultWithEvaluationV2,
 } from '../browser'
-import { calculateOffset, Result } from '../lib'
+import { calculateOffset, NotFoundError, Result } from '../lib'
 import {
   commits,
   datasetRows,
@@ -61,6 +62,31 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .$dynamic()
   }
 
+  async findByUuid(uuid: string) {
+    const result = await this.scope
+      .where(and(this.scopeFilter, eq(evaluationResultsV2.uuid, uuid)))
+      .limit(1)
+      .then((r) => r[0])
+
+    if (!result) {
+      return Result.error(
+        new NotFoundError(
+          `Record with uuid ${uuid} not found in ${this.scope._.tableName}`,
+        ),
+      )
+    }
+
+    return Result.ok<EvaluationResultV2>(result as EvaluationResultV2)
+  }
+
+  async findManyByUuid(uuids: string[]) {
+    const results = await this.scope
+      .where(and(this.scopeFilter, inArray(evaluationResultsV2.uuid, uuids)))
+      .limit(uuids.length)
+
+    return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
+  }
+
   listByEvaluationFilter({
     evaluationUuid,
     params: { filters },
@@ -76,6 +102,11 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     if (filters?.commitIds?.length) {
       filter.push(inArray(evaluationResultsV2.commitId, filters.commitIds))
+    }
+
+    if (filters?.errored !== undefined) {
+      if (filters.errored) filter.push(isNotNull(evaluationResultsV2.error))
+      else filter.push(isNull(evaluationResultsV2.error))
     }
 
     if (filters?.createdAt?.from) {

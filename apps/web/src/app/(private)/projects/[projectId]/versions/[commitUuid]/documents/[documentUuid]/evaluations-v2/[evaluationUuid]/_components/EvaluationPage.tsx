@@ -104,11 +104,13 @@ export function EvaluationPage<
   selectedResult: serverSelectedResult,
   stats: serverStats,
   search: serverSearch,
+  refinementEnabled,
 }: {
   results: EvaluationResultV2WithDetails<T, M>[]
   selectedResult?: EvaluationResultV2WithDetails<T, M>
   stats?: EvaluationV2Stats
   search: EvaluationResultsV2Search
+  refinementEnabled: boolean
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -226,6 +228,7 @@ export function EvaluationPage<
         setSelectedResult={setSelectedResult}
         search={search}
         setSearch={setSearch}
+        refinementEnabled={refinementEnabled}
         isLoading={isLoading}
       />
     </div>

@@ -31,7 +31,7 @@ function EvaluationMeanValue({
   )
 
   if (isLoading || data == null) {
-    return <Skeleton height='h4' className='w-6' />
+    return <Skeleton className='w-full h-4' />
   }
 
   return (
