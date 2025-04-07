@@ -9,6 +9,7 @@ import {
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
+  Experiment,
   formatMessage,
   ProviderLogDto,
   Workspace,
@@ -37,6 +38,7 @@ export async function runEvaluationV2<
   {
     evaluation,
     providerLog,
+    experiment,
     dataset,
     datasetLabel,
     datasetRow,
@@ -45,6 +47,7 @@ export async function runEvaluationV2<
   }: {
     evaluation: EvaluationV2<T, M>
     providerLog: ProviderLogDto
+    experiment?: Experiment
     dataset?: Dataset
     datasetLabel?: string
     datasetRow?: DatasetRow
@@ -168,6 +171,7 @@ export async function runEvaluationV2<
         evaluation: evaluation,
         providerLog: providerLog,
         commit: commit,
+        experiment,
         dataset: dataset,
         datasetRow: datasetRow,
         value: value as EvaluationResultValue<T, M>,
@@ -198,6 +202,7 @@ export async function createEvaluationResultV2<
     resultUuid,
     evaluation,
     providerLog,
+    experiment,
     commit,
     dataset,
     datasetRow,
@@ -209,6 +214,7 @@ export async function createEvaluationResultV2<
     evaluation: EvaluationV2<T, M>
     providerLog: ProviderLogDto
     commit: Commit
+    experiment?: Experiment
     dataset?: Dataset
     datasetRow?: DatasetRow
     value: EvaluationResultValue<T, M>
@@ -224,6 +230,7 @@ export async function createEvaluationResultV2<
         uuid: resultUuid,
         workspaceId: workspace.id,
         commitId: commit.id,
+        experimentId: experiment?.id,
         evaluationUuid: evaluation.uuid,
         datasetId: dataset?.id,
         evaluatedRowId: datasetRow?.id,

@@ -2,6 +2,15 @@ import { Redis } from 'ioredis'
 import { env } from '@latitude-data/env'
 import { buildRedisConnection } from '../../redis'
 
+export type TrackedProgress = {
+  total: number
+  completed: number
+  errors: number
+  enqueued: number
+  failed: number
+  totalScore: number
+}
+
 export class ProgressTracker {
   private redis: Redis | null = null
 
@@ -26,39 +35,56 @@ export class ProgressTracker {
     multi.set(this.getKey('completed'), 0)
     multi.set(this.getKey('enqueued'), 0)
     multi.set(this.getKey('errors'), 0)
+    multi.set(this.getKey('failed'), 0)
+    multi.set(this.getKey('totalScore'), 0)
 
     await multi.exec()
   }
 
-  async incrementCompleted() {
+  async incrementCompleted(count?: number) {
     const redis = await this.ensureConnection()
-    await redis.incr(this.getKey('completed'))
+    await redis.incrby(this.getKey('completed'), count ?? 1)
   }
 
-  async incrementErrors() {
+  async incrementFailed(count?: number) {
     const redis = await this.ensureConnection()
-    await redis.incr(this.getKey('errors'))
+    await redis.incrby(this.getKey('failed'), count ?? 1)
   }
 
-  async incrementEnqueued() {
+  async incrementErrors(count?: number) {
     const redis = await this.ensureConnection()
-    await redis.incr(this.getKey('enqueued'))
+    await redis.incrby(this.getKey('errors'), count ?? 1)
   }
 
-  async getProgress() {
+  async incrementEnqueued(count?: number) {
     const redis = await this.ensureConnection()
-    const [total, completed, errors, enqueued] = await redis.mget([
-      this.getKey('total'),
-      this.getKey('completed'),
-      this.getKey('errors'),
-      this.getKey('enqueued'),
-    ])
+    await redis.incrby(this.getKey('enqueued'), count ?? 1)
+  }
+
+  async incrementTotalScore(count?: number) {
+    const redis = await this.ensureConnection()
+    await redis.incrby(this.getKey('totalScore'), count ?? 1)
+  }
+
+  async getProgress(): Promise<TrackedProgress> {
+    const redis = await this.ensureConnection()
+    const [total, completed, errors, enqueued, failed, totalScore] =
+      await redis.mget([
+        this.getKey('total'),
+        this.getKey('completed'),
+        this.getKey('errors'),
+        this.getKey('enqueued'),
+        this.getKey('failed'),
+        this.getKey('totalScore'),
+      ])
 
     return {
       total: parseInt(total || '0', 10),
       completed: parseInt(completed || '0', 10),
       errors: parseInt(errors || '0', 10),
       enqueued: parseInt(enqueued || '0', 10),
+      failed: parseInt(failed || '0', 10),
+      totalScore: parseInt(totalScore || '0', 10),
     }
   }
 

@@ -17,10 +17,12 @@ export async function getResolvedContent({
   workspaceId,
   document,
   commit,
+  customPrompt,
 }: {
   workspaceId: Workspace['id']
   document: DocumentVersion
   commit: Commit
+  customPrompt?: string
 }): Promise<TypedResult<string, LatitudeError>> {
   const documentScope = new DocumentVersionsRepository(workspaceId)
   const docs = await documentScope
@@ -41,7 +43,10 @@ export async function getResolvedContent({
 
   const metadataResult = await scanDocumentContent({
     workspaceId,
-    document,
+    document: {
+      ...document,
+      content: customPrompt ?? document.content,
+    },
     commit,
   })
 

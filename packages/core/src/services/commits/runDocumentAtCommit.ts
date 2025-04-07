@@ -4,6 +4,7 @@ import {
   Commit,
   DocumentType,
   ErrorableEntity,
+  Experiment,
   LogSources,
   StreamType,
   type DocumentVersion,
@@ -23,6 +24,7 @@ async function createDocumentRunResult({
   document,
   commit,
   errorableUuid,
+  experiment,
   parameters,
   resolvedContent,
   customIdentifier,
@@ -36,6 +38,7 @@ async function createDocumentRunResult({
   document: DocumentVersion
   source: LogSources
   errorableUuid: string
+  experiment?: Experiment
   parameters: Record<string, unknown>
   resolvedContent: string
   publishEvent: boolean
@@ -73,6 +76,7 @@ async function createDocumentRunResult({
       resolvedContent,
       uuid: errorableUuid,
       source,
+      experimentId: experiment?.id,
     },
   }).then((r) => r.unwrap())
 }
@@ -85,6 +89,8 @@ export async function runDocumentAtCommit({
   customIdentifier,
   source,
   abortSignal,
+  customPrompt,
+  experiment,
 }: {
   workspace: Workspace
   commit: Commit
@@ -93,6 +99,8 @@ export async function runDocumentAtCommit({
   customIdentifier?: string
   source: LogSources
   abortSignal?: AbortSignal
+  customPrompt?: string
+  experiment?: Experiment
 }) {
   const errorableType = ErrorableEntity.DocumentLog
   const errorableUuid = generateUUIDIdentifier()
@@ -103,6 +111,7 @@ export async function runDocumentAtCommit({
     workspaceId: workspace.id,
     document,
     commit,
+    customPrompt,
   })
 
   // NOTE: We don't log these errors. If something happen
@@ -127,6 +136,7 @@ export async function runDocumentAtCommit({
       resolvedContent: result.value,
       source,
       publishEvent: false,
+      experiment,
     })
 
     return checkerResult
@@ -169,6 +179,7 @@ export async function runDocumentAtCommit({
         source,
         duration: await runResult.duration,
         publishEvent: true,
+        experiment,
       })
 
       return response

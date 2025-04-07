@@ -22,7 +22,8 @@ export type RunEvaluationV2JobData = {
   datasetId?: number
   datasetLabel?: string
   datasetRowId?: number
-  batchId?: string // TODO(exps): Replace with experiments when they exists
+  batchId?: string // TODO: Deprecated
+  experimentUuid?: string
 }
 
 export function runEvaluationV2JobKey({

@@ -46,6 +46,10 @@ export enum DocumentTriggerParameters {
 export type ExperimentMetadata = {
   resolvedPrompt: string
   promptHash: string
+  parametersMap: Record<string, number>
+  expectedOutputColumn?: string // name for the expected output column in golden datasets
+  fromRow?: number
+  toRow?: number
   count: number // Total number of to generate logs in the experiment
 }
 

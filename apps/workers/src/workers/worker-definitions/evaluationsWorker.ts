@@ -7,6 +7,7 @@ const jobMappings = {
   runEvaluationJob: jobs.runEvaluationJob,
   runEvaluationV2Job: jobs.runEvaluationV2Job,
   runBatchEvaluationJob: jobs.runBatchEvaluationJob,
+  runEvaluationsForExperimentJob: jobs.runEvaluationsForExperimentJob,
 }
 
 export function startEvaluationsWorker() {

@@ -11,6 +11,7 @@ import {
   EvaluationResultV2,
   EvaluationTmp,
   EvaluationV2,
+  ExperimentDto,
   ProviderLogDto,
   Span,
   Trace,
@@ -71,6 +72,10 @@ type EvaluationStatusArgs = {
     }
 )
 
+type ExperimentStatusArgs = {
+  experiment: ExperimentDto
+}
+
 type EvaluationResultCreatedArgs = {
   workspaceId: number
   evaluationId: number
@@ -117,6 +122,7 @@ type EvaluationResultV2CreatedArgs = {
 export type WebServerToClientEvents = {
   documentBatchRunStatus: (args: DocumentBatchRunStatusArgs) => void
   evaluationStatus: (args: EvaluationStatusArgs) => void
+  experimentStatus: (args: ExperimentStatusArgs) => void
   evaluationResultCreated: (args: EvaluationResultCreatedArgs) => void
   datasetRowsCreated: (args: DatasetRowsCreatedArgs) => void
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
@@ -171,6 +177,10 @@ export type WorkersClientToServerEvents = {
   evaluationResultV2Created: (args: {
     workspaceId: number
     data: EvaluationResultV2CreatedArgs
+  }) => void
+  experimentStatus: (args: {
+    workspaceId: number
+    data: ExperimentStatusArgs
   }) => void
   tracesAndSpansCreated: (args: {
     workspaceId: number

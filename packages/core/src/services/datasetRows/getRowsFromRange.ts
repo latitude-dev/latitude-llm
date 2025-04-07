@@ -1,4 +1,5 @@
 import { DatasetRow, Dataset } from '../../browser'
+import { database } from '../../client'
 import { DatasetRowsRepository } from '../../repositories'
 import { DatasetRowDataContent } from '../../schema'
 
@@ -27,16 +28,19 @@ function extractValues(row: DatasetRow) {
   return { id: row.id, values }
 }
 
-export async function getRowsFromRange({
-  dataset,
-  fromLine,
-  toLine: to,
-}: {
-  dataset: Dataset
-  fromLine: number
-  toLine?: number
-}) {
-  const repo = new DatasetRowsRepository(dataset.workspaceId)
+export async function getRowsFromRange(
+  {
+    dataset,
+    fromLine,
+    toLine: to,
+  }: {
+    dataset: Dataset
+    fromLine: number
+    toLine?: number
+  },
+  db = database,
+) {
+  const repo = new DatasetRowsRepository(dataset.workspaceId, db)
   const toLine = await getToLine({ toLine: to, dataset, repo })
 
   const limit = toLine - fromLine + 1 // ensure we include the last line

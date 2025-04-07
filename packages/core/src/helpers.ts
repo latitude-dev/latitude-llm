@@ -11,7 +11,7 @@ import {
   type DateRange,
 } from './constants'
 import { type QueryParams } from './lib'
-import type { ProviderLogDto } from './schema/types'
+import { ProviderLog, ProviderLogDto } from './browser'
 
 export function buildCsvFile(csvData: CsvData, name: string): File {
   const headers = csvData.headers.map((h) => JSON.stringify(h)).join(',')
@@ -56,13 +56,23 @@ export function buildAllMessagesFromResponse<T extends StreamType>({
   return [...previousMessages, ...messages]
 }
 
-export function buildConversation(providerLog: ProviderLogDto) {
+export function buildConversation(providerLog: ProviderLogDto | ProviderLog) {
   let messages: Message[] = [...providerLog.messages]
+
+  const responseText =
+    // if ProviderLog
+    'responseText' in providerLog
+      ? (providerLog.responseText ?? undefined)
+      : // if ProviderLogDto
+        'response' in providerLog
+        ? providerLog.response
+        : // otherwise
+          undefined
 
   const message = buildResponseMessage({
     type: 'text',
     data: {
-      text: providerLog.response,
+      text: responseText,
       toolCalls: providerLog.toolCalls,
     },
   })

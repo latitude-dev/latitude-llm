@@ -18,6 +18,7 @@ export async function respondToToolCalls({
   workspace,
   commit,
   document,
+  customPrompt,
   documentLogUuid,
   source,
   copilot,
@@ -26,6 +27,7 @@ export async function respondToToolCalls({
   workspace: Workspace
   commit: Commit
   document: DocumentVersion
+  customPrompt?: string
   documentLogUuid: string
   source: LogSources
   copilot: AutogenerateToolResponseCopilotData
@@ -50,6 +52,7 @@ export async function respondToToolCalls({
     workspace,
     commit,
     document,
+    customPrompt,
     toolCalls,
     source,
     copilot,
