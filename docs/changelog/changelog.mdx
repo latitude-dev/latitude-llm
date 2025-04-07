@@ -3,6 +3,44 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-04-07'>
+
+## Added new providers
+
+- Added support for new providers: xAI, DeepkSeek, Amazon Bedrock, and Perplexity
+- [PR #1075](https://github.com/latitude-dev/latitude-llm/pull/1075)
+
+## Quality of life improvements
+
+We have made several improvements to the quality of life of our users with a slew of small but important fixes:
+
+- In sidebar when creating folder/prompt save it on blur #1044
+- If there’s only one folder in the project, display it open #1051
+- When creating a prompt put focus in the editor #1052
+- When open evaluations close parameters. And the other way #1055
+- 🐛 Collapsed/Expanded parameters are broken #1000
+- Move to the center prompt Add message/Reset in playground #1056
+- Rename "Publish prompt" to "Share" in playground #1060
+- Move toasts to the left side #1069
+
+- [PR #1078](https://github.com/latitude-dev/latitude-llm/pull/1078)
+
+## Improved public Docker images
+
+- Shaved several GBs off the public Docker images 
+- [PR #1068](https://github.com/latitude-dev/latitude-llm/pull/1068)
+
+## Other Updates
+
+- Added several new MCPs to the list of supported integrations.
+- Improved parameter mapping by using selected dataset columns as a fallback.
+- Refactored jobs to remove meta programming, potentially fixing a memory leak.
+- Introduced an impersonation feature for admin users.
+- Addressed a build issue with heapdump in amd64 environments.
+- Improved SDK's error handling to address silent failures.
+
+</Update>
+
 <Update label='2025-03-28'>
 
 ## New evaluation types
