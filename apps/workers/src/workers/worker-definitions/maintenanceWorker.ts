@@ -7,6 +7,7 @@ const jobMappings = {
   cleanDocumentSuggestionsJob: jobs.cleanDocumentSuggestionsJob,
   scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,
   updateMcpServerLastUsedJob: jobs.updateMcpServerLastUsedJob,
+  requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
 }
 
 export function startMaintenanceWorker() {

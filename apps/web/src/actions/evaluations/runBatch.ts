@@ -10,7 +10,7 @@ import { getEvaluationMetricSpecification } from '@latitude-data/core/services/e
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 import { refineParameters, withDataset } from './_helpers'
-import { defaultQueue } from '@latitude-data/core/queues'
+import { evaluationsQueue } from '@latitude-data/core/queues'
 
 export const runBatchEvaluationAction = withDataset
   .createServerAction()
@@ -114,7 +114,7 @@ export const runBatchEvaluationAction = withDataset
     evaluations.forEach((evaluation) => {
       const batchId = `evaluation:${evaluation.uuid}:${nanoid(5)}`
 
-      defaultQueue.add('runBatchEvaluationJob', {
+      evaluationsQueue.add('runBatchEvaluationJob', {
         workspace: ctx.workspace,
         user: ctx.user,
         evaluation,

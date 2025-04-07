@@ -1,4 +1,4 @@
-import { defaultQueue, maintenanceQueue } from '@latitude-data/core/queues'
+import { maintenanceQueue } from '@latitude-data/core/queues'
 import { startMaintenanceWorker } from './worker-definitions/maintenanceWorker'
 import {
   startEventsWorker,
@@ -31,7 +31,7 @@ export async function startWorkers() {
 
 export async function setupSchedules() {
   // Every day at 8 AM
-  await defaultQueue.upsertJobScheduler(
+  await maintenanceQueue.upsertJobScheduler(
     'requestDocumentSuggestionsJob',
     {
       pattern: '0 0 8 * * *',
