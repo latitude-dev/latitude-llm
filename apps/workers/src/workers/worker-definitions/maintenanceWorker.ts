@@ -4,10 +4,11 @@ import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
   autoScaleJob: jobs.autoScaleJob,
+  checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   cleanDocumentSuggestionsJob: jobs.cleanDocumentSuggestionsJob,
+  requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
   scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,
   updateMcpServerLastUsedJob: jobs.updateMcpServerLastUsedJob,
-  requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
 }
 
 export function startMaintenanceWorker() {

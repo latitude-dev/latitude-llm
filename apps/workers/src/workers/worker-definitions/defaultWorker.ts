@@ -12,7 +12,6 @@ const jobMappings = {
   runDocumentJob: jobs.runDocumentJob,
   uploadDocumentLogsJob: jobs.uploadDocumentLogsJob,
   generateDocumentSuggestionJob: jobs.generateDocumentSuggestionJob,
-  checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   processScheduledTriggerJob: jobs.processScheduledTriggerJob,
   runEmailTriggerJob: jobs.runEmailTriggerJob,
 }
