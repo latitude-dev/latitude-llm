@@ -24,11 +24,11 @@ export const documentSuggestions = latitudeSchema.table(
       .notNull()
       .references(() => commits.id, { onDelete: 'restrict' }),
     documentUuid: uuid('document_uuid').notNull(),
-    evaluationUuid: uuid('evaluation_uuid'), // TODO: Add .notNull() when evaluations v1 are deprecated
+    evaluationUuid: uuid('evaluation_uuid'), // TODO(evalsv2): Add .notNull() when evaluations v1 are deprecated
     evaluationId: bigint('evaluation_id', { mode: 'number' }).references(
       () => evaluations.id,
       { onDelete: 'cascade' },
-    ), // TODO: Remove this when evaluations v1 are deprecated
+    ), // TODO(evalsv2): Remove this when evaluations v1 are deprecated
     oldPrompt: text('old_prompt').notNull(),
     newPrompt: text('new_prompt').notNull(),
     summary: text('summary').notNull(),

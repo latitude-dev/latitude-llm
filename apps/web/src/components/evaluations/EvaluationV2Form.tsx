@@ -19,7 +19,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ConfigurationForm from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
 
-// TODO: Uncomment when all types are implemented
+// TODO(evalsv2): Uncomment when all types are implemented
 // const EVALUATION_TYPE_OPTIONS = Object.values(EvaluationType).map((type) => {
 //   const specification = EVALUATION_SPECIFICATIONS[type]
 //   return {
@@ -30,11 +30,11 @@ import { EVALUATION_SPECIFICATIONS } from './index'
 // })
 
 const EVALUATION_METRIC_OPTIONS = (_type: EvaluationType) => {
-  // TODO: Add other evaluation types with a switch type
+  // TODO(evalsv2): Add other evaluation types with a switch type
   return (
-    // TODO: Remove type assertion when all metrics are implemented
+    // TODO(evalsv2): Remove type assertion when all metrics are implemented
     Object.values(RuleEvaluationMetric)
-      // TODO: Remove undefined filter when all metrics are implemented
+      // TODO(evalsv2): Remove undefined filter when all metrics are implemented
       .filter(
         (metric) =>
           !!EVALUATION_SPECIFICATIONS[EvaluationType.Rule].metrics[metric],
@@ -135,7 +135,7 @@ export default function EvaluationV2Form<
           disabled={disabled}
           required
         />
-        {/* TODO: Uncomment when all types are implemented */}
+        {/* TODO(evalsv2): Uncomment when all types are implemented */}
         {/*{mode === 'create' && (<Select
           value={settings.type}
           name='type'
@@ -210,7 +210,7 @@ export default function EvaluationV2Form<
               errors={errors?.['enableSuggestions']}
               disabled={disabled}
             />
-            {/* TODO: Uncomment when experiments are implemented */}
+            {/* TODO(exps): Uncomment when experiments are implemented */}
             {/* <SwitchInput
                   checked={!!options.autoApplySuggestions}
                   name='autoApplySuggestions'

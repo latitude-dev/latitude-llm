@@ -159,6 +159,7 @@ export function EvaluationResultsTableBody<
             <TableRow
               key={index}
               className='border-b-[0.5px] h-12 max-h-12 border-border relative'
+              hoverable={false}
             >
               <TableCell align='left'>
                 <Checkbox fullWidth={false} disabled={true} />

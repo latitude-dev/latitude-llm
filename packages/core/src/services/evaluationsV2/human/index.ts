@@ -9,15 +9,15 @@ import { EvaluationMetricBackendSpecification } from '../shared'
 const METRICS: {
   [M in HumanEvaluationMetric]: EvaluationMetricBackendSpecification<EvaluationType.Human, M>
 } = {
-  [HumanEvaluationMetric.Binary]: undefined as any, // TODO: Implement
-  [HumanEvaluationMetric.Rating]: undefined as any, // TODO: Implement
-  [HumanEvaluationMetric.Comparison]: undefined as any, // TODO: Implement
+  [HumanEvaluationMetric.Binary]: undefined as any, // TODO(evalsv2): Implement
+  [HumanEvaluationMetric.Rating]: undefined as any, // TODO(evalsv2): Implement
+  [HumanEvaluationMetric.Comparison]: undefined as any, // TODO(evalsv2): Implement
 }
 
 const specification = HumanEvaluationSpecification
 export default {
   ...specification,
-  validate: undefined as any, // TODO: Implement
-  run: undefined as any, // TODO: Implement
+  validate: undefined as any, // TODO(evalsv2): Implement
+  run: undefined as any, // TODO(evalsv2): Implement
   metrics: METRICS,
 }

@@ -14,8 +14,8 @@ import {
   EvaluationV2,
   RuleEvaluationSpecification,
 } from '@latitude-data/core/browser'
-import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import {
   Table,
   TableBody,
@@ -102,15 +102,9 @@ export default function ConnectedEvaluationsTable({
               }}
             >
               <TableCell>
-                <div className='flex items-center justify-between gap-2 truncate'>
-                  <Text.H5 noWrap ellipsis>
-                    {row.name}
-                  </Text.H5>
-                  {/* TODO: Uncomment this when we only have v2 because v1 does not carry that info
-                  {row.version === 'v2' && !!row.evaluateLiveLogs && (
-                    <Badge variant='accent'>Live</Badge>
-                  )} */}
-                </div>
+                <Text.H5 noWrap ellipsis>
+                  {row.name}
+                </Text.H5>
               </TableCell>
               <TableCell>
                 <Text.H5>{row.description || '-'}</Text.H5>

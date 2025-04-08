@@ -47,13 +47,15 @@ export const TableWithHeader = ({
           <Text.H5 color='foregroundMuted'>{description}</Text.H5>
         ) : null}
       </div>
-      <div
-        className={cn('flex', {
-          'relative min-h-0 min-w-0': takeVertialSpace,
-        })}
-      >
-        {table}
-      </div>
+      {table && (
+        <div
+          className={cn('flex', {
+            'relative min-h-0 min-w-0': takeVertialSpace,
+          })}
+        >
+          {table}
+        </div>
+      )}
     </div>
   )
 }

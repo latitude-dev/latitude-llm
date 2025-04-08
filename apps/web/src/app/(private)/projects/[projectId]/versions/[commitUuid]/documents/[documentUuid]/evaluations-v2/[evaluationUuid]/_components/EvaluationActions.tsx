@@ -35,9 +35,7 @@ export function EvaluationActions<
   const [settings, setSettings] = useState<EvaluationSettings<T, M>>(evaluation)
   const [options, setOptions] = useState<EvaluationOptions>(evaluation)
   const [errors, setErrors] =
-    useState<ActionErrors<typeof useEvaluationsV2, 'updateEvaluation'>>(
-      undefined,
-    )
+    useState<ActionErrors<typeof useEvaluationsV2, 'updateEvaluation'>>()
   const { updateEvaluation, isExecuting } = useEvaluationsV2({
     project: project,
     commit: commit,
@@ -51,7 +49,10 @@ export function EvaluationActions<
       options: options,
     })
     if (errors) setErrors(errors)
-    else setOpenUpdateModal(false)
+    else {
+      setErrors(undefined)
+      setOpenUpdateModal(false)
+    }
   }, [
     isExecuting,
     commit,
@@ -59,6 +60,7 @@ export function EvaluationActions<
     settings,
     options,
     updateEvaluation,
+    setErrors,
     setOpenUpdateModal,
   ])
 
