@@ -17,6 +17,7 @@ import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
 import serializeProviderLog from '../../../providerLogs/serialize'
 import { ChainStreamManager } from '../../../../lib/chainStreamManager'
 import { PromptConfig } from '@latitude-data/constants'
+import { getInputSchema, getOutputType } from '../../../chains/ChainValidator'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
@@ -87,6 +88,8 @@ export async function addChatMessage({
       source,
       conversation,
       abortSignal,
+      output: getOutputType({ config: conversation.config }),
+      schema: getInputSchema({ config: conversation.config }),
     })
 
     if (clientToolCalls.length) {

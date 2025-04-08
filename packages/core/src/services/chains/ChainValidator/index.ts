@@ -39,7 +39,7 @@ type ValidatorContext = {
   removeSchema?: boolean
 }
 
-const getInputSchema = ({
+export const getInputSchema = ({
   config,
   configOverrides,
   ignoreSchema = false,
@@ -56,7 +56,7 @@ const getInputSchema = ({
   return overrideSchema || config.schema
 }
 
-const getOutputType = ({
+export const getOutputType = ({
   config,
   configOverrides,
   ignoreSchema = false,
