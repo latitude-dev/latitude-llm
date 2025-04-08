@@ -67,7 +67,7 @@ export default function DocumentEditor({
     [documents],
   )
 
-  const [value, setValue] = useState(_document.content)
+  const [value, setValue] = useState(document.content)
   const [isSaved, setIsSaved] = useState(true)
   const [diff, setDiff] = useState<DiffOptions>()
   const debouncedSave = useDebouncedCallback(
