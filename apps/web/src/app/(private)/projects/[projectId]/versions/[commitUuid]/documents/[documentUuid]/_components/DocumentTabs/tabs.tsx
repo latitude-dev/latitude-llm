@@ -58,9 +58,6 @@ export function DocumentTabSelector({
     },
   }
 
-  console.log(evaluationsV2Enabled)
-  console.log(selectedSegment)
-
   return (
     <TabSelector
       options={Object.values(options)}
