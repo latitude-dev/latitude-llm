@@ -29,6 +29,10 @@ export function BehaviourSettings({
   })
 
   useEffect(() => {
+    // DO not update the document if it's disabled
+    // disabled means it's merged
+    if (disabled) return
+
     if (agentValue !== 'agent') {
       setDisableAgentOptimization(undefined)
     }
