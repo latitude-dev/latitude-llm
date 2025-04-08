@@ -1,5 +1,8 @@
-import { AUTH_COOKIE_NAME } from '$/services/auth/constants'
-import { isPublicPath, ROUTES } from '$/services/routes'
+import {
+  AUTH_COOKIE_NAME,
+  isPublicPath,
+  PUBLIC_ROOT_PATHS,
+} from '$/services/auth/constants'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -10,7 +13,9 @@ export async function middleware(request: NextRequest) {
 
   // Skip checking DB if no session is found
   const hasSession = request.cookies.get(AUTH_COOKIE_NAME)
-  if (!hasSession) return redirect(new URL(ROUTES.auth.login, request.url))
+  if (!hasSession) {
+    return redirect(new URL(PUBLIC_ROOT_PATHS.login, request.url))
+  }
 
   return NextResponse.next()
 }

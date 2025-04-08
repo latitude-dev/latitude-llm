@@ -1,6 +1,7 @@
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
 
 import { API_ROUTES } from './routes/api'
+import { PUBLIC_ROOT_PATHS } from '$/services/auth/constants'
 
 export type IDatasetSettingsModal = 'new' | 'generate'
 
@@ -23,25 +24,6 @@ export enum BackofficeRoutes {
   triggers = 'triggers',
 }
 
-const PUBLIC_ROOT_PATHS = {
-  setup: '/setup',
-  login: '/login',
-  magicLinks: '/magic-links',
-  invitations: '/invitations',
-  share: '/share',
-}
-
-export function isPublicPath(pathname: string) {
-  const publicPaths = [
-    PUBLIC_ROOT_PATHS.setup,
-    PUBLIC_ROOT_PATHS.login,
-    PUBLIC_ROOT_PATHS.magicLinks,
-    PUBLIC_ROOT_PATHS.invitations,
-    PUBLIC_ROOT_PATHS.share,
-  ]
-
-  return publicPaths.some((publicPath) => pathname.startsWith(publicPath))
-}
 const BACKOFFICE_ROOT = '/backoffice'
 
 export const ROUTES = {
