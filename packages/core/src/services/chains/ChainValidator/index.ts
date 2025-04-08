@@ -56,7 +56,7 @@ const getInputSchema = ({
   return overrideSchema || config.schema
 }
 
-const getOutputType = ({
+export const getOutputType = ({
   config,
   configOverrides,
   ignoreSchema = false,

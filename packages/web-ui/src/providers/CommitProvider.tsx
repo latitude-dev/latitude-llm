@@ -35,6 +35,7 @@ const useCurrentCommit = () => {
   if (!context) {
     throw new Error('useCurrentCommit must be used within a CommitProvider')
   }
+
   return context
 }
 

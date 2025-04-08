@@ -69,6 +69,7 @@ export default async function CommitLayout({
 
     throw error
   }
+
   return (
     <ProjectProvider project={project}>
       <CommitProvider commit={commit} isHead={isHead}>
