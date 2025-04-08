@@ -38,8 +38,7 @@ describe('createRowsFromUploadedDataset', () => {
     fileKey = createdDataset.fileKey
   })
 
-  // TODO: test failing intermittently in CI
-  it.skip('should create rows from an uploaded dataset', async () => {
+  it('should create rows from an uploaded dataset', async () => {
     const event = {
       type: 'datasetUploaded' as DatasetV2CreatedEvent['type'],
       data: {

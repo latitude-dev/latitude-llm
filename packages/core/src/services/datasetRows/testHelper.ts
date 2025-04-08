@@ -20,11 +20,12 @@ export async function createTestCsvFile({
   name?: string
   fileContent?: string
 } = {}) {
-  await fs.mkdir(TEST_DISK_LOCATION, { recursive: true })
   const filePath = path.join(TEST_DISK_LOCATION, name)
   try {
     await fs.access(filePath) // Check if file exists
   } catch {
+    // Ensure parent directories exist
+    await fs.mkdir(path.dirname(filePath), { recursive: true })
     await fs.writeFile(filePath, fileContent)
   }
 
