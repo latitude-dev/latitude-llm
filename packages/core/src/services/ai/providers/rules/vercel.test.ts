@@ -209,16 +209,16 @@ describe('applyVercelSdkRules', () => {
             text: 'Hello',
             providerOptions: {
               anthropic: {
-                some_attribute: 'some_user_value',
-                another_attribute: { another_user: 'value' },
+                someAttribute: 'some_user_value',
+                anotherAttribute: { anotherUser: 'value' },
               },
             },
           },
         ],
         providerOptions: {
           anthropic: {
-            some_attribute: 'some_user_value',
-            another_attribute: { another_user: 'value' },
+            someAttribute: 'some_user_value',
+            anotherAttribute: { anotherUser: 'value' },
           },
         },
       },
@@ -234,16 +234,16 @@ describe('applyVercelSdkRules', () => {
             text: 'I am good',
             providerOptions: {
               anthropic: {
-                some_attribute: 'some_assistant_value',
-                another_attribute: { another_assistant: 'value' },
+                someAttribute: 'some_assistant_value',
+                anotherAttribute: { anotherAssistant: 'value' },
               },
             },
           },
         ],
         providerOptions: {
           anthropic: {
-            some_attribute: 'some_assistant_value',
-            another_attribute: { another_assistant: 'value' },
+            someAttribute: 'some_assistant_value',
+            anotherAttribute: { anotherAssistant: 'value' },
           },
         },
       },
@@ -252,9 +252,9 @@ describe('applyVercelSdkRules', () => {
         content: 'I am good',
         providerOptions: {
           anthropic: {
-            some_attribute: 'some_system_value',
+            someAttribute: 'some_system_value',
             cacheControl: { type: 'ephemeral' },
-            another_attribute: { another_system: 'value' },
+            anotherAttribute: { anotherSystem: 'value' },
           },
         },
       },
@@ -307,8 +307,8 @@ describe('applyVercelSdkRules', () => {
             text: 'Hello',
             providerOptions: {
               anthropic: {
-                some_attribute: 'some_user_value',
-                another_attribute: { another_user: 'value' },
+                someAttribute: 'some_user_value',
+                anotherAttribute: { anotherUser: 'value' },
               },
             },
           },
@@ -326,8 +326,8 @@ describe('applyVercelSdkRules', () => {
             text: 'I am good',
             providerOptions: {
               anthropic: {
-                some_attribute: 'some_assistant_value',
-                another_attribute: { another_assistant: 'value' },
+                someAttribute: 'some_assistant_value',
+                anotherAttribute: { anotherAssistant: 'value' },
               },
             },
           },
