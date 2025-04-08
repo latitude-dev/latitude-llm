@@ -47,7 +47,7 @@ export function GenerateDatasetModal({
     e.preventDefault()
     const formData = new FormData(e.target as HTMLFormElement)
 
-    if (!modalData.previewCsv) {
+    if (!modalData.previewData) {
       modalData.generatePreview(formData)
     } else {
       const [dataset] = await runGenerateAction({
@@ -65,7 +65,6 @@ export function GenerateDatasetModal({
         description: 'Dataset generated succesfully',
       })
 
-      // TODO: What to when backUrl
       if (backUrl) {
         navigate.push(backUrl)
       } else {
@@ -85,7 +84,7 @@ export function GenerateDatasetModal({
       explanation={modalData.explanation}
       defaultParameters={modalData.defaultParameters}
       parameters={modalData.parameters}
-      previewCsv={modalData.previewCsv}
+      previewData={modalData.previewData}
       // State
       handleRegeneratePreview={modalData.handleRegeneratePreview}
       handleParametersChange={modalData.handleParametersChange}

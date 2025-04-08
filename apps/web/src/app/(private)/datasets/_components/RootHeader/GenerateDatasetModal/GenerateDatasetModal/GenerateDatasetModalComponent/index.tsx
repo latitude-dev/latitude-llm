@@ -15,15 +15,15 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
-import { CsvPreviewTable } from '$/components/CsvPreviewTable'
-import type { PreviewCsv } from '../useDatasetPreviewModal'
+import { PreviewTable } from '$/components/PreviewTable'
+import type { PreviewData } from '../useDatasetPreviewModal'
 
 export function GenerateDatasetModalComponent({
   open,
   onOpenChange,
   previewIsLoading,
   generateIsLoading,
-  previewCsv,
+  previewData,
   defaultParameters,
   parameters,
   backUrl,
@@ -42,14 +42,14 @@ export function GenerateDatasetModalComponent({
   defaultParameters: string[]
   parameters: string[]
   backUrl?: string
-  previewCsv: PreviewCsv
+  previewData: PreviewData
   explanation?: string
   onSubmit: (e: FormEvent<HTMLFormElement>) => void
   handleRegeneratePreview: () => Promise<void>
   handleParametersChange: (e: ChangeEvent<HTMLInputElement>) => void
   errorMessage: string | undefined
 }) {
-  const previewDone = previewCsv && explanation
+  const previewDone = previewData && explanation
   return (
     <Modal
       dismissible
@@ -75,7 +75,7 @@ export function GenerateDatasetModalComponent({
             )}
             <div className='flex flex-row gap-2'>
               <CloseTrigger />
-              {previewCsv && (
+              {previewData && (
                 <Button
                   onClick={handleRegeneratePreview}
                   disabled={previewIsLoading || generateIsLoading}
@@ -93,7 +93,7 @@ export function GenerateDatasetModalComponent({
               >
                 {previewIsLoading || generateIsLoading
                   ? 'Generating...'
-                  : previewCsv
+                  : previewData
                     ? 'Generate dataset'
                     : 'Generate preview'}
               </Button>
@@ -158,7 +158,7 @@ export function GenerateDatasetModalComponent({
                 maxRows={5}
               />
             </FormField>
-            {previewCsv ? (
+            {previewData ? (
               <FormField
                 label='Row count'
                 info='AI agent might decide to generate more or less rows than requested'
@@ -186,25 +186,26 @@ export function GenerateDatasetModalComponent({
         )}
         {previewIsLoading && !previewDone && (
           <div className='animate-in fade-in slide-in-from-top-5 duration-300 overflow-y-hidden'>
-            <TableSkeleton rows={10} cols={parameters.length} maxHeight={320} />
+            <TableSkeleton rows={10} cols={parameters} maxHeight={320} />
           </div>
         )}
-        {previewDone &&
-          previewCsv?.data?.length &&
-          previewCsv.data.length > 0 && (
-            <div className='animate-in fade-in duration-300 flex flex-col gap-2'>
-              <CsvPreviewTable csvData={previewCsv} />
-              <div className='flex items-start gap-2'>
-                <Tooltip trigger={<Icon name='info' color='foregroundMuted' />}>
-                  {explanation}
-                </Tooltip>
-                <Text.H6 color='foregroundMuted'>
-                  This is a preview of the dataset. You can generate the
-                  complete dataset by clicking the button below.
-                </Text.H6>
-              </div>
+        {previewDone && previewData.rows.length > 0 && (
+          <div className='animate-in fade-in duration-300 flex flex-col gap-2'>
+            <PreviewTable
+              rows={previewData.rows}
+              headers={previewData.headers}
+            />
+            <div className='flex items-start gap-2'>
+              <Tooltip trigger={<Icon name='info' color='foregroundMuted' />}>
+                {explanation}
+              </Tooltip>
+              <Text.H6 color='foregroundMuted'>
+                This is a preview of the dataset. You can generate the complete
+                dataset by clicking the button below.
+              </Text.H6>
             </div>
-          )}
+          </div>
+        )}
       </div>
     </Modal>
   )

@@ -31,3 +31,5 @@ export async function createWorkspace(
 
   return { workspace, userData }
 }
+
+export type CreateWorkspaceResult = Awaited<ReturnType<typeof createWorkspace>>

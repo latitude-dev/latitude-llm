@@ -131,16 +131,13 @@ export async function createRowsFromUploadedDataset(
 
       if (!deleteFile) break
 
-      // PARANOID MODE: I don't want to enable file deletion until we have migrated
-      // all datasets V1
+      const deleteResult = await disk.delete(fileKey)
 
-      /* const deleteResult = await disk.delete(fileKey) */
-      /**/
-      /* if (deleteResult.error) { */
-      /*   throw new Error( */
-      /*     `Error deleting file: ${deleteResult.error.message} datasetId: ${datasetId} workspaceId: ${workspaceId}`, */
-      /*   ) */
-      /* } */
+      if (deleteResult.error) {
+        throw new Error(
+          `Error deleting file: ${deleteResult.error.message} datasetId: ${datasetId} workspaceId: ${workspaceId}`,
+        )
+      }
       break
     }
 
