@@ -9,13 +9,10 @@ export const envClient = createEnv({
     NEXT_PUBLIC_POSTHOG_HOST: z.string(),
     NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: z.string(),
     NEXT_PUBLIC_EMAIL_TRIGGER_DOMAIN: z.string().optional(),
-    NEXT_PUBLIC_EVALUATIONS_V2_ENABLED: z.string().optional(), // TODO: Remove when evaluations v2 is fully released
     NEXT_PUBLIC_SENTRY_WEB_DSN: z.string().optional(),
     NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL: z.string(),
   },
   runtimeEnv: {
-    NEXT_PUBLIC_EVALUATIONS_V2_ENABLED:
-      process.env.NEXT_PUBLIC_EVALUATIONS_V2_ENABLED ?? 'false',
     NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL:
       process.env.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL ?? '',
     NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: 'Latitude',

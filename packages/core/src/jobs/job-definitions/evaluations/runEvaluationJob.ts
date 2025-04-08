@@ -22,7 +22,7 @@ export type RunEvaluationV2JobData = {
   datasetId?: number
   datasetLabel?: string
   datasetRowId?: number
-  batchId?: string // TODO: Replace with experiments when they exists
+  batchId?: string // TODO(exps): Replace with experiments when they exists
 }
 
 export function runEvaluationV2JobKey({
@@ -101,7 +101,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
 
   const websockets = await WebsocketClient.getSocket()
 
-  // TODO: Replace with experiments when they exists
+  // TODO(exps): Replace with experiments when they exists
   if (batchId) {
     const tracker = new ProgressTracker(batchId)
     try {

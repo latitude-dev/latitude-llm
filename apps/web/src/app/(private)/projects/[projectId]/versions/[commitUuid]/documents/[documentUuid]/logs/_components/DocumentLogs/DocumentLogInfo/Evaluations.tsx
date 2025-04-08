@@ -106,7 +106,7 @@ function evaluationEditorLinkV2<
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
 
-  // TODO: Go to LLM evaluation editor when LLM V2 evaluations are available
+  // TODO(evalsv2): Go to LLM evaluation editor when LLM V2 evaluations are available
   return ROUTES.projects
     .detail({ id: project.id })
     .commits.detail({ uuid: commit.uuid })

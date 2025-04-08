@@ -1,13 +1,15 @@
-import { ReactNode } from 'react'
-
 import {
   getEvaluationsByDocumentUuidCached,
   getEvaluationTemplatesCached,
   listEvaluationsV2AtCommitByDocumentCached,
 } from '$/app/(private)/_data-access'
-
-import EvaluationsLayoutClient from './_components/Layout'
+import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
+import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { ROUTES } from '$/services/routes'
 import { env } from '@latitude-data/env'
+import { redirect } from 'next/navigation'
+import { ReactNode } from 'react'
+import EvaluationsLayoutClient from './_components/Layout'
 
 export default async function EvaluationsLayout({
   children,
@@ -21,6 +23,19 @@ export default async function EvaluationsLayout({
   }>
 }) {
   const { projectId, commitUuid, documentUuid } = await params
+
+  const { workspace } = await getCurrentUser()
+  const flags = getFeatureFlagsForWorkspaceCached({ workspace })
+
+  if (flags.evaluationsV2.enabled) {
+    return redirect(
+      ROUTES.projects
+        .detail({ id: Number(projectId) })
+        .commits.detail({ uuid: commitUuid })
+        .documents.detail({ uuid: documentUuid }).evaluationsV2.root,
+    )
+  }
+
   const evaluations = await getEvaluationsByDocumentUuidCached(documentUuid)
   const evaluationsV2 = await listEvaluationsV2AtCommitByDocumentCached({
     projectId: Number(projectId),
@@ -28,6 +43,7 @@ export default async function EvaluationsLayout({
     documentUuid: documentUuid,
   })
   const evaluationTemplates = await getEvaluationTemplatesCached()
+
   return (
     <div className='w-full p-6'>
       {children}

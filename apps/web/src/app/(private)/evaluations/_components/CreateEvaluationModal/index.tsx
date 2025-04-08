@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import useEvaluations from '$/stores/evaluations'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
@@ -42,7 +41,7 @@ const METADATA_TYPE_DESCRIPTIONS = {
   evaluationV2: RuleEvaluationSpecification.description,
 }
 
-const DEFAULT_METADATA_TYPE_OPTIONS = [
+const METADATA_TYPE_OPTIONS = [
   {
     label: 'LLM as judge',
     value: EvaluationMetadataType.LlmAsJudgeSimple as EvaluationMetadataTypeTmp,
@@ -50,6 +49,10 @@ const DEFAULT_METADATA_TYPE_OPTIONS = [
   {
     label: 'Code / Manual',
     value: EvaluationMetadataType.Manual as EvaluationMetadataTypeTmp,
+  },
+  {
+    label: 'Rule',
+    value: 'evaluationV2',
   },
 ]
 
@@ -87,10 +90,6 @@ export default function CreateEvaluationModal({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-
-  const { enabled: evaluationsV2Enabled } = useFeatureFlag({
-    featureFlag: 'evaluationsV2',
-  })
 
   const [title, setTitle] = useState(initialData?.title ?? '')
   const [description, setDescription] = useState(initialData?.description ?? '')
@@ -224,18 +223,6 @@ export default function CreateEvaluationModal({
       return 'There is already an evaluation with this name. Please choose a different name.'
     return undefined
   }, [metadataType, existingEvaluations, title])
-
-  const METADATA_TYPE_OPTIONS = [
-    ...DEFAULT_METADATA_TYPE_OPTIONS,
-    ...(evaluationsV2Enabled
-      ? [
-          {
-            label: 'Rule',
-            value: 'evaluationV2',
-          },
-        ]
-      : []),
-  ]
 
   return (
     <ConfirmModal

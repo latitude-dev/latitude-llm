@@ -303,17 +303,17 @@ export type EvaluationV2Stats = EvaluationV2BaseStats & {
   })[]
 }
 
-// TODO: Remove when we migrate to v2
+// TODO(evalsv2): Remove when we migrate to v2
 export type EvaluationTmp =
   | (EvaluationDto & { version: 'v1' })
   | (EvaluationV2 & { version: 'v2' })
 
-// TODO: Remove when we migrate to v2
+// TODO(evalsv2): Remove when we migrate to v2
 export type EvaluationResultTmp =
   | (EvaluationResultDto & { version: 'v1' })
   | (EvaluationResultV2 & { version: 'v2' })
 
-// TODO: Remove when we migrate to v2
+// TODO(evalsv2): Remove when we migrate to v2
 export type ResultWithEvaluationTmp =
   | (ResultWithEvaluation & { version: 'v1' })
   | (ResultWithEvaluationV2 & { version: 'v2' })
