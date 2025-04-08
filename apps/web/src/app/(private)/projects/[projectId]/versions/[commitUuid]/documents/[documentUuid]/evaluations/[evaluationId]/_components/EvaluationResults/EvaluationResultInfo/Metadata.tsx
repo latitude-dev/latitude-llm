@@ -10,7 +10,6 @@ import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { format } from 'date-fns'
 
 import {
-  FinishReasonItem,
   MetadataItem,
   MetadataItemTooltip,
 } from '../../../../../../[documentUuid]/_components/MetadataItem'
@@ -31,11 +30,6 @@ function ProviderLogItems({
   )
   return (
     <>
-      <MetadataItem
-        label='Timestamp'
-        value={format(evaluationResult.createdAt, 'PPp')}
-      />
-      <FinishReasonItem providerLog={providerLog} />
       <MetadataItem
         label='Tokens'
         value={providerLog?.tokens?.toString() ?? '-'}

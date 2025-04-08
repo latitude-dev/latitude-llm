@@ -864,6 +864,9 @@ importers:
       zod:
         specifier: ^3.23.8
         version: 3.24.2
+      zod-to-json-schema:
+        specifier: ^3.24.5
+        version: 3.24.5(zod@3.24.2)
     devDependencies:
       '@faker-js/faker':
         specifier: ^8.4.1

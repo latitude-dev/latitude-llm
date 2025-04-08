@@ -7,10 +7,9 @@ import {
   EvaluationType,
   EvaluationV2Stats,
 } from '@latitude-data/core/browser'
-import { ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
-import { AreaChart } from '@latitude-data/web-ui/molecules/Charts'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { AreaChart, ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
 import { format } from 'date-fns'
 import { useMemo } from 'react'
 
@@ -35,14 +34,16 @@ export default function DailyOverviewChart<
     )
   }, [stats])
 
-  const minY = useMemo(
-    () => data.reduce((min, point) => Math.min(min, point.y), Infinity),
-    [data],
-  )
-  const maxY = useMemo(
-    () => data.reduce((max, point) => Math.max(max, point.y), -Infinity),
-    [data],
-  )
+  const minY = useMemo(() => {
+    const min = data.reduce((min, point) => Math.min(min, point.y), Infinity)
+    if (configuration.min === -Infinity) return Math.floor(min * 0.9)
+    return Math.min(configuration.min, min)
+  }, [data, configuration])
+  const maxY = useMemo(() => {
+    const max = data.reduce((max, point) => Math.max(max, point.y), -Infinity)
+    if (configuration.max === Infinity) return Math.ceil(max * 1.1)
+    return Math.max(configuration.max, max)
+  }, [data, configuration])
 
   return (
     <ChartWrapper
@@ -64,8 +65,8 @@ export default function DailyOverviewChart<
               label: 'Average score',
               legend: 'average score',
               type: 'number',
-              min: Math.min(configuration.min, minY),
-              max: Math.max(configuration.max, maxY),
+              min: minY,
+              max: maxY,
               thresholds: configuration.thresholds,
               tickFormatter: (score) =>
                 configuration.format(Number(score), true),

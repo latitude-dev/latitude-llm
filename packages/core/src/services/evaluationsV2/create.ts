@@ -39,10 +39,10 @@ export async function createEvaluationV2<
 
   const { settings: vSettings, options: vOptions } = await validateEvaluationV2(
     {
-      document: document,
-      commit: commit,
       settings: settings,
       options: options,
+      document: document,
+      commit: commit,
       workspace: workspace,
     },
     db,
