@@ -133,16 +133,14 @@ export function DocumentLogs({
         <div className='flex justify-center sticky bottom-4 pointer-events-none'>
           <FloatingPanel visible={selectableState.selectedCount > 0}>
             <div className='flex flex-row justify-between gap-x-4'>
-              <>
-                <Button
-                  fancy
-                  disabled={selectableState.selectedCount === 0}
-                  onClick={previewLogsState.onClickShowPreview}
-                >
-                  Save logs to dataset
-                </Button>
-                <DownloadLogsButton selectableState={selectableState} />
-              </>
+              <Button
+                fancy
+                disabled={selectableState.selectedCount === 0}
+                onClick={previewLogsState.onClickShowPreview}
+              >
+                Save logs to dataset
+              </Button>
+              <DownloadLogsButton selectableState={selectableState} />
               <Button
                 fancy
                 variant='outline'
