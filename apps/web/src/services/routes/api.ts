@@ -300,14 +300,6 @@ export const API_ROUTES = {
     evaluationResults: {
       root: `/api/documentLogs/evaluation-results`,
     },
-    // DEPRECATED: Is for all datasets
-    generateCsv: {
-      detail: ({ documentLogIds }: { documentLogIds: number[] }) => {
-        return {
-          root: `/api/documentLogs/generate-csv?ids=${documentLogIds.join(',')}`,
-        }
-      },
-    },
     downloadLogs: {
       root: `/api/documentLogs/download-logs`,
     },

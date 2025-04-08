@@ -34,6 +34,8 @@ describe('buildDocumentLogDatasetRows', async () => {
       commit: setup.commit,
       parameters: {
         location: 'San Francisco',
+        listOfThings: [{ thing: 'thing1' }, { thing: 'thing2' }],
+        simpleJson: { thing: 'thing1' },
         age: 25,
       },
       automaticProvidersGeneratedAt: new Date(2022, 1, 1),
@@ -54,7 +56,8 @@ describe('buildDocumentLogDatasetRows', async () => {
     const repo = new ProviderLogsRepository(setup.workspace.id)
     const providers = await repo.findManyByDocumentLogUuid([documentLog.uuid])
     const tokens = sum(providers.map((p) => p.tokens ?? 0))
-    expect(result.value).toEqual(`age,location,output,document_log_id,tokens
-25,"San Francisco","Last provider response. Hello!",${documentLog.id},${tokens}`)
+    expect(result.value)
+      .toEqual(`age,location,simpleJson,listOfThings,output,document_log_id,tokens
+25,San Francisco,"{""thing"":""thing1""}","[{""thing"":""thing1""},{""thing"":""thing2""}]",Last provider response. Hello!,${documentLog.id},${tokens}\n`)
   })
 })
