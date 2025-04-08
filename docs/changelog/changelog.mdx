@@ -3,6 +3,35 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-04-14'>
+
+## Bug Fixes and Improvements
+
+- **Fix Output Schema in /chat Endpoint**: Fixed the output schema in the `/chat` endpoint to ensure better data handling and response structure.
+  - [Commit](https://github.com/latitude-dev/latitude-llm/commit/07c6ba2b2f1b0b636494d12bf9b1d75dab9874d3)
+  - [PR](https://github.com/latitude-dev/latitude-llm/commit/07c6ba2b2f1b0b636494d12bf9b1d75dab9874d3)
+
+- **Always Pick Fresh Document When Loading Playground**: Ensures that a fresh document is always picked when loading the playground, improving user experience and data accuracy.
+  - [Commit](https://github.com/latitude-dev/latitude-llm/commit/e13a1708c52fab6779ccf2add74fd5ed55f00aa8)
+  - [PR](https://github.com/latitude-dev/latitude-llm/commit/e13a1708c52fab6779ccf2add74fd5ed55f00aa8)
+
+## New Features
+
+- **Add Documents Queue/Worker**: Introduced a new queue and worker with higher concurrency for faster document processing, optimizing I/O bound tasks.
+  - [Commit](https://github.com/latitude-dev/latitude-llm/commit/927b47760586704e30386314a2d26967840feb07)
+  - [PR](https://github.com/latitude-dev/latitude-llm/commit/927b47760586704e30386314a2d26967840feb07)
+
+- **Feature/912 Evaluations V2 Refiner**: Added Evaluations V2 to the Prompt Refiner, enhancing the evaluation process and refining capabilities.
+  - [Commit](https://github.com/latitude-dev/latitude-llm/commit/125ee954cdf6145e479e8e4e050a71cffb44b3c7)
+  - [PR](https://github.com/latitude-dev/latitude-llm/commit/125ee954cdf6145e479e8e4e050a71cffb44b3c7)
+
+## Other Updates
+
+- **Experiments Schema**: Introduced a new schema for experiments, providing a structured approach to handling experimental data.
+  - [Commit](https://github.com/latitude-dev/latitude-llm/commit/74dd315bd70ae30d71db35017e4ec7a637f3ade1)
+
+</Update>
+
 <Update label='2025-04-07'>
 
 ## Added new providers
