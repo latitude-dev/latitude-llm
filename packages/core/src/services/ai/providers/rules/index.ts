@@ -13,7 +13,7 @@ import { applyPerplexityRules } from './perplexity'
 import { getProviderMetadataKey } from './providerMetadata'
 import { JSONValue } from 'ai'
 import { VercelConfig } from '@latitude-data/constants'
-import { toCamelCaseDeep } from '../../../../lib'
+import { toCamelCaseDeep } from '../../../../lib/camelCaseRecursive'
 
 type Props = {
   providerType: Providers
