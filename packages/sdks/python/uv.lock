@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.9, <3.13"
 
 [[package]]
@@ -316,7 +317,7 @@ wheels = [
 
 [[package]]
 name = "latitude-sdk"
-version = "1.1.0"
+version = "1.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -343,7 +344,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "httpx-sse", specifier = ">=0.4.0" },
     { name = "latitude-telemetry", specifier = ">=1.0.0" },
-    { name = "promptl-ai", specifier = ">=1.0.2" },
+    { name = "promptl-ai", specifier = ">=1.0.3" },
     { name = "pydantic", specifier = ">=2.10.3" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
 ]
@@ -837,16 +838,16 @@ wheels = [
 
 [[package]]
 name = "promptl-ai"
-version = "1.0.2"
+version = "1.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },
     { name = "wasmtime" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/95/21/a17f945570b18a26f8a313e4ea7073385e0ef3443627162493124ff897b0/promptl_ai-1.0.2.tar.gz", hash = "sha256:f20ac209f472c70911775f7b1b861a792318f333e4964eeca37d9fe9c698d427", size = 984391 }
+sdist = { url = "https://files.pythonhosted.org/packages/b0/42/cfac426457eeb7a765e0bb5edcab7a294a611ce5ca4a9d7ff25a57723aaf/promptl_ai-1.0.3.tar.gz", hash = "sha256:fe14dd5248878f1842ce30caa62d67182cfc6f3229a54fbad0709571e6c8694f", size = 981242 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/61/cc4a1006be6b22abef71756c1e1637b8869157cdd7f37c1892a41120a716/promptl_ai-1.0.2-py3-none-any.whl", hash = "sha256:bee771bf7a64719c1965bbf090c3788c25cf0f2ae59bd9dea6ac220d1c3384d3", size = 969281 },
+    { url = "https://files.pythonhosted.org/packages/81/e4/b1889c70ec8f0050cb67f28d4b01c6e38656340acf65d2c9460ea19dd3e0/promptl_ai-1.0.3-py3-none-any.whl", hash = "sha256:30e589459feae16d69eaa2485429413268d9c7e3c1d03ac1195a9d54f6139793", size = 966250 },
 ]
 
 [[package]]
