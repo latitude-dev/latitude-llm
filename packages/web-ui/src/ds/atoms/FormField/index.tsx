@@ -275,6 +275,7 @@ function FormField({
         badgeLabel={badgeLabel}
         info={info}
         error={error}
+        errorStyle={errorStyle}
         description={description}
         formDescriptionId={formDescriptionId}
         formMessageId={formMessageId}
