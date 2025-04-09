@@ -6,7 +6,6 @@ import { findOrCreateUserFromOAuth } from '@latitude-data/core/services/auth/fin
 import { setSession } from '$/services/auth/setSession'
 import { ObjectParser } from '@pilcrowjs/object-parser'
 import { NextResponse } from 'next/server'
-import { ROUTES } from '$/services/routes'
 import { OAuthProvider } from '@latitude-data/core/schema'
 import { env } from '@latitude-data/env'
 
