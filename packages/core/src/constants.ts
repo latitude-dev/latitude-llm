@@ -21,8 +21,6 @@ import type {
   DocumentVersion,
   EvaluationDto,
   ProviderLog,
-  Span,
-  Trace,
 } from './browser'
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
@@ -384,11 +382,6 @@ export enum SpanKind {
   // Represents the processing of a message from a message queue/stream
   // Example: Processing a message from RabbitMQ, handling a Kafka message
   Consumer = 'consumer',
-}
-
-export type TraceWithSpans = Trace & {
-  spans: Span[]
-  realtimeAdded?: boolean
 }
 
 export type SpanMetadataTypes = 'default' | 'generation'

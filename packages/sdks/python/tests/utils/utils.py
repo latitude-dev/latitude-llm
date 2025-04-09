@@ -4,8 +4,6 @@ from unittest import IsolatedAsyncioTestCase
 
 import httpx
 import respx
-from latitude_telemetry import InternalOptions as TelemetryInternalOptions
-from latitude_telemetry import TelemetryOptions
 from promptl_ai import (
     Adapter,
     AssistantMessage,
@@ -43,11 +41,6 @@ class TestCase(IsolatedAsyncioTestCase):
         }
 
         self.internal_options = InternalOptions.model_validate(internal_options)
-        self.telemetry_options = TelemetryOptions(
-            instrumentors=[],
-            disable_batch=True,
-            internal=TelemetryInternalOptions.model_validate(internal_options),
-        )
         self.promptl_options = PromptlOptions(
             adapter=Adapter.Default,
         )
@@ -71,7 +64,6 @@ class TestCase(IsolatedAsyncioTestCase):
                 project_id=self.project_id,
                 version_uuid=self.version_uuid,
                 promptl=self.promptl_options,
-                telemetry=self.telemetry_options,
                 internal=self.internal_options,
             ),
         )

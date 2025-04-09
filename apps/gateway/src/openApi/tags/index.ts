@@ -16,18 +16,9 @@ const conversationTag = {
   },
 }
 
-const telemetryTag = {
-  name: 'Telemetry',
-  description: 'Latitude telemetry tracing operations',
-  externalDocs: {
-    description: 'Tracing your LLM calls',
-    url: 'https://docs.latitude.so/guides/sdk/typescript#tracing-your-llm-calls',
-  },
-}
-
 const v1Deprecated = {
   name: 'V1_DEPRECATED',
   description: 'V1 of the API is deprecated. Please use V2',
 }
 
-export const tags = [documentTag, conversationTag, telemetryTag, v1Deprecated]
+export const tags = [documentTag, conversationTag, v1Deprecated]

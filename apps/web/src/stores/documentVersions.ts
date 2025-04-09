@@ -6,7 +6,6 @@ import useFetcher from '$/hooks/useFetcher'
 import { assignDatasetAction } from '$/actions/documents/assignDatasetAction'
 import { saveLinkedDatasetAction } from '$/actions/documents/saveLinkedDatasetAction'
 import { createDocumentVersionAction } from '$/actions/documents/create'
-import { createDocumentVersionFromTraceAction } from '$/actions/documents/createFromTrace'
 import { destroyDocumentAction } from '$/actions/documents/destroyDocumentAction'
 import { destroyFolderAction } from '$/actions/documents/destroyFolderAction'
 import { renameDocumentPathsAction } from '$/actions/documents/renamePathsAction'
@@ -84,13 +83,14 @@ export default function useDocumentVersions(
     useServerAction(destroyFolderAction)
 
   const createFile = useCallback(
-    async ({ path }: { path: string }) => {
+    async ({ path, content }: { path: string; content?: string }) => {
       if (!projectId) return
 
       const [document, error] = await executeCreateDocument({
-        path,
         projectId,
         commitUuid,
+        path,
+        content,
       })
 
       if (error) {
@@ -302,26 +302,6 @@ export default function useDocumentVersions(
       },
     })
 
-  const { execute: createFromTrace } = useLatitudeAction(
-    createDocumentVersionFromTraceAction,
-    {
-      onSuccess: ({ data: documentVersion }) => {
-        toast({
-          title: 'Success',
-          description: 'Document successfully created',
-        })
-        mutate([...data, documentVersion])
-      },
-      onError: (error) => {
-        toast({
-          title: 'Error creating document',
-          description: error.err.formErrors?.[0] || error.err.message,
-          variant: 'destructive',
-        })
-      },
-    },
-  )
-
   return {
     data,
     isValidating: isValidating,
@@ -329,7 +309,6 @@ export default function useDocumentVersions(
     error: swrError,
     createFile,
     uploadFile,
-    createFromTrace,
     renamePaths,
     destroyFile,
     destroyFolder,

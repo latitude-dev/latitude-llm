@@ -67,9 +67,6 @@ export const API_ROUTES = {
   users: {
     root: '/api/users',
   },
-  traces: {
-    root: '/api/traces',
-  },
   documents: {
     logs: {
       detail: (documentLogUuid: string) => ({

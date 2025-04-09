@@ -41,54 +41,6 @@ sdk = Latitude('your-api-key-here', LatitudeOptions(
 
 Check out our [cookbook](/guides/cookbook/overview#python) for more examples of how to use Latitude's SDK.
 
-## Telemetry
-
-Latitude can automatically trace all your LLM calls from most major providers and frameworks
-using our OpenTelemetry integration. We recommend this approach to easily get
-started using Latitude's full capabilities.
-
-Here's how to integrate with the all supported providers/frameworks:
-
-- [Aleph Alpha](/guides/sdk/telemetry/aleph-alpha)
-- [Anthropic](/guides/sdk/telemetry/anthropic)
-- [AWS Bedrock](/guides/sdk/telemetry/aws-bedrock)
-- [AWS Sagemaker](/guides/sdk/telemetry/aws-sagemaker)
-- [Cohere](/guides/sdk/telemetry/cohere)
-- [DSPy](/guides/sdk/telemetry/dspy)
-- [Google AI Platform](/guides/sdk/telemetry/google-ai-platform)
-- [Groq](/guides/sdk/telemetry/groq)
-- [Haystack](/guides/sdk/telemetry/haystack)
-- [Langchain](/guides/sdk/telemetry/langchain)
-- [LiteLLM](/guides/sdk/telemetry/litellm)
-- [LlamaIndex](/guides/sdk/telemetry/llamaindex)
-- [MistralAI](/guides/sdk/telemetry/mistralai)
-- [Ollama](/guides/sdk/telemetry/ollama)
-- [OpenAI](/guides/sdk/telemetry/openai)
-- [Replicate](/guides/sdk/telemetry/replicate)
-- [Together](/guides/sdk/telemetry/together)
-- [Transformers](/guides/sdk/telemetry/transformers)
-- [Vertex AI](/guides/sdk/telemetry/vertex-ai)
-- [Watsonx](/guides/sdk/telemetry/watsonx)
-
-Learn more about [traces](/guides/traces/overview) and how to monitor them with Latitude.
-
-#### A note during development
-
-Latitude's OpenTelemetry integration batches requests automatically in order to
-improve performance. This is helpful in production workloads, but during
-development you may want to disable batching. This can be done by setting the
-`disable_batch` option to `True`:
-
-```python
-from latitude_telemetry import TelemetryOptions
-
-Latitude('your-api-key-here', LatitudeOptions(
-    telemetry=TelemetryOptions(
-        disable_batch=True,
-    ),
-))
-```
-
 ## Prompt Management
 
 ### Get or create a prompt

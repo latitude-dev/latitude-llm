@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/sdk",
-  "version": "2.3.1",
+  "version": "3.0.0",
   "description": "Latitude SDK for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "LGPL-3.0",
@@ -43,8 +43,6 @@
   },
   "dependencies": {
     "@latitude-data/constants": "workspace:*",
-    "@latitude-data/telemetry": "workspace:^",
-    "@t3-oss/env-core": "^0.10.1",
     "eventsource-parser": "^2.0.1",
     "node-fetch": "3.3.2",
     "promptl-ai": "^0.5.2",

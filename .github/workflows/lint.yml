@@ -70,9 +70,6 @@ jobs:
           cd packages/sdks/python
           uv venv
           uv sync --all-extras --all-groups
-          cd ../../telemetry/python
-          uv venv
-          uv sync --all-extras --all-groups
 
       - name: Use Turbo to build affected packages
         run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
@@ -86,8 +83,6 @@ jobs:
       - name: Python Lint
         run: |
           cd packages/sdks/python
-          uv run scripts/lint.py
-          cd ../../telemetry/python
           uv run scripts/lint.py
 
       - name: TypeScript

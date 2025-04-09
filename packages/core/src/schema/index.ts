@@ -2,6 +2,8 @@ export * from './db-schema'
 
 // Legacy models
 export * from './legacyModels/datasetsV1'
+export * from './legacyModels/traces'
+export * from './legacyModels/spans'
 
 // Tenancy tables
 export * from './models/users'
@@ -55,9 +57,6 @@ export * from './models/evaluationResultableTexts'
 export * from './models/evaluationResultableBooleans'
 
 export * from './models/experiments'
-
-export * from './models/traces'
-export * from './models/spans'
 
 // Public sharing & Triggers
 export * from './models/publishedDocuments'

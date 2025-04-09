@@ -27,9 +27,6 @@ const V3_EVALUATIONS = `${V3_CONVERSATIONS}/{conversationUuid}/evaluations`
 const V2_EVALUATION_DETAIL = `${V2_EVALUATIONS}/{evaluationUuid}`
 const V3_EVALUATION_DETAIL = `${V3_EVALUATIONS}/{evaluationUuid}`
 
-const V2_TELEMETRY = `${V2_PATH}/otlp`
-const V3_TELEMETRY = `${V3_PATH}/otlp`
-
 export const API_ROUTES = {
   v1: {
     documents: {
@@ -53,9 +50,6 @@ export const API_ROUTES = {
       evaluate: `${V2_CONVERSATION_DETAIL}/evaluate`,
       createEvaluationResult: `${V2_EVALUATION_DETAIL}/evaluation-results`,
     },
-    telemetry: {
-      traces: `${V2_TELEMETRY}/v1/traces`,
-    },
   },
   v3: {
     documents: {
@@ -69,9 +63,6 @@ export const API_ROUTES = {
       chat: `${V3_CONVERSATION_DETAIL}/chat`,
       evaluate: `${V3_CONVERSATION_DETAIL}/evaluate`,
       createEvaluationResult: `${V3_EVALUATION_DETAIL}/evaluation-results`,
-    },
-    telemetry: {
-      traces: `${V3_TELEMETRY}/v1/traces`,
     },
   },
 }

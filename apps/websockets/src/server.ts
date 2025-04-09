@@ -158,12 +158,6 @@ workers.on('connection', (socket) => {
     web.to(workspace).emit('evaluationResultV2Created', data)
   })
 
-  socket.on('tracesAndSpansCreated', (args) => {
-    const { workspaceId, data } = args
-    const workspace = buildWorkspaceRoom({ workspaceId })
-    web.to(workspace).emit('tracesAndSpansCreated', data)
-  })
-
   socket.on('datasetRowsCreated', (args) => {
     const { workspaceId, data } = args
     const workspace = buildWorkspaceRoom({ workspaceId })

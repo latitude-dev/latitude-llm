@@ -1,10 +1,8 @@
 import { IEventsHandlers } from '../events'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
-import { createDocumentLogsFromSpansJob } from './createDocumentLogsFromSpansJob'
 import { createLoopsContact } from './createLoopsContact'
 import { evaluateLiveLogJob } from './evaluateLiveLog'
-import { notifyClientOfBulkCreateTracesAndSpans } from './notifyClientOfBulkCreateTracesAndSpans'
 import { notifyClientOfDocumentSuggestionCreated } from './notifyClientOfDocumentSuggestionCreated'
 import { notifyClientOfEvaluationResultV2Created } from './notifyClientOfEvaluationResultV2Created'
 import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
@@ -71,10 +69,6 @@ export const EventHandlers: IEventsHandlers = {
   copilotRefinerApplied: [],
   copilotSuggestionGenerated: [],
   copilotSuggestionApplied: [],
-  bulkCreateTracesAndSpans: [
-    notifyClientOfBulkCreateTracesAndSpans,
-    createDocumentLogsFromSpansJob,
-  ],
   evaluationV2Created: [],
   evaluationV2Ran: [],
   evaluationResultV2Created: [
