@@ -91,6 +91,9 @@ if (environment === 'development' || environment === 'test') {
       MCP_DOCKER_IMAGE: 'ghcr.io/latitude-dev/latitude-mcp:latest',
       MCP_NODE_GROUP_NAME: 'latitude-dev-node-group',
       MAIL_TRANSPORT: 'mailpit',
+      GOOGLE_CLIENT_ID: '',
+      GOOGLE_CLIENT_SECRET: '',
+      GOOGLE_REDIRECT_URI: 'http://localhost:3000/api/auth/google/callback',
     },
     { path: pathToEnv },
   )
@@ -231,6 +234,11 @@ export const env = createEnv({
     SECURE_WEBSOCKETS: z.coerce.boolean().optional().default(false),
 
     JOB_RETRY_ATTEMPTS: z.coerce.number().optional().default(3),
+
+    // Google OAuth
+    GOOGLE_CLIENT_ID: z.string(),
+    GOOGLE_CLIENT_SECRET: z.string(),
+    GOOGLE_REDIRECT_URI: z.string(),
   },
   runtimeEnv: {
     ...process.env,

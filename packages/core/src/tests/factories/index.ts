@@ -1,6 +1,7 @@
 export * from './apiKeys'
 export * from './commits'
 export * from './connectedEvaluations'
+export * from './oauthAccounts'
 export * from './datasets'
 export * from './datasetsV2'
 export * from './documentLogs'

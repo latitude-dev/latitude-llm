@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 
 import { lucia } from '.'
 import { SessionData } from './getCurrentUser'
+import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies'
 
 type PartialSession = Omit<SessionData, 'session'>
 export async function setWebsocketSessionCookie({
@@ -28,17 +29,21 @@ export async function setWebsocketSessionCookie({
   })
 }
 
-export async function setSession({
-  sessionData: { workspace, user },
-}: {
-  sessionData: PartialSession
-}) {
+export async function setSession(
+  {
+    sessionData: { workspace, user },
+  }: {
+    sessionData: PartialSession
+  },
+  cks?: ReadonlyRequestCookies,
+) {
   const session = await lucia.createSession(user.id, {
     currentWorkspaceId: workspace.id,
   })
   const sessionCookie = lucia.createSessionCookie(session.id)
-  const cks = await cookies()
+  cks = cks ?? (await cookies())
 
+  console.log(sessionCookie.name, sessionCookie.value, sessionCookie.attributes)
   cks.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes)
 
   setWebsocketSessionCookie({

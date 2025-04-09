@@ -3,10 +3,14 @@ import { ReactNode } from 'react'
 
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { loginAction } from '$/actions/user/loginAction'
 import { useServerAction } from 'zsa-react'
+import Link from 'next/link'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export default function LoginForm({
   footer,
@@ -40,9 +44,30 @@ export default function LoginForm({
           placeholder='Ex.: jon@example.com'
           errors={errors?.email}
         />
-        <Button fullWidth isLoading={isPending && !error}>
-          Login
-        </Button>
+        <div className='flex flex-col gap-6'>
+          <Button fullWidth isLoading={isPending && !error}>
+            Login
+          </Button>
+
+          <div className='relative'>
+            <Separator />
+            <div className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'>
+              <div className='bg-background px-2'>
+                <Text.H6 color='foregroundMuted'>Or</Text.H6>
+              </div>
+            </div>
+          </div>
+
+          <Button variant='outline' fullWidth asChild>
+            <Link
+              href='/api/auth/google/start'
+              className='flex items-center gap-2'
+            >
+              <Icon name='googleWorkspace' />
+              <Text.H5>Continue with Google</Text.H5>
+            </Link>
+          </Button>
+        </div>
 
         {footer}
       </FormWrapper>

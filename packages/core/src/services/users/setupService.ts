@@ -1,3 +1,4 @@
+import { database } from '../../client'
 import { Providers } from '../../constants'
 import { SessionData } from '../../data-access'
 import { publisher } from '../../events/publisher'
@@ -9,21 +10,24 @@ import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
 import { createUser } from './createUser'
 
-export default function setupService({
-  email,
-  name,
-  companyName,
-  defaultProviderName,
-  defaultProviderApiKey,
-  captureException,
-}: {
-  email: string
-  name: string
-  companyName: string
-  defaultProviderName?: string
-  defaultProviderApiKey?: string
-  captureException?: (error: Error) => void
-}): PromisedResult<SessionData> {
+export default function setupService(
+  {
+    email,
+    name,
+    companyName,
+    defaultProviderName,
+    defaultProviderApiKey,
+    captureException,
+  }: {
+    email: string
+    name: string
+    companyName: string
+    defaultProviderName?: string
+    defaultProviderApiKey?: string
+    captureException?: (error: Error) => void
+  },
+  db = database,
+): PromisedResult<SessionData> {
   return Transaction.call(async (tx) => {
     const userResult = await createUser(
       { email, name, confirmedAt: new Date() },
@@ -91,5 +95,5 @@ export default function setupService({
       user,
       workspace,
     })
-  })
+  }, db)
 }

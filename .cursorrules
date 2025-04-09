@@ -24,6 +24,7 @@ Before responding to any request, follow these steps:
    - Plan for error handling and edge cases
    - Ensure accessibility compliance
    - Verify best practices alignment
+   - Write only essential comments
 
 ## Project Structure
 
@@ -123,3 +124,8 @@ These rules apply to services implemented within packages/core services folder
 - Any service implemented a write operation has to use the Transaction abstraction
 - All services that can fail have to return an instance of Result abstraction
 - Update/Delete services should receive always instances of the models they are trying to delete, rather than their ids.
+
+## Testing
+- When asked to write tests, look for other tests in order to learn how we usually write and structure tests
+- Make as much use of factories as possible
+- If asked to write integration tests, make as little use of mocks as possible
