@@ -11,7 +11,7 @@ import { env } from '@latitude-data/env'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { authProcedure } from '$/actions/procedures'
-import { createDatasetFromJson } from '@latitude-data/core/services/datasetsV2/createFromJson'
+import { createDatasetFromJson } from '@latitude-data/core/services/datasets/createFromJson'
 
 export const generateDatasetAction = authProcedure
   .createServerAction()

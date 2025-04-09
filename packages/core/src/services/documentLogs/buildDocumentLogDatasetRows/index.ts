@@ -1,7 +1,7 @@
-import { DatasetV2, Workspace } from '../../../browser'
+import { Dataset, Workspace } from '../../../browser'
 import { PromisedResult, Result } from '../../../lib'
 import { Column, DatasetRowData, documentLogs } from '../../../schema'
-import { HashAlgorithmFn, nanoidHashAlgorithm } from '../../datasetsV2/utils'
+import { HashAlgorithmFn, nanoidHashAlgorithm } from '../../datasets/utils'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../../repositories/documentLogsWithMetadataAndErrorsRepository'
 import {
   DocumentLogWithMetadataAndError,
@@ -194,7 +194,7 @@ export async function buildDocumentLogDatasetRows({
 }: {
   workspace: Workspace
   documentLogIds: number[]
-  dataset?: DatasetV2
+  dataset?: Dataset
   hashAlgorithm?: HashAlgorithmFn
 }): PromisedResult<ExportedDocumentLogs> {
   const logs = await findLogs({ workspace, documentLogIds })

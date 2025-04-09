@@ -1,10 +1,7 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useUsers from '$/stores/users'
-import {
-  DatasetVersion,
-  DocumentTriggerParameters,
-} from '@latitude-data/constants'
+import { DocumentTriggerParameters } from '@latitude-data/constants'
 import { EmailTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/helpers/schema'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -150,7 +147,6 @@ export function EmailTriggerConfig({
   } = useDocumentParameters({
     document,
     commitVersionUuid: commit.uuid,
-    datasetVersion: DatasetVersion.V2,
   })
   const documentParameters = Object.keys(inputs)
 

@@ -28,8 +28,8 @@ export function PreviewTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map((cells, rowIndex) => (
-          <TableRow key={rowIndex} hoverable={false}>
+        {rows.map((cells, i) => (
+          <TableRow key={i} hoverable={false}>
             {cells.map((cell, cellIndex) => (
               <TableCell key={cellIndex}>
                 <div className='py-1'>

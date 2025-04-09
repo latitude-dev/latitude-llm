@@ -47,19 +47,12 @@ function LocalParameterInput({ param, input, setInput }: ManualParameterProps) {
   )
 }
 
-export function ManualParams({
-  document,
-  commit,
-  prompt,
-  setPrompt,
-  datasetVersion,
-}: Props) {
+export function ManualParams({ document, commit, prompt, setPrompt }: Props) {
   const {
     manual: { inputs, setInput },
   } = useDocumentParameters({
     document,
     commitVersionUuid: commit.uuid,
-    datasetVersion,
   })
   return (
     <ParametersWrapper document={document} commit={commit}>

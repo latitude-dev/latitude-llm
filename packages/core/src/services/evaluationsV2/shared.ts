@@ -2,7 +2,7 @@ import type { Message } from '@latitude-data/compiler'
 import {
   Commit,
   DatasetRow,
-  DatasetV2,
+  Dataset,
   DocumentLog,
   DocumentVersion,
   EVALUATION_SCORE_SCALE,
@@ -40,7 +40,7 @@ export type EvaluationMetricRunArgs<
   providerLog: ProviderLogDto
   documentLog: DocumentLog
   document: DocumentVersion
-  dataset?: DatasetV2
+  dataset?: Dataset
   datasetLabel?: string
   datasetRow?: DatasetRow
   commit: Commit

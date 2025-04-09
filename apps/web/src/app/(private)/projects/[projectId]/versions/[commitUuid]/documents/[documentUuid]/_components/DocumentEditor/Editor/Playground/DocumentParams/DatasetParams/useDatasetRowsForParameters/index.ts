@@ -3,8 +3,7 @@ import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import useDatasetRows from '$/stores/datasetRows'
 import {
   DatasetRow,
-  DatasetV2,
-  DatasetVersion,
+  Dataset,
   DocumentVersion,
   Inputs,
   LinkedDatasetRow,
@@ -21,7 +20,7 @@ function mapDatasetColumnsToParameters({
   dataset,
 }: {
   parameters: string[]
-  dataset: DatasetV2
+  dataset: Dataset
 }) {
   return Object.fromEntries(
     dataset.columns
@@ -42,7 +41,7 @@ function resolveDatasetDataRow({
   datasetRowId: number
   serverData: LinkedDatasetRow | undefined
   localData: LinkedDatasetRow | undefined
-  dataset: DatasetV2
+  dataset: Dataset
   emptyInputs: Inputs<'datasetV2'> | undefined
 }): LinkedDatasetRow {
   let linkedDatasetRow: LinkedDatasetRow = {
@@ -112,7 +111,7 @@ export function useDatasetRowsForParameters({
   setPosition: ReactStateDispatch<number | undefined>
   document: DocumentVersion
   commitVersionUuid: string
-  dataset: DatasetV2 | null | undefined
+  dataset: Dataset | null | undefined
 }) {
   const emptyInputs = useMetadataParameters().emptyInputs?.datasetV2
   const dataset = useMemo(() => originalDataset, [originalDataset?.id])
@@ -128,7 +127,6 @@ export function useDatasetRowsForParameters({
   const { metadataParameters, datasetV2: ds } = useDocumentParameters({
     document,
     commitVersionUuid,
-    datasetVersion: DatasetVersion.V2,
   })
 
   const onRowsFetched = useCallback(
@@ -154,7 +152,6 @@ export function useDatasetRowsForParameters({
 
       await ds.setDataset({
         datasetId: row.datasetId,
-        datasetVersion: DatasetVersion.V2,
         data: {
           inputs,
           mappedInputs: resolvedData.mappedInputs,
@@ -217,7 +214,6 @@ export function useDatasetRowsForParameters({
       })
       ds.setDataset({
         datasetId: dataset.id,
-        datasetVersion: DatasetVersion.V2,
         data: {
           datasetRowId: datasetRow.id,
           inputs,

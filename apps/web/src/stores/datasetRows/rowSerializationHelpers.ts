@@ -1,8 +1,4 @@
-import {
-  DatasetRow,
-  DatasetV2,
-  parseRowCell,
-} from '@latitude-data/core/browser'
+import { DatasetRow, Dataset, parseRowCell } from '@latitude-data/core/browser'
 import { DatasetRowData } from '@latitude-data/core/schema'
 
 export type ClientDatasetRow = DatasetRow & {
@@ -15,7 +11,7 @@ export function serializeRow({
   columns,
 }: {
   row: DatasetRow
-  columns: DatasetV2['columns']
+  columns: Dataset['columns']
 }): ClientDatasetRow {
   return {
     ...row,
@@ -39,7 +35,7 @@ export function serializeRow({
 }
 
 export const serializeRows =
-  (columns: DatasetV2['columns']) =>
+  (columns: Dataset['columns']) =>
   (rows: DatasetRow[]): ClientDatasetRow[] => {
     return rows.map((item) => serializeRow({ row: item, columns }))
   }

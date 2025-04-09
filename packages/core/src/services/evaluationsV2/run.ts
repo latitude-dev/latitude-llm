@@ -2,7 +2,7 @@ import {
   buildConversation,
   Commit,
   DatasetRow,
-  DatasetV2,
+  Dataset,
   EVALUATION_SCORE_SCALE,
   EvaluationMetric,
   EvaluationResultV2,
@@ -26,7 +26,7 @@ import {
   DocumentVersionsRepository,
 } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema'
-import { getColumnData } from '../datasetsV2/utils'
+import { getColumnData } from '../datasets/utils'
 import { EVALUATION_SPECIFICATIONS } from './shared'
 
 export async function runEvaluationV2<
@@ -44,7 +44,7 @@ export async function runEvaluationV2<
   }: {
     evaluation: EvaluationV2<T, M>
     providerLog: ProviderLogDto
-    dataset?: DatasetV2
+    dataset?: Dataset
     datasetLabel?: string
     datasetRow?: DatasetRow
     commit: Commit
@@ -196,7 +196,7 @@ export async function createEvaluationResultV2<
     evaluation: EvaluationV2<T, M>
     providerLog: ProviderLogDto
     commit: Commit
-    dataset?: DatasetV2
+    dataset?: Dataset
     datasetRow?: DatasetRow
     value: EvaluationResultValue<T, M>
     usedForSuggestion?: boolean

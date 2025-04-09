@@ -31,6 +31,9 @@ __pycache__
 out/
 build
 dist
+# Vim crap
+*.ts-E
+*.tsx-E
 
 
 # Debug

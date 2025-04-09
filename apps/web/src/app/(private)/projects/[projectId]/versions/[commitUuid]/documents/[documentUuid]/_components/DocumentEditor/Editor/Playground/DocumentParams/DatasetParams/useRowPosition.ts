@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { executeFetch } from '$/hooks/useFetcher'
-import { DatasetV2 } from '@latitude-data/core/browser'
+import { Dataset } from '@latitude-data/core/browser'
 import { ROUTES } from '$/services/routes'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -22,7 +22,7 @@ const buildFetcher =
     dataset,
     datasetRowId,
   }: {
-    dataset: DatasetV2 | null
+    dataset: Dataset | null
     datasetRowId?: number
   }) => {
     if (!dataset) return undefined
@@ -52,7 +52,7 @@ export function useDatasetRowPosition() {
       dataset,
       datasetRowId,
     }: {
-      dataset: DatasetV2 | null
+      dataset: Dataset | null
       datasetRowId?: number
     }) => {
       setIsLoadingPosition(true)

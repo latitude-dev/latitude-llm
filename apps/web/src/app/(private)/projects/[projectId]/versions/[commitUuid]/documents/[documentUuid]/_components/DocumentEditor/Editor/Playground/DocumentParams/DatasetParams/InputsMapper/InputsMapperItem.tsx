@@ -4,17 +4,15 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { DatasetVersion, InputSource } from '@latitude-data/core/browser'
+import { InputSource } from '@latitude-data/core/browser'
 import { type UseSelectDataset } from '../useSelectDataset'
 
-type SelectValueType<V extends DatasetVersion> = V extends DatasetVersion.V1
-  ? number
-  : string
+type SelectValueType = string
 export type OnSelectRowCellFn<T> = (
   param: string,
 ) => (value: T | undefined) => void
 
-export function InputsMapperItem<V extends DatasetVersion = DatasetVersion>({
+export function InputsMapperItem({
   value,
   isMapped,
   param,
@@ -25,13 +23,12 @@ export function InputsMapperItem<V extends DatasetVersion = DatasetVersion>({
   copyToManual,
   loadingState,
 }: {
-  datasetVersion: V
-  value: SelectValueType<V> | undefined
+  value: SelectValueType | undefined
   loadingState: UseSelectDataset['loadingState']
   isMapped: boolean
   param: string
-  onSelectRowCell: OnSelectRowCellFn<SelectValueType<V>>
-  rowCellOptions: SelectOption<SelectValueType<V>>[]
+  onSelectRowCell: OnSelectRowCellFn<SelectValueType>
+  rowCellOptions: SelectOption<SelectValueType>[]
   setSource: (source: InputSource) => void
   tooltipValue: { isEmpty: boolean; value: string }
   copyToManual: () => void
@@ -53,7 +50,7 @@ export function InputsMapperItem<V extends DatasetVersion = DatasetVersion>({
       </div>
       <div className='flex flex-grow min-w-0 items-start w-full'>
         <div className='flex flex-col flex-grow min-w-0 gap-y-1'>
-          <Select<SelectValueType<V>>
+          <Select<SelectValueType>
             name='datasetId'
             placeholder='Choose row header'
             options={rowCellOptions}

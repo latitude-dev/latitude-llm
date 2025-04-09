@@ -1,7 +1,6 @@
 'use client'
 
 import EditorHeader from '$/components/EditorHeader'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useMetadata } from '$/hooks/useMetadata'
 import { ROUTES } from '$/services/routes'
@@ -9,11 +8,7 @@ import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import useDocumentVersions from '$/stores/documentVersions'
 import useIntegrations from '$/stores/integrations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
-import {
-  DatasetVersion,
-  DocumentVersion,
-  ProviderApiKey,
-} from '@latitude-data/core/browser'
+import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -85,16 +80,10 @@ export default function DocumentEditor({
     { trailing: true },
   )
 
-  const { enabled: hasDatasetsV2 } = useFeatureFlag({
-    featureFlag: 'datasetsV2',
-  })
-  const datasetVersion = hasDatasetsV2 ? DatasetVersion.V2 : DatasetVersion.V1
-
   const { metadata, runReadMetadata } = useMetadata()
   useDocumentParameters({
     commitVersionUuid: commit.uuid,
     document,
-    datasetVersion,
     metadata,
   })
   const { data: agentToolsMap } = useAgentToolsMap({
@@ -228,7 +217,6 @@ export default function DocumentEditor({
                 prompt={value}
                 setPrompt={onChange}
                 metadata={metadata!}
-                datasetVersion={datasetVersion}
               />
             </div>
           </SplitPane.Pane>

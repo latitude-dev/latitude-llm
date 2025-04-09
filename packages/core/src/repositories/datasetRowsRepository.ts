@@ -8,7 +8,7 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import { DatasetRow, DatasetV2, DEFAULT_PAGINATION_SIZE } from '../browser'
+import { DatasetRow, Dataset, DEFAULT_PAGINATION_SIZE } from '../browser'
 import { calculateOffset } from '../lib/pagination/calculateOffset'
 import { datasetRows } from '../schema'
 import Repository from './repositoryV2'
@@ -32,7 +32,7 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
     dataset,
     rowIds,
   }: {
-    dataset: DatasetV2
+    dataset: Dataset
     rowIds: number[]
   }) {
     return this.db

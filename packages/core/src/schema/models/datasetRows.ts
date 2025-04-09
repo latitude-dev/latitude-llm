@@ -1,7 +1,7 @@
 import { bigint, bigserial, index, jsonb } from 'drizzle-orm/pg-core'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { datasetsV2 } from './datasetsV2'
+import { datasets } from './datasets'
 import { workspaces } from './workspaces'
 
 export type DatasetRowDataContent =
@@ -23,7 +23,7 @@ export const datasetRows = latitudeSchema.table(
       .references(() => workspaces.id, { onDelete: 'cascade' })
       .notNull(),
     datasetId: bigserial('dataset_id', { mode: 'number' })
-      .references(() => datasetsV2.id, { onDelete: 'cascade' })
+      .references(() => datasets.id, { onDelete: 'cascade' })
       .notNull(),
     rowData: jsonb('row_data').$type<DatasetRowData>().notNull(),
     ...timestamps(),

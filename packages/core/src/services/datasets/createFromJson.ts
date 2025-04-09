@@ -1,4 +1,4 @@
-import { DatasetV2, User, Workspace } from '../../browser'
+import { Dataset, User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
@@ -42,7 +42,7 @@ export const createDatasetFromJson = async (
 
   const { columns, rows } = result.value
 
-  return await Transaction.call<DatasetV2>(async (trx) => {
+  return await Transaction.call<Dataset>(async (trx) => {
     const dataset = await createDataset(
       {
         author,

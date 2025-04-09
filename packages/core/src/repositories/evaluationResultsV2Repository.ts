@@ -34,7 +34,7 @@ import { calculateOffset, NotFoundError, Result } from '../lib'
 import {
   commits,
   datasetRows,
-  datasetsV2,
+  datasets,
   evaluationResultsV2,
   evaluationVersions,
   providerLogs,
@@ -133,13 +133,13 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .select({
         ...tt,
         commit: commits,
-        dataset: datasetsV2,
+        dataset: datasets,
         evaluatedRow: datasetRows,
         evaluatedLog: providerLogs,
       })
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
-      .leftJoin(datasetsV2, eq(datasetsV2.id, evaluationResultsV2.datasetId))
+      .leftJoin(datasets, eq(datasets.id, evaluationResultsV2.datasetId))
       .leftJoin(
         datasetRows,
         eq(datasetRows.id, evaluationResultsV2.evaluatedRowId),

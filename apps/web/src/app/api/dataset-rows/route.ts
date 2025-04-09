@@ -4,7 +4,7 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import {
   DatasetRowsRepository,
-  DatasetsV2Repository,
+  DatasetsRepository,
 } from '@latitude-data/core/repositories'
 import { parsePage } from '@latitude-data/core/services/documentLogs/index'
 
@@ -20,7 +20,7 @@ export const GET = errorHandler(
     ) => {
       const searchParams = req.nextUrl.searchParams
       const datasetId = searchParams.get('datasetId')
-      const datasetRepo = new DatasetsV2Repository(workspace.id)
+      const datasetRepo = new DatasetsRepository(workspace.id)
       const result = await datasetRepo.find(Number(datasetId))
 
       if (result.error) {

@@ -1,6 +1,6 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import type { DatasetV2 } from '@latitude-data/core/browser'
+import type { Dataset } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { compact } from 'lodash-es'
 import useSWR, { SWRConfiguration } from 'swr'
@@ -9,7 +9,7 @@ export default function useDatasetRowCount(
   {
     dataset,
   }: {
-    dataset: DatasetV2
+    dataset: Dataset
   },
   opts?: SWRConfiguration,
 ) {

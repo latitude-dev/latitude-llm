@@ -1,4 +1,4 @@
-import { DatasetV2, Workspace } from '../../browser'
+import { Dataset, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
 import { DatasetRowData, datasetRows } from '../../schema'
@@ -10,7 +10,7 @@ export const createDatasetRow = async (
     data,
   }: {
     workspace: Workspace
-    dataset: DatasetV2
+    dataset: Dataset
     data: {
       rowData: DatasetRowData
     }

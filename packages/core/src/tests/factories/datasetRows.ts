@@ -1,11 +1,11 @@
-import { DatasetV2, Workspace } from '../../browser'
+import { Dataset, Workspace } from '../../browser'
 import { createDatasetRow as createDatasetRowFn } from '../../services/datasetRows/create'
 import { Column, DatasetRowData } from '../../schema'
 import { faker } from '@faker-js/faker'
 
 export type InputData = {
   workspace: Workspace
-  dataset: DatasetV2
+  dataset: Dataset
   columns?: Column[]
   rowData?: DatasetRowData
 }

@@ -3,9 +3,8 @@ import { randomUUID } from 'crypto'
 import { Job } from 'bullmq'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { DatasetV2, Providers } from '../../../browser'
-import * as datasetsPreview from '../../../services/datasets/preview'
-import { identityHashAlgorithm } from '../../../services/datasetsV2/utils'
+import { Dataset, Providers } from '../../../browser'
+import { identityHashAlgorithm } from '../../../services/datasets/utils'
 import * as factories from '../../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../../tests/factories'
 import getTestDisk from '../../../tests/testDrive'
@@ -27,19 +26,6 @@ const mocks = vi.hoisted(() => ({
     documentsQueue: vi.fn(),
   },
 }))
-
-// Replace the mock for previewDataset with a spy
-const previewDatasetSpy = vi.spyOn(datasetsPreview, 'previewDataset')
-previewDatasetSpy.mockResolvedValue({
-  // @ts-ignore - mock implementation
-  unwrap: () => ({
-    rows: [
-      ['value1', 'value2'],
-      ['value3', 'value4'],
-      ['value5', 'value6'],
-    ],
-  }),
-})
 
 vi.spyOn(documentsQueue, 'add').mockImplementation(mocks.queues.documentsQueue)
 vi.spyOn(eventsQueue, 'add').mockImplementation(mocks.queues.eventsQueue)
@@ -120,13 +106,13 @@ describe('runBatchEvaluationJob', () => {
   })
 
   describe('with V2 dataset', () => {
-    let dataset: DatasetV2
+    let dataset: Dataset
 
     beforeEach(async () => {
       vi.clearAllMocks()
 
       dataset = await factories
-        .createDatasetV2({
+        .createDataset({
           disk: testDrive,
           workspace: setup.workspace,
           author: setup.user,

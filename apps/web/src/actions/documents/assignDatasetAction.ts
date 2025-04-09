@@ -9,6 +9,5 @@ export const assignDatasetAction = withDataset
     return await assignDataset({
       document: ctx.document,
       dataset: ctx.dataset,
-      datasetVersion: ctx.datasetVersion,
     }).then((r) => r.unwrap())
   })

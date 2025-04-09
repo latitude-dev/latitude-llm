@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { DatasetV2 } from '@latitude-data/core/browser'
+import { Dataset } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { dateFormatter } from '@latitude-data/web-ui/dateUtils'
 import {
@@ -13,7 +13,7 @@ import {
 } from '@latitude-data/web-ui/atoms/Table'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import useDatasets from '$/stores/datasetsV2'
+import useDatasets from '$/stores/datasets'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { useSearchParams } from 'next/navigation'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
@@ -28,14 +28,14 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 export function DatasetsTable({
   datasets: serverDatasets,
 }: {
-  datasets: DatasetV2[]
+  datasets: Dataset[]
 }) {
   const navigate = useNavigate()
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
   const pageSize = searchParams.get('pageSize') ?? '25'
   const newDataset = useToggleModal()
-  const [deletable, setDeletable] = useState<DatasetV2 | null>(null)
+  const [deletable, setDeletable] = useState<Dataset | null>(null)
   const { data: datasets } = useDatasets(
     { page, pageSize },
     {

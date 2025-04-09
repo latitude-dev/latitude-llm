@@ -1,6 +1,5 @@
 import { useCallback } from 'react'
 import {
-  DatasetVersion,
   DocumentVersion,
   InputSource,
   LinkedDatasetRow,
@@ -81,11 +80,9 @@ export function useDatasetUtils({
   const setDataset = useCallback(
     async ({
       datasetId,
-      datasetVersion,
       data,
     }: {
       datasetId: number
-      datasetVersion: DatasetVersion
       data?: {
         datasetRowId: number
         mappedInputs: LinkedDatasetRow['mappedInputs'] | undefined
@@ -98,7 +95,6 @@ export function useDatasetUtils({
           projectId,
           commitUuid,
           datasetId,
-          datasetVersion: DatasetVersion.V2,
         })
       }
 
@@ -127,7 +123,6 @@ export function useDatasetUtils({
         commitUuid,
         documentUuid: document.documentUuid,
         datasetId,
-        datasetVersion,
         datasetRowId: data?.datasetRowId,
         mappedInputs: data?.mappedInputs ?? {},
         inputs: data?.inputs ?? {},

@@ -1,18 +1,16 @@
 import { useCallback, useMemo, useState } from 'react'
 
 import {
-  Dataset,
   DocumentVersion,
-  DatasetV2,
+  Dataset,
   InputSource,
-  DatasetVersion,
   LinkedDatasetRow,
 } from '@latitude-data/core/browser'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useVersionedDatasets } from '$/hooks/useVersionedDatasets'
+import useDatasetsV2 from '$/stores/datasets'
 import { useDatasetRowsForParameters } from './useDatasetRowsForParameters'
 import { useDatasetRowPosition } from './useRowPosition'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
@@ -42,9 +40,7 @@ export function useSelectDataset({
   commitVersionUuid: string
   source: InputSource
 }) {
-  const [selectedDataset, setSelectedDataset] = useState<
-    Dataset | DatasetV2 | undefined
-  >()
+  const [selectedDataset, setSelectedDataset] = useState<Dataset | undefined>()
   const { position, getPosition, setPosition, isLoadingPosition } =
     useDatasetRowPosition()
   const { project } = useCurrentProject()
@@ -52,13 +48,8 @@ export function useSelectDataset({
   const { datasetV2: localDatasetData } = useDocumentParameters({
     document,
     commitVersionUuid,
-    datasetVersion: DatasetVersion.V2,
   })
-  const {
-    data: datasets,
-    isLoading: isLoadingDatasets,
-    datasetVersion,
-  } = useVersionedDatasets({
+  const { data: datasets, isLoading: isLoadingDatasets } = useDatasetsV2({
     onFetched: async (data) => {
       const selectedDs = data.find((ds) => ds.id === document.datasetV2Id)
       if (!selectedDs) return
@@ -69,7 +60,7 @@ export function useSelectDataset({
         local: localDatasetData.assignedDatasets,
       })
       await getPosition({
-        dataset: selectedDs as DatasetV2,
+        dataset: selectedDs as Dataset,
         datasetRowId,
       })
 
@@ -91,14 +82,13 @@ export function useSelectDataset({
         local: localDatasetData.assignedDatasets,
       })
       await getPosition({
-        dataset: ds as DatasetV2,
+        dataset: ds as Dataset,
         datasetRowId,
       })
       setSelectedDataset(ds)
     },
     [
       datasets,
-      datasetVersion,
       project.id,
       document.documentUuid,
       commit.uuid,
@@ -109,7 +99,7 @@ export function useSelectDataset({
   const rowsData = useDatasetRowsForParameters({
     document,
     commitVersionUuid,
-    dataset: selectedDataset as DatasetV2 | undefined,
+    dataset: selectedDataset as Dataset | undefined,
     position,
     setPosition,
   })

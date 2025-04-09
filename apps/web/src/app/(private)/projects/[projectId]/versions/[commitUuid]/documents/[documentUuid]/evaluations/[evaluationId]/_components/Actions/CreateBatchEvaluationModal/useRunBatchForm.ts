@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { ConversationMetadata } from 'promptl-ai'
-import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
-import { getDatasetCount } from '$/hooks/useVersionedDatasets'
+import { DocumentVersion } from '@latitude-data/core/browser'
+import { getDatasetCount } from '$/lib/datasetsUtils'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import { useLabels } from './useLabels'
 import { useMappedParameters } from './useMappedParameters'
@@ -66,7 +66,6 @@ export function useRunBatchForm({
     datasets,
     isLoadingDatasets,
     selectedDataset,
-    datasetVersion: DatasetVersion.V2,
     datasetLabel,
     headers,
     labels,

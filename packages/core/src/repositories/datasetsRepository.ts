@@ -1,38 +1,52 @@
-import { eq, sql } from 'drizzle-orm'
+import { eq, and, sql, getTableColumns, desc } from 'drizzle-orm'
 
-import { Dataset } from '../browser'
+import { Dataset, DEFAULT_PAGINATION_SIZE } from '../browser'
 import { datasets, users } from '../schema'
-import RepositoryLegacy from './repository'
+import Repository from './repositoryV2'
+import { calculateOffset } from '../lib/pagination/calculateOffset'
 
-export const datasetColumns = {
-  id: datasets.id,
-  name: datasets.name,
-  workspaceId: datasets.workspaceId,
-  authorId: datasets.authorId,
-  fileKey: datasets.fileKey,
-  fileMetadata: datasets.fileMetadata,
-  csvDelimiter: datasets.csvDelimiter,
-  createdAt: datasets.createdAt,
-  updatedAt: datasets.updatedAt,
+const datasetColumns = {
+  ...getTableColumns(datasets),
   author: {
-    id: sql`${users.id}`.as('users_id'),
-    name: sql`${users.name}`.as('users_name'),
+    id: sql<string>`${users.id}`.as('users_id'),
+    name: sql<string>`${users.name}`.as('users_name'),
   },
 }
-export class DatasetsRepository extends RepositoryLegacy<
-  typeof datasetColumns,
-  Dataset
-> {
+
+export class DatasetsRepository extends Repository<Dataset> {
+  get scopeFilter() {
+    return eq(datasets.workspaceId, this.workspaceId)
+  }
+
   get scope() {
     return this.db
       .select(datasetColumns)
       .from(datasets)
       .leftJoin(users, eq(users.id, datasets.authorId))
-      .where(eq(datasets.workspaceId, this.workspaceId))
-      .as('datasetsScope')
+      .where(this.scopeFilter)
+      .$dynamic()
   }
 
   findByName(name: string) {
-    return this.db.select().from(this.scope).where(eq(this.scope.name, name))
+    return this.db
+      .select(datasetColumns)
+      .from(datasets)
+      .leftJoin(users, eq(users.id, datasets.authorId))
+      .where(and(this.scopeFilter, eq(datasets.name, name)))
+  }
+
+  findAllPaginated({
+    page = '1',
+    pageSize = String(DEFAULT_PAGINATION_SIZE),
+  }: {
+    page?: string
+    pageSize?: string
+  }) {
+    const offset = calculateOffset(page, pageSize)
+    return this.scope
+      .where(and(this.scopeFilter))
+      .limit(parseInt(pageSize))
+      .offset(offset)
+      .orderBy(desc(datasets.createdAt))
   }
 }

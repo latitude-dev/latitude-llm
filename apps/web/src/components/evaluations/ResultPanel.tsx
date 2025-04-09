@@ -19,7 +19,7 @@ import {
 import {
   Commit,
   DatasetRow,
-  DatasetV2,
+  Dataset,
   DocumentLog,
   ProviderLogDto,
   buildConversation,
@@ -61,7 +61,7 @@ function EvaluatedDatasetRowModal({
   open,
   onOpenChange,
 }: {
-  dataset: DatasetV2
+  dataset: Dataset
   datasetRow: DatasetRow
   open: boolean
   onOpenChange: (open: boolean) => void

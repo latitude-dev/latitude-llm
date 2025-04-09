@@ -1,5 +1,8 @@
 export * from './db-schema'
 
+// Legacy models
+export * from './legacyModels/datasetsV1'
+
 // Tenancy tables
 export * from './models/users'
 export * from './models/sessions'
@@ -24,7 +27,6 @@ export * from './models/providerLogs'
 
 // Evaluations tables
 export * from './models/datasets'
-export * from './models/datasetsV2'
 export * from './models/datasetRows'
 export * from './models/evaluations'
 

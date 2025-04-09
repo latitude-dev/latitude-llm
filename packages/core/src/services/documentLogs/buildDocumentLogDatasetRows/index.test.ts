@@ -3,17 +3,17 @@ import { describe, beforeAll, beforeEach, it, expect } from 'vitest'
 import { Providers } from '@latitude-data/constants'
 import * as factories from '../../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../../tests/factories'
-import { identityHashAlgorithm } from '../../datasetsV2/utils'
+import { identityHashAlgorithm } from '../../datasets/utils'
 import { buildDocumentLogDatasetRows } from './index'
 import { ProviderLogsRepository } from '../../../repositories'
-import { DatasetV2, DocumentLog, ErrorableEntity } from '../../../browser'
+import { Dataset, DocumentLog, ErrorableEntity } from '../../../browser'
 import getTestDisk from '../../../tests/testDrive'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 const testDrive = getTestDisk()
 let setup: FactoryCreateProjectReturn
 let documentLog: DocumentLog
-let dataset: DatasetV2
+let dataset: Dataset
 
 describe('buildDocumentLogDatasetRows', async () => {
   beforeAll(async () => {
@@ -169,7 +169,7 @@ describe('buildDocumentLogDatasetRows', async () => {
     describe('with dataset', () => {
       beforeEach(async () => {
         dataset = await factories
-          .createDatasetV2({
+          .createDataset({
             disk: testDrive,
             workspace: setup.workspace,
             author: setup.user,

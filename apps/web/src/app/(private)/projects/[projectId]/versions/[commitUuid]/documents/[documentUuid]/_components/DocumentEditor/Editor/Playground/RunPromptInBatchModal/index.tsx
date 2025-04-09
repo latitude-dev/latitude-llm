@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import {
@@ -39,13 +39,11 @@ function useRunDocumentInBatch({
     async ({
       wantAllLines,
       datasetId,
-      datasetVersion,
       parameters,
       fromLine,
       toLine,
     }: {
       datasetId: number | undefined
-      datasetVersion: DatasetVersion
       fromLine: number | undefined
       toLine: number | undefined
       wantAllLines: boolean
@@ -54,7 +52,6 @@ function useRunDocumentInBatch({
       await run({
         commitUuid,
         datasetId: datasetId!,
-        datasetVersion,
         documentUuid: document.documentUuid,
         fromLine: wantAllLines ? undefined : fromLine,
         parameters,
@@ -125,7 +122,6 @@ export default function RunPromptInBatchModal({
   const onRunBatch = () => {
     runBatch({
       datasetId: form.selectedDataset?.id,
-      datasetVersion: form.datasetVersion,
       fromLine: form.fromLine,
       toLine: form.toLine,
       wantAllLines: form.wantAllLines,

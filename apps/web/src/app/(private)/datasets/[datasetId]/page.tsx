@@ -1,32 +1,21 @@
-import { DatasetV1DetailTable } from '$/app/(private)/datasets/_v1DeprecatedComponents/DatasetDetailTable'
-import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import {
-  Dataset,
-  DatasetRow,
-  DatasetV2,
-  Workspace,
-} from '@latitude-data/core/browser'
+import { DatasetRow, Dataset, Workspace } from '@latitude-data/core/browser'
 import { Result, TypedResult } from '@latitude-data/core/lib/Result'
 import {
   DatasetRowsRepository,
   DatasetsRepository,
-  DatasetsV2Repository,
 } from '@latitude-data/core/repositories'
 import { notFound, redirect } from 'next/navigation'
 import Layout from '../_components/Layout'
 import { DatasetDetailTable } from './DatasetDetailTable'
 
-type GetDataResult =
-  | { isV2: false; dataset: Dataset }
-  | {
-      isV2: true
-      redirectUrl?: string
-      dataset: DatasetV2
-      rows: DatasetRow[]
-      count: number
-    }
+type GetDataResult = {
+  redirectUrl?: string
+  dataset: Dataset
+  rows: DatasetRow[]
+  count: number
+}
 
 const ROWS_PAGE_SIZE = '100'
 async function getData({
@@ -44,18 +33,7 @@ async function getData({
   pageSize: string | undefined
   rowId: string | undefined
 }): Promise<TypedResult<GetDataResult, Error>> {
-  const flags = getFeatureFlagsForWorkspaceCached({ workspace })
-  const isV1 = !flags.datasetsV2.enabled
-
-  if (isV1) {
-    const scope = new DatasetsRepository(workspace.id)
-    const result = await scope.find(datasetId)
-    if (result.error) return Result.error(result.error)
-
-    return Result.ok({ dataset: result.value, isV2: false })
-  }
-
-  const scope = new DatasetsV2Repository(workspace.id)
+  const scope = new DatasetsRepository(workspace.id)
   const result = await scope.find(Number(datasetId))
 
   if (result.error) return Result.error(result.error)
@@ -132,13 +110,6 @@ export default async function DatasetDetail({
   })
 
   if (result.error) return notFound()
-
-  const isV1 = !result.value.isV2
-
-  if (isV1) {
-    return <DatasetV1DetailTable dataset={result.value.dataset} />
-  }
-
   if (result.value.redirectUrl) redirect(result.value.redirectUrl)
 
   return (
