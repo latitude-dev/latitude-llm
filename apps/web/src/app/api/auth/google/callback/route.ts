@@ -8,6 +8,7 @@ import { ObjectParser } from '@pilcrowjs/object-parser'
 import { NextResponse } from 'next/server'
 import { ROUTES } from '$/services/routes'
 import { OAuthProvider } from '@latitude-data/core/schema'
+import { env } from '@latitude-data/env'
 
 export async function GET(request: NextRequest): Promise<Response> {
   const url = new URL(request.url)
@@ -80,10 +81,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     )
 
     // 5. Redirect user
-    const returnTo = cookiesStore.get('returnTo')?.value ?? ROUTES.root
-    return NextResponse.redirect(
-      new URL(returnTo ? returnTo : ROUTES.root, request.url),
-    )
+    const returnTo = cookiesStore.get('returnTo')?.value ?? env.APP_URL
+    return NextResponse.redirect(returnTo)
   } catch (e) {
     console.error('Google OAuth Callback Error:', e)
     if (e instanceof OAuth2RequestError) {
