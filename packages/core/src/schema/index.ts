@@ -8,6 +8,7 @@ export * from './models/subscriptions'
 export * from './models/memberships'
 export * from './models/apiKeys'
 export * from './models/claimedRewards'
+export * from './models/oauthAccounts'
 
 // Document tables
 export * from './models/projects'

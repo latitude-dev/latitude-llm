@@ -4,6 +4,7 @@ import { DrizzlePostgreSQLAdapter } from '@lucia-auth/adapter-drizzle'
 import { AUTH_COOKIE_NAME } from '$/services/auth/constants'
 import { Lucia } from 'lucia'
 import { env } from '@latitude-data/env'
+import { Google } from 'arctic'
 
 const adapter = new DrizzlePostgreSQLAdapter(
   // @ts-expect-error - No idea why this is happening
@@ -47,3 +48,9 @@ export const lucia = new Lucia(adapter, {
     }
   },
 })
+
+export const googleProvider = new Google(
+  env.GOOGLE_CLIENT_ID,
+  env.GOOGLE_CLIENT_SECRET,
+  env.GOOGLE_REDIRECT_URI,
+)
