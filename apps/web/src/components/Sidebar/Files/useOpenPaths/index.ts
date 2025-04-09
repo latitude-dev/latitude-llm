@@ -3,13 +3,19 @@ import { create } from 'zustand'
 type OpenPathsState = {
   openPaths: { [key: string]: boolean }
   togglePath: (path: string) => void
+  isOpen: (path: string) => boolean
   reset: () => void
 }
 
-export const useOpenPaths = create<OpenPathsState>((set) => ({
+export const useOpenPaths = create<OpenPathsState>((set, get) => ({
   openPaths: {},
   reset: () => {
     set({ openPaths: {} })
+  },
+  isOpen: (path: string) => {
+    const state = get()
+    const paths = state.openPaths
+    return !!paths[path]
   },
   togglePath: (path: string) => {
     set((state) => {

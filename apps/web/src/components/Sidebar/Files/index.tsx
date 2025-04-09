@@ -219,7 +219,10 @@ export function FilesTree({
   isDestroying: boolean
 }) {
   const isMount = useRef(false)
-  const togglePath = useOpenPaths((state) => state.togglePath)
+  const { togglePath, isOpenThisPath } = useOpenPaths((state) => ({
+    isOpenThisPath: state.isOpen,
+    togglePath: state.togglePath,
+  }))
   const rootNode = useTree({ documents, liveDocuments })
   const [deletableNode, setDeletable] =
     useState<DeletableElement<DeletableType> | null>(null)
@@ -237,6 +240,7 @@ export function FilesTree({
     if (!isMount.current) {
       const oneFolder = thereisOnlyOneFolder(rootNode)
       if (!oneFolder) return
+      if (isOpenThisPath(oneFolder.path)) return
 
       togglePath(oneFolder.path)
       isMount.current = true
@@ -246,7 +250,7 @@ export function FilesTree({
     if (currentPath) {
       togglePath(currentPath)
     }
-  }, [currentPath, togglePath, rootNode])
+  }, [currentPath, togglePath, isOpenThisPath, rootNode])
 
   const onConfirmDelete = useCallback(
     async <T extends DeletableType>(deletable: DeletableElement<T>) => {
