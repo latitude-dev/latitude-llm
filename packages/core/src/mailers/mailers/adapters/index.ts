@@ -5,6 +5,7 @@ import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
 import createMailgunTransport from './mailgun'
 import createMailpitTransport from './mailpit'
+import createSmtpTransport from './smtp'
 
 const htmlToText = HTMLToText.htmlToText
 
@@ -32,6 +33,9 @@ export function createAdapter() {
       break
     case 'mailpit':
       transport = createMailpitTransport(options)
+      break
+    case 'smtp':
+      transport = createSmtpTransport(options)
       break
     default:
       throw new Error('Invalid MAIL_TRANSPORT')
