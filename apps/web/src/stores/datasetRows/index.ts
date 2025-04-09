@@ -4,7 +4,7 @@ import { updateDatasetRowAction } from '$/actions/datasetRows/update'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import type { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
+import type { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
@@ -42,7 +42,7 @@ export default function useDatasetRows(
     onFetched,
     enabled = true,
   }: {
-    dataset?: DatasetV2 | null
+    dataset?: Dataset | null
     page?: string | number | null | undefined
     pageSize?: string | number | null
     onFetched?: (datasets: ClientDatasetRow[]) => void

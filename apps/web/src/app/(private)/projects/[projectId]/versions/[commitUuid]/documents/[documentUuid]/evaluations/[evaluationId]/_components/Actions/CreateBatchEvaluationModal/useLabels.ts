@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react'
-import { DatasetV2 } from '@latitude-data/core/browser'
+import { Dataset } from '@latitude-data/core/browser'
 import LabelIndicator from './LabelIndicator'
 import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 
 export function useLabels() {
   const [labels, setLabels] = useState<SelectOption<string>[]>([])
   const buildLabels = useCallback(
-    (dataset: DatasetV2) =>
+    (dataset: Dataset) =>
       setLabels([
         ...dataset.columns
           .filter((column) => column.role === 'label')

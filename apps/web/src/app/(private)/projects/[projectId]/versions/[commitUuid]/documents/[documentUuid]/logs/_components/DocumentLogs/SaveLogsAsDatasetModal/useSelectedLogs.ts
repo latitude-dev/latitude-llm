@@ -1,23 +1,23 @@
-import { createDatasetFromLogsAction } from '$/actions/datasetsV2/createFromLogs'
+import { createDatasetFromLogsAction } from '$/actions/datasets/createFromLogs'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
-import { DatasetV2, parseRowCell } from '@latitude-data/core/browser'
+import { Dataset, parseRowCell } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { DatasetRowData } from '@latitude-data/core/schema'
 import { useCallback, useState } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
 type InputItem = {
-  columns: DatasetV2['columns']
+  columns: Dataset['columns']
   existingRows: DatasetRowData[]
   newRows: DatasetRowData[]
 }
 
 export type OutputItem = {
-  columns: DatasetV2['columns']
+  columns: Dataset['columns']
   datasetRows: string[][]
   previewRows: string[][]
 }
@@ -40,7 +40,7 @@ function serializeRows(item: InputItem): OutputItem {
 }
 
 const EMPTY_DATA = {
-  columns: [] as DatasetV2['columns'],
+  columns: [] as Dataset['columns'],
   datasetRows: [] as string[][],
   previewRows: [] as string[][],
 }
@@ -49,10 +49,10 @@ function usePreviewRowsStore(
   {
     dataset,
     documentLogIds,
-  }: { dataset?: DatasetV2; documentLogIds: (string | number)[] },
+  }: { dataset?: Dataset; documentLogIds: (string | number)[] },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(ROUTES.api.datasetsV2.previewLogs.root, {
+  const fetcher = useFetcher(ROUTES.api.datasets.previewLogs.root, {
     serializer: serializeRows,
     searchParams: compactObject({
       name: dataset?.name,
@@ -88,7 +88,7 @@ export function useSelectedLogs({
   const [selectedLogsIds, setSelectedLogsIds] = useState<(string | number)[]>(
     [],
   )
-  const [selectedDataset, setSelectedDataset] = useState<DatasetV2>()
+  const [selectedDataset, setSelectedDataset] = useState<Dataset>()
   const { previewData, fetchPreview, isLoading } = usePreviewRowsStore({
     dataset: selectedDataset,
     documentLogIds: selectedLogsIds,

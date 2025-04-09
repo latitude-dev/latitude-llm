@@ -4,7 +4,7 @@ import { NotFoundError } from '../../../lib'
 import {
   CommitsRepository,
   DatasetRowsRepository,
-  DatasetsV2Repository,
+  DatasetsRepository,
   DocumentLogsRepository,
   EvaluationsV2Repository,
   ProviderLogsRepository,
@@ -79,7 +79,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
 
   let dataset = undefined
   if (datasetId) {
-    const datasetsRepository = new DatasetsV2Repository(workspace.id)
+    const datasetsRepository = new DatasetsRepository(workspace.id)
     dataset = await datasetsRepository.find(datasetId).then((r) => r.unwrap())
   }
 

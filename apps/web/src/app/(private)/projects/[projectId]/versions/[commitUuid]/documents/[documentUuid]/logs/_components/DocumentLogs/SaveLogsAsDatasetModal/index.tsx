@@ -7,8 +7,8 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { type PreviewLogsState as Props } from './useSelectedLogs'
 import { PreviewTable } from './PreviewTable'
-import useDatasets from '$/stores/datasetsV2'
-import { DatasetV2 } from '@latitude-data/core/browser'
+import useDatasets from '$/stores/datasets'
+import { Dataset } from '@latitude-data/core/browser'
 
 function ExistingDatasetSelector({
   selectedDataset,
@@ -16,7 +16,7 @@ function ExistingDatasetSelector({
   fetchPreview,
   errors,
 }: {
-  selectedDataset: DatasetV2 | undefined
+  selectedDataset: Dataset | undefined
   setSelectedDataset: Props['setSelectedDataset']
   fetchPreview: Props['fetchPreview']
   errors?: string[]

@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid'
 
-import { DatasetRow, DatasetV2 } from '../../browser'
+import { DatasetRow, Dataset } from '../../browser'
 import { DATASET_COLUMN_ROLES, DatasetColumnRole } from '../../constants'
 import { BadRequestError } from '../../lib'
 import { type Column } from '../../schema'
@@ -107,7 +107,7 @@ export function getColumnData({
   row,
   column: columnName,
 }: {
-  dataset: DatasetV2
+  dataset: Dataset
   row: DatasetRow
   column: string
 }) {

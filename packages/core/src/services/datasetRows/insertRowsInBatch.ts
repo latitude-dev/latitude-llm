@@ -1,4 +1,4 @@
-import { DatasetRow, DatasetV2 } from '../../browser'
+import { DatasetRow, Dataset } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
 import { DatasetRowData, datasetRows } from '../../schema'
@@ -8,7 +8,7 @@ export async function insertRowsInBatch(
     dataset,
     data,
   }: {
-    dataset: DatasetV2
+    dataset: Dataset
     data: {
       rows: DatasetRowData[]
     }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core/browser'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
-import { getDatasetCount } from '$/hooks/useVersionedDatasets'
+import { getDatasetCount } from '$/lib/datasetsUtils'
 import { useMetadataParameters } from '$/hooks/useDocumentParameters/metadataParametersStore'
 import { useMappedParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useMappedParameters'
 
@@ -37,7 +37,6 @@ export function useRunDocumentInBatchForm({
     datasets,
     isLoadingDatasets,
     selectedDataset,
-    datasetVersion: DatasetVersion.V2,
     headers,
     wantAllLines,
     fromLine,

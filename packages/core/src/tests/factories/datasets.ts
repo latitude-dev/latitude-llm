@@ -2,8 +2,15 @@ import { faker } from '@faker-js/faker'
 
 import { User, Workspace } from '../../browser'
 import { DiskWrapper } from '../../lib/disk'
-import { createDataset as createDatasetFn } from '../../services/datasets/create'
+import { createDatasetFromFile as createDatasetFromFileFn } from '../../services/datasets/createFromFile'
 import { createWorkspace, ICreateWorkspace } from './workspaces'
+import { createTestCsvFile } from '../../services/datasetRows/testHelper'
+import { DatasetV2CreatedEvent } from '../../events/events'
+import { createRowsFromUploadedDataset } from '../../services/datasetRows/createRowsFromUploadedDataset'
+import { HashAlgorithmFn } from '../../services/datasets/utils'
+import getTestDisk from '../testDrive'
+
+const defaultTestDisk = getTestDisk()
 
 function generateCsvContent(delimiter: string): string {
   const headers = ['id', 'name', 'email', 'age']
@@ -20,44 +27,19 @@ function generateCsvContent(delimiter: string): string {
   ].join('\n')
 }
 
-function createMockFile({
-  name,
-  delimiter,
-  fileContent,
-}: {
-  name: string
-  delimiter: string
-  fileContent?: string
-}) {
-  const content = fileContent ?? generateCsvContent(delimiter)
-  return new File([content], `${name}.csv`, { type: 'text/csv' })
-}
-
-function createMockDisk({ file, name }: { file: File; name: string }) {
-  return {
-    putFile: async () => ({ error: null }),
-    file: () => ({
-      toSnapshot: async () => ({
-        name: `${name}.csv`,
-        size: file.size,
-        type: file.type,
-        lastModified: new Date(),
-      }),
-    }),
-  } as unknown as DiskWrapper
-}
-
-export type ICreateDataset = {
+export type ICreateDatasetV2 = {
   name?: string
   workspace?: Workspace | ICreateWorkspace
   author?: User
   csvDelimiter?: string
   fileContent?: string
   disk?: DiskWrapper
-  file?: File
+  hashAlgorithm?: HashAlgorithmFn
 }
+type Props = Partial<ICreateDatasetV2>
 
-export async function createDataset(datasetData: Partial<ICreateDataset> = {}) {
+export async function createDataset(datasetData: Props) {
+  const disk = datasetData.disk ?? defaultTestDisk
   let workspaceData = datasetData.workspace ?? {}
   let user: User
   let workspace: Workspace
@@ -70,28 +52,45 @@ export async function createDataset(datasetData: Partial<ICreateDataset> = {}) {
     workspace = newWorkspace.workspace
     user = newWorkspace.userData
   }
-  const name = datasetData.name ?? faker.commerce.productName()
-  const delimiter = datasetData.csvDelimiter ?? ','
-  const file =
-    datasetData.file ??
-    createMockFile({
-      name,
-      fileContent: datasetData.fileContent,
-      delimiter,
-    })
-  const disk = datasetData.disk ?? createMockDisk({ file, name })
-  const result = await createDatasetFn({
+
+  const randomName = faker.commerce.productName()
+  const { name = randomName } = datasetData
+
+  const csvDelimiter = datasetData.csvDelimiter ?? ','
+  const fileContent =
+    datasetData.fileContent ?? generateCsvContent(csvDelimiter)
+
+  const { file } = await createTestCsvFile({ fileContent, name })
+  const result = await createDatasetFromFileFn({
     author: user,
     workspace,
     disk,
+    hashAlgorithm: datasetData.hashAlgorithm,
     data: {
       name,
       file,
-      csvDelimiter: delimiter,
+      csvDelimiter,
     },
   })
 
-  const dataset = result.unwrap()
+  const data = result.unwrap()
 
-  return { dataset, user, workspace }
+  const event = {
+    type: 'datasetUploaded' as DatasetV2CreatedEvent['type'],
+    data: {
+      workspaceId: workspace.id,
+      datasetId: data.dataset.id,
+      userEmail: user.email,
+      csvDelimiter: ',',
+      fileKey: data.fileKey,
+    },
+  }
+  await createRowsFromUploadedDataset({
+    event,
+    batchSize: 2,
+    disk,
+    hashAlgorithm: datasetData.hashAlgorithm,
+  })
+
+  return { dataset: data.dataset, user, workspace }
 }

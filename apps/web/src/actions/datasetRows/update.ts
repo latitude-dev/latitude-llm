@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { updateDatasetRow } from '@latitude-data/core/services/datasetRows/update'
 import {
   DatasetRowsRepository,
-  DatasetsV2Repository,
+  DatasetsRepository,
 } from '@latitude-data/core/repositories'
 import { authProcedure } from '$/actions/procedures'
 import { DatasetRowDataContent } from '@latitude-data/core/schema'
@@ -34,7 +34,7 @@ export const updateDatasetRowAction = authProcedure
     { type: 'json' },
   )
   .handler(async ({ ctx, input }) => {
-    const datasetRepo = new DatasetsV2Repository(ctx.workspace.id)
+    const datasetRepo = new DatasetsRepository(ctx.workspace.id)
     const dataset = await datasetRepo
       .find(input.datasetId)
       .then((r) => r.unwrap())

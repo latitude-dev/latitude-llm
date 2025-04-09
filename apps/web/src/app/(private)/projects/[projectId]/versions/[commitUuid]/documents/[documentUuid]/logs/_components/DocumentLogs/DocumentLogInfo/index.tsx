@@ -1,12 +1,10 @@
 'use client'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
 import {
   buildConversation,
-  DatasetVersion,
   ProviderLogDto,
   ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
@@ -60,17 +58,12 @@ function UseDocumentLogInPlaygroundButton({
   const { project } = useCurrentProject()
   const documentUuid = documentLog.documentUuid
   const { document } = useCurrentDocument()
-  const { enabled: hasDatasetsV2 } = useFeatureFlag({
-    featureFlag: 'datasetsV2',
-  })
-  const datasetVersion = hasDatasetsV2 ? DatasetVersion.V2 : DatasetVersion.V1
   const {
     setSource,
     history: { setHistoryLog },
   } = useDocumentParameters({
     document,
     commitVersionUuid: commit.uuid,
-    datasetVersion,
   })
   const navigate = useRouter()
   const employLogAsDocumentParameters = useCallback(() => {

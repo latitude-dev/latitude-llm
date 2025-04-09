@@ -12,7 +12,7 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { ExperimentMetadata } from '@latitude-data/constants'
-import { datasetsV2 } from './datasetsV2'
+import { datasets } from './datasets'
 import { sql } from 'drizzle-orm'
 
 export const experiments = latitudeSchema.table(
@@ -29,7 +29,7 @@ export const experiments = latitudeSchema.table(
       .notNull()
       .default(sql`'{}'::uuid[]`),
     datasetId: bigint('dataset_id', { mode: 'number' }).references(
-      () => datasetsV2.id,
+      () => datasets.id,
       {
         onDelete: 'restrict',
         onUpdate: 'cascade',

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
-import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core/browser'
 import {
   AppLocalStorage,
   useLocalStorage,
@@ -28,13 +28,11 @@ export default function Playground({
   prompt,
   setPrompt,
   metadata,
-  datasetVersion,
 }: {
   document: DocumentVersion
   prompt: string
   setPrompt: (prompt: string) => void
   metadata: ConversationMetadata
-  datasetVersion: DatasetVersion
 }) {
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const { commit } = useCurrentCommit()
@@ -49,7 +47,6 @@ export default function Playground({
   const { parameters, source, setSource } = useDocumentParameters({
     commitVersionUuid: commit.uuid,
     document,
-    datasetVersion,
   })
 
   const { value: expandParameters, setValue: setExpandParameters } =
@@ -95,7 +92,6 @@ export default function Playground({
               setPrompt={setPrompt}
               onToggle={expander.onToggle('parameters')}
               isExpanded={expander.parametersExpanded}
-              datasetVersion={datasetVersion}
             />
           )}
           <DocumentEvaluations

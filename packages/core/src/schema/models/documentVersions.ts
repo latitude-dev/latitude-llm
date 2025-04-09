@@ -14,9 +14,9 @@ import {
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
-import { datasets } from './datasets'
+import { datasetsV1 } from '../legacyModels/datasetsV1'
 import { DocumentType, LinkedDataset, LinkedDatasetRow } from '../../browser'
-import { datasetsV2 } from './datasetsV2'
+import { datasets } from './datasets'
 
 type LinkedDatasetByDatasetId = Record<number, LinkedDataset>
 type LinkedDatasetByDatasetIdAndRowId = Record<number, LinkedDatasetRow>
@@ -43,11 +43,11 @@ export const documentVersions = latitudeSchema.table(
       .notNull()
       .default(DocumentType.Prompt),
     datasetId: bigint('dataset_id', { mode: 'number' }).references(
-      () => datasets.id,
+      () => datasetsV1.id,
       { onDelete: 'set null' },
     ),
     datasetV2Id: bigint('dataset_v2_id', { mode: 'number' }).references(
-      () => datasetsV2.id,
+      () => datasets.id,
       { onDelete: 'set null' },
     ),
     linkedDataset: json('linked_dataset_by_dataset_id')

@@ -3,7 +3,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
-import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core/browser'
 import Link from 'next/link'
 
 import { ParametersPaginationNav } from '../PaginationNav'
@@ -28,12 +28,10 @@ export function DatasetParams({
   data,
   commit,
   document,
-  datasetVersion,
 }: {
   document: DocumentVersion
   commit: ICommitContextType['commit']
   data: UseSelectDataset
-  datasetVersion: DatasetVersion
 }) {
   const selectedId = data.selectedDataset?.id
   const isLoading = data.loadingState.datasets || data.loadingState.position
@@ -58,7 +56,6 @@ export function DatasetParams({
             <>
               {data.selectedDataset && data.position !== undefined ? (
                 <ParametersPaginationNav
-                  zeroIndex={datasetVersion === DatasetVersion.V1}
                   currentIndex={data.position}
                   totalCount={data.count}
                   onPrevPage={data.onPrevPage}
@@ -82,7 +79,6 @@ export function DatasetParams({
         loadingState={data.loadingState}
         rowCellOptions={data.rowCellOptions as SelectOption<string>[]}
         onSelectRowCell={data.onSelectRowCell as OnSelectRowCellFn<string>}
-        datasetVersion={datasetVersion}
       />
     </div>
   )

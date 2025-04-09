@@ -4,7 +4,7 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useDatasetRows from '$/stores/datasetRows'
 import { serializeRows } from '$/stores/datasetRows/rowSerializationHelpers'
-import { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
+import { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useRef, useState } from 'react'
 import { useSWRConfig } from 'swr'
@@ -14,7 +14,7 @@ function useCachedRows({
   currentPage: startingPage,
   pageSize,
 }: {
-  dataset: DatasetV2
+  dataset: Dataset
   currentPage: number
   pageSize: string
 }) {
@@ -56,7 +56,7 @@ export function useDatasetRowsSocket({
   currentPage,
 }: {
   initialRenderIsProcessing: boolean
-  dataset: DatasetV2
+  dataset: Dataset
   mutate: ReturnType<typeof useDatasetRows>['mutate']
   currentPage: number
   pageSize: string

@@ -3,14 +3,14 @@ import * as factories from '../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../tests/factories'
 import { Providers } from '@latitude-data/constants'
 import getTestDisk from '../../tests/testDrive'
-import { DatasetV2, DocumentLog } from '../../browser'
+import { Dataset, DocumentLog } from '../../browser'
 import { identityHashAlgorithm } from './utils'
 import { createDatasetFromLogs } from './createFromLogs'
 import { DatasetRowsRepository } from '../../repositories'
 
 const testDrive = getTestDisk()
 let setup: FactoryCreateProjectReturn
-let dataset: DatasetV2
+let dataset: Dataset
 let documentLog: DocumentLog
 describe('createFromLogs', async () => {
   beforeAll(async () => {
@@ -101,7 +101,7 @@ describe('createFromLogs', async () => {
 
   it('insert rows in an existing dataset', async () => {
     dataset = await factories
-      .createDatasetV2({
+      .createDataset({
         disk: testDrive,
         workspace: setup.workspace,
         author: setup.user,

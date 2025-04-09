@@ -1,10 +1,9 @@
 'use client'
 
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { ROUTES } from '$/services/routes'
 import useDatasetRows from '$/stores/datasetRows'
-import { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
+import { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -16,28 +15,12 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
-import { SimpleTable } from './SimpleTable'
 import { useDatasetRowsSocket } from './useDatasetRowsSocket'
 
 const DataGrid = dynamic(() => import('./DataGrid'), {
   ssr: false,
   loading: () => <TableSkeleton rows={8} cols={5} maxHeight={320} />,
 })
-
-function DatasetV1BlankSlate() {
-  return (
-    <TableBlankSlate
-      description='This dataset is empty'
-      link={
-        <Link href={ROUTES.datasets.root()}>
-          <Button variant='outline' fancy>
-            Back to dataset list
-          </Button>
-        </Link>
-      }
-    />
-  )
-}
 
 function DatasetBlankSlate({
   onClick,
@@ -73,15 +56,12 @@ export function DatasetDetailTable({
   count,
   initialRenderIsProcessing,
 }: {
-  dataset: DatasetV2
+  dataset: Dataset
   rows: DatasetRow[]
   initialRenderIsProcessing: boolean
   count: number
 }) {
   const datasetCellRoleStyles = useDatasetRole()
-  const { enabled: datasetsV2Enabled } = useFeatureFlag({
-    featureFlag: 'useDatagridInForDatasetRows',
-  })
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
   const pageSize = searchParams.get('pageSize') ?? ROWS_PAGE_SIZE
@@ -154,41 +134,27 @@ export function DatasetDetailTable({
               </Text.H6>
             </div>
           ) : null}
-          {datasetsV2Enabled ? (
-            <Button
-              variant='outline'
-              fancy
-              onClick={onClick}
-              disabled={isCreating}
-            >
-              {isCreating ? 'Creating...' : 'Create a row'}
-            </Button>
-          ) : null}
+          <Button
+            variant='outline'
+            fancy
+            onClick={onClick}
+            disabled={isCreating}
+          >
+            {isCreating ? 'Creating...' : 'Create a row'}
+          </Button>
         </>
       }
       table={
         <>
           {rows.length > 0 ? (
-            <>
-              {datasetsV2Enabled ? (
-                <DataGrid
-                  {...props}
-                  updateRows={updateRows}
-                  deleteRows={deleteRows}
-                  isDeleting={isDeleting}
-                />
-              ) : (
-                <SimpleTable {...props} />
-              )}
-            </>
+            <DataGrid
+              {...props}
+              updateRows={updateRows}
+              deleteRows={deleteRows}
+              isDeleting={isDeleting}
+            />
           ) : (
-            <>
-              {datasetsV2Enabled ? (
-                <DatasetBlankSlate onClick={onClick} isCreating={isCreating} />
-              ) : (
-                <DatasetV1BlankSlate />
-              )}
-            </>
+            <DatasetBlankSlate onClick={onClick} isCreating={isCreating} />
           )}
         </>
       }

@@ -1,7 +1,7 @@
 import { User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib'
-import { DatasetsV2Repository } from '../../repositories'
+import { DatasetsRepository } from '../../repositories'
 import { createDataset } from './create'
 
 export async function findOrCreateDataset(
@@ -16,7 +16,7 @@ export async function findOrCreateDataset(
   },
   db = database,
 ) {
-  const repo = new DatasetsV2Repository(workspace.id)
+  const repo = new DatasetsRepository(workspace.id)
   const datasets = await repo.findByName(name)
   const dataset = datasets[0]
   if (dataset) return Result.ok(dataset)

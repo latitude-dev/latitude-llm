@@ -2,8 +2,6 @@ import { eq } from 'drizzle-orm'
 
 import {
   Dataset,
-  DatasetV2,
-  DatasetVersion,
   DocumentVersion,
   LinkedDataset,
   LinkedDatasetRow,
@@ -14,90 +12,57 @@ import { documentVersions } from '../../schema'
 
 function getLinkedData({
   inputs,
-  rowIndex,
   datasetRowId,
   mappedInputs,
-  datasetVersion,
 }: {
-  datasetVersion: DatasetVersion
-  rowIndex: number | undefined
   datasetRowId: number | undefined
   inputs: LinkedDataset['inputs'] | LinkedDatasetRow['inputs']
   mappedInputs: Record<string, number | string> | undefined
 }) {
-  if (datasetVersion === DatasetVersion.V1) {
-    return { inputs, mappedInputs, rowIndex }
-  }
-
   return { inputs, mappedInputs, datasetRowId }
 }
 
 function getCurrentDatasetLinkedData({
   document,
-  datasetVersion,
 }: {
-  datasetVersion: DatasetVersion
   document: DocumentVersion
 }) {
-  if (datasetVersion === DatasetVersion.V1) return document.linkedDataset ?? {}
-  if (datasetVersion === DatasetVersion.V2) {
-    return document.linkedDatasetAndRow ?? {}
-  }
-
-  return undefined
+  return document.linkedDatasetAndRow ?? {}
 }
 
-type LinkedColumn<V extends DatasetVersion = DatasetVersion> =
-  V extends DatasetVersion.V1
-    ? Record<number, LinkedDataset>
-    : Record<number, LinkedDatasetRow>
-export async function saveLinkedDataset<V extends DatasetVersion>(
+type LinkedColumn = Record<number, LinkedDatasetRow>
+export async function saveLinkedDataset(
   {
     document,
     dataset,
-    datasetVersion,
     data,
   }: {
     document: DocumentVersion
-    datasetVersion: V
-    dataset: V extends DatasetVersion.V1 ? Dataset : DatasetV2
+    dataset: Dataset
     data: {
-      datasetRowId: number | undefined
+      datasetRowId: number
       mappedInputs: Record<string, number | string> | undefined
       inputs: LinkedDataset['inputs'] | LinkedDatasetRow['inputs']
-
-      // DEPRECATED: Remove when migrated to datasets V2
-      rowIndex: number | undefined
     }
   },
   trx = database,
 ): Promise<TypedResult<DocumentVersion, Error>> {
   const prevLinkedData = getCurrentDatasetLinkedData({
     document,
-    datasetVersion,
   })
 
-  // TODO: Remove this check after migrated to datasets V2
-  if (prevLinkedData === undefined) {
-    return Result.error(new Error('Invalid dataset version'))
-  }
-
-  const prevData = prevLinkedData as LinkedColumn<V>
-
-  if (datasetVersion === DatasetVersion.V2 && data.datasetRowId === undefined) {
+  const prevData = prevLinkedData as LinkedColumn
+  if (data.datasetRowId === undefined) {
     return Result.error(new Error('Invalid dataset row id'))
   }
 
   return await Transaction.call(async (tx) => {
     const datasetLinkedData = getLinkedData({
-      datasetVersion,
-      rowIndex: data.rowIndex,
       datasetRowId: data.datasetRowId,
       inputs: data.inputs,
       mappedInputs: data.mappedInputs,
     })
 
-    // Datasets V2 Nothing to change (datasetRowId or mappedInputs)
     if (datasetLinkedData === undefined) return Result.ok(document)
 
     const newLinkedData = {
@@ -109,16 +74,8 @@ export async function saveLinkedDataset<V extends DatasetVersion>(
     }
 
     let insertData: Partial<typeof documentVersions.$inferInsert>
-    if (datasetVersion === DatasetVersion.V1) {
-      insertData = {
-        linkedDataset: newLinkedData as LinkedColumn<DatasetVersion.V1>,
-      }
-    } else if (datasetVersion === DatasetVersion.V2) {
-      insertData = {
-        linkedDatasetAndRow: newLinkedData as LinkedColumn<DatasetVersion.V2>,
-      }
-    } else {
-      return Result.error(new Error('Invalid dataset version'))
+    insertData = {
+      linkedDatasetAndRow: newLinkedData as LinkedColumn,
     }
 
     const result = await tx

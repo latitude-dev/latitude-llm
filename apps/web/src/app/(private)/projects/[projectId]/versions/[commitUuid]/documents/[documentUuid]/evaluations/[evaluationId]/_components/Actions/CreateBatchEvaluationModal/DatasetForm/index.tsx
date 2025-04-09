@@ -3,7 +3,6 @@ import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { ROUTES } from '$/services/routes'
 import {
   Dataset,
-  DatasetV2,
   DocumentVersion,
   EvaluationTmp,
 } from '@latitude-data/core/browser'
@@ -119,8 +118,8 @@ export default function DatasetForm({
   onChangeDatasetLabel?: ReactStateDispatch<string | undefined>
   headers: SelectOption<string>[]
   labels?: SelectOption<string>[]
-  selectedDataset: Dataset | DatasetV2 | null
-  datasets: Dataset[] | DatasetV2[]
+  selectedDataset: Dataset | null
+  datasets: Dataset[]
   isLoadingDatasets: boolean
   onSelectDataset: (value: number) => void
   onToggleAllLines: (checked: boolean) => void

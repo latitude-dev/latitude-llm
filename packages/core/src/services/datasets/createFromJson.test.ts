@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { createDatasetFromJson } from './createFromJson'
-import { identityHashAlgorithm } from '../datasetsV2/utils'
+import { identityHashAlgorithm } from '../datasets/utils'
 import * as factories from '../../tests/factories'
 import { type CreateWorkspaceResult } from '../../tests/factories/workspaces'
 import { DatasetRowsRepository } from '../../repositories'

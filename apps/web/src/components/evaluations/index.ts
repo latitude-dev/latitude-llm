@@ -10,7 +10,7 @@ import {
 import {
   Commit,
   DatasetRow,
-  DatasetV2,
+  Dataset,
   DocumentLog,
   ProviderLogDto,
 } from '@latitude-data/core/browser'
@@ -65,7 +65,7 @@ export type ResultPanelProps<
   evaluation: EvaluationV2<T, M>
   result: EvaluationResultV2<T, M>
   commit: Commit
-  dataset?: DatasetV2
+  dataset?: Dataset
   evaluatedDatasetRow?: DatasetRow
   evaluatedProviderLog: ProviderLogDto
   evaluatedDocumentLog: DocumentLog

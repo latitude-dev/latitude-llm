@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
@@ -17,7 +17,6 @@ export function ParametersWrapper({
   const { metadataParameters } = useDocumentParameters({
     document,
     commitVersionUuid: commit.uuid,
-    datasetVersion: DatasetVersion.V2,
   })
   return (
     <ClientOnly>

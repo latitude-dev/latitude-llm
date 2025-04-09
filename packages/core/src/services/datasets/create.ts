@@ -1,94 +1,87 @@
-import path from 'path'
-
-import slugify from '@sindresorhus/slugify'
-import pg from 'pg'
-const { DatabaseError } = pg
-
 import { User, Workspace } from '../../browser'
+import { Column } from '../../schema/models/datasets'
 import { database } from '../../client'
-import { publisher } from '../../events/publisher'
 import {
   BadRequestError,
   databaseErrorCodes,
   Result,
   Transaction,
 } from '../../lib'
-import { diskFactory, DiskWrapper } from '../../lib/disk'
-import { syncReadCsv } from '../../lib/readCsv'
 import { datasets } from '../../schema'
+import pg from 'pg'
+const { DatabaseError } = pg
+import { syncReadCsv } from '../../lib/readCsv'
+import { buildColumns, HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
+
+export async function getCsvAndBuildColumns({
+  file,
+  csvDelimiter,
+  hashAlgorithm = nanoidHashAlgorithm,
+}: {
+  file: File | string
+  csvDelimiter: string
+  hashAlgorithm?: HashAlgorithmFn
+}) {
+  const readCsvResult = await syncReadCsv(file, {
+    delimiter: csvDelimiter,
+  })
+
+  if (readCsvResult.error) return Result.error(readCsvResult.error)
+
+  const headers = readCsvResult.value?.headers ?? []
+  const uniqueHeaders = new Set(headers)
+
+  if (uniqueHeaders.size === 0) {
+    return Result.error(new BadRequestError('CSV file must contain headers'))
+  }
+
+  if ([...uniqueHeaders].some((h) => h.length === 0)) {
+    return Result.error(
+      new BadRequestError('CSV header cannot be an empty string'),
+    )
+  }
+
+  let columns: Column[] = []
+  const newColumns = Array.from(uniqueHeaders.keys()).map((columnName) => ({
+    name: columnName,
+  }))
+  return Result.ok(
+    buildColumns({
+      newColumns,
+      prevColumns: columns,
+      hashAlgorithm,
+    }),
+  )
+}
 
 export const createDataset = async (
   {
     author,
     workspace,
-    disk = diskFactory(),
     data,
   }: {
     author: User
     workspace: Workspace
     data: {
       name: string
-      file: File
-      csvDelimiter: string
+      columns: Column[]
     }
-    disk?: DiskWrapper
   },
   db = database,
 ) => {
-  const name = slugify(data.name)
-  const extension = path.extname(data.file.name)
-  const key = `workspaces/${workspace.id}/datasets/${name}${extension}`
-
-  const diskResult = await disk.putFile(key, data.file)
-  if (diskResult.error) return diskResult
-
-  const file = disk.file(key)
-  const fileMetadata = await file.toSnapshot()
-  const readCsvResult = await syncReadCsv(data.file, {
-    delimiter: data.csvDelimiter,
-  })
-
-  if (readCsvResult.error) return readCsvResult
-
-  const { headers, rowCount } = readCsvResult.value
-  if (headers.length === 0)
-    return Result.error(new BadRequestError('CSV file must contain headers'))
-  if (headers.some((h) => h.length === 0))
-    return Result.error(
-      new BadRequestError('CSV header cannot be an empty string'),
-    )
-
   return Transaction.call(async (trx) => {
     try {
       const inserts = await trx
         .insert(datasets)
         .values({
           name: data.name,
-          csvDelimiter: data.csvDelimiter,
           workspaceId: workspace.id,
           authorId: author.id,
-          fileKey: key,
-          fileMetadata: {
-            ...fileMetadata,
-            headers,
-            rowCount,
-          },
+          columns: data.columns,
         })
         .returning()
 
       const dataset = inserts[0]!
-
-      publisher.publishLater({
-        type: 'datasetCreated',
-        data: {
-          dataset: {
-            ...dataset,
-            author,
-          },
-          workspaceId: workspace.id,
-          userEmail: author.email,
-        },
-      })
 
       return Result.ok({
         ...dataset,

@@ -3,7 +3,7 @@ import {
   extractHeadersFromFirstRow,
   generatePreviewRowsFromJson,
 } from './generatePreviewRowsFromJson'
-import { identityHashAlgorithm } from '../datasetsV2/utils'
+import { identityHashAlgorithm } from '../datasets/utils'
 
 const validJsonArray = JSON.stringify([
   { name: 'Alice', age: 30 },

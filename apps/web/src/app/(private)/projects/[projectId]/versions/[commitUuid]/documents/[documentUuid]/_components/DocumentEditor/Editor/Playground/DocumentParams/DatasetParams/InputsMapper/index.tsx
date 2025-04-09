@@ -1,9 +1,5 @@
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import {
-  DocumentVersion,
-  DatasetVersion,
-  PlaygroundInput,
-} from '@latitude-data/core/browser'
+import { DocumentVersion, PlaygroundInput } from '@latitude-data/core/browser'
 import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
 
@@ -26,19 +22,16 @@ export function InputMapper({
   rowCellOptions,
   loadingState,
   onSelectRowCell,
-  datasetVersion,
 }: {
   document: DocumentVersion
   commit: ICommitContextType['commit']
   rowCellOptions: SelectOption<string>[]
   onSelectRowCell: OnSelectRowCellFn<string>
   loadingState: UseSelectDataset['loadingState']
-  datasetVersion: DatasetVersion
 }) {
   const { setSource, datasetV2: ds } = useDocumentParameters({
     document,
     commitVersionUuid: commit.uuid,
-    datasetVersion,
   })
   const inputs = ds.inputs
   const mappedInputs = ds.mappedInputs
@@ -57,7 +50,6 @@ export function InputMapper({
             <InputsMapperItem
               key={idx}
               value={identifier}
-              datasetVersion={DatasetVersion.V2}
               isMapped={isMapped}
               param={param}
               onSelectRowCell={onSelectRowCell}

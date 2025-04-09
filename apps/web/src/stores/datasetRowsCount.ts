@@ -1,4 +1,4 @@
-import type { Dataset, DatasetV2 } from '@latitude-data/core/browser'
+import type { Dataset } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
@@ -9,7 +9,7 @@ export default function useDatasetRowsCount(
     dataset: selectedDataset,
     onFetched,
   }: {
-    dataset?: Dataset | DatasetV2 | null
+    dataset?: Dataset | null
     onFetched?: (count: number) => void
   },
   opts?: SWRConfiguration,

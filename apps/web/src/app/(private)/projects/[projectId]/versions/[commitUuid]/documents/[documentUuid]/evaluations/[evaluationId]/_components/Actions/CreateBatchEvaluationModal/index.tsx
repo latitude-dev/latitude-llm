@@ -47,7 +47,6 @@ export default function CreateBatchEvaluationModal({
     if (!form.selectedDataset) return
     await runBatch({
       datasetId: form.selectedDataset.id,
-      datasetVersion: form.datasetVersion,
       datasetLabel: form.datasetLabel,
       ...(evaluation.version === 'v2'
         ? {

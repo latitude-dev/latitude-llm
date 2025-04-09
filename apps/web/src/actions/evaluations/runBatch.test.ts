@@ -1,11 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  Dataset,
-  DatasetV2,
-  DatasetVersion,
-  EvaluationDto,
-  Providers,
-} from '@latitude-data/core/browser'
+import { Dataset, EvaluationDto, Providers } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { type FactoryCreateProjectReturn } from '@latitude-data/core/factories'
 
@@ -36,7 +30,6 @@ describe('runBatchAction', () => {
     it('errors when the user is not authenticated', async () => {
       const [_, error] = await runBatchEvaluationAction({
         datasetId: 1,
-        datasetVersion: DatasetVersion.V2,
         projectId: 1,
         documentUuid: 'doc-uuid',
         commitUuid: 'commit-uuid',
@@ -75,13 +68,13 @@ describe('runBatchAction', () => {
     })
 
     describe('with dataset V2', () => {
-      let dataset: DatasetV2
+      let dataset: Dataset
 
       beforeEach(async () => {
         vi.clearAllMocks()
 
         dataset = await factories
-          .createDatasetV2({
+          .createDataset({
             workspace: setup.workspace,
             author: setup.user,
             fileContent: `
@@ -97,7 +90,6 @@ describe('runBatchAction', () => {
       it('handles errors when resources are not found', async () => {
         const [_, error] = await runBatchEvaluationAction({
           datasetId: 999999,
-          datasetVersion: DatasetVersion.V2,
           projectId: setup.project.id,
           documentUuid: setup.documents[0]!.documentUuid,
           commitUuid: setup.commit.uuid,
@@ -114,7 +106,6 @@ describe('runBatchAction', () => {
       it('handles optional parameters', async () => {
         const [result, error] = await runBatchEvaluationAction({
           datasetId: dataset.id,
-          datasetVersion: DatasetVersion.V2,
           projectId: setup.project.id,
           documentUuid: setup.documents[0]!.documentUuid,
           commitUuid: setup.commit.uuid,
@@ -142,7 +133,6 @@ describe('runBatchAction', () => {
       it('fails when doc has not parameters and parameters are passed', async () => {
         const [_result, error] = await runBatchEvaluationAction({
           datasetId: dataset.id,
-          datasetVersion: DatasetVersion.V2,
           projectId: setup.project.id,
           documentUuid: setup.documents[0]!.documentUuid,
           commitUuid: setup.commit.uuid,
@@ -165,7 +155,6 @@ describe('runBatchAction', () => {
       it('successfully enqueues a batch evaluation job', async () => {
         const [result, error] = await runBatchEvaluationAction({
           datasetId: dataset.id,
-          datasetVersion: DatasetVersion.V2,
           projectId: setup.project.id,
           documentUuid: setup.documents[0]!.documentUuid,
           commitUuid: setup.commit.uuid,
@@ -205,7 +194,6 @@ describe('runBatchAction', () => {
 
         const [result, error] = await runBatchEvaluationAction({
           datasetId: dataset.id,
-          datasetVersion: DatasetVersion.V2,
           projectId: setup.project.id,
           documentUuid: setup.documents[0]!.documentUuid,
           commitUuid: setup.commit.uuid,
@@ -233,56 +221,6 @@ describe('runBatchAction', () => {
           'runBatchEvaluationJob',
           expect.objectContaining({
             evaluation: expect.objectContaining({ id: evaluation2.id }),
-          }),
-        )
-      })
-    })
-
-    describe('with dataset V1 (DEPRECATED)', () => {
-      let dataset: Dataset
-
-      beforeEach(async () => {
-        vi.clearAllMocks()
-
-        dataset = await factories
-          .createDataset({
-            name: 'Test Dataset',
-            workspace: setup.workspace,
-            author: setup.user,
-          })
-          .then((result) => result.dataset)
-      })
-
-      it('successfully enqueues a batch evaluation job', async () => {
-        const [result, error] = await runBatchEvaluationAction({
-          datasetId: dataset.id,
-          datasetVersion: DatasetVersion.V1,
-          projectId: setup.project.id,
-          documentUuid: setup.documents[0]!.documentUuid,
-          commitUuid: setup.commit.uuid,
-          fromLine: 0,
-          toLine: 5,
-          parameters: { age: 1, name: 2 },
-          evaluationIds: [evaluation.id],
-        })
-
-        expect(error).toBeNull()
-        expect(result).toEqual({
-          success: true,
-        })
-
-        expect(mocks.queues.evaluationsQueue).toHaveBeenCalledWith(
-          'runBatchEvaluationJob',
-          expect.objectContaining({
-            evaluation: expect.objectContaining({ id: evaluation.id }),
-            dataset: expect.objectContaining({ id: dataset.id }),
-            document: expect.objectContaining({
-              documentUuid: setup.documents[0]!.documentUuid,
-            }),
-            fromLine: 0,
-            toLine: 5,
-            parametersMap: { age: 1, name: 2 },
-            batchId: expect.any(String),
           }),
         )
       })

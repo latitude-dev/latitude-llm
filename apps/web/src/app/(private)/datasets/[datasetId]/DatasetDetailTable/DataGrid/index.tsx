@@ -4,8 +4,8 @@ import { LinkableTablePaginationFooter } from '$/components/TablePaginationFoote
 import { DatasetRoleStyle } from '$/hooks/useDatasetRoles'
 import useDatasetRows from '$/stores/datasetRows'
 import { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
-import useDatasets from '$/stores/datasetsV2'
-import { DatasetV2 } from '@latitude-data/core/browser'
+import useDatasets from '$/stores/datasets'
+import { Dataset } from '@latitude-data/core/browser'
 import { ClientPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import type {
@@ -33,7 +33,7 @@ function rowKeyGetter(row: ClientDatasetRow) {
 }
 
 export type DatasetRowsTableProps = {
-  dataset: DatasetV2
+  dataset: Dataset
   rows: ClientDatasetRow[]
   selectedRow?: ClientDatasetRow
   pagination: ClientPagination
@@ -94,7 +94,7 @@ const renderHeaderCell =
     column,
   }: {
     setEditColumnKey: ReactStateDispatch<string | null>
-    column: DatasetV2['columns'][0]
+    column: Dataset['columns'][0]
   }) =>
   (props: RenderHeaderCellProps<ClientDatasetRow>) => {
     const onClickEdit = useCallback(() => {

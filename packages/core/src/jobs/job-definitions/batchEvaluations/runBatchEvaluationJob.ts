@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import { Job } from 'bullmq'
 
 import {
-  DatasetV2,
+  Dataset,
   DocumentVersion,
   EvaluationTmp,
   User,
@@ -18,7 +18,7 @@ import { publisher } from '../../../events/publisher'
 import { documentsQueue } from '../../queues'
 
 type GetDatasetsProps = {
-  dataset: DatasetV2
+  dataset: Dataset
   fromLine: number | undefined
   toLine: number | undefined
 }
@@ -29,7 +29,7 @@ async function getDatasetRows({
   toLine: to,
 }: GetDatasetsProps) {
   const fromLine = from ? Math.abs(from) : 1
-  return getRowsFromRange({ dataset: ds as DatasetV2, fromLine, toLine: to })
+  return getRowsFromRange({ dataset: ds as Dataset, fromLine, toLine: to })
 }
 
 type GetParametersProps = GetDatasetsProps & {
@@ -65,7 +65,7 @@ export type RunBatchEvaluationJobParams = {
   workspace: Workspace
   user: User
   evaluation: EvaluationTmp
-  dataset: DatasetV2
+  dataset: Dataset
   datasetLabel?: string
   document: DocumentVersion
   commitUuid: string

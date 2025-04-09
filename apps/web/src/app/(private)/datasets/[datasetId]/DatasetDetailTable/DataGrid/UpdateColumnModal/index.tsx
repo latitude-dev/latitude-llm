@@ -1,6 +1,6 @@
 import { useFormAction } from '$/hooks/useFormAction'
-import useDatasets from '$/stores/datasetsV2'
-import { DATASET_COLUMN_ROLES, DatasetV2 } from '@latitude-data/core/browser'
+import useDatasets from '$/stores/datasets'
+import { DATASET_COLUMN_ROLES, Dataset } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -13,7 +13,7 @@ export function UpdateColumnModal({
   columnKey,
   onClose,
 }: {
-  dataset: DatasetV2
+  dataset: Dataset
   columnKey: string
   onClose: () => void
 }) {

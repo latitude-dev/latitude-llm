@@ -102,7 +102,7 @@ describe('createDatasetFromFile', () => {
   })
 
   it('prevents duplicate dataset names', async () => {
-    const { dataset: existingDs } = await factories.createDatasetV2({
+    const { dataset: existingDs } = await factories.createDataset({
       disk,
       workspace,
       author: user,

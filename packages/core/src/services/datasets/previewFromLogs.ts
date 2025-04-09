@@ -1,13 +1,13 @@
 import { Result } from '../../lib'
-import { DatasetV2, Workspace } from '../../browser'
+import { Dataset, Workspace } from '../../browser'
 import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
-import { DatasetRowsRepository, DatasetsV2Repository } from '../../repositories'
+import { DatasetRowsRepository, DatasetsRepository } from '../../repositories'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 
 async function getFirstRowsFromDataset({
   dataset,
 }: {
-  dataset: DatasetV2 | undefined
+  dataset: Dataset | undefined
 }) {
   if (!dataset) return []
 
@@ -31,7 +31,7 @@ export const previewDatasetFromLogs = async ({
   }
   hashAlgorithm?: HashAlgorithmFn
 }) => {
-  const repo = new DatasetsV2Repository(workspace.id)
+  const repo = new DatasetsRepository(workspace.id)
   const datasets = await repo.findByName(data.name)
   const dataset = datasets[0]
   const result = await buildDocumentLogDatasetRows({

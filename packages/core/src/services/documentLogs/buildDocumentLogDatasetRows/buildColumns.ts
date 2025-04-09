@@ -1,6 +1,6 @@
 import {
   DATASET_COLUMN_ROLES,
-  DatasetV2,
+  Dataset,
   DEFAULT_DATASET_LABEL,
 } from '../../../browser'
 import { DocumentLogWithMetadataAndError } from '../../../repositories'
@@ -8,7 +8,7 @@ import { Column } from '../../../schema'
 import {
   buildColumns as buildColumnsFn,
   HashAlgorithmFn,
-} from '../../datasetsV2/utils'
+} from '../../datasets/utils'
 
 function getUniqueParameterNamesFromLogs(
   logs: DocumentLogWithMetadataAndError[],
@@ -35,7 +35,7 @@ export function buildColumns({
   hashAlgorithm,
   logs,
 }: {
-  dataset?: DatasetV2
+  dataset?: Dataset
   hashAlgorithm: HashAlgorithmFn
   logs: DocumentLogWithMetadataAndError[]
 }) {

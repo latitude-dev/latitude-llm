@@ -14,7 +14,7 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { datasetRows } from './datasetRows'
-import { datasetsV2 } from './datasetsV2'
+import { datasets } from './datasets'
 import { providerLogs } from './providerLogs'
 import { workspaces } from './workspaces'
 import { experiments } from './experiments'
@@ -36,7 +36,7 @@ export const evaluationResultsV2 = latitudeSchema.table(
       { onDelete: 'restrict', onUpdate: 'cascade' },
     ),
     datasetId: bigint('dataset_id', { mode: 'number' }).references(
-      () => datasetsV2.id,
+      () => datasets.id,
       { onDelete: 'set null' },
     ),
     evaluatedRowId: bigint('evaluated_row_id', { mode: 'number' }).references(

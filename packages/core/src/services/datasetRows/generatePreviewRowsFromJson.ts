@@ -4,7 +4,7 @@ import {
   buildColumns,
   HashAlgorithmFn,
   nanoidHashAlgorithm,
-} from '../datasetsV2/utils'
+} from '../datasets/utils'
 import { parseRowCell } from './utils'
 
 type JsonRow = Record<string, unknown>

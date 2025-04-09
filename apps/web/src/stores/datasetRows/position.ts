@@ -1,6 +1,6 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import type { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
+import type { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { compact } from 'lodash-es'
 import useSWR, { SWRConfiguration } from 'swr'
@@ -16,7 +16,7 @@ export default function useDatasetRowPosition(
     datasetRow,
     pageSize,
   }: {
-    dataset: DatasetV2
+    dataset: Dataset
     datasetRow: DatasetRow
     pageSize?: Number
   },

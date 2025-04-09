@@ -1,7 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 
 import {
-  Dataset,
   DocumentVersion,
   LinkedDataset,
   User,
@@ -19,10 +18,6 @@ export type IDocumentVersionData = {
   path: string
   content: string
   deletedAt?: Date
-  datasetV1?: {
-    dataset: Dataset
-    linkedDataset: Record<number, LinkedDataset>
-  }
 }
 
 export async function markAsSoftDelete(
@@ -52,19 +47,6 @@ export async function createDocumentVersion(
   })
 
   let doc = result.unwrap()
-
-  // FIXME: Remove after dataset V2 migration
-  if (data.datasetV1) {
-    const upDocs = await tx
-      .update(documentVersions)
-      .set({
-        datasetId: data.datasetV1.dataset.id,
-        linkedDataset: data.datasetV1.linkedDataset,
-      })
-      .where(eq(documentVersions.id, doc.id))
-      .returning()
-    doc = upDocs[0]!
-  }
 
   if (data.content) {
     result = await updateDocument({

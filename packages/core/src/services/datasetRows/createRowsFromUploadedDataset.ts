@@ -1,16 +1,16 @@
-import { DatasetRow, DatasetV2 } from '../../browser'
+import { DatasetRow, Dataset } from '../../browser'
 import { database } from '../../client'
 import { DatasetV2CreatedEvent } from '../../events/events'
 import { diskFactory, DiskWrapper, Result } from '../../lib'
 import { csvBatchGenerator, CSVRow, type CsvBatch } from '../../lib/readCsv'
-import { DatasetsV2Repository } from '../../repositories'
+import { DatasetsRepository } from '../../repositories'
 import { Column, DatasetRowData } from '../../schema'
-import { updateDataset } from '../datasetsV2/update'
+import { updateDataset } from '../datasets/update'
 import {
   buildColumns,
   HashAlgorithmFn,
   nanoidHashAlgorithm,
-} from '../datasetsV2/utils'
+} from '../datasets/utils'
 import { insertRowsInBatch } from './insertRowsInBatch'
 
 function reorderRowsByColumns({
@@ -66,7 +66,7 @@ async function updateDatasetColumnsWithCsv({
   csvColumns,
   hashAlgorithm,
 }: {
-  dataset: DatasetV2
+  dataset: Dataset
   csvColumns: CsvColum[]
   hashAlgorithm: HashAlgorithmFn
 }) {
@@ -95,7 +95,7 @@ export async function createRowsFromUploadedDataset(
   }: {
     event: DatasetV2CreatedEvent
     onError?: (error: Error) => void
-    onRowsCreated?: (args: { dataset: DatasetV2; rows: DatasetRow[] }) => void
+    onRowsCreated?: (args: { dataset: Dataset; rows: DatasetRow[] }) => void
     onFinished?: () => void
     disk?: DiskWrapper
     deleteFile?: boolean
@@ -105,7 +105,7 @@ export async function createRowsFromUploadedDataset(
   db = database,
 ) {
   const { workspaceId, datasetId, fileKey, csvDelimiter } = event.data
-  const repo = new DatasetsV2Repository(workspaceId)
+  const repo = new DatasetsRepository(workspaceId)
   const datasetResult = await repo.find(datasetId)
 
   if (datasetResult.error) {

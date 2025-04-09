@@ -7,14 +7,14 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import useDatasets from '$/stores/datasetsV2'
+import useDatasets from '$/stores/datasets'
 import DelimiterSelector from '$/app/(private)/datasets/_components/DelimiterSelector'
 import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useCallback, useState } from 'react'
-import { DatasetV2 } from '@latitude-data/core/browser'
+import { Dataset } from '@latitude-data/core/browser'
 
 export function NewDatasetModalComponent({
   open,
@@ -95,7 +95,7 @@ export type NewDatasetModalProps = {
 export function NewDatasetModal({ open, onOpenChange }: NewDatasetModalProps) {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const [createdDataset, setCreatedDataset] = useState<DatasetV2 | null>(null)
+  const [createdDataset, setCreatedDataset] = useState<Dataset | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const { createError, createFormAction, isCreating } = useDatasets({
     onCreateSuccess: (dataset) => {

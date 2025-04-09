@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm'
-import { DatasetV2 } from '../../browser'
+import { Dataset } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
 import { DatasetRowData, datasetRows } from '../../schema'
@@ -9,7 +9,7 @@ export const updateDatasetRow = async (
     dataset,
     data,
   }: {
-    dataset: DatasetV2
+    dataset: Dataset
     data: {
       rows: {
         rowId: number

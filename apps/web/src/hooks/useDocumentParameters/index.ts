@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import {
-  DatasetVersion,
   DocumentLog,
   DocumentVersion,
   INPUT_SOURCE,
@@ -40,15 +39,12 @@ function convertToParams(inputs: Inputs<InputSource>) {
   )
 }
 
-export function useDocumentParameters<
-  V extends DatasetVersion = DatasetVersion,
->({
+export function useDocumentParameters({
   document,
   commitVersionUuid,
   metadata,
 }: {
   document: DocumentVersion
-  datasetVersion: V
   commitVersionUuid: string
   metadata?: ConversationMetadata | undefined
 }) {
@@ -284,7 +280,7 @@ export function useDocumentParameters<
     },
     datasetV2: {
       isAssigning,
-      assignedDatasets: inputs.datasetV2,
+      assignedDatasets: inputs.datasetV2 ?? {},
       datasetRowId: dsId ? inputs?.datasetV2?.[dsId]?.datasetRowId : undefined,
       inputs: dsId
         ? (inputs.datasetV2?.[dsId]?.inputs ?? emptyInputs.datasetV2)

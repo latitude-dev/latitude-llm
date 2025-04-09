@@ -6,7 +6,7 @@
 import {
   Commit,
   DatasetRow,
-  DatasetV2,
+  Dataset,
   DocumentSuggestion,
   EvaluationResultV2,
   EvaluationTmp,
@@ -110,7 +110,7 @@ type EvaluationResultV2CreatedArgs = {
   evaluation: EvaluationV2
   commit: Commit
   providerLog: ProviderLogDto
-  dataset?: DatasetV2
+  dataset?: Dataset
   datasetRow?: DatasetRow
 }
 

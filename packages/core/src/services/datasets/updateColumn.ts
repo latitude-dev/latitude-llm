@@ -1,4 +1,4 @@
-import { DatasetColumnRole, DatasetV2 } from '../../browser'
+import { DatasetColumnRole, Dataset } from '../../browser'
 import { database } from '../../client'
 import { Result, TypedResult } from '../../lib'
 import { updateDataset } from './update'
@@ -8,7 +8,7 @@ export async function updateDatasetColumn(
     dataset,
     data,
   }: {
-    dataset: DatasetV2
+    dataset: Dataset
     data: {
       identifier: string
       name: string
@@ -16,7 +16,7 @@ export async function updateDatasetColumn(
     }
   },
   db = database,
-): Promise<TypedResult<DatasetV2, Error>> {
+): Promise<TypedResult<Dataset, Error>> {
   const column = dataset.columns.find((c) => c.identifier === data.identifier)
 
   if (!column) {
@@ -35,5 +35,5 @@ export async function updateDatasetColumn(
   )
   if (updatedDatasetResult.error) return updatedDatasetResult
 
-  return Result.ok(updatedDatasetResult.value as DatasetV2)
+  return Result.ok(updatedDatasetResult.value as Dataset)
 }

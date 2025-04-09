@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import { buildColumnList, getColumnIndex } from '$/hooks/useVersionedDatasets'
-import { DatasetV2, DocumentVersion } from '@latitude-data/core/browser'
-import useDatasets from '$/stores/datasetsV2'
+import { buildColumnList, getColumnIndex } from '$/lib/datasetsUtils'
+import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
+import useDatasets from '$/stores/datasets'
 import type { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { type RunBatchParameters } from './useRunBatch'
 
@@ -20,12 +20,12 @@ export function useMappedParameters({
 }: {
   parametersList: string[]
   document: DocumentVersion
-  onSelectedDataset?: (dataset: DatasetV2) => void
-  onFetched?: (dataset: DatasetV2) => void
+  onSelectedDataset?: (dataset: Dataset) => void
+  onFetched?: (dataset: Dataset) => void
 }) {
-  const [selectedDataset, setSelectedDataset] = useState<DatasetV2 | null>(null)
+  const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
   const buildMappedInputs = useCallback(
-    (dataset: DatasetV2) => {
+    (dataset: Dataset) => {
       if (!document?.linkedDatasetAndRow) return {}
       return document.linkedDatasetAndRow[dataset.id]?.mappedInputs ?? {}
     },
@@ -36,7 +36,7 @@ export function useMappedParameters({
     buildEmptyParameters(parametersList),
   )
   const buildHeaders = useCallback(
-    (dataset: DatasetV2) => {
+    (dataset: Dataset) => {
       setHeaders([
         { value: '-1', label: '-- Leave this parameter empty' },
         ...buildColumnList(dataset).map((value) => ({ value, label: value })),
@@ -57,7 +57,7 @@ export function useMappedParameters({
   )
 
   const buildSelectedParameters = useCallback(
-    (dataset: DatasetV2) => {
+    (dataset: Dataset) => {
       const mappedInputs = buildMappedInputs(dataset)
       const mappedParameters = Object.fromEntries(
         Object.entries(mappedInputs).map(([key, identifier]) => {
@@ -77,7 +77,7 @@ export function useMappedParameters({
     [setParameters, parametersList],
   )
   const setupDataset = useCallback(
-    (selectedDataset: DatasetV2) => {
+    (selectedDataset: Dataset) => {
       setSelectedDataset(selectedDataset)
       buildHeaders(selectedDataset)
       buildSelectedParameters(selectedDataset)

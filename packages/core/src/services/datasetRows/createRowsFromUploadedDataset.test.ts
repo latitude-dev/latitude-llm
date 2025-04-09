@@ -1,18 +1,18 @@
 import { beforeAll, expect, describe, it, vi } from 'vitest'
 import getTestDisk from '../../tests/testDrive'
-import { createDatasetFromFile } from '../datasetsV2/createFromFile'
+import { createDatasetFromFile } from '../datasets/createFromFile'
 import * as factories from '../../tests/factories'
-import { DatasetV2, User, Workspace } from '../../browser'
+import { Dataset, User, Workspace } from '../../browser'
 import { createRowsFromUploadedDataset } from './createRowsFromUploadedDataset'
 import { DatasetV2CreatedEvent } from '../../events/events'
-import { DatasetRowsRepository, DatasetsV2Repository } from '../../repositories'
+import { DatasetRowsRepository, DatasetsRepository } from '../../repositories'
 import { createTestCsvFile } from './testHelper'
 
 const testDrive = getTestDisk()
 
 let workspace: Workspace
 let author: User
-let dataset: DatasetV2
+let dataset: Dataset
 let fileKey: string
 
 describe('createRowsFromUploadedDataset', () => {
@@ -137,7 +137,7 @@ describe('createRowsFromUploadedDataset', () => {
 
   it('add rows to an existing dataset with rows', async () => {
     const dataset = await factories
-      .createDatasetV2({
+      .createDataset({
         disk: testDrive,
         workspace,
         author,
@@ -188,7 +188,7 @@ describe('createRowsFromUploadedDataset', () => {
     })
     const rowData = rows.map((r) => r.rowData)
 
-    const datasetRepo = new DatasetsV2Repository(workspace.id)
+    const datasetRepo = new DatasetsRepository(workspace.id)
     const freshDataset = await datasetRepo
       .find(dataset.id)
       .then((r) => r.unwrap())

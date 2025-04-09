@@ -4,7 +4,7 @@ import { omit } from 'lodash-es'
 import { describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import useDatasetRows from './index'
-import { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
+import { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { type UseFetcherArgs } from '$/hooks/useFetcher'
 
 vi.mock('@latitude-data/web-ui/atoms/Toast', async (mod) => {
@@ -27,7 +27,7 @@ const MOCK_DATASET = {
     { name: 'cocinitas', identifier: 'KhdzZS0' },
     { name: 'losquecomen', identifier: 'FdBuNWV' },
   ],
-} as DatasetV2
+} as Dataset
 
 const MOCK_ROWS = [
   {

@@ -1,40 +1,24 @@
-import {
-  DatasetsRepository,
-  DatasetsV2Repository,
-} from '@latitude-data/core/repositories'
 import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'
 
 import { scan } from 'promptl-ai'
 import { readMetadata } from '@latitude-data/compiler'
 import { withDocument } from '../procedures'
-import { DatasetVersion, DocumentVersion } from '@latitude-data/constants'
-import { Dataset, DatasetV2 } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/constants'
+import { DatasetsRepository } from '@latitude-data/core/repositories'
+import { Dataset } from '@latitude-data/core/browser'
 
 export const withDataset = createServerActionProcedure(withDocument)
   .input(
     z.object({
       datasetId: z.number(),
-      datasetVersion: z.nativeEnum(DatasetVersion),
     }),
   )
   .handler(async ({ input, ctx }) => {
-    const datasetVersion = input.datasetVersion
-    let response = { ...ctx, datasetVersion }
-
-    // DEPRECATED
-    if (datasetVersion === DatasetVersion.V1) {
-      const datasetsRepo = new DatasetsRepository(ctx.workspace.id)
-      const dataset = await datasetsRepo
-        .find(input.datasetId)
-        .then((r) => r.unwrap())
-      return { ...response, dataset: dataset as Dataset }
-    }
-
-    const repo = new DatasetsV2Repository(ctx.workspace.id)
+    const repo = new DatasetsRepository(ctx.workspace.id)
     const dataset = await repo.find(input.datasetId).then((r) => r.unwrap())
 
-    return { ...response, dataset: dataset as DatasetV2 }
+    return { ...ctx, dataset: dataset as Dataset }
   })
 
 export const USER_DECIDED_TO_IGNORE_THIS_PARAMETER = -1
@@ -70,8 +54,7 @@ export async function refineParameters({
 }: {
   ctx: {
     document: DocumentCtx
-    dataset: Dataset | DatasetV2
-    datasetVersion: DatasetVersion
+    dataset: Dataset
   }
   parameters: Record<string, number | undefined>
   refineCtx: z.RefinementCtx
@@ -81,13 +64,7 @@ export async function refineParameters({
       ? await readMetadata({ prompt: ctx.document.content })
       : await scan({ prompt: ctx.document.content })
   const docParams = metadata.parameters
-  const version = ctx.datasetVersion
-  const headers =
-    version === DatasetVersion.V1 && 'fileMetadata' in ctx.dataset
-      ? ctx.dataset.fileMetadata.headers
-      : 'columns' in ctx.dataset
-        ? ctx.dataset.columns.map((c) => c.name)
-        : [] // Should not happen
+  const headers = ctx.dataset.columns.map((c) => c.name)
   const paramKeys = Object.keys(parameters)
 
   Array.from(docParams).forEach((key) => {

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import {
   Commit,
   DatasetRow,
-  DatasetV2,
+  Dataset,
   DEFAULT_DATASET_LABEL,
   EvaluationMetric,
   EvaluationResultV2,
@@ -26,7 +26,7 @@ type CreateEvaluationResultV2Args<
   evaluation: EvaluationV2<T, M>
   providerLog: ProviderLog | ProviderLogDto
   commit: Commit
-  dataset?: DatasetV2
+  dataset?: Dataset
   datasetLabel?: string
   datasetRow?: DatasetRow
   usedForSuggestion?: boolean

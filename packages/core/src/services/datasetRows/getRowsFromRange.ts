@@ -1,4 +1,4 @@
-import { DatasetRow, DatasetV2 } from '../../browser'
+import { DatasetRow, Dataset } from '../../browser'
 import { DatasetRowsRepository } from '../../repositories'
 import { DatasetRowDataContent } from '../../schema'
 
@@ -7,7 +7,7 @@ async function getToLine({
   dataset,
   repo,
 }: {
-  dataset: DatasetV2
+  dataset: Dataset
   repo: DatasetRowsRepository
   toLine: number | undefined
 }) {
@@ -32,7 +32,7 @@ export async function getRowsFromRange({
   fromLine,
   toLine: to,
 }: {
-  dataset: DatasetV2
+  dataset: Dataset
   fromLine: number
   toLine?: number
 }) {

@@ -3,7 +3,6 @@ import {
   useDocumentParameters,
 } from '$/hooks/useDocumentParameters'
 import {
-  DatasetVersion,
   DocumentVersion,
   INPUT_SOURCE,
   InputSource,
@@ -37,7 +36,6 @@ export const TABS: TabSelectorOption<InputSource>[] = [
 ]
 
 export type Props = {
-  datasetVersion: DatasetVersion
   document: DocumentVersion
   commit: ICommitContextType['commit']
   prompt: string
@@ -61,7 +59,6 @@ function ParamsTabs({
   source,
   datasetInfo,
   historyInfo,
-  datasetVersion,
 }: ContentProps) {
   return (
     <div className='w-full flex flex-col gap-4'>
@@ -77,23 +74,16 @@ function ParamsTabs({
           commit={commit}
           prompt={prompt}
           setPrompt={setPrompt}
-          datasetVersion={datasetVersion}
         />
       )}
       {source === INPUT_SOURCE.dataset && (
-        <DatasetParams
-          data={datasetInfo}
-          document={document}
-          commit={commit}
-          datasetVersion={datasetVersion}
-        />
+        <DatasetParams data={datasetInfo} document={document} commit={commit} />
       )}
       {source === INPUT_SOURCE.history && (
         <HistoryLogParams
           data={historyInfo}
           document={document}
           commit={commit}
-          datasetVersion={datasetVersion}
         />
       )}
     </div>
@@ -156,7 +146,6 @@ export default function DocumentParams({
   const historyInfo = useLogHistoryParams({
     document: props.document,
     commitVersionUuid: commit.uuid,
-    datasetVersion: props.datasetVersion,
   })
 
   const contentProps = {
@@ -165,7 +154,6 @@ export default function DocumentParams({
     setSource,
     datasetInfo,
     historyInfo,
-    datasetVersion: props.datasetVersion,
   }
 
   return (
