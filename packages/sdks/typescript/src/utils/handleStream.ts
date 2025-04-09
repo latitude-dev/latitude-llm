@@ -16,6 +16,7 @@ import {
   StreamEventTypes,
   ChainEventTypes,
   LatitudeEventData,
+  extractAgentToolCalls,
 } from '@latitude-data/constants'
 
 function parseJSON(line: string) {
@@ -95,11 +96,14 @@ export async function handleStream({
       throw new Error('Stream ended without returning a provider response.')
     }
 
+    const [agentTools, otherTools] = extractAgentToolCalls(toolsRequested)
+
     const finalResponse = {
       conversation,
       uuid,
       response: chainResponse,
-      toolRequests: toolsRequested,
+      toolRequests: otherTools,
+      agentResponse: agentTools[0]?.arguments,
     }
 
     return finalResponse

@@ -44,10 +44,12 @@ export function mockStreamResponse({
   server,
   apiVersion,
   customChunks,
+  closeOnLastCustomChunk = false,
 }: {
   server: Server
   apiVersion: SdkApiVersion
   customChunks?: string[]
+  closeOnLastCustomChunk?: boolean
 }) {
   let stream: ReadableStream
   const chunks = customChunks ?? CHUNKS
@@ -65,8 +67,10 @@ export function mockStreamResponse({
               )
 
               // customChunks is used to test the case where the server returns errors
-              if (index === chunks.length - 1 && !customChunks) {
-                controller.close()
+              if (index === chunks.length - 1) {
+                if (!customChunks || closeOnLastCustomChunk) {
+                  controller.close()
+                }
               }
             })
           },

@@ -32,6 +32,10 @@ import {
   buildMockTools,
   MockedTools,
 } from '$sdk/tests/helpers/mockTools/server'
+import {
+  ChainEventTypes,
+  AGENT_RETURN_TOOL_NAME,
+} from '@latitude-data/constants'
 
 let latitudeApiKey = 'fake-api-key'
 let projectId = 123
@@ -598,6 +602,101 @@ data: ${JSON.stringify({
               },
             }),
           ).rejects.toThrowError(new Error('Coordinates service is down'))
+        }),
+      )
+    })
+
+    describe('agent prompts', () => {
+      it(
+        'returns the agent response as a property',
+        server.boundary(async () => {
+          const customChunks = [
+            `event: latitude-event
+data: ${JSON.stringify({
+              type: ChainEventTypes.ChainStarted,
+              uuid: 'some-uuid',
+            })}
+        `,
+            `event: latitude-event
+data: ${JSON.stringify({
+              type: ChainEventTypes.ProviderStarted,
+              uuid: 'some-uuid',
+              messages: [],
+            })}
+        `,
+            `event: latitude-event
+data: ${JSON.stringify({
+              type: ChainEventTypes.ProviderCompleted,
+              uuid: 'some-uuid',
+              response: {
+                // some response
+              },
+              messages: [
+                {
+                  role: 'assistant',
+                  toolCalls: [
+                    {
+                      id: 'some-id',
+                      name: AGENT_RETURN_TOOL_NAME,
+                      arguments: {
+                        response: 'AI Agent response!',
+                      },
+                    },
+                  ],
+                },
+              ],
+            })}
+        `,
+            `event: latitude-event
+data: ${JSON.stringify({
+              type: ChainEventTypes.ToolsRequested,
+              uuid: 'some-uuid',
+              messages: [
+                {
+                  role: 'assistant',
+                  toolCalls: [
+                    {
+                      id: 'some-id',
+                      name: AGENT_RETURN_TOOL_NAME,
+                      arguments: {
+                        response: 'AI Agent response!',
+                      },
+                    },
+                  ],
+                },
+              ],
+              tools: [
+                {
+                  id: 'some-id',
+                  name: AGENT_RETURN_TOOL_NAME,
+                  arguments: {
+                    response: 'AI Agent response!',
+                  },
+                },
+              ],
+              response: {},
+            })}
+        `,
+          ]
+          const onFinishMock = vi.fn()
+          const onErrorMock = vi.fn()
+          mockStreamResponse({
+            server,
+            apiVersion: 'v3',
+            customChunks,
+            closeOnLastCustomChunk: true,
+          })
+          const response = await sdk.prompts.run('path/to/document', {
+            projectId,
+            parameters: { foo: 'bar', lol: 'foo' },
+            stream: true,
+            onFinished: onFinishMock,
+            onError: onErrorMock,
+          })
+          expect(response?.agentResponse).toBeDefined()
+          expect(response?.agentResponse).toEqual({
+            response: 'AI Agent response!',
+          })
         }),
       )
     })
