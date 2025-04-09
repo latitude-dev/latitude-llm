@@ -13,7 +13,8 @@ const alertVariants = cva(
         destructive:
           'border-destructive-muted-foreground/10 text-destructive-muted-foreground bg-destructive-muted [&>svg]:text-destructive-muted-foreground',
         success: 'border-green-500 text-green-500 dark:text-white',
-        warning: 'bg-yellow text-warning-muted-foreground border-transparent',
+        warning:
+          'bg-yellow text-warning-muted-foreground [&>svg]:text-warning-muted-foreground  border-transparent',
       },
     },
     defaultVariants: {
@@ -55,7 +56,10 @@ const AlertDescription = forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('text-sm [&_p]:leading-relaxed break-keep', className)}
+    className={cn(
+      'text-sm [&_p]:leading-relaxed whitespace-pre-wrap break-all',
+      className,
+    )}
     {...props}
   />
 ))

@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { Bar, BarChart as RechartsBarChart, XAxis, YAxis } from 'recharts'
 import {
@@ -15,33 +15,42 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '../../../atoms/Charts'
+import { useMeasure } from '../../../../browser'
+import { useTruncatedTick } from './useTruncatedTick'
+
+const CustomTick = ({
+  x,
+  y,
+  value,
+  availableWidth,
+}: {
+  x: number
+  y: number
+  value: string | number
+  availableWidth: number
+}) => {
+  const { originalText, truncatedText } = useTruncatedTick({
+    text: value.toString(),
+    availableWidth,
+  })
+
+  return (
+    <text x={x} y={y} dy={16} textAnchor='middle'>
+      <title>{originalText}</title>
+      {truncatedText}
+    </text>
+  )
+}
 
 export function BarChart({ config }: { config: BarChartConfig }) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [dimensions, setDimensions] = useState<{
-    width: number
-    height: number
-  }>({ width: 0, height: 0 })
+  const [containerRef, dimensions] = useMeasure<HTMLDivElement>()
+  const perTickWidth =
+    config.data.length > 0 ? dimensions.width / config.data.length : 0
 
   const color = useMemo(
     () => config.color ?? 'hsl(var(--primary))',
     [config.color],
   )
-
-  useEffect(() => {
-    if (!containerRef.current) return
-
-    const resizeObserver = new ResizeObserver(() => {
-      const { width, height } = containerRef.current!.getBoundingClientRect()
-      setDimensions({ width, height })
-    })
-
-    resizeObserver.observe(containerRef.current)
-
-    return () => {
-      resizeObserver.disconnect()
-    }
-  }, [])
 
   const labelFormatter = useCallback(
     (_: string, payload: Payload<ValueType, NameType>[]) => {
@@ -84,6 +93,7 @@ export function BarChart({ config }: { config: BarChartConfig }) {
 
   return (
     <ChartContainer
+      ref={containerRef}
       config={{
         x: {
           label: config.xAxis.label,
@@ -92,7 +102,6 @@ export function BarChart({ config }: { config: BarChartConfig }) {
           label: config.yAxis.label,
         },
       }}
-      ref={containerRef}
     >
       <RechartsBarChart
         width={dimensions.width}
@@ -104,6 +113,7 @@ export function BarChart({ config }: { config: BarChartConfig }) {
         maxBarSize={50}
       >
         <XAxis
+          allowDataOverflow
           dataKey='x'
           tickLine={config.xAxis.tickLine ?? false}
           axisLine={config.xAxis.axisLine ?? false}
@@ -116,6 +126,15 @@ export function BarChart({ config }: { config: BarChartConfig }) {
               : undefined
           }
           offset={5}
+          interval={config.xAxis.type === 'category' ? 0 : undefined}
+          tick={(tick) => (
+            <CustomTick
+              y={tick.y}
+              x={tick.x}
+              value={tick.payload.value}
+              availableWidth={perTickWidth}
+            />
+          )}
         />
         <YAxis
           dataKey='y'
