@@ -5,7 +5,7 @@ import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
 import createMailgunTransport from './mailgun'
 import createMailpitTransport from './mailpit'
-import createSmtpTransport from './smtp' 
+import createSmtpTransport from './smtp'
 
 const htmlToText = HTMLToText.htmlToText
 

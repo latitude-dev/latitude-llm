@@ -76,6 +76,12 @@ Make sure this network is created before running the containers with `docker com
   - `SMTP_USER`: Your email address used for authentication (e.g., `your_email@gmail.com`)
   - `SMTP_PASS`: The password for your email account (use an **app password** if using Gmail)
 
+  Security Considerations:
+
+  **TLS/SSL Encryption**:
+   - Ensure that **SMTP** connections use TLS/SSL (via `SMTP_SECURE` set to `true` for SMTPS or `false` for STARTTLS). This is crucial for protecting your email credentials and the contents of your email.
+   - Always use a secure connection to prevent the exposure of sensitive data over the network.
+
 - **Storage Configuration**:
 
   - `DRIVE_DISK`: Choose between `local` or `s3` for file storage
