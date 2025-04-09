@@ -212,6 +212,7 @@ export type RunSyncAPIResponse = {
   conversation: Message[]
   toolRequests: ToolCall[]
   response: ChainCallResponseDto
+  agentResponse?: { response: string } | Record<string, unknown>
 }
 
 export type ChatSyncAPIResponse = RunSyncAPIResponse

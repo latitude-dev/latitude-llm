@@ -5,6 +5,7 @@ import {
   ChainStepObjectResponse,
   ChainStepTextResponse,
   RunSyncAPIResponse,
+  extractAgentToolCalls,
 } from '@latitude-data/constants'
 import { ToolCall } from '@latitude-data/compiler'
 
@@ -63,11 +64,14 @@ export function runPresenter({
     return Result.error(error)
   }
 
+  const [agentTools, toolRequests] = extractAgentToolCalls(toolCalls)
+
   const type = response.streamType
   return Result.ok({
     uuid: uuid!,
     conversation: conversation!,
-    toolRequests: toolCalls,
+    toolRequests,
+    agentResponse: agentTools[0]?.arguments,
     response: {
       streamType: type,
       usage: response.usage!,

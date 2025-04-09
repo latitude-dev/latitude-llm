@@ -143,6 +143,7 @@ type OriginalResponse = {
   conversation: Message[]
   toolRequests: ToolCall[]
   response: ChainCallResponseDto
+  agentResponse?: { response: string } | Record<string, unknown>
 }
 
 export function hasToolRequests<Tools extends ToolSpec>({

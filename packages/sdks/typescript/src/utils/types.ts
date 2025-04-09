@@ -123,6 +123,7 @@ export type StreamChainResponse = {
   uuid: string
   conversation: Message[]
   response: ChainCallResponseDto
+  agentResponse?: { response: string } | Record<string, unknown>
 }
 
 export type StreamResponseCallbacks = {

@@ -206,6 +206,36 @@ await sdk.prompts.run('path/to/your/prompt', {
 })
 ```
 
+#### Running agents
+
+Running an agent through Latitude's Gateway is works in the same way as
+running a prompt! In this case, however, the returned object will contain the
+`agentResponse` property, which contains the agent's response.
+
+```typescript
+const result = await sdk.prompts.run('path/to/your/agent', {
+  projectId,
+  parameters: {
+    my_location: 'Barcelona and Miami',
+    other_location: 'Boston',
+  },
+  versionUuid: commitUuid,
+  stream: true,
+})
+
+console.log('??', result.agentResponse)
+```
+
+The `agentResponse` property will always be defined when the prompt is an agent,
+and it will contain the agent's response as an object. The structure of the
+response will depend on the agent's configuration, although by default it looks
+like this:
+```json
+{
+  "response": "Your agent's response"
+}
+```
+
 #### Running a prompt with tools
 
 When you run a prompt with tools, you can define and supply the corresponding
