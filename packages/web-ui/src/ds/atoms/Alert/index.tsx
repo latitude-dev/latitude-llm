@@ -20,7 +20,7 @@ type Props = {
 const IconColor: Record<string, TextColor> = {
   destructive: 'destructive',
   success: 'success',
-  warning: 'warningForeground',
+  warning: 'warningMutedForeground',
   default: 'foreground',
 }
 
