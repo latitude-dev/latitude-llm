@@ -197,8 +197,13 @@ export const env = createEnv({
     MAILGUN_EMAIL_DOMAIN: z.string().optional(),
     MAILGUN_MAILER_API_KEY: z.string().optional(),
     DISABLE_EMAIL_AUTHENTICATION: z.boolean().optional().default(false),
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.union([z.string(), z.number()]).optional(),
+    SMTP_SECURE: z.string().optional(),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
     MAIL_TRANSPORT: z
-      .enum(['mailpit', 'mailgun'])
+      .enum(['mailpit', 'mailgun', 'smtp'])
       .optional()
       .default('mailpit'),
 
