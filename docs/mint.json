@@ -113,64 +113,44 @@
       ]
     },
     {
-      "group": "HTTP API",
+      "group": "Integration & Deployment",
       "pages": [
-        "guides/api/api-access",
-        "guides/api/streaming-events",
-        "guides/api/webhooks"
-      ]
-    },
-    {
-      "group": "Integrations",
-      "pages": [
-        "guides/sdk/typescript",
-        "guides/sdk/python",
+        "guides/integration/publishing-deployment",
         {
-          "group": "Telemetry",
+          "group": "Latitude SDK",
           "pages": [
-            "guides/sdk/telemetry/aleph-alpha",
-            "guides/sdk/telemetry/anthropic",
-            "guides/sdk/telemetry/aws-bedrock",
-            "guides/sdk/telemetry/aws-sagemaker",
-            "guides/sdk/telemetry/azure-openai",
-            "guides/sdk/telemetry/cohere",
-            "guides/sdk/telemetry/dspy",
-            "guides/sdk/telemetry/google-ai-platform",
-            "guides/sdk/telemetry/groq",
-            "guides/sdk/telemetry/haystack",
-            "guides/sdk/telemetry/langchain",
-            "guides/sdk/telemetry/litellm",
-            "guides/sdk/telemetry/llamaindex",
-            "guides/sdk/telemetry/mistralai",
-            "guides/sdk/telemetry/ollama",
-            "guides/sdk/telemetry/openai",
-            "guides/sdk/telemetry/replicate",
-            "guides/sdk/telemetry/together",
-            "guides/sdk/telemetry/transformers",
-            "guides/sdk/telemetry/vercel-ai-sdk",
-            "guides/sdk/telemetry/vertex-ai",
-            "guides/sdk/telemetry/watsonx"
+            "guides/sdk/typescript",
+            "guides/sdk/python"
           ]
         },
         {
-          "group": "Community",
+          "group": "HTTP API",
           "pages": [
-            "guides/sdk/rust"
+            "guides/api/reference",
+            "guides/api/api-access",
+            "guides/api/streaming-events",
+            "guides/api/webhooks"
+          ]
+        },
+        {
+          "group": "Other Integrations",
+          "pages": [
+            "guides/integration/mcp-integrations"
+          ]
+        },
+        {
+          "group": "Support",
+          "pages": [
+            "guides/integration/community-support"
           ]
         }
       ]
     },
     {
-      "group": "Cookbook",
+      "group": "Self-Hosting & Advanced Config",
       "pages": [
-        "guides/cookbook/overview"
-      ]
-    },
-    {
-      "group": "Self-hosting",
-      "pages": [
-        "guides/self-hosted/development",
-        "guides/self-hosted/production"
+        "guides/self-hosted/development-setup",
+        "guides/self-hosted/production-setup"
       ]
     },
     {
