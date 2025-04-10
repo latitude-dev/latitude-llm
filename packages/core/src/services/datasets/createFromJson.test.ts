@@ -79,6 +79,6 @@ describe('createDatasetFromJson', () => {
       hashAlgorithm: identityHashAlgorithm,
     })
     expect(result.error).toBeTruthy()
-    expect(result.error?.message).toBe('Invalid generated data')
+    expect(result.error?.message).toBe('Invalid generated data: { invalid json } is not valid JSON')
   })
 })
