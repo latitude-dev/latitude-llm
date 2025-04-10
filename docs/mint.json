@@ -84,7 +84,7 @@
       ]
     },
     {
-      "group": "Evaluations & Prompt Improvement",
+      "group": "Evaluations",
       "pages": [
         "guides/evaluations/overview",
         "guides/evaluations/llm_as_judge_evaluations",
@@ -94,13 +94,6 @@
         "guides/evaluations/running-evaluations",
         "guides/evaluations/prompt-suggestions",
         "guides/evaluations/integrating-evaluations-workflow"
-      ]
-    },
-    {
-      "group": "Logs",
-      "pages": [
-        "guides/logs/overview",
-        "guides/logs/upload-logs"
       ]
     },
     {
@@ -147,7 +140,7 @@
       ]
     },
     {
-      "group": "Self-Hosting & Advanced Config",
+      "group": "Self-Hosting",
       "pages": [
         "guides/self-hosted/development-setup",
         "guides/self-hosted/production-setup"
