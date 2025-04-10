@@ -16,7 +16,9 @@ export function ChartBlankSlate({ children, className }: Props) {
         className,
       )}
     >
-      <Text.H6 color='foregroundMuted' centered>{children}</Text.H6>
+      <Text.H6 color='foregroundMuted' centered>
+        {children}
+      </Text.H6>
     </div>
   )
 }

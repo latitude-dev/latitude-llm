@@ -7,9 +7,9 @@ import { buildProvidersMap } from '@latitude-data/core/services/providerApiKeys/
 import { createStreamableValue } from 'ai/rsc'
 import { z } from 'zod'
 
-import { authProcedure } from '../procedures'
-import { EvaluationsRepository } from '@latitude-data/core/repositories'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { EvaluationsRepository } from '@latitude-data/core/repositories'
+import { authProcedure } from '../procedures'
 
 export const runEvaluationPromptAction = authProcedure
   .createServerAction()
@@ -42,7 +42,7 @@ export const runEvaluationPromptAction = authProcedure
         providersMap: await buildProvidersMap({
           workspaceId: ctx.workspace.id,
         }),
-        promptSource: evaluationResult.unwrap(),
+        promptSource: { ...evaluationResult.unwrap(), version: 'v1' as const },
       }).then((r) => r.unwrap())
 
       pipeToStream(run.stream, stream)
