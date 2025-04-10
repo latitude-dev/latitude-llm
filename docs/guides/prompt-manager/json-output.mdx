@@ -1,59 +1,71 @@
 ---
-title: JSON Output
-description: Learn how to specify and enforce JSON output structure in your prompts.
+title: Enforcing JSON Output
+description: Define JSON schemas to ensure structured and validated responses from AI models.
 ---
 
-## Overview
-Latitude's prompt editor allows you to define the expected JSON structure for your prompt's output directly in the frontmatter. This feature ensures that the AI model returns responses in a consistent, structured format that can be easily parsed and used in your applications.
+Latitude allows you to enforce structured JSON output from AI models by defining a JSON schema directly in the prompt's configuration (frontmatter). This ensures responses are consistent, automatically validated, and easy to integrate into your applications.
 
-## Specifying JSON Output
-To specify the JSON output structure, use the output property in the frontmatter of your prompt. This property defines the structure and types of the expected output.
+## Specifying the Schema
 
-## Basic Syntax
-Here's the basic structure for specifying JSON output in the frontmatter:
-```
-provider: <provider_name>
-model: <model_name>
-schema:
-    type: object
-    properties:
-        <property_name>:
-            type: <property_type>
-        required:
-            <required_property_name>
-```
-Example
-Here's an example of how you might specify a JSON output for a sentiment analysis prompt:
-```
+Use the `schema` key within the prompt's configuration block (`---`). Define the expected JSON structure using standard [JSON Schema](https://json-schema.org/) syntax.
+
+```yaml
 ---
 provider: openai
-model: gpt-4
+model: gpt-4o
 schema:
-    type: object
-    properties:
-        sentiment:
-            type: string
-            enum: [positive, negative, neutral]
-        confidence:
-            type: number
-            minimum: 0
-            maximum: 1
-        explanation:
-            type: string
-        required:
-            sentiment
-            confidence
+  type: object
+  properties:
+    sentiment:
+      type: string
+      description: The sentiment of the input text.
+      enum: [positive, negative, neutral]
+    confidence:
+      type: number
+      description: The confidence score (0.0 to 1.0).
+      minimum: 0
+      maximum: 1
+    explanation:
+      type: string
+      description: A brief explanation for the sentiment classification.
+  required:
+    - sentiment
+    - confidence
 ---
+<system>
+Analyze the sentiment of the following text and provide your analysis in JSON format according to the defined schema.
+</system>
+
+<user>
+{{ user_text }}
+</user>
 ```
-In this example, we're expecting the AI to return a JSON object with three properties:
-- sentiment: a string that must be either "positive", "negative", or "neutral"
-- confidence: a number between 0 and 1
-- explanation: a string (optional)
 
-The sentiment and confidence fields are required in the output.
+In this example:
 
-## Benefits of Using JSON Output
-- **Consistency**: Ensures that the AI model always returns data in the expected format.
-- **Validation**: Latitude can automatically validate the AI's response against the specified structure.
-- **Ease of Integration**: Structured JSON output is easier to integrate into your applications and workflows.
-- **Clear Expectations**: Helps guide the AI model to provide responses in the desired format.
+- We expect a JSON object (`type: object`).
+- It must have `properties`: `sentiment`, `confidence`, and `explanation`.
+- `sentiment` must be one of the strings in the `enum` list.
+- `confidence` must be a `number` between 0 and 1.
+- `explanation` is an optional `string`.
+- `sentiment` and `confidence` are mandatory (`required` list).
+
+## How it Works
+
+When a `schema` is defined:
+
+1.  **Provider Integration**: Latitude communicates the schema to the AI provider (if the provider supports JSON mode or function calling with schemas, like recent OpenAI, Anthropic, and Google models).
+2.  **Model Guidance**: The model is instructed to generate output strictly adhering to the provided schema.
+
+## Benefits
+
+- **Reliability**: Guarantees consistent data structures from the AI.
+- **Ease of Use**: Simplifies parsing and using AI responses in downstream code.
+- **Reduced Errors**: Catches formatting issues automatically.
+- **Clear Intent**: Explicitly tells the model the desired output format.
+
+## Next Steps
+
+- Configure other [Prompt Settings](/guides/prompt-manager/configuration)
+- Learn about using [Tools](/guides/prompt-manager/tools) for more complex interactions.
+- Test your JSON-output prompts in the [Playground](/guides/prompt-manager/playground)

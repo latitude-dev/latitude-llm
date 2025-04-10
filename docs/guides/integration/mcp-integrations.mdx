@@ -1,0 +1,58 @@
+---
+title: Third-Party Integrations
+description: Connect Latitude to other tools and services using Model Coordination Protocol (MCP) servers.
+---
+
+# Third-Party Integrations
+
+Latitude supports extending its capabilities by integrating with external tools and services through servers implementing the **Model Coordination Protocol (MCP)**. This allows you to connect Latitude prompts to systems like Slack, Notion, databases, or custom internal tools.
+
+## What is MCP?
+
+MCP (Model Coordination Protocol) is a standardized way for AI platforms like Latitude to interact with external tools or "skills". An MCP server acts as a bridge:
+
+1.  **Latitude Request**: When a Latitude prompt (often an [Agent](/guides/prompt-manager/agents)) needs to use an external tool, it sends a request to the configured MCP server.
+2.  **MCP Server Action**: The MCP server receives the request, understands which tool is being called and with which arguments, and executes the corresponding action in the third-party system (e.g., sending a Slack message, querying a database, creating a Notion page).
+3.  **MCP Server Response**: The MCP server sends the result of the action back to Latitude.
+4.  **Latitude Continues**: Latitude receives the result and continues the prompt execution (e.g., the agent uses the information retrieved from the database).
+
+## Setting Up an MCP Integration
+
+The exact setup process depends on the specific MCP server you want to integrate.
+
+### Option 1: Using Pre-built MCP Servers
+
+Several open-source or third-party MCP servers might exist for common tools (check community resources or the specific tool's integrations).
+
+1.  **Deploy the MCP Server**: Follow the server's instructions to deploy it (e.g., as a container, serverless function).
+2.  **Configure in Latitude**: In your Latitude project settings (or potentially self-hosted configuration), add the MCP server's URL and any required authentication details.
+3.  **Enable Tools in Prompts**: In your Latitude prompts, [enable the specific tools](/guides/prompt-manager/tools) provided by that MCP server in the `tools` configuration block.
+
+### Option 2: Building a Custom MCP Server
+
+If you need to connect to a custom internal tool or a service without a pre-built MCP server, you can build your own.
+
+1.  **Choose a Framework**: Use any web server framework (e.g., Node.js/Express, Python/Flask, Go/Gin).
+2.  **Implement MCP Endpoints**: Implement the required HTTP endpoints specified by the MCP protocol standard (details typically found in Latitude's advanced/developer documentation or community resources).
+    - Handle incoming tool call requests from Latitude.
+    - Parse tool names and arguments.
+    - Interact with your target third-party service/API.
+    - Format and return the results according to the MCP specification.
+3.  **Deploy and Configure**: Deploy your custom server and configure it in Latitude as described in Option 1.
+
+## Example Use Cases
+
+- **Slack Integration**: An agent uses an MCP tool to send notifications or summaries to a Slack channel.
+- **Notion Integration**: A prompt uses an MCP tool to create new pages or query databases within Notion.
+- **Database Query**: An agent retrieves customer information from your internal database via a custom MCP server tool.
+- **Calendar Management**: A prompt schedules meetings using an MCP tool connected to Google Calendar.
+
+## Self-Hosting MCP Integrations
+
+If you are [self-hosting Latitude](/guides/self-hosted/overview), you will also need to deploy and manage any required MCP servers within your own infrastructure and configure Latitude to communicate with them.
+
+## Next Steps
+
+- Explore available [Community Integrations](/guides/sdk/community)
+- Learn how prompts use [Tools](/guides/prompt-manager/tools)
+- Refer to specific MCP server documentation for detailed setup instructions.

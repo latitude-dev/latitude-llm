@@ -1,33 +1,44 @@
 ---
 title: Prompt Suggestions
-description: 'Learn how to take advantage of automatically generated suggestions to improve your prompts based on evaluation results.'
+description: Use automatically generated suggestions based on evaluation results to improve your prompts.
 ---
 
-## What are Prompt Suggestions?
+Latitude's Prompt Suggestions feature (known as the Refiner) analyzes your evaluation results to automatically recommend improvements for your prompts. It acts like an AI assistant helping you iterate faster and achieve better performance.
 
-Prompt Suggestions are automatically generated recommendations to improve your prompt based on your latest evaluation results. They help you identify areas where your prompt can be enhanced to achieve better outcomes.
+## How Suggestions Are Generated
 
-Whenever you run a prompt, from the playground, the API or a dataset, that has an evaluation connected, you'll see suggestions appear next to the Refiner button in the prompt editor.
+1.  **Data Collection**: The system gathers results from your completed evaluations ([LLM-as-Judge](/guides/evaluations/llm_as_judge_evaluations), [Programmatic Rules](/guides/evaluations/programmatic_rules), and [Manual Evaluations](/guides/evaluations/manual_evaluations)). Both batch and live evaluation results are considered.
+2.  **Pattern Analysis**: Latitude analyzes these results, looking for correlations between prompt inputs, outputs, and evaluation scores. It identifies patterns where certain inputs lead to lower scores or specific failure modes.
+3.  **Suggestion Generation**: Based on these patterns, an AI model generates concrete suggestions for modifying your prompt. These suggestions might involve:
+    - Rewording instructions for clarity.
+    - Adding context or constraints.
+    - Providing better examples (few-shot learning).
+    - Adjusting prompt structure.
+    - Modifying [configuration parameters](/guides/prompt-manager/configuration).
+4.  **Prioritization**: Suggestions are often prioritized based on the potential impact on evaluation scores.
 
-Latitude analyzes the latest evaluation results to identify patterns and potential improvements. Based on this analysis, we generate specific suggestions that can help you:
+<Note>
+  Suggestions become more insightful as more evaluation data is collected. Aim
+  for at least 20-30 evaluated logs for meaningful analysis, though more data is
+  generally better.
+</Note>
 
-- Improve response quality
-- Address common failure points
-- Enhance clarity and effectiveness
-- Optimize for specific metrics
-- Fix identified issues
+## Viewing and Applying Suggestions
 
-![Suggestions](/assets/prompt_suggestions.png)
+1.  **Navigate to the Prompt**: Open the prompt you want to improve in the editor.
+2.  **Check for Suggestions**: If suggestions are available, a "Suggestions" button/indicator will appear at the bottom of the prompt editor.
+    ![Suggestions Indicator](/assets/prompt_suggestions_indicator.png)
+3.  **Review Suggestions**: Clicking the button opens a panel displaying the generated suggestions. Each suggestion includes:
+    - The reasoning based on evaluation data (e.g., "Outputs often failed the 'Conciseness' evaluation for long inputs").
+    - Clicking the "View" button will display a diff of the proposed changes to the current prompt.
+      ![Suggestions View](/assets/prompt_suggestions_view.png)
+4.  **Apply or Dismiss**: For each suggestion, you can:
+    - **Apply**: Automatically applies the suggested change to your current prompt draft.
+    - **Dismiss**: Ignores the suggestion.
+      ![Suggestions Diff](/assets/prompt_suggestions_diff.png)
 
-## Getting Started
+## Next Steps
 
-To start using prompt suggestions:
-
-1. Create evaluations for your prompt
-2. Run evaluations in batch mode or enable live evaluation
-3. Collect enough evaluation results for meaningful analysis
-4. Check the suggestions tab for improvement recommendations
-5. Implement the most relevant suggestions
-6. Run evaluations again to measure improvement
-
-Remember that suggestions are most effective when you have a good amount of evaluation data to work with. We recommend running evaluations on at least 20-30 responses before checking for suggestions.
+- Ensure you have robust [Evaluations](/guides/evaluations/overview) set up.
+- Regularly [Run Evaluations](/guides/evaluations/running-evaluations) to feed the Refiner.
+- Learn about preparing data with [Datasets](/guides/datasets/overview).

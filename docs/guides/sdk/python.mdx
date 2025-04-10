@@ -1,35 +1,25 @@
 ---
-title: Python
-description: Integrate Latitude's SDK into your Python project
+title: Python SDK
+description: Integrate Latitude into your Python applications using the Python SDK.
 ---
 
-Latitude's Python integration has the following main features:
+# Python SDK
 
-- Automatic tracing of LLM calls
-- Interact with Latitude's prompt manager from code: create, update and delete prompts
-- Render Latitude prompts locally and run them against your LLM providers
-- Run prompts with Latitude's high-performing gateway
-- Trigger LLM as judge and human in the loop evaluations
-- Programmatically push external logs to Latitude for evaluation and monitoring
+The Latitude Python SDK allows you to easily interact with the Latitude platform from your Python applications.
 
 ## Installation
 
-To install the Latitude SDK, use your preferred package manager:
-
 ```bash
 pip install latitude-sdk
-# or
-poetry add latitude-sdk
-# or
-uv add latitude-sdk
 ```
 
-## Getting Started
+## Authentication and Initialization
 
-First, import the Latitude class from the SDK and initialize it with your API key:
+Import the client and initialize it with your API key. Obtain keys from your Latitude project settings under "API Access".
 
 ```python
-from latitude_sdk import Latitude, LatitudeOptions
+import os
+from latitude import LatitudeClient
 
 sdk = Latitude('your-api-key-here', LatitudeOptions(
     project_id=12345, # Optional, otherwise you have to provide it in each method
@@ -86,155 +76,146 @@ response = openai.chat.completions.create(
 )
 ```
 
-You can also execute [chains](/promptl/advanced/chains) by providing an `on_step` callback to the
-`render_chain` method, which will be called for each step of the chain to generate
-the corresponding response:
+Always use environment variables or secure secrets management for your API key.
+
+## Programmatically Managing Prompts
+
+Interact with your prompts directly from Python.
+
+### Create a Prompt
 
 ```python
-from typing import Any, Dict, List, Sequence, Union
-from latitude_sdk import RenderChainOptions
-from promptl_ai import Adapter, MessageLike
-
-async def on_step(messages: List[MessageLike], config: Dict[str, Any]) -> Union[str, MessageLike, Sequence[MessageLike]]:
-    ...
-    return "Assistant message"
-
-result = await sdk.prompts.render_chain(prompt, on_step, RenderChainOptions(
-    parameters={
-        # Any parameters your prompt expects
-    },
-    adapter=Adapter.OpenAI, # Optional, by default is OpenAI
-))
+def create_new_prompt():
+    try:
+        new_prompt = latitude.prompts.create(
+            name="Support Ticket Classifier",
+            content="""
+            ---
+            provider: openai
+            model: gpt-4o-mini
+            schema:
+              type: object
+              properties:
+                category:
+                  type: string
+                  enum: [Billing, Technical, Feature Request, Other]
+              required: [category]
+            ---
+            <system>Classify the following support ticket into one of the predefined categories.</system>
+            <user>Ticket Text: {{ticket_text}}</user>
+            """,
+            # project_id="your_project_id" # Optional
+        )
+        print(f"Created Prompt: {new_prompt.id}")
+        return new_prompt
+    except Exception as e:
+        print(f"Error creating prompt: {e}")
 ```
 
-<Note>
-  `render` and `render_chain` only work with the latest version of Latitude's
-  open source prompt syntax: [PromptL](https://promptl.ai/)
-</Note>
-
-### Run a prompt through Latitude Gateway
-
-Latitude's Gateway is a high-performing gateway that proxies your LLM calls
-between your application and the LLM provider. It includes some additional
-features like automatic prompt caching based on content and prompt
-configuration.
-
-In order to run a prompt through Latitude's Gateway, use the `run` method:
+### Get a Prompt
 
 ```python
-from latitude_sdk import RunPromptOptions
-
-await sdk.prompts.run('path/to/your/prompt', RunPromptOptions(
-    project_id=12345, # Optional if you provided it in the constructor
-    version_uuid='optional-version-uuid', # Optional, by default it targets the latest live version
-    stream=False, # Optional, by default it's false
-    parameters={
-        # Any parameters your prompt expects
-    },
-    tools={
-        # Any tools your prompt expects
-    },
-    on_event=lambda event: print(event), # Handle events during execution
-    on_finished=lambda result: print(result), # Handle the final result
-    on_error=lambda error: print(error), # Handle any errors
-))
+def get_prompt(prompt_id):
+    try:
+        prompt = latitude.prompts.get(prompt_id)
+        print(f"Fetched Prompt: {prompt.name}")
+        return prompt
+    except Exception as e:
+        print(f"Error fetching prompt {prompt_id}: {e}")
 ```
 
-#### Running a prompt with tools
-
-When you run a prompt with tools, you can define and supply the corresponding
-tool handlers to the Latitude SDK. These handlers will be called automatically
-when the LLM invokes the tools. The tool results will be returned to the LLM,
-and the conversation will continue.
+### List Prompts
 
 ```python
-from latitude_sdk import OnToolCallDetails
-
-async def get_coordinates(arguments: Dict[str, Any], details: OnToolCallDetails) -> int:
-    # Arguments from the LLM. You could use a Pydantic model to validate the arguments and to have type hinting
-    location = arguments["location"]
-    ...
-    # The result can be anything JSON serializable
-    return 12345
-
-async def get_weather(arguments: Dict[str, Any], details: OnToolCallDetails) -> Dict[str, Any]:
-    ...
-    # The result can be anything JSON serializable
-    return {"weather": "sunny"}
-
-await sdk.prompts.run('path/to/your/prompt', RunPromptOptions(
-    ...
-    tools={
-        "get_coordinates": get_coordinates,
-        "get_weather": get_weather,
-    },
-    ...
-))
+def list_all_prompts():
+    try:
+        prompts = latitude.prompts.list()
+        print("Prompts:", [(p.id, p.name) for p in prompts])
+        return prompts
+    except Exception as e:
+        print(f"Error listing prompts: {e}")
 ```
 
-<Note>
-  Any exception raised in the tool handler will be caught and sent to the LLM as
-  a tool result error.
-</Note>
+## Running Prompts and Handling Responses
 
-#### Pausing tool execution
+Execute published prompts via the AI Gateway using their ID.
 
-If you need to pause the execution of the tools, you can do so by returning
-`details.pause_execution()` in the tool handler. You can resume the
-conversation later by returning the tool results in the `sdk.prompts.chat`
-method.
+### Standard Run (Non-Streaming)
+
+Returns the full response after generation is complete.
 
 ```python
-from latitude_sdk import OnToolCallDetails
+def run_classifier_prompt(prompt_id):
+    try:
+        response = latitude.run(prompt_id,
+            parameters={
+                "ticket_text": "I can't log in to my account, the password reset link isn't working."
+            },
+            metadata={
+                "user_id": "user-pqr-456",
+                "source": "web-support-form"
+            }
+        )
 
-# OnToolCallDetails:
-# .id: Called tool id
-# .name: Called tool name, `get_weather` in this case
-# .pause_execution: Signal to optionally pause the execution
-# .messages: List of conversation messages so far
-# .conversation_uuid: Conversation identifier, to be used in the `sdk.prompts.chat` method
-# .requested_tool_calls: All tool calls requested by the LLM, including this one
+        print("Classification Result:")
+        print(response.content) # Often a JSON string if schema is used
 
-async def get_weather(arguments: Dict[str, Any], details: OnToolCallDetails) -> Any:
-    # Let's imagine `get_weather` takes a long time to execute and you want to do it in the background.
-    # With `pause_execution`, you can pause the conversation, get the weather data, and resume the conversation
-    # later, by returning the tool results in the `sdk.prompts.chat` method.
-    # You may have to store `requested_tool_calls` and `conversation_uuid` on your side to resume the conversation.
-    # Note that, you must return all results from the requested tools, in the `sdk.prompts.chat` method, at once.
-    return details.pause_execution()
+        # Access response metadata
+        if response.metadata:
+            print(f"Trace ID: {response.metadata.trace_id}")
+            print(f"Log ID: {response.metadata.log_id}")
 
-await sdk.prompts.run('path/to/your/prompt', RunPromptOptions(
-    ...
-    tools={
-        "get_coordinates": get_coordinates,
-        "get_weather": get_weather,
-    },
-    ...
-))
+        return response
+    except Exception as e:
+        print(f"Error running prompt: {e}")
 ```
 
-## Log Management
+### Handling Streaming Responses
 
-### Pushing a log to Latitude
-
-To create a log programmatically, use the `create` method:
+Process response chunks in real-time.
 
 ```python
-from latitude_sdk import CreateLogOptions, UserMessage
+def run_streaming_prompt(prompt_id):
+    try:
+        stream = latitude.run(prompt_id,
+            parameters={
+                "ticket_text": "How do I upgrade my subscription?"
+            },
+            stream=True, # Enable streaming
+            metadata={"user_id": "user-stu-789"}
+        )
 
-messages = [
-    UserMessage(content='Please tell me a joke about doctors'),
-]
+        print("Streaming Response:")
+        full_content = ""
+        for chunk in stream:
+            # Process text chunks
+            if chunk.type == 'text-delta' and chunk.content:
+                print(chunk.content, end="", flush=True)
+                full_content += chunk.content
+            # Handle other event types
+            if chunk.type == 'response':
+                print(f"\n--- Stream Finished --- ")
+                if chunk.metadata:
+                    print(f"Final Metadata (Trace ID): {chunk.metadata.trace_id}")
+            # Add handling for chunk.type == 'tool-call', 'error', etc.
+            # See Streaming Events guide for details: /guides/api/streaming-events
 
-await sdk.logs.create('path/to/your/prompt', messages, CreateLogOptions(
-    project_id=12345, # Optional, if you did not provide it in the constructor
-    version_uuid='optional-version-uuid', # Optional, by default it targets the latest live version
-    response='assistant response',
-))
+        # full_content holds the complete text
+    except Exception as e:
+        print(f"Error running streaming prompt: {e}")
+
 ```
 
-<Note>
-  Logs follow the [PromptL format](/promptl/getting-started/introduction). If
-  you're using a different method to run your prompts, you'll need to format
-  your logs accordingly.
-</Note>
+See the [Streaming Events](/guides/api/streaming-events) documentation for details on all event types.
+
+## Logging and Telemetry Features
+
+- **Automatic Logging**: Calls via `latitude.run()` are logged automatically, capturing inputs, outputs, metadata, performance, and traces.
+- **Custom Metadata**: Include application context (e.g., `user_id`, `session_id`) via the `metadata` argument in the `run` call to enrich logs.
+- **Trace IDs**: Link related events (LLM calls, tool calls) using the `trace_id` from the response metadata.
+
+## Further Information
+
+- [HTTP API Reference](/guides/api/reference)
+- [API Access and Authentication](/guides/api/api-access)
+- [Streaming Event Details](/guides/api/streaming-events)

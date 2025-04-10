@@ -1,182 +1,138 @@
 ---
-title: Tools
-description: Learn how to define tools in your prompts.
+title: Extending Prompts with Tools
+description: Enable AI models to interact with external functions and data sources using tools.
 ---
 
-## Overview
-
-Latitude's prompt editor allows you to define **tools** in your prompts. Tools are function calls made available to the AI model during the conversation, enabling it to perform tasks beyond its built-in capabilities.
+Tools allow you to give AI models access to external functions or data sources, enabling them to perform actions beyond simple text generation. You can define custom tools or use Latitude's built-in tools.
 
 <Warning>
-  Tools may not be available for all providers or models. Check the documentation of your provider to see if tools are supported.
+  Tool support depends on the specific AI provider and model. Check your
+  provider's documentation for compatibility.
 </Warning>
 
----
+## Enabling Tools in a Prompt
 
-## Available Tools
-
-In Latitude, you can specify a list of available tools to the AI model, which will be able to request its executions in order to accomplish a task. Although you can define your own custom tools, Latitude provides a set of built-in tools that can be used in your prompts.
-
-Currently, only Latitude Tools are supported. The following tools are available:
-- `latitude/code`
-- `latitude/search`
-- `latitude/extract`
-
-Take a look at the [Latitude Tools Section](/guides/prompt-manager/latitude-tools) for more information on how to use them.
-
----
-
-## Defining Custom Tools
-
-You can define custom tools as a list of functions. These functions will not run in Latitude, but instead will be requested to your client through the SDK when the AI model calls them.
-
-Each tool must include:
-- A `name`
-- A `description`
-- An optional list of `parameters`
+To make tools available to your prompt, list them under the `tools` key in the prompt's configuration block (`---`).
 
 ```yaml
 ---
-provider: <your-provider-name>
-model: <your-model>
-tools:
-  - <tool-name>:
-      description: <tool-description>
-      parameters:
-        type: object
-        properties:
-          <parameter-name>:
-            type: <parameter-type>
-            description: <parameter-description>
-        required: [<required-parameter-name>]
-        additionalProperties: false
----
-```
-
-When adding parameters to a tool, they must be defined using a [JSON object schema](#object), specifying the structure, type, and constraints.
-
-Once defined, the AI may respond with a tool call request. To handle these requests, refer to the Latitude SDK guide [here](/guides/sdk/javascript-typescript-sdk).
-
----
-
-## JSON Schema
-
-A JSON schema defines the structure and constraints for tool parameters. It ensures the AI knows what inputs are expected and validates them accordingly.
-
-For more details, refer to the official [JSON Schema documentation](https://tour.json-schema.org/).
-
-### General Guidelines:
-- **Required Properties**: `type` (mandatory), `description` (optional but recommended).
-- **Flexibility**: Additional properties like `minLength`, `enum`, or `pattern` can be added depending on the parameter type.
-
-### Object
-
-An object is a collection of key-value pairs. It is defined with `type: object` and can include:
-
-- **`properties`**: Specifies the expected key-value pairs.
-- **`required`**: Lists required properties.
-- **`additionalProperties`**: Determines if extra properties are allowed (default: `true`).
-
-Example:
-```yaml
-type: object
-properties:
-  name:
-    type: string
-    description: The user’s name.
-  age:
-    type: integer
-    description: The user’s age.
-required: [name]
-additionalProperties: false
-```
-
-### String
-
-A string is a sequence of characters. Optional properties include:
-
-- **`enum`**: Predefined list of acceptable text values.
-- **`minLength`/`maxLength`**: Minimum/maximum string length.
-- **`pattern`**: Regular expression for string validation.
-
-Example:
-```yaml
-type: string
-enum: [red, green, blue]
-```
-
-### Number
-
-A number can include:
-
-- **`enum`**: Predefined list of acceptable numeric values.
-- **`minimum`/`maximum`**: Value constraints.
-
-To define integers, use `type: integer`.
-
-Example:
-```yaml
-type: integer
-minimum: 0
-maximum: 100
-```
-
-### Boolean
-
-A boolean is a true/false value.
-
-Example:
-```yaml
-type: boolean
-```
-
-### Array
-
-An array is a list of values. Properties include:
-
-- **`items`**: Schema for array elements.
-- **`minItems`/`maxItems`**: Minimum/maximum number of elements.
-
-Example:
-```yaml
-type: array
-items:
-  type: string
-minItems: 1
-maxItems: 3
-```
-
----
-
-## Example
-
-Here's an example of how you might define a tool to get the current weather for a specified location:
-
-```md
----
-provider: OpenAI
+provider: openai
 model: gpt-4o
 tools:
-  - get_weather:
-      description: Get the current weather for a specified location.
-      parameters:
-        type: object
-        properties:
-          location:
-            type: string
-            description: The name of the location to get the weather for.
-        required: [location]
-        additionalProperties: false
+  - latitude/search # Use a built-in Latitude tool
+  - get_weather # Use a custom tool defined below
+
+# Custom tool definition (see below)
+get_weather:
+  description: Get the current weather for a specified location.
+  parameters: # JSON Schema for parameters
+    type: object
+    properties:
+      location:
+        type: string
+        description: The city and state, e.g., San Francisco, CA
+    required: [location]
 ---
-
-You're a weather bot! Respond to any user's request
-about the weather in a specific location.
-
 <user>
-  What's the weather in {{ location }}?
+What's the weather like in {{ location }}?
 </user>
 ```
 
-## Handling Tool Calls
+## Built-in Latitude Tools
 
-To handle the tool call response using the Latitude SDK, refer to the [Latitude SDK Guide](/guides/sdk/javascript-typescript-sdk) for implementation details.
+Latitude provides several powerful built-in tools that you can enable directly:
+
+- `latitude/search`: Performs web searches to find up-to-date information.
+- `latitude/code`: Executes code snippets.
+- `latitude/extract`: Extracts structured data from text.
+
+Simply include their names (e.g., `latitude/search`) in the `tools` list.
+
+[Learn more about using Latitude Tools](/guides/prompt-manager/latitude-tools).
+
+## Defining Custom Tools
+
+For capabilities beyond the built-in tools, you can define your own custom tools. When the model decides to use a custom tool, Latitude will request its execution from your application via the SDK.
+
+Define custom tools directly within the configuration block, outside the main `tools` list:
+
+```yaml
+---
+provider: openai
+model: gpt-4o
+tools:
+  - get_stock_price # Enable the custom tool
+
+# Define the custom tool
+get_stock_price:
+  description: Retrieves the current stock price for a given ticker symbol.
+  parameters:
+    type: object
+    properties:
+      ticker_symbol:
+        type: string
+        description: The stock ticker symbol (e.g., AAPL, GOOGL).
+    required: [ticker_symbol]
+---
+<user>
+What is the current price of {{ ticker }} stock?
+</user>
+```
+
+Each custom tool definition requires:
+
+- **`description`**: A clear explanation for the AI model of what the tool does.
+- **`parameters`**: A [JSON Schema](#json-schema-for-parameters) defining the expected input arguments for the tool.
+
+### Handling Custom Tool Calls
+
+When the AI model decides to use `get_stock_price`, the Latitude SDK in your application will receive a tool call request. Your code needs to:
+
+1.  Execute the actual logic (e.g., call a financial API).
+2.  Return the result back to Latitude.
+
+Refer to the SDK documentation ([TypeScript](/guides/sdk/typescript), [Python](/guides/sdk/python)) for details on handling tool calls.
+
+## JSON Schema for Parameters
+
+Tool parameters **must** be defined using JSON Schema to specify their structure, types, and requirements. This helps the model understand how to call the tool correctly.
+
+Key schema components:
+
+- `type`: `object`, `string`, `number`, `integer`, `boolean`, `array`.
+- `description`: Essential for explaining parameters to the model.
+- `properties` (for `object` type): Defines nested parameters.
+- `required` (for `object` type): Lists mandatory properties.
+- `enum` (for `string`, `number`): Specifies allowed values.
+- `items` (for `array` type): Defines the schema for array elements.
+
+See the [official JSON Schema guide](https://json-schema.org/learn/getting-started-step-by-step) for more details.
+
+**Example (Object with multiple parameters):**
+
+```yaml
+add_calendar_event:
+  description: Adds an event to the user's calendar.
+  parameters:
+    type: object
+    properties:
+      title:
+        type: string
+        description: The title of the event.
+      date:
+        type: string
+        description: The date of the event (YYYY-MM-DD).
+      time:
+        type: string
+        description: The time of the event (HH:MM).
+      duration_minutes:
+        type: integer
+        description: Duration of the event in minutes.
+    required: [title, date, time]
+```
+
+## Next Steps
+
+- Explore [Latitude's Built-in Tools](/guides/prompt-manager/latitude-tools) in more detail.
+- Learn how to build powerful [Agents](/guides/prompt-manager/agents) that leverage tools.
+- Test tool interactions in the [Playground](/guides/prompt-manager/playground#testing-tool-responses).

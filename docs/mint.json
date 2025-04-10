@@ -48,8 +48,13 @@
       "group": "Getting started",
       "pages": [
         "guides/getting-started/introduction",
-        "guides/getting-started/concepts",
-        "guides/getting-started/quick-start",
+        {
+          "group": "Onboarding Paths",
+          "pages": [
+            "guides/getting-started/quick-start-pm"
+          ]
+        },
+        "guides/getting-started/core-concepts",
         {
           "group": "Providers",
           "pages": [
@@ -63,7 +68,7 @@
       ]
     },
     {
-      "group": "Prompt Manager",
+      "group": "Prompt Development Guide",
       "pages": [
         "guides/prompt-manager/overview",
         "guides/prompt-manager/configuration",
@@ -73,91 +78,68 @@
         "guides/prompt-manager/tools",
         "guides/prompt-manager/latitude-tools",
         "guides/prompt-manager/agents",
-        {
-          "group": "Custom Rules",
-          "pages": [
-            "guides/prompt-manager/custom-rules",
-            "guides/prompt-manager/provider-rules/openai",
-            "guides/prompt-manager/provider-rules/anthropic",
-            "guides/prompt-manager/provider-rules/google",
-            "guides/prompt-manager/provider-rules/vertex"
-          ]
-        },
-        "guides/prompt-manager/cache",
-        "guides/prompt-manager/migrate-to-promptl"
+        "guides/prompt-manager/prompt-best-practices"
       ]
     },
     {
       "group": "Evaluations",
       "pages": [
         "guides/evaluations/overview",
-        {
-          "group": "LLM as Judge",
-          "pages": [
-            "guides/evaluations/llm_as_judge_evaluations",
-            "guides/evaluations/evaluation-templates",
-            {
-              "group": "Custom Evaluations",
-              "pages": [
-                "guides/evaluations/custom-evaluations",
-                "guides/evaluations/numeric-evals",
-                "guides/evaluations/text-evals",
-                "guides/evaluations/boolean-evals"
-              ]
-            }
-          ]
-        },
+        "guides/evaluations/llm_as_judge_evaluations",
+        "guides/evaluations/evaluation-templates",
         "guides/evaluations/programmatic_rules",
         "guides/evaluations/manual_evaluations",
         "guides/evaluations/running-evaluations",
-        "guides/evaluations/prompt-suggestions"
+        "guides/evaluations/prompt-suggestions",
+        "guides/evaluations/integrating-evaluations-workflow"
       ]
     },
     {
-      "group": "Logs",
+      "group": "Data Management with Datasets",
       "pages": [
-        "guides/logs/overview",
-        "guides/logs/upload-logs"
+        "guides/datasets/overview",
+        "guides/datasets/golden-datasets"
       ]
     },
     {
-      "group": "Datasets",
+      "group": "Integration & Deployment",
       "pages": [
-        "guides/datasets/overview"
-      ]
-    },
-    {
-      "group": "HTTP API",
-      "pages": [
-        "guides/api/api-access",
-        "guides/api/streaming-events",
-        "guides/api/webhooks"
-      ]
-    },
-    {
-      "group": "Integrations",
-      "pages": [
-        "guides/sdk/typescript",
-        "guides/sdk/python",
+        "guides/integration/publishing-deployment",
         {
-          "group": "Community",
+          "group": "Latitude SDK",
           "pages": [
-            "guides/sdk/rust"
+            "guides/sdk/typescript",
+            "guides/sdk/python"
+          ]
+        },
+        {
+          "group": "HTTP API",
+          "pages": [
+            "guides/api/reference",
+            "guides/api/api-access",
+            "guides/api/streaming-events",
+            "guides/api/webhooks"
+          ]
+        },
+        {
+          "group": "Other Integrations",
+          "pages": [
+            "guides/integration/mcp-integrations"
+          ]
+        },
+        {
+          "group": "Support",
+          "pages": [
+            "guides/integration/community-support"
           ]
         }
       ]
     },
     {
-      "group": "Cookbook",
+      "group": "Self-Hosting",
       "pages": [
-        "guides/cookbook/overview"
-      ]
-    },
-    {
-      "group": "Self-hosting",
-      "pages": [
-        "guides/self-hosted/development",
-        "guides/self-hosted/production"
+        "guides/self-hosted/development-setup",
+        "guides/self-hosted/production-setup"
       ]
     },
     {
