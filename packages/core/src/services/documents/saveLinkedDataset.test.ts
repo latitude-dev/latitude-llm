@@ -35,9 +35,6 @@ describe('saveLinkedDataset', () => {
         path: 'doc1',
       })
       .then((r) => r.unwrap())
-  })
-
-  beforeAll(async () => {
     dataset = await factories
       .createDataset({
         name: 'Test Dataset',

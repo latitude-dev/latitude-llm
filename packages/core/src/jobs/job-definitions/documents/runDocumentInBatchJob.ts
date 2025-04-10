@@ -9,6 +9,7 @@ export type RunDocumentInBatchJobProps = {
   document: DocumentVersion
   dataset: Dataset
   workspace: Workspace
+  autoRespondToolCalls: boolean
   fromLine?: number
   toLine?: number
   parametersMap?: Record<string, number>
@@ -22,6 +23,7 @@ export const runDocumentInBatchJob = async (
     dataset,
     document,
     workspace,
+    autoRespondToolCalls,
     fromLine,
     toLine,
     parametersMap,
@@ -40,6 +42,7 @@ export const runDocumentInBatchJob = async (
       commitUuid: commit.uuid,
       projectId: commit.projectId,
       parameters: rows[i]!.parameters,
+      autoRespondToolCalls,
     })
   }
 }

@@ -70,6 +70,7 @@ export type RunBatchEvaluationJobParams = {
   document: DocumentVersion
   commitUuid: string
   projectId: number
+  autoRespondToolCalls: boolean
   fromLine?: number
   toLine?: number
   parametersMap?: Record<string, number>
@@ -92,26 +93,18 @@ export const runBatchEvaluationJob = async (
     toLine,
     parametersMap,
     batchId = randomUUID(),
+    autoRespondToolCalls,
   } = job.data
   const websockets = await WebsocketClient.getSocket()
   const commit = await new CommitsRepository(workspace.id)
     .getCommitByUuid({ projectId, uuid: commitUuid })
     .then((r) => r.unwrap())
 
-  if (
-    datasetLabel &&
-    'columns' in dataset &&
-    !dataset.columns.find((c) => c.name === datasetLabel)
-  ) {
-    throw new Error(`${datasetLabel} is not a valid dataset column`)
-  }
-
   if (evaluation.version === 'v2') {
-    if (!('columns' in dataset)) {
-      throw new Error('Cannot run a batch evaluation v2 without a dataset v2')
-    }
-
     const specification = getEvaluationMetricSpecification(evaluation)
+    if (datasetLabel && !dataset.columns.find((c) => c.name === datasetLabel)) {
+      throw new Error(`${datasetLabel} is not a valid dataset column`)
+    }
     if (!specification.supportsBatchEvaluation) {
       throw new Error('Evaluation does not support batch evaluation')
     }
@@ -128,6 +121,7 @@ export const runBatchEvaluationJob = async (
         evaluationUuid: evaluation.uuid,
         workspaceId: workspace.id,
         userEmail: user.email,
+        autoRespondToolCalls,
         version: 'v2',
       },
     })
@@ -138,6 +132,7 @@ export const runBatchEvaluationJob = async (
         evaluationId: evaluation.id,
         workspaceId: workspace.id,
         userEmail: user.email,
+        autoRespondToolCalls,
         version: 'v1',
       },
     })
@@ -211,6 +206,7 @@ export const runBatchEvaluationJob = async (
           : { evaluationId: evaluation.id }),
         version: evaluation.version,
         batchId,
+        autoRespondToolCalls,
       })
 
       progress = await progressTracker.getProgress()

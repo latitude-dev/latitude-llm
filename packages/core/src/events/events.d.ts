@@ -327,6 +327,7 @@ export type BatchEvaluationRunEvent = LatitudeEventGeneric<
   {
     workspaceId: number
     userEmail: string
+    autoRespondToolCalls: boolean
   } & (
     | {
         evaluationId: number
@@ -421,6 +422,7 @@ export type BatchEvaluationRunRequestedEvent = LatitudeEventGeneric<
   {
     workspaceId: number
     userEmail: string
+    autoRespondToolCalls: boolean
   } & (
     | {
         evaluationIds: number[]

@@ -13,6 +13,7 @@ export const runDocumentInBatchAction = withDataset
     z.object({
       fromLine: z.number().optional(),
       toLine: z.number().optional(),
+      autoRespondToolCalls: z.boolean(),
       parameters: z
         .record(z.number().optional())
         .optional()
@@ -44,6 +45,7 @@ export const runDocumentInBatchAction = withDataset
       parametersMap: input.parameters as Record<string, number>,
       fromLine: input.fromLine,
       toLine: input.toLine,
+      autoRespondToolCalls: input.autoRespondToolCalls,
     })
 
     return { success: true }

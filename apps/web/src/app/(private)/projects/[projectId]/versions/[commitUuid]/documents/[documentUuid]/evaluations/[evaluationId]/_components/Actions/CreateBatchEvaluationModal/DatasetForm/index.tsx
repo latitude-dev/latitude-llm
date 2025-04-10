@@ -103,6 +103,8 @@ export default function DatasetForm({
   onSelectDataset,
   errors,
   maxLineCount,
+  autoRespondToolCalls,
+  onAutoRespondToolCallsChange,
 }: {
   document: DocumentVersion
   evaluation?: EvaluationTmp
@@ -125,6 +127,8 @@ export default function DatasetForm({
   onToggleAllLines: (checked: boolean) => void
   errors: Record<string, string[] | undefined> | undefined
   maxLineCount: number | undefined
+  autoRespondToolCalls: boolean
+  onAutoRespondToolCallsChange: (checked: boolean) => void
 }) {
   const filteredHeaders = useMemo(
     () => headers.filter((h) => h.value !== ''),
@@ -231,6 +235,13 @@ export default function DatasetForm({
                 onCheckedChange={onToggleAllLines}
                 label='Include all lines'
                 description='You can pass to evaluations all lines from a dataset or a selection from one line to another. Uncheck this option to select the lines.'
+              />
+              <SwitchInput
+                name='autoRespondToolCalls'
+                defaultChecked={autoRespondToolCalls}
+                onCheckedChange={onAutoRespondToolCallsChange}
+                label='Automatically respond to tool calls'
+                description='When enabled, tool calls will automatically receive responses from an AI. This is useful for testing and debugging purposes.'
               />
             </div>
           ) : null}

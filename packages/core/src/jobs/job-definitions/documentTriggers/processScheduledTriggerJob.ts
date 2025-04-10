@@ -42,6 +42,7 @@ export const processScheduledTriggerJob = async (
     documentUuid,
     commitUuid,
     parameters,
+    autoRespondToolCalls: true, // Always true for scheduled triggers
     // Using a dedicated batch ID for scheduled triggers
     batchId: `scheduled-${documentTriggerUuid}-${Date.now()}`,
   }

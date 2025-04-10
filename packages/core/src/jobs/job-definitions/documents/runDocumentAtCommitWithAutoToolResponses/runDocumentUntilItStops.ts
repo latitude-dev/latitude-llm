@@ -9,6 +9,7 @@ import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 type Props<T extends boolean> = T extends true
   ? {
       hasToolCalls: true
+      autoRespondToolCalls: boolean
       data: {
         workspace: Workspace
         commit: Commit
@@ -21,6 +22,7 @@ type Props<T extends boolean> = T extends true
     }
   : {
       hasToolCalls: false
+      autoRespondToolCalls: boolean
       data: {
         workspace: Workspace
         document: DocumentVersion
@@ -40,7 +42,7 @@ type Props<T extends boolean> = T extends true
  * When (B) this function run recursively until the response is generated
  */
 export async function runDocumentUntilItStops<T extends boolean>(
-  { hasToolCalls, data }: Props<T>,
+  { hasToolCalls, autoRespondToolCalls, data }: Props<T>,
   recursiveFn: typeof runDocumentUntilItStops,
 ) {
   const runResult = !hasToolCalls
@@ -55,11 +57,17 @@ export async function runDocumentUntilItStops<T extends boolean>(
     return Result.error(error)
   }
 
+  if (!autoRespondToolCalls) {
+    return Result.ok(result)
+  }
+
   const toolCalls = await result.toolCalls
+
   if (toolCalls.length) {
     return recursiveFn(
       {
         hasToolCalls: true,
+        autoRespondToolCalls,
         data: {
           ...data,
           documentLogUuid: result.errorableUuid,

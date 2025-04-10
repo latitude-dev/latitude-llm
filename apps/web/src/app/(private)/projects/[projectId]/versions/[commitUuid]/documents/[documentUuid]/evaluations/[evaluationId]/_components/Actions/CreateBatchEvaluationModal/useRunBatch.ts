@@ -32,6 +32,7 @@ export function useRunBatch({
       parameters,
       fromLine,
       toLine,
+      autoRespondToolCalls,
     }: {
       evaluationIds?: number[]
       evaluationUuids?: string[]
@@ -41,6 +42,7 @@ export function useRunBatch({
       toLine?: number
       wantAllLines: boolean
       parameters: RunBatchParameters
+      autoRespondToolCalls: boolean
     }) => {
       const [result, errors] = await run({
         projectId: Number(projectId),
@@ -53,6 +55,7 @@ export function useRunBatch({
         fromLine: wantAllLines ? undefined : fromLine,
         toLine: wantAllLines ? undefined : toLine,
         parameters,
+        autoRespondToolCalls,
       })
       if (errors) return
       return result

@@ -6,7 +6,8 @@ import { FSDriver } from 'flydrive/drivers/fs'
 
 let testDisk: DiskWrapper | undefined = undefined
 
-export const TEST_DISK_LOCATION = `${os.tmpdir()}/test-disk`
+export const TEST_DISK_LOCATION = `${os.tmpdir()}/test-disk-${process.pid}-${Date.now()}`
+
 export default function getTestDisk() {
   if (!testDisk) {
     const disk = new Disk(

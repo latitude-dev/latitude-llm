@@ -36,6 +36,7 @@ describe('runBatchAction', () => {
         fromLine: 0,
         toLine: 5,
         evaluationIds: [1],
+        autoRespondToolCalls: true,
       })
 
       expect(error!.name).toEqual('UnauthorizedError')
@@ -97,6 +98,7 @@ describe('runBatchAction', () => {
           toLine: 5,
           parameters: { age: 1 },
           evaluationIds: [evaluation.id],
+          autoRespondToolCalls: true,
         })
 
         expect(error).not.toBeNull()
@@ -113,6 +115,7 @@ describe('runBatchAction', () => {
           toLine: 20,
           evaluationIds: [evaluation.id],
           parameters: { age: 1, name: 2 },
+          autoRespondToolCalls: true,
         })
 
         expect(error).toBeNull()
@@ -140,6 +143,7 @@ describe('runBatchAction', () => {
           toLine: 5,
           parameters: { noColumn: 1 },
           evaluationIds: [evaluation.id],
+          autoRespondToolCalls: true,
         })
 
         expect(error?.fieldErrors).toEqual({
@@ -162,6 +166,7 @@ describe('runBatchAction', () => {
           toLine: 5,
           parameters: { age: 1, name: 2 },
           evaluationIds: [evaluation.id],
+          autoRespondToolCalls: true,
         })
 
         expect(error).toBeNull()
@@ -201,6 +206,7 @@ describe('runBatchAction', () => {
           toLine: 5,
           parameters: { age: 1, name: 2 },
           evaluationIds: [evaluation.id, evaluation2.id],
+          autoRespondToolCalls: true,
         })
 
         expect(error).toBeNull()
