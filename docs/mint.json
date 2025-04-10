@@ -48,8 +48,15 @@
       "group": "Getting started",
       "pages": [
         "guides/getting-started/introduction",
-        "guides/getting-started/concepts",
-        "guides/getting-started/quick-start",
+        "guides/getting-started/setup",
+        {
+          "group": "Onboarding Paths",
+          "pages": [
+            "guides/getting-started/quick-start-pm",
+            "guides/getting-started/quick-start-dev"
+          ]
+        },
+        "guides/getting-started/core-concepts",
         {
           "group": "Providers",
           "pages": [
@@ -63,7 +70,7 @@
       ]
     },
     {
-      "group": "Prompt Manager",
+      "group": "Prompt Development Guide",
       "pages": [
         "guides/prompt-manager/overview",
         "guides/prompt-manager/configuration",
@@ -73,50 +80,20 @@
         "guides/prompt-manager/tools",
         "guides/prompt-manager/latitude-tools",
         "guides/prompt-manager/agents",
-        {
-          "group": "Custom Rules",
-          "pages": [
-            "guides/prompt-manager/custom-rules",
-            "guides/prompt-manager/provider-rules/openai",
-            "guides/prompt-manager/provider-rules/anthropic",
-            "guides/prompt-manager/provider-rules/google",
-            "guides/prompt-manager/provider-rules/vertex"
-          ]
-        },
-        "guides/prompt-manager/cache",
-        "guides/prompt-manager/migrate-to-promptl"
+        "guides/prompt-manager/prompt-best-practices"
       ]
     },
     {
-      "group": "Evaluations",
+      "group": "Evaluations & Prompt Improvement",
       "pages": [
         "guides/evaluations/overview",
-        {
-          "group": "LLM as Judge",
-          "pages": [
-            "guides/evaluations/llm_as_judge_evaluations",
-            "guides/evaluations/evaluation-templates",
-            {
-              "group": "Custom Evaluations",
-              "pages": [
-                "guides/evaluations/custom-evaluations",
-                "guides/evaluations/numeric-evals",
-                "guides/evaluations/text-evals",
-                "guides/evaluations/boolean-evals"
-              ]
-            }
-          ]
-        },
+        "guides/evaluations/llm_as_judge_evaluations",
+        "guides/evaluations/evaluation-templates",
         "guides/evaluations/programmatic_rules",
         "guides/evaluations/manual_evaluations",
         "guides/evaluations/running-evaluations",
-        "guides/evaluations/prompt-suggestions"
-      ]
-    },
-    {
-      "group": "Traces",
-      "pages": [
-        "guides/traces/overview"
+        "guides/evaluations/prompt-suggestions",
+        "guides/evaluations/integrating-evaluations-workflow"
       ]
     },
     {
@@ -127,9 +104,12 @@
       ]
     },
     {
-      "group": "Datasets",
+      "group": "Data Management with Datasets",
       "pages": [
-        "guides/datasets/overview"
+        "guides/datasets/overview",
+        "guides/datasets/golden-datasets",
+        "guides/datasets/datasets-for-finetuning",
+        "guides/datasets/team-collaboration"
       ]
     },
     {

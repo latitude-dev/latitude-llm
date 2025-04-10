@@ -1,0 +1,122 @@
+---
+title: Quick Start for Product Managers
+description: 'Get started with Latitude without writing code'
+---
+
+# Quick Start for Product Managers (No-Code)
+
+This guide will walk you through creating and testing your first prompt in Latitude without writing any code.
+
+## Prerequisites
+
+- A Latitude account (Sign up at [latitude.so](https://latitude.so) or use your self-hosted instance)
+- Access to at least one AI provider (OpenAI, Anthropic, Google, etc.)
+
+## 1. Create a Project
+
+1. Log in to your Latitude account
+2. From the dashboard, click "New Project"
+3. Enter a name and description for your project
+4. Choose a default provider for your project or select "Configure later"
+5. Click "Create Project"
+
+## 2. Add a Provider
+
+If you haven't added a provider during project creation:
+
+1. Navigate to "Settings" > "Providers"
+2. Click "Add Provider"
+3. Select your provider (e.g., OpenAI, Anthropic, Google, etc.)
+4. Enter your API key and any required configuration
+5. Click "Save"
+
+![Adding a Provider](/assets/add-provider.png)
+
+## 3. Create Your First Prompt
+
+1. Navigate to the "Prompts" section
+2. Click "New Prompt"
+3. Enter a name for your prompt (e.g., "Product Description Generator")
+4. In the editor, enter a basic prompt template:
+
+```
+Write a compelling product description for ${product_name} with the following features:
+${features}
+
+The description should be appropriate for ${target_audience} and highlight the main benefits.
+Tone: ${tone}
+Length: ${word_count} words
+```
+
+5. Click "Save" to create your prompt
+
+## 4. Test in the Playground
+
+1. In the prompt editor, click "Playground" tab
+2. Fill in the parameter values:
+   - `product_name`: "Smart Home Assistant"
+   - `features`: "Voice control, Smart home integration, AI-powered recommendations"
+   - `target_audience`: "Tech-savvy homeowners"
+   - `tone`: "Professional but friendly"
+   - `word_count`: "150"
+3. Click "Run" to see the generated output
+4. Try different inputs to test how your prompt performs in various scenarios
+
+![Testing in Playground](/assets/playground-testing.png)
+
+## 5. Run a Simple Evaluation
+
+1. Navigate to the "Evaluations" tab for your prompt
+2. Click "New Evaluation"
+3. Select "LLM as Judge" as the evaluation type
+4. Choose a pre-defined template or create a custom evaluation
+5. For this example, select "Clarity and Readability"
+6. Click "Create"
+7. Run the evaluation on your recent playground results
+8. Review the evaluation scores and feedback
+
+## 6. Publish and Deploy the Prompt
+
+1. Once you're satisfied with your prompt, click "Publish"
+2. Add a version note describing the prompt (e.g., "Initial version of product description generator")
+3. Click "Publish Version"
+4. Your prompt is now available as an API endpoint through the AI Gateway
+5. Copy the endpoint URL for sharing with developers
+
+## 7. Observe Results and Logs
+
+1. Navigate to the "Logs" section
+2. You'll see a record of all interactions with your prompt
+3. Click on any log entry to view details including:
+   - Input parameters
+   - Generated output
+   - Model used
+   - Response time
+   - Evaluation results (if available)
+4. Use filters to find specific logs based on time, status, or content
+
+![Viewing Logs](/assets/logs-view.png)
+
+## Next Steps
+
+Now that you've created and deployed your first prompt, you can:
+
+- Share your endpoint with developers for integration
+- Create more complex prompts using [PromptL syntax](/promptl/syntax/structure)
+- Set up [ongoing evaluations](/guides/evaluations/running-evaluations) to monitor quality
+- [Invite team members](/guides/getting-started/invite-your-team) to collaborate
+
+## Video Tutorial: Creating & Testing a Prompt
+
+Watch this 4-minute video guide that walks through the process:
+
+<iframe
+  width='100%'
+  height='500px'
+  src='https://www.youtube.com/embed/EXAMPLE_ID'
+  title='Creating & Testing a Prompt'
+  frameborder='0'
+  allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'
+  referrerpolicy='strict-origin-when-cross-origin'
+  allowfullscreen
+></iframe>
