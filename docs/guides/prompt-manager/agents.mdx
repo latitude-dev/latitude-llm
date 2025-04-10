@@ -3,12 +3,6 @@ title: Latitude Agents
 description: Create autonomous agents that can use tools, reason, and complete complex tasks over multiple steps.
 ---
 
-# Latitude Agents
-
-Latitude Agents are an advanced prompt type that enables AI models to operate autonomously, breaking down complex tasks, using tools, and reasoning through multiple steps until a final goal is achieved.
-
-Unlike simple prompts or even [Chains](/promptl/advanced/chains) which follow predefined steps, Agents can dynamically decide their next action based on the context and available tools.
-
 <iframe
   width='100%'
   height='500px'
@@ -19,6 +13,10 @@ Unlike simple prompts or even [Chains](/promptl/advanced/chains) which follow pr
   referrerpolicy='strict-origin-when-cross-origin'
   allowfullscreen
 ></iframe>
+
+Latitude Agents are an advanced prompt type that enables AI models to operate autonomously, breaking down complex tasks, using tools, and reasoning through multiple steps until a final goal is achieved.
+
+Unlike simple prompts or even [Chains](/promptl/advanced/chains) which follow predefined steps, Agents can dynamically decide their next action based on the context and available tools.
 
 ## Defining an Agent
 
@@ -148,21 +146,6 @@ If the limit is reached before the goal is completed, the agent run will termina
 ## Running Agents
 
 Agents are run just like any other prompt using the [API](/guides/api/api-access) or [SDKs](/guides/sdk/typescript). The response will typically be a stream of events detailing the agent's thought process, tool calls, and final answer.
-
-## Video Tutorial: Building an Agent
-
-Learn how to build and configure Latitude Agents in this 4-minute video:
-
-<iframe
-  width='100%'
-  height='500px'
-  src='https://www.youtube.com/embed/EXAMPLE_ID'
-  title='Building an Agent'
-  frameborder='0'
-  allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'
-  referrerpolicy='strict-origin-when-cross-origin'
-  allowfullscreen
-></iframe>
 
 ## Next Steps
 
