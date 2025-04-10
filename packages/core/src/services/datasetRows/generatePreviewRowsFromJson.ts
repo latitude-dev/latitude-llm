@@ -20,7 +20,9 @@ function parseStringRows(json: string): TypedResult<JsonRow[], Error> {
 
     return Result.ok(rows)
   } catch {
-    return Result.error(new Error('Invalid generated data'))
+    return Result.error(
+      new Error(`Invalid generated data: ${json} is not valid JSON`),
+    )
   }
 }
 
