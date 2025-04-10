@@ -1,7 +1,8 @@
 import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 
 import { User } from '../browser'
-import { databaseErrorCodes, Result, UnprocessableEntityError } from '../lib'
+import { databaseErrorCodes, UnprocessableEntityError } from '../lib/errors'
+import { Result } from '../lib/Result'
 import { memberships, users } from '../schema'
 import RepositoryLegacy from './repository'
 

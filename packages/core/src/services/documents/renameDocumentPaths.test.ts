@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { Providers } from '../../constants'
-import { BadRequestError } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { renameDocumentPaths } from './renameDocumentPaths'
+import { BadRequestError } from './../../lib/errors'
 
 describe('renameDocumentPaths', () => {
   it('renames a single document path', async () => {

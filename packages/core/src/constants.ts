@@ -24,8 +24,8 @@ import type {
   Span,
   Trace,
 } from './browser'
-
-import type { LatitudeError, PromisedResult } from './lib'
+import { PromisedResult } from './lib/Transaction'
+import { LatitudeError } from './lib/errors'
 
 export {
   EvaluationResultableType,

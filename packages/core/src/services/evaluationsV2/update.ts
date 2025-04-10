@@ -8,11 +8,13 @@ import {
   Workspace,
 } from '../../browser'
 import { database, Database } from '../../client'
-import { compactObject, Result, Transaction } from '../../lib'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { evaluationVersions } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 import { validateEvaluationV2 } from './validate'
+import { compactObject } from './../../lib/compactObject'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export async function updateEvaluationV2<
   T extends EvaluationType,

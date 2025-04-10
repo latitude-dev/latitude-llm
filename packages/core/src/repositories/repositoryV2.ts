@@ -2,7 +2,8 @@ import { and, eq, inArray, SQL } from 'drizzle-orm'
 import { PgSelect } from 'drizzle-orm/pg-core'
 
 import { database } from '../client'
-import { NotFoundError, Result } from '../lib'
+import { NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
 
 export type QueryOptions = {
   limit?: number

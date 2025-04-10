@@ -1,9 +1,9 @@
 import { and, eq, getTableColumns } from 'drizzle-orm'
-
-import { NotFoundError, Result } from '../lib'
+import { PublishedDocument } from '../browser'
+import { NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
 import { publishedDocuments } from '../schema'
 import Repository from './repositoryV2'
-import { PublishedDocument } from '../browser'
 
 const tt = getTableColumns(publishedDocuments)
 

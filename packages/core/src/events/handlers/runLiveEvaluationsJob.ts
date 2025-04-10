@@ -3,10 +3,10 @@ import {
   NON_LIVE_EVALUABLE_LOG_SOURCES,
 } from '@latitude-data/constants'
 import { findWorkspaceFromDocumentLog } from '../../data-access'
-import { NotFoundError } from '../../lib'
 import { EvaluationsRepository } from '../../repositories'
 import { DocumentLogCreatedEvent } from '../events'
 import { liveEvaluationsQueue } from '../../jobs/queues'
+import { NotFoundError } from './../../lib/errors'
 
 export function isLiveEvaluableSource(source: LogSources | null | undefined) {
   if (!source) return true

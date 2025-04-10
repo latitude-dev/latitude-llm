@@ -1,10 +1,12 @@
 import { eq } from 'drizzle-orm'
 
 import { database } from '../../client'
-import { NotFoundError, Result, TypedResult } from '../../lib'
 import { DocumentLogWithMetadataAndError } from '../../repositories'
 import { documentLogs } from '../../schema'
 import { computeDocumentLogsWithMetadataQuery } from './computeDocumentLogsWithMetadata'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
 
 function throwNotFound({
   identifier,

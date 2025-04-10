@@ -4,13 +4,13 @@ import { HEAD_COMMIT, LogSources } from '../../../browser'
 import { Span } from '../../../browser'
 import { findCommitByUuid } from '../../../data-access/commits'
 import { createDocumentLog } from '../../../services/documentLogs'
-import { generateUUIDIdentifier } from '../../../lib'
 import {
   findProjectFromDocument,
   findWorkspaceFromSpan,
 } from '../../../data-access'
 import { DocumentVersionsRepository } from '../../../repositories'
 import { CoreAssistantMessage, CoreMessage } from 'ai'
+import { generateUUIDIdentifier } from './../../../lib/generateUUID'
 
 export type CreateDocumentLogFromSpanJobData = {
   span: Span

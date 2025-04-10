@@ -4,11 +4,11 @@ import { Workspace } from '../../browser'
 import { Database, database } from '../../client'
 import { SpanKind, SpanMetadataTypes } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { Result, Transaction } from '../../lib'
+import { Result } from '../../lib/Result'
+import Transaction from './../../lib/Transaction'
 import { spans } from '../../schema/models/spans'
 import { traces } from '../../schema/models/traces'
 import type { Message, ToolCall } from '@latitude-data/compiler'
-
 export type BulkCreateTracesAndSpansProps = {
   workspace: Workspace
   traces: TraceInput[]

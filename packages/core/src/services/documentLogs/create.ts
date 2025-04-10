@@ -4,16 +4,14 @@ import { Commit, DocumentLog, LogSources } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { publisher } from '../../events/publisher'
-import {
-  generateUUIDIdentifier,
-  hashContent,
-  NotFoundError,
-  Result,
-  Transaction,
-} from '../../lib'
 import { documentLogs } from '../../schema'
 import { createProviderLog } from '../providerLogs'
 import { LanguageModelUsage } from 'ai'
+import { generateUUIDIdentifier } from './../../lib/generateUUID'
+import { hashContent } from './../../lib/hashContent'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export type CreateDocumentLogProps = {
   commit: Commit

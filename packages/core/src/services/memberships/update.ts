@@ -2,9 +2,9 @@ import { eq } from 'drizzle-orm'
 
 import { Membership } from '../../browser'
 import { database } from '../../client'
-import { Result, Transaction } from '../../lib'
+import { Result } from '../../lib/Result'
+import Transaction from './../../lib/Transaction'
 import { memberships } from '../../schema'
-
 export const updateMembership = async (
   membership: Membership,
   values: Partial<Membership>,

@@ -1,6 +1,4 @@
 import { Job } from 'bullmq'
-
-import { getUnknownError, Result } from '../../../lib'
 import {
   EvaluationsRepository,
   ProviderLogsRepository,
@@ -8,6 +6,8 @@ import {
 import { runEvaluation } from '../../../services/evaluations/run'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
+import { getUnknownError } from './../../../lib/getUnknownError'
+import { Result } from './../../../lib/Result'
 
 async function fetchData({
   workspaceId,

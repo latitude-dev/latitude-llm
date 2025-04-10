@@ -2,9 +2,9 @@ import { readFile, readdir } from 'fs/promises'
 import { join } from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as constants from '../../constants'
-import { BadRequestError, UnprocessableEntityError } from '../../lib'
-
 import { convertFile } from './convert'
+import { BadRequestError } from './../../lib/errors'
+import { UnprocessableEntityError } from './../../lib/errors'
 
 describe('convertFile', () => {
   const DOCUMENTS_PATH = join(__dirname, '../../tests/fixtures/files/documents')

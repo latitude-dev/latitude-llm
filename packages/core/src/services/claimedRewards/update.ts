@@ -1,8 +1,10 @@
 import { eq } from 'drizzle-orm'
 
 import { database } from '../../client'
-import { NotFoundError, Result, Transaction } from '../../lib'
 import { claimedRewards } from '../../schema'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export async function updateRewardClaim(
   {

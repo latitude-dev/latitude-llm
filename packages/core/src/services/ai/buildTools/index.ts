@@ -1,10 +1,9 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { CoreTool, jsonSchema } from 'ai'
-
-import { Result } from '../../../lib'
 import { compactObject } from '../../../lib/compactObject'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { ToolDefinitionsMap } from '@latitude-data/constants'
+import { Result } from './../../../lib/Result'
 
 export const buildTools = (tools: ToolDefinitionsMap | undefined) => {
   if (!tools) return Result.ok(undefined)

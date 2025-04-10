@@ -3,7 +3,8 @@ import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 import { Commit } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'
-import { Result, Transaction } from '../../lib'
+import { Result } from '../../lib/Result'
+import Transaction from './../../lib/Transaction'
 import {
   LatitudeError,
   NotFoundError,

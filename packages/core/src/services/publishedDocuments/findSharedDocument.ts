@@ -2,12 +2,13 @@ import { eq, and } from 'drizzle-orm'
 
 import { database } from '../../client'
 import { unsafelyFindWorkspace } from '../../data-access'
-import { NotFoundError, Result } from '../../lib'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
 import { publishedDocuments } from '../../schema'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
 
 const NotFound = Result.error(
   new NotFoundError(

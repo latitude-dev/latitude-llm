@@ -6,7 +6,8 @@ import {
 } from '../../browser'
 import { findLastProviderLogFromDocumentLogUuid } from '../../data-access'
 import { evaluationsQueue } from '../../jobs/queues'
-import { NotFoundError, Result } from '../../lib'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
 
 export async function evaluateDocumentLog(
   documentLog: DocumentLog,

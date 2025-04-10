@@ -5,12 +5,12 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { processResponse } from '.'
 import { LogSources, Providers } from '../../../constants'
-import { generateUUIDIdentifier } from '../../../lib'
 import {
   AsyncStreamIteable,
   TOOLS,
 } from '../../../lib/chainStreamManager/ChainStreamConsumer/consumeStream.test'
 import { buildProviderLogDto } from './saveOrPublishProviderLogs'
+import { generateUUIDIdentifier } from './../../../lib/generateUUID'
 
 let data: ReturnType<typeof buildProviderLogDto>
 

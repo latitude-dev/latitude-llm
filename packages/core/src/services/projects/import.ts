@@ -3,11 +3,13 @@ import { eq } from 'drizzle-orm'
 
 import { Project, User, Workspace } from '../../browser'
 import { database } from '../../client'
-import { NotFoundError, Result, Transaction } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 import { projects } from '../../schema'
 import { createNewDocument } from '../documents'
 import { createProject } from './create'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export async function importDefaultProject(
   {

@@ -11,7 +11,6 @@ import {
   Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
-import { NotFoundError, Result } from '../../lib'
 import {
   DocumentSuggestionsRepository,
   DocumentVersionsRepository,
@@ -19,6 +18,8 @@ import {
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits/merge'
 import { applyDocumentSuggestion } from './apply'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
 
 describe('applyDocumentSuggestion', () => {
   let mocks: {

@@ -12,7 +12,6 @@ import {
 import { database } from '../../client'
 import { unsafelyFindDocumentLogByUuid } from '../../data-access'
 import { publisher } from '../../events/publisher'
-import { generateUUIDIdentifier, NotFoundError, Result } from '../../lib'
 import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import { runChain } from '../chains/run'
 import {
@@ -22,6 +21,9 @@ import {
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import { createRunError } from '../runErrors/create'
 import { EvaluationRunChecker } from './EvaluationRunChecker'
+import { generateUUIDIdentifier } from './../../lib/generateUUID'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
 
 interface RunEvaluationParams {
   providerLog: ProviderLog

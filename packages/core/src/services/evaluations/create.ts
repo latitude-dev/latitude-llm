@@ -20,13 +20,6 @@ import { Database, database } from '../../client'
 import { findEvaluationTemplateById } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import {
-  BadRequestError,
-  NotFoundError,
-  PromisedResult,
-  Result,
-  Transaction,
-} from '../../lib'
-import {
   evaluationConfigurationBoolean,
   evaluationConfigurationNumerical,
   evaluationConfigurationText,
@@ -37,7 +30,10 @@ import {
 import { evaluationMetadataManual } from '../../schema/models/evaluationMetadataDefault'
 import { findDefaultEvaluationProvider } from '../providerApiKeys/findDefaultProvider'
 import { connectEvaluations } from './connect'
-
+import { BadRequestError } from './../../lib/errors'
+import { NotFoundError } from './../../lib/errors'
+import Transaction, { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 type EvaluationResultConfigurationNumerical = {
   minValue: number
   maxValue: number

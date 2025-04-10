@@ -9,8 +9,10 @@ import {
 } from '../../../../repositories'
 import { getEmailResponse } from './getResponse'
 import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
-import { LatitudeError, PromisedResult, Result } from '../../../../lib'
 import { DocumentTriggerMailer } from '../../../../mailers'
+import { LatitudeError } from './../../../../lib/errors'
+import { PromisedResult } from './../../../../lib/Transaction'
+import { Result } from './../../../../lib/Result'
 
 export type RunEmailTriggerJobData = {
   workspaceId: number

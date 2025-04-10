@@ -7,13 +7,11 @@ import * as factories from '../../../../tests/factories'
 import { LogSources, Providers } from '@latitude-data/constants'
 import * as chainCache from '../../../../services/chains/chainCache'
 import * as runDoc from '../../../../services/commits/runDocumentAtCommit'
-import {
-  LatitudeError,
-  Result,
-  UnprocessableEntityError,
-} from '../../../../lib'
 import { ChainError } from '../../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { LatitudeError } from './../../../../lib/errors'
+import { Result } from './../../../../lib/Result'
+import { UnprocessableEntityError } from './../../../../lib/errors'
 
 let workspace: Workspace
 let commit: Commit

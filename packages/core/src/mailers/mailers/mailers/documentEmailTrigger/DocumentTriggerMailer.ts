@@ -4,9 +4,9 @@ import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
 import { TypedResult } from '../../../../lib/Result'
 import Mailer from '../../Mailer'
-import { LatitudeError } from '../../../../lib'
 import type { AssistantMessage } from '@latitude-data/compiler'
 import DocumentTriggerResponseMail from '../../../emails/documentTrigger/DocumentTriggerResponseMail'
+import { LatitudeError } from './../../../../lib/errors'
 
 export class DocumentTriggerMailer extends Mailer {
   result: TypedResult<AssistantMessage, LatitudeError>

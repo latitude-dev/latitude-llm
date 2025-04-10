@@ -7,7 +7,7 @@ import {
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import {
   commits,
   documentLogs,

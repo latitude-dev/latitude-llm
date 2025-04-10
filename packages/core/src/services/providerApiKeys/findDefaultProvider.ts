@@ -2,7 +2,7 @@ import { env } from '@latitude-data/env'
 
 import { Providers, Workspace } from '../../browser'
 import { database, Database } from '../../client'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import { ProviderApiKeysRepository } from '../../repositories'
 
 export async function findDefaultProvider(

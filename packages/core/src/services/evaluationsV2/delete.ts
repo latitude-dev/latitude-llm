@@ -7,7 +7,8 @@ import {
   Workspace,
 } from '../../browser'
 import { database, Database } from '../../client'
-import { Result, Transaction } from '../../lib'
+import { Result } from '../../lib/Result'
+import Transaction from './../../lib/Transaction'
 import { EvaluationsV2Repository } from '../../repositories'
 import { evaluationVersions } from '../../schema'
 import { pingProjectUpdate } from '../projects'

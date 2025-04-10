@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm'
 
 import { Evaluation } from '../../browser'
 import { database } from '../../client'
-import { Result, Transaction } from '../../lib'
+import { Result } from '../../lib/Result'
+import Transaction from './../../lib/Transaction'
 import { evaluations } from '../../schema'
 
 export function destroyEvaluation(

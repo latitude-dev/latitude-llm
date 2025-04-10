@@ -1,8 +1,11 @@
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
-import { BadRequestError, ConflictError, Result, TypedResult } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 import { getChangesToRevertDocuments } from '../commits/computeRevertChanges'
+import { BadRequestError } from './../../lib/errors'
+import { ConflictError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
 
 export async function computeDocumentRevertChanges(
   {

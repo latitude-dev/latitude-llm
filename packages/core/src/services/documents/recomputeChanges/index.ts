@@ -17,7 +17,6 @@ import {
   Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
-import { hashContent, Result, Transaction, TypedResult } from '../../../lib'
 import { assertCommitIsDraft } from '../../../lib/assertCommitIsDraft'
 import {
   IntegrationsRepository,
@@ -28,6 +27,10 @@ import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
 import { inheritDocumentRelations } from '../inheritRelations'
 import { getHeadDocumentsAndDraftDocumentsForCommit } from './getHeadDocumentsAndDraftDocuments'
 import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
+import { hashContent } from './../../../lib/hashContent'
+import { Result } from './../../../lib/Result'
+import { TypedResult } from './../../../lib/Result'
+import Transaction from './../../../lib/Transaction'
 
 async function resolveDocumentChanges({
   originalDocuments,

@@ -19,12 +19,13 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { Result, UnprocessableEntityError } from '../../lib'
 import { DocumentSuggestionsRepository } from '../../repositories'
 import { evaluationResults } from '../../schema'
 import * as factories from '../../tests/factories'
 import * as copilot from '../copilot'
 import { generateDocumentSuggestion } from './generate'
+import { Result } from './../../lib/Result'
+import { UnprocessableEntityError } from './../../lib/errors'
 
 describe('generateDocumentSuggestion', () => {
   let mocks: {

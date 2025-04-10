@@ -7,7 +7,6 @@ import {
   EvaluationResultableType,
 } from '../../browser'
 import { database } from '../../client'
-import { hashContent, Result } from '../../lib'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
 import { DocumentVersionsRepository } from '../../repositories'
 import {
@@ -19,6 +18,8 @@ import {
 } from '../../schema'
 import { runErrors } from '../../schema/models/runErrors'
 import { getResolvedContent } from '../documents'
+import { hashContent } from './../../lib/hashContent'
+import { Result } from './../../lib/Result'
 
 async function getDocumentContent(
   {

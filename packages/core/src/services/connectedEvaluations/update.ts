@@ -2,9 +2,9 @@ import { eq } from 'drizzle-orm'
 
 import { ConnectedEvaluation } from '../../browser'
 import { database } from '../../client'
-import { Result, Transaction } from '../../lib'
+import { Result } from '../../lib/Result'
+import Transaction from './../../lib/Transaction'
 import { connectedEvaluations } from '../../schema'
-
 type UpdateData = {
   live: boolean
 }

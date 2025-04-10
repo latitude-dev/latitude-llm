@@ -5,11 +5,11 @@ import {
   findWorkspaceFromDocumentLog,
 } from '../../data-access'
 import { runEvaluationV2JobKey } from '../../jobs/job-definitions'
-import { NotFoundError } from '../../lib'
 import { CommitsRepository, EvaluationsV2Repository } from '../../repositories'
 import { getEvaluationMetricSpecification } from '../../services/evaluationsV2'
 import { DocumentLogCreatedEvent } from '../events'
 import { evaluationsQueue } from '../../jobs/queues'
+import { NotFoundError } from './../../lib/errors'
 
 export const evaluateLiveLogJob = async ({
   data: event,

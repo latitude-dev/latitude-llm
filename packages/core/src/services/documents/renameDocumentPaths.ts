@@ -1,10 +1,12 @@
 import type { Commit, DocumentVersion } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
-import { Result, Transaction, TypedResult } from '../../lib'
 import { BadRequestError } from '../../lib/errors'
 import { DocumentVersionsRepository } from '../../repositories'
 import { updateDocument } from './update'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export async function renameDocumentPaths(
   {

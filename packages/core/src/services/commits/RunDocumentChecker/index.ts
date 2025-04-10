@@ -14,16 +14,14 @@ import {
 } from 'promptl-ai'
 
 import { DocumentVersion, ErrorableEntity } from '../../../browser'
-import {
-  BadRequestError,
-  ErrorResult,
-  LatitudeError,
-  PromisedResult,
-  Result,
-} from '../../../lib'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { createRunError } from '../../runErrors/create'
 import { PromptConfig } from '@latitude-data/constants'
+import { BadRequestError } from './../../../lib/errors'
+import { ErrorResult } from './../../../lib/Result'
+import { LatitudeError } from './../../../lib/errors'
+import { PromisedResult } from './../../../lib/Transaction'
+import { Result } from './../../../lib/Result'
 
 type RunDocumentErrorCodes = RunErrorCodes.ChainCompileError
 

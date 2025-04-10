@@ -1,13 +1,6 @@
 import { IntegrationType } from '@latitude-data/constants'
 import type { IntegrationDto, User, Workspace } from '../../browser'
 import { database } from '../../client'
-import {
-  BadRequestError,
-  ErrorResult,
-  PromisedResult,
-  Result,
-  Transaction,
-} from '../../lib'
 import { integrations } from '../../schema'
 import {
   ExternalMcpIntegrationConfiguration,
@@ -16,7 +9,10 @@ import {
 } from './helpers/schema'
 import { deployMcpServer } from '../mcpServers/deployService'
 import { HOSTED_MCP_CONFIGS } from './hostedTypes'
-
+import { BadRequestError } from './../../lib/errors'
+import { ErrorResult } from './../../lib/Result'
+import Transaction, { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 type ConfigurationFormType<T extends IntegrationType> =
   T extends IntegrationType.ExternalMCP
     ? ExternalMcpIntegrationConfiguration

@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
 import { EvaluationResultableType, Providers } from '../../constants'
-import { generateUUIDIdentifier } from '../../lib'
 import {
   evaluationResultableBooleans,
   evaluationResultableNumbers,
@@ -12,6 +11,7 @@ import {
 } from '../../schema'
 import * as factories from '../../tests/factories'
 import { createEvaluationResult } from './create'
+import { generateUUIDIdentifier } from './../../lib/generateUUID'
 
 async function setupTest(configurationType: EvaluationResultableType) {
   const { workspace, project, user, providers } = await factories.createProject(

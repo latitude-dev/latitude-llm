@@ -4,13 +4,11 @@ import {
 } from '@latitude-data/constants'
 import { env } from '@latitude-data/env'
 import { LatitudeToolDefinition } from '../../../constants'
-import {
-  BadRequestError,
-  LatitudeError,
-  PromisedResult,
-  Result,
-} from '../../../lib'
 import { ExtractToolArgs, ExtractToolResult } from './types'
+import { BadRequestError } from './../../../lib/errors'
+import { LatitudeError } from './../../../lib/errors'
+import { PromisedResult } from './../../../lib/Transaction'
+import { Result } from './../../../lib/Result'
 
 const HANDINGER_API_URL = 'https://api.handinger.com/markdown'
 

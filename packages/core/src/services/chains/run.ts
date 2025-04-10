@@ -14,7 +14,6 @@ import {
   PromptSource,
   StreamType,
 } from '../../constants'
-import { TypedResult } from '../../lib'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import {
   ChainError,
@@ -25,6 +24,7 @@ import { runStep } from './runStep'
 import { ChainStreamManager } from '../../lib/chainStreamManager'
 import { LanguageModelUsage } from 'ai'
 import { MAX_STEPS_CONFIG_NAME, PromptConfig } from '@latitude-data/constants'
+import { TypedResult } from './../../lib/Result'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
 export type SomeChain = LegacyChain | PromptlChain

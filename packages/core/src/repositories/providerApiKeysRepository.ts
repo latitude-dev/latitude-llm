@@ -1,7 +1,8 @@
 import { and, eq, getTableColumns, inArray, isNull } from 'drizzle-orm'
 
 import { ProviderApiKey } from '../browser'
-import { NotFoundError, Result } from '../lib'
+import { NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
 import { providerApiKeys } from '../schema'
 import RepositoryLegacy from './repository'
 

@@ -1,4 +1,3 @@
-import { Result, TypedResult } from '../../lib'
 import { Column, DatasetRowDataContent } from '../../schema'
 import {
   buildColumns,
@@ -6,6 +5,8 @@ import {
   nanoidHashAlgorithm,
 } from '../datasets/utils'
 import { parseRowCell } from './utils'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
 
 type JsonRow = Record<string, unknown>
 

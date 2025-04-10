@@ -12,7 +12,7 @@ import {
 
 import { Workspace } from '../../browser'
 import { LogSources, PromptSource } from '../../constants'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import { CachedApiKeys, runChain } from '../chains/run'
 import { PromptConfig } from '@latitude-data/constants'
 

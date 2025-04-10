@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
 import { Providers } from '../../constants'
-import { NotFoundError } from '../../lib'
 import { documentVersions } from '../../schema'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'
 import { createNewDocument } from './create'
 import { destroyFolder } from './destroyFolder'
 import { updateDocument } from './update'
+import { NotFoundError } from './../../lib/errors'
 
 describe('removing folders', () => {
   it('throws error if folder does not exist', async () => {

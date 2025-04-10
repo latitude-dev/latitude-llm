@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm'
 
 import { database } from '../client'
-import { NotFoundError, Result } from '../lib'
+import { NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
 import { memberships } from '../schema'
 
 export async function unsafelyFindMembershipByToken(

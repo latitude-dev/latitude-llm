@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as factories from '../../tests/factories'
 import { Workspace, User, Providers } from '../../browser'
 import { createProvider as createProviderGlobal } from './helpers'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 

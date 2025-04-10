@@ -1,5 +1,6 @@
-import { BadRequestError, Result } from '.'
 import { Commit } from '../browser'
+import { BadRequestError } from './errors'
+import { Result } from './Result'
 
 export function assertCommitIsDraft(commit: Commit) {
   if (commit.mergedAt !== null) {

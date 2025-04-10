@@ -1,7 +1,8 @@
 import { eq, getTableColumns, sql } from 'drizzle-orm'
 
 import { Database, database } from '../client'
-import { NotFoundError, Result } from '../lib'
+import { NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
 import { memberships, subscriptions, workspaces } from '../schema'
 
 export const workspacesDtoColumns = {

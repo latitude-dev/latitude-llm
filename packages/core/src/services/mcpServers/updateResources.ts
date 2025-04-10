@@ -8,7 +8,7 @@ import { decrypt } from '../../lib/encryption'
 import { generateK8sManifest } from './manifestGenerator'
 import { McpServer } from '../../browser'
 import { database } from '../../client'
-import { Transaction } from '../../lib'
+import Transaction from './../../lib/Transaction'
 
 /**
  * Updates the Kubernetes resources for an existing MCP server

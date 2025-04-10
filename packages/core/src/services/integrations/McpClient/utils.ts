@@ -1,7 +1,8 @@
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
-import { Result, TypedResult } from '../../../lib'
 import { LatitudeError } from '../../../lib/errors'
+import { Result } from './../../../lib/Result'
+import { TypedResult } from './../../../lib/Result'
 
 // Types
 export interface McpClientConnection {

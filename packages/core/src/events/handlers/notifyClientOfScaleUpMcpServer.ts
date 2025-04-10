@@ -1,7 +1,7 @@
 import { unsafelyFindWorkspace } from '../../data-access'
-import { NotFoundError } from '../../lib'
 import { WebsocketClient } from '../../websockets/workers'
 import { ScaleMcpServerEvent } from '../events'
+import { NotFoundError } from './../../lib/errors'
 
 export const notifyClientOfScaleUpMcpServer = async ({
   data: event,

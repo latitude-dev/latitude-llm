@@ -7,9 +7,9 @@ import {
   ProviderApiKey,
   Workspace,
 } from '../../../browser'
-import { Result } from '../../../lib'
 import { incrFreeRuns } from '../../freeRunsManager'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+import { Result } from './../../../lib/Result'
 
 export async function checkFreeProviderQuota({
   workspace,

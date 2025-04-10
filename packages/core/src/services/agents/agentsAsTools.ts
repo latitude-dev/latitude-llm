@@ -3,7 +3,6 @@ import {
   resolveRelativePath,
   ToolDefinition,
 } from '@latitude-data/constants'
-import { PromisedResult, Result } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { scan } from 'promptl-ai'
@@ -11,6 +10,8 @@ import { readMetadata } from '@latitude-data/compiler'
 import { JSONSchema7 } from 'json-schema'
 import { getAgentToolName } from './helpers'
 import { database } from '../../client'
+import { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 const DEFAULT_PARAM_DEFINITION: JSONSchema7 = {
   type: 'string',

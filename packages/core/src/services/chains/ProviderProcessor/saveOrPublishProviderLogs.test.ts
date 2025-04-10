@@ -4,13 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Workspace } from '../../../browser'
 import { LogSources, Providers } from '../../../constants'
 import { publisher } from '../../../events/publisher'
-import { generateUUIDIdentifier } from '../../../lib'
 import * as createProviderLogService from '../../providerLogs/create'
 import {
   buildProviderLogDto,
   saveOrPublishProviderLogs,
 } from './saveOrPublishProviderLogs'
 import { defaultQueue } from '../../../jobs/queues'
+import { generateUUIDIdentifier } from './../../../lib/generateUUID'
 
 const publisherSpy = vi.spyOn(publisher, 'publishLater')
 const createProviderLogSpy = vi.spyOn(

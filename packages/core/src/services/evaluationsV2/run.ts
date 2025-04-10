@@ -16,18 +16,16 @@ import {
 import { database, Database } from '../../client'
 import { publisher } from '../../events/publisher'
 import {
-  BadRequestError,
-  Result,
-  Transaction,
-  UnprocessableEntityError,
-} from '../../lib'
-import {
   DocumentLogsRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema'
 import { getColumnData } from '../datasets/utils'
 import { EVALUATION_SPECIFICATIONS } from './shared'
+import { BadRequestError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import { UnprocessableEntityError } from './../../lib/errors'
+import Transaction from './../../lib/Transaction'
 
 export async function runEvaluationV2<
   T extends EvaluationType,

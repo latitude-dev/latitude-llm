@@ -1,18 +1,14 @@
 import slugify from '@sindresorhus/slugify'
 import path from 'path'
 import { diskFactory, DiskWrapper } from '../../lib/disk'
-
-import {
-  BadRequestError,
-  generateUUIDIdentifier,
-  Result,
-  TypedResult,
-  UnprocessableEntityError,
-} from '../../lib'
-
 import { Workspace } from '../../browser'
 import { MAX_UPLOAD_SIZE_IN_MB } from '../../constants'
 import { PromptLFile, toPromptLFile } from 'promptl-ai'
+import { BadRequestError } from './../../lib/errors'
+import { generateUUIDIdentifier } from './../../lib/generateUUID'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
+import { UnprocessableEntityError } from './../../lib/errors'
 
 function generateKey({
   filename,

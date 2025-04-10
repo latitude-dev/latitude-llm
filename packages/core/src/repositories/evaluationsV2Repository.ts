@@ -10,7 +10,8 @@ import {
   sql,
 } from 'drizzle-orm'
 import { EvaluationV2 } from '../browser'
-import { NotFoundError, Result } from '../lib'
+import { NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
 import { commits, evaluationVersions, projects } from '../schema'
 import { CommitsRepository } from './commitsRepository'
 import Repository from './repositoryV2'

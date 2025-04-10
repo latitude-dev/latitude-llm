@@ -10,13 +10,14 @@ import {
   type Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
-import { generateUUIDIdentifier, Result } from '../../lib'
 import { runAgent } from '../agents/run'
 import { runChain } from '../chains/run'
 import { createDocumentLog } from '../documentLogs'
 import { getResolvedContent } from '../documents'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import { RunDocumentChecker } from './RunDocumentChecker'
+import { generateUUIDIdentifier } from './../../lib/generateUUID'
+import { Result } from './../../lib/Result'
 
 async function createDocumentRunResult({
   workspace,

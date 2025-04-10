@@ -1,7 +1,6 @@
 import { eq, and } from 'drizzle-orm'
 import { Workspace } from '../../browser'
 import { database } from '../../client'
-import { BadRequestError, Result, Transaction } from '../../lib'
 import {
   users,
   oauthAccounts,
@@ -10,6 +9,9 @@ import {
   OAuthProvider,
 } from '../../schema'
 import setupServiceFn from '../users/setupService'
+import { BadRequestError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 interface FindOrCreateUserFromOAuthInput {
   providerId: OAuthProvider

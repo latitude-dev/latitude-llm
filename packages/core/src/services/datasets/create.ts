@@ -1,17 +1,15 @@
 import { User, Workspace } from '../../browser'
 import { Column } from '../../schema/models/datasets'
 import { database } from '../../client'
-import {
-  BadRequestError,
-  databaseErrorCodes,
-  Result,
-  Transaction,
-} from '../../lib'
 import { datasets } from '../../schema'
 import pg from 'pg'
 const { DatabaseError } = pg
 import { syncReadCsv } from '../../lib/readCsv'
 import { buildColumns, HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
+import { BadRequestError } from './../../lib/errors'
+import { databaseErrorCodes } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export async function getCsvAndBuildColumns({
   file,

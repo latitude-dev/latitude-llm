@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm'
 
 import { Project } from '../../browser'
-import { Result, Transaction } from '../../lib'
+import { Result } from '../../lib/Result'
+import Transaction from './../../lib/Transaction'
 import { projects } from '../../schema'
 
 export function destroyProject({ project }: { project: Project }) {

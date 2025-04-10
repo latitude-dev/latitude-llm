@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { withAdmin } from '../../../procedures'
 import { handleEmailTrigger } from '../../../../../../../packages/core/src/services/documentTriggers/handlers/email'
-import { env } from 'process'
+import { env } from '@latitude-data/env'
 
 export const manualEmailTriggerAction = withAdmin
   .createServerAction()

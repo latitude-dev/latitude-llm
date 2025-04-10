@@ -1,9 +1,10 @@
 import { and, count, eq, getTableColumns, gte, isNull } from 'drizzle-orm'
 
 import { Commit, DocumentLog, ErrorableEntity, LogSources } from '../../browser'
-import { NotFoundError, Result } from '../../lib'
 import { commits, documentLogs, projects, runErrors } from '../../schema'
 import Repository from '../repositoryV2'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
 
 export type DocumentLogWithMetadata = DocumentLog & {
   commit: Commit

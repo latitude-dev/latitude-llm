@@ -18,13 +18,13 @@ import {
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { findCommitById } from '../../data-access/commits'
-import { generateUUIDIdentifier } from '../../lib'
 import { ProviderApiKeysRepository } from '../../repositories'
 import { evaluationResults } from '../../schema'
 import { Config } from '../../services/ai'
 import { createEvaluationResult as createEvaluationResultService } from '../../services/evaluationResults'
 import { getEvaluationPrompt } from '../../services/evaluations'
 import { createProviderLog } from '../../services/providerLogs'
+import { generateUUIDIdentifier } from './../../lib/generateUUID'
 
 type ProviderLogProps = {
   evaluation: EvaluationDto

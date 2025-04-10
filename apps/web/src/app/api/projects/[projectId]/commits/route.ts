@@ -4,17 +4,14 @@ import {
   Workspace,
 } from '@latitude-data/core/browser'
 import {
-  BadRequestError,
-  NotFoundError,
-  paginateQuery,
-} from '@latitude-data/core/lib/index'
-import {
   CommitsRepository,
   ProjectsRepository,
 } from '@latitude-data/core/repositories'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
+import { BadRequestError, NotFoundError } from '@latitude-data/core/lib/errors'
+import { paginateQuery } from '@latitude-data/core/lib/pagination/paginate'
 
 export const GET = errorHandler(
   authHandler(

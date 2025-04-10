@@ -1,7 +1,8 @@
 import { Commit, Project, User } from '../../browser'
 import { database, Database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { Result, Transaction } from '../../lib'
+import { Result } from '../../lib/Result'
+import Transaction from './../../lib/Transaction'
 import { commits } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 

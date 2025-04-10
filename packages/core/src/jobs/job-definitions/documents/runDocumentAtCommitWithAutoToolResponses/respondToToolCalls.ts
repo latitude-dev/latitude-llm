@@ -5,7 +5,6 @@ import {
   DocumentVersion,
   LogSources,
 } from '../../../../browser'
-import { Result, UnprocessableEntityError } from '../../../../lib'
 import { getCachedChain } from '../../../../services/chains/chainCache'
 import { generateToolResponseMessages } from './generateToolResponseMessages'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
@@ -13,6 +12,8 @@ import { resumePausedPrompt } from '../../../../services/documentLogs/addMessage
 import { DocumentVersionsRepository } from '../../../../repositories'
 import { getDocumentMetadata } from '../../../../services/documents'
 import { PromptConfig } from '@latitude-data/constants'
+import { Result } from './../../../../lib/Result'
+import { UnprocessableEntityError } from './../../../../lib/errors'
 
 export async function respondToToolCalls({
   workspace,

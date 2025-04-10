@@ -4,7 +4,7 @@ import { webhooks } from '../../schema/models/webhooks'
 import { Result, type TypedResult } from '../../lib/Result'
 import { type Webhook } from './types'
 import { NotFoundError } from '../../lib/errors'
-import Transaction from '../../lib/Transaction'
+import Transaction from './../../lib/Transaction'
 
 export async function updateWebhookTimestamp(
   webhookId: number,

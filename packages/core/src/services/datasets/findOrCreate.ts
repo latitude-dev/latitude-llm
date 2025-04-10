@@ -1,6 +1,6 @@
 import { User, Workspace } from '../../browser'
 import { database } from '../../client'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import { DatasetsRepository } from '../../repositories'
 import { createDataset } from './create'
 

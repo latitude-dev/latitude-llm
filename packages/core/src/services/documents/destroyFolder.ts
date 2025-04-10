@@ -1,9 +1,11 @@
 import type { Commit, Workspace } from '../../browser'
 import { database, Database } from '../../client'
-import { NotFoundError, Result, Transaction } from '../../lib'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { DocumentVersionsRepository } from '../../repositories/documentVersionsRepository'
 import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export async function destroyFolder({
   path,

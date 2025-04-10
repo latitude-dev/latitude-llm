@@ -10,8 +10,8 @@ import {
   type CsvData,
   type DateRange,
 } from './constants'
-import { type QueryParams } from './lib'
 import type { ProviderLogDto } from './schema/types'
+import type { QueryParams } from './lib/pagination'
 
 export function buildCsvFile(csvData: CsvData, name: string): File {
   const headers = csvData.headers.map((h) => JSON.stringify(h)).join(',')

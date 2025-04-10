@@ -23,7 +23,7 @@ import {
   EvaluationResultDto,
   MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
 } from '../../browser'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import {
   evaluationResultableBooleans,
   evaluationResultableNumbers,

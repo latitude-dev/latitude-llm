@@ -6,8 +6,10 @@ import {
   Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
-import { LatitudeError, PromisedResult, Result } from '../../../lib'
 import { ProviderApiKeysRepository } from '../../../repositories'
+import { LatitudeError } from './../../../lib/errors'
+import { PromisedResult } from './../../../lib/Transaction'
+import { Result } from './../../../lib/Result'
 
 function valueInformation(evaluation: EvaluationDto) {
   if (evaluation.resultType === EvaluationResultableType.Boolean) {

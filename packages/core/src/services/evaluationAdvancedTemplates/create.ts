@@ -1,9 +1,11 @@
 import { EvaluationResultConfiguration } from '../../browser'
 import { database } from '../../client'
 import { findEvaluationTemplateCategoryById } from '../../data-access/evaluationTemplateCategories'
-import { NotFoundError, Result, Transaction } from '../../lib'
 import { evaluationAdvancedTemplates } from '../../schema'
 import { createEvaluationTemplateCategory } from '../evaluationTemplateCategories/create'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 const DEFAULT_CATEGORY_NAME = 'Default Category'
 

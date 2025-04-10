@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { EvaluationResultableType } from '../../constants'
 import { findEvaluationTemplateCategoryById } from '../../data-access/evaluationTemplateCategories'
-import { NotFoundError, Result } from '../../lib'
 import * as evaluationTemplateCategoriesService from '../evaluationTemplateCategories/create'
 import { createEvaluationTemplate } from './create'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
 
 describe('createEvaluationTemplate', () => {
   beforeEach(async () => {

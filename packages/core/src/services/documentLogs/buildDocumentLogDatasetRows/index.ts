@@ -1,5 +1,4 @@
 import { Dataset, Workspace } from '../../../browser'
-import { PromisedResult, Result } from '../../../lib'
 import { Column, DatasetRowData, documentLogs } from '../../../schema'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from '../../datasets/utils'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../../repositories/documentLogsWithMetadataAndErrorsRepository'
@@ -11,6 +10,8 @@ import { ContentType, Message, MessageContent } from '@latitude-data/compiler'
 import { buildColumns, FixedColumnsByName } from './buildColumns'
 import { buildResponseMessage, ProviderLog } from '@latitude-data/constants'
 import { desc } from 'drizzle-orm'
+import { PromisedResult } from './../../../lib/Transaction'
+import { Result } from './../../../lib/Result'
 
 export type ExportedDocumentLogs = {
   columns: Column[]

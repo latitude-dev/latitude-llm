@@ -5,7 +5,6 @@ import {
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
-import { PromisedResult, Result } from '../../lib'
 import type { CompileError } from 'promptl-ai'
 import { recomputeChanges } from '../documents'
 import {
@@ -13,6 +12,8 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
+import { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 type DocumentErrors = { [documentUuid: string]: CompileError[] }
 

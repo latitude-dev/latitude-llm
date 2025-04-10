@@ -6,7 +6,7 @@ import {
   ScheduledTriggerConfiguration,
 } from './schema'
 import { getNextRunTime } from './cronHelper'
-import { LatitudeError } from '../../../lib'
+import { LatitudeError } from './../../../lib/errors'
 
 export function buildConfiguration({
   triggerType,

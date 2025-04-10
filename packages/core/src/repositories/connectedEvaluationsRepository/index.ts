@@ -15,7 +15,6 @@ import {
   DocumentVersion,
   EvaluationDto,
 } from '../../browser'
-import { LatitudeError, Result, TypedResult } from '../../lib'
 import {
   connectedEvaluations,
   documentLogs,
@@ -26,6 +25,9 @@ import { DocumentVersionsRepository } from '../documentVersionsRepository'
 import { EvaluationResultsRepository } from '../evaluationResultsRepository'
 import { EvaluationsRepository } from '../evaluationsRepository'
 import RepositoryLegacy from '../repository'
+import { LatitudeError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
 
 const tt = getTableColumns(connectedEvaluations)
 

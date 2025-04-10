@@ -1,5 +1,4 @@
 import { env } from '@latitude-data/env'
-import { Result } from '../../../../lib'
 import {
   unsafelyFindWorkspace,
   unsafelyGetApiKeyByToken,
@@ -9,6 +8,7 @@ import {
   DocumentVersionsRepository,
 } from '../../../../repositories'
 import { Commit, Workspace, DocumentVersion } from '../../../../browser'
+import { Result } from './../../../../lib/Result'
 
 export const DEFAULT_COPILOT_GENERATE_TOOL_RESPONSES_PATH =
   'tool-responses-generator'

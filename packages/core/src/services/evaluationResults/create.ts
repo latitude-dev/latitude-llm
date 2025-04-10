@@ -7,11 +7,13 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { BadRequestError, Result, Transaction } from '../../lib'
 import { evaluationResults } from '../../schema'
 import { evaluationResultableBooleans } from '../../schema/models/evaluationResultableBooleans'
 import { evaluationResultableNumbers } from '../../schema/models/evaluationResultableNumbers'
 import { evaluationResultableTexts } from '../../schema/models/evaluationResultableTexts'
+import { BadRequestError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 function getResultable(type: EvaluationResultableType) {
   switch (type) {

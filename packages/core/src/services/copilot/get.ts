@@ -4,7 +4,7 @@ import {
   unsafelyFindWorkspace,
   unsafelyGetApiKeyByToken,
 } from '../../data-access'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,

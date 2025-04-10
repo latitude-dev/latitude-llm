@@ -11,10 +11,10 @@ import {
   Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
-import { NotFoundError } from '../../lib'
 import { DocumentSuggestionsRepository } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { discardDocumentSuggestion } from './discard'
+import { NotFoundError } from './../../lib/errors'
 
 describe('discardDocumentSuggestion', () => {
   let mocks: {

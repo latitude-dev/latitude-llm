@@ -2,13 +2,6 @@ import { ConnectedEvaluation, User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import {
-  NotFoundError,
-  PromisedResult,
-  Result,
-  Transaction,
-  TypedResult,
-} from '../../lib'
-import {
   DocumentVersionsRepository,
   EvaluationsRepository,
   ProjectsRepository,
@@ -16,6 +9,10 @@ import {
 import { connectedEvaluations } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 import { importLlmAsJudgeEvaluation } from './create'
+import { NotFoundError } from './../../lib/errors'
+import Transaction, { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
 
 export function connectEvaluations(
   {

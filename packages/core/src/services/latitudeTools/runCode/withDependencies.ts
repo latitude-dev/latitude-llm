@@ -1,11 +1,9 @@
-import {
-  BadRequestError,
-  LatitudeError,
-  PromisedResult,
-  Result,
-} from '../../../lib'
 import { CodeRunResult, CodeToolArgs, SupportedLanguage } from './types'
 import { normalizedResult, withSafeSandbox } from './sandbox'
+import { BadRequestError } from './../../../lib/errors'
+import { LatitudeError } from './../../../lib/errors'
+import { PromisedResult } from './../../../lib/Transaction'
+import { Result } from './../../../lib/Result'
 
 function getDependencyBuilder({ language }: { language: SupportedLanguage }) {
   if (language === 'python') return (dep: string) => `pip install ${dep}`
