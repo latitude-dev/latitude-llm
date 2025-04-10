@@ -6,19 +6,19 @@ import {
   DocumentVersion,
   EvaluationTmp,
 } from '@latitude-data/core/browser'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { NumeredList } from '@latitude-data/web-ui/molecules/NumeredList'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { NumeredList } from '@latitude-data/web-ui/molecules/NumeredList'
 import { isNumber } from 'lodash-es'
 import Link from 'next/link'
 import { useMemo } from 'react'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 
 function findValue({
   headers,
@@ -258,7 +258,7 @@ export default function DatasetForm({
                         param,
                       })}
                       onChange={onParametersChange(param)}
-                      placeholder='Select column'
+                      placeholder='Select csv column'
                     />
                   )
                 })}
@@ -272,24 +272,26 @@ export default function DatasetForm({
             )
           ) : null}
         </NumeredList.Item>
-        <NumeredList.Item
-          title={`Select the column that contains the expected output (${specification?.requiresExpectedOutput ? 'REQUIRED' : 'OPTIONAL'})`}
-          width='w-1/2'
-        >
-          {selectedDataset ? (
-            <div className='flex flex-col gap-y-3'>
-              <Select
-                name='datasetLabel'
-                disabled={labels!.length === 0}
-                errors={errors?.datasetLabel}
-                options={labels!}
-                value={datasetLabel!}
-                onChange={onChangeDatasetLabel!}
-                placeholder='No expected output'
-              />
-            </div>
-          ) : null}
-        </NumeredList.Item>
+        {specification?.requiresExpectedOutput && (
+          <NumeredList.Item
+            title='Select the column that contains the expected output'
+            width='w-1/2'
+          >
+            {selectedDataset ? (
+              <div className='flex flex-col gap-y-3'>
+                <Select
+                  name='datasetLabel'
+                  disabled={labels!.length === 0}
+                  errors={errors?.datasetLabel}
+                  options={labels!}
+                  value={datasetLabel!}
+                  onChange={onChangeDatasetLabel!}
+                  placeholder='Select csv column'
+                />
+              </div>
+            ) : null}
+          </NumeredList.Item>
+        )}
       </NumeredList>
     </>
   )

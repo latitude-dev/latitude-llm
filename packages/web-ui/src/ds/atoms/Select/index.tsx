@@ -1,19 +1,18 @@
 'use client'
-
 import { ReactNode, useEffect, useState } from 'react'
+
 import { cn } from '../../../lib/utils'
-import { zIndex } from '../../tokens/zIndex'
-import { FormField, type FormFieldProps } from '../FormField'
+import { FormField } from '../FormField'
+import { type FormFieldProps } from '../FormField'
 import { IconName } from '../Icons'
-import { Skeleton } from '../Skeleton'
 import {
   SelectContent,
-  SelectGroup,
-  SelectItem,
   SelectRoot,
   SelectTrigger,
   SelectValue,
 } from './Primitives'
+import { SelectGroup, SelectItem } from './Primitives'
+import { zIndex } from '../../tokens/zIndex'
 
 export type SelectOption<V extends unknown = unknown> = {
   label: string
@@ -47,7 +46,6 @@ export type SelectProps<V extends unknown = unknown> = Omit<
   value?: V
   trigger?: ReactNode
   placeholder?: string
-  loading?: boolean
   disabled?: boolean
   required?: boolean
   onChange?: (value: V) => void
@@ -68,7 +66,6 @@ export function Select<V extends unknown = unknown>({
   info,
   onChange,
   width = 'full',
-  loading = false,
   disabled = false,
   required = false,
 }: SelectProps<V>) {
@@ -92,40 +89,36 @@ export function Select<V extends unknown = unknown>({
       className={width === 'full' ? 'w-full' : 'w-auto'}
     >
       <div className={width === 'full' ? 'w-full' : 'w-auto'}>
-        {loading ? (
-          <Skeleton className='w-full h-8 rounded-md' />
-        ) : (
-          <SelectRoot
-            required={required}
-            disabled={disabled || loading}
-            name={name}
-            value={value as string}
-            defaultValue={defaultValue as string}
-            onValueChange={_onChange}
-          >
-            {trigger ? (
-              trigger
-            ) : (
-              <SelectTrigger
-                autoFocus={autoFocus}
-                className={cn({
-                  'border-red-500 focus:ring-red-500': errors,
-                })}
-              >
-                <SelectValue
-                  selected={selectedValue}
-                  options={options}
-                  placeholder={placeholder ?? 'Select an option'}
-                />
-              </SelectTrigger>
-            )}
-            <SelectContent className={zIndex.dropdown}>
-              <SelectGroup>
-                <Options options={options as SelectOption<V>[]} />
-              </SelectGroup>
-            </SelectContent>
-          </SelectRoot>
-        )}
+        <SelectRoot
+          required={required}
+          disabled={disabled}
+          name={name}
+          value={value as string}
+          defaultValue={defaultValue as string}
+          onValueChange={_onChange}
+        >
+          {trigger ? (
+            trigger
+          ) : (
+            <SelectTrigger
+              autoFocus={autoFocus}
+              className={cn({
+                'border-red-500 focus:ring-red-500': errors,
+              })}
+            >
+              <SelectValue
+                selected={selectedValue}
+                options={options}
+                placeholder={placeholder ?? 'Select an option'}
+              />
+            </SelectTrigger>
+          )}
+          <SelectContent className={zIndex.dropdown}>
+            <SelectGroup>
+              <Options options={options as SelectOption<V>[]} />
+            </SelectGroup>
+          </SelectContent>
+        </SelectRoot>
       </div>
     </FormField>
   )

@@ -17,7 +17,6 @@ import { database, Database } from '../../client'
 import { publisher } from '../../events/publisher'
 import {
   BadRequestError,
-  generateUUIDIdentifier,
   Result,
   Transaction,
   UnprocessableEntityError,
@@ -53,8 +52,6 @@ export async function runEvaluationV2<
   },
   db: Database = database,
 ) {
-  const resultUuid = generateUUIDIdentifier()
-
   const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
   const document = await documentsRepository
     .getDocumentAtCommit({
@@ -104,15 +101,13 @@ export async function runEvaluationV2<
   }
 
   let expectedOutput = undefined
-  if (dataset && datasetLabel && datasetRow) {
-    if (datasetRow.datasetId !== dataset.id) {
-      return Result.error(new BadRequestError('Row is not part of the dataset'))
+  if (metricSpecification.requiresExpectedOutput) {
+    if (!dataset || !datasetLabel || !datasetRow) {
+      throw new BadRequestError('Dataset, label and row are required')
     }
 
-    if (!dataset.columns.find((c) => c.name === datasetLabel)) {
-      return Result.error(
-        new BadRequestError(`${datasetLabel} column not found in dataset`),
-      )
+    if (datasetRow.datasetId !== dataset.id) {
+      return Result.error(new BadRequestError('Row is not part of the dataset'))
     }
 
     expectedOutput = getColumnData({
@@ -122,16 +117,11 @@ export async function runEvaluationV2<
     })
   }
 
-  if (metricSpecification.requiresExpectedOutput && !expectedOutput) {
-    return Result.error(new BadRequestError('Expected output is required'))
-  }
-
   let value
   try {
     value = (await typeSpecification.run(
       {
         metric: evaluation.metric,
-        resultUuid: resultUuid,
         evaluation: evaluation,
         actualOutput: actualOutput,
         expectedOutput: expectedOutput,
@@ -164,7 +154,6 @@ export async function runEvaluationV2<
   return await Transaction.call(async (tx) => {
     const { result } = await createEvaluationResultV2(
       {
-        resultUuid: resultUuid,
         evaluation: evaluation,
         providerLog: providerLog,
         commit: commit,
@@ -195,7 +184,6 @@ export async function createEvaluationResultV2<
   M extends EvaluationMetric<T>,
 >(
   {
-    resultUuid,
     evaluation,
     providerLog,
     commit,
@@ -205,7 +193,6 @@ export async function createEvaluationResultV2<
     usedForSuggestion,
     workspace,
   }: {
-    resultUuid?: string
     evaluation: EvaluationV2<T, M>
     providerLog: ProviderLogDto
     commit: Commit
@@ -221,7 +208,6 @@ export async function createEvaluationResultV2<
     const result = (await tx
       .insert(evaluationResultsV2)
       .values({
-        uuid: resultUuid,
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,

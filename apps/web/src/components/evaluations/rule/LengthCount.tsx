@@ -106,7 +106,7 @@ function chartConfiguration({
   RuleEvaluationMetric.LengthCount
 >) {
   return {
-    min: 0,
+    min: evaluation.configuration.minLength ?? 0,
     max: evaluation.configuration.maxLength ?? Infinity,
     thresholds: {
       lower: evaluation.configuration.minLength,

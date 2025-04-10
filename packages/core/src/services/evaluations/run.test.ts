@@ -1,6 +1,6 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { and, eq, isNull } from 'drizzle-orm'
 import { Adapters, Chain } from 'promptl-ai'
+import { and, eq, isNull } from 'drizzle-orm'
 import {
   afterEach,
   beforeEach,
@@ -28,7 +28,6 @@ import {
 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib'
-import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import * as generateUUIDModule from '../../lib/generateUUID'
 import {
   documentLogs,
@@ -37,6 +36,7 @@ import {
   runErrors,
 } from '../../schema'
 import * as factories from '../../tests/factories'
+import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import * as runChainModule from '../chains/run'
 import { serialize } from '../documentLogs/serialize'
 import * as createRunErrorModule from '../runErrors/create'
@@ -188,7 +188,7 @@ describe('run', () => {
         globalConfig: expect.any(Object),
         promptlVersion: 1,
         source: LogSources.Evaluation,
-        promptSource: { ...evaluation, version: 'v1' },
+        promptSource: evaluation,
         providersMap: new Map().set(provider.name, providerUsed),
         configOverrides: {
           schema: {

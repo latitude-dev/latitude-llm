@@ -8,13 +8,11 @@ import {
   EvaluationV2Stats,
 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
+import { ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  ChartWrapper,
-  ScatterChart,
-} from '@latitude-data/web-ui/molecules/Charts'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
+import { ScatterChart } from '@latitude-data/web-ui/molecules/Charts'
 import { useMemo } from 'react'
 
 export default function VersionOverviewChart<
@@ -44,16 +42,14 @@ export default function VersionOverviewChart<
     )
   }, [stats])
 
-  const minY = useMemo(() => {
-    const min = data.reduce((min, point) => Math.min(min, point.y), Infinity)
-    if (configuration.min === -Infinity) return Math.floor(min * 0.9)
-    return Math.min(configuration.min, min)
-  }, [data, configuration])
-  const maxY = useMemo(() => {
-    const max = data.reduce((max, point) => Math.max(max, point.y), -Infinity)
-    if (configuration.max === Infinity) return Math.ceil(max * 1.1)
-    return Math.max(configuration.max, max)
-  }, [data, configuration])
+  const minY = useMemo(
+    () => data.reduce((min, point) => Math.min(min, point.y), Infinity),
+    [data],
+  )
+  const maxY = useMemo(
+    () => data.reduce((max, point) => Math.max(max, point.y), -Infinity),
+    [data],
+  )
 
   return (
     <ChartWrapper
@@ -76,8 +72,8 @@ export default function VersionOverviewChart<
               label: 'Average score',
               legend: 'average score',
               type: 'number',
-              min: minY,
-              max: maxY,
+              min: Math.min(configuration.min, minY),
+              max: Math.max(configuration.max, maxY),
               thresholds: configuration.thresholds,
               tickFormatter: (score) =>
                 configuration.format(Number(score), true),

@@ -1,1 +1,0 @@
-ALTER TYPE "latitude"."run_error_code_enum" ADD VALUE 'invalid_response_format_error';
