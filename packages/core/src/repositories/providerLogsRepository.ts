@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, getTableColumns, inArray } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns, inArray, sum } from 'drizzle-orm'
 
 import { ProviderLog } from '../browser'
 import { NotFoundError, Result } from '../lib'
@@ -112,5 +112,31 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
     const result = await query
 
     return Result.ok(result)
+  }
+
+  async statsByDocumentLogUuid(documentLogUuid: string) {
+    const stats = await this.db
+      .select({
+        documentLogUuid: providerLogs.documentLogUuid,
+        tokens: sum(providerLogs.tokens).mapWith(Number),
+        duration: sum(providerLogs.duration).mapWith(Number),
+        costInMillicents: sum(providerLogs.costInMillicents).mapWith(Number),
+      })
+      .from(providerLogs)
+      .where(
+        and(
+          this.scopeFilter,
+          eq(providerLogs.documentLogUuid, documentLogUuid),
+        ),
+      )
+      .groupBy(providerLogs.documentLogUuid)
+      .then((r) => r[0])
+
+    return Result.ok({
+      documentLogUuid: stats?.documentLogUuid ?? documentLogUuid,
+      tokens: stats?.tokens ?? 0,
+      duration: stats?.duration ?? 0,
+      costInMillicents: stats?.costInMillicents ?? 0,
+    })
   }
 }

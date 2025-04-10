@@ -19,17 +19,17 @@ export async function validateEvaluationV2<
 >(
   {
     evaluation,
-    document,
-    commit,
     settings,
     options,
+    document,
+    commit,
     workspace,
   }: {
     evaluation?: EvaluationV2<T, M>
-    document?: DocumentVersion
-    commit: Commit
     settings: EvaluationSettings<T, M>
     options: EvaluationOptions
+    document: DocumentVersion
+    commit: Commit
     workspace: Workspace
   },
   db: Database = database,
@@ -55,6 +55,9 @@ export async function validateEvaluationV2<
       {
         metric: settings.metric,
         configuration: settings.configuration,
+        document: document,
+        commit: commit,
+        workspace: workspace,
       },
       db,
     )
@@ -64,7 +67,7 @@ export async function validateEvaluationV2<
   const evaluations = await repository
     .listAtCommitByDocument({
       commitUuid: commit.uuid,
-      documentUuid: (document?.documentUuid || evaluation?.documentUuid)!,
+      documentUuid: document.documentUuid,
     })
     .then((r) => r.unwrap())
   if (

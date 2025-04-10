@@ -88,7 +88,7 @@ export async function runEvaluation(
     source: LogSources.Evaluation,
     providersMap,
     configOverrides: { schema, output: 'object' },
-    promptSource: evaluation,
+    promptSource: { ...evaluation, version: 'v1' as const },
   })
 
   // Handle response

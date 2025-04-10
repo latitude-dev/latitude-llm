@@ -189,6 +189,7 @@ describe('computeProjectStats', () => {
       model: 'gpt-4',
       tokens: 100,
       costInMillicents: 500,
+      duration: 1000,
     })
 
     await factories.createEvaluationResultV2({
@@ -205,6 +206,7 @@ describe('computeProjectStats', () => {
         reason: 'reason',
         tokens: 100,
         cost: 500,
+        duration: 1000,
       },
       hasPassed: true,
     })

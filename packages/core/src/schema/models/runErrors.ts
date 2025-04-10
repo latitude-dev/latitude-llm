@@ -15,13 +15,14 @@ export const errorCodeEnum = latitudeSchema.enum('run_error_code_enum', [
   RunErrorCodes.AIRunError,
   RunErrorCodes.UnsupportedProviderResponseTypeError,
   RunErrorCodes.AIProviderConfigError,
-  RunErrorCodes.EvaluationRunMissingProviderLogError,
-  RunErrorCodes.EvaluationRunMissingWorkspaceError,
-  RunErrorCodes.EvaluationRunUnsupportedResultTypeError,
-  RunErrorCodes.EvaluationRunResponseJsonFormatError,
+  RunErrorCodes.EvaluationRunMissingProviderLogError, // TODO(evalsv2): Deprecated, remove when v1 evals are migrated
+  RunErrorCodes.EvaluationRunMissingWorkspaceError, // TODO(evalsv2): Deprecated, remove when v1 evals are migrated
+  RunErrorCodes.EvaluationRunUnsupportedResultTypeError, // TODO(evalsv2): Deprecated, remove when v1 evals are migrated
+  RunErrorCodes.EvaluationRunResponseJsonFormatError, // TODO(evalsv2): Deprecated, remove when v1 evals are migrated
   RunErrorCodes.DefaultProviderInvalidModel,
   RunErrorCodes.MaxStepCountExceededError,
   RunErrorCodes.FailedToWakeUpIntegrationError,
+  RunErrorCodes.InvalidResponseFormatError,
 ])
 
 export const runErrorEntities = latitudeSchema.enum('run_error_entity_enum', [

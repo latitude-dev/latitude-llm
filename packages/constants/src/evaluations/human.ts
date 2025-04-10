@@ -9,7 +9,7 @@ const humanEvaluationConfiguration = BaseEvaluationConfiguration.extend({
   instructions: z.string(),
 })
 const humanEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({
-  reason: z.string(),
+  reason: z.string().optional(),
 })
 const humanEvaluationResultError = BaseEvaluationResultError.extend({})
 
@@ -52,8 +52,8 @@ const humanEvaluationRatingConfiguration = humanEvaluationConfiguration.extend({
   minRatingDescription: z.string(),
   maxRating: z.number(),
   maxRatingDescription: z.string(),
-  minThreshold: z.number(),
-  maxThreshold: z.number(),
+  minThreshold: z.number().optional(), // Threshold in rating range
+  maxThreshold: z.number().optional(), // Threshold in rating range
 })
 const humanEvaluationRatingResultMetadata =
   humanEvaluationResultMetadata.extend({
@@ -85,8 +85,8 @@ export type HumanEvaluationRatingResultError = z.infer<
 
 const humanEvaluationComparisonConfiguration =
   humanEvaluationConfiguration.extend({
-    minThreshold: z.number(), // Threshold percentage
-    maxThreshold: z.number(), // Threshold percentage
+    minThreshold: z.number().optional(), // Threshold percentage
+    maxThreshold: z.number().optional(), // Threshold percentage
   })
 const humanEvaluationComparisonResultMetadata =
   humanEvaluationResultMetadata.extend({
