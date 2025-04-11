@@ -1,20 +1,20 @@
-// import yaml from 'js-yaml'
-// import { z } from 'zod'
-// import { zodToJsonSchema } from 'zod-to-json-schema'
+import yaml from 'js-yaml'
+import { z } from 'zod'
+import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   // ErrorableEntity,
   EvaluationType,
   // formatConversation,
   LlmEvaluationBinarySpecification,
   LlmEvaluationMetric,
-  // ProviderApiKey,
-  // Providers,
+  ProviderApiKey,
+  Providers,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 // import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-// import { serialize as serializeDocumentLog } from '../../documentLogs'
+import { serialize as serializeDocumentLog } from '../../documentLogs'
 // import { createRunError } from '../../runErrors/create'
 import {
   EvaluationMetricRunArgs,
@@ -63,73 +63,73 @@ async function validate(
   })
 }
 
-// const promptSchema = z.object({
-//   passed: z.boolean(),
-//   reason: z.string(),
-// })
+const promptSchema = z.object({
+  passed: z.boolean(),
+  reason: z.string(),
+})
 
 // @ts-ignore
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-// function buildPrompt({
-//   provider,
-//   model,
-//   criteria,
-//   passDescription,
-//   failDescription,
-// }: {
-//   provider: ProviderApiKey
-//   model: string
-//   criteria: string
-//   passDescription: string
-//   failDescription: string
-// }) {
-//   return `
-// ---
-// provider: ${provider.name}
-// model: ${model}
-// temperature: 0.7
-// ${yaml.dump({ schema: zodToJsonSchema(promptSchema, { target: 'openAi' }) })}
-// ---
+function buildPrompt({
+  provider,
+  model,
+  criteria,
+  passDescription,
+  failDescription,
+}: {
+  provider: ProviderApiKey
+  model: string
+  criteria: string
+  passDescription: string
+  failDescription: string
+}) {
+  return `
+---
+provider: ${provider.name}
+model: ${model}
+temperature: 0.7
+${yaml.dump({ schema: zodToJsonSchema(promptSchema, { target: 'openAi' }) })}
+---
 
-// You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), meets the following criteria:
-// ${criteria}
+You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), meets the following criteria:
+${criteria}
 
-// The resulting verdict is \`true\` if the response meets the criteria, \`false\` otherwise, where:
-// - \`true\` represents "${passDescription}"
-// - \`false\` represents "${failDescription}"
+The resulting verdict is \`true\` if the response meets the criteria, \`false\` otherwise, where:
+- \`true\` represents "${passDescription}"
+- \`false\` represents "${failDescription}"
 
-// ${provider.provider === Providers.Anthropic ? '<user>' : ''}
+${provider.provider === Providers.Anthropic ? '<user>' : ''}
 
-// Based on the given instructions, evaluate the assistant response:
-// \`\`\`
-// {{ actualOutput }}
-// \`\`\`
+Based on the given instructions, evaluate the assistant response:
+\`\`\`
+{{ actualOutput }}
+\`\`\`
 
-// For context, here is the full conversation:
-// \`\`\`
-// {{ conversation }}
-// \`\`\`
+For context, here is the full conversation:
+\`\`\`
+{{ conversation }}
+\`\`\`
 
-// {{if toolCalls }}
-//   Also, here are the tool calls that the assistant requested:
-//   \`\`\`
-//   {{toolCalls}}
-//   \`\`\`
-// {{endif}}
+{{if toolCalls }}
+  Also, here are the tool calls that the assistant requested:
+  \`\`\`
+  {{toolCalls}}
+  \`\`\`
+{{endif}}
 
-// {{if cost || duration }}
-//   Also, here is some additional metadata about the conversation. It may or may not be relevant for the evaluation.
-//   {{if cost }} - Cost: {{ cost }} cents. {{endif}}
-//   {{if duration }} - Duration: {{ duration }} milliseconds. {{endif}}
-// {{endif}}
+{{if cost || duration }}
+  Also, here is some additional metadata about the conversation. It may or may not be relevant for the evaluation.
+  {{if cost }} - Cost: {{ cost }} cents. {{endif}}
+  {{if duration }} - Duration: {{ duration }} milliseconds. {{endif}}
+{{endif}}
 
-// ${provider.provider === Providers.Anthropic ? '</user>' : ''}
+${provider.provider === Providers.Anthropic ? '</user>' : ''}
 
-// You must give your verdict as a single JSON object with the following properties:
-// - passed (boolean): \`true\` if the response meets the criteria, \`false\` otherwise
-// - reason (string): A string explaining your evaluation decision.
-// `.trim()
-// }
+You must give your verdict as a single JSON object with the following properties:
+- passed (boolean): \`true\` if the response meets the criteria, \`false\` otherwise
+- reason (string): A string explaining your evaluation decision.
+`.trim()
+}
 
 async function run(
   {
@@ -137,11 +137,11 @@ async function run(
     evaluation,
     actualOutput,
     // conversation,
-    // documentLog,
+    documentLog,
     providers,
-    // workspace,
+    workspace,
   }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Binary>,
-  _db: Database = database,
+  db: Database = database,
 ) {
   try {
     let metadata = {
@@ -161,10 +161,10 @@ async function run(
 
     // @ts-ignore
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    // const evaluatedLog = await serializeDocumentLog(
-    //   { documentLog, workspace },
-    //   db,
-    // ).then((r) => r.unwrap())
+    const evaluatedLog = await serializeDocumentLog(
+      { documentLog, workspace },
+      db,
+    ).then((r) => r.unwrap())
 
     // const { response, stats, verdict } = await runPrompt({
     //   prompt: buildPrompt({ ...metadata.configuration, provider }),
