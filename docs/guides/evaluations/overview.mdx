@@ -1,33 +1,58 @@
 ---
-title: Overview
-description: 'Learn how to create and use evaluations for your prompts.'
+title: Evaluation Overview
+description: Understand the different ways to evaluate prompt performance in Latitude.
 ---
 
-## What is an evaluation?
+Evaluations are crucial for understanding and improving the quality of your AI prompt responses. Latitude provides a comprehensive evaluation framework to assess performance against various criteria.
 
-Evaluations help you assess the quality of your LLM responses. Each prompt in your project has its own evaluations. Latitude supports three types of evaluations, each type has its own strengths and use cases:
+## Why Evaluate Prompts?
 
-- [**LLM-as-judge**](/guides/evaluations/llm_as_judge_evaluations): Large language models are used to evaluate the output of other models. This is useful when the evaluated criteria is subjective and complex.
-- [**Programmatic rules**](/guides/evaluations/programmatic_rules): Simple, algorithmic rules, that evaluate your prompt based on a metric. Perfect for ground truth testing and objective criterias, such as enforcing specific lengths or validating formats.
-- [**Human-in-the-loop**](/guides/evaluations/manual_evaluations): You (or your team) manually review the logs and evaluate them based on your criteria. This is ideal when you need human verification.
+- **Measure Quality**: Objectively assess if prompts meet desired standards (accuracy, relevance, tone, safety, etc.).
+- **Identify Weaknesses**: Pinpoint scenarios where prompts underperform.
+- **Compare Versions**: Quantify the impact of prompt changes (A/B testing).
+- **Drive Improvement**: Gather data to refine prompts using [Prompt Suggestions](/guides/evaluations/prompt-suggestions).
+- **Ensure Reliability**: Build confidence in production-deployed prompts.
 
-### Negative evaluations
+## Evaluation Types in Latitude
 
-Usually, a higher score is always better in an evaluation. However, if you want to measure negative traits such as hallucinations or perplexity, you may want to use negative evaluations. Negative evaluations are evaluations that measure a negative criteria, where a lower score is better.
+Latitude supports three main approaches to evaluation, each suited for different needs:
 
-You can define whether a higher or lower score is better in the evaluation's settings at any time. The refiner will use this to decide whether to choose higher or lower score evaluation results when optimizing your prompt.
+1.  [**LLM-as-Judge**](/guides/evaluations/llm_as_judge_evaluations):
 
-## Running evaluations
+    - **How it works**: Uses another language model (the "judge") to score or critique the output of your target prompt based on specific criteria (e.g., helpfulness, clarity, adherence to instructions).
+    - **Best for**: Subjective criteria, complex assessments, evaluating nuanced qualities like creativity or tone.
+    - **Requires**: Defining evaluation criteria (often via templates or custom instructions for the judge LLM).
 
-Once you've defined your evaluations, you can run them in two ways:
+2.  [**Programmatic Rules**](/guides/evaluations/programmatic_rules):
 
-- [**Live mode**](/guides/evaluations/running-evaluations#running-evaluations-in-live-mode): Continuously evaluate new logs as they are generated.
-- [**Batch mode**](/guides/evaluations/running-evaluations#running-evaluations-in-batch-mode): Run evaluations on a set of logs, either from a dataset or existing logs.
+    - **How it works**: Applies code-based rules and metrics to check outputs against objective criteria.
+    - **Best for**: Objective checks, ground truth comparisons (using datasets), format validation (JSON, regex), safety checks (keyword detection), length constraints.
+    - **Requires**: Defining specific rules (e.g., exact match, contains keyword, JSON schema validation) and potentially providing a [Dataset](/guides/datasets/overview) with expected outputs.
 
-<Note>
-  Some evaluation types and/or metrics may not support live or batch evaluation.
-</Note>
+3.  [**Human-in-the-Loop (Manual Evaluations)**](/guides/evaluations/manual_evaluations):
+    - **How it works**: Team members manually review prompt outputs (logs) and assign scores or labels based on their judgment.
+    - **Best for**: Capturing nuanced human preferences, evaluating criteria difficult for LLMs to judge, initial quality assessment, creating golden datasets for other evaluation types.
+    - **Requires**: Setting up manual review workflows and criteria for reviewers.
 
-## Prompt suggestions
+## How Evaluations Connect to Prompts
 
-Latitude automatically analyzes your evaluation results to generate [prompt suggestions](/guides/evaluations/prompt-suggestions) that help improve your prompts. These suggestions are based on patterns in your evaluation results and provide actionable recommendations for enhancing your prompt's performance.
+- **Per-Prompt Basis**: Evaluations are configured individually for each prompt within a project.
+- **Target Logs**: Evaluations run on the [Logs](/guides/logs/overview) generated by their associated prompt.
+- **Triggering**: Evaluations can be run manually on batches of logs/datasets or automatically on incoming logs (live mode). See [Running Evaluations](/guides/evaluations/running-evaluations).
+- **Results**: Evaluation results (scores, labels, feedback) are stored alongside the corresponding logs, providing a rich dataset for analysis and improvement.
+
+## Negative Evaluations
+
+Sometimes, you want to measure undesirable traits (e.g., toxicity, hallucination presence), where a _lower_ score is better. Latitude allows you to mark evaluations as "negative".
+
+- Go to the evaluation's settings.
+- Configure whether a higher or lower score indicates better performance.
+- The [Prompt Suggestions](/guides/evaluations/prompt-suggestions) feature will use this setting to optimize correctly.
+
+## Next Steps
+
+Dive deeper into each evaluation type:
+
+- [LLM-as-Judge Evaluations](/guides/evaluations/llm_as_judge_evaluations)
+- [Programmatic Rule Evaluations](/guides/evaluations/programmatic_rules)
+- [Human-in-the-Loop Evaluations](/guides/evaluations/manual_evaluations)

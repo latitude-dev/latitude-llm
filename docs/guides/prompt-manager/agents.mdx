@@ -1,36 +1,56 @@
 ---
-title: 'Agents'
-description: 'Learn how to create agents with your prompts'
+title: Latitude Agents
+description: Create autonomous agents that can use tools, reason, and complete complex tasks over multiple steps.
 ---
 
-## Overview
+<iframe
+  width='100%'
+  height='500px'
+  src='https://www.youtube.com/embed/d77AGdOYpVA?si=DS-21MrIICHbbS9T'
+  title='Latitude Agents Overview'
+  frameborder='0'
+  allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'
+  referrerpolicy='strict-origin-when-cross-origin'
+  allowfullscreen
+></iframe>
 
-Agents enable your prompts to run steps autonomously until a task is completed.
+Latitude Agents are an advanced prompt type that enables AI models to operate autonomously, breaking down complex tasks, using tools, and reasoning through multiple steps until a final goal is achieved.
 
-A regular prompt runs as a single step in a conversation. For more complex workflows, you can use [Chains](/promptl/advanced/chains) to set a specific sequence of steps for the AI to follow. However, certain tasks require the AI to be more flexible, improvising and adapting to the user’s input and the tool’s response in ways that Chains cannot achieve.
+Unlike simple prompts or even [Chains](/promptl/advanced/chains) which follow predefined steps, Agents can dynamically decide their next action based on the context and available tools.
 
-By defining a prompt as an "Agent", the AI will automatically keep thinking and running tools until the task is completed, automatically adapting to the circumstances.
+## Defining an Agent
 
-<iframe width="100%" height="500px" src="https://www.youtube.com/embed/d77AGdOYpVA?si=DS-21MrIICHbbS9T" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-
-## Syntax
-
-Defining a prompt as an Agent is simple. Just add the `type: agent` option to the prompt configuration, and specify their task as you would in a regular prompt.
+To turn a prompt into an Agent, simply add `type: agent` to its configuration block:
 
 ```markdown
 ---
 provider: openai
 model: gpt-4o
-type: agent
+type: agent # Enable agent mode
 ---
-Count from 1 to 10, using only 1 message at a time.
+
+Plan and execute the steps needed to research and write a short blog post about the benefits of using Latitude Agents.
 ```
 
-### Available tools
+## How the Agent Loop Works
 
-Agents can use all the tools available in Latitude, just like regular prompts. Having a selection of tools at their disposal is particularly useful, as the AI can then decide which ones to use and when, in order to complete the task.
+When an Agent prompt is run:
 
-Learn more about how to define tools in the [Tools](/guides/prompt-manager/tools) guide.
+1.  **Goal Understanding**: The agent analyzes the initial prompt to understand the overall task or goal.
+2.  **Planning (Implicit)**: It internally plans the first step needed to move towards the goal.
+3.  **Action**: It decides whether to:
+    a. **Call a Tool**: If it needs external information or functionality, it requests a tool call.
+    b. **Generate Response**: If it has enough information or needs to ask a clarifying question, it generates text.
+4.  **Observation**: If a tool was called, it receives the tool's response.
+5.  **Reasoning**: Based on the goal, previous steps, and new observations (tool responses), it reasons about the next action needed.
+6.  **Repeat**: Steps 3-5 repeat until the agent determines the original goal is fully accomplished.
+7.  **Final Answer**: The agent provides the final result.
+
+This loop allows the agent to adapt its strategy, handle errors, and utilize tools effectively.
+
+## Using Tools Within Agents
+
+Agents become truly powerful when combined with [Tools](/guides/prompt-manager/tools). Provide the agent with a set of relevant tools, and it will decide which ones to use and when.
 
 ```markdown
 ---
@@ -38,135 +58,97 @@ provider: openai
 model: gpt-4o
 type: agent
 tools:
-  get_weather:
-    description: Returns the weather forecast for a specific location.
-    parameters:
-      type: object
-      properties:
-        location_id:
-          type: number
-          description: The ID for the location to get the weather for.
-  get_location_id:
-    description: Returns the location ID given a location name.
-    parameters:
-      type: object
-      properties:
-        location_name:
-          type: string
-          description: The name of the location to get the ID for.
+  - latitude/search
+  - get_weather
+  - get_location_id
+
+# Tool definitions...
+get_weather:
+  # ... definition
+get_location_id:
+  # ... definition
 ---
-What's the weather in {{ location }}?
+
+Find the current weather for {{ location_name }}.
 ```
 
-In this example, the AI identifies the need for a Location ID to retrieve the weather, but it only has the location name. To address this, the AI decides on a course of action. It uses the `get_location_id` tool to obtain the ID, then utilizes the `get_weather` tool to get the forecast, and finally returns the result to the user.
+In this example, the agent might:
 
-### Response schema
+1.  Realize it needs a location ID for `get_weather`.
+2.  Call `get_location_id` with `location_name`.
+3.  Receive the `location_id`.
+4.  Call `get_weather` with the obtained `location_id`.
+5.  Receive the weather data.
+6.  Formulate and return the final answer to the user.
 
-You can define the structure of an agent's final response by specifying its response schema. This is defined by using the [JSON Schema](/guides/prompt-manager/json-output) option in the prompt configuration.
+## Defining the Final Output (Schema)
+
+You can guide the agent's final output by specifying a response `schema` using [JSON Schema](/guides/prompt-manager/json-output):
 
 ```markdown
 ---
 provider: openai
 model: gpt-4o
 type: agent
-
-tools:
-  get_weather:
-    description: Returns the weather forecast for a specific location.
-    parameters:
-      type: object
-      properties:
-        location:
-          type: string
-          description: The name of the location to get the weather for.
-
+tools: [latitude/search]
 schema:
   type: object
   properties:
-    temperature:
-      type: number
-      description: The value of the temperature.
-    unit:
+    summary:
       type: string
-      description: The unit of the temperature (Celsius, Fahrenheit, etc.).
+      description: A concise summary of the findings.
+    key_points:
+      type: array
+      items:
+        type: string
+      description: A list of key bullet points.
+  required: [summary, key_points]
 ---
-What's the weather in {{ location }}?
+
+Research the main features of the Vercel AI SDK and provide a summary and key bullet points.
 ```
 
-### Predefined steps
+The agent will work towards fulfilling the task and then structure its final response according to the schema.
 
-Agents will run multiple steps autonomously until the task is completed. However, you can still use `<step>` tags into the prompt to define specific steps the AI must follow before starting the autonomous process.
+## Predefined Steps
+
+While agents operate autonomously, you can provide initial instructions or force specific actions using `<step>` tags. The agent will execute these predefined steps first before entering its autonomous loop.
 
 ```markdown
 ---
-provider: openai
-model: gpt-4o
-type: agent
-tools:
-  get_user_id:
-    description: Returns the user's ID given a name.
-    parameters:
-      type: object
-      properties:
-        name:
-          type: string
-          description: The name of the user to get the ID for.
-  get_user_info:
-    description: Given a user ID, returns the user's information.
-    parameters:
-      type: object
-      properties:
-        user_id:
-          type: number
-          description: The ID of the user to get information for.
+# ... agent config ...
 ---
+
 <step>
-  Get the user's ID for the name "{{ name }}".
+  First, search for recent news about AI advancements.
 </step>
 
 <step>
-  Get the user's information for the returned ID.
+  Then, identify the top 3 trends mentioned.
 </step>
 
-Now, create a list of the information about all of this user's friends
-and categorize them by status.
+Now, write a short analysis comparing these trends.
 ```
 
-In this example, the first two steps will always be executed, and the AI will then proceed autonomously to complete the task, deciding what to do in each following step by itself.
+## Limiting Agent Iterations
 
-### Limiting steps
+To prevent agents from running indefinitely (e.g., getting stuck in loops), you can limit the maximum number of steps (tool calls + LLM responses) using the `maxSteps` configuration option (default: 20, max: 150).
 
-The AI will run autonomously until it decides the task is complete, based on your prompt. It can perform as many steps as necessary. To prevent infinite loops, you can set a limit on the number of steps using the `maxSteps` option in the prompt configuration. By default, the limit is set to `20`, and you can change this configuration up to `150`.
-
-Exceeding this limitation will result in an error and stop the agent from running further.
-
-```markdown
+```yaml
 ---
-provider: openai
-model: gpt-4o
-type: agent
-tools:
-  get_user_info:
-    description: Given a user ID, returns the user's information.
-    parameters:
-      type: object
-      properties:
-        user_id:
-          type: number
-          description: The ID of the user to get information for.
-
-maxSteps: 10
+# ... agent config ...
+maxSteps: 10 # Limit the agent to 10 steps
 ---
-Find the ID of the user with name "{{ name }}".
 ```
+
+If the limit is reached before the goal is completed, the agent run will terminate with an error.
 
 ## Running Agents
 
-Agent prompts can be executed in exactly the same way as regular prompts. It will return a series of events that represent the AI's thought process and the tools it uses to complete the task as a sequence of steps, just like with regular Chains, and eventually end with a final response.
+Agents are run just like any other prompt using the [API](/guides/api/api-access) or [SDKs](/guides/sdk/typescript). The response will typically be a stream of events detailing the agent's thought process, tool calls, and final answer.
 
-Just using the `run` API endpoint, or `prompt.run` method from the SDK, and specify the prompt path and parameters as regular.
+## Next Steps
 
-<Note>
-  Learn more about how the [API](/guides/api/api-access) or the [SDK
-  Integrations](/guides/sdk/typescript).
-</Note>
+- Explore [Latitude Tools](/guides/prompt-manager/latitude-tools) that agents can use.
+- Test your agents in the [Playground](/guides/prompt-manager/playground).
+- Learn about [Evaluations](/guides/evaluations/overview) to assess agent performance.
