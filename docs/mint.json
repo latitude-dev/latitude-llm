@@ -114,12 +114,6 @@
       ]
     },
     {
-      "group": "Traces",
-      "pages": [
-        "guides/traces/overview"
-      ]
-    },
-    {
       "group": "Logs",
       "pages": [
         "guides/logs/overview",
@@ -145,33 +139,6 @@
       "pages": [
         "guides/sdk/typescript",
         "guides/sdk/python",
-        {
-          "group": "Telemetry",
-          "pages": [
-            "guides/sdk/telemetry/aleph-alpha",
-            "guides/sdk/telemetry/anthropic",
-            "guides/sdk/telemetry/aws-bedrock",
-            "guides/sdk/telemetry/aws-sagemaker",
-            "guides/sdk/telemetry/azure-openai",
-            "guides/sdk/telemetry/cohere",
-            "guides/sdk/telemetry/dspy",
-            "guides/sdk/telemetry/google-ai-platform",
-            "guides/sdk/telemetry/groq",
-            "guides/sdk/telemetry/haystack",
-            "guides/sdk/telemetry/langchain",
-            "guides/sdk/telemetry/litellm",
-            "guides/sdk/telemetry/llamaindex",
-            "guides/sdk/telemetry/mistralai",
-            "guides/sdk/telemetry/ollama",
-            "guides/sdk/telemetry/openai",
-            "guides/sdk/telemetry/replicate",
-            "guides/sdk/telemetry/together",
-            "guides/sdk/telemetry/transformers",
-            "guides/sdk/telemetry/vercel-ai-sdk",
-            "guides/sdk/telemetry/vertex-ai",
-            "guides/sdk/telemetry/watsonx"
-          ]
-        },
         {
           "group": "Community",
           "pages": [

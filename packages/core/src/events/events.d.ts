@@ -24,9 +24,7 @@ import type {
   ProviderLog,
   ProviderLogDto,
   Providers,
-  Span,
   StreamType,
-  Trace,
   User,
   Workspace,
 } from '../browser'
@@ -71,7 +69,6 @@ export type Events =
   | 'copilotSuggestionGenerated'
   | 'copilotSuggestionApplied'
   | 'evaluationResultUpdated'
-  | 'bulkCreateTracesAndSpans'
   | 'evaluationV2Created'
   | 'evaluationV2Ran'
   | 'evaluationResultV2Created'
@@ -504,15 +501,6 @@ export type EvaluationResultUpdatedEvent = LatitudeEventGeneric<
   }
 >
 
-export type BulkCreateTracesAndSpansEvent = LatitudeEventGeneric<
-  'bulkCreateTracesAndSpans',
-  {
-    workspaceId: number
-    traces: Trace[]
-    spans: Span[]
-  }
->
-
 export type EvaluationV2CreatedEvent = LatitudeEventGeneric<
   'evaluationV2Created',
   {
@@ -613,7 +601,6 @@ export type LatitudeEvent =
   | CopilotSuggestionGenerated
   | CopilotSuggestionApplied
   | EvaluationResultUpdatedEvent
-  | BulkCreateTracesAndSpansEvent
   | EvaluationV2CreatedEvent
   | EvaluationV2RanEvent
   | EvaluationResultV2CreatedEvent
@@ -660,7 +647,6 @@ export interface IEventsHandlers {
   copilotSuggestionGenerated: EventHandler<CopilotSuggestionGenerated>[]
   copilotSuggestionApplied: EventHandler<CopilotSuggestionApplied>[]
   evaluationResultUpdated: EventHandler<EvaluationResultUpdatedEvent>[]
-  bulkCreateTracesAndSpans: EventHandler<BulkCreateTracesAndSpansEvent>[]
   evaluationV2Created: EventHandler<EvaluationV2CreatedEvent>[]
   evaluationV2Ran: EventHandler<EvaluationV2RanEvent>[]
   evaluationResultV2Created: EventHandler<EvaluationResultV2CreatedEvent>[]

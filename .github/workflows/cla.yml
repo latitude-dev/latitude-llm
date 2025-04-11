@@ -26,4 +26,4 @@ jobs:
           path-to-signatures: 'signatures/version1/cla.json'
           path-to-document: 'https://github.com/latitude-dev/latitude-llm/blob/main/cla.md'
           branch: 'signatures'
-          allowlist: geclos,cesr,csansoon,andresgutgon,samulatitude,cesr,ferranrodriguez
+          allowlist: geclos,cesr,csansoon,andresgutgon,neoxelox

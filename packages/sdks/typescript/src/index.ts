@@ -23,11 +23,6 @@ import {
   MessageRole as PromptlMessageRole,
   ContentType as PromptlContentType,
 } from 'promptl-ai'
-import {
-  LatitudeExporter,
-  LatitudeTelemetrySDK,
-  LatitudeTelemetrySDKConfig,
-} from '@latitude-data/telemetry'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
 import {
@@ -75,9 +70,6 @@ const DEFAULT_INTERNAL = {
 type Options = {
   versionUuid?: string
   projectId?: number
-  telemetry?: Omit<LatitudeTelemetrySDKConfig, 'exporter'> & {
-    exporter?: any
-  }
   __internal?: {
     gateway?: GatewayApiConfig
     source?: LogSources
@@ -87,9 +79,6 @@ type Options = {
 
 class Latitude {
   protected options: SDKOptions
-
-  public telemetry?: LatitudeTelemetrySDK
-
   public evaluations: {
     trigger: (uuid: string, options?: EvalOptions) => Promise<{ uuid: string }>
     createResult: (
@@ -143,7 +132,6 @@ class Latitude {
     {
       projectId,
       versionUuid,
-      telemetry,
       __internal = {
         gateway: DEFAULT_GAWATE_WAY,
       },
@@ -189,20 +177,6 @@ class Latitude {
       render: this.renderPrompt.bind(this),
       renderChain: this.renderChain.bind(this),
       renderAgent: this.renderAgent.bind(this),
-    }
-
-    if (telemetry) {
-      const exporter =
-        telemetry.exporter ??
-        new LatitudeExporter({
-          apiKey: this.options.apiKey,
-        })
-
-      this.telemetry = new LatitudeTelemetrySDK({
-        ...telemetry,
-        exporter,
-        processors: telemetry.processors,
-      })
     }
   }
 

@@ -41,40 +41,6 @@ const sdk = new Latitude('your-api-key-here', {
 
 Check out our [cookbook](/guides/cookbook/overview#typescript) for more examples of how to use Latitude's SDK.
 
-## Telemetry
-
-Latitude can automatically trace all your LLM calls from most major providers and frameworks
-using our OpenTelemetry integration. We recommend this approach to easily get
-started using Latitude's full capabilities.
-
-Here's how to integrate with the all supported providers/frameworks:
-
-- [Anthropic](/guides/sdk/telemetry/anthropic)
-- [AWS Bedrock](/guides/sdk/telemetry/aws-bedrock)
-- [Azure OpenAI](/guides/sdk/telemetry/azure-openai)
-- [Cohere](/guides/sdk/telemetry/cohere)
-- [Google AI Platform](/guides/sdk/telemetry/google-ai-platform)
-- [OpenAI](/guides/sdk/telemetry/openai)
-- [Vercel AI SDK](/guides/sdk/telemetry/vercel-ai-sdk)
-- [Vertex AI](/guides/sdk/telemetry/vertex-ai)
-
-Learn more about [traces](/guides/traces/overview) and how to monitor them with Latitude.
-
-#### A note during development
-
-Latitude's OpenTelemetry integration batches requests automatically in order to
-improve performance. This is helpful in production workloads, but during
-development you may want to disable batching. This can be done by setting the
-`disableBatch` option to `true`:
-
-```typescript
-new Latitude('your-api-key-here', {
-  telemetry: {
-    disableBatch: true,
-  },
-})
-```
-
 ## Prompt Management
 
 ### Get or create a prompt

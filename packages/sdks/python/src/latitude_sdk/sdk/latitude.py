@@ -1,6 +1,5 @@
 from typing import Optional
 
-from latitude_telemetry import Telemetry, TelemetryOptions
 from promptl_ai import Promptl, PromptlOptions
 
 from latitude_sdk.client import Client, ClientOptions, RouterOptions
@@ -22,7 +21,6 @@ class InternalOptions(Model):
 
 class LatitudeOptions(SdkOptions, Model):
     promptl: Optional[PromptlOptions] = None
-    telemetry: Optional[TelemetryOptions] = None
     internal: Optional[InternalOptions] = None
 
 
@@ -41,7 +39,6 @@ DEFAULT_INTERNAL_OPTIONS = InternalOptions(
 
 
 DEFAULT_LATITUDE_OPTIONS = LatitudeOptions(
-    telemetry=None,  # NOTE: Telemetry is opt-in
     internal=DEFAULT_INTERNAL_OPTIONS,
 )
 
@@ -51,7 +48,6 @@ class Latitude:
     _client: Client
 
     promptl: Promptl
-    telemetry: Optional[Telemetry]
 
     prompts: Prompts
     logs: Logs
@@ -81,9 +77,6 @@ class Latitude:
         )
 
         self.promptl = Promptl(self._options.promptl)
-        if self._options.telemetry:
-            self.telemetry = Telemetry(api_key, self._options.telemetry)
-
         self.prompts = Prompts(self._client, self.promptl, self._options)
         self.logs = Logs(self._client, self._options)
         self.evaluations = Evaluations(self._client, self._options)

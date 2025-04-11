@@ -1,27 +1,25 @@
-import { createEnv } from '@t3-oss/env-core'
-import { z } from 'zod'
-
-let GATEWAY_HOSTNAME, GATEWAY_PORT, GATEWAY_SSL
-if (process.env.NODE_ENV === 'production') {
-  GATEWAY_HOSTNAME = 'gateway.latitude.so'
-  GATEWAY_SSL = 'true'
-} else {
-  GATEWAY_HOSTNAME = 'localhost'
-  GATEWAY_PORT = '8787'
-  GATEWAY_SSL = 'false'
+function generateEnv() {
+  const isProd = process.env.NODE_ENV === 'production'
+  return {
+    GATEWAY_HOSTNAME: isProd ? 'gateway.latitude.so' : 'localhost',
+    GATEWAY_PORT: !isProd ? 8787 : undefined,
+    GATEWAY_SSL: isProd ? true : false,
+  }
 }
 
-export default createEnv({
-  server: {
-    GATEWAY_HOSTNAME: z.string(),
-    GATEWAY_PORT: z.coerce.number().optional(),
-    GATEWAY_SSL: z
-      .enum(['true', 'false'])
-      .transform((value) => value === 'true'),
-  },
-  runtimeEnv: {
-    GATEWAY_HOSTNAME,
-    GATEWAY_PORT,
-    GATEWAY_SSL,
-  },
-})
+type SdkEnv = {
+  GATEWAY_HOSTNAME: string
+  GATEWAY_SSL: boolean
+  GATEWAY_PORT?: number
+}
+
+let sdkEnv: SdkEnv
+
+function createEnv() {
+  if (sdkEnv) return sdkEnv
+
+  sdkEnv = generateEnv()
+  return sdkEnv
+}
+
+export default createEnv()

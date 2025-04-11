@@ -1,5 +1,6 @@
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
+import { scan } from 'promptl-ai'
 
 import {
   DOCUMENT_PATH_REGEXP,
@@ -25,6 +26,36 @@ import { getDocumentType } from './update'
 import { Result } from './../../lib/Result'
 import { TypedResult } from './../../lib/Result'
 import Transaction from './../../lib/Transaction'
+
+async function hasMetadata(content: string) {
+  try {
+    const doc = await scan({ prompt: content })
+
+    if (!doc.config) return false
+
+    return Object.keys(doc.config).length > 0
+  } catch (e) {
+    return false
+  }
+}
+
+async function applyContent({
+  content,
+  defaultContent,
+}: {
+  content?: string
+  defaultContent: {
+    content: string
+    metadata: string
+  }
+}) {
+  if (content === undefined || content === null || content === '') {
+    return defaultContent.metadata + defaultContent.content
+  }
+
+  const hasMeta = await hasMetadata(content)
+  return hasMeta ? content : defaultContent.metadata + content
+}
 
 export async function createNewDocument(
   {
@@ -72,9 +103,7 @@ export async function createNewDocument(
     }
 
     const defaultContent = await defaultDocumentContent({ workspace }, tx)
-    const docContent =
-      content ?? defaultContent.metadata + defaultContent.content
-
+    const docContent = await applyContent({ content, defaultContent })
     const documentType = await getDocumentType({
       content: docContent,
       promptlVersion,

@@ -12,8 +12,6 @@ import {
   EvaluationTmp,
   EvaluationV2,
   ProviderLogDto,
-  Span,
-  Trace,
 } from '../browser'
 import {
   type DocumentLogWithMetadataAndError,
@@ -123,11 +121,6 @@ export type WebServerToClientEvents = {
   documentLogCreated: (args: DocumentLogCreatedArgs) => void
   documentSuggestionCreated: (args: DocumentSuggestionCreatedArgs) => void
   evaluationResultV2Created: (args: EvaluationResultV2CreatedArgs) => void
-  tracesAndSpansCreated: (args: {
-    workspaceId: number
-    traces: Trace[]
-    spans: Span[]
-  }) => void
   mcpServerScaleEvent: (args: {
     workspaceId: number
     replicas: number
@@ -171,14 +164,6 @@ export type WorkersClientToServerEvents = {
   evaluationResultV2Created: (args: {
     workspaceId: number
     data: EvaluationResultV2CreatedArgs
-  }) => void
-  tracesAndSpansCreated: (args: {
-    workspaceId: number
-    data: {
-      workspaceId: number
-      traces: Trace[]
-      spans: Span[]
-    }
   }) => void
   mcpServerScaleEvent: (args: {
     workspaceId: number

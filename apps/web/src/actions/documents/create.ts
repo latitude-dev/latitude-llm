@@ -10,8 +10,9 @@ export const createDocumentVersionAction = withProject
   .createServerAction()
   .input(
     z.object({
-      path: z.string(),
       commitUuid: z.string(),
+      path: z.string(),
+      content: z.string().optional(),
     }),
     { type: 'json' },
   )
@@ -27,6 +28,7 @@ export const createDocumentVersionAction = withProject
       commit,
       path: input.path,
       createDemoEvaluation: true,
+      content: input.content,
     })
 
     return result.unwrap()

@@ -18,10 +18,7 @@ const aliasEntries = {
 }
 const EXTERNALS = [
   '@latitude-data/compiler',
-  '@latitude-data/telemetry',
-  '@t3-oss/env-core',
   'eventsource-parser/stream',
-  'flydrive/types',
   'node-fetch',
   'promptl-ai',
   'stream',

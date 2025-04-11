@@ -148,6 +148,51 @@ model: ${provider.defaultModel}
     )
   })
 
+  it('creates a new document with default default provider when no metadata', async (ctx) => {
+    let { project, user, workspace } = await ctx.factories.createProject({
+      providers: [],
+    })
+    const { commit } = await ctx.factories.createDraft({ project, user })
+    const provider = await ctx.factories.createProviderApiKey({
+      workspace,
+      type: Providers.Anthropic,
+      name: 'Default Provider',
+      defaultModel: 'claude-3-5-sonnet-latest',
+      user,
+    })
+    await ctx.factories.setProviderAsDefault(workspace, provider)
+    const workspacesScope = new WorkspacesRepository(user.id)
+    workspace = await workspacesScope.find(workspace.id).then((r) => r.unwrap())
+
+    const documentResult = await createNewDocument({
+      workspace,
+      user,
+      commit,
+      path: 'newdoc',
+      content: 'This is my prompt',
+    })
+
+    const document = documentResult.unwrap()
+    expect(document.path).toBe('newdoc')
+
+    const scope = new DocumentVersionsRepository(project.workspaceId)
+    const commitChanges = await scope.listCommitChanges(commit)
+    expect(commitChanges.value.length).toBe(1)
+
+    const createdDocument = commitChanges.value[0]!
+    expect(createdDocument.documentUuid).toBe(document.documentUuid)
+    expect(createdDocument.path).toBe(document.path)
+    expect(createdDocument.content).toBe(
+      `
+---
+provider: ${provider.name}
+model: ${provider.defaultModel}
+---
+
+This is my prompt`.trimStart(),
+    )
+  })
+
   it('creates a new document with default content when no default provider', async (ctx) => {
     const { project, user, workspace } = await ctx.factories.createProject({
       providers: [],

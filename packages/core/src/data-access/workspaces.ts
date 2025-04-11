@@ -1,6 +1,6 @@
-import { desc, eq, getTableColumns } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 
-import { DocumentVersion, ProviderApiKey, Span, type Commit } from '../browser'
+import { DocumentVersion, ProviderApiKey, type Commit } from '../browser'
 import { database } from '../client'
 import { workspacesDtoColumns } from '../repositories'
 import {
@@ -9,9 +9,7 @@ import {
   memberships,
   projects,
   providerApiKeys,
-  spans,
   subscriptions,
-  traces,
   workspaces,
 } from '../schema'
 
@@ -99,15 +97,4 @@ export async function findWorkspaceFromProviderApiKey(
     .limit(1)
 
   return results[0]
-}
-
-export async function findWorkspaceFromSpan(span: Span, db = database) {
-  return db
-    .select(getTableColumns(workspaces))
-    .from(workspaces)
-    .innerJoin(traces, eq(workspaces.id, traces.workspaceId))
-    .innerJoin(spans, eq(traces.traceId, spans.traceId))
-    .where(eq(spans.id, span.id))
-    .limit(1)
-    .then((r) => r[0])
 }

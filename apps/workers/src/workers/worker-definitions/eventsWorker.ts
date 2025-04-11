@@ -12,10 +12,7 @@ const eventsJobMappings = {
 // Event Handlers Queue job mappings
 const eventHandlersJobMappings = {
   createClaimInvitationReferralJob: jobs.createClaimInvitationReferralJob,
-  createDocumentLogsFromSpansJob: jobs.createDocumentLogsFromSpansJob,
   createLoopsContact: jobs.createLoopsContact,
-  notifyClientOfBulkCreateTracesAndSpans:
-    jobs.notifyClientOfBulkCreateTracesAndSpans,
   notifyToClientDocumentLogCreatedJob: jobs.notifyToClientDocumentLogCreatedJob,
   notifyClientOfDocumentSuggestionCreated:
     jobs.notifyClientOfDocumentSuggestionCreated,

@@ -5,10 +5,10 @@ import { findProjectCached } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 import DocumentsLayout from '../_components/DocumentsLayout'
-import { AddFileButton } from '../documents/_components/AddFileButton'
 import { DocumentBlankSlateLayout } from '../documents/_components/DocumentBlankSlateLayout'
-import { DocumentsClient } from '../documents/_components/DocumentsClient'
 import Overview from './_components/Overview'
+import { AddFileButton } from './_components/Overview/AddFileButton'
+import { AddPromptTextarea } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/overview/_components/Overview/AddPromptTextarea'
 
 export default async function OverviewPage({
   params,
@@ -35,41 +35,14 @@ export default async function OverviewPage({
             table={<Overview project={project} stats={projectStats} />}
           />
         </div>
-      ) : projectStats.totalDocuments > 0 ? (
-        <DocumentBlankSlateLayout className='p-6'>
-          <div className='flex flex-col gap-4 items-center'>
-            <Text.H4M>{project.name}</Text.H4M>
-            <Text.H5>There are no logs for this project yet.</Text.H5>
-          </div>
-          <div className='p-6 bg-background border rounded-lg flex flex-col gap-4 max-w-3xl'>
-            <Text.H4M>Upload logs to Latitude</Text.H4M>
-            <Text.H5 color='foregroundMuted'>
-              Run this code snippet to start uploading logs to Latitude. Once
-              done, come back to this page, and you'll be able to evaluate both
-              existing and incoming logs.
-            </Text.H5>
-            <DocumentsClient />
-          </div>
-        </DocumentBlankSlateLayout>
       ) : (
-        <DocumentBlankSlateLayout className='p-6'>
-          <div className='flex flex-col gap-4 items-center'>
-            <Text.H4M>{project.name}</Text.H4M>
-            <Text.H5>
-              To get started, please choose one of the following options:
-            </Text.H5>
-          </div>
+        <DocumentBlankSlateLayout
+          title={project.name}
+          description='To get started, please choose one of the following options.'
+        >
           <AddFileButton />
           <Text.H5 color='foregroundMuted'>Or</Text.H5>
-          <div className='p-6 bg-background border rounded-lg flex flex-col gap-4 max-w-3xl'>
-            <Text.H4M>Import your logs</Text.H4M>
-            <Text.H5 color='foregroundMuted'>
-              Run this code snippet to start importing logs into Latitude. Once
-              done, come back to this page, and you'll be able to evaluate both
-              existing and incoming logs.
-            </Text.H5>
-            <DocumentsClient />
-          </div>
+          <AddPromptTextarea />
         </DocumentBlankSlateLayout>
       )}
     </DocumentsLayout>

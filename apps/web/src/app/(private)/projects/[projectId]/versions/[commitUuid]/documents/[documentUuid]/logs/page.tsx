@@ -56,8 +56,14 @@ export default async function DocumentPage({
   const projectId = Number(pjid)
 
   const documentLogsRepo = new DocumentLogsRepository(workspace.id)
-  if (!documentLogsRepo.hasLogs(documentUuid)) {
-    return <DocumentLogBlankSlate />
+
+  const hasLogs = await documentLogsRepo.hasLogs(documentUuid)
+  if (!hasLogs) {
+    const uploadUrl = ROUTES.projects
+      .detail({ id: projectId })
+      .commits.detail({ uuid: commitUuid })
+      .documents.detail({ uuid: documentUuid }).logs.upload
+    return <DocumentLogBlankSlate uploadUrl={uploadUrl} />
   }
 
   const commit = await findCommitCached({ projectId, uuid: commitUuid })
