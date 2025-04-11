@@ -77,6 +77,10 @@ export function runAgent<T extends boolean, C extends SomeChain>({
         return
       }
 
+      if (value.data.type === ChainEventTypes.ProviderCompleted) {
+        chainStreamManager.setLastResponse(value.data.response)
+      }
+
       // Forward all other events
       chainStreamManager.forwardEvent(value)
 
