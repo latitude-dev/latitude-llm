@@ -11,8 +11,9 @@ import {
   Providers,
 } from '../../../browser'
 import { database, Database } from '../../../client'
-import { BadRequestError, Result } from '../../../lib'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+import { BadRequestError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
 import { serialize as serializeDocumentLog } from '../../documentLogs'
 import { createRunError } from '../../runErrors/create'
 import {

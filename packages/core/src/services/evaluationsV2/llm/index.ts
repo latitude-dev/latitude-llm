@@ -6,8 +6,9 @@ import {
   LlmEvaluationSpecification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
-import { BadRequestError, Result } from '../../../lib'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+import { BadRequestError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
 import { ProviderApiKeysRepository } from '../../../repositories'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { createRunError } from '../../runErrors/create'

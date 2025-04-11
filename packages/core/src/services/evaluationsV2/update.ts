@@ -9,13 +9,13 @@ import {
 } from '../../browser'
 import { database, Database } from '../../client'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
+import { compactObject } from '../../lib/compactObject'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { evaluationVersions } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 import { validateEvaluationV2 } from './validate'
-import { compactObject } from './../../lib/compactObject'
-import { Result } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 
 export async function updateEvaluationV2<
   T extends EvaluationType,

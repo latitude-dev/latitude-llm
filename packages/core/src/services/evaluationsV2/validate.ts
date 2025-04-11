@@ -9,10 +9,10 @@ import {
   Workspace,
 } from '../../browser'
 import { database, Database } from '../../client'
+import { BadRequestError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
 import { EvaluationsV2Repository } from '../../repositories'
 import { EVALUATION_SPECIFICATIONS } from './shared'
-import { BadRequestError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
 
 export async function validateEvaluationV2<
   T extends EvaluationType,

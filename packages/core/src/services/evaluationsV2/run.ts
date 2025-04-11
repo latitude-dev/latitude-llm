@@ -15,16 +15,16 @@ import {
 } from '../../browser'
 import { database, Database } from '../../client'
 import { publisher } from '../../events/publisher'
+import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
+import { generateUUIDIdentifier } from '../../lib/generateUUID'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import {
   DocumentLogsRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema'
 import { getColumnData } from '../datasets/utils'
-import { BadRequestError, UnprocessableEntityError } from './../../lib/errors'
-import { generateUUIDIdentifier } from './../../lib/generateUUID'
-import { Result } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 import { EVALUATION_SPECIFICATIONS } from './shared'
 
 export async function runEvaluationV2<
