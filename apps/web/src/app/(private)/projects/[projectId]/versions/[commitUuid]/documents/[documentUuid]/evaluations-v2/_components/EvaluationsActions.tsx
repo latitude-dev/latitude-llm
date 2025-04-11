@@ -1,5 +1,8 @@
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationOptions,
@@ -9,6 +12,10 @@ import {
 } from '@latitude-data/core/browser'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
 
 const DEFAULT_EVALUATION_SETTINGS = {
@@ -37,6 +44,12 @@ export function EvaluationsActions({
   generatorEnabled: boolean
   isExecuting: boolean
 }) {
+  const navigate = useNavigate()
+
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+
   const [openCreateModal, setOpenCreateModal] = useState(false)
   const [settings, setSettings] = useState<EvaluationSettings>(
     DEFAULT_EVALUATION_SETTINGS,
@@ -49,13 +62,22 @@ export function EvaluationsActions({
 
   const onCreate = useCallback(async () => {
     if (isExecuting) return
-    const [_, errors] = await createEvaluation({ settings, options })
+    const [result, errors] = await createEvaluation({ settings, options })
     if (errors) setErrors(errors)
     else {
       setSettings(DEFAULT_EVALUATION_SETTINGS)
       setOptions(DEFAULT_EVALUATION_OPTIONS)
       setErrors(undefined)
       setOpenCreateModal(false)
+
+      const { evaluation } = result
+      navigate.push(
+        ROUTES.projects
+          .detail({ id: project.id })
+          .commits.detail({ uuid: commit.uuid })
+          .documents.detail({ uuid: document.documentUuid })
+          .evaluationsV2.detail({ uuid: evaluation.uuid }).root,
+      )
     }
   }, [
     isExecuting,
@@ -66,6 +88,10 @@ export function EvaluationsActions({
     setOptions,
     setErrors,
     setOpenCreateModal,
+    project,
+    commit,
+    document,
+    navigate,
   ])
 
   return (
@@ -87,6 +113,7 @@ export function EvaluationsActions({
       </TableWithHeader.Button>
       <ConfirmModal
         dismissible
+        size='medium'
         open={openCreateModal}
         title='Create a new evaluation'
         description='Evaluations help you assess the quality of your prompts.'

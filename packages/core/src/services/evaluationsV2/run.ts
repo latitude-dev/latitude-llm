@@ -1,8 +1,8 @@
 import {
   buildConversation,
   Commit,
-  DatasetRow,
   Dataset,
+  DatasetRow,
   EVALUATION_SCORE_SCALE,
   EvaluationMetric,
   EvaluationResultV2,
@@ -21,11 +21,11 @@ import {
 } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema'
 import { getColumnData } from '../datasets/utils'
-import { EVALUATION_SPECIFICATIONS } from './shared'
-import { BadRequestError } from './../../lib/errors'
+import { BadRequestError, UnprocessableEntityError } from './../../lib/errors'
+import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { Result } from './../../lib/Result'
-import { UnprocessableEntityError } from './../../lib/errors'
 import Transaction from './../../lib/Transaction'
+import { EVALUATION_SPECIFICATIONS } from './shared'
 
 export async function runEvaluationV2<
   T extends EvaluationType,
@@ -50,6 +50,8 @@ export async function runEvaluationV2<
   },
   db: Database = database,
 ) {
+  const resultUuid = generateUUIDIdentifier()
+
   const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
   const document = await documentsRepository
     .getDocumentAtCommit({
@@ -99,13 +101,15 @@ export async function runEvaluationV2<
   }
 
   let expectedOutput = undefined
-  if (metricSpecification.requiresExpectedOutput) {
-    if (!dataset || !datasetLabel || !datasetRow) {
-      throw new BadRequestError('Dataset, label and row are required')
-    }
-
+  if (dataset && datasetLabel && datasetRow) {
     if (datasetRow.datasetId !== dataset.id) {
       return Result.error(new BadRequestError('Row is not part of the dataset'))
+    }
+
+    if (!dataset.columns.find((c) => c.name === datasetLabel)) {
+      return Result.error(
+        new BadRequestError(`${datasetLabel} column not found in dataset`),
+      )
     }
 
     expectedOutput = getColumnData({
@@ -115,11 +119,16 @@ export async function runEvaluationV2<
     })
   }
 
+  if (metricSpecification.requiresExpectedOutput && !expectedOutput) {
+    return Result.error(new BadRequestError('Expected output is required'))
+  }
+
   let value
   try {
     value = (await typeSpecification.run(
       {
         metric: evaluation.metric,
+        resultUuid: resultUuid,
         evaluation: evaluation,
         actualOutput: actualOutput,
         expectedOutput: expectedOutput,
@@ -152,6 +161,7 @@ export async function runEvaluationV2<
   return await Transaction.call(async (tx) => {
     const { result } = await createEvaluationResultV2(
       {
+        resultUuid: resultUuid,
         evaluation: evaluation,
         providerLog: providerLog,
         commit: commit,
@@ -182,6 +192,7 @@ export async function createEvaluationResultV2<
   M extends EvaluationMetric<T>,
 >(
   {
+    resultUuid,
     evaluation,
     providerLog,
     commit,
@@ -191,6 +202,7 @@ export async function createEvaluationResultV2<
     usedForSuggestion,
     workspace,
   }: {
+    resultUuid?: string
     evaluation: EvaluationV2<T, M>
     providerLog: ProviderLogDto
     commit: Commit
@@ -206,6 +218,7 @@ export async function createEvaluationResultV2<
     const result = (await tx
       .insert(evaluationResultsV2)
       .values({
+        uuid: resultUuid,
         workspaceId: workspace.id,
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,

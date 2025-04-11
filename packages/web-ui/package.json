@@ -86,6 +86,7 @@
     "./molecules/SelectableCard": "./src/ds/molecules/SelectableCard/index.tsx",
     "./molecules/SelectableSwitch": "./src/ds/molecules/SelectableSwitch/index.tsx",
     "./molecules/Steps": "./src/ds/molecules/Steps/index.tsx",
+    "./molecules/TabSelect": "./src/ds/molecules/TabSelect/index.tsx",
     "./molecules/TabSelector": "./src/ds/molecules/TabSelector/index.tsx",
     "./molecules/TableBlankSlate": "./src/ds/molecules/TableBlankSlate/index.tsx",
     "./molecules/TableSkeleton": "./src/ds/molecules/TableSkeleton/index.tsx",

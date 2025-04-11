@@ -88,11 +88,13 @@ function ResultRowHeaders<M extends RuleEvaluationMetric>({
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
-  if (!metricSpecification.ResultRowHeaders) return <></>
-
   return (
     <>
-      <metricSpecification.ResultRowHeaders {...rest} />
+      {metricSpecification.ResultRowHeaders ? (
+        <metricSpecification.ResultRowHeaders {...rest} />
+      ) : (
+        <></>
+      )}
     </>
   )
 }
@@ -106,11 +108,13 @@ function ResultRowCells<M extends RuleEvaluationMetric>({
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
-  if (!metricSpecification.ResultRowCells) return <></>
-
   return (
     <>
-      <metricSpecification.ResultRowCells {...rest} />
+      {metricSpecification.ResultRowCells ? (
+        <metricSpecification.ResultRowCells {...rest} />
+      ) : (
+        <></>
+      )}
     </>
   )
 }
@@ -125,9 +129,7 @@ function resultPanelTabs<M extends RuleEvaluationMetric>({
     throw new Error('Invalid evaluation metric')
   }
 
-  if (!metricSpecification.resultPanelTabs) return []
-
-  return metricSpecification.resultPanelTabs
+  return [...(metricSpecification.resultPanelTabs ?? [])]
 }
 
 function ResultPanelMetadata<M extends RuleEvaluationMetric>({
@@ -139,11 +141,13 @@ function ResultPanelMetadata<M extends RuleEvaluationMetric>({
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
-  if (!metricSpecification.ResultPanelMetadata) return <></>
-
   return (
     <>
-      <metricSpecification.ResultPanelMetadata {...rest} />
+      {metricSpecification.ResultPanelMetadata ? (
+        <metricSpecification.ResultPanelMetadata {...rest} />
+      ) : (
+        <></>
+      )}
     </>
   )
 }
@@ -157,11 +161,13 @@ function ResultPanelContent<M extends RuleEvaluationMetric>({
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
-  if (!metricSpecification.ResultPanelContent) return <></>
-
   return (
     <>
-      <metricSpecification.ResultPanelContent {...rest} />
+      {metricSpecification.ResultPanelContent ? (
+        <metricSpecification.ResultPanelContent {...rest} />
+      ) : (
+        <></>
+      )}
     </>
   )
 }

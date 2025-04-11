@@ -9,6 +9,7 @@ import {
 } from '../../browser'
 import { database, Database } from '../../client'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
+import { DocumentVersionsRepository } from '../../repositories'
 import { evaluationVersions } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 import { validateEvaluationV2 } from './validate'
@@ -37,6 +38,14 @@ export async function updateEvaluationV2<
 ) {
   assertCommitIsDraft(commit).unwrap()
 
+  const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
+  const document = await documentsRepository
+    .getDocumentAtCommit({
+      commitUuid: commit.uuid,
+      documentUuid: evaluation.documentUuid,
+    })
+    .then((r) => r.unwrap())
+
   if (!settings) settings = {}
   settings = compactObject(settings)
 
@@ -46,9 +55,10 @@ export async function updateEvaluationV2<
   const { settings: vSettings, options: vOptions } = await validateEvaluationV2(
     {
       evaluation: evaluation,
-      commit: commit,
       settings: { ...evaluation, ...settings },
       options: { ...evaluation, ...options },
+      document: document,
+      commit: commit,
       workspace: workspace,
     },
     db,
