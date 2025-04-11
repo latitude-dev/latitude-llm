@@ -1,8 +1,10 @@
 import { DocumentLog, SerializedDocumentLog, Workspace } from '../../browser'
 import { database } from '../../client'
-import { NotFoundError, PromisedResult, Result } from '../../lib'
 import { ProviderLogsRepository } from '../../repositories'
 import { serializeForEvaluation as serializeProviderLog } from '../providerLogs'
+import { NotFoundError } from './../../lib/errors'
+import { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 export async function serialize(
   {

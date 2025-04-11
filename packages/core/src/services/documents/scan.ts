@@ -4,13 +4,11 @@ import { readMetadata, Document as RefDocument } from '@latitude-data/compiler'
 import { type ConversationMetadata, scan } from 'promptl-ai'
 
 import { Commit, DocumentVersion, Workspace } from '../../browser'
-import {
-  LatitudeError,
-  Result,
-  TypedResult,
-  UnprocessableEntityError,
-} from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
+import { LatitudeError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
+import { UnprocessableEntityError } from './../../lib/errors'
 
 export async function getDocumentMetadata({
   document,

@@ -15,7 +15,6 @@ import {
   Providers,
   StreamEventTypes,
 } from '../../constants'
-import { Result, TypedResult } from '../../lib'
 import * as factories from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import * as aiModule from '../ai'
@@ -25,6 +24,8 @@ import * as saveOrPublishProviderLogsModule from './ProviderProcessor/saveOrPubl
 import { runChain } from './run'
 import { objectToString, PromptConfig } from '@latitude-data/constants'
 import { ChainEventTypes } from '@latitude-data/constants'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
 
 // Mock other dependencies
 vi.mock('@latitude-data/compiler')

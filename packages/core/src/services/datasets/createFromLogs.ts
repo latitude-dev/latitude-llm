@@ -1,12 +1,12 @@
 import { database } from '../../client'
-import { Result, Transaction } from '../../lib'
+import { Result } from '../../lib/Result'
+import Transaction from './../../lib/Transaction'
 import { findOrCreateDataset } from './findOrCreate'
 import { User, Workspace } from '../../browser'
 import { HashAlgorithmFn } from './utils'
 import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
 import { updateDataset } from './update'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
-
 export const createDatasetFromLogs = async (
   {
     author,

@@ -1,9 +1,3 @@
-import {
-  BadRequestError,
-  LatitudeError,
-  PromisedResult,
-  Result,
-} from '../../../../lib'
 import { findUnscopedDocumentTriggers } from '../../find'
 import {
   DocumentTriggerType,
@@ -18,6 +12,10 @@ import { uploadFile } from '../../../files'
 import { unsafelyFindWorkspace } from '../../../../data-access'
 import { RunEmailTriggerJobData } from '../../../../jobs/job-definitions/documentTriggers/runEmailTriggerJob'
 import { defaultQueue } from '../../../../jobs/queues'
+import { BadRequestError } from './../../../../lib/errors'
+import { LatitudeError } from './../../../../lib/errors'
+import { PromisedResult } from './../../../../lib/Transaction'
+import { Result } from './../../../../lib/Result'
 
 async function getTriggerName(
   trigger: DocumentTrigger,

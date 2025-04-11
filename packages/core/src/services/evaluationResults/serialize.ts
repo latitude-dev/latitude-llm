@@ -6,13 +6,15 @@ import {
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
-import { NotFoundError, PromisedResult, Result } from '../../lib'
 import {
   DocumentLogsRepository,
   ProviderLogsRepository,
 } from '../../repositories'
 import { serialize as serializeDocumentLog } from '../documentLogs/serialize'
 import { serializeForEvaluation } from '../providerLogs'
+import { NotFoundError } from './../../lib/errors'
+import { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 async function findEvaluationProviderLog(
   {

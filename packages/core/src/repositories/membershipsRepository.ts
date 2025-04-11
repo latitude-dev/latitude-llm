@@ -1,7 +1,8 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
 import { Membership } from '../browser'
-import { NotFoundError, Result } from '../lib'
+import { NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
 import { memberships } from '../schema'
 import RepositoryLegacy from './repository'
 

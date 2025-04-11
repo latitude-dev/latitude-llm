@@ -6,10 +6,12 @@ import {
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
-import { Result, Transaction, UnprocessableEntityError } from '../../lib'
 import { CommitsRepository } from '../../repositories'
 import { PublishedDocumentRepository } from '../../repositories/publishedDocumentsRepository'
 import { publishedDocuments } from '../../schema'
+import { Result } from './../../lib/Result'
+import { UnprocessableEntityError } from './../../lib/errors'
+import Transaction from './../../lib/Transaction'
 
 export async function createPublishedDocument(
   {

@@ -17,10 +17,11 @@ import {
   Workspace,
 } from '../../browser'
 import { Database } from '../../client'
-import { LatitudeError, TypedResult } from '../../lib'
 import HumanEvaluationSpecification from './human'
 import LlmEvaluationSpecification from './llm'
 import RuleEvaluationSpecification from './rule'
+import { LatitudeError } from './../../lib/errors'
+import { TypedResult } from './../../lib/Result'
 
 export type EvaluationMetricValidateArgs<
   T extends EvaluationType = EvaluationType,

@@ -1,8 +1,10 @@
 import { IntegrationDto } from '../../../browser'
-import { LatitudeError, PromisedResult, Result } from '../../../lib'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import { touchIntegration } from '../touch'
 import { createMcpClientManager } from './McpClientManager'
+import { LatitudeError } from './../../../lib/errors'
+import { PromisedResult } from './../../../lib/Transaction'
+import { Result } from './../../../lib/Result'
 
 type ResultContent =
   | { type: 'text'; text: string }

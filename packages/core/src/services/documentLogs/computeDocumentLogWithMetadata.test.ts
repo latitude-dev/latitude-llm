@@ -6,9 +6,9 @@ import {
   ProviderLog,
   Workspace,
 } from '../../browser'
-import { NotFoundError } from '../../lib'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
+import { NotFoundError } from './../../lib/errors'
 
 describe('computeDocumentLogWithMetadata', () => {
   let workspace: Workspace

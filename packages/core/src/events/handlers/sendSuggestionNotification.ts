@@ -3,7 +3,6 @@ import { subDays } from 'date-fns'
 import { eq } from 'drizzle-orm'
 import { DOCUMENT_SUGGESTION_NOTIFICATION_DAYS, User } from '../../browser'
 import { unsafelyFindWorkspace } from '../../data-access'
-import { NotFoundError, Result, Transaction } from '../../lib'
 import { SuggestionMailer } from '../../mailers'
 import {
   CommitsRepository,
@@ -12,6 +11,9 @@ import {
 } from '../../repositories'
 import { users } from '../../schema'
 import { DocumentSuggestionCreatedEvent } from '../events'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 const UTM_SOURCE = 'email'
 const UTM_CAMPAIGN = 'document_suggestions'

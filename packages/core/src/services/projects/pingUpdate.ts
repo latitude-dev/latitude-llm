@@ -1,7 +1,9 @@
 import { and, eq } from 'drizzle-orm'
 import { database } from '../../client'
-import { NotFoundError, PromisedResult, Result, Transaction } from '../../lib'
 import { projects } from '../../schema'
+import { NotFoundError } from './../../lib/errors'
+import Transaction, { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 export async function pingProjectUpdate(
   {

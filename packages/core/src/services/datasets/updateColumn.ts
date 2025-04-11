@@ -1,7 +1,8 @@
 import { DatasetColumnRole, Dataset } from '../../browser'
 import { database } from '../../client'
-import { Result, TypedResult } from '../../lib'
 import { updateDataset } from './update'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
 
 export async function updateDatasetColumn(
   {

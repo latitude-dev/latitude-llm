@@ -2,12 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTrigger, Workspace } from '../../browser'
 import { updateDocumentTriggerConfiguration } from './update'
-import { LatitudeError, Transaction } from '../../lib'
 import { database } from '../../client'
 import * as buildConfigurationModule from './helpers/buildConfiguration'
 import { documentTriggers } from '../../schema'
 import { EmailTriggerConfiguration } from './helpers/schema'
 import { and, eq } from 'drizzle-orm'
+import { LatitudeError } from './../../lib/errors'
+import Transaction from './../../lib/Transaction'
 
 describe('updateDocumentTriggerConfiguration', () => {
   let workspace: Workspace

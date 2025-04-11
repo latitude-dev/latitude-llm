@@ -2,13 +2,14 @@ import { database } from '../../client'
 import { Providers } from '../../constants'
 import { SessionData } from '../../data-access'
 import { publisher } from '../../events/publisher'
-import { PromisedResult, Result, Transaction } from '../../lib'
 import { createApiKey } from '../apiKeys'
 import { createMembership } from '../memberships/create'
 import { importDefaultProject } from '../projects/import'
 import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
 import { createUser } from './createUser'
+import Transaction, { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 export default function setupService(
   {

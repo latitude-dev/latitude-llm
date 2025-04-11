@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm'
 
 import { Dataset } from '../../browser'
 import { database } from '../../client'
-import { Result, Transaction } from '../../lib'
+import { Result } from '../../lib/Result'
+import Transaction from './../../lib/Transaction'
 import { datasets } from '../../schema'
 
 export async function destroyDataset(

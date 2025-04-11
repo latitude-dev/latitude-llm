@@ -4,14 +4,12 @@ const { DatabaseError } = pg
 import { Providers, User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import {
-  BadRequestError,
-  databaseErrorCodes,
-  Result,
-  Transaction,
-} from '../../lib'
 import { providerApiKeys, ProviderConfiguration } from '../../schema'
 import { amazonBedrockConfigurationSchema } from '../ai'
+import { BadRequestError } from './../../lib/errors'
+import { databaseErrorCodes } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export type Props = {
   workspace: Workspace

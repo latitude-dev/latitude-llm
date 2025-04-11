@@ -1,7 +1,6 @@
 import { DatasetRow, Dataset } from '../../browser'
 import { database } from '../../client'
 import { DatasetV2CreatedEvent } from '../../events/events'
-import { diskFactory, DiskWrapper, Result } from '../../lib'
 import { csvBatchGenerator, CSVRow, type CsvBatch } from '../../lib/readCsv'
 import { DatasetsRepository } from '../../repositories'
 import { Column, DatasetRowData } from '../../schema'
@@ -12,6 +11,9 @@ import {
   nanoidHashAlgorithm,
 } from '../datasets/utils'
 import { insertRowsInBatch } from './insertRowsInBatch'
+import { diskFactory } from './../../lib/disk'
+import { DiskWrapper } from './../../lib/disk'
+import { Result } from './../../lib/Result'
 
 function reorderRowsByColumns({
   columns,

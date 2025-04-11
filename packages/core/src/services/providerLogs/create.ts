@@ -4,12 +4,12 @@ import { FinishReason, LanguageModelUsage } from 'ai'
 import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { Result, Transaction } from '../../lib'
+import { Result } from '../../lib/Result'
+import Transaction from './../../lib/Transaction'
 import { providerLogs } from '../../schema'
 import { estimateCost, PartialConfig } from '../ai'
 import { touchApiKey } from '../apiKeys'
 import { touchProviderApiKey } from '../providerApiKeys/touch'
-
 const TO_MILLICENTS_FACTOR = 100_000
 
 export type CreateProviderLogProps = {

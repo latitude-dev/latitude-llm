@@ -10,11 +10,12 @@ import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
 import { z } from 'zod'
 
 import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
-import { Result, TypedResult } from '../../../lib'
 import { azureConfig, Config, googleConfig } from '../../ai/helpers'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
+import { Result } from './../../../lib/Result'
+import { TypedResult } from './../../../lib/Result'
 
 type SomeChain = LegacyChain | PromptlChain
 

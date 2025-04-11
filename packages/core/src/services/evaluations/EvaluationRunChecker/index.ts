@@ -16,12 +16,12 @@ import {
 } from '../../../browser'
 import { Database } from '../../../client'
 import { findWorkspaceFromDocumentLog } from '../../../data-access'
-import { Result } from '../../../lib'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { serialize } from '../../documentLogs/serialize'
 import { createRunError } from '../../runErrors/create'
 import { getEvaluationPrompt } from '../prompt'
 import { PromptConfig } from '@latitude-data/constants'
+import { Result } from './../../../lib/Result'
 
 type EvaluationRunErrorCheckerCodes =
   | RunErrorCodes.EvaluationRunMissingProviderLogError

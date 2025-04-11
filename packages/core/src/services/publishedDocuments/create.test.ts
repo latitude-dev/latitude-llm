@@ -8,9 +8,9 @@ import {
   User,
   Workspace,
 } from '../../browser'
-import { UnprocessableEntityError } from '../../lib'
 import * as factories from '../../tests/factories'
 import { createPublishedDocument } from './create'
+import { UnprocessableEntityError } from './../../lib/errors'
 
 let workspace: Workspace
 let user: User

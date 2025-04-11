@@ -1,6 +1,6 @@
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database, Database } from '../../client'
-import { Transaction } from '../../lib'
+import Transaction from './../../lib/Transaction'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
 

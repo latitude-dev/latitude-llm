@@ -3,9 +3,11 @@ import { randomBytes } from 'crypto'
 import { database } from '../../client'
 import { webhooks } from '../../schema/models/webhooks'
 import { UnprocessableEntityError } from '../../lib/errors'
-import { Result, Transaction, type TypedResult } from '../../lib'
 import { type CreateWebhookParams, type Webhook } from './types'
 import { type Database } from '../../client'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export async function createWebhook(
   params: CreateWebhookParams,

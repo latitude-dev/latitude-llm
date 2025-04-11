@@ -1,6 +1,7 @@
-import { Result, TypedResult } from '../../lib'
 import { WebhookTestResponse } from './types'
 import { sendWebhook } from './sendWebhook'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
 
 interface TestWebhookEndpointParams {
   url: string

@@ -2,16 +2,14 @@ import { and, eq } from 'drizzle-orm'
 import { omit } from 'lodash-es'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
-import {
-  ConflictError,
-  LatitudeError,
-  Result,
-  Transaction,
-  TypedResult,
-} from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
 import { inheritDocumentRelations } from './inheritRelations'
+import { ConflictError } from './../../lib/errors'
+import { LatitudeError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export async function resetToDocumentVersion(
   {

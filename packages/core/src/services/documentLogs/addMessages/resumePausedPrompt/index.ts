@@ -6,7 +6,6 @@ import {
   Workspace,
   buildMessagesFromResponse,
 } from '../../../../browser'
-import { Result } from '../../../../lib'
 import { runChain } from '../../../chains/run'
 import { buildProvidersMap } from '../../../providerApiKeys/buildMap'
 import { Message } from '@latitude-data/compiler'
@@ -20,6 +19,7 @@ import {
 } from '../../../../constants'
 import { runAgent } from '../../../agents/run'
 import { PromptConfig } from '@latitude-data/constants'
+import { Result } from './../../../../lib/Result'
 
 /**
  * Resuming a prompt

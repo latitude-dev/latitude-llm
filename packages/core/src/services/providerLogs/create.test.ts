@@ -5,9 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProviderApiKey, Workspace } from '../../browser'
 import { database } from '../../client'
 import { LogSources, Providers } from '../../constants'
-import { generateUUIDIdentifier } from '../../lib'
 import { apiKeys } from '../../schema'
 import { createProviderLog, type CreateProviderLogProps } from './create'
+import { generateUUIDIdentifier } from './../../lib/generateUUID'
 
 let workspace: Workspace
 let provider: ProviderApiKey

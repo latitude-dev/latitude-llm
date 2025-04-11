@@ -1,12 +1,10 @@
 import { Commit, DocumentVersion, Workspace } from '../../browser'
-import {
-  LatitudeError,
-  Result,
-  TypedResult,
-  UnprocessableEntityError,
-} from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 import { scanDocumentContent } from './scan'
+import { LatitudeError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
+import { UnprocessableEntityError } from './../../lib/errors'
 
 /**
  * This is an internal method. It should always receives

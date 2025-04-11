@@ -12,7 +12,7 @@ import {
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import * as mailers from '../../mailers'
 import { users } from '../../schema'
 import * as factories from '../../tests/factories'

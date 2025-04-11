@@ -10,10 +10,12 @@ import {
 } from '../../browser'
 import { database, Database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { compactObject, Result, Transaction } from '../../lib'
 import { evaluationVersions } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 import { validateEvaluationV2 } from './validate'
+import { compactObject } from './../../lib/compactObject'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export async function createEvaluationV2<
   T extends EvaluationType,

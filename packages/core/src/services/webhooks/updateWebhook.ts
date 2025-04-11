@@ -5,7 +5,7 @@ import { webhooks } from '../../schema/models/webhooks'
 import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
 import { Result, type TypedResult } from '../../lib/Result'
 import { type UpdateWebhookParams, type Webhook } from './types'
-import Transaction from '../../lib/Transaction'
+import Transaction from './../../lib/Transaction'
 
 export async function updateWebhook(
   params: UpdateWebhookParams,

@@ -5,12 +5,13 @@ import {
   RuleEvaluationRegularExpressionSpecification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
-import { BadRequestError, Result } from '../../../lib'
 import {
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
+import { BadRequestError } from './../../../lib/errors'
+import { Result } from './../../../lib/Result'
 
 const specification = RuleEvaluationRegularExpressionSpecification
 export default {

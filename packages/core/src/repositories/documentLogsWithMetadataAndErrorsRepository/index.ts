@@ -1,7 +1,6 @@
 import { and, eq, getTableColumns, isNull, sql, sum } from 'drizzle-orm'
 
 import { ErrorableEntity } from '../../browser'
-import { NotFoundError, Result } from '../../lib'
 import {
   commits,
   documentLogs,
@@ -12,6 +11,8 @@ import {
 } from '../../schema'
 import Repository from '../repositoryV2'
 import { DocumentLogWithMetadataAndError } from '../runErrors/documentLogsRepository'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
 
 export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<DocumentLogWithMetadataAndError> {
   get scopeFilter() {

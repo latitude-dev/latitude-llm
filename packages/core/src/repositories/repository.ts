@@ -2,7 +2,8 @@ import { ColumnsSelection, eq, inArray } from 'drizzle-orm'
 import { PgSelect, SubqueryWithSelection } from 'drizzle-orm/pg-core'
 
 import { database } from '../client'
-import { NotFoundError, Result } from '../lib'
+import { NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
 
 export type QueryOptions = {
   limit?: number

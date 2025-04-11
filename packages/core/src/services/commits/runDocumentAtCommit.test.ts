@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { LogSources, Providers, StreamEventTypes } from '../../browser'
 import { publisher } from '../../events/publisher'
-import { Ok, Result, UnprocessableEntityError } from '../../lib'
 import { ProviderLogsRepository } from '../../repositories'
 import {
   createDocumentVersion,
@@ -13,6 +12,9 @@ import {
 import { testConsumeStream } from '../../tests/helpers'
 import { runDocumentAtCommit } from './index'
 import { ChainEventTypes } from '@latitude-data/constants'
+import { Ok } from './../../lib/Result'
+import { Result } from './../../lib/Result'
+import { UnprocessableEntityError } from './../../lib/errors'
 
 const mocks = {
   publish: vi.fn(),

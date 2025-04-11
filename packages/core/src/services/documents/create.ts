@@ -15,7 +15,6 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { Result, Transaction, TypedResult } from '../../lib'
 import { BadRequestError } from '../../lib/errors'
 import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
@@ -23,6 +22,9 @@ import { connectEvaluations, createEvaluation } from '../evaluations'
 import { pingProjectUpdate } from '../projects'
 import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
 import { getDocumentType } from './update'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export async function createNewDocument(
   {

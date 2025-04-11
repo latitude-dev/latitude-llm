@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { ProviderApiKey, Providers, Workspace } from '../../../browser'
 import { cache } from '../../../cache'
-import { Result } from '../../../lib'
 import * as factories from '../../../tests/factories'
 import { buildFreeRunCacheKey, getFreeRuns } from '../../freeRunsManager'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from './index'
+import { Result } from './../../../lib/Result'
 
 let workspace: Workspace
 let provider: ProviderApiKey

@@ -27,7 +27,7 @@ import {
   Providers,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import * as generateUUIDModule from '../../lib/generateUUID'
 import {
   documentLogs,

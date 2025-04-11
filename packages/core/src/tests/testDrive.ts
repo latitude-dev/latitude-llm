@@ -1,8 +1,8 @@
-import os from 'os'
-import { promises as fs } from 'fs'
 import { Disk } from 'flydrive'
-import { DiskWrapper } from '../lib'
 import { FSDriver } from 'flydrive/drivers/fs'
+import { promises as fs } from 'fs'
+import os from 'os'
+import { DiskWrapper } from '../lib/disk'
 
 let testDisk: DiskWrapper | undefined = undefined
 

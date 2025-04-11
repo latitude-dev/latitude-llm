@@ -1,7 +1,6 @@
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
-import { NotFoundError, UnprocessableEntityError } from '../../../lib'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -9,6 +8,8 @@ import {
   EvaluationsV2Repository,
 } from '../../../repositories'
 import { generateDocumentSuggestion } from '../../../services/documentSuggestions'
+import { NotFoundError } from './../../../lib/errors'
+import { UnprocessableEntityError } from './../../../lib/errors'
 
 export type GenerateDocumentSuggestionJobData = {
   workspaceId: number

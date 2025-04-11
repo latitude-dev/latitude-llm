@@ -4,11 +4,13 @@ import { and, eq, inArray, ne } from 'drizzle-orm'
 
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
-import { Result, Transaction, TypedResult } from '../../lib'
 import { EvaluationsV2Repository } from '../../repositories'
 import { documentVersions } from '../../schema'
 import { deleteEvaluationV2 } from '../evaluationsV2'
 import { pingProjectUpdate } from '../projects'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 async function findUuidsInOtherCommits({
   tx,

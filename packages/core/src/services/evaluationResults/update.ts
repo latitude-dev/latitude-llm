@@ -4,11 +4,14 @@ import { EvaluationResultableType, EvaluationResultDto } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromEvaluationResult } from '../../data-access'
 import { publisher } from '../../events/publisher'
-import { BadRequestError, NotFoundError, Result, Transaction } from '../../lib'
 import { evaluationResults } from '../../schema'
 import { evaluationResultableBooleans } from '../../schema/models/evaluationResultableBooleans'
 import { evaluationResultableNumbers } from '../../schema/models/evaluationResultableNumbers'
 import { evaluationResultableTexts } from '../../schema/models/evaluationResultableTexts'
+import { BadRequestError } from './../../lib/errors'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 function getResultableTable(type: EvaluationResultableType) {
   switch (type) {

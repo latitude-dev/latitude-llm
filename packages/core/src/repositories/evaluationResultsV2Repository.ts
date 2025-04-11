@@ -30,7 +30,9 @@ import {
   MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
   ResultWithEvaluationV2,
 } from '../browser'
-import { calculateOffset, NotFoundError, Result } from '../lib'
+import { NotFoundError } from '../lib/errors'
+import { calculateOffset } from '../lib/pagination/index'
+import { Result } from '../lib/Result'
 import {
   commits,
   datasetRows,

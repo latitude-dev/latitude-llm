@@ -1,9 +1,9 @@
-import { vi } from 'vitest'
-import * as factories from './factories'
-import { DEFAULT_COPILOT_GENERATE_TOOL_RESPONSES_PATH } from '../jobs/job-definitions/documents/runDocumentAtCommitWithAutoToolResponses/getCopilotData'
 import { Providers } from '@latitude-data/constants'
+import { vi } from 'vitest'
+import { DEFAULT_COPILOT_GENERATE_TOOL_RESPONSES_PATH } from '../jobs/job-definitions/documents/runDocumentAtCommitWithAutoToolResponses/getCopilotData'
+import { Result } from '../lib/Result'
 import { mergeCommit } from '../services/commits'
-import { Result } from '../lib'
+import * as factories from './factories'
 
 export async function testConsumeStream(stream: ReadableStream) {
   const reader = stream.getReader()

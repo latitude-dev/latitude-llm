@@ -1,5 +1,4 @@
 import { LogSources, Workspace, ProviderLog } from '../../../../browser'
-import { Result } from '../../../../lib'
 import { buildProvidersMap } from '../../../providerApiKeys/buildMap'
 import {
   AssistantMessage,
@@ -14,6 +13,7 @@ import { PromptSource } from '../../../../constants'
 import { runAgentStep } from '../../../agents/runStep'
 import { ChainStreamManager } from '../../../../lib/chainStreamManager'
 import { PromptConfig } from '@latitude-data/constants'
+import { Result } from './../../../../lib/Result'
 
 function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
   const toolContents: ToolRequestContent[] = providerLog.toolCalls.map(

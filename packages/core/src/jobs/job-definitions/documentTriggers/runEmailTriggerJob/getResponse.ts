@@ -1,9 +1,3 @@
-import {
-  BadRequestError,
-  LatitudeError,
-  PromisedResult,
-  Result,
-} from '../../../../lib'
 import { type PromptLFile } from 'promptl-ai'
 import {
   DocumentLog,
@@ -22,6 +16,10 @@ import { DocumentTrigger, Workspace } from '../../../../browser'
 import { type AssistantMessage } from '@latitude-data/compiler'
 import { uploadFile } from '../../../../services/files'
 import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
+import { BadRequestError } from './../../../../lib/errors'
+import { LatitudeError } from './../../../../lib/errors'
+import { PromisedResult } from './../../../../lib/Transaction'
+import { Result } from './../../../../lib/Result'
 
 async function getNewTriggerResponse(
   {

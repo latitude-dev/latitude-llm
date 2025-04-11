@@ -1,7 +1,8 @@
 import { and, desc, eq, getTableColumns, isNull } from 'drizzle-orm'
 
 import { Project } from '../browser'
-import { NotFoundError, Result } from '../lib'
+import { NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
 import { commits, documentVersions, projects } from '../schema'
 import RepositoryLegacy from './repository'
 

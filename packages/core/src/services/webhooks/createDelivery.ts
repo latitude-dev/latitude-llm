@@ -2,7 +2,7 @@ import { database } from '../../client'
 import { webhookDeliveries } from '../../schema/models/webhooks'
 import { Result, type TypedResult } from '../../lib/Result'
 import { publisher } from '../../events/publisher'
-import { Transaction } from '../../lib'
+import Transaction from './../../lib/Transaction'
 import { WebhookDelivery } from './types'
 import { Events } from '../../events/events'
 

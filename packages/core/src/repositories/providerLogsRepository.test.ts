@@ -10,7 +10,7 @@ import {
   Providers,
   Workspace,
 } from '../browser'
-import { NotFoundError } from '../lib'
+import { NotFoundError } from '../lib/errors'
 import * as factories from '../tests/factories'
 import { ProviderLogsRepository } from './providerLogsRepository'
 

@@ -9,7 +9,6 @@ import {
   Workspace,
 } from '../../../browser'
 import { Providers } from '../../../constants'
-import { Result } from '../../../lib'
 import { EvaluationsRepository } from '../../../repositories'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { ChainResponse } from '../../../services/chains/run'
@@ -18,6 +17,7 @@ import * as factories from '../../../tests/factories'
 import * as websockets from '../../../websockets/workers'
 import * as progressTracker from '../../utils/progressTracker'
 import { runEvaluationJob, type RunEvaluationJobData } from './runEvaluationJob'
+import { Result } from './../../../lib/Result'
 
 vi.mock('../../../redis', () => ({
   buildRedisConnection: vi.fn().mockResolvedValue({}),

@@ -18,7 +18,6 @@ import {
 import { JSONSchema7 } from 'json-schema'
 
 import { ProviderApiKey, StreamType } from '../../browser'
-import { Result, TypedResult } from '../../lib'
 import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import { buildTools } from './buildTools'
 import { handleAICallAPIError } from './handleError'
@@ -26,6 +25,8 @@ import { createProvider } from './helpers'
 import { Providers } from './providers/models'
 import { applyAllRules } from './providers/rules'
 import { VercelConfig } from '@latitude-data/constants'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
 
 const DEFAULT_AI_SDK_PROVIDER = {
   streamText: originalStreamText,

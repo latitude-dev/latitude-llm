@@ -15,7 +15,7 @@ import {
   PromptSource,
   Providers,
 } from '../../constants'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
 import { ChainError } from '../../lib/chainStreamManager/ChainErrors'

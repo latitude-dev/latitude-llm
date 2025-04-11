@@ -7,7 +7,7 @@ import {
   DocumentSuggestionWithDetails,
   DocumentVersion,
 } from '../browser'
-import { Result } from '../lib'
+import { Result } from '../lib/Result'
 import { documentSuggestions } from '../schema'
 import { EvaluationsRepository } from './evaluationsRepository'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'

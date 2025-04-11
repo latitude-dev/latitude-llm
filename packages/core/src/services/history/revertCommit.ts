@@ -1,5 +1,4 @@
 import { Commit, DraftChange, Project, User, Workspace } from '../../browser'
-import { PromisedResult, Result } from '../../lib'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -7,6 +6,8 @@ import {
 import { createCommit } from '../commits'
 import { computeChangesToRevertCommit } from '../commits/computeRevertChanges'
 import { updateDocument } from '../documents'
+import { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 async function fetchCommitReversionDetails({
   workspace,

@@ -5,10 +5,10 @@ import { ProviderApiKey, ProviderLog, Workspace } from '../../../browser'
 import { ChainStepResponse, LogSources, StreamType } from '../../../constants'
 import { AIProviderCallCompletedData } from '../../../events/events'
 import { publisher } from '../../../events/publisher'
-import { generateUUIDIdentifier } from '../../../lib'
 import { PartialConfig } from '../../ai'
 import { createProviderLog } from '../../providerLogs'
 import { defaultQueue } from '../../../jobs/queues'
+import { generateUUIDIdentifier } from './../../../lib/generateUUID'
 
 export async function saveOrPublishProviderLogs<
   S extends boolean,

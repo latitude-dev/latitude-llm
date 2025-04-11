@@ -3,7 +3,7 @@ import {
   ChainStepTextResponse,
   LogSources,
 } from '../../browser'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import { runDocumentAtCommit } from '../commits/runDocumentAtCommit'
 import { Copilot } from './shared'
 

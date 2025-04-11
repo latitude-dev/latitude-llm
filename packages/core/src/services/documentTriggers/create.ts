@@ -1,16 +1,13 @@
 import { DocumentVersion } from '@latitude-data/constants'
 import { DocumentTrigger, Project, Workspace } from '../../browser'
 import { InsertDocumentTriggerWithConfiguration } from './helpers/schema'
-import {
-  generateUUIDIdentifier,
-  LatitudeError,
-  PromisedResult,
-  Result,
-  Transaction,
-} from '../../lib'
 import { documentTriggers } from '../../schema'
 import { database } from '../../client'
 import { buildConfiguration } from './helpers/buildConfiguration'
+import { generateUUIDIdentifier } from './../../lib/generateUUID'
+import { LatitudeError } from './../../lib/errors'
+import Transaction, { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 export async function createDocumentTrigger(
   {

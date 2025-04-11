@@ -7,7 +7,6 @@ import {
   ValidatedChainStep,
 } from '../ChainValidator'
 import { CachedApiKeys, SomeChain, stepLimitExceededErrorMessage } from '../run'
-import { Result } from '../../../lib'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { buildMessagesFromResponse, Workspace } from '../../../browser'
@@ -21,6 +20,7 @@ import {
   PromptConfig,
   StreamType,
 } from '@latitude-data/constants'
+import { Result } from './../../../lib/Result'
 
 function assertValidStepCount({
   stepCount,

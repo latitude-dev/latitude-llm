@@ -16,9 +16,11 @@ import type { PgColumn } from 'drizzle-orm/pg-core'
 
 import type { SearchFilter, Span, Workspace } from '../../browser'
 import { database } from '../../client'
-import { BadRequestError, Result, TypedResult } from '../../lib'
 import { spans } from '../../schema/models/spans'
 import { traces } from '../../schema/models/traces'
+import { BadRequestError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import { TypedResult } from './../../lib/Result'
 
 export type ListTracesProps = {
   workspace: Workspace

@@ -1,7 +1,8 @@
 import { User } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { Result, Transaction } from '../../lib'
+import { Result } from '../../lib/Result'
+import Transaction from './../../lib/Transaction'
 import { magicLinkTokens } from '../../schema/models/magicLinkTokens'
 
 export async function createMagicLinkToken(

@@ -6,7 +6,6 @@ import {
   LogSources,
   Workspace,
 } from '../../../../browser'
-import { Result, UnprocessableEntityError } from '../../../../lib'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 import { runDocumentAtCommit } from '../../../../services/commits/runDocumentAtCommit'
 import {
@@ -14,6 +13,8 @@ import {
   ToolCallResponse,
 } from '@latitude-data/constants'
 import { ToolSchema } from '../../../../services/ai'
+import { Result } from './../../../../lib/Result'
+import { UnprocessableEntityError } from './../../../../lib/errors'
 
 async function buildToolSpecifications({
   document,

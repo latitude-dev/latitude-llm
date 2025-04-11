@@ -16,11 +16,13 @@ import {
   HEAD_COMMIT,
   ModifiedDocumentType,
 } from '../../constants'
-import { InferedReturnType, NotFoundError, Result } from '../../lib'
 import RepositoryLegacy from '../repository'
 import { buildCommitsScope, columnSelection } from './utils/buildCommitsScope'
 import { getHeadCommitForProject } from './utils/getHeadCommit'
 import { documentVersions } from '../../schema'
+import { InferedReturnType } from './../../lib/commonTypes'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
 
 export type ChangedDocument = {
   documentUuid: string

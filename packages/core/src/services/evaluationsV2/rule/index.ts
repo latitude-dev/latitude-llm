@@ -5,7 +5,6 @@ import {
   RuleEvaluationSpecification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
-import { BadRequestError, Result } from '../../../lib'
 import {
   EvaluationMetricBackendSpecification,
   EvaluationMetricRunArgs,
@@ -17,6 +16,8 @@ import RuleEvaluationLexicalOverlapSpecification from './lexicalOverlap'
 import RuleEvaluationRegularExpressionSpecification from './regularExpression'
 import RuleEvaluationSchemaValidationSpecification from './schemaValidation'
 import RuleEvaluationSemanticSimilaritySpecification from './semanticSimilarity'
+import { BadRequestError } from './../../../lib/errors'
+import { Result } from './../../../lib/Result'
 
 // prettier-ignore
 const METRICS: {

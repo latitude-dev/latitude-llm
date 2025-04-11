@@ -13,7 +13,7 @@ import { type Message, MessageRole } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { Providers } from '../../constants'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 
 import { PartialPromptConfig } from '@latitude-data/constants'

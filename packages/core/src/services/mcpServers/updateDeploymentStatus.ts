@@ -2,11 +2,10 @@ import { Result } from '../../lib/Result'
 import { mcpServers } from '../../schema/models/mcpServers'
 import { getK8sClient } from '../k8s/k8sClient'
 import { database } from '../../client'
-import { Transaction } from '../../lib'
+import Transaction from './../../lib/Transaction'
 import * as k8s from '@kubernetes/client-node'
 import { eq } from 'drizzle-orm'
 import { McpServer } from '../../browser'
-
 type DeploymentStatus = 'deploying' | 'deployed' | 'failed' | 'deleted'
 
 /**

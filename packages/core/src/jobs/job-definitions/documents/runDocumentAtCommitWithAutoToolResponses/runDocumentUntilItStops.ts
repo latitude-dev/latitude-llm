@@ -2,9 +2,9 @@ import { LogSources } from '@latitude-data/constants'
 import { runDocumentAtCommit as runDocumentAtCommitFn } from '../../../../services/commits/runDocumentAtCommit'
 import { Commit, Workspace, DocumentVersion } from '../../../../browser'
 import { ToolCall } from '@latitude-data/compiler'
-import { Result } from '../../../../lib'
 import { respondToToolCalls } from './respondToToolCalls'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
+import { Result } from './../../../../lib/Result'
 
 type Props<T extends boolean> = T extends true
   ? {

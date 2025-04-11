@@ -1,7 +1,8 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
 import { ApiKey } from '../browser'
-import { NotFoundError, Result } from '../lib'
+import { NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
 import { apiKeys } from '../schema'
 import RepositoryLegacy from './repository'
 

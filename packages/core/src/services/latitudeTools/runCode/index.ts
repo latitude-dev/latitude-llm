@@ -1,9 +1,3 @@
-import {
-  LatitudeError,
-  BadRequestError,
-  PromisedResult,
-  Result,
-} from '../../../lib'
 import { CodeToolArgs } from './types'
 import { runCodeWithoutDependencies } from './withoutDependencies'
 import { runCodeWithDependencies } from './withDependencies'
@@ -12,6 +6,10 @@ import {
   LatitudeTool,
   LatitudeToolInternalName,
 } from '@latitude-data/constants'
+import { LatitudeError } from './../../../lib/errors'
+import { BadRequestError } from './../../../lib/errors'
+import { PromisedResult } from './../../../lib/Transaction'
+import { Result } from './../../../lib/Result'
 
 function assertContainsPrintStatement({ code, language }: CodeToolArgs) {
   const printStatementResult = (() => {

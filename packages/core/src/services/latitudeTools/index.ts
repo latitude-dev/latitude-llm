@@ -1,11 +1,9 @@
 import { LatitudeTool } from '@latitude-data/constants'
-import {
-  BadRequestError,
-  LatitudeError,
-  PromisedResult,
-  Result,
-} from '../../lib'
 import { LATITUDE_TOOLS } from './tools'
+import { BadRequestError } from './../../lib/errors'
+import { LatitudeError } from './../../lib/errors'
+import { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 export async function executeLatitudeToolCall({
   latitudeTool,

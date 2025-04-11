@@ -1,6 +1,5 @@
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
-import { NotFoundError } from '../../../lib'
 import {
   CommitsRepository,
   DatasetRowsRepository,
@@ -13,6 +12,7 @@ import { runEvaluationV2 } from '../../../services/evaluationsV2'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
+import { NotFoundError } from './../../../lib/errors'
 
 export type RunEvaluationV2JobData = {
   workspaceId: number

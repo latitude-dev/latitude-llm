@@ -3,7 +3,7 @@ import { and, count, desc, eq, inArray, isNull, sql, sum } from 'drizzle-orm'
 import { Project } from '../../browser'
 import { database } from '../../client'
 import { EvaluationType, ProjectStats } from '../../constants'
-import { Result } from '../../lib'
+import { Result } from '../../lib/Result'
 import {
   commits,
   connectedEvaluations,

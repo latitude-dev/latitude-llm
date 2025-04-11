@@ -8,7 +8,7 @@ import {
   createWebhookDelivery,
   sendSignedWebhook,
 } from '../../../services/webhooks'
-import { Result } from '../../../lib'
+import { Result } from './../../../lib/Result'
 
 // Mock the services
 vi.mock('../../../services/webhooks', () => ({

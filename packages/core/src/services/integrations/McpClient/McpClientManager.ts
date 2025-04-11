@@ -1,7 +1,6 @@
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { IntegrationDto, McpServer } from '../../../browser'
-import { Result, TypedResult } from '../../../lib'
 import { McpServerRepository } from '../../../repositories'
 import { scaleMcpServer } from '../../mcpServers/scaleService'
 import {
@@ -16,6 +15,8 @@ import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { maintenanceQueue } from '../../../jobs/queues'
+import { Result } from './../../../lib/Result'
+import { TypedResult } from './../../../lib/Result'
 
 // Public Types
 export interface McpClientManager {

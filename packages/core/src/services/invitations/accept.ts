@@ -1,6 +1,6 @@
 import { Membership, User } from '../../browser'
 import { database } from '../../client'
-import { Transaction } from '../../lib'
+import Transaction from './../../lib/Transaction'
 import { updateMembership } from '../memberships'
 import { updateUser } from '../users'
 

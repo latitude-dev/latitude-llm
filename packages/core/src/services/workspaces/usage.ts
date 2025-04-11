@@ -1,6 +1,5 @@
 import { Subscription, Workspace, WorkspaceUsage } from '../../browser'
 import { database } from '../../client'
-import { PromisedResult, Result } from '../../lib'
 import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
 import {
   ClaimedRewardsRepository,
@@ -10,6 +9,8 @@ import {
 } from '../../repositories'
 import { DocumentLogsRepository } from '../../repositories/documentLogsRepository'
 import { getLatestRenewalDate } from './utils/calculateRenewalDate'
+import { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 export async function computeWorkspaceUsage(
   workspace: {

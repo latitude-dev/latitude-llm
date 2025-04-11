@@ -8,12 +8,12 @@ import {
   ProviderLogsRepository,
 } from '../../../repositories'
 import { findPausedChain } from './findPausedChain'
-import { Result } from '../../../lib'
 import { resumePausedPrompt } from './resumePausedPrompt'
 import { addChatMessage } from './addChatMessage'
 import { resumeAgent } from './resumeAgent'
 import { scanDocumentContent } from '../../documents'
 import { PromptConfig } from '@latitude-data/constants'
+import { Result } from './../../../lib/Result'
 
 async function retrieveData({
   workspace,

@@ -1,7 +1,6 @@
 import { and, avg, count, eq, sql, sum } from 'drizzle-orm'
 
 import { database } from '../../client'
-import { PromisedResult, Result } from '../../lib'
 import {
   CommitsRepository,
   EvaluationResultsRepository,
@@ -18,6 +17,8 @@ import {
   AverageResultOverTime,
   Evaluation,
 } from '../../schema/types'
+import { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 export async function computeAverageResultAndCostOverCommit(
   {

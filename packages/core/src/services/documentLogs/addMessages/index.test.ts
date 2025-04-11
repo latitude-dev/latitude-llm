@@ -15,7 +15,6 @@ import {
   Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
-import { Result, TypedResult } from '../../../lib'
 import { ProviderLogsRepository } from '../../../repositories'
 import { providerLogs } from '../../../schema'
 import { createDocumentLog, createProject } from '../../../tests/factories'
@@ -23,6 +22,8 @@ import { testConsumeStream } from '../../../tests/helpers'
 import * as aiModule from '../../ai'
 import { addMessages } from './index'
 import { ChainEventTypes } from '@latitude-data/constants'
+import { Result } from './../../../lib/Result'
+import { TypedResult } from './../../../lib/Result'
 
 const dummyDoc1Content = `
 ---

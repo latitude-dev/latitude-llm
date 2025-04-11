@@ -1,7 +1,9 @@
 import { and, eq, getTableColumns } from 'drizzle-orm'
 
 import { IntegrationDto } from '../browser'
-import { LatitudeError, NotFoundError, PromisedResult, Result } from '../lib'
+import { LatitudeError, NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
+import { PromisedResult } from '../lib/Transaction'
 import { integrations } from '../schema'
 import Repository from './repositoryV2'
 

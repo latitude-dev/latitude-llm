@@ -1,10 +1,12 @@
 import { DocumentTrigger, Workspace } from '../../browser'
 import { DocumentTriggerWithConfiguration } from './helpers/schema'
-import { LatitudeError, PromisedResult, Result, Transaction } from '../../lib'
 import { documentTriggers } from '../../schema'
 import { database } from '../../client'
 import { and, eq } from 'drizzle-orm'
 import { buildConfiguration } from './helpers/buildConfiguration'
+import { LatitudeError } from './../../lib/errors'
+import Transaction, { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 export async function updateDocumentTriggerConfiguration(
   {

@@ -11,13 +11,15 @@ import {
   PromptSource,
 } from '../../../../browser'
 import { unsafelyFindProviderApiKey } from '../../../../data-access'
-import { NotFoundError, Result, TypedResult } from '../../../../lib'
 import { ChainError } from '../../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
 import serializeProviderLog from '../../../providerLogs/serialize'
 import { ChainStreamManager } from '../../../../lib/chainStreamManager'
 import { PromptConfig } from '@latitude-data/constants'
 import { getInputSchema, getOutputType } from '../../../chains/ChainValidator'
+import { NotFoundError } from './../../../../lib/errors'
+import { Result } from './../../../../lib/Result'
+import { TypedResult } from './../../../../lib/Result'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,

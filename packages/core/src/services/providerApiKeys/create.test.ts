@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Providers, User, Workspace } from '../../browser'
-import { BadRequestError } from '../../lib'
 import { ProviderApiKeysRepository } from '../../repositories'
 import { createProject } from '../../tests/factories'
 import { createProviderApiKey } from './create'
 import { destroyProviderApiKey } from './destroy'
+import { BadRequestError } from './../../lib/errors'
 
 const mocks = await vi.hoisted(async () => ({
   publisher: vi.spyOn(

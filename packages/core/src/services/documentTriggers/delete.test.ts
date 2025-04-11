@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTrigger, Workspace } from '../../browser'
 import { deleteDocumentTrigger } from './delete'
-import { LatitudeError, Transaction } from '../../lib'
 import { database } from '../../client'
 import { documentTriggers } from '../../schema'
 import { and, eq } from 'drizzle-orm'
+import { LatitudeError } from './../../lib/errors'
+import Transaction from './../../lib/Transaction'
 
 describe('deleteDocumentTrigger', () => {
   let workspace: Workspace

@@ -1,7 +1,8 @@
 import { and, asc, desc, eq, getTableColumns, inArray } from 'drizzle-orm'
 
 import { ProviderLog } from '../browser'
-import { NotFoundError, Result } from '../lib'
+import { NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
 import { documentLogs, providerLogs } from '../schema'
 import { QueryOptions } from './repository'
 import Repository from './repositoryV2'

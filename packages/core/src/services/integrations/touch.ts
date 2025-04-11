@@ -1,8 +1,10 @@
 import { eq } from 'drizzle-orm'
 
 import { database } from '../../client'
-import { NotFoundError, PromisedResult, Result, Transaction } from '../../lib'
 import { integrations } from '../../schema'
+import { NotFoundError } from './../../lib/errors'
+import Transaction, { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 export function touchIntegration(
   id: number,

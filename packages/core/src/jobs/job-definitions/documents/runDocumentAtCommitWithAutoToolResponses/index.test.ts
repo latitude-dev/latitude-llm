@@ -11,11 +11,12 @@ import {
   Workspace,
 } from '../../../../browser'
 import * as runDoc from '../../../../services/commits/runDocumentAtCommit'
-import { NotFoundError, Result } from '../../../../lib'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 import type { RunDocumentAtCommitWithAutoToolResponsesFn } from './index'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { ChainError } from '../../../../lib/chainStreamManager/ChainErrors'
+import { NotFoundError } from './../../../../lib/errors'
+import { Result } from './../../../../lib/Result'
 
 let workspace: Workspace
 let project: Project

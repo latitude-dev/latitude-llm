@@ -1,9 +1,9 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { StreamType } from '../../../constants'
-import { Result } from '../..'
 import { AIReturn } from '../../../services/ai'
 import { ChainError } from '../ChainErrors'
+import { Result } from '../../Result'
 
 export function checkValidStream({ type }: AIReturn<StreamType>) {
   const invalidType = type !== 'text' && type !== 'object'

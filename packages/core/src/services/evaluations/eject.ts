@@ -3,7 +3,6 @@ import { eq } from 'drizzle-orm'
 import { EvaluationDto, EvaluationMetadataType } from '../../browser'
 import { database } from '../../client'
 import { unsafelyFindWorkspace } from '../../data-access'
-import { BadRequestError, NotFoundError, Result, Transaction } from '../../lib'
 import {
   evaluationMetadataLlmAsJudgeAdvanced,
   evaluationMetadataLlmAsJudgeSimple,
@@ -11,6 +10,10 @@ import {
 } from '../../schema'
 import { configurationTables } from './create'
 import { getEvaluationPrompt } from './prompt'
+import { BadRequestError } from './../../lib/errors'
+import { NotFoundError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export async function ejectEvaluation(
   evaluation: EvaluationDto,

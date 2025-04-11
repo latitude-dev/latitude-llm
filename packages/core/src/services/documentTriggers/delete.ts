@@ -1,8 +1,10 @@
 import { DocumentTrigger, Workspace } from '../../browser'
-import { LatitudeError, PromisedResult, Result, Transaction } from '../../lib'
 import { documentTriggers } from '../../schema'
 import { database } from '../../client'
 import { and, eq } from 'drizzle-orm'
+import { LatitudeError } from './../../lib/errors'
+import Transaction, { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 export async function deleteDocumentTrigger(
   {

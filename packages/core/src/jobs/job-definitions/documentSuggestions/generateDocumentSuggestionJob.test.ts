@@ -11,10 +11,11 @@ import {
   LogSources,
   Workspace,
 } from '../../../browser'
-import { Result, UnprocessableEntityError } from '../../../lib'
 import * as services from '../../../services/documentSuggestions'
 import * as factories from '../../../tests/factories'
 import { generateDocumentSuggestionJob } from './generateDocumentSuggestionJob'
+import { Result } from './../../../lib/Result'
+import { UnprocessableEntityError } from './../../../lib/errors'
 
 describe('generateDocumentSuggestionJob', () => {
   let mocks: {

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType, DocumentVersion } from '@latitude-data/constants'
 import { DocumentTrigger, Project, Workspace } from '../../browser'
 import { createDocumentTrigger } from './create'
-import { LatitudeError, Transaction } from '../../lib'
 import { database } from '../../client'
 import * as buildConfigurationModule from './helpers/buildConfiguration'
 import { documentTriggers } from '../../schema'
@@ -10,6 +9,8 @@ import {
   EmailTriggerConfiguration,
   InsertScheduledTriggerConfiguration,
 } from './helpers/schema'
+import { LatitudeError } from './../../lib/errors'
+import Transaction from './../../lib/Transaction'
 
 describe('createDocumentTrigger', () => {
   let workspace: Workspace
@@ -42,8 +43,9 @@ describe('createDocumentTrigger', () => {
     )
 
     // Mock the generateUUIDIdentifier function by importing and mocking it
-    vi.mock('../../lib', async (importOriginal) => {
-      const original = await importOriginal<typeof import('../../lib')>()
+    vi.mock('../../lib/generateUUID', async (importOriginal) => {
+      const original =
+        await importOriginal<typeof import('../../lib/generateUUID')>()
       return {
         ...original,
         generateUUIDIdentifier: vi.fn().mockReturnValue('mocked-uuid'),

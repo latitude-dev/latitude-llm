@@ -1,7 +1,6 @@
 import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
 
 import { ErrorableEntity } from '../../../browser'
-import { NotFoundError, Result } from '../../../lib'
 import {
   commits,
   documentLogs,
@@ -12,6 +11,8 @@ import {
 import { DocumentLogWithMetadata } from '../../documentLogsRepository'
 import Repository from '../../repositoryV2'
 import { RunErrorField } from '../evaluationResultsRepository'
+import { NotFoundError } from './../../../lib/errors'
+import { Result } from './../../../lib/Result'
 
 const tt = {
   ...getTableColumns(documentLogs),

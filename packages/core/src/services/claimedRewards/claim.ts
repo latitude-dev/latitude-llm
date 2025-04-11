@@ -2,9 +2,11 @@ import { REWARD_VALUES, RewardType, User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { unsafelyFindUserByEmail } from '../../data-access'
 import { publisher } from '../../events/publisher'
-import { BadRequestError, Result, Transaction } from '../../lib'
 import { ClaimedRewardsRepository } from '../../repositories'
 import { claimedRewards } from '../../schema'
+import { BadRequestError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import Transaction from './../../lib/Transaction'
 
 export async function claimReward(
   {

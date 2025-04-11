@@ -10,7 +10,6 @@ import {
   EvaluationMetadataType,
   EvaluationResultableType,
 } from '../../browser'
-import { BadRequestError, PromisedResult, Result, Transaction } from '../../lib'
 import {
   evaluationConfigurationBoolean,
   evaluationConfigurationNumerical,
@@ -19,6 +18,9 @@ import {
   evaluationMetadataLlmAsJudgeSimple,
   evaluationMetadataManual,
 } from '../../schema'
+import { BadRequestError } from './../../lib/errors'
+import Transaction, { PromisedResult } from './../../lib/Transaction'
+import { Result } from './../../lib/Result'
 
 export async function updateEvaluation({
   evaluation,
