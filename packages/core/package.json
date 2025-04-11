@@ -106,8 +106,7 @@
     "safe-regex": "^2.1.1",
     "socket.io-client": "^4.7.5",
     "uuid": "^10.0.0",
-    "zod": "^3.23.8",
-    "zod-to-json-schema": "^3.24.5"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.4.1",

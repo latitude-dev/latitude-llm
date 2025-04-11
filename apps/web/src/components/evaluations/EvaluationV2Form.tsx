@@ -1,4 +1,3 @@
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { ActionErrors, parseActionErrors } from '$/hooks/useLatitudeAction'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
@@ -6,62 +5,49 @@ import {
   EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
-  HumanEvaluationMetric,
-  LlmEvaluationMetric,
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
 import { useEffect, useMemo, useState } from 'react'
 import ConfigurationForm from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
 
-const EVALUATION_TYPE_OPTIONS = Object.values(EvaluationType).map((type) => {
-  const specification = EVALUATION_SPECIFICATIONS[type]
-  return {
-    label: specification.name,
-    value: type,
-    icon: specification.icon,
-  }
-})
+// TODO(evalsv2): Uncomment when all types are implemented
+// const EVALUATION_TYPE_OPTIONS = Object.values(EvaluationType).map((type) => {
+//   const specification = EVALUATION_SPECIFICATIONS[type]
+//   return {
+//     label: specification.name,
+//     value: type,
+//     icon: specification.icon,
+//   }
+// })
 
-const EVALUATION_METRIC_OPTIONS = <
-  T extends EvaluationType = EvaluationType,
-  M extends EvaluationMetric<T> = EvaluationMetric<T>,
->(
-  type: T,
-) => {
-  let metrics: M[] = []
-  switch (type) {
-    case EvaluationType.Rule:
-      metrics = Object.values(RuleEvaluationMetric) as M[]
-      break
-    case EvaluationType.Llm:
-      metrics = Object.values(LlmEvaluationMetric) as M[]
-      break
-    case EvaluationType.Human:
-      metrics = Object.values(HumanEvaluationMetric) as M[]
-      break
-  }
-
+const EVALUATION_METRIC_OPTIONS = (_type: EvaluationType) => {
+  // TODO(evalsv2): Add other evaluation types with a switch type
   return (
-    metrics
+    // TODO(evalsv2): Remove type assertion when all metrics are implemented
+    Object.values(RuleEvaluationMetric)
       // TODO(evalsv2): Remove undefined filter when all metrics are implemented
-      .filter((metric) => !!EVALUATION_SPECIFICATIONS[type].metrics[metric])
+      .filter(
+        (metric) =>
+          !!EVALUATION_SPECIFICATIONS[EvaluationType.Rule].metrics[metric],
+      )
       .map((metric) => {
-        const specification = EVALUATION_SPECIFICATIONS[type].metrics[metric]
+        const specification =
+          EVALUATION_SPECIFICATIONS[EvaluationType.Rule].metrics[metric]
         return {
           label: specification.name,
           value: metric,
           icon: specification.icon,
         }
-      })
+      }) as { label: string; value: EvaluationMetric; icon: IconName }[]
   )
 }
 
@@ -113,16 +99,6 @@ export default function EvaluationV2Form<
   const metricSpecification = typeSpecification?.metrics[settings.metric]
 
   useEffect(() => {
-    if (mode === 'update') return
-    if (metricSpecification) return
-    setSettings({
-      ...settings,
-      metric: EVALUATION_METRIC_OPTIONS(settings.type)[0]!.value as M,
-    })
-  }, [metricSpecification?.ConfigurationForm])
-
-  useEffect(() => {
-    if (mode === 'update') return
     if (!metricSpecification) return
     setOptions({
       ...options,
@@ -130,26 +106,9 @@ export default function EvaluationV2Form<
     })
   }, [metricSpecification?.supportsLiveEvaluation])
 
-  const { enabled: evaluationsV2Enabled } = useFeatureFlag({
-    featureFlag: 'evaluationsV2',
-  })
-
   return (
     <form className='min-w-0' id='evaluationV2Form'>
       <FormWrapper>
-        {evaluationsV2Enabled && mode === 'create' && (
-          <TabSelect
-            value={settings.type}
-            name='type'
-            description={typeSpecification.description}
-            options={EVALUATION_TYPE_OPTIONS}
-            onChange={(value) => setSettings({ ...settings, type: value as T })}
-            errors={errors?.['type']}
-            fancy
-            disabled={disabled}
-            required
-          />
-        )}
         <Input
           value={settings.name}
           name='name'
@@ -176,6 +135,19 @@ export default function EvaluationV2Form<
           disabled={disabled}
           required
         />
+        {/* TODO(evalsv2): Uncomment when all types are implemented */}
+        {/*{mode === 'create' && (<Select
+          value={settings.type}
+          name='type'
+          label='Type'
+          description={typeSpecification.description}
+          placeholder='Select an evaluation type'
+          options={EVALUATION_TYPE_OPTIONS}
+          onChange={(value) => setSettings({ ...settings, type: value as T })}
+          errors={errors?.['type']}
+          disabled={disabled}
+          required
+        />)} */}
         {mode === 'create' && (
           <Select
             value={settings.metric}

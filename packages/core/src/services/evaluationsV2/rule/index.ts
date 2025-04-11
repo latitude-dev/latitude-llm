@@ -43,7 +43,6 @@ async function validate<M extends RuleEvaluationMetric>(
   {
     metric,
     configuration,
-    ...rest
   }: EvaluationMetricValidateArgs<EvaluationType.Rule, M> & {
     metric: M
   },
@@ -57,7 +56,7 @@ async function validate<M extends RuleEvaluationMetric>(
   metricSpecification.configuration.parse(configuration)
 
   configuration = await metricSpecification
-    .validate({ configuration, ...rest }, db)
+    .validate({ configuration }, db)
     .then((r) => r.unwrap())
 
   // Note: all settings are explicitly returned to ensure we don't

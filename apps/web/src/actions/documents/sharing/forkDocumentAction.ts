@@ -1,10 +1,11 @@
 'use server'
 
 import { forkDocument } from '@latitude-data/core/services/documents/forkDocument'
-import { findSharedDocument } from '@latitude-data/core/services/publishedDocuments/findSharedDocument'
-import { env } from '@latitude-data/env'
+
 import { z } from 'zod'
 import { authProcedure } from '../../procedures'
+import { findSharedDocument } from '@latitude-data/core/services/publishedDocuments/findSharedDocument'
+import { env } from '@latitude-data/env'
 
 export const forkDocumentAction = authProcedure
   .createServerAction()
@@ -26,6 +27,5 @@ export const forkDocumentAction = authProcedure
         user: ctx.user,
       },
       defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
-      evaluationsV2Enabled: false, // TODO(evalsv2): use flag somehow
     }).then((r) => r.unwrap())
   })

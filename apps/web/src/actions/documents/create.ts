@@ -3,6 +3,7 @@
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { createNewDocument } from '@latitude-data/core/services/documents/create'
 import { z } from 'zod'
+
 import { withProject } from '../procedures'
 
 export const createDocumentVersionAction = withProject
@@ -25,7 +26,6 @@ export const createDocumentVersionAction = withProject
       user: ctx.user,
       commit,
       path: input.path,
-      evaluationsV2Enabled: false, // TODO(evalsv2): use flag somehow
       createDemoEvaluation: true,
     })
 

@@ -9,10 +9,10 @@ import {
   Workspace,
 } from '../../browser'
 import { database, Database } from '../../client'
-import { BadRequestError } from '../../lib/errors'
-import { Result } from '../../lib/Result'
 import { EvaluationsV2Repository } from '../../repositories'
 import { EVALUATION_SPECIFICATIONS } from './shared'
+import { BadRequestError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
 
 export async function validateEvaluationV2<
   T extends EvaluationType,
@@ -20,17 +20,17 @@ export async function validateEvaluationV2<
 >(
   {
     evaluation,
-    settings,
-    options,
     document,
     commit,
+    settings,
+    options,
     workspace,
   }: {
     evaluation?: EvaluationV2<T, M>
+    document?: DocumentVersion
+    commit: Commit
     settings: EvaluationSettings<T, M>
     options: EvaluationOptions
-    document: DocumentVersion
-    commit: Commit
     workspace: Workspace
   },
   db: Database = database,
@@ -56,9 +56,6 @@ export async function validateEvaluationV2<
       {
         metric: settings.metric,
         configuration: settings.configuration,
-        document: document,
-        commit: commit,
-        workspace: workspace,
       },
       db,
     )
@@ -68,7 +65,7 @@ export async function validateEvaluationV2<
   const evaluations = await repository
     .listAtCommitByDocument({
       commitUuid: commit.uuid,
-      documentUuid: document.documentUuid,
+      documentUuid: (document?.documentUuid || evaluation?.documentUuid)!,
     })
     .then((r) => r.unwrap())
   if (

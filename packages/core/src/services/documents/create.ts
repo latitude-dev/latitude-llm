@@ -7,9 +7,7 @@ import {
   EvaluationMetadataLlmAsJudgeSimple,
   EvaluationMetadataType,
   EvaluationResultableType,
-  EvaluationType,
   findFirstModelForProvider,
-  LlmEvaluationMetric,
   User,
   Workspace,
   type Commit,
@@ -21,12 +19,8 @@ import { BadRequestError } from '../../lib/errors'
 import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
 import { connectEvaluations, createEvaluation } from '../evaluations'
-import { createEvaluationV2 } from '../evaluationsV2'
 import { pingProjectUpdate } from '../projects'
-import {
-  findDefaultEvaluationProvider,
-  findDefaultProvider,
-} from '../providerApiKeys/findDefaultProvider'
+import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
 import { getDocumentType } from './update'
 import { Result } from './../../lib/Result'
 import { TypedResult } from './../../lib/Result'
@@ -40,8 +34,7 @@ export async function createNewDocument(
     path,
     content,
     promptlVersion = 1,
-    createDemoEvaluation: demoEvaluation = false,
-    evaluationsV2Enabled = false,
+    createDemoEvaluation = false,
   }: {
     workspace: Workspace
     user?: User
@@ -50,7 +43,6 @@ export async function createNewDocument(
     content?: string
     promptlVersion?: number
     createDemoEvaluation?: boolean
-    evaluationsV2Enabled?: boolean
   },
   db = database,
 ): Promise<TypedResult<DocumentVersion, Error>> {
@@ -118,11 +110,40 @@ export async function createNewDocument(
       },
     })
 
-    if (user && demoEvaluation) {
-      await createDemoEvaluation(
-        { commit, document, evaluationsV2Enabled, user, workspace },
+    if (user && createDemoEvaluation) {
+      const evaluation = await createEvaluation(
+        {
+          workspace: workspace,
+          user: user,
+          name: `Accuracy`,
+          description: `Evaluates how well the given instructions are followed.`,
+          metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
+          metadata: {
+            objective:
+              'Assess how well the response follows the given instructions.',
+          } as EvaluationMetadataLlmAsJudgeSimple,
+          resultType: EvaluationResultableType.Number,
+          resultConfiguration: {
+            minValue: 1,
+            maxValue: 5,
+            minValueDescription:
+              "Not faithful, doesn't follow the instructions.",
+            maxValueDescription: 'Very faithful, does follow the instructions.',
+          } as EvaluationConfigurationNumerical,
+        },
         tx,
-      )
+      ).then((r) => r.unwrap())
+
+      await connectEvaluations(
+        {
+          workspace: workspace,
+          documentUuid: document.documentUuid,
+          evaluationUuids: [evaluation.uuid],
+          user: user,
+          live: true,
+        },
+        tx,
+      ).then((r) => r.unwrap())
     }
 
     return Result.ok(document)
@@ -156,97 +177,4 @@ export async function defaultDocumentContent(
     metadata: metadata ? `---\n${metadata}\n---\n\n` : '',
     content: content,
   }
-}
-
-async function createDemoEvaluation(
-  {
-    commit,
-    document,
-    evaluationsV2Enabled,
-    user,
-    workspace,
-  }: {
-    commit: Commit
-    document: DocumentVersion
-    evaluationsV2Enabled: boolean
-    user: User
-    workspace: Workspace
-  },
-  db = database,
-) {
-  // Note: failing silently to avoid not letting the user create the document
-  const result = await findDefaultEvaluationProvider(workspace, db)
-  if (result.error || !result.value) return
-  const provider = result.value
-
-  const model = findFirstModelForProvider({
-    provider: provider,
-    defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
-  })
-  if (!model) return
-
-  if (evaluationsV2Enabled) {
-    return await createEvaluationV2({
-      document: document,
-      commit: commit,
-      settings: {
-        name: `Accuracy`,
-        description: `Evaluates how well the given instructions are followed.`,
-        type: EvaluationType.Llm,
-        metric: LlmEvaluationMetric.Rating,
-        configuration: {
-          reverseScale: false,
-          provider: provider.name,
-          model: model,
-          criteria:
-            'Assess how well the response follows the given instructions.',
-          minRating: 1,
-          minRatingDescription:
-            "Not faithful, doesn't follow the instructions.",
-          maxRating: 5,
-          maxRatingDescription: 'Very faithful, does follow the instructions.',
-          minThreshold: 4,
-        },
-      },
-      options: {
-        evaluateLiveLogs: true,
-        enableSuggestions: true,
-        autoApplySuggestions: true,
-      },
-      workspace: workspace,
-    }).then((r) => r.unwrap())
-  }
-
-  const evaluation = await createEvaluation(
-    {
-      workspace: workspace,
-      user: user,
-      name: `Accuracy`,
-      description: `Evaluates how well the given instructions are followed.`,
-      metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
-      metadata: {
-        objective:
-          'Assess how well the response follows the given instructions.',
-      } as EvaluationMetadataLlmAsJudgeSimple,
-      resultType: EvaluationResultableType.Number,
-      resultConfiguration: {
-        minValue: 1,
-        maxValue: 5,
-        minValueDescription: "Not faithful, doesn't follow the instructions.",
-        maxValueDescription: 'Very faithful, does follow the instructions.',
-      } as EvaluationConfigurationNumerical,
-    },
-    db,
-  ).then((r) => r.unwrap())
-
-  await connectEvaluations(
-    {
-      workspace: workspace,
-      documentUuid: document.documentUuid,
-      evaluationUuids: [evaluation.uuid],
-      user: user,
-      live: true,
-    },
-    db,
-  ).then((r) => r.unwrap())
 }
