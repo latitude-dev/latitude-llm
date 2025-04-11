@@ -32,21 +32,17 @@ export const runBatchEvaluationAction = withDataset
         .refine(
           async (datasetLabel) => {
             if (!datasetLabel) return true
-            if (!('columns' in ctx.dataset)) return true
             return ctx.dataset.columns.find((c) => c.name === datasetLabel)
           },
-          { message: 'Dataset column not present in the dataset' },
+          { message: 'Label is not a valid dataset column' },
         ),
+      autoRespondToolCalls: z.boolean(),
     }),
   )
   .handler(async ({ input, ctx }) => {
     let evaluations = []
 
     if (input.evaluationUuids) {
-      if (!('columns' in ctx.dataset)) {
-        throw new Error('Cannot run a batch evaluation v2 without a dataset v2')
-      }
-
       const evaluationsRepository = new EvaluationsV2Repository(
         ctx.workspace.id,
       )
@@ -79,15 +75,18 @@ export const runBatchEvaluationAction = withDataset
         }
       })
 
+      // NOTE: If you replace this event for another for experiments
+      // keep tracking `autoRespondToolCalls`
       publisher.publishLater({
         type: 'batchEvaluationRunRequested',
         data: {
+          version: 'v2' as const,
+          workspaceId: ctx.workspace.id,
+          userEmail: ctx.user.email,
+          autoRespondToolCalls: input.autoRespondToolCalls,
           commitId: ctx.commit.id,
           documentUuid: ctx.document.documentUuid,
           evaluationUuids: input.evaluationUuids!,
-          workspaceId: ctx.workspace.id,
-          userEmail: ctx.user.email,
-          version: 'v2',
         },
       })
     } else {
@@ -99,14 +98,17 @@ export const runBatchEvaluationAction = withDataset
 
       if (evaluations.length === 0) return { success: true }
 
+      // NOTE: If you replace this event for another for experiments
+      // keep tracking `autoRespondToolCalls`
       publisher.publishLater({
         type: 'batchEvaluationRunRequested',
         data: {
-          evaluationIds: input.evaluationIds!,
-          documentUuid: input.documentUuid,
+          version: 'v1',
           workspaceId: ctx.workspace.id,
           userEmail: ctx.user.email,
-          version: 'v1',
+          autoRespondToolCalls: input.autoRespondToolCalls,
+          evaluationIds: input.evaluationIds!,
+          documentUuid: input.documentUuid,
         },
       })
     }
@@ -126,6 +128,7 @@ export const runBatchEvaluationAction = withDataset
         fromLine: input.fromLine,
         toLine: input.toLine,
         parametersMap: input.parameters as Record<string, number>,
+        autoRespondToolCalls: input.autoRespondToolCalls,
         batchId,
       })
     })

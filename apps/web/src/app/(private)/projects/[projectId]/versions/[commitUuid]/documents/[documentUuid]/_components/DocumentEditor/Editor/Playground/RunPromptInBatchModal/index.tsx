@@ -38,6 +38,7 @@ function useRunDocumentInBatch({
   const runBatch = useCallback(
     async ({
       wantAllLines,
+      autoRespondToolCalls,
       datasetId,
       parameters,
       fromLine,
@@ -47,15 +48,17 @@ function useRunDocumentInBatch({
       fromLine: number | undefined
       toLine: number | undefined
       wantAllLines: boolean
+      autoRespondToolCalls: boolean
       parameters: RunBatchParameters
     }) => {
       await run({
+        projectId: Number(projectId),
         commitUuid,
         datasetId: datasetId!,
         documentUuid: document.documentUuid,
-        fromLine: wantAllLines ? undefined : fromLine,
         parameters,
-        projectId: Number(projectId),
+        autoRespondToolCalls,
+        fromLine: wantAllLines ? undefined : fromLine,
         toLine: wantAllLines ? undefined : toLine,
       })
     },
@@ -125,6 +128,7 @@ export default function RunPromptInBatchModal({
       fromLine: form.fromLine,
       toLine: form.toLine,
       wantAllLines: form.wantAllLines,
+      autoRespondToolCalls: form.autoRespondToolCalls,
       parameters: form.parameters,
     })
   }
@@ -145,7 +149,7 @@ export default function RunPromptInBatchModal({
             fancy
             onClick={onRunBatch}
           >
-            {isRunningBatch ? 'Running...' : 'Run Batch'}
+            {isRunningBatch ? 'Running...' : 'Run experiment'}
           </Button>
         </>
       }
@@ -168,6 +172,8 @@ export default function RunPromptInBatchModal({
         parametersList={form.parametersList}
         onParametersChange={form.onParameterChange}
         parameters={form.parameters}
+        autoRespondToolCalls={form.autoRespondToolCalls}
+        onAutoRespondToolCallsChange={form.setAutoRespondToolCalls}
       />
     </Modal>
   )

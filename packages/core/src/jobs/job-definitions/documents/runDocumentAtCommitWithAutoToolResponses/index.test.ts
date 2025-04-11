@@ -68,6 +68,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       documentUuid: document.documentUuid,
       parameters: { param1: 'value1' },
       source: LogSources.Playground,
+      autoRespondToolCalls: true,
     })
 
     expect(runDoc.runDocumentAtCommit).toHaveBeenCalledWith(
@@ -82,6 +83,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
     expect(runDocUntilStops.runDocumentUntilItStops).toHaveBeenCalledWith(
       {
         hasToolCalls: false,
+        autoRespondToolCalls: true,
         data: {
           workspace,
           commit,
@@ -104,6 +106,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       documentUuid: document.documentUuid,
       parameters: { param1: 'value1' },
       source: LogSources.Playground,
+      autoRespondToolCalls: true,
     })
 
     expect(result.error).toEqual(
@@ -134,6 +137,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       documentUuid: document.documentUuid,
       parameters: { param1: 'value1' },
       source: LogSources.Playground,
+      autoRespondToolCalls: true,
     })
 
     expect(result).toEqual(mockResult)
@@ -174,6 +178,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       documentUuid: document.documentUuid,
       parameters: { param1: 'value1' },
       source: LogSources.Playground,
+      autoRespondToolCalls: true,
     })
 
     expect(runDoc.runDocumentAtCommit).toHaveBeenCalledWith(
@@ -189,6 +194,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       1,
       {
         hasToolCalls: false,
+        autoRespondToolCalls: true,
         data: {
           workspace,
           commit,
@@ -205,6 +211,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       2,
       {
         hasToolCalls: true,
+        autoRespondToolCalls: true,
         data: {
           workspace,
           commit,
@@ -218,5 +225,76 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       },
       runDocUntilStops.runDocumentUntilItStops,
     )
+  })
+
+  it('it skip reponding to tools', async () => {
+    const fakeTools = [
+      {
+        id: 'call_fak3123',
+        name: 'get_weather',
+        arguments: { city: 'New York' },
+      },
+    ]
+    const mockResult = {
+      response: Promise.resolve({
+        providerLog: { uuid: 'log1' },
+        toolCalls: fakeTools,
+      }),
+      toolCalls: Promise.resolve(fakeTools),
+      errorableUuid: 'log1',
+    }
+
+    vi.spyOn(runDoc, 'runDocumentAtCommit')
+    vi.mocked(runDoc.runDocumentAtCommit).mockResolvedValueOnce(
+      // @ts-ignore
+      Result.ok(mockResult),
+    )
+    vi.spyOn(runDocUntilStops, 'runDocumentUntilItStops')
+
+    const mod = await import('./index')
+    runDocumentAtCommitWithAutoToolResponses =
+      mod.runDocumentAtCommitWithAutoToolResponses
+
+    const result = await runDocumentAtCommitWithAutoToolResponses({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      commitUuid: commit.uuid,
+      documentUuid: document.documentUuid,
+      parameters: { param1: 'value1' },
+      source: LogSources.Playground,
+      autoRespondToolCalls: false,
+    })
+
+    expect(runDoc.runDocumentAtCommit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspace,
+        commit,
+        parameters: { param1: 'value1' },
+        source: LogSources.Playground,
+      }),
+    )
+
+    expect(runDocUntilStops.runDocumentUntilItStops).toHaveBeenCalledTimes(1)
+    expect(runDocUntilStops.runDocumentUntilItStops).toHaveBeenNthCalledWith(
+      1,
+      {
+        hasToolCalls: false,
+        autoRespondToolCalls: false,
+        data: {
+          workspace,
+          commit,
+          document,
+          copilot,
+          source: LogSources.Playground,
+          parameters: { param1: 'value1' },
+        },
+      },
+      runDocUntilStops.runDocumentUntilItStops,
+    )
+    expect(result.value).toEqual({
+      errorableUuid: 'log1',
+      response: Promise.resolve({}),
+      toolCalls: Promise.resolve(fakeTools),
+    })
   })
 })

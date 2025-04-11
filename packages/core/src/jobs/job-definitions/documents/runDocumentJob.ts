@@ -13,6 +13,7 @@ export type RunDocumentJobData = {
   documentUuid: string
   commitUuid: string
   projectId: number
+  autoRespondToolCalls: boolean
   parameters?: Record<string, unknown>
   batchId?: string
 }
@@ -48,6 +49,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     projectId,
     parameters = {},
     batchId = randomUUID(),
+    autoRespondToolCalls,
   } = job.data
 
   const websockets = await WebsocketClient.getSocket()
@@ -61,6 +63,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
       commitUuid,
       parameters,
       source: LogSources.Playground,
+      autoRespondToolCalls,
     }).then((r) => r.unwrap())
 
     await progressTracker.incrementCompleted()

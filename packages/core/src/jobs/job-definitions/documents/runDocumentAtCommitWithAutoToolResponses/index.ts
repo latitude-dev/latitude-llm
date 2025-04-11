@@ -17,10 +17,12 @@ import { getCopilotDataForGenerateToolResponses } from './getCopilotData'
 export async function runDocumentAtCommitWithAutoToolResponses({
   parameters,
   source,
+  autoRespondToolCalls,
   ...dataParams
 }: GetDataParams & {
   parameters: Record<string, unknown>
   source: LogSources
+  autoRespondToolCalls: boolean
 }) {
   const copilotResult = await getCopilotDataForGenerateToolResponses()
   if (copilotResult.error) return copilotResult
@@ -33,6 +35,7 @@ export async function runDocumentAtCommitWithAutoToolResponses({
   return await runDocumentUntilItStops(
     {
       hasToolCalls: false,
+      autoRespondToolCalls,
       data: {
         workspace,
         commit,

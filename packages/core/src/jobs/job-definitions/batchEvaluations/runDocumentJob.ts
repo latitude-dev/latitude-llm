@@ -17,6 +17,7 @@ export type RunDocumentForEvaluationJobData = {
   projectId: number
   parameters: Record<string, unknown>
   batchId: string
+  autoRespondToolCalls: boolean
 } & (
   | {
       evaluationId: number
@@ -43,6 +44,7 @@ export const runDocumentForEvaluationJob = async (
     parameters,
     version,
     batchId,
+    autoRespondToolCalls,
   } = job.data
 
   const progressTracker = new ProgressTracker(batchId)
@@ -55,6 +57,7 @@ export const runDocumentForEvaluationJob = async (
       commitUuid,
       parameters,
       source: LogSources.Evaluation,
+      autoRespondToolCalls,
     }).then((r) => r.unwrap())
 
     const providerLog = (await result.lastResponse)?.providerLog

@@ -5,6 +5,7 @@ import { getDatasetCount } from '$/lib/datasetsUtils'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import { useLabels } from './useLabels'
 import { useMappedParameters } from './useMappedParameters'
+import { useRunBatchLineOptions } from './useLineOptions'
 
 export function useRunBatchForm({
   document,
@@ -17,9 +18,7 @@ export function useRunBatchForm({
     () => Array.from(documentMetadata?.parameters ?? []),
     [documentMetadata?.parameters],
   )
-  const [wantAllLines, setAllRows] = useState(true)
-  const [fromLine, setFromLine] = useState<number>(1)
-  const [toLine, setToLine] = useState<number | undefined>(undefined)
+  const lineOptions = useRunBatchLineOptions()
   const { labels, buildLabels } = useLabels()
   const {
     headers,
@@ -36,7 +35,7 @@ export function useRunBatchForm({
       buildLabels(selected)
     },
     onSelectedDataset: (selected) => {
-      setFromLine(1)
+      lineOptions.setFromLine(1)
       buildLabels(selected)
     },
   })
@@ -47,7 +46,7 @@ export function useRunBatchForm({
   const { data: datasetRowsCount } = useDatasetRowsCount({
     dataset: selectedDataset,
     onFetched: (count) => {
-      setToLine(() => count)
+      lineOptions.setToLine(() => count)
     },
   })
   const maxLineCount = getDatasetCount(selectedDataset, datasetRowsCount)
@@ -55,31 +54,26 @@ export function useRunBatchForm({
   const onToggleAllLines = useCallback(
     (wantAllLines: boolean) => {
       if (wantAllLines) {
-        setToLine(() => maxLineCount)
+        lineOptions.setToLine(() => maxLineCount)
       }
-      setAllRows(wantAllLines)
+      lineOptions.setAllRows(wantAllLines)
     },
-    [maxLineCount],
+    [maxLineCount, lineOptions],
   )
 
   return {
+    ...lineOptions,
     datasets,
     isLoadingDatasets,
     selectedDataset,
     datasetLabel,
     headers,
     labels,
-    wantAllLines,
-    fromLine,
-    toLine,
     parameters,
     parametersList,
     onParameterChange,
     onSelectDataset,
     setDatasetLabel,
-    setAllRows,
-    setFromLine,
-    setToLine,
     maxLineCount,
     onToggleAllLines,
   }

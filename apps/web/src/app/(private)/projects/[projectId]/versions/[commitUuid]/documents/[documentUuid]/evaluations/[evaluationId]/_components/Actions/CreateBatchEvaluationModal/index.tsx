@@ -59,6 +59,7 @@ export default function CreateBatchEvaluationModal({
       toLine: form.toLine,
       wantAllLines: form.wantAllLines,
       parameters: form.parameters,
+      autoRespondToolCalls: form.autoRespondToolCalls,
     })
   }, [form, evaluation, runBatch])
 
@@ -105,6 +106,8 @@ export default function CreateBatchEvaluationModal({
         onParametersChange={form.onParameterChange}
         parameters={form.parameters}
         maxLineCount={form.maxLineCount}
+        autoRespondToolCalls={form.autoRespondToolCalls}
+        onAutoRespondToolCallsChange={form.setAutoRespondToolCalls}
       />
     </Modal>
   )
