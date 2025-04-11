@@ -3,6 +3,7 @@
 import { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
+import { zIndex } from '../../tokens/zIndex'
 import { Alert } from '../Alert'
 import { Button } from '../Button'
 import { Text } from '../Text'
@@ -16,7 +17,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from './Primitives'
-import { zIndex } from '../../tokens/zIndex'
 
 export const ModalTrigger = DialogTrigger
 
@@ -45,7 +45,7 @@ export type ModalProps = {
   description?: string
   children?: ReactNode
   footer?: ReactNode
-  size?: 'small' | 'regular' | 'large' | 'xl' | 'full'
+  size?: 'small' | 'regular' | 'medium' | 'large' | 'xl' | 'full'
   steps?: {
     total: number
     current: number
@@ -72,6 +72,7 @@ export function Modal({
         className={cn('flex flex-col', zIndex.modal, {
           'max-w-modal-sm': size === 'small',
           'max-w-modal': size === 'regular',
+          'max-w-modal-md': size === 'medium',
           'max-w-modal-lg': size === 'large',
           'max-w-modal-xl': size === 'xl',
           'max-w-[97.5%]': size === 'full',

@@ -120,16 +120,19 @@ export default {
       },
       width: {
         modal: '580px',
+        'modal-md': '650px',
         'modal-lg': '720px',
       },
       minWidth: {
         '1/2': '50%',
         modal: '580px',
+        'modal-md': '650px',
         'modal-lg': '720px',
       },
       maxWidth: {
         'modal-sm': '360px',
         modal: '580px',
+        'modal-md': '650px',
         'modal-lg': '720px',
         'modal-xl': '1200px',
         chat: '1024px',
