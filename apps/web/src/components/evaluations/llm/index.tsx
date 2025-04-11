@@ -13,6 +13,7 @@ const METRICS: {
   [LlmEvaluationMetric.Binary]: undefined as any, // TODO(evalsv2): Implement
   [LlmEvaluationMetric.Rating]: undefined as any, // TODO(evalsv2): Implement
   [LlmEvaluationMetric.Comparison]: undefined as any, // TODO(evalsv2): Implement
+  [LlmEvaluationMetric.Custom]: undefined as any, // TODO(evalsv2): Implement
 }
 
 const specification = LlmEvaluationSpecification

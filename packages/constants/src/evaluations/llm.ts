@@ -8,21 +8,22 @@ import {
 const llmEvaluationConfiguration = BaseEvaluationConfiguration.extend({
   provider: z.string(),
   model: z.string(),
-  instructions: z.string(),
 })
 const llmEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({
   evaluationLogId: z.number(),
   reason: z.string(),
   tokens: z.number(),
   cost: z.number(),
+  duration: z.number(),
 })
 const llmEvaluationResultError = BaseEvaluationResultError.extend({
-  runErrorId: z.number(),
+  runErrorId: z.number().optional(),
 })
 
 // BINARY
 
 const llmEvaluationBinaryConfiguration = llmEvaluationConfiguration.extend({
+  criteria: z.string(),
   passDescription: z.string(),
   failDescription: z.string(),
 })
@@ -54,12 +55,13 @@ export type LlmEvaluationBinaryResultError = z.infer<
 // RATING
 
 const llmEvaluationRatingConfiguration = llmEvaluationConfiguration.extend({
+  criteria: z.string(),
   minRating: z.number(),
   minRatingDescription: z.string(),
   maxRating: z.number(),
   maxRatingDescription: z.string(),
-  minThreshold: z.number(),
-  maxThreshold: z.number(),
+  minThreshold: z.number().optional(), // Threshold in rating range
+  maxThreshold: z.number().optional(), // Threshold in rating range
 })
 const llmEvaluationRatingResultMetadata = llmEvaluationResultMetadata.extend({
   configuration: llmEvaluationRatingConfiguration,
@@ -89,8 +91,9 @@ export type LlmEvaluationRatingResultError = z.infer<
 // COMPARISON
 
 const llmEvaluationComparisonConfiguration = llmEvaluationConfiguration.extend({
-  minThreshold: z.number(), // Threshold percentage
-  maxThreshold: z.number(), // Threshold percentage
+  criteria: z.string(),
+  minThreshold: z.number().optional(), // Threshold percentage
+  maxThreshold: z.number().optional(), // Threshold percentage
 })
 const llmEvaluationComparisonResultMetadata =
   llmEvaluationResultMetadata.extend({
@@ -118,12 +121,45 @@ export type LlmEvaluationComparisonResultError = z.infer<
   typeof LlmEvaluationComparisonSpecification.resultError
 >
 
+// CUSTOM
+
+const llmEvaluationCustomConfiguration = llmEvaluationConfiguration.extend({
+  prompt: z.string(),
+  minThreshold: z.number().optional(), // Threshold percentage
+  maxThreshold: z.number().optional(), // Threshold percentage
+})
+const llmEvaluationCustomResultMetadata = llmEvaluationResultMetadata.extend({
+  configuration: llmEvaluationCustomConfiguration,
+})
+const llmEvaluationCustomResultError = llmEvaluationResultError.extend({})
+export const LlmEvaluationCustomSpecification = {
+  name: 'Custom',
+  description:
+    'Judges the response under a criteria using a custom prompt. The resulting score is the percentage of the criteria that is met',
+  configuration: llmEvaluationCustomConfiguration,
+  resultMetadata: llmEvaluationCustomResultMetadata,
+  resultError: llmEvaluationCustomResultError,
+  requiresExpectedOutput: false,
+  supportsLiveEvaluation: true,
+  supportsBatchEvaluation: true,
+}
+export type LlmEvaluationCustomConfiguration = z.infer<
+  typeof LlmEvaluationCustomSpecification.configuration
+>
+export type LlmEvaluationCustomResultMetadata = z.infer<
+  typeof LlmEvaluationCustomSpecification.resultMetadata
+>
+export type LlmEvaluationCustomResultError = z.infer<
+  typeof LlmEvaluationCustomSpecification.resultError
+>
+
 /* ------------------------------------------------------------------------- */
 
 export enum LlmEvaluationMetric {
   Binary = 'binary',
   Rating = 'rating',
   Comparison = 'comparison',
+  Custom = 'custom',
 }
 
 // prettier-ignore
@@ -131,6 +167,7 @@ export type LlmEvaluationConfiguration<M extends LlmEvaluationMetric = LlmEvalua
   M extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryConfiguration :
   M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingConfiguration :
   M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonConfiguration :
+  M extends LlmEvaluationMetric.Custom ? LlmEvaluationCustomConfiguration :
   never;
 
 // prettier-ignore
@@ -138,6 +175,7 @@ export type LlmEvaluationResultMetadata<M extends LlmEvaluationMetric = LlmEvalu
   M extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryResultMetadata :
   M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingResultMetadata :
   M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonResultMetadata :
+  M extends LlmEvaluationMetric.Custom ? LlmEvaluationCustomResultMetadata :
   never;
 
 // prettier-ignore
@@ -145,6 +183,7 @@ export type LlmEvaluationResultError<M extends LlmEvaluationMetric = LlmEvaluati
   M extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryResultError :
   M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingResultError :
   M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonResultError :
+  M extends LlmEvaluationMetric.Custom ? LlmEvaluationCustomResultError :
   never;
 
 export const LlmEvaluationSpecification = {
@@ -158,5 +197,6 @@ export const LlmEvaluationSpecification = {
     [LlmEvaluationMetric.Binary]: LlmEvaluationBinarySpecification,
     [LlmEvaluationMetric.Rating]: LlmEvaluationRatingSpecification,
     [LlmEvaluationMetric.Comparison]: LlmEvaluationComparisonSpecification,
+    [LlmEvaluationMetric.Custom]: LlmEvaluationCustomSpecification,
   },
 }
