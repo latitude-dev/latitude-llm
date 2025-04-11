@@ -43,6 +43,11 @@ export function DocumentTabSelector({
             value: DocumentRoutes.evaluationsV2,
             route: baseRoute.evaluationsV2.root,
           },
+          [DocumentRoutes.experiments]: {
+            label: 'Experiments',
+            value: DocumentRoutes.experiments,
+            route: baseRoute.experiments.dashboard.root,
+          },
         }
       : {
           [DocumentRoutes.evaluations]: {
