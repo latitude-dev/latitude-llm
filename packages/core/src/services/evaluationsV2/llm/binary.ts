@@ -4,7 +4,6 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   ErrorableEntity,
   EvaluationType,
-  formatConversation as _formatConversation,
   LlmEvaluationBinarySpecification,
   LlmEvaluationMetric,
   ProviderApiKey,
@@ -68,7 +67,9 @@ const promptSchema = z.object({
   reason: z.string(),
 })
 
-function _buildPrompt({
+// @ts-ignore
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function buildPrompt({
   provider,
   model,
   criteria,
@@ -134,7 +135,9 @@ async function run(
     resultUuid,
     evaluation,
     actualOutput,
-    conversation: _conversation,
+    // @ts-ignore
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    conversation,
     documentLog,
     providers,
     workspace,
@@ -157,7 +160,9 @@ async function run(
       throw new BadRequestError('Provider is required')
     }
 
-    const _evaluatedLog = await serializeDocumentLog(
+    // @ts-ignore
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const evaluatedLog = await serializeDocumentLog(
       { documentLog, workspace },
       db,
     ).then((r) => r.unwrap())
