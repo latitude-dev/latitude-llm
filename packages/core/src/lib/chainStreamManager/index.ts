@@ -10,14 +10,12 @@ import {
   ChainEvent,
   ChainEventTypes,
   OmittedLatitudeEventData,
-} from '@latitude-data/constants'
-import { streamAIResponse } from './step/streamAIResponse'
-import type {
   ChainStepResponse,
   LogSources,
-  PromptSource,
   StreamType,
-} from '../../constants'
+} from '@latitude-data/constants'
+import { streamAIResponse } from './step/streamAIResponse'
+import type { PromptSource } from '../../constants'
 import { buildMessagesFromResponse } from '../../helpers'
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { ChainError } from './ChainErrors'
@@ -237,7 +235,7 @@ export class ChainStreamManager {
         this.tokenUsage.completionTokens + tokenUsage.completionTokens,
       totalTokens: this.tokenUsage.totalTokens + tokenUsage.totalTokens,
     }
-    this.lastResponse = response
+    this.setLastResponse(response)
 
     this.sendEvent({
       type: ChainEventTypes.ProviderCompleted,
@@ -405,6 +403,10 @@ export class ChainStreamManager {
 
     this.messages = event.data.messages
     this.sendEvent(event.data)
+  }
+
+  setLastResponse(response: ChainStepResponse<StreamType>) {
+    this.lastResponse = response
   }
 
   private addMessageFromResponse(response: ChainStepResponse<StreamType>) {
