@@ -4,7 +4,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   ErrorableEntity,
   EvaluationType,
-  formatConversation,
+  formatConversation as _formatConversation,
   LlmEvaluationBinarySpecification,
   LlmEvaluationMetric,
   ProviderApiKey,
@@ -21,7 +21,7 @@ import {
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { runPrompt } from './shared'
+// import { runPrompt } from './shared'
 
 const specification = LlmEvaluationBinarySpecification
 export default {
@@ -68,7 +68,7 @@ const promptSchema = z.object({
   reason: z.string(),
 })
 
-function buildPrompt({
+function _buildPrompt({
   provider,
   model,
   criteria,
@@ -134,7 +134,7 @@ async function run(
     resultUuid,
     evaluation,
     actualOutput,
-    conversation,
+    conversation: _conversation,
     documentLog,
     providers,
     workspace,
@@ -157,35 +157,35 @@ async function run(
       throw new BadRequestError('Provider is required')
     }
 
-    const evaluatedLog = await serializeDocumentLog(
+    const _evaluatedLog = await serializeDocumentLog(
       { documentLog, workspace },
       db,
     ).then((r) => r.unwrap())
 
-    const { response, stats, verdict } = await runPrompt({
-      prompt: buildPrompt({ ...metadata.configuration, provider }),
-      parameters: {
-        ...evaluatedLog,
-        actualOutput: actualOutput,
-        conversation: formatConversation(conversation),
-      },
-      schema: promptSchema,
-      resultUuid: resultUuid,
-      evaluation: evaluation,
-      providers: providers!,
-      workspace: workspace,
-    })
+    // const { response, stats, verdict } = await runPrompt({
+    //   prompt: buildPrompt({ ...metadata.configuration, provider }),
+    //   parameters: {
+    //     ...evaluatedLog,
+    //     actualOutput: actualOutput,
+    //     conversation: formatConversation(conversation),
+    //   },
+    //   schema: promptSchema,
+    //   resultUuid: resultUuid,
+    //   evaluation: evaluation,
+    //   providers: providers!,
+    //   workspace: workspace,
+    // })
 
-    metadata.evaluationLogId = response.providerLog!.id
-    metadata.reason = verdict.reason
-    metadata.tokens = stats.tokens
-    metadata.cost = stats.costInMillicents
-    metadata.duration = stats.duration
+    // metadata.evaluationLogId = response.providerLog!.id
+    // metadata.reason = verdict.reason
+    // metadata.tokens = stats.tokens
+    // metadata.cost = stats.costInMillicents
+    // metadata.duration = stats.duration
 
-    const score = verdict.passed ? 1 : 0
+    const score = 0 // verdict.passed ? 1 : 0
 
     let normalizedScore = normalizeScore(score, 0, 1)
-    let hasPassed = score === 1
+    let hasPassed = false // score === 1
     if (metadata.configuration.reverseScale) {
       normalizedScore = normalizeScore(score, 1, 0)
       hasPassed = score === 0
