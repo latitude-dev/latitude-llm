@@ -1,8 +1,8 @@
 import type { Message } from '@latitude-data/compiler'
 import {
   Commit,
-  DatasetRow,
   Dataset,
+  DatasetRow,
   DocumentLog,
   DocumentVersion,
   EVALUATION_SCORE_SCALE,
@@ -13,27 +13,32 @@ import {
   EvaluationSpecification,
   EvaluationType,
   EvaluationV2,
+  ProviderApiKey,
   ProviderLogDto,
   Workspace,
 } from '../../browser'
 import { Database } from '../../client'
+import { LatitudeError } from '../../lib/errors'
+import { TypedResult } from '../../lib/Result'
 import HumanEvaluationSpecification from './human'
 import LlmEvaluationSpecification from './llm'
 import RuleEvaluationSpecification from './rule'
-import { LatitudeError } from './../../lib/errors'
-import { TypedResult } from './../../lib/Result'
 
 export type EvaluationMetricValidateArgs<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   configuration: EvaluationConfiguration<T, M>
+  document: DocumentVersion
+  commit: Commit
+  workspace: Workspace
 }
 
 export type EvaluationMetricRunArgs<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
+  resultUuid: string
   evaluation: EvaluationV2<T, M>
   actualOutput: string
   expectedOutput?: string
@@ -44,6 +49,7 @@ export type EvaluationMetricRunArgs<
   dataset?: Dataset
   datasetLabel?: string
   datasetRow?: DatasetRow
+  providers?: Map<string, ProviderApiKey>
   commit: Commit
   workspace: Workspace
 }

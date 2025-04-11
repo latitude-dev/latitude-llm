@@ -5,6 +5,8 @@ import {
   RuleEvaluationSpecification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
+import { BadRequestError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
 import {
   EvaluationMetricBackendSpecification,
   EvaluationMetricRunArgs,
@@ -16,8 +18,6 @@ import RuleEvaluationLexicalOverlapSpecification from './lexicalOverlap'
 import RuleEvaluationRegularExpressionSpecification from './regularExpression'
 import RuleEvaluationSchemaValidationSpecification from './schemaValidation'
 import RuleEvaluationSemanticSimilaritySpecification from './semanticSimilarity'
-import { BadRequestError } from './../../../lib/errors'
-import { Result } from './../../../lib/Result'
 
 // prettier-ignore
 const METRICS: {
@@ -43,6 +43,7 @@ async function validate<M extends RuleEvaluationMetric>(
   {
     metric,
     configuration,
+    ...rest
   }: EvaluationMetricValidateArgs<EvaluationType.Rule, M> & {
     metric: M
   },
@@ -56,7 +57,7 @@ async function validate<M extends RuleEvaluationMetric>(
   metricSpecification.configuration.parse(configuration)
 
   configuration = await metricSpecification
-    .validate({ configuration }, db)
+    .validate({ configuration, ...rest }, db)
     .then((r) => r.unwrap())
 
   // Note: all settings are explicitly returned to ensure we don't

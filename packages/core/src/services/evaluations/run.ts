@@ -20,10 +20,10 @@ import {
 } from '../evaluationResults'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import { createRunError } from '../runErrors/create'
-import { EvaluationRunChecker } from './EvaluationRunChecker'
-import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { NotFoundError } from './../../lib/errors'
+import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { Result } from './../../lib/Result'
+import { EvaluationRunChecker } from './EvaluationRunChecker'
 
 interface RunEvaluationParams {
   providerLog: ProviderLog
@@ -90,7 +90,7 @@ export async function runEvaluation(
     source: LogSources.Evaluation,
     providersMap,
     configOverrides: { schema, output: 'object' },
-    promptSource: evaluation,
+    promptSource: { ...evaluation, version: 'v1' as const },
   })
 
   // Handle response
