@@ -1,4 +1,4 @@
-import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations/'
+import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import EvaluateLiveLogsSwitch from '$/components/evaluations/EvaluateLiveLogsSwitch'
 import ResultBadge from '$/components/evaluations/ResultBadge'
 import { EvaluationRoutes, ROUTES } from '$/services/routes'

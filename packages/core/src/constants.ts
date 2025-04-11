@@ -19,7 +19,7 @@ import { z } from 'zod'
 import type {
   Commit,
   DocumentVersion,
-  EvaluationDto,
+  EvaluationTmp,
   ProviderLog,
   Span,
   Trace,
@@ -482,7 +482,7 @@ export type DocumentRunPromptSource = {
   document: DocumentVersion
   commit: Commit
 }
-export type PromptSource = EvaluationDto | DocumentRunPromptSource
+export type PromptSource = EvaluationTmp | DocumentRunPromptSource
 
 export type LatitudeToolDefinition = {
   name: LatitudeTool

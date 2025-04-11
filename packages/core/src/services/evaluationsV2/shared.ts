@@ -13,6 +13,7 @@ import {
   EvaluationSpecification,
   EvaluationType,
   EvaluationV2,
+  ProviderApiKey,
   ProviderLogDto,
   Workspace,
 } from '../../browser'
@@ -28,12 +29,16 @@ export type EvaluationMetricValidateArgs<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   configuration: EvaluationConfiguration<T, M>
+  document: DocumentVersion
+  commit: Commit
+  workspace: Workspace
 }
 
 export type EvaluationMetricRunArgs<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
+  resultUuid: string
   evaluation: EvaluationV2<T, M>
   actualOutput: string
   expectedOutput?: string
@@ -44,6 +49,7 @@ export type EvaluationMetricRunArgs<
   dataset?: Dataset
   datasetLabel?: string
   datasetRow?: DatasetRow
+  providers?: Map<string, ProviderApiKey>
   commit: Commit
   workspace: Workspace
 }
