@@ -4,8 +4,8 @@ import { Job } from 'bullmq'
 import { Commit } from '../../../browser'
 import { LogSources } from '../../../constants'
 import { DocumentVersionsRepository } from '../../../repositories'
-import { createDocumentLog } from '../../../services/documentLogs'
 import { generateUUIDIdentifier } from './../../../lib/generateUUID'
+import { createDocumentLog } from '../../../services/documentLogs/create'
 
 export type CreateDocumentLogJobProps = {
   workspaceId: number

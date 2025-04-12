@@ -6,7 +6,7 @@ import { LogSources } from '@latitude-data/core/browser'
 import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
-import { addMessages } from '@latitude-data/core/services/documentLogs/index'
+import { addMessages } from '@latitude-data/core/services/documentLogs/addMessages/index'
 import { captureException } from '@sentry/node'
 import { streamSSE } from 'hono/streaming'
 
