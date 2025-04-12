@@ -41,7 +41,7 @@ export async function runPrompt<
   // let promptConfig
   // let promptChain
   try {
-    /*promptConfig =*/ (await scan({ prompt })).config as PromptConfig
+    /*promptConfig =*/ ;(await scan({ prompt })).config as PromptConfig
     /*promptChain =*/ new PromptlChain({
       prompt: prompt,
       parameters: parameters,
@@ -78,7 +78,6 @@ export async function runPrompt<
     //     message: (error as Error).message,
     //   })
     // }
-
     // throw error
   }
 
@@ -119,7 +118,7 @@ export async function runPrompt<
 
   const repository = new ProviderLogsRepository(workspace.id, db)
   const stats = await repository
-    .statsByDocumentLogUuid("") // response.providerLog.documentLogUuid)
+    .statsByDocumentLogUuid('') // response.providerLog.documentLogUuid)
     .then((r) => r.unwrap())
 
   return { response, stats, verdict }
