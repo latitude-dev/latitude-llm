@@ -38,15 +38,11 @@ export async function runPrompt<
   },
   db: Database = database,
 ) {
-  let promptConfig
-  let promptChain
+  // let promptConfig
+  // let promptChain
   try {
-    // @ts-ignore
-    // eslint-disable-next-line
-    promptConfig = (await scan({ prompt })).config as PromptConfig
-    // @ts-ignore
-    // eslint-disable-next-line
-    promptChain = new PromptlChain({
+    /*promptConfig =*/ (await scan({ prompt })).config as PromptConfig
+    /*promptChain =*/ new PromptlChain({
       prompt: prompt,
       parameters: parameters,
       adapter: Adapters.default,
