@@ -14,9 +14,9 @@ import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/docum
 import { redirect } from 'next/navigation'
 
 import { DocumentLogsRepository } from '@latitude-data/core/repositories'
-import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs/index'
 import { DocumentLogsPage } from './_components'
 import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
+import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseLogFilterParams'
 
 async function fetchDocumentLogPage({
   workspace,
