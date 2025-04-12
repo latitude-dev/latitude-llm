@@ -6,7 +6,7 @@ import {
   DatasetRowsRepository,
   DatasetsRepository,
 } from '@latitude-data/core/repositories'
-import { parsePage } from '@latitude-data/core/services/documentLogs/index'
+import { parsePage } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 
 export const GET = errorHandler(
   authHandler(

@@ -13,12 +13,12 @@ import {
 import { publisher } from '../../events/publisher'
 import { runAgent } from '../agents/run'
 import { runChain } from '../chains/run'
-import { createDocumentLog } from '../documentLogs'
 import { getResolvedContent } from '../documents'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import { RunDocumentChecker } from './RunDocumentChecker'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { Result } from './../../lib/Result'
+import { createDocumentLog } from '../documentLogs/create'
 
 async function createDocumentRunResult({
   workspace,

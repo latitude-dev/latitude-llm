@@ -3,7 +3,7 @@ import { computeDocumentLogsDailyCount } from '@latitude-data/core/services/docu
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/index'
+import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 
 export const GET = errorHandler(
   authHandler(
