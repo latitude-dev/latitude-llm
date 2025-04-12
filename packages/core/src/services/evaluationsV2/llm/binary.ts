@@ -21,7 +21,7 @@ import {
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-// import { runPrompt } from './shared'
+import { runPrompt } from './shared'
 
 const specification = LlmEvaluationBinarySpecification
 export default {
@@ -133,7 +133,7 @@ You must give your verdict as a single JSON object with the following properties
 
 async function run(
   {
-    // resultUuid,
+    resultUuid,
     evaluation,
     actualOutput,
     // conversation,
@@ -164,25 +164,25 @@ async function run(
       db,
     ).then((r) => r.unwrap())
 
-    // const { response, stats, verdict } = await runPrompt({
-    //   prompt: buildPrompt({ ...metadata.configuration, provider }),
-    //   parameters: {
-    //     // ...evaluatedLog,
-    //     actualOutput: actualOutput,
-    //     conversation: '', // formatConversation(conversation),
-    //   },
-    //   schema: promptSchema,
-    //   resultUuid: resultUuid,
-    //   evaluation: evaluation,
-    //   providers: providers!,
-    //   workspace: workspace,
-    // })
+    const { /*response,*/ stats, verdict } = await runPrompt({
+      prompt: buildPrompt({ ...metadata.configuration, provider }),
+      parameters: {
+        // ...evaluatedLog,
+        actualOutput: actualOutput,
+        conversation: '', // formatConversation(conversation),
+      },
+      schema: promptSchema,
+      resultUuid: resultUuid,
+      evaluation: evaluation,
+      providers: providers!,
+      workspace: workspace,
+    })
 
     // metadata.evaluationLogId = response.providerLog!.id
-    // metadata.reason = verdict.reason
-    // metadata.tokens = stats.tokens
-    // metadata.cost = stats.costInMillicents
-    // metadata.duration = stats.duration
+    metadata.reason = verdict.reason
+    metadata.tokens = stats.tokens
+    metadata.cost = stats.costInMillicents
+    metadata.duration = stats.duration
 
     const score = 0 // verdict.passed ? 1 : 0
 

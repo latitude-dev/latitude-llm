@@ -1,6 +1,6 @@
-import { PromptConfig } from '@latitude-data/constants'
+// import { PromptConfig } from '@latitude-data/constants'
 // import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
+// import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
 import {
   EvaluationType,
@@ -21,7 +21,7 @@ export async function runPrompt<
 >(
   {
     prompt,
-    parameters,
+    // parameters,
     // schema,
     // resultUuid,
     // evaluation,
@@ -41,19 +41,21 @@ export async function runPrompt<
   // let promptConfig
   // let promptChain
   try {
-    /*promptConfig =*/ ;(await scan({ prompt })).config as PromptConfig
-    /*promptChain =*/ new PromptlChain({
-      prompt: prompt,
-      parameters: parameters,
-      adapter: Adapters.default,
-      includeSourceMap: true,
-    })
+    // promptConfig = (await scan({ prompt })).config as PromptConfig
+    // promptChain = new PromptlChain({
+    //   prompt: prompt,
+    //   parameters: parameters,
+    //   adapter: Adapters.default,
+    //   includeSourceMap: true,
+    // })
   } catch (error) {
     // throw new ChainError({
     //   code: RunErrorCodes.ChainCompileError,
     //   message: (error as Error).message,
     // })
   }
+
+  prompt
 
   let response
   let error
