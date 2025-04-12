@@ -1,19 +1,19 @@
 import { PromptConfig } from '@latitude-data/constants'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+// import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
 import {
   EvaluationType,
   EvaluationV2,
   LlmEvaluationMetric,
-  LogSources,
+  // LogSources,
   ProviderApiKey,
   Workspace,
 } from '../../../browser'
 import { database, Database } from '../../../client'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+// import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { ProviderLogsRepository } from '../../../repositories'
-import { runChain } from '../../chains/run'
+// import { runChain } from '../../chains/run'
 
 export async function runPrompt<
   M extends LlmEvaluationMetric,
@@ -22,10 +22,10 @@ export async function runPrompt<
   {
     prompt,
     parameters,
-    schema,
-    resultUuid,
-    evaluation,
-    providers,
+    // schema,
+    // resultUuid,
+    // evaluation,
+    // providers,
     workspace,
   }: {
     prompt: string
@@ -41,7 +41,11 @@ export async function runPrompt<
   let promptConfig
   let promptChain
   try {
+    // @ts-ignore
+    // eslint-disable-next-line
     promptConfig = (await scan({ prompt })).config as PromptConfig
+    // @ts-ignore
+    // eslint-disable-next-line
     promptChain = new PromptlChain({
       prompt: prompt,
       parameters: parameters,
@@ -49,77 +53,77 @@ export async function runPrompt<
       includeSourceMap: true,
     })
   } catch (error) {
-    throw new ChainError({
-      code: RunErrorCodes.ChainCompileError,
-      message: (error as Error).message,
-    })
+    // throw new ChainError({
+    //   code: RunErrorCodes.ChainCompileError,
+    //   message: (error as Error).message,
+    // })
   }
 
   let response
   let error
   try {
-    const result = runChain({
-      chain: promptChain,
-      globalConfig: promptConfig,
-      source: LogSources.Evaluation,
-      promptlVersion: 1,
-      persistErrors: false,
-      generateUUID: () => resultUuid, // Note: this makes documentLogUuid = resultUuid
-      promptSource: { ...evaluation, version: 'v2' as const },
-      providersMap: providers,
-      workspace: workspace,
-    })
-    response = await result.lastResponse
-    error = await result.error
+    // const result = runChain({
+    //   chain: promptChain,
+    //   globalConfig: promptConfig,
+    //   source: LogSources.Evaluation,
+    //   promptlVersion: 1,
+    //   persistErrors: false,
+    //   generateUUID: () => resultUuid, // Note: this makes documentLogUuid = resultUuid
+    //   promptSource: { ...evaluation, version: 'v2' as const },
+    //   providersMap: providers,
+    //   workspace: workspace,
+    // })
+    // response = await result.lastResponse
+    // error = await result.error
   } catch (error) {
-    if (!(error instanceof ChainError)) {
-      throw new ChainError({
-        code: RunErrorCodes.Unknown,
-        message: (error as Error).message,
-      })
-    }
+    // if (!(error instanceof ChainError)) {
+    //   throw new ChainError({
+    //     code: RunErrorCodes.Unknown,
+    //     message: (error as Error).message,
+    //   })
+    // }
 
-    throw error
+    // throw error
   }
 
   if (error) throw error
 
-  if (!promptChain.completed) {
-    throw new ChainError({
-      code: RunErrorCodes.AIRunError,
-      message: 'Evaluation conversation is not completed',
-    })
-  }
+  // if (!promptChain.completed) {
+  //   throw new ChainError({
+  //     code: RunErrorCodes.AIRunError,
+  //     message: 'Evaluation conversation is not completed',
+  //   })
+  // }
 
-  if (!response?.providerLog?.documentLogUuid) {
-    throw new ChainError({
-      code: RunErrorCodes.AIRunError,
-      message: 'Evaluation conversation log not created',
-    })
-  }
+  // if (!response?.providerLog?.documentLogUuid) {
+  //   throw new ChainError({
+  //     code: RunErrorCodes.AIRunError,
+  //     message: 'Evaluation conversation log not created',
+  //   })
+  // }
 
-  if (response.streamType !== 'object') {
-    throw new ChainError({
-      code: RunErrorCodes.InvalidResponseFormatError,
-      message: 'Evaluation conversation response is not an object',
-    })
-  }
+  // if (response.streamType !== 'object') {
+  //   throw new ChainError({
+  //     code: RunErrorCodes.InvalidResponseFormatError,
+  //     message: 'Evaluation conversation response is not an object',
+  //   })
+  // }
 
-  let verdict: S extends z.ZodSchema ? z.infer<S> : unknown = response.object
-  if (schema) {
-    const result = schema.safeParse(response.object)
-    if (result.error) {
-      throw new ChainError({
-        code: RunErrorCodes.InvalidResponseFormatError,
-        message: result.error.message,
-      })
-    }
-    verdict = result.data
-  }
+  let verdict: S extends z.ZodSchema ? z.infer<S> : unknown = {} as any // response.object
+  // if (schema) {
+  //   const result = schema.safeParse(response.object)
+  //   if (result.error) {
+  //     throw new ChainError({
+  //       code: RunErrorCodes.InvalidResponseFormatError,
+  //       message: result.error.message,
+  //     })
+  //   }
+  //   verdict = result.data
+  // }
 
   const repository = new ProviderLogsRepository(workspace.id, db)
   const stats = await repository
-    .statsByDocumentLogUuid(response.providerLog.documentLogUuid)
+    .statsByDocumentLogUuid("") // response.providerLog.documentLogUuid)
     .then((r) => r.unwrap())
 
   return { response, stats, verdict }

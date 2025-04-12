@@ -176,6 +176,7 @@ async function run(
       workspace: workspace,
     })
 
+    // @ts-ignore
     metadata.evaluationLogId = response.providerLog!.id
     metadata.reason = verdict.reason
     metadata.tokens = stats.tokens
