@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import {
   EventArgs,
   useSockets,
@@ -14,6 +14,7 @@ import {
   EvaluationResultDto,
   EvaluationResultTmp,
   EvaluationResultV2,
+  EvaluationType,
   EvaluationV2,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
@@ -23,9 +24,10 @@ import {
   OnToggleFn,
 } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import {
-  useCurrentProject,
   ICommitContextType,
+  useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CollapsedContentHeader,
   ExpandedContent,
@@ -115,6 +117,10 @@ export default function DocumentEvaluations({
 }) {
   const { project } = useCurrentProject()
 
+  const { enabled: evaluationsV2Enabled } = useFeatureFlag({
+    featureFlag: 'evaluationsV2',
+  })
+
   const { data: connectedEvaluations, isLoading: isEvaluationsV1Loading } =
     useConnectedEvaluations({
       documentUuid: document.documentUuid,
@@ -135,14 +141,18 @@ export default function DocumentEvaluations({
 
   const evaluations = useMemo<EvaluationTmp[]>(() => {
     return [
-      ...evaluationsV1.map((evaluation) => ({
+      ...(evaluationsV2Enabled ? [] : evaluationsV1).map((evaluation) => ({
         ...evaluation,
         version: 'v1' as const,
       })),
-      ...evaluationsV2.map((evaluation) => ({
-        ...evaluation,
-        version: 'v2' as const,
-      })),
+      ...evaluationsV2
+        .filter((evaluation) =>
+          evaluationsV2Enabled ? true : evaluation.type === EvaluationType.Rule,
+        )
+        .map((evaluation) => ({
+          ...evaluation,
+          version: 'v2' as const,
+        })),
     ]
   }, [evaluationsV1, evaluationsV2])
 

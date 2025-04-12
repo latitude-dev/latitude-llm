@@ -11,6 +11,7 @@ import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationDto,
   EvaluationTmp,
+  EvaluationType,
   EvaluationV2,
   RuleEvaluationSpecification,
 } from '@latitude-data/core/browser'
@@ -53,10 +54,12 @@ export default function ConnectedEvaluationsTable({
         ...evaluation,
         version: 'v1' as const,
       })),
-      ...evaluationsV2.map((evaluation) => ({
-        ...evaluation,
-        version: 'v2' as const,
-      })),
+      ...evaluationsV2
+        .filter((evaluation) => evaluation.type === EvaluationType.Rule)
+        .map((evaluation) => ({
+          ...evaluation,
+          version: 'v2' as const,
+        })),
     ]
   }, [evaluations, evaluationsV2])
 

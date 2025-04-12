@@ -250,7 +250,7 @@ export function DocumentLogParameters({
   }, [documentLog.parameters])
 
   return (
-    <>
+    <div className='flex flex-col gap-y-1'>
       <Text.H5M color='foreground'>Parameters</Text.H5M>
       <div className='grid grid-cols-[auto_1fr] gap-y-3'>
         {parameters.map(({ parameter, value }, index) => {
@@ -281,7 +281,7 @@ export function DocumentLogParameters({
           )
         })}
       </div>
-    </>
+    </div>
   )
 }
 
