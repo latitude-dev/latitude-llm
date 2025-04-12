@@ -12,7 +12,7 @@ import {
 } from '../../../browser'
 import { database, Database } from '../../../client'
 // import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
-import { ProviderLogsRepository } from '../../../repositories'
+// import { ProviderLogsRepository } from '../../../repositories'
 // import { runChain } from '../../chains/run'
 
 export async function runPrompt<
@@ -26,7 +26,7 @@ export async function runPrompt<
     // resultUuid,
     // evaluation,
     // providers,
-    workspace,
+    // workspace,
   }: {
     prompt: string
     parameters?: Record<string, unknown>
@@ -36,7 +36,7 @@ export async function runPrompt<
     providers: Map<string, ProviderApiKey>
     workspace: Workspace
   },
-  db: Database = database,
+  _db: Database = database,
 ) {
   // let promptConfig
   // let promptChain
@@ -116,10 +116,17 @@ export async function runPrompt<
   //   verdict = result.data
   // }
 
-  const repository = new ProviderLogsRepository(workspace.id, db)
-  const stats = await repository
-    .statsByDocumentLogUuid('') // response.providerLog.documentLogUuid)
-    .then((r) => r.unwrap())
+  // const repository = new ProviderLogsRepository(workspace.id, db)
+  // const stats = await repository
+  //   .statsByDocumentLogUuid('') // response.providerLog.documentLogUuid)
+  //   .then((r) => r.unwrap())
+
+  const stats = {
+    documentLogUuid: '',
+    tokens: 0,
+    duration: 0,
+    costInMillicents: 0,
+  }
 
   return { response, stats, verdict }
 }
