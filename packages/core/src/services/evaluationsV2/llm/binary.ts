@@ -4,7 +4,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   // ErrorableEntity,
   EvaluationType,
-  formatConversation,
+  // formatConversation,
   LlmEvaluationBinarySpecification,
   LlmEvaluationMetric,
   ProviderApiKey,
@@ -134,7 +134,7 @@ async function run(
     resultUuid,
     evaluation,
     actualOutput,
-    conversation,
+    // conversation,
     // documentLog,
     providers,
     workspace,
@@ -167,7 +167,7 @@ async function run(
       parameters: {
         // ...evaluatedLog,
         actualOutput: actualOutput,
-        conversation: formatConversation(conversation),
+        conversation: '', // formatConversation(conversation),
       },
       schema: promptSchema,
       resultUuid: resultUuid,
