@@ -14,7 +14,7 @@ import { database, Database } from '../../../client'
 // import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
+// import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
 // import { createRunError } from '../../runErrors/create'
 import {
   EvaluationMetricRunArgs,
@@ -135,11 +135,11 @@ async function run(
     evaluation,
     actualOutput,
     conversation,
-    documentLog,
+    // documentLog,
     providers,
     workspace,
   }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Binary>,
-  db: Database = database,
+  _db: Database = database,
 ) {
   try {
     let metadata = {
@@ -157,15 +157,15 @@ async function run(
       throw new BadRequestError('Provider is required')
     }
 
-    const evaluatedLog = await serializeDocumentLog(
-      { documentLog, workspace },
-      db,
-    ).then((r) => r.unwrap())
+    // const evaluatedLog = await serializeDocumentLog(
+    //   { documentLog, workspace },
+    //   db,
+    // ).then((r) => r.unwrap())
 
     const { response, stats, verdict } = await runPrompt({
       prompt: buildPrompt({ ...metadata.configuration, provider }),
       parameters: {
-        ...evaluatedLog,
+        // ...evaluatedLog,
         actualOutput: actualOutput,
         conversation: formatConversation(conversation),
       },
