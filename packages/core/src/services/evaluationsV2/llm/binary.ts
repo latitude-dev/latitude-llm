@@ -14,7 +14,7 @@ import { database, Database } from '../../../client'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { serialize as serializeDocumentLog } from '../../documentLogs'
+import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
 import { createRunError } from '../../runErrors/create'
 import {
   EvaluationMetricRunArgs,
