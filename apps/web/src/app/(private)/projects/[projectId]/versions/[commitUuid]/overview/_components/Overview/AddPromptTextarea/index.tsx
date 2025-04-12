@@ -45,7 +45,7 @@ export function AddPromptTextarea() {
   const onCreate = useCallback(() => {
     if (!content) return
     createFile({
-      path: 'my-first-prompt',
+      path: `prompt-${Date.now()}`,
       content,
     })
   }, [createFile, content])

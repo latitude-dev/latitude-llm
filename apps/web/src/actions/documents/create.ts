@@ -31,6 +31,7 @@ export const createDocumentVersionAction = withProject
       user: ctx.user,
       commit,
       path: input.path,
+      content: input.content,
       evaluationsV2Enabled: flags.evaluationsV2.enabled,
       createDemoEvaluation: true,
     })
