@@ -2,7 +2,7 @@ import yaml from 'js-yaml'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
-  ErrorableEntity,
+  // ErrorableEntity,
   EvaluationType,
   formatConversation,
   LlmEvaluationBinarySpecification,
@@ -11,11 +11,11 @@ import {
   Providers,
 } from '../../../browser'
 import { database, Database } from '../../../client'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+// import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
-import { createRunError } from '../../runErrors/create'
+// import { createRunError } from '../../runErrors/create'
 import {
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
@@ -193,24 +193,24 @@ async function run(
 
     return { score, normalizedScore, metadata, hasPassed }
   } catch (error) {
-    let runError
-    if (error instanceof ChainError) {
-      runError = await createRunError(
-        {
-          data: {
-            errorableUuid: resultUuid,
-            errorableType: ErrorableEntity.EvaluationResult,
-            code: error.errorCode,
-            message: error.message,
-            details: error.details,
-          },
-        },
-        db,
-      ).then((r) => r.unwrap())
-    }
+    // let runError
+    // if (error instanceof ChainError) {
+    //   runError = await createRunError(
+    //     {
+    //       data: {
+    //         errorableUuid: resultUuid,
+    //         errorableType: ErrorableEntity.EvaluationResult,
+    //         code: error.errorCode,
+    //         message: error.message,
+    //         details: error.details,
+    //       },
+    //     },
+    //     db,
+    //   ).then((r) => r.unwrap())
+    // }
 
     return {
-      error: { message: (error as Error).message, runErrorId: runError?.id },
+      error: { message: (error as Error).message }, //, runErrorId: runError?.id },
     }
   }
 }
