@@ -1,6 +1,6 @@
 import { PromptConfig } from '@latitude-data/constants'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-// import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
+import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
 import {
   EvaluationType,
@@ -20,8 +20,8 @@ export async function runPrompt<
   S extends z.ZodSchema = z.ZodAny,
 >(
   {
-    // prompt,
-    // parameters,
+    prompt,
+    parameters,
     schema,
     resultUuid,
     evaluation,
@@ -41,15 +41,13 @@ export async function runPrompt<
   let promptConfig
   let promptChain
   try {
-    promptConfig = {} as PromptConfig
-    promptChain
-    // promptConfig = (await scan({ prompt })).config as PromptConfig
-    // promptChain = new PromptlChain({
-    //   prompt: prompt,
-    //   parameters: parameters,
-    //   adapter: Adapters.default,
-    //   includeSourceMap: true,
-    // })
+    promptConfig = (await scan({ prompt })).config as PromptConfig
+    promptChain = new PromptlChain({
+      prompt: prompt,
+      parameters: parameters,
+      adapter: Adapters.default,
+      includeSourceMap: true,
+    })
   } catch (error) {
     throw new ChainError({
       code: RunErrorCodes.ChainCompileError,
@@ -61,8 +59,8 @@ export async function runPrompt<
   let error
   try {
     const result = runChain({
-      chain: promptChain as any,
-      globalConfig: promptConfig as any,
+      chain: promptChain,
+      globalConfig: promptConfig,
       source: LogSources.Evaluation,
       promptlVersion: 1,
       persistErrors: false,
@@ -86,12 +84,12 @@ export async function runPrompt<
 
   if (error) throw error
 
-  // if (!promptChain.completed) {
-  //   throw new ChainError({
-  //     code: RunErrorCodes.AIRunError,
-  //     message: 'Evaluation conversation is not completed',
-  //   })
-  // }
+  if (!promptChain.completed) {
+    throw new ChainError({
+      code: RunErrorCodes.AIRunError,
+      message: 'Evaluation conversation is not completed',
+    })
+  }
 
   if (!response?.providerLog?.documentLogUuid) {
     throw new ChainError({
