@@ -11,7 +11,7 @@ import {
   DocumentLogsRepository,
   ProviderLogsRepository,
 } from '../../repositories'
-import { serialize as serializeDocumentLog } from '../documentLogs'
+import { serialize as serializeDocumentLog } from '../documentLogs/serialize'
 import { EVALUATION_SPECIFICATIONS } from '../evaluationsV2'
 
 export async function serializeEvaluation<
