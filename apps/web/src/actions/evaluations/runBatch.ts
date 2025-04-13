@@ -2,15 +2,15 @@
 
 import { publisher } from '@latitude-data/core/events/publisher'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { evaluationsQueue } from '@latitude-data/core/queues'
 import {
   EvaluationsRepository,
   EvaluationsV2Repository,
 } from '@latitude-data/core/repositories'
-import { getEvaluationMetricSpecification } from '@latitude-data/core/services/evaluationsV2/shared'
+import { getEvaluationMetricSpecification } from '@latitude-data/core/services/evaluationsV2/specs'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 import { refineParameters, withDataset } from './_helpers'
-import { evaluationsQueue } from '@latitude-data/core/queues'
 
 export const runBatchEvaluationAction = withDataset
   .createServerAction()

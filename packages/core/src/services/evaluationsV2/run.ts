@@ -25,7 +25,7 @@ import {
 } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema'
 import { getColumnData } from '../datasets/utils'
-import { EVALUATION_SPECIFICATIONS } from './shared'
+import { EVALUATION_SPECIFICATIONS } from './specs'
 
 export async function runEvaluationV2<
   T extends EvaluationType,

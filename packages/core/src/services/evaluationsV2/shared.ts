@@ -20,9 +20,6 @@ import {
 import { Database } from '../../client'
 import { LatitudeError } from '../../lib/errors'
 import { TypedResult } from '../../lib/Result'
-import HumanEvaluationSpecification from './human'
-import LlmEvaluationSpecification from './llm'
-import RuleEvaluationSpecification from './rule'
 
 export type EvaluationMetricValidateArgs<
   T extends EvaluationType = EvaluationType,
@@ -82,27 +79,6 @@ export type EvaluationBackendSpecification<
   metrics: {
     [M in EvaluationMetric<T>]: EvaluationMetricBackendSpecification<T, M>
   }
-}
-
-export const EVALUATION_SPECIFICATIONS: {
-  [T in EvaluationType]: EvaluationBackendSpecification<T>
-} = {
-  [EvaluationType.Rule]: RuleEvaluationSpecification,
-  [EvaluationType.Llm]: LlmEvaluationSpecification,
-  [EvaluationType.Human]: HumanEvaluationSpecification,
-}
-
-export function getEvaluationTypeSpecification<
-  T extends EvaluationType = EvaluationType,
->(evaluation: EvaluationV2<T>) {
-  return EVALUATION_SPECIFICATIONS[evaluation.type]
-}
-
-export function getEvaluationMetricSpecification<
-  T extends EvaluationType = EvaluationType,
-  M extends EvaluationMetric<T> = EvaluationMetric<T>,
->(evaluation: EvaluationV2<T, M>) {
-  return EVALUATION_SPECIFICATIONS[evaluation.type].metrics[evaluation.metric]
 }
 
 export function normalizeScore(score: number, lower: number, upper: number) {
