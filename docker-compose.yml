@@ -171,6 +171,11 @@ services:
     restart: always
     container_name: latitude-llm-web
     platform: linux/amd64
+    environment:
+      - NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
+    build:
+      args:
+        - NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
 
   migrations-local:
     <<: *common-service
