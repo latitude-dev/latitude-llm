@@ -1,4 +1,4 @@
-import { type Message } from '@latitude-data/compiler'
+import { type Message } from '@latitude-data/constants'
 import { setupServer } from 'msw/node'
 import { parseSSE } from '$sdk/utils/parseSSE'
 import { http, HttpResponse } from 'msw'

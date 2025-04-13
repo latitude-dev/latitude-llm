@@ -4,7 +4,7 @@ import {
   Message,
   ToolCall,
   ToolMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { PromptConfig, StreamEventTypes } from '@latitude-data/constants'
 import {
   ChainEvent,

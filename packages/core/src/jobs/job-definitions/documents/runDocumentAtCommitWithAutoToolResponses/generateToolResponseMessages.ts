@@ -1,5 +1,5 @@
 import { scan } from 'promptl-ai'
-import { ToolCall, readMetadata } from '@latitude-data/compiler'
+import { ToolCall } from '@latitude-data/constants'
 import {
   Commit,
   DocumentVersion,
@@ -23,13 +23,11 @@ async function buildToolSpecifications({
   document: DocumentVersion
   toolCalls: ToolCall[]
 }) {
-  const metadata =
-    document.promptlVersion === 0
-      ? await readMetadata({ prompt: document.content })
-      : await scan({ prompt: document.content })
-  const schemas = metadata.config.tools as
-    | Record<string, ToolSchema>
-    | undefined
+  if (document.promptlVersion === 0) {
+    return Result.error(new Error('promptlVersion 0 is not supported'))
+  }
+  const metadata = await scan({ prompt: document.content })
+  const schemas = metadata.config.tools as Record<string, ToolSchema>
   const toolCallNames = toolCalls.map((toolCall) => toolCall.name)
   const specKeys = Object.keys(schemas ?? {})
 

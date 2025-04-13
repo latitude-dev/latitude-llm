@@ -1,9 +1,4 @@
-import {
-  Chain,
-  ContentType,
-  createChain,
-  MessageRole,
-} from '@latitude-data/compiler'
+import { ContentType, MessageRole } from '@latitude-data/constants'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -27,6 +22,7 @@ import {
 import * as ChainValidator from './ChainValidator'
 import { runChain } from './run'
 import { PromptConfig } from '@latitude-data/constants'
+import { Chain, createChain } from 'promptl-ai'
 
 let providersMap: Map<string, any>
 
@@ -85,6 +81,7 @@ describe('run chain error handling', () => {
 
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
+      // @ts-expect-error - TODO: fix type incompats
       conversation: {
         messages: [
           {

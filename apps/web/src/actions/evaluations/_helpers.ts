@@ -2,7 +2,6 @@ import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'
 
 import { scan } from 'promptl-ai'
-import { readMetadata } from '@latitude-data/compiler'
 import { withDocument } from '../procedures'
 import { DocumentVersion } from '@latitude-data/constants'
 import { DatasetsRepository } from '@latitude-data/core/repositories'
@@ -61,8 +60,11 @@ export async function refineParameters({
 }) {
   const metadata =
     ctx.document.promptlVersion === 0
-      ? await readMetadata({ prompt: ctx.document.content })
+      ? undefined
       : await scan({ prompt: ctx.document.content })
+
+  if (!metadata) return
+
   const docParams = metadata.parameters
   const headers = ctx.dataset.columns.map((c) => c.name)
   const paramKeys = Object.keys(parameters)

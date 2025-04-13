@@ -7,7 +7,7 @@ import {
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
 import { z } from '@hono/zod-openapi'
-import { ConversationMetadata as CompilerConversationMetadata } from '@latitude-data/compiler'
+import { ConversationMetadata as CompilerConversationMetadata } from '@latitude-data/constants'
 import { ConversationMetadata as PromptlConversationMetadata } from 'promptl-ai'
 import { ParameterType } from '@latitude-data/constants'
 

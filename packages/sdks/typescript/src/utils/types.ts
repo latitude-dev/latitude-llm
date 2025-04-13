@@ -1,7 +1,7 @@
 // TODO: Right now it takes a lot of work to add a simple new route to this file
 // We should refactor this to make it easier to add new routes
 
-import type { Config, Message, ToolCall } from '@latitude-data/compiler'
+import type { Config, Message, ToolCall } from '@latitude-data/constants'
 import {
   AdapterMessageType,
   ProviderAdapter,

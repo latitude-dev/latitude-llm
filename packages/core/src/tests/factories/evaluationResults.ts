@@ -1,10 +1,6 @@
 import { faker } from '@faker-js/faker'
-import {
-  ContentType,
-  type Conversation,
-  createChain,
-} from '@latitude-data/compiler'
-import { Adapters, Chain as PromptlChain } from 'promptl-ai'
+import { ContentType, type Conversation } from '@latitude-data/constants'
+import { Adapters, createChain, Chain as PromptlChain } from 'promptl-ai'
 import { LanguageModelUsage } from 'ai'
 import { eq } from 'drizzle-orm'
 
@@ -76,9 +72,7 @@ async function generateEvaluationProviderLogs({
     const { completed, ...rest } = await chain.step(mockedResponse)
     if (usePromptl && completed) break
 
-    const conversation: Conversation = usePromptl
-      ? (rest as unknown as Conversation)
-      : (rest as { conversation: Conversation }).conversation
+    const conversation: Conversation = rest as unknown as Conversation
 
     const config = conversation.config as Config
     const provider = await providerScope

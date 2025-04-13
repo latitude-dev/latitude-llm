@@ -2,7 +2,7 @@
 import { use, useMemo, useState } from 'react'
 import { capitalize } from 'lodash-es'
 
-import { MessageContent } from '@latitude-data/compiler'
+import { MessageContent } from '@latitude-data/constants'
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'

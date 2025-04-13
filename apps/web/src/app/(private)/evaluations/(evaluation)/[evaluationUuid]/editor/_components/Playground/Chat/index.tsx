@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Conversation,
   Message as ConversationMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import {
   LegacyChainEventTypes,
   EvaluationDto,

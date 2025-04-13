@@ -6,7 +6,7 @@ import {
   MessageRole,
   ToolContent,
   ToolMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 
 import { Message } from '..'
 import type { AgentToolsMap } from '@latitude-data/constants'

@@ -1,11 +1,15 @@
-import { AssistantMessage, Config, Conversation } from '@latitude-data/compiler'
+import {
+  AssistantMessage,
+  Config,
+  Conversation,
+} from '@latitude-data/constants'
 import {
   buildMessagesFromResponse,
   LogSources,
   Workspace,
 } from '../../../browser'
 import { CachedApiKeys, stepLimitExceededErrorMessage } from '../../chains/run'
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants'
 import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'

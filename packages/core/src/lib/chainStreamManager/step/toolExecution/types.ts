@@ -1,4 +1,4 @@
-import { ToolCall } from '@latitude-data/compiler'
+import { ToolCall } from '@latitude-data/constants'
 import { PromptSource, Workspace } from '../../../../browser'
 import { ResolvedTools } from '../../resolveTools/types'
 import { createMcpClientManager } from '../../../../services/integrations/McpClient/McpClientManager'

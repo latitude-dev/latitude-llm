@@ -4,7 +4,7 @@ import type {
   SystemMessage,
   ToolCall,
   UserMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import {
   EvaluationResultableType,
   LatitudeTool,

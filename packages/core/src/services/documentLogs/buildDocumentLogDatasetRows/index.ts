@@ -6,7 +6,7 @@ import {
   DocumentLogWithMetadataAndError,
   ProviderLogsRepository,
 } from '../../../repositories'
-import { ContentType, Message, MessageContent } from '@latitude-data/compiler'
+import { ContentType, Message, MessageContent } from '@latitude-data/constants'
 import { buildColumns, FixedColumnsByName } from './buildColumns'
 import { buildResponseMessage, ProviderLog } from '@latitude-data/constants'
 import { desc } from 'drizzle-orm'

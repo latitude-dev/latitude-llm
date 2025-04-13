@@ -1,9 +1,8 @@
 import {
   ContentType,
   Conversation,
-  Chain as LegacyChain,
   MessageRole,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -28,11 +27,10 @@ import { Result } from './../../lib/Result'
 import { TypedResult } from './../../lib/Result'
 
 // Mock other dependencies
-vi.mock('@latitude-data/compiler')
 vi.mock('uuid')
 
 describe('runChain', () => {
-  const mockChain: Partial<LegacyChain> = {
+  const mockChain = {
     step: vi.fn(),
     rawText: 'Test raw text',
   }
@@ -103,7 +101,8 @@ describe('runChain', () => {
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
@@ -178,7 +177,8 @@ describe('runChain', () => {
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
@@ -255,7 +255,8 @@ describe('runChain', () => {
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
@@ -300,7 +301,8 @@ describe('runChain', () => {
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
@@ -382,7 +384,8 @@ describe('runChain', () => {
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
@@ -475,7 +478,8 @@ describe('runChain', () => {
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
@@ -534,7 +538,8 @@ describe('runChain', () => {
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
@@ -604,7 +609,8 @@ describe('runChain', () => {
 
     const result = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
@@ -670,7 +676,8 @@ describe('runChain', () => {
 
     const result = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
@@ -800,7 +807,8 @@ describe('runChain', () => {
       })
       const run = runChain({
         workspace,
-        chain: mockChain as LegacyChain,
+        // @ts-ignore - mockChain is not a Chain
+        chain: mockChain,
         globalConfig: {} as PromptConfig,
         promptlVersion: 0,
         providersMap,
@@ -856,7 +864,8 @@ describe('runChain', () => {
 
         const run = runChain({
           workspace,
-          chain: mockChain as LegacyChain,
+          // @ts-ignore - mockChain is not a Chain
+          chain: mockChain,
           globalConfig: {} as PromptConfig,
           promptlVersion: 0,
           providersMap,
@@ -917,7 +926,8 @@ describe('runChain', () => {
 
         const run = runChain({
           workspace,
-          chain: mockChain as LegacyChain,
+          // @ts-ignore - mockChain is not a Chain
+          chain: mockChain,
           globalConfig: {} as PromptConfig,
           promptlVersion: 0,
           providersMap,

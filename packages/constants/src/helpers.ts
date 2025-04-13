@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { AgentToolsMap } from '.'
+import { AgentToolsMap, ToolCall } from '.'
 import {
   AGENT_RETURN_TOOL_NAME,
   LATITUDE_TOOLS_CONFIG_NAME,
@@ -7,7 +7,6 @@ import {
   MAX_STEPS_CONFIG_NAME,
   ParameterType,
 } from './config'
-import { ToolCall } from '@latitude-data/compiler'
 
 export function resolveRelativePath(refPath: string, from?: string): string {
   if (refPath.startsWith('/')) {

@@ -9,7 +9,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createXai } from '@ai-sdk/xai'
 import { createDeepSeek } from '@ai-sdk/deepseek'
 import { createPerplexity } from '@ai-sdk/perplexity'
-import { type Message, MessageRole } from '@latitude-data/compiler'
+import { type Message, MessageRole } from '@latitude-data/constants'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { Providers } from '../../constants'

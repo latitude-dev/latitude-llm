@@ -1,4 +1,4 @@
-import type { Config } from '@latitude-data/compiler'
+import type { Config } from '@latitude-data/constants'
 import { ToolDefinitionsMap } from '@latitude-data/constants/ai'
 import { Adapters, ProviderAdapter } from 'promptl-ai'
 

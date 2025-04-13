@@ -1,6 +1,10 @@
 import { useMemo } from 'react'
 
-import { AssistantMessage, Message, MessageRole } from '@latitude-data/compiler'
+import {
+  AssistantMessage,
+  Message,
+  MessageRole,
+} from '@latitude-data/constants'
 import {
   ProviderLogDto,
   SERIALIZED_DOCUMENT_LOG_FIELDS,

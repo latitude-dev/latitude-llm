@@ -1,4 +1,4 @@
-import { type AssistantMessage } from '@latitude-data/compiler'
+import { type AssistantMessage } from '@latitude-data/constants'
 
 import { DocumentLog, ProviderLog } from '../../../browser'
 
