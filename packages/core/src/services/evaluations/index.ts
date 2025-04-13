@@ -1,6 +1,0 @@
-export * from './create'
-export * from './update'
-export * from './destroy'
-export * from './connect'
-export * from './run'
-export * from './prompt'

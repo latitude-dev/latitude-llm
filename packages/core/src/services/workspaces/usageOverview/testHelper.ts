@@ -16,10 +16,10 @@ import {
   Workspace,
 } from '../../../browser'
 import * as factories from '../../../tests/factories'
-import { connectEvaluations } from '../../evaluations'
 import { createMembership } from '../../memberships/create'
 import { generateWorkspaceFixtures, type WorkspaceInfo } from './fixtures'
 import { GetUsageOverview, GetUsageOverviewRow } from './getUsageOverview'
+import { connectEvaluations } from '../../evaluations/connect'
 
 async function createMember({
   workspace,

@@ -18,10 +18,10 @@ import {
   serializeEvaluation as serializeEvaluationV2,
 } from '@latitude-data/core/services/documentSuggestions/serialize'
 import { serialize as serializeEvaluationResult } from '@latitude-data/core/services/evaluationResults/serialize'
-import { getEvaluationPrompt as serializeEvaluation } from '@latitude-data/core/services/evaluations/index'
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
 import { withDocument } from '../procedures'
+import { getEvaluationPrompt } from '@latitude-data/core/services/evaluations/prompt/index'
 
 export const refinePromptAction = withDocument
   .createServerAction()
@@ -65,7 +65,7 @@ export const refinePromptAction = withDocument
         .then((r) => r.unwrap())
         .then((e) => ({ ...e, version: 'v1' as const }))
 
-      serializedEvaluation = await serializeEvaluation({
+      serializedEvaluation = await getEvaluationPrompt({
         workspace: ctx.workspace,
         evaluation: evaluation,
       }).then((r) => r.unwrap())

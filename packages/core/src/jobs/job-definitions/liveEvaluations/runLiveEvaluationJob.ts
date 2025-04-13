@@ -2,7 +2,7 @@ import { Job } from 'bullmq'
 
 import { DocumentLog, EvaluationDto } from '../../../browser'
 import { findLastProviderLogFromDocumentLogUuid } from '../../../data-access'
-import { runEvaluation } from '../../../services/evaluations'
+import { runEvaluation } from '../../../services/evaluations/run'
 
 export type RunLiveEvaluationJobData = {
   evaluation: EvaluationDto

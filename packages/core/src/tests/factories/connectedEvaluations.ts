@@ -7,10 +7,8 @@ import {
   Workspace,
 } from '../../browser'
 import { updateConnectedEvaluation } from '../../services/connectedEvaluations'
-import {
-  connectEvaluations,
-  createAdvancedEvaluation,
-} from '../../services/evaluations'
+import { connectEvaluations } from '../../services/evaluations/connect'
+import { createAdvancedEvaluation } from '../../services/evaluations/create'
 
 export async function createConnectedEvaluation({
   workspace,

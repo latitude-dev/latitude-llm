@@ -11,11 +11,11 @@ import {
 } from '../../../browser'
 import { CommitsRepository } from '../../../repositories'
 import { getRowsFromRange } from '../../../services/datasetRows/getRowsFromRange'
-import { getEvaluationMetricSpecification } from '../../../services/evaluationsV2'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { publisher } from '../../../events/publisher'
 import { documentsQueue } from '../../queues'
+import { getEvaluationMetricSpecification } from '../../../services/evaluationsV2/specs'
 
 type GetDatasetsProps = {
   dataset: Dataset

@@ -22,7 +22,7 @@ import { ProviderApiKeysRepository } from '../../repositories'
 import { evaluationResults } from '../../schema'
 import { Config } from '../../services/ai'
 import { createEvaluationResult as createEvaluationResultService } from '../../services/evaluationResults'
-import { getEvaluationPrompt } from '../../services/evaluations'
+import { getEvaluationPrompt } from '../../services/evaluations/prompt'
 import { createProviderLog } from '../../services/providerLogs'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
 

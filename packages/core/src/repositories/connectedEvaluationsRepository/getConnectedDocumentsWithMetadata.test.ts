@@ -13,8 +13,8 @@ import { Providers } from '../../constants'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
 import { destroyOrSoftDeleteDocuments } from '../../services/documents/destroyOrSoftDeleteDocuments'
-import { connectEvaluations } from '../../services/evaluations'
 import * as factories from '../../tests/factories'
+import { connectEvaluations } from '../../services/evaluations/connect'
 
 function documentContent(text: string) {
   return `

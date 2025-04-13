@@ -6,10 +6,10 @@ import {
 } from '../../data-access'
 import { runEvaluationV2JobKey } from '../../jobs/job-definitions'
 import { CommitsRepository, EvaluationsV2Repository } from '../../repositories'
-import { getEvaluationMetricSpecification } from '../../services/evaluationsV2'
 import { DocumentLogCreatedEvent } from '../events'
 import { evaluationsQueue } from '../../jobs/queues'
 import { NotFoundError } from './../../lib/errors'
+import { getEvaluationMetricSpecification } from '../../services/evaluationsV2/specs'
 
 export const evaluateLiveLogJob = async ({
   data: event,

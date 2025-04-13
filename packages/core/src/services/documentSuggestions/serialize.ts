@@ -1,4 +1,5 @@
 import {
+  EVALUATION_SPECIFICATIONS,
   EvaluationMetric,
   EvaluationResultV2,
   EvaluationType,
@@ -12,7 +13,6 @@ import {
   ProviderLogsRepository,
 } from '../../repositories'
 import { serialize as serializeDocumentLog } from '../documentLogs/serialize'
-import { EVALUATION_SPECIFICATIONS } from '../evaluationsV2'
 
 export async function serializeEvaluation<
   T extends EvaluationType,

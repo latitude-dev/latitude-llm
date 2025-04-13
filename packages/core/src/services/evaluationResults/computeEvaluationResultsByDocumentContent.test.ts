@@ -12,7 +12,7 @@ import { EvaluationMetadataType, Providers } from '../../constants'
 import { EvaluationResultByDocument } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { updateDocument } from '../documents'
-import { connectEvaluations } from '../evaluations'
+import { connectEvaluations } from '../evaluations/connect'
 
 async function evaluateDocument({
   commit,

@@ -23,7 +23,7 @@ import {
   EvaluationsRepository,
 } from '../../repositories'
 import * as factories from '../../tests/factories'
-import { connectEvaluations } from '../evaluations'
+import { connectEvaluations } from '../evaluations/connect'
 
 describe('fetchEvaluationResultsByDocumentLogs', () => {
   let user: User

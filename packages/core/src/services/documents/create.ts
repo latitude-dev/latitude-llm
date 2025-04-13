@@ -20,8 +20,6 @@ import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
-import { connectEvaluations, createEvaluation } from '../evaluations'
-import { createEvaluationV2 } from '../evaluationsV2'
 import { pingProjectUpdate } from '../projects'
 import {
   findDefaultEvaluationProvider,
@@ -30,6 +28,9 @@ import {
 import { Result, TypedResult } from './../../lib/Result'
 import Transaction from './../../lib/Transaction'
 import { getDocumentType } from './update'
+import { createEvaluationV2 } from '../evaluationsV2/create'
+import { createEvaluation } from '../evaluations/create'
+import { connectEvaluations } from '../evaluations/connect'
 
 async function hasMetadata(content: string) {
   try {

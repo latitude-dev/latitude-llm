@@ -9,9 +9,9 @@ import {
   Workspace,
 } from '../../browser'
 import {
+  createEvaluation as createEvaluationFn,
   createAdvancedEvaluation,
-  createEvaluation as createEvaluationService,
-} from '../../services/evaluations'
+} from '../../services/evaluations/create'
 
 export type IEvaluationData = {
   workspace: Workspace
@@ -73,7 +73,7 @@ export async function createEvaluation({
   resultType?: EvaluationResultableType
   resultConfiguration?: Record<string, unknown>
 }): Promise<EvaluationDto> {
-  return createEvaluationService({
+  return createEvaluationFn({
     workspace,
     user,
     name,

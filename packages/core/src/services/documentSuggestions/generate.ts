@@ -23,7 +23,7 @@ import {
 import { documentSuggestions, evaluationResultsV2 } from '../../schema'
 import { getCopilot, runCopilot } from '../copilot'
 import { serialize as serializeEvaluationResult } from '../evaluationResults'
-import { getEvaluationPrompt as serializeEvaluation } from '../evaluations'
+import { getEvaluationPrompt as serializeEvaluation } from '../evaluations/prompt'
 import {
   serializeEvaluationResult as serializeEvaluationResultV2,
   serializeEvaluation as serializeEvaluationV2,

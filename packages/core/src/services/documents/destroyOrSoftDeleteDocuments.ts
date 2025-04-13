@@ -6,11 +6,11 @@ import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
 import { EvaluationsV2Repository } from '../../repositories'
 import { documentVersions } from '../../schema'
-import { deleteEvaluationV2 } from '../evaluationsV2'
 import { pingProjectUpdate } from '../projects'
 import { Result } from './../../lib/Result'
 import { TypedResult } from './../../lib/Result'
 import Transaction from './../../lib/Transaction'
+import { deleteEvaluationV2 } from '../evaluationsV2/delete'
 
 async function findUuidsInOtherCommits({
   tx,
