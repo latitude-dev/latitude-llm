@@ -3,7 +3,7 @@ import {
   EvaluationResultValue,
   EvaluationType,
   LlmEvaluationMetric,
-  LlmEvaluationSpecification,
+  LlmEvaluationSpecification as originalLlmEvaluationSpecification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
@@ -29,9 +29,8 @@ const METRICS: {
   [LlmEvaluationMetric.Custom]: undefined as any, // TODO(evalsv2): Implement
 }
 
-const specification = LlmEvaluationSpecification
-export default {
-  ...specification,
+export const LlmEvaluationSpecification = {
+  ...originalLlmEvaluationSpecification,
   validate: validate,
   run: run,
   metrics: METRICS,

@@ -2,7 +2,7 @@ import {
   EvaluationResultValue,
   EvaluationType,
   RuleEvaluationMetric,
-  RuleEvaluationSpecification,
+  RuleEvaluationSpecification as originalRuleEvaluationSpecification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
@@ -31,9 +31,8 @@ const METRICS: {
   [RuleEvaluationMetric.SemanticSimilarity]: RuleEvaluationSemanticSimilaritySpecification,
 }
 
-const specification = RuleEvaluationSpecification
-export default {
-  ...specification,
+export const RuleEvaluationSpecification = {
+  ...originalRuleEvaluationSpecification,
   validate: validate,
   run: run,
   metrics: METRICS,

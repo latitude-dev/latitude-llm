@@ -1,7 +1,7 @@
 import { EvaluationMetric, EvaluationType, EvaluationV2 } from '../../browser'
-import HumanEvaluationSpecification from './human'
-import LlmEvaluationSpecification from './llm'
-import RuleEvaluationSpecification from './rule'
+import { HumanEvaluationSpecification } from './human'
+import { LlmEvaluationSpecification } from './llm'
+import { RuleEvaluationSpecification } from './rule'
 import { EvaluationBackendSpecification } from './shared'
 
 export const EVALUATION_SPECIFICATIONS: {
