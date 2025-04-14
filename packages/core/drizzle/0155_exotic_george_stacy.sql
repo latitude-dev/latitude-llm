@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "connected_evaluations_document_uuid_idx" ON "latitude"."connected_evaluations" USING btree ("document_uuid");

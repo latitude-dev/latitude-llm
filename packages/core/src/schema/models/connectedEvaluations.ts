@@ -31,5 +31,8 @@ export const connectedEvaluations = latitudeSchema.table(
     connectedEvaluationsUniqueIdx: unique(
       'connected_evaluations_unique_idx',
     ).on(table.documentUuid, table.evaluationId),
+    documentUuidIdx: index('connected_evaluations_document_uuid_idx').on(
+      table.documentUuid,
+    ),
   }),
 )
