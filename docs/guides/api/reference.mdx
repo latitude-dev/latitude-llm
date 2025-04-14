@@ -1,0 +1,62 @@
+---
+title: HTTP API Reference
+description: Overview of Latitude's HTTP API for programmatic access and integration.
+---
+
+# HTTP API Reference
+
+Latitude provides a comprehensive HTTP API that allows you to interact with the platform programmatically, enabling custom integrations and workflows beyond the capabilities of the SDKs.
+
+## Base URL
+
+- **Latitude Cloud**: `https://api.latitude.so/v1`
+- **Self-Hosted**: `https://<your-latitude-domain>/api/v1`
+
+## Authentication
+
+All API requests must be authenticated using an API key.
+
+- Generate keys in your Project Settings > API Access.
+- Include the key in the `Authorization` header as a Bearer token:
+  `Authorization: Bearer YOUR_API_KEY`
+
+[Learn more about API Access and Authentication](/guides/api/api-access).
+
+## Key Concepts & Endpoints
+
+While a full interactive API specification (e.g., Swagger/OpenAPI) is the definitive reference (link usually available within the Latitude platform), here's an overview of key areas:
+
+- **Running Prompts**: Execute deployed prompts via the AI Gateway.
+  - Endpoint: `/run/{prompt_id}` (or similar)
+  - Method: `POST`
+  - Key Features: Parameter passing, metadata attachment, streaming support.
+  - See: [Publishing & Deployment](/guides/integration/publishing-deployment)
+- **Managing Prompts**: Create, retrieve, update, list, and manage versions of prompts.
+  - Endpoints: `/prompts`, `/prompts/{prompt_id}`, `/prompts/{prompt_id}/versions`, etc.
+- **Managing Evaluations**: Configure and trigger evaluations.
+  - Endpoints: `/evaluations`, `/evaluations/{evaluation_id}/run`, etc.
+- **Managing Datasets**: Upload, download, list, and manage datasets.
+  - Endpoints: `/datasets`, `/datasets/{dataset_id}`, etc.
+- **Managing Logs**: Retrieve and potentially create logs.
+  - Endpoints: `/logs`, `/logs/{log_id}`, etc.
+- **Submitting Manual Evaluations**: Add human feedback to logs.
+  - Endpoint: `/logs/{log_id}/evaluations/{evaluation_id}` (or similar)
+  - Method: `POST` or `PUT`
+- **Streaming Events**: Understand the event types returned when using `stream=true`.
+  - See: [Streaming Events Guide](/guides/api/streaming-events)
+- **Webhooks**: Configure endpoints to receive notifications about events in Latitude.
+  - See: [Webhooks Guide](/guides/api/webhooks)
+
+## Rate Limits
+
+API endpoints are subject to rate limiting to ensure platform stability. Check the API documentation or response headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`) for specific limits.
+
+## Interactive API Documentation
+
+For detailed endpoint specifications, request/response schemas, and the ability to try out API calls directly, please refer to the interactive API documentation (Swagger UI or similar) linked within your Latitude workspace.
+
+## Next Steps
+
+- Set up [API Access Keys](/guides/api/api-access)
+- Understand [Streaming Events](/guides/api/streaming-events)
+- Configure [Webhooks](/guides/api/webhooks)

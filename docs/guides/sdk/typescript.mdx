@@ -1,45 +1,37 @@
 ---
-title: Typescript
-description: Integrate Latitude's SDK into your Typescript project
+title: TypeScript SDK
+description: Integrate Latitude into your Node.js applications using the TypeScript SDK.
 ---
 
-Latitude's Typescript integration has the following main features:
-
-- Automatic tracing of LLM calls
-- Interact with Latitude's prompt manager from code: create, update and delete prompts
-- Render Latitude prompts locally and run them against your LLM providers
-- Run prompts with Latitude's high-performing gateway
-- Trigger LLM as judge and human in the loop evaluations
-- Programmatically push external logs to Latitude for evaluation and monitoring
+The Latitude TypeScript SDK provides a convenient way to interact with the Latitude platform from your Node.js or browser applications.
 
 ## Installation
 
-To install the Latitude SDK, use your preferred package manager:
-
 ```bash
-npm install @latitude-data/sdk
+npm install @latitude/sdk
 # or
-yarn add @latitude-data/sdk
+yarn add @latitude/sdk
 # or
-pnpm add @latitude-data/sdk
+pnpm add @latitude/sdk
 ```
 
-## Getting Started
+## Authentication and Initialization
 
-First, import the Latitude class from the SDK and initialize it with your API key:
+Import the client and initialize it with your API key. You can generate API keys in your Latitude project settings under "API Access".
 
 ```typescript
-import { Latitude } from '@latitude-data/sdk'
+import { LatitudeClient } from '@latitude/sdk'
 
-const sdk = new Latitude('your-api-key-here', {
-  projectId: 12345, // Optional, otherwise you have to provide it in each method
-  versionUuid: 'optional-version-uuid', // Optional, by default it targets the latest live version
+const latitude = new LatitudeClient({
+  apiKey: process.env.LATITUDE_API_KEY!, // Use environment variables
+  // Optional: Specify base URL for self-hosted instances
+  // baseUrl: 'https://your-latitude-instance.com/api'
 })
 ```
 
-## Examples
+Keep your API key secure and avoid committing it directly into your codebase.
 
-Check out our [cookbook](/guides/cookbook/overview#typescript) for more examples of how to use Latitude's SDK.
+## Programmatically Managing Prompts
 
 ## Prompt Management
 
@@ -48,261 +40,121 @@ Check out our [cookbook](/guides/cookbook/overview#typescript) for more examples
 To get or create a prompt, use the `getOrCreate` method:
 
 ```typescript
-await sdk.prompts.getOrCreate('path/to/your/prompt', {
-  projectId: 12345, // Optional, if you did not provide it in the constructor
-  versionUuid: 'optional-version-uuid', // Optional, by default it targets the latest live version
-  prompt: 'Your prompt here', // Optional, this will be the contents of your prompt if it does not exist
-})
+async function getPrompt(promptId: string) {
+  try {
+    const prompt = await latitude.prompts.get(promptId)
+    console.log('Fetched Prompt:', prompt.name)
+    return prompt
+  } catch (error) {
+    console.error(`Error fetching prompt ${promptId}:`, error)
+  }
+}
 ```
 
-### Run a prompt with your LLM provider
-
-The `render` method will render your prompt and return the configuration and
-messages to use with your LLM provider. This render step is completely local and
-does not use Latitude's runtime services:
+### List Prompts
 
 ```typescript
-import { Latitude } from '@latitude-data/sdk'
-import { OpenAI } from 'openai'
-
-const sdk = new Latitude('your-api-key-here', {
-  projectId: 12345, // Optional: You can specify a default project ID here
-  versionUuid: 'optional-version-uuid', // Optional: You can specify a default version UUID here
-})
-
-const prompt = await sdk.prompts.get('path/to/your/prompt', {
-  projectId: 12345, // Optional if you provided it in the constructor
-  versionUuid: 'optional-version-uuid', // Optional, by default it targets the latest live version
-})
-
-const openai = new OpenAI({ apiKey: 'your-openai-api-key' })
-
-const { config, messages } = await sdk.prompts.render({
-  prompt,
-  parameters: {
-    // Any parameters your prompt expects
-  },
-})
-
-const response = await openai.chat.completions.create({
-  ...config,
-  messages,
-})
+async function listAllPrompts() {
+  try {
+    const prompts = await latitude.prompts.list()
+    console.log(
+      'Prompts:',
+      prompts.map((p) => ({ id: p.id, name: p.name })),
+    )
+    return prompts
+  } catch (error) {
+    console.error('Error listing prompts:', error)
+  }
+}
 ```
 
-To execute [chains](/promptl/advanced/chains) or [agents](/guides/prompt-manager/agents) locally, you can use the `renderChain` and `renderAgent` methods.
-In these cases, you must provide the `onStep` callback that will be called to generate the response for each step of the chain or agent.
+## Running Prompts and Handling Responses
+
+Execute published prompts via the AI Gateway.
+
+### Standard Run (Non-Streaming)
+
+This returns the complete response once generation is finished.
 
 ```typescript
-const { messages } = await sdk.prompts.renderChain({
-  prompt,
-  parameters: {
-    // Any parameters your prompt expects
-  },
-  onStep: async ({ config, messages }) => {
-    // Your call to your LLM provider goes here
-    const response = await openai.chat.completions.create({
-      ...config,
-      messages,
+async function runEmailPrompt(promptId: string) {
+  try {
+    const response = await latitude.run(promptId, {
+      parameters: {
+        productName: 'CloudSync Pro',
+        audience: 'Small Business Owners',
+      },
+      // Optional: Add metadata for logging/tracing
+      metadata: {
+        userId: 'user-abc-123',
+        campaign: 'Q3-launch',
+      },
     })
 
+    console.log('Generated Email Content:')
+    console.log(response.content)
+
+    // Access response metadata
+    console.log('Trace ID:', response.metadata?.traceId)
+    console.log('Log ID:', response.metadata?.logId)
+
     return response
-  },
-})
-```
-
-<Note>
-  When using the `renderAgent` method, make sure to provide the `config.tools`
-  parameter to the LLM provider in your `onStep` implementation, otherwise the
-  AI will not be able to stop the Agent loop!
-</Note>
-
-If your prompt contains tools, you can also provide callbacks for each tool with the `tools` argument, and they will be automatically called when the LLM invokes them.
-
-```typescript
-const { messages, result } = await sdk.prompts.renderAgent({
-  prompt,
-  parameters: {
-    // Any parameters your prompt expects
-  },
-  tools: {
-    get_weather: async ({ latitude, longitude }) => {
-      // your custom tool logic here
-      const temperature = await fetch(...)
-      return { temperature }
-    },
-  },
-})
-```
-
-<Note>
-  Make sure the tool definitions in the prompt match the function signatures you
-  provide, otherwise it may not work as expected.
-</Note>
-
-### Run a prompt through Latitude Gateway
-
-Latitude's Gateway is a high-performing gateway that proxies your LLM calls
-between your application and the LLM provider. It includes some additional
-features like automatic prompt caching based on content and prompt
-configuration.
-
-In order to run a prompt through Latitude's Gateway, use the `run` method:
-
-```typescript
-await sdk.prompts.run('path/to/your/prompt', {
-  projectId: 12345, // Optional if you provided it in the constructor
-  versionUuid: 'optional-version-uuid', // Optional, by default it targets the latest live version
-  stream: false, // Optional, by default it's false
-  parameters: {
-    // Any parameters your prompt expects
-  },
-  tools: {
-    // Any tools your prompt expects
-  },
-  onEvent: ({ event, data }) => {
-    // Handle events during execution
-  },
-  onFinished: (result) => {
-    // Handle the final result
-  },
-  onError: (error) => {
-    // Handle any errors
-  },
-})
-```
-
-#### Running agents
-
-Running an agent through Latitude's Gateway is works in the same way as
-running a prompt! In this case, however, the returned object will contain the
-`agentResponse` property, which contains the agent's response.
-
-```typescript
-const result = await sdk.prompts.run('path/to/your/agent', {
-  projectId,
-  parameters: {
-    my_location: 'Barcelona and Miami',
-    other_location: 'Boston',
-  },
-  versionUuid: commitUuid,
-  stream: true,
-})
-
-console.log('??', result.agentResponse)
-```
-
-The `agentResponse` property will always be defined when the prompt is an agent,
-and it will contain the agent's response as an object. The structure of the
-response will depend on the agent's configuration, although by default it looks
-like this:
-```json
-{
-  "response": "Your agent's response"
+  } catch (error) {
+    console.error('Error running prompt:', error)
+  }
 }
 ```
 
-#### Running a prompt with tools
+### Handling Streaming Responses
 
-When you run a prompt with tools, you can define and supply the corresponding
-tool handlers to the Latitude SDK. These handlers will be called automatically
-when the LLM invokes the tools. The tool results will be returned to the LLM,
-and the conversation will continue.
+For real-time applications (like chatbots), use streaming to get response chunks as they are generated.
 
 ```typescript
-import { Latitude } from '@latitude-data/sdk'
+async function runStreamingPrompt(promptId: string) {
+  try {
+    const stream = await latitude.run(promptId, {
+      parameters: {
+        productName: 'CloudSync Pro',
+        audience: 'Small Business Owners',
+      },
+      stream: true, // Enable streaming
+      metadata: { userId: 'user-xyz-789' },
+    })
 
-// If you use TypeScript, you can define the tools you want to use
-// These types will be available in the tools parameter of the run and chat methods
-type Tools = {
-  get_coordinates: { location: string }
-  get_weather: { latitude: string; longitude: string }
+    console.log('Streaming Response:')
+    let fullContent = ''
+    for await (const chunk of stream) {
+      // Process text chunks
+      if (chunk.type === 'text-delta' && chunk.content) {
+        process.stdout.write(chunk.content)
+        fullContent += chunk.content
+      }
+      // Handle other event types (tool calls, errors, final response)
+      if (chunk.type === 'response') {
+        console.log(`\n--- Stream Finished ---`)
+        console.log('Final Metadata (Trace ID):', chunk.metadata?.traceId)
+        // Note: chunk.content might be empty here if streamed
+      }
+      // Add handling for chunk.type === 'tool-call', 'error', etc.
+      // See Streaming Events guide for details: /guides/api/streaming-events
+    }
+    // fullContent now holds the complete generated text
+  } catch (error) {
+    console.error('Error running streaming prompt:', error)
+  }
 }
-
-const response = await sdk.prompts.run<Tools>(documentPath, {
-  projectId,
-  parameters: {
-    my_location: 'Barcelona and Miami',
-    other_location: 'Boston',
-  },
-  versionUuid: commitUuid,
-  stream: true,
-  tools: {
-    get_coordinates: async ({ location }) => {
-      const data = fetch(
-        'https://api.example.com/coordinates?location=' + location,
-      )
-      const { latitude, longitude } = await data.json()
-      return { latitude, longitude }
-    },
-    get_weather: async ({ latitude, longitude }) => {
-      const data = fetch(
-        'https://api.example.com/weather?latitude=' +
-          latitude +
-          '&longitude=' +
-          longitude,
-      )
-      const { temperature } = await data.json()
-      return { temperature }
-    },
-  },
-})
 ```
 
-#### Pausing tool execution
+Refer to the [Streaming Events](/guides/api/streaming-events) documentation for a detailed explanation of all event types.
 
-If you need to pause the execution of the tools, you can do so by returning
-`details.pauseExecution()` in the tool handler. You can resume the
-conversation later by returning the tool results in the `sdk.prompts.chat`
-method.
+## Logging and Telemetry Features
 
-```typescript
-// ...example of the tools argument in the `sdk.prompts.run` method
-tools: {
-  get_weather: async (
-    { latitude, longitude },
-    details: {
-      toolId, // Called tool id
-      toolName, // Called tool name, `get_weather` in this case
-      pauseExecution, // Signal to optionally pause the execution
-      messages, // List of conversation messages so far
-      conversationUuid, // Conversation identifier, to be used in the `sdk.prompts.chat` method
-      requestedToolCalls, // All tool calls requested by the LLM, including this one
-    },
-  ) => {
-    // Let's imagine `get_weather` takes a long time to execute and you want to do it in the background.
-    // With `pauseExecution`, you can pause the conversation, get the weather data, and resume the conversation
-    // later, by returning the tool results in the `sdk.prompts.chat` method.
-    // You may have to store `requestedToolCalls` and `conversationUuid` on your side to resume the conversation.
-    // Note that, you must return all results from the requested tools, in the `sdk.prompts.chat` method, at once.
-    return pauseExecution()
-  },
-},
-```
+- **Automatic Logging**: All runs through `latitude.run()` are automatically logged in Latitude, capturing inputs, outputs, metadata, performance metrics, and trace information.
+- **Custom Metadata**: Pass application-specific context (like `userId`, `sessionId`, `environment`) in the `metadata` field during the `run` call. This metadata is attached to the logs and traces, enabling better filtering and analysis.
+- **Trace IDs**: The `traceId` returned in the response metadata links all related events (LLM calls, tool calls, evaluations) for a single execution flow.
 
-## Log Management
+## Further Information
 
-### Pushing a log to Latitude
-
-To create a log programmatically, use the `create` method:
-
-```typescript
-const messages = [
-  {
-    role: 'user',
-    content: 'Please tell me a joke about doctors',
-  },
-]
-
-await sdk.logs.create('path/to/your/prompt', messages, {
-  projectId: 12345, // Optional, if you did not provide it in the constructor
-  versionUuid: 'optional-version-uuid', // Optional, by default it targets the latest live version
-  response: 'assistant response',
-})
-```
-
-<Note>
-  Logs follow the [PromptL format](/promptl/getting-started/introduction). If
-  you're using a different method to run your prompts, you'll need to format
-  your logs accordingly.
-</Note>
+- [HTTP API Reference](/guides/api/reference)
+- [API Access and Authentication](/guides/api/api-access)
+- [Streaming Event Details](/guides/api/streaming-events)

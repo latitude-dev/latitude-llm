@@ -1,15 +1,11 @@
 ---
 title: Prompt Configuration
-description: Learn how to configure your prompts
+description: Learn how to configure model, provider, and generation parameters for your prompts.
 ---
 
-## Overview
-
-The configuration section of a prompt in Latitude is always required, and defines the way the prompt will be executed. It will always be located at the top of the prompt file, and is enclosed by three dashes (`---`). The configuration section is written in YAML format, and can include any key-value pairs supported by your LLM provider.
+The configuration section, located at the top of every prompt file and enclosed by triple dashes (`---`), defines how Latitude executes your prompt. It's written in YAML format and allows you to specify the AI provider, model, generation parameters, and other advanced settings.
 
 ![Prompt configuration section](/assets/prompt_config.png)
-
-This section is enclosed between three dashes (`---`) and written in YAML format:
 
 ```yaml
 ---
@@ -17,18 +13,17 @@ provider: OpenAI
 model: gpt-4o-mini
 temperature: 0.6
 top_p: 0.9
+# ... other settings
 ---
 ```
 
----
-
-## Configuration Options
+## Core Settings
 
 ### Provider (required)
 
-The `provider` key specifies the LLM provider to use for the prompt. This key is always required in the configuration section, and must reference one of the providers you have configured in your Latitude workspace.
+Specifies the AI provider to use (e.g., OpenAI, Anthropic, Google). This must match a provider configured in your Latitude workspace settings.
 
-You can also select any available provider from the dropdown on top of the prompt editor.
+You can easily select a configured provider using the dropdown in the editor's header.
 
 ![Selecting a provider](/assets/prompt_provider.png)
 
@@ -36,107 +31,99 @@ You can also select any available provider from the dropdown on top of the promp
 
 ### Model (required)
 
-The `model` key specifies the model to use for the prompt. The available models will depend on your LLM provider, and you can select from the available models in the dropdown on top of the prompt editor.
+Specifies the exact language model to use (e.g., `gpt-4o-mini`, `claude-3-opus-20240229`). Available models depend on the selected provider.
+
+The model dropdown in the editor's header lists available models for the chosen provider.
 
 ![Selecting a model](/assets/prompt_model.png)
 
-### Additional Parameters
+## Generation Parameters
 
-#### **`parameters`**
+These parameters control how the AI model generates its response. The specific ranges and behaviors might vary slightly between providers.
 
-The `parameters` key optionally allows you to define advance options for the parameters in the playground and shared prompts.
-You can define the following options for each parameter:
+### `temperature`
 
-- **`type`** (required): `text`, `image` or `file`. If a parameter, or the whole parameters key, is not set, all types are `text` by default.
-
-[Learn more about prompt parameters](/guides/prompt-manager/playground#parameters)
-
-#### **`schema`**
-
-Define the JSON schema for the response of the prompt.
-
-[Learn more about how to define the JSON schemas](/guides/prompt-manager/json-output)
-
-#### **`tools`**
-
-Configure the tools available to the AI assistant.
-
-[Learn more about configuring tools in your prompt](/guides/prompt-manager/tools)
-
-#### **`temperature`**
-
-Temperature setting.
-
-The value is passed through to the provider. The range depends on the provider and model. For most providers, 0 means almost deterministic results, and higher values mean more randomness.
-
-It is recommended to set either temperature or topP, but not both.
+Controls the randomness of the output. Lower values (e.g., 0.1) make the output more deterministic and focused, while higher values (e.g., 0.9) increase creativity and randomness.
 
 <Note>
-  Not configuring temperature, or setting it to 0 will cache the response for the prompt, and the same response will be returned when the prompt is called again with the same parameters.
-
-[Learn more about caching in Latitude](/guides/prompt-manager/cache)
-
+  Setting temperature to 0, or leaving it unset, enables response
+  [caching](/guides/prompt-manager/cache) for identical inputs.
 </Note>
 
-#### **`maxSteps`**
+It's generally recommended to adjust _either_ `temperature` _or_ `topP`, but not both.
 
-Maximum number of steps to execute.
+### `maxTokens`
 
-When using [Chains](/promptl/advanced/chains), you can configure the maximum number of steps to execute. Reaching this limit will stop the execution of the chain and return an error.
-Defaults to 20, and has a maximum value of 150.
+Sets the maximum number of tokens (words or parts of words) the model can generate in its response.
 
-#### **`maxTokens`**
+### `topP` (Nucleus Sampling)
 
-Maximum number of tokens to generate.
+An alternative to `temperature` for controlling randomness. It instructs the model to consider only the most probable tokens whose cumulative probability mass exceeds the `topP` value (e.g., 0.9 means consider tokens comprising the top 90% probability mass).
 
-#### **`topP`**
+### `topK`
 
-Nucleus sampling.
+Restricts the model to sampling only from the `K` most likely next tokens at each step. Generally used for advanced cases; `temperature` or `topP` are usually sufficient.
 
-The value is passed through to the provider. The range depends on the provider and model. For most providers, nucleus sampling is a number between 0 and 1. E.g. 0.1 would mean that only tokens with the top 10% probability mass are considered.
+### `presencePenalty`
 
-It is recommended to set either temperature or topP, but not both.
+Discourages the model from repeating information already present in the prompt context. Higher values increase the penalty.
 
-#### **`topK`**
+### `frequencyPenalty`
 
-Only sample from the top K options for each subsequent token.
+Discourages the model from using the same words or phrases repeatedly in its response. Higher values increase the penalty.
 
-Used to remove "long tail" low probability responses. Recommended for advanced use cases only. You usually only need to use temperature.
+### `stopSequences`
 
-#### **`presencePenalty`**
+A list of strings that, if generated by the model, will cause generation to stop immediately.
 
-The presence penalty affects the likelihood of the model to repeat information that is already in the prompt.
+### `seed`
 
-The value is passed through to the provider. The range depends on the provider and model. For most providers, 0 means no penalty.
+An integer used to initialize the random number generator. If supported by the model, using the same seed with identical inputs will produce deterministic outputs, useful for reproducibility.
 
-#### **`frequencyPenalty`**
+## Advanced Configuration
 
-The frequency penalty affects the likelihood of the model to repeatedly use the same words or phrases.
+### `parameters`
 
-The value is passed through to the provider. The range depends on the provider and model. For most providers, 0 means no penalty.
+Defines types and constraints for input parameters used in the [Playground](/guides/prompt-manager/playground) or shared prompts.
 
-#### **`stopSequences`**
+```yaml
+parameters:
+  user_input:
+    type: text # Default type
+  image_upload:
+    type: image
+  data_file:
+    type: file
+```
 
-The stop sequences to use for stopping the text generation.
+[Learn more about parameter types in the Playground guide](/guides/prompt-manager/playground#parameter-types).
 
-If set, the model will stop generating text when one of the stop sequences is generated. Providers may have limits on the number of stop sequences.
+### `schema`
 
-#### **`seed`**
+Defines a JSON schema to enforce structured output from the model.
 
-It is the seed (integer) to use for random sampling. If set and supported by the model, calls will generate deterministic results.
+[Learn more about enforcing JSON output](/guides/prompt-manager/json-output).
 
-#### **`maxRetries`**
+### `tools`
 
-Maximum number of retries. Set to 0 to disable retries. Default: 2.
+Lists the tools (functions) available for the AI model to call.
 
-#### **`abortSignal`**
+[Learn more about configuring tools](/guides/prompt-manager/tools).
 
-An optional abort signal that can be used to cancel the call.
+### `maxSteps`
 
-The abort signal can e.g. be forwarded from a user interface to cancel the call, or to define a timeout.
+For [Chains](/promptl/advanced/chains) and [Agents](/guides/prompt-manager/agents), sets the maximum number of execution steps allowed (default: 20, max: 150).
 
-#### **`headers`**
+### `maxRetries`
 
-Additional HTTP headers to be sent with the request. Only applicable for HTTP-based providers.
+Maximum number of times to retry a provider call on failure (default: 2).
 
-You can use the request headers to provide additional information to the provider, depending on what the provider supports. For example, some observability providers support headers such as Prompt-Id.
+### `headers`
+
+Sends additional HTTP headers with the request, useful for integrating with specific provider features or observability tools.
+
+## Next Steps
+
+- Test prompts with different settings in the [Playground](/guides/prompt-manager/playground)
+- Learn about [Enforcing JSON Output](/guides/prompt-manager/json-output)
+- Explore using [Tools](/guides/prompt-manager/tools) and [Agents](/guides/prompt-manager/agents)

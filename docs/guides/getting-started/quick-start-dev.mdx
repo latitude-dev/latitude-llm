@@ -1,0 +1,280 @@
+---
+title: Quick Start for AI Engineers
+description: 'Get started with Latitude using code and SDKs'
+---
+
+This guide will walk you through integrating Latitude into your development workflow using our SDKs and API.
+
+## Prerequisites
+
+- A Latitude account (Sign up at [latitude.so](https://latitude.so) or use your self-hosted instance)
+- Access to at least one AI provider (OpenAI, Anthropic, Google, etc.)
+- Node.js (v16+) or Python (v3.8+) installed on your machine
+
+## 1. Install and Initialize the SDK
+
+Latitude offers SDKs for TypeScript/JavaScript and Python. Choose your preferred language below:
+
+### TypeScript/JavaScript
+
+```bash
+# Install via npm
+npm install @latitude/sdk
+
+# Or via yarn
+yarn add @latitude/sdk
+
+# Or via pnpm
+pnpm add @latitude/sdk
+```
+
+Initialize the SDK in your code:
+
+```typescript
+import { LatitudeClient } from '@latitude/sdk'
+
+const latitude = new LatitudeClient({
+  apiKey: 'your_api_key',
+  // For self-hosted instances, specify the baseUrl
+  // baseUrl: 'https://your-latitude-instance.com/api',
+})
+```
+
+### Python
+
+```bash
+# Install via pip
+pip install latitude-sdk
+```
+
+Initialize the SDK in your code:
+
+```python
+from latitude import LatitudeClient
+
+latitude = LatitudeClient(
+    api_key="your_api_key",
+    // For self-hosted instances, specify the base_url
+    // base_url="https://your-latitude-instance.com/api",
+)
+```
+
+## 2. Create or Fetch a Prompt via Code
+
+### Creating a New Prompt
+
+```typescript
+// TypeScript
+const prompt = await latitude.prompts.create({
+  name: 'Customer Support Assistant',
+  content: `
+    You are a helpful customer support assistant for a software company.
+    
+    Customer query: ${query}
+    Product: ${product}
+    
+    Provide a helpful, friendly response that addresses the customer's question.
+    Include relevant product details when necessary.
+  `,
+})
+
+console.log(`Created prompt with ID: ${prompt.id}`)
+```
+
+```python
+# Python
+prompt = latitude.prompts.create(
+    name="Customer Support Assistant",
+    content="""
+    You are a helpful customer support assistant for a software company.
+
+    Customer query: ${query}
+    Product: ${product}
+
+    Provide a helpful, friendly response that addresses the customer's question.
+    Include relevant product details when necessary.
+    """,
+)
+
+print(f"Created prompt with ID: {prompt.id}")
+```
+
+### Fetching an Existing Prompt
+
+```typescript
+// TypeScript
+const prompt = await latitude.prompts.get('prompt_id')
+console.log(`Fetched prompt: ${prompt.name}`)
+```
+
+```python
+# Python
+prompt = latitude.prompts.get("prompt_id")
+print(f"Fetched prompt: {prompt.name}")
+```
+
+## 3. Run a Prompt Through the Gateway
+
+Once you have a prompt, you can run it either by ID or directly:
+
+### Running by Prompt ID
+
+```typescript
+// TypeScript
+const response = await latitude.run('prompt_id', {
+  parameters: {
+    query: 'How do I reset my password?',
+    product: 'CloudManager Pro',
+  },
+})
+
+console.log(response.content)
+```
+
+```python
+# Python
+response = latitude.run("prompt_id",
+    parameters={
+        "query": "How do I reset my password?",
+        "product": "CloudManager Pro"
+    }
+)
+
+print(response.content)
+```
+
+### Running with Direct Content
+
+```typescript
+// TypeScript
+const response = await latitude.completion({
+  prompt: 'Summarize the following in 3 bullet points: ${text}',
+  parameters: {
+    text: 'Latitude is an open-source prompt engineering platform. It helps teams manage and deploy prompts as endpoints, evaluate their output at scale, and monitor performance over time. Latitude is designed for team collaboration, making it accessible to developers, product managers, and domain experts alike.',
+  },
+  provider: {
+    id: 'openai',
+    model: 'gpt-4',
+    temperature: 0.7,
+  },
+})
+
+console.log(response.content)
+```
+
+```python
+# Python
+response = latitude.completion(
+    prompt="Summarize the following in 3 bullet points: ${text}",
+    parameters={
+        "text": "Latitude is an open-source prompt engineering platform. It helps teams manage and deploy prompts as endpoints, evaluate their output at scale, and monitor performance over time. Latitude is designed for team collaboration, making it accessible to developers, product managers, and domain experts alike."
+    },
+    provider={
+        "id": "openai",
+        "model": "gpt-4",
+        "temperature": 0.7
+    }
+)
+
+print(response.content)
+```
+
+## 4. Use Streaming Results and Logging
+
+### Handling Streaming Responses
+
+```typescript
+// TypeScript
+const stream = await latitude.run('prompt_id', {
+  parameters: {
+    query: 'How do I integrate your API?',
+    product: 'Latitude SDK',
+  },
+  stream: true,
+})
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk.content)
+}
+```
+
+```python
+# Python
+stream = latitude.run("prompt_id",
+    parameters={
+        "query": "How do I integrate your API?",
+        "product": "Latitude SDK"
+    },
+    stream=True
+)
+
+for chunk in stream:
+    print(chunk.content, end="")
+```
+
+### Adding Custom Metadata for Logging
+
+```typescript
+// TypeScript
+const response = await latitude.run('prompt_id', {
+  parameters: {
+    query: "What's new in version 2.0?",
+    product: 'CloudManager Pro',
+  },
+  metadata: {
+    user_id: 'user_123',
+    session_id: 'session_456',
+    source: 'mobile_app',
+  },
+})
+```
+
+```python
+# Python
+response = latitude.run("prompt_id",
+    parameters={
+        "query": "What's new in version 2.0?",
+        "product": "CloudManager Pro"
+    },
+    metadata={
+        "user_id": "user_123",
+        "session_id": "session_456",
+        "source": "mobile_app"
+    }
+)
+```
+
+## 5. Trigger Evaluations Programmatically
+
+You can run evaluations on specific logs or datasets programmatically:
+
+```typescript
+// TypeScript
+const evaluation = await latitude.evaluations.run({
+  prompt_id: 'prompt_id',
+  evaluation_id: 'evaluation_id',
+  log_ids: ['log_id_1', 'log_id_2'],
+})
+
+console.log(`Evaluation started with job ID: ${evaluation.job_id}`)
+```
+
+```python
+# Python
+evaluation = latitude.evaluations.run(
+    prompt_id="prompt_id",
+    evaluation_id="evaluation_id",
+    log_ids=["log_id_1", "log_id_2"]
+)
+
+print(f"Evaluation started with job ID: {evaluation.job_id}")
+```
+
+## Next Steps
+
+Now that you've integrated Latitude into your code, you can:
+
+- Explore additional SDK capabilities in the [SDK Reference](/guides/sdk/typescript)
+- Learn about [Webhook integrations](/guides/api/webhooks) for event-driven workflows
+- Set up [automatic logging](/guides/logs/overview) from various AI libraries
+- Configure [custom API authentication](/guides/api/api-access) for your team

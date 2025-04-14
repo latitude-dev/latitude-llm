@@ -1,47 +1,53 @@
 ---
-title: Version control
-description: Latitude's version control system allows you to manage and track changes to your prompts over time.
+title: Version Control & Collaboration
+description: Manage prompt versions, track changes, and collaborate effectively with your team.
 ---
+
+Latitude includes built-in version control, allowing you to manage the lifecycle of your prompts, track changes over time, and collaborate effectively with your team.
 
 ## Key Concepts
 
-### Version
+- **Version**: A snapshot of all prompts within a project at a specific point in time.
+- **Draft**: A work-in-progress version where you can safely make and test changes without impacting the live, published version.
+- **Published Version**: The official, live version of your prompts that is served by the AI Gateway and used in production applications.
 
-A version represents a specific state of your project. It captures the content of all prompts at a particular point in time.
+## Managing Drafts and Versions
 
-### Drafts
+### Creating and Switching Drafts
 
-Drafts are work-in-progress versions that haven't been finalized yet. They allow you to make changes without affecting the main version of your project.
+1.  Open your project.
+2.  Click the version dropdown in the sidebar (usually shows "Published" or the current draft name).
+3.  Click "New version" to create a new draft based on the currently published version.
+4.  Alternatively, select an existing draft from the list to switch to it.
+5.  All changes made while in a draft are saved to that specific draft.
 
-Other users can see all versions and modify them.
+### Viewing and Comparing History
 
-### Published version
+1.  Click the version dropdown.
+2.  Select "Version history".
+3.  Here you can see a list of all published versions and drafts.
+4.  Select two versions to compare their differences side-by-side.
 
-Published versions are finalized versions that have been released into your app in production. They represent stable, approved states of your prompts.
+## Publishing Changes
 
-## Working with Version Control
+When a draft is ready to go live:
 
-### Creating a Draft
+1.  Make sure you are viewing the draft you want to publish.
+2.  Click the "Publish" button (often located near the version dropdown).
+3.  Add a descriptive version note (e.g., "Improved error handling for user queries"). This helps track changes.
+4.  Confirm the publish action.
 
-To start making changes:
+Your draft is now the new "Published" version, and the AI Gateway will start serving these updated prompts.
 
-1. Navigate to a project.
-1. Open the version dropdown in the sidebar.
-1. Click on the New version button to create a draft.
-    - Alternatively, you can click on View in an existing draft to open it.
-1. Once you are in a draft, you can make changes to your prompts.
+## Collaboration Tips
 
-### Publishing a version
+- **Use Drafts for Development**: Encourage team members to create drafts for new features or significant changes to avoid conflicts.
+- **Descriptive Version Notes**: Write clear notes when publishing to explain _what_ changed and _why_.
+- **Regular Publishing**: Publish stable changes regularly rather than keeping large, long-running drafts.
+- **Review Before Publishing**: Have a team member review changes in a draft before it goes live, especially for critical prompts.
+- **Utilize Comparison**: Use the diff view in version history to understand changes made by others.
 
-When you're ready to finalize your changes:
+## Next Steps
 
-1. Make sure you are in the version you want to publish.
-1. Click `Publish` in the sidebar.
-1. Confirm the publish and then your changes will be in production.
-
-## Best Practices
-
-- Review changes carefully before publishing.
-- Use drafts for experimental changes or work-in-progress features.
-
-By leveraging Latitude's version control system, you can confidently manage your prompts, collaborate with team members, and maintain a clear history of your project's evolution.
+- Learn about [Prompt Configuration](/guides/prompt-manager/configuration)
+- Test changes in the [Playground](/guides/prompt-manager/playground)

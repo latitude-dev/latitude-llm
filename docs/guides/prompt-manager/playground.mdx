@@ -1,92 +1,71 @@
 ---
-title: Playground
-description: Learn how to use the Prompt Playground
+title: Using the Playground
+description: Learn how to test and refine your prompts interactively in the Playground.
 ---
 
-## Overview
-
-The Prompt Playground is a powerful tool that allows you to test and refine your prompts before deploying them in your Latitude workspace. It provides a real-time preview of how your prompts will be executed, allowing you to fine-tune the configuration and content to achieve the desired results.
+The Prompt Playground is your interactive sandbox for testing, debugging, and refining prompts before deploying them. It lets you run prompts with different inputs, see the model's responses in real-time, and even test how your prompt interacts with tools.
 
 ![Prompt Playground](/assets/prompt_playground.png)
 
----
+## Running Single Inputs
 
-## Testing the Prompt
+1.  **Preview**: The main panel shows a preview of the messages that will be sent to the model, based on your prompt template and current parameter values.
+    ![Prompt Preview](/assets/prompt_preview.png)
+2.  **Parameters**: If your prompt uses input parameters (like `{{ topic }}`), they appear in the "Parameters" section. Fill in values here.
+    ![Parameters](/assets/prompt_parameters.png)
+3.  **Run**: Click "Run prompt". Latitude sends the request to the configured provider and model.
+4.  **Chat Mode**: The response appears, and the Playground enters Chat mode. You can continue the conversation turn by turn.
+    ![Chat Mode](/assets/prompt_chat.png)
+5.  **Reset**: Click "Reset Chat" to clear the conversation and run the prompt again from the beginning, potentially with new parameter values.
 
-In the Playground, you will see a Preview of your prompt messages in real-time, displayed in a conversation format. This allows you to see how the prompt will be executed and what roles each participant will play.
+## Parameter Input Methods
 
-![Prompt Preview](/assets/prompt_preview.png)
+You can populate parameters in several ways:
 
-You can run the prompt by clicking on the "Run prompt" button. This will send the displayed messages to your LLM provider and generate a response based on the configuration and content of the prompt, which will be included in the previewed conversation in real time.
-
-After running the prompt, the preview will enter in Chat mode, where you will be able to follow the conversation flow and interact with the assistant as if it were a real conversation.
-
-![Chat Mode](/assets/prompt_chat.png)
-
-To leave Chat mode and rerun the prompt, click on the "Reset Chat" button.
-
----
-
-## Parameters
-
-Your prompts can include input parameters that will be interpolated into the messages at runtime. This allows you to create dynamic prompts that can respond to user input or external data.
-
-[Learn more about using parameters in your prompts](/promptl/syntax/variables#input-parameters).
-
-When parameters are present in your prompt, they will automatically appear in the Parameters section of the Playground. Here, you can provide values for the parameters and run the prompt to see how they affect the conversation.
-
-![Parameters](/assets/prompt_parameters.png)
+- **Manual**: Type values directly into the fields.
+  ![Manual Parameters](/assets/parameters_manual.png)
+- **Dataset**: Load inputs from a [Dataset](/guides/datasets/overview). Each row becomes a separate test case. This is great for **batch testing**.
+  ![Dataset Parameters](/assets/parameters_dataset.png)
+- **History**: Reuse parameter values from previous runs.
+  ![History Parameters](/assets/parameters_history.png)
 
 ### Parameter Types
 
-Parameters can have different types. On the playground, and in shared prompts, this will affect how they are populated and interpolated into the messages. You can either change the parameter types in the configuration section of the prompt, or in the playground.
+Parameters can accept different input types, configured either in the prompt's [settings](/guides/prompt-manager/configuration#parameters) or directly in the Playground:
 
 ![Parameter Types](/assets/parameters_types.png)
 
-#### Text
+- **Text**: Standard text input (default).
+  ![Text Parameter](/assets/parameters_text.png)
+- **Image**: Upload an image file. Passed to the model as content (requires model support like GPT-4V, Claude 3). Use `<content-image>` tag in your prompt.
+  ![Image Parameter](/assets/parameters_image.png)
+- **File**: Upload any file type. Passed as content (requires model support). Use `<content-file>` tag.
+  ![File Parameter](/assets/parameters_file.png)
 
-Text parameters allow you to freely input text content.
+## Testing Tool Responses
 
-![Text Parameter](/assets/parameters_text.png)
+If your prompt uses [Tools](/guides/prompt-manager/tools), the Playground allows you to simulate their responses:
 
-#### Image
+1.  **Run the prompt**: Initiate the prompt run as usual.
+2.  **Tool Call Request**: If the model decides to call a tool, the Playground will pause and display the requested tool call and its arguments.
+    ![Tool Call Request](/assets/playground-tool-call.png)
+3.  **Mock Response**: Enter the JSON response you want the tool to _pretend_ to return.
+    ![Mock Tool Response](/assets/playground-mock-response.png)
+4.  **Continue**: Click "Send message". Latitude sends the mocked tool response back to the model, which then continues its generation process based on that simulated information.
 
-Image parameters allow you to upload an image. The image will be passed to the LLM as a URL. Parameters should be used within a `<content-image>` tag.
+This allows you to test the logic of your prompt's interaction with tools without needing to execute the actual tool functions.
 
-Image type support depends on your provider. However, these are common supported types:
+## Viewing Logs in the Playground
 
-- `jpg`
-- `jpeg`
-- `png`
-- `gif`
-- `webp`
+Every run in the Playground generates a log entry. You can quickly access the detailed log for the current run:
 
-![Image Parameter](/assets/parameters_image.png)
+1.  Click the "Logs" icon or link within the Playground interface (location may vary slightly).
+2.  This opens the detailed log view, showing inputs, outputs, metadata, timings, and any evaluation results associated with that specific run.
 
-#### File
+This provides immediate feedback and traceability for debugging.
 
-File parameters allow you to upload any file. The file will be passed to the LLM as a URL. Parameters should be used within a `<content-file>` tag.
+## Next Steps
 
-File type support depends on your provider.
-
-![File Parameter](/assets/parameters_file.png)
-
-### Populating Parameters
-
-There are three ways to populate the parameters.
-
-#### Manual
-
-Manually enter values for the parameters in the input fields.
-![Manual Parameters](/assets/parameters_manual.png)
-
-#### Dataset
-
-Load data from a dataset to populate the parameters, where each row in the dataset corresponds to a set of values for the parameters.
-![Dataset Parameters](/assets/parameters_dataset.png)
-[Learn more about using datasets in Latitude](/guides/datasets/overview)
-
-#### History
-
-Load values from previous runs of the prompt to populate the parameters.
-![History Parameters](/assets/parameters_history.png)
+- Learn about [Prompt Configuration](/guides/prompt-manager/configuration)
+- Manage changes using [Version Control](/guides/prompt-manager/version-control)
+- Explore how to use [Tools](/guides/prompt-manager/tools) in your prompts

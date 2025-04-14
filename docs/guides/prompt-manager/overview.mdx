@@ -1,55 +1,59 @@
 ---
-title: Prompt Editor
-description: Learn about the powerful features of the Latitude prompt editor.
+title: Prompt Editor 101
+description: Learn the basics of writing and managing prompts in the Latitude editor.
 ---
 
-## Overview
-
-The Latitude prompt editor allows you to define and structure your prompts with precision.
+The Latitude Prompt Editor is your central hub for designing, testing, and managing AI prompts. It provides a powerful interface built around **PromptL**, our specialized language for creating dynamic and structured prompts.
 
 ![Prompt Editor](/assets/prompt_editor.png)
 
-The editor allows to define prompts using [PromptL](/promptl/getting-started/introduction), a simple and intuitive language that enables you to create dynamic yet easy-to-understand prompts.
+## Writing a Prompt using PromptL
 
-## Syntax
+At its core, the editor lets you write prompts using [PromptL syntax](/promptl/syntax/structure). This includes:
 
-The language syntax is easy to understand and use, making it simple to create dynamic and engaging prompts. However, it also supports advanced features like parameters, snippets, and logic to create more complex and dynamic prompts.
-
-To learn more about it, take a look at the [PromptL documentation](/promptl/getting-started/introduction):
-
-- [Structure](/promptl/syntax/structure)
-- [Messages](/promptl/syntax/messages)
-- [Configuration](/guides/prompt-manager/configuration)
-- [Variables](/promptl/syntax/variables)
-- [Conditional statements](/promptl/syntax/conditionals)
-- [Loops and Iteration](/promptl/syntax/loops)
-- [Snippets and references](/promptl/advanced/snippets)
-- [Chains and Steps](/promptl/advanced/chains)
-
----
-
-### Example of a Prompt
+- **Configuration Block**: Define provider, model, and settings in the YAML frontmatter.
+- **Messages**: Structure conversations using `<system>`, `<user>`, and `<assistant>` tags.
+- **Advanced Features**: Utilize loops, conditionals, snippets, and more for complex logic.
 
 ```markdown
 ---
 provider: openai
 model: gpt-4o
+temperature: 0.7
 ---
 
 <system>
-  <prompt path="system_instructions" />
+You are a helpful assistant.
 </system>
 
 <user>
-  Hello, I'd like to know about {{ topic }}.
-</user>
-
-<assistant>
-  Certainly! I'd be happy to provide information about {{ topic }}. What
-  specific aspect would you like to know?
-</assistant>
-
-<user>
-  Tell me about its history.
+Tell me a joke about {{ topic }}.
 </user>
 ```
+
+Explore the full power of PromptL in the [PromptL Syntax documentation](/promptl/syntax/structure).
+
+## Adding Parameters and Variables
+
+Make your prompts dynamic by using variables:
+
+- **Input Parameters**: Define placeholders like `{{ topic }}` in your prompt. These are filled in via the Playground or API calls.
+- **Internal Variables**: Use `<var>` tags to define variables within your prompt logic.
+
+Learn more about [Variables in PromptL](/promptl/syntax/variables).
+
+Input parameters will automatically appear in the [Playground](/guides/prompt-manager/playground) for easy testing.
+
+## Collaborating in the Editor
+
+Latitude is built for teamwork:
+
+- **Version Control**: Manage changes using drafts and published versions. See the [Version Control guide](/guides/prompt-manager/version-control) for details.
+- **Shared Workspace**: Team members can view and edit prompts within the same project.
+- **Comments (Coming Soon)**: Add comments directly within the editor for feedback and discussion.
+
+## Next Steps
+
+- Learn how to [Configure Prompt Settings](/guides/prompt-manager/configuration)
+- Test your prompts in the [Playground](/guides/prompt-manager/playground)
+- Manage changes with [Version Control](/guides/prompt-manager/version-control)
