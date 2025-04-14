@@ -20,7 +20,7 @@ export type PromisedResult<F, E extends Error = Error> = Promise<
 
 const DB_ERROR_CODES = {
   UNIQUE_VIOLATION: '23505',
-  INPUT_SYTAXT_ERROR: '22P02',
+  INPUT_SYNTAX_ERROR: '22P02',
   TRANSACTION_ABORTED: '25P02',
 }
 
@@ -59,8 +59,12 @@ export default class Transaction {
     switch (code) {
       case DB_ERROR_CODES.UNIQUE_VIOLATION:
         return Result.error(new ConflictError((error as DatabaseError).message))
-      case DB_ERROR_CODES.INPUT_SYTAXT_ERROR:
-        return Result.error(new UnprocessableEntityError('Invalid input', {}))
+      case DB_ERROR_CODES.INPUT_SYNTAX_ERROR:
+        return Result.error(
+          new UnprocessableEntityError((error as DatabaseError).message, {
+            details: (error as DatabaseError).message,
+          }),
+        )
       default:
         return Result.error(error as Error)
     }
