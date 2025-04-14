@@ -27,13 +27,14 @@ import {
   ResultRowHeadersProps,
 } from '../index'
 import LlmEvaluationBinarySpecification from './Binary'
+import LlmEvaluationRatingSpecification from './Rating'
 
 // prettier-ignore
 const METRICS: {
   [M in LlmEvaluationMetric]: EvaluationMetricFrontendSpecification<EvaluationType.Llm, M>
 } = {
   [LlmEvaluationMetric.Binary]: LlmEvaluationBinarySpecification,
-  [LlmEvaluationMetric.Rating]: undefined as any, // TODO(evalsv2): Implement
+  [LlmEvaluationMetric.Rating]: LlmEvaluationRatingSpecification,
   [LlmEvaluationMetric.Comparison]: undefined as any, // TODO(evalsv2): Implement
   [LlmEvaluationMetric.Custom]: undefined as any, // TODO(evalsv2): Implement
 }

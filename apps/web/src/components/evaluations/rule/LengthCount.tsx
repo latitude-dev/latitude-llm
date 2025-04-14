@@ -4,6 +4,7 @@ import {
   RuleEvaluationLengthCountSpecification,
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
+import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
@@ -53,38 +54,41 @@ function ConfigurationForm({
         disabled={disabled}
         required
       />
-      <NumberInput
-        value={configuration.minLength ?? undefined}
-        name='minLength'
-        label='Minimum length'
-        description='The minimum length of the response'
-        placeholder='No minimum'
-        min={0}
-        onChange={(value) =>
-          setConfiguration({ ...configuration, minLength: value })
-        }
-        errors={errors?.['minLength']}
-        defaultAppearance
-        className='w-full'
-        disabled={disabled}
-        required
-      />
-      <NumberInput
-        value={configuration.maxLength ?? undefined}
-        name='maxLength'
-        label='Maximum length'
-        description='The maximum length of the response'
-        placeholder='No maximum'
-        min={0}
-        onChange={(value) =>
-          setConfiguration({ ...configuration, maxLength: value })
-        }
-        errors={errors?.['maxLength']}
-        defaultAppearance
-        className='w-full'
-        disabled={disabled}
-        required
-      />
+      <FormFieldGroup
+        layout='horizontal'
+        description='The minimum and maximum length of the response'
+      >
+        <NumberInput
+          value={configuration.minLength ?? undefined}
+          name='minLength'
+          label='Minimum length'
+          placeholder='No minimum'
+          min={0}
+          onChange={(value) =>
+            setConfiguration({ ...configuration, minLength: value })
+          }
+          errors={errors?.['minLength']}
+          defaultAppearance
+          className='w-full'
+          disabled={disabled}
+          required
+        />
+        <NumberInput
+          value={configuration.maxLength ?? undefined}
+          name='maxLength'
+          label='Maximum length'
+          placeholder='No maximum'
+          min={0}
+          onChange={(value) =>
+            setConfiguration({ ...configuration, maxLength: value })
+          }
+          errors={errors?.['maxLength']}
+          defaultAppearance
+          className='w-full'
+          disabled={disabled}
+          required
+        />
+      </FormFieldGroup>
     </>
   )
 }
@@ -116,6 +120,6 @@ function chartConfiguration({
     format: (point: number, short?: boolean) =>
       short
         ? `${formatCount(point)}`
-        : `${formatCount(point)} ${evaluation.configuration.algorithm}s`,
+        : `${point.toFixed(2)} ${evaluation.configuration.algorithm}s`,
   }
 }

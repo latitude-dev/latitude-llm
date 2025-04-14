@@ -1,9 +1,11 @@
 'use client'
+
 import {
   EvaluationType,
   RuleEvaluationMetric,
   RuleEvaluationSemanticSimilaritySpecification,
 } from '@latitude-data/constants'
+import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { useEffect } from 'react'
@@ -60,40 +62,43 @@ function ConfigurationForm({
         disabled={disabled}
         required
       /> */}
-      <NumberInput
-        value={configuration.minSimilarity ?? undefined}
-        name='minSimilarity'
-        label='Minimum similarity'
-        description='The minimum percentage of similarity of the response'
-        placeholder='No minimum'
-        min={0}
-        max={100}
-        onChange={(value) =>
-          setConfiguration({ ...configuration, minSimilarity: value })
-        }
-        errors={errors?.['minSimilarity']}
-        defaultAppearance
-        className='w-full'
-        disabled={disabled}
-        required
-      />
-      <NumberInput
-        value={configuration.maxSimilarity ?? undefined}
-        name='maxSimilarity'
-        label='Maximum similarity'
-        description='The maximum percentage of similarity of the response'
-        placeholder='No maximum'
-        min={0}
-        max={100}
-        onChange={(value) =>
-          setConfiguration({ ...configuration, maxSimilarity: value })
-        }
-        errors={errors?.['maxSimilarity']}
-        defaultAppearance
-        className='w-full'
-        disabled={disabled}
-        required
-      />
+      <FormFieldGroup
+        layout='horizontal'
+        description='The minimum and maximum percentage of similarity of the response'
+      >
+        <NumberInput
+          value={configuration.minSimilarity ?? undefined}
+          name='minSimilarity'
+          label='Minimum similarity'
+          placeholder='No minimum'
+          min={0}
+          max={100}
+          onChange={(value) =>
+            setConfiguration({ ...configuration, minSimilarity: value })
+          }
+          errors={errors?.['minSimilarity']}
+          defaultAppearance
+          className='w-full'
+          disabled={disabled}
+          required
+        />
+        <NumberInput
+          value={configuration.maxSimilarity ?? undefined}
+          name='maxSimilarity'
+          label='Maximum similarity'
+          placeholder='No maximum'
+          min={0}
+          max={100}
+          onChange={(value) =>
+            setConfiguration({ ...configuration, maxSimilarity: value })
+          }
+          errors={errors?.['maxSimilarity']}
+          defaultAppearance
+          className='w-full'
+          disabled={disabled}
+          required
+        />
+      </FormFieldGroup>
     </>
   )
 }

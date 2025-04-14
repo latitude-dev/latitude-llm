@@ -8,12 +8,44 @@ import {
   LlmEvaluationMetric,
   LogSources,
   ProviderApiKey,
+  Providers,
   Workspace,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { ProviderLogsRepository } from '../../../repositories'
 import { runChain } from '../../chains/run'
+
+export function promptTask({ provider }: { provider: ProviderApiKey }) {
+  return `
+${provider.provider === Providers.Anthropic ? '<user>' : ''}
+
+Based on the given instructions, evaluate the assistant response:
+\`\`\`
+{{ actualOutput }}
+\`\`\`
+
+For context, here is the full conversation:
+\`\`\`
+{{ conversation }}
+\`\`\`
+
+{{if toolCalls }}
+  Also, here are the tool calls that the assistant requested:
+  \`\`\`
+  {{toolCalls}}
+  \`\`\`
+{{endif}}
+
+{{if cost || duration }}
+  Also, here is some additional metadata about the conversation. It may or may not be relevant for the evaluation.
+  {{if cost }} - Cost: {{ cost }} cents. {{endif}}
+  {{if duration }} - Duration: {{ duration }} milliseconds. {{endif}}
+{{endif}}
+
+${provider.provider === Providers.Anthropic ? '</user>' : ''}
+`.trim()
+}
 
 export async function runPrompt<
   M extends LlmEvaluationMetric,

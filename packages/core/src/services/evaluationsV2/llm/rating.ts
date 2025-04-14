@@ -7,7 +7,7 @@ import {
   formatConversation,
   LlmEvaluationMetric,
   ProviderApiKey,
-  LlmEvaluationBinarySpecification as specification,
+  LlmEvaluationRatingSpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
@@ -22,7 +22,7 @@ import {
 } from '../shared'
 import { promptTask, runPrompt } from './shared'
 
-export const LlmEvaluationBinarySpecification = {
+export const LlmEvaluationRatingSpecification = {
   ...specification,
   validate: validate,
   run: run,
@@ -33,7 +33,7 @@ async function validate(
     configuration,
   }: EvaluationMetricValidateArgs<
     EvaluationType.Llm,
-    LlmEvaluationMetric.Binary
+    LlmEvaluationMetric.Rating
   >,
   _: Database = database,
 ) {
@@ -41,12 +41,58 @@ async function validate(
     return Result.error(new BadRequestError('Criteria is required'))
   }
 
-  if (!configuration.passDescription) {
-    return Result.error(new BadRequestError('Pass description is required'))
+  if (configuration.minRating >= configuration.maxRating) {
+    return Result.error(
+      new BadRequestError('Minimum rating must be less than maximum rating'),
+    )
   }
 
-  if (!configuration.failDescription) {
-    return Result.error(new BadRequestError('Fail description is required'))
+  if (!configuration.minRatingDescription) {
+    return Result.error(
+      new BadRequestError('Minimum rating description is required'),
+    )
+  }
+
+  if (!configuration.maxRatingDescription) {
+    return Result.error(
+      new BadRequestError('Maximum rating description is required'),
+    )
+  }
+
+  if (
+    configuration.minThreshold !== undefined &&
+    (configuration.minThreshold < configuration.minRating ||
+      configuration.minThreshold > configuration.maxRating)
+  ) {
+    return Result.error(
+      new BadRequestError(
+        `Minimum threshold must be a number between ${configuration.minRating} and ${configuration.maxRating}`,
+      ),
+    )
+  }
+
+  if (
+    configuration.maxThreshold !== undefined &&
+    (configuration.maxThreshold < configuration.minRating ||
+      configuration.maxThreshold > configuration.maxRating)
+  ) {
+    return Result.error(
+      new BadRequestError(
+        `Maximum threshold must be a number between ${configuration.minRating} and ${configuration.maxRating}`,
+      ),
+    )
+  }
+
+  if (
+    configuration.minThreshold !== undefined &&
+    configuration.maxThreshold !== undefined &&
+    configuration.minThreshold >= configuration.maxThreshold
+  ) {
+    return Result.error(
+      new BadRequestError(
+        'Minimum threshold must be less than maximum threshold',
+      ),
+    )
   }
 
   // Note: all settings are explicitly returned to ensure we don't
@@ -56,48 +102,53 @@ async function validate(
     provider: configuration.provider,
     model: configuration.model,
     criteria: configuration.criteria,
-    passDescription: configuration.passDescription,
-    failDescription: configuration.failDescription,
+    minRating: configuration.minRating,
+    minRatingDescription: configuration.minRatingDescription,
+    maxRating: configuration.maxRating,
+    maxRatingDescription: configuration.maxRatingDescription,
+    minThreshold: configuration.minThreshold,
+    maxThreshold: configuration.maxThreshold,
   })
 }
-
-const promptSchema = z.object({
-  passed: z.boolean(),
-  reason: z.string(),
-})
 
 function buildPrompt({
   provider,
   model,
+  schema,
   criteria,
-  passDescription,
-  failDescription,
+  minRating,
+  minRatingDescription,
+  maxRating,
+  maxRatingDescription,
 }: {
   provider: ProviderApiKey
   model: string
+  schema: z.ZodSchema
   criteria: string
-  passDescription: string
-  failDescription: string
+  minRating: number
+  minRatingDescription: string
+  maxRating: number
+  maxRatingDescription: string
 }) {
   return `
 ---
 provider: ${provider.name}
 model: ${model}
 temperature: 0.7
-${yaml.dump({ schema: zodToJsonSchema(promptSchema, { target: 'openAi' }) })}
+${yaml.dump({ schema: zodToJsonSchema(schema, { target: 'openAi' }) })}
 ---
 
 You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), meets the following criteria:
 ${criteria}
 
-The resulting verdict is \`true\` if the response meets the criteria, \`false\` otherwise, where:
-- \`true\` represents "${passDescription}"
-- \`false\` represents "${failDescription}"
+The resulting verdict is a number between \`${minRating}\`, if the response does not meet the criteria, and \`${maxRating}\` otherwise, where:
+- \`${minRating}\` represents "${minRatingDescription}"
+- \`${maxRating}\` represents "${maxRatingDescription}"
 
 ${promptTask({ provider })}
 
 You must give your verdict as a single JSON object with the following properties:
-- passed (boolean): \`true\` if the response meets the criteria, \`false\` otherwise
+- rating (number): A number between \`${minRating}\` and \`${maxRating}\`
 - reason (string): A string explaining your evaluation decision.
 `.trim()
 }
@@ -111,7 +162,7 @@ async function run(
     documentLog,
     providers,
     workspace,
-  }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Binary>,
+  }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Rating>,
   db: Database = database,
 ) {
   try {
@@ -135,8 +186,20 @@ async function run(
       db,
     ).then((r) => r.unwrap())
 
+    const promptSchema = z.object({
+      rating: z
+        .number()
+        .min(metadata.configuration.minRating)
+        .max(metadata.configuration.maxRating),
+      reason: z.string(),
+    })
+
     const { response, stats, verdict } = await runPrompt({
-      prompt: buildPrompt({ ...metadata.configuration, provider }),
+      prompt: buildPrompt({
+        ...metadata.configuration,
+        schema: promptSchema,
+        provider: provider,
+      }),
       parameters: {
         ...evaluatedLog,
         actualOutput: actualOutput,
@@ -155,14 +218,32 @@ async function run(
     metadata.cost = stats.costInMillicents
     metadata.duration = stats.duration
 
-    const score = verdict.passed ? 1 : 0
+    const score = Math.min(
+      Math.max(
+        Number(verdict.rating.toFixed(0)),
+        metadata.configuration.minRating,
+      ),
+      metadata.configuration.maxRating,
+    )
 
-    let normalizedScore = normalizeScore(score, 0, 1)
-    let hasPassed = score === 1
+    let normalizedScore = normalizeScore(
+      score,
+      metadata.configuration.minRating,
+      metadata.configuration.maxRating,
+    )
     if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, 1, 0)
-      hasPassed = score === 0
+      normalizedScore = normalizeScore(
+        score,
+        metadata.configuration.maxRating,
+        metadata.configuration.minRating,
+      )
     }
+
+    const minThreshold =
+      metadata.configuration.minThreshold ?? metadata.configuration.minRating
+    const maxThreshold =
+      metadata.configuration.maxThreshold ?? metadata.configuration.maxRating
+    const hasPassed = score >= minThreshold && score <= maxThreshold
 
     return { score, normalizedScore, metadata, hasPassed }
   } catch (error) {

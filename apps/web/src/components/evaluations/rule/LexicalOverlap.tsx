@@ -3,6 +3,7 @@ import {
   RuleEvaluationLexicalOverlapSpecification,
   RuleEvaluationMetric,
 } from '@latitude-data/constants'
+import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
@@ -52,40 +53,43 @@ function ConfigurationForm({
         disabled={disabled}
         required
       />
-      <NumberInput
-        value={configuration.minOverlap ?? undefined}
-        name='minOverlap'
-        label='Minimum overlap'
-        description='The minimum percentage of overlap of the response'
-        placeholder='No minimum'
-        min={0}
-        max={100}
-        onChange={(value) =>
-          setConfiguration({ ...configuration, minOverlap: value })
-        }
-        errors={errors?.['minOverlap']}
-        defaultAppearance
-        className='w-full'
-        disabled={disabled}
-        required
-      />
-      <NumberInput
-        value={configuration.maxOverlap ?? undefined}
-        name='maxOverlap'
-        label='Maximum overlap'
-        description='The maximum percentage of overlap of the response'
-        placeholder='No maximum'
-        min={0}
-        max={100}
-        onChange={(value) =>
-          setConfiguration({ ...configuration, maxOverlap: value })
-        }
-        errors={errors?.['maxOverlap']}
-        defaultAppearance
-        className='w-full'
-        disabled={disabled}
-        required
-      />
+      <FormFieldGroup
+        layout='horizontal'
+        description='The minimum and maximum percentage of overlap of the response'
+      >
+        <NumberInput
+          value={configuration.minOverlap ?? undefined}
+          name='minOverlap'
+          label='Minimum overlap'
+          placeholder='No minimum'
+          min={0}
+          max={100}
+          onChange={(value) =>
+            setConfiguration({ ...configuration, minOverlap: value })
+          }
+          errors={errors?.['minOverlap']}
+          defaultAppearance
+          className='w-full'
+          disabled={disabled}
+          required
+        />
+        <NumberInput
+          value={configuration.maxOverlap ?? undefined}
+          name='maxOverlap'
+          label='Maximum overlap'
+          placeholder='No maximum'
+          min={0}
+          max={100}
+          onChange={(value) =>
+            setConfiguration({ ...configuration, maxOverlap: value })
+          }
+          errors={errors?.['maxOverlap']}
+          defaultAppearance
+          className='w-full'
+          disabled={disabled}
+          required
+        />
+      </FormFieldGroup>
     </>
   )
 }
