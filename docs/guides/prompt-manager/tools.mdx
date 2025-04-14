@@ -22,19 +22,19 @@ tools:
   - latitude/search # Use a built-in Latitude tool
   - get_weather # Use a custom tool defined below
 
-# Custom tool definition (see below)
-get_weather:
-  description: Get the current weather for a specified location.
-  parameters: # JSON Schema for parameters
-    type: object
-    properties:
-      location:
-        type: string
-        description: The city and state, e.g., San Francisco, CA
-    required: [location]
+  # Custom tool definition (see below)
+  - get_weather:
+      description: Get the current weather for a specified location.
+      parameters: # JSON Schema for parameters
+        type: object
+        properties:
+          location:
+            type: string
+            description: The city and state, e.g., San Francisco, CA
+        required: [location]
 ---
 <user>
-What's the weather like in {{ location }}?
+  What's the weather like in {{ location }}?
 </user>
 ```
 
@@ -64,18 +64,18 @@ tools:
   - get_stock_price # Enable the custom tool
 
 # Define the custom tool
-get_stock_price:
-  description: Retrieves the current stock price for a given ticker symbol.
-  parameters:
-    type: object
-    properties:
-      ticker_symbol:
-        type: string
-        description: The stock ticker symbol (e.g., AAPL, GOOGL).
-    required: [ticker_symbol]
+  - get_stock_price:
+      description: Retrieves the current stock price for a given ticker symbol.
+      parameters:
+        type: object
+        properties:
+          ticker_symbol:
+            type: string
+            description: The stock ticker symbol (e.g., AAPL, GOOGL).
+        required: [ticker_symbol]
 ---
 <user>
-What is the current price of {{ ticker }} stock?
+  What is the current price of {{ ticker }} stock?
 </user>
 ```
 

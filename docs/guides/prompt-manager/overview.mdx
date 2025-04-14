@@ -35,10 +35,11 @@ Explore the full power of PromptL in the [PromptL Syntax documentation](/promptl
 
 ## Adding Parameters and Variables
 
-Make your prompts dynamic by using variables:
+Make your prompts dynamic by using variables and parameters:
 
-- **Input Parameters**: Define placeholders like `{{ topic }}` in your prompt. These are filled in via the Playground or API calls.
-- **Internal Variables**: Use `<var>` tags to define variables within your prompt logic.
+Define placeholders like `{{ topic }}` in your prompt. You can use, read, and write data from these variables all over your prompt.
+All variables defined in the prompt without a value are automatically added as **Input Parameters**, which can be filled in via the
+Playground or API calls.
 
 Learn more about [Variables in PromptL](/promptl/syntax/variables).
 
@@ -50,7 +51,7 @@ Latitude is built for teamwork:
 
 - **Version Control**: Manage changes using drafts and published versions. See the [Version Control guide](/guides/prompt-manager/version-control) for details.
 - **Shared Workspace**: Team members can view and edit prompts within the same project.
-- **Comments (Coming Soon)**: Add comments directly within the editor for feedback and discussion.
+- **Comments**: Add `/* comments */` directly within the editor for feedback and discussion.
 
 ## Next Steps
 

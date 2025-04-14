@@ -22,14 +22,15 @@ Unlike simple prompts or even [Chains](/promptl/advanced/chains) which follow pr
 
 To turn a prompt into an Agent, simply add `type: agent` to its configuration block:
 
-```markdown
+```markdown {4}
 ---
 provider: openai
 model: gpt-4o
-type: agent # Enable agent mode
+type: agent
 ---
 
-Plan and execute the steps needed to research and write a short blog post about the benefits of using Latitude Agents.
+Plan and execute the steps needed to research and write
+a short blog post about the benefits of using Latitude Agents.
 ```
 
 ## How the Agent Loop Works
@@ -62,11 +63,11 @@ tools:
   - get_weather
   - get_location_id
 
-# Tool definitions...
-get_weather:
-  # ... definition
-get_location_id:
-  # ... definition
+  # Tool definitions...
+  - get_weather:
+      # ... definition
+  - get_location_id:
+      # ... definition
 ---
 
 Find the current weather for {{ location_name }}.

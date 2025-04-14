@@ -9,7 +9,7 @@ description: Common questions about Anthropic provider
 
 To do this, add `cacheControl: true` to the front matter of your prompt.
 
-```markdown
+```markdown {4}
 ---
 provider: name-of-your-antropic-provider-in-latitude
 model: claude-3-5-sonnet-20241022
@@ -19,7 +19,7 @@ cacheControl: true
 
 Once this is set up, you can start caching specific parts of the prompt:
 
-```
+```markdown {4}
 <system>This part of the text is not cached</system>
 <system>
   Read this large book and answer users' questions.
@@ -27,11 +27,11 @@ Once this is set up, you can start caching specific parts of the prompt:
     ...BIG_BOOK_CONTENT...
   </text>
 </system>
-````
+```
 
 If you want an entire message to be cached, add the cache directive to the `user`, `assistant`, or `system` tags:
 
-```
+```markdown {1}
 <user cache_control={{ { type: 'ephemeral' } }}>
   This text will be cached.
   <text>
@@ -40,4 +40,3 @@ If you want an entire message to be cached, add the cache directive to the `user
   And this text as well.
 </user>
 ```
-
