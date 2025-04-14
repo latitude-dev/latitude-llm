@@ -54,8 +54,8 @@ from latitude import LatitudeClient
 
 latitude = LatitudeClient(
     api_key="your_api_key",
-    // For self-hosted instances, specify the base_url
-    // base_url="https://your-latitude-instance.com/api",
+    # For self-hosted instances, specify the base_url
+    # base_url="https://your-latitude-instance.com/api",
 )
 ```
 
@@ -63,8 +63,8 @@ latitude = LatitudeClient(
 
 ### Creating a New Prompt
 
-```typescript
-// TypeScript
+<CodeGroup>
+```typescript TypeScript
 const prompt = await latitude.prompts.create({
   name: 'Customer Support Assistant',
   content: `
@@ -81,37 +81,39 @@ const prompt = await latitude.prompts.create({
 console.log(`Created prompt with ID: ${prompt.id}`)
 ```
 
-```python
-# Python
+```python Python
 prompt = latitude.prompts.create(
-    name="Customer Support Assistant",
-    content="""
+  name="Customer Support Assistant",
+  content=f"""
     You are a helpful customer support assistant for a software company.
 
-    Customer query: ${query}
-    Product: ${product}
+    Customer query: {query}
+    Product: {product}
 
     Provide a helpful, friendly response that addresses the customer's question.
     Include relevant product details when necessary.
-    """,
+  """,
 )
 
 print(f"Created prompt with ID: {prompt.id}")
 ```
 
+</CodeGroup>
+
 ### Fetching an Existing Prompt
 
-```typescript
-// TypeScript
+<CodeGroup>
+```typescript TypeScript
 const prompt = await latitude.prompts.get('prompt_id')
 console.log(`Fetched prompt: ${prompt.name}`)
 ```
 
-```python
-# Python
+```python Python
 prompt = latitude.prompts.get("prompt_id")
 print(f"Fetched prompt: {prompt.name}")
 ```
+
+</CodeGroup>
 
 ## 3. Run a Prompt Through the Gateway
 
@@ -119,8 +121,8 @@ Once you have a prompt, you can run it either by ID or directly:
 
 ### Running by Prompt ID
 
-```typescript
-// TypeScript
+<CodeGroup>
+```typescript TypeScript
 const response = await latitude.run('prompt_id', {
   parameters: {
     query: 'How do I reset my password?',
@@ -131,8 +133,7 @@ const response = await latitude.run('prompt_id', {
 console.log(response.content)
 ```
 
-```python
-# Python
+```python Python
 response = latitude.run("prompt_id",
     parameters={
         "query": "How do I reset my password?",
@@ -143,10 +144,12 @@ response = latitude.run("prompt_id",
 print(response.content)
 ```
 
+</CodeGroup>
+
 ### Running with Direct Content
 
-```typescript
-// TypeScript
+<CodeGroup>
+```typescript TypeScript
 const response = await latitude.completion({
   prompt: 'Summarize the following in 3 bullet points: ${text}',
   parameters: {
@@ -162,8 +165,7 @@ const response = await latitude.completion({
 console.log(response.content)
 ```
 
-```python
-# Python
+```python Python
 response = latitude.completion(
     prompt="Summarize the following in 3 bullet points: ${text}",
     parameters={
@@ -179,12 +181,14 @@ response = latitude.completion(
 print(response.content)
 ```
 
+</CodeGroup>
+
 ## 4. Use Streaming Results and Logging
 
 ### Handling Streaming Responses
 
-```typescript
-// TypeScript
+<CodeGroup>
+```typescript TypeScript
 const stream = await latitude.run('prompt_id', {
   parameters: {
     query: 'How do I integrate your API?',
@@ -198,8 +202,7 @@ for await (const chunk of stream) {
 }
 ```
 
-```python
-# Python
+```python Python
 stream = latitude.run("prompt_id",
     parameters={
         "query": "How do I integrate your API?",
@@ -210,12 +213,15 @@ stream = latitude.run("prompt_id",
 
 for chunk in stream:
     print(chunk.content, end="")
+
 ```
+
+</CodeGroup>
 
 ### Adding Custom Metadata for Logging
 
-```typescript
-// TypeScript
+<CodeGroup>
+```typescript TypeScript
 const response = await latitude.run('prompt_id', {
   parameters: {
     query: "What's new in version 2.0?",
@@ -229,8 +235,7 @@ const response = await latitude.run('prompt_id', {
 })
 ```
 
-```python
-# Python
+```python Python
 response = latitude.run("prompt_id",
     parameters={
         "query": "What's new in version 2.0?",
@@ -244,12 +249,14 @@ response = latitude.run("prompt_id",
 )
 ```
 
+</CodeGroup>
+
 ## 5. Trigger Evaluations Programmatically
 
 You can run evaluations on specific logs or datasets programmatically:
 
-```typescript
-// TypeScript
+<CodeGroup>
+```typescript TypeScript
 const evaluation = await latitude.evaluations.run({
   prompt_id: 'prompt_id',
   evaluation_id: 'evaluation_id',
@@ -259,8 +266,7 @@ const evaluation = await latitude.evaluations.run({
 console.log(`Evaluation started with job ID: ${evaluation.job_id}`)
 ```
 
-```python
-# Python
+```python Python
 evaluation = latitude.evaluations.run(
     prompt_id="prompt_id",
     evaluation_id="evaluation_id",
@@ -269,6 +275,8 @@ evaluation = latitude.evaluations.run(
 
 print(f"Evaluation started with job ID: {evaluation.job_id}")
 ```
+
+</CodeGroup>
 
 ## Next Steps
 
