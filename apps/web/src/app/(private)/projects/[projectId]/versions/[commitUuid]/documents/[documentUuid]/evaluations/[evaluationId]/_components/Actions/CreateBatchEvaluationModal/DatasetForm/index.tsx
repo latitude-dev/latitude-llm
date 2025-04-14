@@ -283,15 +283,16 @@ export default function DatasetForm({
             )
           ) : null}
         </NumeredList.Item>
-        <NumeredList.Item
-          title={`Select the column that contains the expected output (${specification?.requiresExpectedOutput ? 'REQUIRED' : 'OPTIONAL'})`}
-          width='w-1/2'
-        >
-          {selectedDataset ? (
+
+        {selectedDataset && labels ? (
+          <NumeredList.Item
+            title={`Select the column that contains the expected output (${specification?.requiresExpectedOutput ? 'REQUIRED' : 'OPTIONAL'})`}
+            width='w-1/2'
+          >
             <div className='flex flex-col gap-y-3'>
               <Select
                 name='datasetLabel'
-                disabled={labels!.length === 0}
+                disabled={labels.length === 0}
                 errors={errors?.datasetLabel}
                 options={labels!}
                 value={datasetLabel!}
@@ -299,8 +300,8 @@ export default function DatasetForm({
                 placeholder='No expected output'
               />
             </div>
-          ) : null}
-        </NumeredList.Item>
+          </NumeredList.Item>
+        ) : null}
       </NumeredList>
     </>
   )
