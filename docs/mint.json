@@ -110,7 +110,8 @@
           "group": "Latitude SDK",
           "pages": [
             "guides/sdk/typescript",
-            "guides/sdk/python"
+            "guides/sdk/python",
+            "guides/cookbook/overview"
           ]
         },
         {
