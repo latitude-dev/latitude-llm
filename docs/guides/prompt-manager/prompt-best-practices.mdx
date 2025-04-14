@@ -75,17 +75,15 @@ schema:
       description: The full email body, formatted professionally.
   required: [subject, body]
 tools:
-  - get_customer_details
-
-get_customer_details:
-  description: Retrieves customer details based on email address.
-  parameters:
-    type: object
-    properties:
-      email:
-        type: string
-        description: The customer's email address.
-    required: [email]
+  - get_customer_details:
+      description: Retrieves customer details based on email address.
+      parameters:
+        type: object
+        properties:
+          email:
+            type: string
+            description: The customer's email address.
+        required: [email]
 ---
 
 <system>
