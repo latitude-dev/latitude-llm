@@ -13,206 +13,362 @@ The Latitude Python SDK allows you to easily interact with the Latitude platform
 pip install latitude-sdk
 ```
 
+## Requirements
+
+Python 3.9 or higher is required to use the Latitude SDK.
+
 ## Authentication and Initialization
 
-Import the client and initialize it with your API key. Obtain keys from your Latitude project settings under "API Access".
+Import the SDK and initialize it with your API key. You can generate API keys in your Latitude project settings under "API Access".
 
 ```python
-import os
-from latitude import LatitudeClient
+from latitude_sdk import Latitude, LatitudeOptions
 
-sdk = Latitude('your-api-key-here', LatitudeOptions(
-    project_id=12345, # Optional, otherwise you have to provide it in each method
-    version_uuid='optional-version-uuid', # Optional, by default it targets the latest live version
+# Basic initialization
+sdk = Latitude("your-api-key-here")
+
+# With additional options
+sdk = Latitude("your-api-key-here", LatitudeOptions(
+    project_id=12345,  # Your Latitude project ID
+    version_uuid="optional-version-uuid",  # Optional version UUID
 ))
 ```
 
-## Examples
+## SDK Structure
 
-Check out our [cookbook](/guides/cookbook/overview#python) for more examples of how to use Latitude's SDK.
+The Latitude SDK is organized into several namespaces:
+
+- `prompts`: Methods for managing and running prompts
+- `logs`: Methods for creating and managing logs
+- `evaluations`: Methods for triggering evaluations and creating results
 
 ## Prompt Management
 
-### Get or create a prompt
+### Get a Prompt
 
-To get or create a prompt, use the `get_or_create` method:
+To retrieve a specific prompt by its path:
+
+```python
+async def get_prompt(prompt_path):
+    try:
+        prompt = await sdk.prompts.get(prompt_path, GetPromptOptions(
+            project_id=12345,  # Optional if provided at initialization
+            version_uuid="optional-version-uuid"  # Optional
+        ))
+        print(f"Fetched Prompt: {prompt.name}")
+        return prompt
+    except Exception as error:
+        print(f"Error fetching prompt {prompt_path}: {error}")
+```
+
+### Get All Prompts
+
+To retrieve all prompts in your project:
+
+```python
+async def get_all_prompts():
+    try:
+        prompts = await sdk.prompts.get_all(GetAllPromptOptions(
+            project_id=12345,  # Optional if provided at initialization
+            version_uuid="optional-version-uuid"  # Optional
+        ))
+        print(f"Found {len(prompts)} prompts")
+        return prompts
+    except Exception as error:
+        print(f"Error listing prompts: {error}")
+```
+
+### Get or Create a Prompt
+
+To get an existing prompt or create a new one if it doesn't exist:
 
 ```python
 from latitude_sdk import GetOrCreatePromptOptions
 
-await sdk.prompts.get_or_create('path/to/your/prompt', GetOrCreatePromptOptions(
-    project_id=12345, # Optional, if you did not provide it in the constructor
-    version_uuid='optional-version-uuid', # Optional, by default it targets the latest live version
-    prompt='Your prompt here', # Optional, this will be the contents of your prompt if it does not exist
-))
-```
-
-### Run a prompt with your LLM provider
-
-The `render` method will render your prompt and return the configuration and
-messages to use with your LLM provider. This render step is completely local and
-does not use Latitude's runtime services:
-
-```python
-from latitude_sdk import GetPromptOptions, RenderPromptOptions
-from promptl_ai import Adapter
-from openai import OpenAI
-
-prompt = await sdk.prompts.get('path/to/your/prompt', GetPromptOptions(
-    project_id=12345, # Optional, if you did not provide it in the constructor
-    version_uuid='optional-version-uuid', # Optional, by default it targets the latest live version
-))
-
-result = await sdk.prompts.render(prompt, RenderPromptOptions(
-    parameters={
-        # Any parameters your prompt expects
-    },
-    adapter=Adapter.OpenAI, # Optional, by default is OpenAI
-))
-
-response = openai.chat.completions.create(
-    **result.config,
-    messages=[message.model_dump() for message in result.messages],
-)
-```
-
-Always use environment variables or secure secrets management for your API key.
-
-## Programmatically Managing Prompts
-
-Interact with your prompts directly from Python.
-
-### Create a Prompt
-
-```python
-def create_new_prompt():
+async def get_or_create_prompt(prompt_path):
     try:
-        new_prompt = latitude.prompts.create(
-            name="Support Ticket Classifier",
-            content="""
-            ---
-            provider: openai
-            model: gpt-4o-mini
-            schema:
-              type: object
-              properties:
-                category:
-                  type: string
-                  enum: [Billing, Technical, Feature Request, Other]
-              required: [category]
-            ---
-            <system>Classify the following support ticket into one of the predefined categories.</system>
-            <user>Ticket Text: {{ticket_text}}</user>
-            """,
-            # project_id="your_project_id" # Optional
-        )
-        print(f"Created Prompt: {new_prompt.id}")
-        return new_prompt
-    except Exception as e:
-        print(f"Error creating prompt: {e}")
-```
-
-### Get a Prompt
-
-```python
-def get_prompt(prompt_id):
-    try:
-        prompt = latitude.prompts.get(prompt_id)
-        print(f"Fetched Prompt: {prompt.name}")
+        prompt = await sdk.prompts.get_or_create(prompt_path, GetOrCreatePromptOptions(
+            project_id=12345,  # Optional if provided at initialization
+            version_uuid="optional-version-uuid",  # Optional
+            prompt="Content for the prompt if it needs to be created"  # Optional
+        ))
+        print(f"Prompt: {prompt.name}")
         return prompt
-    except Exception as e:
-        print(f"Error fetching prompt {prompt_id}: {e}")
+    except Exception as error:
+        print(f"Error getting/creating prompt {prompt_path}: {error}")
 ```
 
-### List Prompts
-
-```python
-def list_all_prompts():
-    try:
-        prompts = latitude.prompts.list()
-        print("Prompts:", [(p.id, p.name) for p in prompts])
-        return prompts
-    except Exception as e:
-        print(f"Error listing prompts: {e}")
-```
-
-## Running Prompts and Handling Responses
-
-Execute published prompts via the AI Gateway using their ID.
+## Running Prompts
 
 ### Standard Run (Non-Streaming)
 
-Returns the full response after generation is complete.
+Execute a prompt and get the complete response once generation is finished:
 
 ```python
-def run_classifier_prompt(prompt_id):
+from latitude_sdk import RunPromptOptions
+
+async def run_prompt(prompt_path):
     try:
-        response = latitude.run(prompt_id,
+        response = await sdk.prompts.run(prompt_path, RunPromptOptions(
             parameters={
-                "ticket_text": "I can't log in to my account, the password reset link isn't working."
+                "product_name": "CloudSync Pro",
+                "audience": "Small Business Owners"
             },
-            metadata={
-                "user_id": "user-pqr-456",
-                "source": "web-support-form"
-            }
-        )
+            custom_identifier="marketing-campaign-2023",  # Optional: Provide a custom identifier
+            project_id=12345,  # Optional if provided at initialization
+            version_uuid="optional-version-uuid",  # Optional
+            # Optional: Event callbacks
+            on_finished=lambda data: print(f"Run complete: {data.uuid}"),
+            on_error=lambda error: print(f"Run error: {error.message}")
+        ))
 
-        print("Classification Result:")
-        print(response.content) # Often a JSON string if schema is used
-
-        # Access response metadata
-        if response.metadata:
-            print(f"Trace ID: {response.metadata.trace_id}")
-            print(f"Log ID: {response.metadata.log_id}")
+        if response:
+            print("Generated Content:")
+            print(response.response.content)  # Access the response content
+            print(f"Response UUID: {response.uuid}")
 
         return response
-    except Exception as e:
-        print(f"Error running prompt: {e}")
+    except Exception as error:
+        print(f"Error running prompt: {error}")
 ```
 
 ### Handling Streaming Responses
 
-Process response chunks in real-time.
+For real-time applications, use streaming to get response chunks as they're generated:
 
 ```python
-def run_streaming_prompt(prompt_id):
+async def run_streaming_prompt(prompt_path):
     try:
-        stream = latitude.run(prompt_id,
+        response = await sdk.prompts.run(prompt_path, RunPromptOptions(
             parameters={
-                "ticket_text": "How do I upgrade my subscription?"
+                "query": "Tell me about machine learning"
             },
-            stream=True, # Enable streaming
-            metadata={"user_id": "user-stu-789"}
-        )
+            stream=True,  # Enable streaming
+            # Event handlers
+            on_event=lambda event: print(f"Received event: {event}"),
+            on_finished=lambda data: print(f"Stream complete: {data.uuid}"),
+            on_error=lambda error: print(f"Stream error: {error.message}")
+        ))
 
-        print("Streaming Response:")
-        full_content = ""
-        for chunk in stream:
-            # Process text chunks
-            if chunk.type == 'text-delta' and chunk.content:
-                print(chunk.content, end="", flush=True)
-                full_content += chunk.content
-            # Handle other event types
-            if chunk.type == 'response':
-                print(f"\n--- Stream Finished --- ")
-                if chunk.metadata:
-                    print(f"Final Metadata (Trace ID): {chunk.metadata.trace_id}")
-            # Add handling for chunk.type == 'tool-call', 'error', etc.
-            # See Streaming Events guide for details: /guides/api/streaming-events
-
-        # full_content holds the complete text
-    except Exception as e:
-        print(f"Error running streaming prompt: {e}")
-
+        return response
+    except Exception as error:
+        print(f"Error running streaming prompt: {error}")
 ```
 
-See the [Streaming Events](/guides/api/streaming-events) documentation for details on all event types.
+### Using Tools with Prompts
+
+You can provide tool handlers that the model can call during execution:
+
+```python
+async def run_prompt_with_tools(prompt_path):
+    try:
+        response = await sdk.prompts.run(prompt_path, RunPromptOptions(
+            parameters={
+                "query": "What's the weather in San Francisco?"
+            },
+            # Define tools the model can use
+            tools={
+                "get_weather": async def(args, details):
+                    # args contains the arguments passed by the model
+                    # details contains context like tool_id, tool_name
+                    print(f"Getting weather for: {args.get('location')}")
+                    return {"temperature": "72°F", "conditions": "Sunny"}
+            }
+        ))
+
+        return response
+    except Exception as error:
+        print(f"Error running prompt with tools: {error}")
+```
+
+### Chat with a Prompt
+
+Continue a conversation with a prompt using its UUID:
+
+```python
+from latitude_sdk import ChatPromptOptions
+
+async def chat_with_prompt(prompt_uuid):
+    try:
+        messages = [
+            {"role": "user", "content": "Hello, how can you help me today?"}
+        ]
+
+        response = await sdk.prompts.chat(prompt_uuid, messages, ChatPromptOptions(
+            # Optional: Event callbacks
+            on_finished=lambda data: print(f"Chat complete: {data.uuid}"),
+            on_error=lambda error: print(f"Chat error: {error.message}"),
+            # Optional: Enable streaming
+            stream=True,
+            # Optional: Define tools
+            tools={
+                "search": async def(args, details):
+                    return {"results": ["Result 1", "Result 2"]}
+            }
+        ))
+
+        if response:
+            print("Chat Response:")
+            print(response.response.content)
+
+        return response
+    except Exception as error:
+        print(f"Error chatting with prompt: {error}")
+```
+
+### Rendering Prompts
+
+#### Basic Rendering
+
+Render a prompt without executing it through Latitude's services:
+
+```python
+from latitude_sdk import RenderPromptOptions
+from promptl_ai import Adapter
+
+async def render_prompt(prompt_content):
+    try:
+        result = await sdk.prompts.render(prompt_content, RenderPromptOptions(
+            parameters={
+                "topic": "Artificial Intelligence",
+                "tone": "Professional"
+            },
+            adapter=Adapter.OpenAI  # Optional: Specify an adapter (OpenAI is default)
+        ))
+
+        print("Rendered Messages:", result.messages)
+        print("Rendered Config:", result.config)
+        return result
+    except Exception as error:
+        print(f"Error rendering prompt: {error}")
+```
+
+#### Chain Rendering
+
+Render a chain of prompts:
+
+```python
+from latitude_sdk import RenderChainOptions, GetPromptOptions, Prompt
+
+async def render_chain_example(prompt_path: str):
+    try:
+        # First, fetch the Prompt object
+        latitude_prompt: Prompt = await sdk.prompts.get(prompt_path, GetPromptOptions(project_id=12345))
+
+        async def on_step(messages, config):
+            # Process each step in the chain
+            print("Processing step with messages:", messages)
+            # Return a string or message object
+            return "Step response"
+
+        result = await sdk.prompts.render_chain(
+            latitude_prompt, # Pass the fetched Prompt object
+            on_step,
+            RenderChainOptions(
+                parameters={
+                    "topic": "Machine Learning",
+                    "complexity": "Advanced"
+                }
+            )
+        )
+
+        print("Chain Rendering Result:", result)
+        return result
+    except Exception as error:
+        print(f"Error rendering chain: {error}")
+```
+
+## Logging
+
+### Creating Logs
+
+Create a log entry for a prompt execution:
+
+```python
+from latitude_sdk import CreateLogOptions
+
+async def create_log(prompt_path, messages):
+    try:
+        log = await sdk.logs.create(prompt_path, messages, CreateLogOptions(
+            response="The response from the prompt execution",
+            project_id=12345,  # Optional if provided at initialization
+            version_uuid="optional-version-uuid"  # Optional
+        ))
+
+        print(f"Created Log: {log.id}")
+        return log
+    except Exception as error:
+        print(f"Error creating log: {error}")
+```
+
+## Evaluations
+
+### Triggering Evaluations
+
+Trigger an evaluation for a conversation:
+
+```python
+from latitude_sdk import TriggerEvaluationOptions
+
+async def trigger_evaluation(conversation_uuid):
+    try:
+        result = await sdk.evaluations.trigger(conversation_uuid, TriggerEvaluationOptions(
+            evaluation_uuids=["eval-uuid-1", "eval-uuid-2"]  # Optional: specific evaluations to run
+        ))
+
+        print(f"Evaluations Triggered: {result.evaluations}")
+        return result
+    except Exception as error:
+        print(f"Error triggering evaluation: {error}")
+```
+
+### Creating Evaluation Results
+
+Create a result for an evaluation:
+
+```python
+from latitude_sdk import CreateEvaluationResultOptions
+
+async def create_evaluation_result(conversation_uuid, evaluation_uuid):
+    try:
+        result = await sdk.evaluations.create_result(
+            conversation_uuid,
+            evaluation_uuid,
+            CreateEvaluationResultOptions(
+                result=True,  # Can be string, boolean, or number
+                reason="The evaluation passed because..."
+            )
+        )
+
+        print(f"Evaluation Result Created: {result.uuid}")
+        return result
+    except Exception as error:
+        print(f"Error creating evaluation result: {error}")
+```
+
+## Error Handling
+
+The SDK throws `ApiError` instances when API requests fail:
+
+```python
+from latitude_sdk import ApiError, ApiErrorCodes
+
+async def handle_errors():
+    try:
+        prompt = await sdk.prompts.get("non-existent-prompt")
+    except ApiError as error:
+        print(f"API Error: {error.message}")
+        print(f"Error Code: {error.code}")
+        print(f"Status: {error.status}")
+    except Exception as error:
+        print(f"Unexpected error: {error}")
+```
 
 ## Logging and Telemetry Features
 
-- **Automatic Logging**: Calls via `latitude.run()` are logged automatically, capturing inputs, outputs, metadata, performance, and traces.
-- **Custom Metadata**: Include application context (e.g., `user_id`, `session_id`) via the `metadata` argument in the `run` call to enrich logs.
-- **Trace IDs**: Link related events (LLM calls, tool calls) using the `trace_id` from the response metadata.
+- **Automatic Logging**: All runs through `sdk.prompts.run()` are automatically logged in Latitude, capturing inputs, outputs, performance metrics, and trace information.
+- **Custom Identifiers**: Use the optional `custom_identifier` parameter to tag runs for easier filtering and analysis in the Latitude dashboard.
+- **Response Data**: Each response includes identifying information like UUID that can be used to reference the specific run later.
 
 ## Further Information
 
