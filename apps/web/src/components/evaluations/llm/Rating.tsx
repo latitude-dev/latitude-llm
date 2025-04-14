@@ -51,7 +51,7 @@ function ConfigurationForm({
       <FormFieldGroup
         layout='horizontal'
         label='Minimum rating'
-        description='When should the response be rated as a minimum?'
+        description='When should the response be rated low?'
       >
         <NumberInput
           value={configuration.minRating ?? undefined}
@@ -87,7 +87,7 @@ function ConfigurationForm({
       <FormFieldGroup
         layout='horizontal'
         label='Maximum rating'
-        description='When should the response be rated as a maximum?'
+        description='When should the response be rated high?'
       >
         <NumberInput
           value={configuration.maxRating ?? undefined}

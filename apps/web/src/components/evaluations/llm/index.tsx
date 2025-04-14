@@ -27,6 +27,7 @@ import {
   ResultRowHeadersProps,
 } from '../index'
 import LlmEvaluationBinarySpecification from './Binary'
+import LlmEvaluationComparisonSpecification from './Comparison'
 import LlmEvaluationRatingSpecification from './Rating'
 
 // prettier-ignore
@@ -35,7 +36,7 @@ const METRICS: {
 } = {
   [LlmEvaluationMetric.Binary]: LlmEvaluationBinarySpecification,
   [LlmEvaluationMetric.Rating]: LlmEvaluationRatingSpecification,
-  [LlmEvaluationMetric.Comparison]: undefined as any, // TODO(evalsv2): Implement
+  [LlmEvaluationMetric.Comparison]: LlmEvaluationComparisonSpecification,
   [LlmEvaluationMetric.Custom]: undefined as any, // TODO(evalsv2): Implement
 }
 

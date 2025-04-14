@@ -97,7 +97,7 @@ The resulting verdict is \`true\` if the response meets the criteria, \`false\` 
 ${promptTask({ provider })}
 
 You must give your verdict as a single JSON object with the following properties:
-- passed (boolean): \`true\` if the response meets the criteria, \`false\` otherwise
+- passed (boolean): \`true\` if the response meets the criteria, \`false\` otherwise.
 - reason (string): A string explaining your evaluation decision.
 `.trim()
 }

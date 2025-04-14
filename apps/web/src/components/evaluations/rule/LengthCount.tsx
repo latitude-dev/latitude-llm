@@ -17,7 +17,7 @@ import {
 const specification = RuleEvaluationLengthCountSpecification
 export default {
   ...specification,
-  icon: 'space' as IconName,
+  icon: 'wholeWord' as IconName,
   ConfigurationForm: ConfigurationForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,

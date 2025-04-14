@@ -18,6 +18,7 @@ import {
   EvaluationMetricValidateArgs,
 } from '../shared'
 import { LlmEvaluationBinarySpecification } from './binary'
+import { LlmEvaluationComparisonSpecification } from './comparison'
 import { LlmEvaluationRatingSpecification } from './rating'
 
 // prettier-ignore
@@ -26,7 +27,7 @@ const METRICS: {
 } = {
   [LlmEvaluationMetric.Binary]: LlmEvaluationBinarySpecification,
   [LlmEvaluationMetric.Rating]: LlmEvaluationRatingSpecification,
-  [LlmEvaluationMetric.Comparison]: undefined as any, // TODO(evalsv2): Implement
+  [LlmEvaluationMetric.Comparison]: LlmEvaluationComparisonSpecification,
   [LlmEvaluationMetric.Custom]: undefined as any, // TODO(evalsv2): Implement
 }
 
