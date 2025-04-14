@@ -64,6 +64,46 @@ When a `schema` is defined:
 - **Reduced Errors**: Catches formatting issues automatically.
 - **Clear Intent**: Explicitly tells the model the desired output format.
 
+## Chains and Agents
+
+When working with chains and agents, there's some things to keep in mind:
+
+### Chains
+When using chains, the configuration added to the general configuration section in the prompt will be applied to all steps in the chain. This means that if you have a schema defined in the general configuration, it will be applied to all steps, which may not be the expected behavior. To avoid this, you can define the schema in the specific step configuration instead.
+
+```{5-7,9-27}
+---
+provider: openai
+model: gpt-4o
+---
+<step>
+  This step does not have a schema defined.
+</step>
+
+<step schema={{
+  {
+    type: 'object',
+    properties: {
+      success: {
+        type: 'boolean',
+        description: 'Indicates if the operation was successful.',
+      },
+      explanation: {
+        type: 'string',
+        description: 'A brief explanation of the operation.',
+      },
+    },
+    required: ['success', 'explanation'],
+    additionalProperties: false,
+  }
+}}>
+  This step has a schema defined.
+</step>
+```
+
+### Agents
+When creating agents, the only schema to have in mind is the schema of the Agent response, since any intermediate steps are used as Chain of Thought, reasoning steps, or tool calling. This is why, even if an Agent has a `schema` property defined in the configuration, it will only be applied to the final response of the Agent, and not any intermediate steps. 
+
 ## Next Steps
 
 - Configure other [Prompt Settings](/guides/prompt-manager/configuration)
