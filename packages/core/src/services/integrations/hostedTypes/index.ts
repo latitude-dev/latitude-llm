@@ -35,6 +35,7 @@ import APIFY_MCP_CONFIG from './configs/apify'
 import EXA_MCP_CONFIG from './configs/exa'
 import YEPCODE_MCP_CONFIG from './configs/yepcode'
 import MONDAY_MCP_CONFIG from './configs/monday'
+import SUPABASE_MCP_CONFIG from './configs/supabase'
 
 export const HOSTED_MCP_CONFIGS: Record<
   HostedIntegrationType,
@@ -64,7 +65,7 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.browserbase]: browserbase_MCP_CONFIG,
   [HostedIntegrationType.Neon]: NEON_MCP_CONFIG,
   [HostedIntegrationType.Postgres]: POSTGRES_MCP_CONFIG,
-  [HostedIntegrationType.Supabase]: POSTGRES_MCP_CONFIG,
+  [HostedIntegrationType.Supabase]: SUPABASE_MCP_CONFIG,
   [HostedIntegrationType.Redis]: REDIS_MCP_CONFIG,
   [HostedIntegrationType.Jira]: JIRA_MCP_CONFIG,
   [HostedIntegrationType.Attio]: ATTIO_MCP_CONFIG,
