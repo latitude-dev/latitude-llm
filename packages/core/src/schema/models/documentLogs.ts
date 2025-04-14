@@ -45,5 +45,9 @@ export const documentLogs = latitudeSchema.table(
     customIdentifierTrgmIdx: index('document_logs_custom_identifier_trgm_idx')
       .using('gin', sql`${table.customIdentifier} gin_trgm_ops`)
       .concurrently(),
+    commitCreatedAtIdx: index('document_logs_commit_created_at_idx').on(
+      table.commitId,
+      table.createdAt,
+    ),
   }),
 )

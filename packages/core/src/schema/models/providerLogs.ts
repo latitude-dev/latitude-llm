@@ -64,5 +64,9 @@ export const providerLogs = latitudeSchema.table(
     createdAtIdx: index('provider_logs_created_at_idx').on(table.createdAt),
     workspaceIdx: index().on(table.workspaceId),
     documentUuidIdx: index('document_uuid_idx').on(table.documentLogUuid),
+    documentLogModelIdx: index('provider_logs_document_log_model_idx').on(
+      table.documentLogUuid,
+      table.model,
+    ),
   }),
 )

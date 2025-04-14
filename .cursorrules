@@ -25,6 +25,7 @@ Before responding to any request, follow these steps:
    - Ensure accessibility compliance
    - Verify best practices alignment
    - Write only essential comments
+   - Do not write console logs unless explicitely asked to
 
 ## Project Structure
 

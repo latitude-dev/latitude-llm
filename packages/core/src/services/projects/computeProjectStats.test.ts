@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   Commit,
@@ -19,6 +19,15 @@ import {
 import { evaluationVersions } from '../../schema'
 import * as factories from '../../tests/factories'
 import { computeProjectStats } from './computeProjectStats'
+import * as cacheModule from '../../cache'
+
+// Mock the cache module
+vi.mock('../../cache', () => ({
+  cache: vi.fn().mockResolvedValue({
+    get: vi.fn(),
+    set: vi.fn(),
+  }),
+}))
 
 describe('computeProjectStats', () => {
   let user: User
@@ -27,8 +36,19 @@ describe('computeProjectStats', () => {
   let document: DocumentVersion
   let commit: Commit
   let provider: ProviderApiKey
+  let mockRedis: any
 
   beforeEach(async () => {
+    // Reset mocks
+    vi.clearAllMocks()
+
+    // Setup mock Redis
+    mockRedis = {
+      get: vi.fn(),
+      set: vi.fn(),
+    }
+    vi.mocked(cacheModule.cache).mockResolvedValue(mockRedis)
+
     const setup = await factories.createProject({
       providers: [{ name: 'openai', type: Providers.OpenAI }],
       documents: {
@@ -239,5 +259,185 @@ describe('computeProjectStats', () => {
       },
     })
     expect(stats.rollingDocumentLogs).toHaveLength(1)
+  })
+
+  // New tests for caching functionality
+  it('returns cached stats when available and not forcing refresh', async () => {
+    // Setup mock cache to return data
+    const cachedStats = {
+      totalTokens: 1000,
+      totalRuns: 10,
+      totalDocuments: 2,
+      runsPerModel: { 'gpt-4': 10 },
+      costPerModel: { 'gpt-4': 5000 },
+      rollingDocumentLogs: [
+        { count: 5, date: '2023-01-01' },
+        { count: 5, date: '2023-01-02' },
+      ],
+      totalEvaluations: 3,
+      totalEvaluationResults: 15,
+      costPerEvaluation: { 'Test Eval': 1000 },
+    }
+
+    mockRedis.get.mockResolvedValue(JSON.stringify(cachedStats))
+
+    const result = await computeProjectStats({ project })
+    expect(result.ok).toBe(true)
+
+    const stats = result.unwrap()
+    expect(stats).toEqual(cachedStats)
+
+    // Verify cache was checked
+    expect(mockRedis.get).toHaveBeenCalledWith(`project_stats:${project.id}`)
+    // Verify no database queries were made (we can't directly verify this, but we can check that set wasn't called)
+    expect(mockRedis.set).not.toHaveBeenCalled()
+  })
+
+  it('forces refresh of stats when forceRefresh is true', async () => {
+    // Setup mock cache to return data
+    const cachedStats = {
+      totalTokens: 1000,
+      totalRuns: 10,
+      totalDocuments: 2,
+      runsPerModel: { 'gpt-4': 10 },
+      costPerModel: { 'gpt-4': 5000 },
+      rollingDocumentLogs: [
+        { count: 5, date: '2023-01-01' },
+        { count: 5, date: '2023-01-02' },
+      ],
+      totalEvaluations: 3,
+      totalEvaluationResults: 15,
+      costPerEvaluation: { 'Test Eval': 1000 },
+    }
+
+    mockRedis.get.mockResolvedValue(JSON.stringify(cachedStats))
+
+    // Create some actual data to ensure we're not just returning cached data
+    const { documentLog } = await factories.createDocumentLog({
+      document,
+      commit,
+      skipProviderLogs: true,
+    })
+
+    const providerLog = await factories.createProviderLog({
+      workspace,
+      documentLogUuid: documentLog.uuid,
+      providerId: provider.id,
+      providerType: provider.provider,
+      model: 'gpt-4',
+      tokens: 100,
+      costInMillicents: 500,
+    })
+
+    const result = await computeProjectStats({ project, forceRefresh: true })
+    expect(result.ok).toBe(true)
+
+    const stats = result.unwrap()
+    // Should not match cached stats
+    expect(stats).not.toEqual(cachedStats)
+    // Should match actual data
+    expect(stats.totalTokens).toBe(providerLog.tokens)
+    expect(stats.totalRuns).toBe(1)
+    expect(mockRedis.get).not.toHaveBeenCalledWith(
+      `project_stats:${project.id}`,
+    )
+  })
+
+  it('handles cache errors gracefully', async () => {
+    // Setup mock cache to throw an error
+    mockRedis.get.mockRejectedValue(new Error('Cache error'))
+
+    // Create some actual data
+    const { documentLog } = await factories.createDocumentLog({
+      document,
+      commit,
+      skipProviderLogs: true,
+    })
+
+    const providerLog = await factories.createProviderLog({
+      workspace,
+      documentLogUuid: documentLog.uuid,
+      providerId: provider.id,
+      providerType: provider.provider,
+      model: 'gpt-4',
+      tokens: 100,
+      costInMillicents: 500,
+    })
+
+    const result = await computeProjectStats({ project })
+    expect(result.ok).toBe(true)
+
+    const stats = result.unwrap()
+    // Should still compute correct stats despite cache error
+    expect(stats.totalTokens).toBe(providerLog.tokens)
+    expect(stats.totalRuns).toBe(1)
+  })
+
+  it('does not cache results when project has few logs', async () => {
+    // Create fewer logs than MIN_LOGS_FOR_CACHING
+    const { documentLog } = await factories.createDocumentLog({
+      document,
+      commit,
+      skipProviderLogs: true,
+    })
+
+    await factories.createProviderLog({
+      workspace,
+      documentLogUuid: documentLog.uuid,
+      providerId: provider.id,
+      providerType: provider.provider,
+      model: 'gpt-4',
+      tokens: 100,
+      costInMillicents: 500,
+    })
+
+    const result = await computeProjectStats({ project })
+    expect(result.ok).toBe(true)
+
+    // Verify cache was not set
+    expect(mockRedis.set).not.toHaveBeenCalled()
+  })
+
+  it('handles multiple models correctly', async () => {
+    // Create logs with different models
+    const { documentLog } = await factories.createDocumentLog({
+      document,
+      commit,
+      skipProviderLogs: true,
+    })
+
+    await factories.createProviderLog({
+      workspace,
+      documentLogUuid: documentLog.uuid,
+      providerId: provider.id,
+      providerType: provider.provider,
+      model: 'gpt-4',
+      tokens: 100,
+      costInMillicents: 500,
+    })
+
+    await factories.createProviderLog({
+      workspace,
+      documentLogUuid: documentLog.uuid,
+      providerId: provider.id,
+      providerType: provider.provider,
+      model: 'gpt-3.5-turbo',
+      tokens: 50,
+      costInMillicents: 100,
+    })
+
+    const result = await computeProjectStats({ project })
+    expect(result.ok).toBe(true)
+
+    const stats = result.unwrap()
+    expect(stats.runsPerModel).toEqual({
+      'gpt-4': 1,
+      'gpt-3.5-turbo': 1,
+    })
+    expect(stats.costPerModel).toEqual({
+      'gpt-4': 500,
+      'gpt-3.5-turbo': 100,
+    })
+    expect(stats.totalTokens).toBe(150)
   })
 })
