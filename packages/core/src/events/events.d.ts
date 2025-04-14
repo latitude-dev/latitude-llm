@@ -205,7 +205,7 @@ export type CommitCreatedEvent = LatitudeEventGeneric<
 
 export type DocumentLogCreatedEvent = LatitudeEventGeneric<
   'documentLogCreated',
-  DocumentLog
+  DocumentLog & { workspaceId: number }
 >
 
 export type DocumentSuggestionCreatedEvent = LatitudeEventGeneric<

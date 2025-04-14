@@ -71,12 +71,12 @@ export async function createDocumentLog(
       .returning()
 
     const documentLog = inserts[0]!
-    if (providerLog) {
-      const workspace = await findWorkspaceFromCommit(commit, trx)
-      if (!workspace) {
-        throw new NotFoundError('Workspace not found')
-      }
+    const workspace = await findWorkspaceFromCommit(commit, trx)
+    if (!workspace) {
+      throw new NotFoundError('Workspace not found')
+    }
 
+    if (providerLog) {
       await createProviderLog({
         uuid: generateUUIDIdentifier(),
         documentLogUuid: documentLog.uuid,
@@ -95,7 +95,10 @@ export async function createDocumentLog(
 
     publisher.publishLater({
       type: 'documentLogCreated',
-      data: documentLog,
+      data: {
+        ...documentLog,
+        workspaceId: workspace.id,
+      },
     })
 
     return Result.ok(documentLog)

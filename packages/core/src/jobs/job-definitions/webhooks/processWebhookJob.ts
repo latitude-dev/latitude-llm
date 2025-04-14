@@ -5,7 +5,10 @@ import { webhooks } from '../../../schema/models/webhooks'
 import { Events, LatitudeEvent } from '../../../events/events'
 import { webhooksQueue } from '../../queues'
 
-const WEBHOOK_EVENTS: Array<Events> = ['commitPublished']
+export const WEBHOOK_EVENTS: Array<Events> = [
+  'commitPublished',
+  'documentLogCreated',
+]
 
 export async function processWebhookJob({
   data: event,

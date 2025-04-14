@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { webhooksQueue } from '../../queues'
 import { processWebhookJob } from './processWebhookJob'
 import * as factories from '../../../tests/factories'
-import { Commit } from '../../../browser'
-import { CommitPublishedEvent } from '../../../events/events'
+import { Commit, Providers } from '../../../browser'
+import {
+  CommitPublishedEvent,
+  DocumentLogCreatedEvent,
+} from '../../../events/events'
 
 describe('processWebhookJob', () => {
   const mocks = vi.hoisted(() => ({
@@ -139,5 +142,57 @@ describe('processWebhookJob', () => {
 
     // Verify no jobs were enqueued
     expect(mocks.webhooksQueue).not.toHaveBeenCalled()
+  })
+
+  it('enqueues jobs for documentLogCreated events', async () => {
+    // Create workspace, project, commit, and document using the project factory
+    const { workspace, commit, documents } = await factories.createProject({
+      providers: [{ name: 'openai', type: Providers.OpenAI }],
+      documents: {
+        subagent: factories.helpers.createPrompt({
+          provider: 'openai',
+          extraConfig: {
+            type: 'agent',
+          },
+        }),
+      },
+    })
+    const document = documents[0] // Get the created document
+
+    const webhook = await factories.createWebhook({
+      workspaceId: workspace.id,
+      url: 'https://example.com/webhook',
+      isActive: true,
+      projectIds: [], // No filter
+    })
+
+    // Create a document log linked to the document and commit
+    const { documentLog } = await factories.createDocumentLog({
+      document: document!, // Pass the actual document object
+      commit: commit, // Pass the actual commit object
+    })
+
+    const event: DocumentLogCreatedEvent = {
+      type: 'documentLogCreated',
+      data: {
+        ...documentLog,
+        workspaceId: workspace.id,
+      },
+    }
+
+    mocks.webhooksQueue.mockClear()
+
+    // Process the webhook job
+    await processWebhookJob({ data: event })
+
+    // Verify a job was enqueued for the webhook
+    expect(mocks.webhooksQueue).toHaveBeenCalledTimes(1)
+    expect(mocks.webhooksQueue).toHaveBeenCalledWith(
+      'processIndividualWebhookJob',
+      {
+        event,
+        webhookId: webhook.id,
+      },
+    )
   })
 })
