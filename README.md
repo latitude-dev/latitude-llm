@@ -50,7 +50,7 @@ Latitude is designed for cross-functional teams, enabling collaboration between 
 - **Integrations**: Seamlessly integrate with your existing stack via SDKs and APIs
 - **Open-source**: Driven by the community
 
-## �� Table Of Contents
+## 📚 Table Of Contents
 
 - [Getting Started](https://docs.latitude.so/guides/getting-started/introduction)
 - [Prompt Development Guide](https://docs.latitude.so/guides/prompt-manager/overview)
