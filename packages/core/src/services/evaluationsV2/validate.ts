@@ -12,7 +12,7 @@ import { database, Database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { EvaluationsV2Repository } from '../../repositories'
-import { EVALUATION_SPECIFICATIONS } from './specs'
+import { EVALUATION_SPECIFICATIONS } from './specifications'
 
 export async function validateEvaluationV2<
   T extends EvaluationType,

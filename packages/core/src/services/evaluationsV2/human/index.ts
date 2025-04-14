@@ -1,7 +1,7 @@
 import {
   EvaluationType,
   HumanEvaluationMetric,
-  HumanEvaluationSpecification as originalHumanEvaluationSpecification,
+  HumanEvaluationSpecification as specification,
 } from '../../../browser'
 import { EvaluationMetricBackendSpecification } from '../shared'
 
@@ -15,7 +15,7 @@ const METRICS: {
 }
 
 export const HumanEvaluationSpecification = {
-  ...originalHumanEvaluationSpecification,
+  ...specification,
   validate: undefined as any, // TODO(evalsv2): Implement
   run: undefined as any, // TODO(evalsv2): Implement
   metrics: METRICS,

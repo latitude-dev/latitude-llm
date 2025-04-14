@@ -5,10 +5,10 @@ import {
   ErrorableEntity,
   EvaluationType,
   formatConversation,
-  LlmEvaluationBinarySpecification,
   LlmEvaluationMetric,
   ProviderApiKey,
   Providers,
+  LlmEvaluationBinarySpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
@@ -23,8 +23,7 @@ import {
 } from '../shared'
 import { runPrompt } from './shared'
 
-const specification = LlmEvaluationBinarySpecification
-export default {
+export const LlmEvaluationBinarySpecification = {
   ...specification,
   validate: validate,
   run: run,

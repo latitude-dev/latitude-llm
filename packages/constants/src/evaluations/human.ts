@@ -32,6 +32,7 @@ export const HumanEvaluationBinarySpecification = {
   resultMetadata: humanEvaluationBinaryResultMetadata,
   resultError: humanEvaluationBinaryResultError,
   requiresExpectedOutput: false,
+  requiresAnnotation: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,
 }
@@ -68,6 +69,7 @@ export const HumanEvaluationRatingSpecification = {
   resultMetadata: humanEvaluationRatingResultMetadata,
   resultError: humanEvaluationRatingResultError,
   requiresExpectedOutput: false,
+  requiresAnnotation: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,
 }
@@ -103,6 +105,7 @@ export const HumanEvaluationComparisonSpecification = {
   resultMetadata: humanEvaluationComparisonResultMetadata,
   resultError: humanEvaluationComparisonResultError,
   requiresExpectedOutput: true,
+  requiresAnnotation: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,
 }

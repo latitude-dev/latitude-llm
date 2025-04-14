@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
 import {
   Commit,
-  DatasetRow,
   Dataset,
+  DatasetRow,
   DEFAULT_DATASET_LABEL,
   EvaluationMetric,
   EvaluationResultV2,
@@ -16,7 +16,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { evaluationResultsV2 } from '../../schema'
-import { createEvaluationResultV2 as createEvaluationResultV2Fn } from '../../services/evaluationsV2/run'
+import { createEvaluationResultV2 as createEvaluationResultSvc } from '../../services/evaluationsV2/run'
 import serializeProviderLog from '../../services/providerLogs/serialize'
 
 type CreateEvaluationResultV2Args<
@@ -51,7 +51,7 @@ export async function createEvaluationResultV2<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
 >(args: CreateEvaluationResultV2Args<T, M>): Promise<EvaluationResultV2<T, M>> {
-  const { result } = await createEvaluationResultV2Fn({
+  const { result } = await createEvaluationResultSvc({
     evaluation: args.evaluation,
     providerLog:
       'response' in args.providerLog

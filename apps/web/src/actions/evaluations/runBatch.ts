@@ -7,7 +7,7 @@ import {
   EvaluationsRepository,
   EvaluationsV2Repository,
 } from '@latitude-data/core/repositories'
-import { getEvaluationMetricSpecification } from '@latitude-data/core/services/evaluationsV2/specs'
+import { getEvaluationMetricSpecification } from '@latitude-data/core/services/evaluationsV2/specifications'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 import { refineParameters, withDataset } from './_helpers'

@@ -2,7 +2,7 @@ import {
   EvaluationResultValue,
   EvaluationType,
   RuleEvaluationMetric,
-  RuleEvaluationSpecification as originalRuleEvaluationSpecification,
+  RuleEvaluationSpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
@@ -12,12 +12,12 @@ import {
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
 } from '../shared'
-import RuleEvaluationExactMatchSpecification from './exactMatch'
-import RuleEvaluationLengthCountSpecification from './lengthCount'
-import RuleEvaluationLexicalOverlapSpecification from './lexicalOverlap'
-import RuleEvaluationRegularExpressionSpecification from './regularExpression'
-import RuleEvaluationSchemaValidationSpecification from './schemaValidation'
-import RuleEvaluationSemanticSimilaritySpecification from './semanticSimilarity'
+import { RuleEvaluationExactMatchSpecification } from './exactMatch'
+import { RuleEvaluationLengthCountSpecification } from './lengthCount'
+import { RuleEvaluationLexicalOverlapSpecification } from './lexicalOverlap'
+import { RuleEvaluationRegularExpressionSpecification } from './regularExpression'
+import { RuleEvaluationSchemaValidationSpecification } from './schemaValidation'
+import { RuleEvaluationSemanticSimilaritySpecification } from './semanticSimilarity'
 
 // prettier-ignore
 const METRICS: {
@@ -32,7 +32,7 @@ const METRICS: {
 }
 
 export const RuleEvaluationSpecification = {
-  ...originalRuleEvaluationSpecification,
+  ...specification,
   validate: validate,
   run: run,
   metrics: METRICS,
@@ -80,6 +80,10 @@ async function run<M extends RuleEvaluationMetric>(
     const metricSpecification = METRICS[metric]
     if (!metricSpecification) {
       throw new BadRequestError('Invalid evaluation metric')
+    }
+
+    if (!metricSpecification.run) {
+      throw new BadRequestError('Running is not supported for this evaluation')
     }
 
     const value = await metricSpecification.run({ ...rest }, db)

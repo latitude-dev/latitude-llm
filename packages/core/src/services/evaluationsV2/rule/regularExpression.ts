@@ -2,7 +2,7 @@ import safeRegex from 'safe-regex'
 import {
   EvaluationType,
   RuleEvaluationMetric,
-  RuleEvaluationRegularExpressionSpecification,
+  RuleEvaluationRegularExpressionSpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import {
@@ -13,8 +13,7 @@ import {
 import { BadRequestError } from './../../../lib/errors'
 import { Result } from './../../../lib/Result'
 
-const specification = RuleEvaluationRegularExpressionSpecification
-export default {
+export const RuleEvaluationRegularExpressionSpecification = {
   ...specification,
   validate: validate,
   run: run,

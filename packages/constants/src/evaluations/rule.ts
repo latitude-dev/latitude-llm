@@ -28,6 +28,7 @@ export const RuleEvaluationExactMatchSpecification = {
   resultMetadata: ruleEvaluationExactMatchResultMetadata,
   resultError: ruleEvaluationExactMatchResultError,
   requiresExpectedOutput: true,
+  requiresAnnotation: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
 }
@@ -61,6 +62,7 @@ export const RuleEvaluationRegularExpressionSpecification = {
   resultMetadata: ruleEvaluationRegularExpressionResultMetadata,
   resultError: ruleEvaluationRegularExpressionResultError,
   requiresExpectedOutput: false,
+  requiresAnnotation: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
 }
@@ -95,6 +97,7 @@ export const RuleEvaluationSchemaValidationSpecification = {
   resultMetadata: ruleEvaluationSchemaValidationResultMetadata,
   resultError: ruleEvaluationSchemaValidationResultError,
   requiresExpectedOutput: false,
+  requiresAnnotation: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
 }
@@ -131,6 +134,7 @@ export const RuleEvaluationLengthCountSpecification = {
   resultMetadata: ruleEvaluationLengthCountResultMetadata,
   resultError: ruleEvaluationLengthCountResultError,
   requiresExpectedOutput: false,
+  requiresAnnotation: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
 }
@@ -166,6 +170,7 @@ export const RuleEvaluationLexicalOverlapSpecification = {
   resultMetadata: ruleEvaluationLexicalOverlapResultMetadata,
   resultError: ruleEvaluationLexicalOverlapResultError,
   requiresExpectedOutput: true,
+  requiresAnnotation: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
 }
@@ -201,6 +206,7 @@ export const RuleEvaluationSemanticSimilaritySpecification = {
   resultMetadata: ruleEvaluationSemanticSimilarityResultMetadata,
   resultError: ruleEvaluationSemanticSimilarityResultError,
   requiresExpectedOutput: true,
+  requiresAnnotation: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
 }

@@ -18,19 +18,19 @@ import {
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
+import { Result, TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
+import { connectEvaluations } from '../evaluations/connect'
+import { createEvaluation } from '../evaluations/create'
+import { createEvaluationV2 } from '../evaluationsV2/create'
 import { pingProjectUpdate } from '../projects'
 import {
   findDefaultEvaluationProvider,
   findDefaultProvider,
 } from '../providerApiKeys/findDefaultProvider'
-import { Result, TypedResult } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 import { getDocumentType } from './update'
-import { createEvaluationV2 } from '../evaluationsV2/create'
-import { createEvaluation } from '../evaluations/create'
-import { connectEvaluations } from '../evaluations/connect'
 
 async function hasMetadata(content: string) {
   try {

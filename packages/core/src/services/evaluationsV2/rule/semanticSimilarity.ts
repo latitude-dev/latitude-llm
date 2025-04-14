@@ -5,7 +5,7 @@ import similarity from 'compute-cosine-similarity'
 import {
   EvaluationType,
   RuleEvaluationMetric,
-  RuleEvaluationSemanticSimilaritySpecification,
+  RuleEvaluationSemanticSimilaritySpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import {
@@ -16,8 +16,7 @@ import {
 import { BadRequestError } from './../../../lib/errors'
 import { Result } from './../../../lib/Result'
 
-const specification = RuleEvaluationSemanticSimilaritySpecification
-export default {
+export const RuleEvaluationSemanticSimilaritySpecification = {
   ...specification,
   validate: validate,
   run: run,

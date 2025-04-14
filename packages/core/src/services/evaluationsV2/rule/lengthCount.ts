@@ -1,7 +1,7 @@
 import {
   EvaluationType,
-  RuleEvaluationLengthCountSpecification,
   RuleEvaluationMetric,
+  RuleEvaluationLengthCountSpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import {
@@ -12,8 +12,7 @@ import {
 import { BadRequestError } from './../../../lib/errors'
 import { Result } from './../../../lib/Result'
 
-const specification = RuleEvaluationLengthCountSpecification
-export default {
+export const RuleEvaluationLengthCountSpecification = {
   ...specification,
   validate: validate,
   run: run,

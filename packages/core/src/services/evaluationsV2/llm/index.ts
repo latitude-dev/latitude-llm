@@ -3,7 +3,7 @@ import {
   EvaluationResultValue,
   EvaluationType,
   LlmEvaluationMetric,
-  LlmEvaluationSpecification as originalLlmEvaluationSpecification,
+  LlmEvaluationSpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
@@ -17,7 +17,7 @@ import {
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
 } from '../shared'
-import LlmEvaluationBinarySpecification from './binary'
+import { LlmEvaluationBinarySpecification } from './binary'
 
 // prettier-ignore
 const METRICS: {
@@ -30,7 +30,7 @@ const METRICS: {
 }
 
 export const LlmEvaluationSpecification = {
-  ...originalLlmEvaluationSpecification,
+  ...specification,
   validate: validate,
   run: run,
   metrics: METRICS,
@@ -96,6 +96,10 @@ async function run<M extends LlmEvaluationMetric>(
     const metricSpecification = METRICS[metric]
     if (!metricSpecification) {
       throw new BadRequestError('Invalid evaluation metric')
+    }
+
+    if (!metricSpecification.run) {
+      throw new BadRequestError('Running is not supported for this evaluation')
     }
 
     const providers = await buildProvidersMap({ workspaceId: workspace.id })

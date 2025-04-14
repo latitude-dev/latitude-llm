@@ -1,7 +1,7 @@
 import {
   EvaluationType,
-  RuleEvaluationExactMatchSpecification,
   RuleEvaluationMetric,
+  RuleEvaluationExactMatchSpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import {
@@ -12,8 +12,7 @@ import {
 import { BadRequestError } from './../../../lib/errors'
 import { Result } from './../../../lib/Result'
 
-const specification = RuleEvaluationExactMatchSpecification
-export default {
+export const RuleEvaluationExactMatchSpecification = {
   ...specification,
   validate: validate,
   run: run,

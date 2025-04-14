@@ -59,10 +59,11 @@ export type EvaluationMetricBackendSpecification<
     args: EvaluationMetricValidateArgs<T, M>,
     db?: Database,
   ) => Promise<TypedResult<EvaluationConfiguration<T, M>, LatitudeError>>
-  run: (
+  run?: (
     args: EvaluationMetricRunArgs<T, M>,
     db?: Database,
   ) => Promise<EvaluationResultValue<T, M>>
+  // TODO(evalsv2): Add annotate method
 }
 
 export type EvaluationBackendSpecification<
@@ -72,10 +73,11 @@ export type EvaluationBackendSpecification<
     args: EvaluationMetricValidateArgs<T, M> & { metric: M },
     db?: Database,
   ) => Promise<TypedResult<EvaluationConfiguration<T, M>, LatitudeError>>
-  run: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
+  run?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     args: EvaluationMetricRunArgs<T, M> & { metric: M },
     db?: Database,
   ) => Promise<EvaluationResultValue<T, M>>
+  // TODO(evalsv2): Add annotate method
   metrics: {
     [M in EvaluationMetric<T>]: EvaluationMetricBackendSpecification<T, M>
   }

@@ -25,7 +25,7 @@ import {
 } from '../../repositories'
 import { evaluationResultsV2 } from '../../schema'
 import { getColumnData } from '../datasets/utils'
-import { EVALUATION_SPECIFICATIONS } from './specs'
+import { EVALUATION_SPECIFICATIONS } from './specifications'
 
 export async function runEvaluationV2<
   T extends EvaluationType,
@@ -93,6 +93,12 @@ export async function runEvaluationV2<
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) {
     return Result.error(new BadRequestError('Invalid evaluation type'))
+  }
+
+  if (!typeSpecification.run) {
+    return Result.error(
+      new BadRequestError('Running is not supported for this evaluation'),
+    )
   }
 
   const metricSpecification = typeSpecification.metrics[evaluation.metric]

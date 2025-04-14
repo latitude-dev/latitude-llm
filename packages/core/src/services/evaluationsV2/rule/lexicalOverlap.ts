@@ -2,8 +2,8 @@ import { distance } from 'fastest-levenshtein'
 import * as rouge from 'js-rouge'
 import {
   EvaluationType,
-  RuleEvaluationLexicalOverlapSpecification,
   RuleEvaluationMetric,
+  RuleEvaluationLexicalOverlapSpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import {
@@ -14,8 +14,7 @@ import {
 import { BadRequestError } from './../../../lib/errors'
 import { Result } from './../../../lib/Result'
 
-const specification = RuleEvaluationLexicalOverlapSpecification
-export default {
+export const RuleEvaluationLexicalOverlapSpecification = {
   ...specification,
   validate: validate,
   run: run,

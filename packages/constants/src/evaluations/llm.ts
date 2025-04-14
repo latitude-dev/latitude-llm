@@ -39,6 +39,7 @@ export const LlmEvaluationBinarySpecification = {
   resultMetadata: llmEvaluationBinaryResultMetadata,
   resultError: llmEvaluationBinaryResultError,
   requiresExpectedOutput: false,
+  requiresAnnotation: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
 }
@@ -75,6 +76,7 @@ export const LlmEvaluationRatingSpecification = {
   resultMetadata: llmEvaluationRatingResultMetadata,
   resultError: llmEvaluationRatingResultError,
   requiresExpectedOutput: false,
+  requiresAnnotation: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
 }
@@ -108,6 +110,7 @@ export const LlmEvaluationComparisonSpecification = {
   resultMetadata: llmEvaluationComparisonResultMetadata,
   resultError: llmEvaluationComparisonResultError,
   requiresExpectedOutput: true,
+  requiresAnnotation: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
 }
@@ -140,6 +143,7 @@ export const LlmEvaluationCustomSpecification = {
   resultMetadata: llmEvaluationCustomResultMetadata,
   resultError: llmEvaluationCustomResultError,
   requiresExpectedOutput: false,
+  requiresAnnotation: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
 }

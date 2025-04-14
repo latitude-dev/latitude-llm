@@ -93,6 +93,7 @@ export type EvaluationMetricSpecification<
   resultMetadata: z.ZodSchema<EvaluationResultMetadata<T, M>>
   resultError: z.ZodSchema<EvaluationResultError<T, M>>
   requiresExpectedOutput: boolean
+  requiresAnnotation: boolean
   supportsLiveEvaluation: boolean
   supportsBatchEvaluation: boolean
 }

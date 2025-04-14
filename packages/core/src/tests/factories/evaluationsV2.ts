@@ -12,7 +12,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { evaluationVersions } from '../../schema'
-import { createEvaluationV2 as createEvaluationV2Fn } from '../../services/evaluationsV2/create'
+import { createEvaluationV2 as createEvaluationSvc } from '../../services/evaluationsV2/create'
 
 type CreateEvaluationV2Args<
   T extends EvaluationType = EvaluationType,
@@ -42,7 +42,7 @@ export async function createEvaluationV2<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
 >(args: CreateEvaluationV2Args<T, M>): Promise<EvaluationV2<T, M>> {
-  const { evaluation } = await createEvaluationV2Fn({
+  const { evaluation } = await createEvaluationSvc({
     document: args.document,
     commit: args.commit,
     settings: {

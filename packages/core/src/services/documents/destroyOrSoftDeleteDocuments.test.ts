@@ -5,9 +5,9 @@ import { database } from '../../client'
 import { Providers } from '../../constants'
 import { documentVersions, evaluationVersions } from '../../schema'
 import * as factories from '../../tests/factories'
+import { updateEvaluationV2 } from '../evaluationsV2/update'
 import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
 import { updateDocument } from './update'
-import { updateEvaluationV2 } from '../evaluationsV2/update'
 
 describe('destroyOrSoftDeleteDocuments', () => {
   it('remove documents that were not present in merged commits', async (ctx) => {

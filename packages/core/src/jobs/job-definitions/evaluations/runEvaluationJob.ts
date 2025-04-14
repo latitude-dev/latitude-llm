@@ -8,11 +8,11 @@ import {
   EvaluationsV2Repository,
   ProviderLogsRepository,
 } from '../../../repositories'
+import { runEvaluationV2 } from '../../../services/evaluationsV2/run'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { NotFoundError } from './../../../lib/errors'
-import { runEvaluationV2 } from '../../../services/evaluationsV2/run'
 
 export type RunEvaluationV2JobData = {
   workspaceId: number

@@ -2,7 +2,7 @@ import Ajv from 'ajv'
 import {
   EvaluationType,
   RuleEvaluationMetric,
-  RuleEvaluationSchemaValidationSpecification,
+  RuleEvaluationSchemaValidationSpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import {
@@ -13,8 +13,7 @@ import {
 import { BadRequestError } from './../../../lib/errors'
 import { Result } from './../../../lib/Result'
 
-const specification = RuleEvaluationSchemaValidationSpecification
-export default {
+export const RuleEvaluationSchemaValidationSpecification = {
   ...specification,
   validate: validate,
   run: run,

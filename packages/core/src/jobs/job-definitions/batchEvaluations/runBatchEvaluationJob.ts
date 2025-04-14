@@ -9,13 +9,13 @@ import {
   User,
   Workspace,
 } from '../../../browser'
+import { publisher } from '../../../events/publisher'
 import { CommitsRepository } from '../../../repositories'
 import { getRowsFromRange } from '../../../services/datasetRows/getRowsFromRange'
+import { getEvaluationMetricSpecification } from '../../../services/evaluationsV2/specifications'
 import { WebsocketClient } from '../../../websockets/workers'
-import { ProgressTracker } from '../../utils/progressTracker'
-import { publisher } from '../../../events/publisher'
 import { documentsQueue } from '../../queues'
-import { getEvaluationMetricSpecification } from '../../../services/evaluationsV2/specs'
+import { ProgressTracker } from '../../utils/progressTracker'
 
 type GetDatasetsProps = {
   dataset: Dataset

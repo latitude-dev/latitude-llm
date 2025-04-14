@@ -13,6 +13,9 @@ import {
 } from '../../browser'
 import { database, Database } from '../../client'
 import { publisher } from '../../events/publisher'
+import { UnprocessableEntityError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import {
   ConnectedEvaluationsRepository,
   DocumentSuggestionsRepository,
@@ -28,9 +31,6 @@ import {
   serializeEvaluationResult as serializeEvaluationResultV2,
   serializeEvaluation as serializeEvaluationV2,
 } from './serialize'
-import { Result } from './../../lib/Result'
-import { UnprocessableEntityError } from './../../lib/errors'
-import Transaction from './../../lib/Transaction'
 
 async function checkSuggestionLimits(
   {
