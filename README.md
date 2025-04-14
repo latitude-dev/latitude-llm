@@ -25,33 +25,43 @@
 
 ## 🌈 Why Latitude?
 
-Latitude is a platform that helps developers and product teams build AI features with confidence. Here's what it does:
+Latitude is an open-source platform for AI prompt engineering, deployment, and evaluation. It helps teams build, test, and maintain reliable AI applications by providing a complete lifecycle management system for prompts.
 
-1. Makes prompts easier to manage: Instead of hiding prompts in code, Latitude lets everyone work on them together.
-2. Helps with testing: AI doesn't always return the same answer, which can be tricky. Latitude uses LLMs to check other LLM responses, looking for mistakes or off-topic answers.
-3. Provides insights: Offers detailed analytics on LLM request performance, including response times and cost comparisons across various AI models and prompt versions.
+With Latitude, you can:
 
-Latitude puts all these helpful tools in one place. This means you can add AI to your products without a lot of hassle, and keep an eye on how it's all working.
+- Design and version prompts collaboratively
+- Test iterations in an interactive playground
+- Deploy prompts as API endpoints
+- Monitor performance with automatic logging
+- Evaluate and improve prompts systematically
+
+Latitude is designed for cross-functional teams, enabling collaboration between developers, product managers, and domain experts throughout the entire AI development process.
 
 <a href="https://www.youtube.com/watch?v=jPVn9kf4GrE" target="_blank"><img alt="Latitude screenshot" src="https://github.com/user-attachments/assets/3d5a217d-7f75-4997-b569-e8754ce505e8"></a>
 
 ## ✨ Features
 
-- 👥 Collaborative prompt manager
-- 🚀 Support for advanced features like parameters, snippets, logic, and more
-- 🔄 Version control for prompts
-- 🔌 API + SDKs for easy integration
-- 🔍 Built-in observability
-- 📊 Evaluations in batch or real-time
-- 🌟 Open-source driven by the community
+- **Prompt Manager**: Create, version, and collaborate on prompts with a powerful editor supporting advanced features like variables, conditionals, and loops through PromptL
+- **Playground**: Test prompts interactively with different inputs, parameters, and tool configurations
+- **AI Gateway**: Deploy prompts as API endpoints that stay up-to-date with published changes
+- **Evaluations**: Assess prompt performance via LLM-as-judge, programmatic rules, or human review
+- **Logs & Observability**: Automatically capture all interactions with prompts and models
+- **Datasets**: Manage test data for batch evaluations and regression testing
+- **Integrations**: Seamlessly integrate with your existing stack via SDKs and APIs
+- **Open-source**: Driven by the community
 
-## 📚 Table Of Contents
+## �� Table Of Contents
 
-- [Quick start](https://github.com/latitude-dev/latitude-llm#-quick-start)
+- [Getting Started](https://docs.latitude.so/guides/getting-started/introduction)
+- [Prompt Development Guide](https://docs.latitude.so/guides/prompt-manager/overview)
+- [Evaluations](https://docs.latitude.so/guides/evaluations/overview)
+- [Data Management](https://docs.latitude.so/guides/datasets/overview)
+- [Integration & Deployment](https://docs.latitude.so/guides/integration/publishing-deployment)
+- [Self-Hosting](https://docs.latitude.so/guides/self-hosted/production-setup)
+- [PromptL Language](https://docs.latitude.so/promptl/getting-started/introduction)
 - [Community](https://github.com/latitude-dev/latitude-llm#-community)
 - [Contributing](https://github.com/latitude-dev/latitude-llm#-contributing)
 - [License](https://github.com/latitude-dev/latitude-llm#-license)
-- [Links](https://github.com/latitude-dev/latitude-llm#-links)
 
 ## ⚡ Quick start
 
@@ -88,7 +98,7 @@ For more detailed information on each step, explore our documentation or join ou
 
 ### Latitude Self-Hosted
 
-Follow the instructions in the [self-hosted guide](https://docs.latitude.so/guides/self-hosted/production) to get started with Latitude Self-Hosted.
+Follow the instructions in the [self-hosted guide](https://docs.latitude.so/guides/self-hosted/production-setup) to get started with Latitude Self-Hosted.
 
 After setting up Latitude Self-Hosted, you can follow the same steps as in the Latitude Cloud guide to create, test, evaluate, and deploy your prompts.
 
