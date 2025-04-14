@@ -1,4 +1,3 @@
-import { computeProjectStats } from '@latitude-data/core/services/projects/computeProjectStats'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { findProjectCached } from '$/app/(private)/_data-access'
@@ -9,6 +8,7 @@ import { DocumentBlankSlateLayout } from '../documents/_components/DocumentBlank
 import Overview from './_components/Overview'
 import { AddFileButton } from './_components/Overview/AddFileButton'
 import { AddPromptTextarea } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/overview/_components/Overview/AddPromptTextarea'
+import { computeTotalRuns } from '@latitude-data/core/services/projects/computeTotalRuns'
 
 export default async function OverviewPage({
   params,
@@ -22,17 +22,15 @@ export default async function OverviewPage({
     workspaceId: session.workspace.id,
   })
 
-  const projectStats = await computeProjectStats({
-    project,
-  }).then((result) => result.unwrap())
+  const totalRuns = await computeTotalRuns(project).then((r) => r.unwrap())
 
   return (
     <DocumentsLayout projectId={Number(projectId)} commitUuid={commitUuid}>
-      {projectStats.totalRuns > 0 ? (
+      {totalRuns > 0 ? (
         <div className='p-6'>
           <TableWithHeader
             title='Overview'
-            table={<Overview project={project} stats={projectStats} />}
+            table={<Overview project={project} />}
           />
         </div>
       ) : (

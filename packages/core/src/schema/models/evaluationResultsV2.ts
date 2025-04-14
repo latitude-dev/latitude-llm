@@ -80,5 +80,9 @@ export const evaluationResultsV2 = latitudeSchema.table(
     createdAtIdx: index('evaluation_results_v2_created_at_idx').on(
       table.createdAt,
     ),
+    // Add composite index for evaluation results queries
+    commitEvaluationIdx: index(
+      'evaluation_results_v2_commit_evaluation_idx',
+    ).on(table.commitId, table.evaluationUuid),
   }),
 )

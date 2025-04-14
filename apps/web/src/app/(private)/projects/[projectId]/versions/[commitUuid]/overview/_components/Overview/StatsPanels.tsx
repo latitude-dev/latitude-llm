@@ -31,19 +31,19 @@ export function StatsPanels({
               date: new Date(r.date),
               count: r.count,
             }))}
-            isLoading={!stats && isLoading}
+            isLoading={isLoading}
           />
           <div className='grid grid-cols-1 gap-4'>
             <Panel
               label='Prompts'
               additionalInfo='The total number of prompts across all versions, including deleted ones.'
-              loading={!stats && isLoading}
+              loading={isLoading}
               value={String(stats?.totalDocuments ?? '-')}
             />
             <Panel
               label='Total logs'
               additionalInfo='The total number of prompt logs across all versions, including deleted prompts.'
-              loading={!stats && isLoading}
+              loading={isLoading}
               value={String(stats?.totalRuns ?? '-')}
             />
           </div>
@@ -51,24 +51,24 @@ export function StatsPanels({
             <Panel
               label='Total tokens'
               additionalInfo='The total number of tokens processed in prompt runs across all versions, including deleted prompts.'
-              loading={!stats && isLoading}
+              loading={isLoading}
               value={String(stats?.totalTokens ?? '-')}
             />
             <Panel
               label='Total cost'
               additionalInfo='The cumulative cost of all prompt runs across all versions, including from deleted prompts.'
-              loading={!stats && isLoading}
+              loading={isLoading}
               value={stats ? formatCostInMillicents(totalCost) : '-'}
             />
           </div>
         </div>
 
-        <ModelCharts stats={stats} isLoading={!stats && isLoading} />
+        <ModelCharts stats={stats} isLoading={isLoading} />
       </div>
 
       <div className='flex flex-col gap-4'>
         <Text.H5>Evaluations</Text.H5>
-        <EvaluationStats stats={stats} isLoading={!stats && isLoading} />
+        <EvaluationStats stats={stats} isLoading={isLoading} />
       </div>
     </div>
   )

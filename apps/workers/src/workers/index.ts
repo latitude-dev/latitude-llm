@@ -68,4 +68,13 @@ export async function setupSchedules() {
     },
     { opts: { attempts: 1 } },
   )
+
+  // Every day at 3 AM - Refresh project stats cache
+  await maintenanceQueue.upsertJobScheduler(
+    'refreshProjectStatsCacheJob',
+    {
+      pattern: '0 0 3 * * *',
+    },
+    { opts: { attempts: 1 } },
+  )
 }
