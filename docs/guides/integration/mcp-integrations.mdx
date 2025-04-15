@@ -1,15 +1,13 @@
 ---
-title: Third-Party Integrations
-description: Connect Latitude to other tools and services using Model Coordination Protocol (MCP) servers.
+title: MCPs
+description: Connect Latitude to other tools and services using Model Context Protocol (MCP) servers.
 ---
 
-# Third-Party Integrations
+Latitude supports extending its capabilities by integrating with external tools and services through servers implementing the **Model Context Protocol (MCP)**. This allows you to connect Latitude prompts to systems like Slack, Notion, databases, or custom internal tools.
 
-Latitude supports extending its capabilities by integrating with external tools and services through servers implementing the **Model Coordination Protocol (MCP)**. This allows you to connect Latitude prompts to systems like Slack, Notion, databases, or custom internal tools.
+## What is an MCP?
 
-## What is MCP?
-
-MCP (Model Coordination Protocol) is a standardized way for AI platforms like Latitude to interact with external tools or "skills". An MCP server acts as a bridge:
+MCP (Model Context Protocol) is a standardized way for AI platforms like Latitude to interact with external tools or "skills". An MCP server acts as a bridge:
 
 1.  **Latitude Request**: When a Latitude prompt (often an [Agent](/guides/prompt-manager/agents)) needs to use an external tool, it sends a request to the configured MCP server.
 2.  **MCP Server Action**: The MCP server receives the request, understands which tool is being called and with which arguments, and executes the corresponding action in the third-party system (e.g., sending a Slack message, querying a database, creating a Notion page).

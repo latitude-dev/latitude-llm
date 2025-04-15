@@ -1,5 +1,5 @@
 ---
-title: Extending Prompts with Tools
+title: Tool use
 description: Enable AI models to interact with external functions and data sources using tools.
 ---
 
@@ -34,7 +34,7 @@ tools:
         required: [location]
 ---
 <user>
-  What's the weather like in {{ location }}?
+What's the weather like in {{ location }}?
 </user>
 ```
 
@@ -63,7 +63,7 @@ model: gpt-4o
 tools:
   - get_stock_price # Enable the custom tool
 
-# Define the custom tool
+  # Define the custom tool
   - get_stock_price:
       description: Retrieves the current stock price for a given ticker symbol.
       parameters:
@@ -75,7 +75,7 @@ tools:
         required: [ticker_symbol]
 ---
 <user>
-  What is the current price of {{ ticker }} stock?
+What is the current price of {{ ticker }} stock?
 </user>
 ```
 

@@ -69,7 +69,7 @@
       ]
     },
     {
-      "group": "Prompt Development Guide",
+      "group": "Prompts",
       "pages": [
         "guides/prompt-manager/overview",
         "guides/prompt-manager/configuration",
@@ -77,17 +77,28 @@
         "guides/prompt-manager/version-control",
         "guides/prompt-manager/json-output",
         "guides/prompt-manager/tools",
-        "guides/prompt-manager/latitude-tools",
-        "guides/prompt-manager/agents",
         "guides/prompt-manager/prompt-best-practices"
+      ]
+    },
+    {
+      "group": "Agents",
+      "pages": [
+        "guides/prompt-manager/agents",
+        "guides/prompt-manager/latitude-tools",
+        "guides/integration/mcp-integrations"
       ]
     },
     {
       "group": "Evaluations",
       "pages": [
         "guides/evaluations/overview",
-        "guides/evaluations/llm_as_judge_evaluations",
-        "guides/evaluations/evaluation-templates",
+        {
+          "group": "LLM-as-Judges",
+          "pages": [
+            "guides/evaluations/llm_as_judge_evaluations",
+            "guides/evaluations/evaluation-templates"
+          ]
+        },
         "guides/evaluations/programmatic_rules",
         "guides/evaluations/manual_evaluations",
         "guides/evaluations/running-evaluations",
@@ -96,14 +107,11 @@
       ]
     },
     {
-      "group": "Data Management with Datasets",
-      "pages": [
-        "guides/datasets/overview",
-        "guides/datasets/golden-datasets"
-      ]
+      "group": "Datasets",
+      "pages": ["guides/datasets/overview", "guides/datasets/golden-datasets"]
     },
     {
-      "group": "Integration & Deployment",
+      "group": "Deployment",
       "pages": [
         "guides/integration/publishing-deployment",
         {
@@ -122,18 +130,6 @@
             "guides/api/streaming-events",
             "guides/api/webhooks"
           ]
-        },
-        {
-          "group": "Other Integrations",
-          "pages": [
-            "guides/integration/mcp-integrations"
-          ]
-        },
-        {
-          "group": "Support",
-          "pages": [
-            "guides/integration/community-support"
-          ]
         }
       ]
     },
@@ -145,10 +141,12 @@
       ]
     },
     {
+      "group": "Support",
+      "pages": ["guides/integration/community-support"]
+    },
+    {
       "group": "Getting Started",
-      "pages": [
-        "promptl/getting-started/introduction"
-      ]
+      "pages": ["promptl/getting-started/introduction"]
     },
     {
       "group": "Syntax",
@@ -177,16 +175,11 @@
     },
     {
       "group": "Advanced",
-      "pages": [
-        "promptl/advanced/chains",
-        "promptl/advanced/snippets"
-      ]
+      "pages": ["promptl/advanced/chains", "promptl/advanced/snippets"]
     },
     {
       "group": "Changelog",
-      "pages": [
-        "changelog/changelog"
-      ]
+      "pages": ["changelog/changelog"]
     }
   ],
   "footerSocials": {
