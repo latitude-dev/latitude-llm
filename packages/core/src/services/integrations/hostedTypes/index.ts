@@ -36,6 +36,47 @@ import EXA_MCP_CONFIG from './configs/exa'
 import YEPCODE_MCP_CONFIG from './configs/yepcode'
 import MONDAY_MCP_CONFIG from './configs/monday'
 import SUPABASE_MCP_CONFIG from './configs/supabase'
+import AGENTQL_MCP_CONFIG from './configs/agentql'
+import AGENTRPC_MCP_CONFIG from './configs/agentrpc'
+import ASTRADB_MCP_CONFIG from './configs/astraDb'
+import BANKLESS_MCP_CONFIG from './configs/bankless'
+import BICSCAN_MCP_CONFIG from './configs/bicscan'
+import CHARGEBEE_MCP_CONFIG from './configs/chargebee'
+import CHRONULUS_MCP_CONFIG from './configs/chronulus'
+import CIRCLECI_MCP_CONFIG from './configs/circleci'
+import CODACY_MCP_CONFIG from './configs/codacy'
+import CODELOGIC_MCP_CONFIG from './configs/codelogic'
+import CONVEX_MCP_CONFIG from './configs/convex'
+import DART_MCP_CONFIG from './configs/dart'
+import DEVHUB_CMS_MCP_CONFIG from './configs/devhubCms'
+import ELASTICSEARCH_MCP_CONFIG from './configs/elasticsearch'
+import ESIGNATURES_MCP_CONFIG from './configs/esignatures'
+import FEWSATS_MCP_CONFIG from './configs/fewsats'
+import FIRECRAWL_MCP_CONFIG from './configs/firecrawl'
+import GRAPHLIT_MCP_CONFIG from './configs/graphlit'
+import HEROKU_MCP_CONFIG from './configs/heroku'
+import INTEGRATION_APP_HUBSPOT_MCP_CONFIG from './configs/integrationAppHubspot'
+import LARA_TRANSLATE_MCP_CONFIG from './configs/laraTranslate'
+import LOGFIRE_MCP_CONFIG from './configs/logfire'
+import LANGFUSE_MCP_CONFIG from './configs/langfuse'
+import SUPABASE_LINGO_MCP_CONFIG from './configs/lingoSupabase'
+import MAKE_MCP_CONFIG from './configs/make'
+import MEILISEARCH_MCP_CONFIG from './configs/meilisearch'
+import MOMENTO_MCP_CONFIG from './configs/momento'
+import NEO4J_AURA_MCP_CONFIG from './configs/neo4jAura'
+import OCTAGON_MCP_CONFIG from './configs/octagon'
+import PADDLE_MCP_CONFIG from './configs/paddle'
+import PAYPAL_MCP_CONFIG from './configs/paypal'
+import QDRANT_MCP_CONFIG from './configs/qdrant'
+import RAYGUN_MCP_CONFIG from './configs/raygun'
+import REMBER_MCP_CONFIG from './configs/rember'
+import RIZA_MCP_CONFIG from './configs/riza'
+import SEARCH1API_MCP_CONFIG from './configs/search1api'
+import SEMGREP_MCP_CONFIG from './configs/semgrep'
+import TAVILY_MCP_CONFIG from './configs/tavily'
+import UNSTRUCTURED_MCP_CONFIG from './configs/unstructured'
+import VECTORIZE_MCP_CONFIG from './configs/vectorize'
+import XERO_MCP_CONFIG from './configs/xero'
 
 export const HOSTED_MCP_CONFIGS: Record<
   HostedIntegrationType,
@@ -77,4 +118,46 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.Exa]: EXA_MCP_CONFIG,
   [HostedIntegrationType.YepCode]: YEPCODE_MCP_CONFIG,
   [HostedIntegrationType.Monday]: MONDAY_MCP_CONFIG,
+  [HostedIntegrationType.AgentQL]: AGENTQL_MCP_CONFIG,
+  [HostedIntegrationType.AgentRPC]: AGENTRPC_MCP_CONFIG,
+  [HostedIntegrationType.AstraDB]: ASTRADB_MCP_CONFIG,
+  [HostedIntegrationType.Bankless]: BANKLESS_MCP_CONFIG,
+  [HostedIntegrationType.Bicscan]: BICSCAN_MCP_CONFIG,
+  [HostedIntegrationType.Chargebee]: CHARGEBEE_MCP_CONFIG,
+  [HostedIntegrationType.Chronulus]: CHRONULUS_MCP_CONFIG,
+  [HostedIntegrationType.CircleCI]: CIRCLECI_MCP_CONFIG,
+  [HostedIntegrationType.Codacy]: CODACY_MCP_CONFIG,
+  [HostedIntegrationType.CodeLogic]: CODELOGIC_MCP_CONFIG,
+  [HostedIntegrationType.Convex]: CONVEX_MCP_CONFIG,
+  [HostedIntegrationType.Dart]: DART_MCP_CONFIG,
+  [HostedIntegrationType.DevHubCMS]: DEVHUB_CMS_MCP_CONFIG,
+  [HostedIntegrationType.Elasticsearch]: ELASTICSEARCH_MCP_CONFIG,
+  [HostedIntegrationType.ESignatures]: ESIGNATURES_MCP_CONFIG,
+  [HostedIntegrationType.Fewsats]: FEWSATS_MCP_CONFIG,
+  [HostedIntegrationType.Firecrawl]: FIRECRAWL_MCP_CONFIG,
+  [HostedIntegrationType.Graphlit]: GRAPHLIT_MCP_CONFIG,
+  [HostedIntegrationType.Heroku]: HEROKU_MCP_CONFIG,
+  [HostedIntegrationType.IntegrationAppHubspot]:
+    INTEGRATION_APP_HUBSPOT_MCP_CONFIG,
+  [HostedIntegrationType.LaraTranslate]: LARA_TRANSLATE_MCP_CONFIG,
+  [HostedIntegrationType.Logfire]: LOGFIRE_MCP_CONFIG,
+  [HostedIntegrationType.Langfuse]: LANGFUSE_MCP_CONFIG,
+  [HostedIntegrationType.LingoSupabase]: SUPABASE_LINGO_MCP_CONFIG,
+  [HostedIntegrationType.Make]: MAKE_MCP_CONFIG,
+  [HostedIntegrationType.Meilisearch]: MEILISEARCH_MCP_CONFIG,
+  [HostedIntegrationType.Momento]: MOMENTO_MCP_CONFIG,
+  [HostedIntegrationType.Neo4jAura]: NEO4J_AURA_MCP_CONFIG,
+  [HostedIntegrationType.Octagon]: OCTAGON_MCP_CONFIG,
+  [HostedIntegrationType.Paddle]: PADDLE_MCP_CONFIG,
+  [HostedIntegrationType.PayPal]: PAYPAL_MCP_CONFIG,
+  [HostedIntegrationType.Qdrant]: QDRANT_MCP_CONFIG,
+  [HostedIntegrationType.Raygun]: RAYGUN_MCP_CONFIG,
+  [HostedIntegrationType.Rember]: REMBER_MCP_CONFIG,
+  [HostedIntegrationType.Riza]: RIZA_MCP_CONFIG,
+  [HostedIntegrationType.Search1API]: SEARCH1API_MCP_CONFIG,
+  [HostedIntegrationType.Semgrep]: SEMGREP_MCP_CONFIG,
+  [HostedIntegrationType.Tavily]: TAVILY_MCP_CONFIG,
+  [HostedIntegrationType.Unstructured]: UNSTRUCTURED_MCP_CONFIG,
+  [HostedIntegrationType.Vectorize]: VECTORIZE_MCP_CONFIG,
+  [HostedIntegrationType.Xero]: XERO_MCP_CONFIG,
 }
