@@ -214,35 +214,39 @@ async function createDemoEvaluation(
   if (!model) return
 
   if (evaluationsV2Enabled) {
-    return await createEvaluationV2({
-      document: document,
-      commit: commit,
-      settings: {
-        name: `Accuracy`,
-        description: `Evaluates how well the given instructions are followed.`,
-        type: EvaluationType.Llm,
-        metric: LlmEvaluationMetric.Rating,
-        configuration: {
-          reverseScale: false,
-          provider: provider.name,
-          model: model,
-          criteria:
-            'Assess how well the response follows the given instructions.',
-          minRating: 1,
-          minRatingDescription:
-            "Not faithful, doesn't follow the instructions.",
-          maxRating: 5,
-          maxRatingDescription: 'Very faithful, does follow the instructions.',
-          minThreshold: 4,
+    return await createEvaluationV2(
+      {
+        document: document,
+        commit: commit,
+        settings: {
+          name: `Accuracy`,
+          description: `Evaluates how well the given instructions are followed.`,
+          type: EvaluationType.Llm,
+          metric: LlmEvaluationMetric.Rating,
+          configuration: {
+            reverseScale: false,
+            provider: provider.name,
+            model: model,
+            criteria:
+              'Assess how well the response follows the given instructions.',
+            minRating: 1,
+            minRatingDescription:
+              "Not faithful, doesn't follow the instructions.",
+            maxRating: 5,
+            maxRatingDescription:
+              'Very faithful, does follow the instructions.',
+            minThreshold: 4,
+          },
         },
+        options: {
+          evaluateLiveLogs: true,
+          enableSuggestions: true,
+          autoApplySuggestions: true,
+        },
+        workspace: workspace,
       },
-      options: {
-        evaluateLiveLogs: true,
-        enableSuggestions: true,
-        autoApplySuggestions: true,
-      },
-      workspace: workspace,
-    }).then((r) => r.unwrap())
+      db,
+    ).then((r) => r.unwrap())
   }
 
   const evaluation = await createEvaluation(
