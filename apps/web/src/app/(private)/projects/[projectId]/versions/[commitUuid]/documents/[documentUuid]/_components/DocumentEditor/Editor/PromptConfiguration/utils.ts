@@ -79,7 +79,7 @@ export const useLatitudeAgentsConfig = ({
   const { document } = useCurrentDocument()
 
   const { data: agentToolsMap } = useAgentToolsMap({
-    commitUuid: commit.uuid,
+    commitUuid: commit?.uuid,
     projectId: project.id,
   })
 
