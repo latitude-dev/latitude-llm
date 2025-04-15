@@ -138,9 +138,6 @@ export function DocumentRefinement({
     router,
   ])
 
-  if (!refinementEnabled) return null
-  if (document.promptlVersion === 0) return null
-
   const step = useMemo(() => {
     if (resultIds.length > 0 || resultUuids.length > 0) {
       return {
@@ -210,6 +207,9 @@ export function DocumentRefinement({
     refine,
     reset,
   ])
+
+  if (!refinementEnabled) return null
+  if (document.promptlVersion === 0) return null
 
   return (
     <>
