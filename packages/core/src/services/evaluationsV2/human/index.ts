@@ -17,6 +17,6 @@ const METRICS: {
 export const HumanEvaluationSpecification = {
   ...specification,
   validate: undefined as any, // TODO(evalsv2): Implement
-  run: undefined as any, // TODO(evalsv2): Implement
+  annotate: undefined as any, // TODO(evalsv2): Implement
   metrics: METRICS,
 }

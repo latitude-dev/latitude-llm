@@ -6,7 +6,7 @@ import {
 } from './shared'
 
 const humanEvaluationConfiguration = BaseEvaluationConfiguration.extend({
-  instructions: z.string(),
+  criteria: z.string(),
 })
 const humanEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({
   reason: z.string().optional(),
@@ -87,6 +87,8 @@ export type HumanEvaluationRatingResultError = z.infer<
 
 const humanEvaluationComparisonConfiguration =
   humanEvaluationConfiguration.extend({
+    passDescription: z.string(),
+    failDescription: z.string(),
     minThreshold: z.number().optional(), // Threshold percentage
     maxThreshold: z.number().optional(), // Threshold percentage
   })

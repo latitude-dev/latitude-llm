@@ -73,7 +73,15 @@ export async function runPrompt<
   let promptConfig
   let promptChain
   try {
-    promptConfig = (await scan({ prompt })).config as PromptConfig
+    const result = await scan({ prompt })
+    if (result.errors.length > 0) {
+      throw new ChainError({
+        code: RunErrorCodes.ChainCompileError,
+        message: result.errors.join('\n'),
+      })
+    }
+
+    promptConfig = result.config as PromptConfig
     promptChain = new PromptlChain({
       prompt: prompt,
       parameters: parameters,
@@ -81,6 +89,7 @@ export async function runPrompt<
       includeSourceMap: true,
     })
   } catch (error) {
+    if (error instanceof ChainError) throw error
     throw new ChainError({
       code: RunErrorCodes.ChainCompileError,
       message: (error as Error).message,
@@ -88,7 +97,6 @@ export async function runPrompt<
   }
 
   let response
-  let error
   try {
     const result = runChain({
       chain: promptChain,
@@ -101,20 +109,18 @@ export async function runPrompt<
       providersMap: providers,
       workspace: workspace,
     })
+
+    const error = await result.error
+    if (error) throw error
+
     response = await result.lastResponse
-    error = await result.error
   } catch (error) {
-    if (!(error instanceof ChainError)) {
-      throw new ChainError({
-        code: RunErrorCodes.Unknown,
-        message: (error as Error).message,
-      })
-    }
-
-    throw error
+    if (error instanceof ChainError) throw error
+    throw new ChainError({
+      code: RunErrorCodes.Unknown,
+      message: (error as Error).message,
+    })
   }
-
-  if (error) throw error
 
   if (!promptChain.completed) {
     throw new ChainError({

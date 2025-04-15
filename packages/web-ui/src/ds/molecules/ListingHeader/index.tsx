@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes, ReactNode } from 'react'
+import { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Button, ButtonProps } from '../../atoms/Button'
@@ -7,16 +7,12 @@ import { TitleWithActions } from '../TitleWithActions'
 
 export function ListingButton({
   variant = 'outline',
+  fancy = true,
   children,
-  onClick,
-  disabled = false,
-}: {
-  children: ReactNode
-  variant?: ButtonProps['variant']
-  disabled?: boolean
-} & ButtonHTMLAttributes<HTMLButtonElement>) {
+  ...rest
+}: ButtonProps) {
   return (
-    <Button onClick={onClick} fancy variant={variant} disabled={disabled}>
+    <Button variant={variant} fancy={fancy} {...rest}>
       {children}
     </Button>
   )
