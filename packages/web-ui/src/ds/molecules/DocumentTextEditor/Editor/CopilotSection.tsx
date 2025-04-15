@@ -3,6 +3,8 @@ import { KeyboardEvent, useState } from 'react'
 import { cn } from '../../../../lib/utils'
 import { Button } from '../../../atoms/Button'
 import { TextArea } from '../../../atoms/TextArea'
+import { Tooltip } from '../../../atoms/Tooltip'
+import { TooltipTrigger } from '@radix-ui/react-tooltip'
 
 export function CopilotSection({
   isLoading,
@@ -16,6 +18,10 @@ export function CopilotSection({
   const [value, setValue] = useState('')
   const handleSubmit = () => {
     requestSuggestion(value)
+  }
+  const improveThisPrompt = () => {
+    setValue('Improve this prompt')
+    requestSuggestion('Improve this prompt')
   }
   const handleKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -46,6 +52,24 @@ export function CopilotSection({
           <Button fancy disabled={isLoading || !value} onClick={handleSubmit}>
             {isLoading ? 'Generating...' : 'Submit'}
           </Button>
+          <Tooltip
+            trigger={
+              <TooltipTrigger asChild>
+                <Button
+                  iconProps={{ name: 'sparkles', color: 'foregroundMuted' }}
+                  variant='outline'
+                  fancy
+                  onClick={() => improveThisPrompt()}
+                  disabled={isLoading}
+                >
+                  Improve my prompt
+                </Button>
+              </TooltipTrigger>
+            }
+          >
+            Let our AI Assistant improve and fix your prompt based on
+            documentation and best practices.
+          </Tooltip>
         </div>
       </div>
     </div>
