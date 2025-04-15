@@ -106,18 +106,24 @@ export default function Preview({
     if (metadata.errors.length > 0) return
 
     const usePromptl = document.promptlVersion !== 0
-    const chain = usePromptl
-      ? new PromptlChain({
-          prompt: metadata.resolvedPrompt,
-          parameters,
-          adapter: Adapters.default,
-          includeSourceMap: true,
-        })
-      : new LegacyChain({
-          prompt: metadata.resolvedPrompt,
-          parameters,
-          includeSourceMap: true,
-        })
+    let chain
+    try {
+      chain = usePromptl
+        ? new PromptlChain({
+            prompt: metadata.resolvedPrompt,
+            parameters,
+            adapter: Adapters.default,
+            includeSourceMap: true,
+          })
+        : new LegacyChain({
+            prompt: metadata.resolvedPrompt,
+            parameters,
+            includeSourceMap: true,
+          })
+    } catch (e) {
+      setError(e as Error)
+      return
+    }
 
     chain
       .step()
