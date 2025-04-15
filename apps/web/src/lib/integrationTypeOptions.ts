@@ -176,6 +176,170 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Monday',
     icon: 'monday',
   },
+  [HostedIntegrationType.AgentQL]: {
+    label: 'AgentQL',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.AgentRPC]: {
+    label: 'AgentRPC',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.AstraDB]: {
+    label: 'AstraDB',
+    icon: 'database',
+  },
+  [HostedIntegrationType.Bankless]: {
+    label: 'Bankless',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Bicscan]: {
+    label: 'Bicscan',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Chargebee]: {
+    label: 'Chargebee',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Chronulus]: {
+    label: 'Chronulus',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.CircleCI]: {
+    label: 'CircleCI',
+    icon: 'mcp', // Assuming generic icon
+  },
+  [HostedIntegrationType.Codacy]: {
+    label: 'Codacy',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.CodeLogic]: {
+    label: 'CodeLogic',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Convex]: {
+    label: 'Convex',
+    icon: 'database',
+  },
+  [HostedIntegrationType.Dart]: {
+    label: 'Dart',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.DevHubCMS]: {
+    label: 'DevHub CMS',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Elasticsearch]: {
+    label: 'Elasticsearch',
+    icon: 'database',
+  },
+  [HostedIntegrationType.ESignatures]: {
+    label: 'ESignatures',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Fewsats]: {
+    label: 'Fewsats',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Firecrawl]: {
+    label: 'Firecrawl',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Graphlit]: {
+    label: 'Graphlit',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Heroku]: {
+    label: 'Heroku',
+    icon: 'mcp', // Assuming generic icon
+  },
+  [HostedIntegrationType.IntegrationAppHubspot]: {
+    label: 'HubSpot (via Integration.app)',
+    icon: 'mcp', // Assuming generic icon, specific 'hubspot' might exist
+  },
+  [HostedIntegrationType.LaraTranslate]: {
+    label: 'LaraTranslate',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Logfire]: {
+    label: 'Logfire',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Langfuse]: {
+    label: 'Langfuse',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.LingoSupabase]: {
+    label: 'Lingo (Supabase)',
+    icon: 'supabase', // Reusing existing icon
+  },
+  [HostedIntegrationType.Make]: {
+    label: 'Make',
+    icon: 'mcp', // Assuming generic icon
+  },
+  [HostedIntegrationType.Meilisearch]: {
+    label: 'Meilisearch',
+    icon: 'search',
+  },
+  [HostedIntegrationType.Momento]: {
+    label: 'Momento',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Neo4jAura]: {
+    label: 'Neo4j Aura',
+    icon: 'database',
+  },
+  [HostedIntegrationType.Octagon]: {
+    label: 'Octagon',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Paddle]: {
+    label: 'Paddle',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.PayPal]: {
+    label: 'PayPal',
+    icon: 'mcp', // Assuming generic icon
+  },
+  [HostedIntegrationType.Qdrant]: {
+    label: 'Qdrant',
+    icon: 'database',
+  },
+  [HostedIntegrationType.Raygun]: {
+    label: 'Raygun',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Rember]: {
+    label: 'Rember',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Riza]: {
+    label: 'Riza',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Search1API]: {
+    label: 'Search1 API',
+    icon: 'search',
+  },
+  [HostedIntegrationType.Semgrep]: {
+    label: 'Semgrep',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Tavily]: {
+    label: 'Tavily',
+    icon: 'search',
+  },
+  [HostedIntegrationType.Unstructured]: {
+    label: 'Unstructured',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Vectorize]: {
+    label: 'Vectorize',
+    icon: 'database',
+  },
+  [HostedIntegrationType.Xero]: {
+    label: 'Xero',
+    icon: 'mcp',
+  },
 }
 
 export function integrationOptions(
