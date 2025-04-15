@@ -148,6 +148,21 @@ If the limit is reached before the goal is completed, the agent run will termina
 
 Agents are run just like any other prompt using the [API](/guides/api/api-access) or [SDKs](/guides/sdk/typescript). The response will typically be a stream of events detailing the agent's thought process, tool calls, and final answer.
 
+## Subagents
+
+You can make any prompt have access to other agents in your project by using the `agents` configuration option. This allows you to create a hierarchy of agents, where tasks are delegated to subagents with specific responsibilities.
+
+```yaml {4-5}
+---
+provider: openai
+model: gpt-4o
+agents:
+ - path/to/another-agent
+---
+```
+
+The main prompt will have access to running the subagent prompt as if it was a tool. This allows you to structure complex tasks into smaller, manageable sub-tasks performed by different agents.
+
 ## Next Steps
 
 - Explore [Latitude Tools](/guides/prompt-manager/latitude-tools) that agents can use.

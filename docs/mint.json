@@ -36,6 +36,10 @@
       "url": "promptl"
     },
     {
+      "name": "Examples",
+      "url": "examples"
+    },
+    {
       "name": "Changelog",
       "url": "changelog"
     }
@@ -178,6 +182,14 @@
       "pages": ["promptl/advanced/chains", "promptl/advanced/snippets"]
     },
     {
+      "group": "Simple prompts",
+      "pages": ["/examples/tool-calling/weather-chatbot"]
+    },
+    {
+      "group": "Agents",
+      "pages": ["/examples/agents/joke-generator", "/examples/agents/deep-search"]
+    },
+    {
       "group": "Changelog",
       "pages": ["changelog/changelog"]
     }
@@ -188,3 +200,4 @@
     "linkedin": "https://www.linkedin.com/company/trylatitude/"
   }
 }
+
