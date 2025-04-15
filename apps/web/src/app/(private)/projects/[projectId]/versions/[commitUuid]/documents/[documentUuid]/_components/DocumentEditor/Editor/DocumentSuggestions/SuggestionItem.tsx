@@ -5,7 +5,6 @@ import {
   DocumentVersion,
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   ICommitContextType,
@@ -15,7 +14,7 @@ import DiffMatchPatch from 'diff-match-patch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 
 const dmp = new DiffMatchPatch()
 
@@ -47,8 +46,6 @@ export function SuggestionItem({
   isLoading: boolean
 }) {
   const router = useRouter()
-
-  const [isDiscarding, setIsDiscarding] = useState(false)
 
   const evaluationLink = useMemo(() => {
     if (suggestion.evaluation.version === 'v2') {
@@ -98,8 +95,7 @@ export function SuggestionItem({
 
   const onDiscard = useCallback(async () => {
     await discard({ suggestionId: suggestion.id })
-    setIsDiscarding(false)
-  }, [suggestion, discard, setIsDiscarding])
+  }, [suggestion, discard])
 
   return (
     <li className='w-full flex flex-col p-4 gap-y-2 hover:bg-accent/50'>
@@ -131,29 +127,11 @@ export function SuggestionItem({
           variant='link'
           size='none'
           className='text-destructive'
-          onClick={() => {
-            setIsDiscarding(true)
-            close()
-          }}
+          onClick={onDiscard}
           disabled={isLoading}
         >
           Remove
         </Button>
-        <ConfirmModal
-          dismissible
-          open={isDiscarding}
-          title={`Remove ${suggestion.evaluation.name} suggestion`}
-          type='destructive'
-          onConfirm={onDiscard}
-          onCancel={() => setIsDiscarding(false)}
-          onOpenChange={setIsDiscarding}
-          confirm={{
-            label: 'Remove suggestion',
-            description:
-              'This will remove the suggestion. This action cannot be undone. We will try to generate a better suggestion next time!',
-            isConfirming: isLoading,
-          }}
-        />
       </div>
     </li>
   )
