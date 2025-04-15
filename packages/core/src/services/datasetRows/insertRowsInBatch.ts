@@ -21,6 +21,11 @@ export async function insertRowsInBatch(
     datasetId: dataset.id,
     rowData,
   }))
+
+  if (!rows.length) {
+    return Result.ok([])
+  }
+
   return await Transaction.call<DatasetRow[]>(async (trx) => {
     const result = await trx.insert(datasetRows).values(rows).returning()
     return Result.ok(result)
