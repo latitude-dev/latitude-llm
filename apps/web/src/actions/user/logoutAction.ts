@@ -21,7 +21,7 @@ function removeSocketCookie({
 export const logoutAction = authProcedure
   .createServerAction()
   .handler(async ({ ctx }) => {
-    removeSession({ session: ctx.session })
+    await removeSession({ session: ctx.session })
 
     const cookies = await getCookies()
     removeSocketCookie({ name: 'websocket', cookies })

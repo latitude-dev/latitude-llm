@@ -81,7 +81,12 @@ export function createProviderApiKey(
         },
       })
 
-      return Result.ok(result[0]!)
+      const providerApiKey = result[0]
+      if (!providerApiKey) {
+        return Result.error(new BadRequestError('Provider API key not created'))
+      }
+
+      return Result.ok(providerApiKey)
     } catch (error) {
       if (error instanceof DatabaseError) {
         if (error.code === databaseErrorCodes.uniqueViolation) {
