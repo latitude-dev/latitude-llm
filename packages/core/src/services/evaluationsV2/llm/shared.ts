@@ -8,12 +8,44 @@ import {
   LlmEvaluationMetric,
   LogSources,
   ProviderApiKey,
+  Providers,
   Workspace,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { ProviderLogsRepository } from '../../../repositories'
 import { runChain } from '../../chains/run'
+
+export function promptTask({ provider }: { provider: ProviderApiKey }) {
+  return `
+${provider.provider === Providers.Anthropic ? '<user>' : ''}
+
+Based on the given instructions, evaluate the assistant response:
+\`\`\`
+{{ actualOutput }}
+\`\`\`
+
+For context, here is the full conversation:
+\`\`\`
+{{ conversation }}
+\`\`\`
+
+{{if toolCalls }}
+  Also, here are the tool calls that the assistant requested:
+  \`\`\`
+  {{toolCalls}}
+  \`\`\`
+{{endif}}
+
+{{if cost || duration }}
+  Also, here is some additional metadata about the conversation. It may or may not be relevant for the evaluation.
+  {{if cost }} - Cost: {{ cost }} cents. {{endif}}
+  {{if duration }} - Duration: {{ duration }} milliseconds. {{endif}}
+{{endif}}
+
+${provider.provider === Providers.Anthropic ? '</user>' : ''}
+`.trim()
+}
 
 export async function runPrompt<
   M extends LlmEvaluationMetric,
@@ -41,7 +73,15 @@ export async function runPrompt<
   let promptConfig
   let promptChain
   try {
-    promptConfig = (await scan({ prompt })).config as PromptConfig
+    const result = await scan({ prompt })
+    if (result.errors.length > 0) {
+      throw new ChainError({
+        code: RunErrorCodes.ChainCompileError,
+        message: result.errors.join('\n'),
+      })
+    }
+
+    promptConfig = result.config as PromptConfig
     promptChain = new PromptlChain({
       prompt: prompt,
       parameters: parameters,
@@ -49,6 +89,7 @@ export async function runPrompt<
       includeSourceMap: true,
     })
   } catch (error) {
+    if (error instanceof ChainError) throw error
     throw new ChainError({
       code: RunErrorCodes.ChainCompileError,
       message: (error as Error).message,
@@ -56,7 +97,6 @@ export async function runPrompt<
   }
 
   let response
-  let error
   try {
     const result = runChain({
       chain: promptChain,
@@ -69,20 +109,18 @@ export async function runPrompt<
       providersMap: providers,
       workspace: workspace,
     })
+
+    const error = await result.error
+    if (error) throw error
+
     response = await result.lastResponse
-    error = await result.error
   } catch (error) {
-    if (!(error instanceof ChainError)) {
-      throw new ChainError({
-        code: RunErrorCodes.Unknown,
-        message: (error as Error).message,
-      })
-    }
-
-    throw error
+    if (error instanceof ChainError) throw error
+    throw new ChainError({
+      code: RunErrorCodes.Unknown,
+      message: (error as Error).message,
+    })
   }
-
-  if (error) throw error
 
   if (!promptChain.completed) {
     throw new ChainError({

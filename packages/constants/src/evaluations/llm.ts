@@ -94,6 +94,8 @@ export type LlmEvaluationRatingResultError = z.infer<
 
 const llmEvaluationComparisonConfiguration = llmEvaluationConfiguration.extend({
   criteria: z.string(),
+  passDescription: z.string(),
+  failDescription: z.string(),
   minThreshold: z.number().optional(), // Threshold percentage
   maxThreshold: z.number().optional(), // Threshold percentage
 })

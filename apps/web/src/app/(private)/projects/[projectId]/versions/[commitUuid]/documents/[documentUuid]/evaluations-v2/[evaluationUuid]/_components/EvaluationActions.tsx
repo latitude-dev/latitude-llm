@@ -131,6 +131,15 @@ function EditPrompt<
   return (
     <>
       <TableWithHeader.Button
+        variant='link'
+        size='none'
+        fancy={false}
+        iconProps={{
+          name: 'arrowUpRight',
+          widthClass: 'w-4',
+          heightClass: 'h-4',
+          placement: 'right',
+        }}
         onClick={() => setOpenCloneModal(true)}
         disabled={isExecuting}
       >

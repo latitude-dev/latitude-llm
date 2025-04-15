@@ -27,15 +27,18 @@ import {
   ResultRowHeadersProps,
 } from '../index'
 import LlmEvaluationBinarySpecification from './Binary'
+import LlmEvaluationComparisonSpecification from './Comparison'
+import LlmEvaluationCustomSpecification from './Custom'
+import LlmEvaluationRatingSpecification from './Rating'
 
 // prettier-ignore
 const METRICS: {
   [M in LlmEvaluationMetric]: EvaluationMetricFrontendSpecification<EvaluationType.Llm, M>
 } = {
   [LlmEvaluationMetric.Binary]: LlmEvaluationBinarySpecification,
-  [LlmEvaluationMetric.Rating]: undefined as any, // TODO(evalsv2): Implement
-  [LlmEvaluationMetric.Comparison]: undefined as any, // TODO(evalsv2): Implement
-  [LlmEvaluationMetric.Custom]: undefined as any, // TODO(evalsv2): Implement
+  [LlmEvaluationMetric.Rating]: LlmEvaluationRatingSpecification,
+  [LlmEvaluationMetric.Comparison]: LlmEvaluationComparisonSpecification,
+  [LlmEvaluationMetric.Custom]: LlmEvaluationCustomSpecification,
 }
 
 const specification = LlmEvaluationSpecification
@@ -54,6 +57,7 @@ export default {
 }
 
 function ConfigurationForm<M extends LlmEvaluationMetric>({
+  mode,
   metric,
   configuration,
   setConfiguration,
@@ -80,6 +84,10 @@ function ConfigurationForm<M extends LlmEvaluationMetric>({
   })
 
   const isLoading = isLoadingWorkspace || isLoadingProviders
+  const isDisabled =
+    disabled ||
+    isLoading ||
+    (mode !== 'create' && metric === LlmEvaluationMetric.Custom)
 
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
@@ -88,7 +96,7 @@ function ConfigurationForm<M extends LlmEvaluationMetric>({
     <>
       <FormFieldGroup
         layout='horizontal'
-        description='The provider and model to use when running the evaluation prompt. You can change them in the editor too when using a custom prompt'
+        description={`The provider and model to use when running the evaluation prompt${mode !== 'create' && metric === LlmEvaluationMetric.Custom ? '. You must change them in the editor when using a custom prompt' : ''}`}
       >
         <Select
           value={configuration.provider ?? ''}
@@ -101,7 +109,7 @@ function ConfigurationForm<M extends LlmEvaluationMetric>({
           }
           errors={errors?.['provider']}
           loading={isLoading}
-          disabled={disabled || isLoading || !providerOptions.length}
+          disabled={isDisabled || !providerOptions.length}
           required
         />
         {selectedProvider?.provider === Providers.Custom ? (
@@ -115,7 +123,7 @@ function ConfigurationForm<M extends LlmEvaluationMetric>({
             }
             errors={errors?.['model']}
             className='w-full px-3'
-            disabled={disabled || isLoading}
+            disabled={isDisabled}
             required
           />
         ) : (
@@ -130,12 +138,13 @@ function ConfigurationForm<M extends LlmEvaluationMetric>({
             }
             errors={errors?.['model']}
             loading={isLoading}
-            disabled={disabled || isLoading || !modelOptions.length}
+            disabled={isDisabled || !modelOptions.length}
             required
           />
         )}
       </FormFieldGroup>
       <metricSpecification.ConfigurationForm
+        mode={mode}
         configuration={configuration}
         setConfiguration={setConfiguration}
         errors={errors}

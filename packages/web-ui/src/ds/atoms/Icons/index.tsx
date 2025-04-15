@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ArrowRightIcon,
   ArrowUpIcon,
+  ArrowUpRight,
   AtSign,
   BarChart4,
   Blend,
@@ -45,6 +46,7 @@ import {
   ExternalLink,
   Eye,
   File,
+  FileCode2,
   FileDown,
   FilePlus,
   FileQuestion,
@@ -53,6 +55,7 @@ import {
   FolderClosed,
   FolderOpen,
   FolderPlus,
+  GitCompareArrows,
   Github,
   Gitlab,
   Globe,
@@ -125,6 +128,7 @@ import AwsBedrock from './custom-icons/logos/AwsBedrock'
 import Brave from './custom-icons/logos/Brave'
 import Browserbase from './custom-icons/logos/Browserbase'
 import Discord from './custom-icons/logos/Discord'
+import Exa from './custom-icons/logos/Exa'
 import Figma from './custom-icons/logos/Figma'
 import Ghost from './custom-icons/logos/Ghost'
 import Google from './custom-icons/logos/Google'
@@ -132,6 +136,7 @@ import Hyperbrowser from './custom-icons/logos/Hyperbrowser'
 import Intercom from './custom-icons/logos/Intercom'
 import Jira from './custom-icons/logos/Jira'
 import Linear from './custom-icons/logos/Linear'
+import Monday from './custom-icons/logos/Monday'
 import Neon from './custom-icons/logos/Neon'
 import Notion from './custom-icons/logos/Notion'
 import Perplexity from './custom-icons/logos/Perplexity'
@@ -145,9 +150,7 @@ import Telegram from './custom-icons/logos/Telegram'
 import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
-import Exa from './custom-icons/logos/Exa'
 import YepCode from './custom-icons/logos/YepCode'
-import Monday from './custom-icons/logos/Monday'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -162,6 +165,7 @@ const Icons = {
   arrowLeft: ArrowLeft,
   arrowRight: ArrowRightIcon,
   arrowUp: ArrowUpIcon,
+  arrowUpRight: ArrowUpRight,
   atSign: AtSign,
   attio: Attio,
   audiense: Audiense,
@@ -211,6 +215,7 @@ const Icons = {
   filePlus: FilePlus,
   fileQuestion: FileQuestion,
   fileUp: FileUpIcon,
+  fileCode: FileCode2,
   folderClose: FolderClosed,
   folderOpen: FolderOpen,
   folderPlus: FolderPlus,
@@ -294,6 +299,7 @@ const Icons = {
   exa: Exa,
   yepcode: YepCode,
   monday: Monday,
+  gitCompareArrows: GitCompareArrows,
 }
 
 export type IconName = keyof typeof Icons

@@ -189,7 +189,7 @@ describe('computeProjectStats', () => {
           reverseScale: false,
           provider: 'openai',
           model: 'gpt-4',
-          instructions: 'Evaluate the response',
+          criteria: 'Evaluate the response',
           passDescription: 'Pass',
           failDescription: 'Fail',
         },

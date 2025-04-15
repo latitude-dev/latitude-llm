@@ -1,13 +1,11 @@
-import yaml from 'js-yaml'
+import { scan } from 'promptl-ai'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   ErrorableEntity,
   EvaluationType,
   formatConversation,
   LlmEvaluationMetric,
-  ProviderApiKey,
-  LlmEvaluationBinarySpecification as specification,
+  LlmEvaluationCustomSpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
@@ -20,9 +18,9 @@ import {
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { promptTask, runPrompt } from './shared'
+import { runPrompt } from './shared'
 
-export const LlmEvaluationBinarySpecification = {
+export const LlmEvaluationCustomSpecification = {
   ...specification,
   validate: validate,
   run: run,
@@ -33,20 +31,57 @@ async function validate(
     configuration,
   }: EvaluationMetricValidateArgs<
     EvaluationType.Llm,
-    LlmEvaluationMetric.Binary
+    LlmEvaluationMetric.Custom
   >,
   _: Database = database,
 ) {
-  if (!configuration.criteria) {
-    return Result.error(new BadRequestError('Criteria is required'))
+  // Note: we allow to save an invalid prompt to avoid bad
+  // user experience when automatically saving the prompt
+
+  if (configuration.prompt === undefined) {
+    return Result.error(new BadRequestError('Prompt is required'))
   }
 
-  if (!configuration.passDescription) {
-    return Result.error(new BadRequestError('Pass description is required'))
+  try {
+    const { config } = await scan({ prompt: configuration.prompt })
+    configuration.provider = (config.provider as string | undefined) ?? ''
+    configuration.model = (config.model as string | undefined) ?? ''
+  } catch (_) {
+    // Fail silently
   }
 
-  if (!configuration.failDescription) {
-    return Result.error(new BadRequestError('Fail description is required'))
+  if (
+    configuration.minThreshold !== undefined &&
+    (configuration.minThreshold < 0 || configuration.minThreshold > 100)
+  ) {
+    return Result.error(
+      new BadRequestError(
+        'Minimum threshold must be a number between 0 and 100',
+      ),
+    )
+  }
+
+  if (
+    configuration.maxThreshold !== undefined &&
+    (configuration.maxThreshold < 0 || configuration.maxThreshold > 100)
+  ) {
+    return Result.error(
+      new BadRequestError(
+        'Maximum threshold must be a number between 0 and 100',
+      ),
+    )
+  }
+
+  if (
+    configuration.minThreshold !== undefined &&
+    configuration.maxThreshold !== undefined &&
+    configuration.minThreshold >= configuration.maxThreshold
+  ) {
+    return Result.error(
+      new BadRequestError(
+        'Minimum threshold must be less than maximum threshold',
+      ),
+    )
   }
 
   // Note: all settings are explicitly returned to ensure we don't
@@ -55,75 +90,45 @@ async function validate(
     reverseScale: configuration.reverseScale,
     provider: configuration.provider,
     model: configuration.model,
-    criteria: configuration.criteria,
-    passDescription: configuration.passDescription,
-    failDescription: configuration.failDescription,
+    prompt: configuration.prompt,
+    minThreshold: configuration.minThreshold,
+    maxThreshold: configuration.maxThreshold,
   })
 }
 
 const promptSchema = z.object({
-  passed: z.boolean(),
+  score: z.number().min(0).max(100),
   reason: z.string(),
 })
-
-function buildPrompt({
-  provider,
-  model,
-  criteria,
-  passDescription,
-  failDescription,
-}: {
-  provider: ProviderApiKey
-  model: string
-  criteria: string
-  passDescription: string
-  failDescription: string
-}) {
-  return `
----
-provider: ${provider.name}
-model: ${model}
-temperature: 0.7
-${yaml.dump({ schema: zodToJsonSchema(promptSchema, { target: 'openAi' }) })}
----
-
-You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), meets the following criteria:
-${criteria}
-
-The resulting verdict is \`true\` if the response meets the criteria, \`false\` otherwise, where:
-- \`true\` represents "${passDescription}"
-- \`false\` represents "${failDescription}"
-
-${promptTask({ provider })}
-
-You must give your verdict as a single JSON object with the following properties:
-- passed (boolean): \`true\` if the response meets the criteria, \`false\` otherwise.
-- reason (string): A string explaining your evaluation decision.
-`.trim()
-}
 
 async function run(
   {
     resultUuid,
     evaluation,
     actualOutput,
+    expectedOutput,
+    datasetLabel,
     conversation,
     documentLog,
     providers,
     workspace,
-  }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Binary>,
+  }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Custom>,
   db: Database = database,
 ) {
   try {
     let metadata = {
       configuration: evaluation.configuration,
       actualOutput: actualOutput,
+      expectedOutput: expectedOutput,
+      datasetLabel: datasetLabel,
       evaluationLogId: -1,
       reason: '',
       tokens: 0,
       cost: 0,
       duration: 0,
     }
+
+    // Note: expectedOutput is optional for this metric
 
     const provider = providers?.get(metadata.configuration.provider)
     if (!provider) {
@@ -136,10 +141,11 @@ async function run(
     ).then((r) => r.unwrap())
 
     const { response, stats, verdict } = await runPrompt({
-      prompt: buildPrompt({ ...metadata.configuration, provider }),
+      prompt: metadata.configuration.prompt,
       parameters: {
         ...evaluatedLog,
         actualOutput: actualOutput,
+        expectedOutput: expectedOutput,
         conversation: formatConversation(conversation),
       },
       schema: promptSchema,
@@ -155,14 +161,16 @@ async function run(
     metadata.cost = stats.costInMillicents
     metadata.duration = stats.duration
 
-    const score = verdict.passed ? 1 : 0
+    const score = Math.min(Math.max(Number(verdict.score.toFixed(0)), 0), 100)
 
-    let normalizedScore = normalizeScore(score, 0, 1)
-    let hasPassed = score === 1
+    let normalizedScore = normalizeScore(score, 0, 100)
     if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, 1, 0)
-      hasPassed = score === 0
+      normalizedScore = normalizeScore(score, 100, 0)
     }
+
+    const minThreshold = metadata.configuration.minThreshold ?? 0
+    const maxThreshold = metadata.configuration.maxThreshold ?? 100
+    const hasPassed = score >= minThreshold && score <= maxThreshold
 
     return { score, normalizedScore, metadata, hasPassed }
   } catch (error) {

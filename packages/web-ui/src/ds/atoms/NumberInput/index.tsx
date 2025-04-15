@@ -7,10 +7,10 @@ import {
   useRef,
   useState,
 } from 'react'
+import { cn } from '../../../lib/utils'
 import { Button } from '../Button'
 import { FormField, FormFieldProps } from '../FormField'
 import { Input, InputProps } from '../Input'
-import { cn } from '../../../lib/utils'
 
 export type NumberInputProps = {
   value?: number
@@ -18,6 +18,7 @@ export type NumberInputProps = {
   min?: number
   max?: number
   defaultAppearance?: boolean
+  fieldClassName?: string
 } & Omit<
   InputProps,
   'defaultValue' | 'value' | 'onChange' | 'min' | 'max' | 'type'
@@ -32,6 +33,7 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       min = -Infinity,
       max = Infinity,
       defaultAppearance,
+      fieldClassName,
       disabled,
       className,
       label,
@@ -96,11 +98,13 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
         description={description}
         errors={errors}
         errorStyle={errorStyle}
+        className={fieldClassName}
       >
         <div
           className={cn(
             'w-full flex items-center rounded-md outline-none',
             focused && 'ring-ring ring-2 ring-offset-2',
+            focused && errors && 'ring-red-500',
             className,
           )}
         >
@@ -121,6 +125,7 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
             max={max}
             min={min}
             className={cn('w-full relative focus-visible:ring-0', {
+              'border-red-500': errors,
               '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-r-none':
                 !defaultAppearance,
             })}
