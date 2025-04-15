@@ -102,7 +102,27 @@ Some providers will return additional metadata along with the response. To store
 ```
 
 The raw response will return an object with the full message details, which contains the `role`, `content`, and other metadata provided by the model.
-The `content` attribute will always be defined as an array of content objects, which can include text, images, or other types of content.
+The `content` attribute will always be defined as an array of content objects, which can include text, images, tool calls and any other types of content returned by the LLM.
+
+```json
+{
+  "role": "assistant",
+  "content": [
+    {
+      "type": "text",
+      "text": "This is a summary of the text."
+    },
+    {
+      "type": "tool-call",
+      "toolCallId": "tool-123",
+      "toolName": "store-summary",
+      "toolArguments": {
+        "summary": "This is a summary of the text."
+      }
+    }
+  ]
+}
+```
 
 ---
 
