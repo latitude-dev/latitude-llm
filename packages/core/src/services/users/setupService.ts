@@ -23,8 +23,8 @@ export default function setupService(
     email: string
     name: string
     companyName: string
-    defaultProviderName?: string
-    defaultProviderApiKey?: string
+    defaultProviderName: string
+    defaultProviderApiKey: string
     captureException?: (error: Error) => void
   },
   db = database,
@@ -46,24 +46,22 @@ export default function setupService(
       tx,
     )
     if (resultWorkspace.error) return resultWorkspace
+
     const workspace = resultWorkspace.value
+    const firstProvider = await createProviderApiKey(
+      {
+        workspace,
+        provider: Providers.OpenAI,
+        name: defaultProviderName,
+        token: defaultProviderApiKey,
+        defaultModel: 'gpt-4o-mini', // TODO: Move this to env variable
+        author: user,
+      },
+      tx,
+    )
 
-    if (defaultProviderName && defaultProviderApiKey) {
-      const firstProvider = await createProviderApiKey(
-        {
-          workspace,
-          provider: Providers.OpenAI,
-          name: defaultProviderName,
-          token: defaultProviderApiKey,
-          defaultModel: 'gpt-4o-mini', // TODO: Move this to env variable
-          author: user,
-        },
-        tx,
-      )
-
-      if (firstProvider.error) {
-        captureException?.(firstProvider.error)
-      }
+    if (firstProvider.error) {
+      captureException?.(firstProvider.error)
     }
 
     const resultImportingDefaultProject = await importDefaultProject(

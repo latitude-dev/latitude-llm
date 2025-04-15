@@ -94,6 +94,7 @@ if (environment === 'development' || environment === 'test') {
       GOOGLE_CLIENT_ID: '',
       GOOGLE_CLIENT_SECRET: '',
       GOOGLE_REDIRECT_URI: 'http://localhost:3000/api/auth/google/callback',
+      DEFAULT_PROVIDER_API_KEY: 'fake-provider-api-key',
     },
     { path: pathToEnv },
   )
@@ -116,7 +117,7 @@ export const env = createEnv({
 
     // Default settings when creating a new workspace
     DEFAULT_PROJECT_ID: z.coerce.number().optional(),
-    DEFAULT_PROVIDER_API_KEY: z.string().optional(),
+    DEFAULT_PROVIDER_API_KEY: z.string(),
     NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: z.string(),
 
     APP_DOMAIN: z.string(),
@@ -249,7 +250,6 @@ export const env = createEnv({
     ...process.env,
     CACHE_PORT: process.env.CACHE_PORT ?? '6379',
     NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: 'Latitude', // TODO: Move to env in infra
-    DEFAULT_PROVIDER_API_KEY: process.env.DEFAULT_PROVIDER_API_KEY,
     DRIVE_DISK: process.env.DRIVE_DISK ?? 'local',
     FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? UPLOADS_PATH,
     QUEUE_PORT: process.env.QUEUE_PORT ?? '6379',

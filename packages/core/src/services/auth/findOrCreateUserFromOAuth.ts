@@ -12,6 +12,7 @@ import setupServiceFn from '../users/setupService'
 import { BadRequestError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
 import Transaction from './../../lib/Transaction'
+import { env } from '@latitude-data/env'
 
 interface FindOrCreateUserFromOAuthInput {
   providerId: OAuthProvider
@@ -114,6 +115,8 @@ export function findOrCreateUserFromOAuth(
         email,
         name,
         companyName: `${name}'s Workspace`,
+        defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
+        defaultProviderApiKey: env.DEFAULT_PROVIDER_API_KEY,
       },
       tx,
     )
