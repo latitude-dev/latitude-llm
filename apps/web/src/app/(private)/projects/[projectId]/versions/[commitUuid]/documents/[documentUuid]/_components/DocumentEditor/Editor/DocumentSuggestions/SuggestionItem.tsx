@@ -131,7 +131,10 @@ export function SuggestionItem({
           variant='link'
           size='none'
           className='text-destructive'
-          onClick={() => setIsDiscarding(true)}
+          onClick={() => {
+            setIsDiscarding(true)
+            close()
+          }}
           disabled={isLoading}
         >
           Remove
