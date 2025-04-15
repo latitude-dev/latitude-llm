@@ -182,8 +182,8 @@
       "pages": ["promptl/advanced/chains", "promptl/advanced/snippets"]
     },
     {
-      "group": "Simple prompts",
-      "pages": ["/examples/tool-calling/weather-chatbot"]
+      "group": "Custom Tools",
+      "pages": ["/examples/custom-tools/weather-chatbot"]
     },
     {
       "group": "Agents",
