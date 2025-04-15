@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 import { DocumentLog } from '../browser'
 import { database } from '../client'
@@ -43,4 +43,18 @@ export const unsafelyFindDocumentLogByUuid = async (
     .limit(1)
 
   return result[0]
+}
+
+export async function findDocumentFromLog(log: DocumentLog) {
+  return database
+    .select()
+    .from(documentVersions)
+    .where(
+      and(
+        eq(documentVersions.documentUuid, log.documentUuid),
+        eq(documentVersions.commitId, log.commitId),
+      ),
+    )
+    .limit(1)
+    .then(([document]) => document)
 }

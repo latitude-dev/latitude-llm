@@ -8,8 +8,8 @@ import {
   createWebhookDelivery,
   sendSignedWebhook,
 } from '../../../services/webhooks'
-import { type WebhookPayload } from '../../../services/webhooks/types'
 import { Events, LatitudeEvent } from '../../../events/events'
+import { processWebhookPayload } from './utils/processWebhookPayload'
 
 const WEBHOOK_EVENTS: Array<Events> = ['commitPublished']
 
@@ -50,10 +50,9 @@ export const processIndividualWebhookJob = async (
   }
 
   // Create webhook payload
-  const payload: WebhookPayload = {
-    eventType: event.type,
-    payload: event.data,
-  }
+  const payload = await processWebhookPayload(event as LatitudeEvent).then(
+    (r) => r.unwrap(),
+  )
 
   try {
     // Send signed webhook
