@@ -175,6 +175,12 @@ workers.on('connection', (socket) => {
     const workspace = buildWorkspaceRoom({ workspaceId })
     web.to(workspace).emit('mcpServerConnected', data)
   })
+
+  socket.on('experimentStatus', (args) => {
+    const { workspaceId, data } = args
+    const workspace = buildWorkspaceRoom({ workspaceId })
+    web.to(workspace).emit('experimentStatus', data)
+  })
 })
 
 const PORT = process.env.WEBSOCKETS_SERVER_PORT || 4002

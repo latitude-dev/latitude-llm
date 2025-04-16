@@ -309,3 +309,12 @@ export type ResultWithEvaluationTmp =
   | (ResultWithEvaluationV2 & { version: 'v2' })
 
 export type Experiment = InferSelectModel<typeof experiments>
+export type ExperimentAggregatedResults = {
+  passed: number
+  failed: number
+  errors: number
+  totalScore: number
+}
+export type ExperimentDto = Experiment & {
+  results: ExperimentAggregatedResults
+}

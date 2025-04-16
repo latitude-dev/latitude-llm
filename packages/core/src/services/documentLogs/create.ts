@@ -33,6 +33,7 @@ export type CreateDocumentLogProps = {
       usage?: LanguageModelUsage
       costInMillicents?: number
     }
+    experimentId?: number
   }
 }
 
@@ -48,6 +49,7 @@ export async function createDocumentLog(
       source,
       createdAt,
       providerLog,
+      experimentId,
     },
     commit,
   }: CreateDocumentLogProps,
@@ -67,6 +69,7 @@ export async function createDocumentLog(
         duration,
         source,
         createdAt,
+        experimentId,
       })
       .returning()
 
