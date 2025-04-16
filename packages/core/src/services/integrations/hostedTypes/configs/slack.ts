@@ -18,5 +18,6 @@ export default {
       required: true,
     },
   },
-  envSource: 'https://api.slack.com/tutorials/tracks/getting-a-token',
+  envSource:
+    'https://github.com/modelcontextprotocol/servers/tree/main/src/slack#setup',
 } as HostedIntegrationConfig
