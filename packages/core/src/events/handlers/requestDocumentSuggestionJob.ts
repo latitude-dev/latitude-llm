@@ -1,7 +1,7 @@
 import { LogSources } from '../../browser'
 import { unsafelyFindWorkspace } from '../../data-access'
 import { generateDocumentSuggestionJobKey } from '../../jobs/job-definitions'
-import { documentsQueue } from '../../jobs/queues'
+import { documentSuggestionsQueue } from '../../jobs/queues'
 import { hasEvaluationResultPassed } from '../../services/evaluationResults'
 import {
   EvaluationResultCreatedEvent,
@@ -32,7 +32,7 @@ export const requestDocumentSuggestionJob = async ({
 
   if (hasEvaluationResultPassed({ result, evaluation })) return
 
-  documentsQueue.add(
+  documentSuggestionsQueue.add(
     'generateDocumentSuggestionJob',
     {
       workspaceId: workspace.id,
@@ -68,7 +68,7 @@ export const requestDocumentSuggestionJobV2 = async ({
   if (result.hasPassed || result.error || result.usedForSuggestion) return
   if (!evaluation.enableSuggestions) return
 
-  documentsQueue.add(
+  documentSuggestionsQueue.add(
     'generateDocumentSuggestionJob',
     {
       workspaceId: workspace.id,

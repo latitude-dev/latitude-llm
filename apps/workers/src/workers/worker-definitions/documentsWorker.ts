@@ -4,7 +4,6 @@ import { createWorker } from '../utils/createWorker'
 import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
 const jobMappings = {
-  generateDocumentSuggestionJob: jobs.generateDocumentSuggestionJob,
   runDocumentForEvaluationJob: jobs.runDocumentForEvaluationJob,
   runDocumentInBatchJob: jobs.runDocumentInBatchJob,
   runDocumentJob: jobs.runDocumentJob,
@@ -12,7 +11,7 @@ const jobMappings = {
 
 export function startDocumentsWorker() {
   return createWorker(Queues.documentsQueue, jobMappings, {
-    concurrency: 50,
+    concurrency: 25,
     connection: WORKER_CONNECTION_CONFIG,
   })
 }

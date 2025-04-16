@@ -4,14 +4,12 @@ import { createWorker } from '../utils/createWorker'
 import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
 const jobMappings = {
-  runEvaluationJob: jobs.runEvaluationJob,
-  runEvaluationV2Job: jobs.runEvaluationV2Job,
-  runBatchEvaluationJob: jobs.runBatchEvaluationJob,
+  generateDocumentSuggestionJob: jobs.generateDocumentSuggestionJob,
 }
 
-export function startEvaluationsWorker() {
-  return createWorker(Queues.evaluationsQueue, jobMappings, {
-    concurrency: 25,
+export function startDocumentSuggestionsWorker() {
+  return createWorker(Queues.documentSuggestionsQueue, jobMappings, {
+    concurrency: 1, // Very low concurrency to avoid rate limiting
     connection: WORKER_CONNECTION_CONFIG,
   })
 }

@@ -8,13 +8,13 @@ import {
   LogSources,
   Workspace,
 } from '../../browser'
-import { documentsQueue } from '../../jobs/queues'
+import { documentSuggestionsQueue } from '../../jobs/queues'
 import * as factories from '../../tests/factories'
 import { requestDocumentSuggestionJob } from './requestDocumentSuggestionJob'
 
 describe('requestDocumentSuggestionJob', () => {
   const mocks = vi.hoisted(() => ({
-    documentsQueue: vi.fn(),
+    documentSuggestionsQueue: vi.fn(),
   }))
 
   let workspace: Workspace
@@ -88,7 +88,9 @@ describe('requestDocumentSuggestionJob', () => {
     })
     result = r
 
-    vi.spyOn(documentsQueue, 'add').mockImplementation(mocks.documentsQueue)
+    vi.spyOn(documentSuggestionsQueue, 'add').mockImplementation(
+      mocks.documentSuggestionsQueue,
+    )
   })
 
   it('not enqueues generate suggestion job when result is not live', async () => {
@@ -107,7 +109,7 @@ describe('requestDocumentSuggestionJob', () => {
       },
     })
 
-    expect(mocks.documentsQueue).not.toHaveBeenCalled()
+    expect(mocks.documentSuggestionsQueue).not.toHaveBeenCalled()
   })
 
   it('not enqueues generate suggestion job when result has passed', async () => {
@@ -125,7 +127,7 @@ describe('requestDocumentSuggestionJob', () => {
       },
     })
 
-    expect(mocks.documentsQueue).not.toHaveBeenCalled()
+    expect(mocks.documentSuggestionsQueue).not.toHaveBeenCalled()
   })
 
   it('enqueues generate suggestion job', async () => {
@@ -141,8 +143,8 @@ describe('requestDocumentSuggestionJob', () => {
       },
     })
 
-    expect(mocks.documentsQueue).toHaveBeenCalledOnce()
-    expect(mocks.documentsQueue).toHaveBeenCalledWith(
+    expect(mocks.documentSuggestionsQueue).toHaveBeenCalledOnce()
+    expect(mocks.documentSuggestionsQueue).toHaveBeenCalledWith(
       'generateDocumentSuggestionJob',
       {
         workspaceId: workspace.id,
