@@ -1,4 +1,5 @@
 'use client'
+
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'

@@ -6,7 +6,14 @@ import Transaction from './../../lib/Transaction'
 import * as k8s from '@kubernetes/client-node'
 import { eq } from 'drizzle-orm'
 import { McpServer } from '../../browser'
-type DeploymentStatus = 'deploying' | 'deployed' | 'failed' | 'deleted'
+import { pingCustomMCPServer } from '../integrations'
+
+type DeploymentStatus =
+  | 'deploying'
+  | 'deployed'
+  | 'failed'
+  | 'deleted'
+  | 'unavailable'
 
 /**
  * Retrieves the latest status of a MCP server deployment from Kubernetes
@@ -81,6 +88,11 @@ export async function updateMcpServerStatus(
 
       if (failedPod) {
         currentStatus = 'failed'
+      }
+
+      const result = await pingCustomMCPServer(mcpServer.endpoint)
+      if (result.error) {
+        currentStatus = 'unavailable'
       }
 
       // If the status hasn't changed, return the current record
