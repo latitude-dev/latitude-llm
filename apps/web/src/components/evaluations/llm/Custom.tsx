@@ -116,7 +116,7 @@ You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the res
           <div className='w-full flex justify-center items-start p-0 !m-0 !-mt-2'>
             {/* TODO(evalsv2): Go to prompt editor*/}
             <Link
-              href='/todo'
+              href='#'
               className={
                 disabled ? 'pointer-events-none' : 'pointer-events-auto'
               }

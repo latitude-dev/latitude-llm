@@ -3,7 +3,11 @@ import {
   evaluationResultTypes,
 } from '$/app/(private)/evaluations/_components/ActiveEvaluations/Table'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { getEvaluationMetricSpecification } from '$/components/evaluations'
+import {
+  getEvaluationMetricSpecification,
+  getEvaluationTypeSpecification,
+} from '$/components/evaluations'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
@@ -13,7 +17,6 @@ import {
   EvaluationTmp,
   EvaluationType,
   EvaluationV2,
-  RuleEvaluationSpecification,
 } from '@latitude-data/core/browser'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
@@ -48,6 +51,10 @@ export default function ConnectedEvaluationsTable({
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
+  const { enabled: experimentsEnabled } = useFeatureFlag({
+    featureFlag: 'experiments',
+  })
+
   const rows = useMemo<EvaluationTmp[]>(() => {
     return [
       ...evaluations.map((evaluation) => ({
@@ -55,13 +62,21 @@ export default function ConnectedEvaluationsTable({
         version: 'v1' as const,
       })),
       ...evaluationsV2
-        .filter((evaluation) => evaluation.type === EvaluationType.Rule)
+        .filter((evaluation) => {
+          if (experimentsEnabled) {
+            return (
+              evaluation.type === EvaluationType.Rule ||
+              evaluation.type === EvaluationType.Llm
+            )
+          }
+          return evaluation.type === EvaluationType.Rule
+        })
         .map((evaluation) => ({
           ...evaluation,
           version: 'v2' as const,
         })),
     ]
-  }, [evaluations, evaluationsV2])
+  }, [evaluations, evaluationsV2, experimentsEnabled])
 
   const [selectedRow, setSelectedRow] = useState<EvaluationTmp>()
   const [openDestroyModal, setOpenDestroyModal] = useState(false)
@@ -115,7 +130,7 @@ export default function ConnectedEvaluationsTable({
               <TableCell>
                 <Text.H5>
                   {row.version === 'v2'
-                    ? RuleEvaluationSpecification.name
+                    ? getEvaluationTypeSpecification(row).name
                     : evaluationMetadataTypes[row.metadataType]}
                 </Text.H5>
               </TableCell>

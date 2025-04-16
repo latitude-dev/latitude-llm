@@ -24,6 +24,7 @@ export default function ConfigurationForm<
   configuration?: EvaluationConfiguration<T, M>
   onChange?: (configuration: EvaluationConfiguration<T, M>) => void
 }) {
+  // TODO(evalsv2): Delete this intermediate state, does not makes sense to have it and is problematic
   const [configuration, setConfiguration] = useState(
     defaultConfiguration ?? ({} as EvaluationConfiguration<T, M>),
   )

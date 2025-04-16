@@ -121,6 +121,10 @@ export default function DocumentEvaluations({
     featureFlag: 'evaluationsV2',
   })
 
+  const { enabled: experimentsEnabled } = useFeatureFlag({
+    featureFlag: 'experiments',
+  })
+
   const { data: connectedEvaluations, isLoading: isEvaluationsV1Loading } =
     useConnectedEvaluations({
       documentUuid: document.documentUuid,
@@ -146,15 +150,22 @@ export default function DocumentEvaluations({
         version: 'v1' as const,
       })),
       ...evaluationsV2
-        .filter((evaluation) =>
-          evaluationsV2Enabled ? true : evaluation.type === EvaluationType.Rule,
-        )
+        .filter((evaluation) => {
+          if (evaluationsV2Enabled) return true
+          if (experimentsEnabled) {
+            return (
+              evaluation.type === EvaluationType.Rule ||
+              evaluation.type === EvaluationType.Llm
+            )
+          }
+          return evaluation.type === EvaluationType.Rule
+        })
         .map((evaluation) => ({
           ...evaluation,
           version: 'v2' as const,
         })),
     ]
-  }, [evaluationsV1, evaluationsV2])
+  }, [evaluationsV1, evaluationsV2, evaluationsV2Enabled, experimentsEnabled])
 
   const { data: evaluationResultsV1, mutate: mutateV1 } =
     useEvaluationResultsByDocumentLogs({

@@ -140,7 +140,8 @@ function EditPrompt<
           heightClass: 'h-4',
           placement: 'right',
         }}
-        onClick={() => setOpenCloneModal(true)}
+        // TODO(evalsv2): Clone eval or go to prompt editor if its a custom llm eval
+        // onClick={() => setOpenCloneModal(true)}
         disabled={isExecuting}
       >
         Edit prompt

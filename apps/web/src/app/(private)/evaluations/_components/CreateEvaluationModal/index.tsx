@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import useEvaluations from '$/stores/evaluations'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
@@ -12,6 +13,8 @@ import {
   EvaluationResultConfiguration,
   EvaluationSettings,
   EvaluationType,
+  LlmEvaluationMetric,
+  LlmEvaluationSpecification,
   RuleEvaluationMetric,
   RuleEvaluationSpecification,
 } from '@latitude-data/core/browser'
@@ -29,7 +32,10 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useEvaluationConfiguration } from './useEvaluationConfiguration'
 
-type EvaluationMetadataTypeTmp = EvaluationMetadataType | 'evaluationV2'
+type EvaluationMetadataTypeTmp =
+  | EvaluationMetadataType
+  | 'evaluationV2_rule'
+  | 'evaluationV2_llm'
 
 const METADATA_TYPE_DESCRIPTIONS = {
   [EvaluationMetadataType.LlmAsJudgeSimple]:
@@ -38,25 +44,11 @@ const METADATA_TYPE_DESCRIPTIONS = {
     'Use AI to automatically evaluate your logs based on predefined criteria',
   [EvaluationMetadataType.Manual]:
     'Use your own evaluation logic and push evaluation results to Latitude with our SDK or HTTP API',
-  evaluationV2: RuleEvaluationSpecification.description,
+  evaluationV2_rule: RuleEvaluationSpecification.description,
+  evaluationV2_llm: LlmEvaluationSpecification.description,
 }
 
-const METADATA_TYPE_OPTIONS = [
-  {
-    label: 'LLM as judge',
-    value: EvaluationMetadataType.LlmAsJudgeSimple as EvaluationMetadataTypeTmp,
-  },
-  {
-    label: 'Code / Manual',
-    value: EvaluationMetadataType.Manual as EvaluationMetadataTypeTmp,
-  },
-  {
-    label: 'Rule',
-    value: 'evaluationV2',
-  },
-]
-
-const DEFAULT_SETTINGS_V2 = {
+const DEFAULT_RULE_SETTINGS_V2 = {
   name: 'Accuracy',
   description: 'Matches the expected output?',
   type: EvaluationType.Rule,
@@ -64,6 +56,24 @@ const DEFAULT_SETTINGS_V2 = {
   configuration: {
     reverseScale: false,
     caseInsensitive: false,
+  },
+}
+
+const DEFAULT_LLM_SETTINGS_V2 = {
+  name: `Accuracy`,
+  description: `Evaluates how well the given instructions are followed.`,
+  type: EvaluationType.Llm,
+  metric: LlmEvaluationMetric.Rating,
+  configuration: {
+    reverseScale: false,
+    provider: undefined,
+    model: undefined,
+    criteria: 'Assess how well the response follows the given instructions.',
+    minRating: 1,
+    minRatingDescription: "Not faithful, doesn't follow the instructions.",
+    maxRating: 5,
+    maxRatingDescription: 'Very faithful, does follow the instructions.',
+    minThreshold: 3,
   },
 }
 
@@ -91,11 +101,42 @@ export default function CreateEvaluationModal({
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
+  const { enabled: experimentsEnabled } = useFeatureFlag({
+    featureFlag: 'experiments',
+  })
+
+  const METADATA_TYPE_OPTIONS = [
+    ...(experimentsEnabled
+      ? [
+          {
+            label: 'LLM as judge',
+            value: 'evaluationV2_llm',
+          },
+        ]
+      : [
+          {
+            label: 'LLM as judge',
+            value:
+              EvaluationMetadataType.LlmAsJudgeSimple as EvaluationMetadataTypeTmp,
+          },
+        ]),
+    {
+      label: 'Code / Manual',
+      value: EvaluationMetadataType.Manual as EvaluationMetadataTypeTmp,
+    },
+    {
+      label: 'Rule',
+      value: 'evaluationV2_rule',
+    },
+  ]
+
   const [title, setTitle] = useState(initialData?.title ?? '')
   const [description, setDescription] = useState(initialData?.description ?? '')
   const [prompt, setPrompt] = useState(initialData?.prompt ?? '')
   const [metadataType, setMetadataType] = useState<EvaluationMetadataTypeTmp>(
-    EvaluationMetadataType.LlmAsJudgeSimple,
+    experimentsEnabled
+      ? 'evaluationV2_llm'
+      : EvaluationMetadataType.LlmAsJudgeSimple,
   )
   const {
     configuration,
@@ -124,8 +165,9 @@ export default function CreateEvaluationModal({
     params: { documentUuid: document?.documentUuid },
   })
 
-  const [settingsV2, setSettingsV2] =
-    useState<EvaluationSettings>(DEFAULT_SETTINGS_V2)
+  const [settingsV2, setSettingsV2] = useState<EvaluationSettings>(
+    experimentsEnabled ? DEFAULT_LLM_SETTINGS_V2 : DEFAULT_RULE_SETTINGS_V2,
+  )
   const [optionsV2, setOptionsV2] =
     useState<Partial<EvaluationOptions>>(DEFAULT_OPTIONS_V2)
   const [errorsV2, setErrorsV2] =
@@ -143,7 +185,7 @@ export default function CreateEvaluationModal({
   const onConfirm = useCallback(async () => {
     if (isLoading || isCreating) return
 
-    if (metadataType === 'evaluationV2') {
+    if (metadataType.startsWith('evaluationV2')) {
       const [_, errors] = await createEvaluationV2({
         settings: settingsV2,
         options: optionsV2,
@@ -152,7 +194,11 @@ export default function CreateEvaluationModal({
       if (errors) {
         setErrorsV2(errors)
       } else {
-        setSettingsV2(DEFAULT_SETTINGS_V2)
+        setSettingsV2(
+          metadataType === 'evaluationV2_llm'
+            ? DEFAULT_LLM_SETTINGS_V2
+            : DEFAULT_RULE_SETTINGS_V2,
+        )
         setOptionsV2(DEFAULT_OPTIONS_V2)
         onClose(null)
       }
@@ -217,7 +263,7 @@ export default function CreateEvaluationModal({
   ])
 
   const titleError = useMemo<string | undefined>(() => {
-    if (metadataType === 'evaluationV2') return undefined
+    if (metadataType.startsWith('evaluationV2')) return undefined
     if (!title) return 'Please enter a name for your evaluation.'
     if (existingEvaluations?.find((e) => e.name === title))
       return 'There is already an evaluation with this name. Please choose a different name.'
@@ -241,7 +287,7 @@ export default function CreateEvaluationModal({
         isConfirming: isCreating,
       }}
     >
-      {metadataType === 'evaluationV2' ? (
+      {metadataType.startsWith('evaluationV2') ? (
         <>
           <FormField className='w-full'>
             <div className='flex flex-col gap-2'>
@@ -266,6 +312,12 @@ export default function CreateEvaluationModal({
             onOptionsChange={setOptionsV2}
             errors={errorsV2}
             disabled={isCreating}
+            forceTypeChange={
+              /* TODO(evalsv2): Temporal hot garbage hack */
+              metadataType === 'evaluationV2_llm'
+                ? EvaluationType.Llm
+                : EvaluationType.Rule
+            }
           />
         </>
       ) : (

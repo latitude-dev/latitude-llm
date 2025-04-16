@@ -76,6 +76,7 @@ export default function EvaluationV2Form<
   onOptionsChange,
   errors: actionErrors,
   disabled,
+  forceTypeChange,
 }: {
   mode: 'create' | 'update'
   settings?: EvaluationSettings<T, M>
@@ -87,7 +88,9 @@ export default function EvaluationV2Form<
     'createEvaluation' | 'updateEvaluation'
   >
   disabled?: boolean
+  forceTypeChange?: T
 }) {
+  // TODO(evalsv2): Delete this intermediate state, does not makes sense to have it and is problematic
   const [settings, setSettings] = useState({
     name: defaultSettings?.name ?? 'Accuracy',
     description: defaultSettings?.description ?? 'Matches the expected output?',
@@ -99,6 +102,43 @@ export default function EvaluationV2Form<
     },
   } as EvaluationSettings<T, M>)
   useEffect(() => onSettingsChange?.(settings), [settings])
+
+  // TODO(evalsv2): Temporal hot garbage hack for old evaluation creation modal
+  useEffect(() => {
+    if (!forceTypeChange) return
+    if (forceTypeChange === settings.type) return
+    if (mode !== 'create') return
+    if (forceTypeChange === EvaluationType.Llm) {
+      setSettings({
+        ...settings,
+        type: forceTypeChange,
+        configuration: {
+          ...settings.configuration,
+          reverseScale: false,
+          provider: undefined,
+          model: undefined,
+          criteria:
+            'Assess how well the response follows the given instructions.',
+          minRating: 1,
+          minRatingDescription:
+            "Not faithful, doesn't follow the instructions.",
+          maxRating: 5,
+          maxRatingDescription: 'Very faithful, does follow the instructions.',
+          minThreshold: 3,
+        },
+      })
+    } else if (forceTypeChange === EvaluationType.Rule) {
+      setSettings({
+        ...settings,
+        type: forceTypeChange,
+        configuration: {
+          ...settings.configuration,
+          reverseScale: false,
+          caseInsensitive: false,
+        },
+      })
+    }
+  }, [forceTypeChange])
 
   const [options, setOptions] = useState({
     evaluateLiveLogs: defaultOptions?.evaluateLiveLogs ?? true,

@@ -1,5 +1,6 @@
 export const FEATURE_FLAGS = {
   evaluationsV2: 'evaluationsV2',
+  experiments: 'experiments',
 } as const
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS
@@ -12,6 +13,7 @@ export const FEATURE_FLAGS_CONDITIONS: Record<
   FeatureFlagCondition
 > = {
   evaluationsV2: { workspaceIds: [] },
+  experiments: { workspaceIds: [] },
 }
 
 export type ResolvedFeatureFlags = Record<FeatureFlag, { enabled: boolean }>
