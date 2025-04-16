@@ -131,7 +131,11 @@ export function BarChart({ config }: { config: BarChartConfig }) {
             <CustomTick
               y={tick.y}
               x={tick.x}
-              value={tick.payload.value}
+              value={
+                tick.tickFormatter
+                  ? tick.tickFormatter(tick.payload.value)
+                  : tick.payload.value
+              }
               availableWidth={perTickWidth}
             />
           )}
