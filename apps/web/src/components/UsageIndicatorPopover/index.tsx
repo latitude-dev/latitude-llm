@@ -158,16 +158,20 @@ export function UsageIndicatorPopover({
     () => (workspaceUsage ? runsDescription({ ratio, max }) : undefined),
     [workspaceUsage],
   )
+  const isFree = [SubscriptionPlan.HobbyV1, SubscriptionPlan.HobbyV2].includes(
+    subscription.plan,
+  )
+
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
         <Button
           size='small'
-          variant={isOverlimits ? 'destructive' : 'ghost'}
+          variant={isOverlimits && isFree ? 'destructive' : 'ghost'}
           className='hover:bg-muted'
         >
           <div className='flex flex-row items-center gap-x-1.5'>
-            {isOverlimits ? (
+            {isOverlimits && isFree ? (
               <Icon name='alert' color='white' />
             ) : (
               <UsageIndicatorCircle
@@ -177,8 +181,11 @@ export function UsageIndicatorPopover({
               />
             )}
             <LoadingText isLoading={isLoading}>
-              <Text.H6 noWrap color={isOverlimits ? 'white' : 'foreground'}>
-                {isOverlimits
+              <Text.H6
+                noWrap
+                color={isOverlimits && isFree ? 'white' : 'foreground'}
+              >
+                {isOverlimits && isFree
                   ? 'Over limits'
                   : `${workspaceUsage?.usage} / ${workspaceUsage?.max}`}
               </Text.H6>
@@ -191,7 +198,7 @@ export function UsageIndicatorPopover({
           <div className='flex flex-col gap-y-3'>
             <div className='flex flex-col gap-y-2'>
               <div className='flex flex-row items-center gap-x-2'>
-                {isOverlimitsRuns ? (
+                {isOverlimitsRuns && isFree ? (
                   <Icon
                     name='alert'
                     color='destructive'
@@ -235,7 +242,7 @@ export function UsageIndicatorPopover({
             <hr className='w-full border-border mt-2 mb-1' />
             <div className='flex flex-col gap-y-2'>
               <div className='flex flex-row items-center gap-x-2'>
-                {isOverlimitsMembers ? (
+                {isOverlimitsMembers && isFree ? (
                   <Icon
                     name='alert'
                     color='destructive'
