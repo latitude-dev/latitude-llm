@@ -111,8 +111,8 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       promptl-ai:
-        specifier: ^0.5.2
-        version: 0.5.3
+        specifier: ^0.5.4
+        version: 0.5.4
       rate-limiter-flexible:
         specifier: ^5.0.3
         version: 5.0.5
@@ -280,8 +280,8 @@ importers:
         specifier: ^1.161.6
         version: 1.232.6
       promptl-ai:
-        specifier: ^0.5.2
-        version: 0.5.3
+        specifier: ^0.5.4
+        version: 0.5.4
       rate-limiter-flexible:
         specifier: ^5.0.3
         version: 5.0.5
@@ -596,8 +596,8 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0
       promptl-ai:
-        specifier: ^0.5.2
-        version: 0.5.3
+        specifier: ^0.5.4
+        version: 0.5.4
       zod:
         specifier: ^3.23.8
         version: 3.24.2
@@ -786,8 +786,8 @@ importers:
         specifier: ^4.2.0
         version: 4.10.1
       promptl-ai:
-        specifier: ^0.5.2
-        version: 0.5.3
+        specifier: ^0.5.4
+        version: 0.5.4
       react:
         specifier: ^18.3.0
         version: 18.3.0
@@ -917,8 +917,8 @@ importers:
         specifier: 3.3.2
         version: 3.3.2
       promptl-ai:
-        specifier: ^0.5.2
-        version: 0.5.3
+        specifier: ^0.5.4
+        version: 0.5.4
       typescript:
         specifier: ^5.5.4
         version: 5.8.2
@@ -1168,8 +1168,8 @@ importers:
         specifier: ^16.1.0
         version: 16.1.0(postcss@8.5.3)
       promptl-ai:
-        specifier: ^0.5.3
-        version: 0.5.3
+        specifier: ^0.5.4
+        version: 0.5.4
       recast:
         specifier: ^0.23.4
         version: 0.23.11
@@ -10193,8 +10193,8 @@ packages:
     resolution: {integrity: sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==}
     engines: {node: '>=0.4.0'}
 
-  promptl-ai@0.5.3:
-    resolution: {integrity: sha512-rekg6pM/FQz9nrduIy234j7zsdTXyuZs2jzmtDRwGCnCdJwrW+2m3aGh1Raxg51yJ+ZgJl+/XJR53VqDLKX+OA==}
+  promptl-ai@0.5.4:
+    resolution: {integrity: sha512-eUiSCtVFEtdy4+9fZf62Vpf5/4IdRIVHKu3gPjUm6Qg0bATywtLcOKQHOWmmCSQ9HLfKlGwN0DBNnKhVEmrpvw==}
 
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
@@ -22655,7 +22655,7 @@ snapshots:
 
   progress@2.0.3: {}
 
-  promptl-ai@0.5.3:
+  promptl-ai@0.5.4:
     dependencies:
       acorn: 8.14.1
       code-red: 1.0.4
