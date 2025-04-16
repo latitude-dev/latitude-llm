@@ -9,6 +9,7 @@ import { startWebhooksWorker } from './worker-definitions/webhooksWorker'
 import { startDocumentsWorker } from './worker-definitions/documentsWorker'
 import { startDefaultWorker } from './worker-definitions/defaultWorker'
 import { startLiveEvaluationsWorker } from './worker-definitions/liveEvaluationsWorker'
+import { startDocumentSuggestionsWorker } from './worker-definitions/documentSuggestionsWorker'
 
 export async function startWorkers() {
   const defaultWorker = startDefaultWorker()
@@ -19,8 +20,9 @@ export async function startWorkers() {
   const maintenanceWorker = startMaintenanceWorker()
   const webhooksWorker = startWebhooksWorker()
   const documentsWorker = startDocumentsWorker()
+  const documentSuggestionsWorker = startDocumentSuggestionsWorker()
 
-  return {
+  const workers = [
     defaultWorker,
     evaluationsWorker,
     eventsWorker,
@@ -29,7 +31,10 @@ export async function startWorkers() {
     maintenanceWorker,
     webhooksWorker,
     documentsWorker,
-  }
+    documentSuggestionsWorker,
+  ]
+
+  return Promise.all(workers)
 }
 
 export async function setupSchedules() {
