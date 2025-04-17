@@ -77,7 +77,7 @@ export async function scanDocumentContent({
   }
 
   const metadata = await getDocumentMetadata({
-    document: docInCommit,
+    document,
     getDocumentByPath: (path) => docs.find((d) => d.path === path),
   })
 

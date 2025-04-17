@@ -7,6 +7,7 @@ const jobMappings = {
   runDocumentForEvaluationJob: jobs.runDocumentForEvaluationJob,
   runDocumentInBatchJob: jobs.runDocumentInBatchJob,
   runDocumentJob: jobs.runDocumentJob,
+  runDocumentForExperimentJob: jobs.runDocumentForExperimentJob,
 }
 
 export function startDocumentsWorker() {

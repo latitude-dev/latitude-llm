@@ -170,6 +170,9 @@ export const API_ROUTES = {
           detail: (documentUuid: string) => {
             const documentRoot = `${projectRoot}/documents/${documentUuid}`
             return {
+              experiments: {
+                root: `${documentRoot}/experiments`,
+              },
               logs: {
                 root: ({
                   page,

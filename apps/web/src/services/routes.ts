@@ -10,6 +10,7 @@ export enum DocumentRoutes {
   logs = 'logs',
   evaluations = 'evaluations',
   evaluationsV2 = 'evaluationsV2',
+  experiments = 'experiments',
 }
 
 export enum EvaluationRoutes {
@@ -159,6 +160,7 @@ export const ROUTES = {
                   const root = `${rootDocuments}/${uuid}`
                   const evaluationsRoot = `${root}/evaluations`
                   const rootEvaluations = `${root}/evaluations-v2`
+                  const experimentsRoot = `${root}/experiments`
                   return {
                     root,
                     [DocumentRoutes.editor]: {
@@ -194,6 +196,9 @@ export const ROUTES = {
                     [DocumentRoutes.logs]: {
                       root: `${root}/${DocumentRoutes.logs}`,
                       upload: `${root}/${DocumentRoutes.logs}/upload`,
+                    },
+                    [DocumentRoutes.experiments]: {
+                      root: experimentsRoot,
                     },
                   }
                 },

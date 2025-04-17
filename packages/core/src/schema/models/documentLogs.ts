@@ -13,6 +13,7 @@ import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { logSourcesEnum } from './providerLogs'
 import { LogSources } from '@latitude-data/constants'
+import { experiments } from './experiments'
 
 export const documentLogs = latitudeSchema.table(
   'document_logs',
@@ -32,6 +33,13 @@ export const documentLogs = latitudeSchema.table(
     customIdentifier: text('custom_identifier'),
     duration: bigint('duration', { mode: 'number' }),
     source: logSourcesEnum('source').$type<LogSources>(),
+    experimentId: bigint('experiment_id', { mode: 'number' }).references(
+      () => experiments.id,
+      {
+        onDelete: 'restrict',
+        onUpdate: 'cascade',
+      },
+    ),
     ...timestamps(),
   },
   (table) => ({
@@ -48,6 +56,9 @@ export const documentLogs = latitudeSchema.table(
     commitCreatedAtIdx: index('document_logs_commit_created_at_idx').on(
       table.commitId,
       table.createdAt,
+    ),
+    experimentIdIdx: index('document_logs_experiment_id_idx').on(
+      table.experimentId,
     ),
   }),
 )

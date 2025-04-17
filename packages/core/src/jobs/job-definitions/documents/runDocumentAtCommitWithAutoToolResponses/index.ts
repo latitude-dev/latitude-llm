@@ -5,6 +5,7 @@ import {
 } from './getDataForInitialRequest'
 import { runDocumentUntilItStops } from './runDocumentUntilItStops'
 import { getCopilotDataForGenerateToolResponses } from './getCopilotData'
+import { Experiment } from '../../../../browser'
 
 /**
  * This function handle the processing of a document even when
@@ -16,11 +17,15 @@ import { getCopilotDataForGenerateToolResponses } from './getCopilotData'
  */
 export async function runDocumentAtCommitWithAutoToolResponses({
   parameters,
+  customPrompt,
   source,
   autoRespondToolCalls,
+  experiment,
   ...dataParams
 }: GetDataParams & {
   parameters: Record<string, unknown>
+  customPrompt?: string
+  experiment?: Experiment
   source: LogSources
   autoRespondToolCalls: boolean
 }) {
@@ -40,8 +45,10 @@ export async function runDocumentAtCommitWithAutoToolResponses({
         workspace,
         commit,
         document,
+        customPrompt,
         parameters,
         source,
+        experiment,
         copilot: copilotResult.value,
       },
     },

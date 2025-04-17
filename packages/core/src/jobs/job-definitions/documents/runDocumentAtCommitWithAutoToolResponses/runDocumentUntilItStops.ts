@@ -1,6 +1,11 @@
 import { LogSources } from '@latitude-data/constants'
 import { runDocumentAtCommit as runDocumentAtCommitFn } from '../../../../services/commits/runDocumentAtCommit'
-import { Commit, Workspace, DocumentVersion } from '../../../../browser'
+import {
+  Commit,
+  Workspace,
+  DocumentVersion,
+  Experiment,
+} from '../../../../browser'
 import { ToolCall } from '@latitude-data/compiler'
 import { respondToToolCalls } from './respondToToolCalls'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
@@ -14,6 +19,8 @@ type Props<T extends boolean> = T extends true
         workspace: Workspace
         commit: Commit
         document: DocumentVersion
+        customPrompt?: string
+        experiment?: Experiment
         documentLogUuid: string
         copilot: AutogenerateToolResponseCopilotData
         source: LogSources
@@ -25,8 +32,10 @@ type Props<T extends boolean> = T extends true
       autoRespondToolCalls: boolean
       data: {
         workspace: Workspace
-        document: DocumentVersion
         commit: Commit
+        document: DocumentVersion
+        customPrompt?: string
+        experiment?: Experiment
         copilot: AutogenerateToolResponseCopilotData
         parameters: Record<string, unknown>
         source: LogSources

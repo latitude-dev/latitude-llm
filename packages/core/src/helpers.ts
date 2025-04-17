@@ -10,7 +10,7 @@ import {
   type CsvData,
   type DateRange,
 } from './constants'
-import type { ProviderLogDto } from './schema/types'
+import { ProviderLog, ProviderLogDto } from './browser'
 import type { QueryParams } from './lib/pagination'
 
 export function buildCsvFile(csvData: CsvData, name: string): File {
@@ -56,13 +56,23 @@ export function buildAllMessagesFromResponse<T extends StreamType>({
   return [...previousMessages, ...messages]
 }
 
-export function buildConversation(providerLog: ProviderLogDto) {
+export function buildConversation(providerLog: ProviderLogDto | ProviderLog) {
   let messages: Message[] = [...providerLog.messages]
+
+  const responseText =
+    // if ProviderLog
+    'responseText' in providerLog
+      ? (providerLog.responseText ?? undefined)
+      : // if ProviderLogDto
+        'response' in providerLog
+        ? providerLog.response
+        : // otherwise
+          undefined
 
   const message = buildResponseMessage({
     type: 'text',
     data: {
-      text: providerLog.response,
+      text: responseText,
       toolCalls: providerLog.toolCalls,
     },
   })

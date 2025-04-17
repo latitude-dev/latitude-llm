@@ -19,14 +19,18 @@ import { UnprocessableEntityError } from './../../../../lib/errors'
 async function buildToolSpecifications({
   document,
   toolCalls,
+  customPrompt,
 }: {
   document: DocumentVersion
   toolCalls: ToolCall[]
+  customPrompt?: string
 }) {
+  const prompt = customPrompt ?? document.content
+
   const metadata =
     document.promptlVersion === 0
-      ? await readMetadata({ prompt: document.content })
-      : await scan({ prompt: document.content })
+      ? await readMetadata({ prompt })
+      : await scan({ prompt })
   const schemas = metadata.config.tools as
     | Record<string, ToolSchema>
     | undefined
@@ -78,6 +82,7 @@ export async function generateToolResponseMessages({
   workspace,
   commit,
   document,
+  customPrompt,
   toolCalls,
   copilot,
   source,
@@ -85,6 +90,7 @@ export async function generateToolResponseMessages({
   workspace: Workspace
   commit: Commit
   document: DocumentVersion
+  customPrompt?: string
   toolCalls: ToolCall[]
   source: LogSources
   copilot: AutogenerateToolResponseCopilotData
@@ -98,6 +104,7 @@ export async function generateToolResponseMessages({
   const toolSpecificationsResult = await buildToolSpecifications({
     document,
     toolCalls,
+    customPrompt,
   })
   if (toolSpecificationsResult.error) return toolSpecificationsResult
 
