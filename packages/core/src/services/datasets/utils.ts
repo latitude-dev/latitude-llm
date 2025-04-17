@@ -116,5 +116,14 @@ export function getColumnData({
     throw new BadRequestError(`${columnName} column not found in dataset`)
   }
 
-  return row.rowData[column.identifier]?.toString() ?? ''
+  const expectedOutput = row.rowData[column.identifier]
+  if (expectedOutput === undefined) {
+    return ''
+  }
+
+  if (typeof expectedOutput === 'string') {
+    return expectedOutput
+  }
+
+  return JSON.stringify(expectedOutput)
 }
