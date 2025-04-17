@@ -15,7 +15,7 @@ export const FEATURE_FLAGS_CONDITIONS: Record<
   FeatureFlagCondition
 > = {
   evaluationsV2: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [] },
-  experiments: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [] },
+  experiments: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [1] },
 }
 
 export type ResolvedFeatureFlags = Record<FeatureFlag, { enabled: boolean }>
