@@ -28,7 +28,7 @@ NumeredList.Item = ({
   width?: string
 }) => {
   return (
-    <div className='w-full flex flex-col gap-y-4'>
+    <div className='flex-grow min-w-0 flex flex-col gap-y-4'>
       <Text.H5>{title}</Text.H5>
       {children ? (
         <div className={cn(width, { 'w-full': !width })}>{children}</div>

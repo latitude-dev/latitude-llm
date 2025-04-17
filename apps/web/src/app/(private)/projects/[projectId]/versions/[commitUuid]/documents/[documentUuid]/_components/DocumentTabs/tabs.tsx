@@ -23,6 +23,10 @@ export function DocumentTabSelector({
     featureFlag: 'evaluationsV2',
   })
 
+  const { enabled: experimentsEnabled } = useFeatureFlag({
+    featureFlag: 'experiments',
+  })
+
   const selectedSegment = useSelectedLayoutSegment() as DocumentRoutes | null
 
   const baseRoute = ROUTES.projects
@@ -51,6 +55,15 @@ export function DocumentTabSelector({
             route: baseRoute.evaluations.dashboard.root,
           },
         }),
+    ...(experimentsEnabled
+      ? {
+          [DocumentRoutes.experiments]: {
+            label: 'Experiments',
+            value: DocumentRoutes.experiments,
+            route: baseRoute.experiments.root,
+          },
+        }
+      : {}),
     [DocumentRoutes.logs]: {
       label: 'Logs',
       value: DocumentRoutes.logs,

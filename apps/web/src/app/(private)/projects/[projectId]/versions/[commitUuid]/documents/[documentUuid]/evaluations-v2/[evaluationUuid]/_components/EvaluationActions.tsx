@@ -7,12 +7,14 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
+  Commit,
   DocumentVersion,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
+  Project,
 } from '@latitude-data/core/browser'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
@@ -24,6 +26,8 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
 import CreateBatchEvaluationModal from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal'
+import { RunExperimentModal } from '$/components/RunExperimentModal'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 export function EvaluationActions<
   T extends EvaluationType = EvaluationType,
@@ -265,25 +269,40 @@ function RunExperiment<
   evaluation: EvaluationV2<T, M>
   isExecuting: boolean
 }) {
-  const [openBatchModal, setOpenBatchModal] = useState(false)
+  const [open, setOpen] = useState(false)
+
+  const { enabled: experimentsEnabled } = useFeatureFlag({
+    featureFlag: 'experiments',
+  })
 
   return (
     <>
       <TableWithHeader.Button
         variant='default'
-        onClick={() => setOpenBatchModal(true)}
+        onClick={() => setOpen(true)}
         disabled={isExecuting}
       >
         Run experiment
       </TableWithHeader.Button>
-      <CreateBatchEvaluationModal
-        open={openBatchModal}
-        onClose={() => setOpenBatchModal(false)}
-        projectId={project.id.toString()}
-        commitUuid={commit.uuid}
-        document={document}
-        evaluation={{ ...evaluation, version: 'v2' }}
-      />
+      {experimentsEnabled ? (
+        <RunExperimentModal
+          project={project as Project}
+          commit={commit as Commit}
+          document={document}
+          isOpen={open}
+          setOpen={setOpen}
+          initialEvaluation={evaluation}
+        />
+      ) : (
+        <CreateBatchEvaluationModal
+          open={open}
+          onClose={() => setOpen(false)}
+          projectId={project.id.toString()}
+          commitUuid={commit.uuid}
+          document={document}
+          evaluation={{ ...evaluation, version: 'v2' }}
+        />
+      )}
     </>
   )
 }
