@@ -11,7 +11,9 @@ import {
 import {
   AppliedRules,
   applyProviderRules,
+  Commit,
   LATITUDE_DOCS_URL,
+  Project,
   ProviderRules,
 } from '@latitude-data/core/browser'
 import {
@@ -36,6 +38,12 @@ import Actions, { ActionsState } from './Actions'
 import RunPromptInBatchModal from './RunPromptInBatchModal'
 import { BATCH_MODAL_NAME } from '../../../constants'
 import { ToolBarWrapper } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/ChatWrapper/ChatTextArea/ToolBar'
+import { RunExperimentModal } from '$/components/RunExperimentModal'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 function WarningLink({ providerRule }: { providerRule: ProviderRules }) {
   const docPath = providerRule.startsWith('vertex') ? 'vertex' : providerRule
@@ -81,6 +89,8 @@ export default function Preview({
   const openBatch = params.get('modal') === BATCH_MODAL_NAME
   const runModal = useToggleModal({ initialState: openBatch })
   const { data: providers } = useProviderApiKeys()
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const [conversation, setConversation] = useState<Conversation>()
   const provider = useMemo(() => {
@@ -93,9 +103,15 @@ export default function Preview({
   const [fixedMessages, setFixedMessages] = useState<ConversationMessage[]>()
   const [warningRule, setWarningRule] = useState<AppliedRules | undefined>()
 
+  const { enabled: newExperimentsEnabled } = useFeatureFlag({
+    featureFlag: 'experiments',
+  })
+
   const [completed, setCompleted] = useState(true)
   const [error, setError] = useState<Error | undefined>(undefined)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  const [experimentModalOpen, setExperimentModalOpen] = useState(false)
 
   useAutoScroll(containerRef, { startAtBottom: true })
 
@@ -163,6 +179,13 @@ export default function Preview({
 
   return (
     <>
+      <RunExperimentModal
+        isOpen={experimentModalOpen}
+        setOpen={setExperimentModalOpen}
+        project={project as Project}
+        commit={commit as Commit}
+        document={document}
+      />
       <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
         {warningRule ? <Warnings warnings={warningRule} /> : null}
         <div className='flex flex-row items-center justify-between w-full'>
@@ -219,7 +242,17 @@ export default function Preview({
                 Run
               </Button>
             )}
-            <Button fancy variant='outline' onClick={runModal.onOpen}>
+            <Button
+              fancy
+              variant='outline'
+              onClick={() => {
+                if (newExperimentsEnabled) {
+                  setExperimentModalOpen(true)
+                } else {
+                  runModal.onOpen()
+                }
+              }}
+            >
               Run experiment
             </Button>
           </ToolBarWrapper>

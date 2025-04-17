@@ -107,6 +107,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
       datasetRow: datasetRow,
       commit: commit,
       workspace: workspace,
+      experiment,
     }).then((r) => r.unwrap())
 
     if (experiment) {

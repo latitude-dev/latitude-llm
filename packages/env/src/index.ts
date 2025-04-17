@@ -95,6 +95,7 @@ if (environment === 'development' || environment === 'test') {
       GOOGLE_CLIENT_SECRET: '',
       GOOGLE_REDIRECT_URI: 'http://localhost:3000/api/auth/google/callback',
       DEFAULT_PROVIDER_API_KEY: 'fake-provider-api-key',
+      ENABLE_ALL_FLAGS: 'false',
     },
     { path: pathToEnv },
   )
@@ -245,6 +246,8 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: z.string(),
     GOOGLE_CLIENT_SECRET: z.string(),
     GOOGLE_REDIRECT_URI: z.string(),
+
+    ENABLE_ALL_FLAGS: z.coerce.boolean().optional().default(false),
   },
   runtimeEnv: {
     ...process.env,
@@ -260,5 +263,6 @@ export const env = createEnv({
     LATITUDE_CLOUD_PAYMENT_URL: process.env.LATITUDE_CLOUD_PAYMENT_URL,
     DISABLE_EMAIL_AUTHENTICATION:
       process.env.DISABLE_EMAIL_AUTHENTICATION === 'true',
+    ENABLE_ALL_FLAGS: process.env.ENABLE_ALL_FLAGS === 'true',
   },
 })

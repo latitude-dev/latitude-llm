@@ -17,13 +17,13 @@ import { FormField } from '../../atoms/FormField'
 import { Popover } from '../../atoms/Popover'
 import { Separator } from '../../atoms/Separator'
 import { Text } from '../../atoms/Text'
-import { Icon } from '../../atoms/Icons'
+import { Icon, IconName } from '../../atoms/Icons'
 
 interface MultiSelectProps extends Omit<typeof FormField, 'children'> {
   options: {
     label: string
     value: string
-    icon?: React.ComponentType<{ className?: string }>
+    icon?: IconName
   }[]
   onChange?: (value: string[]) => void
   defaultValue?: string[]
@@ -156,7 +156,7 @@ export const MultiSelect = React.forwardRef<
                 {...props}
                 onClick={handleTogglePopover}
                 className={cn(
-                  'flex w-full p-0 h-8 py-2 px-2 rounded-md border items-center justify-between bg-inherit hover:bg-inherit [&_svg]:pointer-events-auto overflow-y-auto',
+                  'flex w-full p-2 h-8 rounded-md border items-center justify-between bg-inherit hover:bg-inherit [&_svg]:pointer-events-auto overflow-y-auto',
                   className,
                 )}
               >
@@ -165,7 +165,6 @@ export const MultiSelect = React.forwardRef<
                     <div className='flex flex-wrap items-center gap-1'>
                       {selectedValues.slice(0, maxCount).map((value) => {
                         const option = options.find((o) => o.value === value)
-                        const IconComponent = option?.icon
                         return (
                           <Badge
                             variant='muted'
@@ -175,8 +174,11 @@ export const MultiSelect = React.forwardRef<
                               toggleOption(value)
                             }}
                           >
-                            {IconComponent && (
-                              <IconComponent className='h-2 w-2 pr-2' />
+                            {option?.icon && (
+                              <Icon
+                                name={option.icon}
+                                className='min-w-5 pr-2'
+                              />
                             )}
                             <Text.H6>{option?.label}</Text.H6>
                             <div className='cursor-pointer'>
@@ -289,7 +291,12 @@ export const MultiSelect = React.forwardRef<
                             />
                           </div>
                           {option.icon && (
-                            <option.icon className='pr-2 h-4 w-4 text-muted-foreground' />
+                            <Icon
+                              name={option.icon}
+                              size='small'
+                              color='foregroundMuted'
+                              className='w-4'
+                            />
                           )}
                           <Text.H6>{option.label}</Text.H6>
                         </CommandItem>
