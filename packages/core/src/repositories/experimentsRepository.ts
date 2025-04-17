@@ -1,4 +1,4 @@
-import { eq, and, getTableColumns, sql, count } from 'drizzle-orm'
+import { eq, and, getTableColumns, sql, count, desc } from 'drizzle-orm'
 
 import { Experiment, ExperimentDto } from '../browser'
 import {
@@ -108,7 +108,15 @@ export class ExperimentsRepository extends Repository<Experiment> {
     )
   }
 
-  async findByDocumentUuid(documentUuid: string): Promise<ExperimentDto[]> {
+  async findByDocumentUuid({
+    documentUuid,
+    page,
+    pageSize,
+  }: {
+    documentUuid: string
+    page: number
+    pageSize: number
+  }): Promise<ExperimentDto[]> {
     const aggregatedResults = this.aggregatedResultsSubquery
 
     const results = await this.db
@@ -124,6 +132,9 @@ export class ExperimentsRepository extends Repository<Experiment> {
       .from(experiments)
       .leftJoin(aggregatedResults, eq(aggregatedResults.id, experiments.id))
       .where(and(this.scopeFilter, eq(experiments.documentUuid, documentUuid)))
+      .orderBy(desc(experiments.createdAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
 
     return results.map(this.experimentDtoPresenter)
   }

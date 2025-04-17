@@ -172,6 +172,12 @@ export const API_ROUTES = {
             return {
               experiments: {
                 root: `${documentRoot}/experiments`,
+                paginated: (pagination: Partial<PaginationParameters>) =>
+                  generateDocumentLogsApiRouteWithParams({
+                    path: `${documentRoot}/experiments`,
+                    params: pagination,
+                  }),
+                count: `${documentRoot}/experiments/count`,
               },
               logs: {
                 root: ({
