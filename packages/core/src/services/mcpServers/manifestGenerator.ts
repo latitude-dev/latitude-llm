@@ -54,7 +54,6 @@ export function generateK8sManifest(params: K8sDeploymentParams): {
     SCHEME: env.MCP_SCHEME,
     SECRET_HASH: secretHash,
     NODE_GROUP_NAME: env.MCP_NODE_GROUP_NAME,
-    ALB_GROUP_NAME: `alb-${env.NODE_ENV}-${params.workspaceId}`,
   }
 
   // Add command and args if provided

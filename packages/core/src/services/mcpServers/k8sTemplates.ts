@@ -91,9 +91,8 @@ metadata:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: {{SCHEME}}
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/group.name: {{ALB_GROUP_NAME}}
+    alb.ingress.kubernetes.io/group.name: latitude-mcps-{{NODE_ENV}}
     alb.ingress.kubernetes.io/healthcheck-path: /health
-    external-dns.alpha.kubernetes.io/hostname: {{NAME}}.{{LATITUDE_MCP_HOST}}
 spec:
   ingressClassName: alb
   rules:
