@@ -3,12 +3,11 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { ExperimentsRepository } from '@latitude-data/core/repositories'
-import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/index'
 
 export const GET = errorHandler(
   authHandler(
     async (
-      req: NextRequest,
+      _: NextRequest,
       {
         params: { documentUuid },
         workspace,
@@ -17,17 +16,10 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const searchParams = req.nextUrl.searchParams
-      const { page, pageSize } = parseApiDocumentLogParams({ searchParams })
-
       const scope = new ExperimentsRepository(workspace.id)
-      const experiments = await scope.findByDocumentUuid({
-        documentUuid,
-        page: +page,
-        pageSize: +pageSize,
-      })
+      const count = await scope.countByDocumentUuid(documentUuid)
 
-      return NextResponse.json(experiments, { status: 200 })
+      return NextResponse.json(count, { status: 200 })
     },
   ),
 )

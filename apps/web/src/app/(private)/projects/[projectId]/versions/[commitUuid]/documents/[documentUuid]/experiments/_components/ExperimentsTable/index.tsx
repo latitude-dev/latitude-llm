@@ -27,6 +27,10 @@ import { DurationCell } from './DurationCell'
 import { ScoreCell } from './ScoreCell'
 import { cn } from '@latitude-data/web-ui/utils'
 import { formatCount } from '$/lib/formatCount'
+import { useSearchParams } from 'next/navigation'
+import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { DocumentRoutes, ROUTES } from '$/services/routes'
+import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 
 type ExperimentStatus = {
   isPending: boolean
@@ -40,10 +44,18 @@ const getStatus = (experiment: ExperimentDto): ExperimentStatus => ({
   isFinished: !!experiment.finishedAt,
 })
 
+const countLabel = (count: number): string => {
+  return `${count} experiments`
+}
+
 export function ExperimentsTable() {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
+
+  const searchParams = useSearchParams()
+  const page = searchParams.get('page') ?? '1'
+  const pageSize = searchParams.get('pageSize') ?? '25'
 
   const { data: evaluations, isLoading: isLoadingEvaluations } =
     useEvaluationsV2({
@@ -54,9 +66,15 @@ export function ExperimentsTable() {
 
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
 
-  const { data: experiments, isLoading } = useExperiments({
+  const {
+    data: experiments,
+    count,
+    isLoading,
+  } = useExperiments({
     projectId: project.id,
     documentUuid: document.documentUuid,
+    page: Number(page),
+    pageSize: Number(pageSize),
   })
 
   const { data: commits, isLoading: isLoadingCommits } = useCommitsFromProject(
@@ -64,7 +82,27 @@ export function ExperimentsTable() {
   )
 
   return (
-    <Table>
+    <Table
+      externalFooter={
+        count && (
+          <LinkableTablePaginationFooter
+            isLoading={isLoading}
+            countLabel={countLabel}
+            pagination={buildPagination({
+              baseUrl: ROUTES.projects
+                .detail({ id: project.id })
+                .commits.detail({ uuid: commit.uuid })
+                .documents.detail({ uuid: document.documentUuid })[
+                DocumentRoutes.experiments
+              ].root,
+              count: count ?? 0,
+              page: Number(page),
+              pageSize: Number(pageSize),
+            })}
+          />
+        )
+      }
+    >
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>

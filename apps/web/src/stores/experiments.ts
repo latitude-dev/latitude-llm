@@ -16,17 +16,23 @@ export function useExperiments(
   {
     projectId,
     documentUuid,
+    page = 1,
+    pageSize = 25,
   }: {
     projectId: number
     documentUuid: string
+    page?: number
+    pageSize?: number
   },
   opts: SWRConfiguration & {
     onCreate?: (experiment: ExperimentDto) => void
   } = {},
 ) {
-  const fetcher = useFetcher<ExperimentDto[]>(
-    ROUTES.api.projects.detail(projectId).documents.detail(documentUuid)
-      .experiments.root,
+  const dataFetcher = useFetcher<ExperimentDto[]>(
+    ROUTES.api.projects
+      .detail(projectId)
+      .documents.detail(documentUuid)
+      .experiments.paginated({ page, pageSize }),
     {
       serializer: (item: unknown) => {
         if (Array.isArray(item)) {
@@ -43,13 +49,24 @@ export function useExperiments(
     },
   )
 
+  const countFetcher = useFetcher<number>(
+    ROUTES.api.projects.detail(projectId).documents.detail(documentUuid)
+      .experiments.count,
+  )
+
   const {
     data = EMPTY_ARRAY,
     isLoading,
     mutate,
   } = useSWR<ExperimentDto[]>(
-    ['experiments', projectId, documentUuid],
-    fetcher,
+    ['experiments', projectId, documentUuid, page, pageSize],
+    dataFetcher,
+    opts,
+  )
+
+  const { data: count, mutate: mutateCount } = useSWR<number>(
+    ['experiments', projectId, documentUuid, 'count'],
+    countFetcher,
     opts,
   )
 
@@ -73,6 +90,11 @@ export function useExperiments(
             return prev
           }
 
+          if (page > 1) {
+            // Do not add any new experiments if we are not on the first page
+            return
+          }
+
           return [updatedExperiment, ...prev]
         },
         {
@@ -86,6 +108,10 @@ export function useExperiments(
     createExperimentAction,
     {
       onSuccess: async ({ data: experiment }: { data: Experiment }) => {
+        mutateCount((prev) => (prev ? prev + 1 : 1), {
+          revalidate: false,
+        })
+
         const experimentDto = {
           ...experiment,
           results: {
@@ -95,23 +121,27 @@ export function useExperiments(
             totalScore: 0,
           },
         } as ExperimentDto
-        mutate(
-          (prev) => {
-            const prevExperiment = prev?.find(
-              (exp) => exp.uuid === experimentDto.uuid,
-            )
 
-            if (prevExperiment) {
-              // this might happen due to race conditions with the experimentStatus websocket
-              return prev
-            }
+        if (page === 1) {
+          mutate(
+            (prev) => {
+              const prevExperiment = prev?.find(
+                (exp) => exp.uuid === experimentDto.uuid,
+              )
 
-            return [experimentDto, ...(prev ?? [])]
-          },
-          {
-            revalidate: false,
-          },
-        )
+              if (prevExperiment) {
+                // this might happen due to race conditions with the experimentStatus websocket
+                return prev
+              }
+
+              return [experimentDto, ...(prev ?? [])]
+            },
+            {
+              revalidate: false,
+            },
+          )
+        }
+
         toast({
           title: 'Experiment created successfully',
           description: `Experiment ${experiment.name} created successfully`,
@@ -132,6 +162,7 @@ export function useExperiments(
   )
 
   return {
+    count,
     data,
     isLoading,
     create,
