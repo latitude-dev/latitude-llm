@@ -8,12 +8,7 @@ import { eq } from 'drizzle-orm'
 import { McpServer } from '../../browser'
 import { pingCustomMCPServer } from '../integrations'
 
-type DeploymentStatus =
-  | 'deploying'
-  | 'deployed'
-  | 'failed'
-  | 'deleted'
-  | 'unavailable'
+type DeploymentStatus = 'deploying' | 'deployed' | 'failed' | 'deleted'
 
 /**
  * Retrieves the latest status of a MCP server deployment from Kubernetes
@@ -88,11 +83,13 @@ export async function updateMcpServerStatus(
 
       if (failedPod) {
         currentStatus = 'failed'
-      }
-
-      const result = await pingCustomMCPServer(mcpServer.endpoint)
-      if (result.error) {
-        currentStatus = 'unavailable'
+      } else {
+        const result = await pingCustomMCPServer(
+          `http://${mcpServer.endpoint}/sse`,
+        )
+        if (result.error) {
+          currentStatus = 'deploying'
+        }
       }
 
       // If the status hasn't changed, return the current record

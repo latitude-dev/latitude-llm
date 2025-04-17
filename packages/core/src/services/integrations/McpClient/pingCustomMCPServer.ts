@@ -21,10 +21,16 @@ export async function pingCustomMCPServer(
     version: '1.0.0',
   })
 
-  await client.connect(transport)
-  const response = await client.listTools(undefined, {
-    timeout: 3000,
-    maxTotalTimeout: 9000,
-  })
-  return Result.ok(response.tools as McpTool[])
+  try {
+    await client.connect(transport)
+
+    const response = await client.listTools(undefined, {
+      timeout: 3000,
+      maxTotalTimeout: 9000,
+    })
+
+    return Result.ok(response.tools as McpTool[])
+  } catch (error) {
+    return Result.error(error as Error)
+  }
 }

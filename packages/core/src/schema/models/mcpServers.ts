@@ -20,7 +20,6 @@ export const k8sAppStatusEnum = latitudeSchema.enum('k8s_app_status', [
   'failed',
   'deleting',
   'deleted',
-  'unavailable',
 ])
 
 export const mcpServers = latitudeSchema.table(

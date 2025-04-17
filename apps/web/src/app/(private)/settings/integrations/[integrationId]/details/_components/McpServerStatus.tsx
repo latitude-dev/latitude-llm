@@ -39,6 +39,8 @@ export function McpServerStatus({
         return 'error'
       case 'deleted':
         return 'default'
+      case 'unavailable':
+        return 'muted'
       default:
         return 'warning'
     }
@@ -99,6 +101,41 @@ const StatusText = ({
           <Text.H6 color='primary'>Upgrade</Text.H6>
         </UpgradeLink>{' '}
         your plan to avoid this.
+      </Tooltip>
+    )
+  }
+
+  if (status === 'unavailable') {
+    return (
+      <Tooltip
+        trigger={
+          <Text.H5 color='foregroundMuted'>
+            {shortText}
+            {capitalize(status)}
+          </Text.H5>
+        }
+      >
+        The integration has been successfully deployed but is not yet available.
+        <br />
+        <br />
+        If you just created this integration you can expect it to be available
+        in a few minutes.
+      </Tooltip>
+    )
+  }
+
+  if (status === 'deploying') {
+    return (
+      <Tooltip
+        trigger={
+          <Text.H5 color='foregroundMuted'>
+            {shortText}
+            {capitalize(status)}
+          </Text.H5>
+        }
+      >
+        The MCP server is currently being deployed. This should complete in a
+        few minutes.
       </Tooltip>
     )
   }

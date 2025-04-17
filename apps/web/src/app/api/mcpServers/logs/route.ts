@@ -61,7 +61,7 @@ export const GET = errorHandler(
       if (!Result.isOk(logsResult)) {
         return NextResponse.json(
           { error: logsResult.error.message },
-          { status: 500 },
+          { status: 204 },
         )
       }
 
