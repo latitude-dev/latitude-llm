@@ -14,6 +14,7 @@ import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
+import { isOnboardingCompleted } from '$/data-access/workspaceOnboarding'
 
 import { CSPostHogProvider, IdentifyUser } from '../providers'
 import { NAV_LINKS } from './_lib/constants'
@@ -34,6 +35,11 @@ export default async function PrivateLayout({
 
   const { workspace, user, subscriptionPlan } = await getCurrentUser()
   if (!user) return redirect(ROUTES.auth.login)
+
+  const completed = await isOnboardingCompleted()
+  if (!completed) {
+    redirect(ROUTES.onboarding.root)
+  }
 
   const supportIdentity = createSupportUserIdentity(user)
   const featureFlags = getFeatureFlagsForWorkspaceCached({ workspace })

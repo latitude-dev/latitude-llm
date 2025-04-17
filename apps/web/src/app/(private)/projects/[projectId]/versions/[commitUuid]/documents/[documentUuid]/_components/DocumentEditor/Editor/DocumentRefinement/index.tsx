@@ -217,7 +217,7 @@ export function DocumentRefinement({
         variant='outline'
         size='small'
         iconProps={{
-          name: 'sparkles',
+          name: 'brain',
           size: 'small',
         }}
         onClick={() => setOpenModal(true)}

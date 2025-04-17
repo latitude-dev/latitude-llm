@@ -35,7 +35,7 @@ export function usePlaygroundChat({
   onPromptRan,
 }: {
   runPromptFn: () => Promise<ReadableStream<ParsedEvent>>
-  addMessagesFn: ({
+  addMessagesFn?: ({
     documentLogUuid,
     messages,
   }: {
@@ -167,6 +167,7 @@ export function usePlaygroundChat({
 
   const submitUserMessage = useCallback(
     async (input: string | ToolMessage[]) => {
+      if (!addMessagesFn) return
       if (!documentLogUuid) {
         // This should not happen
         setError(

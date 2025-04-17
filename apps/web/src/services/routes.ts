@@ -30,6 +30,9 @@ const BACKOFFICE_ROOT = '/backoffice'
 export const ROUTES = {
   root: '/',
   api: API_ROUTES,
+  onboarding: {
+    root: '/onboarding',
+  },
   backoffice: {
     root: BACKOFFICE_ROOT,
     [BackofficeRoutes.templates]: {

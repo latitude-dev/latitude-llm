@@ -119,7 +119,10 @@ export function IntegrationToolsList({
 
   useSockets({
     event: 'mcpServerScaleEvent',
-    onMessage: ({ mcpServerId, replicas }) => {
+    onMessage: (e) => {
+      if (!e) return
+
+      const { mcpServerId, replicas } = e
       if (replicas < 1) return
       if (mcpServerId !== integration?.mcpServerId) return
 
