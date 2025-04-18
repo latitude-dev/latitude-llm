@@ -103,6 +103,7 @@ describe('setupService', () => {
       email: 'test@example.com',
       name: 'Test User',
       companyName: 'Test Company',
+      importDefaultProject: false,
     })
 
     const user = result.value?.user!

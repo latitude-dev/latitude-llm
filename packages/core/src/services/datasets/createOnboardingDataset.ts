@@ -122,7 +122,7 @@ export async function createOnboardingDataset(
   },
   db = database,
 ) {
-  const repo = new DatasetsRepository(workspace.id)
+  const repo = new DatasetsRepository(workspace.id, db)
   const datasets = await repo.findByName('onboarding dataset')
   const dataset = datasets[0]
   if (dataset) return Result.ok(dataset)

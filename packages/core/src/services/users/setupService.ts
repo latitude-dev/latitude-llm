@@ -4,7 +4,6 @@ import { SessionData } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { createApiKey } from '../apiKeys'
 import { createMembership } from '../memberships/create'
-import { importDefaultProject } from '../projects/import'
 import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
 import { createWorkspaceOnboarding } from '../workspaceOnboarding'
@@ -12,8 +11,8 @@ import { createUser } from './createUser'
 import Transaction, { PromisedResult } from './../../lib/Transaction'
 import { Result } from './../../lib/Result'
 import { createOnboardingDataset } from '../datasets/createOnboardingDataset'
-import { env } from '@latitude-data/env'
 import { createOnboardingProject } from '../projects/createOnboardingProject'
+import { importDefaultProject as importDefaultProjectFn } from '../projects/import'
 
 export default function setupService(
   {
@@ -23,6 +22,7 @@ export default function setupService(
     defaultProviderName,
     defaultProviderApiKey,
     captureException,
+    importDefaultProject = true,
   }: {
     email: string
     name: string
@@ -30,6 +30,7 @@ export default function setupService(
     defaultProviderName: string
     defaultProviderApiKey: string
     captureException?: (error: Error) => void
+    importDefaultProject?: boolean
   },
   db = database,
 ): PromisedResult<SessionData> {
@@ -68,8 +69,8 @@ export default function setupService(
       captureException?.(firstProvider.error)
     }
 
-    if (env.NODE_ENV === 'production') {
-      await importDefaultProject({ workspace, user }, tx).then((r) =>
+    if (importDefaultProject) {
+      await importDefaultProjectFn({ workspace, user }, tx).then((r) =>
         r.unwrap(),
       )
     } else {

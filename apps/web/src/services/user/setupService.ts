@@ -6,10 +6,12 @@ export default function setupService({
   email,
   name,
   companyName,
+  importDefaultProject = true,
 }: {
   email: string
   name: string
   companyName: string
+  importDefaultProject?: boolean
 }) {
   return setupServiceFn({
     email,
@@ -18,5 +20,6 @@ export default function setupService({
     defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
     defaultProviderApiKey: env.DEFAULT_PROVIDER_API_KEY,
     captureException,
+    importDefaultProject,
   })
 }
