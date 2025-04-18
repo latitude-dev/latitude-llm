@@ -10,11 +10,11 @@ The Latitude TypeScript SDK provides a convenient way to interact with the Latit
 The Latitude SDK is compatible with Node.js 16 or higher.
 
 ```bash
-npm install @latitude/sdk
+npm install @latitude-data/sdk
 # or
-yarn add @latitude/sdk
+yarn add @latitude-data/sdk
 # or
-pnpm add @latitude/sdk
+pnpm add @latitude-data/sdk
 ```
 
 ## Authentication and Initialization
@@ -22,7 +22,7 @@ pnpm add @latitude/sdk
 Import the SDK and initialize it with your API key. You can generate API keys in your Latitude project settings under "API Access".
 
 ```typescript
-import { Latitude } from '@latitude/sdk'
+import { Latitude } from '@latitude-data/sdk'
 
 const latitude = new Latitude(process.env.LATITUDE_API_KEY)
 ```
@@ -515,7 +515,7 @@ latitude.evaluations.createResult(
 The SDK throws `LatitudeApiError` instances when API requests fail. You can catch and handle these errors:
 
 ```typescript
-import { LatitudeApiError } from '@latitude/sdk'
+import { LatitudeApiError } from '@latitude-data/sdk'
 
 async function handleErrors() {
   try {
