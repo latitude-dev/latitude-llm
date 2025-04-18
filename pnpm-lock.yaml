@@ -907,9 +907,6 @@ importers:
 
   packages/sdks/typescript:
     dependencies:
-      '@latitude-data/constants':
-        specifier: workspace:*
-        version: link:../../constants
       eventsource-parser:
         specifier: ^2.0.1
         version: 2.0.1
@@ -929,6 +926,9 @@ importers:
       '@latitude-data/compiler':
         specifier: workspace:^
         version: link:../../compiler
+      '@latitude-data/constants':
+        specifier: workspace:*
+        version: link:../../constants
       '@latitude-data/eslint-config':
         specifier: workspace:*
         version: link:../../../tools/eslint
