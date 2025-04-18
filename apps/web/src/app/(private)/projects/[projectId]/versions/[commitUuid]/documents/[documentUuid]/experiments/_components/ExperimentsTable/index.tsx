@@ -31,6 +31,7 @@ import { useSearchParams } from 'next/navigation'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { DatasetCell } from './DatasetCell'
 
 type ExperimentStatus = {
   isPending: boolean
@@ -251,21 +252,11 @@ export function ExperimentsTable() {
                 )}
               </TableCell>
               <TableCell>
-                {isLoadingDatasets ? (
-                  <Skeleton height='h5' className='w-12' />
-                ) : (
-                  <div className='flex flex-nowrap overflow-x-auto max-w-full'>
-                    {datasets?.map((dataset) => (
-                      <Badge
-                        key={dataset.id}
-                        variant='secondary'
-                        className='mr-1'
-                      >
-                        {dataset.name}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+                <DatasetCell
+                  isLoading={isLoadingDatasets}
+                  datasets={datasets}
+                  datasetId={experiment.datasetId}
+                />
               </TableCell>
               <TableCell>
                 <div className='flex w-full items-center justify-center'>
