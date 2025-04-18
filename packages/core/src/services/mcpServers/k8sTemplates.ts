@@ -88,7 +88,7 @@ metadata:
   name: {{NAME}}-ingress
   namespace: {{NAMESPACE}}
   annotations:
-    kubernetes.io/ingress.class: nginx
+    kubernetes.io/ingress.class: {{INGRESS_CLASS_NAME}}
     nginx.ingress.kubernetes.io/ssl-redirect: "{{#TLS_ENABLED}}true{{/TLS_ENABLED}}{{^TLS_ENABLED}}false{{/TLS_ENABLED}}"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "{{#TLS_ENABLED}}true{{/TLS_ENABLED}}{{^TLS_ENABLED}}false{{/TLS_ENABLED}}"
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
