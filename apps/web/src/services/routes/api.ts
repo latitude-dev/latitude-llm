@@ -7,6 +7,10 @@ export const API_ROUTES = {
   workspaces: {
     current: '/api/workspaces/current',
     usage: '/api/workspaces/usage',
+    onboarding: {
+      root: '/api/workspaces/onboarding',
+      update: '/api/workspaces/onboarding/update',
+    },
   },
   apiKeys: {
     root: '/api/apiKeys',

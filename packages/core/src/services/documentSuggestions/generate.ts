@@ -8,7 +8,6 @@ import {
   EvaluationTmp,
   EvaluationV2,
   MAX_DOCUMENT_SUGGESTIONS_PER_EVALUATION,
-  MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
   Workspace,
 } from '../../browser'
 import { database, Database } from '../../client'
@@ -150,13 +149,11 @@ export async function generateDocumentSuggestion(
     }
   }
 
-  if (!results!.length) {
+  if (!results || !results!.length) {
     return Result.error(
       new UnprocessableEntityError('Not enough evaluation results found'),
     )
   }
-
-  results = results!.slice(0, MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION)
 
   for (const result of results) {
     if (result.version === 'v2') {

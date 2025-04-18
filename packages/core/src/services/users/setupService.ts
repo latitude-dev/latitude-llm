@@ -7,9 +7,13 @@ import { createMembership } from '../memberships/create'
 import { importDefaultProject } from '../projects/import'
 import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
+import { createWorkspaceOnboarding } from '../workspaceOnboarding'
 import { createUser } from './createUser'
 import Transaction, { PromisedResult } from './../../lib/Transaction'
 import { Result } from './../../lib/Result'
+import { createOnboardingDataset } from '../datasets/createOnboardingDataset'
+import { env } from '@latitude-data/env'
+import { createOnboardingProject } from '../projects/createOnboardingProject'
 
 export default function setupService(
   {
@@ -64,18 +68,21 @@ export default function setupService(
       captureException?.(firstProvider.error)
     }
 
-    const resultImportingDefaultProject = await importDefaultProject(
-      { workspace, user },
-      tx,
-    )
-
-    if (resultImportingDefaultProject.error) {
-      captureException?.(resultImportingDefaultProject.error)
+    if (env.NODE_ENV === 'production') {
+      await importDefaultProject({ workspace, user }, tx).then((r) =>
+        r.unwrap(),
+      )
+    } else {
+      await createOnboardingProject({ workspace, user }, tx).then((r) =>
+        r.unwrap(),
+      )
     }
 
     const results = await Promise.all([
       createMembership({ confirmedAt: new Date(), user, workspace }, tx),
       createApiKey({ workspace }, tx),
+      createWorkspaceOnboarding({ workspace }, tx),
+      createOnboardingDataset({ workspace, author: user }, tx),
     ])
 
     const result = Result.findError(results)
