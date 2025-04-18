@@ -79,15 +79,15 @@ export default function setupService(
       )
     }
 
-    const results = await Promise.all([
-      createMembership({ confirmedAt: new Date(), user, workspace }, tx),
-      createApiKey({ workspace }, tx),
-      createWorkspaceOnboarding({ workspace }, tx),
-      createOnboardingDataset({ workspace, author: user }, tx),
-    ])
-
-    const result = Result.findError(results)
-    if (result) return result
+    await createMembership(
+      { confirmedAt: new Date(), user, workspace },
+      tx,
+    ).then((r) => r.unwrap())
+    await createApiKey({ workspace }, tx).then((r) => r.unwrap())
+    await createWorkspaceOnboarding({ workspace }, tx).then((r) => r.unwrap())
+    await createOnboardingDataset({ workspace, author: user }, tx).then((r) =>
+      r.unwrap(),
+    )
 
     publisher.publishLater({
       type: 'userCreated',
