@@ -54,6 +54,9 @@ export function generateK8sManifest(params: K8sDeploymentParams): {
     SCHEME: env.MCP_SCHEME,
     SECRET_HASH: secretHash,
     NODE_GROUP_NAME: env.MCP_NODE_GROUP_NAME,
+    // TODO: Remove NODE_ENV check and move to proper env var
+    INGRESS_CLASS_NAME:
+      env.NODE_ENV === 'production' ? 'ingress-internal-prod' : 'nginx',
   }
 
   // Add command and args if provided

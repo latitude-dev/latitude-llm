@@ -88,13 +88,12 @@ metadata:
   name: {{NAME}}-ingress
   namespace: {{NAMESPACE}}
   annotations:
-    kubernetes.io/ingress.class: alb
-    alb.ingress.kubernetes.io/scheme: {{SCHEME}}
-    alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/group.name: latitude-mcps-{{NODE_ENV}}
-    alb.ingress.kubernetes.io/healthcheck-path: /health
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "{{#TLS_ENABLED}}true{{/TLS_ENABLED}}{{^TLS_ENABLED}}false{{/TLS_ENABLED}}"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "{{#TLS_ENABLED}}true{{/TLS_ENABLED}}{{^TLS_ENABLED}}false{{/TLS_ENABLED}}"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 spec:
-  ingressClassName: alb
+  ingressClassName: {{INGRESS_CLASS_NAME}}
   rules:
     - host: {{NAME}}.{{LATITUDE_MCP_HOST}}
       http:
