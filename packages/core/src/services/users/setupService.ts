@@ -35,24 +35,18 @@ export default function setupService(
   db = database,
 ): PromisedResult<SessionData> {
   return Transaction.call(async (tx) => {
-    const userResult = await createUser(
+    const user = await createUser(
       { email, name, confirmedAt: new Date() },
       tx,
-    )
-
-    if (userResult.error) return userResult
-
-    const user = userResult.value
-    const resultWorkspace = await createWorkspace(
+    ).then((r) => r.unwrap())
+    const workspace = await createWorkspace(
       {
         name: companyName,
         user,
       },
       tx,
-    )
-    if (resultWorkspace.error) return resultWorkspace
+    ).then((r) => r.unwrap())
 
-    const workspace = resultWorkspace.value
     const firstProvider = await createProviderApiKey(
       {
         workspace,
@@ -64,7 +58,6 @@ export default function setupService(
       },
       tx,
     )
-
     if (firstProvider.error) {
       captureException?.(firstProvider.error)
     }
