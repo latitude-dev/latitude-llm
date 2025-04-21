@@ -215,42 +215,42 @@ describe('forkDocument', () => {
           {
             path: 'some-folder/parent',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'siblingParent/sibling',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'some-folder/children/child1',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'some-folder/children/child2',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'some-folder/children/childSibling',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'some-folder/children/grandchildren/grandchild1',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'some-folder/children/grandchildren/grandchild2',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'some-folder/children/grandchildren/grand-grand-grandChildren/deepestGrandChild',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
         ])
       })
@@ -296,47 +296,47 @@ describe('forkDocument', () => {
           {
             path: 'agents/agent1',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'agents/agent2',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'agents/subagent1',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'agents/subagent2',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'some-folder/children/child1',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'some-folder/children/childSibling',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'some-folder/children/grandchildren/grandchild1',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'some-folder/children/grandchildren/grandchild2',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
           {
             path: 'some-folder/children/grandchildren/grand-grand-grandChildren/deepestGrandChild',
             provider: 'google',
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-pro-preview',
           },
         ])
       })

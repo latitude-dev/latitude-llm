@@ -21,10 +21,10 @@ export const GOOGLE_MODELS = createModelSpec({
     },
     // --- Gemini 2.0 Models ---
     'gemini-2.0-flash': { cost: { input: 0.1, output: 0.4 } },
+    'gemini-2.0-flash-lite': { cost: { input: 0.075, output: 0.3 } },
     // --- Experimental / Free Tier ---
     'gemini-2.5-pro-exp-03-25': { cost: { input: 0, output: 0 } }, // Specific free tier model
     'gemini-2.0-flash-exp': { cost: { input: 0, output: 0 } },
-    'gemini-2.0-flash-lite': { cost: { input: 0, output: 0 } },
     'gemini-2.0-pro-exp': { cost: { input: 0, output: 0 } },
     'gemini-2.0-flash-thinking-exp': { cost: { input: 0, output: 0 } },
     // --- Gemini 1.5 Models ---
@@ -46,16 +46,26 @@ export const GOOGLE_MODELS = createModelSpec({
         { input: 0.075, output: 0.3, tokensRangeStart: 128_000 },
       ],
     },
+    // --- Gemini 1.0 Models ---
     'gemini-1.0-pro': { cost: { input: 0.5, output: 1.5 } },
     'gemini-1.0-pro-001': { cost: { input: 0.5, output: 1.5 } },
     'gemini-1.0-pro-vision-latest': { cost: { input: 0.5, output: 1.5 } },
     'gemini-pro-vision': { cost: { input: 0.5, output: 1.5 } },
+    // --- Other Models ---
+    'imagen-3': { cost: { input: 0, output: 0.03, isPerImage: true } }, // Priced per image ($0.03)
+    'veo-2': { cost: { input: 0, output: 0.35, isPerSecond: true } }, // Priced per second ($0.35)
+    'gemma-3': { cost: { input: 0, output: 0 } }, // Free / Not applicable for token cost
+    'text-embedding-004': { cost: { input: 0, output: 0 } }, // Free / Not applicable for token cost
   },
   modelName: (model: string) => {
     // Exact matches first for specific/preview models
     if (model === 'gemini-2.5-pro-preview') return 'gemini-2.5-pro-preview'
     if (model === 'gemini-2.5-flash-preview') return 'gemini-2.5-flash-preview'
     if (model === 'gemini-2.5-pro-exp-03-25') return 'gemini-2.5-pro-exp-03-25' // Handle specific free tier
+    if (model === 'imagen-3') return 'imagen-3'
+    if (model === 'veo-2') return 'veo-2'
+    if (model === 'gemma-3') return 'gemma-3'
+    if (model === 'text-embedding-004') return 'text-embedding-004'
 
     // Handle variations using startsWith
     if (model.startsWith('gemini-2.0-flash-thinking-exp')) {
@@ -71,14 +81,7 @@ export const GOOGLE_MODELS = createModelSpec({
     if (model.startsWith('gemini-1.5-flash-')) return 'gemini-1.5-flash'
     if (model.startsWith('gemini-1.0-pro-')) return 'gemini-1.0-pro'
 
-    // Add comments for models with different pricing structures
-    // Imagen 3: Priced per image ($0.03)
-    // Veo 2: Priced per second ($0.35)
-    // Gemma 3: Free / Not applicable for token cost
-    // Text Embedding 004: Free / Not applicable for token cost
-
-    // Fallback or return undefined/null if no match?
-    // Consider adding a check for unhandled models or returning the default.
-    // For now, let it fall through, might return undefined if no match.
+    // Return the default model if no match is found
+    return 'gemini-1.5-flash'
   },
 })
