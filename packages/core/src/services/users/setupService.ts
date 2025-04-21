@@ -12,7 +12,11 @@ import Transaction, { PromisedResult } from './../../lib/Transaction'
 import { Result } from './../../lib/Result'
 import { createOnboardingDataset } from '../datasets/createOnboardingDataset'
 import { createOnboardingProject } from '../projects/createOnboardingProject'
-import { importDefaultProject as importDefaultProjectFn } from '../projects/import'
+import { importOnboardingProject } from '../projects/import'
+import { createOnboardingEvaluation } from './createOnboardingEvaluation'
+import { Commit, DocumentVersion, User, Workspace } from '../../browser'
+import { ONBOARDING_DOCUMENT_PATH } from '../documents/findOnboardingDocument'
+import { LatitudeError } from '../../lib/errors'
 
 export default function setupService(
   {
@@ -62,15 +66,11 @@ export default function setupService(
       captureException?.(firstProvider.error)
     }
 
-    if (importDefaultProject) {
-      await importDefaultProjectFn({ workspace, user }, tx).then((r) =>
-        r.unwrap(),
+    const { onboardingDocument, commit } =
+      await createOrImportOnboardingProject(
+        { importDefaultProject, workspace, user },
+        tx,
       )
-    } else {
-      await createOnboardingProject({ workspace, user }, tx).then((r) =>
-        r.unwrap(),
-      )
-    }
 
     await createMembership(
       { confirmedAt: new Date(), user, workspace },
@@ -81,6 +81,10 @@ export default function setupService(
     await createOnboardingDataset({ workspace, author: user }, tx).then((r) =>
       r.unwrap(),
     )
+    await createOnboardingEvaluation(
+      { workspace, document: onboardingDocument, commit, user },
+      tx,
+    ).then((r) => r.unwrap())
 
     publisher.publishLater({
       type: 'userCreated',
@@ -96,4 +100,47 @@ export default function setupService(
       workspace,
     })
   }, db)
+}
+
+async function createOrImportOnboardingProject(
+  {
+    importDefaultProject,
+    workspace,
+    user,
+  }: {
+    importDefaultProject: boolean
+    workspace: Workspace
+    user: User
+  },
+  db = database,
+) {
+  let documents: DocumentVersion[] = []
+  let commit: Commit
+  if (importDefaultProject) {
+    const { documents: ds, commit: c } = await importOnboardingProject(
+      { workspace, user },
+      db,
+    ).then((r) => r.unwrap())
+    documents = ds
+    commit = c
+  } else {
+    const { documents: ds, commit: c } = await createOnboardingProject(
+      {
+        workspace,
+        user,
+      },
+      db,
+    ).then((r) => r.unwrap())
+
+    documents = ds
+    commit = c
+  }
+  const onboardingDocument = documents.find(
+    (document) => document.path === ONBOARDING_DOCUMENT_PATH,
+  )
+  if (!onboardingDocument) {
+    throw new LatitudeError('Onboarding document not found')
+  }
+
+  return { commit, onboardingDocument }
 }

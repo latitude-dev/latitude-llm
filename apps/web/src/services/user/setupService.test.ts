@@ -1,12 +1,13 @@
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
 import { Providers } from '@latitude-data/core/browser'
-import { database } from '@latitude-data/core/client'
+import { database, dbUtils } from '@latitude-data/core/client'
 import { publisher } from '@latitude-data/core/events/publisher'
 import * as factories from '@latitude-data/core/factories'
 import {
   apiKeys,
   commits,
   documentVersions,
+  evaluationVersions,
   memberships,
   projects,
   providerApiKeys,
@@ -14,7 +15,6 @@ import {
   workspaces,
 } from '@latitude-data/core/schema'
 import { env } from '@latitude-data/env'
-import { eq } from 'drizzle-orm'
 import setupServiceGlobal from './setupService'
 
 const mocks = vi.hoisted(() => ({
@@ -47,6 +47,7 @@ describe('setupService', () => {
       email: 'test@example.com',
       name: 'Test User',
       companyName: 'Test Company',
+      importDefaultProject: false,
     })
 
     expect(result.error).toBeUndefined()
@@ -58,8 +59,7 @@ describe('setupService', () => {
 
     // Check user creation
     const createdUser = await database.query.users.findFirst({
-      // @ts-expect-error - drizzle-orm types are not up to date
-      where: eq(users.id, user.id),
+      where: dbUtils.eq(users.id, user.id),
     })
     expect(createdUser).toBeDefined()
     expect(createdUser?.email).toBe('test@example.com')
@@ -67,35 +67,39 @@ describe('setupService', () => {
 
     // Check workspace creation
     const createdWorkspace = await database.query.workspaces.findFirst({
-      // @ts-expect-error - drizzle-orm types are not up to date
-      where: eq(workspaces.id, workspace.id),
+      where: dbUtils.eq(workspaces.id, workspace.id),
     })
     expect(createdWorkspace).toBeDefined()
     expect(createdWorkspace?.name).toBe('Test Company')
 
     // Check membership creation
     const createdMembership = await database.query.memberships.findFirst({
-      // @ts-expect-error - drizzle-orm types are not up to date
-      where: eq(memberships.userId, user.id),
+      where: dbUtils.eq(memberships.userId, user.id),
     })
     expect(createdMembership).toBeDefined()
     expect(createdMembership?.workspaceId).toBe(workspace.id)
 
     // Check API key creation
     const createdApiKey = await database.query.apiKeys.findFirst({
-      // @ts-expect-error - drizzle-orm types are not up to date
-      where: eq(apiKeys.workspaceId, workspace.id),
+      where: dbUtils.eq(apiKeys.workspaceId, workspace.id),
     })
     expect(createdApiKey).toBeDefined()
 
     // Check provider API key creation when ENV variables are present
     const createdProviderApiKey =
       await database.query.providerApiKeys.findFirst({
-        // @ts-expect-error - drizzle-orm types are not up to date
-        where: eq(providerApiKeys.workspaceId, workspace.id),
+        where: dbUtils.eq(providerApiKeys.workspaceId, workspace.id),
       })
     expect(createdProviderApiKey).toBeDefined()
     expect(createdProviderApiKey?.authorId).toBe(user.id)
+
+    // Check if onboarding evaluation was created
+    const createdEvaluation = await database.query.evaluationVersions.findFirst(
+      {
+        where: dbUtils.eq(evaluationVersions.workspaceId, workspace.id),
+      },
+    )
+    expect(createdEvaluation).toBeDefined()
   })
 
   it('publishes userCreated event', async () => {
@@ -127,9 +131,7 @@ describe('setupService', () => {
       providers: [{ type: Providers.OpenAI, name: 'Latitude' }],
       name: 'Default Project',
       documents: {
-        foo: {
-          content: prompt,
-        },
+        onboarding: prompt,
       },
     })
 
@@ -150,8 +152,7 @@ describe('setupService', () => {
 
     // Check if the default project was imported
     const importedProject = await database.query.projects.findFirst({
-      // @ts-expect-error - drizzle-orm types are not up to date
-      where: eq(projects.workspaceId, workspace.id),
+      where: dbUtils.eq(projects.workspaceId, workspace.id),
     })
     expect(importedProject).toBeDefined()
     expect(importedProject?.name).toBe('Default Project')
@@ -160,11 +161,17 @@ describe('setupService', () => {
     const importedDocuments = await database
       .select()
       .from(documentVersions)
-      // @ts-expect-error - drizzle-orm types are not up to date
-      .innerJoin(commits, eq(commits.id, documentVersions.commitId))
-      // @ts-expect-error - drizzle-orm types are not up to date
-      .where(eq(commits.projectId, importedProject!.id))
+      .innerJoin(commits, dbUtils.eq(commits.id, documentVersions.commitId))
+      .where(dbUtils.eq(commits.projectId, importedProject!.id))
     expect(importedDocuments.length).toBe(1)
     expect(importedDocuments[0]!.document_versions.content).toEqual(prompt)
+
+    // Check if onboarding evaluation was created
+    const createdEvaluation = await database.query.evaluationVersions.findFirst(
+      {
+        where: dbUtils.eq(evaluationVersions.workspaceId, workspace.id),
+      },
+    )
+    expect(createdEvaluation).toBeDefined()
   })
 })

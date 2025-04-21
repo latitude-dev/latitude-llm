@@ -189,7 +189,6 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
             <TableHead>Time</TableHead>
             <TableHead>Version</TableHead>
             <TableHead>Origin</TableHead>
-            <TableHead>Custom Identifier</TableHead>
             <TableHead>Evaluations</TableHead>
             <TableHead>Duration</TableHead>
             <TableHead>Tokens</TableHead>
@@ -258,11 +257,6 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                 <TableCell>
                   <Text.H5 color={cellColor}>
                     {capitalize(documentLog.source || '-')}
-                  </Text.H5>
-                </TableCell>
-                <TableCell>
-                  <Text.H5 color={cellColor}>
-                    {documentLog.customIdentifier || '-'}
                   </Text.H5>
                 </TableCell>
                 <TableCell>

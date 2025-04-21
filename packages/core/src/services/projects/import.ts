@@ -1,7 +1,13 @@
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 
-import { Project, User, Workspace } from '../../browser'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+  User,
+  Workspace,
+} from '../../browser'
 import { database } from '../../client'
 import { DocumentVersionsRepository } from '../../repositories'
 import { projects } from '../../schema'
@@ -11,7 +17,7 @@ import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
 import Transaction from './../../lib/Transaction'
 
-export async function importDefaultProject(
+export async function importOnboardingProject(
   {
     workspace,
     user,
@@ -33,14 +39,17 @@ export async function importDefaultProject(
     db,
   )
 
-  const defaultDocuments =
-    await defaultProjectDocumentsScope.getDocumentsFromMergedCommits({
+  const defaultDocuments = await defaultProjectDocumentsScope
+    .getDocumentsFromMergedCommits({
       projectId: defaultProject!.id,
     })
+    .then((r) => r.unwrap())
 
-  if (defaultDocuments.error) return defaultDocuments
-
-  return Transaction.call<Project>(async (tx) => {
+  return Transaction.call<{
+    project: Project
+    commit: Commit
+    documents: DocumentVersion[]
+  }>(async (tx) => {
     const { project, commit } = await createProject(
       {
         workspace,
@@ -51,7 +60,7 @@ export async function importDefaultProject(
     ).then((r) => r.unwrap())
 
     const results = await Promise.all(
-      defaultDocuments.value.map(async (document) =>
+      defaultDocuments.map(async (document) =>
         createNewDocument(
           {
             workspace,
@@ -68,6 +77,10 @@ export async function importDefaultProject(
     const result = Result.findError(results)
     if (result) return result
 
-    return Result.ok(project)
+    return Result.ok({
+      project,
+      commit,
+      documents: results.map((r) => r.unwrap()),
+    })
   }, db)
 }
