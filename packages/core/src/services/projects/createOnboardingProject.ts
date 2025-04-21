@@ -51,7 +51,6 @@ Length: {{word_count}} words`,
       },
       tx,
     )
-
     if (documentResult.error) {
       return documentResult
     }
@@ -59,6 +58,10 @@ Length: {{word_count}} words`,
     // Merge the commit to finalize the document
     const mergedCommit = await mergeCommit(commit, tx).then((r) => r.unwrap())
 
-    return Result.ok({ project, commit: mergedCommit })
+    return Result.ok({
+      project,
+      documents: [documentResult.unwrap()],
+      commit: mergedCommit,
+    })
   }, db)
 }
