@@ -4,6 +4,11 @@ import { createModelSpec } from './helpers'
 export const OPENAI_MODELS = createModelSpec({
   defaultModel: 'gpt-4o',
   models: {
+    // gpt-4.1 family
+    'gpt-4.1': { cost: { input: 2.0, output: 8.0 } },
+    'gpt-4.1-mini': { cost: { input: 0.4, output: 1.6 } },
+    'gpt-4.1-nano': { cost: { input: 0.1, output: 0.4 } },
+
     // gpt-4o mini family
     'gpt-4o-mini': { cost: { input: 0.15, output: 0.6 } },
     'gpt-4o-mini-audio-preview': {
@@ -17,7 +22,7 @@ export const OPENAI_MODELS = createModelSpec({
 
     // gpt-4 family
     'gpt-4o': { cost: { input: 2.5, output: 10.0 } },
-    'gpt-4o-2024-05-13': { cost: { input: 5.0, output: 15.0 }, hidden: true },
+    'gpt-4o-2024-05-13': { cost: { input: 2.5, output: 10.0 }, hidden: true },
     'gpt-4o-audio-preview': {
       cost: { input: 2.5, output: 10.0 },
       hidden: true,
@@ -28,22 +33,25 @@ export const OPENAI_MODELS = createModelSpec({
     },
 
     // gpt-4.5 family
-    'gpt-4.5-preview': { cost: { input: 75, output: 150 } },
+    'gpt-4.5-preview': { cost: { input: 75.0, output: 150.0 } },
     'gpt-4.5-preview-2025-02-27': {
-      cost: { input: 75, output: 150 },
+      cost: { input: 75.0, output: 150.0 },
       hidden: true,
     },
 
     // o3 family
     'o3-mini': { cost: { input: 1.1, output: 4.4 } },
+    'o3-mini-2024-05-13': { cost: { input: 1.1, output: 4.4 }, hidden: true },
 
     // o1 family
     'o1-mini': { cost: { input: 1.1, output: 4.4 } },
+    'o1-mini-2024-05-13': { cost: { input: 1.1, output: 4.4 }, hidden: true },
     o1: { cost: { input: 15.0, output: 60.0 } },
+    'o1-2024-05-13': { cost: { input: 15.0, output: 60.0 }, hidden: true },
 
     // Legacy models
     'o1-preview': { cost: { input: 15.0, output: 60.0 }, hidden: true },
-    'chatgpt-4o-latest': { cost: { input: 5.0, output: 15.0 }, hidden: true },
+    'chatgpt-4o-latest': { cost: { input: 2.5, output: 10.0 }, hidden: true },
     'gpt-4-turbo': { cost: { input: 10.0, output: 30.0 }, hidden: true },
     'gpt-4-turbo-2024-04-09': {
       cost: { input: 10.0, output: 30.0 },
@@ -74,6 +82,9 @@ export const OPENAI_MODELS = createModelSpec({
   },
   modelName: (model: string) => {
     if (model.startsWith('gpt-4.5')) return 'gpt-4.5-preview'
+    if (model.startsWith('gpt-4.1-nano')) return 'gpt-4.1-nano'
+    if (model.startsWith('gpt-4.1-mini')) return 'gpt-4.1-mini'
+    if (model.startsWith('gpt-4.1')) return 'gpt-4.1'
 
     if (model.startsWith('o3-mini')) return 'o3-mini'
 

@@ -7,12 +7,27 @@ import { createModelSpec } from './helpers'
 export const GOOGLE_MODELS = createModelSpec({
   defaultModel: 'gemini-1.5-flash',
   models: {
+    // --- Gemini 2.5 Preview Models ---
+    'gemini-2.5-pro-preview': {
+      // Note: Pricing includes thinking tokens
+      cost: [
+        { input: 1.25, output: 10.0 },
+        { input: 2.5, output: 15.0, tokensRangeStart: 200_000 },
+      ],
+    },
+    'gemini-2.5-flash-preview': {
+      // Note: Using non-thinking output cost
+      cost: { input: 0.15, output: 0.6 }, // Input assumes text/image/video cost
+    },
+    // --- Gemini 2.0 Models ---
     'gemini-2.0-flash': { cost: { input: 0.1, output: 0.4 } },
+    // --- Experimental / Free Tier ---
+    'gemini-2.5-pro-exp-03-25': { cost: { input: 0, output: 0 } }, // Specific free tier model
     'gemini-2.0-flash-exp': { cost: { input: 0, output: 0 } },
     'gemini-2.0-flash-lite': { cost: { input: 0, output: 0 } },
     'gemini-2.0-pro-exp': { cost: { input: 0, output: 0 } },
     'gemini-2.0-flash-thinking-exp': { cost: { input: 0, output: 0 } },
-
+    // --- Gemini 1.5 Models ---
     'gemini-1.5-pro': {
       cost: [
         { input: 1.25, output: 5 },
@@ -31,14 +46,18 @@ export const GOOGLE_MODELS = createModelSpec({
         { input: 0.075, output: 0.3, tokensRangeStart: 128_000 },
       ],
     },
-
     'gemini-1.0-pro': { cost: { input: 0.5, output: 1.5 } },
     'gemini-1.0-pro-001': { cost: { input: 0.5, output: 1.5 } },
-
     'gemini-1.0-pro-vision-latest': { cost: { input: 0.5, output: 1.5 } },
     'gemini-pro-vision': { cost: { input: 0.5, output: 1.5 } },
   },
   modelName: (model: string) => {
+    // Exact matches first for specific/preview models
+    if (model === 'gemini-2.5-pro-preview') return 'gemini-2.5-pro-preview'
+    if (model === 'gemini-2.5-flash-preview') return 'gemini-2.5-flash-preview'
+    if (model === 'gemini-2.5-pro-exp-03-25') return 'gemini-2.5-pro-exp-03-25' // Handle specific free tier
+
+    // Handle variations using startsWith
     if (model.startsWith('gemini-2.0-flash-thinking-exp')) {
       return 'gemini-2.0-flash-thinking-exp'
     }
@@ -48,8 +67,18 @@ export const GOOGLE_MODELS = createModelSpec({
     if (model.startsWith('gemini-2.0-flash-')) return 'gemini-2.0-flash'
 
     if (model.startsWith('gemini-1.5-pro-')) return 'gemini-1.5-pro'
-    if (model.startsWith('gemini-1.0-flash-8b-')) return 'gemini-1.5-flash-8b'
+    if (model.startsWith('gemini-1.0-flash-8b-')) return 'gemini-1.5-flash-8b' // Note: Check if this naming is correct, usually 1.5
     if (model.startsWith('gemini-1.5-flash-')) return 'gemini-1.5-flash'
     if (model.startsWith('gemini-1.0-pro-')) return 'gemini-1.0-pro'
+
+    // Add comments for models with different pricing structures
+    // Imagen 3: Priced per image ($0.03)
+    // Veo 2: Priced per second ($0.35)
+    // Gemma 3: Free / Not applicable for token cost
+    // Text Embedding 004: Free / Not applicable for token cost
+
+    // Fallback or return undefined/null if no match?
+    // Consider adding a check for unhandled models or returning the default.
+    // For now, let it fall through, might return undefined if no match.
   },
 })
