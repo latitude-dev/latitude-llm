@@ -92,7 +92,7 @@ describe('run chain error handling', () => {
             content: [{ type: ContentType.text, text: 'Test message' }],
           },
         ],
-        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
+        config: { provider: 'openai', model: 'gpt-4o-mini' },
       },
     })
   })
@@ -218,7 +218,7 @@ describe('run chain error handling', () => {
       prompt: `
         ---
         provider: patata_provider
-        model: gpt-3.5-turbo
+        model: gpt-4o-mini
         ---
       `,
       parameters: {},
@@ -255,7 +255,7 @@ describe('run chain error handling', () => {
       prompt: `
         ---
         provider: openai
-        model: gpt-3.5-turbo
+        model: gpt-4o-mini
         ---
         <ref>NOT VALID TAG</ref>
       `,
@@ -338,7 +338,7 @@ describe('run chain error handling', () => {
       prompt: `
         ---
         provider: openai
-        model: gpt-3.5-turbo
+        model: gpt-4o-mini
         ---
       `,
       parameters: {},
@@ -383,7 +383,7 @@ describe('run chain error handling', () => {
       prompt: `
         ---
         provider: openai
-        model: gpt-3.5-turbo
+        model: gpt-4o-mini
         ---
       `,
       parameters: {},
@@ -413,13 +413,13 @@ describe('run chain error handling', () => {
         uuid: expect.any(String),
         documentLogUuid: expect.any(String),
         apiKeyId: null,
-        config: { model: 'gpt-3.5-turbo', provider: 'openai' },
-        costInMillicents: 1,
+        config: { model: 'gpt-4o-mini', provider: 'openai' },
+        costInMillicents: 0,
         duration: expect.any(Number),
         finishReason: 'stop',
         generatedAt: expect.any(Date),
         providerId: providersMap.get('openai').id,
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         responseText: 'MY TEXT',
         responseObject: null,
         source: 'api',

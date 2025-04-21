@@ -2,7 +2,7 @@ import { HostedIntegrationConfig } from '../types'
 import { uvxCommand } from '../utils'
 
 export default {
-  description: `A bridge between the Telegram API and AI assistants, providing read-only access to Telegram data like dialogs and messages.`,
+  description: `An MCP server to interact with a Tinybird Workspace.`,
   command: uvxCommand({
     name: 'mcp-tinybird',
     repository: 'https://github.com/tinybirdco/mcp-tinybird.git',

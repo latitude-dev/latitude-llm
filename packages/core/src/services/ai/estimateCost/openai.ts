@@ -1,9 +1,41 @@
 import { createModelSpec } from './helpers'
 
 // source: https://openai.com/api/pricing/
+// NOTE: Order matters here, the first model is the default model
 export const OPENAI_MODELS = createModelSpec({
   defaultModel: 'gpt-4o',
   models: {
+    // gpt-4o mini family
+    'gpt-4o-mini': { cost: { input: 0.15, output: 0.6 } },
+    'gpt-4o-mini-2024-07-18': {
+      cost: { input: 0.15, output: 0.6 },
+      hidden: true,
+    },
+    'gpt-4o-mini-audio-preview': {
+      cost: { input: 0.15, output: 0.6 },
+      hidden: true,
+    },
+    'gpt-4o-mini-audio-preview-2024-12-17': {
+      cost: { input: 0.15, output: 0.6 },
+      hidden: true,
+    },
+    'gpt-4o-mini-realtime-preview': {
+      cost: { input: 0.6, output: 2.4 },
+      hidden: true,
+    },
+    'gpt-4o-mini-realtime-preview-2024-12-17': {
+      cost: { input: 0.6, output: 2.4 },
+      hidden: true,
+    },
+    'gpt-4o-mini-search-preview': {
+      cost: { input: 0.15, output: 0.6 },
+      hidden: true,
+    },
+    'gpt-4o-mini-search-preview-2025-03-11': {
+      cost: { input: 0.15, output: 0.6 },
+      hidden: true,
+    },
+
     // gpt-4.1 family
     'gpt-4.1': { cost: { input: 2.0, output: 8.0 } },
     'gpt-4.1-2025-04-14': { cost: { input: 2.0, output: 8.0 }, hidden: true },
@@ -50,37 +82,6 @@ export const OPENAI_MODELS = createModelSpec({
     },
     'gpt-4o-search-preview-2025-03-11': {
       cost: { input: 2.5, output: 10.0 },
-      hidden: true,
-    },
-
-    // gpt-4o mini family
-    'gpt-4o-mini': { cost: { input: 0.15, output: 0.6 } },
-    'gpt-4o-mini-2024-07-18': {
-      cost: { input: 0.15, output: 0.6 },
-      hidden: true,
-    },
-    'gpt-4o-mini-audio-preview': {
-      cost: { input: 0.15, output: 0.6 },
-      hidden: true,
-    },
-    'gpt-4o-mini-audio-preview-2024-12-17': {
-      cost: { input: 0.15, output: 0.6 },
-      hidden: true,
-    },
-    'gpt-4o-mini-realtime-preview': {
-      cost: { input: 0.6, output: 2.4 },
-      hidden: true,
-    },
-    'gpt-4o-mini-realtime-preview-2024-12-17': {
-      cost: { input: 0.6, output: 2.4 },
-      hidden: true,
-    },
-    'gpt-4o-mini-search-preview': {
-      cost: { input: 0.15, output: 0.6 },
-      hidden: true,
-    },
-    'gpt-4o-mini-search-preview-2025-03-11': {
-      cost: { input: 0.15, output: 0.6 },
       hidden: true,
     },
 
