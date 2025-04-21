@@ -24,7 +24,7 @@ export async function findOnboardingDocument(
 
     // Get the first commit in the project
     const commitsRepo = new CommitsRepository(workspaceId, db)
-    const commitsResult = await commitsRepo.getHeadCommit(project.id)
+    const commitsResult = await commitsRepo.getFirstCommitForProject(project)
     if (commitsResult.error) {
       return Result.error(commitsResult.error)
     }
