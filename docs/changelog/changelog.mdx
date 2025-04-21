@@ -3,6 +3,33 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-04-21'>
+
+## New Features and Improvements
+
+- **Evaluation in Onboarding Document**: Added a feature to create evaluations in the onboarding document, enhancing the onboarding process for new users.
+  - [PR #1161](https://github.com/latitude-dev/latitude-llm/commit/8b6bbfb2de045c981aa6e9a95f47685e1efbb2eb)
+
+- **Nginx Controller**: Implemented an nginx controller due to AWS listener rule limits, deploying via an nginx reverse proxy within the cluster to improve scalability and resource management.
+  - [PR #1160](https://github.com/latitude-dev/latitude-llm/commit/2836648ad1e2e7eb75f2fd01a8eb937c7985ab1e)
+
+- **New Onboarding Process**: Introduced a new onboarding process to improve user experience and streamline the initial setup.
+  - [PR #1156](https://github.com/latitude-dev/latitude-llm/commit/5e210848a06d27c3cf2671b5b06ce7de947201b8)
+
+- **Dynamic Allocation of ALBs for Kubernetes Deployments**: Implemented dynamic allocation of ALBs for Kubernetes deployments to handle rule evaluation limits, enhancing scalability and flexibility.
+  - [PR #1157](https://github.com/latitude-dev/latitude-llm/commit/e7c2b77d83d358abb8b4da1d3048701a4bc6bb33)
+
+- **New Document Suggestions Worker**: Added a new queue and workers for processing document suggestions, optimizing document handling.
+  - [PR #1155](https://github.com/latitude-dev/latitude-llm/commit/1f63adb451f5f07f90982c467cd2b544db154830)
+
+## Minor Updates
+
+- **Typo Fixes and Test Improvements**: Addressed minor typos and improved test reliability.
+- **Setup Service Enhancements**: Ensured user creation only if other operations succeed.
+- **Tick Formatter Reapplication**: Reapplied tick formatter to the code.
+
+</Update>
+
 <Update label='2025-04-07'>
 
 ## Added new providers
