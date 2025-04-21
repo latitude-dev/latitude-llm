@@ -18,6 +18,7 @@ import { buildProviderPayload } from './buildProviderPayload'
 const CUSTOM_LABELS: Partial<Record<Providers, string>> = {
   [Providers.GoogleVertex]: 'Google Vertex (Gemini models)',
   [Providers.AnthropicVertex]: 'Google Vertex (Anthropic models)',
+  [Providers.Custom]: 'OpenAI Compatible (e.g OpenRouter, LM Studio, Baseten)',
 }
 
 const PROVIDER_OPTIONS = Object.entries(Providers).map(([key, value]) => ({
