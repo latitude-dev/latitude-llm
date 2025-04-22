@@ -67,7 +67,7 @@ export function EvaluationsTemplates({
 
       const existing = evaluations.filter(
         (evaluation) => evaluation.name === template.name,
-      )
+      ).length
       const next = evaluations.filter((evaluation) =>
         evaluation.name.startsWith(template.name),
       ).length
@@ -75,7 +75,7 @@ export function EvaluationsTemplates({
       const [result, errors] = await createEvaluation({
         settings: {
           ...template,
-          name: `${template.name}${existing.length > 0 ? ` (${next})` : ''}`,
+          name: `${template.name}${existing ? ` (${next})` : ''}`,
         },
         options: {
           evaluateLiveLogs:
@@ -161,7 +161,7 @@ export function EvaluationsTemplates({
             }}
           >
             {selectedTemplate.type === EvaluationType.Llm && (
-              <UseLlmModal
+              <LlmEvaluationTemplateForm
                 // @ts-expect-error seems TypeScript is not able to infer the type
                 template={selectedTemplate}
                 setTemplate={setSelectedTemplate}
@@ -207,7 +207,7 @@ function EvaluationTemplate<
           {template.name}
         </Text.H5>
       </TableCell>
-      <TableCell>
+      <TableCell className='max-w-96'>
         <Text.H5>{template.description}</Text.H5>
       </TableCell>
       <TableCell>
@@ -236,7 +236,7 @@ function EvaluationTemplate<
   )
 }
 
-function UseLlmModal<M extends LlmEvaluationMetric>({
+function LlmEvaluationTemplateForm<M extends LlmEvaluationMetric>({
   template,
   setTemplate,
   isExecuting,
