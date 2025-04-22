@@ -8,13 +8,13 @@ import {
   Workspace,
 } from '../../browser'
 import { database, Database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { compactObject } from '../../lib/compactObject'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { evaluationVersions } from '../../schema'
-import { pingProjectUpdate } from '../projects'
 import { validateEvaluationV2 } from './validate'
 
 export async function updateEvaluationV2<
@@ -93,9 +93,13 @@ export async function updateEvaluationV2<
       versionId: result.id,
     } as unknown as EvaluationV2<T, M>
 
-    await pingProjectUpdate({ projectId: commit.projectId }, tx).then((r) =>
-      r.unwrap(),
-    )
+    publisher.publishLater({
+      type: 'evaluationV2Updated',
+      data: {
+        evaluation: evaluation,
+        workspaceId: workspace.id,
+      },
+    })
 
     return Result.ok({ evaluation })
   }, db)

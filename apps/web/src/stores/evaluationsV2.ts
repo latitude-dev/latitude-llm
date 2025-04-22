@@ -3,6 +3,7 @@
 import {
   createEvaluationV2Action,
   deleteEvaluationV2Action,
+  toggleLiveModeAction,
   updateEvaluationV2Action,
 } from '$/actions/evaluationsV2'
 import useFetcher from '$/hooks/useFetcher'
@@ -182,6 +183,45 @@ export function useEvaluationsV2(
     [project, commit, document, executeDeleteEvaluationV2],
   )
 
+  const { execute: executeToggleLiveMode, isPending: isTogglingLiveMode } =
+    useLatitudeAction(toggleLiveModeAction, {
+      onSuccess: async ({ data: { evaluation } }) => {
+        mutate(
+          (prev) =>
+            prev?.map((e) => {
+              if (e.uuid !== evaluation.uuid) return e
+              return evaluation
+            }) ?? [],
+        )
+      },
+      onError: async (error) => {
+        if (error?.err?.name === 'ZodError') return
+        toast({
+          title: 'Error updating evaluation',
+          description: error?.err?.message,
+          variant: 'destructive',
+        })
+      },
+    })
+  const toggleLiveMode = useCallback(
+    async ({
+      evaluationUuid,
+      live,
+    }: {
+      evaluationUuid: string
+      live: boolean
+    }) => {
+      return await executeToggleLiveMode({
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+        evaluationUuid: evaluationUuid,
+        live: live,
+      })
+    },
+    [executeToggleLiveMode],
+  )
+
   return {
     data,
     mutate,
@@ -191,8 +231,13 @@ export function useEvaluationsV2(
     isUpdatingEvaluation,
     deleteEvaluation,
     isDeletingEvaluation,
+    toggleLiveMode,
+    isTogglingLiveMode,
     isExecuting:
-      isCreatingEvaluation || isUpdatingEvaluation || isDeletingEvaluation,
+      isCreatingEvaluation ||
+      isUpdatingEvaluation ||
+      isDeletingEvaluation ||
+      isTogglingLiveMode,
     ...rest,
   }
 }

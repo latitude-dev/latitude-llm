@@ -70,6 +70,7 @@ export type Events =
   | 'copilotSuggestionApplied'
   | 'evaluationResultUpdated'
   | 'evaluationV2Created'
+  | 'evaluationV2Updated'
   | 'evaluationV2Ran'
   | 'evaluationResultV2Created'
   | 'mcpServerConnected'
@@ -511,6 +512,14 @@ export type EvaluationV2CreatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type EvaluationV2UpdatedEvent = LatitudeEventGeneric<
+  'evaluationV2Updated',
+  {
+    workspaceId: number
+    evaluation: EvaluationV2
+  }
+>
+
 export type EvaluationV2RanEvent = LatitudeEventGeneric<
   'evaluationV2Ran',
   {
@@ -609,6 +618,7 @@ export type LatitudeEvent =
   | ScaleMcpServerEvent
   | McpServerConnectedEvent
   | WebhookDeliveryCreatedEvent
+  | EvaluationV2UpdatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -655,4 +665,5 @@ export interface IEventsHandlers {
   scaleMcpServer: EventHandler<ScaleMcpServerEvent>[]
   mcpServerConnected: EventHandler<McpServerConnectedEvent>[]
   webhookDeliveryCreated: EventHandler<WebhookDeliveryCreatedEvent>[]
+  evaluationV2Updated: EventHandler<EvaluationV2UpdatedEvent>[]
 }
