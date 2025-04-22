@@ -29,19 +29,19 @@ export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
       <div
         ref={ref}
         className={cn(
-          'flex flex-col flex-grow min-h-0 bg-background overflow-hidden',
+          'flex flex-col flex-grow min-h-0 bg-background overflow-x-auto',
           'border border-border rounded-lg items-center relative',
           className,
         )}
       >
-        <div className='pt-6 pb-2 relative flex justify-center w-full'>
+        <div className='pt-6 pb-2 px-4 relative flex gap-2 justify-center w-full'>
           <TabSelector
             options={tabs}
             selected={selectedTab}
             onSelect={setSelectedTab}
           />
           {tabsActions ? (
-            <div className='absolute right-4 top-6 flex items-center justify-end w-full min-h-11 pointer-events-none'>
+            <div className='flex items-center justify-end w-full min-h-11 pointer-events-none'>
               {tabsActions}
             </div>
           ) : null}

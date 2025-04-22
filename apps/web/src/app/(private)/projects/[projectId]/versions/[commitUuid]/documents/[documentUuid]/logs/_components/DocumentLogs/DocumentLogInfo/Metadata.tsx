@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
@@ -27,6 +27,14 @@ import {
   MetadataItemTooltip,
 } from '../../../../../[documentUuid]/_components/MetadataItem'
 import { Message } from '@latitude-data/compiler'
+import { ROUTES } from '$/services/routes'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useCurrentCommit } from 'node_modules/@latitude-data/web-ui/src/providers/CommitProvider'
+import { useCurrentProject } from 'node_modules/@latitude-data/web-ui/src/providers/ProjectProvider'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useNavigate } from '$/hooks/useNavigate'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 
 function costNotCalculatedReason({
   provider,
@@ -251,7 +259,10 @@ export function DocumentLogParameters({
 
   return (
     <div className='flex flex-col gap-y-1'>
-      <Text.H5M color='foreground'>Parameters</Text.H5M>
+      <div className='flex flex-row items-center justify-between'>
+        <Text.H5M color='foreground'>Parameters</Text.H5M>
+        <UseDocumentLogInPlaygroundButton documentLog={documentLog} />
+      </div>
       <div className='grid grid-cols-[auto_1fr] gap-y-3'>
         {parameters.map(({ parameter, value }, index) => {
           const file = asPromptLFile(value)
@@ -345,5 +356,65 @@ export function DocumentLogMetadata({
         </div>
       ) : null}
     </div>
+  )
+}
+
+function UseDocumentLogInPlaygroundButton({
+  documentLog,
+}: {
+  documentLog: DocumentLogWithMetadataAndError | DocumentLog
+}) {
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const documentUuid = documentLog.documentUuid
+  const { document } = useCurrentDocument()
+  const {
+    setSource,
+    history: { setHistoryLog },
+  } = useDocumentParameters({
+    document,
+    commitVersionUuid: commit.uuid,
+  })
+  const navigate = useNavigate()
+  const employLogAsDocumentParameters = useCallback(() => {
+    setSource('history')
+    setHistoryLog(documentLog.uuid)
+    navigate.push(
+      ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({
+          uuid: commit.uuid,
+        })
+        .documents.detail({ uuid: documentUuid }).root,
+    )
+  }, [
+    setHistoryLog,
+    setSource,
+    navigate,
+    project.id,
+    commit.uuid,
+    documentUuid,
+    documentLog.uuid,
+  ])
+  const hasError = 'error' in documentLog && !!documentLog.error.message
+
+  if (hasError) return null
+
+  return (
+    <Tooltip
+      asChild
+      trigger={
+        <Button
+          onClick={employLogAsDocumentParameters}
+          iconProps={{ name: 'pencil', color: 'foregroundMuted' }}
+          variant='nope'
+          size='icon'
+          containerClassName='rounded-xl pointer-events-auto'
+          className='rounded-xl'
+        />
+      }
+    >
+      Test this log's parameters in the playground
+    </Tooltip>
   )
 }

@@ -5,6 +5,7 @@ import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
 import {
   buildConversation,
+  DocumentLog,
   ProviderLogDto,
   ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
@@ -46,67 +47,6 @@ function DocumentLogMetadataLoading() {
       <MetadataItem label='Duration' loading />
       <MetadataItem label='Version' loading />
     </div>
-  )
-}
-
-function UseDocumentLogInPlaygroundButton({
-  documentLog,
-}: {
-  documentLog: DocumentLogWithMetadataAndError
-}) {
-  const { commit } = useCurrentCommit()
-  const { project } = useCurrentProject()
-  const documentUuid = documentLog.documentUuid
-  const { document } = useCurrentDocument()
-  const {
-    setSource,
-    history: { setHistoryLog },
-  } = useDocumentParameters({
-    document,
-    commitVersionUuid: commit.uuid,
-  })
-  const navigate = useRouter()
-  const employLogAsDocumentParameters = useCallback(() => {
-    setSource('history')
-    setHistoryLog(documentLog.uuid)
-    navigate.push(
-      ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({
-          uuid: commit.uuid,
-        })
-        .documents.detail({ uuid: documentUuid }).root,
-    )
-  }, [
-    setHistoryLog,
-    setSource,
-    navigate,
-    project.id,
-    commit.uuid,
-    documentUuid,
-    documentLog.uuid,
-  ])
-  const hasError = !!documentLog.error.message
-
-  if (hasError) return null
-
-  return (
-    <Tooltip
-      asChild
-      trigger={
-        <Button
-          onClick={employLogAsDocumentParameters}
-          fancy
-          iconProps={{ name: 'rollText', color: 'foregroundMuted' }}
-          variant='outline'
-          size='icon'
-          containerClassName='rounded-xl pointer-events-auto'
-          className='rounded-xl'
-        />
-      }
-    >
-      Use this log in the playground
-    </Tooltip>
   )
 }
 
@@ -166,13 +106,6 @@ export function DocumentLogInfo({
         evaluationResults
           ? [...DEFAULT_TABS, { label: 'Evaluations', value: 'evaluations' }]
           : DEFAULT_TABS
-      }
-      tabsActions={
-        <>
-          {documentLog ? (
-            <UseDocumentLogInPlaygroundButton documentLog={documentLog} />
-          ) : null}
-        </>
       }
     >
       {({ selectedTab }) =>
