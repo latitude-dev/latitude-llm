@@ -139,6 +139,7 @@ describe('setupService', () => {
       email: 'test2@example.com',
       name: 'Test User 2',
       companyName: 'Test Company 2',
+      importDefaultProject: true,
     })
 
     expect(result.error).toBeUndefined()

@@ -6,7 +6,7 @@ export default function setupService({
   email,
   name,
   companyName,
-  importDefaultProject = true,
+  importDefaultProject = env.IMPORT_DEFAULT_PROJECT,
 }: {
   email: string
   name: string

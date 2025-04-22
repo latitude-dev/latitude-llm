@@ -17,6 +17,9 @@ import { createOnboardingEvaluation } from './createOnboardingEvaluation'
 import { Commit, DocumentVersion, User, Workspace } from '../../browser'
 import { ONBOARDING_DOCUMENT_PATH } from '../documents/findOnboardingDocument'
 import { LatitudeError } from '../../lib/errors'
+import { env } from '@latitude-data/env'
+
+const DEFAULT_MODEL = 'gpt-4o-mini'
 
 export default function setupService(
   {
@@ -26,7 +29,7 @@ export default function setupService(
     defaultProviderName,
     defaultProviderApiKey,
     captureException,
-    importDefaultProject = true,
+    importDefaultProject = env.IMPORT_DEFAULT_PROJECT,
   }: {
     email: string
     name: string
@@ -57,7 +60,7 @@ export default function setupService(
         provider: Providers.OpenAI,
         name: defaultProviderName,
         token: defaultProviderApiKey,
-        defaultModel: 'gpt-4o-mini', // TODO: Move this to env variable
+        defaultModel: DEFAULT_MODEL, // TODO: Move this to env variable
         author: user,
       },
       tx,
