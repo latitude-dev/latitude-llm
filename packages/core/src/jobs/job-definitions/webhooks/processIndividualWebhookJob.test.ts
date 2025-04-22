@@ -282,6 +282,69 @@ describe('processIndividualWebhookJob', () => {
     })
   })
 
+  it('processes documentLogCreated event type', async () => {
+    // Create a workspace and webhook
+    const { workspace, commit } = await factories.createProject()
+    const webhook = await factories.createWebhook({
+      workspaceId: workspace.id,
+      url: 'https://example.com/webhook',
+      isActive: true,
+      projectIds: [],
+    })
+
+    // Create a documentLogCreated event
+    const event = {
+      type: 'documentLogCreated',
+      data: {
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        userEmail: 'test@example.com',
+      },
+    }
+
+    // Mock the sendSignedWebhook function to return a successful response
+    vi.mocked(sendSignedWebhook).mockResolvedValue(
+      Result.ok({
+        success: true,
+        statusCode: 200,
+        responseBody: 'OK',
+      }),
+    )
+
+    // Create a mock job
+    const mockJob = {
+      data: {
+        event,
+        webhookId: webhook.id,
+      },
+    } as Job
+
+    // Process the webhook job
+    await processIndividualWebhookJob(mockJob)
+
+    // Verify webhook was sent
+    expect(sendSignedWebhook).toHaveBeenCalledWith({
+      url: webhook.url,
+      secret: webhook.secret,
+      payload: {
+        eventType: event.type,
+        payload: {
+          commitId: commit.id,
+        },
+      },
+    })
+
+    // Verify delivery record was created
+    expect(createWebhookDelivery).toHaveBeenCalledWith({
+      webhookId: webhook.id,
+      eventType: event.type,
+      status: 'success',
+      responseStatus: 200,
+      responseBody: 'OK',
+      errorMessage: undefined,
+    })
+  })
+
   it('handles webhook sending error', async () => {
     // Create a workspace and webhook
     const { workspace } = await factories.createWorkspace()
