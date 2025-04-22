@@ -3,9 +3,10 @@ import { FormEvent, ReactNode, useCallback, useMemo, useState } from 'react'
 
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
@@ -20,33 +21,24 @@ import {
   HOSTED_INTEGRATION_TYPE_OPTIONS,
   INTEGRATION_TYPE_VALUES,
 } from '$/lib/integrationTypeOptions'
-import { Select } from '@latitude-data/web-ui/atoms/Select'
 
 const SELECTABLE_TYPES: {
   value: IntegrationType | HostedIntegrationType
   label: string
-  icon: IconName | ReactNode
+  icon: ReactNode
 }[] = [
   {
     value: IntegrationType.ExternalMCP,
     label: INTEGRATION_TYPE_VALUES[IntegrationType.ExternalMCP].label,
     icon: (
-      <Icon
-        name={INTEGRATION_TYPE_VALUES[IntegrationType.ExternalMCP].icon}
-        color='foregroundMuted'
-      />
+      <Icon name={INTEGRATION_TYPE_VALUES[IntegrationType.ExternalMCP].icon} />
     ),
   },
   ...Object.values(HostedIntegrationType)
     .map((value) => ({
       value,
       label: HOSTED_INTEGRATION_TYPE_OPTIONS[value].label,
-      icon: (
-        <Icon
-          name={HOSTED_INTEGRATION_TYPE_OPTIONS[value].icon}
-          color='foregroundMuted'
-        />
-      ),
+      icon: <Icon name={HOSTED_INTEGRATION_TYPE_OPTIONS[value].icon} />,
     }))
     .sort((a, b) => a.label.localeCompare(b.label)),
 ]
@@ -132,7 +124,6 @@ export default function NewIntegration() {
           />
           <Select
             required
-            searchable
             name='type'
             options={SELECTABLE_TYPES}
             onChange={(value) => setIntegrationType(value)}
