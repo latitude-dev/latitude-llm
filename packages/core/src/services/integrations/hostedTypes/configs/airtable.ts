@@ -2,8 +2,7 @@ import { HostedIntegrationConfig } from '../types'
 import { npxCommand } from '../utils'
 
 export default {
-  description:
-    'Tools for the Notion API, enabling your AI to interact with Notion workspaces.',
+  description: 'Provides read and write access to Airtable databases.',
   command: npxCommand({ package: 'airtable-mcp-server' }),
   env: {
     AIRTABLE_API_KEY: {
