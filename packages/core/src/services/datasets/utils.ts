@@ -1,9 +1,8 @@
 import { nanoid } from 'nanoid'
 
-import { DatasetRow, Dataset } from '../../browser'
+import { Dataset, DatasetRow } from '../../browser'
 import { DATASET_COLUMN_ROLES, DatasetColumnRole } from '../../constants'
 import { type Column } from '../../schema'
-import { BadRequestError } from './../../lib/errors'
 
 export type HashAlgorithmFn = (args: { columnName: string }) => string
 export type hashAlgorithmArgs = Parameters<HashAlgorithmFn>[0]
@@ -113,17 +112,21 @@ export function getColumnData({
 }) {
   const column = dataset.columns.find((c) => c.name === columnName)
   if (!column) {
-    throw new BadRequestError(`${columnName} column not found in dataset`)
+    throw new Error(`${columnName} column not found in dataset`)
   }
 
-  const expectedOutput = row.rowData[column.identifier]
-  if (expectedOutput === undefined) {
+  const data = row.rowData[column.identifier]
+  if (data === undefined || data === null) {
     return ''
   }
 
-  if (typeof expectedOutput === 'string') {
-    return expectedOutput
+  if (typeof data === 'string') {
+    return data
   }
 
-  return JSON.stringify(expectedOutput)
+  try {
+    return JSON.stringify(data)
+  } catch (error) {
+    return data.toString()
+  }
 }

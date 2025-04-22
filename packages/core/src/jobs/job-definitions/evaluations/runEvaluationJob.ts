@@ -1,3 +1,4 @@
+import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import {
@@ -11,20 +12,21 @@ import {
 } from '../../../repositories'
 import { runEvaluationV2 } from '../../../services/evaluationsV2/run'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
-import { NotFoundError } from './../../../lib/errors'
+import { WebsocketClient } from '../../../websockets/workers'
+import { ProgressTracker } from '../../utils/progressTracker'
 import { updateExperimentStatus } from '../experiments/shared'
-import { env } from '@latitude-data/env'
+import { NotFoundError } from './../../../lib/errors'
 
 export type RunEvaluationV2JobData = {
   workspaceId: number
   commitId: number
   evaluationUuid: string
   providerLogUuid: string
+  experimentUuid?: string
   datasetId?: number
   datasetLabel?: string
   datasetRowId?: number
   batchId?: string // TODO(exps): Deprecated
-  experimentUuid?: string
 }
 
 export function runEvaluationV2JobKey({
@@ -32,11 +34,12 @@ export function runEvaluationV2JobKey({
   commitId,
   evaluationUuid,
   providerLogUuid,
+  experimentUuid,
   datasetId,
   datasetLabel,
   datasetRowId,
 }: RunEvaluationV2JobData) {
-  return `runEvaluationV2Job-${workspaceId}-${commitId}-${evaluationUuid}-${providerLogUuid}-${datasetId}-${datasetLabel}-${datasetRowId}`
+  return `runEvaluationV2Job-${workspaceId}-${commitId}-${evaluationUuid}-${providerLogUuid}-${experimentUuid}-${datasetId}-${datasetLabel}-${datasetRowId}`
 }
 
 export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
@@ -45,10 +48,11 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     commitId,
     evaluationUuid,
     providerLogUuid,
+    experimentUuid,
     datasetId,
     datasetLabel,
     datasetRowId,
-    experimentUuid,
+    batchId,
   } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
@@ -102,12 +106,12 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     const { result } = await runEvaluationV2({
       evaluation: evaluation,
       providerLog: providerLog,
+      experiment: experiment,
       dataset: dataset,
       datasetLabel: datasetLabel,
       datasetRow: datasetRow,
       commit: commit,
       workspace: workspace,
-      experiment,
     }).then((r) => r.unwrap())
 
     if (experiment) {
@@ -125,6 +129,33 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
           }
         },
       ).then((r) => r.unwrap())
+    }
+
+    // TODO(exps): Deprecated
+    if (batchId) {
+      const websockets = await WebsocketClient.getSocket()
+      const tracker = new ProgressTracker(batchId)
+
+      try {
+        if (result.error) await tracker.incrementErrors()
+        else await tracker.incrementCompleted()
+
+        const progress = await tracker.getProgress()
+
+        websockets.emit('evaluationStatus', {
+          workspaceId,
+          data: {
+            batchId,
+            commitId: commit.id,
+            documentUuid: documentLog.documentUuid,
+            evaluationUuid: evaluation.uuid,
+            version: 'v2',
+            ...progress,
+          },
+        })
+      } finally {
+        await tracker.cleanup()
+      }
     }
   } catch (error) {
     if (env.NODE_ENV === 'development') {
