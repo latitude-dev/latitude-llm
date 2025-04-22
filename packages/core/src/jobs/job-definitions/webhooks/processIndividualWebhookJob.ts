@@ -10,8 +10,8 @@ import {
 } from '../../../services/webhooks'
 import { Events, LatitudeEvent } from '../../../events/events'
 import { processWebhookPayload } from './utils/processWebhookPayload'
-
-const WEBHOOK_EVENTS: Array<Events> = ['commitPublished']
+import { WEBHOOK_EVENTS } from './processWebhookJob'
+import { findCommitById } from '../../../data-access/commits'
 
 export type ProcessIndividualWebhookJobData = {
   event: typeof events.$inferSelect
@@ -34,7 +34,7 @@ export const processIndividualWebhookJob = async (
   }
 
   // Extract projectId from the event
-  const projectId = fetchProjectIdFromEvent(event as LatitudeEvent)
+  const projectId = await fetchProjectIdFromEvent(event as LatitudeEvent)
   if (!projectId) {
     throw new Error(`No project id found in event ${event.type}`)
   }
@@ -91,7 +91,7 @@ export const processIndividualWebhookJob = async (
   }
 }
 
-function fetchProjectIdFromEvent(event: LatitudeEvent) {
+async function fetchProjectIdFromEvent(event: LatitudeEvent) {
   if (!WEBHOOK_EVENTS.includes(event.type as Events)) {
     return
   }
@@ -99,6 +99,10 @@ function fetchProjectIdFromEvent(event: LatitudeEvent) {
   switch (event.type) {
     case 'commitPublished':
       return event.data.commit.projectId
+    case 'documentLogCreated':
+      return await findCommitById({ id: event.data.commitId })
+        .then((r) => r.unwrap())
+        .then((c) => c.projectId)
     default:
       return
   }
