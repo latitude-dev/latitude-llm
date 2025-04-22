@@ -11,6 +11,7 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { EvaluationsActions } from './EvaluationsActions'
 import { EvaluationsTable } from './EvaluationsTable'
+import { EvaluationsTemplates } from './EvaluationsTemplates'
 
 export function EvaluationsPage({
   evaluations: serverEvaluations,
@@ -62,9 +63,12 @@ export function EvaluationsPage({
         isLoading={isLoading}
         isExecuting={isExecuting}
       />
-      {/* TODO(evalsv2):
-        <EvaluationsTemplates />
-      */}
+      <EvaluationsTemplates
+        evaluations={evaluations}
+        createEvaluation={createEvaluation}
+        isLoading={isLoading}
+        isExecuting={isExecuting}
+      />
     </div>
   )
 }
