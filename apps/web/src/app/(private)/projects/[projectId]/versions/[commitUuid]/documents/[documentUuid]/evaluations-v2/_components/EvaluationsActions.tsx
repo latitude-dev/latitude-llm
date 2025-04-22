@@ -128,9 +128,9 @@ export function EvaluationsActions({
         <EvaluationV2Form
           mode='create'
           settings={settings}
-          onSettingsChange={setSettings}
+          setSettings={setSettings}
           options={options}
-          onOptionsChange={setOptions}
+          setOptions={setOptions}
           errors={errors}
           disabled={isExecuting}
         />

@@ -18,7 +18,7 @@ import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import ConfigurationForm from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
 
@@ -70,19 +70,19 @@ export default function EvaluationV2Form<
   M extends EvaluationMetric<T>,
 >({
   mode,
-  settings: defaultSettings,
-  options: defaultOptions,
-  onSettingsChange,
-  onOptionsChange,
+  settings,
+  setSettings,
+  options,
+  setOptions,
   errors: actionErrors,
   disabled,
   forceTypeChange,
 }: {
   mode: 'create' | 'update'
-  settings?: EvaluationSettings<T, M>
-  onSettingsChange?: (settings: EvaluationSettings<T, M>) => void
-  options?: Partial<EvaluationOptions>
-  onOptionsChange?: (options: Partial<EvaluationOptions>) => void
+  settings: EvaluationSettings<T, M>
+  setSettings: (settings: EvaluationSettings<T, M>) => void
+  options: Partial<EvaluationOptions>
+  setOptions: (options: Partial<EvaluationOptions>) => void
   errors?: ActionErrors<
     typeof useEvaluationsV2,
     'createEvaluation' | 'updateEvaluation'
@@ -90,18 +90,9 @@ export default function EvaluationV2Form<
   disabled?: boolean
   forceTypeChange?: T
 }) {
-  // TODO(evalsv2): Delete this intermediate state, does not makes sense to have it and is problematic
-  const [settings, setSettings] = useState({
-    name: defaultSettings?.name ?? 'Accuracy',
-    description: defaultSettings?.description ?? 'Matches the expected output?',
-    type: defaultSettings?.type ?? EvaluationType.Rule,
-    metric: defaultSettings?.metric ?? RuleEvaluationMetric.ExactMatch,
-    configuration: defaultSettings?.configuration ?? {
-      reverseScale: false,
-      caseInsensitive: false,
-    },
-  } as EvaluationSettings<T, M>)
-  useEffect(() => onSettingsChange?.(settings), [settings])
+  const { enabled: evaluationsV2Enabled } = useFeatureFlag({
+    featureFlag: 'evaluationsV2',
+  })
 
   // TODO(evalsv2): Temporal hot garbage hack for old evaluation creation modal
   useEffect(() => {
@@ -112,6 +103,7 @@ export default function EvaluationV2Form<
       setSettings({
         ...settings,
         type: forceTypeChange,
+        metric: LlmEvaluationMetric.Rating as M,
         configuration: {
           ...settings.configuration,
           reverseScale: false,
@@ -140,13 +132,6 @@ export default function EvaluationV2Form<
     }
   }, [forceTypeChange])
 
-  const [options, setOptions] = useState({
-    evaluateLiveLogs: defaultOptions?.evaluateLiveLogs ?? true,
-    enableSuggestions: defaultOptions?.enableSuggestions ?? true,
-    autoApplySuggestions: defaultOptions?.autoApplySuggestions ?? true,
-  } as EvaluationOptions)
-  useEffect(() => onOptionsChange?.(options), [options])
-
   const errors = useMemo(() => parseActionErrors(actionErrors), [actionErrors])
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[settings.type]
@@ -169,10 +154,6 @@ export default function EvaluationV2Form<
       evaluateLiveLogs: !!metricSpecification.supportsLiveEvaluation,
     })
   }, [metricSpecification?.supportsLiveEvaluation])
-
-  const { enabled: evaluationsV2Enabled } = useFeatureFlag({
-    featureFlag: 'evaluationsV2',
-  })
 
   return (
     <form className='min-w-0' id='evaluationV2Form'>
@@ -237,7 +218,7 @@ export default function EvaluationV2Form<
           type={settings.type}
           metric={settings.metric}
           configuration={settings.configuration}
-          onChange={(value) =>
+          setConfiguration={(value) =>
             setSettings({ ...settings, configuration: value })
           }
           errors={errors}

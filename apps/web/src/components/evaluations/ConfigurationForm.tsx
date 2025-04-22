@@ -1,10 +1,5 @@
-import {
-  EvaluationConfiguration,
-  EvaluationMetric,
-  EvaluationType,
-} from '@latitude-data/constants'
+import { EvaluationMetric, EvaluationType } from '@latitude-data/constants'
 import { SelectableSwitch } from '@latitude-data/web-ui/molecules/SelectableSwitch'
-import { useEffect, useState } from 'react'
 import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
 
 export default function ConfigurationForm<
@@ -14,22 +9,11 @@ export default function ConfigurationForm<
   mode,
   type,
   metric,
-  configuration: defaultConfiguration,
-  onChange,
+  configuration,
+  setConfiguration,
   errors,
   disabled,
-}: Omit<ConfigurationFormProps<T, M>, 'configuration' | 'setConfiguration'> & {
-  type: T
-  metric: M
-  configuration?: EvaluationConfiguration<T, M>
-  onChange?: (configuration: EvaluationConfiguration<T, M>) => void
-}) {
-  // TODO(evalsv2): Delete this intermediate state, does not makes sense to have it and is problematic
-  const [configuration, setConfiguration] = useState(
-    defaultConfiguration ?? ({} as EvaluationConfiguration<T, M>),
-  )
-  useEffect(() => onChange?.(configuration), [configuration])
-
+}: ConfigurationFormProps<T, M> & { type: T; metric: M }) {
   const typeSpecification = EVALUATION_SPECIFICATIONS[type]
   if (!typeSpecification) return null
 

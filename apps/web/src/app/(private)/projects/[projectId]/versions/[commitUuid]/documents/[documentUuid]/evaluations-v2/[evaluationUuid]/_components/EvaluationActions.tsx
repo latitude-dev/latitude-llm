@@ -2,6 +2,8 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
@@ -26,8 +28,6 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
 import CreateBatchEvaluationModal from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal'
-import { RunExperimentModal } from '$/components/RunExperimentModal'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 export function EvaluationActions<
   T extends EvaluationType = EvaluationType,
@@ -242,9 +242,9 @@ function EditEvaluation<
         <EvaluationV2Form
           mode='update'
           settings={settings}
-          onSettingsChange={setSettings}
+          setSettings={setSettings}
           options={options}
-          onOptionsChange={setOptions}
+          setOptions={setOptions}
           errors={errors}
           disabled={isExecuting || !!commit.mergedAt}
         />

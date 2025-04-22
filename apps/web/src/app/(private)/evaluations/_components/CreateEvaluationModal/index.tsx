@@ -1,5 +1,3 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
@@ -30,6 +28,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useEvaluationConfiguration } from './useEvaluationConfiguration'
 
 type EvaluationMetadataTypeTmp =
@@ -307,9 +306,9 @@ export default function CreateEvaluationModal({
           <EvaluationV2Form
             mode='create'
             settings={settingsV2}
-            onSettingsChange={setSettingsV2}
+            setSettings={setSettingsV2}
             options={optionsV2}
-            onOptionsChange={setOptionsV2}
+            setOptions={setOptionsV2}
             errors={errorsV2}
             disabled={isCreating}
             forceTypeChange={
