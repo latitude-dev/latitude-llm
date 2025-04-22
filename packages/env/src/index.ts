@@ -94,8 +94,8 @@ if (environment === 'development' || environment === 'test') {
       GOOGLE_CLIENT_ID: '',
       GOOGLE_CLIENT_SECRET: '',
       GOOGLE_REDIRECT_URI: 'http://localhost:3000/api/auth/google/callback',
-      DEFAULT_PROVIDER_API_KEY: 'fake-provider-api-key',
       ENABLE_ALL_FLAGS: 'false',
+      DEFAULT_PROVIDER_API_KEY: 'openai-api-key',
     },
     { path: pathToEnv },
   )
@@ -248,6 +248,7 @@ export const env = createEnv({
     GOOGLE_REDIRECT_URI: z.string(),
 
     ENABLE_ALL_FLAGS: z.coerce.boolean().optional().default(false),
+    IMPORT_DEFAULT_PROJECT: z.coerce.boolean().optional().default(false),
   },
   runtimeEnv: {
     ...process.env,

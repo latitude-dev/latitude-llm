@@ -117,7 +117,7 @@ export function findOrCreateUserFromOAuth(
         companyName: `${name}'s Workspace`,
         defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
         defaultProviderApiKey: env.DEFAULT_PROVIDER_API_KEY,
-        importDefaultProject: env.NODE_ENV === 'production',
+        importDefaultProject: env.IMPORT_DEFAULT_PROJECT,
       },
       tx,
     )
