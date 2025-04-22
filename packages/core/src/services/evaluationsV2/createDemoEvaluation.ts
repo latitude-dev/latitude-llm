@@ -81,7 +81,6 @@ export async function createDemoEvaluation(
     ).then((r) => r.unwrap())
   }
 
-  // If evaluationsV2 is not enabled, we don't create an evaluation
   const evaluation = await createEvaluation(
     {
       workspace: workspace,

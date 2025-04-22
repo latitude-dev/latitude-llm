@@ -25,6 +25,7 @@ export function createOnboardingEvaluation(
         document,
         commit,
         workspace,
+        evaluationsV2Enabled: false,
       },
       tx,
     )

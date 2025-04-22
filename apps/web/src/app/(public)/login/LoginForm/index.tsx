@@ -45,7 +45,7 @@ export default function LoginForm({
           errors={errors?.email}
         />
         <div className='flex flex-col gap-6'>
-          <Button fullWidth isLoading={isPending && !error}>
+          <Button fancy fullWidth isLoading={isPending && !error}>
             Login
           </Button>
 
