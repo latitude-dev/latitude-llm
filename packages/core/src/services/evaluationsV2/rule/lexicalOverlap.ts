@@ -67,6 +67,30 @@ async function validate(
   })
 }
 
+function longestCommonSubstring(actual: string, expected: string) {
+  if (!actual.length || !expected.length) return 0
+
+  const [shorter, longer] =
+    actual.length <= expected.length ? [actual, expected] : [expected, actual]
+  let previous = new Array(shorter.length + 1).fill(0)
+  let current = new Array(shorter.length + 1).fill(0)
+  let longestMatch = 0
+
+  for (let i = 1; i <= longer.length; i++) {
+    for (let j = 1; j <= shorter.length; j++) {
+      if (longer[i - 1] === shorter[j - 1]) {
+        current[j] = previous[j - 1] + 1
+        longestMatch = Math.max(longestMatch, current[j])
+      } else current[j] = 0
+    }
+
+    // Note: Swapping current and previous rows without reallocation
+    ;[previous, current] = [current, previous]
+  }
+
+  return longestMatch
+}
+
 async function run(
   {
     evaluation,
@@ -96,18 +120,10 @@ async function run(
     switch (metadata.configuration.algorithm) {
       case 'substring':
         {
-          let longestMatch = 0
-          for (
-            let length = metadata.actualOutput.length;
-            length > 0;
-            length--
-          ) {
-            const substring = metadata.actualOutput.substring(0, length)
-            if (metadata.expectedOutput.includes(substring)) {
-              longestMatch = length
-              break
-            }
-          }
+          const longestMatch = longestCommonSubstring(
+            metadata.actualOutput,
+            metadata.expectedOutput,
+          )
 
           score =
             metadata.expectedOutput.length > 0
