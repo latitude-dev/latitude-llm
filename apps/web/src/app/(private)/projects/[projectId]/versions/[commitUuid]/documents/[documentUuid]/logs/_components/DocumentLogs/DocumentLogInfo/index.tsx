@@ -1,28 +1,17 @@
 'use client'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+
 import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
-import { ROUTES } from '$/services/routes'
 import {
   buildConversation,
-  DocumentLog,
   ProviderLogDto,
   ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
-import { useRouter } from 'next/navigation'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
 import {
   ReactNode,
   RefObject,
-  useCallback,
   useEffect,
   useMemo,
   useRef,
