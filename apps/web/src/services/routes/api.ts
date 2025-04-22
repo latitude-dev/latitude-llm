@@ -182,6 +182,8 @@ export const API_ROUTES = {
                     params: pagination,
                   }),
                 count: `${documentRoot}/experiments/count`,
+                comparison: (experimentUuids: string[]) =>
+                  `${documentRoot}/experiments/comparison?uuids=${experimentUuids.join(',')}`,
               },
               logs: {
                 root: ({

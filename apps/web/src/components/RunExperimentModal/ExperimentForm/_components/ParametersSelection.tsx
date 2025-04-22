@@ -2,13 +2,79 @@ import { ExperimentFormPayload } from '../useExperimentFormPayload'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { useCallback, useEffect, useMemo } from 'react'
 import { useMetadata } from '$/hooks/useMetadata'
-import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { useLabels } from './useLabels'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { LlmEvaluationMetric } from '@latitude-data/constants'
+import { EvaluationV2, LlmEvaluationMetric } from '@latitude-data/constants'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+
+function DatasetLabelSelector({
+  evaluation,
+  labels,
+  datasetLabels,
+  setDatasetLabels,
+}: {
+  evaluation: EvaluationV2
+  labels: SelectOption<number>[]
+  datasetLabels: Record<string, string>
+  setDatasetLabels: ReactStateDispatch<Record<string, string>>
+}) {
+  const specification = getEvaluationMetricSpecification(evaluation)
+  const canContainLabel =
+    specification.requiresExpectedOutput ||
+    evaluation.metric === LlmEvaluationMetric.Custom
+
+  const options = useMemo(
+    () =>
+      labels.map((label) => ({
+        ...label,
+        value: label.label,
+      })),
+    [labels],
+  )
+
+  const value = datasetLabels[evaluation.uuid]
+  const setValue = useCallback(
+    (newLabel: string) => {
+      setDatasetLabels((prev) => ({
+        ...prev,
+        [evaluation.uuid]: newLabel,
+      }))
+    },
+    [evaluation.uuid, setDatasetLabels],
+  )
+
+  if (!canContainLabel) return null
+
+  return (
+    <Select
+      key={evaluation.uuid}
+      name={`expectedOutput-${evaluation.uuid}`}
+      required={specification.requiresExpectedOutput}
+      label={
+        <div className='flex flex-row items-center gap-2'>
+          <Text.H5>Expected output for</Text.H5>
+          <Badge variant='muted'>
+            <Icon
+              name={specification.icon}
+              className='mr-1'
+              color='foregroundMuted'
+            ></Icon>
+            <Text.H6 color='foregroundMuted'>{evaluation.name}</Text.H6>
+          </Badge>
+        </div>
+      }
+      options={options}
+      value={value}
+      onChange={setValue}
+      placeholder='Select column'
+      disabled={labels.length === 0}
+    />
+  )
+}
 
 export function ParametersSelection({
   document,
@@ -65,25 +131,6 @@ export function ParametersSelection({
     )
   }, [selectedDataset, metadata])
 
-  const evaluationOptions = useMemo(
-    () =>
-      labels.map((label) => ({
-        ...label,
-        value: label.label,
-      })),
-    [labels],
-  )
-
-  const handleEvaluationLabelChange = useCallback(
-    (evaluationUuid: string) => (newLabel: string) => {
-      setDatasetLabels((prev) => ({
-        ...prev,
-        [evaluationUuid]: newLabel,
-      }))
-    },
-    [setDatasetLabels],
-  )
-
   if (!selectedDataset) {
     return <Text.H6 color='foregroundMuted'>You must select a dataset</Text.H6>
   }
@@ -114,41 +161,16 @@ export function ParametersSelection({
           placeholder='Select column'
         />
       ))}
-      {selectedEvaluations.map((evaluation) => {
-        const specification = getEvaluationMetricSpecification(evaluation)
-        const canContainLabel =
-          specification.requiresExpectedOutput ||
-          evaluation.metric === LlmEvaluationMetric.Custom
-        if (!canContainLabel) return null
 
-        const value = datasetLabels[evaluation.uuid]
-
-        return (
-          <Select
-            key={evaluation.uuid}
-            name={`expectedOutput-${evaluation.uuid}`}
-            required={specification.requiresExpectedOutput}
-            label={
-              <div className='flex flex-row items-center gap-2'>
-                <Text.H5>Expected output for</Text.H5>
-                <Badge variant='muted'>
-                  <Icon
-                    name={specification.icon}
-                    className='mr-1'
-                    color='foregroundMuted'
-                  ></Icon>
-                  <Text.H6 color='foregroundMuted'>{evaluation.name}</Text.H6>
-                </Badge>
-              </div>
-            }
-            options={evaluationOptions}
-            value={value}
-            onChange={handleEvaluationLabelChange(evaluation.uuid)}
-            placeholder='Select column'
-            disabled={labels.length === 0}
-          />
-        )
-      })}
+      {selectedEvaluations.map((evaluation) => (
+        <DatasetLabelSelector
+          key={evaluation.uuid}
+          evaluation={evaluation}
+          labels={labels}
+          datasetLabels={datasetLabels}
+          setDatasetLabels={setDatasetLabels}
+        />
+      ))}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { eq, and, getTableColumns, sql, count, desc } from 'drizzle-orm'
+import { eq, and, getTableColumns, sql, count, desc, sum } from 'drizzle-orm'
 
 import { Experiment, ExperimentDto } from '../browser'
 import {
@@ -14,6 +14,7 @@ import { omit } from 'lodash-es'
 import { PromisedResult } from '../lib/Transaction'
 import { LatitudeError, NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
+import { ExperimentScores } from '@latitude-data/constants'
 
 export class ExperimentsRepository extends Repository<Experiment> {
   get scopeFilter() {
@@ -175,6 +176,49 @@ export class ExperimentsRepository extends Repository<Experiment> {
     }
 
     return Result.ok(this.experimentDtoPresenter(result[0]!))
+  }
+
+  async experimentScores(
+    uuid: string,
+  ): PromisedResult<ExperimentScores, LatitudeError> {
+    const result = await this.db
+      .select({
+        experimentUuid: experiments.uuid,
+        evaluationUuid: evaluationResultsV2.evaluationUuid,
+        count: count(evaluationResultsV2.id).mapWith(Number).as('count'),
+        totalScore: sum(evaluationResultsV2.score)
+          .mapWith(Number)
+          .as('total_score'),
+        totalNormalizedScore: sum(evaluationResultsV2.normalizedScore)
+          .mapWith(Number)
+          .as('total_normalized_score'),
+      })
+      .from(experiments)
+      .leftJoin(
+        evaluationResultsV2,
+        eq(evaluationResultsV2.experimentId, experiments.id),
+      )
+      .where(and(this.scopeFilter, eq(experiments.uuid, uuid)))
+      .groupBy(experiments.uuid, evaluationResultsV2.evaluationUuid)
+
+    if (!result.length) {
+      return Result.error(
+        new NotFoundError(`Experiment not found with uuid '${uuid}'`),
+      )
+    }
+
+    return Result.ok(
+      result
+        .filter((r) => !!r.evaluationUuid)
+        .reduce((acc: ExperimentScores, r) => {
+          acc[r.evaluationUuid!] = {
+            count: r.count,
+            totalScore: r.totalScore,
+            totalNormalizedScore: r.totalNormalizedScore,
+          }
+          return acc
+        }, {}),
+    )
   }
 
   private experimentDtoPresenter = (

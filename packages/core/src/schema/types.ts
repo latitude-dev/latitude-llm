@@ -12,7 +12,7 @@ import { apiKeys } from './models/apiKeys'
 import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
-import { EvaluationResultDto } from '@latitude-data/constants'
+import { EvaluationResultDto, ExperimentScores } from '@latitude-data/constants'
 import { DocumentTriggerWithConfiguration } from '../services/documentTriggers/helpers/schema'
 import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
 import { datasetRows } from './models/datasetRows'
@@ -317,4 +317,7 @@ export type ExperimentAggregatedResults = {
 }
 export type ExperimentDto = Experiment & {
   results: ExperimentAggregatedResults
+}
+export type ExperimentWithScores = ExperimentDto & {
+  scores: ExperimentScores
 }
