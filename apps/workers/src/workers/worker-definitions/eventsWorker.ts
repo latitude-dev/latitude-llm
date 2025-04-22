@@ -32,6 +32,7 @@ const eventHandlersJobMappings = {
   runLiveEvaluationsJob: jobs.runLiveEvaluationsJob,
   evaluateLiveLogJob: jobs.evaluateLiveLogJob,
   updateWebhookLastTriggeredAt: jobs.updateWebhookLastTriggeredAt,
+  pingProjectUpdateJob: jobs.pingProjectUpdateJob,
 }
 
 export function startEventsWorker() {

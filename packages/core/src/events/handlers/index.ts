@@ -19,6 +19,7 @@ import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
 import { updateWebhookLastTriggeredAt } from './webhooks'
+import { pingProjectUpdateJob } from './pingProjectUpdateJob'
 
 export const EventHandlers: IEventsHandlers = {
   aiProviderCallCompleted: [],
@@ -78,4 +79,5 @@ export const EventHandlers: IEventsHandlers = {
   scaleMcpServer: [notifyClientOfScaleUpMcpServer],
   mcpServerConnected: [notifyClientOfMcpServerConnected],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],
+  evaluationV2Updated: [pingProjectUpdateJob],
 }
