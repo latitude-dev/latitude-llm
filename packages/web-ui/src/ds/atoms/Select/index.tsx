@@ -2,10 +2,19 @@
 
 import { ReactNode, useEffect, useState } from 'react'
 import { cn } from '../../../lib/utils'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '../../atoms/Command'
 import { zIndex } from '../../tokens/zIndex'
 import { FormField, type FormFieldProps } from '../FormField'
-import { IconName } from '../Icons'
+import { Icon, IconName } from '../Icons'
 import { Skeleton } from '../Skeleton'
+import { Text } from '../Text'
 import {
   SelectContent,
   SelectGroup,
@@ -52,6 +61,7 @@ export type SelectProps<V extends unknown = unknown> = Omit<
   required?: boolean
   onChange?: (value: V) => void
   width?: 'auto' | 'full'
+  searchable?: boolean
 }
 export function Select<V extends unknown = unknown>({
   name,
@@ -71,17 +81,24 @@ export function Select<V extends unknown = unknown>({
   loading = false,
   disabled = false,
   required = false,
+  searchable = false,
 }: SelectProps<V>) {
   const [selectedValue, setSelected] = useState<V | undefined>(
     value ?? defaultValue,
   )
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isOpen, setIsOpen] = useState(false)
+
   useEffect(() => {
     setSelected(value ?? defaultValue)
   }, [value, defaultValue])
+
   const _onChange = (newValue: string) => {
     setSelected(newValue as V)
     if (onChange) onChange(newValue as V)
+    setIsOpen(false) // Close the popover on selection
   }
+
   return (
     <FormField
       badgeLabel={badgeLabel}
@@ -99,9 +116,11 @@ export function Select<V extends unknown = unknown>({
             required={required}
             disabled={disabled || loading}
             name={name}
-            value={value as string}
+            value={selectedValue as string}
             defaultValue={defaultValue as string}
-            onValueChange={_onChange}
+            onValueChange={searchable ? undefined : _onChange}
+            open={isOpen}
+            onOpenChange={setIsOpen}
           >
             {trigger ? (
               trigger
@@ -119,10 +138,65 @@ export function Select<V extends unknown = unknown>({
                 />
               </SelectTrigger>
             )}
-            <SelectContent className={zIndex.dropdown}>
-              <SelectGroup>
-                <Options options={options as SelectOption<V>[]} />
-              </SelectGroup>
+            <SelectContent className={cn(zIndex.dropdown, 'p-0')}>
+              {searchable ? (
+                <>
+                  <Command>
+                    <CommandInput
+                      placeholder='Search...'
+                      value={searchQuery}
+                      onValueChange={setSearchQuery}
+                      className='text-xs' // Consistent with MultiSelect
+                    />
+                    <CommandList>
+                      <CommandEmpty>
+                        <Text.H6>No results found.</Text.H6>
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {options
+                          .filter((option) =>
+                            option.label
+                              .toLowerCase()
+                              .includes(searchQuery.toLowerCase()),
+                          )
+                          .map((option) => (
+                            <CommandItem
+                              key={option.label}
+                              value={option.label} // CommandItem uses value for filtering/search, not the actual select value
+                              onSelect={() => {
+                                console.log(option.value)
+                                _onChange(option.value as string)
+                                // Optionally close the popover after selection
+                                // This requires access to the Popover's open state,
+                                // which might need further refactoring if desired.
+                                setSearchQuery('') // Clear search on select
+                              }}
+                              className='cursor-pointer flex items-center gap-2'
+                            >
+                              {option.icon &&
+                              typeof option.icon === 'string' ? (
+                                <Icon
+                                  name={option.icon as IconName}
+                                  size='small'
+                                />
+                              ) : (
+                                option.icon
+                              )}
+                              <Text.H6>{option.label}</Text.H6>
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                  <SelectGroup hidden>
+                    <Options options={options as SelectOption<V>[]} />
+                  </SelectGroup>
+                </>
+              ) : (
+                <SelectGroup>
+                  <Options options={options as SelectOption<V>[]} />
+                </SelectGroup>
+              )}
             </SelectContent>
           </SelectRoot>
         )}

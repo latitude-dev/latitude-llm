@@ -25,6 +25,7 @@ interface MultiSelectProps extends Omit<typeof FormField, 'children'> {
     value: string
     icon?: IconName
   }[]
+  required?: boolean
   onChange?: (value: string[]) => void
   defaultValue?: string[]
   placeholder?: string
@@ -48,7 +49,7 @@ export const MultiSelect = React.forwardRef<
     {
       options,
       onChange: onValueChange,
-
+      required,
       defaultValue = [],
       placeholder = 'Select options',
       description = '',
@@ -140,6 +141,7 @@ export const MultiSelect = React.forwardRef<
       >
         <div>
           <input
+            required={required}
             type='hidden'
             name={name}
             value={JSON.stringify(selectedValues)}
