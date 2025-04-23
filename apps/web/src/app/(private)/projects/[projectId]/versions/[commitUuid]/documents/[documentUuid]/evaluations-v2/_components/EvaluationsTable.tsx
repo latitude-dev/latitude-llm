@@ -66,7 +66,7 @@ export function EvaluationsTable({
   )
 
   return (
-    <div className='flex flex-col gap-4 flex-grow min-h-0'>
+    <div className='flex flex-col gap-4'>
       {evaluations.length > 0 ? (
         <div className='flex flex-col gap-4'>
           <Table className='table-auto'>

@@ -5,6 +5,7 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
+  DocumentVersion,
   EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
@@ -13,6 +14,8 @@ import {
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import {
+  ICommitContextType,
+  IProjectContextType,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
@@ -44,11 +47,65 @@ export function EvaluationsActions({
   generatorEnabled: boolean
   isExecuting: boolean
 }) {
-  const navigate = useNavigate()
-
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
+
+  return (
+    <div className='flex flex-row items-center gap-4'>
+      {generatorEnabled && (
+        <GenerateEvaluation
+          project={project}
+          commit={commit}
+          document={document}
+          createEvaluation={createEvaluation}
+          isExecuting={isExecuting}
+        />
+      )}
+      <AddEvaluation
+        project={project}
+        commit={commit}
+        document={document}
+        createEvaluation={createEvaluation}
+        isExecuting={isExecuting}
+      />
+    </div>
+  )
+}
+
+function GenerateEvaluation({
+  isExecuting,
+}: {
+  project: IProjectContextType['project']
+  commit: ICommitContextType['commit']
+  document: DocumentVersion
+  createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
+  isExecuting: boolean
+}) {
+  return (
+    <>
+      {/* TODO(evalsv2) */}
+      <TableWithHeader.Button onClick={() => {}} disabled={isExecuting}>
+        Generate evaluation
+      </TableWithHeader.Button>
+    </>
+  )
+}
+
+function AddEvaluation({
+  project,
+  commit,
+  document,
+  createEvaluation,
+  isExecuting,
+}: {
+  project: IProjectContextType['project']
+  commit: ICommitContextType['commit']
+  document: DocumentVersion
+  createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
+  isExecuting: boolean
+}) {
+  const navigate = useNavigate()
 
   const [openCreateModal, setOpenCreateModal] = useState(false)
   const [settings, setSettings] = useState<EvaluationSettings>(
@@ -95,15 +152,7 @@ export function EvaluationsActions({
   ])
 
   return (
-    <div className='flex flex-row items-center gap-4'>
-      {generatorEnabled && (
-        <>
-          {/* TODO(evalsv2) */}
-          <TableWithHeader.Button onClick={() => {}} disabled={isExecuting}>
-            Generate evaluation
-          </TableWithHeader.Button>
-        </>
-      )}
+    <>
       <TableWithHeader.Button
         variant='default'
         onClick={() => setOpenCreateModal(true)}
@@ -135,6 +184,6 @@ export function EvaluationsActions({
           disabled={isExecuting}
         />
       </ConfirmModal>
-    </div>
+    </>
   )
 }

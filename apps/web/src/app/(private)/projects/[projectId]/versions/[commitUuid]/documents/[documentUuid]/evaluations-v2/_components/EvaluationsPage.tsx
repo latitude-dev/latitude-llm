@@ -11,6 +11,7 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { EvaluationsActions } from './EvaluationsActions'
 import { EvaluationsTable } from './EvaluationsTable'
+import { EvaluationsTemplates } from './EvaluationsTemplates'
 
 export function EvaluationsPage({
   evaluations: serverEvaluations,
@@ -35,7 +36,7 @@ export function EvaluationsPage({
   )
 
   return (
-    <div className='flex flex-grow min-h-0 flex-col w-full gap-4 p-6'>
+    <div className='w-full flex flex-col gap-4 p-6'>
       <TableWithHeader
         title={
           <Text.H4M noWrap ellipsis>
@@ -62,9 +63,12 @@ export function EvaluationsPage({
         isLoading={isLoading}
         isExecuting={isExecuting}
       />
-      {/* TODO(evalsv2):
-        <EvaluationsTemplates />
-      */}
+      <EvaluationsTemplates
+        evaluations={evaluations}
+        createEvaluation={createEvaluation}
+        isLoading={isLoading}
+        isExecuting={isExecuting}
+      />
     </div>
   )
 }
