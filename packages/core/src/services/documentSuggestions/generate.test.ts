@@ -1,6 +1,7 @@
 import * as env from '@latitude-data/env'
 import { subDays } from 'date-fns'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
+import { ZodObject } from 'zod'
 import {
   Commit,
   ConnectedEvaluation,
@@ -19,13 +20,13 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
+import { Result } from '../../lib/Result'
+import { UnprocessableEntityError } from '../../lib/errors'
 import { DocumentSuggestionsRepository } from '../../repositories'
 import { evaluationResults } from '../../schema'
 import * as factories from '../../tests/factories'
 import * as copilot from '../copilot'
 import { generateDocumentSuggestion } from './generate'
-import { Result } from './../../lib/Result'
-import { UnprocessableEntityError } from './../../lib/errors'
 
 describe('generateDocumentSuggestion', () => {
   let mocks: {
@@ -327,6 +328,7 @@ describe('generateDocumentSuggestion', () => {
           .map((r) => expect.objectContaining({ result: Number(r.result) }))
           .slice(0, MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION),
       },
+      schema: expect.any(ZodObject),
     })
     expect(mocks.publisher).toHaveBeenLastCalledWith({
       type: 'documentSuggestionCreated',
@@ -388,6 +390,7 @@ describe('generateDocumentSuggestion', () => {
           .map((r) => expect.objectContaining({ result: Number(r.result) }))
           .slice(0, MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION),
       },
+      schema: expect.any(ZodObject),
     })
     expect(mocks.publisher).toHaveBeenLastCalledWith({
       type: 'documentSuggestionCreated',
