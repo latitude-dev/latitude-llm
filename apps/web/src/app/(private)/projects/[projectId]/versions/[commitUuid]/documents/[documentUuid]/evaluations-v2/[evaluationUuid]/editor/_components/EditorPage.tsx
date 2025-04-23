@@ -44,6 +44,7 @@ export function EditorPage({
     project: project,
     commit: commit,
     document: document,
+    silent: true,
   })
   const { data: providers } = useProviderApiKeys()
   const { data: integrations } = useIntegrations()

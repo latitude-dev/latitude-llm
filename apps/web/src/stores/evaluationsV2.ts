@@ -33,14 +33,16 @@ export function useEvaluationsV2(
     project,
     commit,
     document,
+    silent,
   }: {
     project: Pick<Project, 'id'>
     commit: Pick<Commit, 'uuid'>
     document: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
+    silent?: boolean
   },
   opts?: SWRConfiguration,
 ) {
-  const { toast } = useToast()
+  const { toast } = useToast(silent)
 
   const fetcher = useFetcher<EvaluationV2[]>(
     ROUTES.api.projects

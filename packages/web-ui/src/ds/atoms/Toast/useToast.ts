@@ -167,7 +167,7 @@ function toast({ ...props }: Toast) {
   }
 }
 
-function useToast() {
+function useToast(disabled?: boolean) {
   const [state, setState] = useState<State>(memoryState)
 
   useEffect(() => {
@@ -182,7 +182,7 @@ function useToast() {
 
   return {
     ...state,
-    toast,
+    toast: disabled ? () => {} : toast,
     dismiss: (toastId?: string) => dispatch({ type: 'DISMISS_TOAST', toastId }),
   }
 }
