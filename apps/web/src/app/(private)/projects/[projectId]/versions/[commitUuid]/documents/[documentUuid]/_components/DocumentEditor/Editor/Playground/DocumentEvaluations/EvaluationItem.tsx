@@ -135,12 +135,11 @@ export default function EvaluationItem({
 }) {
   const route = useMemo(() => {
     if (evaluation.version === 'v2') {
-      // TODO(evalsv2): Go to LLM evaluation editor when LLM V2 evaluations are available
       return ROUTES.projects
         .detail({ id: project.id })
         .commits.detail({ uuid: commit.uuid })
         .documents.detail({ uuid: document.documentUuid })
-        .evaluationsV2.detail({ uuid: evaluation.uuid }).root
+        .evaluationsV2.detail({ uuid: evaluation.uuid }).editor.root
     }
 
     const resultV1 = result as EvaluationResultDto

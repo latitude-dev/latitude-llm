@@ -1,6 +1,9 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
-import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
+import {
+  EVALUATION_SPECIFICATIONS,
+  getEvaluationMetricSpecification,
+} from '$/components/evaluations'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
@@ -16,6 +19,8 @@ import {
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
+  LlmEvaluationCustomSpecification,
+  LlmEvaluationMetric,
   Project,
 } from '@latitude-data/core/browser'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
@@ -26,6 +31,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import Link from 'next/link'
 import { useCallback, useState } from 'react'
 import CreateBatchEvaluationModal from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal'
 
@@ -41,7 +47,7 @@ export function EvaluationActions<
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   const metricSpecification = typeSpecification.metrics[evaluation.metric]
 
-  const { createEvaluation, updateEvaluation, isExecuting } = useEvaluationsV2({
+  const { updateEvaluation, cloneEvaluation, isExecuting } = useEvaluationsV2({
     project: project,
     commit: commit,
     document: document,
@@ -54,8 +60,8 @@ export function EvaluationActions<
           project={project}
           commit={commit}
           document={document}
-          evaluation={evaluation}
-          createEvaluation={createEvaluation}
+          evaluation={evaluation as EvaluationV2<EvaluationType.Llm>}
+          cloneEvaluation={cloneEvaluation}
           isExecuting={isExecuting}
         />
       )}
@@ -80,38 +86,30 @@ export function EvaluationActions<
   )
 }
 
-function EditPrompt<
-  T extends EvaluationType = EvaluationType,
-  M extends EvaluationMetric<T> = EvaluationMetric<T>,
->({
+function EditPrompt<M extends LlmEvaluationMetric>({
   project,
   commit,
   document,
   evaluation,
-  createEvaluation,
+  cloneEvaluation,
   isExecuting,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
-  evaluation: EvaluationV2<T, M>
-  createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
+  evaluation: EvaluationV2<EvaluationType.Llm, M>
+  cloneEvaluation: ReturnType<typeof useEvaluationsV2>['cloneEvaluation']
   isExecuting: boolean
 }) {
   const navigate = useNavigate()
 
-  // TODO(evalsv2): Clone eval or go to prompt editor if its a custom llm eval
-
   const [openCloneModal, setOpenCloneModal] = useState(false)
-
   const onClone = useCallback(async () => {
     if (isExecuting) return
-    const [result, errors] = await createEvaluation({
-      settings: evaluation,
-      options: evaluation,
+    const [result, errors] = await cloneEvaluation({
+      evaluationUuid: evaluation.uuid,
     })
     if (errors) return
-
     setOpenCloneModal(false)
 
     navigate.push(
@@ -119,18 +117,48 @@ function EditPrompt<
         .detail({ id: project.id })
         .commits.detail({ uuid: commit.uuid })
         .documents.detail({ uuid: document.documentUuid })
-        .evaluationsV2.detail({ uuid: result.evaluation.uuid }).root,
+        .evaluationsV2.detail({ uuid: result.evaluation.uuid }).editor.root,
     )
   }, [
     isExecuting,
-    createEvaluation,
-    evaluation,
+    cloneEvaluation,
     setOpenCloneModal,
     project,
     commit,
     document,
+    evaluation,
     navigate,
   ])
+
+  if (evaluation.metric === LlmEvaluationMetric.Custom) {
+    return (
+      <Link
+        href={
+          ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid })
+            .documents.detail({ uuid: document.documentUuid })
+            .evaluationsV2.detail({ uuid: evaluation.uuid }).editor.root
+        }
+        className={isExecuting ? 'pointer-events-none' : 'pointer-events-auto'}
+      >
+        <TableWithHeader.Button
+          variant='link'
+          size='none'
+          fancy={false}
+          iconProps={{
+            name: 'arrowUpRight',
+            widthClass: 'w-4',
+            heightClass: 'h-4',
+            placement: 'right',
+          }}
+          disabled={isExecuting}
+        >
+          Edit prompt
+        </TableWithHeader.Button>
+      </Link>
+    )
+  }
 
   return (
     <>
@@ -144,27 +172,27 @@ function EditPrompt<
           heightClass: 'h-4',
           placement: 'right',
         }}
-        // TODO(evalsv2): Clone eval or go to prompt editor if its a custom llm eval
-        // onClick={() => setOpenCloneModal(true)}
+        onClick={() => setOpenCloneModal(true)}
         disabled={isExecuting}
       >
         Edit prompt
       </TableWithHeader.Button>
-      <ConfirmModal
-        dismissible
-        open={openCloneModal}
-        title={`Clone ${evaluation.name}`}
-        description='TODO'
-        onOpenChange={setOpenCloneModal}
-        onConfirm={onClone}
-        confirm={{
-          label: isExecuting ? 'Cloning...' : `Clone ${evaluation.name}`,
-          disabled: isExecuting || !!commit.mergedAt,
-          isConfirming: isExecuting,
-        }}
-      >
-        TODO
-      </ConfirmModal>
+      {openCloneModal && (
+        <ConfirmModal
+          dismissible
+          open={openCloneModal}
+          title={`Clone ${evaluation.name}`}
+          onOpenChange={setOpenCloneModal}
+          onConfirm={onClone}
+          onCancel={() => setOpenCloneModal(false)}
+          confirm={{
+            label: isExecuting ? 'Cloning...' : `Clone ${evaluation.name}`,
+            description: `The prompt of ${getEvaluationMetricSpecification(evaluation).name} evaluations cannot be edited. A new ${LlmEvaluationCustomSpecification.name} evaluation will be created.`,
+            disabled: isExecuting,
+            isConfirming: isExecuting,
+          }}
+        />
+      )}
     </>
   )
 }
