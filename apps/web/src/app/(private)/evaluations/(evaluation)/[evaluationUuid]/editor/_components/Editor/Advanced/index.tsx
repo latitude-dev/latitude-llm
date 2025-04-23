@@ -11,7 +11,7 @@ import {
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
-import EditorHeader from '$/components/EditorHeader'
+import { EditorHeader } from '$/components/EditorHeader'
 import { useMetadata } from '$/hooks/useMetadata'
 import useEvaluations from '$/stores/evaluations'
 import useProviderApiKeys from '$/stores/providerApiKeys'

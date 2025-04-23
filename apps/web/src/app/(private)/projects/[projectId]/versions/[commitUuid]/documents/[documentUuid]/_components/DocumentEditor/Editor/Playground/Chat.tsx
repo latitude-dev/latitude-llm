@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Message as ConversationMessage } from '@latitude-data/compiler'
 import { type DocumentVersion } from '@latitude-data/core/browser'
 import {
@@ -181,8 +181,14 @@ export default function Chat({
       >
         {/* Prompt messages */}
         <MessageList
-          messages={messages.slice(0, chainLength - 1) ?? []}
-          parameters={Object.keys(parameters ?? {})}
+          messages={useMemo(
+            () => messages.slice(0, chainLength - 1) ?? [],
+            [messages, chainLength],
+          )}
+          parameters={useMemo(
+            () => Object.keys(parameters ?? {}),
+            [parameters],
+          )}
           collapseParameters={!expandParameters}
           agentToolsMap={agentToolsMap}
           toolContentMap={toolContentMap}
@@ -192,7 +198,10 @@ export default function Chat({
         {(messages.length ?? 0) >= chainLength && (
           <>
             <MessageList
-              messages={messages.slice(chainLength - 1, chainLength) ?? []}
+              messages={useMemo(
+                () => messages.slice(chainLength - 1, chainLength) ?? [],
+                [messages, chainLength],
+              )}
               toolContentMap={toolContentMap}
             />
             {time && <Timer timeMs={time} />}
@@ -204,7 +213,10 @@ export default function Chat({
           <>
             <Text.H6M>Chat</Text.H6M>
             <MessageList
-              messages={messages.slice(chainLength)}
+              messages={useMemo(
+                () => messages.slice(chainLength),
+                [messages, chainLength],
+              )}
               toolContentMap={toolContentMap}
             />
           </>

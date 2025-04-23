@@ -1,9 +1,10 @@
 import { ToolContent } from '@latitude-data/compiler'
 import { CodeBlock } from '../../../atoms/CodeBlock'
+import { Button } from '../../../atoms/Button'
 import { Icon } from '../../../atoms/Icons'
 import { Text } from '../../../atoms/Text'
 import { CardTextContent, ContentCard } from './ContentCard'
-import { ReactNode, useMemo } from 'react'
+import { ReactNode, useMemo, useState } from 'react'
 import { cn } from '../../../../lib/utils'
 import { TextColor } from '../../../tokens'
 
@@ -48,36 +49,64 @@ export function ToolResultContent({
   toolResponse: ToolContent
   color?: TextColor
 }) {
+  const [isCollapsed, setIsCollapsed] = useState(!toolResponse.isError)
   const [result, isString] = useMemo(
     () => getResult(toolResponse.result),
     [toolResponse.result],
   )
   const fgColor = toolResponse.isError ? 'destructiveMutedForeground' : color
 
-  if (isString) {
+  const toggleCollapse = () => setIsCollapsed(!isCollapsed)
+
+  const renderContent = () => {
+    if (isString) {
+      return (
+        <div
+          className={cn('flex flex-col gap-2 overflow-x-auto', {
+            'bg-destructive-muted': toolResponse.isError,
+          })}
+        >
+          <Text.H5 color={fgColor}>{result as string}</Text.H5>
+        </div>
+      )
+    }
+
+    const strResult = JSON.stringify(toolResponse.result, null, 2)
     return (
-      <div
-        className={cn('flex flex-col gap-2 p-4 overflow-x-auto', {
-          'bg-destructive-muted': toolResponse.isError,
-        })}
+      <CodeBlock
+        language={strResult.length > MAX_LENGTH_JSON_PREVIEW ? '' : 'json'}
       >
-        {(result as string).split('\n').map((line, i) => (
-          <Text.H5 key={i} color={fgColor}>
-            {line}
-          </Text.H5>
-        ))}
-      </div>
+        {JSON.stringify(toolResponse.result, null, 2)}
+      </CodeBlock>
     )
   }
 
-  const strResult = JSON.stringify(toolResponse.result, null, 2)
-
   return (
-    <CodeBlock
-      language={strResult.length > MAX_LENGTH_JSON_PREVIEW ? '' : 'json'}
-    >
-      {JSON.stringify(toolResponse.result, null, 2)}
-    </CodeBlock>
+    <div className='w-full'>
+      <Button
+        onClick={toggleCollapse}
+        variant='ghost'
+        size='small'
+        fullWidth
+        iconProps={{
+          name: isCollapsed ? 'chevronRight' : 'chevronDown',
+          size: 'small',
+          color: 'foregroundMuted',
+        }}
+      >
+        <Text.H6 color='foregroundMuted'>
+          {isCollapsed ? 'Show result' : 'Hide result'}
+        </Text.H6>
+      </Button>
+      <div
+        className={cn('transition-all duration-200', {
+          'h-0 overflow-hidden': isCollapsed,
+          'p-4': !isCollapsed,
+        })}
+      >
+        {renderContent()}
+      </div>
+    </div>
   )
 }
 

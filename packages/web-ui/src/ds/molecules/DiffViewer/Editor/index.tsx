@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { editor } from 'monaco-editor'
+import { type editor } from 'monaco-editor'
 import { DiffValue } from '@latitude-data/core/browser'
 import { MonacoDiffEditor } from '../../DocumentTextEditor/Editor/DiffEditor'
 

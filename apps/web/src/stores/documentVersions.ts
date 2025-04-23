@@ -257,9 +257,8 @@ export default function useDocumentVersions(
     [executeDestroyFolder, mutate, commitUuid],
   )
 
-  const { execute: updateContent } = useLatitudeAction(
-    updateDocumentContentAction,
-    {
+  const { execute: updateContent, isPending: isUpdatingContent } =
+    useLatitudeAction(updateDocumentContentAction, {
       onSuccess: ({ data: document }) => {
         if (!document) return
 
@@ -271,8 +270,7 @@ export default function useDocumentVersions(
           ),
         )
       },
-    },
-  )
+    })
 
   const { execute: assignDataset, isPending: isAssigningDataset } =
     useLatitudeAction(assignDatasetAction, {
@@ -313,6 +311,7 @@ export default function useDocumentVersions(
     destroyFile,
     destroyFolder,
     updateContent,
+    isUpdatingContent,
     assignDataset,
     saveLinkedDataset,
     mutate,

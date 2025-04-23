@@ -1,5 +1,5 @@
 'use client'
-import { ReactNode, useEffect, useMemo, useState } from 'react'
+import { memo, ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
   ContentType,
@@ -80,39 +80,41 @@ export function MessageItem({
   )
 }
 
-export function Message({
-  role,
-  content,
-  animatePulse = false,
-  size = 'default',
-  parameters = [],
-  collapseParameters = false,
-  agentToolsMap,
-  toolContentMap,
-}: MessageProps) {
-  if (isAgentToolResponse({ role: role as MessageRole, content })) {
-    return null
-  }
-  return (
-    <MessageItem
-      animatePulse={animatePulse}
-      badgeLabel={roleToString(role)}
-      badgeVariant={roleVariant(role)}
-    >
-      {({ collapsedMessage }) => (
-        <MessageItemContent
-          content={content}
-          size={size}
-          parameters={parameters}
-          collapseParameters={collapseParameters}
-          collapsedMessage={collapsedMessage}
-          agentToolsMap={agentToolsMap}
-          toolContentMap={toolContentMap}
-        />
-      )}
-    </MessageItem>
-  )
-}
+export const Message = memo(
+  ({
+    role,
+    content,
+    animatePulse = false,
+    size = 'default',
+    parameters = [],
+    collapseParameters = false,
+    agentToolsMap,
+    toolContentMap,
+  }: MessageProps) => {
+    if (isAgentToolResponse({ role: role as MessageRole, content })) {
+      return null
+    }
+    return (
+      <MessageItem
+        animatePulse={animatePulse}
+        badgeLabel={roleToString(role)}
+        badgeVariant={roleVariant(role)}
+      >
+        {({ collapsedMessage }) => (
+          <MessageItemContent
+            content={content}
+            size={size}
+            parameters={parameters}
+            collapseParameters={collapseParameters}
+            collapsedMessage={collapsedMessage}
+            agentToolsMap={agentToolsMap}
+            toolContentMap={toolContentMap}
+          />
+        )}
+      </MessageItem>
+    )
+  },
+)
 
 export function MessageItemContent({
   content,
@@ -318,54 +320,62 @@ type Reference = {
 }
 type Segment = string | Reference
 
-const ContentText = ({
-  index = 0,
-  color,
-  size,
-  message,
-  parameters = [],
-  collapseParameters = false,
-  sourceMap = [],
-}: {
-  index?: number
-  color: TextColor
-  size?: 'default' | 'small'
-  message: TextContent['text']
-  parameters?: string[]
-  collapseParameters?: boolean
-  sourceMap?: PromptlSourceRef[]
-}) => {
-  const TextComponent = size === 'small' ? Text.H6 : Text.H5
+const ContentText = memo(
+  ({
+    index = 0,
+    color,
+    size,
+    message,
+    parameters = [],
+    collapseParameters = false,
+    sourceMap = [],
+  }: {
+    index?: number
+    color: TextColor
+    size?: 'default' | 'small'
+    message: TextContent['text']
+    parameters?: string[]
+    collapseParameters?: boolean
+    sourceMap?: PromptlSourceRef[]
+  }) => {
+    const TextComponent = size === 'small' ? Text.H6 : Text.H5
 
-  const segments = useMemo(
-    () => computeSegments(ContentType.text, message, sourceMap, parameters),
-    [message, sourceMap, parameters],
-  )
-  const groups = useMemo(() => groupSegments(segments), [segments])
+    const segments = useMemo(
+      () => computeSegments(ContentType.text, message, sourceMap, parameters),
+      [message, sourceMap, parameters],
+    )
+    const groups = useMemo(() => groupSegments(segments), [segments])
 
-  return groups.map((group, groupIndex) => (
-    <TextComponent
-      color={color}
-      whiteSpace='preWrap'
-      key={`${index}-group-${groupIndex}`}
-    >
-      {group.length > 0
-        ? group.map((segment, segmentIndex) => (
-            <span key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}>
-              {typeof segment === 'string' ? (
-                segment
-              ) : (
-                <ReferenceComponent
-                  reference={segment}
-                  collapseParameters={collapseParameters}
-                />
-              )}
-            </span>
-          ))
-        : '\n'}
-    </TextComponent>
-  ))
-}
+    return useMemo(
+      () =>
+        groups.map((group, groupIndex) => (
+          <TextComponent
+            color={color}
+            whiteSpace='preWrap'
+            key={`${index}-group-${groupIndex}`}
+          >
+            {group.length > 0
+              ? group.map((segment, segmentIndex) => (
+                  <span
+                    key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}
+                  >
+                    {typeof segment === 'string' ? (
+                      segment
+                    ) : (
+                      <ReferenceComponent
+                        reference={segment}
+                        collapseParameters={collapseParameters}
+                      />
+                    )}
+                  </span>
+                ))
+              : '\n'}
+          </TextComponent>
+        )),
+      [groups],
+    )
+  },
+)
 
 function ReferenceComponent({
   reference,
@@ -555,128 +565,141 @@ function isValidUrl(url: unknown) {
   return false
 }
 
-const ContentImage = ({
-  index = 0,
-  color,
-  size,
-  image,
-  parameters = [],
-  collapseParameters = false,
-  sourceMap = [],
-}: {
-  index?: number
-  color: TextColor
-  size?: 'default' | 'small'
-  image: ImageContent['image']
-  parameters?: string[]
-  collapseParameters?: boolean
-  sourceMap?: PromptlSourceRef[]
-}) => {
-  if (!isValidUrl(image)) {
+const ContentImage = memo(
+  ({
+    index = 0,
+    color,
+    size,
+    image,
+    parameters = [],
+    collapseParameters = false,
+    sourceMap = [],
+  }: {
+    index?: number
+    color: TextColor
+    size?: 'default' | 'small'
+    image: ImageContent['image']
+    parameters?: string[]
+    collapseParameters?: boolean
+    sourceMap?: PromptlSourceRef[]
+  }) => {
+    if (!isValidUrl(image)) {
+      const TextComponent = size === 'small' ? Text.H6 : Text.H5
+
+      return (
+        <div className='flex flex-row p-4 gap-2 bg-muted rounded-xl w-fit items-center'>
+          <Icon name='imageOff' color='foregroundMuted' />
+          <TextComponent
+            color={color}
+            whiteSpace='preWrap'
+            wordBreak='breakAll'
+          >
+            {'<Image preview unavailable>'}
+          </TextComponent>
+        </div>
+      )
+    }
+
     const TextComponent = size === 'small' ? Text.H6 : Text.H5
 
+    const segment = useMemo(
+      () =>
+        computeSegments(
+          ContentType.image,
+          image.toString(),
+          sourceMap,
+          parameters,
+        ),
+      [image, sourceMap, parameters],
+    )[0]
+
+    if (!segment || typeof segment === 'string') {
+      return (
+        <Image
+          src={image.toString()}
+          className='max-h-72 rounded-xl w-fit object-contain'
+        />
+      )
+    }
+
     return (
-      <div className='flex flex-row p-4 gap-2 bg-muted rounded-xl w-fit items-center'>
-        <Icon name='imageOff' color='foregroundMuted' />
-        <TextComponent color={color} whiteSpace='preWrap' wordBreak='breakAll'>
-          {'<Image preview unavailable>'}
-        </TextComponent>
-      </div>
+      <TextComponent
+        key={index}
+        color={color}
+        whiteSpace='preWrap'
+        wordBreak='breakAll'
+      >
+        {typeof segment === 'string' ? (
+          segment
+        ) : (
+          <ReferenceComponent
+            reference={segment}
+            collapseParameters={collapseParameters}
+          />
+        )}
+      </TextComponent>
     )
-  }
+  },
+)
 
-  const TextComponent = size === 'small' ? Text.H6 : Text.H5
+const ContentFile = memo(
+  ({
+    index = 0,
+    color,
+    size,
+    file,
+    parameters = [],
+    collapseParameters = false,
+    sourceMap = [],
+  }: {
+    index?: number
+    color: TextColor
+    size?: 'default' | 'small'
+    file: FileContent['file']
+    parameters?: string[]
+    collapseParameters?: boolean
+    sourceMap?: PromptlSourceRef[]
+  }) => {
+    if (!isValidUrl(file)) {
+      return (
+        <div className='flex flex-row p-4 gap-2 bg-muted rounded-xl w-fit items-center'>
+          <Icon name='fileOff' color='foregroundMuted' />
+          <Text.H5 color={color} whiteSpace='preWrap' wordBreak='breakAll'>
+            {'<File preview unavailable>'}
+          </Text.H5>
+        </div>
+      )
+    }
 
-  const segment = useMemo(
-    () =>
-      computeSegments(
-        ContentType.image,
-        image.toString(),
-        sourceMap,
-        parameters,
-      ),
-    [image, sourceMap, parameters],
-  )[0]
+    const TextComponent = size === 'small' ? Text.H6 : Text.H5
 
-  if (!segment || typeof segment === 'string') {
+    const segment = useMemo(
+      () =>
+        computeSegments(
+          ContentType.file,
+          file.toString(),
+          sourceMap,
+          parameters,
+        ),
+      [file, sourceMap, parameters],
+    )[0]
+
+    if (!segment || typeof segment === 'string') {
+      return <FileComponent src={file.toString()} />
+    }
+
     return (
-      <Image
-        src={image.toString()}
-        className='max-h-72 rounded-xl w-fit object-contain'
-      />
-    )
-  }
-
-  return (
-    <TextComponent
-      key={index}
-      color={color}
-      whiteSpace='preWrap'
-      wordBreak='breakAll'
-    >
-      {typeof segment === 'string' ? (
-        segment
-      ) : (
+      <TextComponent
+        color={color}
+        whiteSpace='preWrap'
+        wordBreak='breakAll'
+        key={`${index}`}
+      >
         <ReferenceComponent
           reference={segment}
           collapseParameters={collapseParameters}
         />
-      )}
-    </TextComponent>
-  )
-}
-
-const ContentFile = ({
-  index = 0,
-  color,
-  size,
-  file,
-  parameters = [],
-  collapseParameters = false,
-  sourceMap = [],
-}: {
-  index?: number
-  color: TextColor
-  size?: 'default' | 'small'
-  file: FileContent['file']
-  parameters?: string[]
-  collapseParameters?: boolean
-  sourceMap?: PromptlSourceRef[]
-}) => {
-  if (!isValidUrl(file)) {
-    return (
-      <div className='flex flex-row p-4 gap-2 bg-muted rounded-xl w-fit items-center'>
-        <Icon name='fileOff' color='foregroundMuted' />
-        <Text.H5 color={color} whiteSpace='preWrap' wordBreak='breakAll'>
-          {'<File preview unavailable>'}
-        </Text.H5>
-      </div>
+      </TextComponent>
     )
-  }
-
-  const TextComponent = size === 'small' ? Text.H6 : Text.H5
-
-  const segment = useMemo(
-    () =>
-      computeSegments(ContentType.file, file.toString(), sourceMap, parameters),
-    [file, sourceMap, parameters],
-  )[0]
-
-  if (!segment || typeof segment === 'string') {
-    return <FileComponent src={file.toString()} />
-  }
-
-  return (
-    <TextComponent
-      color={color}
-      whiteSpace='preWrap'
-      wordBreak='breakAll'
-      key={`${index}`}
-    >
-      <ReferenceComponent
-        reference={segment}
-        collapseParameters={collapseParameters}
-      />
-    </TextComponent>
-  )
-}
+  },
+)

@@ -1,6 +1,7 @@
 import { ToolRequestContent } from '@latitude-data/compiler'
 import { CardTextContent, ContentCard } from '../ContentCard'
 import { CodeBlock } from '../../../../atoms/CodeBlock'
+import { useMemo } from 'react'
 
 export function AgentToolCallContent({ value }: { value: ToolRequestContent }) {
   const isDefaultSchema =
@@ -14,15 +15,19 @@ export function AgentToolCallContent({ value }: { value: ToolRequestContent }) {
       bgColor='bg-primary'
       fgColor='accent'
     >
-      {isDefaultSchema ? (
-        <CardTextContent
-          value={value.args['response'] as string}
-          color='primary'
-        />
-      ) : (
-        <CodeBlock language='json'>
-          {JSON.stringify(value.args, null, 2)}
-        </CodeBlock>
+      {useMemo(
+        () =>
+          isDefaultSchema ? (
+            <CardTextContent
+              value={value.args['response'] as string}
+              color='primary'
+            />
+          ) : (
+            <CodeBlock language='json'>
+              {useMemo(() => JSON.stringify(value.args, null, 2), [value.args])}
+            </CodeBlock>
+          ),
+        [value.args],
       )}
     </ContentCard>
   )

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 
-import { loader, type Monaco } from '@monaco-editor/react'
-import * as monaco from 'monaco-editor'
+import { type Monaco } from '@monaco-editor/react'
+import { type languages } from 'monaco-editor'
 
 import { DocumentError } from '../types'
 import {
@@ -9,8 +9,6 @@ import {
   tokenizer,
   useThemeColors,
 } from '../../../../lib/monacoEditor/language'
-
-loader.config({ monaco })
 
 export function useMonacoSetup({
   errorFixFn,
@@ -63,8 +61,8 @@ export function useMonacoSetup({
     })
 
     if (errorFixFn) {
-      const codeActionProvider: monaco.languages.CodeActionProvider = {
-        provideCodeActions: function (_model, _range, context, _token) {
+      const codeActionProvider: languages.CodeActionProvider = {
+        provideCodeActions: (_, __, context, ___) => {
           const actions = [
             {
               title: 'Fix with copilot',
