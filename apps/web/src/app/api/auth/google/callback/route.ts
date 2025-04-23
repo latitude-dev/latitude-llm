@@ -66,8 +66,6 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const { user, workspace } = userResult.value
 
-    console.log(user, workspace)
-
     // 4. Create session
     await setSession(
       {

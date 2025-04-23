@@ -88,8 +88,6 @@ describe('createDraftWithContentAction', () => {
         content: 'New content',
       })
 
-      console.log('error', error)
-
       expect(error!.name).toEqual('NotFoundError')
     })
 

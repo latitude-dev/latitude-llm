@@ -33,8 +33,6 @@ const nextConfig = {
 
 let config
 if (process.env.SENTRY_ORG && process.env.SENTRY_PROJECT) {
-  console.log('configuring sentry...')
-
   config = withSentryConfig(nextConfig, {
     // For all available options, see:
     // https://github.com/getsentry/sentry-webpack-plugin#options
