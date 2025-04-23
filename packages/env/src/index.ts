@@ -63,6 +63,7 @@ if (environment === 'development' || environment === 'test') {
     {
       CACHE_HOST: '0.0.0.0',
       COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: 'evaluation-generator',
+      COPILOT_EVALUATION_GENERATOR_PROMPT_PATH: 'evaluation-v2-generator',
       COPILOT_GENERATE_TOOL_RESPONSES_PATH: 'tool-responses-generator',
       DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
       DRIVE_DISK: 'local',
@@ -182,12 +183,13 @@ export const env = createEnv({
     // Copilot
     COPILOT_CODE_SUGGESTION_PROMPT_PATH: z.string().optional(),
     COPILOT_DATASET_GENERATOR_PROMPT_PATH: z.string().optional(),
-    COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: z.string().optional(),
+    COPILOT_EVALUATION_GENERATOR_PROMPT_PATH: z.string().optional(),
+    COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: z.string().optional(), // TODO(evalsv2): Delete this when evaluations are migrated
     COPILOT_GENERATE_TOOL_RESPONSES_PATH: z.string().optional(),
     COPILOT_PROJECT_ID: z.coerce.number().optional(),
     COPILOT_REFINE_PROMPT_PATH: z.string().optional(),
     COPILOT_WORKSPACE_API_KEY: z.string().optional(),
-    COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH: z.string().optional(),
+    COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH: z.string().optional(), // TODO(evalsv2): Delete this when evaluations are migrated
 
     LOOPS_API_KEY: z.string().optional(),
     CODESANDBOX_API_KEY: z.string().optional(),

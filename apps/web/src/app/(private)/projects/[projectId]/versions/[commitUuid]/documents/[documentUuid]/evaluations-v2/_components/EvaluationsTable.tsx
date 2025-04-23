@@ -30,19 +30,26 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
+import { EvaluationsGenerator } from './EvaluationsGenerator'
 
 export function EvaluationsTable({
   evaluations,
+  createEvaluation,
   deleteEvaluation,
+  generateEvaluation,
   generatorEnabled,
   isLoading,
   isExecuting,
+  isGeneratingEvaluation,
 }: {
   evaluations: EvaluationV2[]
+  createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
   deleteEvaluation: ReturnType<typeof useEvaluationsV2>['deleteEvaluation']
+  generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
   isLoading: boolean
   isExecuting: boolean
+  isGeneratingEvaluation: boolean
 }) {
   const navigate = useNavigate()
 
@@ -174,17 +181,33 @@ export function EvaluationsTable({
           )}
         </div>
       ) : (
-        <EvaluationsTableBlankSlate generatorEnabled={generatorEnabled} />
+        <EvaluationsTableBlankSlate
+          createEvaluation={createEvaluation}
+          generateEvaluation={generateEvaluation}
+          generatorEnabled={generatorEnabled}
+          isExecuting={isExecuting}
+          isGeneratingEvaluation={isGeneratingEvaluation}
+        />
       )}
     </div>
   )
 }
 
 function EvaluationsTableBlankSlate({
+  createEvaluation,
+  generateEvaluation,
   generatorEnabled,
+  isExecuting,
+  isGeneratingEvaluation,
 }: {
+  createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
+  generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
+  isExecuting: boolean
+  isGeneratingEvaluation: boolean
 }) {
+  const [openGenerateModal, setOpenGenerateModal] = useState(false)
+
   return (
     <BlankSlateWithSteps
       title='Welcome to evaluations'
@@ -235,10 +258,22 @@ Don't rawdog your prompts!
           </div>
           <div className='absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-secondary to-transparent pointer-events-none'></div>
           <div className='flex justify-center absolute right-0 bottom-4 w-full'>
-            {/* TODO(evalsv2) */}
-            <Button fancy onClick={() => {}} disabled={!generatorEnabled}>
+            <Button
+              fancy
+              onClick={() => setOpenGenerateModal(true)}
+              disabled={!generatorEnabled || isExecuting}
+            >
               Generate the evaluation
             </Button>
+            <EvaluationsGenerator
+              open={openGenerateModal}
+              setOpen={setOpenGenerateModal}
+              createEvaluation={createEvaluation}
+              generateEvaluation={generateEvaluation}
+              generatorEnabled={generatorEnabled}
+              isExecuting={isExecuting}
+              isGeneratingEvaluation={isGeneratingEvaluation}
+            />
           </div>
         </div>
       </BlankSlateStep>

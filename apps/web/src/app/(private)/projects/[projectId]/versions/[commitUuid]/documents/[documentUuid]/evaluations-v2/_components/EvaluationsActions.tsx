@@ -20,6 +20,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
+import { EvaluationsGenerator } from './EvaluationsGenerator'
 
 const DEFAULT_EVALUATION_SETTINGS = {
   name: 'Accuracy',
@@ -40,12 +41,16 @@ const DEFAULT_EVALUATION_OPTIONS = {
 
 export function EvaluationsActions({
   createEvaluation,
+  generateEvaluation,
   generatorEnabled,
   isExecuting,
+  isGeneratingEvaluation,
 }: {
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
+  generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
   isExecuting: boolean
+  isGeneratingEvaluation: boolean
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -55,11 +60,11 @@ export function EvaluationsActions({
     <div className='flex flex-row items-center gap-4'>
       {generatorEnabled && (
         <GenerateEvaluation
-          project={project}
-          commit={commit}
-          document={document}
           createEvaluation={createEvaluation}
+          generateEvaluation={generateEvaluation}
+          generatorEnabled={generatorEnabled}
           isExecuting={isExecuting}
+          isGeneratingEvaluation={isGeneratingEvaluation}
         />
       )}
       <AddEvaluation
@@ -74,20 +79,37 @@ export function EvaluationsActions({
 }
 
 function GenerateEvaluation({
+  createEvaluation,
+  generateEvaluation,
+  generatorEnabled,
   isExecuting,
+  isGeneratingEvaluation,
 }: {
-  project: IProjectContextType['project']
-  commit: ICommitContextType['commit']
-  document: DocumentVersion
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
+  generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
+  generatorEnabled: boolean
   isExecuting: boolean
+  isGeneratingEvaluation: boolean
 }) {
+  const [openGenerateModal, setOpenGenerateModal] = useState(false)
+
   return (
     <>
-      {/* TODO(evalsv2) */}
-      <TableWithHeader.Button onClick={() => {}} disabled={isExecuting}>
+      <TableWithHeader.Button
+        onClick={() => setOpenGenerateModal(true)}
+        disabled={!generatorEnabled || isExecuting}
+      >
         Generate evaluation
       </TableWithHeader.Button>
+      <EvaluationsGenerator
+        open={openGenerateModal}
+        setOpen={setOpenGenerateModal}
+        createEvaluation={createEvaluation}
+        generateEvaluation={generateEvaluation}
+        generatorEnabled={generatorEnabled}
+        isExecuting={isExecuting}
+        isGeneratingEvaluation={isGeneratingEvaluation}
+      />
     </>
   )
 }

@@ -1,5 +1,6 @@
 import { env } from '@latitude-data/env'
 import { and, eq, inArray } from 'drizzle-orm'
+import { z } from 'zod'
 import {
   CLOUD_MESSAGES,
   Commit,
@@ -63,6 +64,11 @@ async function checkSuggestionLimits(
 
   return Result.nil()
 }
+
+const refinerSchema = z.object({
+  prompt: z.string(),
+  summary: z.string(),
+})
 
 export async function generateDocumentSuggestion(
   {
@@ -196,17 +202,15 @@ export async function generateDocumentSuggestion(
     ),
   )
 
-  const result = (await runCopilot({
+  const result = await runCopilot({
     copilot: copilot,
     parameters: {
       prompt: document.content,
       evaluation: serializedEvaluation,
       results: serializedResults,
     },
-  }).then((r) => r.unwrap())) as {
-    prompt: string
-    summary: string
-  }
+    schema: refinerSchema,
+  }).then((r) => r.unwrap())
 
   return Transaction.call(async (tx) => {
     const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)

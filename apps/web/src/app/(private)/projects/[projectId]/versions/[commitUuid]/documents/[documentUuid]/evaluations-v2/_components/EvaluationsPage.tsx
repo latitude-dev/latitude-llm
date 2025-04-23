@@ -29,7 +29,9 @@ export function EvaluationsPage({
     isLoading,
     createEvaluation,
     deleteEvaluation,
+    generateEvaluation,
     isExecuting,
+    isGeneratingEvaluation,
   } = useEvaluationsV2(
     { project, commit, document },
     { fallbackData: serverEvaluations },
@@ -46,8 +48,10 @@ export function EvaluationsPage({
         actions={
           <EvaluationsActions
             createEvaluation={createEvaluation}
+            generateEvaluation={generateEvaluation}
             generatorEnabled={generatorEnabled}
             isExecuting={isExecuting}
+            isGeneratingEvaluation={isGeneratingEvaluation}
           />
         }
       />
@@ -58,10 +62,13 @@ export function EvaluationsPage({
       */}
       <EvaluationsTable
         evaluations={evaluations}
+        createEvaluation={createEvaluation}
         deleteEvaluation={deleteEvaluation}
+        generateEvaluation={generateEvaluation}
         generatorEnabled={generatorEnabled}
         isLoading={isLoading}
         isExecuting={isExecuting}
+        isGeneratingEvaluation={isGeneratingEvaluation}
       />
       <EvaluationsTemplates
         evaluations={evaluations}

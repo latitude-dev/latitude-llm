@@ -3,6 +3,7 @@
 import {
   createEvaluationV2Action,
   deleteEvaluationV2Action,
+  generateEvaluationV2Action,
   toggleLiveModeAction,
   updateEvaluationV2Action,
 } from '$/actions/evaluationsV2'
@@ -183,6 +184,37 @@ export function useEvaluationsV2(
     [project, commit, document, executeDeleteEvaluationV2],
   )
 
+  const {
+    execute: executeGenerateEvaluationV2,
+    isPending: isGeneratingEvaluation,
+  } = useLatitudeAction(generateEvaluationV2Action, {
+    onSuccess: async ({ data: { settings } }) => {
+      toast({
+        title: 'Evaluation generated successfully',
+        description: `Evaluation ${settings.name} generated successfully`,
+      })
+    },
+    onError: async (error) => {
+      if (error?.err?.name === 'ZodError') return
+      toast({
+        title: 'Error generating evaluation',
+        description: error?.err?.message,
+        variant: 'destructive',
+      })
+    },
+  })
+  const generateEvaluation = useCallback(
+    async ({ instructions }: { instructions?: string }) => {
+      return await executeGenerateEvaluationV2({
+        instructions: instructions,
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+      })
+    },
+    [project, commit, document, executeGenerateEvaluationV2],
+  )
+
   const { execute: executeToggleLiveMode, isPending: isTogglingLiveMode } =
     useLatitudeAction(toggleLiveModeAction, {
       onSuccess: async ({ data: { evaluation } }) => {
@@ -219,7 +251,7 @@ export function useEvaluationsV2(
         live: live,
       })
     },
-    [executeToggleLiveMode],
+    [project, commit, document, executeToggleLiveMode],
   )
 
   return {
@@ -231,12 +263,15 @@ export function useEvaluationsV2(
     isUpdatingEvaluation,
     deleteEvaluation,
     isDeletingEvaluation,
+    generateEvaluation,
+    isGeneratingEvaluation,
     toggleLiveMode,
     isTogglingLiveMode,
     isExecuting:
       isCreatingEvaluation ||
       isUpdatingEvaluation ||
       isDeletingEvaluation ||
+      isGeneratingEvaluation ||
       isTogglingLiveMode,
     ...rest,
   }
