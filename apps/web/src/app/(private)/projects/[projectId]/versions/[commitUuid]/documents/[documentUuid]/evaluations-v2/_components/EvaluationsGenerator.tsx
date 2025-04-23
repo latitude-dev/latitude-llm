@@ -18,7 +18,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 const DEFAULT_EVALUATION_OPTIONS = {
   evaluateLiveLogs: true,
@@ -57,18 +57,10 @@ export function EvaluationsGenerator({
   const [errors, setErrors] =
     useState<ActionErrors<typeof useEvaluationsV2, 'createEvaluation'>>()
 
-  useEffect(() => {
-    setOpen(false)
-    setSettings(undefined)
-    setOptions(DEFAULT_EVALUATION_OPTIONS)
-    setErrors(undefined)
-  }, [document.contentHash])
-
   const onGenerate = useCallback(async () => {
     if (isGeneratingEvaluation) return
     const [result, errors] = await generateEvaluation({ instructions })
     if (errors) return
-
     setInstructions(undefined)
     setSettings(result.settings)
     setOptions(DEFAULT_EVALUATION_OPTIONS)
