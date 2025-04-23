@@ -21,7 +21,7 @@ import {
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { promptTask, runPrompt } from './shared'
+import { promptTask, runPrompt, thresholdToCustomScale } from './shared'
 
 export const LlmEvaluationComparisonSpecification = {
   ...specification,
@@ -260,6 +260,24 @@ async function clone(
     return Result.error(new BadRequestError('Provider is required'))
   }
 
+  let minThreshold = undefined
+  if (evaluation.configuration.minThreshold !== undefined) {
+    minThreshold = thresholdToCustomScale(
+      evaluation.configuration.minThreshold,
+      0,
+      100,
+    )
+  }
+
+  let maxThreshold = undefined
+  if (evaluation.configuration.maxThreshold !== undefined) {
+    maxThreshold = thresholdToCustomScale(
+      evaluation.configuration.maxThreshold,
+      0,
+      100,
+    )
+  }
+
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original evaluation object
   return Result.ok({
@@ -272,8 +290,8 @@ async function clone(
       provider: evaluation.configuration.provider,
       model: evaluation.configuration.model,
       prompt: buildPrompt({ ...evaluation.configuration, provider }),
-      minThreshold: evaluation.configuration.minThreshold,
-      maxThreshold: evaluation.configuration.maxThreshold,
+      minThreshold: minThreshold,
+      maxThreshold: maxThreshold,
     },
   })
 }

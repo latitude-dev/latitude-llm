@@ -21,7 +21,7 @@ import {
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { promptTask, runPrompt } from './shared'
+import { promptTask, runPrompt, thresholdToCustomScale } from './shared'
 
 export const LlmEvaluationBinarySpecification = {
   ...specification,
@@ -214,7 +214,7 @@ async function clone(
       provider: evaluation.configuration.provider,
       model: evaluation.configuration.model,
       prompt: buildPrompt({ ...evaluation.configuration, provider }),
-      minThreshold: 50,
+      minThreshold: thresholdToCustomScale(0.5, 0, 1),
       maxThreshold: undefined,
     },
   })

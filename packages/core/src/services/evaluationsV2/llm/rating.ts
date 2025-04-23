@@ -21,7 +21,7 @@ import {
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { promptTask, runPrompt } from './shared'
+import { promptTask, runPrompt, thresholdToCustomScale } from './shared'
 
 export const LlmEvaluationRatingSpecification = {
   ...specification,
@@ -291,6 +291,24 @@ async function clone(
     reason: z.string(),
   })
 
+  let minThreshold = undefined
+  if (evaluation.configuration.minThreshold !== undefined) {
+    minThreshold = thresholdToCustomScale(
+      evaluation.configuration.minThreshold,
+      evaluation.configuration.minRating,
+      evaluation.configuration.maxRating,
+    )
+  }
+
+  let maxThreshold = undefined
+  if (evaluation.configuration.maxThreshold !== undefined) {
+    maxThreshold = thresholdToCustomScale(
+      evaluation.configuration.maxThreshold,
+      evaluation.configuration.minRating,
+      evaluation.configuration.maxRating,
+    )
+  }
+
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original evaluation object
   return Result.ok({
@@ -307,8 +325,8 @@ async function clone(
         schema: promptSchema,
         provider: provider,
       }),
-      minThreshold: undefined,
-      maxThreshold: undefined,
+      minThreshold: minThreshold,
+      maxThreshold: maxThreshold,
     },
   })
 }
