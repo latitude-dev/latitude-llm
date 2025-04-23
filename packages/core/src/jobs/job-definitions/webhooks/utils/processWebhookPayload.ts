@@ -2,6 +2,8 @@ import { LatitudeEvent } from '../../../../events/events'
 import { WebhookPayload } from '../../../../services/webhooks/types'
 import { findDocumentFromLog } from '../../../../data-access/documentLogs'
 import { Result, TypedResult } from '../../../../lib/Result'
+import { findLastProviderLogFromDocumentLogUuid } from '../../../../data-access'
+import { buildProviderLogResponse } from '../../../../services/providerLogs'
 
 export async function processWebhookPayload(
   event: LatitudeEvent,
@@ -9,6 +11,10 @@ export async function processWebhookPayload(
   try {
     switch (event.type) {
       case 'documentLogCreated':
+        const providerLog = await findLastProviderLogFromDocumentLogUuid(
+          event.data.uuid,
+        )
+
         return Result.ok({
           eventType: event.type,
           payload: {
@@ -19,6 +25,10 @@ export async function processWebhookPayload(
             duration: event.data.duration,
             source: event.data.source,
             commitId: event.data.commitId,
+            messages: providerLog?.messages,
+            response: providerLog
+              ? buildProviderLogResponse(providerLog)
+              : undefined,
           },
         })
       default:
