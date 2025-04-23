@@ -32,7 +32,7 @@ export function EvaluationsGenerator({
   createEvaluation,
   generateEvaluation,
   generatorEnabled,
-  isExecuting,
+  isCreatingEvaluation,
   isGeneratingEvaluation,
 }: {
   open: boolean
@@ -40,7 +40,7 @@ export function EvaluationsGenerator({
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
   generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
-  isExecuting: boolean
+  isCreatingEvaluation: boolean
   isGeneratingEvaluation: boolean
 }) {
   const navigate = useNavigate()
@@ -65,7 +65,7 @@ export function EvaluationsGenerator({
   }, [document.contentHash])
 
   const onGenerate = useCallback(async () => {
-    if (isExecuting) return
+    if (isGeneratingEvaluation) return
     const [result, errors] = await generateEvaluation({ instructions })
     if (errors) return
 
@@ -74,7 +74,7 @@ export function EvaluationsGenerator({
     setOptions(DEFAULT_EVALUATION_OPTIONS)
     setErrors(undefined)
   }, [
-    isExecuting,
+    isGeneratingEvaluation,
     generateEvaluation,
     instructions,
     setInstructions,
@@ -84,7 +84,7 @@ export function EvaluationsGenerator({
   ])
 
   const onCreate = useCallback(async () => {
-    if (isExecuting || !settings) return
+    if (isCreatingEvaluation || !settings) return
     const [result, errors] = await createEvaluation({ settings, options })
     if (errors) setErrors(errors)
     else {
@@ -104,7 +104,7 @@ export function EvaluationsGenerator({
       )
     }
   }, [
-    isExecuting,
+    isCreatingEvaluation,
     createEvaluation,
     settings,
     options,
@@ -155,7 +155,7 @@ export function EvaluationsGenerator({
         title: 'Generate evaluation',
         description:
           'Generate an evaluation to assess the quality of your prompts',
-        label: isExecuting ? 'Generating...' : 'Generate evaluation',
+        label: isGeneratingEvaluation ? 'Generating...' : 'Generate evaluation',
         onConfirm: onGenerate,
         content: (
           <form className='min-w-0'>
@@ -170,7 +170,7 @@ export function EvaluationsGenerator({
                 maxRows={4}
                 onChange={(e) => setInstructions(e.target.value)}
                 className='w-full'
-                disabled={isExecuting}
+                disabled={isGeneratingEvaluation}
                 required
               />
             </FormWrapper>
@@ -183,7 +183,7 @@ export function EvaluationsGenerator({
       number: 3,
       title: 'Create a new evaluation',
       description: 'Evaluations help you assess the quality of your prompts',
-      label: isExecuting ? 'Creating...' : 'Create evaluation',
+      label: isCreatingEvaluation ? 'Creating...' : 'Create evaluation',
       onConfirm: onCreate,
       content: (
         <EvaluationV2Form
@@ -193,12 +193,12 @@ export function EvaluationsGenerator({
           options={options}
           setOptions={setOptions}
           errors={errors}
-          disabled={isExecuting}
+          disabled={isCreatingEvaluation}
         />
       ),
     }
   }, [
-    isExecuting,
+    isCreatingEvaluation,
     isGeneratingEvaluation,
     instructions,
     settings,
@@ -225,8 +225,8 @@ export function EvaluationsGenerator({
       onConfirm={step.onConfirm}
       confirm={{
         label: step.label,
-        disabled: isExecuting,
-        isConfirming: isExecuting,
+        disabled: isCreatingEvaluation || isGeneratingEvaluation,
+        isConfirming: isCreatingEvaluation || isGeneratingEvaluation,
       }}
       onCancel={() => setOpen(false)}
       cancel={{

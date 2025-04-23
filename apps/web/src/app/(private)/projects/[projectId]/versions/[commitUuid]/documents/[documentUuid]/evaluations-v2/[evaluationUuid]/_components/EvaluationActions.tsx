@@ -41,11 +41,12 @@ export function EvaluationActions<
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   const metricSpecification = typeSpecification.metrics[evaluation.metric]
 
-  const { createEvaluation, updateEvaluation, isExecuting } = useEvaluationsV2({
-    project: project,
-    commit: commit,
-    document: document,
-  })
+  const {
+    createEvaluation,
+    updateEvaluation,
+    isCreatingEvaluation,
+    isUpdatingEvaluation,
+  } = useEvaluationsV2({ project, commit, document })
 
   return (
     <div className='flex flex-row items-center gap-4'>
@@ -56,7 +57,7 @@ export function EvaluationActions<
           document={document}
           evaluation={evaluation}
           createEvaluation={createEvaluation}
-          isExecuting={isExecuting}
+          isCreatingEvaluation={isCreatingEvaluation}
         />
       )}
       <EditEvaluation
@@ -65,7 +66,7 @@ export function EvaluationActions<
         document={document}
         evaluation={evaluation}
         updateEvaluation={updateEvaluation}
-        isExecuting={isExecuting}
+        isUpdatingEvaluation={isUpdatingEvaluation}
       />
       {metricSpecification.supportsBatchEvaluation && (
         <RunExperiment
@@ -73,7 +74,6 @@ export function EvaluationActions<
           commit={commit}
           document={document}
           evaluation={evaluation}
-          isExecuting={isExecuting}
         />
       )}
     </div>
@@ -89,14 +89,14 @@ function EditPrompt<
   document,
   evaluation,
   createEvaluation,
-  isExecuting,
+  isCreatingEvaluation,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
   evaluation: EvaluationV2<T, M>
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
-  isExecuting: boolean
+  isCreatingEvaluation: boolean
 }) {
   const navigate = useNavigate()
 
@@ -105,7 +105,7 @@ function EditPrompt<
   const [openCloneModal, setOpenCloneModal] = useState(false)
 
   const onClone = useCallback(async () => {
-    if (isExecuting) return
+    if (isCreatingEvaluation) return
     const [result, errors] = await createEvaluation({
       settings: evaluation,
       options: evaluation,
@@ -122,7 +122,7 @@ function EditPrompt<
         .evaluationsV2.detail({ uuid: result.evaluation.uuid }).root,
     )
   }, [
-    isExecuting,
+    isCreatingEvaluation,
     createEvaluation,
     evaluation,
     setOpenCloneModal,
@@ -146,7 +146,7 @@ function EditPrompt<
         }}
         // TODO(evalsv2): Clone eval or go to prompt editor if its a custom llm eval
         // onClick={() => setOpenCloneModal(true)}
-        disabled={isExecuting}
+        disabled={isCreatingEvaluation}
       >
         Edit prompt
       </TableWithHeader.Button>
@@ -158,9 +158,11 @@ function EditPrompt<
         onOpenChange={setOpenCloneModal}
         onConfirm={onClone}
         confirm={{
-          label: isExecuting ? 'Cloning...' : `Clone ${evaluation.name}`,
-          disabled: isExecuting || !!commit.mergedAt,
-          isConfirming: isExecuting,
+          label: isCreatingEvaluation
+            ? 'Cloning...'
+            : `Clone ${evaluation.name}`,
+          disabled: isCreatingEvaluation || !!commit.mergedAt,
+          isConfirming: isCreatingEvaluation,
         }}
       >
         TODO
@@ -176,14 +178,14 @@ function EditEvaluation<
   commit,
   evaluation,
   updateEvaluation,
-  isExecuting,
+  isUpdatingEvaluation,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
   evaluation: EvaluationV2<T, M>
   updateEvaluation: ReturnType<typeof useEvaluationsV2>['updateEvaluation']
-  isExecuting: boolean
+  isUpdatingEvaluation: boolean
 }) {
   const [openUpdateModal, setOpenUpdateModal] = useState(false)
   const [settings, setSettings] = useState<EvaluationSettings<T, M>>(evaluation)
@@ -192,7 +194,7 @@ function EditEvaluation<
     useState<ActionErrors<typeof useEvaluationsV2, 'updateEvaluation'>>()
 
   const onUpdate = useCallback(async () => {
-    if (isExecuting || !!commit.mergedAt) return
+    if (isUpdatingEvaluation || !!commit.mergedAt) return
     const [_, errors] = await updateEvaluation({
       evaluationUuid: evaluation.uuid,
       settings: settings,
@@ -204,7 +206,7 @@ function EditEvaluation<
       setOpenUpdateModal(false)
     }
   }, [
-    isExecuting,
+    isUpdatingEvaluation,
     commit,
     evaluation,
     settings,
@@ -218,7 +220,7 @@ function EditEvaluation<
     <>
       <TableWithHeader.Button
         onClick={() => setOpenUpdateModal(true)}
-        disabled={isExecuting}
+        disabled={isUpdatingEvaluation}
       >
         Edit evaluation
       </TableWithHeader.Button>
@@ -234,9 +236,11 @@ function EditEvaluation<
         onOpenChange={setOpenUpdateModal}
         onConfirm={onUpdate}
         confirm={{
-          label: isExecuting ? 'Updating...' : `Update ${evaluation.name}`,
-          disabled: isExecuting || !!commit.mergedAt,
-          isConfirming: isExecuting,
+          label: isUpdatingEvaluation
+            ? 'Updating...'
+            : `Update ${evaluation.name}`,
+          disabled: isUpdatingEvaluation || !!commit.mergedAt,
+          isConfirming: isUpdatingEvaluation,
         }}
       >
         <EvaluationV2Form
@@ -246,7 +250,7 @@ function EditEvaluation<
           options={options}
           setOptions={setOptions}
           errors={errors}
-          disabled={isExecuting || !!commit.mergedAt}
+          disabled={isUpdatingEvaluation || !!commit.mergedAt}
         />
       </ConfirmModal>
     </>
@@ -261,13 +265,11 @@ function RunExperiment<
   commit,
   document,
   evaluation,
-  isExecuting,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
   evaluation: EvaluationV2<T, M>
-  isExecuting: boolean
 }) {
   const [open, setOpen] = useState(false)
 
@@ -277,11 +279,7 @@ function RunExperiment<
 
   return (
     <>
-      <TableWithHeader.Button
-        variant='default'
-        onClick={() => setOpen(true)}
-        disabled={isExecuting}
-      >
+      <TableWithHeader.Button variant='default' onClick={() => setOpen(true)}>
         Run experiment
       </TableWithHeader.Button>
       {experimentsEnabled ? (

@@ -267,12 +267,6 @@ export function useEvaluationsV2(
     isGeneratingEvaluation,
     toggleLiveMode,
     isTogglingLiveMode,
-    isExecuting:
-      isCreatingEvaluation ||
-      isUpdatingEvaluation ||
-      isDeletingEvaluation ||
-      isGeneratingEvaluation ||
-      isTogglingLiveMode,
     ...rest,
   }
 }

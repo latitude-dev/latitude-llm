@@ -43,13 +43,13 @@ export function EvaluationsActions({
   createEvaluation,
   generateEvaluation,
   generatorEnabled,
-  isExecuting,
+  isCreatingEvaluation,
   isGeneratingEvaluation,
 }: {
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
   generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
-  isExecuting: boolean
+  isCreatingEvaluation: boolean
   isGeneratingEvaluation: boolean
 }) {
   const { project } = useCurrentProject()
@@ -63,7 +63,7 @@ export function EvaluationsActions({
           createEvaluation={createEvaluation}
           generateEvaluation={generateEvaluation}
           generatorEnabled={generatorEnabled}
-          isExecuting={isExecuting}
+          isCreatingEvaluation={isCreatingEvaluation}
           isGeneratingEvaluation={isGeneratingEvaluation}
         />
       )}
@@ -72,7 +72,7 @@ export function EvaluationsActions({
         commit={commit}
         document={document}
         createEvaluation={createEvaluation}
-        isExecuting={isExecuting}
+        isCreatingEvaluation={isCreatingEvaluation}
       />
     </div>
   )
@@ -82,13 +82,13 @@ function GenerateEvaluation({
   createEvaluation,
   generateEvaluation,
   generatorEnabled,
-  isExecuting,
+  isCreatingEvaluation,
   isGeneratingEvaluation,
 }: {
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
   generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
-  isExecuting: boolean
+  isCreatingEvaluation: boolean
   isGeneratingEvaluation: boolean
 }) {
   const [openGenerateModal, setOpenGenerateModal] = useState(false)
@@ -97,7 +97,7 @@ function GenerateEvaluation({
     <>
       <TableWithHeader.Button
         onClick={() => setOpenGenerateModal(true)}
-        disabled={!generatorEnabled || isExecuting}
+        disabled={!generatorEnabled}
       >
         Generate evaluation
       </TableWithHeader.Button>
@@ -107,7 +107,7 @@ function GenerateEvaluation({
         createEvaluation={createEvaluation}
         generateEvaluation={generateEvaluation}
         generatorEnabled={generatorEnabled}
-        isExecuting={isExecuting}
+        isCreatingEvaluation={isCreatingEvaluation}
         isGeneratingEvaluation={isGeneratingEvaluation}
       />
     </>
@@ -119,13 +119,13 @@ function AddEvaluation({
   commit,
   document,
   createEvaluation,
-  isExecuting,
+  isCreatingEvaluation,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
-  isExecuting: boolean
+  isCreatingEvaluation: boolean
 }) {
   const navigate = useNavigate()
 
@@ -140,7 +140,7 @@ function AddEvaluation({
     useState<ActionErrors<typeof useEvaluationsV2, 'createEvaluation'>>()
 
   const onCreate = useCallback(async () => {
-    if (isExecuting) return
+    if (isCreatingEvaluation) return
     const [result, errors] = await createEvaluation({ settings, options })
     if (errors) setErrors(errors)
     else {
@@ -159,7 +159,7 @@ function AddEvaluation({
       )
     }
   }, [
-    isExecuting,
+    isCreatingEvaluation,
     createEvaluation,
     settings,
     options,
@@ -178,7 +178,7 @@ function AddEvaluation({
       <TableWithHeader.Button
         variant='default'
         onClick={() => setOpenCreateModal(true)}
-        disabled={isExecuting}
+        disabled={isCreatingEvaluation}
       >
         Add evaluation
       </TableWithHeader.Button>
@@ -191,9 +191,9 @@ function AddEvaluation({
         onOpenChange={setOpenCreateModal}
         onConfirm={onCreate}
         confirm={{
-          label: isExecuting ? 'Creating...' : 'Create evaluation',
-          disabled: isExecuting,
-          isConfirming: isExecuting,
+          label: isCreatingEvaluation ? 'Creating...' : 'Create evaluation',
+          disabled: isCreatingEvaluation,
+          isConfirming: isCreatingEvaluation,
         }}
       >
         <EvaluationV2Form
@@ -203,7 +203,7 @@ function AddEvaluation({
           options={options}
           setOptions={setOptions}
           errors={errors}
-          disabled={isExecuting}
+          disabled={isCreatingEvaluation}
         />
       </ConfirmModal>
     </>

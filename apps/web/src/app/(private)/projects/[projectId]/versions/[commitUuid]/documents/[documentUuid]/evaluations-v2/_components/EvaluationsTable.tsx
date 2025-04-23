@@ -39,7 +39,8 @@ export function EvaluationsTable({
   generateEvaluation,
   generatorEnabled,
   isLoading,
-  isExecuting,
+  isCreatingEvaluation,
+  isDeletingEvaluation,
   isGeneratingEvaluation,
 }: {
   evaluations: EvaluationV2[]
@@ -48,7 +49,8 @@ export function EvaluationsTable({
   generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
   isLoading: boolean
-  isExecuting: boolean
+  isCreatingEvaluation: boolean
+  isDeletingEvaluation: boolean
   isGeneratingEvaluation: boolean
 }) {
   const navigate = useNavigate()
@@ -62,14 +64,14 @@ export function EvaluationsTable({
   const [openDeleteModal, setOpenDeleteModal] = useState(false)
   const onDelete = useCallback(
     async (evaluation: EvaluationV2) => {
-      if (isExecuting) return
+      if (isDeletingEvaluation) return
       const [_, errors] = await deleteEvaluation({
         evaluationUuid: evaluation.uuid,
       })
       if (errors) return
       setOpenDeleteModal(false)
     },
-    [isExecuting, deleteEvaluation, setOpenDeleteModal],
+    [isDeletingEvaluation, deleteEvaluation, setOpenDeleteModal],
   )
 
   return (
@@ -169,13 +171,13 @@ export function EvaluationsTable({
               onConfirm={() => onDelete(selectedEvaluation)}
               onCancel={() => setOpenDeleteModal(false)}
               confirm={{
-                label: isExecuting
+                label: isDeletingEvaluation
                   ? 'Removing...'
                   : `Remove ${selectedEvaluation.name}`,
                 description:
                   'Are you sure you want to remove the evaluation? This action cannot be undone.',
-                disabled: isExecuting,
-                isConfirming: isExecuting,
+                disabled: isDeletingEvaluation,
+                isConfirming: isDeletingEvaluation,
               }}
             />
           )}
@@ -185,7 +187,7 @@ export function EvaluationsTable({
           createEvaluation={createEvaluation}
           generateEvaluation={generateEvaluation}
           generatorEnabled={generatorEnabled}
-          isExecuting={isExecuting}
+          isCreatingEvaluation={isCreatingEvaluation}
           isGeneratingEvaluation={isGeneratingEvaluation}
         />
       )}
@@ -197,13 +199,13 @@ function EvaluationsTableBlankSlate({
   createEvaluation,
   generateEvaluation,
   generatorEnabled,
-  isExecuting,
+  isCreatingEvaluation,
   isGeneratingEvaluation,
 }: {
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
   generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
-  isExecuting: boolean
+  isCreatingEvaluation: boolean
   isGeneratingEvaluation: boolean
 }) {
   const [openGenerateModal, setOpenGenerateModal] = useState(false)
@@ -261,7 +263,7 @@ Don't rawdog your prompts!
             <Button
               fancy
               onClick={() => setOpenGenerateModal(true)}
-              disabled={!generatorEnabled || isExecuting}
+              disabled={!generatorEnabled}
             >
               Generate the evaluation
             </Button>
@@ -271,7 +273,7 @@ Don't rawdog your prompts!
               createEvaluation={createEvaluation}
               generateEvaluation={generateEvaluation}
               generatorEnabled={generatorEnabled}
-              isExecuting={isExecuting}
+              isCreatingEvaluation={isCreatingEvaluation}
               isGeneratingEvaluation={isGeneratingEvaluation}
             />
           </div>

@@ -30,7 +30,8 @@ export function EvaluationsPage({
     createEvaluation,
     deleteEvaluation,
     generateEvaluation,
-    isExecuting,
+    isCreatingEvaluation,
+    isDeletingEvaluation,
     isGeneratingEvaluation,
   } = useEvaluationsV2(
     { project, commit, document },
@@ -50,7 +51,7 @@ export function EvaluationsPage({
             createEvaluation={createEvaluation}
             generateEvaluation={generateEvaluation}
             generatorEnabled={generatorEnabled}
-            isExecuting={isExecuting}
+            isCreatingEvaluation={isCreatingEvaluation}
             isGeneratingEvaluation={isGeneratingEvaluation}
           />
         }
@@ -67,14 +68,15 @@ export function EvaluationsPage({
         generateEvaluation={generateEvaluation}
         generatorEnabled={generatorEnabled}
         isLoading={isLoading}
-        isExecuting={isExecuting}
+        isCreatingEvaluation={isCreatingEvaluation}
+        isDeletingEvaluation={isDeletingEvaluation}
         isGeneratingEvaluation={isGeneratingEvaluation}
       />
       <EvaluationsTemplates
         evaluations={evaluations}
         createEvaluation={createEvaluation}
         isLoading={isLoading}
-        isExecuting={isExecuting}
+        isCreatingEvaluation={isCreatingEvaluation}
       />
     </div>
   )
