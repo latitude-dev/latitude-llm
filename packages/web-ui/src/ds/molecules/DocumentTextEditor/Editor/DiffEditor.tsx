@@ -1,6 +1,6 @@
 'use client'
 
-import { MutableRefObject, useCallback } from 'react'
+import { MutableRefObject, useCallback, useEffect } from 'react'
 
 import { DiffEditor, Monaco } from '@monaco-editor/react'
 import { type editor } from 'monaco-editor'
@@ -49,8 +49,16 @@ export function MonacoDiffEditor({
 
       editor.layout()
     },
-    [],
+    [editorRef, monacoRef],
   )
+
+  useEffect(() => {
+    return () => {
+      if (!editorRef.current) return
+
+      editorRef.current.dispose()
+    }
+  }, [editorRef])
 
   return (
     <EditorWrapper>
