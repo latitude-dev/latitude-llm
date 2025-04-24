@@ -21,7 +21,7 @@ export const generateSuggestedEvaluationsAction = authProcedure
   )
   .handler(async ({ input, ctx }) => {
     if (!env.LATITUDE_CLOUD) {
-      throw new BadRequestError(CLOUD_MESSAGES.autogenerateEvaluations)
+      throw new BadRequestError(CLOUD_MESSAGES.generateEvaluations)
     }
 
     if (!env.COPILOT_WORKSPACE_API_KEY) {

@@ -30,19 +30,28 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
+import { EvaluationsGenerator } from './EvaluationsGenerator'
 
 export function EvaluationsTable({
   evaluations,
+  createEvaluation,
   deleteEvaluation,
+  generateEvaluation,
   generatorEnabled,
   isLoading,
-  isExecuting,
+  isCreatingEvaluation,
+  isDeletingEvaluation,
+  isGeneratingEvaluation,
 }: {
   evaluations: EvaluationV2[]
+  createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
   deleteEvaluation: ReturnType<typeof useEvaluationsV2>['deleteEvaluation']
+  generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
   isLoading: boolean
-  isExecuting: boolean
+  isCreatingEvaluation: boolean
+  isDeletingEvaluation: boolean
+  isGeneratingEvaluation: boolean
 }) {
   const navigate = useNavigate()
 
@@ -55,14 +64,14 @@ export function EvaluationsTable({
   const [openDeleteModal, setOpenDeleteModal] = useState(false)
   const onDelete = useCallback(
     async (evaluation: EvaluationV2) => {
-      if (isExecuting) return
+      if (isDeletingEvaluation) return
       const [_, errors] = await deleteEvaluation({
         evaluationUuid: evaluation.uuid,
       })
       if (errors) return
       setOpenDeleteModal(false)
     },
-    [isExecuting, deleteEvaluation, setOpenDeleteModal],
+    [isDeletingEvaluation, deleteEvaluation, setOpenDeleteModal],
   )
 
   return (
@@ -162,29 +171,45 @@ export function EvaluationsTable({
               onConfirm={() => onDelete(selectedEvaluation)}
               onCancel={() => setOpenDeleteModal(false)}
               confirm={{
-                label: isExecuting
+                label: isDeletingEvaluation
                   ? 'Removing...'
                   : `Remove ${selectedEvaluation.name}`,
                 description:
                   'Are you sure you want to remove the evaluation? This action cannot be undone.',
-                disabled: isExecuting,
-                isConfirming: isExecuting,
+                disabled: isDeletingEvaluation,
+                isConfirming: isDeletingEvaluation,
               }}
             />
           )}
         </div>
       ) : (
-        <EvaluationsTableBlankSlate generatorEnabled={generatorEnabled} />
+        <EvaluationsTableBlankSlate
+          createEvaluation={createEvaluation}
+          generateEvaluation={generateEvaluation}
+          generatorEnabled={generatorEnabled}
+          isCreatingEvaluation={isCreatingEvaluation}
+          isGeneratingEvaluation={isGeneratingEvaluation}
+        />
       )}
     </div>
   )
 }
 
 function EvaluationsTableBlankSlate({
+  createEvaluation,
+  generateEvaluation,
   generatorEnabled,
+  isCreatingEvaluation,
+  isGeneratingEvaluation,
 }: {
+  createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
+  generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
+  isCreatingEvaluation: boolean
+  isGeneratingEvaluation: boolean
 }) {
+  const [openGenerateModal, setOpenGenerateModal] = useState(false)
+
   return (
     <BlankSlateWithSteps
       title='Welcome to evaluations'
@@ -235,10 +260,22 @@ Don't rawdog your prompts!
           </div>
           <div className='absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-secondary to-transparent pointer-events-none'></div>
           <div className='flex justify-center absolute right-0 bottom-4 w-full'>
-            {/* TODO(evalsv2) */}
-            <Button fancy onClick={() => {}} disabled={!generatorEnabled}>
+            <Button
+              fancy
+              onClick={() => setOpenGenerateModal(true)}
+              disabled={!generatorEnabled}
+            >
               Generate the evaluation
             </Button>
+            <EvaluationsGenerator
+              open={openGenerateModal}
+              setOpen={setOpenGenerateModal}
+              createEvaluation={createEvaluation}
+              generateEvaluation={generateEvaluation}
+              generatorEnabled={generatorEnabled}
+              isCreatingEvaluation={isCreatingEvaluation}
+              isGeneratingEvaluation={isGeneratingEvaluation}
+            />
           </div>
         </div>
       </BlankSlateStep>

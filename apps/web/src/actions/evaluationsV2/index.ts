@@ -1,4 +1,5 @@
 export * from './create'
 export * from './delete'
-export * from './update'
+export * from './generate'
 export * from './toggleLiveMode'
+export * from './update'

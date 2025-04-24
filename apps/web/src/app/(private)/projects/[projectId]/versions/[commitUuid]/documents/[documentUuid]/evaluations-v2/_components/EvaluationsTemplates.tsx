@@ -40,12 +40,12 @@ export function EvaluationsTemplates({
   evaluations,
   createEvaluation,
   isLoading,
-  isExecuting,
+  isCreatingEvaluation,
 }: {
   evaluations: EvaluationV2[]
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
   isLoading: boolean
-  isExecuting: boolean
+  isCreatingEvaluation: boolean
 }) {
   const navigate = useNavigate()
 
@@ -63,7 +63,7 @@ export function EvaluationsTemplates({
     >(
       template: EvaluationSettings<T, M>,
     ) => {
-      if (isExecuting) return
+      if (isCreatingEvaluation) return
 
       const existing = evaluations.filter(
         (evaluation) => evaluation.name === template.name,
@@ -98,7 +98,7 @@ export function EvaluationsTemplates({
       )
     },
     [
-      isExecuting,
+      isCreatingEvaluation,
       evaluations,
       createEvaluation,
       setOpenUseModal,
@@ -145,19 +145,19 @@ export function EvaluationsTemplates({
             onConfirm={() => onUse(selectedTemplate)}
             onCancel={() => setOpenUseModal(false)}
             confirm={{
-              label: isExecuting
+              label: isCreatingEvaluation
                 ? 'Creating...'
                 : `Use ${selectedTemplate.name}`,
               description:
                 'A new evaluation will be created from this template.',
               disabled:
-                isExecuting ||
+                isCreatingEvaluation ||
                 (selectedTemplate.type === EvaluationType.Llm &&
                   // @ts-expect-error seems TypeScript is not able to infer the type
                   (!selectedTemplate.configuration.provider ||
                     // @ts-expect-error seems TypeScript is not able to infer the type
                     !selectedTemplate.configuration.model)),
-              isConfirming: isExecuting,
+              isConfirming: isCreatingEvaluation,
             }}
           >
             {selectedTemplate.type === EvaluationType.Llm && (
@@ -165,7 +165,7 @@ export function EvaluationsTemplates({
                 // @ts-expect-error seems TypeScript is not able to infer the type
                 template={selectedTemplate}
                 setTemplate={setSelectedTemplate}
-                isExecuting={isExecuting}
+                isCreatingEvaluation={isCreatingEvaluation}
               />
             )}
           </ConfirmModal>
@@ -239,11 +239,11 @@ function EvaluationTemplate<
 function LlmEvaluationTemplateForm<M extends LlmEvaluationMetric>({
   template,
   setTemplate,
-  isExecuting,
+  isCreatingEvaluation,
 }: {
   template: EvaluationSettings<EvaluationType.Llm, M>
   setTemplate: (template: EvaluationSettings<EvaluationType.Llm, M>) => void
-  isExecuting: boolean
+  isCreatingEvaluation: boolean
 }) {
   const { isLoading: isLoadingWorkspace } = useCurrentWorkspace()
   const { data: providers, isLoading: isLoadingProviders } = useProviders()
@@ -263,7 +263,7 @@ function LlmEvaluationTemplateForm<M extends LlmEvaluationMetric>({
   })
 
   const isLoading = isLoadingWorkspace || isLoadingProviders
-  const isDisabled = isLoading || isExecuting
+  const isDisabled = isLoading || isCreatingEvaluation
 
   return (
     <form className='min-w-0'>

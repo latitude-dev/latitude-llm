@@ -20,6 +20,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
+import { EvaluationsGenerator } from './EvaluationsGenerator'
 
 const DEFAULT_EVALUATION_SETTINGS = {
   name: 'Accuracy',
@@ -40,12 +41,16 @@ const DEFAULT_EVALUATION_OPTIONS = {
 
 export function EvaluationsActions({
   createEvaluation,
+  generateEvaluation,
   generatorEnabled,
-  isExecuting,
+  isCreatingEvaluation,
+  isGeneratingEvaluation,
 }: {
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
+  generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
-  isExecuting: boolean
+  isCreatingEvaluation: boolean
+  isGeneratingEvaluation: boolean
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -55,11 +60,11 @@ export function EvaluationsActions({
     <div className='flex flex-row items-center gap-4'>
       {generatorEnabled && (
         <GenerateEvaluation
-          project={project}
-          commit={commit}
-          document={document}
           createEvaluation={createEvaluation}
-          isExecuting={isExecuting}
+          generateEvaluation={generateEvaluation}
+          generatorEnabled={generatorEnabled}
+          isCreatingEvaluation={isCreatingEvaluation}
+          isGeneratingEvaluation={isGeneratingEvaluation}
         />
       )}
       <AddEvaluation
@@ -67,27 +72,44 @@ export function EvaluationsActions({
         commit={commit}
         document={document}
         createEvaluation={createEvaluation}
-        isExecuting={isExecuting}
+        isCreatingEvaluation={isCreatingEvaluation}
       />
     </div>
   )
 }
 
 function GenerateEvaluation({
-  isExecuting,
+  createEvaluation,
+  generateEvaluation,
+  generatorEnabled,
+  isCreatingEvaluation,
+  isGeneratingEvaluation,
 }: {
-  project: IProjectContextType['project']
-  commit: ICommitContextType['commit']
-  document: DocumentVersion
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
-  isExecuting: boolean
+  generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
+  generatorEnabled: boolean
+  isCreatingEvaluation: boolean
+  isGeneratingEvaluation: boolean
 }) {
+  const [openGenerateModal, setOpenGenerateModal] = useState(false)
+
   return (
     <>
-      {/* TODO(evalsv2) */}
-      <TableWithHeader.Button onClick={() => {}} disabled={isExecuting}>
+      <TableWithHeader.Button
+        onClick={() => setOpenGenerateModal(true)}
+        disabled={!generatorEnabled}
+      >
         Generate evaluation
       </TableWithHeader.Button>
+      <EvaluationsGenerator
+        open={openGenerateModal}
+        setOpen={setOpenGenerateModal}
+        createEvaluation={createEvaluation}
+        generateEvaluation={generateEvaluation}
+        generatorEnabled={generatorEnabled}
+        isCreatingEvaluation={isCreatingEvaluation}
+        isGeneratingEvaluation={isGeneratingEvaluation}
+      />
     </>
   )
 }
@@ -97,13 +119,13 @@ function AddEvaluation({
   commit,
   document,
   createEvaluation,
-  isExecuting,
+  isCreatingEvaluation,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
-  isExecuting: boolean
+  isCreatingEvaluation: boolean
 }) {
   const navigate = useNavigate()
 
@@ -118,7 +140,7 @@ function AddEvaluation({
     useState<ActionErrors<typeof useEvaluationsV2, 'createEvaluation'>>()
 
   const onCreate = useCallback(async () => {
-    if (isExecuting) return
+    if (isCreatingEvaluation) return
     const [result, errors] = await createEvaluation({ settings, options })
     if (errors) setErrors(errors)
     else {
@@ -137,7 +159,7 @@ function AddEvaluation({
       )
     }
   }, [
-    isExecuting,
+    isCreatingEvaluation,
     createEvaluation,
     settings,
     options,
@@ -156,7 +178,7 @@ function AddEvaluation({
       <TableWithHeader.Button
         variant='default'
         onClick={() => setOpenCreateModal(true)}
-        disabled={isExecuting}
+        disabled={isCreatingEvaluation}
       >
         Add evaluation
       </TableWithHeader.Button>
@@ -169,9 +191,9 @@ function AddEvaluation({
         onOpenChange={setOpenCreateModal}
         onConfirm={onCreate}
         confirm={{
-          label: isExecuting ? 'Creating...' : 'Create evaluation',
-          disabled: isExecuting,
-          isConfirming: isExecuting,
+          label: isCreatingEvaluation ? 'Creating...' : 'Create evaluation',
+          disabled: isCreatingEvaluation,
+          isConfirming: isCreatingEvaluation,
         }}
       >
         <EvaluationV2Form
@@ -181,7 +203,7 @@ function AddEvaluation({
           options={options}
           setOptions={setOptions}
           errors={errors}
-          disabled={isExecuting}
+          disabled={isCreatingEvaluation}
         />
       </ConfirmModal>
     </>
