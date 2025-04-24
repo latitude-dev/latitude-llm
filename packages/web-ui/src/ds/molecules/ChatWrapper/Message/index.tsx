@@ -339,41 +339,37 @@ const ContentText = memo(
     sourceMap?: PromptlSourceRef[]
   }) => {
     const TextComponent = size === 'small' ? Text.H6 : Text.H5
-
     const segments = useMemo(
       () => computeSegments(ContentType.text, message, sourceMap, parameters),
       [message, sourceMap, parameters],
     )
+
     const groups = useMemo(() => groupSegments(segments), [segments])
 
-    return useMemo(
-      () =>
-        groups.map((group, groupIndex) => (
-          <TextComponent
-            color={color}
-            whiteSpace='preWrap'
-            key={`${index}-group-${groupIndex}`}
-          >
-            {group.length > 0
-              ? group.map((segment, segmentIndex) => (
-                  <span
-                    key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}
-                  >
-                    {typeof segment === 'string' ? (
-                      segment
-                    ) : (
-                      <ReferenceComponent
-                        reference={segment}
-                        collapseParameters={collapseParameters}
-                      />
-                    )}
-                  </span>
-                ))
-              : '\n'}
-          </TextComponent>
-        )),
-      [groups],
-    )
+    return groups.map((group, groupIndex) => (
+      <TextComponent
+        color={color}
+        whiteSpace='preWrap'
+        key={`${index}-group-${groupIndex}`}
+      >
+        {group.length > 0
+          ? group.map((segment, segmentIndex) => (
+              <span
+                key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}
+              >
+                {typeof segment === 'string' ? (
+                  segment
+                ) : (
+                  <ReferenceComponent
+                    reference={segment}
+                    collapseParameters={collapseParameters}
+                  />
+                )}
+              </span>
+            ))
+          : '\n'}
+      </TextComponent>
+    ))
   },
 )
 
@@ -583,6 +579,17 @@ const ContentImage = memo(
     collapseParameters?: boolean
     sourceMap?: PromptlSourceRef[]
   }) => {
+    const segment = useMemo(
+      () =>
+        computeSegments(
+          ContentType.image,
+          image.toString(),
+          sourceMap,
+          parameters,
+        ),
+      [image, sourceMap, parameters],
+    )[0]
+
     if (!isValidUrl(image)) {
       const TextComponent = size === 'small' ? Text.H6 : Text.H5
 
@@ -601,17 +608,6 @@ const ContentImage = memo(
     }
 
     const TextComponent = size === 'small' ? Text.H6 : Text.H5
-
-    const segment = useMemo(
-      () =>
-        computeSegments(
-          ContentType.image,
-          image.toString(),
-          sourceMap,
-          parameters,
-        ),
-      [image, sourceMap, parameters],
-    )[0]
 
     if (!segment || typeof segment === 'string') {
       return (
@@ -660,6 +656,17 @@ const ContentFile = memo(
     collapseParameters?: boolean
     sourceMap?: PromptlSourceRef[]
   }) => {
+    const segment = useMemo(
+      () =>
+        computeSegments(
+          ContentType.file,
+          file.toString(),
+          sourceMap,
+          parameters,
+        ),
+      [file, sourceMap, parameters],
+    )[0]
+
     if (!isValidUrl(file)) {
       return (
         <div className='flex flex-row p-4 gap-2 bg-muted rounded-xl w-fit items-center'>
@@ -672,17 +679,6 @@ const ContentFile = memo(
     }
 
     const TextComponent = size === 'small' ? Text.H6 : Text.H5
-
-    const segment = useMemo(
-      () =>
-        computeSegments(
-          ContentType.file,
-          file.toString(),
-          sourceMap,
-          parameters,
-        ),
-      [file, sourceMap, parameters],
-    )[0]
 
     if (!segment || typeof segment === 'string') {
       return <FileComponent src={file.toString()} />

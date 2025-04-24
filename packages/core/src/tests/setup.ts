@@ -3,11 +3,11 @@
 import { beforeEach, afterAll } from 'vitest'
 
 import * as factories from './factories'
-import useTestDatabase from './useTestDatabase'
+import setupTestDatabase from './useTestDatabase'
 import { removeTestFolder } from './testDrive'
 
 // This do rollback stragegy for each test. Faster than truncate.
-useTestDatabase()
+setupTestDatabase()
 
 beforeEach((ctx) => {
   ctx.factories = factories

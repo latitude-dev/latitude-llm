@@ -2,7 +2,9 @@
   "name": "@latitude-data/eslint-config",
   "version": "0.0.0",
   "private": true,
-  "files": ["library.js"],
+  "files": [
+    "library.js"
+  ],
   "exports": {
     ".": {
       "import": "./library.js",
@@ -16,6 +18,7 @@
     "@vercel/style-guide": "^5.2.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-config-turbo": "^2.0.6",
-    "eslint-plugin-only-warn": "^1.1.0"
+    "eslint-plugin-only-warn": "^1.1.0",
+    "eslint-plugin-react-hooks": "^5.2.0"
   }
 }

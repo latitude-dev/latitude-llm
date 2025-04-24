@@ -65,6 +65,25 @@ export function ParametersSelection({
     )
   }, [selectedDataset, metadata])
 
+  const evaluationOptions = useMemo(
+    () =>
+      labels.map((label) => ({
+        ...label,
+        value: label.label,
+      })),
+    [labels],
+  )
+
+  const handleEvaluationLabelChange = useCallback(
+    (evaluationUuid: string) => (newLabel: string) => {
+      setDatasetLabels((prev) => ({
+        ...prev,
+        [evaluationUuid]: newLabel,
+      }))
+    },
+    [setDatasetLabels],
+  )
+
   if (!selectedDataset) {
     return <Text.H6 color='foregroundMuted'>You must select a dataset</Text.H6>
   }
@@ -102,25 +121,7 @@ export function ParametersSelection({
           evaluation.metric === LlmEvaluationMetric.Custom
         if (!canContainLabel) return null
 
-        const options = useMemo(
-          () =>
-            labels.map((label) => ({
-              ...label,
-              value: label.label,
-            })),
-          [labels],
-        )
-
         const value = datasetLabels[evaluation.uuid]
-        const setValue = useCallback(
-          (newLabel: string) => {
-            setDatasetLabels((prev) => ({
-              ...prev,
-              [evaluation.uuid]: newLabel,
-            }))
-          },
-          [evaluation.uuid, setDatasetLabels],
-        )
 
         return (
           <Select
@@ -140,9 +141,9 @@ export function ParametersSelection({
                 </Badge>
               </div>
             }
-            options={options}
+            options={evaluationOptions}
             value={value}
-            onChange={setValue}
+            onChange={handleEvaluationLabelChange(evaluation.uuid)}
             placeholder='Select column'
             disabled={labels.length === 0}
           />

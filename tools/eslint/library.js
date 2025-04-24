@@ -9,6 +9,7 @@ module.exports = {
   extends: [
     'eslint:recommended',
     'prettier',
+    'plugin:react-hooks/recommended-legacy',
     ...(unwrappedTurbo.extends || []),
   ],
   plugins: ['@typescript-eslint/eslint-plugin'],

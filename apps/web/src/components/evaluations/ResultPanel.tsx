@@ -258,7 +258,7 @@ function ResultPanelMetadata<
   )
 }
 
-function evaluatedDocumentLogLink({
+function EvaluatedDocumentLogLink({
   commit,
   documentLog,
 }: {
@@ -373,7 +373,7 @@ export function ResultPanel<
               />
               <div className='w-full flex justify-center pt-4'>
                 <Link
-                  href={evaluatedDocumentLogLink({
+                  href={EvaluatedDocumentLogLink({
                     commit: commit,
                     documentLog: evaluatedDocumentLog,
                   })}

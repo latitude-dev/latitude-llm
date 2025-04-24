@@ -58,7 +58,7 @@ function tryToParseJSON(value: string) {
   }
 }
 
-function renderEditCell(props: RenderEditCellProps<ClientDatasetRow, unknown>) {
+function RenderEditCell(props: RenderEditCellProps<ClientDatasetRow, unknown>) {
   const row = props.row
   const column = props.column
   const onRowChange = props.onRowChange
@@ -151,7 +151,7 @@ export default function DataGrid({
           'group/cell-header',
           backgroundCssClasses[col.role],
         ),
-        renderEditCell,
+        renderEditCell: RenderEditCell,
         renderHeaderCell: renderHeaderCell({
           column: col,
           setEditColumnKey,

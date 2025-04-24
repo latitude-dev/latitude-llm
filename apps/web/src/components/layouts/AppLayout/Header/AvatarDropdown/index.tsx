@@ -13,12 +13,12 @@ export default function AvatarDropdown({
 }: {
   currentUser: SessionUser | undefined
 }) {
-  const info = currentUser ? getUserInfoFromSession(currentUser) : null
-  if (!info) return null
-
   const onClickLogout = useCallback(async () => {
     await logoutAction()
   }, [])
+
+  const info = currentUser ? getUserInfoFromSession(currentUser) : null
+  if (!info) return null
 
   let options: MenuOption[] = [
     {
