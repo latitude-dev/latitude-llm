@@ -11,9 +11,9 @@ export function useToolContentMap(
   messages: Message[],
   toolContentMap?: Record<string, ToolContent>,
 ) {
-  if (toolContentMap) return toolContentMap
-
   return useMemo(() => {
+    if (toolContentMap) return toolContentMap
+
     return messages.reduce((acc: Record<string, ToolContent>, message) => {
       if (message.role !== MessageRole.tool) return acc
       return Object.assign(
@@ -25,5 +25,5 @@ export function useToolContentMap(
         ),
       )
     }, {})
-  }, [messages])
+  }, [messages, toolContentMap])
 }

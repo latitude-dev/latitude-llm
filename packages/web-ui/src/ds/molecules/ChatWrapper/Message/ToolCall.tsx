@@ -37,12 +37,20 @@ export function ToolCallContent({
   toolContentMap?: Record<string, ToolContent>
 }) {
   const toolResponse = toolContentMap?.[value.toolCallId]
+  const args = toolArgs(value)
+
+  const resultFooter = useMemo(
+    () => (
+      <ToolResultFooter>
+        {toolResponse && <ToolResultContent toolResponse={toolResponse} />}
+      </ToolResultFooter>
+    ),
+    [toolResponse],
+  )
 
   if (value.toolName === AGENT_RETURN_TOOL_NAME) {
     return <AgentToolCallContent value={value} />
   }
-
-  const args = toolArgs(value)
 
   if (value.toolName === LatitudeToolInternalName.RunCode) {
     return (
@@ -96,21 +104,12 @@ export function ToolCallContent({
       fgColor='warningForeground'
       info={value.toolCallId}
       infoColor='warningMutedForeground'
-      resultFooter={useMemo(
-        () => (
-          <ToolResultFooter>
-            {toolResponse && <ToolResultContent toolResponse={toolResponse} />}
-          </ToolResultFooter>
-        ),
-        [toolResponse],
-      )}
+      resultFooter={resultFooter}
       separatorColor={
         toolResponse?.isError ? 'destructiveMutedForeground' : undefined
       }
     >
-      <CodeBlock language='javascript'>
-        {useMemo(() => codeBlockValue, [codeBlockValue])}
-      </CodeBlock>
+      <CodeBlock language='javascript'>{codeBlockValue}</CodeBlock>
     </ContentCard>
   )
 }

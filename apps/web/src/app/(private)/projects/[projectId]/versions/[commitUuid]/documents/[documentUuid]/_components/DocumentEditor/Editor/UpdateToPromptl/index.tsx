@@ -149,9 +149,9 @@ export function UpdateToPromptLButton({
 }: {
   document: DocumentVersion
 }) {
-  if (document.promptlVersion !== 0) return null
-
   const [open, setOpen] = useState(false)
+
+  if (document.promptlVersion !== 0) return null
 
   return (
     <>

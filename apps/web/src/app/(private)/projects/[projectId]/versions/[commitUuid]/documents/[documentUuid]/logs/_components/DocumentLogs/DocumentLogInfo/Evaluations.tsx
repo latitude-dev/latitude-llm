@@ -44,7 +44,7 @@ function EvaluationResultItem({ result, evaluation }: ResultWithEvaluation) {
   return <ResultCellContent evaluation={evaluation} value={result.result} />
 }
 
-function evaluatedLogLinkV1({ result, evaluation }: ResultWithEvaluation) {
+function EvaluatedLogLinkV1({ result, evaluation }: ResultWithEvaluation) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
@@ -66,7 +66,7 @@ function evaluatedLogLinkV1({ result, evaluation }: ResultWithEvaluation) {
   )
 }
 
-function evaluatedLogLinkV2<
+function EvaluatedLogLinkV2<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 >({ result, evaluation, commit }: Props<T, M>) {
@@ -86,7 +86,7 @@ function evaluatedLogLinkV2<
   )
 }
 
-function evaluationEditorLinkV1({ result, evaluation }: ResultWithEvaluation) {
+function EvaluationEditorLinkV1({ result, evaluation }: ResultWithEvaluation) {
   const query = new URLSearchParams()
   if (result.evaluatedProviderLogId) {
     query.set('providerLogId', result.evaluatedProviderLogId.toString())
@@ -99,7 +99,7 @@ function evaluationEditorLinkV1({ result, evaluation }: ResultWithEvaluation) {
   )
 }
 
-function evaluationEditorLinkV2<
+function EvaluationEditorLinkV2<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 >({ evaluation, commit }: Props<T, M>) {
@@ -210,8 +210,8 @@ export function DocumentLogEvaluations({
             <Link
               href={
                 item.version === 'v2'
-                  ? evaluationEditorLinkV2({ ...item, commit })
-                  : evaluationEditorLinkV1(item)
+                  ? EvaluationEditorLinkV2({ ...item, commit })
+                  : EvaluationEditorLinkV1(item)
               }
               target='_blank'
             >
@@ -239,8 +239,8 @@ export function DocumentLogEvaluations({
             <Link
               href={
                 item.version === 'v2'
-                  ? evaluatedLogLinkV2({ ...item, commit })
-                  : evaluatedLogLinkV1(item)
+                  ? EvaluatedLogLinkV2({ ...item, commit })
+                  : EvaluatedLogLinkV1(item)
               }
               target='_blank'
             >

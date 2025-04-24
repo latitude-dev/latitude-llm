@@ -8,6 +8,22 @@ export function AgentToolCallContent({ value }: { value: ToolRequestContent }) {
     Object.keys(value.args).length === 1 &&
     Object.keys(value.args)[0] === 'response'
 
+  const content = useMemo(() => {
+    if (isDefaultSchema) {
+      return (
+        <CardTextContent
+          value={value.args['response'] as string}
+          color='primary'
+        />
+      )
+    }
+    return (
+      <CodeBlock language='json'>
+        {JSON.stringify(value.args, null, 2)}
+      </CodeBlock>
+    )
+  }, [value.args, isDefaultSchema])
+
   return (
     <ContentCard
       label='Agent response'
@@ -15,20 +31,7 @@ export function AgentToolCallContent({ value }: { value: ToolRequestContent }) {
       bgColor='bg-primary'
       fgColor='accent'
     >
-      {useMemo(
-        () =>
-          isDefaultSchema ? (
-            <CardTextContent
-              value={value.args['response'] as string}
-              color='primary'
-            />
-          ) : (
-            <CodeBlock language='json'>
-              {useMemo(() => JSON.stringify(value.args, null, 2), [value.args])}
-            </CodeBlock>
-          ),
-        [value.args],
-      )}
+      {content}
     </ContentCard>
   )
 }

@@ -28,7 +28,10 @@ import { getBuiltInToolCallResponses } from './step/toolExecution'
 import { JSONSchema7 } from 'json-schema'
 import { createMcpClientManager } from '../../services/integrations/McpClient/McpClientManager'
 
-const usePromise = <T>(): readonly [Promise<T>, (value: T) => void] => {
+const createPromiseWithResolver = <T>(): readonly [
+  Promise<T>,
+  (value: T) => void,
+] => {
   let resolveValue: (value: T) => void
 
   const promisedValue = new Promise<T>((res) => {
@@ -106,12 +109,13 @@ export class ChainStreamManager {
     if (this.controller) throw new Error('Chain already started')
     if (this.finished) throw new Error('Chain already finished')
 
-    const [messages, resolveMessages] = usePromise<Message[]>()
-    const [error, resolveError] = usePromise<
+    const [messages, resolveMessages] = createPromiseWithResolver<Message[]>()
+    const [error, resolveError] = createPromiseWithResolver<
       ChainError<RunErrorCodes> | undefined
     >()
-    const [toolCalls, resolveToolCalls] = usePromise<ToolCall[]>()
-    const [lastResponse, resolveLastResponse] = usePromise<
+    const [toolCalls, resolveToolCalls] =
+      createPromiseWithResolver<ToolCall[]>()
+    const [lastResponse, resolveLastResponse] = createPromiseWithResolver<
       ChainStepResponse<StreamType> | undefined
     >()
     this.resolveMessages = resolveMessages

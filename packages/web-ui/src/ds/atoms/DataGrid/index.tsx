@@ -33,7 +33,7 @@ const NoRowsFallback = ({ fallbackText }: { fallbackText: string }) => (
   <Text.H5>{fallbackText}</Text.H5>
 )
 
-const renderCheckbox = ({
+const RenderCheckbox = ({
   checked: isChecked,
   indeterminate,
   onChange,
@@ -94,7 +94,7 @@ export default function DataGrid<R, SR = unknown, K extends Key = Key>({
           renderers={{
             ...renderers,
             noRowsFallback: <NoRowsFallback fallbackText={fallbackText} />,
-            renderCheckbox,
+            renderCheckbox: RenderCheckbox,
           }}
           {...rest}
         />

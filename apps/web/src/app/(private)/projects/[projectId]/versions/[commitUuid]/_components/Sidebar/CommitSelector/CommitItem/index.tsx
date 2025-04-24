@@ -61,13 +61,11 @@ export function CommitItem({
   const { project } = useCurrentProject()
   const { commit: currentCommit } = useCurrentCommit()
   const selectedSegment = useSelectedLayoutSegment()
-
-  if (!commit) return null
-
-  const isHead = commit.id === headCommitId
-  const isDraft = !commit.mergedAt
-
+  const isHead = commit?.id === headCommitId
+  const isDraft = !commit?.mergedAt
   const commitPath = useMemo(() => {
+    if (!commit) return null
+
     const commitRoute = ROUTES.projects
       .detail({ id: project.id })
       .commits.detail({ uuid: isHead ? HEAD_COMMIT : commit.uuid })
@@ -83,7 +81,9 @@ export function CommitItem({
       documentRoute[selectedSegment as 'editor' | 'logs']?.root ??
       documentRoute.editor.root
     )
-  }, [project.id, commit.uuid, isHead, currentDocument, selectedSegment])
+  }, [project.id, commit?.uuid, isHead, currentDocument, selectedSegment])
+
+  if (!commit || !commitPath) return null
 
   return (
     <div

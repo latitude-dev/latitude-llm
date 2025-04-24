@@ -110,7 +110,7 @@ function MetadataInfo({
             />
             {evaluatedLog && (
               <div className='w-full flex justify-center pt-4'>
-                <Link href={evaluatedLogLink({ evaluatedLog })} target='_blank'>
+                <Link href={EvaluatedLogLink({ evaluatedLog })} target='_blank'>
                   <Button
                     variant='link'
                     iconProps={{
@@ -146,7 +146,7 @@ function MetadataInfo({
               {evaluatedLog && (
                 <div className='w-full flex justify-center pt-4'>
                   <Link
-                    href={evaluatedLogLink({ evaluatedLog })}
+                    href={EvaluatedLogLink({ evaluatedLog })}
                     target='_blank'
                   >
                     <Button
@@ -170,7 +170,7 @@ function MetadataInfo({
   }
 }
 
-function evaluatedLogLink({ evaluatedLog }: { evaluatedLog: ProviderLogDto }) {
+function EvaluatedLogLink({ evaluatedLog }: { evaluatedLog: ProviderLogDto }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
