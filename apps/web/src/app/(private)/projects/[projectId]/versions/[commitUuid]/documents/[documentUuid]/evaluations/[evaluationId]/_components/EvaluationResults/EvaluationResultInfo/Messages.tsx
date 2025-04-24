@@ -5,13 +5,13 @@ import {
   ProviderLogDto,
   SERIALIZED_DOCUMENT_LOG_FIELDS,
 } from '@latitude-data/core/browser'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
-import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 const EVALUATION_PARAMETERS = SERIALIZED_DOCUMENT_LOG_FIELDS
 
@@ -47,9 +47,11 @@ export function EvaluationResultMessages({
 
   if (!providerLog) {
     return (
-      <Text.H5 color='foregroundMuted' centered>
-        There are no messages generated for this log
-      </Text.H5>
+      <div className='w-full flex items-center justify-center'>
+        <Text.H5 color='foregroundMuted' centered>
+          There are no messages generated for this log
+        </Text.H5>
+      </div>
     )
   }
 

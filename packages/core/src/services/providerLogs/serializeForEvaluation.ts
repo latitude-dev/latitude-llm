@@ -1,5 +1,6 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
 
+import { objectToString } from '@latitude-data/constants'
 import {
   Message,
   ProviderLog,
@@ -8,7 +9,6 @@ import {
   SerializedProviderLog,
 } from '../../browser'
 import { buildProviderLogResponse } from './buildResponse'
-import { objectToString } from '@latitude-data/constants'
 
 export function formatConversation(
   providerLog: ProviderLogDto | ProviderLog,
@@ -114,7 +114,8 @@ export function serializeForEvaluation(
     toolCalls: providerLog.toolCalls,
     response,
     config: providerLog.config,
-    duration: providerLog.duration,
-    cost: providerLog.costInMillicents / 1000,
+    cost: (providerLog.costInMillicents ?? 0) / 1000,
+    tokens: providerLog.tokens ?? 0,
+    duration: (providerLog.duration ?? 0) / 1000,
   }
 }

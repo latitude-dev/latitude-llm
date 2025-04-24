@@ -30,18 +30,19 @@ For context, here is the full conversation:
 {{ conversation }}
 \`\`\`
 
-{{if toolCalls }}
+{{ if toolCalls?.length }}
   Also, here are the tool calls that the assistant requested:
   \`\`\`
-  {{toolCalls}}
+  {{ toolCalls }}
   \`\`\`
-{{endif}}
+{{ else }}
+  Also, the assistant did not request any tool calls.
+{{ endif }}
 
-{{if cost || duration }}
-  Also, here is some additional metadata about the conversation. It may or may not be relevant for the evaluation.
-  {{if cost }} - Cost: {{ cost }} cents. {{endif}}
-  {{if duration }} - Duration: {{ duration }} milliseconds. {{endif}}
-{{endif}}
+Finally, here is some additional metadata about the conversation. It may or may not be relevant for the evaluation.
+- Cost: {{ cost }} cents.
+- Tokens: {{ tokens }} tokens.
+- Duration: {{ duration }} seconds.
 
 ${provider.provider === Providers.Anthropic ? '</user>' : ''}
 `.trim()

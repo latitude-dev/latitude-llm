@@ -70,7 +70,7 @@ schema:
   - {{ toolCalls }} (array of objects): All the tool calls of the conversation
   - {{ cost }} (number): The cost, in cents, of the evaluated log
   - {{ tokens }} (number): The tokens of the evaluated log
-  - {{ duration }} (number): The duration, in milliseconds, of the evaluated log
+  - {{ duration }} (number): The duration, in seconds, of the evaluated log
 
   More info on messages and tool calls format in: https://docs.latitude.so/promptl/syntax/messages
 

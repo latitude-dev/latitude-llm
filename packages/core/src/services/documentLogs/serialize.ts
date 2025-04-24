@@ -3,8 +3,8 @@ import { database } from '../../client'
 import { ProviderLogsRepository } from '../../repositories'
 import { serializeForEvaluation as serializeProviderLog } from '../providerLogs'
 import { NotFoundError } from './../../lib/errors'
-import { PromisedResult } from './../../lib/Transaction'
 import { Result } from './../../lib/Result'
+import { PromisedResult } from './../../lib/Transaction'
 
 export async function serialize(
   {
@@ -27,16 +27,21 @@ export async function serialize(
     )
   }
 
-  const totalCostInMillicents = providerLogs.reduce(
-    (acc, providerLog) => acc + providerLog.costInMillicents,
-    0,
-  )
-  const lastProviderLog = providerLogs.pop()!
+  let cost = 0
+  let tokens = 0
+  let duration = 0
+  for (const providerLog of providerLogs) {
+    cost += providerLog.costInMillicents ?? 0
+    tokens += providerLog.tokens ?? 0
+    duration += providerLog.duration ?? 0
+  }
+
   return Result.ok({
-    ...serializeProviderLog(lastProviderLog),
+    ...serializeProviderLog(providerLogs.pop()!),
     parameters: documentLog.parameters,
     prompt: documentLog.resolvedContent,
-    duration: documentLog.duration,
-    cost: totalCostInMillicents / 1000,
+    cost: cost / 1000,
+    tokens: tokens,
+    duration: duration / 1000,
   })
 }

@@ -192,8 +192,9 @@ export type SerializedProviderLog = {
   toolCalls: ToolCall[]
   response: string | null
   config: object | null
-  duration: number | null
   cost: number
+  tokens: number
+  duration: number
 }
 
 export type SerializedDocumentLog = SerializedProviderLog & {
@@ -207,6 +208,7 @@ export const SERIALIZED_DOCUMENT_LOG_FIELDS = [
   'response',
   'config',
   'duration',
+  'tokens',
   'cost',
   'prompt',
   'parameters',

@@ -188,9 +188,11 @@ export function DocumentLogEvaluations({
 }) {
   if (!evaluationResults.length) {
     return (
-      <Text.H5 color='foregroundMuted' centered>
-        There are no evaluation results for this log
-      </Text.H5>
+      <div className='w-full flex items-center justify-center'>
+        <Text.H5 color='foregroundMuted' centered>
+          There are no evaluation results for this log
+        </Text.H5>
+      </div>
     )
   }
 

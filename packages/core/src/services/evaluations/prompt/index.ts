@@ -109,10 +109,11 @@ Now, evaluate the assistant response for the following conversation, based on yo
   {{toolCalls}}
 {{endif}}
 
-{{if cost || duration }}
+{{if cost || tokens || duration }}
   Also, here is some aditional metadata about the LLM response. It may or may not be relevant to your objective.
   {{if cost }} - Cost: {{ cost }} cents. {{endif}}
-  {{if duration }} - Duration: {{ duration }} milliseconds. {{endif}}
+  {{if tokens }} - Tokens: {{ tokens }}. {{endif}}
+  {{if duration }} - Duration: {{ duration }} seconds. {{endif}}
 {{endif}}
 
 You must respond with a JSON object with the following properties:

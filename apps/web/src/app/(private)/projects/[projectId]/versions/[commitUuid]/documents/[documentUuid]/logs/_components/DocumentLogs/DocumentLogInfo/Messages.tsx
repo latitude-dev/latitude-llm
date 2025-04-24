@@ -2,13 +2,13 @@ import { useMemo } from 'react'
 
 import { Message } from '@latitude-data/compiler'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
-import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export function DocumentLogMessages({
   documentLog,
@@ -32,9 +32,11 @@ export function DocumentLogMessages({
 
   if (!messages.length) {
     return (
-      <Text.H5 color='foregroundMuted' centered>
-        There are no messages generated for this log
-      </Text.H5>
+      <div className='w-full flex items-center justify-center'>
+        <Text.H5 color='foregroundMuted' centered>
+          There are no messages generated for this log
+        </Text.H5>
+      </div>
     )
   }
 

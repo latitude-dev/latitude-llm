@@ -8,10 +8,11 @@ import {
   ToolMessage,
 } from '@latitude-data/compiler'
 
-import { Message } from '..'
 import type { AgentToolsMap } from '@latitude-data/constants'
-import { useToolContentMap } from '../../../../lib/hooks/useToolContentMap'
 import { memo } from 'react'
+import { Message } from '..'
+import { useToolContentMap } from '../../../../lib/hooks/useToolContentMap'
+import { Skeleton } from '../../../atoms/Skeleton'
 
 /**
  * Checks if the tool message has an existing tool request with the same ID.
@@ -74,3 +75,23 @@ export const MessageList = memo(
     )
   },
 )
+
+export function MessageListSkeleton({ messages = 3 }: { messages?: number }) {
+  return (
+    <div className='w-full flex flex-col gap-4'>
+      {Array.from({ length: messages }).map((_, index) => (
+        <div key={index} className='flex flex-col gap-1 w-full items-start'>
+          <div>
+            <Skeleton className='w-14 h-4' />
+          </div>
+          <div className='flex w-full flex-row items-stretch gap-4 pl-4'>
+            <div className='flex-shrink-0 bg-muted w-1 rounded-lg' />
+            <div className='flex flex-grow flex-col gap-1 overflow-x-auto py-1'>
+              <Skeleton className='w-full h-20' />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
