@@ -53,6 +53,16 @@ export type ExperimentMetadata = {
   count: number // Total number of to generate logs in the experiment
 }
 
+export type ExperimentEvaluationScore = {
+  count: number
+  totalScore: number
+  totalNormalizedScore: number
+}
+
+export type ExperimentScores = {
+  [evaluationUuid: string]: ExperimentEvaluationScore
+}
+
 export * from './models'
 export * from './ai'
 export * from './tools'

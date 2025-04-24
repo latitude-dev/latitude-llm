@@ -32,6 +32,7 @@ import { LinkableTablePaginationFooter } from '$/components/TablePaginationFoote
 import { DocumentRoutes, ROUTES } from '$/services/routes'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { DatasetCell } from './DatasetCell'
+import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 
 type ExperimentStatus = {
   isPending: boolean
@@ -49,7 +50,13 @@ const countLabel = (count: number): string => {
   return `${count} experiments`
 }
 
-export function ExperimentsTable() {
+export function ExperimentsTable({
+  selectedExperiments,
+  onSelectExperiment,
+}: {
+  selectedExperiments: string[]
+  onSelectExperiment: (experimentUuid: string) => void
+}) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
@@ -99,6 +106,9 @@ export function ExperimentsTable() {
               count: count ?? 0,
               page: Number(page),
               pageSize: Number(pageSize),
+              queryParams: selectedExperiments.length
+                ? `selected=${selectedExperiments.join(',')}`
+                : undefined,
             })}
           />
         )
@@ -106,6 +116,7 @@ export function ExperimentsTable() {
     >
       <TableHeader>
         <TableRow>
+          <TableHead />
           <TableHead>Name</TableHead>
           <TableHead>Duration</TableHead>
           <TableHead tooltipMessage='Average score across all evaluation results. Each result is normalized to a 0-100 scale and averaged together. Any error is evaluated as 0.'>
@@ -133,6 +144,16 @@ export function ExperimentsTable() {
                 'animate-pulse': isRunning,
               })}
             >
+              <TableCell
+                preventDefault
+                align='left'
+                onClick={() => onSelectExperiment(experiment.uuid)}
+              >
+                <Checkbox
+                  fullWidth={false}
+                  checked={selectedExperiments.includes(experiment.uuid)}
+                />
+              </TableCell>
               <TableCell>
                 <div className='flex items-center gap-2'>
                   {isPending && <Icon name='clock' color='foregroundMuted' />}

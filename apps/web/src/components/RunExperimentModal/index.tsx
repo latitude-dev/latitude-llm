@@ -5,6 +5,7 @@ import {
   Commit,
   DocumentVersion,
   EvaluationV2,
+  ExperimentDto,
   Project,
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -20,6 +21,7 @@ export function RunExperimentModal({
   isOpen,
   setOpen,
   initialEvaluation,
+  onCreate: onCreateCb,
 }: {
   project: Project
   commit: Commit
@@ -27,6 +29,7 @@ export function RunExperimentModal({
   isOpen: boolean
   setOpen: (open: boolean) => void
   initialEvaluation?: EvaluationV2
+  onCreate?: (experiment: ExperimentDto) => void
 }) {
   const { create, isCreating } = useExperiments(
     {
@@ -34,7 +37,10 @@ export function RunExperimentModal({
       documentUuid: document.documentUuid,
     },
     {
-      onCreate: () => setOpen(false),
+      onCreate: (experiment) => {
+        setOpen(false)
+        onCreateCb?.(experiment)
+      },
     },
   )
   const formPayload = useExperimentFormPayload({
