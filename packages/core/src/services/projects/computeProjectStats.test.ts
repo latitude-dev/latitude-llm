@@ -7,19 +7,16 @@ import {
   ProviderApiKey,
   User,
 } from '../../browser'
-import { database } from '../../client'
+import * as cacheModule from '../../cache'
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
   EvaluationType,
-  EvaluationV2,
   LlmEvaluationMetric,
   Providers,
 } from '../../constants'
-import { evaluationVersions } from '../../schema'
 import * as factories from '../../tests/factories'
 import { computeProjectStats } from './computeProjectStats'
-import * as cacheModule from '../../cache'
 
 // Mock the cache module
 vi.mock('../../cache', () => ({
@@ -174,32 +171,23 @@ describe('computeProjectStats', () => {
       ],
     })
 
-    // TODO: Use factory when LLM evaluations V2 are implemented
-    const evaluationV2 = (await database
-      .insert(evaluationVersions)
-      .values({
-        workspaceId: workspace.id,
-        commitId: commit.id,
-        documentUuid: document.documentUuid,
-        name: 'Evaluation V2',
-        description: 'A V2 LLM evaluation',
-        type: EvaluationType.Llm,
-        metric: LlmEvaluationMetric.Binary,
-        configuration: {
-          reverseScale: false,
-          provider: 'openai',
-          model: 'gpt-4',
-          criteria: 'Evaluate the response',
-          passDescription: 'Pass',
-          failDescription: 'Fail',
-        },
-      })
-      .returning()
-      .then((r) => ({
-        ...r[0]!,
-        uuid: r[0]!.evaluationUuid,
-        versionId: r[0]!.id,
-      }))) as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
+    const evaluationV2 = await factories.createEvaluationV2({
+      document: document,
+      commit: commit,
+      name: 'Evaluation V2',
+      description: 'A V2 LLM evaluation',
+      type: EvaluationType.Llm,
+      metric: LlmEvaluationMetric.Binary,
+      configuration: {
+        reverseScale: false,
+        provider: 'openai',
+        model: 'gpt-4',
+        criteria: 'Evaluate the response',
+        passDescription: 'Pass',
+        failDescription: 'Fail',
+      },
+      workspace: workspace,
+    })
 
     const evaluationLogV2 = await factories.createProviderLog({
       workspace,
