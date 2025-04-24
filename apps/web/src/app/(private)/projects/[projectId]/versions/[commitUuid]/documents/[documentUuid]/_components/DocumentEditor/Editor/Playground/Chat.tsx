@@ -155,6 +155,27 @@ export default function Chat({
   // Get tool content map
   const toolContentMap = useToolContentMap(messages)
 
+  // Memoize all values that were previously in conditional hooks
+  const promptMessages = useMemo(
+    () => messages.slice(0, chainLength - 1) ?? [],
+    [messages, chainLength],
+  )
+
+  const parameterKeys = useMemo(
+    () => Object.keys(parameters ?? {}),
+    [parameters],
+  )
+
+  const chainResultMessages = useMemo(
+    () => messages.slice(chainLength - 1, chainLength) ?? [],
+    [messages, chainLength],
+  )
+
+  const chatMessages = useMemo(
+    () => messages.slice(chainLength),
+    [messages, chainLength],
+  )
+
   // Start chat on first render
   useEffect(() => {
     if (!runOnce.current) {
@@ -181,14 +202,8 @@ export default function Chat({
       >
         {/* Prompt messages */}
         <MessageList
-          messages={useMemo(
-            () => messages.slice(0, chainLength - 1) ?? [],
-            [messages, chainLength],
-          )}
-          parameters={useMemo(
-            () => Object.keys(parameters ?? {}),
-            [parameters],
-          )}
+          messages={promptMessages}
+          parameters={parameterKeys}
           collapseParameters={!expandParameters}
           agentToolsMap={agentToolsMap}
           toolContentMap={toolContentMap}
@@ -198,10 +213,7 @@ export default function Chat({
         {(messages.length ?? 0) >= chainLength && (
           <>
             <MessageList
-              messages={useMemo(
-                () => messages.slice(chainLength - 1, chainLength) ?? [],
-                [messages, chainLength],
-              )}
+              messages={chainResultMessages}
               toolContentMap={toolContentMap}
             />
             {time && <Timer timeMs={time} />}
@@ -213,10 +225,7 @@ export default function Chat({
           <>
             <Text.H6M>Chat</Text.H6M>
             <MessageList
-              messages={useMemo(
-                () => messages.slice(chainLength),
-                [messages, chainLength],
-              )}
+              messages={chatMessages}
               toolContentMap={toolContentMap}
             />
           </>
