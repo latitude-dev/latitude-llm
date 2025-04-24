@@ -4,18 +4,32 @@ import useModelOptions from '$/hooks/useModelOptions'
 import { formatCount } from '$/lib/formatCount'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useProviders from '$/stores/providerApiKeys'
+import { useProviderLog } from '$/stores/providerLogs'
 import {
+  buildConversation,
+  EvaluationResultV2,
   EvaluationType,
+  LLM_EVALUATION_PROMPT_PARAMETERS,
   LlmEvaluationMetric,
   LlmEvaluationSpecification,
   Providers,
-} from '@latitude-data/constants'
+} from '@latitude-data/core/browser'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { TableCell, TableHead } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import {
+  AppLocalStorage,
+  useLocalStorage,
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import {
+  MessageList,
+  MessageListSkeleton,
+} from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { useMemo } from 'react'
 import {
   ChartConfigurationArgs,
@@ -247,7 +261,10 @@ function resultPanelTabs<M extends LlmEvaluationMetric>({
     throw new Error('Invalid evaluation metric')
   }
 
-  return [...(metricSpecification.resultPanelTabs ?? [])]
+  return [
+    { label: 'Messages', value: 'messages' },
+    ...(metricSpecification.resultPanelTabs ?? []),
+  ]
 }
 
 function ResultPanelMetadata<M extends LlmEvaluationMetric>({
@@ -298,6 +315,8 @@ function ResultPanelMetadata<M extends LlmEvaluationMetric>({
 
 function ResultPanelContent<M extends LlmEvaluationMetric>({
   metric,
+  result,
+  selectedTab,
   ...rest
 }: ResultPanelProps<EvaluationType.Llm, M> & {
   metric: M
@@ -307,11 +326,100 @@ function ResultPanelContent<M extends LlmEvaluationMetric>({
 
   return (
     <>
+      {selectedTab === 'messages' && <ResultPanelMessages result={result} />}
       {metricSpecification.ResultPanelContent ? (
-        <metricSpecification.ResultPanelContent {...rest} />
+        <metricSpecification.ResultPanelContent
+          result={result}
+          selectedTab={selectedTab}
+          {...rest}
+        />
       ) : (
         <></>
       )}
+    </>
+  )
+}
+
+function ResultPanelMessages<M extends LlmEvaluationMetric>({
+  result,
+}: {
+  result: EvaluationResultV2<EvaluationType.Llm, M>
+}) {
+  const { data: providerLog, isLoading: isLoadingProviderLog } = useProviderLog(
+    result.metadata?.evaluationLogId,
+  )
+
+  const conversation = useMemo(() => {
+    if (!providerLog) return []
+    return buildConversation(providerLog)
+  }, [providerLog])
+
+  const sourceMapAvailable = useMemo(
+    () =>
+      conversation.some((message) => {
+        if (typeof message.content !== 'object') return false
+        return message.content.some((content) => '_promptlSourceMap' in content)
+      }),
+    [conversation],
+  )
+
+  const { value: expandParameters, setValue: setExpandParameters } =
+    useLocalStorage({
+      key: AppLocalStorage.expandParameters,
+      defaultValue: false,
+    })
+
+  if (result.error) {
+    return (
+      <div className='w-full flex items-center justify-center'>
+        <Text.H5 color='foregroundMuted' centered>
+          There are no logs for this evaluation result
+        </Text.H5>
+      </div>
+    )
+  }
+
+  if (isLoadingProviderLog) {
+    return (
+      <div className='w-full flex flex-col items-center justify-center gap-2'>
+        <div className='w-full flex items-center justify-between'>
+          <Text.H6M>Messages</Text.H6M>
+          <Skeleton className='w-20 h-4' />
+        </div>
+        <MessageListSkeleton messages={3} />
+      </div>
+    )
+  }
+
+  if (!conversation.length) {
+    return (
+      <div className='w-full flex items-center justify-center'>
+        <Text.H5 color='foregroundMuted' centered>
+          There are no messages generated for this evaluation log
+        </Text.H5>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className='flex flex-row items-center justify-between w-full sticky top-0 bg-background pb-2'>
+        <Text.H6M>Messages</Text.H6M>
+        {sourceMapAvailable && (
+          <div className='flex flex-row gap-2 items-center'>
+            <Text.H6M>Expand parameters</Text.H6M>
+            <SwitchToggle
+              checked={expandParameters}
+              onCheckedChange={setExpandParameters}
+            />
+          </div>
+        )}
+      </div>
+      <MessageList
+        messages={conversation}
+        parameters={LLM_EVALUATION_PROMPT_PARAMETERS}
+        collapseParameters={!expandParameters}
+      />
     </>
   )
 }

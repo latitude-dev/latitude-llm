@@ -18,23 +18,15 @@ import {
 } from '@latitude-data/constants'
 import {
   Commit,
-  DatasetRow,
   Dataset,
+  DatasetRow,
   DocumentLog,
-  ProviderLogDto,
-  buildConversation,
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
@@ -266,64 +258,6 @@ function ResultPanelMetadata<
   )
 }
 
-function ResultPanelMessages({
-  providerLog,
-  documentLog,
-}: {
-  providerLog: ProviderLogDto
-  documentLog: DocumentLog
-}) {
-  const conversation = useMemo(
-    () => buildConversation(providerLog),
-    [providerLog],
-  )
-
-  const sourceMapAvailable = useMemo(
-    () =>
-      conversation.some((message) => {
-        if (typeof message.content !== 'object') return false
-        return message.content.some((content) => '_promptlSourceMap' in content)
-      }),
-    [conversation],
-  )
-
-  const { value: expandParameters, setValue: setExpandParameters } =
-    useLocalStorage({
-      key: AppLocalStorage.expandParameters,
-      defaultValue: false,
-    })
-
-  if (!conversation.length) {
-    return (
-      <Text.H5 color='foregroundMuted' centered>
-        There are no messages generated for this evaluated log
-      </Text.H5>
-    )
-  }
-
-  return (
-    <>
-      <div className='flex flex-row items-center justify-between w-full sticky top-0 bg-background pb-2'>
-        <Text.H6M>Messages</Text.H6M>
-        {sourceMapAvailable && (
-          <div className='flex flex-row gap-2 items-center'>
-            <Text.H6M>Expand parameters</Text.H6M>
-            <SwitchToggle
-              checked={expandParameters}
-              onCheckedChange={setExpandParameters}
-            />
-          </div>
-        )}
-      </div>
-      <MessageList
-        messages={conversation}
-        parameters={Object.keys(documentLog.parameters)}
-        collapseParameters={!expandParameters}
-      />
-    </>
-  )
-}
-
 function evaluatedDocumentLogLink({
   commit,
   documentLog,
@@ -393,17 +327,16 @@ export function ResultPanel<
     isLoading: isLoadingEvaluatedDocumentLog,
   } = useDocumentLog({ documentLogUuid: evaluatedProviderLog.documentLogUuid })
 
+  const isLoading = isLoadingEvaluatedDocumentLog || !evaluatedDocumentLog
+
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) return null
-
-  const isLoading = isLoadingEvaluatedDocumentLog || !evaluatedDocumentLog
 
   return (
     <div ref={ref} className='flex flex-col'>
       <MetadataInfoTabs
         tabs={[
           { label: 'Metadata', value: 'metadata' },
-          { label: 'Messages', value: 'messages' },
           ...typeSpecification.resultPanelTabs({ metric: evaluation.metric }),
         ]}
         className='w-full'
@@ -424,12 +357,6 @@ export function ResultPanel<
                   tableRef={tableRef}
                   selectedTab={selectedTab}
                   {...rest}
-                />
-              )}
-              {selectedTab === 'messages' && (
-                <ResultPanelMessages
-                  providerLog={evaluatedProviderLog}
-                  documentLog={evaluatedDocumentLog}
                 />
               )}
               <typeSpecification.ResultPanelContent

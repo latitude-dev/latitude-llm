@@ -206,3 +206,17 @@ export const LlmEvaluationSpecification = {
     [LlmEvaluationMetric.Custom]: LlmEvaluationCustomSpecification,
   },
 }
+
+export const LLM_EVALUATION_PROMPT_PARAMETERS = [
+  'actualOutput',
+  'expectedOutput',
+  'conversation',
+  'messages',
+  'toolCalls',
+  'cost',
+  'tokens',
+  'duration',
+  'prompt',
+  'config',
+  'parameters',
+]

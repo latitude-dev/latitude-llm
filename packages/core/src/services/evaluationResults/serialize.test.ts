@@ -59,8 +59,9 @@ describe('serialize', () => {
         ...serializedDocumentProviderLog,
         parameters: documentLog.parameters,
         prompt: documentLog.resolvedContent,
-        duration: documentLog.duration,
-        cost: documentProviderLogInput.costInMillicents / 1000,
+        cost: (documentProviderLogInput.costInMillicents ?? 0) / 1000,
+        tokens: documentProviderLogInput.tokens ?? 0,
+        duration: (documentProviderLogInput.duration ?? 0) / 1000,
       }
     })
 
