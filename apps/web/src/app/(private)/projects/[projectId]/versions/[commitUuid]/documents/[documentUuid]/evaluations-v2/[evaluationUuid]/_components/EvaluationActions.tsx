@@ -1,6 +1,9 @@
+import {
+  EVALUATION_SPECIFICATIONS,
+  getEvaluationMetricSpecification,
+} from '$/components/evaluations'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
-import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
@@ -16,6 +19,8 @@ import {
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
+  LlmEvaluationMetric,
+  LlmEvaluationCustomSpecification,
   Project,
 } from '@latitude-data/core/browser'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
@@ -28,6 +33,7 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
 import CreateBatchEvaluationModal from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal'
+import { useToggleModal } from '$/hooks/useToogleModal'
 
 export function EvaluationActions<
   T extends EvaluationType = EvaluationType,
@@ -42,10 +48,10 @@ export function EvaluationActions<
   const metricSpecification = typeSpecification.metrics[evaluation.metric]
 
   const {
-    createEvaluation,
     updateEvaluation,
-    isCreatingEvaluation,
     isUpdatingEvaluation,
+    cloneEvaluation,
+    isCloningEvaluation,
   } = useEvaluationsV2({ project, commit, document })
 
   return (
@@ -55,9 +61,11 @@ export function EvaluationActions<
           project={project}
           commit={commit}
           document={document}
-          evaluation={evaluation}
-          createEvaluation={createEvaluation}
-          isCreatingEvaluation={isCreatingEvaluation}
+          evaluation={
+            evaluation as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric>
+          }
+          cloneEvaluation={cloneEvaluation}
+          isCloningEvaluation={isCloningEvaluation}
         />
       )}
       <EditEvaluation
@@ -80,52 +88,69 @@ export function EvaluationActions<
   )
 }
 
-function EditPrompt<
-  T extends EvaluationType = EvaluationType,
-  M extends EvaluationMetric<T> = EvaluationMetric<T>,
->({
+function EditPrompt<M extends LlmEvaluationMetric>({
   project,
   commit,
   document,
   evaluation,
-  createEvaluation,
-  isCreatingEvaluation,
+  cloneEvaluation,
+  isCloningEvaluation,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
-  evaluation: EvaluationV2<T, M>
-  createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
-  isCreatingEvaluation: boolean
+  evaluation: EvaluationV2<EvaluationType.Llm, M>
+  cloneEvaluation: ReturnType<typeof useEvaluationsV2>['cloneEvaluation']
+  isCloningEvaluation: boolean
 }) {
   const navigate = useNavigate()
+  const cloneModal = useToggleModal()
 
-  // TODO(evalsv2): Clone eval or go to prompt editor if its a custom llm eval
-
-  const [openCloneModal, setOpenCloneModal] = useState(false)
-
-  const onClone = useCallback(async () => {
-    if (isCreatingEvaluation) return
-    const [result, errors] = await createEvaluation({
-      settings: evaluation,
-      options: evaluation,
-    })
-    if (errors) return
-
-    setOpenCloneModal(false)
-
-    navigate.push(
+  const baseEvaluationRoute = useCallback(
+    ({ evaluationUuid }: { evaluationUuid: string }) =>
       ROUTES.projects
         .detail({ id: project.id })
         .commits.detail({ uuid: commit.uuid })
         .documents.detail({ uuid: document.documentUuid })
-        .evaluationsV2.detail({ uuid: result.evaluation.uuid }).root,
+        .evaluationsV2.detail({ uuid: evaluationUuid }),
+    [project.id, commit.uuid, document.documentUuid],
+  )
+
+  const onClickEditPrompt = useCallback(() => {
+    const isMetric = evaluation.metric === LlmEvaluationMetric.Custom
+    if (!isMetric) {
+      return cloneModal.onOpen()
+    }
+
+    navigate.push(
+      baseEvaluationRoute({ evaluationUuid: evaluation.uuid }).editor.root,
     )
   }, [
-    isCreatingEvaluation,
-    createEvaluation,
+    evaluation.metric,
+    baseEvaluationRoute,
+    cloneModal.onOpen,
+    navigate,
+    evaluation.uuid,
+  ])
+
+  const onClone = useCallback(async () => {
+    if (isCloningEvaluation) return
+    const [result, errors] = await cloneEvaluation({
+      evaluationUuid: evaluation.uuid,
+    })
+    if (errors) return
+
+    cloneModal.onClose()
+
+    const newEvaluationUrl = baseEvaluationRoute({
+      evaluationUuid: result.evaluation.uuid,
+    }).editor.root
+    navigate.push(newEvaluationUrl)
+  }, [
+    isCloningEvaluation,
+    cloneEvaluation,
     evaluation,
-    setOpenCloneModal,
+    cloneModal.onClose,
     project,
     commit,
     document,
@@ -144,29 +169,27 @@ function EditPrompt<
           heightClass: 'h-4',
           placement: 'right',
         }}
-        // TODO(evalsv2): Clone eval or go to prompt editor if its a custom llm eval
-        // onClick={() => setOpenCloneModal(true)}
-        disabled={isCreatingEvaluation}
+        onClick={onClickEditPrompt}
+        disabled={isCloningEvaluation}
       >
         Edit prompt
       </TableWithHeader.Button>
       <ConfirmModal
         dismissible
-        open={openCloneModal}
+        open={cloneModal.open}
         title={`Clone ${evaluation.name}`}
-        description='TODO'
-        onOpenChange={setOpenCloneModal}
+        onOpenChange={cloneModal.onOpenChange}
         onConfirm={onClone}
+        onCancel={cloneModal.onClose}
         confirm={{
-          label: isCreatingEvaluation
+          label: isCloningEvaluation
             ? 'Cloning...'
             : `Clone ${evaluation.name}`,
-          disabled: isCreatingEvaluation || !!commit.mergedAt,
-          isConfirming: isCreatingEvaluation,
+          description: `The prompt of ${getEvaluationMetricSpecification(evaluation).name} evaluations cannot be edited. A new ${LlmEvaluationCustomSpecification.name} evaluation will be created.`,
+          disabled: isCloningEvaluation,
+          isConfirming: isCloningEvaluation,
         }}
-      >
-        TODO
-      </ConfirmModal>
+      />
     </>
   )
 }

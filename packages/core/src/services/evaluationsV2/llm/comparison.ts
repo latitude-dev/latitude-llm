@@ -16,16 +16,18 @@ import { Result } from '../../../lib/Result'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
 import { createRunError } from '../../runErrors/create'
 import {
+  EvaluationMetricCloneArgs,
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { promptTask, runPrompt } from './shared'
+import { promptTask, runPrompt, thresholdToCustomScale } from './shared'
 
 export const LlmEvaluationComparisonSpecification = {
   ...specification,
   validate: validate,
   run: run,
+  clone: clone,
 }
 
 async function validate(
@@ -241,4 +243,55 @@ async function run(
       error: { message: (error as Error).message, runErrorId: runError?.id },
     }
   }
+}
+
+async function clone(
+  {
+    evaluation,
+    providers,
+  }: EvaluationMetricCloneArgs<
+    EvaluationType.Llm,
+    LlmEvaluationMetric.Comparison
+  >,
+  _: Database = database,
+) {
+  const provider = providers?.get(evaluation.configuration.provider)
+  if (!provider) {
+    return Result.error(new BadRequestError('Provider is required'))
+  }
+
+  let minThreshold = undefined
+  if (evaluation.configuration.minThreshold !== undefined) {
+    minThreshold = thresholdToCustomScale(
+      evaluation.configuration.minThreshold,
+      0,
+      100,
+    )
+  }
+
+  let maxThreshold = undefined
+  if (evaluation.configuration.maxThreshold !== undefined) {
+    maxThreshold = thresholdToCustomScale(
+      evaluation.configuration.maxThreshold,
+      0,
+      100,
+    )
+  }
+
+  // Note: all settings are explicitly returned to ensure we don't
+  // carry dangling fields from the original evaluation object
+  return Result.ok({
+    name: evaluation.name,
+    description: evaluation.description,
+    type: EvaluationType.Llm,
+    metric: LlmEvaluationMetric.Custom,
+    configuration: {
+      reverseScale: evaluation.configuration.reverseScale,
+      provider: evaluation.configuration.provider,
+      model: evaluation.configuration.model,
+      prompt: buildPrompt({ ...evaluation.configuration, provider }),
+      minThreshold: minThreshold,
+      maxThreshold: maxThreshold,
+    },
+  })
 }

@@ -163,3 +163,12 @@ export async function runPrompt<
 
   return { response, stats, verdict }
 }
+
+export function thresholdToCustomScale(
+  threshold: number,
+  lower: number,
+  upper: number,
+) {
+  const map = ((threshold - lower) * 100) / (upper - lower)
+  return Math.min(Math.max(Number(map.toFixed(0)), 0), 100)
+}

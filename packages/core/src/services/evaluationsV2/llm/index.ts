@@ -14,6 +14,7 @@ import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { createRunError } from '../../runErrors/create'
 import {
   EvaluationMetricBackendSpecification,
+  EvaluationMetricCloneArgs,
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
 } from '../shared'
@@ -36,6 +37,7 @@ export const LlmEvaluationSpecification = {
   ...specification,
   validate: validate,
   run: run,
+  clone: clone,
   metrics: METRICS,
 }
 
@@ -134,4 +136,34 @@ async function run<M extends LlmEvaluationMetric>(
       error: { message: (error as Error).message, runErrorId: runError?.id },
     } as EvaluationResultValue<EvaluationType.Llm, M>
   }
+}
+
+async function clone<M extends LlmEvaluationMetric>(
+  {
+    metric,
+    workspace,
+    ...rest
+  }: EvaluationMetricCloneArgs<EvaluationType.Llm, M> & {
+    metric: M
+  },
+  db: Database = database,
+) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) {
+    return Result.error(new BadRequestError('Invalid evaluation metric'))
+  }
+
+  if (!metricSpecification.clone) {
+    return Result.error(
+      new BadRequestError('Cloning is not supported for this evaluation'),
+    )
+  }
+
+  const providers = await buildProvidersMap({ workspaceId: workspace.id })
+
+  const settings = await metricSpecification
+    .clone({ providers, workspace, ...rest }, db)
+    .then((r) => r.unwrap())
+
+  return Result.ok(settings)
 }

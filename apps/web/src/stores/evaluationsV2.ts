@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  cloneEvaluationV2Action,
   createEvaluationV2Action,
   deleteEvaluationV2Action,
   generateEvaluationV2Action,
@@ -215,6 +216,36 @@ export function useEvaluationsV2(
     [project, commit, document, executeGenerateEvaluationV2],
   )
 
+  const { execute: executeCloneEvaluationV2, isPending: isCloningEvaluation } =
+    useLatitudeAction(cloneEvaluationV2Action, {
+      onSuccess: async ({ data: { evaluation } }) => {
+        mutate((prev) => [evaluation, ...(prev ?? [])])
+        toast({
+          title: 'Evaluation cloned successfully',
+          description: `Evaluation ${evaluation.name} cloned successfully`,
+        })
+      },
+      onError: async (error) => {
+        if (error?.err?.name === 'ZodError') return
+        toast({
+          title: 'Error cloning evaluation',
+          description: error?.err?.message,
+          variant: 'destructive',
+        })
+      },
+    })
+  const cloneEvaluation = useCallback(
+    async ({ evaluationUuid }: { evaluationUuid: string }) => {
+      return await executeCloneEvaluationV2({
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+        evaluationUuid: evaluationUuid,
+      })
+    },
+    [project, commit, document, executeCloneEvaluationV2],
+  )
+
   const { execute: executeToggleLiveMode, isPending: isTogglingLiveMode } =
     useLatitudeAction(toggleLiveModeAction, {
       onSuccess: async ({ data: { evaluation } }) => {
@@ -267,6 +298,8 @@ export function useEvaluationsV2(
     isGeneratingEvaluation,
     toggleLiveMode,
     isTogglingLiveMode,
+    cloneEvaluation,
+    isCloningEvaluation,
     ...rest,
   }
 }
