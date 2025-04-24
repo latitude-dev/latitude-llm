@@ -193,6 +193,9 @@ export const ROUTES = {
                         const root = `${rootEvaluations}/${uuid}`
                         return {
                           root: root,
+                          [EvaluationRoutes.editor]: {
+                            root: `${root}/editor`,
+                          },
                         }
                       },
                     },

@@ -1,3 +1,4 @@
+import { useParams } from 'next/navigation'
 import {
   EvaluationType,
   LlmEvaluationCustomSpecification,
@@ -16,6 +17,12 @@ import {
   ConfigurationFormProps,
   ResultBadgeProps,
 } from '../index'
+import { ROUTES } from '$/services/routes'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 
 const specification = LlmEvaluationCustomSpecification
 export default {
@@ -33,6 +40,10 @@ function ConfigurationForm({
   errors,
   disabled,
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+  const { evaluationUuid } = useParams()
   useEffect(() => {
     if (mode !== 'create') return
     if (!configuration.provider || !configuration.model) return
@@ -114,9 +125,15 @@ You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the res
       >
         {mode === 'update' ? (
           <div className='w-full flex justify-center items-start p-0 !m-0 !-mt-2'>
-            {/* TODO(evalsv2): Go to prompt editor*/}
             <Link
-              href='#'
+              href={
+                ROUTES.projects
+                  .detail({ id: project.id })
+                  .commits.detail({ uuid: commit.uuid })
+                  .documents.detail({ uuid: document.documentUuid })
+                  .evaluationsV2.detail({ uuid: evaluationUuid as string })
+                  .editor.root
+              }
               className={
                 disabled ? 'pointer-events-none' : 'pointer-events-auto'
               }
