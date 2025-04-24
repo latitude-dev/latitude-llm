@@ -16,8 +16,6 @@
     <a href="https://docs.latitude.so" rel="dofollow"><strong>See documentation →</strong></a>
     <br />
     <br/>
-    <a href="https://github.com/latitude-dev/latitude-llm/issues/new">Report Bug</a>
-    ·
   <a href="https://join.slack.com/t/trylatitude/shared_invite/zt-2vlnnz3xi-mO1DArzBX0lTJJBATVhR7w">Join Our Slack</a>
     ·
     <a href="https://x.com/trylatitude">X</a>
