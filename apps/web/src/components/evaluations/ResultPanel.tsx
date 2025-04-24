@@ -12,15 +12,14 @@ import useDatasetRowCount from '$/stores/datasetRows/count'
 import useDatasetRowPosition from '$/stores/datasetRows/position'
 import useDocumentLog from '$/stores/documentLogWithMetadata'
 import {
-  EvaluationMetric,
-  EvaluationResultV2,
-  EvaluationType,
-} from '@latitude-data/constants'
-import {
   Commit,
   Dataset,
   DatasetRow,
   DocumentLog,
+  DocumentVersion,
+  EvaluationMetric,
+  EvaluationResultV2,
+  EvaluationType,
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -29,7 +28,10 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import {
+  IProjectContextType,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import { format } from 'date-fns'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
@@ -259,15 +261,16 @@ function ResultPanelMetadata<
 }
 
 function EvaluatedDocumentLogLink({
+  project,
   commit,
+  document,
   documentLog,
 }: {
+  project: IProjectContextType['project']
   commit: Commit
+  document: DocumentVersion
   documentLog: DocumentLog
 }) {
-  const { project } = useCurrentProject()
-  const { document } = useCurrentDocument()
-
   const query = new URLSearchParams()
   query.set('logUuid', documentLog.uuid)
 
@@ -322,6 +325,9 @@ export function ResultPanel<
     offset: { top: 12, bottom: 12 },
   })
 
+  const { project } = useCurrentProject()
+  const { document } = useCurrentDocument()
+
   const {
     data: evaluatedDocumentLog,
     isLoading: isLoadingEvaluatedDocumentLog,
@@ -374,7 +380,9 @@ export function ResultPanel<
               <div className='w-full flex justify-center pt-4'>
                 <Link
                   href={EvaluatedDocumentLogLink({
+                    project: project,
                     commit: commit,
+                    document: document,
                     documentLog: evaluatedDocumentLog,
                   })}
                   target='_blank'
