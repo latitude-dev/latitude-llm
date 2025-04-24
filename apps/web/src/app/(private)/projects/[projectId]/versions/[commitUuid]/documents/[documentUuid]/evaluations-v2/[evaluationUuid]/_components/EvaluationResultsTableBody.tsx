@@ -164,7 +164,9 @@ export function EvaluationResultsTableBody<
               <TableCell align='left'>
                 <Checkbox fullWidth={false} disabled={true} />
               </TableCell>
-              <Skeleton className='h-5 w-[90%] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' />
+              <TableCell>
+                <Skeleton className='h-5 w-[90%] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' />
+              </TableCell>
             </TableRow>
           ))}
         {!isLoading &&

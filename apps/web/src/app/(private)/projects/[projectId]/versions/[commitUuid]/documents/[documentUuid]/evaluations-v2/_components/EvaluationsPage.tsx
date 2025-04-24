@@ -67,6 +67,7 @@ export function EvaluationsPage({
         deleteEvaluation={deleteEvaluation}
         generateEvaluation={generateEvaluation}
         generatorEnabled={generatorEnabled}
+        isLoading={isLoading}
         isCreatingEvaluation={isCreatingEvaluation}
         isDeletingEvaluation={isDeletingEvaluation}
         isGeneratingEvaluation={isGeneratingEvaluation}
