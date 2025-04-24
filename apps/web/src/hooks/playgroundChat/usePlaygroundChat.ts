@@ -50,6 +50,9 @@ export function usePlaygroundChat({
   const [streamingResponse, setStreamingResponse] = useState<
     string | undefined
   >()
+  const [streamingReasoning, setStreamingReasoning] = useState<
+    string | undefined
+  >()
   const [isLoading, setIsLoading] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [unresponedToolCalls, setUnresponedToolCalls] = useState<ToolCall[]>([])
@@ -79,6 +82,7 @@ export function usePlaygroundChat({
       setError(undefined)
       const start = performance.now()
       let accumulatedTextDelta = ''
+      let accumulatedReasoningDelta = ''
       let documentLogUuid: string | undefined
 
       const reader = stream.getReader()
@@ -112,6 +116,10 @@ export function usePlaygroundChat({
               accumulatedTextDelta += data.textDelta
               setStreamingResponse(accumulatedTextDelta)
             }
+            if (data.type === 'reasoning') {
+              accumulatedReasoningDelta += data.textDelta
+              setStreamingReasoning(accumulatedReasoningDelta)
+            }
             continue
           }
 
@@ -121,10 +129,13 @@ export function usePlaygroundChat({
 
           if (data.type === ChainEventTypes.StepStarted) {
             accumulatedTextDelta = ''
+            accumulatedReasoningDelta = ''
           }
           if (data.type === ChainEventTypes.ProviderCompleted) {
             accumulatedTextDelta = ''
+            accumulatedReasoningDelta = ''
             setStreamingResponse(undefined)
+            setStreamingReasoning(undefined)
             setUsage(data.tokenUsage)
           }
 
@@ -159,6 +170,7 @@ export function usePlaygroundChat({
       }
 
       setStreamingResponse(undefined)
+      setStreamingReasoning(undefined)
       setIsLoading(false)
       onPromptRan?.(documentLogUuid)
     },
@@ -237,6 +249,7 @@ export function usePlaygroundChat({
     addMessages,
     setError,
     error,
+    streamingReasoning,
     streamingResponse,
     messages,
     wakingUpIntegration,

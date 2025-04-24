@@ -44,6 +44,7 @@ export const providerLogs = latitudeSchema.table(
     messages: json('messages').$type<Message[]>().notNull(),
     responseObject: jsonb('response_object').$type<unknown>(),
     responseText: text('response_text').$type<string>(),
+    responseReasoning: text('response_reasoning').$type<string>(),
     toolCalls: json('tool_calls').$type<ToolCall[]>().notNull().default([]),
     tokens: bigint('tokens', { mode: 'number' }),
     costInMillicents: integer('cost_in_millicents').notNull().default(0),

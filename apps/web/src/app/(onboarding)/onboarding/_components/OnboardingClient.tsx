@@ -137,18 +137,22 @@ export function OnboardingClient({
     }
   }, [document, createStreamHandler, project.id, commit.uuid])
 
-  const { start, streamingResponse, messages, chainLength } = usePlaygroundChat(
-    {
-      runPromptFn: () => {
-        return runDocument()
-      },
-      onPromptRan: () => {
-        setTimeout(() => {
-          setCurrentStep(OnboardingStep.ShowResultsAndExperiment)
-        }, 2000)
-      },
+  const {
+    start,
+    streamingResponse,
+    streamingReasoning,
+    messages,
+    chainLength,
+  } = usePlaygroundChat({
+    runPromptFn: () => {
+      return runDocument()
     },
-  )
+    onPromptRan: () => {
+      setTimeout(() => {
+        setCurrentStep(OnboardingStep.ShowResultsAndExperiment)
+      }, 2000)
+    },
+  })
 
   // Sample parameter values for the table
   const sampleParameters = [
@@ -266,6 +270,7 @@ export function OnboardingClient({
             <MessageList messages={messages} />
             <StreamMessage
               responseStream={streamingResponse}
+              reasoningStream={streamingReasoning}
               messages={messages}
               chainLength={chainLength}
             />
@@ -290,6 +295,7 @@ export function OnboardingClient({
                 {streamingResponse && (
                   <StreamMessage
                     responseStream={streamingResponse}
+                    reasoningStream={streamingReasoning}
                     messages={messages}
                     chainLength={chainLength}
                   />

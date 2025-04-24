@@ -6,6 +6,9 @@ export const DEEPSEEK_MODELS = createModelSpec({
     'deepseek-chat': {
       cost: { input: 0.1, output: 0.2 },
     },
+    'deepseek-reasoner': {
+      cost: { input: 0.27, output: 0.55 },
+    },
     'deepseek-coder': {
       cost: { input: 0.1, output: 0.2 },
     },

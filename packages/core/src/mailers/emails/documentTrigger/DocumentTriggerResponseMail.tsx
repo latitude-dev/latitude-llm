@@ -97,8 +97,8 @@ function RegularPromptResponseContent({
     <>
       {content.map((content, index) => {
         if (content.type === ContentType.text) {
-          return content.text
-            .split('\n')
+          return content
+            .text!.split('\n')
             .map((text, index) => <Text key={index}>{text}</Text>)
         }
         if (content.type === ContentType.image) {

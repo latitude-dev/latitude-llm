@@ -68,6 +68,9 @@ describe('ProviderProcessor', () => {
         type: 'text' as 'text',
         data: {
           toolCalls: new Promise((resolve) => resolve([])),
+          reasoning: new Promise<string | undefined>((resolve) =>
+            resolve(undefined),
+          ),
           text: new Promise<string>((resolve) =>
             resolve(data.responseText as string),
           ),

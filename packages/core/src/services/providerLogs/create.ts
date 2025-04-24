@@ -27,6 +27,7 @@ export type CreateProviderLogProps = {
   finishReason?: FinishReason
   apiKeyId?: number
   responseText?: string
+  responseReasoning?: string
   responseObject?: unknown
   toolCalls?: ToolCall[]
   documentLogUuid?: string
@@ -43,6 +44,7 @@ export async function createProviderLog(
     config,
     messages,
     responseText,
+    responseReasoning,
     responseObject,
     toolCalls,
     usage,
@@ -80,6 +82,7 @@ export async function createProviderLog(
         config,
         messages,
         responseText,
+        responseReasoning,
         responseObject,
         toolCalls,
         tokens: usage

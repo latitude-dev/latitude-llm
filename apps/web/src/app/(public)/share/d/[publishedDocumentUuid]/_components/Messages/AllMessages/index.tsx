@@ -16,6 +16,7 @@ export function AllMessages({
   messages,
   error,
   responseStream,
+  reasoningStream,
   conversation,
   chainLength,
   setPromptVisibility,
@@ -24,6 +25,7 @@ export function AllMessages({
   messages: ConversationMessage[]
   error: Error | undefined
   responseStream: string | undefined
+  reasoningStream: string | undefined
   conversation: Conversation | undefined
   chainLength: number
   setPromptVisibility: ReactStateDispatch<boolean>
@@ -43,6 +45,7 @@ export function AllMessages({
       ) : (
         <StreamMessage
           responseStream={responseStream}
+          reasoningStream={reasoningStream}
           messages={conversation?.messages ?? []}
           chainLength={chainLength}
         />

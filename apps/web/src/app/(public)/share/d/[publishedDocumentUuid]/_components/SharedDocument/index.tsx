@@ -270,11 +270,12 @@ export function SharedDocument({
                   },
                 )}
               >
-                {isChatVisible ? (
+                {isChatVisible && (
                   <Messages
                     isStreaming={prompt.isStreaming}
                     isLoadingPrompt={prompt.isLoadingPrompt}
                     responseStream={prompt.responseStream}
+                    reasoningStream={prompt.reasoningStream}
                     conversation={prompt.conversation}
                     chainLength={prompt.chainLength}
                     error={prompt.error}
@@ -283,7 +284,7 @@ export function SharedDocument({
                     canChat={shared.canFollowConversation}
                     lastMessage={prompt.lastMessage}
                   />
-                ) : null}
+                )}
               </div>
             </div>
           </CardContent>

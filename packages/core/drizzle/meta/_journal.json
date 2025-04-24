@@ -1107,6 +1107,13 @@
       "when": 1744929177633,
       "tag": "0158_smart_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 159,
+      "version": "7",
+      "when": 1745505632066,
+      "tag": "0159_lovely_shaman",
+      "breakpoints": true
     }
   ]
 }

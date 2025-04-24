@@ -134,6 +134,7 @@ export default function Chat({
     runningLatitudeTools,
     wakingUpIntegration,
     streamingResponse,
+    streamingReasoning,
     chainLength,
     isLoading,
   } = usePlaygroundChat({
@@ -237,6 +238,7 @@ export default function Chat({
         ) : (
           <StreamMessage
             responseStream={streamingResponse}
+            reasoningStream={streamingReasoning}
             messages={messages}
             chainLength={chainLength}
           />

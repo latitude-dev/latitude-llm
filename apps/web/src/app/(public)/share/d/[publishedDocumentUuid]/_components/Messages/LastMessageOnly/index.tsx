@@ -58,11 +58,13 @@ function ChainResponseMessage<L extends boolean>({
   isLoading,
   message,
   responseStream,
+  reasoningStream,
   error,
 }: {
   isLoading: L
   message: L extends true ? ConversationMessage : undefined
   responseStream: string | undefined
+  reasoningStream?: string | undefined
   error: Error | undefined
 }) {
   if (error) {
@@ -81,6 +83,7 @@ function ChainResponseMessage<L extends boolean>({
                 {
                   type: ContentType.text,
                   text: responseStream ?? '',
+                  reasoning: reasoningStream,
                 },
               ]}
               collapsedMessage={collapsedMessage}
@@ -98,12 +101,14 @@ export function LastMessageOnly({
   lastMessage,
   error,
   responseStream,
+  reasoningStream,
   setPromptVisibility,
   isStreaming,
   isLoadingPrompt,
 }: {
   lastMessage: LastMessage | undefined
   responseStream: string | undefined
+  reasoningStream?: string | undefined
   error: Error | undefined
   setPromptVisibility: ReactStateDispatch<boolean>
   isStreaming: boolean
@@ -121,6 +126,7 @@ export function LastMessageOnly({
         isLoading={isStreaming || !message}
         message={message}
         responseStream={responseStream}
+        reasoningStream={reasoningStream}
         error={error}
       />
     </>

@@ -790,6 +790,7 @@ describe('runChain', () => {
         response: {
           streamType: 'text',
           text: 'cached response',
+          reasoning: undefined,
           usage: {
             promptTokens: 0,
             completionTokens: 0,
@@ -840,6 +841,7 @@ describe('runChain', () => {
           response: {
             streamType: 'text',
             text: 'cached response',
+            reasoning: undefined,
             usage: {
               promptTokens: 0,
               completionTokens: 0,
@@ -899,6 +901,7 @@ describe('runChain', () => {
           config,
           conversation,
           response: {
+            reasoning: undefined,
             streamType: 'text',
             text: 'cached response',
             usage: {

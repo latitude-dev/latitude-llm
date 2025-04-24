@@ -93,6 +93,8 @@ export function buildProviderLogDto({
     responseObject:
       response.streamType === 'object' ? response.object : undefined,
     responseText: response.streamType === 'text' ? response.text : undefined,
+    responseReasoning:
+      response.streamType === 'text' ? response.reasoning : undefined,
     toolCalls: response.streamType === 'text' ? response.toolCalls : [],
   }
 }

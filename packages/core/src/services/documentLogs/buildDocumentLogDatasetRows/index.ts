@@ -47,7 +47,7 @@ function isJsonString(str: string) {
 function itemContentByType(item: MessageContent) {
   switch (item.type) {
     case ContentType.text:
-      return item.text
+      return item.text!
     case ContentType.image:
       return item.image.toString()
     case ContentType.file:

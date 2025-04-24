@@ -34,6 +34,7 @@ export function Messages({
   isStreaming,
   isLoadingPrompt,
   responseStream,
+  reasoningStream,
   conversation,
   chainLength,
   error,
@@ -43,6 +44,7 @@ export function Messages({
   lastMessage,
 }: {
   responseStream: string | undefined
+  reasoningStream: string | undefined
   isLoadingPrompt: boolean
   isStreaming: boolean
   conversation: Conversation | undefined
@@ -74,6 +76,7 @@ export function Messages({
             messages={conversation?.messages ?? []}
             error={error}
             responseStream={responseStream}
+            reasoningStream={reasoningStream}
             conversation={conversation}
             chainLength={chainLength}
             setPromptVisibility={setPromptVisibility}
@@ -83,6 +86,7 @@ export function Messages({
             isLoadingPrompt={isLoadingPrompt}
             lastMessage={lastMessage}
             responseStream={fakeResponseStream}
+            reasoningStream={reasoningStream}
             isStreaming={fakeIsStreaming}
             error={error}
             setPromptVisibility={setPromptVisibility}
@@ -92,6 +96,7 @@ export function Messages({
         <ChatMessages
           conversation={conversation}
           responseStream={responseStream}
+          reasoningStream={reasoningStream}
           chainLength={chainLength}
           error={error}
         />

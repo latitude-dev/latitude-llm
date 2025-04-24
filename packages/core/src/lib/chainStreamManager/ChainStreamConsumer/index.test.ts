@@ -95,6 +95,7 @@ describe('ChainStreamConsumer', () => {
     const response: ChainStepResponse<StreamType> = {
       streamType: 'text',
       text: 'text response',
+      reasoning: undefined,
       toolCalls: [],
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       documentLogUuid: 'errorable-uuid',
@@ -119,6 +120,7 @@ describe('ChainStreamConsumer', () => {
     const response: ChainStepResponse<'text'> = {
       streamType: 'text',
       text: 'text response',
+      reasoning: undefined,
       toolCalls: [],
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       documentLogUuid: 'errorable-uuid',
@@ -229,6 +231,7 @@ describe('ChainStreamConsumer', () => {
     const response: ChainStepResponse<'text'> = {
       streamType: 'text',
       text: '',
+      reasoning: undefined,
       toolCalls: [
         {
           id: 'tool-call-id',
@@ -306,6 +309,7 @@ describe('ChainStreamConsumer', () => {
     const response: ChainStepResponse<'text'> = {
       streamType: 'text',
       text: 'text response',
+      reasoning: undefined,
       toolCalls: [
         {
           id: 'tool-call-id',

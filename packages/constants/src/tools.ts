@@ -21,6 +21,7 @@ type BuildMessageParams<T extends StreamType> = T extends 'object'
       type: 'text'
       data?: {
         text: string | undefined
+        reasoning?: string | undefined
         toolCalls?: ToolCall[]
         toolCallResponses?: ToolCallResponse[]
       }
@@ -68,6 +69,7 @@ export function buildResponseMessage<T extends StreamType>({
   const text = data.text
   const object = type === 'object' ? data.object : undefined
   const toolCalls = type === 'text' ? (data.toolCalls ?? []) : []
+  const reasoning = type === 'text' ? data.reasoning : undefined
   let content: MessageContent[] = []
 
   if (object) {
@@ -75,12 +77,13 @@ export function buildResponseMessage<T extends StreamType>({
       type: 'text',
       text: objectToString(object),
     } as MessageContent)
-  } else if ((text === '' && !toolCalls.length) || (text && text.length > 0)) {
     // Text can be empty string. We want to always at least generate
     // an empty text response
+  } else if ((text === '' && !toolCalls.length) || (text && text.length > 0)) {
     content.push({
       type: 'text',
-      text: text,
+      text,
+      reasoning,
     } as MessageContent)
   }
 
