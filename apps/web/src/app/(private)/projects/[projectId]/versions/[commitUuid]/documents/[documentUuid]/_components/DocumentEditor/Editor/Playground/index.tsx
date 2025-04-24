@@ -71,6 +71,7 @@ export const Playground = memo(
       [setRunCount, setDocumentLogUuid],
     )
     const clearChat = useCallback(() => setMode('preview'), [setMode])
+    const runPrompt = useCallback(() => setMode('chat'), [setMode])
 
     return (
       <SplitPane
@@ -113,7 +114,7 @@ export const Playground = memo(
               <Preview
                 metadata={metadata}
                 parameters={parameters}
-                runPrompt={() => setMode('chat')}
+                runPrompt={runPrompt}
                 expandParameters={expandParameters}
                 setExpandParameters={setExpandParameters}
               />

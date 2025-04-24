@@ -71,13 +71,35 @@ export default function DocumentEditor({
   const [diff, setDiff] = useState<DiffOptions>()
   const { toast } = useToast()
   const debouncedSave = useDebouncedCallback(
-    (val: string) =>
-      updateContent({
+    async (val: string) => {
+      const [_, error] = await updateContent({
         commitUuid: commit.uuid,
         projectId: project.id,
         documentUuid: document.documentUuid,
         content: val,
-      }),
+      })
+
+      if (error) {
+        toast({
+          title: 'Error saving document',
+          description: 'There was an error saving the document.',
+          variant: 'destructive',
+        })
+
+        setValue(document.content)
+      } else {
+        runReadMetadata({
+          prompt: val,
+          documents,
+          document,
+          fullPath: document.path,
+          promptlVersion: document.promptlVersion,
+          agentToolsMap,
+          providerNames: providers.map((p) => p.name) ?? [],
+          integrationNames: integrations?.map((i) => i.name) ?? [],
+        })
+      }
+    },
     500,
     { leading: false, trailing: true },
   )
@@ -110,30 +132,7 @@ export default function DocumentEditor({
     async (newValue: string) => {
       setValue(newValue)
 
-      const result = await debouncedSave(newValue)
-      if (!result) return
-
-      const [_, error] = result
-      if (error) {
-        toast({
-          title: 'Error saving document',
-          description: 'There was an error saving the document.',
-          variant: 'destructive',
-        })
-
-        setValue(document.content)
-      } else {
-        runReadMetadata({
-          prompt: newValue,
-          documents,
-          document,
-          fullPath: document.path,
-          promptlVersion: document.promptlVersion,
-          agentToolsMap,
-          providerNames: providers.map((p) => p.name) ?? [],
-          integrationNames: integrations?.map((i) => i.name) ?? [],
-        })
-      }
+      debouncedSave(newValue)
     },
     [
       agentToolsMap,
