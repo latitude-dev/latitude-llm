@@ -4,7 +4,6 @@ import { cn } from '../../../../lib/utils'
 import { Button } from '../../../atoms/Button'
 import { TextArea } from '../../../atoms/TextArea'
 import { Tooltip } from '../../../atoms/Tooltip'
-import { TooltipTrigger } from '@radix-ui/react-tooltip'
 
 export function CopilotSection({
   isLoading,
@@ -53,18 +52,17 @@ export function CopilotSection({
             {isLoading ? 'Generating...' : 'Submit'}
           </Button>
           <Tooltip
+            asChild
             trigger={
-              <TooltipTrigger asChild>
-                <Button
-                  iconProps={{ name: 'sparkles', color: 'foregroundMuted' }}
-                  variant='outline'
-                  fancy
-                  onClick={() => improveThisPrompt()}
-                  disabled={isLoading}
-                >
-                  Improve my prompt
-                </Button>
-              </TooltipTrigger>
+              <Button
+                iconProps={{ name: 'sparkles', color: 'foregroundMuted' }}
+                variant='outline'
+                fancy
+                onClick={() => improveThisPrompt()}
+                disabled={isLoading}
+              >
+                Improve my prompt
+              </Button>
             }
           >
             Let our AI Assistant improve and fix your prompt based on

@@ -10,6 +10,8 @@ import { EditorWrapper } from './EditorWrapper'
 import { useEditorOptions } from './useEditorOptions'
 import { useMonacoSetup } from './useMonacoSetup'
 
+const SCROLLBAR_SIZE = 10
+
 export function MonacoDiffEditor({
   editorRef,
   oldValue,
@@ -52,6 +54,28 @@ export function MonacoDiffEditor({
 
   return (
     <EditorWrapper>
+      <style>{`
+        /* Add padding with line numbers and adjust editor width for new scrollbar size */
+        .editor.modified { left: 0.5rem !important; width: unset !important; right: ${SCROLLBAR_SIZE}px !important }
+        .monaco-editor {
+          outline-width: 0 !important;
+          width: unset !important;
+          right: ${SCROLLBAR_SIZE}px !important;
+        }
+        .monaco-editor>.overflow-guard { width: unset !important; right: 0px !important; }
+        .editor-scrollable { width: unset !important; right: 0px !important; }
+        .view-overlays { width: 100% !important; }
+        .view-zones { width: 100% !important; }
+        .view-lines { width: 100% !important; }
+        .lines-content { width: 100% !important; }
+
+        .line-numbers { padding-right: 0.5rem !important; }
+        .monaco-editor-overlaymessage { display: none !important; }
+        .diffOverview { width: ${SCROLLBAR_SIZE}px !important; left: unset !important; right: 0! important; }
+        .diffViewport { width: ${SCROLLBAR_SIZE}px !important; left: unset !important; right: 0! important; }
+        .diffOverviewRuler { width: ${SCROLLBAR_SIZE / 2}px !important; }
+        .diffOverviewRuler.original { right: ${SCROLLBAR_SIZE / 2}px !important; }
+      `}</style>
       <DiffEditor
         height='100%'
         width='100%'

@@ -11,7 +11,6 @@ import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
   Table,
   TableBody,
@@ -38,7 +37,6 @@ export function EvaluationsTable({
   deleteEvaluation,
   generateEvaluation,
   generatorEnabled,
-  isLoading,
   isCreatingEvaluation,
   isDeletingEvaluation,
   isGeneratingEvaluation,
@@ -48,7 +46,6 @@ export function EvaluationsTable({
   deleteEvaluation: ReturnType<typeof useEvaluationsV2>['deleteEvaluation']
   generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
-  isLoading: boolean
   isCreatingEvaluation: boolean
   isDeletingEvaluation: boolean
   isGeneratingEvaluation: boolean
@@ -89,76 +86,65 @@ export function EvaluationsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading &&
-                Array.from({ length: 5 }).map((_, index) => (
-                  <TableRow
-                    key={index}
-                    className='border-b-[0.5px] h-12 max-h-12 border-border relative'
-                    hoverable={false}
-                  >
-                    <Skeleton className='h-5 w-[90%] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' />
-                  </TableRow>
-                ))}
-              {!isLoading &&
-                evaluations.map((evaluation) => (
-                  <TableRow
-                    key={evaluation.uuid}
-                    className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors'
-                    onClick={() =>
-                      navigate.push(
-                        ROUTES.projects
-                          .detail({ id: project.id })
-                          .commits.detail({ uuid: commit.uuid })
-                          .documents.detail({ uuid: document.documentUuid })
-                          .evaluationsV2.detail({ uuid: evaluation.uuid }).root,
-                      )
-                    }
-                  >
-                    <TableCell>
-                      <div className='flex items-center justify-between gap-2 truncate'>
-                        <Text.H5 noWrap ellipsis>
-                          {evaluation.name}
-                        </Text.H5>
-                        {!!evaluation.evaluateLiveLogs && (
-                          <Badge variant='accent'>Live</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Text.H5>{evaluation.description || '-'}</Text.H5>
-                    </TableCell>
-                    <TableCell>
-                      <Text.H5>
-                        {getEvaluationTypeSpecification(evaluation).name}
+              {evaluations.map((evaluation) => (
+                <TableRow
+                  key={evaluation.uuid}
+                  className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors'
+                  onClick={() =>
+                    navigate.push(
+                      ROUTES.projects
+                        .detail({ id: project.id })
+                        .commits.detail({ uuid: commit.uuid })
+                        .documents.detail({ uuid: document.documentUuid })
+                        .evaluationsV2.detail({ uuid: evaluation.uuid }).root,
+                    )
+                  }
+                >
+                  <TableCell>
+                    <div className='flex items-center justify-between gap-2 truncate'>
+                      <Text.H5 noWrap ellipsis>
+                        {evaluation.name}
                       </Text.H5>
-                    </TableCell>
-                    <TableCell>
-                      <Text.H5>
-                        {getEvaluationMetricSpecification(evaluation).name}
-                      </Text.H5>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu
-                        options={[
-                          {
-                            label: 'Remove',
-                            onElementClick: (e) => e.stopPropagation(),
-                            onClick: () => {
-                              setSelectedEvaluation(evaluation)
-                              setOpenDeleteModal(true)
-                            },
-                            type: 'destructive',
+                      {!!evaluation.evaluateLiveLogs && (
+                        <Badge variant='accent'>Live</Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Text.H5>{evaluation.description || '-'}</Text.H5>
+                  </TableCell>
+                  <TableCell>
+                    <Text.H5>
+                      {getEvaluationTypeSpecification(evaluation).name}
+                    </Text.H5>
+                  </TableCell>
+                  <TableCell>
+                    <Text.H5>
+                      {getEvaluationMetricSpecification(evaluation).name}
+                    </Text.H5>
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu
+                      options={[
+                        {
+                          label: 'Remove',
+                          onElementClick: (e) => e.stopPropagation(),
+                          onClick: () => {
+                            setSelectedEvaluation(evaluation)
+                            setOpenDeleteModal(true)
                           },
-                        ]}
-                        side='bottom'
-                        align='end'
-                        triggerButtonProps={{
-                          className: 'border-none justify-end cursor-pointer',
-                        }}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          type: 'destructive',
+                        },
+                      ]}
+                      side='bottom'
+                      align='end'
+                      triggerButtonProps={{
+                        className: 'border-none justify-end cursor-pointer',
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
           {openDeleteModal && selectedEvaluation && (
