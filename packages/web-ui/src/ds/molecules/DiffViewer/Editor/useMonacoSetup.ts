@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react'
 
-import { loader, type Monaco } from '@monaco-editor/react'
-import * as monaco from 'monaco-editor'
+import { type Monaco } from '@monaco-editor/react'
 
 import {
   themeRules,
   tokenizer,
   useThemeColors,
 } from '../../../../lib/monacoEditor/language'
-
-loader.config({ monaco })
 
 export function useMonacoSetup() {
   const monacoRef = useRef<Monaco | null>(null)

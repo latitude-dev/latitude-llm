@@ -17,6 +17,7 @@ import {
 } from '@latitude-data/constants'
 import { ToolResultContent, ToolResultFooter } from './ToolResult'
 import { AgentToolCallContent } from './LatitudeTools/Agent'
+import { useMemo } from 'react'
 
 function toolArgs(
   value: ToolRequestContent | PromptlToolCall,
@@ -85,6 +86,8 @@ export function ToolCallContent({
     )
   }
 
+  const codeBlockValue = `${value.toolName}(${JSON.stringify(args, null, 2)})`
+
   return (
     <ContentCard
       label='Tool requested'
@@ -93,17 +96,20 @@ export function ToolCallContent({
       fgColor='warningForeground'
       info={value.toolCallId}
       infoColor='warningMutedForeground'
-      resultFooter={
-        <ToolResultFooter>
-          {toolResponse && <ToolResultContent toolResponse={toolResponse} />}
-        </ToolResultFooter>
-      }
+      resultFooter={useMemo(
+        () => (
+          <ToolResultFooter>
+            {toolResponse && <ToolResultContent toolResponse={toolResponse} />}
+          </ToolResultFooter>
+        ),
+        [toolResponse],
+      )}
       separatorColor={
         toolResponse?.isError ? 'destructiveMutedForeground' : undefined
       }
     >
       <CodeBlock language='javascript'>
-        {`${value.toolName}(${JSON.stringify(args, null, 2)})`}
+        {useMemo(() => codeBlockValue, [codeBlockValue])}
       </CodeBlock>
     </ContentCard>
   )

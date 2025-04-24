@@ -3,14 +3,17 @@ import { ContentCard } from '../ContentCard'
 import { CodeBlock } from '../../../../atoms/CodeBlock'
 import { ToolContent } from '@latitude-data/compiler'
 import { ToolResultContent, ToolResultFooter } from '../ToolResult'
+import { useMemo } from 'react'
 
 function runCodeContent(args: CodeToolArgs): string {
   if (!args.dependencies) return args.code
+
   const comment = args.language === 'python' ? '#' : '//'
   const deps = ['Dependencies:']
     .concat(args.dependencies.map((dep) => `- ${dep}`))
     .map((line) => `${comment} ${line}`)
     .join('\n')
+
   return `${deps}\n\n${args.code}`
 }
 
@@ -23,6 +26,8 @@ export function CodeLatitudeToolCallContent({
   args: CodeToolArgs
   toolResponse?: ToolContent
 }) {
+  const value = runCodeContent(args as CodeToolArgs)
+
   return (
     <ContentCard
       label={args.language.at(0)!.toUpperCase() + args.language.slice(1)}
@@ -40,7 +45,7 @@ export function CodeLatitudeToolCallContent({
       }
     >
       <CodeBlock language={args.language}>
-        {runCodeContent(args as CodeToolArgs)}
+        {useMemo(() => value, [value])}
       </CodeBlock>
     </ContentCard>
   )

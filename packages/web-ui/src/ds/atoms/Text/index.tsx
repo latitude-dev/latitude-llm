@@ -1,6 +1,7 @@
 import {
   Children,
   forwardRef,
+  memo,
   ReactNode,
   type ForwardRefExoticComponent,
 } from 'react'
@@ -63,79 +64,82 @@ export type TextProps = {
 
 type AllTextProps = TextProps & Common
 
-const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
-  {
-    children,
-    size = 'h4',
-    color = 'foreground',
-    darkColor,
-    theme,
-    spacing = 'normal',
-    weight = 'normal',
-    display = 'inline',
-    uppercase = false,
-    align = 'left',
-    capitalize = false,
-    whiteSpace = 'normal',
-    wordBreak = 'normal',
-    ellipsis = false,
-    lineClamp = undefined,
-    userSelect = true,
-    noWrap = false,
-    underline = false,
-    lineThrough = false,
-    asChild = false,
-    monospace = false,
-    centered = false,
-    animate = false,
-  },
-  ref,
-) {
-  const isDark = theme === CurrentTheme.Dark
-  const colorClass = colors.textColors[isDark && darkColor ? darkColor : color]
-  const sizeClass = font.size[size]
-  const weightClass = font.weight[weight]
-  const spacingClass = font.spacing[spacing]
-  const alignClass = font.align[align]
-  const wordBreakClass = wordBreakOptions[wordBreak]
-  const whiteSpaceClass = whiteSpaceOptions[whiteSpace]
-  const Comp = asChild ? Slot : 'span'
-  return (
-    <Comp
-      ref={ref}
-      title={ellipsis && typeof children === 'string' ? children : ''}
-      className={cn(
-        sizeClass,
-        weightClass,
-        spacingClass,
-        colorClass,
-        wordBreakClass,
-        whiteSpaceClass,
-        alignClass,
-        display,
-        {
-          'bg-[length:200%_auto] text-transparent bg-clip-text animate-text-gradient bg-gradient-to-r from-muted via-muted-foreground to-muted':
-            animate,
-          capitalize: capitalize,
-          uppercase: uppercase,
-          truncate: ellipsis,
-          'select-none': !userSelect,
-          'whitespace-nowrap': noWrap,
-          underline: underline,
-          'line-through': lineThrough,
-          [font.family.mono]: monospace,
-          [font.family.sans]: !monospace,
-          'text-center': centered,
-          'line-clamp-1': lineClamp === 1,
-          'line-clamp-3': lineClamp === 3,
-          'leading-5': lineClamp && size === 'h6',
-        },
-      )}
-    >
-      {Children.count(children) > 1 ? <span>{children}</span> : children}
-    </Comp>
-  )
-})
+const TextAtom = memo(
+  forwardRef<HTMLElement, AllTextProps>(function Text(
+    {
+      children,
+      size = 'h4',
+      color = 'foreground',
+      darkColor,
+      theme,
+      spacing = 'normal',
+      weight = 'normal',
+      display = 'inline',
+      uppercase = false,
+      align = 'left',
+      capitalize = false,
+      whiteSpace = 'normal',
+      wordBreak = 'normal',
+      ellipsis = false,
+      lineClamp = undefined,
+      userSelect = true,
+      noWrap = false,
+      underline = false,
+      lineThrough = false,
+      asChild = false,
+      monospace = false,
+      centered = false,
+      animate = false,
+    },
+    ref,
+  ) {
+    const isDark = theme === CurrentTheme.Dark
+    const colorClass =
+      colors.textColors[isDark && darkColor ? darkColor : color]
+    const sizeClass = font.size[size]
+    const weightClass = font.weight[weight]
+    const spacingClass = font.spacing[spacing]
+    const alignClass = font.align[align]
+    const wordBreakClass = wordBreakOptions[wordBreak]
+    const whiteSpaceClass = whiteSpaceOptions[whiteSpace]
+    const Comp = asChild ? Slot : 'span'
+    return (
+      <Comp
+        ref={ref}
+        title={ellipsis && typeof children === 'string' ? children : ''}
+        className={cn(
+          sizeClass,
+          weightClass,
+          spacingClass,
+          colorClass,
+          wordBreakClass,
+          whiteSpaceClass,
+          alignClass,
+          display,
+          {
+            'bg-[length:200%_auto] text-transparent bg-clip-text animate-text-gradient bg-gradient-to-r from-muted via-muted-foreground to-muted':
+              animate,
+            capitalize: capitalize,
+            uppercase: uppercase,
+            truncate: ellipsis,
+            'select-none': !userSelect,
+            'whitespace-nowrap': noWrap,
+            underline: underline,
+            'line-through': lineThrough,
+            [font.family.mono]: monospace,
+            [font.family.sans]: !monospace,
+            'text-center': centered,
+            'line-clamp-1': lineClamp === 1,
+            'line-clamp-3': lineClamp === 3,
+            'leading-5': lineClamp && size === 'h6',
+          },
+        )}
+      >
+        {Children.count(children) > 1 ? <span>{children}</span> : children}
+      </Comp>
+    )
+  }),
+)
 
 namespace Text {
   export const H1: ForwardRefExoticComponent<Common> = forwardRef<

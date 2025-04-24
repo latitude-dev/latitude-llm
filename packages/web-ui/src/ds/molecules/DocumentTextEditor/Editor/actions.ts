@@ -1,5 +1,5 @@
 import { Monaco } from '@monaco-editor/react'
-import { editor } from 'monaco-editor'
+import { type editor } from 'monaco-editor'
 
 export function registerActions(
   editor: editor.IStandaloneCodeEditor,

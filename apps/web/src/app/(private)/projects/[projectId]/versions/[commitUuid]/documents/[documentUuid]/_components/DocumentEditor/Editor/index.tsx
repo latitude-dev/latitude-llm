@@ -1,6 +1,6 @@
 'use client'
 
-import EditorHeader from '$/components/EditorHeader'
+import { EditorHeader } from '$/components/EditorHeader'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useMetadata } from '$/hooks/useMetadata'
 import { ROUTES } from '$/services/routes'
@@ -21,9 +21,10 @@ import Link from 'next/link'
 import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import Playground from './Playground'
 import { PlaygroundTextEditor } from './TextEditor'
 import { UpdateToPromptLButton } from './UpdateToPromptl'
+import { Playground } from './Playground'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 
 export default function DocumentEditor({
   document: _document,
@@ -45,7 +46,11 @@ export default function DocumentEditor({
     fallbackData: providerApiKeys,
   })
   const { data: integrations } = useIntegrations()
-  const { data: documents, updateContent } = useDocumentVersions(
+  const {
+    data: documents,
+    updateContent,
+    isUpdatingContent,
+  } = useDocumentVersions(
     {
       commitUuid: commit.uuid,
       projectId: project.id,
@@ -63,21 +68,18 @@ export default function DocumentEditor({
   )
 
   const [value, setValue] = useState(document.content)
-  const [isSaved, setIsSaved] = useState(true)
   const [diff, setDiff] = useState<DiffOptions>()
+  const { toast } = useToast()
   const debouncedSave = useDebouncedCallback(
-    (val: string) => {
+    (val: string) =>
       updateContent({
         commitUuid: commit.uuid,
         projectId: project.id,
         documentUuid: document.documentUuid,
         content: val,
-      })
-
-      setIsSaved(true)
-    },
+      }),
     500,
-    { trailing: true },
+    { leading: false, trailing: true },
   )
 
   const { metadata, runReadMetadata } = useMetadata()
@@ -105,28 +107,41 @@ export default function DocumentEditor({
   }, [document.promptlVersion, agentToolsMap, providers, integrations])
 
   const onChange = useCallback(
-    (newValue: string) => {
-      setIsSaved(false)
+    async (newValue: string) => {
       setValue(newValue)
-      debouncedSave(newValue)
-      runReadMetadata({
-        prompt: newValue,
-        documents,
-        document,
-        fullPath: document.path,
-        promptlVersion: document.promptlVersion,
-        agentToolsMap,
-        providerNames: providers.map((p) => p.name) ?? [],
-        integrationNames: integrations?.map((i) => i.name) ?? [],
-      })
+
+      const result = await debouncedSave(newValue)
+      if (!result) return
+
+      const [_, error] = result
+      if (error) {
+        toast({
+          title: 'Error saving document',
+          description: 'There was an error saving the document.',
+          variant: 'destructive',
+        })
+
+        setValue(document.content)
+      } else {
+        runReadMetadata({
+          prompt: newValue,
+          documents,
+          document,
+          fullPath: document.path,
+          promptlVersion: document.promptlVersion,
+          agentToolsMap,
+          providerNames: providers.map((p) => p.name) ?? [],
+          integrationNames: integrations?.map((i) => i.name) ?? [],
+        })
+      }
     },
     [
-      runReadMetadata,
+      agentToolsMap,
       document.path,
       document.promptlVersion,
-      agentToolsMap,
-      providers,
       integrations,
+      providers,
+      runReadMetadata,
     ],
   )
 
@@ -149,46 +164,52 @@ export default function DocumentEditor({
                 providers={providers}
                 disabledMetadataSelectors={isMerged}
                 title={name.length > 30 ? name.slice(0, 30) + '...' : name}
-                rightActions={
-                  <>
-                    <Tooltip
-                      asChild
-                      trigger={
-                        <Link
-                          href={
-                            ROUTES.projects
-                              .detail({ id: project.id })
-                              .commits.detail({ uuid: commit.uuid })
-                              .history.detail({
-                                uuid: document.documentUuid,
-                              }).root
-                          }
-                        >
-                          <Button
-                            variant='outline'
-                            size='small'
-                            className='h-7'
-                            iconProps={{
-                              name: 'history',
-                              color: 'foregroundMuted',
-                            }}
-                          />
-                        </Link>
-                      }
-                    >
-                      View prompt history
-                    </Tooltip>
-                    <UpdateToPromptLButton document={document} />
-                  </>
-                }
-                leftActions={
-                  <ClickToCopyUuid
-                    tooltipContent='Click to copy the prompt UUID'
-                    uuid={document.documentUuid}
-                  />
-                }
+                rightActions={useMemo(
+                  () => (
+                    <>
+                      <Tooltip
+                        asChild
+                        trigger={
+                          <Link
+                            href={
+                              ROUTES.projects
+                                .detail({ id: project.id })
+                                .commits.detail({ uuid: commit.uuid })
+                                .history.detail({
+                                  uuid: document.documentUuid,
+                                }).root
+                            }
+                          >
+                            <Button
+                              variant='outline'
+                              size='small'
+                              className='h-7'
+                              iconProps={{
+                                name: 'history',
+                                color: 'foregroundMuted',
+                              }}
+                            />
+                          </Link>
+                        }
+                      >
+                        View prompt history
+                      </Tooltip>
+                      <UpdateToPromptLButton document={document} />
+                    </>
+                  ),
+                  [project.id, commit.uuid, document.documentUuid],
+                )}
+                leftActions={useMemo(
+                  () => (
+                    <ClickToCopyUuid
+                      tooltipContent='Click to copy the prompt UUID'
+                      uuid={document.documentUuid}
+                    />
+                  ),
+                  [document.documentUuid],
+                )}
                 metadata={metadata}
-                prompt={value}
+                prompt={document.content}
                 onChangePrompt={onChange}
                 freeRunsCount={freeRunsCount}
                 showCopilotSetting={copilotEnabled}
@@ -201,9 +222,10 @@ export default function DocumentEditor({
                 setDiff={setDiff}
                 diff={diff}
                 value={value}
+                defaultValue={document.content}
                 copilotEnabled={copilotEnabled}
                 isMerged={isMerged}
-                isSaved={isSaved}
+                isSaved={!isUpdatingContent}
                 onChange={onChange}
               />
             </div>
@@ -214,7 +236,7 @@ export default function DocumentEditor({
             <div className='flex-1 relative max-h-full pr-6'>
               <Playground
                 document={document}
-                prompt={value}
+                prompt={document.content}
                 setPrompt={onChange}
                 metadata={metadata!}
               />

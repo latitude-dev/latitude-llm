@@ -11,6 +11,7 @@ export type DiffOptions = {
 
 export type DocumentTextEditorProps = {
   value: string
+  defaultValue?: string
   path?: string
   compileErrors?: CompileError[]
   onChange?: (value: string) => void

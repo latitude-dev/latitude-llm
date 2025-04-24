@@ -1,4 +1,11 @@
-import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  memo,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 
 import { envClient } from '$/envClient'
 import useModelOptions from '$/hooks/useModelOptions'
@@ -27,264 +34,266 @@ import { PromptIntegrations } from '$/app/(private)/projects/[projectId]/version
 type PromptMetadata = { provider?: string; model?: string }
 export type IProviderByName = Record<string, ProviderApiKey>
 
-export default function EditorHeader({
-  title,
-  metadata,
-  onChangePrompt,
-  rightActions,
-  leftActions,
-  disabledMetadataSelectors = false,
-  providers,
-  freeRunsCount,
-  showCopilotSetting,
-  prompt,
-}: {
-  title: string
-  metadata: ConversationMetadata | undefined
-  prompt: string
-  onChangePrompt: (prompt: string) => void
-  rightActions?: ReactNode
-  leftActions?: ReactNode
-  disabledMetadataSelectors?: boolean
-  providers?: ProviderApiKey[]
-  freeRunsCount?: number
-  showCopilotSetting?: boolean
-}) {
-  const { data: providerApiKeys, isLoading } = useProviderApiKeys({
-    fallbackData: providers,
-  })
+export const EditorHeader = memo(
+  ({
+    title,
+    metadata,
+    onChangePrompt,
+    rightActions,
+    leftActions,
+    disabledMetadataSelectors = false,
+    providers,
+    freeRunsCount,
+    showCopilotSetting,
+    prompt,
+  }: {
+    title: string
+    metadata: ConversationMetadata | undefined
+    prompt: string
+    onChangePrompt: (prompt: string) => void
+    rightActions?: ReactNode
+    leftActions?: ReactNode
+    disabledMetadataSelectors?: boolean
+    providers?: ProviderApiKey[]
+    freeRunsCount?: number
+    showCopilotSetting?: boolean
+  }) => {
+    const { data: providerApiKeys, isLoading } = useProviderApiKeys({
+      fallbackData: providers,
+    })
 
-  const { value: showLineNumbers, setValue: setShowLineNumbers } =
-    useLocalStorage({
-      key: AppLocalStorage.editorLineNumbers,
+    const { value: showLineNumbers, setValue: setShowLineNumbers } =
+      useLocalStorage({
+        key: AppLocalStorage.editorLineNumbers,
+        defaultValue: true,
+      })
+    const { value: wrapText, setValue: setWrapText } = useLocalStorage({
+      key: AppLocalStorage.editorWrapText,
       defaultValue: true,
     })
-  const { value: wrapText, setValue: setWrapText } = useLocalStorage({
-    key: AppLocalStorage.editorWrapText,
-    defaultValue: true,
-  })
-  const { value: showMinimap, setValue: setShowMinimap } = useLocalStorage({
-    key: AppLocalStorage.editorMinimap,
-    defaultValue: false,
-  })
-  const { value: showCopilot, setValue: setShowCopilot } = useLocalStorage({
-    key: AppLocalStorage.editorCopilot,
-    defaultValue: true,
-  })
+    const { value: showMinimap, setValue: setShowMinimap } = useLocalStorage({
+      key: AppLocalStorage.editorMinimap,
+      defaultValue: false,
+    })
+    const { value: showCopilot, setValue: setShowCopilot } = useLocalStorage({
+      key: AppLocalStorage.editorCopilot,
+      defaultValue: true,
+    })
 
-  const [provider, setProvider] = useState<string | undefined>()
-  const [model, setModel] = useState<string | undefined | null>()
+    const [provider, setProvider] = useState<string | undefined>()
+    const [model, setModel] = useState<string | undefined | null>()
 
-  const promptMetadata = useMemo<PromptMetadata | undefined>(() => {
-    if (!metadata?.config) return undefined
-    return {
-      provider: metadata.config.provider as PromptMetadata['provider'],
-      model: metadata.config.model as PromptMetadata['model'],
-    }
-  }, [metadata?.config])
+    const promptMetadata = useMemo<PromptMetadata | undefined>(() => {
+      if (!metadata?.config) return undefined
+      return {
+        provider: metadata.config.provider as PromptMetadata['provider'],
+        model: metadata.config.model as PromptMetadata['model'],
+      }
+    }, [metadata?.config])
 
-  const providersByName = useMemo(() => {
-    return providerApiKeys.reduce((acc, data) => {
-      acc[data.name] = data
-      return acc
-    }, {} as IProviderByName)
-  }, [isLoading, providerApiKeys])
+    const providersByName = useMemo(() => {
+      return providerApiKeys.reduce((acc, data) => {
+        acc[data.name] = data
+        return acc
+      }, {} as IProviderByName)
+    }, [isLoading, providerApiKeys])
 
-  const providerOptions = useMemo(() => {
-    return providerApiKeys.map((apiKey) => ({
-      label: apiKey.name,
-      value: apiKey.name,
-    }))
-  }, [providerApiKeys])
-  const modelOptions = useModelOptions({
-    provider: provider ? providersByName[provider]?.provider : undefined,
-    name: provider ? providersByName[provider]?.name : undefined,
-  })
+    const providerOptions = useMemo(() => {
+      return providerApiKeys.map((apiKey) => ({
+        label: apiKey.name,
+        value: apiKey.name,
+      }))
+    }, [providerApiKeys])
+    const modelOptions = useModelOptions({
+      provider: provider ? providersByName[provider]?.provider : undefined,
+      name: provider ? providersByName[provider]?.name : undefined,
+    })
 
-  // onPromptMetadataChange
-  useEffect(() => {
-    if (!promptMetadata) return
+    // onPromptMetadataChange
+    useEffect(() => {
+      if (!promptMetadata) return
 
-    if (promptMetadata.provider !== provider) {
-      setProvider(promptMetadata.provider)
-    }
+      if (promptMetadata.provider !== provider) {
+        setProvider(promptMetadata.provider)
+      }
 
-    if (!promptMetadata.model || promptMetadata.model !== model) {
-      setModel(promptMetadata.model ?? null)
-    }
-  }, [promptMetadata])
+      if (!promptMetadata.model || promptMetadata.model !== model) {
+        setModel(promptMetadata.model ?? null)
+      }
+    }, [promptMetadata])
 
-  const onSelectProvider = useCallback(
-    (selectedProvider: string) => {
-      if (!selectedProvider) return
-      if (selectedProvider === provider) return
+    const onSelectProvider = useCallback(
+      (selectedProvider: string) => {
+        if (!selectedProvider) return
+        if (selectedProvider === provider) return
 
-      const firstModel = findFirstModelForProvider({
-        provider: providersByName[selectedProvider],
-        defaultProviderName: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
-      })
+        const firstModel = findFirstModelForProvider({
+          provider: providersByName[selectedProvider],
+          defaultProviderName: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
+        })
 
-      setProvider(selectedProvider)
-      setModel(firstModel)
+        setProvider(selectedProvider)
+        setModel(firstModel)
 
-      const updatedPrompt = updatePromptMetadata(prompt, {
-        provider: selectedProvider,
-        model: firstModel,
-      })
-      onChangePrompt(updatedPrompt)
-    },
-    [provider, providersByName, prompt],
-  )
+        const updatedPrompt = updatePromptMetadata(prompt, {
+          provider: selectedProvider,
+          model: firstModel,
+        })
+        onChangePrompt(updatedPrompt)
+      },
+      [provider, providersByName, prompt],
+    )
 
-  const onSelectModel = useCallback(
-    (selectedModel: string) => {
-      if (!selectedModel) return
-      if (selectedModel === model) return
+    const onSelectModel = useCallback(
+      (selectedModel: string) => {
+        if (!selectedModel) return
+        if (selectedModel === model) return
 
-      setModel(selectedModel)
+        setModel(selectedModel)
 
-      const updatedPrompt = updatePromptMetadata(prompt, {
-        model: selectedModel,
-      })
-      onChangePrompt(updatedPrompt)
-    },
-    [model, prompt],
-  )
+        const updatedPrompt = updatePromptMetadata(prompt, {
+          model: selectedModel,
+        })
+        onChangePrompt(updatedPrompt)
+      },
+      [model, prompt],
+    )
 
-  const newProviderLink = (
-    <Link
-      href={ROUTES.settings.root}
-      className='flex-noWrap inline-block text-accent-foreground'
-    >
-      Set up new provider{' '}
-      <Icon name='arrowRight' color='accentForeground' className='inline' />
-    </Link>
-  )
-  const tooltipContent =
-    'We include the Latitude provider by default with 100 free runs to allow you to test the product.'
-  const newProviderOutro = (
-    <>We highly recommend switching to your own provider. {newProviderLink}</>
-  )
+    const newProviderLink = (
+      <Link
+        href={ROUTES.settings.root}
+        className='flex-noWrap inline-block text-accent-foreground'
+      >
+        Set up new provider{' '}
+        <Icon name='arrowRight' color='accentForeground' className='inline' />
+      </Link>
+    )
+    const tooltipContent =
+      'We include the Latitude provider by default with 100 free runs to allow you to test the product.'
+    const newProviderOutro = (
+      <>We highly recommend switching to your own provider. {newProviderLink}</>
+    )
 
-  const isLatitudeProvider =
-    provider === envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME
+    const isLatitudeProvider =
+      provider === envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME
 
-  return (
-    <div className='flex flex-col gap-y-2'>
-      <div className='flex flex-row h-8 justify-between items-center'>
-        <div className='flex flex-row items-center gap-2'>
-          <Text.H4M>{title}</Text.H4M>
-          {leftActions}
+    return (
+      <div className='flex flex-col gap-y-2'>
+        <div className='flex flex-row h-8 justify-between items-center'>
+          <div className='flex flex-row items-center gap-2'>
+            <Text.H4M>{title}</Text.H4M>
+            {leftActions}
+          </div>
+          <div className='flex flex-row items-center gap-2'>
+            {rightActions}
+            <DropdownMenu
+              options={[
+                {
+                  label: 'Show line numbers',
+                  onClick: () => setShowLineNumbers(!showLineNumbers),
+                  checked: showLineNumbers,
+                },
+                {
+                  label: 'Wrap text',
+                  onClick: () => setWrapText(!wrapText),
+                  checked: wrapText,
+                },
+                {
+                  label: 'Show minimap',
+                  onClick: () => setShowMinimap(!showMinimap),
+                  checked: showMinimap,
+                },
+                ...(showCopilotSetting
+                  ? [
+                      {
+                        label: 'Show Copilot',
+                        onClick: () => setShowCopilot(!showCopilot),
+                        checked: showCopilot,
+                      },
+                    ]
+                  : []),
+              ]}
+              side='bottom'
+              align='end'
+            />
+          </div>
         </div>
-        <div className='flex flex-row items-center gap-2'>
-          {rightActions}
-          <DropdownMenu
-            options={[
-              {
-                label: 'Show line numbers',
-                onClick: () => setShowLineNumbers(!showLineNumbers),
-                checked: showLineNumbers,
-              },
-              {
-                label: 'Wrap text',
-                onClick: () => setWrapText(!wrapText),
-                checked: wrapText,
-              },
-              {
-                label: 'Show minimap',
-                onClick: () => setShowMinimap(!showMinimap),
-                checked: showMinimap,
-              },
-              ...(showCopilotSetting
-                ? [
-                    {
-                      label: 'Show Copilot',
-                      onClick: () => setShowCopilot(!showCopilot),
-                      checked: showCopilot,
-                    },
-                  ]
-                : []),
-            ]}
-            side='bottom'
-            align='end'
+        <div className='flex flex-row items-end gap-2'>
+          <ProviderModelSelector
+            providerOptions={providerOptions}
+            selectedProvider={provider}
+            onProviderChange={onSelectProvider}
+            modelOptions={modelOptions}
+            selectedModel={model}
+            onModelChange={onSelectModel}
+            providerDisabled={
+              disabledMetadataSelectors ||
+              isLoading ||
+              !providerOptions.length ||
+              !metadata
+            }
+            modelDisabled={
+              disabledMetadataSelectors ||
+              isLoading ||
+              !modelOptions.length ||
+              !provider ||
+              !metadata
+            }
+          />
+          <PromptConfiguration
+            disabled={disabledMetadataSelectors}
+            config={metadata?.config ?? {}}
+            setConfig={(config: Record<string, unknown>) => {
+              onChangePrompt(updatePromptMetadata(prompt, config))
+            }}
+          />
+          <PromptIntegrations
+            disabled={disabledMetadataSelectors}
+            config={metadata?.config ?? {}}
+            setConfig={(config: Record<string, unknown>) => {
+              onChangePrompt(updatePromptMetadata(prompt, config))
+            }}
           />
         </div>
+        {isLatitudeProvider && (
+          <div>
+            {freeRunsCount !== undefined ? (
+              <Text.H6 color='foregroundMuted'>
+                You have consumed{' '}
+                <Tooltip
+                  asChild
+                  trigger={
+                    <Text.H6M color='accentForeground'>
+                      {freeRunsCount} of 100 daily free runs.
+                    </Text.H6M>
+                  }
+                >
+                  {tooltipContent}
+                </Tooltip>{' '}
+                {newProviderOutro}
+              </Text.H6>
+            ) : (
+              <Text.H6 color='foregroundMuted'>
+                This provider has a limit of{' '}
+                <Tooltip
+                  asChild
+                  trigger={
+                    <Text.H6M color='accentForeground'>
+                      100 daily free runs.
+                    </Text.H6M>
+                  }
+                >
+                  {tooltipContent}
+                </Tooltip>{' '}
+                {newProviderOutro}
+              </Text.H6>
+            )}
+          </div>
+        )}
       </div>
-      <div className='flex flex-row items-end gap-2'>
-        <ProviderModelSelector
-          providerOptions={providerOptions}
-          selectedProvider={provider}
-          onProviderChange={onSelectProvider}
-          modelOptions={modelOptions}
-          selectedModel={model}
-          onModelChange={onSelectModel}
-          providerDisabled={
-            disabledMetadataSelectors ||
-            isLoading ||
-            !providerOptions.length ||
-            !metadata
-          }
-          modelDisabled={
-            disabledMetadataSelectors ||
-            isLoading ||
-            !modelOptions.length ||
-            !provider ||
-            !metadata
-          }
-        />
-        <PromptConfiguration
-          disabled={disabledMetadataSelectors}
-          config={metadata?.config ?? {}}
-          setConfig={(config: Record<string, unknown>) => {
-            onChangePrompt(updatePromptMetadata(prompt, config))
-          }}
-        />
-        <PromptIntegrations
-          disabled={disabledMetadataSelectors}
-          config={metadata?.config ?? {}}
-          setConfig={(config: Record<string, unknown>) => {
-            onChangePrompt(updatePromptMetadata(prompt, config))
-          }}
-        />
-      </div>
-      {isLatitudeProvider && (
-        <div>
-          {freeRunsCount !== undefined ? (
-            <Text.H6 color='foregroundMuted'>
-              You have consumed{' '}
-              <Tooltip
-                asChild
-                trigger={
-                  <Text.H6M color='accentForeground'>
-                    {freeRunsCount} of 100 daily free runs.
-                  </Text.H6M>
-                }
-              >
-                {tooltipContent}
-              </Tooltip>{' '}
-              {newProviderOutro}
-            </Text.H6>
-          ) : (
-            <Text.H6 color='foregroundMuted'>
-              This provider has a limit of{' '}
-              <Tooltip
-                asChild
-                trigger={
-                  <Text.H6M color='accentForeground'>
-                    100 daily free runs.
-                  </Text.H6M>
-                }
-              >
-                {tooltipContent}
-              </Tooltip>{' '}
-              {newProviderOutro}
-            </Text.H6>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
+    )
+  },
+)
 
 export function ProviderModelSelector({
   providerOptions,

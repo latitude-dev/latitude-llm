@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import hslToHex from 'hsl-to-hex'
-import type { languages } from 'monaco-editor'
+import { type languages } from 'monaco-editor'
 import { useTheme } from 'next-themes'
 
 export const tokenizer = {

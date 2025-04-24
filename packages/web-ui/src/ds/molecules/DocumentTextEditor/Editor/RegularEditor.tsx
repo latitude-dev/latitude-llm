@@ -48,6 +48,7 @@ export function RegularMonacoEditor({
   className,
   editorRef,
   value,
+  defaultValue,
   path,
   language = 'document',
   readOnlyMessage,
@@ -59,6 +60,7 @@ export function RegularMonacoEditor({
   className?: string
   editorRef: MutableRefObject<editor.IStandaloneCodeEditor | null>
   value: string
+  defaultValue?: string
   path?: string
   readOnlyMessage?: string
   language?: string
@@ -69,7 +71,6 @@ export function RegularMonacoEditor({
 }) {
   const { monacoRef, handleEditorWillMount } = useMonacoSetup({ errorFixFn })
 
-  const [defaultValue, _] = useState(value)
   // to avoid race conditions
   const [isEditorMounted, setIsEditorMounted] = useState(false)
   const { options } = useEditorOptions({
