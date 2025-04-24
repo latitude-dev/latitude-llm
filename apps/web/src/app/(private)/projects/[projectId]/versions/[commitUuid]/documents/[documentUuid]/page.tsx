@@ -49,14 +49,12 @@ export default async function DocumentPage({
   const freeRunsCount = await getFreeRuns(workspace.id)
 
   return (
-    <>
-      <DocumentEditor
-        documents={documents}
-        document={document}
-        providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
-        freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
-        copilotEnabled={env.LATITUDE_CLOUD}
-      />
-    </>
+    <DocumentEditor
+      documents={documents}
+      document={document}
+      providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
+      freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
+      copilotEnabled={env.LATITUDE_CLOUD}
+    />
   )
 }

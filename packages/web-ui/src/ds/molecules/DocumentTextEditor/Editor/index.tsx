@@ -18,6 +18,7 @@ import { CopilotSection } from './CopilotSection'
 import { MonacoDiffEditor } from './DiffEditor'
 import { RegularMonacoEditor } from './RegularEditor'
 
+const NO_ERRORS: CompileError[] = []
 export function DocumentTextEditor({
   value,
   path,
@@ -30,7 +31,7 @@ export function DocumentTextEditor({
   compileErrors,
   autoFocus = false,
 }: DocumentTextEditorProps) {
-  const errors = compileErrors ?? []
+  const errors = compileErrors ?? NO_ERRORS
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null)
 

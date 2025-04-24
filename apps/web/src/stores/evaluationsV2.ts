@@ -34,10 +34,12 @@ export function useEvaluationsV2(
     project,
     commit,
     document,
+    notifyUpdate = true,
   }: {
     project: Pick<Project, 'id'>
     commit: Pick<Commit, 'uuid'>
     document: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
+    notifyUpdate?: boolean
   },
   opts?: SWRConfiguration,
 ) {
@@ -117,10 +119,13 @@ export function useEvaluationsV2(
             return evaluation
           }) ?? [],
       )
-      toast({
-        title: 'Evaluation updated successfully',
-        description: `Evaluation ${evaluation.name} updated successfully`,
-      })
+
+      if (notifyUpdate) {
+        toast({
+          title: 'Evaluation updated successfully',
+          description: `Evaluation ${evaluation.name} updated successfully`,
+        })
+      }
     },
     onError: async (error) => {
       if (error?.err?.name === 'ZodError') return
