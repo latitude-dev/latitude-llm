@@ -9,6 +9,8 @@ import {
   sendSignedWebhook,
 } from '../../../services/webhooks'
 import { Result } from './../../../lib/Result'
+import { Message, MessageRole } from '@latitude-data/compiler'
+import { Providers } from '@latitude-data/constants'
 
 // Mock the services
 vi.mock('../../../services/webhooks', () => ({
@@ -284,7 +286,20 @@ describe('processIndividualWebhookJob', () => {
 
   it('processes documentLogCreated event type', async () => {
     // Create a workspace and webhook
-    const { workspace, commit } = await factories.createProject()
+    // Create a project with a document
+    const prompt = factories.helpers.createPrompt({
+      provider: 'openai',
+      model: 'gpt-4o',
+    })
+    const { workspace, commit, documents } = await factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      name: 'Default Project',
+      documents: {
+        foo: prompt,
+      },
+    })
+
+    const document = documents[0]!
     const webhook = await factories.createWebhook({
       workspaceId: workspace.id,
       url: 'https://example.com/webhook',
@@ -292,13 +307,56 @@ describe('processIndividualWebhookJob', () => {
       projectIds: [],
     })
 
+    // Create a document log with the factory
+    const { documentLog } = await factories.createDocumentLog({
+      document,
+      commit,
+      parameters: { test: 'value' },
+      skipProviderLogs: true,
+    })
+
+    // Create a provider log for the document log
+    const provider = await factories.createProviderApiKey({
+      workspace,
+      type: Providers.OpenAI,
+      name: 'wat',
+      user: await factories.createUser(),
+    })
+
+    const messages = [
+      { role: MessageRole.user, content: 'Hello, how are you?' },
+      {
+        role: MessageRole.assistant,
+        content: 'I am doing well, thank you for asking!',
+      },
+    ]
+
+    await factories.createProviderLog({
+      documentLogUuid: documentLog.uuid,
+      providerId: provider.id,
+      providerType: Providers.OpenAI,
+      workspace,
+      messages: messages as Message[],
+      responseText: 'I am doing well, thank you for asking!',
+      model: 'gpt-4',
+      duration: 1000,
+      tokens: 50,
+    })
+
     // Create a documentLogCreated event
     const event = {
       type: 'documentLogCreated',
       data: {
+        uuid: documentLog.uuid,
+        documentUuid: document.documentUuid,
+        duration: 1000,
+        parameters: { test: 'value' },
+        customIdentifier: undefined,
+        source: 'playground',
         workspaceId: workspace.id,
         commitId: commit.id,
         userEmail: 'test@example.com',
+        messages,
       },
     }
 
@@ -322,15 +380,23 @@ describe('processIndividualWebhookJob', () => {
     // Process the webhook job
     await processIndividualWebhookJob(mockJob)
 
-    // Verify webhook was sent
+    // Verify webhook was sent with the correct payload including messages
     expect(sendSignedWebhook).toHaveBeenCalledWith({
       url: webhook.url,
       secret: webhook.secret,
       payload: {
         eventType: event.type,
-        payload: {
+        payload: expect.objectContaining({
+          prompt: expect.any(Object),
+          uuid: documentLog.uuid,
+          parameters: { test: 'value' },
+          customIdentifier: undefined,
+          duration: expect.any(Number),
+          source: expect.any(String),
           commitId: commit.id,
-        },
+          messages: messages,
+          response: expect.any(String),
+        }),
       },
     })
 
