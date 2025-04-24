@@ -118,11 +118,16 @@ function FileNode({
   useEffect(() => {
     setSelected(!!currentUuid && currentUuid === node.doc?.documentUuid)
   }, [currentUuid])
+
+  const overMyself =
+    droppable.over && droppable.over.id === droppable.active?.id
+  const someoneIsOverMe = droppable.isOver && !overMyself
+  const canDrag = !isMerged && !node.isRoot
   return (
     <div
       ref={droppable.setNodeRef}
       className={cn('flex-1 w-full', {
-        'bg-accent/50': droppable.isOver,
+        'bg-accent/50': someoneIsOverMe,
       })}
     >
       <NodeHeader
@@ -131,7 +136,7 @@ function FileNode({
         selected={selected}
         open={open}
         onToggleOpen={onToggleOpen}
-        canDrag={!isMerged && !node.isRoot}
+        canDrag={canDrag}
       />
 
       {node.isFile ? null : (

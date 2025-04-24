@@ -55,9 +55,7 @@ const FileTreeProvider = ({
 }) => {
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
-      delay: 200, // ms
-      distance: 15,
-      tolerance: 15,
+      distance: 5,
     },
   })
   const sensors = useSensors(mouseSensor)
@@ -68,8 +66,9 @@ const FileTreeProvider = ({
   const { onDragEnd } = useDragEndFile({ renamePaths })
   const onDragOver = useCallback(
     (event: DragOverEvent) => {
-      const overData = event.over?.data?.current
-        ? (event.over.data as DataRef<DraggableAndDroppableData>).current
+      const { over } = event
+      const overData = over?.data?.current
+        ? (over.data as DataRef<DraggableAndDroppableData>).current
         : undefined
 
       const nodePath = overData ? overData.path : undefined

@@ -13,8 +13,13 @@ export function useDragEndFile({
   }))
   const onDragEnd = useCallback(
     async (event: DragEndEvent) => {
-      const dragNodeData = event.active.data.current
-      const draggedFolderData = event.over?.data?.current
+      const { active, over } = event
+
+      // Skip if the drag is over itself
+      if (over && active.id === over.id) return
+
+      const dragNodeData = active.data.current
+      const draggedFolderData = over?.data?.current
       if (!dragNodeData || !draggedFolderData) return
 
       const dragNode = dragNodeData as DraggableAndDroppableData
