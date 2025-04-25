@@ -17,6 +17,9 @@ import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
 
+// TODO: Make this generic. Pass prompts: string
+// Pass entityUuid and entityType so this can be used to track
+// events for documents and evaluations. Now the event is tied to documents
 export const requestSuggestionAction = authProcedure
   .createServerAction()
   .input(
