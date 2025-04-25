@@ -27,7 +27,7 @@ export function ScoreCell({ experiment }: { experiment: ExperimentDto }) {
   }
 
   const scoreText =
-    avgScore % 1 === 0 ? avgScore.toFixed(0) : avgScore.toFixed(1)
+    avgScore % 1 < 0.01 ? avgScore.toFixed(0) : avgScore.toFixed(2)
 
   return <Badge variant={scoreBadgeVariant(avgScore)}>{scoreText}</Badge>
 }

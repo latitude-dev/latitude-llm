@@ -3,7 +3,6 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCommitsFromProject } from '$/stores/commitsStore'
 import useDatasets from '$/stores/datasets'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { useExperiments } from '$/stores/experiments'
 import { ExperimentDto } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
@@ -33,6 +32,7 @@ import { DocumentRoutes, ROUTES } from '$/services/routes'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { DatasetCell } from './DatasetCell'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
+import { EvaluationsCell } from './EvaluationsCell'
 
 type ExperimentStatus = {
   isPending: boolean
@@ -64,13 +64,6 @@ export function ExperimentsTable({
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
   const pageSize = searchParams.get('pageSize') ?? '25'
-
-  const { data: evaluations, isLoading: isLoadingEvaluations } =
-    useEvaluationsV2({
-      project,
-      commit,
-      document,
-    })
 
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
 
@@ -134,6 +127,8 @@ export function ExperimentsTable({
       <TableBody>
         {experiments.map((experiment) => {
           const { isPending, isRunning } = getStatus(experiment)
+          const isSelected = selectedExperiments.includes(experiment.uuid)
+          const textColor = isSelected ? 'primary' : 'foreground'
 
           const commit = commits?.find((c) => c.id === experiment.commitId)
 
@@ -142,6 +137,7 @@ export function ExperimentsTable({
               key={experiment.id}
               className={cn('border-b-[0.5px] h-12 max-h-12 border-border', {
                 'animate-pulse': isRunning,
+                'bg-accent hover:bg-accent/50': isSelected,
               })}
             >
               <TableCell
@@ -171,12 +167,14 @@ export function ExperimentsTable({
                     </div>
                   )}
 
-                  <Text.H5 noWrap>{experiment.name}</Text.H5>
+                  <Text.H5 noWrap ellipsis color={textColor}>
+                    {experiment.name}
+                  </Text.H5>
                 </div>
               </TableCell>
               <TableCell>
                 <div className='flex w-full items-center justify-center'>
-                  <DurationCell experiment={experiment} />
+                  <DurationCell experiment={experiment} color={textColor} />
                 </div>
               </TableCell>
               <TableCell>
@@ -231,28 +229,7 @@ export function ExperimentsTable({
                 </div>
               </TableCell>
               <TableCell>
-                <Text.H5 noWrap>
-                  {isLoadingEvaluations ? (
-                    <Skeleton height='h5' className='w-12' />
-                  ) : (
-                    <div className='flex flex-nowrap overflow-x-auto max-w-full'>
-                      {experiment.evaluationUuids.map((evaluationUuid) => {
-                        const evaluation = evaluations?.find(
-                          (evaluation) => evaluation.uuid === evaluationUuid,
-                        )
-                        return (
-                          <Badge
-                            key={evaluationUuid}
-                            variant='secondary'
-                            className='mr-1'
-                          >
-                            {evaluation?.name ?? 'Unknown evaluation'}
-                          </Badge>
-                        )
-                      })}
-                    </div>
-                  )}
-                </Text.H5>
+                <EvaluationsCell experiment={experiment} />
               </TableCell>
               <TableCell>
                 {isLoadingCommits ? (
@@ -281,13 +258,13 @@ export function ExperimentsTable({
               </TableCell>
               <TableCell>
                 <div className='flex w-full items-center justify-center'>
-                  <Text.H5 noWrap>
+                  <Text.H5 noWrap color={textColor}>
                     {formatCount(experiment.metadata.count)}
                   </Text.H5>
                 </div>
               </TableCell>
               <TableCell>
-                <Text.H5 noWrap>
+                <Text.H5 noWrap color={textColor}>
                   {experiment.createdAt?.toLocaleString()}
                 </Text.H5>
               </TableCell>

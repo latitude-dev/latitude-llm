@@ -318,6 +318,12 @@ export type ExperimentAggregatedResults = {
 export type ExperimentDto = Experiment & {
   results: ExperimentAggregatedResults
 }
+export type ExperimentLogsMetadata = {
+  totalCost: number
+  totalDuration: number
+  count: number
+}
 export type ExperimentWithScores = ExperimentDto & {
   scores: ExperimentScores
+  logsMetadata: ExperimentLogsMetadata
 }

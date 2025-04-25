@@ -17,6 +17,11 @@ import {
 
 const EMPTY_ARRAY: [] = []
 
+export type BestLogsMetadata = {
+  cost: string[]
+  duration: string[]
+}
+
 function getExperimentUuidsWithBestScore(
   evaluationUuid: string,
   experimentsWithScores: (ExperimentWithScores | undefined)[],
@@ -48,6 +53,55 @@ function getExperimentUuidsWithBestScore(
     },
     { bestValue: -Infinity, experimentUuids: [] },
   ).experimentUuids
+}
+
+function getExperimentUuidsWithBestLogsMetadata(
+  experimentsWithScores: (ExperimentWithScores | undefined)[],
+): BestLogsMetadata {
+  const results = experimentsWithScores.reduce(
+    (
+      acc: {
+        cost: { bestValue: number; experimentUuids: string[] }
+        duration: { bestValue: number; experimentUuids: string[] }
+      },
+      experiment,
+    ) => {
+      const logsMetadata = experiment?.logsMetadata
+      if (!logsMetadata) return acc
+      if (!logsMetadata.count) return acc // Invalid logsMetadata
+
+      const cost = logsMetadata.totalCost / logsMetadata.count
+      const duration = logsMetadata.totalDuration / logsMetadata.count
+
+      // Evaluate cost
+      if (cost < acc.cost.bestValue) {
+        acc.cost = { bestValue: cost, experimentUuids: [experiment.uuid] }
+      } else if (cost === acc.cost.bestValue) {
+        acc.cost.experimentUuids.push(experiment.uuid)
+      }
+
+      // Evaluate duration
+      if (duration < acc.duration.bestValue) {
+        acc.duration = {
+          bestValue: duration,
+          experimentUuids: [experiment.uuid],
+        }
+      } else if (duration === acc.duration.bestValue) {
+        acc.duration.experimentUuids.push(experiment.uuid)
+      }
+
+      return acc
+    },
+    {
+      cost: { bestValue: Infinity, experimentUuids: [] },
+      duration: { bestValue: Infinity, experimentUuids: [] },
+    },
+  )
+
+  return {
+    cost: results.cost.experimentUuids,
+    duration: results.duration.experimentUuids,
+  }
 }
 
 export type EvaluationWithBestExperiment = EvaluationV2 & {
@@ -167,7 +221,13 @@ export function useExperimentComparison(
       setExperimentsWithScores((prev) => {
         const prevExperiment = prev[index]
         prev[index] = {
-          scores: {}, // If the experiment is not loaded, we create it with empty scores
+          // If the experiment is not loaded, we create it with empty scores and logsMetadata
+          scores: {},
+          logsMetadata: {
+            count: 0,
+            totalCost: 0,
+            totalDuration: 0,
+          },
           ...prevExperiment, // If it did exist, we keep the previous scores
           ...updatedExperiment, // Update any values from the experiments
         }
@@ -228,9 +288,22 @@ export function useExperimentComparison(
     },
   })
 
+  const [bestLogsMetadata, setBestLogsMetadata] = useState<BestLogsMetadata>({
+    cost: [],
+    duration: [],
+  })
+
+  useEffect(() => {
+    if (!experimentsWithScores) return
+    setBestLogsMetadata(
+      getExperimentUuidsWithBestLogsMetadata(experimentsWithScores),
+    )
+  }, [experimentsWithScores])
+
   return {
     experiments: experimentsWithScores,
     evaluations: evaluationsWithBestExperiments,
+    bestLogsMetadata,
     isLoading: isLoading || isLoadingEvaluations,
   }
 }

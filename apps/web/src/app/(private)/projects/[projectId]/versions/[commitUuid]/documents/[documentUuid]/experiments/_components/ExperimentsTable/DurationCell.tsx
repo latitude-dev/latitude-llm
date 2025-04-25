@@ -2,6 +2,7 @@
 
 import { ExperimentDto } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextColor } from '@latitude-data/web-ui/tokens'
 import { useEffect, useState } from 'react'
 
 const getDuration = (start: Date | null, end: Date | null) => {
@@ -22,7 +23,13 @@ const toTimer = (duration: number) => {
   return hours > 0 ? `${hours}:${minutes}:${seconds}` : `${minutes}:${seconds}`
 }
 
-export function DurationCell({ experiment }: { experiment: ExperimentDto }) {
+export function DurationCell({
+  experiment,
+  color,
+}: {
+  experiment: ExperimentDto
+  color: TextColor
+}) {
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
@@ -37,5 +44,9 @@ export function DurationCell({ experiment }: { experiment: ExperimentDto }) {
     experiment.finishedAt ? new Date(experiment.finishedAt) : now,
   )
 
-  return <Text.H5 noWrap>{duration ? toTimer(duration) : 'Pending'}</Text.H5>
+  return (
+    <Text.H5 noWrap color={color}>
+      {duration ? toTimer(duration) : 'Pending'}
+    </Text.H5>
+  )
 }
