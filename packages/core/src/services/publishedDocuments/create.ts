@@ -19,11 +19,13 @@ export async function createPublishedDocument(
     workspace,
     document,
     commitUuid,
+    isPublished = false,
   }: {
     project: Project
     workspace: Workspace
     document: DocumentVersion
     commitUuid: string
+    isPublished?: boolean
   },
   db = database,
 ) {
@@ -69,7 +71,7 @@ export async function createPublishedDocument(
         workspaceId: workspace.id,
         documentUuid: document.documentUuid,
         projectId: project.id,
-        isPublished: false,
+        isPublished,
         canFollowConversation: false,
         title: document.path,
       })

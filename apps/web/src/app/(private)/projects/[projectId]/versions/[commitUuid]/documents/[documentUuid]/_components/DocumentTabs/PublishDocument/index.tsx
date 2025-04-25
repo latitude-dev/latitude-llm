@@ -24,18 +24,23 @@ function UnpublishedDocumentSettings({
 }) {
   const {
     data: publishedData,
-    isPublishing: isLoading,
-    setPublished,
+    publish,
+    isPublishing,
   } = usePublishedDocument({
     documentUuid: document.documentUuid,
     projectId,
   })
 
-  const { isHead: canEdit } = useCurrentCommit()
+  const { commit, isHead: canEdit } = useCurrentCommit()
 
   const onPublish = () => {
     if (!canEdit) return
-    setPublished(true)
+
+    publish({
+      documentUuid: document.documentUuid,
+      projectId,
+      commitUuid: commit.uuid,
+    })
   }
 
   return (
@@ -55,7 +60,7 @@ function UnpublishedDocumentSettings({
           fullWidth
           fancy
           variant='default'
-          isLoading={isLoading}
+          isLoading={isPublishing}
           disabled={!canEdit}
           onClick={onPublish}
         >
@@ -74,14 +79,15 @@ function PublishedDocumentSettings({
   projectId: number
 }) {
   const { isHead: canEdit } = useCurrentCommit()
-  const { data, isUpdating, update, setPublished } = usePublishedDocument({
+  const { data, isUpdating, update } = usePublishedDocument({
     documentUuid: document.documentUuid,
     projectId,
   })
 
   const onUnpublish = () => {
     if (!canEdit) return
-    setPublished(false)
+
+    update({ isPublished: false })
   }
 
   const [title, setTitle] = useState<string | undefined>()
@@ -101,6 +107,7 @@ function PublishedDocumentSettings({
 
   const onSaveChanges = useCallback(() => {
     if (isUpdating) return
+
     update({
       title,
       description,
