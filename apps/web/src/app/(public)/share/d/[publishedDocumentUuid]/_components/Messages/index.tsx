@@ -109,6 +109,7 @@ export function Messages({
 
         {canChat ? (
           <ChatTextArea
+            canChat
             clearChat={onReset}
             onSubmit={onChat}
             placeholder='Enter followup message...'

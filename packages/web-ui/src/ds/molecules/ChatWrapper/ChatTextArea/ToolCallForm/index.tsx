@@ -226,6 +226,7 @@ export function ToolCallForm({
       />
       <div className='absolute w-full -bottom-3 flex justify-center'>
         <ToolBar
+          canChat
           disabled={disabled ?? getValue(value) === ''}
           clearChat={clearChat}
           onSubmit={onSubmitHandler}

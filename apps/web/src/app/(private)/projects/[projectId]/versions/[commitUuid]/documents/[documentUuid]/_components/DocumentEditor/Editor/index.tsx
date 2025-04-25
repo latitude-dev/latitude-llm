@@ -64,7 +64,7 @@ export default function DocumentEditor({
     () =>
       documents?.find((d) => d.documentUuid === _document.documentUuid) ??
       _document,
-    [documents],
+    [documents, _document],
   )
 
   const [value, setValue] = useState(document.content)
@@ -126,7 +126,16 @@ export default function DocumentEditor({
       providerNames: providers.map((p) => p.name) ?? [],
       integrationNames: integrations?.map((i) => i.name) ?? [],
     })
-  }, [document.promptlVersion, agentToolsMap, providers, integrations])
+  }, [
+    document.promptlVersion,
+    agentToolsMap,
+    providers,
+    integrations,
+    document,
+    documents,
+    runReadMetadata,
+    value,
+  ])
 
   const onChange = useCallback(
     async (newValue: string) => {
@@ -134,14 +143,7 @@ export default function DocumentEditor({
 
       debouncedSave(newValue)
     },
-    [
-      agentToolsMap,
-      document.path,
-      document.promptlVersion,
-      integrations,
-      providers,
-      runReadMetadata,
-    ],
+    [debouncedSave, setValue],
   )
 
   const isMerged = commit.mergedAt !== null
@@ -196,7 +198,7 @@ export default function DocumentEditor({
                       <UpdateToPromptLButton document={document} />
                     </>
                   ),
-                  [project.id, commit.uuid, document.documentUuid],
+                  [project.id, commit.uuid, document],
                 )}
                 leftActions={useMemo(
                   () => (

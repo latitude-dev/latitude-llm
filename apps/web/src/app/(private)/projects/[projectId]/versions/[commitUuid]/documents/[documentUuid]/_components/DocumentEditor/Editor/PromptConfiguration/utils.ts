@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export type PromptConfigurationProps = {
   config: Record<string, unknown>
+  canUseSubagents: boolean
   setConfig: (config: Record<string, unknown>) => void
   disabled?: boolean
 }
@@ -19,7 +20,10 @@ export type PromptConfigurationProps = {
 export const useReactiveConfig = ({
   config: promptConfig,
   setConfig: setPromptConfig,
-}: PromptConfigurationProps) => {
+}: {
+  config: PromptConfigurationProps['config']
+  setConfig: PromptConfigurationProps['setConfig']
+}) => {
   const [localConfig, setLocalConfig] = useState(promptConfig)
 
   useEffect(() => {
@@ -128,7 +132,7 @@ export const useLatitudeAgentsConfig = ({
       )
       setSelectedAgents([...selectedAgents, selectedRelativePath])
     },
-    [selectedAgents, setSelectedAgents],
+    [selectedAgents, setSelectedAgents, document.path],
   )
 
   return {

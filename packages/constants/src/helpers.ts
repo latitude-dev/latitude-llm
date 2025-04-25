@@ -61,6 +61,8 @@ export function createRelativePath(refPath: string, from?: string): string {
   return refPath.length < fullRefPath.length ? '/' + refPath : fullRefPath
 }
 
+// TODO: Forbid tools in schema by passing a flag.
+// This is needed for custom evaluation prompts.
 export function promptConfigSchema({
   providerNames,
   integrationNames,

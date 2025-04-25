@@ -16,6 +16,7 @@ import {
   ProviderApiKey,
   Providers,
   Workspace,
+  LLM_EVALUATION_PROMPT_PARAMETERS,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
@@ -81,7 +82,10 @@ export async function runPrompt<
   let promptConfig
   let promptChain
   try {
-    const result = await scan({ prompt })
+    const result = await scan({
+      prompt,
+      withParameters: LLM_EVALUATION_PROMPT_PARAMETERS,
+    })
     if (result.errors.length > 0) {
       throw new ChainError({
         code: RunErrorCodes.ChainCompileError,

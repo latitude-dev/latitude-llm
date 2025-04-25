@@ -9,19 +9,23 @@ import {
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { cn } from '@latitude-data/web-ui/utils'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
-import { COLLAPSED_BOX_HEIGHT } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import type { ConversationMetadata } from 'promptl-ai'
 
-import Chat from './Chat'
 import DocumentEvaluations from './DocumentEvaluations'
 import DocumentParams from './DocumentParams'
 import Preview from './Preview'
 import DocumentParamsLoading from './DocumentParams/DocumentParamsLoading'
 import { useExpandParametersOrEvaluations } from './hooks/useExpandParametersOrEvaluations'
-
-const COLLAPSED_SIZE = COLLAPSED_BOX_HEIGHT * 2 + 12
-const GAP_PADDING = 26
+import {
+  PLAYGROUND_COLLAPSED_SIZE,
+  PLAYGROUND_GAP_PADDING,
+} from '$/hooks/playgrounds/constants'
+import Chat from '$/components/PlaygroundCommon/Chat'
+import { useRunPlaygroundPrompt } from './hooks/useRunPlaygroundPrompt'
 
 export const Playground = memo(
   ({
@@ -37,13 +41,14 @@ export const Playground = memo(
   }) => {
     const [mode, setMode] = useState<'preview' | 'chat'>('preview')
     const { commit } = useCurrentCommit()
+    const { project } = useCurrentProject()
     const [forcedSize, setForcedSize] = useState<number | undefined>()
     const expander = useExpandParametersOrEvaluations({
       initialExpanded: 'parameters',
     })
     const collapsed = expander.expandedSection === null
     useEffect(() => {
-      setForcedSize(collapsed ? COLLAPSED_SIZE : undefined)
+      setForcedSize(collapsed ? PLAYGROUND_COLLAPSED_SIZE : undefined)
     }, [collapsed])
     const { parameters, source, setSource } = useDocumentParameters({
       commitVersionUuid: commit.uuid,
@@ -72,6 +77,12 @@ export const Playground = memo(
     )
     const clearChat = useCallback(() => setMode('preview'), [setMode])
     const runPrompt = useCallback(() => setMode('chat'), [setMode])
+    const { runPromptFn, addMessagesFn } = useRunPlaygroundPrompt({
+      commit,
+      projectId: project.id,
+      document,
+      parameters,
+    })
 
     return (
       <SplitPane
@@ -79,7 +90,7 @@ export const Playground = memo(
         gap={4}
         initialPercentage={50}
         forcedSize={forcedSize}
-        minSize={COLLAPSED_SIZE + GAP_PADDING}
+        minSize={PLAYGROUND_COLLAPSED_SIZE + PLAYGROUND_GAP_PADDING}
         dragDisabled={collapsed}
         firstPane={
           <div className={cn('grid gap-2 w-full pr-0.5', expander.cssClass)}>
@@ -120,9 +131,11 @@ export const Playground = memo(
               />
             ) : (
               <Chat
-                document={document}
+                canChat
                 parameters={parameters}
                 clearChat={clearChat}
+                runPromptFn={runPromptFn}
+                addMessagesFn={addMessagesFn}
                 onPromptRan={onPromptRan}
                 expandParameters={expandParameters}
                 setExpandParameters={setExpandParameters}

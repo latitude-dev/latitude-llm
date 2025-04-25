@@ -11,12 +11,14 @@ import { ToolBar } from './ToolBar'
 
 function SimpleTextArea({
   placeholder,
+  canChat,
   clearChat,
   onSubmit: onSubmitProp,
   disabled = false,
   disableReset = false,
 }: {
   placeholder: string
+  canChat: boolean
   clearChat: () => void
   disabled?: boolean
   onSubmit?: (value: string) => void
@@ -40,18 +42,21 @@ function SimpleTextArea({
   )
   return (
     <>
-      <TextareaAutosize
-        className='bg-transparent w-full px-2 pt-2 pb-14 resize-none text-sm'
-        disabled={disabled}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        minRows={1}
-        maxRows={5}
-      />
+      {canChat ? (
+        <TextareaAutosize
+          className='bg-transparent w-full px-2 pt-2 pb-14 resize-none text-sm'
+          disabled={disabled}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          minRows={1}
+          maxRows={5}
+        />
+      ) : null}
       <div className='absolute w-full -bottom-3 flex justify-center'>
         <ToolBar
+          canChat={canChat}
           onSubmit={onSubmit}
           clearChat={clearChat}
           disabled={disabled}
@@ -72,8 +77,10 @@ export function ChatTextArea({
   toolRequests = [],
   addMessages,
   disableReset = false,
+  canChat,
 }: {
   placeholder: string
+  canChat: boolean
   clearChat: () => void
   disabled?: boolean
   onSubmit?: OnSubmit | OnSubmitWithTools
@@ -83,10 +90,10 @@ export function ChatTextArea({
 }) {
   return (
     <div
-      className={cn(
-        'flex relative w-full border border-border bg-secondary mb-6',
-        'dark:bg-foreground/10 rounded-md',
-      )}
+      className={cn('flex relative w-full border mb-6 rounded-md', {
+        'border-border bg-secondary dark:bg-foreground/10': canChat,
+        'border-transparent': !canChat,
+      })}
     >
       {toolRequests.length > 0 && addMessages ? (
         <ToolCallForm
@@ -99,6 +106,7 @@ export function ChatTextArea({
       ) : (
         <SimpleTextArea
           placeholder={placeholder}
+          canChat={canChat}
           clearChat={clearChat}
           onSubmit={onSubmit}
           disabled={disabled}

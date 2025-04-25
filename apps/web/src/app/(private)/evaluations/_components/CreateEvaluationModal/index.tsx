@@ -253,6 +253,8 @@ export default function CreateEvaluationModal({
     onClose,
     title,
     description,
+    isCreating,
+    isLoading,
     prompt,
     configuration,
     metadataType,

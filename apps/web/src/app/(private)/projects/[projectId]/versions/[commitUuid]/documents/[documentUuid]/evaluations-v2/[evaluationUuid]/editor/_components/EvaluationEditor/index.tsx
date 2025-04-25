@@ -21,8 +21,7 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { EditorHeader } from '$/components/EditorHeader'
 
 import { TextEditor } from './TextEditor'
-// TODO: Implement playground
-// import { Playground } from './Playground'
+import { Playground } from './Playground'
 
 export function EvaluationEditor({
   document,
@@ -112,14 +111,6 @@ export function EvaluationEditor({
       providerNames: providers.map((p) => p.name),
     })
   }, [providers, value, runReadMetadata])
-
-  // TODO: Implement playground
-  // <Playground
-  //   document={document}
-  //   prompt={evaluation.configuration.prompt}
-  //   setPrompt={onChange}
-  //   metadata={metadata!}
-  // />
   return (
     <>
       <SplitPane
@@ -133,6 +124,7 @@ export function EvaluationEditor({
           <SplitPane.Pane>
             <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0 pl-6 pb-6'>
               <EditorHeader
+                canUseSubagents={false}
                 providers={providers}
                 disabledMetadataSelectors={commit.mergedAt !== null}
                 title={evaluation.name}
@@ -161,7 +153,7 @@ export function EvaluationEditor({
         secondPane={
           <SplitPane.Pane>
             <div className='flex-1 relative max-h-full pr-6'>
-              Playground goes here
+              <Playground metadata={metadata!} />
             </div>
           </SplitPane.Pane>
         }

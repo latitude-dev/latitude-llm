@@ -1,10 +1,11 @@
-import { StreamMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/components'
 import { Conversation } from '@latitude-data/compiler'
 import {
   ErrorMessage,
   MessageList,
 } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
+
 export function ChatMessages({
   conversation,
   responseStream,

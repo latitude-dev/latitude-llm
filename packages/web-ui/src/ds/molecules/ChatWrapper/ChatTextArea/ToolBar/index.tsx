@@ -16,12 +16,14 @@ export function ToolBarWrapper({
 }
 
 export function ToolBar({
+  canChat,
   onSubmit,
   clearChat,
   disabled = false,
   submitLabel = 'Send Message',
   disableReset = false,
 }: {
+  canChat: boolean
   onSubmit?: () => void
   clearChat?: () => void
   disabled?: boolean
@@ -32,15 +34,17 @@ export function ToolBar({
     <ToolBarWrapper>
       <Button
         fancy
-        variant='outline'
+        variant={canChat ? 'outline' : 'default'}
         disabled={disableReset}
         onClick={clearChat}
       >
         Reset Chat
       </Button>
-      <Button fancy disabled={disabled} onClick={onSubmit}>
-        {submitLabel}
-      </Button>
+      {canChat ? (
+        <Button fancy disabled={disabled} onClick={onSubmit}>
+          {submitLabel}
+        </Button>
+      ) : null}
     </ToolBarWrapper>
   )
 }

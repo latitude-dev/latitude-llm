@@ -6,9 +6,10 @@ export function SubAgentSelector({
   config,
   setConfig,
   disabled,
+  canUseSubagents,
 }: PromptConfigurationProps) {
   const { selectedAgents, availableAgents, toggleAgent } =
-    useLatitudeAgentsConfig({ config, setConfig })
+    useLatitudeAgentsConfig({ config, setConfig, canUseSubagents })
 
   const label = useMemo(() => {
     if (!selectedAgents.length) return 'No agents selected'
