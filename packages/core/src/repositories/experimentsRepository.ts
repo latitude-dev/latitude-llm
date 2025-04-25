@@ -1,12 +1,13 @@
 import { eq, and, getTableColumns, sql, count, desc, sum } from 'drizzle-orm'
 
-import { Experiment, ExperimentDto } from '../browser'
+import { Experiment, ExperimentDto, ExperimentLogsMetadata } from '../browser'
 import {
   commits,
   documentLogs,
   evaluationResultsV2,
   experiments,
   projects,
+  providerLogs,
   runErrors,
 } from '../schema'
 import Repository from './repositoryV2'
@@ -178,7 +179,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
     return Result.ok(this.experimentDtoPresenter(result[0]!))
   }
 
-  async experimentScores(
+  async getScores(
     uuid: string,
   ): PromisedResult<ExperimentScores, LatitudeError> {
     const result = await this.db
@@ -219,6 +220,42 @@ export class ExperimentsRepository extends Repository<Experiment> {
           return acc
         }, {}),
     )
+  }
+
+  async getLogsMetadata(
+    uuid: string,
+  ): PromisedResult<ExperimentLogsMetadata, LatitudeError> {
+    const result = await this.db
+      .select({
+        id: experiments.id,
+        count: count(documentLogs.id).as('count'),
+        totalCost: sum(providerLogs.costInMillicents)
+          .mapWith(Number)
+          .as('total_cost'),
+        totalDuration: sum(providerLogs.duration)
+          .mapWith(Number)
+          .as('total_duration'),
+      })
+      .from(experiments)
+      .leftJoin(documentLogs, eq(documentLogs.experimentId, experiments.id))
+      .leftJoin(
+        providerLogs,
+        eq(providerLogs.documentLogUuid, documentLogs.uuid),
+      )
+      .where(and(this.scopeFilter, eq(experiments.uuid, uuid)))
+      .groupBy(experiments.id)
+
+    if (!result.length) {
+      return Result.error(
+        new NotFoundError(`Experiment not found with uuid '${uuid}'`),
+      )
+    }
+
+    return Result.ok({
+      count: result[0]!.count,
+      totalCost: result[0]!.totalCost,
+      totalDuration: result[0]!.totalDuration,
+    })
   }
 
   private experimentDtoPresenter = (

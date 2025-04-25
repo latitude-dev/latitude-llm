@@ -23,15 +23,19 @@ export const GET = errorHandler(
       const experiments: ExperimentWithScores[] = await Promise.all(
         experimentUuids.map(async (uuid) => {
           const experimentResult = scope.findByUuid(uuid)
-          const scoresResult = scope.experimentScores(uuid)
+          const scoresResult = scope.getScores(uuid)
 
           await Promise.all([experimentResult, scoresResult])
           const experiment = await experimentResult.then((r) => r.unwrap())
           const scores = await scoresResult.then((r) => r.unwrap())
+          const logsMetadata = await scope
+            .getLogsMetadata(uuid)
+            .then((r) => r.unwrap())
 
           return {
             ...experiment,
             scores,
+            logsMetadata,
           } as ExperimentWithScores
         }),
       )

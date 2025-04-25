@@ -113,7 +113,7 @@ export async function createExperiment(
           datasetLabels,
           fromRow: fromRow,
           toRow: toRow ?? rowCount,
-          count: Math.min(rowCount, toRow ?? rowCount) - fromRow,
+          count: Math.min(rowCount, toRow ?? rowCount) - fromRow + 1,
         },
       })
       .returning()

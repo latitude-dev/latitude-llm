@@ -1,5 +1,5 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ExperimentItem } from './Item'
+import { ExperimentItem } from './ExperimentItem/index'
 import { useExperimentComparison } from '$/stores/experimentComparison'
 import {
   useCurrentCommit,
@@ -19,12 +19,13 @@ export function ExperimentComparison({
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
-  const { experiments, evaluations } = useExperimentComparison({
-    project: project as Project,
-    commit: commit as Commit,
-    document,
-    experimentUuids: selectedExperimentUuids,
-  })
+  const { experiments, evaluations, bestLogsMetadata } =
+    useExperimentComparison({
+      project: project as Project,
+      commit: commit as Commit,
+      document,
+      experimentUuids: selectedExperimentUuids,
+    })
 
   return (
     <div className='flex flex-row w-full max-w-full relative border border-border rounded-lg overflow-auto custom-scrollbar'>
@@ -43,6 +44,7 @@ export function ExperimentComparison({
                 ? () => onUnselectExperiment(experiment.uuid)
                 : undefined
             }
+            bestLogsMetadata={bestLogsMetadata}
           />
         )
       })}
