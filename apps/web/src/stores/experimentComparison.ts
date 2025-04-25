@@ -300,6 +300,49 @@ export function useExperimentComparison(
     )
   }, [experimentsWithScores])
 
+  useSockets({
+    event: 'documentLogCreated',
+    onMessage: (message: EventArgs<'documentLogCreated'>) => {
+      const { documentLogWithMetadata } = message
+      if (!documentLogWithMetadata) return
+
+      setExperimentsWithScores((prev) => {
+        if (!prev) return prev
+
+        // Find the experiment that was updated
+        const prevExperimentIdx = prev.findIndex(
+          (exp) => exp?.id === documentLogWithMetadata.experimentId,
+        )
+
+        if (prevExperimentIdx === -1) return prev
+
+        const prevExperiment = prev[prevExperimentIdx]!
+        const prevLogsMetadata = prevExperiment.logsMetadata ?? {
+          count: 0,
+          totalCost: 0,
+          totalDuration: 0,
+        }
+
+        prev[prevExperimentIdx] = {
+          // Update any values from the experiments
+          ...prevExperiment,
+          logsMetadata: {
+            ...prevExperiment.logsMetadata,
+            count: prevLogsMetadata.count + 1,
+            totalCost:
+              prevLogsMetadata.totalCost +
+              (documentLogWithMetadata.costInMillicents ?? 0),
+            totalDuration:
+              prevLogsMetadata.totalDuration +
+              (documentLogWithMetadata.duration ?? 0),
+          },
+        }
+
+        return prev
+      })
+    },
+  })
+
   return {
     experiments: experimentsWithScores,
     evaluations: evaluationsWithBestExperiments,

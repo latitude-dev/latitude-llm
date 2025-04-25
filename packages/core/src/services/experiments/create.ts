@@ -9,6 +9,20 @@ import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { Result } from '../../lib/Result'
 import { LatitudeError } from '../../lib/errors'
 
+function calculateSelectedRangeCount({
+  firstIndex,
+  lastIndex,
+  totalCount,
+}: {
+  firstIndex: number
+  lastIndex?: number
+  totalCount: number
+}): number {
+  const firstRow = Math.max(0, firstIndex)
+  const lastRow = Math.min(totalCount, lastIndex ?? totalCount)
+  return lastRow - firstRow + 1 // +1 because both first and last rows are inclusive
+}
+
 async function getPromptMetadata({
   workspace,
   commit,
@@ -113,7 +127,11 @@ export async function createExperiment(
           datasetLabels,
           fromRow: fromRow,
           toRow: toRow ?? rowCount,
-          count: Math.min(rowCount, toRow ?? rowCount) - fromRow + 1,
+          count: calculateSelectedRangeCount({
+            firstIndex: fromRow,
+            lastIndex: toRow,
+            totalCount: rowCount,
+          }),
         },
       })
       .returning()

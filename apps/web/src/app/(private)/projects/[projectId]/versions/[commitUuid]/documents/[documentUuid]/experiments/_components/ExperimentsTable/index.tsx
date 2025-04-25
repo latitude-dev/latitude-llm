@@ -121,7 +121,6 @@ export function ExperimentsTable({
           <TableHead>Dataset</TableHead>
           <TableHead>Rows</TableHead>
           <TableHead>Created At</TableHead>
-          <TableHead />
         </TableRow>
       </TableHeader>
       <TableBody>

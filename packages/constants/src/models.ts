@@ -15,6 +15,7 @@ export type DocumentLog = {
   source: LogSources | null
   createdAt: Date
   updatedAt: Date
+  experimentId: number | null
 }
 
 export enum EvaluationResultableType {
