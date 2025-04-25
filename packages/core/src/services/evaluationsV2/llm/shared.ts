@@ -1,4 +1,9 @@
-import { AGENT_RETURN_TOOL_NAME, PromptConfig } from '@latitude-data/constants'
+import {
+  AGENT_RETURN_TOOL_NAME,
+  ChainStepResponse,
+  PromptConfig,
+  StreamType,
+} from '@latitude-data/constants'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
@@ -145,8 +150,33 @@ export async function runPrompt<
   }
 
   let verdict: S extends z.ZodSchema ? z.infer<S> : unknown
+  verdict = parseVerdict(response, promptConfig.type as DocumentType)
 
-  if (promptConfig.type === DocumentType.Agent) {
+  if (schema) {
+    const result = schema.safeParse(verdict)
+    if (result.error) {
+      throw new ChainError({
+        code: RunErrorCodes.InvalidResponseFormatError,
+        message: result.error.message,
+      })
+    }
+
+    verdict = result.data
+  }
+
+  const repository = new ProviderLogsRepository(workspace.id, db)
+  const stats = await repository
+    .statsByDocumentLogUuid(response.providerLog.documentLogUuid)
+    .then((r) => r.unwrap())
+
+  return { response, stats, verdict }
+}
+
+function parseVerdict(
+  response: ChainStepResponse<StreamType>,
+  type?: DocumentType,
+): any {
+  if (type === DocumentType.Agent) {
     if (
       response.streamType !== 'text' ||
       response.toolCalls[0]?.name !== AGENT_RETURN_TOOL_NAME
@@ -157,35 +187,17 @@ export async function runPrompt<
       })
     }
 
-    verdict = response.toolCalls[0].arguments as any
-  } else {
-    if (response.streamType !== 'object') {
-      throw new ChainError({
-        code: RunErrorCodes.InvalidResponseFormatError,
-        message: 'Evaluation conversation response is not an object',
-      })
-    }
-
-    verdict = response.object
+    return response.toolCalls[0].arguments
   }
 
-  if (schema) {
-    const result = schema.safeParse(verdict)
-    if (result.error) {
-      throw new ChainError({
-        code: RunErrorCodes.InvalidResponseFormatError,
-        message: result.error.message,
-      })
-    }
-    verdict = result.data
+  if (response.streamType !== 'object') {
+    throw new ChainError({
+      code: RunErrorCodes.InvalidResponseFormatError,
+      message: 'Evaluation conversation response is not an object',
+    })
   }
 
-  const repository = new ProviderLogsRepository(workspace.id, db)
-  const stats = await repository
-    .statsByDocumentLogUuid(response.providerLog.documentLogUuid)
-    .then((r) => r.unwrap())
-
-  return { response, stats, verdict }
+  return response.object
 }
 
 export function thresholdToCustomScale(
