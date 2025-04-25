@@ -128,6 +128,8 @@ function adaptContentFields({
       }
     }
 
+    if ('reasoning' in c) delete c.reasoning
+
     switch (c.type) {
       case 'file': {
         const adaptedContent = {
@@ -181,6 +183,8 @@ export function vercelSdkRules(
     if (message.role === 'system') {
       return flattenSystemMessage({ message, provider })
     }
+
+    console.log('message', message)
 
     const toolResultInMessage = extractPromptlToolInfo({ message })
     const extracted = extractMessageMetadata({
