@@ -14,6 +14,7 @@ import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
+import { publishDocumentAction } from '$/actions/documents/sharing/publishDocumentAction'
 
 const EMPTY_ARRAY = [] as const
 export default function usePublishedDocument(
@@ -41,8 +42,7 @@ export default function usePublishedDocument(
       onSuccess: ({ data: publishedDocument }) => {
         toast({
           title: 'Success',
-          description:
-            'Document published successfully. Share the link with others.',
+          description: 'Document published successfully.',
         })
         mutate([...publishedDocuments, publishedDocument])
       },
@@ -53,6 +53,11 @@ export default function usePublishedDocument(
     updatePublishedDocumentAction,
     {
       onSuccess: ({ data: publishedDocument }) => {
+        toast({
+          title: 'Success',
+          description: 'Document updated successfully.',
+        })
+
         mutate([...publishedDocuments, publishedDocument])
       },
     },
@@ -62,7 +67,6 @@ export default function usePublishedDocument(
     () => publishedDocuments.find((d) => d.documentUuid === documentUuid),
     [publishedDocuments, documentUuid],
   )
-
   const isPublished = data?.isPublished ?? false
 
   const update = useCallback(
@@ -77,30 +81,36 @@ export default function usePublishedDocument(
     [executeUpdate, projectId, documentUuid, data],
   )
 
-  const setPublished = useCallback(
-    (visibility: boolean) => {
-      if (isLoading) return
-      if (!visibility && !data) return // published does not exist, nothing to do here
-      if (data?.isPublished === visibility) return // already in desired state
+  const { execute: publish, isPending: isPublishing } = useLatitudeAction(
+    publishDocumentAction,
+    {
+      onSuccess: ({ data: publishedDocument }) => {
+        toast({
+          title: 'Success',
+          description: 'Document published successfully.',
+        })
 
-      if (!data) {
-        return create({ projectId, documentUuid, commitUuid: HEAD_COMMIT })
-      }
+        mutate((prev = []) => {
+          const idx = prev?.findIndex((d) => d.uuid === publishedDocument.uuid)
+          if (idx === undefined || idx < 0) return [...prev, publishedDocument]
 
-      update({ isPublished: visibility })
+          const newData = [...prev]
+          newData[idx] = publishedDocument
+          return newData
+        })
+      },
     },
-    [create, data, isLoading, update, projectId, documentUuid],
   )
 
   return {
     data,
     isLoading,
+    isPublished,
     create,
     isCreating,
-    isPublished,
-    setPublished,
-    isPublishing: isCreating || isUpdating,
     update,
     isUpdating,
+    publish,
+    isPublishing,
   }
 }
