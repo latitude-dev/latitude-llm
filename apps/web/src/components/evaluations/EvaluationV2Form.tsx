@@ -43,7 +43,11 @@ const EVALUATION_METRIC_OPTIONS = <
       metrics = Object.values(RuleEvaluationMetric) as M[]
       break
     case EvaluationType.Llm:
-      metrics = Object.values(LlmEvaluationMetric) as M[]
+      metrics = Object.values(LlmEvaluationMetric).filter(
+        (metric) =>
+          metric === LlmEvaluationMetric.Custom ||
+          !metric.startsWith(LlmEvaluationMetric.Custom),
+      ) as M[]
       break
     case EvaluationType.Human:
       metrics = Object.values(HumanEvaluationMetric) as M[]
@@ -199,7 +203,12 @@ export default function EvaluationV2Form<
         />
         {mode === 'create' && (
           <Select
-            value={settings.metric}
+            value={
+              settings.type === EvaluationType.Llm &&
+              settings.metric.startsWith(LlmEvaluationMetric.Custom)
+                ? (LlmEvaluationMetric.Custom as M)
+                : settings.metric
+            }
             name='metric'
             label='Metric'
             description={metricSpecification?.description}
@@ -221,6 +230,8 @@ export default function EvaluationV2Form<
           setConfiguration={(value) =>
             setSettings({ ...settings, configuration: value })
           }
+          settings={settings}
+          setSettings={setSettings}
           errors={errors}
           disabled={disabled}
         />

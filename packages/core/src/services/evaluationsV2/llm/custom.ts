@@ -115,11 +115,13 @@ async function run(
   }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Custom>,
   db: Database = database,
 ) {
+  // Note: expectedOutput is optional for this metric as this function
+  // is reused for both, custom and custom labeled, llm metrics
+
   try {
     let metadata = {
       configuration: evaluation.configuration,
       actualOutput: actualOutput,
-      expectedOutput: expectedOutput,
       datasetLabel: datasetLabel,
       evaluationLogId: -1,
       reason: '',
@@ -127,8 +129,6 @@ async function run(
       cost: 0,
       duration: 0,
     }
-
-    // Note: expectedOutput is optional for this metric
 
     const provider = providers?.get(metadata.configuration.provider)
     if (!provider) {

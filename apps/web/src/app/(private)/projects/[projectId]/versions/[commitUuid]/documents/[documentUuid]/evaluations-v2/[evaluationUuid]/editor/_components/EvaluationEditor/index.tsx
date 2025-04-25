@@ -1,24 +1,24 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useDebouncedCallback } from 'use-debounce'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
+import { EditorHeader } from '$/components/EditorHeader'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
+  Commit,
+  DocumentVersion,
   EvaluationType,
   LlmEvaluationMetric,
   ProviderApiKey,
-  DocumentVersion,
-  Commit,
 } from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { EditorHeader } from '$/components/EditorHeader'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useDebouncedCallback } from 'use-debounce'
 
 import { TextEditor } from './TextEditor'
 // TODO: Implement playground
@@ -40,7 +40,7 @@ export function EvaluationEditor({
   const { project } = useCurrentProject()
   const { evaluation } = useCurrentEvaluationV2<
     EvaluationType.Llm,
-    LlmEvaluationMetric.Custom
+    LlmEvaluationMetric.Custom | LlmEvaluationMetric.CustomLabeled
   >()
 
   const { updateEvaluation, isUpdatingEvaluation } = useEvaluationsV2({

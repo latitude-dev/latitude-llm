@@ -11,6 +11,7 @@ import { FormField } from '@latitude-data/web-ui/atoms/FormField'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
+import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import {
   useCurrentCommit,
   useCurrentProject,
@@ -37,6 +38,8 @@ function ConfigurationForm({
   mode,
   configuration,
   setConfiguration,
+  settings,
+  setSettings,
   errors,
   disabled,
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
@@ -161,6 +164,29 @@ You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the res
           />
         )}
       </FormField>
+      <SwitchInput
+        checked={
+          // @ts-expect-error this component is reused for
+          // both custom and custom labeled evaluations
+          settings.metric === LlmEvaluationMetric.CustomLabeled
+        }
+        label='Use expected output'
+        description='Use the expected output in the evaluation prompt'
+        onCheckedChange={(checked) => {
+          if (checked) {
+            setSettings({
+              ...settings,
+              // @ts-expect-error this component is reused for
+              // both custom and custom labeled evaluations
+              metric: LlmEvaluationMetric.CustomLabeled,
+            })
+          } else {
+            setSettings({ ...settings, metric: LlmEvaluationMetric.Custom })
+          }
+        }}
+        disabled={disabled || mode !== 'create'}
+        required
+      />
       <FormFieldGroup
         layout='horizontal'
         description='The minimum and maximum percentage of criteria met of the response'

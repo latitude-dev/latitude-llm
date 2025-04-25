@@ -13,6 +13,7 @@ export default function ConfigurationForm<
   setConfiguration,
   errors,
   disabled,
+  ...rest
 }: ConfigurationFormProps<T, M> & { type: T; metric: M }) {
   const typeSpecification = EVALUATION_SPECIFICATIONS[type]
   if (!typeSpecification) return null
@@ -26,6 +27,7 @@ export default function ConfigurationForm<
         setConfiguration={setConfiguration}
         errors={errors}
         disabled={disabled}
+        {...rest}
       />
       {mode === 'update' && (
         <SelectableSwitch

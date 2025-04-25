@@ -3,14 +3,15 @@ import {
   EvaluationMetric,
   EvaluationMetricSpecification,
   EvaluationResultV2,
+  EvaluationSettings,
   EvaluationSpecification,
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/constants'
 import {
   Commit,
-  DatasetRow,
   Dataset,
+  DatasetRow,
   DocumentLog,
   ProviderLogDto,
 } from '@latitude-data/core/browser'
@@ -27,8 +28,10 @@ export type ConfigurationFormProps<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   mode: 'create' | 'update'
-  configuration: EvaluationConfiguration<T, M>
-  setConfiguration: (configuration: EvaluationConfiguration<T, M>) => void
+  configuration: EvaluationConfiguration<T, M> // Note: probably just use settings
+  setConfiguration: (configuration: EvaluationConfiguration<T, M>) => void // Note: probably just use setSettings
+  settings: EvaluationSettings<T, M>
+  setSettings: (settings: EvaluationSettings<T, M>) => void
   errors?: Record<string, string[]>
   disabled?: boolean
 }

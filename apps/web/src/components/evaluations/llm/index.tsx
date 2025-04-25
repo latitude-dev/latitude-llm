@@ -43,6 +43,7 @@ import {
 import LlmEvaluationBinarySpecification from './Binary'
 import LlmEvaluationComparisonSpecification from './Comparison'
 import LlmEvaluationCustomSpecification from './Custom'
+import LlmEvaluationCustomLabeledSpecification from './CustomLabeled'
 import LlmEvaluationRatingSpecification from './Rating'
 
 // prettier-ignore
@@ -53,6 +54,7 @@ const METRICS: {
   [LlmEvaluationMetric.Rating]: LlmEvaluationRatingSpecification,
   [LlmEvaluationMetric.Comparison]: LlmEvaluationComparisonSpecification,
   [LlmEvaluationMetric.Custom]: LlmEvaluationCustomSpecification,
+  [LlmEvaluationMetric.CustomLabeled]: LlmEvaluationCustomLabeledSpecification,
 }
 
 const specification = LlmEvaluationSpecification
@@ -97,11 +99,9 @@ function ConfigurationForm<M extends LlmEvaluationMetric>({
     name: selectedProvider?.name,
   })
 
+  const hasEditor = metric.startsWith(LlmEvaluationMetric.Custom)
   const isLoading = isLoadingWorkspace || isLoadingProviders
-  const isDisabled =
-    disabled ||
-    isLoading ||
-    (mode !== 'create' && metric === LlmEvaluationMetric.Custom)
+  const isDisabled = disabled || isLoading || (mode !== 'create' && hasEditor)
 
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
@@ -110,7 +110,7 @@ function ConfigurationForm<M extends LlmEvaluationMetric>({
     <>
       <FormFieldGroup
         layout='horizontal'
-        description={`The provider and model to use when running the evaluation prompt${mode !== 'create' && metric === LlmEvaluationMetric.Custom ? '. You must change them in the editor when using a custom prompt' : ''}`}
+        description={`The provider and model to use when running the evaluation prompt${mode !== 'create' && hasEditor ? '. You must change them in the editor when using a custom prompt' : ''}`}
       >
         <Select
           value={configuration.provider ?? ''}

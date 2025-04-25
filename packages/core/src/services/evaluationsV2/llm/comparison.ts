@@ -284,7 +284,7 @@ async function clone(
     name: evaluation.name,
     description: evaluation.description,
     type: EvaluationType.Llm,
-    metric: LlmEvaluationMetric.Custom,
+    metric: LlmEvaluationMetric.CustomLabeled,
     configuration: {
       reverseScale: evaluation.configuration.reverseScale,
       provider: evaluation.configuration.provider,
