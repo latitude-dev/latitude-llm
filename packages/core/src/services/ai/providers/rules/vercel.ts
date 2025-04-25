@@ -184,8 +184,6 @@ export function vercelSdkRules(
       return flattenSystemMessage({ message, provider })
     }
 
-    console.log('message', message)
-
     const toolResultInMessage = extractPromptlToolInfo({ message })
     const extracted = extractMessageMetadata({
       message: message,
