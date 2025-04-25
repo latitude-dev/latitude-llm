@@ -128,8 +128,6 @@ function adaptContentFields({
       }
     }
 
-    if ('reasoning' in c) delete c.reasoning
-
     switch (c.type) {
       case 'file': {
         const adaptedContent = {
@@ -152,6 +150,12 @@ function adaptContentFields({
 
         return adaptedContent
       }
+
+      case 'text':
+        if ('reasoning' in c) delete c.reasoning
+        if ('isReasoning' in c) delete c.isReasoning
+
+        return c
 
       default:
         return c

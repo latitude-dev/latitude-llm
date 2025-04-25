@@ -451,6 +451,75 @@ describe('applyVercelSdkRules', () => {
     ])
   })
 
+  it('always returns type and text for text content regardless of other props', () => {
+    messages = [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Hello',
+            someRandomProp: 'value',
+            anotherProp: { nested: 'value' },
+            _promptlSourceMap: [{ start: 0, end: 5 }],
+          },
+        ],
+      },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'Hi there',
+            isReasoning: true,
+            reasoning: 'Some reasoning',
+          },
+        ],
+      },
+    ] as Message[]
+
+    const rules = vercelSdkRules(
+      { rules: [], messages, config },
+      Providers.Anthropic,
+    )
+
+    // Verify each text content only has type and text properties
+    rules.messages.forEach((message) => {
+      if (Array.isArray(message.content)) {
+        message.content.forEach((content) => {
+          if (content.type === 'text') {
+            expect(Object.keys(content).sort()).not.toContain([
+              'reasoning',
+              'isReasoning',
+            ])
+          }
+        })
+      }
+    })
+
+    expect(rules.messages).toEqual([
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Hello',
+            providerOptions: expect.any(Object),
+          },
+        ],
+      },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'Hi there',
+          },
+        ],
+      },
+    ])
+  })
+
   it('transform promptl tool messages into vercel tool messages', () => {
     messages = [
       {
