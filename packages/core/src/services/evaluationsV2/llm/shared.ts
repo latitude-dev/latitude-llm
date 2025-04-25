@@ -1,8 +1,14 @@
-import { PromptConfig } from '@latitude-data/constants'
+import {
+  AGENT_RETURN_TOOL_NAME,
+  ChainStepResponse,
+  PromptConfig,
+  StreamType,
+} from '@latitude-data/constants'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
 import {
+  DocumentType,
   EvaluationType,
   EvaluationV2,
   LlmEvaluationMetric,
@@ -14,6 +20,7 @@ import {
 import { database, Database } from '../../../client'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { ProviderLogsRepository } from '../../../repositories'
+import { runAgent } from '../../agents/run'
 import { runChain } from '../../chains/run'
 
 export function promptTask({ provider }: { provider: ProviderApiKey }) {
@@ -99,17 +106,22 @@ export async function runPrompt<
 
   let response
   try {
-    const result = runChain({
+    const runArgs = {
       chain: promptChain,
       globalConfig: promptConfig,
       source: LogSources.Evaluation,
       promptlVersion: 1,
-      persistErrors: false,
+      persistErrors: false as false, // Note: required so TypeScript doesn't infer true
       generateUUID: () => resultUuid, // Note: this makes documentLogUuid = resultUuid
       promptSource: { ...evaluation, version: 'v2' as const },
       providersMap: providers,
       workspace: workspace,
-    })
+    }
+
+    const result =
+      promptConfig.type === DocumentType.Agent
+        ? runAgent(runArgs)
+        : runChain(runArgs)
 
     const error = await result.error
     if (error) throw error
@@ -137,22 +149,18 @@ export async function runPrompt<
     })
   }
 
-  if (response.streamType !== 'object') {
-    throw new ChainError({
-      code: RunErrorCodes.InvalidResponseFormatError,
-      message: 'Evaluation conversation response is not an object',
-    })
-  }
+  let verdict: S extends z.ZodSchema ? z.infer<S> : unknown
+  verdict = parseVerdict(response, promptConfig.type as DocumentType)
 
-  let verdict: S extends z.ZodSchema ? z.infer<S> : unknown = response.object
   if (schema) {
-    const result = schema.safeParse(response.object)
+    const result = schema.safeParse(verdict)
     if (result.error) {
       throw new ChainError({
         code: RunErrorCodes.InvalidResponseFormatError,
         message: result.error.message,
       })
     }
+
     verdict = result.data
   }
 
@@ -162,6 +170,34 @@ export async function runPrompt<
     .then((r) => r.unwrap())
 
   return { response, stats, verdict }
+}
+
+function parseVerdict(
+  response: ChainStepResponse<StreamType>,
+  type?: DocumentType,
+): any {
+  if (type === DocumentType.Agent) {
+    if (
+      response.streamType !== 'text' ||
+      response.toolCalls[0]?.name !== AGENT_RETURN_TOOL_NAME
+    ) {
+      throw new ChainError({
+        code: RunErrorCodes.InvalidResponseFormatError,
+        message: 'Evaluation conversation response is not an agent return call',
+      })
+    }
+
+    return response.toolCalls[0].arguments
+  }
+
+  if (response.streamType !== 'object') {
+    throw new ChainError({
+      code: RunErrorCodes.InvalidResponseFormatError,
+      message: 'Evaluation conversation response is not an object',
+    })
+  }
+
+  return response.object
 }
 
 export function thresholdToCustomScale(

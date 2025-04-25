@@ -63,7 +63,7 @@ async function validate(
   })
 }
 
-const promptSchema = z.object({
+export const promptSchema = z.object({
   passed: z.boolean(),
   reason: z.string(),
 })

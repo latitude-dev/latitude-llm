@@ -301,10 +301,10 @@ export function useEvaluationsV2(
     isDeletingEvaluation,
     generateEvaluation,
     isGeneratingEvaluation,
-    toggleLiveMode,
-    isTogglingLiveMode,
     cloneEvaluation,
     isCloningEvaluation,
+    toggleLiveMode,
+    isTogglingLiveMode,
     ...rest,
   }
 }
