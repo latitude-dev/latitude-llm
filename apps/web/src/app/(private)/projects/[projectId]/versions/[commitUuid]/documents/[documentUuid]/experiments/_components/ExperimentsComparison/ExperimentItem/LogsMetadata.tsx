@@ -1,6 +1,7 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { BestLogsMetadata } from '$/stores/experimentComparison'
 import { ExperimentWithScores } from '@latitude-data/core/browser'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 
@@ -77,8 +78,14 @@ export function ExperimentLogsMetadata({
 export function ExperimentLogsMetadataPlaceholder() {
   return (
     <div className='flex flex-row items-center gap-4'>
-      <div className='flex w-full bg-muted animate-pulse rounded-md' />
-      <div className='flex w-full bg-muted animate-pulse rounded-md' />
+      <div className='flex flex-col w-full gap-2 items-center p-4 rounded-md bg-muted animate-pulse'>
+        <Skeleton height='h5' className='w-[20%]' />
+        <Skeleton height='h6' className='w-[60%]' />
+      </div>
+      <div className='flex flex-col w-full gap-2 items-center p-4 rounded-md bg-muted animate-pulse'>
+        <Skeleton height='h5' className='w-[20%]' />
+        <Skeleton height='h6' className='w-[60%]' />
+      </div>
     </div>
   )
 }
