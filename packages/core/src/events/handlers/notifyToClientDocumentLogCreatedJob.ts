@@ -1,6 +1,6 @@
 import { findWorkspaceFromDocumentLog } from '../../data-access'
 import { findCommitById } from '../../data-access/commits'
-import { computeDocumentLogWithMetadata } from '../../services/documentLogs'
+import { computeDocumentLogWithMetadata } from '../../services/documentLogs/computeDocumentLogWithMetadata'
 import { WebsocketClient } from '../../websockets/workers'
 import { DocumentLogCreatedEvent } from '../events'
 import { NotFoundError } from './../../lib/errors'

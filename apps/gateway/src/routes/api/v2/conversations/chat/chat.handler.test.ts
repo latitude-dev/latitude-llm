@@ -30,7 +30,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock(
-  '@latitude-data/core/services/documentLogs/index',
+  '@latitude-data/core/services/documentLogs/addMessages/index',
   async (importOriginal) => {
     const original = (await importOriginal()) as typeof importOriginal
 
