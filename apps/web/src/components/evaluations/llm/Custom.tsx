@@ -1,4 +1,5 @@
-import { useParams } from 'next/navigation'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { ROUTES } from '$/services/routes'
 import {
   EvaluationType,
   LlmEvaluationCustomSpecification,
@@ -10,19 +11,18 @@ import { FormField } from '@latitude-data/web-ui/atoms/FormField'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { useEffect } from 'react'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
 } from '../index'
-import { ROUTES } from '$/services/routes'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 
 const specification = LlmEvaluationCustomSpecification
 export default {
@@ -44,6 +44,7 @@ function ConfigurationForm({
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const { evaluationUuid } = useParams()
+
   useEffect(() => {
     if (mode !== 'create') return
     if (!configuration.provider || !configuration.model) return
