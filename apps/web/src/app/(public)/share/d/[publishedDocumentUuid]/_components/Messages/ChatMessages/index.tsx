@@ -8,10 +8,12 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 export function ChatMessages({
   conversation,
   responseStream,
+  reasoningStream,
   chainLength,
   error,
 }: {
   responseStream: string | undefined
+  reasoningStream?: string | undefined
   conversation: Conversation | undefined
   chainLength: number
   error: Error | undefined
@@ -34,6 +36,7 @@ export function ChatMessages({
       ) : (
         <StreamMessage
           responseStream={responseStream}
+          reasoningStream={reasoningStream}
           messages={conversation.messages}
           chainLength={chainLength}
         />

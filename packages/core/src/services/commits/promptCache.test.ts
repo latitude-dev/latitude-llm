@@ -23,6 +23,7 @@ describe('promptCache', async () => {
   const response = {
     streamType: 'text' as 'text',
     text: 'cached response',
+    reasoning: undefined,
     usage: {
       promptTokens: 0,
       completionTokens: 0,
@@ -44,6 +45,7 @@ describe('promptCache', async () => {
       config: { provider: 'openai', model: 'gpt-4o-mini' },
       responseObject: null,
       responseText: 'We do not care',
+      responseReasoning: null,
       toolCalls: [],
       tokens: 399,
       costInMillicents: 13,

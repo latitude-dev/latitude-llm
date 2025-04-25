@@ -38,7 +38,11 @@ export function buildMessagesFromResponse<T extends StreamType>({
       : type === 'text'
         ? buildResponseMessage<'text'>({
             type: 'text',
-            data: { text: response.text, toolCalls: response.toolCalls },
+            data: {
+              text: response.text,
+              reasoning: response.reasoning,
+              toolCalls: response.toolCalls,
+            },
           })
         : undefined
 
@@ -73,6 +77,7 @@ export function buildConversation(providerLog: ProviderLogDto | ProviderLog) {
     type: 'text',
     data: {
       text: responseText,
+      reasoning: providerLog.responseReasoning || undefined,
       toolCalls: providerLog.toolCalls,
     },
   })

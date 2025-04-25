@@ -51,6 +51,9 @@ function buildFakeChain({
     data: {
       toolCalls: [] as any,
       text: new Promise<string>(() => 'text'),
+      reasoning: new Promise<string | undefined>((resolve) =>
+        resolve(undefined),
+      ),
       usage: new Promise<LanguageModelUsage>(() => DEFAULT_USAGE),
       fullStream,
       providerName: Providers.OpenAI,

@@ -27,7 +27,9 @@ interface IMessageContent {
 
 export type TextContent = IMessageContent & {
   type: ContentType.text
-  text: string
+  text: string | undefined
+  isReasoning?: boolean
+  reasoning?: string | undefined
 }
 
 export type ImageContent = IMessageContent & {

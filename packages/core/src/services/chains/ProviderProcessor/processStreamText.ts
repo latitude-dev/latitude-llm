@@ -11,6 +11,7 @@ export async function processStreamText({
     streamType: aiResult.type,
     documentLogUuid,
     text: await aiResult.data.text,
+    reasoning: await aiResult.data.reasoning,
     usage: await aiResult.data.usage,
     toolCalls: (await aiResult.data.toolCalls).map((t) => ({
       id: t.toolCallId,

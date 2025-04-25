@@ -53,7 +53,12 @@ type AIReturnText = {
   type: 'text'
   data: Pick<
     StreamTextResult<Record<string, CoreTool<any, any>>, PARTIAL_OUTPUT>,
-    'fullStream' | 'text' | 'usage' | 'toolCalls' | 'providerMetadata'
+    | 'fullStream'
+    | 'text'
+    | 'usage'
+    | 'toolCalls'
+    | 'providerMetadata'
+    | 'reasoning'
   > & {
     providerName: Providers
   }
@@ -206,6 +211,7 @@ export async function ai({
       data: {
         fullStream: result.fullStream,
         text: result.text,
+        reasoning: result.reasoning,
         usage: result.usage,
         toolCalls: result.toolCalls,
         providerName: providerType,

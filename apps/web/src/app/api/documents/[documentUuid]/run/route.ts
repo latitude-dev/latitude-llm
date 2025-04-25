@@ -123,7 +123,7 @@ export const POST = errorHandler(
             onEvent: async (event) => {
               try {
                 if (event.data.type === ChainEventTypes.ChainError) {
-                  await captureException(event.data.error)
+                  captureException(event.data.error)
                 }
 
                 await writer.write(

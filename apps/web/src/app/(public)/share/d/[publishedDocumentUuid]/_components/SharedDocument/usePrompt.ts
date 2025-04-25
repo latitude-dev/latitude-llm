@@ -53,7 +53,7 @@ function getDeltas({
       if (c.type === ContentType.toolResult)
         return splitInWords(JSON.stringify(c))
 
-      return splitInWords(c.text)
+      return splitInWords(c.text!)
     })
   } catch (error) {
     return []
@@ -66,6 +66,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
   const isLoadingPrompt = useRef<boolean>(false)
   const [error, setError] = useState<Error | undefined>()
   const [responseStream, setResponseStream] = useState<string | undefined>()
+  const [reasoningStream, setReasoningStream] = useState<string | undefined>()
   const [isStreaming, setIsStreaming] = useState(false)
   const [conversation, setConversation] = useState<Conversation | undefined>()
   const [lastMessage, setLastMessage] = useState<LastMessage | undefined>(
@@ -97,7 +98,8 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
       isLoadingPrompt.current = true
       setIsStreaming(true)
       let response = ''
-      let accomulateIndex = 0
+      let reasoning = ''
+      let rollingIndex = 0
       let accomulatedDeltas: AccoumulatedDeltaMessage[] = [{ deltas: [] }]
       let messagesCount = 0
       let lastMessage: ConversationMessage | undefined
@@ -124,11 +126,18 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
           // Delta text from the provider
           if (event === StreamEventTypes.Provider) {
             if (data.type === 'text-delta') {
-              accomulatedDeltas[accomulateIndex]!.deltas.push(data.textDelta)
+              accomulatedDeltas[rollingIndex]!.deltas.push(data.textDelta)
               response += data.textDelta
 
               setResponseStream(response)
             }
+
+            if (data.type === 'reasoning') {
+              reasoning += data.textDelta
+
+              setReasoningStream(reasoning)
+            }
+
             continue
           }
 
@@ -144,8 +153,9 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
             response = ''
             response = ''
             accomulatedDeltas.push({ deltas: [] })
-            accomulateIndex++
+            rollingIndex++
 
+            setReasoningStream(undefined)
             setResponseStream(undefined)
             messagesCount += data.messages!.length
 
@@ -159,7 +169,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
           ) {
             const deltas = getDeltas({
               accomulatedDeltas,
-              accomulateIndex,
+              accomulateIndex: rollingIndex,
               lastMessage,
             })
             setLastMessage({ lastMessage, deltas })
@@ -176,6 +186,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
       } finally {
         isLoadingPrompt.current = false
         setIsStreaming(false)
+        setReasoningStream(undefined)
         setResponseStream(undefined)
       }
     },
@@ -184,6 +195,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
 
   const resetPrompt = useCallback(() => {
     setError(undefined)
+    setReasoningStream('')
     setResponseStream('')
     setIsStreaming(false)
     setConversation(undefined)
@@ -200,6 +212,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
     isStreaming,
     isLoadingPrompt: isLoadingPrompt.current,
     responseStream,
+    reasoningStream,
     conversation,
     lastMessage,
     chainLength,
@@ -207,6 +220,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
     documentLogUuid,
     setMessages,
     setResponseStream,
+    setReasoningStream,
     setError,
   }
 }

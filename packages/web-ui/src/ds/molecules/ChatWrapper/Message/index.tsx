@@ -1,4 +1,5 @@
 'use client'
+
 import { memo, ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
@@ -26,6 +27,7 @@ import { isAgentToolResponse, roleToString } from './helpers'
 import { ToolCallContent } from './ToolCall'
 import { UnresolvedToolResultContent } from './ToolResult'
 import { AgentToolsMap } from '@latitude-data/constants'
+import { Button } from '../../../atoms/Button'
 
 export { roleToString, roleVariant } from './helpers'
 
@@ -236,7 +238,7 @@ const Content = ({
 
   if (value.type === ContentType.text) {
     try {
-      const parsedValue = JSON.parse(value.text)
+      const parsedValue = JSON.parse(value.text || '')
       return (
         <div key={`${index}`} className='py-2 max-w-full'>
           <div className='overflow-hidden rounded-xl w-full'>
@@ -252,6 +254,8 @@ const Content = ({
           index={index}
           color={color}
           size={size}
+          reasoning={value.reasoning}
+          isReasoning={value.isReasoning}
           message={value.text}
           parameters={parameters}
           collapseParameters={collapseParameters}
@@ -326,6 +330,8 @@ const ContentText = memo(
     color,
     size,
     message,
+    reasoning,
+    isReasoning,
     parameters = [],
     collapseParameters = false,
     sourceMap = [],
@@ -334,6 +340,8 @@ const ContentText = memo(
     color: TextColor
     size?: 'default' | 'small'
     message: TextContent['text']
+    reasoning?: TextContent['reasoning']
+    isReasoning?: boolean
     parameters?: string[]
     collapseParameters?: boolean
     sourceMap?: PromptlSourceRef[]
@@ -345,8 +353,7 @@ const ContentText = memo(
     )
 
     const groups = useMemo(() => groupSegments(segments), [segments])
-
-    return groups.map((group, groupIndex) => (
+    const messagesList = groups.map((group, groupIndex) => (
       <TextComponent
         color={color}
         whiteSpace='preWrap'
@@ -370,8 +377,56 @@ const ContentText = memo(
           : '\n'}
       </TextComponent>
     ))
+
+    return (
+      <div className='flex flex-col gap-4'>
+        <Reasoning reasoning={reasoning} isReasoning={isReasoning} />
+        {messagesList}
+      </div>
+    )
   },
 )
+
+function Reasoning({
+  reasoning,
+  isReasoning = false,
+}: {
+  reasoning?: string
+  isReasoning?: boolean
+}) {
+  const [collapsed, setCollapsed] = useState(true)
+
+  if (!reasoning) return null
+
+  return (
+    <div className='flex flex-col gap-2'>
+      <Button
+        variant='nope'
+        onClick={() => setCollapsed(!collapsed)}
+        className='flex flex-row justify-start'
+      >
+        <div className='flex flex-row gap-2 items-center'>
+          <div className={cn({ 'opacity-50': !isReasoning })}>
+            <Text.H6 animate={isReasoning} color='foregroundMuted'>
+              {isReasoning ? 'Thinking...' : 'Thought for a while'}
+            </Text.H6>
+          </div>
+          <div className='opacity-50'>
+            <Icon
+              name={collapsed ? 'chevronDown' : 'chevronUp'}
+              color='foregroundMuted'
+            />
+          </div>
+        </div>
+      </Button>
+      {!collapsed && (
+        <div className='opacity-50 text-left'>
+          <Text.H6 color='foregroundMuted'>{reasoning}</Text.H6>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function ReferenceComponent({
   reference,
@@ -488,11 +543,12 @@ function FileComponent({ src }: { src: string }) {
 
 function computeSegments(
   type: ContentType,
-  source: string,
+  source: string | undefined,
   sourceMap: PromptlSourceRef[],
   parameters: string[],
 ): Segment[] {
   let segments: Segment[] = []
+  if (!source) return segments
 
   // Filter source map references without value
   sourceMap = sourceMap.filter(
