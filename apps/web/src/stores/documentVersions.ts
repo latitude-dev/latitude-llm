@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import useFetcher from '$/hooks/useFetcher'
 import { assignDatasetAction } from '$/actions/documents/assignDatasetAction'
@@ -23,6 +23,7 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useRouter } from 'next/navigation'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
+import { inferServerActionReturnData } from 'zsa'
 
 const EMPTY_DATA = [] as DocumentVersion[]
 export default function useDocumentVersions(
@@ -113,7 +114,7 @@ export default function useDocumentVersions(
         }
       }
     },
-    [executeCreateDocument, mutate, data, commitUuid],
+    [executeCreateDocument, mutate, data, commitUuid, projectId, toast, router],
   )
 
   const uploadFile = useCallback(
@@ -156,7 +157,7 @@ export default function useDocumentVersions(
           .documents.detail({ uuid: document.documentUuid }).root,
       )
     },
-    [executeUploadDocument, mutate, data, commitUuid],
+    [executeUploadDocument, mutate, data, commitUuid, projectId, toast, router],
   )
 
   const renamePaths = useCallback(
@@ -189,7 +190,7 @@ export default function useDocumentVersions(
         })
       }
     },
-    [executeRenamePaths, mutate, data, commitUuid],
+    [executeRenamePaths, mutate, data, commitUuid, projectId, toast],
   )
 
   const destroyFile = useCallback(
@@ -221,7 +222,15 @@ export default function useDocumentVersions(
         )
       }
     },
-    [executeDestroyDocument, mutate, data, commitUuid],
+    [
+      executeDestroyDocument,
+      mutate,
+      data,
+      commitUuid,
+      projectId,
+      router,
+      toast,
+    ],
   )
 
   const destroyFolder = useCallback(
@@ -254,68 +263,111 @@ export default function useDocumentVersions(
         )
       }
     },
-    [executeDestroyFolder, mutate, commitUuid],
+    [executeDestroyFolder, mutate, commitUuid, projectId, router, toast],
   )
 
   const { execute: updateContent, isPending: isUpdatingContent } =
     useLatitudeAction(updateDocumentContentAction, {
-      onSuccess: ({ data: document }) => {
-        if (!document) return
+      onSuccess: useCallback(
+        ({
+          data: document,
+        }: {
+          data: inferServerActionReturnData<typeof updateDocumentContentAction>
+        }) => {
+          if (!document) return
 
-        const prevDocuments = data || []
+          const prevDocuments = data || []
 
-        mutate(
-          prevDocuments.map((d) =>
-            d.documentUuid === document.documentUuid ? document : d,
-          ),
-        )
-      },
+          mutate(
+            prevDocuments.map((d) =>
+              d.documentUuid === document.documentUuid ? document : d,
+            ),
+          )
+        },
+        [data, mutate],
+      ),
     })
 
   const { execute: assignDataset, isPending: isAssigningDataset } =
     useLatitudeAction(assignDatasetAction, {
-      onSuccess: ({ data: document }) => {
-        if (!document) return
+      onSuccess: useCallback(
+        ({
+          data: document,
+        }: {
+          data: inferServerActionReturnData<typeof assignDatasetAction>
+        }) => {
+          if (!document) return
 
-        const prevDocuments = data || []
-        mutate(
-          prevDocuments.map((d) =>
-            d.documentUuid === document.documentUuid ? document : d,
-          ),
-        )
-      },
+          const prevDocuments = data || []
+          mutate(
+            prevDocuments.map((d) =>
+              d.documentUuid === document.documentUuid ? document : d,
+            ),
+          )
+        },
+        [data, mutate],
+      ),
     })
 
   const { execute: saveLinkedDataset, isPending: isLinkingDataset } =
     useLatitudeAction(saveLinkedDatasetAction, {
-      onSuccess: ({ data: document }) => {
-        if (!document) return
+      onSuccess: useCallback(
+        ({
+          data: document,
+        }: {
+          data: inferServerActionReturnData<typeof saveLinkedDatasetAction>
+        }) => {
+          if (!document) return
 
-        const prevDocuments = data || []
-        mutate(
-          prevDocuments.map((d) =>
-            d.documentUuid === document.documentUuid ? document : d,
-          ),
-        )
-      },
+          const prevDocuments = data || []
+          mutate(
+            prevDocuments.map((d) =>
+              d.documentUuid === document.documentUuid ? document : d,
+            ),
+          )
+        },
+        [data, mutate],
+      ),
     })
 
-  return {
-    data,
-    isValidating: isValidating,
-    isLoading: isLoading,
-    error: swrError,
-    createFile,
-    uploadFile,
-    renamePaths,
-    destroyFile,
-    destroyFolder,
-    updateContent,
-    isUpdatingContent,
-    assignDataset,
-    saveLinkedDataset,
-    mutate,
-    isAssigning: isAssigningDataset || isLinkingDataset,
-    isDestroying: isDestroyingFile || isDestroyingFolder,
-  }
+  return useMemo(
+    () => ({
+      data,
+      isValidating: isValidating,
+      isLoading: isLoading,
+      error: swrError,
+      createFile,
+      uploadFile,
+      renamePaths,
+      destroyFile,
+      destroyFolder,
+      updateContent,
+      isUpdatingContent,
+      assignDataset,
+      saveLinkedDataset,
+      mutate,
+      isAssigning: isAssigningDataset || isLinkingDataset,
+      isDestroying: isDestroyingFile || isDestroyingFolder,
+    }),
+    [
+      data,
+      isValidating,
+      isLoading,
+      swrError,
+      createFile,
+      uploadFile,
+      renamePaths,
+      destroyFile,
+      destroyFolder,
+      updateContent,
+      isUpdatingContent,
+      assignDataset,
+      saveLinkedDataset,
+      mutate,
+      isAssigningDataset,
+      isLinkingDataset,
+      isDestroyingFile,
+      isDestroyingFolder,
+    ],
+  )
 }

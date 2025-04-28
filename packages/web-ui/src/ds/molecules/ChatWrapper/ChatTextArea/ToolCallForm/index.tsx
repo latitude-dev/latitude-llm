@@ -9,6 +9,8 @@ import { Tooltip } from '../../../../atoms/Tooltip'
 import { ClientOnly } from '../../../../atoms/ClientOnly'
 import { ToolBar } from '../ToolBar'
 import { buildResponseMessage } from '@latitude-data/constants'
+import { Button } from '../../../../atoms/Button'
+import { cn } from '../../../../../lib/utils'
 
 const TextEditor = lazy(() => import('./Editor/index'))
 
@@ -62,17 +64,18 @@ function ToolEditor({
   onChange: (value: string | undefined) => void
   onSubmit?: (sentValue?: string | undefined) => void
 }) {
+  const [collapsed, setCollapsed] = useState(false)
   const functionCall = useMemo(
     () => generateExampleFunctionCall(toolRequest),
     [toolRequest],
   )
   return (
     <div className='flex flex-col'>
-      <div className='flex px-2 pt-2'>
+      <div className='flex justify-between px-2 pt-2'>
         <Tooltip
           asChild
           trigger={
-            <div className='inline-flex items-center gap-x-1 mb-2'>
+            <div className='inline-flex items-center gap-x-1'>
               <Text.H6>
                 You have{' '}
                 {totalToolRequests <= 1 ? (
@@ -97,8 +100,19 @@ function ToolEditor({
           result. However, since we cannot access your code execution from the
           Playground, you must write the expected response when using this tool.
         </Tooltip>
+        <Button
+          variant='link'
+          onClick={() => setCollapsed((prev) => !prev)}
+          iconProps={{ name: collapsed ? 'chevronsDownUp' : 'chevronsUpDown' }}
+        >
+          Collapse arguments
+        </Button>
       </div>
-      <CodeBlock copy={false} language='javascript'>
+      <CodeBlock
+        copy={false}
+        language='javascript'
+        className={cn({ hidden: collapsed })}
+      >
         {functionCall}
       </CodeBlock>
       <hr className='my-1 border-foregroundMuted' />

@@ -2,7 +2,7 @@ import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import { Message as ConversationMessage } from '@latitude-data/compiler'
 import { ROUTES } from '$/services/routes'
 import { DocumentVersion } from '@latitude-data/core/browser'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
 
 export function useRunPlaygroundPrompt({
@@ -18,30 +18,25 @@ export function useRunPlaygroundPrompt({
 }) {
   const { createStreamHandler } = useStreamHandler()
   const runPromptFn = useCallback(async () => {
-    try {
-      const response = await fetch(
-        ROUTES.api.documents.detail(document.documentUuid).run,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            path: document.path,
-            projectId: projectId,
-            commitUuid: commit.uuid,
-            parameters: parameters ?? {},
-            stream: true, // Explicitly request streaming
-          }),
+    const response = await fetch(
+      ROUTES.api.documents.detail(document.documentUuid).run,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      )
+        body: JSON.stringify({
+          path: document.path,
+          projectId: projectId,
+          commitUuid: commit.uuid,
+          parameters: parameters ?? {},
+          stream: true, // Explicitly request streaming
+        }),
+      },
+    )
 
-      return createStreamHandler(response)
-    } catch (error) {
-      console.error('Error running prompt:', error)
-      throw error
-    }
+    return createStreamHandler(response)
   }, [
     projectId,
     document.path,
@@ -78,5 +73,8 @@ export function useRunPlaygroundPrompt({
     [createStreamHandler],
   )
 
-  return { runPromptFn, addMessagesFn }
+  return useMemo(
+    () => ({ runPromptFn, addMessagesFn }),
+    [runPromptFn, addMessagesFn],
+  )
 }

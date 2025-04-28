@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import type { ConversationMetadata } from 'promptl-ai'
 import { cn } from '@latitude-data/web-ui/utils'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
@@ -10,11 +10,11 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { useExpandParametersOrEvaluations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/hooks/useExpandParametersOrEvaluations'
 import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import { ROUTES } from '$/services/routes'
 import PreviewPrompt from '$/components/PlaygroundCommon/PreviewPrompt'
 import Chat from '$/components/PlaygroundCommon/Chat'
+import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
 
 const FAKE_PARAMETERS = {}
 export const Playground = memo(
@@ -65,6 +65,45 @@ export const Playground = memo(
         throw error
       }
     }, [parameters, createStreamHandler])
+    const firstPane = useMemo(() => {
+      return (
+        <div className={cn('grid gap-2 w-full pr-0.5', expander.cssClass)} />
+      )
+    }, [expander.cssClass])
+
+    const secondPane = useMemo(() => {
+      return (
+        <div className='h-full flex-grow flex-shrink min-h-0 flex flex-col gap-2 overflow-hidden pr-0.5'>
+          {mode === 'preview' ? (
+            <PreviewPrompt
+              metadata={metadata}
+              parameters={parameters}
+              runPrompt={runPrompt}
+              expandParameters={expandParameters}
+              setExpandParameters={setExpandParameters}
+            />
+          ) : (
+            <Chat
+              canChat={false}
+              parameters={parameters}
+              clearChat={clearChat}
+              expandParameters={expandParameters}
+              setExpandParameters={setExpandParameters}
+              runPromptFn={runPromptFn}
+            />
+          )}
+        </div>
+      )
+    }, [
+      clearChat,
+      expandParameters,
+      metadata,
+      mode,
+      parameters,
+      runPromptFn,
+      runPrompt,
+      setExpandParameters,
+    ])
 
     return (
       <SplitPane
@@ -74,33 +113,8 @@ export const Playground = memo(
         forcedSize={forcedSize}
         minSize={PLAYGROUND_COLLAPSED_SIZE + PLAYGROUND_GAP_PADDING}
         dragDisabled={collapsed}
-        firstPane={
-          <div
-            className={cn('grid gap-2 w-full pr-0.5', expander.cssClass)}
-          ></div>
-        }
-        secondPane={
-          <div className='h-full flex-grow flex-shrink min-h-0 flex flex-col gap-2 overflow-hidden pr-0.5'>
-            {mode === 'preview' ? (
-              <PreviewPrompt
-                metadata={metadata}
-                parameters={parameters}
-                runPrompt={runPrompt}
-                expandParameters={expandParameters}
-                setExpandParameters={setExpandParameters}
-              />
-            ) : (
-              <Chat
-                canChat={false}
-                parameters={parameters}
-                clearChat={clearChat}
-                expandParameters={expandParameters}
-                setExpandParameters={setExpandParameters}
-                runPromptFn={runPromptFn}
-              />
-            )}
-          </div>
-        }
+        firstPane={firstPane}
+        secondPane={secondPane}
       />
     )
   },

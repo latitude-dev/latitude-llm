@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useMemo } from 'react'
 
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import {
@@ -51,18 +51,22 @@ export default function useLatitudeAction<
   } = {},
 ) {
   const { toast } = useToast()
-  const successCb = useCallback(
-    onSuccess ||
+
+  const successCb = useMemo(() => {
+    return (
+      onSuccess ??
       (() => {
         toast({
           title: 'Success',
           description: 'Action completed successfully',
         })
-      }),
-    [onSuccess],
-  )
-  const errorCb = useCallback(
-    onError ||
+      })
+    )
+  }, [onSuccess, toast])
+
+  const errorCb = useMemo(() => {
+    return (
+      onError ??
       ((error: inferServerActionError<TServerAction>) => {
         if (error?.err?.code === 'INPUT_PARSE_ERROR') return
 
@@ -71,12 +75,17 @@ export default function useLatitudeAction<
           description: error?.err?.message || error?.message,
           variant: 'destructive',
         })
-      }),
-    [onError],
+      })
+    )
+  }, [onError, toast])
+
+  const options = useMemo(
+    () => ({
+      onSuccess: successCb,
+      onError: errorCb,
+    }),
+    [successCb, errorCb],
   )
 
-  return useServerAction(action, {
-    onSuccess: successCb,
-    onError: errorCb,
-  })
+  return useServerAction(action, options)
 }

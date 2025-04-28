@@ -147,7 +147,7 @@ function useGetUrlWithParams({ shared }: { shared: PublishedDocument }) {
       }
       return url
     },
-    [promptPath],
+    [promptPath, toast],
   )
 }
 
@@ -184,7 +184,7 @@ export function SharedDocument({
         await prompt.runPrompt(parameters)
       }, DURATION_MS_RUN)
     },
-    [prompt.runPrompt],
+    [prompt.runPrompt, getUrl, router],
   )
   const onReset = useCallback(() => {
     setFormHeight(originalFormHeight.current)
@@ -193,7 +193,7 @@ export function SharedDocument({
       setFormVisible(true)
       prompt.resetPrompt()
     }, DURATION_MS_RESET)
-  }, [prompt.resetPrompt])
+  }, [prompt.resetPrompt, setFormVisible])
 
   const { onChat } = useChat({
     shared,
