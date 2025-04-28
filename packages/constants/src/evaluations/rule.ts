@@ -28,9 +28,9 @@ export const RuleEvaluationExactMatchSpecification = {
   resultMetadata: ruleEvaluationExactMatchResultMetadata,
   resultError: ruleEvaluationExactMatchResultError,
   requiresExpectedOutput: true,
-  requiresAnnotation: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
+  supportsManualEvaluation: false,
 }
 export type RuleEvaluationExactMatchConfiguration = z.infer<
   typeof RuleEvaluationExactMatchSpecification.configuration
@@ -62,9 +62,9 @@ export const RuleEvaluationRegularExpressionSpecification = {
   resultMetadata: ruleEvaluationRegularExpressionResultMetadata,
   resultError: ruleEvaluationRegularExpressionResultError,
   requiresExpectedOutput: false,
-  requiresAnnotation: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
+  supportsManualEvaluation: false,
 }
 export type RuleEvaluationRegularExpressionConfiguration = z.infer<
   typeof RuleEvaluationRegularExpressionSpecification.configuration
@@ -97,9 +97,9 @@ export const RuleEvaluationSchemaValidationSpecification = {
   resultMetadata: ruleEvaluationSchemaValidationResultMetadata,
   resultError: ruleEvaluationSchemaValidationResultError,
   requiresExpectedOutput: false,
-  requiresAnnotation: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
+  supportsManualEvaluation: false,
 }
 export type RuleEvaluationSchemaValidationConfiguration = z.infer<
   typeof RuleEvaluationSchemaValidationSpecification.configuration
@@ -134,9 +134,9 @@ export const RuleEvaluationLengthCountSpecification = {
   resultMetadata: ruleEvaluationLengthCountResultMetadata,
   resultError: ruleEvaluationLengthCountResultError,
   requiresExpectedOutput: false,
-  requiresAnnotation: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
+  supportsManualEvaluation: false,
 }
 export type RuleEvaluationLengthCountConfiguration = z.infer<
   typeof RuleEvaluationLengthCountSpecification.configuration
@@ -170,9 +170,9 @@ export const RuleEvaluationLexicalOverlapSpecification = {
   resultMetadata: ruleEvaluationLexicalOverlapResultMetadata,
   resultError: ruleEvaluationLexicalOverlapResultError,
   requiresExpectedOutput: true,
-  requiresAnnotation: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
+  supportsManualEvaluation: false,
 }
 export type RuleEvaluationLexicalOverlapConfiguration = z.infer<
   typeof RuleEvaluationLexicalOverlapSpecification.configuration
@@ -206,9 +206,9 @@ export const RuleEvaluationSemanticSimilaritySpecification = {
   resultMetadata: ruleEvaluationSemanticSimilarityResultMetadata,
   resultError: ruleEvaluationSemanticSimilarityResultError,
   requiresExpectedOutput: true,
-  requiresAnnotation: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
+  supportsManualEvaluation: false,
 }
 export type RuleEvaluationSemanticSimilarityConfiguration = z.infer<
   typeof RuleEvaluationSemanticSimilaritySpecification.configuration

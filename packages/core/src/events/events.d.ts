@@ -72,6 +72,7 @@ export type Events =
   | 'evaluationV2Created'
   | 'evaluationV2Updated'
   | 'evaluationV2Ran'
+  | 'evaluationV2Annotated'
   | 'evaluationResultV2Created'
   | 'mcpServerConnected'
   | 'scaleMcpServer'
@@ -530,6 +531,16 @@ export type EvaluationV2RanEvent = LatitudeEventGeneric<
   }
 >
 
+export type EvaluationV2AnnotatedEvent = LatitudeEventGeneric<
+  'evaluationV2Annotated',
+  {
+    workspaceId: number
+    evaluation: EvaluationV2
+    commit: Commit
+    providerLog: ProviderLogDto
+  }
+>
+
 export type EvaluationResultV2CreatedEvent = LatitudeEventGeneric<
   'evaluationResultV2Created',
   {
@@ -613,12 +624,13 @@ export type LatitudeEvent =
   | CopilotSuggestionApplied
   | EvaluationResultUpdatedEvent
   | EvaluationV2CreatedEvent
+  | EvaluationV2UpdatedEvent
   | EvaluationV2RanEvent
+  | EvaluationV2AnnotatedEvent
   | EvaluationResultV2CreatedEvent
   | ScaleMcpServerEvent
   | McpServerConnectedEvent
   | WebhookDeliveryCreatedEvent
-  | EvaluationV2UpdatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -660,10 +672,11 @@ export interface IEventsHandlers {
   copilotSuggestionApplied: EventHandler<CopilotSuggestionApplied>[]
   evaluationResultUpdated: EventHandler<EvaluationResultUpdatedEvent>[]
   evaluationV2Created: EventHandler<EvaluationV2CreatedEvent>[]
+  evaluationV2Updated: EventHandler<EvaluationV2UpdatedEvent>[]
   evaluationV2Ran: EventHandler<EvaluationV2RanEvent>[]
+  evaluationV2Annotated: EventHandler<EvaluationV2AnnotatedEvent>[]
   evaluationResultV2Created: EventHandler<EvaluationResultV2CreatedEvent>[]
   scaleMcpServer: EventHandler<ScaleMcpServerEvent>[]
   mcpServerConnected: EventHandler<McpServerConnectedEvent>[]
   webhookDeliveryCreated: EventHandler<WebhookDeliveryCreatedEvent>[]
-  evaluationV2Updated: EventHandler<EvaluationV2UpdatedEvent>[]
 }

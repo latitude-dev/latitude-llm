@@ -54,19 +54,14 @@ const EVALUATION_METRIC_OPTIONS = <
       break
   }
 
-  return (
-    metrics
-      // TODO(evalsv2): Remove undefined filter when all metrics are implemented
-      .filter((metric) => !!EVALUATION_SPECIFICATIONS[type].metrics[metric])
-      .map((metric) => {
-        const specification = EVALUATION_SPECIFICATIONS[type].metrics[metric]
-        return {
-          label: specification.name,
-          value: metric,
-          icon: specification.icon,
-        }
-      })
-  )
+  return metrics.map((metric) => {
+    const specification = EVALUATION_SPECIFICATIONS[type].metrics[metric]
+    return {
+      label: specification.name,
+      value: metric,
+      icon: specification.icon,
+    }
+  })
 }
 
 export default function EvaluationV2Form<

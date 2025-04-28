@@ -58,10 +58,13 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
-  const experimentScope = new ExperimentsRepository(workspace.id)
-  const experiment = experimentUuid
-    ? await experimentScope.findByUuid(experimentUuid).then((r) => r.unwrap())
-    : undefined
+  let experiment = undefined
+  if (experimentUuid) {
+    const experimentsRepository = new ExperimentsRepository(workspace.id)
+    experiment = await experimentsRepository
+      .findByUuid(experimentUuid)
+      .then((r) => r.unwrap())
+  }
 
   try {
     const commitsRepository = new CommitsRepository(workspace.id)

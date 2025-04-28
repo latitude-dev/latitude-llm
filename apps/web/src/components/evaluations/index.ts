@@ -28,8 +28,8 @@ export type ConfigurationFormProps<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   mode: 'create' | 'update'
-  configuration: EvaluationConfiguration<T, M> // Note: probably just use settings
-  setConfiguration: (configuration: EvaluationConfiguration<T, M>) => void // Note: probably just use setSettings
+  configuration: EvaluationConfiguration<T, M> // Note: remove and just use settings
+  setConfiguration: (configuration: EvaluationConfiguration<T, M>) => void // Note: remove and just use setSettings
   settings: EvaluationSettings<T, M>
   setSettings: (settings: EvaluationSettings<T, M>) => void
   errors?: Record<string, string[]>
