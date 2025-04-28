@@ -125,7 +125,7 @@ export default function useFetcher<
       navigate,
     })
     return response as R
-  }, [route, searchParams, toast, serializer, navigate])
+  }, [route, searchParams, toast, serializer, navigate, fallback])
 }
 
 function buildRoute(route: string, searchParams?: ISearchParams) {

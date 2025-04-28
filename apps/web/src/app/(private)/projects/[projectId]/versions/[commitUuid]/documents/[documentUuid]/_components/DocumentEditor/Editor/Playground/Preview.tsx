@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useSearchParams } from 'next/navigation'
 import { Commit, Project } from '@latitude-data/core/browser'
@@ -38,6 +38,14 @@ export default function Preview({
     featureFlag: 'experiments',
   })
   const [experimentModalOpen, setExperimentModalOpen] = useState(false)
+  const onOpenRunModal = runModal.onOpen
+  const onClickRunExperiment = useCallback(() => {
+    if (newExperimentsEnabled) {
+      setExperimentModalOpen(true)
+    } else {
+      onOpenRunModal()
+    }
+  }, [newExperimentsEnabled, onOpenRunModal, setExperimentModalOpen])
   return (
     <>
       <PreviewPrompt
@@ -47,17 +55,7 @@ export default function Preview({
         expandParameters={expandParameters}
         setExpandParameters={setExpandParameters}
         actions={
-          <Button
-            fancy
-            variant='outline'
-            onClick={() => {
-              if (newExperimentsEnabled) {
-                setExperimentModalOpen(true)
-              } else {
-                runModal.onOpen()
-              }
-            }}
-          >
+          <Button fancy variant='outline' onClick={onClickRunExperiment}>
             Run experiment
           </Button>
         }

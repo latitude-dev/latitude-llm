@@ -19,13 +19,13 @@ import DocumentEvaluations from './DocumentEvaluations'
 import DocumentParams from './DocumentParams'
 import Preview from './Preview'
 import DocumentParamsLoading from './DocumentParams/DocumentParamsLoading'
-import { useExpandParametersOrEvaluations } from './hooks/useExpandParametersOrEvaluations'
 import {
   PLAYGROUND_COLLAPSED_SIZE,
   PLAYGROUND_GAP_PADDING,
 } from '$/hooks/playgrounds/constants'
 import Chat from '$/components/PlaygroundCommon/Chat'
 import { useRunPlaygroundPrompt } from './hooks/useRunPlaygroundPrompt'
+import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
 
 export const Playground = memo(
   ({

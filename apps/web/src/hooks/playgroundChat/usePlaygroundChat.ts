@@ -15,7 +15,7 @@ import {
 import { StreamEventTypes } from '@latitude-data/core/browser'
 import { LanguageModelUsage } from 'ai'
 import { ParsedEvent } from 'eventsource-parser/stream'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 function buildMessage({ input }: { input: string | ToolMessage[] }) {
   if (typeof input === 'string') {
@@ -246,21 +246,41 @@ export function usePlaygroundChat({
     }
   }, [handleStream, runPromptFn, onPromptRan])
 
-  return {
-    start,
-    submitUserMessage,
-    addMessages: addMessagesFn ? addMessages : undefined,
-    setError,
-    error,
-    streamingReasoning,
-    streamingResponse,
-    messages,
-    wakingUpIntegration,
-    runningLatitudeTools,
-    chainLength,
-    usage,
-    time,
-    unresponedToolCalls,
-    isLoading,
-  }
+  return useMemo(
+    () => ({
+      start,
+      submitUserMessage,
+      addMessages: addMessagesFn ? addMessages : undefined,
+      setError,
+      error,
+      streamingReasoning,
+      streamingResponse,
+      messages,
+      wakingUpIntegration,
+      runningLatitudeTools,
+      chainLength,
+      usage,
+      time,
+      unresponedToolCalls,
+      isLoading,
+    }),
+    [
+      start,
+      submitUserMessage,
+      addMessagesFn,
+      addMessages,
+      setError,
+      error,
+      streamingReasoning,
+      streamingResponse,
+      messages,
+      wakingUpIntegration,
+      runningLatitudeTools,
+      chainLength,
+      usage,
+      time,
+      unresponedToolCalls,
+      isLoading,
+    ],
+  )
 }
