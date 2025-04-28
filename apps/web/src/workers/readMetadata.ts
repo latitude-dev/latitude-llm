@@ -34,7 +34,10 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
     ...rest
   } = event.data
 
-  const referenceFn = readDocument(document, documents, prompt)
+  const referenceFn =
+    document && documents
+      ? readDocument(document, documents, prompt)
+      : undefined
   const configSchema =
     document && providerNames
       ? promptConfigSchema({

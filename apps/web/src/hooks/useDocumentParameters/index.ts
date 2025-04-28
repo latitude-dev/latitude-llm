@@ -102,7 +102,7 @@ export function useDocumentParameters({
           newInputs,
         }),
       ),
-    [setValue],
+    [key, setValue],
   )
 
   const setInput = useCallback(
@@ -122,7 +122,7 @@ export function useDocumentParameters({
         }
       }
     },
-    [source, inputsBySource],
+    [inputsBySource, setHistoryInputs, setManualInputs],
   )
 
   const setManualInput = useCallback(
@@ -158,7 +158,7 @@ export function useDocumentParameters({
   const copyDatasetToManual = useCallback(() => {
     const dsInputs = dsId ? (inputs.datasetV2?.[dsId]?.inputs ?? {}) : {}
     setManualInputs(dsInputs)
-  }, [inputs.datasetV2, dsId])
+  }, [inputs.datasetV2, dsId, setManualInputs])
 
   const setHistoryLog = useCallback(
     (logUuid: string) => {
@@ -176,7 +176,7 @@ export function useDocumentParameters({
         }
       })
     },
-    [allInputs, key, setValue],
+    [key, setValue],
   )
 
   const mapDocParametersToInputs = useCallback(
@@ -200,14 +200,13 @@ export function useDocumentParameters({
         })
       })
     },
-    [inputs, key, setValue, emptyInputs.history],
+    [key, setValue, emptyInputs.history],
   )
 
   const onMetadataChange = useCallback(
     (metadata: ConversationMetadata) => {
       setValue((oldState) => {
         const prevInputs = useMetadataParameters.getState().prevInputs
-        const dsId = document.datasetV2Id
         return recalculateAllInputs({
           key,
           oldState,
@@ -229,7 +228,7 @@ export function useDocumentParameters({
         })
       })
     },
-    [key, document.datasetId, setValue],
+    [key, setValue, dsId],
   )
   const lastMetadataRef = useRef<ConversationMetadata | null>(null)
 
@@ -259,13 +258,20 @@ export function useDocumentParameters({
     setParameters(Array.from(nextParams))
     onMetadataChange(metadata)
     lastMetadataRef.current = metadata
-  }, [metadata, setParameters, onMetadataChange])
+  }, [
+    metadata,
+    setParameters,
+    onMetadataChange,
+    snapshotCurrentDoc,
+    document,
+    setValue,
+  ])
 
   const parameters = useMemo(() => {
     if (!metadataParameters) return undefined
 
     return convertToParams(inputsBySource)
-  }, [inputsBySource])
+  }, [inputsBySource, metadataParameters])
 
   return {
     metadataParameters,

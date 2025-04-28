@@ -69,7 +69,7 @@ export function DocumentLogInfo({
     if (!ref.current) return
 
     setTarget(ref.current)
-  }, [ref.current])
+  }, [])
   const scrollableArea = usePanelDomRef({ selfRef: target })
   const beacon = stickyRef?.current
   useStickyNested({

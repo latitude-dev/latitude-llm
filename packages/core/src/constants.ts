@@ -203,6 +203,13 @@ export type SerializedDocumentLog = SerializedProviderLog & {
   parameters: Record<string, unknown>
 }
 
+export type EvaluatedDocumentLog = SerializedDocumentLog & {
+  uuid: string
+  createdAt: Date
+  actualOutput: string
+  conversation: CompilerMessage[]
+}
+
 export const SERIALIZED_DOCUMENT_LOG_FIELDS = [
   'messages',
   'context',

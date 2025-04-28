@@ -1,10 +1,42 @@
-import { DocumentLog, SerializedDocumentLog, Workspace } from '../../browser'
+import {
+  DocumentLog,
+  ProviderLog,
+  SerializedDocumentLog,
+  Workspace,
+} from '../../browser'
 import { database } from '../../client'
 import { ProviderLogsRepository } from '../../repositories'
 import { serializeForEvaluation as serializeProviderLog } from '../providerLogs'
 import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
 import { PromisedResult } from './../../lib/Transaction'
+
+export function serializeAggregatedProviderLog({
+  documentLog,
+  providerLogs,
+}: {
+  documentLog: DocumentLog
+  providerLogs: ProviderLog[]
+}) {
+  let cost = 0
+  let tokens = 0
+  let duration = 0
+  for (const providerLog of providerLogs) {
+    cost += providerLog.costInMillicents ?? 0
+    tokens += providerLog.tokens ?? 0
+    duration += providerLog.duration ?? 0
+  }
+
+  const lastProviderLog = providerLogs.at(-1)!
+  return Result.ok({
+    ...serializeProviderLog(lastProviderLog),
+    parameters: documentLog.parameters,
+    prompt: documentLog.resolvedContent,
+    cost: cost / 1000,
+    tokens: tokens,
+    duration: duration / 1000,
+  })
+}
 
 export async function serialize(
   {
@@ -27,21 +59,5 @@ export async function serialize(
     )
   }
 
-  let cost = 0
-  let tokens = 0
-  let duration = 0
-  for (const providerLog of providerLogs) {
-    cost += providerLog.costInMillicents ?? 0
-    tokens += providerLog.tokens ?? 0
-    duration += providerLog.duration ?? 0
-  }
-
-  return Result.ok({
-    ...serializeProviderLog(providerLogs.pop()!),
-    parameters: documentLog.parameters,
-    prompt: documentLog.resolvedContent,
-    cost: cost / 1000,
-    tokens: tokens,
-    duration: duration / 1000,
-  })
+  return serializeAggregatedProviderLog({ documentLog, providerLogs })
 }

@@ -1,32 +1,29 @@
 import { useCallback, useState } from 'react'
-
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
+import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import useDocumentLogs from '$/stores/documentLogs'
 import useDocumentLogWithPaginationPosition, {
   LogWithPosition,
 } from '$/stores/documentLogWithPaginationPosition'
-import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
+import {
+  DocumentVersion,
+  EvaluatedDocumentLog,
+} from '@latitude-data/core/browser'
+import useEvaluatedDocumentLogs from '$/stores/evaluatedDocumentLogs'
 
 const ONLY_ONE_PAGE = '1'
 
-export function useLogHistoryParams({
+export type OnHistoryFetchedFn = (log: EvaluatedDocumentLog) => void
+export function useSerializedLogs({
   document,
-  commitVersionUuid,
+  onHistoryFetched,
+  logUuid,
 }: {
   document: DocumentVersion
-  commitVersionUuid: string
+  onHistoryFetched: OnHistoryFetchedFn
+  logUuid?: string
 }) {
   const { project } = useCurrentProject()
-  const {
-    history: { setHistoryLog, logUuid, mapDocParametersToInputs },
-  } = useDocumentParameters({
-    document,
-    commitVersionUuid,
-  })
-
   const filterOptions = useDefaultLogFilterOptions()
   const { data: pagination, isLoading: isLoadingCounter } =
     useDocumentLogsPagination({
@@ -37,7 +34,6 @@ export function useLogHistoryParams({
       pageSize: ONLY_ONE_PAGE,
       excludeErrors: true,
     })
-
   const [position, setPosition] = useState<LogWithPosition | undefined>(
     logUuid ? undefined : { position: 1, page: 1 },
   )
@@ -55,19 +51,17 @@ export function useLogHistoryParams({
     },
   )
 
-  const { data: logs, isLoading: isLoadingLog } = useDocumentLogs({
+  const { data: logs, isLoading: isLoadingLog } = useEvaluatedDocumentLogs({
     documentUuid: position === undefined ? undefined : document.documentUuid,
     filterOptions,
     projectId: project.id,
     page: position === undefined ? undefined : String(position.position),
     pageSize: ONLY_ONE_PAGE,
-    excludeErrors: true,
     onFetched: (logs) => {
       const log = logs[0]
       if (!log) return
 
-      mapDocParametersToInputs({ parameters: log.parameters })
-      setHistoryLog(log.uuid)
+      onHistoryFetched(log)
     },
   })
 
@@ -105,5 +99,3 @@ export function useLogHistoryParams({
     onPrevPage,
   }
 }
-
-export type UseLogHistoryParams = ReturnType<typeof useLogHistoryParams>

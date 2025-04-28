@@ -417,7 +417,7 @@ function ResultPanelMessages<M extends LlmEvaluationMetric>({
       </div>
       <MessageList
         messages={conversation}
-        parameters={LLM_EVALUATION_PROMPT_PARAMETERS}
+        parameters={LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]}
         collapseParameters={!expandParameters}
       />
     </>
