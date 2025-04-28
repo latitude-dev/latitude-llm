@@ -89,6 +89,7 @@ export enum HostedIntegrationType {
   Unstructured = 'unstructured',
   Vectorize = 'vectorize',
   Xero = 'xero',
+  Readwise = 'readwise',
 
   // Require all auth file :point_down:
   // Gmail = 'google_drive',
