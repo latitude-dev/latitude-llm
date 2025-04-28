@@ -11,8 +11,12 @@ export function PromptConfiguration({
   disabled,
   ...restProps
 }: PromptConfigurationProps) {
+  const canUseSubagents = restProps.canUseSubagents
   const [isOpen, setIsOpen] = useState(false)
-  const { config, setConfig } = useReactiveConfig(restProps)
+  const { config, setConfig } = useReactiveConfig({
+    config: restProps.config,
+    setConfig: restProps.setConfig,
+  })
 
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
@@ -35,16 +39,19 @@ export function PromptConfiguration({
         <div className='flex flex-col gap-6 p-2'>
           <GenerationSettings
             config={config}
+            canUseSubagents={canUseSubagents}
             setConfig={setConfig}
             disabled={disabled}
           />
           <BehaviourSettings
             config={config}
+            canUseSubagents={canUseSubagents}
             setConfig={setConfig}
             disabled={disabled}
           />
           <LimitSettings
             config={config}
+            canUseSubagents={canUseSubagents}
             setConfig={setConfig}
             disabled={disabled}
           />

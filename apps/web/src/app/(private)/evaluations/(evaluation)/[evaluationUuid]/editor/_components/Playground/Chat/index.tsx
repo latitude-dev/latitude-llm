@@ -22,11 +22,9 @@ import useEvaluationPrompt from '$/stores/evaluationPrompt'
 import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
 import { useToolContentMap } from 'node_modules/@latitude-data/web-ui/src/lib/hooks/useToolContentMap'
-import {
-  StatusIndicator,
-  StreamMessage,
-  Timer,
-} from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/components'
+import { StatusIndicator } from '$/components/PlaygroundCommon/StatusIndicator'
+import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
+import { Timer } from '$/components/PlaygroundCommon/Timer'
 
 export default function Chat({
   clearChat,
@@ -137,7 +135,7 @@ export default function Chat({
       }
     }
     setIsStreaming(false)
-  }, [prompt, parameters, runEvaluationPromptAction])
+  }, [prompt, parameters, addMessageToConversation, evaluation.id, usePromptl])
 
   const toolContentMap = useToolContentMap(conversation?.messages ?? [])
 

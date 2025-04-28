@@ -29,19 +29,22 @@ function buildMessage({ input }: { input: string | ToolMessage[] }) {
   return input
 }
 
+export type RunPromptFn = () => Promise<ReadableStream<ParsedEvent>>
+export type AddMessagesFn = ({
+  documentLogUuid,
+  messages,
+}: {
+  documentLogUuid: string
+  messages: Message[]
+}) => Promise<ReadableStream<ParsedEvent>>
+
 export function usePlaygroundChat({
   runPromptFn,
   addMessagesFn,
   onPromptRan,
 }: {
-  runPromptFn: () => Promise<ReadableStream<ParsedEvent>>
-  addMessagesFn?: ({
-    documentLogUuid,
-    messages,
-  }: {
-    documentLogUuid: string
-    messages: Message[]
-  }) => Promise<ReadableStream<ParsedEvent>>
+  runPromptFn: RunPromptFn
+  addMessagesFn?: AddMessagesFn
   onPromptRan?: (documentLogUuid?: string, error?: Error) => void
 }) {
   const isChat = useRef(false)
@@ -228,7 +231,7 @@ export function usePlaygroundChat({
         setError(error as Error)
       }
     },
-    [addMessagesFn, documentLogUuid, handleStream],
+    [addMessagesFn, documentLogUuid, handleStream, addMessages],
   )
 
   const start = useCallback(async () => {
@@ -246,7 +249,7 @@ export function usePlaygroundChat({
   return {
     start,
     submitUserMessage,
-    addMessages,
+    addMessages: addMessagesFn ? addMessages : undefined,
     setError,
     error,
     streamingReasoning,

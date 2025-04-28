@@ -105,6 +105,14 @@ export const useVariablesData = (providerLog: ProviderLogDto) => {
       tooltip: 'The cost of running this prompt in cents',
       type: 'number',
     },
+    {
+      title: 'tokens',
+      content: documentLogWithMetadata?.tokens
+        ? documentLogWithMetadata.tokens.toString()
+        : '0',
+      tooltip: 'Tokens used in the prompt',
+      type: 'number',
+    },
   ]
 
   return {

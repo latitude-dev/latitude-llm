@@ -1,23 +1,16 @@
+import { useCallback } from 'react'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { ConfigElement, ConfigSection } from './_components/ConfigSection'
 import { PromptConfigurationProps, useConfigValue } from './utils'
 import { SubAgentSelector } from './_components/AgentSelector'
-import { useEffect } from 'react'
 
 export function BehaviourSettings({
   config,
   setConfig,
   disabled,
+  canUseSubagents,
 }: PromptConfigurationProps) {
-  const { value: agentValue, setValue: setAgentValue } = useConfigValue<
-    'agent' | undefined
-  >({
-    config,
-    setConfig,
-    key: 'type',
-    defaultValue: undefined,
-  })
-
+  const agentValue = (config['type'] ?? undefined) as 'agent' | undefined
   const {
     value: disabledAgentOptimization,
     setValue: setDisableAgentOptimization,
@@ -28,15 +21,26 @@ export function BehaviourSettings({
     defaultValue: false,
   })
 
-  useEffect(() => {
-    // DO not update the document if it's disabled
-    // disabled means it's merged
-    if (disabled) return
+  const setValues = useCallback(
+    (updates: Partial<PromptConfigurationProps['config']>) => {
+      setConfig({ ...config, ...updates })
+    },
+    [config, setConfig],
+  )
 
-    if (agentValue !== 'agent') {
-      setDisableAgentOptimization(undefined)
-    }
-  }, [agentValue])
+  const onAgentCheckedChange = useCallback(
+    (checked: boolean) => {
+      const newAgentValue = checked ? 'agent' : undefined
+
+      const updates: Partial<typeof config> = { type: newAgentValue }
+      if (newAgentValue !== 'agent') {
+        updates.disableAgentOptimization = undefined
+      }
+
+      setValues(updates)
+    },
+    [setValues],
+  )
 
   return (
     <ConfigSection title='Behaviour'>
@@ -50,9 +54,7 @@ Unlike regular prompts or predefined Chains, Agents can adapt dynamically, respo
         <SwitchToggle
           disabled={disabled}
           checked={agentValue === 'agent'}
-          onCheckedChange={() =>
-            setAgentValue(agentValue === 'agent' ? undefined : 'agent')
-          }
+          onCheckedChange={onAgentCheckedChange}
         />
       </ConfigElement>
       {agentValue === 'agent' && (
@@ -77,19 +79,22 @@ Unlike regular prompts or predefined Chains, Agents can adapt dynamically, respo
           </ConfigElement>
         </div>
       )}
-      <ConfigElement
-        label='Subagents'
-        icon='bot'
-        summary='Allow the AI to delegate some tasks to other agents to help generate the response.'
-        description={`Allows the model to call other agents to help generate the response.
+      {canUseSubagents ? (
+        <ConfigElement
+          label='Subagents'
+          icon='bot'
+          summary='Allow the AI to delegate some tasks to other agents to help generate the response.'
+          description={`Allows the model to call other agents to help generate the response.
           New tools will be injected into the prompt, one per selected agent, that will execute the selected agent's prompt and return the result to the main prompt.`}
-      >
-        <SubAgentSelector
-          config={config}
-          setConfig={setConfig}
-          disabled={disabled}
-        />
-      </ConfigElement>
+        >
+          <SubAgentSelector
+            config={config}
+            setConfig={setConfig}
+            disabled={disabled}
+            canUseSubagents={canUseSubagents}
+          />
+        </ConfigElement>
+      ) : null}
     </ConfigSection>
   )
 }

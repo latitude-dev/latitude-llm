@@ -84,6 +84,7 @@ export default function Playground({
       duration: documentLogWithMetadata.duration,
       parameters: documentLogWithMetadata.parameters,
       cost: (documentLogWithMetadata.costInMillicents || 0) / 1000,
+      tokens: documentLogWithMetadata.tokens ?? 0,
     }
   }, [documentLogWithMetadata, providerLog])
 

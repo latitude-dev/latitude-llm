@@ -46,6 +46,7 @@ export const EditorHeader = memo(
     freeRunsCount,
     showCopilotSetting,
     prompt,
+    canUseSubagents = true,
   }: {
     title: string
     metadata: ConversationMetadata | undefined
@@ -57,6 +58,7 @@ export const EditorHeader = memo(
     providers?: ProviderApiKey[]
     freeRunsCount?: number
     showCopilotSetting?: boolean
+    canUseSubagents?: boolean
   }) => {
     const { data: providerApiKeys, isLoading } = useProviderApiKeys({
       fallbackData: providers,
@@ -96,7 +98,7 @@ export const EditorHeader = memo(
         acc[data.name] = data
         return acc
       }, {} as IProviderByName)
-    }, [isLoading, providerApiKeys])
+    }, [providerApiKeys])
 
     const providerOptions = useMemo(() => {
       return providerApiKeys.map((apiKey) => ({
@@ -120,7 +122,7 @@ export const EditorHeader = memo(
       if (!promptMetadata.model || promptMetadata.model !== model) {
         setModel(promptMetadata.model ?? null)
       }
-    }, [promptMetadata])
+    }, [promptMetadata, model, provider])
 
     const onSelectProvider = useCallback(
       (selectedProvider: string) => {
@@ -141,7 +143,7 @@ export const EditorHeader = memo(
         })
         onChangePrompt(updatedPrompt)
       },
-      [provider, providersByName, prompt],
+      [provider, providersByName, prompt, onChangePrompt],
     )
 
     const onSelectModel = useCallback(
@@ -156,7 +158,7 @@ export const EditorHeader = memo(
         })
         onChangePrompt(updatedPrompt)
       },
-      [model, prompt],
+      [model, prompt, onChangePrompt],
     )
 
     const newProviderLink = (
@@ -242,6 +244,7 @@ export const EditorHeader = memo(
           />
           <PromptConfiguration
             disabled={disabledMetadataSelectors}
+            canUseSubagents={canUseSubagents}
             config={metadata?.config ?? {}}
             setConfig={(config: Record<string, unknown>) => {
               onChangePrompt(updatePromptMetadata(prompt, config))

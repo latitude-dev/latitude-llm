@@ -14,9 +14,7 @@ import { useCallback, useState } from 'react'
 import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { useStreamHandler } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/hooks/useStreamHandler'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { StreamMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/components'
 import { ParameterTable } from './ParameterTable'
 import { cn } from '@latitude-data/web-ui/utils'
 import { runDocumentInBatchAction } from '$/actions/documents/runDocumentInBatchAction'
@@ -24,6 +22,8 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
+import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
 
 type OnboardingStep1ContentProps = {
   workspaceName: string
