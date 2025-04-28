@@ -142,6 +142,7 @@ import Neon from './custom-icons/logos/Neon'
 import Notion from './custom-icons/logos/Notion'
 import Perplexity from './custom-icons/logos/Perplexity'
 import Postgres from './custom-icons/logos/Postgres'
+import Readwise from './custom-icons/logos/Readwise'
 import Reddit from './custom-icons/logos/Reddit'
 import Redis from './custom-icons/logos/Redis'
 import Sentry from './custom-icons/logos/Sentry'
@@ -266,6 +267,7 @@ const Icons = {
   play: Play,
   postgres: Postgres,
   puzzle: Puzzle,
+  readwise: Readwise,
   reddit: Reddit,
   redis: Redis,
   refresh: RefreshCcw,

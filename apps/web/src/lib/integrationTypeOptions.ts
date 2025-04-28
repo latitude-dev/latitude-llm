@@ -340,6 +340,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Xero',
     icon: 'mcp',
   },
+  [HostedIntegrationType.Readwise]: {
+    label: 'Readwise',
+    icon: 'readwise',
+  },
 }
 
 export function integrationOptions(
