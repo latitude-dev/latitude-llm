@@ -1,6 +1,20 @@
-import { eq, and, getTableColumns, sql, count, desc, sum } from 'drizzle-orm'
+import {
+  eq,
+  and,
+  getTableColumns,
+  sql,
+  count,
+  desc,
+  sum,
+  isNull,
+} from 'drizzle-orm'
 
-import { Experiment, ExperimentDto, ExperimentLogsMetadata } from '../browser'
+import {
+  ErrorableEntity,
+  Experiment,
+  ExperimentDto,
+  ExperimentLogsMetadata,
+} from '../browser'
 import {
   commits,
   documentLogs,
@@ -232,7 +246,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
         totalCost: sum(providerLogs.costInMillicents)
           .mapWith(Number)
           .as('total_cost'),
-        totalDuration: sum(providerLogs.duration)
+        totalDuration: sum(documentLogs.duration)
           .mapWith(Number)
           .as('total_duration'),
       })
@@ -242,13 +256,24 @@ export class ExperimentsRepository extends Repository<Experiment> {
         providerLogs,
         eq(providerLogs.documentLogUuid, documentLogs.uuid),
       )
-      .where(and(this.scopeFilter, eq(experiments.uuid, uuid)))
+      .leftJoin(
+        runErrors,
+        and(
+          eq(runErrors.errorableUuid, documentLogs.uuid),
+          eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+        ),
+      )
+      .where(
+        and(this.scopeFilter, eq(experiments.uuid, uuid), isNull(runErrors.id)),
+      )
       .groupBy(experiments.id)
 
     if (!result.length) {
-      return Result.error(
-        new NotFoundError(`Experiment not found with uuid '${uuid}'`),
-      )
+      return Result.ok({
+        count: 0,
+        totalCost: 0,
+        totalDuration: 0,
+      })
     }
 
     return Result.ok({

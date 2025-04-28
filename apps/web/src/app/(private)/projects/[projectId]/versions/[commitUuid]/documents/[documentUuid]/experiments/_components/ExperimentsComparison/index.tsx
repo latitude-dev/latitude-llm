@@ -28,7 +28,7 @@ export function ExperimentComparison({
     })
 
   return (
-    <div className='flex flex-row w-full max-w-full relative border border-border rounded-lg overflow-auto custom-scrollbar'>
+    <div className='flex flex-shrink-0 flex-row w-full max-w-full relative border border-border rounded-lg overflow-auto custom-scrollbar'>
       {Object.values(experiments).map((experiment, index) => {
         const isLast =
           experiments.length > 2 && index === experiments.length - 1

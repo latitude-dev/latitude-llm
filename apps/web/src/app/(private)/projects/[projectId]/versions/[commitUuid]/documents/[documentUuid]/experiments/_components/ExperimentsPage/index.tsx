@@ -13,13 +13,18 @@ import { ExperimentsTable } from '../ExperimentsTable'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { useCallback, useState } from 'react'
 import { ExperimentComparison } from '../ExperimentsComparison'
+import { EmptyPage } from './EmptyPage'
 
-export function ExperimentsPageContent() {
+export function ExperimentsPageContent({
+  initialCount,
+}: {
+  initialCount: number
+}) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
-  const { isCreating: isCreatingExperiment } = useExperiments({
+  const { isCreating: isCreatingExperiment, count } = useExperiments({
     projectId: project.id,
     documentUuid: document.documentUuid,
   })
@@ -82,15 +87,25 @@ export function ExperimentsPageContent() {
         </Button>
       </div>
 
-      <ExperimentComparison
-        selectedExperimentUuids={selectedExperimentUuids}
-        onUnselectExperiment={handleExperimentSelect}
-      />
+      {(count ?? initialCount) === 0 ? (
+        <EmptyPage
+          isCreatingExperiment={isCreatingExperiment}
+          setIsModalOpen={setIsModalOpen}
+        />
+      ) : (
+        <>
+          <ExperimentComparison
+            selectedExperimentUuids={selectedExperimentUuids}
+            onUnselectExperiment={handleExperimentSelect}
+          />
+          <ExperimentsTable
+            count={count ?? initialCount}
+            selectedExperiments={selectedExperimentUuids}
+            onSelectExperiment={handleExperimentSelect}
+          />
+        </>
+      )}
 
-      <ExperimentsTable
-        selectedExperiments={selectedExperimentUuids}
-        onSelectExperiment={handleExperimentSelect}
-      />
       <RunExperimentModal
         project={project as Project}
         commit={commit as Commit}

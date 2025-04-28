@@ -1,5 +1,4 @@
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { useMetadata } from '$/hooks/useMetadata'
 import { EvaluationV2 } from '@latitude-data/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -74,33 +73,21 @@ function DatasetLabelSelector({
 }
 
 export function ParametersSelection({
-  document,
   selectedDataset,
   parametersMap,
   setParametersMap,
   selectedEvaluations,
   datasetLabels,
   setDatasetLabels,
-}: ExperimentFormPayload) {
-  const { metadata, runReadMetadata } = useMetadata()
-  useEffect(() => {
-    runReadMetadata({
-      prompt: document.content ?? '',
-      fullPath: document.path,
-      promptlVersion: document.promptlVersion,
-    })
-  }, [document])
-
+  parameters,
+}: ExperimentFormPayload & {
+  parameters?: string[]
+}) {
   const { labels, buildLabels } = useLabels()
   useEffect(() => {
     if (!selectedDataset) return
     buildLabels(selectedDataset)
   }, [selectedDataset, buildLabels])
-
-  const parameters = useMemo(() => {
-    if (!metadata) return undefined
-    return Array.from(metadata.parameters)
-  }, [metadata])
 
   const selectParameter = useCallback(
     (parameter: string, columnIndex: number) => {
@@ -114,19 +101,19 @@ export function ParametersSelection({
 
   useEffect(() => {
     if (!selectedDataset) return
-    if (!metadata) return
+    if (!parameters) return
 
     setParametersMap(
       Object.fromEntries(
         selectedDataset.columns
           .map((col, index) => {
-            if (!metadata.parameters.has(col.name)) return undefined
+            if (!parameters.includes(col.name)) return null
             return [col.name, index]
           })
           .filter(Boolean) as [string, number][],
       ),
     )
-  }, [selectedDataset, metadata])
+  }, [selectedDataset, parameters, setParametersMap])
 
   if (!selectedDataset) {
     return <Text.H6 color='foregroundMuted'>You must select a dataset</Text.H6>

@@ -9,9 +9,13 @@ import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { useCallback, useMemo } from 'react'
 
 export function DatasetSelector({
+  document,
   selectedDataset,
   onSelectDataset,
-}: ExperimentFormPayload) {
+  parameters,
+}: ExperimentFormPayload & {
+  parameters?: string[]
+}) {
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
 
   const selectOptions = useMemo(
@@ -63,18 +67,22 @@ export function DatasetSelector({
             <Text.H6M>or</Text.H6M>
           </>
         )}
-        {/* <Link
-              className='flex flex-row items-center gap-1 hover:underline'
-              href={ROUTES.datasets.root({
-                modal: 'generate',
-                name: `Dataset for prompt: ${document.path}`,
-                parameters: parametersList.join(','),
-                backUrl: window.location.href,
-              })}
-            >
-              <Text.H5 color='primary'>Generate dataset</Text.H5>
-              <Icon color='primary' name='externalLink' />
-            </Link> */}
+        {parameters === undefined ? (
+          <Skeleton height='h2' className='w-1/2' />
+        ) : (
+          <Link
+            className='flex flex-row items-center gap-1 hover:underline'
+            href={ROUTES.datasets.root({
+              modal: 'generate',
+              name: `Dataset for prompt: ${document.path}`,
+              parameters: parameters.join(','),
+              backUrl: window.location.href,
+            })}
+          >
+            <Text.H5 color='primary'>Generate dataset</Text.H5>
+            <Icon color='primary' name='externalLink' />
+          </Link>
+        )}
       </div>
     </div>
   )

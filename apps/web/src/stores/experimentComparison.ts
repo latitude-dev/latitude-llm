@@ -69,6 +69,7 @@ function getExperimentUuidsWithBestLogsMetadata(
       const logsMetadata = experiment?.logsMetadata
       if (!logsMetadata) return acc
       if (!logsMetadata.count) return acc // Invalid logsMetadata
+      if (logsMetadata.count === 0) return acc // Invalid logsMetadata
 
       const cost = logsMetadata.totalCost / logsMetadata.count
       const duration = logsMetadata.totalDuration / logsMetadata.count

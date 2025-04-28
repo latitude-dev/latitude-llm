@@ -64,7 +64,7 @@ export function useExperiments(
     opts,
   )
 
-  const { data: count, mutate: mutateCount } = useSWR<number>(
+  const { data: count = undefined, mutate: mutateCount } = useSWR<number>(
     ['experiments', projectId, documentUuid, 'count'],
     countFetcher,
     opts,
