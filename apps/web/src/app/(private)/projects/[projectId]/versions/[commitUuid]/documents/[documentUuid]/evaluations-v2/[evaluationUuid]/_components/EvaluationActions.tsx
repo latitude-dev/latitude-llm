@@ -1,14 +1,15 @@
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import {
   EVALUATION_SPECIFICATIONS,
   getEvaluationMetricSpecification,
 } from '$/components/evaluations'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
+import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
@@ -19,8 +20,8 @@ import {
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
-  LlmEvaluationMetric,
   LlmEvaluationCustomSpecification,
+  LlmEvaluationMetric,
   Project,
 } from '@latitude-data/core/browser'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
@@ -33,7 +34,6 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
 import CreateBatchEvaluationModal from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal'
-import { useToggleModal } from '$/hooks/useToogleModal'
 
 export function EvaluationActions<
   T extends EvaluationType = EvaluationType,
@@ -117,14 +117,13 @@ function EditPrompt<M extends LlmEvaluationMetric>({
   )
 
   const onClickEditPrompt = useCallback(() => {
-    const isMetric = evaluation.metric === LlmEvaluationMetric.Custom
-    if (!isMetric) {
-      return cloneModal.onOpen()
+    if (evaluation.metric.startsWith(LlmEvaluationMetric.Custom)) {
+      return navigate.push(
+        baseEvaluationRoute({ evaluationUuid: evaluation.uuid }).editor.root,
+      )
     }
 
-    navigate.push(
-      baseEvaluationRoute({ evaluationUuid: evaluation.uuid }).editor.root,
-    )
+    return cloneModal.onOpen()
   }, [
     evaluation.metric,
     baseEvaluationRoute,

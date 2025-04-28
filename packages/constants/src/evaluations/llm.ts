@@ -159,6 +159,16 @@ export type LlmEvaluationCustomResultError = z.infer<
   typeof LlmEvaluationCustomSpecification.resultError
 >
 
+// CUSTOM LABELED
+
+export const LlmEvaluationCustomLabeledSpecification = {
+  ...LlmEvaluationCustomSpecification,
+  name: 'Custom (Labeled)',
+  requiresExpectedOutput: true,
+  supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
+}
+
 /* ------------------------------------------------------------------------- */
 
 export enum LlmEvaluationMetric {
@@ -166,6 +176,7 @@ export enum LlmEvaluationMetric {
   Rating = 'rating',
   Comparison = 'comparison',
   Custom = 'custom',
+  CustomLabeled = 'custom_labeled',
 }
 
 // prettier-ignore
@@ -174,6 +185,7 @@ export type LlmEvaluationConfiguration<M extends LlmEvaluationMetric = LlmEvalua
   M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingConfiguration :
   M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonConfiguration :
   M extends LlmEvaluationMetric.Custom ? LlmEvaluationCustomConfiguration :
+  M extends LlmEvaluationMetric.CustomLabeled ? LlmEvaluationCustomConfiguration :
   never;
 
 // prettier-ignore
@@ -182,6 +194,7 @@ export type LlmEvaluationResultMetadata<M extends LlmEvaluationMetric = LlmEvalu
   M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingResultMetadata :
   M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonResultMetadata :
   M extends LlmEvaluationMetric.Custom ? LlmEvaluationCustomResultMetadata :
+  M extends LlmEvaluationMetric.CustomLabeled ? LlmEvaluationCustomResultMetadata :
   never;
 
 // prettier-ignore
@@ -190,6 +203,7 @@ export type LlmEvaluationResultError<M extends LlmEvaluationMetric = LlmEvaluati
   M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingResultError :
   M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonResultError :
   M extends LlmEvaluationMetric.Custom ? LlmEvaluationCustomResultError :
+  M extends LlmEvaluationMetric.CustomLabeled ? LlmEvaluationCustomResultError :
   never;
 
 export const LlmEvaluationSpecification = {
@@ -204,6 +218,7 @@ export const LlmEvaluationSpecification = {
     [LlmEvaluationMetric.Rating]: LlmEvaluationRatingSpecification,
     [LlmEvaluationMetric.Comparison]: LlmEvaluationComparisonSpecification,
     [LlmEvaluationMetric.Custom]: LlmEvaluationCustomSpecification,
+    [LlmEvaluationMetric.CustomLabeled]: LlmEvaluationCustomLabeledSpecification,
   },
 }
 

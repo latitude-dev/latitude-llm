@@ -1,15 +1,15 @@
-import { ExperimentFormPayload } from '../useExperimentFormPayload'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { useCallback, useEffect, useMemo } from 'react'
-import { useMetadata } from '$/hooks/useMetadata'
-import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
-import { useLabels } from './useLabels'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useMetadata } from '$/hooks/useMetadata'
+import { EvaluationV2 } from '@latitude-data/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { EvaluationV2, LlmEvaluationMetric } from '@latitude-data/constants'
+import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { useCallback, useEffect, useMemo } from 'react'
+import { ExperimentFormPayload } from '../useExperimentFormPayload'
+import { useLabels } from './useLabels'
 
 function DatasetLabelSelector({
   evaluation,
@@ -23,9 +23,6 @@ function DatasetLabelSelector({
   setDatasetLabels: ReactStateDispatch<Record<string, string>>
 }) {
   const specification = getEvaluationMetricSpecification(evaluation)
-  const canContainLabel =
-    specification.requiresExpectedOutput ||
-    evaluation.metric === LlmEvaluationMetric.Custom
 
   const options = useMemo(
     () =>
@@ -47,13 +44,12 @@ function DatasetLabelSelector({
     [evaluation.uuid, setDatasetLabels],
   )
 
-  if (!canContainLabel) return null
+  if (!specification.requiresExpectedOutput) return null
 
   return (
     <Select
       key={evaluation.uuid}
       name={`expectedOutput-${evaluation.uuid}`}
-      required={specification.requiresExpectedOutput}
       label={
         <div className='flex flex-row items-center gap-2'>
           <Text.H5>Expected output for</Text.H5>
@@ -72,6 +68,7 @@ function DatasetLabelSelector({
       onChange={setValue}
       placeholder='Select column'
       disabled={labels.length === 0}
+      required
     />
   )
 }

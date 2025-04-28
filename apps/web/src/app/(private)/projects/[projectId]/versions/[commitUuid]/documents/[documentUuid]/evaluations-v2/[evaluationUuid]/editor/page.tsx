@@ -4,19 +4,19 @@ import {
   getEvaluationV2AtCommitByDocumentCached,
   getProviderApiKeysCached,
 } from '$/app/(private)/_data-access'
+import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import {
   EvaluationType,
   LlmEvaluationMetric,
 } from '@latitude-data/core/browser'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
 import { env } from '@latitude-data/env'
 import { redirect } from 'next/navigation'
 import { EvaluationEditor } from './_components/EvaluationEditor'
-import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
 
 export default async function EvaluationEditorPage({
   params,
@@ -64,7 +64,7 @@ export default async function EvaluationEditorPage({
 
   const hasEditor =
     evaluation.type == EvaluationType.Llm &&
-    evaluation.metric == LlmEvaluationMetric.Custom
+    evaluation.metric.startsWith(LlmEvaluationMetric.Custom)
 
   if (!hasEditor) {
     return redirect(

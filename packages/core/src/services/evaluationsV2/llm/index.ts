@@ -21,6 +21,7 @@ import {
 import { LlmEvaluationBinarySpecification } from './binary'
 import { LlmEvaluationComparisonSpecification } from './comparison'
 import { LlmEvaluationCustomSpecification } from './custom'
+import { LlmEvaluationCustomLabeledSpecification } from './customLabeled'
 import { LlmEvaluationRatingSpecification } from './rating'
 
 // prettier-ignore
@@ -31,6 +32,7 @@ const METRICS: {
   [LlmEvaluationMetric.Rating]: LlmEvaluationRatingSpecification,
   [LlmEvaluationMetric.Comparison]: LlmEvaluationComparisonSpecification,
   [LlmEvaluationMetric.Custom]: LlmEvaluationCustomSpecification,
+  [LlmEvaluationMetric.CustomLabeled]: LlmEvaluationCustomLabeledSpecification,
 }
 
 export const LlmEvaluationSpecification = {

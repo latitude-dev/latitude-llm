@@ -5,7 +5,6 @@ import {
   Dataset,
   DocumentVersion,
   EvaluationTmp,
-  LlmEvaluationMetric,
 } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
@@ -178,11 +177,6 @@ export default function DatasetForm({
       ? getEvaluationMetricSpecification(evaluation)
       : undefined
 
-  const showExpectedOutput =
-    evaluation?.version === 'v2' &&
-    (specification?.requiresExpectedOutput ||
-      evaluation?.metric === LlmEvaluationMetric.Custom)
-
   return (
     <>
       <NumeredList>
@@ -289,7 +283,7 @@ export default function DatasetForm({
             )
           ) : null}
         </NumeredList.Item>
-        {showExpectedOutput && selectedDataset && labels ? (
+        {specification?.requiresExpectedOutput && selectedDataset && labels ? (
           <NumeredList.Item
             title='Select the column that contains the expected output'
             width='w-1/2'
