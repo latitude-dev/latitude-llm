@@ -33,6 +33,7 @@ import { buildPagination } from '@latitude-data/core/lib/pagination/buildPaginat
 import { DatasetCell } from './DatasetCell'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { EvaluationsCell } from './EvaluationsCell'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 
 type ExperimentStatus = {
   isPending: boolean
@@ -51,9 +52,11 @@ const countLabel = (count: number): string => {
 }
 
 export function ExperimentsTable({
+  count,
   selectedExperiments,
   onSelectExperiment,
 }: {
+  count: number
   selectedExperiments: string[]
   onSelectExperiment: (experimentUuid: string) => void
 }) {
@@ -67,11 +70,7 @@ export function ExperimentsTable({
 
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
 
-  const {
-    data: experiments,
-    count,
-    isLoading,
-  } = useExperiments({
+  const { data: experiments, isLoading } = useExperiments({
     projectId: project.id,
     documentUuid: document.documentUuid,
     page: Number(page),
@@ -81,6 +80,10 @@ export function ExperimentsTable({
   const { data: commits, isLoading: isLoadingCommits } = useCommitsFromProject(
     project.id,
   )
+
+  if (isLoading) {
+    return <TableSkeleton cols={9} rows={Math.min(count, Number(pageSize))} />
+  }
 
   return (
     <Table
