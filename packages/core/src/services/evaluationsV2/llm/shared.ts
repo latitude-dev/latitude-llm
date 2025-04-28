@@ -11,12 +11,12 @@ import {
   DocumentType,
   EvaluationType,
   EvaluationV2,
+  LLM_EVALUATION_PROMPT_PARAMETERS,
   LlmEvaluationMetric,
   LogSources,
   ProviderApiKey,
   Providers,
   Workspace,
-  LLM_EVALUATION_PROMPT_PARAMETERS,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
@@ -83,7 +83,7 @@ export async function runPrompt<
   let promptChain
   try {
     const result = await scan({
-      prompt,
+      prompt: prompt,
       withParameters: LLM_EVALUATION_PROMPT_PARAMETERS,
     })
     if (result.errors.length > 0) {

@@ -39,9 +39,9 @@ export const LlmEvaluationBinarySpecification = {
   resultMetadata: llmEvaluationBinaryResultMetadata,
   resultError: llmEvaluationBinaryResultError,
   requiresExpectedOutput: false,
-  requiresAnnotation: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
+  supportsManualEvaluation: false,
 }
 export type LlmEvaluationBinaryConfiguration = z.infer<
   typeof LlmEvaluationBinarySpecification.configuration
@@ -76,9 +76,9 @@ export const LlmEvaluationRatingSpecification = {
   resultMetadata: llmEvaluationRatingResultMetadata,
   resultError: llmEvaluationRatingResultError,
   requiresExpectedOutput: false,
-  requiresAnnotation: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
+  supportsManualEvaluation: false,
 }
 export type LlmEvaluationRatingConfiguration = z.infer<
   typeof LlmEvaluationRatingSpecification.configuration
@@ -112,9 +112,9 @@ export const LlmEvaluationComparisonSpecification = {
   resultMetadata: llmEvaluationComparisonResultMetadata,
   resultError: llmEvaluationComparisonResultError,
   requiresExpectedOutput: true,
-  requiresAnnotation: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
+  supportsManualEvaluation: false,
 }
 export type LlmEvaluationComparisonConfiguration = z.infer<
   typeof LlmEvaluationComparisonSpecification.configuration
@@ -145,9 +145,9 @@ export const LlmEvaluationCustomSpecification = {
   resultMetadata: llmEvaluationCustomResultMetadata,
   resultError: llmEvaluationCustomResultError,
   requiresExpectedOutput: false,
-  requiresAnnotation: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
+  supportsManualEvaluation: false,
 }
 export type LlmEvaluationCustomConfiguration = z.infer<
   typeof LlmEvaluationCustomSpecification.configuration
@@ -167,6 +167,7 @@ export const LlmEvaluationCustomLabeledSpecification = {
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
+  supportsManualEvaluation: false,
 }
 
 /* ------------------------------------------------------------------------- */

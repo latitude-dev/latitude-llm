@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  annotateEvaluationV2Action,
   cloneEvaluationV2Action,
   createEvaluationV2Action,
   deleteEvaluationV2Action,
@@ -16,6 +17,7 @@ import {
   DocumentVersion,
   EvaluationMetric,
   EvaluationOptions,
+  EvaluationResultMetadata,
   EvaluationResultsV2Search,
   evaluationResultsV2SearchToQueryParams,
   EvaluationSettings,
@@ -212,10 +214,10 @@ export function useEvaluationsV2(
   const generateEvaluation = useCallback(
     async ({ instructions }: { instructions?: string }) => {
       return await executeGenerateEvaluationV2({
-        instructions: instructions,
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
+        instructions: instructions,
       })
     },
     [project, commit, document, executeGenerateEvaluationV2],
@@ -249,6 +251,50 @@ export function useEvaluationsV2(
       })
     },
     [project, commit, document, executeCloneEvaluationV2],
+  )
+
+  const {
+    execute: executeAnnotateEvaluationV2,
+    isPending: isAnnotatingEvaluation,
+  } = useLatitudeAction(annotateEvaluationV2Action, {
+    onSuccess: async ({ data: { result } }) => {
+      toast({
+        title: 'Evaluation annotated successfully',
+        description: `Evaluation annotated successfully with a ${result.hasPassed ? 'passed' : 'failed'} result`,
+      })
+    },
+    onError: async (error) => {
+      if (error?.err?.name === 'ZodError') return
+      toast({
+        title: 'Error annotating evaluation',
+        description: error?.err?.message,
+        variant: 'destructive',
+      })
+    },
+  })
+  const annotateEvaluation = useCallback(
+    async ({
+      evaluationUuid,
+      resultScore,
+      resultMetadata,
+      providerLogUuid,
+    }: {
+      evaluationUuid: string
+      resultScore: number
+      resultMetadata?: Partial<EvaluationResultMetadata>
+      providerLogUuid: string
+    }) => {
+      return await executeAnnotateEvaluationV2({
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+        evaluationUuid: evaluationUuid,
+        resultScore: resultScore,
+        resultMetadata: resultMetadata,
+        providerLogUuid: providerLogUuid,
+      })
+    },
+    [project, commit, document, executeAnnotateEvaluationV2],
   )
 
   const { execute: executeToggleLiveMode, isPending: isTogglingLiveMode } =
@@ -303,6 +349,8 @@ export function useEvaluationsV2(
     isGeneratingEvaluation,
     cloneEvaluation,
     isCloningEvaluation,
+    annotateEvaluation,
+    isAnnotatingEvaluation,
     toggleLiveMode,
     isTogglingLiveMode,
     ...rest,

@@ -32,9 +32,9 @@ export const HumanEvaluationBinarySpecification = {
   resultMetadata: humanEvaluationBinaryResultMetadata,
   resultError: humanEvaluationBinaryResultError,
   requiresExpectedOutput: false,
-  requiresAnnotation: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,
+  supportsManualEvaluation: true,
 }
 export type HumanEvaluationBinaryConfiguration = z.infer<
   typeof HumanEvaluationBinarySpecification.configuration
@@ -69,9 +69,9 @@ export const HumanEvaluationRatingSpecification = {
   resultMetadata: humanEvaluationRatingResultMetadata,
   resultError: humanEvaluationRatingResultError,
   requiresExpectedOutput: false,
-  requiresAnnotation: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,
+  supportsManualEvaluation: true,
 }
 export type HumanEvaluationRatingConfiguration = z.infer<
   typeof HumanEvaluationRatingSpecification.configuration
@@ -83,71 +83,29 @@ export type HumanEvaluationRatingResultError = z.infer<
   typeof HumanEvaluationRatingSpecification.resultError
 >
 
-// COMPARISON
-
-const humanEvaluationComparisonConfiguration =
-  humanEvaluationConfiguration.extend({
-    passDescription: z.string(),
-    failDescription: z.string(),
-    minThreshold: z.number().optional(), // Threshold percentage
-    maxThreshold: z.number().optional(), // Threshold percentage
-  })
-const humanEvaluationComparisonResultMetadata =
-  humanEvaluationResultMetadata.extend({
-    configuration: humanEvaluationComparisonConfiguration,
-  })
-const humanEvaluationComparisonResultError = humanEvaluationResultError.extend(
-  {},
-)
-export const HumanEvaluationComparisonSpecification = {
-  name: 'Comparison',
-  description:
-    'Judges the response by comparing the criteria to the expected output. The resulting score is the percentage of the compared criteria that is met',
-  configuration: humanEvaluationComparisonConfiguration,
-  resultMetadata: humanEvaluationComparisonResultMetadata,
-  resultError: humanEvaluationComparisonResultError,
-  requiresExpectedOutput: true,
-  requiresAnnotation: true,
-  supportsLiveEvaluation: false,
-  supportsBatchEvaluation: false,
-}
-export type HumanEvaluationComparisonConfiguration = z.infer<
-  typeof HumanEvaluationComparisonSpecification.configuration
->
-export type HumanEvaluationComparisonResultMetadata = z.infer<
-  typeof HumanEvaluationComparisonSpecification.resultMetadata
->
-export type HumanEvaluationComparisonResultError = z.infer<
-  typeof HumanEvaluationComparisonSpecification.resultError
->
-
 /* ------------------------------------------------------------------------- */
 
 export enum HumanEvaluationMetric {
   Binary = 'binary',
   Rating = 'rating',
-  Comparison = 'comparison',
 }
 
 // prettier-ignore
 export type HumanEvaluationConfiguration<M extends HumanEvaluationMetric = HumanEvaluationMetric> =
   M extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryConfiguration :
   M extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingConfiguration :
-  M extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonConfiguration :
   never;
 
 // prettier-ignore
 export type HumanEvaluationResultMetadata<M extends HumanEvaluationMetric = HumanEvaluationMetric> =
   M extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryResultMetadata :
   M extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingResultMetadata :
-  M extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonResultMetadata :
   never;
 
 // prettier-ignore
 export type HumanEvaluationResultError<M extends HumanEvaluationMetric = HumanEvaluationMetric> =
   M extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryResultError :
   M extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingResultError :
-  M extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonResultError :
   never;
 
 export const HumanEvaluationSpecification = {
@@ -160,6 +118,5 @@ export const HumanEvaluationSpecification = {
   metrics: {
     [HumanEvaluationMetric.Binary]: HumanEvaluationBinarySpecification,
     [HumanEvaluationMetric.Rating]: HumanEvaluationRatingSpecification,
-    [HumanEvaluationMetric.Comparison]: HumanEvaluationComparisonSpecification,
   },
 }

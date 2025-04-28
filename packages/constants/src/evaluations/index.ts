@@ -83,28 +83,31 @@ export type EvaluationResultError<
 // prettier-ignore
 export const EvaluationResultErrorSchema = z.custom<EvaluationResultError>()
 
+// prettier-ignore
+type ZodSchema<T = any> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny, T, T>
+
 export type EvaluationMetricSpecification<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   name: string
   description: string
-  configuration: z.ZodSchema<EvaluationConfiguration<T, M>>
-  resultMetadata: z.ZodSchema<EvaluationResultMetadata<T, M>>
-  resultError: z.ZodSchema<EvaluationResultError<T, M>>
+  configuration: ZodSchema<EvaluationConfiguration<T, M>>
+  resultMetadata: ZodSchema<EvaluationResultMetadata<T, M>>
+  resultError: ZodSchema<EvaluationResultError<T, M>>
   requiresExpectedOutput: boolean
-  requiresAnnotation: boolean
   supportsLiveEvaluation: boolean
   supportsBatchEvaluation: boolean
+  supportsManualEvaluation: boolean
 }
 
 export type EvaluationSpecification<T extends EvaluationType = EvaluationType> =
   {
     name: string
     description: string
-    configuration: z.ZodSchema
-    resultMetadata: z.ZodSchema
-    resultError: z.ZodSchema
+    configuration: ZodSchema
+    resultMetadata: ZodSchema
+    resultError: ZodSchema
     metrics: { [M in EvaluationMetric<T>]: EvaluationMetricSpecification<T, M> }
   }
 

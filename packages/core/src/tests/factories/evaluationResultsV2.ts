@@ -16,7 +16,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { evaluationResultsV2 } from '../../schema'
-import { createEvaluationResultV2 as createEvaluationResultSvc } from '../../services/evaluationsV2/run'
+import { createEvaluationResultV2 as createEvaluationResultSvc } from '../../services/evaluationsV2/results/create'
 import serializeProviderLog from '../../services/providerLogs/serialize'
 
 type CreateEvaluationResultV2Args<

@@ -9,6 +9,7 @@ import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConne
 import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { notifyToClientEvaluationResultCreatedJob } from './notifyToClientEvaluationResultCreatedJob'
+import { pingProjectUpdateJob } from './pingProjectUpdateJob'
 import {
   requestDocumentSuggestionJob,
   requestDocumentSuggestionJobV2,
@@ -19,7 +20,6 @@ import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
 import { updateWebhookLastTriggeredAt } from './webhooks'
-import { pingProjectUpdateJob } from './pingProjectUpdateJob'
 
 export const EventHandlers: IEventsHandlers = {
   aiProviderCallCompleted: [],
@@ -71,7 +71,9 @@ export const EventHandlers: IEventsHandlers = {
   copilotSuggestionGenerated: [],
   copilotSuggestionApplied: [],
   evaluationV2Created: [],
+  evaluationV2Updated: [pingProjectUpdateJob],
   evaluationV2Ran: [],
+  evaluationV2Annotated: [],
   evaluationResultV2Created: [
     requestDocumentSuggestionJobV2,
     notifyClientOfEvaluationResultV2Created,
@@ -79,5 +81,4 @@ export const EventHandlers: IEventsHandlers = {
   scaleMcpServer: [notifyClientOfScaleUpMcpServer],
   mcpServerConnected: [notifyClientOfMcpServerConnected],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],
-  evaluationV2Updated: [pingProjectUpdateJob],
 }

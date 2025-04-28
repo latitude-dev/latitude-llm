@@ -9,6 +9,7 @@ import {
   EvaluationConfiguration,
   EvaluationMetric,
   EvaluationMetricSpecification,
+  EvaluationResultMetadata,
   EvaluationResultValue,
   EvaluationSettings,
   EvaluationSpecification,
@@ -52,6 +53,22 @@ export type EvaluationMetricRunArgs<
   workspace: Workspace
 }
 
+export type EvaluationMetricAnnotateArgs<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> = {
+  resultUuid: string
+  resultScore: number
+  resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
+  evaluation: EvaluationV2<T, M>
+  actualOutput: string
+  providerLog: ProviderLogDto
+  documentLog: DocumentLog
+  document: DocumentVersion
+  commit: Commit
+  workspace: Workspace
+}
+
 export type EvaluationMetricCloneArgs<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
@@ -75,11 +92,14 @@ export type EvaluationMetricBackendSpecification<
     args: EvaluationMetricRunArgs<T, M>,
     db?: Database,
   ) => Promise<EvaluationResultValue<T, M>>
+  annotate?: (
+    args: EvaluationMetricAnnotateArgs<T, M>,
+    db?: Database,
+  ) => Promise<EvaluationResultValue<T, M>>
   clone?: (
     args: EvaluationMetricCloneArgs<T, M>,
     db?: Database,
   ) => Promise<TypedResult<EvaluationSettings, LatitudeError>>
-  // TODO(evalsv2): Add annotate method
 }
 
 export type EvaluationBackendSpecification<
@@ -93,11 +113,14 @@ export type EvaluationBackendSpecification<
     args: EvaluationMetricRunArgs<T, M> & { metric: M },
     db?: Database,
   ) => Promise<EvaluationResultValue<T, M>>
+  annotate?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
+    args: EvaluationMetricAnnotateArgs<T, M> & { metric: M },
+    db?: Database,
+  ) => Promise<EvaluationResultValue<T, M>>
   clone?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     args: EvaluationMetricCloneArgs<T, M> & { metric: M },
     db?: Database,
   ) => Promise<TypedResult<EvaluationSettings, LatitudeError>>
-  // TODO(evalsv2): Add annotate method
   metrics: {
     [M in EvaluationMetric<T>]: EvaluationMetricBackendSpecification<T, M>
   }
