@@ -1,4 +1,3 @@
-import { useCallback, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { ParameterInput } from '$/components/ParameterInput'
 import {
@@ -23,7 +22,6 @@ type ManualParameterProps = {
 }
 
 function LocalParameterInput({ param, input, setInput }: ManualParameterProps) {
-  const [localInput, setLocalInput] = useState(input.value ?? '')
   const setInputDebounced = useDebouncedCallback(
     async (value: string) => {
       setInput(param, { ...input, value })
@@ -31,18 +29,12 @@ function LocalParameterInput({ param, input, setInput }: ManualParameterProps) {
     100,
     { trailing: true },
   )
-  const onChange = useCallback(
-    (value: string) => {
-      setLocalInput(value)
-      setInputDebounced(value)
-    },
-    [setInputDebounced],
-  )
+
   return (
     <ParameterInput
+      value={input.value}
       type={input.metadata.type || ParameterType.Text}
-      value={localInput}
-      onChange={onChange}
+      onChange={setInputDebounced}
     />
   )
 }
@@ -54,6 +46,7 @@ export function ManualParams({ document, commit, prompt, setPrompt }: Props) {
     document,
     commitVersionUuid: commit.uuid,
   })
+
   return (
     <ParametersWrapper document={document} commit={commit}>
       {({ metadataParameters }) =>
