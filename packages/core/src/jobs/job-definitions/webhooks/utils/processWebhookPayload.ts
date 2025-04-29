@@ -26,6 +26,7 @@ export async function processWebhookPayload(
             source: event.data.source,
             commitId: event.data.commitId,
             messages: providerLog?.messages,
+            toolCalls: providerLog?.toolCalls,
             response: providerLog
               ? buildProviderLogResponse(providerLog)
               : undefined,
