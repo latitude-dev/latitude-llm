@@ -9,7 +9,6 @@
     "./client": "./src/client/index.ts",
     "./data-access": "./src/data-access/index.ts",
     "./data-access/*": "./src/data-access/*.ts",
-    "./data-migrations": "./src/data-migrations/index.ts",
     "./events/*": "./src/events/*.ts",
     "./factories": "./src/tests/factories/index.ts",
     "./jobs": "./src/jobs/index.ts",
