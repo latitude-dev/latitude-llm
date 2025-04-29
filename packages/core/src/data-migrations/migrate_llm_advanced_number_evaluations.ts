@@ -40,64 +40,68 @@ import { scan } from 'promptl-ai'
 import { z } from 'zod'
 import zodToJsonSchema from 'zod-to-json-schema'
 
-Transaction.call<string>(async (trx) => {
-  const evals = await trx
-    .select({
-      ...getTableColumns(evaluations),
-      connectedEvaluationId: connectedEvaluations.id,
-      documentUuid: connectedEvaluations.documentUuid,
-      metadata: getTableColumns(evaluationMetadataLlmAsJudgeAdvanced),
-      configuration: getTableColumns(evaluationConfigurationNumerical),
-    })
-    .from(evaluations)
-    .innerJoin(
-      connectedEvaluations,
-      eq(evaluations.id, connectedEvaluations.evaluationId),
-    )
-    .innerJoin(
-      evaluationConfigurationNumerical,
-      eq(
-        evaluations.resultConfigurationId,
-        evaluationConfigurationNumerical.id,
-      ),
-    )
-    .innerJoin(
-      evaluationMetadataLlmAsJudgeAdvanced,
-      eq(evaluations.metadataId, evaluationMetadataLlmAsJudgeAdvanced.id),
-    )
-    .where(
-      and(
-        eq(evaluations.metadataType, EvaluationMetadataType.LlmAsJudgeAdvanced),
-        eq(evaluations.resultType, EvaluationResultableType.Number),
-      ),
-    )
-    .execute()
+export function main() {
+  Transaction.call<string>(async (trx) => {
+    const evals = await trx
+      .select({
+        ...getTableColumns(evaluations),
+        connectedEvaluationId: connectedEvaluations.id,
+        documentUuid: connectedEvaluations.documentUuid,
+        metadata: getTableColumns(evaluationMetadataLlmAsJudgeAdvanced),
+        configuration: getTableColumns(evaluationConfigurationNumerical),
+      })
+      .from(evaluations)
+      .innerJoin(
+        connectedEvaluations,
+        eq(evaluations.id, connectedEvaluations.evaluationId),
+      )
+      .innerJoin(
+        evaluationConfigurationNumerical,
+        eq(
+          evaluations.resultConfigurationId,
+          evaluationConfigurationNumerical.id,
+        ),
+      )
+      .innerJoin(
+        evaluationMetadataLlmAsJudgeAdvanced,
+        eq(evaluations.metadataId, evaluationMetadataLlmAsJudgeAdvanced.id),
+      )
+      .where(
+        and(
+          eq(
+            evaluations.metadataType,
+            EvaluationMetadataType.LlmAsJudgeAdvanced,
+          ),
+          eq(evaluations.resultType, EvaluationResultableType.Number),
+        ),
+      )
+      .execute()
 
-  for (const evval of evals) {
-    const docsScope = new DocumentVersionsRepository(evval.workspaceId, trx)
-    const commitsScope = new CommitsRepository(evval.workspaceId, trx)
+    for (const evval of evals) {
+      const docsScope = new DocumentVersionsRepository(evval.workspaceId, trx)
+      const commitsScope = new CommitsRepository(evval.workspaceId, trx)
 
-    const documentResult = await docsScope.getDocumentByUuid({
-      documentUuid: evval.documentUuid,
-    })
-    if (documentResult.error) continue
+      const documentResult = await docsScope.getDocumentByUuid({
+        documentUuid: evval.documentUuid,
+      })
+      if (documentResult.error) continue
 
-    const document = documentResult.value
-    if (!document) continue
+      const document = documentResult.value
+      if (!document) continue
 
-    const commitResult = await commitsScope.find(document.commitId)
-    if (commitResult.error) continue
+      const commitResult = await commitsScope.find(document.commitId)
+      if (commitResult.error) continue
 
-    const commit = commitResult.value
-    if (!commit) continue
+      const commit = commitResult.value
+      if (!commit) continue
 
-    const workspace = await unsafelyFindWorkspace(evval.workspaceId)
-    if (!workspace) continue
+      const workspace = await unsafelyFindWorkspace(evval.workspaceId)
+      if (!workspace) continue
 
-    const { config } = await scan({ prompt: evval.metadata.prompt })
-    if (!config.model || !config.provider) continue
+      const { config } = await scan({ prompt: evval.metadata.prompt })
+      if (!config.model || !config.provider) continue
 
-    const prompt = `${evval.metadata.prompt}
+      const prompt = `${evval.metadata.prompt}
 
 /* This step has been added to adapt this evaluation to the new evaluation's
 * result schema. Feel free to change the prompt below considering the result
@@ -111,37 +115,38 @@ expect output with a value between 0 and 100.
 </step>
 `
 
-    const result = await createEvaluationV2({
-      workspace,
-      document,
-      commit,
-      settings: {
-        name: evval.name,
-        description: evval.description,
-        type: EvaluationType.Llm,
-        metric: LlmEvaluationMetric.Custom,
-        configuration: {
-          model: config.model as string,
-          provider: config.provider as string,
-          prompt,
-          reverseScale: false,
+      const result = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+        settings: {
+          name: evval.name,
+          description: evval.description,
+          type: EvaluationType.Llm,
+          metric: LlmEvaluationMetric.Custom,
+          configuration: {
+            model: config.model as string,
+            provider: config.provider as string,
+            prompt,
+            reverseScale: false,
+          },
         },
-      },
-    })
+      })
 
-    if (result.error) throw result.error
+      if (result.error) throw result.error
 
-    await migrateEvaluationResults(
-      evval,
-      result.unwrap().evaluation,
-      commit,
-      workspace,
-      trx,
-    )
-  }
+      await migrateEvaluationResults(
+        evval,
+        result.unwrap().evaluation,
+        commit,
+        workspace,
+        trx,
+      )
+    }
 
-  return Result.ok('done')
-})
+    return Result.ok('done')
+  })
+}
 
 async function migrateEvaluationResults(
   oldEval: Evaluation & {

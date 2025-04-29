@@ -37,93 +37,95 @@ import providerLogPresenter from '../services/providerLogs/presenter'
 import { UnprocessableEntityError } from '../lib/errors'
 import { Database } from '../client'
 
-Transaction.call<string>(async (trx) => {
-  const evals = await trx
-    .select({
-      ...getTableColumns(evaluations),
-      connectedEvaluationId: connectedEvaluations.id,
-      documentUuid: connectedEvaluations.documentUuid,
-      metadata: getTableColumns(evaluationMetadataManual),
-      configuration: getTableColumns(evaluationConfigurationNumerical),
-    })
-    .from(evaluations)
-    .innerJoin(
-      connectedEvaluations,
-      eq(evaluations.id, connectedEvaluations.evaluationId),
-    )
-    .innerJoin(
-      evaluationConfigurationNumerical,
-      eq(
-        evaluations.resultConfigurationId,
-        evaluationConfigurationNumerical.id,
-      ),
-    )
-    .innerJoin(
-      evaluationMetadataManual,
-      eq(evaluations.metadataId, evaluationMetadataManual.id),
-    )
-    .where(
-      and(
-        eq(evaluations.metadataType, EvaluationMetadataType.Manual),
-        eq(evaluations.resultType, EvaluationResultableType.Number),
-      ),
-    )
-    .execute()
+export function main() {
+  Transaction.call<string>(async (trx) => {
+    const evals = await trx
+      .select({
+        ...getTableColumns(evaluations),
+        connectedEvaluationId: connectedEvaluations.id,
+        documentUuid: connectedEvaluations.documentUuid,
+        metadata: getTableColumns(evaluationMetadataManual),
+        configuration: getTableColumns(evaluationConfigurationNumerical),
+      })
+      .from(evaluations)
+      .innerJoin(
+        connectedEvaluations,
+        eq(evaluations.id, connectedEvaluations.evaluationId),
+      )
+      .innerJoin(
+        evaluationConfigurationNumerical,
+        eq(
+          evaluations.resultConfigurationId,
+          evaluationConfigurationNumerical.id,
+        ),
+      )
+      .innerJoin(
+        evaluationMetadataManual,
+        eq(evaluations.metadataId, evaluationMetadataManual.id),
+      )
+      .where(
+        and(
+          eq(evaluations.metadataType, EvaluationMetadataType.Manual),
+          eq(evaluations.resultType, EvaluationResultableType.Number),
+        ),
+      )
+      .execute()
 
-  for (const evval of evals) {
-    const docsScope = new DocumentVersionsRepository(evval.workspaceId, trx)
-    const commitsScope = new CommitsRepository(evval.workspaceId, trx)
+    for (const evval of evals) {
+      const docsScope = new DocumentVersionsRepository(evval.workspaceId, trx)
+      const commitsScope = new CommitsRepository(evval.workspaceId, trx)
 
-    const documentResult = await docsScope.getDocumentByUuid({
-      documentUuid: evval.documentUuid,
-    })
-    if (documentResult.error) continue
+      const documentResult = await docsScope.getDocumentByUuid({
+        documentUuid: evval.documentUuid,
+      })
+      if (documentResult.error) continue
 
-    const document = documentResult.value
-    if (!document) continue
+      const document = documentResult.value
+      if (!document) continue
 
-    const commitResult = await commitsScope.find(document.commitId)
-    if (commitResult.error) continue
+      const commitResult = await commitsScope.find(document.commitId)
+      if (commitResult.error) continue
 
-    const commit = commitResult.value
-    if (!commit) continue
+      const commit = commitResult.value
+      if (!commit) continue
 
-    const workspace = await unsafelyFindWorkspace(evval.workspaceId)
-    if (!workspace) continue
+      const workspace = await unsafelyFindWorkspace(evval.workspaceId)
+      if (!workspace) continue
 
-    const result = await createEvaluationV2({
-      workspace,
-      document,
-      commit,
-      settings: {
-        name: evval.name,
-        description: evval.description,
-        type: EvaluationType.Human,
-        metric: HumanEvaluationMetric.Rating,
-        configuration: {
-          criteria: '',
-          minRating: evval.configuration.minValue,
-          minRatingDescription: evval.configuration.minValueDescription || '',
-          maxRating: evval.configuration.maxValue,
-          maxRatingDescription: evval.configuration.maxValueDescription || '',
-          reverseScale: false,
+      const result = await createEvaluationV2({
+        workspace,
+        document,
+        commit,
+        settings: {
+          name: evval.name,
+          description: evval.description,
+          type: EvaluationType.Human,
+          metric: HumanEvaluationMetric.Rating,
+          configuration: {
+            criteria: '',
+            minRating: evval.configuration.minValue,
+            minRatingDescription: evval.configuration.minValueDescription || '',
+            maxRating: evval.configuration.maxValue,
+            maxRatingDescription: evval.configuration.maxValueDescription || '',
+            reverseScale: false,
+          },
         },
-      },
-    })
+      })
 
-    if (result.error) throw result.error
+      if (result.error) throw result.error
 
-    await migrateEvaluationResults(
-      evval,
-      result.unwrap().evaluation,
-      commit,
-      workspace,
-      trx,
-    )
-  }
+      await migrateEvaluationResults(
+        evval,
+        result.unwrap().evaluation,
+        commit,
+        workspace,
+        trx,
+      )
+    }
 
-  return Result.ok('done')
-})
+    return Result.ok('done')
+  })
+}
 
 async function migrateEvaluationResults(
   oldEval: Evaluation & {
