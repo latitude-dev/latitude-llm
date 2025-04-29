@@ -395,15 +395,6 @@ export default function CreateEvaluationModal({
               onClick={() => handleTypeChange(EvaluationResultableType.Boolean)}
             />
           </FormField>
-          <FormField>
-            <SelectableCard
-              key={EvaluationResultableType.Text}
-              title='Text'
-              description="It allows strings as results, making it ideal for any other evaluation that doesn't fit the other two types"
-              selected={configuration.type === EvaluationResultableType.Text}
-              onClick={() => handleTypeChange(EvaluationResultableType.Text)}
-            />
-          </FormField>
         </div>
       )}
     </ConfirmModal>
