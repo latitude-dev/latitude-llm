@@ -64,14 +64,6 @@ function EvaluationItem({
     }
 
     const isBest = evaluation.bestExperimentUuids.includes(experiment.uuid)
-    const hasTied = isBest && evaluation.bestExperimentUuids.length > 1
-
-    if (hasTied) {
-      return {
-        bgClass: 'bg-muted',
-        fgColor: 'foreground',
-      }
-    }
 
     if (isBest) {
       return {

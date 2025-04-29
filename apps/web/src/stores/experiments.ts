@@ -25,7 +25,7 @@ export function useExperiments(
     pageSize?: number
   },
   opts: SWRConfiguration & {
-    onCreate?: (experiment: ExperimentDto) => void
+    onCreate?: (experiments: ExperimentDto[]) => void
   } = {},
 ) {
   const dataFetcher = useFetcher<ExperimentDto[]>(
@@ -107,34 +107,40 @@ export function useExperiments(
   const { execute: create, isPending: isCreating } = useLatitudeAction(
     createExperimentAction,
     {
-      onSuccess: async ({ data: experiment }: { data: Experiment }) => {
-        mutateCount((prev) => (prev ? prev + 1 : 1), {
+      onSuccess: async ({ data: experiments }: { data: Experiment[] }) => {
+        mutateCount((prev) => (prev ?? 0) + experiments.length, {
           revalidate: false,
         })
 
-        const experimentDto = {
-          ...experiment,
-          results: {
-            passed: 0,
-            failed: 0,
-            errors: 0,
-            totalScore: 0,
-          },
-        } as ExperimentDto
+        const experimentDtos = experiments.map(
+          (experiment) =>
+            ({
+              ...experiment,
+              results: {
+                passed: 0,
+                failed: 0,
+                errors: 0,
+                totalScore: 0,
+              },
+            }) as ExperimentDto,
+        )
 
         if (page === 1) {
           mutate(
             (prev) => {
-              const prevExperiment = prev?.find(
-                (exp) => exp.uuid === experimentDto.uuid,
-              )
+              const newArray = prev ? [...prev] : []
+              experimentDtos.forEach((experimentDto) => {
+                const prevExperiment = prev?.find(
+                  (exp) => exp.uuid === experimentDto.uuid,
+                )
 
-              if (prevExperiment) {
-                // this might happen due to race conditions with the experimentStatus websocket
-                return prev
-              }
+                if (prevExperiment) {
+                  // this might happen due to race conditions with the experimentStatus websocket
+                }
+                newArray.unshift(experimentDto)
+              })
 
-              return [experimentDto, ...(prev ?? [])]
+              return newArray
             },
             {
               revalidate: false,
@@ -143,12 +149,12 @@ export function useExperiments(
         }
 
         toast({
-          title: 'Experiment created successfully',
-          description: `Experiment ${experiment.name} created successfully`,
+          title: 'Experiments created successfully',
+          description: `Experiments created successfully`,
         })
 
-        opts?.onCreate?.(experimentDto)
-        return experimentDto
+        opts?.onCreate?.(experimentDtos)
+        return experimentDtos
       },
       onError: async (error) => {
         if (error?.err?.name === 'ZodError') return

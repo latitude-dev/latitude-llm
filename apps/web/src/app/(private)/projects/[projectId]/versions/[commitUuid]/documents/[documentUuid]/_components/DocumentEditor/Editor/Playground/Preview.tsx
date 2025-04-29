@@ -46,6 +46,7 @@ export default function Preview({
       onOpenRunModal()
     }
   }, [newExperimentsEnabled, onOpenRunModal, setExperimentModalOpen])
+
   return (
     <>
       <PreviewPrompt
@@ -66,6 +67,7 @@ export default function Preview({
         project={project as Project}
         commit={commit as Commit}
         document={document}
+        navigateOnCreate
       />
       {runModal.open ? (
         <RunPromptInBatchModal

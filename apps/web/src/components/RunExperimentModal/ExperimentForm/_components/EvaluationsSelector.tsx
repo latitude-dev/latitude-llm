@@ -20,11 +20,11 @@ export function EvaluationsSelector({
     })
 
   if (isLoadingEvaluations) {
-    return <Skeleton height='h2' className='w-full' />
+    return <Skeleton height='h2' className='w-1/2' />
   }
 
   return (
-    <div className='flex flex-col gap-3'>
+    <div className='flex flex-col gap-3 w-1/2'>
       <MultiSelect
         info='Leave empty to not run any evaluations'
         label='Evaluations'

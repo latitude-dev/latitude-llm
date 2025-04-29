@@ -9,19 +9,14 @@ function ExperimentLogMetadataItem({
   label,
   value,
   isBest = false,
-  onlyOneBest = false,
 }: {
   label: string
   value: string
   isBest?: boolean
   onlyOneBest?: boolean
 }) {
-  const bgClass = isBest
-    ? onlyOneBest
-      ? 'bg-accent'
-      : 'bg-muted'
-    : 'bg-secondary'
-  const fgColor = isBest && onlyOneBest ? 'accentForeground' : 'foregroundMuted'
+  const bgClass = isBest ? 'bg-accent' : 'bg-secondary'
+  const fgColor = isBest ? 'accentForeground' : 'foregroundMuted'
 
   return (
     <div

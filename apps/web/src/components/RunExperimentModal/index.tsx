@@ -13,6 +13,8 @@ import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { useCallback } from 'react'
 import { useExperimentFormPayload } from './ExperimentForm/useExperimentFormPayload'
 import DatasetForm from './ExperimentForm'
+import { useNavigate } from '$/hooks/useNavigate'
+import { DocumentRoutes, ROUTES } from '$/services/routes'
 
 export function RunExperimentModal({
   project,
@@ -22,6 +24,7 @@ export function RunExperimentModal({
   setOpen,
   initialEvaluation,
   onCreate: onCreateCb,
+  navigateOnCreate,
 }: {
   project: Project
   commit: Commit
@@ -29,20 +32,35 @@ export function RunExperimentModal({
   isOpen: boolean
   setOpen: (open: boolean) => void
   initialEvaluation?: EvaluationV2
-  onCreate?: (experiment: ExperimentDto) => void
+  onCreate?: (experiments: ExperimentDto[]) => void
+  navigateOnCreate?: boolean
 }) {
+  const router = useNavigate()
+
   const { create, isCreating } = useExperiments(
     {
       projectId: project.id,
       documentUuid: document.documentUuid,
     },
     {
-      onCreate: (experiment) => {
+      onCreate: (experiments) => {
         setOpen(false)
-        onCreateCb?.(experiment)
+        onCreateCb?.(experiments)
+
+        if (!navigateOnCreate) return
+        router.push(
+          ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid })
+            .documents.detail({ uuid: document.documentUuid })
+            [DocumentRoutes.experiments].withSelected(
+              experiments.map((exp) => exp.uuid),
+            ),
+        )
       },
     },
   )
+
   const formPayload = useExperimentFormPayload({
     project,
     commit,
@@ -58,7 +76,7 @@ export function RunExperimentModal({
       projectId: project.id,
       commitUuid: commit.uuid,
       documentUuid: document.documentUuid,
-      name: formPayload.name,
+      variants: formPayload.variants,
       datasetId: formPayload.selectedDataset.id,
       parametersMap: formPayload.parametersMap,
       datasetLabels: formPayload.datasetLabels,
@@ -66,13 +84,13 @@ export function RunExperimentModal({
       toRow: formPayload.toLine,
       evaluationUuids: formPayload.selectedEvaluations.map((ev) => ev.uuid),
     })
-  }, [formPayload])
+  }, [formPayload, project.id, commit.uuid, document.documentUuid, create])
 
   return (
     <Modal
       open={isOpen}
       onOpenChange={setOpen}
-      size='large'
+      size='xl'
       title='Run New Experiment'
       description='Create and evaluate a batch of logs for this document based on a selected dataset.'
       footer={

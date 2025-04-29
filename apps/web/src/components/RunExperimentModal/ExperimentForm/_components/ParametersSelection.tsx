@@ -116,12 +116,12 @@ export function ParametersSelection({
   }, [selectedDataset, parameters, setParametersMap])
 
   if (!selectedDataset) {
-    return <Text.H6 color='foregroundMuted'>You must select a dataset</Text.H6>
+    return null
   }
 
   if (!parameters) {
     return (
-      <div className='flex flex-col gap-y-3'>
+      <div className='flex flex-col gap-y-3 w-1/2'>
         <Skeleton className='h-6 w-full' />
         <Skeleton className='h-6 w-full' />
         <Skeleton className='h-6 w-full' />
@@ -130,7 +130,7 @@ export function ParametersSelection({
   }
 
   return (
-    <div className='flex flex-col gap-y-3'>
+    <div className='flex flex-col gap-y-3 w-1/2'>
       {parameters.map((param) => (
         <Select
           key={param}

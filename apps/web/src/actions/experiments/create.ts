@@ -13,7 +13,7 @@ export const createExperimentAction = withDocument
   .createServerAction()
   .input(
     z.object({
-      name: z.string(),
+      variants: z.array(z.object({ name: z.string(), prompt: z.string() })),
       evaluationUuids: z.array(z.string()),
       datasetId: z.number(),
       parametersMap: z.record(z.string(), z.number()),
@@ -24,7 +24,7 @@ export const createExperimentAction = withDocument
   )
   .handler(async ({ ctx, input }) => {
     const {
-      name,
+      variants,
       evaluationUuids,
       datasetId,
       parametersMap,
@@ -56,23 +56,32 @@ export const createExperimentAction = withDocument
       )
     }
 
-    const experiment = await createExperiment({
-      name,
-      document: ctx.document,
-      commit: ctx.commit,
-      evaluations,
-      dataset,
-      parametersMap,
-      datasetLabels,
-      fromRow,
-      toRow,
-      workspace: ctx.workspace,
-    }).then((r) => r.unwrap())
+    const experiments = await Promise.all(
+      variants.map((variant) =>
+        createExperiment({
+          name: variant.name,
+          customPrompt: variant.prompt,
+          document: ctx.document,
+          commit: ctx.commit,
+          evaluations,
+          dataset,
+          parametersMap,
+          datasetLabels,
+          fromRow,
+          toRow,
+          workspace: ctx.workspace,
+        }).then((r) => r.unwrap()),
+      ),
+    )
 
-    await startExperiment({
-      workspace: ctx.workspace,
-      experimentUuid: experiment.uuid,
-    }).then((r) => r.unwrap())
+    await Promise.all(
+      experiments.map((experiment) =>
+        startExperiment({
+          workspace: ctx.workspace,
+          experimentUuid: experiment.uuid,
+        }).then((r) => r.unwrap()),
+      ),
+    )
 
-    return experiment
+    return experiments
   })

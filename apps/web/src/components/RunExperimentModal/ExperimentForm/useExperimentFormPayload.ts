@@ -12,8 +12,18 @@ export type ExperimentFormPayload = {
   project: Project
   commit: Commit
   document: DocumentVersion
-  name: string
-  setName: ReactStateDispatch<string>
+  variants: {
+    name: string
+    prompt: string
+    parameters: string[]
+  }[]
+  setVariants: ReactStateDispatch<
+    {
+      name: string
+      prompt: string
+      parameters: string[]
+    }[]
+  >
   selectedDataset?: Dataset
   onSelectDataset: (dataset: Dataset) => void
   fromLine?: number
@@ -39,7 +49,19 @@ export function useExperimentFormPayload({
   document: DocumentVersion
   initialEvaluation?: EvaluationV2
 }): ExperimentFormPayload {
-  const [name, setName] = useState<string>('')
+  const [variants, setVariants] = useState<
+    {
+      name: string
+      prompt: string
+      parameters: string[]
+    }[]
+  >([
+    {
+      name: '',
+      prompt: document.content,
+      parameters: [],
+    },
+  ])
   const [selectedDataset, setSelectedDataset] = useState<Dataset>()
   const [fromLine, setFromLine] = useState<number>()
   const [toLine, setToLine] = useState<number>()
@@ -53,8 +75,8 @@ export function useExperimentFormPayload({
     project,
     commit,
     document,
-    name,
-    setName,
+    variants,
+    setVariants,
     selectedDataset,
     onSelectDataset: setSelectedDataset,
     fromLine,

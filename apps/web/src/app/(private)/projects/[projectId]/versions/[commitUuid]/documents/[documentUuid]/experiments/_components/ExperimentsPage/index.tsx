@@ -11,9 +11,10 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { ExperimentsTable } from '../ExperimentsTable'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ExperimentComparison } from '../ExperimentsComparison'
 import { EmptyPage } from './EmptyPage'
+import { useSearchParams } from 'next/navigation'
 
 export function ExperimentsPageContent({
   initialCount,
@@ -30,26 +31,23 @@ export function ExperimentsPageContent({
   })
 
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedExperimentUuids, setSelectedExperimentUuids] = useState<
+
+  const [selectedExperimentUuids, _setSelectedExperimentUuids] = useState<
     string[]
-  >(() => {
-    if (typeof window === 'undefined') return []
-    const params = new URLSearchParams(window.location.search)
-    const selected = params.get('selected')
-    return selected ? selected.split(',') : []
-  })
+  >([])
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const selected = searchParams.get('selected')
+    _setSelectedExperimentUuids(selected ? selected.split(',') : [])
+  }, [searchParams])
 
-  const handleExperimentSelect = useCallback(
-    (experimentUuid: string) => {
-      const newSelection = selectedExperimentUuids.includes(experimentUuid)
-        ? selectedExperimentUuids.filter((id) => id !== experimentUuid)
-        : [...selectedExperimentUuids, experimentUuid]
-
-      setSelectedExperimentUuids(newSelection)
+  const setSelectedExperimentUuids = useCallback(
+    (newSelection: string[]) => {
+      _setSelectedExperimentUuids(newSelection)
 
       if (typeof window === 'undefined') return
-
       const params = new URLSearchParams(window.location.search)
+
       if (newSelection.length === 0) {
         params.delete('selected')
       } else {
@@ -62,12 +60,25 @@ export function ExperimentsPageContent({
         `${window.location.pathname}?${params}`,
       )
     },
-    [selectedExperimentUuids],
+    [_setSelectedExperimentUuids],
   )
 
-  const onCreateExperiment = useCallback(
-    (experiment: { uuid: string }) => {
-      setSelectedExperimentUuids((prev) => [...prev, experiment.uuid])
+  const handleExperimentSelect = useCallback(
+    (experimentUuid: string) => {
+      const newSelection = (
+        selectedExperimentUuids.includes(experimentUuid)
+          ? selectedExperimentUuids.filter((id) => id !== experimentUuid)
+          : [...selectedExperimentUuids, experimentUuid]
+      ).filter(Boolean)
+
+      setSelectedExperimentUuids(newSelection)
+    },
+    [selectedExperimentUuids, setSelectedExperimentUuids],
+  )
+
+  const onCreateExperiments = useCallback(
+    (experiments: { uuid: string }[]) => {
+      setSelectedExperimentUuids(experiments.map((exp) => exp.uuid))
       setIsModalOpen(false)
     },
     [setSelectedExperimentUuids],
@@ -112,7 +123,7 @@ export function ExperimentsPageContent({
         document={document}
         isOpen={isModalOpen}
         setOpen={setIsModalOpen}
-        onCreate={onCreateExperiment}
+        onCreate={onCreateExperiments}
       />
     </div>
   )
