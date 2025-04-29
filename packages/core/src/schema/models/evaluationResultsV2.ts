@@ -4,6 +4,7 @@ import {
   boolean,
   index,
   jsonb,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
 import {
@@ -15,9 +16,9 @@ import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { datasetRows } from './datasetRows'
 import { datasets } from './datasets'
+import { experiments } from './experiments'
 import { providerLogs } from './providerLogs'
 import { workspaces } from './workspaces'
-import { experiments } from './experiments'
 
 export const evaluationResultsV2 = latitudeSchema.table(
   'evaluation_results_v2',
@@ -80,9 +81,11 @@ export const evaluationResultsV2 = latitudeSchema.table(
     createdAtIdx: index('evaluation_results_v2_created_at_idx').on(
       table.createdAt,
     ),
-    // Add composite index for evaluation results queries
     commitEvaluationIdx: index(
       'evaluation_results_v2_commit_evaluation_idx',
     ).on(table.commitId, table.evaluationUuid),
+    uniqueEvaluatedLogIdEvaluationUuidIdx: uniqueIndex(
+      'evaluation_results_v2_unique_evaluated_log_id_evaluation_uuid_idx',
+    ).on(table.evaluatedLogId, table.evaluationUuid),
   }),
 )
