@@ -10,9 +10,9 @@ import {
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useRef } from 'react'
-import { EvaluationBatchIndicator } from './EvaluationBatchIndicator'
-import { EvaluationResultsTableActions } from './EvaluationResultsTableActions'
-import { EvaluationResultsTableBody } from './EvaluationResultsTableBody'
+import { EvaluationBatchIndicator } from '../EvaluationBatchIndicator'
+import { EvaluationResultsTableActions } from './TableActions'
+import { EvaluationResultsTableBody } from './TableBody'
 
 export function EvaluationResultsTable<
   T extends EvaluationType = EvaluationType,

@@ -20,8 +20,10 @@ import Transaction from '../../lib/Transaction'
 import {
   DocumentLogsRepository,
   DocumentVersionsRepository,
+  EvaluationResultsV2Repository,
 } from '../../repositories'
 import { createEvaluationResultV2 } from './results/create'
+import { updateEvaluationResultV2 } from './results/update'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
 
 export async function annotateEvaluationV2<
@@ -45,7 +47,16 @@ export async function annotateEvaluationV2<
   },
   db: Database = database,
 ) {
-  const resultUuid = generateUUIDIdentifier()
+  const resultsRepository = new EvaluationResultsV2Repository(workspace.id, db)
+  const existingResult =
+    await resultsRepository.findByEvaluatedLogAndEvaluation({
+      evaluatedLogId: providerLog.id,
+      evaluationUuid: evaluation.uuid,
+    })
+
+  const resultUuid = existingResult.ok
+    ? existingResult.unwrap().uuid
+    : generateUUIDIdentifier()
 
   const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
   const document = await documentsRepository
@@ -138,23 +149,38 @@ export async function annotateEvaluationV2<
   }
 
   return await Transaction.call(async (tx) => {
-    const { result } = await createEvaluationResultV2(
-      {
-        resultUuid: resultUuid,
-        evaluation: evaluation,
-        providerLog: providerLog,
-        commit: commit,
-        value: value as EvaluationResultValue<T, M>,
-        workspace: workspace,
-      },
-      tx,
-    ).then((r) => r.unwrap())
+    let result
+    if (existingResult.ok) {
+      const { result: updatedResult } = await updateEvaluationResultV2(
+        {
+          uuid: resultUuid,
+          value: value as EvaluationResultValue<T, M>,
+          workspace: workspace,
+        },
+        tx,
+      ).then((r) => r.unwrap())
+      result = updatedResult
+    } else {
+      const { result: createdResult } = await createEvaluationResultV2(
+        {
+          uuid: resultUuid,
+          evaluation: evaluation,
+          providerLog: providerLog,
+          commit: commit,
+          value: value as EvaluationResultValue<T, M>,
+          workspace: workspace,
+        },
+        tx,
+      ).then((r) => r.unwrap())
+      result = createdResult
+    }
 
     await publisher.publishLater({
       type: 'evaluationV2Annotated',
       data: {
         workspaceId: workspace.id,
         evaluation: evaluation,
+        result: result,
         commit: commit,
         providerLog: providerLog,
       },

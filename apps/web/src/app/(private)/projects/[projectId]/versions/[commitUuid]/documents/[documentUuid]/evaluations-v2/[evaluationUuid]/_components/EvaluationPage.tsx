@@ -38,7 +38,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { DebouncedState, useDebounce, useDebouncedCallback } from 'use-debounce'
 import { EvaluationActions } from './EvaluationActions'
 import { EvaluationFilters } from './EvaluationFilters'
-import { EvaluationResultsTable } from './EvaluationResultsTable'
+import { EvaluationResultsTable } from './EvaluationResults/Table'
 import { EvaluationStats } from './EvaluationStats'
 
 const useEvaluationResultsV2Socket = <

@@ -6,13 +6,13 @@ import {
   EvaluationV2,
 } from '@latitude-data/constants'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCallback } from 'react'
 import { EVALUATION_SPECIFICATIONS } from './index'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export default function EvaluateLiveLogsSwitch<
   T extends EvaluationType,
@@ -61,10 +61,12 @@ export default function EvaluateLiveLogsSwitch<
           <SwitchToggle checked={false} disabled={true} />
         </div>
       }
+      maxWidth='max-w-[400px]'
       align='center'
       side='top'
     >
-      {metricSpecification?.name} evaluations do not support live evaluation
+      {typeSpecification?.name} / {metricSpecification?.name} evaluations do not
+      support live evaluation
     </Tooltip>
   ) : (
     <SwitchToggle

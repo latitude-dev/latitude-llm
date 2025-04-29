@@ -22,7 +22,7 @@ export async function createEvaluationResultV2<
   M extends EvaluationMetric<T>,
 >(
   {
-    resultUuid,
+    uuid,
     evaluation,
     providerLog,
     experiment,
@@ -33,7 +33,7 @@ export async function createEvaluationResultV2<
     usedForSuggestion,
     workspace,
   }: {
-    resultUuid?: string
+    uuid?: string
     evaluation: EvaluationV2<T, M>
     providerLog: ProviderLogDto
     commit: Commit
@@ -50,7 +50,7 @@ export async function createEvaluationResultV2<
     const result = (await tx
       .insert(evaluationResultsV2)
       .values({
-        uuid: resultUuid,
+        uuid: uuid,
         workspaceId: workspace.id,
         commitId: commit.id,
         experimentId: experiment?.id,
@@ -67,13 +67,13 @@ export async function createEvaluationResultV2<
     await publisher.publishLater({
       type: 'evaluationResultV2Created',
       data: {
-        workspaceId: workspace.id,
         result: result,
         evaluation: evaluation,
         commit: commit,
         providerLog: providerLog,
         dataset: dataset,
         datasetRow: datasetRow,
+        workspaceId: workspace.id,
       },
     })
 

@@ -89,6 +89,35 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
   }
 
+  async findByEvaluatedLogAndEvaluation({
+    evaluatedLogId,
+    evaluationUuid,
+  }: {
+    evaluatedLogId: number
+    evaluationUuid: string
+  }) {
+    const result = await this.scope
+      .where(
+        and(
+          this.scopeFilter,
+          eq(evaluationResultsV2.evaluatedLogId, evaluatedLogId),
+          eq(evaluationResultsV2.evaluationUuid, evaluationUuid),
+        ),
+      )
+      .limit(1)
+      .then((r) => r[0])
+
+    if (!result) {
+      return Result.error(
+        new NotFoundError(
+          `Record with evaluatedLogId ${evaluatedLogId} and evaluationUuid ${evaluationUuid} not found in ${this.scope._.tableName}`,
+        ),
+      )
+    }
+
+    return Result.ok<EvaluationResultV2>(result as EvaluationResultV2)
+  }
+
   listByEvaluationFilter({
     evaluationUuid,
     params: { filters },

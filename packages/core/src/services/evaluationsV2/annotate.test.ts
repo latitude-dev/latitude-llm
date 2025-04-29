@@ -334,4 +334,43 @@ describe('annotateEvaluationV2', () => {
       }),
     )
   })
+
+  it('succeeds when annotating a log already annotated', async () => {
+    await annotateEvaluationV2({
+      resultScore: 4,
+      resultMetadata: {
+        reason: 'reason',
+      },
+      evaluation: evaluation,
+      providerLog: providerLog,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    const { result } = await annotateEvaluationV2({
+      resultScore: 2,
+      evaluation: evaluation,
+      providerLog: providerLog,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+        evaluatedLogId: providerLog.id,
+        score: 2,
+        normalizedScore: 25,
+        metadata: {
+          reason: undefined,
+          actualOutput: providerLog.response,
+          configuration: evaluation.configuration,
+        },
+        hasPassed: false,
+        error: null,
+      }),
+    )
+  })
 })
