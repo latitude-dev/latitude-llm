@@ -16,10 +16,10 @@ import {
   Workspace,
 } from '../../../browser'
 import * as factories from '../../../tests/factories'
+import { connectEvaluations } from '../../evaluations/connect'
 import { createMembership } from '../../memberships/create'
 import { generateWorkspaceFixtures, type WorkspaceInfo } from './fixtures'
 import { GetUsageOverview, GetUsageOverviewRow } from './getUsageOverview'
-import { connectEvaluations } from '../../evaluations/connect'
 
 async function createMember({
   workspace,
@@ -144,11 +144,6 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
     documentUuid: document.documentUuid,
     evaluationUuids: [evaluation.uuid],
   })
-  const evaluationV2 = await factories.createEvaluationV2({
-    document: document,
-    commit: commit,
-    workspace: workspace,
-  })
 
   const documentLogs = await Promise.all(
     workspaceInfo.logs.map((info, index) =>
@@ -171,15 +166,20 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
     )
 
     evaluationResultsV2 = await Promise.all(
-      workspaceInfo.resultsV2.map((info) =>
-        createResultV2({
-          evaluation: evaluationV2,
+      workspaceInfo.resultsV2.map(async (info) => {
+        const evaluation = await factories.createEvaluationV2({
+          document: document,
+          commit: commit,
+          workspace: workspace,
+        })
+        return await createResultV2({
+          evaluation: evaluation,
           providerLog: evaluatedProviderLog,
           commit: commit,
           workspace: workspace,
           info: info,
-        }),
-      ),
+        })
+      }),
     )
   }
 
