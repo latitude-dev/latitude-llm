@@ -136,6 +136,12 @@ export function ExperimentEvaluationScores({
           evaluation={evaluation}
         />
       ))}
+      {experiment.results.errors > 0 && (
+        <div className='flex flex-row w-full gap-2 items-center justify-between min-h-8 px-2 py-1 rounded-md bg-destructive/10'>
+          <Text.H6 color='destructive'>Total errors</Text.H6>
+          <Text.H6 color='destructive'>{experiment.results.errors}</Text.H6>
+        </div>
+      )}
     </div>
   )
 }
