@@ -36,11 +36,9 @@ export const evaluateLiveLogJob = async ({
   const commit = await commitsRepository
     .getCommitById(documentLog.commitId)
     .then((r) => r.unwrap())
-
   const providerLog = await findLastProviderLogFromDocumentLogUuid(
     documentLog.uuid,
   )
-  // Note: Failed document logs may not have provider logs
   if (!providerLog) return
 
   const evaluationsRepository = new EvaluationsV2Repository(workspace.id)

@@ -5,7 +5,6 @@ import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
 const jobMappings = {
   evaluateLiveLogJob: jobs.evaluateLiveLogJob,
-  runLiveEvaluationsJob: jobs.runLiveEvaluationsJob,
   runLiveEvaluationJob: jobs.runLiveEvaluationJob,
 }
 
