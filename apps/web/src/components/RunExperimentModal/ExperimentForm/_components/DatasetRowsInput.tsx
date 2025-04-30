@@ -33,7 +33,7 @@ function LineRangeInputs({
         to: Math.max(newVal, prev.to),
       }))
     },
-    [onChangeRange],
+    [onChangeRange, max],
   )
 
   const setToValue = useCallback(
@@ -44,7 +44,7 @@ function LineRangeInputs({
         to: newVal,
       }))
     },
-    [onChangeRange],
+    [onChangeRange, max],
   )
 
   return (
@@ -100,8 +100,16 @@ function RowsInputs({
     }
   }, [allRows, selectedRows, setFromLine, setToLine])
 
+  useEffect(() => {
+    setSelectedRows({
+      from: 1,
+      to: rowCount,
+    })
+    setAllRows(true)
+  }, [rowCount, setToLine])
+
   return (
-    <div className='flex flex-col gap-y-2'>
+    <div className='flex flex-col gap-y-2 w-1/2'>
       <LineRangeInputs
         disabled={allRows}
         defaultRange={selectedRows}
@@ -110,7 +118,7 @@ function RowsInputs({
       />
       <SwitchInput
         name='fullDataset'
-        defaultChecked={allRows}
+        checked={allRows}
         onCheckedChange={() => setAllRows((prev) => !prev)}
         label='Include all lines'
         description='You can pass to evaluations all lines from a dataset or a selection from one line to another. Uncheck this option to select the lines.'
@@ -134,7 +142,7 @@ export function DatasetRowsInput({
 
   if (isLoadingRowCount) {
     return (
-      <div className='flex flex-col gap-y-2'>
+      <div className='flex flex-col gap-y-2 w-1/2'>
         <Skeleton height='h2' className='w-1/2' />
         <Skeleton height='h2' className='w-1/2' />
       </div>

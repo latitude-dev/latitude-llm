@@ -312,6 +312,7 @@ function RunExperiment<
           isOpen={open}
           setOpen={setOpen}
           initialEvaluation={evaluation}
+          navigateOnCreate
         />
       ) : (
         <CreateBatchEvaluationModal

@@ -205,6 +205,10 @@ export const ROUTES = {
                     },
                     [DocumentRoutes.experiments]: {
                       root: experimentsRoot,
+                      withSelected: (uuids: string[]) => {
+                        if (!uuids.length) return experimentsRoot
+                        return `${experimentsRoot}?selected=${uuids.join(',')}`
+                      },
                     },
                   }
                 },

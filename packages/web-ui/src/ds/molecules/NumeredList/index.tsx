@@ -22,13 +22,15 @@ NumeredList.Item = ({
   children,
   title,
   width,
+  className,
 }: {
   title: string
   children: ReactNode
   width?: string
+  className?: string
 }) => {
   return (
-    <div className='flex-grow min-w-0 flex flex-col gap-y-4'>
+    <div className={cn('flex-grow min-w-0 flex flex-col gap-y-4', className)}>
       <Text.H5>{title}</Text.H5>
       {children ? (
         <div className={cn(width, { 'w-full': !width })}>{children}</div>

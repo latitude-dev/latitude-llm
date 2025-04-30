@@ -42,9 +42,9 @@ export function DatasetSelector({
   }
 
   return (
-    <div className='flex flex-row items-center gap-4'>
+    <div className='flex flex-row items-center gap-4 w-1/2'>
       {datasets.length > 0 && (
-        <div className='w-1/2'>
+        <div className='flex-grow'>
           <Select
             name='datasetId'
             placeholder='Select dataset'
