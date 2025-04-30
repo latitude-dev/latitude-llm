@@ -92,6 +92,7 @@ export type AnnotationFormProps<
   providerLog: ProviderLogDto
   documentLog: DocumentLog
   commit: Commit
+  disabled?: boolean
 }
 
 export type ChartConfigurationArgs<

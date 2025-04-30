@@ -158,6 +158,7 @@ function AnnotationForm({
   evaluation,
   resultScore,
   setResultScore,
+  disabled,
 }: AnnotationFormProps<EvaluationType.Human, HumanEvaluationMetric.Rating>) {
   const range = Math.abs(
     evaluation.configuration.maxRating - evaluation.configuration.minRating,
@@ -197,6 +198,7 @@ function AnnotationForm({
           }}
           defaultAppearance
           className='w-full'
+          disabled={disabled}
           required
         />
       ) : (
@@ -206,6 +208,7 @@ function AnnotationForm({
           description={`The response should be rated low when: ${evaluation.configuration.minRatingDescription}. The response should be rated high when: ${evaluation.configuration.maxRatingDescription}`}
           options={options}
           onChange={(value) => setResultScore(value)}
+          disabled={disabled}
           required
         />
       )}

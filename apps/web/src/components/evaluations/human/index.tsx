@@ -200,6 +200,7 @@ function AnnotationForm<M extends HumanEvaluationMetric>({
   evaluation,
   resultMetadata,
   setResultMetadata,
+  disabled,
   ...rest
 }: AnnotationFormProps<EvaluationType.Human, M> & {
   metric: M
@@ -219,6 +220,7 @@ function AnnotationForm<M extends HumanEvaluationMetric>({
           evaluation={evaluation}
           resultMetadata={resultMetadata}
           setResultMetadata={setResultMetadata}
+          disabled={disabled}
           {...rest}
         />
       ) : (
@@ -239,6 +241,7 @@ function AnnotationForm<M extends HumanEvaluationMetric>({
           } as Partial<EvaluationResultMetadata<EvaluationType.Human, M>>)
         }
         className='w-full'
+        disabled={disabled}
         required
       />
     </>

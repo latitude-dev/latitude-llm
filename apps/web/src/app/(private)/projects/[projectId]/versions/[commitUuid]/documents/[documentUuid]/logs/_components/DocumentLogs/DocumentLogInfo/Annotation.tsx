@@ -8,9 +8,10 @@ import {
   EvaluationResultV2,
   EvaluationType,
 } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { isEqual } from 'lodash-es'
 import { ComponentProps, useCallback, useEffect, useState } from 'react'
-import { useDebouncedCallback } from 'use-debounce'
 
 export function DocumentLogAnnotation<
   T extends EvaluationType,
@@ -22,6 +23,7 @@ export function DocumentLogAnnotation<
   providerLog,
   documentLog,
   annotateEvaluation,
+  isAnnotatingEvaluation,
   ...rest
 }: Omit<
   ComponentProps<typeof AnnotationForm<T, M>>,
@@ -32,6 +34,7 @@ export function DocumentLogAnnotation<
     typeof useEvaluationResultsV2ByDocumentLogs
   >['mutate']
   annotateEvaluation: ReturnType<typeof useEvaluationsV2>['annotateEvaluation']
+  isAnnotatingEvaluation: boolean
 }) {
   const [isExpanded, setIsExpanded] = useState(true)
 
@@ -44,67 +47,42 @@ export function DocumentLogAnnotation<
   >(result?.metadata ?? undefined)
   useEffect(() => setResultMetadata(result?.metadata ?? undefined), [result])
 
-  const onAnnotate = useDebouncedCallback(
-    useCallback(
-      async ({
-        resultScore,
-        resultMetadata,
-      }: {
-        resultScore: number
-        resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
-      }) => {
-        const [annotationResult, errors] = await annotateEvaluation({
-          evaluationUuid: evaluation.uuid,
-          resultScore: resultScore,
-          resultMetadata: resultMetadata as Partial<EvaluationResultMetadata>,
-          providerLogUuid: providerLog.uuid,
-        })
-        if (errors) return
+  const onAnnotate = useCallback(async () => {
+    if (isAnnotatingEvaluation) return
+    if (resultScore === undefined) return
+    const [annotationResult, errors] = await annotateEvaluation({
+      evaluationUuid: evaluation.uuid,
+      resultScore: resultScore,
+      resultMetadata: resultMetadata as Partial<EvaluationResultMetadata>,
+      providerLogUuid: providerLog.uuid,
+    })
+    if (errors) return
 
-        const { result } = annotationResult
-        mutateEvaluationResults((prev) => {
-          const prevResults = prev?.[documentLog.uuid] || []
-          const existingResult = prevResults.find(
-            (r) => r.result.uuid === result.uuid,
-          )
-          return {
-            ...(prev ?? {}),
-            [documentLog.uuid]: existingResult
-              ? prevResults.map((r) =>
-                  r.result.uuid === result.uuid ? { evaluation, result } : r,
-                )
-              : [{ evaluation, result }, ...prevResults],
-          }
-        })
-      },
-      [
-        annotateEvaluation,
-        evaluation,
-        providerLog,
-        documentLog,
-        mutateEvaluationResults,
-      ],
-    ),
-    500,
-    { leading: false, trailing: true },
-  )
-
-  const onSetResultScore = useCallback(
-    async (value: number) => {
-      setResultScore(value)
-      onAnnotate({ resultScore: value, resultMetadata })
-    },
-    [setResultScore, onAnnotate, resultMetadata],
-  )
-
-  const onSetResultMetadata = useCallback(
-    async (value: Partial<EvaluationResultMetadata<T, M>>) => {
-      setResultMetadata(value)
-      if (resultScore === undefined) return
-      onAnnotate({ resultScore, resultMetadata: value })
-    },
-    [setResultMetadata, onAnnotate, resultScore],
-  )
+    const { result } = annotationResult
+    mutateEvaluationResults((prev) => {
+      const prevResults = prev?.[documentLog.uuid] || []
+      const existingResult = prevResults.find(
+        (r) => r.result.uuid === result.uuid,
+      )
+      return {
+        ...(prev ?? {}),
+        [documentLog.uuid]: existingResult
+          ? prevResults.map((r) =>
+              r.result.uuid === result.uuid ? { evaluation, result } : r,
+            )
+          : [{ evaluation, result }, ...prevResults],
+      }
+    })
+  }, [
+    isAnnotatingEvaluation,
+    annotateEvaluation,
+    resultScore,
+    resultMetadata,
+    evaluation,
+    providerLog,
+    documentLog,
+    mutateEvaluationResults,
+  ])
 
   return (
     <CollapsibleBox
@@ -113,16 +91,30 @@ export function DocumentLogAnnotation<
       isExpanded={isExpanded}
       onToggle={(value) => setIsExpanded(value)}
       expandedContent={
-        <AnnotationForm
-          evaluation={evaluation}
-          resultScore={resultScore}
-          setResultScore={onSetResultScore}
-          resultMetadata={resultMetadata}
-          setResultMetadata={onSetResultMetadata}
-          providerLog={providerLog}
-          documentLog={documentLog}
-          {...rest}
-        />
+        <div className='flex flex-col gap-y-4'>
+          <AnnotationForm
+            evaluation={evaluation}
+            resultScore={resultScore}
+            setResultScore={setResultScore}
+            resultMetadata={resultMetadata}
+            setResultMetadata={setResultMetadata}
+            providerLog={providerLog}
+            documentLog={documentLog}
+            disabled={isAnnotatingEvaluation}
+            {...rest}
+          />
+          {(resultScore !== result?.score ||
+            !isEqual(resultMetadata, result?.metadata)) && (
+            <Button
+              fullWidth
+              fancy
+              onClick={onAnnotate}
+              disabled={isAnnotatingEvaluation || resultScore === undefined}
+            >
+              Submit verdict
+            </Button>
+          )}
+        </div>
       }
     />
   )

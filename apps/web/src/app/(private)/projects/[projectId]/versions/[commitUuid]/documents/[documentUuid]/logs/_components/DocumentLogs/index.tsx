@@ -41,6 +41,7 @@ export function DocumentLogs({
   isEvaluationsLoading,
   evaluations,
   annotateEvaluation,
+  isAnnotatingEvaluation,
 }: {
   documentLogFilterOptions: DocumentLogFilterOptions
   documentLogs: DocumentLogWithMetadataAndError[]
@@ -178,6 +179,7 @@ export function DocumentLogs({
                       documentLog={selectedLog}
                       commit={selectedLog.commit}
                       annotateEvaluation={annotateEvaluation}
+                      isAnnotatingEvaluation={isAnnotatingEvaluation}
                     />
                   ))}
                 </div>

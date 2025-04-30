@@ -80,6 +80,7 @@ function AnnotationForm({
   evaluation,
   resultScore,
   setResultScore,
+  disabled,
 }: AnnotationFormProps<EvaluationType.Human, HumanEvaluationMetric.Binary>) {
   const options = useMemo(
     () => [
@@ -105,6 +106,7 @@ function AnnotationForm({
         description={`The response should pass when: ${evaluation.configuration.passDescription}. The response should fail when: ${evaluation.configuration.failDescription}`}
         options={options}
         onChange={(value) => setResultScore(value)}
+        disabled={disabled}
         required
       />
     </>
