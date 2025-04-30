@@ -78,6 +78,7 @@ export const EventHandlers: IEventsHandlers = {
     requestDocumentSuggestionJobV2,
     notifyClientOfEvaluationResultV2Created,
   ],
+  evaluationResultV2Updated: [],
   scaleMcpServer: [notifyClientOfScaleUpMcpServer],
   mcpServerConnected: [notifyClientOfMcpServerConnected],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],

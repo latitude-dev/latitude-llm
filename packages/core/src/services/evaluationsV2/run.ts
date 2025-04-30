@@ -22,6 +22,7 @@ import Transaction from '../../lib/Transaction'
 import {
   DocumentLogsRepository,
   DocumentVersionsRepository,
+  EvaluationResultsV2Repository,
 } from '../../repositories'
 import { getColumnData } from '../datasets/utils'
 import { createEvaluationResultV2 } from './results/create'
@@ -52,6 +53,20 @@ export async function runEvaluationV2<
   },
   db: Database = database,
 ) {
+  const resultsRepository = new EvaluationResultsV2Repository(workspace.id, db)
+  const result = await resultsRepository.findByEvaluatedLogAndEvaluation({
+    evaluatedLogId: providerLog.id,
+    evaluationUuid: evaluation.uuid,
+  })
+
+  if (result.ok) {
+    return Result.error(
+      new UnprocessableEntityError(
+        'Cannot evaluate a log that is already evaluated for this evaluation',
+      ),
+    )
+  }
+
   const resultUuid = generateUUIDIdentifier()
 
   const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
@@ -169,7 +184,7 @@ export async function runEvaluationV2<
   return await Transaction.call(async (tx) => {
     const { result } = await createEvaluationResultV2(
       {
-        resultUuid: resultUuid,
+        uuid: resultUuid,
         evaluation: evaluation,
         providerLog: providerLog,
         commit: commit,
@@ -187,6 +202,7 @@ export async function runEvaluationV2<
       data: {
         workspaceId: workspace.id,
         evaluation: evaluation,
+        result: result,
         commit: commit,
         providerLog: providerLog,
       },

@@ -2,6 +2,7 @@
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { normalizeNumber } from '$/lib/normalizeNumber'
@@ -12,6 +13,7 @@ import {
   DocumentLogFilterOptions,
   EvaluationConfigurationNumerical,
   EvaluationResultableType,
+  EvaluationV2,
   LOG_FILTERS_ENCODED_PARAMS,
   ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
@@ -19,7 +21,6 @@ import { buildPagination } from '@latitude-data/core/lib/pagination/buildPaginat
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
-import { cn } from '@latitude-data/web-ui/utils'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
   Table,
@@ -30,11 +31,12 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TextColor } from '@latitude-data/web-ui/tokens'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import { TextColor } from '@latitude-data/web-ui/tokens'
+import { cn } from '@latitude-data/web-ui/utils'
 import { capitalize } from 'lodash-es'
 import { useSearchParams } from 'next/navigation'
 import { forwardRef, useMemo } from 'react'
@@ -48,11 +50,15 @@ type DocumentLogRow = DocumentLogWithMetadataAndError & {
 }
 
 function EvaluationsColumn({
+  documentLog,
   evaluationResults = [],
+  evaluations,
   color: cellColor,
   isLoading,
 }: {
+  documentLog: DocumentLogRow
   evaluationResults?: ResultWithEvaluationTmp[]
+  evaluations: EvaluationV2[]
   color: TextColor
   isLoading: boolean
 }) {
@@ -83,27 +89,46 @@ function EvaluationsColumn({
     [evaluationResults],
   )
 
+  const pendingResults = useMemo(
+    () =>
+      evaluations.filter(
+        (e) =>
+          getEvaluationMetricSpecification(e).supportsManualEvaluation &&
+          !evaluationResults.find((r) => r.evaluation.uuid === e.uuid),
+      ).length,
+    [evaluationResults, evaluations],
+  )
+
+  if (documentLog.error?.code) {
+    return <Text.H5 color={cellColor}>-</Text.H5>
+  }
+
   if (isLoading) {
     return <Skeleton className='w-full h-4' />
   }
 
-  if (!evaluationResults.length) {
+  if (!evaluationResults.length && !pendingResults) {
     return <Text.H5 color={cellColor}>-</Text.H5>
   }
 
   return (
-    <div className='flex justify-center items-center shrink-0'>
-      <Badge
-        variant={
-          passedResults
-            ? passedResults >= evaluationResults.length / 2
-              ? 'successMuted'
-              : 'warningMuted'
-            : 'destructiveMuted'
-        }
-      >
-        {passedResults}/{evaluationResults.length} passed
-      </Badge>
+    <div className='flex justify-center items-center gap-2 shrink-0'>
+      {evaluationResults.length > 0 && (
+        <Badge
+          variant={
+            passedResults
+              ? passedResults >= evaluationResults.length / 2
+                ? 'successMuted'
+                : 'warningMuted'
+              : 'destructiveMuted'
+          }
+        >
+          {passedResults}/{evaluationResults.length} passed
+        </Badge>
+      )}
+      {pendingResults > 0 && (
+        <Badge variant='muted'>{pendingResults} pending</Badge>
+      )}
     </div>
   )
 }
@@ -112,6 +137,7 @@ type Props = {
   documentLogs: DocumentLogRow[]
   documentLogFilterOptions: DocumentLogFilterOptions
   evaluationResults: Record<string, ResultWithEvaluationTmp[]>
+  evaluations: EvaluationV2[]
   selectedLog: DocumentLogWithMetadataAndError | undefined
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void
   isLoading: boolean
@@ -123,6 +149,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
       documentLogs,
       documentLogFilterOptions,
       evaluationResults,
+      evaluations,
       selectedLog,
       setSelectedLog,
       isLoading,
@@ -262,7 +289,9 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                 <TableCell>
                   <EvaluationsColumn
                     color={cellColor}
+                    documentLog={documentLog}
                     evaluationResults={evaluationResults[documentLog.uuid]}
+                    evaluations={evaluations}
                     isLoading={isLoading}
                   />
                 </TableCell>

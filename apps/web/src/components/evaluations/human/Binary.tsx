@@ -5,7 +5,10 @@ import {
 } from '@latitude-data/constants'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
+import { useMemo } from 'react'
 import {
+  AnnotationFormProps,
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
@@ -17,6 +20,7 @@ export default {
   icon: 'thumbsUp' as IconName,
   ConfigurationForm: ConfigurationForm,
   ResultBadge: ResultBadge,
+  AnnotationForm: AnnotationForm,
   chartConfiguration: chartConfiguration,
 }
 
@@ -70,6 +74,43 @@ function ResultBadge({
   result,
 }: ResultBadgeProps<EvaluationType.Human, HumanEvaluationMetric.Binary>) {
   return <>{result.score === 1 ? 'Passed' : 'Failed'}</>
+}
+
+function AnnotationForm({
+  evaluation,
+  resultScore,
+  setResultScore,
+  disabled,
+}: AnnotationFormProps<EvaluationType.Human, HumanEvaluationMetric.Binary>) {
+  const options = useMemo(
+    () => [
+      {
+        label: 'Passed',
+        value: 1,
+        icon: 'thumbsUp',
+      },
+      {
+        label: 'Failed',
+        value: 0,
+        icon: 'thumbsDown',
+      },
+    ],
+    [],
+  )
+
+  return (
+    <>
+      <TabSelect
+        value={resultScore ?? undefined}
+        name='resultScore'
+        description={`The response should pass when: ${evaluation.configuration.passDescription}. The response should fail when: ${evaluation.configuration.failDescription}`}
+        options={options}
+        onChange={(value) => setResultScore(value)}
+        disabled={disabled}
+        required
+      />
+    </>
+  )
 }
 
 function chartConfiguration({

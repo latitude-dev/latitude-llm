@@ -10,31 +10,31 @@ import {
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { Message as MessageComponent } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { Message as MessageComponent } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { format } from 'date-fns'
 
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   asPromptLFile,
   PromptLFileParameter,
 } from '$/components/PromptLFileParameter'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
+import { Message } from '@latitude-data/compiler'
 import { getCostPer1M } from '@latitude-data/core/services/ai/estimateCost/index'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { useCurrentCommit } from 'node_modules/@latitude-data/web-ui/src/providers/CommitProvider'
+import { useCurrentProject } from 'node_modules/@latitude-data/web-ui/src/providers/ProjectProvider'
 import {
   FinishReasonItem,
   MetadataItem,
   MetadataItemTooltip,
 } from '../../../../../[documentUuid]/_components/MetadataItem'
-import { Message } from '@latitude-data/compiler'
-import { ROUTES } from '$/services/routes'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { useCurrentCommit } from 'node_modules/@latitude-data/web-ui/src/providers/CommitProvider'
-import { useCurrentProject } from 'node_modules/@latitude-data/web-ui/src/providers/ProjectProvider'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useNavigate } from '$/hooks/useNavigate'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 
 function costNotCalculatedReason({
   provider,
@@ -406,12 +406,19 @@ function UseDocumentLogInPlaygroundButton({
       trigger={
         <Button
           onClick={employLogAsDocumentParameters}
-          iconProps={{ name: 'pencil', color: 'foregroundMuted' }}
-          variant='nope'
-          size='icon'
+          iconProps={{
+            name: 'arrowRight',
+            widthClass: 'w-4',
+            heightClass: 'h-4',
+            placement: 'right',
+          }}
+          variant='link'
+          size='none'
           containerClassName='rounded-xl pointer-events-auto'
           className='rounded-xl'
-        />
+        >
+          Use
+        </Button>
       }
     >
       Test this log's parameters in the playground

@@ -11,6 +11,7 @@ import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
 import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
 import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   DocumentLogFilterOptions,
   ResultWithEvaluation,
@@ -137,13 +138,16 @@ export function DocumentLogsPage({
     [documentLogs, resultsV1],
   )
 
-  const { data: evaluationResultsV2, isLoading: isEvaluationResultsV2Loading } =
-    useEvaluationResultsV2ByDocumentLogs({
-      project: project,
-      commit: commit,
-      document: document,
-      documentLogUuids: documentLogs.map((l) => l.uuid),
-    })
+  const {
+    data: evaluationResultsV2,
+    isLoading: isEvaluationResultsV2Loading,
+    mutate: mutateEvaluationResultsV2,
+  } = useEvaluationResultsV2ByDocumentLogs({
+    project: project,
+    commit: commit,
+    document: document,
+    documentLogUuids: documentLogs.map((l) => l.uuid),
+  })
 
   const evaluationResults = useMemo<
     Record<string, ResultWithEvaluationTmp[]>
@@ -173,6 +177,18 @@ export function DocumentLogsPage({
 
     return evaluationResults
   }, [evaluationResultsV1, evaluationResultsV2])
+
+  const {
+    data: evaluations,
+    isLoading: isEvaluationsV2Loading,
+    annotateEvaluation,
+    isAnnotatingEvaluation,
+  } = useEvaluationsV2({ project, commit, document })
+
+  const isEvaluationsLoading =
+    isEvaluationResultsV1Loading ||
+    isEvaluationResultsV2Loading ||
+    isEvaluationsV2Loading
 
   useDocumentLogSocket(document.documentUuid, mutate)
 
@@ -209,9 +225,11 @@ export function DocumentLogsPage({
             aggregations={aggregations}
             isAggregationsLoading={isAggregationsLoading}
             evaluationResults={evaluationResults}
-            isEvaluationResultsLoading={
-              isEvaluationResultsV1Loading || isEvaluationResultsV2Loading
-            }
+            mutateEvaluationResults={mutateEvaluationResultsV2}
+            isEvaluationsLoading={isEvaluationsLoading}
+            evaluations={evaluations}
+            annotateEvaluation={annotateEvaluation}
+            isAnnotatingEvaluation={isAnnotatingEvaluation}
           />
         }
       />

@@ -8,7 +8,10 @@ import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
+import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
+import { useMemo } from 'react'
 import {
+  AnnotationFormProps,
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
@@ -20,6 +23,7 @@ export default {
   icon: 'star' as IconName,
   ConfigurationForm: ConfigurationForm,
   ResultBadge: ResultBadge,
+  AnnotationForm: AnnotationForm,
   chartConfiguration: chartConfiguration,
 }
 
@@ -148,6 +152,68 @@ function ResultBadge({
   result,
 }: ResultBadgeProps<EvaluationType.Human, HumanEvaluationMetric.Rating>) {
   return <>{formatCount(result.score!)}</>
+}
+
+function AnnotationForm({
+  evaluation,
+  resultScore,
+  setResultScore,
+  disabled,
+}: AnnotationFormProps<EvaluationType.Human, HumanEvaluationMetric.Rating>) {
+  const range = Math.abs(
+    evaluation.configuration.maxRating - evaluation.configuration.minRating,
+  )
+
+  const options = useMemo(() => {
+    if (range > 10) return []
+
+    const options = []
+    for (
+      let i = evaluation.configuration.minRating;
+      i <= evaluation.configuration.maxRating;
+      i++
+    ) {
+      options.push({
+        label: i.toString(),
+        value: i,
+      })
+    }
+
+    return options
+  }, [range, evaluation])
+
+  return (
+    <>
+      {range > 10 ? (
+        <NumberInput
+          value={resultScore ?? undefined}
+          name='resultScore'
+          description={`The response should be rated low when: ${evaluation.configuration.minRatingDescription}. The response should be rated high when: ${evaluation.configuration.maxRatingDescription}`}
+          placeholder='No rating'
+          min={evaluation.configuration.minRating}
+          max={evaluation.configuration.maxRating}
+          onChange={(value) => {
+            if (value === undefined) return
+            setResultScore(value)
+          }}
+          defaultAppearance
+          className='w-full'
+          disabled={disabled}
+          required
+        />
+      ) : (
+        <TabSelect
+          value={resultScore ?? undefined}
+          name='resultScore'
+          description={`The response should be rated low when: ${evaluation.configuration.minRatingDescription}. The response should be rated high when: ${evaluation.configuration.maxRatingDescription}`}
+          options={options}
+          onChange={(value) => setResultScore(value)}
+          disabled={disabled}
+          required
+        />
+      )}
+    </>
+  )
 }
 
 function chartConfiguration({
