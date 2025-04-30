@@ -153,6 +153,9 @@ export const API_ROUTES = {
                         stats: {
                           root: `${evaluationRoot}/stats`,
                         },
+                        runLlm: {
+                          root: `${evaluationRoot}/run-llm`,
+                        },
                       }
                     },
                     results: {

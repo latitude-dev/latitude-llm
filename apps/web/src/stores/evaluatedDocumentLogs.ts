@@ -5,6 +5,7 @@ import {
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
+import { useMemo } from 'react'
 
 const EMPTY_ARRAY: [] = []
 export default function useEvaluatedDocumentLogs(
@@ -60,5 +61,5 @@ export default function useEvaluatedDocumentLogs(
     },
   )
 
-  return { data, mutate, isLoading }
+  return useMemo(() => ({ data, mutate, isLoading }), [mutate, data, isLoading])
 }

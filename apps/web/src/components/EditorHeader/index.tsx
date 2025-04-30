@@ -48,7 +48,7 @@ export const EditorHeader = memo(
     prompt,
     canUseSubagents = true,
   }: {
-    title: string
+    title: string | ReactNode
     metadata: ConversationMetadata | undefined
     prompt: string
     onChangePrompt: (prompt: string) => void
@@ -181,9 +181,9 @@ export const EditorHeader = memo(
 
     return (
       <div className='flex flex-col gap-y-2'>
-        <div className='flex flex-row h-8 justify-between items-center'>
-          <div className='flex flex-row items-center gap-2'>
-            <Text.H4M>{title}</Text.H4M>
+        <div className='flex flex-row h-8 justify-between items-center gap-x-4'>
+          <div className='flex flex-row items-center gap-2 min-w-0'>
+            {typeof title === 'string' ? <Text.H4M>{title}</Text.H4M> : title}
             {leftActions}
           </div>
           <div className='flex flex-row items-center gap-2'>
