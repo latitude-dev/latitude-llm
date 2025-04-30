@@ -20,7 +20,7 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const { projectId, commitUuid, documentUuid } = params
+      const { projectId, documentUuid } = params
       const documentLogUuids =
         request.nextUrl.searchParams.get('documentLogUuids')?.split(',') || []
 
@@ -28,7 +28,6 @@ export const GET = errorHandler(
       const results = await resultsRepository
         .listByDocumentLogs({
           projectId: projectId,
-          commitUuid: commitUuid,
           documentUuid: documentUuid,
           documentLogUuids: documentLogUuids,
         })

@@ -38,7 +38,6 @@ import {
   datasetRows,
   datasets,
   evaluationResultsV2,
-  evaluationVersions,
   providerLogs,
 } from '../schema'
 import serializeProviderLog from '../services/providerLogs/serialize'
@@ -420,7 +419,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     documentLogUuids,
   }: {
     projectId?: number
-    commitUuid: string
     documentUuid: string
     documentLogUuids: string[]
   }) {
@@ -436,16 +434,6 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         documentLogUuid: providerLogs.documentLogUuid,
       })
       .from(evaluationResultsV2)
-      .leftJoin(
-        evaluationVersions,
-        and(
-          eq(evaluationVersions.commitId, evaluationResultsV2.commitId),
-          eq(
-            evaluationVersions.evaluationUuid,
-            evaluationResultsV2.evaluationUuid,
-          ),
-        ),
-      )
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .innerJoin(
         providerLogs,
@@ -454,8 +442,8 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .where(
         and(
           this.scopeFilter,
-          isNull(evaluationVersions.deletedAt),
           isNull(commits.deletedAt),
+          isNotNull(providerLogs.documentLogUuid),
           inArray(providerLogs.documentLogUuid, documentLogUuids),
         ),
       )
@@ -487,23 +475,18 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       ),
     )
 
-    const resultsByDocumentLog = results.reduce<
-      Record<string, ResultWithEvaluationV2[]>
-    >(
-      (acc, result) => ({
-        ...acc,
-        [result.documentLogUuid!]: [
-          ...(acc[result.documentLogUuid!] ?? []),
-          {
-            result: result,
-            evaluation: evaluationsByCommit[result.commitUuid]!.find(
-              (e) => e.uuid === result.evaluationUuid,
-            )!,
-          } as ResultWithEvaluationV2,
-        ],
-      }),
-      {},
-    )
+    const resultsByDocumentLog: Record<string, ResultWithEvaluationV2[]> = {}
+    for (const result of results) {
+      const evaluation = evaluationsByCommit[result.commitUuid]!.find(
+        (e) => e.uuid === result.evaluationUuid,
+      )
+      if (!evaluation) continue
+
+      resultsByDocumentLog[result.documentLogUuid!] = [
+        ...(resultsByDocumentLog[result.documentLogUuid!] ?? []),
+        { result, evaluation } as ResultWithEvaluationV2,
+      ]
+    }
 
     return Result.ok<Record<string, ResultWithEvaluationV2[]>>(
       resultsByDocumentLog,

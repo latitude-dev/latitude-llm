@@ -35,7 +35,7 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
-import { DebouncedState, useDebounce, useDebouncedCallback } from 'use-debounce'
+import { useDebounce, useDebouncedCallback } from 'use-debounce'
 import { EvaluationActions } from './EvaluationActions'
 import { EvaluationFilters } from './EvaluationFilters'
 import { EvaluationResultsTable } from './EvaluationResults/Table'
@@ -51,9 +51,7 @@ const useEvaluationResultsV2Socket = <
 }: {
   evaluation: EvaluationV2<T, M>
   mutate: ReturnType<typeof useEvaluationResultsV2<T, M>>['mutate']
-  refetchStats: DebouncedState<
-    ReturnType<typeof useEvaluationV2Stats<T, M>>['mutate']
-  >
+  refetchStats: () => void
 }) => {
   const onMessage = useCallback(
     (args: EventArgs<'evaluationResultV2Created'>) => {
