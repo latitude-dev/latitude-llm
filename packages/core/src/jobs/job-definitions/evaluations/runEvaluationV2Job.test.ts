@@ -1,16 +1,21 @@
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
-  ProviderLog,
-  Workspace,
-  Experiment,
+  Commit,
   Dataset,
   DatasetRow,
-  Commit,
+  Experiment,
+  ProviderLog,
+  Workspace,
 } from '../../../browser'
 import { EvaluationV2, Providers } from '../../../constants'
+import { Result } from '../../../lib/Result'
+import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+import { UnprocessableEntityError } from '../../../lib/errors'
 import * as evaluationsV2 from '../../../services/evaluationsV2/run'
+import serializeProviderLog from '../../../services/providerLogs/serialize'
 import * as factories from '../../../tests/factories'
 import * as websockets from '../../../websockets/workers'
 import * as progressTracker from '../../utils/progressTracker'
@@ -18,10 +23,6 @@ import {
   runEvaluationV2Job,
   type RunEvaluationV2JobData,
 } from './runEvaluationJob'
-import { Result } from '../../../lib/Result'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
-import serializeProviderLog from '../../../services/providerLogs/serialize'
 
 vi.mock('../../../redis', () => ({
   buildRedisConnection: vi.fn().mockResolvedValue({}),
@@ -217,10 +218,9 @@ describe('runEvaluationV2Job', () => {
     it('increments error counter when evaluation errors', async () => {
       runEvaluationV2Spy.mockResolvedValueOnce(
         Result.error(
-          new ChainError({
-            code: RunErrorCodes.EvaluationRunResponseJsonFormatError,
-            message: 'malformed json response',
-          }),
+          new UnprocessableEntityError(
+            'Cannot evaluate a log that does not end with an assistant message',
+          ),
         ),
       )
 

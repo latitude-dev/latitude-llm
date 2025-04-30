@@ -506,3 +506,14 @@ export const DATASET_COLUMN_ROLES = {
 
 export type DatasetColumnRole =
   (typeof DATASET_COLUMN_ROLES)[keyof typeof DATASET_COLUMN_ROLES]
+
+export type ProviderApiKeyUsage = {
+  projectId: number
+  projectName: string
+  commitUuid: string
+  commitLive: boolean
+  documentUuid: string
+  documentPath: string
+  evaluationUuid?: string
+  evaluationName?: string
+}[]
