@@ -49,6 +49,7 @@ export function DocumentLogInfo({
   stickyRef,
   sidebarWrapperRef,
   children,
+  bottomActions,
   offset,
 }: {
   documentLog: DocumentLogWithMetadataAndError
@@ -60,6 +61,7 @@ export function DocumentLogInfo({
   stickyRef?: RefObject<HTMLTableElement>
   sidebarWrapperRef?: RefObject<HTMLDivElement>
   children?: ReactNode
+  bottomActions?: ReactNode
   offset?: StickyOffset
 }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -90,7 +92,7 @@ export function DocumentLogInfo({
     <MetadataInfoTabs
       ref={ref}
       className={className}
-      bottomActions={children}
+      bottomActions={bottomActions}
       tabs={
         evaluationResults
           ? [...DEFAULT_TABS, { label: 'Evaluations', value: 'evaluations' }]
@@ -123,6 +125,7 @@ export function DocumentLogInfo({
                     commit={documentLog.commit}
                   />
                 )}
+                {children}
               </>
             ) : (
               <Alert

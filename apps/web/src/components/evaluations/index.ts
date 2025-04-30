@@ -2,6 +2,7 @@ import {
   EvaluationConfiguration,
   EvaluationMetric,
   EvaluationMetricSpecification,
+  EvaluationResultMetadata,
   EvaluationResultV2,
   EvaluationSettings,
   EvaluationSpecification,
@@ -77,6 +78,22 @@ export type ResultPanelProps<
   selectedTab: string
 }
 
+export type AnnotationFormProps<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> = {
+  evaluation: EvaluationV2<T, M>
+  resultScore?: number
+  setResultScore: (resultScore: number) => void
+  resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
+  setResultMetadata: (
+    resultMetadata: Partial<EvaluationResultMetadata<T, M>>,
+  ) => void
+  providerLog: ProviderLogDto
+  documentLog: DocumentLog
+  commit: Commit
+}
+
 export type ChartConfigurationArgs<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
@@ -107,6 +124,7 @@ export type EvaluationMetricFrontendSpecification<
   resultPanelTabs?: TabSelectorOption<string>[]
   ResultPanelMetadata?: (props: ResultPanelProps<T, M>) => React.ReactNode
   ResultPanelContent?: (props: ResultPanelProps<T, M>) => React.ReactNode
+  AnnotationForm?: (props: AnnotationFormProps<T, M>) => React.ReactNode
   chartConfiguration: (
     args: ChartConfigurationArgs<T, M>,
   ) => ChartConfigurationResult
@@ -136,6 +154,9 @@ export type EvaluationFrontendSpecification<
   ) => React.ReactNode
   ResultPanelContent: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     props: ResultPanelProps<T, M> & { metric: M },
+  ) => React.ReactNode
+  AnnotationForm?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
+    props: AnnotationFormProps<T, M> & { metric: M },
   ) => React.ReactNode
   chartConfiguration: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     args: ChartConfigurationArgs<T, M> & { metric: M },

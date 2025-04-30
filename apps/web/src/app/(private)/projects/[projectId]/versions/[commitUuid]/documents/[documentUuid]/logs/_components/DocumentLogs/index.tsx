@@ -1,23 +1,30 @@
 'use client'
+
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
+import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs from '$/stores/providerLogs'
 import {
   DocumentLogFilterOptions,
+  EvaluationResultV2,
+  EvaluationV2,
   ResultWithEvaluationTmp,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { DocumentLogsAggregations } from '@latitude-data/core/services/documentLogs/computeDocumentLogsAggregations'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { cn } from '@latitude-data/web-ui/utils'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo, useRef, useState } from 'react'
 import { LogsOverTime } from '../../../../../overview/_components/Overview/LogsOverTime'
 import { AggregationPanels } from './AggregationPanels'
 import { DocumentLogInfo } from './DocumentLogInfo'
+import { DocumentLogAnnotation } from './DocumentLogInfo/Annotation'
 import { DocumentLogsTable } from './DocumentLogsTable'
 import { DownloadLogsButton } from './DownloadLogsButton'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
@@ -30,7 +37,10 @@ export function DocumentLogs({
   aggregations,
   isAggregationsLoading,
   evaluationResults,
-  isEvaluationResultsLoading,
+  mutateEvaluationResults,
+  isEvaluationsLoading,
+  evaluations,
+  annotateEvaluation,
 }: {
   documentLogFilterOptions: DocumentLogFilterOptions
   documentLogs: DocumentLogWithMetadataAndError[]
@@ -38,7 +48,13 @@ export function DocumentLogs({
   aggregations?: DocumentLogsAggregations
   isAggregationsLoading: boolean
   evaluationResults: Record<string, ResultWithEvaluationTmp[]>
-  isEvaluationResultsLoading: boolean
+  mutateEvaluationResults: ReturnType<
+    typeof useEvaluationResultsV2ByDocumentLogs
+  >['mutate']
+  isEvaluationsLoading: boolean
+  evaluations: EvaluationV2[]
+  annotateEvaluation: ReturnType<typeof useEvaluationsV2>['annotateEvaluation']
+  isAnnotatingEvaluation: boolean
 }) {
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
@@ -71,6 +87,23 @@ export function DocumentLogs({
     rowIds: documentLogIds,
   })
   const previewLogsState = useSelectedLogs({ selectableState })
+
+  const manualEvaluations = useMemo(
+    () =>
+      evaluations.filter(
+        (e) => getEvaluationMetricSpecification(e).supportsManualEvaluation,
+      ),
+    [evaluations],
+  )
+
+  const responseLog = useMemo(() => {
+    if (!selectedLog) return undefined
+    if (selectedLog.error.code) return undefined
+    const lastProviderLog = providerLogs.at(-1)
+    if (!lastProviderLog) return undefined
+    if (lastProviderLog.documentLogUuid != selectedLog.uuid) return undefined
+    return lastProviderLog
+  }, [selectedLog, providerLogs])
 
   if (
     !documentLogFilterOptions.logSources.length &&
@@ -112,9 +145,10 @@ export function DocumentLogs({
           documentLogs={documentLogs}
           documentLogFilterOptions={documentLogFilterOptions}
           evaluationResults={evaluationResults}
+          evaluations={evaluations}
           selectedLog={selectedLog}
           setSelectedLog={setSelectedLog}
-          isLoading={isEvaluationResultsLoading}
+          isLoading={isEvaluationsLoading}
           selectableState={selectableState}
         />
         {selectedLog && (
@@ -123,11 +157,32 @@ export function DocumentLogs({
               documentLog={selectedLog}
               providerLogs={providerLogs}
               evaluationResults={evaluationResults[selectedLog.uuid]}
-              isLoading={isProviderLogsLoading || isEvaluationResultsLoading}
+              isLoading={isProviderLogsLoading || isEvaluationsLoading}
               stickyRef={stickyRef}
               sidebarWrapperRef={sidebarWrapperRef}
               offset={{ top: 12, bottom: 12 }}
-            />
+            >
+              {manualEvaluations.length > 0 && !!responseLog && (
+                <div className='w-full border-t flex flex-col gap-y-4 mt-4 pt-4'>
+                  {manualEvaluations.map((evaluation) => (
+                    <DocumentLogAnnotation
+                      key={evaluation.uuid}
+                      evaluation={evaluation}
+                      result={
+                        evaluationResults[selectedLog.uuid]?.find(
+                          (r) => r.evaluation.uuid === evaluation.uuid,
+                        )?.result as EvaluationResultV2
+                      }
+                      mutateEvaluationResults={mutateEvaluationResults}
+                      providerLog={responseLog}
+                      documentLog={selectedLog}
+                      commit={selectedLog.commit}
+                      annotateEvaluation={annotateEvaluation}
+                    />
+                  ))}
+                </div>
+              )}
+            </DocumentLogInfo>
           </div>
         )}
         <div className='flex justify-center sticky bottom-4 pointer-events-none'>

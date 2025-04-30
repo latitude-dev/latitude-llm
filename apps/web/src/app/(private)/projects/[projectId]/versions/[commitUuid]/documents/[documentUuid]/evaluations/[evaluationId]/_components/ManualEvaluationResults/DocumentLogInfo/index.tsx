@@ -1,11 +1,11 @@
 import { RefObject } from 'react'
 
+import { StickyOffset } from '$/hooks/useStickyNested'
 import {
   EvaluationDto,
   EvaluationResultableType,
   ProviderLogDto,
 } from '@latitude-data/core/browser'
-import { StickyOffset } from '$/hooks/useStickyNested'
 
 import { DocumentLogWithMetadataAndErrorAndEvaluationResult } from '..'
 import { DocumentLogInfo } from '../../../../../logs/_components/DocumentLogs/DocumentLogInfo'
@@ -47,12 +47,13 @@ export function DocumentLogInfoForManualEvaluation({
       stickyRef={stickyRef}
       sidebarWrapperRef={sidebarWrapperRef}
       offset={offset}
-    >
-      <SubmitEvaluationResult
-        documentLog={documentLog}
-        evaluation={evaluation}
-      />
-    </DocumentLogInfo>
+      bottomActions={
+        <SubmitEvaluationResult
+          documentLog={documentLog}
+          evaluation={evaluation}
+        />
+      }
+    />
   )
 }
 
