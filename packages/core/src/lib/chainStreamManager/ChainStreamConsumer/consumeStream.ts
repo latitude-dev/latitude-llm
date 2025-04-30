@@ -3,7 +3,7 @@ import { capitalize } from 'lodash-es'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   APICallError,
-  CoreTool,
+  Tool,
   FinishReason,
   ObjectStreamPart,
   TextStreamPart,
@@ -20,7 +20,7 @@ import { AIReturn } from '../../../services/ai'
 import { ChainError } from '../ChainErrors'
 
 type StreamChunk =
-  | TextStreamPart<Record<string, CoreTool>>
+  | TextStreamPart<Record<string, Tool>>
   | ObjectStreamPart<unknown>
 
 interface ConsumeStreamParams {
@@ -29,8 +29,62 @@ interface ConsumeStreamParams {
 }
 
 interface ConsumeStreamResult {
-  error?: ChainError<RunErrorCodes.AIRunError>
+  error?:
+    | ChainError<RunErrorCodes.AIRunError>
+    | ChainError<RunErrorCodes.RateLimit>
   finishReason: FinishReason
+}
+
+export async function consumeStream({
+  controller,
+  result,
+}: ConsumeStreamParams): Promise<ConsumeStreamResult> {
+  let error:
+    | ChainError<RunErrorCodes.AIRunError>
+    | ChainError<RunErrorCodes.RateLimit>
+    | undefined
+  let finishReason: FinishReason = 'stop'
+
+  for await (const chunk of streamToGenerator<StreamChunk>(result.fullStream)) {
+    if (chunk.type === 'error') {
+      finishReason = 'error'
+      error = createAIError(
+        getErrorMessage({
+          error: chunk.error,
+          providerName: result.providerName,
+        }),
+        getErrorCode(chunk.error),
+      )
+
+      break
+    }
+
+    if (chunk.type === 'finish') {
+      finishReason = chunk.finishReason
+
+      if (chunk.finishReason === 'error') {
+        error = createAIError('AI run finished with error')
+        break
+      }
+    }
+
+    enqueueChainEvent(controller, {
+      event: StreamEventTypes.Provider,
+      data: chunk,
+    })
+  }
+
+  return { error, finishReason }
+}
+
+function getErrorCode(error: unknown) {
+  if (error instanceof APICallError) {
+    if (error.statusCode === 429) {
+      return RunErrorCodes.RateLimit
+    }
+  }
+
+  return RunErrorCodes.AIRunError
 }
 
 function enqueueChainEvent(
@@ -40,9 +94,14 @@ function enqueueChainEvent(
   controller.enqueue(event)
 }
 
-function createAIError(message: string): ChainError<RunErrorCodes.AIRunError> {
+function createAIError(
+  message: string,
+  code:
+    | RunErrorCodes.AIRunError
+    | RunErrorCodes.RateLimit = RunErrorCodes.AIRunError,
+): ChainError<RunErrorCodes.AIRunError> | ChainError<RunErrorCodes.RateLimit> {
   return new ChainError({
-    code: RunErrorCodes.AIRunError,
+    code,
     message,
   })
 }
@@ -72,7 +131,6 @@ function getErrorMessage({
         })
         .join(', ')}`
     } catch (e) {
-      console.error(e)
       return `${intro}: ${error.message}`
     }
   }
@@ -86,43 +144,4 @@ function getErrorMessage({
   } catch (e) {
     return `${intro}: Unknown error`
   }
-}
-
-export async function consumeStream({
-  controller,
-  result,
-}: ConsumeStreamParams): Promise<ConsumeStreamResult> {
-  let error: ChainError<RunErrorCodes.AIRunError> | undefined
-  let finishReason: FinishReason = 'stop'
-
-  for await (const chunk of streamToGenerator<StreamChunk>(
-    result.data.fullStream,
-  )) {
-    if (chunk.type === 'error') {
-      finishReason = 'error'
-      error = createAIError(
-        getErrorMessage({
-          error: chunk.error,
-          providerName: result.data.providerName,
-        }),
-      )
-      break
-    }
-
-    if (chunk.type === 'finish') {
-      finishReason = chunk.finishReason
-
-      if (chunk.finishReason === 'error') {
-        error = createAIError('AI run finished with error')
-        break
-      }
-    }
-
-    enqueueChainEvent(controller, {
-      event: StreamEventTypes.Provider,
-      data: chunk,
-    })
-  }
-
-  return { error, finishReason }
 }

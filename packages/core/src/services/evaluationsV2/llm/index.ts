@@ -1,3 +1,4 @@
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   ErrorableEntity,
   EvaluationResultValue,
@@ -120,6 +121,8 @@ async function run<M extends LlmEvaluationMetric>(
   } catch (error) {
     let runError
     if (error instanceof ChainError) {
+      if (error.errorCode === RunErrorCodes.RateLimit) throw error
+
       runError = await createRunError(
         {
           data: {

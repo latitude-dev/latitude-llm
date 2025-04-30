@@ -99,6 +99,10 @@ export async function runEvaluation(
     | undefined
   const providerLog = response?.providerLog
   const responseError = await run.error
+  if (responseError?.errorCode === RunErrorCodes.RateLimit) {
+    return Result.error(responseError)
+  }
+
   let error: ChainError<RunErrorCodes> | undefined
   if (!responseError && response?.object?.result === undefined) {
     error = new ChainError({
@@ -108,7 +112,6 @@ export async function runEvaluation(
     await handleEvaluationError(error, errorableUuid)
   }
 
-  // Create successful result
   await createEvaluationRunResult({
     errorableUuid,
     evaluation,

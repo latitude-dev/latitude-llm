@@ -1,5 +1,4 @@
 import {
-  EvaluationResultValue,
   EvaluationType,
   RuleEvaluationMetric,
   RuleEvaluationSpecification as specification,
@@ -76,22 +75,16 @@ async function run<M extends RuleEvaluationMetric>(
   },
   db: Database = database,
 ) {
-  try {
-    const metricSpecification = METRICS[metric]
-    if (!metricSpecification) {
-      throw new BadRequestError('Invalid evaluation metric')
-    }
-
-    if (!metricSpecification.run) {
-      throw new BadRequestError('Running is not supported for this evaluation')
-    }
-
-    const value = await metricSpecification.run({ ...rest }, db)
-
-    return value
-  } catch (error) {
-    return {
-      error: { message: (error as Error).message },
-    } as EvaluationResultValue<EvaluationType.Rule, M>
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) {
+    throw new BadRequestError('Invalid evaluation metric')
   }
+
+  if (!metricSpecification.run) {
+    throw new BadRequestError('Running is not supported for this evaluation')
+  }
+
+  const value = await metricSpecification.run({ ...rest }, db)
+
+  return value
 }

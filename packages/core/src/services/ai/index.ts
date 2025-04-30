@@ -4,7 +4,6 @@ import type { Message } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   CoreMessage,
-  CoreTool,
   jsonSchema,
   LanguageModel,
   ObjectStreamPart,
@@ -14,6 +13,7 @@ import {
   StreamObjectResult,
   StreamTextResult,
   TextStreamPart,
+  Tool,
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 
@@ -33,14 +33,12 @@ const DEFAULT_AI_SDK_PROVIDER = {
   streamObject: originalStreamObject,
 }
 type AISDKProvider = typeof DEFAULT_AI_SDK_PROVIDER
-type AIReturnObject = {
+type AIReturnObject = Pick<
+  StreamObjectResult<unknown, unknown, never>,
+  'fullStream' | 'object' | 'usage' | 'providerMetadata'
+> & {
   type: 'object'
-  data: Pick<
-    StreamObjectResult<unknown, unknown, never>,
-    'fullStream' | 'object' | 'usage' | 'providerMetadata'
-  > & {
-    providerName: Providers
-  }
+  providerName: Providers
 }
 
 // A stream of partial outputs. It uses the `experimental_output` specification.
@@ -49,19 +47,17 @@ type AIReturnObject = {
 // https://vercel.com/blog/ai-sdk-4-1#structured-output-improvements
 type PARTIAL_OUTPUT = object
 
-type AIReturnText = {
+type AIReturnText = Pick<
+  StreamTextResult<Record<string, Tool<any, any>>, PARTIAL_OUTPUT>,
+  | 'fullStream'
+  | 'text'
+  | 'usage'
+  | 'toolCalls'
+  | 'providerMetadata'
+  | 'reasoning'
+> & {
   type: 'text'
-  data: Pick<
-    StreamTextResult<Record<string, CoreTool<any, any>>, PARTIAL_OUTPUT>,
-    | 'fullStream'
-    | 'text'
-    | 'usage'
-    | 'toolCalls'
-    | 'providerMetadata'
-    | 'reasoning'
-  > & {
-    providerName: Providers
-  }
+  providerName: Providers
 }
 
 export type AIReturn<T extends StreamType> = T extends 'object'
@@ -71,7 +67,7 @@ export type AIReturn<T extends StreamType> = T extends 'object'
     : never
 
 export type StreamChunk =
-  | TextStreamPart<Record<string, CoreTool>>
+  | TextStreamPart<Record<string, Tool>>
   | ObjectStreamPart<unknown>
 
 export type ObjectOutput = 'object' | 'array' | 'no-schema' | undefined
@@ -190,14 +186,12 @@ export async function ai({
       })
 
       return Result.ok({
+        fullStream: result.fullStream,
+        object: result.object,
+        usage: result.usage,
+        providerMetadata: result.providerMetadata,
         type: 'object',
-        data: {
-          fullStream: result.fullStream,
-          object: result.object,
-          usage: result.usage,
-          providerName: providerType,
-          providerMetadata: result.providerMetadata,
-        },
+        providerName: providerType,
       })
     }
 
@@ -207,16 +201,14 @@ export async function ai({
     })
 
     return Result.ok({
+      fullStream: result.fullStream,
+      text: result.text,
+      reasoning: result.reasoning,
+      usage: result.usage,
+      toolCalls: result.toolCalls,
+      providerMetadata: result.providerMetadata,
       type: 'text',
-      data: {
-        fullStream: result.fullStream,
-        text: result.text,
-        reasoning: result.reasoning,
-        usage: result.usage,
-        toolCalls: result.toolCalls,
-        providerName: providerType,
-        providerMetadata: result.providerMetadata,
-      },
+      providerName: providerType,
     })
   } catch (e) {
     return handleAICallAPIError(e)

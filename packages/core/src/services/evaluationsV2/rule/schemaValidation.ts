@@ -77,56 +77,50 @@ async function run(
   >,
   _: Database = database,
 ) {
-  try {
-    let metadata = {
-      configuration: evaluation.configuration,
-      actualOutput: actualOutput,
-    }
-
-    let score = 0
-
-    switch (metadata.configuration.format) {
-      case 'json':
-        {
-          const ajv = new Ajv({
-            strict: true,
-            strictSchema: true,
-            validateSchema: true,
-            allErrors: true,
-          })
-
-          const validate = ajv.compile(
-            JSON.parse(metadata.configuration.schema),
-          )
-          if (ajv.errors?.length) {
-            throw new Error(ajv.errors.map((e) => e.message).join('. '))
-          }
-
-          try {
-            const result = validate(JSON.parse(metadata.actualOutput))
-            if (!result) {
-              throw new Error(validate.errors!.map((e) => e.message).join('. '))
-            }
-
-            score = 1
-          } catch (error) {
-            score = 0
-          }
-        }
-        break
-      default:
-        throw new Error('Invalid schema format')
-    }
-
-    let normalizedScore = normalizeScore(score, 0, 1)
-    let hasPassed = score === 1
-    if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, 1, 0)
-      hasPassed = score === 0
-    }
-
-    return { score, normalizedScore, metadata, hasPassed }
-  } catch (error) {
-    return { error: { message: (error as Error).message } }
+  let metadata = {
+    configuration: evaluation.configuration,
+    actualOutput: actualOutput,
   }
+
+  let score = 0
+
+  switch (metadata.configuration.format) {
+    case 'json':
+      {
+        const ajv = new Ajv({
+          strict: true,
+          strictSchema: true,
+          validateSchema: true,
+          allErrors: true,
+        })
+
+        const validate = ajv.compile(JSON.parse(metadata.configuration.schema))
+        if (ajv.errors?.length) {
+          throw new Error(ajv.errors.map((e) => e.message).join('. '))
+        }
+
+        try {
+          const result = validate(JSON.parse(metadata.actualOutput))
+          if (!result) {
+            throw new Error(validate.errors!.map((e) => e.message).join('. '))
+          }
+
+          score = 1
+        } catch (error) {
+          score = 0
+        }
+      }
+      break
+    default:
+      throw new Error('Invalid schema format')
+  }
+
+  let normalizedScore = normalizeScore(score, 0, 1)
+  let hasPassed = score === 1
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 1, 0)
+    hasPassed = score === 0
+  }
+
+  return { score, normalizedScore, metadata, hasPassed }
 }

@@ -69,40 +69,36 @@ async function run(
   >,
   _: Database = database,
 ) {
-  try {
-    let metadata = {
-      configuration: evaluation.configuration,
-      actualOutput: actualOutput,
-    }
-
-    let score = 0
-
-    switch (metadata.configuration.algorithm) {
-      case 'character':
-        score = metadata.actualOutput.length
-        break
-      case 'word':
-        score = metadata.actualOutput.trim().split(' ').length
-        break
-      case 'sentence':
-        score = metadata.actualOutput.trim().split(/[.!?]/).length
-        break
-      default:
-        throw new Error('Invalid count algorithm')
-    }
-
-    const minLength = metadata.configuration.minLength ?? 0
-    const maxLength = metadata.configuration.maxLength ?? Infinity
-
-    let normalizedScore = normalizeScore(score, minLength, maxLength)
-    if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, maxLength, minLength)
-    }
-
-    const hasPassed = score >= minLength && score <= maxLength
-
-    return { score, normalizedScore, metadata, hasPassed }
-  } catch (error) {
-    return { error: { message: (error as Error).message } }
+  let metadata = {
+    configuration: evaluation.configuration,
+    actualOutput: actualOutput,
   }
+
+  let score = 0
+
+  switch (metadata.configuration.algorithm) {
+    case 'character':
+      score = metadata.actualOutput.length
+      break
+    case 'word':
+      score = metadata.actualOutput.trim().split(' ').length
+      break
+    case 'sentence':
+      score = metadata.actualOutput.trim().split(/[.!?]/).length
+      break
+    default:
+      throw new Error('Invalid count algorithm')
+  }
+
+  const minLength = metadata.configuration.minLength ?? 0
+  const maxLength = metadata.configuration.maxLength ?? Infinity
+
+  let normalizedScore = normalizeScore(score, minLength, maxLength)
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, maxLength, minLength)
+  }
+
+  const hasPassed = score >= minLength && score <= maxLength
+
+  return { score, normalizedScore, metadata, hasPassed }
 }

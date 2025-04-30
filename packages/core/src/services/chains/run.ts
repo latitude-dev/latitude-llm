@@ -123,6 +123,7 @@ export function runChain<T extends boolean, C extends SomeChain>({
       resolveConversation(conversation)
     } catch (err) {
       const error = err as ChainError<RunErrorCodes>
+
       throw await createChainRunError({
         error,
         errorableUuid,

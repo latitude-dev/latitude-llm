@@ -3,12 +3,11 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { LogSources, Providers } from '../../../browser'
 import { Result } from '../../../lib/Result'
-import * as commits from '../../../services/commits/runDocumentAtCommit'
+import * as runDocumentAtCommitWithAutoToolResponses from './runDocumentAtCommitWithAutoToolResponses'
 import * as factories from '../../../tests/factories'
 import { mockToolRequestsCopilot } from '../../../tests/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
 import * as utils from '../../utils/progressTracker'
-import { defaultQueue, evaluationsQueue, eventsQueue } from '../../queues'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
@@ -20,31 +19,24 @@ describe('runDocumentJob', () => {
   let project: any
   let document: any
   let commit: any
-  let evaluation: any
 
   // Set up spies
   vi.spyOn(WebsocketClient, 'getSocket').mockResolvedValue({
     emit: vi.fn(),
   } as any)
-  const mocks = vi.hoisted(() => ({
-    defaultQueue: vi.fn(),
-    eventsQueue: vi.fn(),
-    evaluationsQueue: vi.fn(),
-  }))
-
-  vi.spyOn(defaultQueue, 'add').mockImplementation(mocks.defaultQueue)
-  vi.spyOn(eventsQueue, 'add').mockImplementation(mocks.eventsQueue)
-  vi.spyOn(evaluationsQueue, 'add').mockImplementation(mocks.evaluationsQueue)
 
   vi.mock('../../../redis', () => ({
     buildRedisConnection: vi.fn().mockResolvedValue({} as any),
   }))
-  vi.spyOn(commits, 'runDocumentAtCommit')
+  vi.spyOn(
+    runDocumentAtCommitWithAutoToolResponses,
+    'runDocumentAtCommitWithAutoToolResponses',
+  )
   // @ts-ignore
   vi.spyOn(utils, 'ProgressTracker').mockImplementation(() => ({
     incrementCompleted: vi.fn(),
     incrementErrors: incrementErrorsMock,
-    getProgress: vi.fn(),
+    getProgress: vi.fn().mockReturnValue({ completed: 0, errors: 0, total: 1 }),
     cleanup: vi.fn(),
   }))
 
@@ -67,12 +59,6 @@ describe('runDocumentJob', () => {
     document = setup.documents[0]
     commit = setup.commit
 
-    evaluation = await factories.createLlmAsJudgeEvaluation({
-      user: setup.user,
-      workspace,
-      name: 'Test Evaluation',
-    })
-
     mockJob = {
       data: {
         workspaceId: workspace.id,
@@ -80,42 +66,51 @@ describe('runDocumentJob', () => {
         commitUuid: commit.uuid,
         projectId: project.id,
         parameters: { param1: 'value1' },
-        evaluationId: evaluation.id,
         batchId: 'batch1',
+        autoRespondToolCalls: true,
       },
     } as Job<any>
   })
 
-  it('should run document and enqueue evaluation job on success', async () => {
+  it('should run document successfully and emit status', async () => {
     const mod = await import('./runDocumentJob')
-    const runDocumentForEvaluationJob = mod.runDocumentForEvaluationJob
+    const runDocumentJob = mod.runDocumentJob
     const mockResult = {
       errorableUuid: 'log1',
       lastResponse: Promise.resolve({ providerLog: { uuid: 'log1' } }),
       toolCalls: Promise.resolve([]),
       messages: Promise.resolve([]),
     }
-    vi.mocked(commits.runDocumentAtCommit).mockResolvedValue(
+    vi.mocked(
+      runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,
+    ).mockResolvedValue(
       // @ts-ignore
       Result.ok(mockResult),
     )
 
-    await runDocumentForEvaluationJob(mockJob)
-    expect(commits.runDocumentAtCommit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        workspace,
-        commit,
-        parameters: { param1: 'value1' },
-        source: LogSources.Evaluation,
-      }),
-    )
+    await runDocumentJob(mockJob)
 
-    expect(mocks.evaluationsQueue).toHaveBeenCalledWith('runEvaluationJob', {
+    expect(
+      runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,
+    ).toHaveBeenCalledWith({
       workspaceId: workspace.id,
+      projectId: project.id,
       documentUuid: document.documentUuid,
-      providerLogUuid: 'log1',
-      evaluationId: evaluation.id,
-      batchId: 'batch1',
+      commitUuid: commit.uuid,
+      parameters: { param1: 'value1' },
+      source: LogSources.Playground,
+      autoRespondToolCalls: true,
+    })
+
+    const socket = await WebsocketClient.getSocket()
+    expect(socket.emit).toHaveBeenCalledWith('documentBatchRunStatus', {
+      workspaceId: workspace.id,
+      data: expect.objectContaining({
+        documentUuid: document.documentUuid,
+        completed: 0,
+        errors: 0,
+        total: 1,
+      }),
     })
 
     expect(incrementErrorsMock).not.toHaveBeenCalled()
@@ -123,52 +118,44 @@ describe('runDocumentJob', () => {
 
   it('should handle errors and update progress tracker', async () => {
     const mod = await import('./runDocumentJob')
-    const runDocumentForEvaluationJob = mod.runDocumentForEvaluationJob
+    const runDocumentJob = mod.runDocumentJob
 
-    vi.mocked(commits.runDocumentAtCommit).mockRejectedValue(
-      new Error('Test error'),
-    )
+    vi.mocked(
+      runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,
+    ).mockRejectedValue(new Error('Test error'))
 
-    await runDocumentForEvaluationJob(mockJob)
+    await runDocumentJob(mockJob)
 
     const socket = await WebsocketClient.getSocket()
-    expect(socket.emit).toHaveBeenCalledWith('evaluationStatus', {
+    expect(socket.emit).toHaveBeenCalledWith('documentBatchRunStatus', {
       workspaceId: workspace.id,
       data: expect.objectContaining({
-        batchId: 'batch1',
-        evaluationId: evaluation.id,
         documentUuid: document.documentUuid,
-        version: 'v1',
+        completed: 0,
+        errors: 0,
+        total: 1,
       }),
     })
 
-    expect(commits.runDocumentAtCommit).toHaveBeenCalled()
-    expect(mocks.evaluationsQueue).not.toHaveBeenCalled()
+    expect(
+      runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,
+    ).toHaveBeenCalled()
     expect(incrementErrorsMock).toHaveBeenCalled()
   })
 
   it('should throw an error when document run fails with rate limit error', async () => {
     const mod = await import('./runDocumentJob')
-    const runDocumentForEvaluationJob = mod.runDocumentForEvaluationJob
+    const runDocumentJob = mod.runDocumentJob
     const rateLimitError = new ChainError({
       code: RunErrorCodes.RateLimit,
       message: 'Rate limit error',
     })
-    const mockResult = {
-      errorableUuid: 'log1',
-      lastResponse: Promise.resolve({ providerLog: { uuid: 'log1' } }),
-      toolCalls: Promise.resolve([]),
-      messages: Promise.resolve([]),
-      error: Promise.resolve(rateLimitError),
-    }
-    vi.mocked(commits.runDocumentAtCommit).mockResolvedValue(
-      // @ts-ignore
-      Result.ok(mockResult),
-    )
 
-    await expect(runDocumentForEvaluationJob(mockJob)).rejects.toThrow(
-      'Rate limit error',
-    )
+    vi.mocked(
+      runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,
+    ).mockRejectedValue(rateLimitError)
+
+    await expect(runDocumentJob(mockJob)).rejects.toThrow('Rate limit error')
 
     expect(incrementErrorsMock).not.toHaveBeenCalled()
   })

@@ -1,5 +1,5 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { CoreTool, LanguageModelUsage, TextStreamPart } from 'ai'
+import { Tool, LanguageModelUsage, TextStreamPart } from 'ai'
 import { describe, expect, it } from 'vitest'
 
 import { LegacyChainEvent, Providers, StreamType } from '../../../constants'
@@ -28,7 +28,7 @@ export const PARTIAL_FINISH_CHUNK = {
   },
 }
 
-export type TOOLS = Record<string, CoreTool>
+export type TOOLS = Record<string, Tool>
 type BuildChainCallback = (
   controller: ReadableStreamDefaultController<LegacyChainEvent>,
   result: AIReturn<StreamType>,
@@ -48,21 +48,18 @@ function buildFakeChain({
   })
   const result = {
     type: 'text' as 'text',
-    data: {
-      toolCalls: [] as any,
-      text: new Promise<string>(() => 'text'),
-      reasoning: new Promise<string | undefined>((resolve) =>
-        resolve(undefined),
-      ),
-      usage: new Promise<LanguageModelUsage>(() => DEFAULT_USAGE),
-      fullStream,
-      providerName: Providers.OpenAI,
-      providerMetadata: new Promise<undefined>(() => undefined),
-    },
+    toolCalls: [] as any,
+    text: new Promise<string>(() => 'text'),
+    reasoning: new Promise<string | undefined>((resolve) => resolve(undefined)),
+    usage: new Promise<LanguageModelUsage>(() => DEFAULT_USAGE),
+    fullStream,
+    providerName: Providers.OpenAI,
+    providerMetadata: new Promise<undefined>(() => undefined),
   }
   return new Promise<void>((resolve) => {
     new ReadableStream<LegacyChainEvent>({
       start(controller) {
+        // @ts-ignore - we mock result's props
         callback(controller, result).then(() => {
           resolve()
         })

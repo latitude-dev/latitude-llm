@@ -8,6 +8,8 @@ import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { getUnknownError } from './../../../lib/getUnknownError'
 import { Result } from './../../../lib/Result'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 
 async function fetchData({
   workspaceId,
@@ -72,6 +74,14 @@ export async function runEvaluationJob(job: Job<RunEvaluationJobData>) {
       evaluation,
       documentUuid,
     })
+
+    if (
+      run.error &&
+      run.error instanceof ChainError &&
+      run.error.errorCode === RunErrorCodes.RateLimit
+    ) {
+      throw run.error // The job system will retry it with exponential backoff
+    }
 
     const { ok, error } = await isSuccessful(run)
 

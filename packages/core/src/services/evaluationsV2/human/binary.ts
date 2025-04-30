@@ -57,24 +57,20 @@ async function annotate(
   >,
   _: Database = database,
 ) {
-  try {
-    let metadata = {
-      configuration: evaluation.configuration,
-      actualOutput: actualOutput,
-      reason: resultMetadata?.reason,
-    }
-
-    const score = Math.min(Math.max(Number(resultScore.toFixed(0)), 0), 1)
-
-    let normalizedScore = normalizeScore(score, 0, 1)
-    let hasPassed = score === 1
-    if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, 1, 0)
-      hasPassed = score === 0
-    }
-
-    return { score, normalizedScore, metadata, hasPassed }
-  } catch (error) {
-    return { error: { message: (error as Error).message } }
+  let metadata = {
+    configuration: evaluation.configuration,
+    actualOutput: actualOutput,
+    reason: resultMetadata?.reason,
   }
+
+  const score = Math.min(Math.max(Number(resultScore.toFixed(0)), 0), 1)
+
+  let normalizedScore = normalizeScore(score, 0, 1)
+  let hasPassed = score === 1
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 1, 0)
+    hasPassed = score === 0
+  }
+
+  return { score, normalizedScore, metadata, hasPassed }
 }

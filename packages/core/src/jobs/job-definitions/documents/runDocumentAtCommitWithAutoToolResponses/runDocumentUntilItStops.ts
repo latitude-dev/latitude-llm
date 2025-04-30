@@ -62,16 +62,11 @@ export async function runDocumentUntilItStops<T extends boolean>(
   const result = runResult.unwrap()
 
   const error = await result.error
-  if (error) {
-    return Result.error(error)
-  }
+  if (error) return Result.error(error)
 
-  if (!autoRespondToolCalls) {
-    return Result.ok(result)
-  }
+  if (!autoRespondToolCalls) return Result.ok(result)
 
   const toolCalls = await result.toolCalls
-
   if (toolCalls.length) {
     return recursiveFn(
       {

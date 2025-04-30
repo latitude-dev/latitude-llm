@@ -293,6 +293,24 @@ describe('runEvaluationJob', () => {
         }),
       )
     })
+
+    it('throws an error when runEvaluation with ChainError.RateLimit', async () => {
+      runEvaluationSpy.mockResolvedValueOnce(
+        Result.error(
+          new ChainError({
+            code: RunErrorCodes.RateLimit,
+            message: 'Rate limit error',
+          }),
+        ),
+      )
+
+      await expect(runEvaluationJob(jobData)).rejects.toThrowError(
+        new ChainError({
+          code: RunErrorCodes.RateLimit,
+          message: 'Rate limit error',
+        }),
+      )
+    })
   })
 
   describe('with invalid data', () => {

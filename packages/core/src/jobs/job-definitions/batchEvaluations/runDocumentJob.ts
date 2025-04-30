@@ -1,4 +1,3 @@
-import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
 import { LogSources } from '@latitude-data/constants'
@@ -8,6 +7,8 @@ import { ProgressTracker } from '../../utils/progressTracker'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
 import { runEvaluationV2JobKey } from '../evaluations'
 import { evaluationsQueue } from '../../queues'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 
 export type RunDocumentForEvaluationJobData = {
   workspaceId: number
@@ -61,7 +62,6 @@ export const runDocumentForEvaluationJob = async (
     }).then((r) => r.unwrap())
 
     const providerLog = (await result.lastResponse)?.providerLog
-
     if (!providerLog) {
       throw new NotFoundError('Provider log not found after running document')
     }
@@ -91,8 +91,11 @@ export const runDocumentForEvaluationJob = async (
       })
     }
   } catch (error) {
-    if (env.NODE_ENV === 'development') {
-      console.error(error)
+    if (
+      error instanceof ChainError &&
+      error.errorCode === RunErrorCodes.RateLimit
+    ) {
+      throw error // The job system will retry it with exponential backoff
     }
 
     await progressTracker.incrementErrors()

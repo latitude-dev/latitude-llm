@@ -28,17 +28,15 @@ const mocks = {
 
     return Result.ok({
       type: 'text',
-      data: {
-        text: Promise.resolve('Fake AI generated text'),
-        providerLog: Promise.resolve({ uuid: 'fake-provider-log-uuid' }),
-        usage: Promise.resolve({
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
-        }),
-        toolCalls: Promise.resolve([]),
-        fullStream,
-      },
+      text: Promise.resolve('Fake AI generated text'),
+      providerLog: Promise.resolve({ uuid: 'fake-provider-log-uuid' }),
+      usage: Promise.resolve({
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      }),
+      toolCalls: Promise.resolve([]),
+      fullStream,
     })
   }),
 }

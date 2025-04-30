@@ -103,82 +103,78 @@ async function run(
   >,
   _: Database = database,
 ) {
-  try {
-    let metadata = {
-      configuration: evaluation.configuration,
-      actualOutput: actualOutput,
-      expectedOutput: expectedOutput,
-      datasetLabel: datasetLabel,
-    }
-
-    if (!metadata.expectedOutput) {
-      throw new BadRequestError('Expected output is required')
-    }
-
-    let score = 0
-
-    switch (metadata.configuration.algorithm) {
-      case 'substring':
-        {
-          const longestMatch = longestCommonSubstring(
-            metadata.actualOutput,
-            metadata.expectedOutput,
-          )
-
-          score =
-            metadata.expectedOutput.length > 0
-              ? (longestMatch / metadata.expectedOutput.length) * 100
-              : metadata.actualOutput.length === 0
-                ? 100
-                : 0
-        }
-        break
-      case 'levenshtein_distance':
-        {
-          const edits = distance(metadata.actualOutput, metadata.expectedOutput)
-          const maxEdits = Math.max(
-            metadata.actualOutput.length,
-            metadata.expectedOutput.length,
-          )
-
-          score = (1 - edits / maxEdits) * 100
-        }
-        break
-      case 'rouge':
-        {
-          if (
-            metadata.actualOutput.trim().split(' ').length < 2 ||
-            metadata.expectedOutput.trim().split(' ').length < 2
-          ) {
-            score =
-              rouge.n(metadata.actualOutput, metadata.expectedOutput, {
-                n: 1,
-              }) * 100
-          } else {
-            score =
-              rouge.n(metadata.actualOutput, metadata.expectedOutput, {
-                n: 2,
-              }) * 100
-          }
-        }
-        break
-      default:
-        throw new Error('Invalid overlap algorithm')
-    }
-
-    score = Math.min(Math.max(Number(score.toFixed(0)), 0), 100)
-
-    let normalizedScore = normalizeScore(score, 0, 100)
-    if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, 100, 0)
-    }
-
-    const minOverlap = metadata.configuration.minOverlap ?? 0
-    const maxOverlap = metadata.configuration.maxOverlap ?? 100
-    const hasPassed = score >= minOverlap && score <= maxOverlap
-
-    return { score, normalizedScore, metadata, hasPassed }
-  } catch (error) {
-    return { error: { message: (error as Error).message } }
+  let metadata = {
+    configuration: evaluation.configuration,
+    actualOutput: actualOutput,
+    expectedOutput: expectedOutput,
+    datasetLabel: datasetLabel,
   }
+
+  if (!metadata.expectedOutput) {
+    throw new BadRequestError('Expected output is required')
+  }
+
+  let score = 0
+
+  switch (metadata.configuration.algorithm) {
+    case 'substring':
+      {
+        const longestMatch = longestCommonSubstring(
+          metadata.actualOutput,
+          metadata.expectedOutput,
+        )
+
+        score =
+          metadata.expectedOutput.length > 0
+            ? (longestMatch / metadata.expectedOutput.length) * 100
+            : metadata.actualOutput.length === 0
+              ? 100
+              : 0
+      }
+      break
+    case 'levenshtein_distance':
+      {
+        const edits = distance(metadata.actualOutput, metadata.expectedOutput)
+        const maxEdits = Math.max(
+          metadata.actualOutput.length,
+          metadata.expectedOutput.length,
+        )
+
+        score = (1 - edits / maxEdits) * 100
+      }
+      break
+    case 'rouge':
+      {
+        if (
+          metadata.actualOutput.trim().split(' ').length < 2 ||
+          metadata.expectedOutput.trim().split(' ').length < 2
+        ) {
+          score =
+            rouge.n(metadata.actualOutput, metadata.expectedOutput, {
+              n: 1,
+            }) * 100
+        } else {
+          score =
+            rouge.n(metadata.actualOutput, metadata.expectedOutput, {
+              n: 2,
+            }) * 100
+        }
+      }
+      break
+    default:
+      throw new Error('Invalid overlap algorithm')
+  }
+
+  score = Math.min(Math.max(Number(score.toFixed(0)), 0), 100)
+
+  let normalizedScore = normalizeScore(score, 0, 100)
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 100, 0)
+  }
+
+  const minOverlap = metadata.configuration.minOverlap ?? 0
+  const maxOverlap = metadata.configuration.maxOverlap ?? 100
+  const hasPassed = score >= minOverlap && score <= maxOverlap
+
+  return { score, normalizedScore, metadata, hasPassed }
 }
