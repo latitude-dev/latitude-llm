@@ -2,7 +2,6 @@
 
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EditorHeader } from '$/components/EditorHeader'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderApiKeys from '$/stores/providerApiKeys'
@@ -10,7 +9,7 @@ import {
   Commit,
   DocumentVersion,
   EvaluationType,
-  LlmEvaluationMetric,
+  LlmEvaluationMetricAnyCustom,
   ProviderApiKey,
 } from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
@@ -22,6 +21,7 @@ import { useDebouncedCallback } from 'use-debounce'
 
 import { TextEditor } from './TextEditor'
 import { Playground } from './Playground'
+import { useEvaluationParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations-v2/[evaluationUuid]/editor/_components/EvaluationEditor/hooks/useEvaluationParamaters'
 
 export function EvaluationEditor({
   document,
@@ -39,9 +39,8 @@ export function EvaluationEditor({
   const { project } = useCurrentProject()
   const { evaluation } = useCurrentEvaluationV2<
     EvaluationType.Llm,
-    LlmEvaluationMetric.Custom | LlmEvaluationMetric.CustomLabeled
+    LlmEvaluationMetricAnyCustom
   >()
-
   const { updateEvaluation, isUpdatingEvaluation } = useEvaluationsV2({
     project: project,
     commit: commit,
@@ -51,7 +50,8 @@ export function EvaluationEditor({
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
-  const [value, setValue] = useState(document.content)
+  const prompt = evaluation.configuration.prompt
+  const [value, setValue] = useState(prompt)
   const { toast } = useToast()
   const providerNames = useMemo(() => providers.map((p) => p.name), [providers])
   const debouncedSave = useDebouncedCallback(
@@ -73,13 +73,11 @@ export function EvaluationEditor({
           variant: 'destructive',
         })
 
-        setValue(document.content)
+        setValue(prompt) // Revert to the original prompt if save fails
       } else {
         runReadMetadata({
           prompt: val,
-          document,
-          fullPath: document.path,
-          promptlVersion: document.promptlVersion,
+          promptlVersion: 1,
           providerNames,
         })
       }
@@ -87,14 +85,6 @@ export function EvaluationEditor({
     500,
     { leading: false, trailing: true },
   )
-
-  const { metadata, runReadMetadata } = useMetadata()
-  useDocumentParameters({
-    commitVersionUuid: commit.uuid,
-    document,
-    metadata,
-  })
-
   const onChange = useCallback(
     (newPrompt: string) => {
       setValue(newPrompt)
@@ -103,14 +93,21 @@ export function EvaluationEditor({
     },
     [debouncedSave, setValue],
   )
+
+  const { metadata, runReadMetadata } = useMetadata()
+  useEvaluationParameters({
+    commitVersionUuid: commit.uuid,
+    document,
+    evaluation,
+    metadata,
+  })
   useEffect(() => {
     runReadMetadata({
       prompt: value,
-      fullPath: 'evaluation',
       promptlVersion: 1,
-      providerNames: providers.map((p) => p.name),
+      providerNames,
     })
-  }, [providers, value, runReadMetadata])
+  }, [providerNames, value, runReadMetadata])
   return (
     <>
       <SplitPane
@@ -135,14 +132,14 @@ export function EvaluationEditor({
                   />
                 }
                 metadata={metadata}
-                prompt={evaluation.configuration.prompt}
+                prompt={prompt}
                 onChangePrompt={onChange}
                 freeRunsCount={freeRunsCount}
                 showCopilotSetting={copilotEnabled}
               />
               <TextEditor
                 compileErrors={metadata?.errors}
-                value={evaluation.configuration.prompt}
+                value={value}
                 isMerged={commit.mergedAt !== null}
                 isSaved={!isUpdatingEvaluation}
                 onChange={onChange}
@@ -153,7 +150,12 @@ export function EvaluationEditor({
         secondPane={
           <SplitPane.Pane>
             <div className='flex-1 relative max-h-full pr-6'>
-              <Playground metadata={metadata!} />
+              <Playground
+                commit={commit}
+                document={document}
+                evaluation={evaluation}
+                metadata={metadata!}
+              />
             </div>
           </SplitPane.Pane>
         }

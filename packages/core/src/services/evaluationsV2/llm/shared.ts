@@ -84,7 +84,7 @@ export async function runPrompt<
   try {
     const result = await scan({
       prompt: prompt,
-      withParameters: LLM_EVALUATION_PROMPT_PARAMETERS,
+      withParameters: LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[],
     })
     if (result.errors.length > 0) {
       throw new ChainError({

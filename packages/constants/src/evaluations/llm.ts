@@ -180,6 +180,10 @@ export enum LlmEvaluationMetric {
   CustomLabeled = 'custom_labeled',
 }
 
+export type LlmEvaluationMetricAnyCustom =
+  | LlmEvaluationMetric.Custom
+  | LlmEvaluationMetric.CustomLabeled
+
 // prettier-ignore
 export type LlmEvaluationConfiguration<M extends LlmEvaluationMetric = LlmEvaluationMetric> =
   M extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryConfiguration :
@@ -235,4 +239,7 @@ export const LLM_EVALUATION_PROMPT_PARAMETERS = [
   'prompt',
   'config',
   'parameters',
-]
+] as const
+
+export type LlmEvaluationPromptParameter =
+  (typeof LLM_EVALUATION_PROMPT_PARAMETERS)[number]

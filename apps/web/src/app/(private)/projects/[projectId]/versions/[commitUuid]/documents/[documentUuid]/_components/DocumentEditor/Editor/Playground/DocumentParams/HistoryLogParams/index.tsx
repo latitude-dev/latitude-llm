@@ -2,12 +2,7 @@ import {
   UseDocumentParameters,
   useDocumentParameters,
 } from '$/hooks/useDocumentParameters'
-import { useGenerateDocumentLogDetailUrl } from '$/hooks/useGenerateDocumentLogDetailUrl'
-import {
-  DocumentLog,
-  DocumentVersion,
-  PlaygroundInput,
-} from '@latitude-data/core/browser'
+import { DocumentVersion, PlaygroundInput } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -16,7 +11,6 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
-import { format } from 'date-fns'
 import Link from 'next/link'
 
 import { ParametersPaginationNav } from '../PaginationNav'
@@ -28,32 +22,7 @@ import {
 import { ChangeEvent, useCallback, useEffect, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { ParametersWrapper } from '../ParametersWrapper'
-
-function usePaginatedDocumentLogUrl({
-  page,
-  selectedLog,
-  isLoading,
-}: {
-  selectedLog: DocumentLog | undefined
-  page: number | undefined
-  isLoading: boolean
-}) {
-  const uuid = selectedLog?.uuid
-  const { url } = useGenerateDocumentLogDetailUrl({
-    page,
-    documentLogUuid: uuid,
-  })
-
-  if (isLoading || !uuid || !url) return undefined
-
-  const shortCode = uuid.split('-')[0]
-  const createdAt = format(selectedLog.createdAt, 'PPp')
-  return {
-    url,
-    shortCode,
-    createdAt,
-  }
-}
+import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
 
 function DebouncedTextArea({
   input,
@@ -80,7 +49,7 @@ function DebouncedTextArea({
       setLocalValue(value)
       setInputDebounced(value)
     },
-    [setInput, input],
+    [setInputDebounced],
   )
 
   useEffect(() => {

@@ -10,15 +10,34 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
-import { ROUTES } from '$/services/routes'
 import PreviewPrompt from '$/components/PlaygroundCommon/PreviewPrompt'
 import Chat from '$/components/PlaygroundCommon/Chat'
 import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
+import {
+  Commit,
+  DocumentVersion,
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetricAnyCustom,
+} from '@latitude-data/core/browser'
+import { useEvaluationParameters } from '../hooks/useEvaluationParamaters'
+import { useRunEvaluationPlaygroundPrompt } from './useRunEvaluationPlaygroundPrompt'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import EvaluationParams from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations-v2/[evaluationUuid]/editor/_components/EvaluationEditor/Playground/EvaluationParams'
 
-const FAKE_PARAMETERS = {}
 export const Playground = memo(
-  ({ metadata }: { metadata: ConversationMetadata }) => {
+  ({
+    commit,
+    document,
+    evaluation,
+    metadata,
+  }: {
+    commit: Commit
+    document: DocumentVersion
+    evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
+    metadata: ConversationMetadata
+  }) => {
+    const { project } = useCurrentProject()
     const [mode, setMode] = useState<'preview' | 'chat'>('preview')
     const [forcedSize, setForcedSize] = useState<number | undefined>()
     const expander = useExpandParametersOrEvaluations({
@@ -35,43 +54,35 @@ export const Playground = memo(
       })
     const clearChat = useCallback(() => setMode('preview'), [setMode])
     const runPrompt = useCallback(() => setMode('chat'), [setMode])
-    const { createStreamHandler } = useStreamHandler()
-    // TODO: Implement evaluation parameters
-    const parameters = FAKE_PARAMETERS
-    const runPromptFn = useCallback(async () => {
-      try {
-        // TODO: Implement evaluation run action
-        const response = await fetch(
-          ROUTES.api.documents.detail('foo-bar').run,
-          {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              path: 'no-path',
-              projectId: 0,
-              commitUuid: 'no-commit-uuid',
-              parameters: parameters ?? {},
-              stream: true, // Explicitly request streaming
-            }),
-          },
-        )
-
-        return createStreamHandler(response)
-      } catch (error) {
-        console.error('Error running prompt:', error)
-        throw error
-      }
-    }, [parameters, createStreamHandler])
+    const { parameters, parametersReady } = useEvaluationParameters({
+      commitVersionUuid: commit.uuid,
+      document,
+      evaluation,
+    })
+    const runPromptFn = useRunEvaluationPlaygroundPrompt({
+      projectId: project.id,
+      commit,
+      document,
+      evaluation,
+      parameters,
+    })
     const firstPane = useMemo(() => {
       return (
-        <div className={cn('grid gap-2 w-full pr-0.5', expander.cssClass)} />
+        <div className={cn('grid gap-2 w-full pr-0.5', expander.cssClass)}>
+          <EvaluationParams
+            document={document}
+            commit={commit}
+            evaluation={evaluation}
+            onToggle={expander.onToggle('parameters')}
+            isExpanded={expander.parametersExpanded}
+          />
+        </div>
       )
-    }, [expander.cssClass])
+    }, [expander, commit, document, evaluation])
 
     const secondPane = useMemo(() => {
+      if (!parametersReady) return null
+
       return (
         <div className='h-full flex-grow flex-shrink min-h-0 flex flex-col gap-2 overflow-hidden pr-0.5'>
           {mode === 'preview' ? (
@@ -103,13 +114,14 @@ export const Playground = memo(
       runPromptFn,
       runPrompt,
       setExpandParameters,
+      parametersReady,
     ])
 
     return (
       <SplitPane
         direction='vertical'
         gap={4}
-        initialPercentage={50}
+        initialPercentage={30}
         forcedSize={forcedSize}
         minSize={PLAYGROUND_COLLAPSED_SIZE + PLAYGROUND_GAP_PADDING}
         dragDisabled={collapsed}

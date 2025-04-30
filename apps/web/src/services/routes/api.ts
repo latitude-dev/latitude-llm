@@ -185,6 +185,25 @@ export const API_ROUTES = {
                 comparison: (experimentUuids: string[]) =>
                   `${documentRoot}/experiments/comparison?uuids=${experimentUuids.join(',')}`,
               },
+              // These are logs serialized that includes the information included
+              // in the genered provider logs together with document log
+              evaluatedLogs: {
+                root: ({
+                  page,
+                  pageSize,
+                  filterOptions,
+                }: Partial<PaginationParameters> & {
+                  filterOptions: DocumentLogFilterOptions
+                }) =>
+                  generateDocumentLogsApiRouteWithParams({
+                    path: `${documentRoot}/evaluatedLogs`,
+                    params: {
+                      page,
+                      pageSize,
+                      filterOptions,
+                    },
+                  }),
+              },
               logs: {
                 root: ({
                   page,
