@@ -111,7 +111,7 @@ export function DocumentLogAnnotation<
               onClick={onAnnotate}
               disabled={isAnnotatingEvaluation || resultScore === undefined}
             >
-              Submit verdict
+              Submit
             </Button>
           )}
         </div>
