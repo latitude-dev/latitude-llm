@@ -99,7 +99,7 @@ const renderHeaderCell =
   (props: RenderHeaderCellProps<ClientDatasetRow>) => {
     const onClickEdit = useCallback(() => {
       setEditColumnKey(props.column.key)
-    }, [props.column.key, setEditColumnKey])
+    }, [props.column.key])
     return (
       <div className='flex items-center gap-x-2'>
         <DatasetHeadText text={column.name} role={column.role} />
@@ -131,9 +131,10 @@ export default function DataGrid({
   datasetCellRoleStyles,
 }: Props) {
   const { data } = useDatasets({}, { fallbackData: [serverDataset] })
+  const serverDatasetId = serverDataset.id
   const dataset = useMemo(() => {
-    return data.find((d) => d.id === serverDataset.id) ?? serverDataset
-  }, [data, serverDataset.id])
+    return data.find((d) => d.id === serverDatasetId) ?? serverDataset
+  }, [data, serverDatasetId, serverDataset])
   const { backgroundCssClasses } = datasetCellRoleStyles
   const [selectedRows, setSelectedRows] = useState(
     () => new Set<number>(selectedRow ? [selectedRow.id] : []),
@@ -161,7 +162,7 @@ export default function DataGrid({
       }))
 
     return [SelectColumn, ...dataColumns]
-  }, [dataset.columns])
+  }, [dataset.columns, backgroundCssClasses])
   const onCellClick = useCallback(
     (args: CellClickArgs<ClientDatasetRow>, event: CellMouseEvent) => {
       event.preventGridDefault()

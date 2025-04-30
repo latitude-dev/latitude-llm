@@ -25,6 +25,7 @@ import { NewDatasetModal } from '../RootHeader/NewDatasetModal'
 import { useNavigate } from '$/hooks/useNavigate'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 
+export const DATASET_TABLE_PAGE_SIZE = '25'
 export function DatasetsTable({
   datasets: serverDatasets,
 }: {
@@ -33,7 +34,7 @@ export function DatasetsTable({
   const navigate = useNavigate()
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
-  const pageSize = searchParams.get('pageSize') ?? '25'
+  const pageSize = searchParams.get('pageSize') ?? DATASET_TABLE_PAGE_SIZE
   const newDataset = useToggleModal()
   const [deletable, setDeletable] = useState<Dataset | null>(null)
   const { data: datasets } = useDatasets(

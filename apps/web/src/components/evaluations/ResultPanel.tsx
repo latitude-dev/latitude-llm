@@ -39,6 +39,7 @@ import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
+import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
 
 const DataGrid = dynamic(
   () =>
@@ -60,7 +61,7 @@ function EvaluatedDatasetRowModal({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const pageSize = 10
+  const pageSize = +DATASET_TABLE_PAGE_SIZE
 
   const {
     data: { page },
@@ -83,9 +84,9 @@ function EvaluatedDatasetRowModal({
     () =>
       buildPagination({
         baseUrl: ROUTES.datasets.detail(dataset.id),
-        count: count,
-        page: page,
-        pageSize: pageSize,
+        count,
+        page,
+        pageSize,
       }),
     [dataset, count, page, pageSize],
   )
@@ -314,7 +315,7 @@ export function ResultPanel<
   useEffect(() => {
     if (!ref.current) return
     setTargetRef(ref.current)
-  }, [ref.current])
+  }, [])
 
   const scrollableArea = usePanelDomRef({ selfRef: targetRef })
   useStickyNested({
