@@ -13,6 +13,7 @@ export const errorCodeEnum = latitudeSchema.enum('run_error_code_enum', [
   RunErrorCodes.MissingProvider,
   RunErrorCodes.ChainCompileError,
   RunErrorCodes.AIRunError,
+  RunErrorCodes.RateLimit,
   RunErrorCodes.UnsupportedProviderResponseTypeError,
   RunErrorCodes.AIProviderConfigError,
   RunErrorCodes.EvaluationRunMissingProviderLogError, // TODO(evalsv2): Deprecated, remove when v1 evals are migrated

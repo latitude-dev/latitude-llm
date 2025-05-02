@@ -107,42 +107,35 @@ async function annotate(
   >,
   _: Database = database,
 ) {
-  try {
-    let metadata = {
-      configuration: evaluation.configuration,
-      actualOutput: actualOutput,
-      reason: resultMetadata?.reason,
-    }
-
-    const score = Math.min(
-      Math.max(
-        Number(resultScore.toFixed(0)),
-        metadata.configuration.minRating,
-      ),
-      metadata.configuration.maxRating,
-    )
-
-    let normalizedScore = normalizeScore(
-      score,
-      metadata.configuration.minRating,
-      metadata.configuration.maxRating,
-    )
-    if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(
-        score,
-        metadata.configuration.maxRating,
-        metadata.configuration.minRating,
-      )
-    }
-
-    const minThreshold =
-      metadata.configuration.minThreshold ?? metadata.configuration.minRating
-    const maxThreshold =
-      metadata.configuration.maxThreshold ?? metadata.configuration.maxRating
-    const hasPassed = score >= minThreshold && score <= maxThreshold
-
-    return { score, normalizedScore, metadata, hasPassed }
-  } catch (error) {
-    return { error: { message: (error as Error).message } }
+  let metadata = {
+    configuration: evaluation.configuration,
+    actualOutput: actualOutput,
+    reason: resultMetadata?.reason,
   }
+
+  const score = Math.min(
+    Math.max(Number(resultScore.toFixed(0)), metadata.configuration.minRating),
+    metadata.configuration.maxRating,
+  )
+
+  let normalizedScore = normalizeScore(
+    score,
+    metadata.configuration.minRating,
+    metadata.configuration.maxRating,
+  )
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(
+      score,
+      metadata.configuration.maxRating,
+      metadata.configuration.minRating,
+    )
+  }
+
+  const minThreshold =
+    metadata.configuration.minThreshold ?? metadata.configuration.minRating
+  const maxThreshold =
+    metadata.configuration.maxThreshold ?? metadata.configuration.maxRating
+  const hasPassed = score >= minThreshold && score <= maxThreshold
+
+  return { score, normalizedScore, metadata, hasPassed }
 }

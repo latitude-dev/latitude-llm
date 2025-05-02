@@ -8,11 +8,11 @@ export async function processStreamObject({
   aiResult: Awaited<AIReturn<'object'>>
   documentLogUuid?: string
 }) {
-  const object = await aiResult.data.object
+  const object = await aiResult.object
   return {
     streamType: aiResult.type,
     documentLogUuid,
-    usage: await aiResult.data.usage,
+    usage: await aiResult.usage,
     text: objectToString(object),
     object,
   }

@@ -62,27 +62,23 @@ async function run(
   >,
   _: Database = database,
 ) {
-  try {
-    let metadata = {
-      configuration: evaluation.configuration,
-      actualOutput: actualOutput,
-    }
-
-    const regex = new RegExp(metadata.configuration.pattern, 'gm')
-
-    const matches = metadata.actualOutput.match(regex)
-
-    const score = (matches?.length ?? 0) > 0 ? 1 : 0
-
-    let normalizedScore = normalizeScore(score, 0, 1)
-    let hasPassed = score === 1
-    if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, 1, 0)
-      hasPassed = score === 0
-    }
-
-    return { score, normalizedScore, metadata, hasPassed }
-  } catch (error) {
-    return { error: { message: (error as Error).message } }
+  let metadata = {
+    configuration: evaluation.configuration,
+    actualOutput: actualOutput,
   }
+
+  const regex = new RegExp(metadata.configuration.pattern, 'gm')
+
+  const matches = metadata.actualOutput.match(regex)
+
+  const score = (matches?.length ?? 0) > 0 ? 1 : 0
+
+  let normalizedScore = normalizeScore(score, 0, 1)
+  let hasPassed = score === 1
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 1, 0)
+    hasPassed = score === 0
+  }
+
+  return { score, normalizedScore, metadata, hasPassed }
 }

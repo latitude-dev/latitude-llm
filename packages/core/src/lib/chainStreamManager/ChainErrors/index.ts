@@ -64,16 +64,20 @@ export async function createChainRunError({
     })
   }
 
-  const dbError = await createRunError({
-    data: {
-      errorableUuid,
-      errorableType,
-      code: chainError.errorCode,
-      message: chainError.message,
-      details: chainError.details,
-    },
-  }).then((r) => r.unwrap())
+  let dbError
+  if (chainError.errorCode !== RunErrorCodes.RateLimit) {
+    dbError = await createRunError({
+      data: {
+        errorableUuid,
+        errorableType,
+        code: chainError.errorCode,
+        message: chainError.message,
+        details: chainError.details,
+      },
+    }).then((r) => r.unwrap())
 
-  chainError.dbError = dbError
+    chainError.dbError = dbError
+  }
+
   return chainError
 }

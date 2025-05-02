@@ -2,7 +2,6 @@ import yaml from 'js-yaml'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
-  ErrorableEntity,
   EvaluationType,
   formatConversation,
   LlmEvaluationMetric,
@@ -10,11 +9,9 @@ import {
   LlmEvaluationBinarySpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
-import { createRunError } from '../../runErrors/create'
 import {
   EvaluationMetricCloneArgs,
   EvaluationMetricRunArgs,
@@ -116,78 +113,56 @@ async function run(
   }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Binary>,
   db: Database = database,
 ) {
-  try {
-    let metadata = {
-      configuration: evaluation.configuration,
-      actualOutput: actualOutput,
-      evaluationLogId: -1,
-      reason: '',
-      tokens: 0,
-      cost: 0,
-      duration: 0,
-    }
-
-    const provider = providers?.get(metadata.configuration.provider)
-    if (!provider) {
-      throw new BadRequestError('Provider is required')
-    }
-
-    const evaluatedLog = await serializeDocumentLog(
-      { documentLog, workspace },
-      db,
-    ).then((r) => r.unwrap())
-
-    const { response, stats, verdict } = await runPrompt({
-      prompt: buildPrompt({ ...metadata.configuration, provider }),
-      parameters: {
-        ...evaluatedLog,
-        actualOutput: actualOutput,
-        conversation: formatConversation(conversation),
-      },
-      schema: promptSchema,
-      resultUuid: resultUuid,
-      evaluation: evaluation,
-      providers: providers!,
-      workspace: workspace,
-    })
-
-    metadata.evaluationLogId = response.providerLog!.id
-    metadata.reason = verdict.reason
-    metadata.tokens = stats.tokens
-    metadata.cost = stats.costInMillicents
-    metadata.duration = stats.duration
-
-    const score = verdict.passed ? 1 : 0
-
-    let normalizedScore = normalizeScore(score, 0, 1)
-    let hasPassed = score === 1
-    if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, 1, 0)
-      hasPassed = score === 0
-    }
-
-    return { score, normalizedScore, metadata, hasPassed }
-  } catch (error) {
-    let runError
-    if (error instanceof ChainError) {
-      runError = await createRunError(
-        {
-          data: {
-            errorableUuid: resultUuid,
-            errorableType: ErrorableEntity.EvaluationResult,
-            code: error.errorCode,
-            message: error.message,
-            details: error.details,
-          },
-        },
-        db,
-      ).then((r) => r.unwrap())
-    }
-
-    return {
-      error: { message: (error as Error).message, runErrorId: runError?.id },
-    }
+  let metadata = {
+    configuration: evaluation.configuration,
+    actualOutput: actualOutput,
+    evaluationLogId: -1,
+    reason: '',
+    tokens: 0,
+    cost: 0,
+    duration: 0,
   }
+
+  const provider = providers?.get(metadata.configuration.provider)
+  if (!provider) {
+    throw new BadRequestError('Provider is required')
+  }
+
+  const evaluatedLog = await serializeDocumentLog(
+    { documentLog, workspace },
+    db,
+  ).then((r) => r.unwrap())
+
+  const { response, stats, verdict } = await runPrompt({
+    prompt: buildPrompt({ ...metadata.configuration, provider }),
+    parameters: {
+      ...evaluatedLog,
+      actualOutput: actualOutput,
+      conversation: formatConversation(conversation),
+    },
+    schema: promptSchema,
+    resultUuid: resultUuid,
+    evaluation: evaluation,
+    providers: providers!,
+    workspace: workspace,
+  })
+
+  metadata.evaluationLogId = response.providerLog!.id
+  metadata.reason = verdict.reason
+  metadata.tokens = stats.tokens
+  metadata.cost = stats.costInMillicents
+  metadata.duration = stats.duration
+
+  const score = verdict.passed ? 1 : 0
+
+  let normalizedScore = normalizeScore(score, 0, 1)
+  let hasPassed = score === 1
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 1, 0)
+    hasPassed = score === 0
+  }
+
+  return { score, normalizedScore, metadata, hasPassed }
 }
 
 async function clone(

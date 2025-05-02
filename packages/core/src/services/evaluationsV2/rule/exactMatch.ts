@@ -47,34 +47,30 @@ async function run(
   >,
   _: Database = database,
 ) {
-  try {
-    let metadata = {
-      configuration: evaluation.configuration,
-      actualOutput: actualOutput,
-      expectedOutput: expectedOutput,
-      datasetLabel: datasetLabel,
-    }
-
-    if (!metadata.expectedOutput) {
-      throw new BadRequestError('Expected output is required')
-    }
-
-    if (metadata.configuration.caseInsensitive) {
-      metadata.actualOutput = metadata.actualOutput.toLowerCase()
-      metadata.expectedOutput = metadata.expectedOutput!.toLowerCase()
-    }
-
-    const score = metadata.actualOutput === metadata.expectedOutput ? 1 : 0
-
-    let normalizedScore = normalizeScore(score, 0, 1)
-    let hasPassed = score === 1
-    if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, 1, 0)
-      hasPassed = score === 0
-    }
-
-    return { score, normalizedScore, metadata, hasPassed }
-  } catch (error) {
-    return { error: { message: (error as Error).message } }
+  let metadata = {
+    configuration: evaluation.configuration,
+    actualOutput: actualOutput,
+    expectedOutput: expectedOutput,
+    datasetLabel: datasetLabel,
   }
+
+  if (!metadata.expectedOutput) {
+    throw new BadRequestError('Expected output is required')
+  }
+
+  if (metadata.configuration.caseInsensitive) {
+    metadata.actualOutput = metadata.actualOutput.toLowerCase()
+    metadata.expectedOutput = metadata.expectedOutput!.toLowerCase()
+  }
+
+  const score = metadata.actualOutput === metadata.expectedOutput ? 1 : 0
+
+  let normalizedScore = normalizeScore(score, 0, 1)
+  let hasPassed = score === 1
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 1, 0)
+    hasPassed = score === 0
+  }
+
+  return { score, normalizedScore, metadata, hasPassed }
 }

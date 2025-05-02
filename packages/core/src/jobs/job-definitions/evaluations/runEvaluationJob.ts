@@ -10,7 +10,10 @@ import {
   ExperimentsRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
-import { runEvaluationV2 } from '../../../services/evaluationsV2/run'
+import {
+  isErrorRetryable,
+  runEvaluationV2,
+} from '../../../services/evaluationsV2/run'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
@@ -164,6 +167,9 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     if (env.NODE_ENV === 'development') {
       console.error(error)
     }
+
+    // Note: The job system will retry it with exponential backoff
+    if (isErrorRetryable(error as Error)) throw error
 
     if (experiment) {
       await updateExperimentStatus(

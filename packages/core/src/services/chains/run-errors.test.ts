@@ -35,24 +35,22 @@ let promptSource: PromptSource
 function buildMockAIresponse(chunks: TextStreamPart<TOOLS>[]) {
   return Result.ok({
     type: 'text' as 'text',
-    data: {
-      text: new Promise((resolve) => resolve('MY TEXT')),
-      usage: new Promise((resolve) =>
-        resolve({
-          promptTokens: 3,
-          completionTokens: 7,
-          totalTokens: 10,
-        }),
-      ),
-      toolCalls: new Promise((resolve) => resolve([])),
-      fullStream: new AsyncStreamIteable({
-        start(controller) {
-          chunks.forEach((chunk) => controller.enqueue(chunk))
-          controller.close()
-        },
+    text: new Promise((resolve) => resolve('MY TEXT')),
+    usage: new Promise((resolve) =>
+      resolve({
+        promptTokens: 3,
+        completionTokens: 7,
+        totalTokens: 10,
       }),
-      providerName: Providers.OpenAI,
-    },
+    ),
+    toolCalls: new Promise((resolve) => resolve([])),
+    fullStream: new AsyncStreamIteable({
+      start(controller) {
+        chunks.forEach((chunk) => controller.enqueue(chunk))
+        controller.close()
+      },
+    }),
+    providerName: Providers.OpenAI,
   } as aiModule.AIReturn<'text'>)
 }
 

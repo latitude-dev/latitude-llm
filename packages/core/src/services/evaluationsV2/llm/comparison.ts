@@ -2,7 +2,6 @@ import yaml from 'js-yaml'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
-  ErrorableEntity,
   EvaluationType,
   formatConversation,
   LlmEvaluationMetric,
@@ -10,11 +9,9 @@ import {
   LlmEvaluationComparisonSpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
-import { createRunError } from '../../runErrors/create'
 import {
   EvaluationMetricCloneArgs,
   EvaluationMetricRunArgs,
@@ -162,87 +159,65 @@ async function run(
   >,
   db: Database = database,
 ) {
-  try {
-    let metadata = {
-      configuration: evaluation.configuration,
+  let metadata = {
+    configuration: evaluation.configuration,
+    actualOutput: actualOutput,
+    expectedOutput: expectedOutput,
+    datasetLabel: datasetLabel,
+    evaluationLogId: -1,
+    reason: '',
+    tokens: 0,
+    cost: 0,
+    duration: 0,
+  }
+
+  if (!metadata.expectedOutput) {
+    throw new BadRequestError('Expected output is required')
+  }
+
+  const provider = providers?.get(metadata.configuration.provider)
+  if (!provider) {
+    throw new BadRequestError('Provider is required')
+  }
+
+  const evaluatedLog = await serializeDocumentLog(
+    { documentLog, workspace },
+    db,
+  ).then((r) => r.unwrap())
+
+  const { response, stats, verdict } = await runPrompt({
+    prompt: buildPrompt({ ...metadata.configuration, provider }),
+    parameters: {
+      ...evaluatedLog,
       actualOutput: actualOutput,
       expectedOutput: expectedOutput,
-      datasetLabel: datasetLabel,
-      evaluationLogId: -1,
-      reason: '',
-      tokens: 0,
-      cost: 0,
-      duration: 0,
-    }
+      conversation: formatConversation(conversation),
+    },
+    schema: promptSchema,
+    resultUuid: resultUuid,
+    evaluation: evaluation,
+    providers: providers!,
+    workspace: workspace,
+  })
 
-    if (!metadata.expectedOutput) {
-      throw new BadRequestError('Expected output is required')
-    }
+  metadata.evaluationLogId = response.providerLog!.id
+  metadata.reason = verdict.reason
+  metadata.tokens = stats.tokens
+  metadata.cost = stats.costInMillicents
+  metadata.duration = stats.duration
 
-    const provider = providers?.get(metadata.configuration.provider)
-    if (!provider) {
-      throw new BadRequestError('Provider is required')
-    }
+  const score = Math.min(Math.max(Number(verdict.score.toFixed(0)), 0), 100)
 
-    const evaluatedLog = await serializeDocumentLog(
-      { documentLog, workspace },
-      db,
-    ).then((r) => r.unwrap())
-
-    const { response, stats, verdict } = await runPrompt({
-      prompt: buildPrompt({ ...metadata.configuration, provider }),
-      parameters: {
-        ...evaluatedLog,
-        actualOutput: actualOutput,
-        expectedOutput: expectedOutput,
-        conversation: formatConversation(conversation),
-      },
-      schema: promptSchema,
-      resultUuid: resultUuid,
-      evaluation: evaluation,
-      providers: providers!,
-      workspace: workspace,
-    })
-
-    metadata.evaluationLogId = response.providerLog!.id
-    metadata.reason = verdict.reason
-    metadata.tokens = stats.tokens
-    metadata.cost = stats.costInMillicents
-    metadata.duration = stats.duration
-
-    const score = Math.min(Math.max(Number(verdict.score.toFixed(0)), 0), 100)
-
-    let normalizedScore = normalizeScore(score, 0, 100)
-    if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, 100, 0)
-    }
-
-    const minThreshold = metadata.configuration.minThreshold ?? 0
-    const maxThreshold = metadata.configuration.maxThreshold ?? 100
-    const hasPassed = score >= minThreshold && score <= maxThreshold
-
-    return { score, normalizedScore, metadata, hasPassed }
-  } catch (error) {
-    let runError
-    if (error instanceof ChainError) {
-      runError = await createRunError(
-        {
-          data: {
-            errorableUuid: resultUuid,
-            errorableType: ErrorableEntity.EvaluationResult,
-            code: error.errorCode,
-            message: error.message,
-            details: error.details,
-          },
-        },
-        db,
-      ).then((r) => r.unwrap())
-    }
-
-    return {
-      error: { message: (error as Error).message, runErrorId: runError?.id },
-    }
+  let normalizedScore = normalizeScore(score, 0, 100)
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 100, 0)
   }
+
+  const minThreshold = metadata.configuration.minThreshold ?? 0
+  const maxThreshold = metadata.configuration.maxThreshold ?? 100
+  const hasPassed = score >= minThreshold && score <= maxThreshold
+
+  return { score, normalizedScore, metadata, hasPassed }
 }
 
 async function clone(

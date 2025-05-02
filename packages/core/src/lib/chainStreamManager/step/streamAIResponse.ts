@@ -107,9 +107,6 @@ export async function streamAIResponse({
   }
 
   const aiResult = await ai({
-    // TODO: vitest will cry when checking the parameters passed to this
-    // function when the object mutes afterwards. To fix this, we make a deep
-    // copy of the array so that it is immutable.
     messages: optimizedAgentMessages,
     config: conversation.config as VercelConfig,
     provider,
@@ -118,14 +115,14 @@ export async function streamAIResponse({
     abortSignal,
   }).then((r) => r.unwrap())
 
-  const checkResult = checkValidStream(aiResult)
+  const checkResult = checkValidStream({ type: aiResult.type })
   if (checkResult.error) throw checkResult.error
 
-  const consumedStream = await consumeStream({
+  const { error, finishReason } = await consumeStream({
     controller,
     result: aiResult,
   })
-  if (consumedStream.error) throw consumedStream.error
+  if (error) throw error
 
   const processedResponse = await processResponse({
     aiResult,
@@ -135,7 +132,7 @@ export async function streamAIResponse({
   const providerLog = await saveOrPublishProviderLogs({
     workspace,
     streamType: aiResult.type,
-    finishReason: consumedStream.finishReason,
+    finishReason,
     data: buildProviderLogDto({
       workspace,
       source,
@@ -159,6 +156,6 @@ export async function streamAIResponse({
 
   return {
     response,
-    tokenUsage: await aiResult.data.usage,
+    tokenUsage: await aiResult.usage,
   }
 }

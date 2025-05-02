@@ -1,5 +1,4 @@
 import {
-  EvaluationResultValue,
   EvaluationType,
   HumanEvaluationMetric,
   HumanEvaluationSpecification as specification,
@@ -74,31 +73,23 @@ async function annotate<M extends HumanEvaluationMetric>(
   },
   db: Database = database,
 ) {
-  try {
-    const metricSpecification = METRICS[metric]
-    if (!metricSpecification) {
-      throw new BadRequestError('Invalid evaluation metric')
-    }
-
-    if (!metricSpecification.annotate) {
-      throw new BadRequestError(
-        'Annotating is not supported for this evaluation',
-      )
-    }
-
-    if (resultMetadata) {
-      metricSpecification.resultMetadata.partial().parse(resultMetadata)
-    }
-
-    const value = await metricSpecification.annotate(
-      { resultMetadata, ...rest },
-      db,
-    )
-
-    return value
-  } catch (error) {
-    return {
-      error: { message: (error as Error).message },
-    } as EvaluationResultValue<EvaluationType.Human, M>
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) {
+    throw new BadRequestError('Invalid evaluation metric')
   }
+
+  if (!metricSpecification.annotate) {
+    throw new BadRequestError('Annotating is not supported for this evaluation')
+  }
+
+  if (resultMetadata) {
+    metricSpecification.resultMetadata.partial().parse(resultMetadata)
+  }
+
+  const value = await metricSpecification.annotate(
+    { resultMetadata, ...rest },
+    db,
+  )
+
+  return value
 }

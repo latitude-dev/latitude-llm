@@ -66,27 +66,25 @@ describe('ProviderProcessor', () => {
       documentLogUuid: data.documentLogUuid!,
       aiResult: {
         type: 'text' as 'text',
-        data: {
-          toolCalls: new Promise((resolve) => resolve([])),
-          reasoning: new Promise<string | undefined>((resolve) =>
-            resolve(undefined),
-          ),
-          text: new Promise<string>((resolve) =>
-            resolve(data.responseText as string),
-          ),
-          usage: new Promise<LanguageModelUsage>((resolve) =>
-            resolve(data.usage),
-          ),
-          fullStream: new AsyncStreamIteable<TextStreamPart<TOOLS>>({
-            start: (controller) => {
-              controller.close()
-            },
-          }),
-          providerName: Providers.OpenAI,
-          providerMetadata: new Promise<undefined>((resolve) =>
-            resolve(undefined),
-          ),
-        },
+        toolCalls: new Promise((resolve) => resolve([])),
+        reasoning: new Promise<string | undefined>((resolve) =>
+          resolve(undefined),
+        ),
+        text: new Promise<string>((resolve) =>
+          resolve(data.responseText as string),
+        ),
+        usage: new Promise<LanguageModelUsage>((resolve) =>
+          resolve(data.usage),
+        ),
+        fullStream: new AsyncStreamIteable<TextStreamPart<TOOLS>>({
+          start: (controller) => {
+            controller.close()
+          },
+        }),
+        providerName: Providers.OpenAI,
+        providerMetadata: new Promise<undefined>((resolve) =>
+          resolve(undefined),
+        ),
       },
     })
 

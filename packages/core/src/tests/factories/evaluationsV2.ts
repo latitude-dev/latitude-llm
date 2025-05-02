@@ -36,7 +36,6 @@ export async function createEvaluationV2(
 export async function createEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
   args: CreateEvaluationV2Args<T, M>
 ): Promise<EvaluationV2<T, M>>
-
 // eslint-disable-next-line no-redeclare
 export async function createEvaluationV2<
   T extends EvaluationType,

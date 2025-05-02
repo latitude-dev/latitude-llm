@@ -87,57 +87,53 @@ async function run(
   >,
   _: Database = database,
 ) {
-  try {
-    let metadata = {
-      configuration: evaluation.configuration,
-      actualOutput: actualOutput,
-      expectedOutput: expectedOutput,
-      datasetLabel: datasetLabel,
-    }
-
-    if (!metadata.expectedOutput) {
-      throw new BadRequestError('Expected output is required')
-    }
-
-    if (!env.OPENAI_API_KEY) {
-      throw new BadRequestError('Internal OPENAI_API_KEY is not set')
-    }
-
-    const {
-      embeddings: [actualEmbedding, expectedEmbedding],
-    } = await embedMany({
-      model: createOpenAI({
-        apiKey: env.OPENAI_API_KEY,
-        compatibility: 'strict',
-      }).textEmbeddingModel('text-embedding-3-small'),
-      values: [metadata.actualOutput, metadata.expectedOutput],
-    })
-
-    let score = 0
-
-    switch (metadata.configuration.algorithm) {
-      case 'cosine_distance':
-        {
-          score = (similarity(actualEmbedding!, expectedEmbedding!) ?? 0) * 100
-        }
-        break
-      default:
-        throw new Error('Invalid similarity algorithm')
-    }
-
-    score = Math.min(Math.max(Number(score.toFixed(0)), 0), 100)
-
-    let normalizedScore = normalizeScore(score, 0, 100)
-    if (metadata.configuration.reverseScale) {
-      normalizedScore = normalizeScore(score, 100, 0)
-    }
-
-    const minSimilarity = metadata.configuration.minSimilarity ?? 0
-    const maxSimilarity = metadata.configuration.maxSimilarity ?? 100
-    const hasPassed = score >= minSimilarity && score <= maxSimilarity
-
-    return { score, normalizedScore, metadata, hasPassed }
-  } catch (error) {
-    return { error: { message: (error as Error).message } }
+  let metadata = {
+    configuration: evaluation.configuration,
+    actualOutput: actualOutput,
+    expectedOutput: expectedOutput,
+    datasetLabel: datasetLabel,
   }
+
+  if (!metadata.expectedOutput) {
+    throw new BadRequestError('Expected output is required')
+  }
+
+  if (!env.OPENAI_API_KEY) {
+    throw new BadRequestError('Internal OPENAI_API_KEY is not set')
+  }
+
+  const {
+    embeddings: [actualEmbedding, expectedEmbedding],
+  } = await embedMany({
+    model: createOpenAI({
+      apiKey: env.OPENAI_API_KEY,
+      compatibility: 'strict',
+    }).textEmbeddingModel('text-embedding-3-small'),
+    values: [metadata.actualOutput, metadata.expectedOutput],
+  })
+
+  let score = 0
+
+  switch (metadata.configuration.algorithm) {
+    case 'cosine_distance':
+      {
+        score = (similarity(actualEmbedding!, expectedEmbedding!) ?? 0) * 100
+      }
+      break
+    default:
+      throw new Error('Invalid similarity algorithm')
+  }
+
+  score = Math.min(Math.max(Number(score.toFixed(0)), 0), 100)
+
+  let normalizedScore = normalizeScore(score, 0, 100)
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 100, 0)
+  }
+
+  const minSimilarity = metadata.configuration.minSimilarity ?? 0
+  const maxSimilarity = metadata.configuration.maxSimilarity ?? 100
+  const hasPassed = score >= minSimilarity && score <= maxSimilarity
+
+  return { score, normalizedScore, metadata, hasPassed }
 }

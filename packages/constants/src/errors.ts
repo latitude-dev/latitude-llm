@@ -18,6 +18,7 @@ export enum RunErrorCodes {
   MissingProvider = 'missing_provider_error',
   ChainCompileError = 'chain_compile_error',
   AIRunError = 'ai_run_error',
+  RateLimit = 'rate_limit_error',
   UnsupportedProviderResponseTypeError = 'unsupported_provider_response_type_error',
   AIProviderConfigError = 'ai_provider_config_error',
   EvaluationRunMissingProviderLogError = 'ev_run_missing_provider_log_error', // TODO(evalsv2): Deprecated, remove when v1 evals are migrated

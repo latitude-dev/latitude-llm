@@ -103,29 +103,27 @@ describe('addMessages', () => {
       ai: vi.spyOn(aiModule, 'ai').mockResolvedValue(
         Result.ok({
           type: 'text',
-          data: {
-            text: Promise.resolve('Fake AI generated text'),
-            toolCalls: Promise.resolve([]),
-            usage: Promise.resolve({
-              promptTokens: 0,
-              completionTokens: 0,
-              totalTokens: 0,
-            }),
-            fullStream: new ReadableStream({
-              start(controller) {
-                controller.enqueue({
-                  type: 'text-delta',
-                  textDelta: 'AI gener',
-                })
-                controller.enqueue({
-                  type: 'text-delta',
-                  textDelta: 'ated text',
-                })
-                controller.close()
-              },
-            }),
-            providerName: 'openai',
-          },
+          text: Promise.resolve('Fake AI generated text'),
+          toolCalls: Promise.resolve([]),
+          usage: Promise.resolve({
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          }),
+          fullStream: new ReadableStream({
+            start(controller) {
+              controller.enqueue({
+                type: 'text-delta',
+                textDelta: 'AI gener',
+              })
+              controller.enqueue({
+                type: 'text-delta',
+                textDelta: 'ated text',
+              })
+              controller.close()
+            },
+          }),
+          providerName: 'openai',
         }) as any as TypedResult<aiModule.AIReturn<'text'>, any>,
       ),
     }
@@ -611,25 +609,23 @@ describe('addMessages', () => {
     mocks.ai = vi.spyOn(aiModule, 'ai').mockResolvedValue(
       Result.ok({
         type: 'text',
-        data: {
-          text: Promise.resolve('assistant message'),
-          toolCalls: Promise.resolve([
-            {
-              toolCallId: 'tool-call-id',
-              toolName: 'tool-call-name',
-              args: { arg1: 'value1', arg2: 'value2' },
-            },
-          ]),
-          usage: Promise.resolve({
-            promptTokens: 0,
-            completionTokens: 0,
-            totalTokens: 0,
-          }),
-          fullStream: new ReadableStream({
-            start: (controller) => controller.close(),
-          }),
-          providerName: 'openai',
-        },
+        text: Promise.resolve('assistant message'),
+        toolCalls: Promise.resolve([
+          {
+            toolCallId: 'tool-call-id',
+            toolName: 'tool-call-name',
+            args: { arg1: 'value1', arg2: 'value2' },
+          },
+        ]),
+        usage: Promise.resolve({
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        }),
+        fullStream: new ReadableStream({
+          start: (controller) => controller.close(),
+        }),
+        providerName: 'openai',
       }) as any as TypedResult<aiModule.AIReturn<'text'>, any>,
     )
 
