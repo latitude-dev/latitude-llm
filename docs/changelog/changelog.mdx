@@ -3,6 +3,63 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-05-02'>
+
+## Initial Prompt Parameters from Document Logs
+
+- Introduced evaluations playground with document logs parameters from the evaluated document.
+- [PR #1200](https://github.com/latitude-dev/latitude-llm/pull/1200)
+
+## Human Evaluations V2
+
+- Frontend and backend development for Human Evaluations V2.
+- [PR #1203](https://github.com/latitude-dev/latitude-llm/pull/1203)
+- [PR #1195](https://github.com/latitude-dev/latitude-llm/pull/1195)
+
+## Experiment Variants
+
+- Users can now create multiple experiments for the same prompt at once, enabling performance comparison.
+- [PR #1206](https://github.com/latitude-dev/latitude-llm/pull/1206)
+
+## Evaluations V2 Migrations
+
+- Migration of evaluations to version 2.
+- [PR #1204](https://github.com/latitude-dev/latitude-llm/pull/1204)
+
+## Experiments: BlankSlate & Generate Dataset Button
+
+- Introduced BlankSlate and Generate Dataset button for experiments.
+- [PR #1197](https://github.com/latitude-dev/latitude-llm/pull/1197)
+
+## Readwise Integration
+
+- Integration with Readwise.
+- [PR #1196](https://github.com/latitude-dev/latitude-llm/pull/1196)
+
+## Support for Agentic LLM Evaluations V2
+
+- Support for Agentic LLM Evaluations V2.
+- [PR #1185](https://github.com/latitude-dev/latitude-llm/pull/1185)
+
+## LLM Evaluation V2 Generator
+
+- Related to the LLM Evaluation V2 Generator.
+- [PR #1176](https://github.com/latitude-dev/latitude-llm/pull/1176)
+
+## Evaluations V2 Templates
+
+- Related to evaluations v2 templates.
+- [PR #1170](https://github.com/latitude-dev/latitude-llm/pull/1170)
+
+### Minor Updates
+
+- Fix: Include tool calls and agent response to documentLogCreated event.
+  - [PR #1202](https://github.com/latitude-dev/latitude-llm/pull/1202)
+- Fix: Parameters keeping state between input type changes.
+  - [PR #1198](https://github.com/latitude-dev/latitude-llm/pull/1198)
+
+</Update>
+
 <Update label='2025-04-21'>
 
 ## New Onboarding
@@ -52,10 +109,10 @@ We've revamped our docs in both structure and content.
 We have made several improvements to the quality of life of our users with a slew of small but important fixes:
 
 - In sidebar when creating folder/prompt save it on blur #1044
-- If there’s only one folder in the project, display it open #1051
+- If theres only one folder in the project, display it open #1051
 - When creating a prompt put focus in the editor #1052
 - When open evaluations close parameters. And the other way #1055
-- 🐛 Collapsed/Expanded parameters are broken #1000
+-  Collapsed/Expanded parameters are broken #1000
 - Move to the center prompt Add message/Reset in playground #1056
 - Rename "Publish prompt" to "Share" in playground #1060
 - Move toasts to the left side #1069
@@ -205,7 +262,7 @@ Additionally, we added a new prompt configuration section that allows you to twe
 
 ## Automatic refiner suggestions
 
-We've added a new feature that suggests changes to your prompts based on the results of your evaluations, automatically. Now, whenever you run a prompt—from the playground or the API—that has an evaluation connected, you'll see suggestions appear next to the Refine button in the prompt editor. These suggestions are directly based on the evaluation results, so you can be sure they'll improve your prompt's quality.
+We've added a new feature that suggests changes to your prompts based on the results of your evaluations, automatically. Now, whenever you run a promptfrom the playground or the APIthat has an evaluation connected, you'll see suggestions appear next to the Refine button in the prompt editor. These suggestions are directly based on the evaluation results, so you can be sure they'll improve your prompt's quality.
 
 ![](/assets/changelog/250220/suggestions.png)
 
@@ -226,7 +283,7 @@ We're very happy to introduce the first version of Latitude Agents. An agent is 
 
 The easiest way to think about agents is as a prompt that runs in a loop and has:
 
-- Some instructions—including a goal and some context—just like any other prompt
+- Some instructionsincluding a goal and some contextjust like any other prompt
 - A set of tools that it can use to interact with the world
 - A tool the agent can call to signal that it's finished its work
 
@@ -433,7 +490,7 @@ const response = await openai.chat.completions.create({
 <Update label='2024-11-26'>
 ## PromptL activated in Latitude
 
-We have implemented the new version of our template syntax – PromptL – in
+We have implemented the new version of our template syntax  a0PromptL  a0in
 Latitude. As a reminder, PromptL is a new template syntax that has native
 support for html/xml tags, contextless chain steps, as well as a slew of other
 improvements that make it writing prompts in Latitude the best way to write
@@ -444,7 +501,7 @@ prompts. [docs](https://docs.latitude.so/promptl/getting-started/introduction)
 ## Refine prompt directly from evaluation logs
 
 One of the most powerful features of Latitude is the ability to improve your
-prompts based on results from evaluations – we call it Refiner. We have now made
+prompts based on results from evaluations  a0we call it Refiner. We have now made
 this process easier by directly allowing users to choose evaluation results from
 the evaluations page and trigger the refiner from there.
 
@@ -552,28 +609,28 @@ creation flow every time.
 ## New evaluations playground
 
 We have completely revamped our evaluations to make it super simple to create
-new evaluations from scratch. From now on you’ll only need to worry about typing
-the goal of your evaluation—as well as any additional instructions that might be
+new evaluations from scratch. From now on youll only need to worry about typing
+the goal of your evaluationas well as any additional instructions that might be
 useful.
 
 ![](/assets/changelog/241113/simple-evaluations-1.png)
 
 ## Latitude Cookbook
 
-We’ve started work on Latitude’s Cookbook showcasing common use cases with
-Latitude’s SDK. Here you can find the first examples.
+Weve started work on Latitudes Cookbook showcasing common use cases with
+Latitudes SDK. Here you can find the first examples.
 
 ## Anthropic cache
 
-We have added support for Anthropic’s prompt caching beta feature.
+We have added support for Anthropics prompt caching beta feature.
 
 ## Rust SDK
 
-Our community member @Dominik Spitzli has implemented a Rust port of Latitude’s SDK!
+Our community member @Dominik Spitzli has implemented a Rust port of Latitudes SDK!
 
 ## Latitude Typescript SDK v1 released
 
-We’ve released the first major version of Latitude’s SDK, v1.0.0, currently in
+Weve released the first major version of Latitudes SDK, v1.0.0, currently in
 beta. It adds support for evaluations, pushing logs, JSON API, and more.
 
 ## Other improvements
@@ -591,7 +648,7 @@ beta. It adds support for evaluations, pushing logs, JSON API, and more.
 ## Upload external logs
 
 Users have long asked us to evaluate their prompts without having to run them
-via Latitude’s Gateway. Well, we now support this use case. You can now upload
+via Latitudes Gateway. Well, we now support this use case. You can now upload
 external logs to Latitude for evaluation so that, even if you run your prompts
 outside of Latitude, you can keep tracking their performance. We support
 uploading logs to Latitude both [from the
@@ -602,7 +659,7 @@ API](https://docs.latitude.so/guides/sdk/javascript-typescript-sdk#pushing-a-log
 ## Trigger evaluations from SDK
 
 In cases where AI agents have long running conversations with users users only
-want to evaluate the agent’s performance at particular points in time (i.e when
+want to evaluate the agents performance at particular points in time (i.e when
 the conversation has finished). You can now trigger evaluations from our [SDK /
 HTTP
 API](https://docs.latitude.so/guides/sdk/javascript-typescript-sdk#evaluating-conversations),
@@ -611,7 +668,7 @@ it.
 
 ## JSON API
 
-We’ve released the [v2 version of our Gateway API](https://docs.latitude.so/guides/api/api-access#api-access), which supports non-streaming responses for the `run` and `chat` endpoints. We've also released the v1 major version of our SDK, which introduces support for the new HTTP API version, as well as the features above described.
+Weve released the [v2 version of our Gateway API](https://docs.latitude.so/guides/api/api-access#api-access), which supports non-streaming responses for the `run` and `chat` endpoints. We've also released the v1 major version of our SDK, which introduces support for the new HTTP API version, as well as the features above described.
 
 ## Other improvements
 
