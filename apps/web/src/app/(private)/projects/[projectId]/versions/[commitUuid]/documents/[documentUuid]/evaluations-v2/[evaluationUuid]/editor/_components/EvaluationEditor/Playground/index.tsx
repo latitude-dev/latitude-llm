@@ -23,7 +23,7 @@ import {
 import { useEvaluationParameters } from '../hooks/useEvaluationParamaters'
 import { useRunEvaluationPlaygroundPrompt } from './useRunEvaluationPlaygroundPrompt'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
-import EvaluationParams from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations-v2/[evaluationUuid]/editor/_components/EvaluationEditor/Playground/EvaluationParams'
+import EvaluationParams from './EvaluationParams'
 
 export const Playground = memo(
   ({

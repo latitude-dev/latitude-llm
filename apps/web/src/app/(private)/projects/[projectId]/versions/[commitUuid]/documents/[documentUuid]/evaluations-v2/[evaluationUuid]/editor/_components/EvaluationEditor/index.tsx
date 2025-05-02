@@ -18,10 +18,15 @@ import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { TextEditor } from './TextEditor'
 import { Playground } from './Playground'
-import { useEvaluationParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations-v2/[evaluationUuid]/editor/_components/EvaluationEditor/hooks/useEvaluationParamaters'
+import { useEvaluationParameters } from './hooks/useEvaluationParamaters'
+import { BreadcrumbSeparator } from '@latitude-data/web-ui/molecules/Breadcrumb'
+import Link from 'next/link'
+import { ROUTES } from '$/services/routes'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 
 export function EvaluationEditor({
   document,
@@ -50,8 +55,8 @@ export function EvaluationEditor({
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
-  const prompt = evaluation.configuration.prompt
-  const [value, setValue] = useState(prompt)
+  const originalPrompt = evaluation.configuration.prompt
+  const [value, setValue] = useState(originalPrompt)
   const { toast } = useToast()
   const providerNames = useMemo(() => providers.map((p) => p.name), [providers])
   const debouncedSave = useDebouncedCallback(
@@ -73,7 +78,7 @@ export function EvaluationEditor({
           variant: 'destructive',
         })
 
-        setValue(prompt) // Revert to the original prompt if save fails
+        setValue(originalPrompt) // Revert to the original prompt if save fails
       } else {
         runReadMetadata({
           prompt: val,
@@ -108,6 +113,11 @@ export function EvaluationEditor({
       providerNames,
     })
   }, [providerNames, value, runReadMetadata])
+  const backUrl = ROUTES.projects
+    .detail({ id: project.id })
+    .commits.detail({ uuid: commit.uuid })
+    .documents.detail({ uuid: document.documentUuid })
+    .evaluationsV2.detail({ uuid: evaluation.uuid }).root
   return (
     <>
       <SplitPane
@@ -124,7 +134,21 @@ export function EvaluationEditor({
                 canUseSubagents={false}
                 providers={providers}
                 disabledMetadataSelectors={commit.mergedAt !== null}
-                title={evaluation.name}
+                title={
+                  <div className='flex flex-row items-center min-w-0 gap-x-2'>
+                    <Link
+                      href={backUrl}
+                      className='flex flex-row items-center min-w-0 gap-x-2'
+                    >
+                      <Icon name='chevronLeft' />
+                      <Text.H4 ellipsis noWrap>
+                        {evaluation.name}
+                      </Text.H4>
+                    </Link>
+                    <BreadcrumbSeparator />
+                    <Text.H4 color='foregroundMuted'>Editor</Text.H4>
+                  </div>
+                }
                 leftActions={
                   <ClickToCopyUuid
                     tooltipContent='Click to copy the evaluation UUID'
@@ -132,14 +156,14 @@ export function EvaluationEditor({
                   />
                 }
                 metadata={metadata}
-                prompt={prompt}
+                prompt={originalPrompt}
                 onChangePrompt={onChange}
                 freeRunsCount={freeRunsCount}
                 showCopilotSetting={copilotEnabled}
               />
               <TextEditor
                 compileErrors={metadata?.errors}
-                value={value}
+                value={originalPrompt}
                 isMerged={commit.mergedAt !== null}
                 isSaved={!isUpdatingEvaluation}
                 onChange={onChange}

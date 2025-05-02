@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
@@ -88,14 +88,26 @@ export function useSerializedLogs({
 
   const isLoading = isLoadingLog || isLoadingCounter
   const log = logs?.[0]
-  return {
-    selectedLog: log,
-    isLoadingLog: isLoadingPosition || isLoadingLog,
-    isLoading,
-    page: position?.page,
-    position: position?.position,
-    count: pagination?.count ?? 0,
-    onNextPage,
-    onPrevPage,
-  }
+  return useMemo(
+    () => ({
+      selectedLog: log,
+      isLoadingLog: isLoadingPosition || isLoadingLog,
+      isLoading,
+      page: position?.page,
+      position: position?.position,
+      count: pagination?.count ?? 0,
+      onNextPage,
+      onPrevPage,
+    }),
+    [
+      log,
+      isLoading,
+      position,
+      pagination?.count,
+      onNextPage,
+      onPrevPage,
+      isLoadingLog,
+      isLoadingPosition,
+    ],
+  )
 }

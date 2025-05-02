@@ -24,20 +24,16 @@ export function useRunEvaluationPlaygroundPrompt({
 }) {
   const { createStreamHandler } = useStreamHandler()
   const runPromptFn = useCallback(async () => {
-    // TODO: Implement action for running evaluation prompt
-    const response = await fetch(ROUTES.api.documents.detail('foo-bar').run, {
+    const route = ROUTES.api.projects
+      .detail(projectId)
+      .commits.detail(commit.uuid)
+      .documents.detail(document.documentUuid)
+      .evaluationsV2.detail(evaluation.uuid).runLlm.root
+    const response = await fetch(route, {
       method: 'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        projectId,
-        commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
-        evaluationUuid: evaluation.uuid,
-        parameters: parameters,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parameters }),
     })
 
     return createStreamHandler(response)

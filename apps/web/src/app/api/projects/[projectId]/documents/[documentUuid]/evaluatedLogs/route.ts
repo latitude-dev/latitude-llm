@@ -5,6 +5,8 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 import { serializeEvaluatedDocumentLog } from '@latitude-data/core/services/evaluationsV2/llm/serializeEvaluatedDocumentLog'
+import { UnprocessableEntityError } from '@latitude-data/core/lib/errors'
+import { ProviderLogsRepository } from '@latitude-data/core/repositories'
 
 export const GET = errorHandler(
   authHandler(
@@ -58,19 +60,22 @@ export const GET = errorHandler(
       // custom llm evalution playground
       //
       // Please consider refactoring this if you want to fetch more than one evaluated log
-      const evaluatedLogResult = await serializeEvaluatedDocumentLog({
-        workspace,
-        documentLog,
-      })
+      const providerLogsScope = new ProviderLogsRepository(workspace.id)
+      const providerLogs = await providerLogsScope
+        .findByDocumentLogUuid(documentLog.uuid)
+        .then((r) => r.unwrap())
 
-      if (evaluatedLogResult.error) {
-        return NextResponse.json(
-          { message: evaluatedLogResult.error.message },
-          { status: 422 },
+      if (!providerLogs.length) {
+        throw new UnprocessableEntityError(
+          'ProviderLogs not found for DocumentLog',
         )
       }
 
-      const evaluatedLog = evaluatedLogResult.value
+      const evaluatedLog = serializeEvaluatedDocumentLog({
+        documentLog,
+        providerLogs,
+      })
+
       return NextResponse.json([evaluatedLog], { status: 200 })
     },
   ),

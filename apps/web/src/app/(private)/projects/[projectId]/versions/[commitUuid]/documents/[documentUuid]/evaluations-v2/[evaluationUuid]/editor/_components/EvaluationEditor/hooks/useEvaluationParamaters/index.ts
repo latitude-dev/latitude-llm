@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import type { ConversationMetadata } from 'promptl-ai'
 import {
   DocumentVersion,
@@ -60,17 +60,29 @@ export function useEvaluationParameters({
     onMetadataChange(metadata)
   }, [metadata, onMetadataChange])
 
-  return {
-    parametersReady: state.logsInitiallyLoaded,
-    parameters: state.filteredParameters,
-    history: {
-      logUuid: logUuid,
+  return useMemo(
+    () => ({
+      parametersReady: state.logsInitiallyLoaded,
+      parameters: state.filteredParameters,
+      history: {
+        logUuid: logUuid,
+        setHistoryLog,
+        inputs: state.inputs,
+        expectedOutput: state.expectedOutput,
+        setInputs: state.setInputs,
+        mapLogParametersToInputs: state.mapLogParametersToInputs,
+      },
+    }),
+    [
+      logUuid,
       setHistoryLog,
-      inputs: state.inputs,
-      expectedOutput: state.expectedOutput,
-      setInputs: state.setInputs,
-      mapLogParametersToInputs: state.mapLogParametersToInputs,
-    },
-  }
+      state.expectedOutput,
+      state.filteredParameters,
+      state.inputs,
+      state.setInputs,
+      state.logsInitiallyLoaded,
+      state.mapLogParametersToInputs,
+    ],
+  )
 }
 export type UseEvaluationParameters = ReturnType<typeof useEvaluationParameters>

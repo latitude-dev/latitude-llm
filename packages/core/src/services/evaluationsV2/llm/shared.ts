@@ -23,6 +23,7 @@ import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { ProviderLogsRepository } from '../../../repositories'
 import { runAgent } from '../../agents/run'
 import { runChain } from '../../chains/run'
+import { Result } from '../../../lib/Result'
 
 export function promptTask({ provider }: { provider: ProviderApiKey }) {
   return `
@@ -56,6 +57,76 @@ ${provider.provider === Providers.Anthropic ? '</user>' : ''}
 `.trim()
 }
 
+export async function buildLlmEvaluationRunFunction<
+  M extends LlmEvaluationMetric,
+>({
+  workspace,
+  providers,
+  evaluation,
+  prompt,
+  parameters,
+  runArgs: inputRunArgs = {},
+}: {
+  workspace: Workspace
+  providers: Map<string, ProviderApiKey>
+  evaluation: EvaluationV2<EvaluationType.Llm, M>
+  prompt: string
+  parameters?: Record<string, unknown>
+  runArgs?: {
+    generateUUID?: () => string
+  }
+}) {
+  let promptConfig
+  let promptChain
+  try {
+    const result = await scan({
+      prompt: prompt,
+      withParameters: LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[],
+    })
+    if (result.errors.length > 0) {
+      return Result.error(
+        new ChainError({
+          code: RunErrorCodes.ChainCompileError,
+          message: result.errors.join('\n'),
+        }),
+      )
+    }
+
+    promptConfig = result.config as PromptConfig
+    promptChain = new PromptlChain({
+      prompt: prompt,
+      parameters: parameters,
+      adapter: Adapters.default,
+      includeSourceMap: true,
+    })
+  } catch (error) {
+    if (error instanceof ChainError) return Result.error(error)
+    return Result.error(
+      new ChainError({
+        code: RunErrorCodes.ChainCompileError,
+        message: (error as Error).message,
+      }),
+    )
+  }
+
+  const runArgs = {
+    ...inputRunArgs,
+    chain: promptChain,
+    globalConfig: promptConfig,
+    source: LogSources.Evaluation,
+    promptlVersion: 1,
+    persistErrors: false as false, // Note: required so TypeScript doesn't infer true
+    promptSource: { ...evaluation, version: 'v2' as const },
+    providersMap: providers,
+    workspace: workspace,
+  }
+
+  const isAgent = promptConfig.type === DocumentType.Agent
+  const runFunction = isAgent ? runAgent : runChain
+
+  return Result.ok({ promptChain, promptConfig, runFunction, runArgs })
+}
+
 export async function runPrompt<
   M extends LlmEvaluationMetric,
   S extends z.ZodSchema = z.ZodAny,
@@ -79,54 +150,21 @@ export async function runPrompt<
   },
   db: Database = database,
 ) {
-  let promptConfig
-  let promptChain
-  try {
-    const result = await scan({
-      prompt: prompt,
-      withParameters: LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[],
-    })
-    if (result.errors.length > 0) {
-      throw new ChainError({
-        code: RunErrorCodes.ChainCompileError,
-        message: result.errors.join('\n'),
-      })
-    }
-
-    promptConfig = result.config as PromptConfig
-    promptChain = new PromptlChain({
-      prompt: prompt,
-      parameters: parameters,
-      adapter: Adapters.default,
-      includeSourceMap: true,
-    })
-  } catch (error) {
-    if (error instanceof ChainError) throw error
-    throw new ChainError({
-      code: RunErrorCodes.ChainCompileError,
-      message: (error as Error).message,
-    })
-  }
+  const { promptChain, promptConfig, runFunction, runArgs } =
+    await buildLlmEvaluationRunFunction<M>({
+      workspace,
+      providers,
+      evaluation,
+      prompt,
+      parameters,
+      runArgs: {
+        generateUUID: () => resultUuid, // Note: this makes documentLogUuid = resultUuid
+      },
+    }).then((r) => r.unwrap())
 
   let response
   try {
-    const runArgs = {
-      chain: promptChain,
-      globalConfig: promptConfig,
-      source: LogSources.Evaluation,
-      promptlVersion: 1,
-      persistErrors: false as false, // Note: required so TypeScript doesn't infer true
-      generateUUID: () => resultUuid, // Note: this makes documentLogUuid = resultUuid
-      promptSource: { ...evaluation, version: 'v2' as const },
-      providersMap: providers,
-      workspace: workspace,
-    }
-
-    const result =
-      promptConfig.type === DocumentType.Agent
-        ? runAgent(runArgs)
-        : runChain(runArgs)
-
+    const result = runFunction(runArgs)
     const error = await result.error
     if (error) throw error
 
