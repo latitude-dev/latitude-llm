@@ -7,6 +7,7 @@ import {
   FinishReason,
   ObjectStreamPart,
   TextStreamPart,
+  RetryError,
 } from 'ai'
 
 import {
@@ -78,6 +79,14 @@ export async function consumeStream({
 }
 
 function getErrorCode(error: unknown) {
+  if (error instanceof RetryError) {
+    if (error.lastError instanceof APICallError) {
+      if (error.lastError.statusCode === 429) {
+        return RunErrorCodes.RateLimit
+      }
+    }
+  }
+
   if (error instanceof APICallError) {
     if (error.statusCode === 429) {
       return RunErrorCodes.RateLimit
