@@ -237,6 +237,13 @@ export default function EvaluationV2Form<
             description='You will configure the column that contains the expected output when you run a batch evaluation'
           />
         )}
+        {mode === 'create' && metricSpecification?.supportsManualEvaluation && (
+          <Alert
+            variant='default'
+            title='This evaluation supports manual evaluation'
+            description='You will be able to manually evaluate responses in the document logs table'
+          />
+        )}
         {mode === 'update' && (
           <FormFieldGroup label='Options' layout='vertical'>
             {metricSpecification?.supportsLiveEvaluation && (

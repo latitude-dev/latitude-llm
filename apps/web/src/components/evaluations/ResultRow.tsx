@@ -22,11 +22,13 @@ export function ResultRowHeaders<
       <TableHead>Time</TableHead>
       <TableHead>Version</TableHead>
       <TableHead>Result</TableHead>
-      <typeSpecification.ResultRowHeaders
-        metric={evaluation.metric}
-        evaluation={evaluation}
-        {...rest}
-      />
+      {!!typeSpecification.ResultRowHeaders && (
+        <typeSpecification.ResultRowHeaders
+          metric={evaluation.metric}
+          evaluation={evaluation}
+          {...rest}
+        />
+      )}
     </>
   )
 }
@@ -64,14 +66,16 @@ export function ResultRowCells<
           <ResultBadge evaluation={evaluation} result={result} />
         )}
       </TableCell>
-      <typeSpecification.ResultRowCells
-        metric={evaluation.metric}
-        evaluation={evaluation}
-        result={result}
-        commit={commit}
-        color={color}
-        {...rest}
-      />
+      {!!typeSpecification.ResultRowCells && (
+        <typeSpecification.ResultRowCells
+          metric={evaluation.metric}
+          evaluation={evaluation}
+          result={result}
+          commit={commit}
+          color={color}
+          {...rest}
+        />
+      )}
     </>
   )
 }

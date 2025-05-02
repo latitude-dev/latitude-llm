@@ -1,5 +1,6 @@
 'use client'
 
+import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
 import { MetadataInfoTabs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataInfoTabs'
 import { MetadataItem } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataItem'
 import { DocumentLogParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/logs/_components/DocumentLogs/DocumentLogInfo/Metadata'
@@ -39,7 +40,6 @@ import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
-import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
 
 const DataGrid = dynamic(
   () =>
@@ -61,7 +61,7 @@ function EvaluatedDatasetRowModal({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const pageSize = +DATASET_TABLE_PAGE_SIZE
+  const pageSize = Number(DATASET_TABLE_PAGE_SIZE)
 
   const {
     data: { page },
@@ -84,9 +84,9 @@ function EvaluatedDatasetRowModal({
     () =>
       buildPagination({
         baseUrl: ROUTES.datasets.detail(dataset.id),
-        count,
-        page,
-        pageSize,
+        count: count,
+        page: page,
+        pageSize: pageSize,
       }),
     [dataset, count, page, pageSize],
   )
@@ -238,14 +238,16 @@ function ResultPanelMetadata<
           )}
         </>
       )}
-      <typeSpecification.ResultPanelMetadata
-        metric={evaluation.metric}
-        evaluation={evaluation}
-        result={result}
-        commit={commit}
-        evaluatedDocumentLog={evaluatedDocumentLog}
-        {...rest}
-      />
+      {!!typeSpecification.ResultPanelMetadata && (
+        <typeSpecification.ResultPanelMetadata
+          metric={evaluation.metric}
+          evaluation={evaluation}
+          result={result}
+          commit={commit}
+          evaluatedDocumentLog={evaluatedDocumentLog}
+          {...rest}
+        />
+      )}
       {Object.keys(evaluatedDocumentLog.parameters).length > 0 && (
         <DocumentLogParameters documentLog={evaluatedDocumentLog} />
       )}
@@ -315,7 +317,7 @@ export function ResultPanel<
   useEffect(() => {
     if (!ref.current) return
     setTargetRef(ref.current)
-  }, [])
+  }, [ref.current])
 
   const scrollableArea = usePanelDomRef({ selfRef: targetRef })
   useStickyNested({
@@ -344,7 +346,9 @@ export function ResultPanel<
       <MetadataInfoTabs
         tabs={[
           { label: 'Metadata', value: 'metadata' },
-          ...typeSpecification.resultPanelTabs({ metric: evaluation.metric }),
+          ...(typeSpecification.resultPanelTabs?.({
+            metric: evaluation.metric,
+          }) ?? []),
         ]}
         className='w-full'
       >
@@ -366,18 +370,20 @@ export function ResultPanel<
                   {...rest}
                 />
               )}
-              <typeSpecification.ResultPanelContent
-                metric={evaluation.metric}
-                evaluation={evaluation}
-                result={result}
-                commit={commit}
-                evaluatedProviderLog={evaluatedProviderLog}
-                evaluatedDocumentLog={evaluatedDocumentLog}
-                panelRef={panelRef}
-                tableRef={tableRef}
-                selectedTab={selectedTab}
-                {...rest}
-              />
+              {!!typeSpecification.ResultPanelContent && (
+                <typeSpecification.ResultPanelContent
+                  metric={evaluation.metric}
+                  evaluation={evaluation}
+                  result={result}
+                  commit={commit}
+                  evaluatedProviderLog={evaluatedProviderLog}
+                  evaluatedDocumentLog={evaluatedDocumentLog}
+                  panelRef={panelRef}
+                  tableRef={tableRef}
+                  selectedTab={selectedTab}
+                  {...rest}
+                />
+              )}
               <div className='w-full flex justify-center pt-4'>
                 <Link
                   href={EvaluatedDocumentLogLink({

@@ -13,9 +13,6 @@ import {
   ConfigurationFormProps,
   EvaluationMetricFrontendSpecification,
   ResultBadgeProps,
-  ResultPanelProps,
-  ResultRowCellsProps,
-  ResultRowHeadersProps,
 } from '../index'
 import HumanEvaluationBinarySpecification from './Binary'
 import HumanEvaluationRatingSpecification from './Rating'
@@ -34,11 +31,6 @@ export default {
   icon: 'userRound' as IconName,
   ConfigurationForm: ConfigurationForm,
   ResultBadge: ResultBadge,
-  ResultRowHeaders: ResultRowHeaders,
-  ResultRowCells: ResultRowCells,
-  resultPanelTabs: resultPanelTabs,
-  ResultPanelMetadata: ResultPanelMetadata,
-  ResultPanelContent: ResultPanelContent,
   AnnotationForm: AnnotationForm,
   chartConfiguration: chartConfiguration,
   metrics: METRICS,
@@ -102,99 +94,6 @@ function ResultBadge<M extends HumanEvaluationMetric>({
   )
 }
 
-function ResultRowHeaders<M extends HumanEvaluationMetric>({
-  metric,
-  ...rest
-}: ResultRowHeadersProps<EvaluationType.Human, M> & {
-  metric: M
-}) {
-  const metricSpecification = METRICS[metric]
-  if (!metricSpecification) return null
-
-  return (
-    <>
-      {metricSpecification.ResultRowHeaders ? (
-        <metricSpecification.ResultRowHeaders {...rest} />
-      ) : (
-        <></>
-      )}
-    </>
-  )
-}
-
-function ResultRowCells<M extends HumanEvaluationMetric>({
-  metric,
-  ...rest
-}: ResultRowCellsProps<EvaluationType.Human, M> & {
-  metric: M
-}) {
-  const metricSpecification = METRICS[metric]
-  if (!metricSpecification) return null
-
-  return (
-    <>
-      {metricSpecification.ResultRowCells ? (
-        <metricSpecification.ResultRowCells {...rest} />
-      ) : (
-        <></>
-      )}
-    </>
-  )
-}
-
-function resultPanelTabs<M extends HumanEvaluationMetric>({
-  metric,
-}: {
-  metric: M
-}) {
-  const metricSpecification = METRICS[metric]
-  if (!metricSpecification) {
-    throw new Error('Invalid evaluation metric')
-  }
-
-  return [...(metricSpecification.resultPanelTabs ?? [])]
-}
-
-function ResultPanelMetadata<M extends HumanEvaluationMetric>({
-  metric,
-  ...rest
-}: ResultPanelProps<EvaluationType.Human, M> & {
-  metric: M
-}) {
-  const metricSpecification = METRICS[metric]
-  if (!metricSpecification) return null
-
-  return (
-    <>
-      {metricSpecification.ResultPanelMetadata ? (
-        <metricSpecification.ResultPanelMetadata {...rest} />
-      ) : (
-        <></>
-      )}
-    </>
-  )
-}
-
-function ResultPanelContent<M extends HumanEvaluationMetric>({
-  metric,
-  ...rest
-}: ResultPanelProps<EvaluationType.Human, M> & {
-  metric: M
-}) {
-  const metricSpecification = METRICS[metric]
-  if (!metricSpecification) return null
-
-  return (
-    <>
-      {metricSpecification.ResultPanelContent ? (
-        <metricSpecification.ResultPanelContent {...rest} />
-      ) : (
-        <></>
-      )}
-    </>
-  )
-}
-
 function AnnotationForm<M extends HumanEvaluationMetric>({
   metric,
   evaluation,
@@ -215,7 +114,7 @@ function AnnotationForm<M extends HumanEvaluationMetric>({
           Criteria: <Text.H6>{evaluation.configuration.criteria}</Text.H6>
         </Text.H6M>
       </div>
-      {metricSpecification.AnnotationForm ? (
+      {!!metricSpecification.AnnotationForm && (
         <metricSpecification.AnnotationForm
           evaluation={evaluation}
           resultMetadata={resultMetadata}
@@ -223,8 +122,6 @@ function AnnotationForm<M extends HumanEvaluationMetric>({
           disabled={disabled}
           {...rest}
         />
-      ) : (
-        <></>
       )}
       <TextArea
         value={resultMetadata?.reason ?? ''}

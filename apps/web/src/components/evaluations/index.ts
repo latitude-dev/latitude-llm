@@ -141,19 +141,21 @@ export type EvaluationFrontendSpecification<
   ResultBadge: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     props: ResultBadgeProps<T, M> & { metric: M },
   ) => React.ReactNode
-  ResultRowHeaders: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
+  ResultRowHeaders?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     props: ResultRowHeadersProps<T, M> & { metric: M },
   ) => React.ReactNode
-  ResultRowCells: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
+  ResultRowCells?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     props: ResultRowCellsProps<T, M> & { metric: M },
   ) => React.ReactNode
-  resultPanelTabs: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(args: {
+  resultPanelTabs?: <
+    M extends EvaluationMetric<T> = EvaluationMetric<T>,
+  >(args: {
     metric: M
   }) => TabSelectorOption<string>[]
-  ResultPanelMetadata: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
+  ResultPanelMetadata?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     props: ResultPanelProps<T, M> & { metric: M },
   ) => React.ReactNode
-  ResultPanelContent: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
+  ResultPanelContent?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     props: ResultPanelProps<T, M> & { metric: M },
   ) => React.ReactNode
   AnnotationForm?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(

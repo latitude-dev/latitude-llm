@@ -198,10 +198,8 @@ function ResultRowHeaders<M extends LlmEvaluationMetric>({
     <>
       <TableHead>Cost</TableHead>
       <TableHead>Tokens</TableHead>
-      {metricSpecification.ResultRowHeaders ? (
+      {!!metricSpecification.ResultRowHeaders && (
         <metricSpecification.ResultRowHeaders {...rest} />
-      ) : (
-        <></>
       )}
     </>
   )
@@ -238,14 +236,12 @@ function ResultRowCells<M extends LlmEvaluationMetric>({
           </Text.H5>
         )}
       </TableCell>
-      {metricSpecification.ResultRowCells ? (
+      {!!metricSpecification.ResultRowCells && (
         <metricSpecification.ResultRowCells
           result={result}
           color={color}
           {...rest}
         />
-      ) : (
-        <></>
       )}
     </>
   )
@@ -304,10 +300,8 @@ function ResultPanelMetadata<M extends LlmEvaluationMetric>({
           />
         </>
       )}
-      {metricSpecification.ResultPanelMetadata ? (
+      {!!metricSpecification.ResultPanelMetadata && (
         <metricSpecification.ResultPanelMetadata result={result} {...rest} />
-      ) : (
-        <></>
       )}
     </>
   )
@@ -327,14 +321,12 @@ function ResultPanelContent<M extends LlmEvaluationMetric>({
   return (
     <>
       {selectedTab === 'messages' && <ResultPanelMessages result={result} />}
-      {metricSpecification.ResultPanelContent ? (
+      {!!metricSpecification.ResultPanelContent && (
         <metricSpecification.ResultPanelContent
           result={result}
           selectedTab={selectedTab}
           {...rest}
         />
-      ) : (
-        <></>
       )}
     </>
   )

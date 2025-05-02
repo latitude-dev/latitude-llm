@@ -9,9 +9,6 @@ import {
   ConfigurationFormProps,
   EvaluationMetricFrontendSpecification,
   ResultBadgeProps,
-  ResultPanelProps,
-  ResultRowCellsProps,
-  ResultRowHeadersProps,
 } from '../index'
 import RuleEvaluationExactMatchSpecification from './ExactMatch'
 import RuleEvaluationLengthCountSpecification from './LengthCount'
@@ -38,11 +35,6 @@ export default {
   icon: 'computer' as IconName,
   ConfigurationForm: ConfigurationForm,
   ResultBadge: ResultBadge,
-  ResultRowHeaders: ResultRowHeaders,
-  ResultRowCells: ResultRowCells,
-  resultPanelTabs: resultPanelTabs,
-  ResultPanelMetadata: ResultPanelMetadata,
-  ResultPanelContent: ResultPanelContent,
   chartConfiguration: chartConfiguration,
   metrics: METRICS,
 }
@@ -75,99 +67,6 @@ function ResultBadge<M extends RuleEvaluationMetric>({
   return (
     <>
       <metricSpecification.ResultBadge {...rest} />
-    </>
-  )
-}
-
-function ResultRowHeaders<M extends RuleEvaluationMetric>({
-  metric,
-  ...rest
-}: ResultRowHeadersProps<EvaluationType.Rule, M> & {
-  metric: M
-}) {
-  const metricSpecification = METRICS[metric]
-  if (!metricSpecification) return null
-
-  return (
-    <>
-      {metricSpecification.ResultRowHeaders ? (
-        <metricSpecification.ResultRowHeaders {...rest} />
-      ) : (
-        <></>
-      )}
-    </>
-  )
-}
-
-function ResultRowCells<M extends RuleEvaluationMetric>({
-  metric,
-  ...rest
-}: ResultRowCellsProps<EvaluationType.Rule, M> & {
-  metric: M
-}) {
-  const metricSpecification = METRICS[metric]
-  if (!metricSpecification) return null
-
-  return (
-    <>
-      {metricSpecification.ResultRowCells ? (
-        <metricSpecification.ResultRowCells {...rest} />
-      ) : (
-        <></>
-      )}
-    </>
-  )
-}
-
-function resultPanelTabs<M extends RuleEvaluationMetric>({
-  metric,
-}: {
-  metric: M
-}) {
-  const metricSpecification = METRICS[metric]
-  if (!metricSpecification) {
-    throw new Error('Invalid evaluation metric')
-  }
-
-  return [...(metricSpecification.resultPanelTabs ?? [])]
-}
-
-function ResultPanelMetadata<M extends RuleEvaluationMetric>({
-  metric,
-  ...rest
-}: ResultPanelProps<EvaluationType.Rule, M> & {
-  metric: M
-}) {
-  const metricSpecification = METRICS[metric]
-  if (!metricSpecification) return null
-
-  return (
-    <>
-      {metricSpecification.ResultPanelMetadata ? (
-        <metricSpecification.ResultPanelMetadata {...rest} />
-      ) : (
-        <></>
-      )}
-    </>
-  )
-}
-
-function ResultPanelContent<M extends RuleEvaluationMetric>({
-  metric,
-  ...rest
-}: ResultPanelProps<EvaluationType.Rule, M> & {
-  metric: M
-}) {
-  const metricSpecification = METRICS[metric]
-  if (!metricSpecification) return null
-
-  return (
-    <>
-      {metricSpecification.ResultPanelContent ? (
-        <metricSpecification.ResultPanelContent {...rest} />
-      ) : (
-        <></>
-      )}
     </>
   )
 }

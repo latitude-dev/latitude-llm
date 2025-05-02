@@ -171,7 +171,7 @@ You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the res
           settings.metric === LlmEvaluationMetric.CustomLabeled
         }
         label='Use expected output'
-        description='Use the expected output in the evaluation prompt'
+        description='Use the {{expectedOutput}} variable in the evaluation prompt'
         onCheckedChange={(checked) => {
           if (checked) {
             setSettings({
