@@ -1,8 +1,8 @@
 'use client'
 
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
 import { MetadataInfoTabs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataInfoTabs'
-import { MetadataItem } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataItem'
 import { DocumentLogParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/logs/_components/DocumentLogs/DocumentLogInfo/Metadata'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
@@ -37,7 +37,7 @@ import { format } from 'date-fns'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { MetadataItem } from '$/components/MetadataItem'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
 

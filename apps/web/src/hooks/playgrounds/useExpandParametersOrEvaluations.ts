@@ -6,6 +6,7 @@ export function useExpandParametersOrEvaluations({
   initialExpanded,
 }: {
   initialExpanded: Section
+  hasEvaluations?: boolean
 }) {
   const [expandedSection, setExpandedSection] = useState<Section | null>(
     initialExpanded,

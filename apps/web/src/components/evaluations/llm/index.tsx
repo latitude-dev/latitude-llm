@@ -1,4 +1,4 @@
-import { MetadataItem } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataItem'
+import { useMemo } from 'react'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import useModelOptions from '$/hooks/useModelOptions'
 import { formatCount } from '$/lib/formatCount'
@@ -30,7 +30,7 @@ import {
   MessageList,
   MessageListSkeleton,
 } from '@latitude-data/web-ui/molecules/ChatWrapper'
-import { useMemo } from 'react'
+import { MetadataItem } from '$/components/MetadataItem'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,

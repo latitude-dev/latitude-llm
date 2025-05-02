@@ -60,7 +60,7 @@ export function useNodeValidator({
 
     await saveValue({ path: value })
     setIsEditing(false)
-  }, [inputRef, validationError, saveValue, leaveWithoutSave])
+  }, [inputRef, saveValue, leaveWithoutSave, setIsEditing])
 
   useOnClickOutside({
     ref: inputRef,

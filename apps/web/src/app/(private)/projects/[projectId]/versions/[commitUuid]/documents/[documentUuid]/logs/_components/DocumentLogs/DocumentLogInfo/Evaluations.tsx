@@ -27,8 +27,8 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
-import { MetadataItem } from '../../../../_components/MetadataItem'
 import { ResultCellContent } from '../../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
+import { MetadataItem } from '$/components/MetadataItem'
 
 type Props<
   T extends EvaluationType = EvaluationType,
