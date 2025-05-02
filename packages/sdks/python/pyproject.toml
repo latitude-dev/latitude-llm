@@ -1,6 +1,6 @@
 [project]
 name = "latitude-sdk"
-version = "2.0.1"
+version = "2.0.2"
 description = "Latitude SDK for Python"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
@@ -15,7 +15,7 @@ dependencies = [
     "httpx-sse>=0.4.0",
     "pydantic>=2.10.3",
     "typing-extensions>=4.12.2",
-    "promptl-ai>=1.0.4",
+    "promptl-ai>=1.0.5",
 ]
 
 [dependency-groups]

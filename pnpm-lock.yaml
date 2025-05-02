@@ -111,8 +111,8 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       promptl-ai:
-        specifier: ^0.5.4
-        version: 0.5.4
+        specifier: ^0.5.5
+        version: 0.5.5
       rate-limiter-flexible:
         specifier: ^5.0.3
         version: 5.0.5
@@ -280,8 +280,8 @@ importers:
         specifier: ^1.161.6
         version: 1.232.6
       promptl-ai:
-        specifier: ^0.5.4
-        version: 0.5.4
+        specifier: ^0.5.5
+        version: 0.5.5
       rate-limiter-flexible:
         specifier: ^5.0.3
         version: 5.0.5
@@ -596,8 +596,8 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0
       promptl-ai:
-        specifier: ^0.5.4
-        version: 0.5.4
+        specifier: ^0.5.5
+        version: 0.5.5
       zod:
         specifier: ^3.23.8
         version: 3.24.2
@@ -786,8 +786,8 @@ importers:
         specifier: ^4.2.0
         version: 4.10.1
       promptl-ai:
-        specifier: ^0.5.4
-        version: 0.5.4
+        specifier: ^0.5.5
+        version: 0.5.5
       react:
         specifier: ^18.3.0
         version: 18.3.0
@@ -914,8 +914,8 @@ importers:
         specifier: 3.3.2
         version: 3.3.2
       promptl-ai:
-        specifier: ^0.5.4
-        version: 0.5.4
+        specifier: ^0.5.5
+        version: 0.5.5
       typescript:
         specifier: ^5.5.4
         version: 5.8.2
@@ -1168,8 +1168,8 @@ importers:
         specifier: ^16.1.0
         version: 16.1.0(postcss@8.5.3)
       promptl-ai:
-        specifier: ^0.5.4
-        version: 0.5.4
+        specifier: ^0.5.5
+        version: 0.5.5
       recast:
         specifier: ^0.23.4
         version: 0.23.11
@@ -2452,7 +2452,7 @@ packages:
     resolution: {integrity: sha512-soEIOALTfTK6EjmKMMoLugwaP0rzkad90iIWd1hMO9ARkSAyjfMfkRRhLvD5qH7vvM0Cg72pieUfR6yh6XxC4w==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     peerDependencies:
-      eslint: ^6.0.0 || ^7.0.0 || >=8.0.0 || >=8.x
+      eslint: ^6.0.0 || ^7.0.0 || >=8.0.0
 
   '@eslint-community/regexpp@4.12.1':
     resolution: {integrity: sha512-CCZCDJuduB9OUkFkY2IgppNZMi2lBQgD2qzwXkEia16cge2pijY/aXi96CJMquDMn3nJdlPV1A5KrJEXwfLNzQ==}
@@ -2873,7 +2873,7 @@ packages:
   '@mdx-js/react@2.3.0':
     resolution: {integrity: sha512-zQH//gdOmuu7nt2oJR29vFhDv88oGPmVw6BggmrHeMI+xgEkp1B2dX9/bMBSYtK0dyLX/aOmesKS09g222K1/g==}
     peerDependencies:
-      react: '>=16 || >=18.x'
+      react: '>=16'
 
   '@microsoft/tsdoc-config@0.16.2':
     resolution: {integrity: sha512-OGiIzzoBLgWWR0UdRJX98oYO+XKGf7tiK4Zk6tQ/E4IJqGCe7dvkTvgDZV5cFJUzLGDOjeAXrnZoA6QkVySuxw==}
@@ -5503,7 +5503,7 @@ packages:
     resolution: {integrity: sha512-4Z+L8I2OqhZV8qA132M4wNL30ypZGYOQVBfMgxDH/K5UX0PNqTu1c6za9ST5r9+tavvHiTWmBnKzpCJ/GlVFtg==}
     engines: {node: ^18.18.0 || >=20.0.0}
     peerDependencies:
-      eslint: ^8.56.0 || >=8.x
+      eslint: ^8.56.0
       typescript: '*'
     peerDependenciesMeta:
       typescript:
@@ -5584,7 +5584,7 @@ packages:
     resolution: {integrity: sha512-n8oxjeb5aIbPFEtmQxQYOLI0i9n5ySBEY/ZEHHZqKQSFnxio1rv6dthascc9dLuwrL0RC5mPCxB7vnAVGAYWAQ==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     peerDependencies:
-      eslint: ^6.0.0 || ^7.0.0 || ^8.0.0 || >=8.x
+      eslint: ^6.0.0 || ^7.0.0 || ^8.0.0
 
   '@typescript-eslint/utils@6.21.0':
     resolution: {integrity: sha512-NfWVaC8HP9T8cbKQxHcsJBY5YE1O33+jpMwN45qzWWaPDZgLIbo12toGMWnmhvCpd3sIxkpDw3Wv1B3dYrbDQQ==}
@@ -10202,8 +10202,8 @@ packages:
     resolution: {integrity: sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==}
     engines: {node: '>=0.4.0'}
 
-  promptl-ai@0.5.4:
-    resolution: {integrity: sha512-eUiSCtVFEtdy4+9fZf62Vpf5/4IdRIVHKu3gPjUm6Qg0bATywtLcOKQHOWmmCSQ9HLfKlGwN0DBNnKhVEmrpvw==}
+  promptl-ai@0.5.5:
+    resolution: {integrity: sha512-rKgFrDD0qgKK6fe7b+dU2YPNMkbfmXI4NeiXXyI6Ntnbj75xT6aAuoleR7O5wVzd5juCMCsZYNrJQv3HrXLhxw==}
 
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
@@ -22668,7 +22668,7 @@ snapshots:
 
   progress@2.0.3: {}
 
-  promptl-ai@0.5.4:
+  promptl-ai@0.5.5:
     dependencies:
       acorn: 8.14.1
       code-red: 1.0.4
