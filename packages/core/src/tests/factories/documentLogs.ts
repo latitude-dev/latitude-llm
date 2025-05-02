@@ -25,6 +25,8 @@ export type IDocumentLogData = {
   parameters?: Record<string, unknown>
   customIdentifier?: string
   source?: LogSources
+  experimentId?: number
+  totalDuration?: number
   createdAt?: Date
   automaticProvidersGeneratedAt?: Date
   skipProviderLogs?: boolean
@@ -105,6 +107,8 @@ export async function createDocumentLog({
   parameters,
   customIdentifier,
   source,
+  experimentId,
+  totalDuration,
   createdAt,
   skipProviderLogs,
   automaticProvidersGeneratedAt,
@@ -129,8 +133,9 @@ export async function createDocumentLog({
   }
 
   const duration =
+    totalDuration ??
     Math.floor(Math.random() * 100) +
-    providerLogs.reduce((acc, log) => acc + (log?.duration ?? 0), 0)
+      providerLogs.reduce((acc, log) => acc + (log?.duration ?? 0), 0)
 
   let documentLog = await ogCreateDocumentLog({
     commit,
@@ -141,6 +146,7 @@ export async function createDocumentLog({
       parameters: parameters ?? {},
       customIdentifier,
       source: source ?? LogSources.API,
+      experimentId,
       duration,
       createdAt,
     },
