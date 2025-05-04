@@ -121,7 +121,7 @@ export const useTempNodes = create<TmpFoldersState>((set, get) => ({
       return {
         tmpFolders: {
           ...state.tmpFolders,
-          ['']: [node, ...existingNodes]
+          ['']: [node, ...existingNodes],
         },
       }
     })
