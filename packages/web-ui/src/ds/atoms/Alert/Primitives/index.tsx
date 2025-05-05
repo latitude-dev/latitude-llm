@@ -57,7 +57,7 @@ const AlertDescription = forwardRef<
   <div
     ref={ref}
     className={cn(
-      'text-sm [&_p]:leading-relaxed whitespace-pre-wrap break-all',
+      'text-sm [&_p]:leading-relaxed whitespace-pre-wrap word-break-keep-all',
       className,
     )}
     {...props}
