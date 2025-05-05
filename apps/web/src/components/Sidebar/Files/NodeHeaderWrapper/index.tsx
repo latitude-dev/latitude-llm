@@ -1,6 +1,6 @@
 'use client'
 import { useDraggable } from '@latitude-data/web-ui/hooks/useDnD'
-import { RefObject, useEffect, useRef, useState } from 'react'
+import { ReactNode, RefObject, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -9,47 +9,15 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ModifiedDocumentType } from '@latitude-data/core/browser'
-import {
-  MODIFICATION_BACKGROUNDS,
-  MODIFICATION_COLORS,
-  MODIFICATION_ICONS,
-} from '@latitude-data/web-ui/molecules/DocumentChange'
+import { MODIFICATION_ICONS } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { useHover } from '@latitude-data/web-ui/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
 import { useNodeValidator } from './useNodeValidator'
+import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
+import { IndentationBar } from '$/components/Sidebar/Files/IndentationBar'
 
 export type IndentType = { isLast: boolean }
-function IndentationBar({
-  indentation,
-  hasChildren,
-}: {
-  hasChildren: boolean
-  indentation: IndentType[]
-}) {
-  return indentation.map((indent, index) => {
-    const anyNextIndentIsNotLast = !!indentation
-      .slice(index)
-      .find((i) => !i.isLast)
-    const showBorder = anyNextIndentIsNotLast ? false : indent.isLast
-    return (
-      <div key={index} className='h-6 min-w-6'>
-        {index > 0 ? (
-          <div className='relative w-6 h-full flex justify-center'>
-            {hasChildren || !showBorder ? (
-              <div className='-ml-px bg-border w-px h-8 -mt-1' />
-            ) : (
-              <div className='-ml-px relative -mt-1'>
-                <div className='border-l h-2.5' />
-                <div className='absolute top-2.5 border-l border-b h-2 w-2 rounded-bl-sm' />
-              </div>
-            )}
-          </div>
-        ) : null}
-      </div>
-    )
-  })
-}
 
 const MODIFICATION_LABELS: Record<ModifiedDocumentType, string> = {
   [ModifiedDocumentType.Created]: 'Created',
@@ -77,6 +45,7 @@ export type NodeHeaderWrapperProps = {
   onSaveValue: (args: { path: string }) => void
   onSaveValueAndTab?: (args: { path: string }) => void
   onLeaveWithoutSave?: () => void
+  children?: ReactNode
 }
 
 function NodeHeaderWrapper({
@@ -98,6 +67,7 @@ function NodeHeaderWrapper({
   draggble,
   url,
   onClick,
+  children,
 }: NodeHeaderWrapperProps) {
   const [tmpName, setTmpName] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -129,11 +99,7 @@ function NodeHeaderWrapper({
     }
   }, [inputRef])
   const showActions = !isEditing && actions && actions.length > 0
-
-  const color = changeType ? MODIFICATION_COLORS[changeType] : 'foreground'
-  const selectedBackgroundColor = changeType
-    ? MODIFICATION_BACKGROUNDS[changeType]
-    : 'bg-accent'
+  const { color, selectedBackgroundColor } = useModifiedColors({ changeType })
   const changeIcon = changeType ? MODIFICATION_ICONS[changeType] : undefined
   const ItemComponent = url ? Link : 'div'
   return (
@@ -141,106 +107,114 @@ function NodeHeaderWrapper({
       tabIndex={0}
       ref={nodeRef as RefObject<HTMLDivElement>}
       className={cn(
-        'max-w-full group/row flex flex-row my-0.5 cursor-pointer items-center gap-2',
+        'max-w-full group/row flex flex-col my-0.5 cursor-pointer',
         {
           'hover:bg-muted': !selected,
           [selectedBackgroundColor]: selected,
-          'pr-2': showActions || !!changeIcon,
         },
       )}
     >
-      <ItemComponent
-        href={url ?? '#'}
-        onClick={onClick}
-        className={cn(
-          'relative min-w-0 flex-grow flex flex-row items-center py-0.5',
-          {
-            'cursor-pointer': !draggble?.isDragging,
-            'cursor-grab': canDrag && draggble?.isDragging,
-          },
-        )}
-        ref={draggble?.setNodeRef}
-        {...(draggble ? draggble.listeners : {})}
-        {...(draggble ? draggble.attributes : {})}
+      <div
+        className={cn('w-full flex flex-row gap-x-2 items-center', {
+          'pr-2': showActions || !!changeIcon,
+        })}
       >
-        {canDrag ? (
-          <div className='absolute left-1 top-0 bottom-0 w-4 flex items-center transition opacity-0 group-hover/row:opacity-100'>
-            <Icon name='gridVertical' color='foregroundMuted' />
+        <ItemComponent
+          href={url ?? '#'}
+          onClick={onClick}
+          className={cn(
+            'relative min-w-0 flex-grow flex flex-row items-center py-0.5',
+            {
+              'cursor-pointer': !draggble?.isDragging,
+              'cursor-grab': canDrag && draggble?.isDragging,
+            },
+          )}
+          ref={draggble?.setNodeRef}
+          {...(draggble ? draggble.listeners : {})}
+          {...(draggble ? draggble.attributes : {})}
+        >
+          {canDrag ? (
+            <div className='absolute left-1 top-0 bottom-0 w-4 flex items-center transition opacity-0 group-hover/row:opacity-100'>
+              <Icon name='gridVertical' color='foregroundMuted' />
+            </div>
+          ) : null}
+          <IndentationBar
+            indentation={indentation}
+            hasChildren={open && hasChildren}
+          />
+          <div className='flex flex-row items-center gap-x-1 mr-1'>
+            {icons.map((icon, index) => (
+              <Icon key={index} name={icon} color={color} />
+            ))}
+          </div>
+          <div className='flex flex-col'>
+            {isEditing ? (
+              <div className='pr-1 flex items-center'>
+                <Input
+                  tabIndex={0}
+                  ref={inputRef}
+                  autoFocus
+                  value={inputValue?.trim()}
+                  onKeyDown={onInputKeyDown}
+                  onChange={onInputChange}
+                  errors={error ? [error] : undefined}
+                  placeholder={
+                    onSaveValueAndTab
+                      ? 'Tab to create another folder'
+                      : isFile
+                        ? 'File name'
+                        : 'Folder name'
+                  }
+                  name='filename'
+                  data-1p-ignore
+                  type='text'
+                  size='small'
+                  errorStyle='tooltip'
+                />
+              </div>
+            ) : (
+              <div className='flex-grow flex-shrink truncate'>
+                <TruncatedTooltip content={name}>
+                  <Text.H5M ellipsis noWrap userSelect={false} color={color}>
+                    {name && name !== ' ' ? name : tmpName}
+                  </Text.H5M>
+                </TruncatedTooltip>
+              </div>
+            )}
+          </div>
+        </ItemComponent>
+        {showActions && isHovered ? (
+          <div className={cn('flex items-center gap-x-2')}>
+            {actions.map((action, index) => (
+              <Tooltip
+                key={index}
+                asChild
+                trigger={
+                  <Button
+                    variant='ghost'
+                    size='none'
+                    lookDisabled={action.lookDisabled}
+                    disabled={action.disabled}
+                    onClick={action.onClick}
+                    iconProps={{
+                      color: 'foregroundMuted',
+                      name: action.iconProps?.name!,
+                    }}
+                  />
+                }
+              >
+                {action.label}
+              </Tooltip>
+            ))}
           </div>
         ) : null}
-        <IndentationBar
-          indentation={indentation}
-          hasChildren={open && hasChildren}
-        />
-        <div className='flex flex-row items-center gap-x-1 mr-1'>
-          {icons.map((icon, index) => (
-            <Icon key={index} name={icon} color={color} />
-          ))}
-        </div>
-        {isEditing ? (
-          <div className='pr-1 flex items-center'>
-            <Input
-              tabIndex={0}
-              ref={inputRef}
-              autoFocus
-              value={inputValue?.trim()}
-              onKeyDown={onInputKeyDown}
-              onChange={onInputChange}
-              errors={error ? [error] : undefined}
-              placeholder={
-                onSaveValueAndTab
-                  ? 'Tab to create another folder'
-                  : isFile
-                    ? 'File name'
-                    : 'Folder name'
-              }
-              name='filename'
-              data-1p-ignore
-              type='text'
-              size='small'
-              errorStyle='tooltip'
-            />
-          </div>
-        ) : (
-          <div className='flex-grow flex-shrink truncate'>
-            <TruncatedTooltip content={name}>
-              <Text.H5M ellipsis noWrap userSelect={false} color={color}>
-                {name && name !== ' ' ? name : tmpName}
-              </Text.H5M>
-            </TruncatedTooltip>
-          </div>
+        {changeIcon && (
+          <Tooltip trigger={<Icon name={changeIcon} color={color} />}>
+            {MODIFICATION_LABELS[changeType!]}
+          </Tooltip>
         )}
-      </ItemComponent>
-      {showActions && isHovered ? (
-        <div className={cn('flex items-center gap-x-2')}>
-          {actions.map((action, index) => (
-            <Tooltip
-              key={index}
-              asChild
-              trigger={
-                <Button
-                  variant='ghost'
-                  size='none'
-                  lookDisabled={action.lookDisabled}
-                  disabled={action.disabled}
-                  onClick={action.onClick}
-                  iconProps={{
-                    color: 'foregroundMuted',
-                    name: action.iconProps?.name!,
-                  }}
-                />
-              }
-            >
-              {action.label}
-            </Tooltip>
-          ))}
-        </div>
-      ) : null}
-      {changeIcon && (
-        <Tooltip trigger={<Icon name={changeIcon} color={color} />}>
-          {MODIFICATION_LABELS[changeType!]}
-        </Tooltip>
-      )}
+      </div>
+      {children ? children : null}
     </div>
   )
 }

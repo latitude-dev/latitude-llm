@@ -129,7 +129,7 @@ export function EvaluationPage<
     if (targetUrl !== window.location.href) {
       router.replace(targetUrl, { scroll: false })
     }
-  }, [debouncedSearch])
+  }, [debouncedSearch, router])
 
   const { data: commits, isLoading: isLoadingCommits } = useCommits()
 

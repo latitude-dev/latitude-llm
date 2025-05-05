@@ -244,7 +244,7 @@ function EditEvaluation<
         onClick={() => setOpenUpdateModal(true)}
         disabled={isUpdatingEvaluation}
       >
-        Edit evaluation
+        Settings
       </TableWithHeader.Button>
       <ConfirmModal
         dismissible

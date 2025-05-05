@@ -11,6 +11,7 @@ import NodeHeaderWrapper, {
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
 import { ROUTES } from '$/services/routes'
+import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
 
 export default function DocumentHeader({
   open,
@@ -52,18 +53,19 @@ export default function DocumentHeader({
       }
       reset()
     },
-    [reset, onCreateFile, onRenameFile, node.path, node.isPersisted],
+    [reset, onCreateFile, onRenameFile, node],
   )
+  const documentUuid = node.doc!.documentUuid
   const url = useMemo(() => {
     if (selected) return undefined
     if (!node.isPersisted) return undefined
-    if (!node.doc?.documentUuid) return undefined
+    if (!documentUuid) return undefined
 
     return ROUTES.projects
       .detail({ id: sidebarLinkContext.projectId })
       .commits.detail({ uuid: sidebarLinkContext.commitUuid })
-      .documents.detail({ uuid: node.doc.documentUuid }).root
-  }, [node.doc!.documentUuid, selected, node.isPersisted, sidebarLinkContext])
+      .documents.detail({ uuid: documentUuid }).root
+  }, [documentUuid, selected, node.isPersisted, sidebarLinkContext])
   const [isEditing, setIsEditing] = useState(node.name === ' ')
   const actions = useMemo<MenuOption[]>(
     () => [
@@ -91,18 +93,12 @@ export default function DocumentHeader({
           if (isMerged) {
             onMergeCommitClick()
           } else {
-            onDeleteFile({ node, documentUuid: node.doc!.documentUuid })
+            onDeleteFile({ node, documentUuid })
           }
         },
       },
     ],
-    [
-      node.doc!.documentUuid,
-      onDeleteFile,
-      isLoading,
-      isMerged,
-      onMergeCommitClick,
-    ],
+    [node, documentUuid, onDeleteFile, isLoading, isMerged, onMergeCommitClick],
   )
   const icon = useMemo<IconName>(() => {
     const docType = node.doc?.documentType
@@ -129,6 +125,14 @@ export default function DocumentHeader({
       onSaveValue={onSaveValue}
       onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
       icons={[icon]}
-    />
+    >
+      {selected ? (
+        <EvaluationList
+          changeType={node.changeType}
+          indentation={indentation}
+          documentUuid={documentUuid}
+        />
+      ) : null}
+    </NodeHeaderWrapper>
   )
 }
