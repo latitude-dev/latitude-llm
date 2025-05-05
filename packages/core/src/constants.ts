@@ -511,7 +511,6 @@ export type ProviderApiKeyUsage = {
   projectId: number
   projectName: string
   commitUuid: string
-  commitLive: boolean
   documentUuid: string
   documentPath: string
   evaluationUuid?: string

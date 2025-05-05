@@ -18,6 +18,7 @@ import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
+import { ICommitContextType } from '@latitude-data/web-ui/providers'
 import { useEffect, useMemo } from 'react'
 import ConfigurationForm from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
@@ -74,6 +75,7 @@ export default function EvaluationV2Form<
   options,
   setOptions,
   errors: actionErrors,
+  commit,
   disabled,
   forceTypeChange,
 }: {
@@ -86,6 +88,7 @@ export default function EvaluationV2Form<
     typeof useEvaluationsV2,
     'createEvaluation' | 'updateEvaluation'
   >
+  commit: ICommitContextType['commit']
   disabled?: boolean
   forceTypeChange?: T
 }) {
@@ -154,6 +157,8 @@ export default function EvaluationV2Form<
     })
   }, [metricSpecification?.supportsLiveEvaluation])
 
+  const commitMerged = mode === 'update' && !!commit.mergedAt
+
   return (
     <form className='min-w-0' id='evaluationV2Form'>
       <FormWrapper>
@@ -166,7 +171,7 @@ export default function EvaluationV2Form<
             onChange={(value) => setSettings({ ...settings, type: value as T })}
             errors={errors?.['type']}
             fancy
-            disabled={disabled}
+            disabled={disabled || commitMerged}
             required
           />
         )}
@@ -178,7 +183,7 @@ export default function EvaluationV2Form<
           onChange={(e) => setSettings({ ...settings, name: e.target.value })}
           errors={errors?.['name']}
           className='w-full'
-          disabled={disabled}
+          disabled={disabled || commitMerged}
           required
         />
         <TextArea
@@ -193,7 +198,7 @@ export default function EvaluationV2Form<
           }
           errors={errors?.['description']}
           className='w-full'
-          disabled={disabled}
+          disabled={disabled || commitMerged}
           required
         />
         {mode === 'create' && (
@@ -213,7 +218,7 @@ export default function EvaluationV2Form<
               setSettings({ ...settings, metric: value as M })
             }
             errors={errors?.['metric']}
-            disabled={disabled}
+            disabled={disabled || commitMerged}
             required
           />
         )}
@@ -228,7 +233,7 @@ export default function EvaluationV2Form<
           settings={settings}
           setSettings={setSettings}
           errors={errors}
-          disabled={disabled}
+          disabled={disabled || commitMerged}
         />
         {mode === 'create' && metricSpecification?.requiresExpectedOutput && (
           <Alert
