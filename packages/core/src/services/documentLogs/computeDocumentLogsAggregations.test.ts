@@ -89,6 +89,7 @@ describe('computeDocumentLogsAggregations', () => {
         logSources: LOG_SOURCES,
         createdAt: undefined,
         customIdentifier: undefined,
+        experimentId: undefined,
       },
     })
 
@@ -125,6 +126,7 @@ describe('computeDocumentLogsAggregations', () => {
         logSources: LOG_SOURCES,
         createdAt: undefined,
         customIdentifier: '31',
+        experimentId: undefined,
       },
     })
 

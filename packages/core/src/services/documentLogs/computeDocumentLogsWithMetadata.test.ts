@@ -105,6 +105,7 @@ describe('getDocumentLogsWithMetadata', () => {
           logSources: LOG_SOURCES,
           createdAt: undefined,
           customIdentifier: undefined,
+          experimentId: undefined,
         },
       })
 
@@ -134,6 +135,7 @@ describe('getDocumentLogsWithMetadata', () => {
           logSources: LOG_SOURCES,
           createdAt: undefined,
           customIdentifier: undefined,
+          experimentId: undefined,
         },
       })
 
@@ -225,6 +227,7 @@ describe('getDocumentLogsWithMetadata', () => {
             logSources: LOG_SOURCES,
             createdAt,
             customIdentifier: undefined,
+            experimentId: undefined,
           },
         })
 
@@ -246,6 +249,7 @@ describe('getDocumentLogsWithMetadata', () => {
             logSources: LOG_SOURCES,
             createdAt,
             customIdentifier: undefined,
+            experimentId: undefined,
           },
         })
 
@@ -268,6 +272,7 @@ describe('getDocumentLogsWithMetadata', () => {
           logSources: LOG_SOURCES,
           createdAt: undefined,
           customIdentifier: undefined,
+          experimentId: undefined,
         },
         page: '1',
         pageSize: '1',
@@ -284,6 +289,7 @@ describe('getDocumentLogsWithMetadata', () => {
           logSources: LOG_SOURCES,
           createdAt: undefined,
           customIdentifier: undefined,
+          experimentId: undefined,
         },
       })
 
@@ -350,6 +356,7 @@ describe('getDocumentLogsWithMetadata', () => {
         logSources: LOG_SOURCES,
         createdAt: undefined,
         customIdentifier: undefined,
+        experimentId: undefined,
       },
     })
 
@@ -415,6 +422,7 @@ describe('getDocumentLogsWithMetadata', () => {
         logSources: LOG_SOURCES,
         createdAt: undefined,
         customIdentifier: undefined,
+        experimentId: undefined,
       },
     })
 
@@ -483,6 +491,7 @@ describe('getDocumentLogsWithMetadata', () => {
         logSources: LOG_SOURCES,
         createdAt: undefined,
         customIdentifier: 'custom_1234',
+        experimentId: undefined,
       },
     })
 
@@ -524,6 +533,7 @@ describe('getDocumentLogsWithMetadata', () => {
         logSources: LOG_SOURCES,
         createdAt: undefined,
         customIdentifier: undefined,
+        experimentId: undefined,
       },
     })
 
@@ -562,6 +572,7 @@ describe('getDocumentLogsWithMetadata', () => {
         logSources: [],
         createdAt: undefined,
         customIdentifier: undefined,
+        experimentId: undefined,
       },
     })
 
@@ -603,6 +614,7 @@ describe('getDocumentLogsWithMetadata', () => {
         logSources: LOG_SOURCES,
         createdAt: undefined,
         customIdentifier: undefined,
+        experimentId: undefined,
       },
     })
 

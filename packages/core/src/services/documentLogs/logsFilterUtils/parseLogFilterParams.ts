@@ -44,6 +44,28 @@ export function parseSafeCustomIdentifier(
   return customIdentifier
 }
 
+export function parseSafeExperimentId(
+  experimentId: string | string[] | undefined,
+) {
+  if (!experimentId) return undefined
+
+  if (Array.isArray(experimentId) && experimentId.length) {
+    experimentId = experimentId[0]
+  }
+
+  try {
+    experimentId = decodeURIComponent(experimentId as string).trim()
+    const experimentIdNumber = Number(experimentId)
+    if (!isNaN(experimentIdNumber)) {
+      return experimentIdNumber
+    }
+  } catch (error) {
+    // do nothing
+  }
+
+  return undefined
+}
+
 export function parseLogFiltersParams({
   params,
   currentCommit,
@@ -62,6 +84,7 @@ export function parseLogFiltersParams({
     origins,
     createdAt: createdAtParam,
     customIdentifier: customIdentifierParam,
+    experimentId: experimentIdParam,
   } = params
   const commitIds =
     versions?.toString()?.split(',')?.map(Number) ?? originalSelectedCommitsIds
@@ -69,12 +92,14 @@ export function parseLogFiltersParams({
   const createdAt = parseSafeCreatedAtRange(createdAtParam)
   const formattedCreatedAt = formatDocumentLogCreatedAtParam(createdAt)
   const customIdentifier = parseSafeCustomIdentifier(customIdentifierParam)
+  const experimentId = parseSafeExperimentId(experimentIdParam)
   return {
     filterOptions: {
       commitIds,
       logSources,
       createdAt,
       customIdentifier,
+      experimentId,
     },
     formattedCreatedAt,
     originalSelectedCommitsIds,
@@ -85,6 +110,7 @@ export function parseLogFiltersParams({
       customIdentifier
         ? `customIdentifier=${customIdentifierParam}`
         : undefined,
+      experimentId ? `experimentId=${experimentIdParam}` : undefined,
     ],
   }
 }

@@ -426,6 +426,7 @@ export type DocumentLogFilterOptions = {
   logSources: LogSources[]
   createdAt: { from: Date | undefined; to?: Date } | undefined
   customIdentifier: string | undefined
+  experimentId: number | undefined
 }
 
 export const RELATIVE_DATES = {

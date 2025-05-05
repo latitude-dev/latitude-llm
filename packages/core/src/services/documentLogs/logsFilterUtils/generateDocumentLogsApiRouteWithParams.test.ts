@@ -40,6 +40,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           commitIds: [],
           logSources: [],
           customIdentifier: undefined,
+          experimentId: undefined,
         },
       },
     })
@@ -57,6 +58,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           commitIds: [],
           logSources: [],
           customIdentifier: undefined,
+          experimentId: undefined,
         },
       },
     })
@@ -74,6 +76,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           commitIds: [],
           logSources: [],
           customIdentifier: undefined,
+          experimentId: undefined,
         },
       },
     })
@@ -89,6 +92,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           commitIds: [123, 456],
           logSources: [LogSources.API, LogSources.User],
           customIdentifier: undefined,
+          experimentId: undefined,
         },
       },
     })
@@ -104,6 +108,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           commitIds: [],
           logSources: [],
           customIdentifier: 'thís shóùld be encoded',
+          experimentId: undefined,
         },
       },
     })
@@ -124,6 +129,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           commitIds: [789],
           logSources: [LogSources.API],
           customIdentifier: '8861c3a3-4728-4818-9259-769f121a2fc6',
+          experimentId: undefined,
         },
         excludeErrors: true,
         days: 30,
@@ -145,6 +151,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           commitIds: [],
           logSources: [],
           customIdentifier: undefined,
+          experimentId: undefined,
         },
       },
     })
@@ -164,6 +171,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           commitIds: [],
           logSources: [],
           customIdentifier: undefined,
+          experimentId: undefined,
         },
       },
     })

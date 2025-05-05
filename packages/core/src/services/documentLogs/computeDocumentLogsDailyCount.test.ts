@@ -99,6 +99,7 @@ describe('computeDocumentLogsDailyCount', () => {
         logSources: LOG_SOURCES,
         createdAt: undefined,
         customIdentifier: undefined,
+        experimentId: undefined,
       },
       days: 3,
     })
@@ -143,6 +144,7 @@ describe('computeDocumentLogsDailyCount', () => {
         logSources: LOG_SOURCES,
         createdAt: undefined,
         customIdentifier: undefined,
+        experimentId: undefined,
       },
     })
 
@@ -188,6 +190,7 @@ describe('computeDocumentLogsDailyCount', () => {
         logSources: LOG_SOURCES,
         createdAt: undefined,
         customIdentifier: '31',
+        experimentId: undefined,
       },
     })
 
@@ -217,6 +220,7 @@ describe('computeDocumentLogsDailyCount', () => {
         logSources: LOG_SOURCES,
         createdAt: undefined,
         customIdentifier: undefined,
+        experimentId: undefined,
       },
     })
 
@@ -247,6 +251,7 @@ describe('computeDocumentLogsDailyCount', () => {
         logSources: LOG_SOURCES,
         createdAt: undefined,
         customIdentifier: undefined,
+        experimentId: undefined,
       },
       days: 30,
     })
