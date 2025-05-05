@@ -1,8 +1,8 @@
 import { scan } from 'promptl-ai'
-import { z } from 'zod'
 import {
   EvaluationType,
   formatConversation,
+  LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA,
   LlmEvaluationMetric,
   LlmEvaluationCustomSpecification as specification,
 } from '../../../browser'
@@ -93,11 +93,6 @@ async function validate(
   })
 }
 
-const promptSchema = z.object({
-  score: z.number().min(0).max(100),
-  reason: z.string(),
-})
-
 async function run(
   {
     resultUuid,
@@ -144,7 +139,7 @@ async function run(
       expectedOutput: expectedOutput,
       conversation: formatConversation(conversation),
     },
-    schema: promptSchema,
+    schema: LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA,
     resultUuid: resultUuid,
     evaluation: evaluation,
     providers: providers!,

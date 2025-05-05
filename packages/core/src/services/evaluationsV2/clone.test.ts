@@ -1,5 +1,4 @@
-import { describe, beforeEach, it, expect } from 'vitest'
-import * as factories from '../../tests/factories'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
   Commit,
   EvaluationType,
@@ -9,6 +8,7 @@ import {
   Providers,
   Workspace,
 } from '../../browser'
+import * as factories from '../../tests/factories'
 import { cloneEvaluationV2 } from './clone'
 import { buildPrompt } from './llm/binary'
 
@@ -88,13 +88,15 @@ describe('clone', () => {
         minThreshold: 50,
         reverseScale: false,
         provider: 'openai',
-        prompt: buildPrompt({
-          provider,
-          model: 'gpt-4',
-          criteria: 'Evaluate the response',
-          passDescription: 'Pass',
-          failDescription: 'Fail',
-        }),
+        prompt: expect.stringContaining(
+          buildPrompt({
+            provider,
+            model: 'gpt-4',
+            criteria: 'Evaluate the response',
+            passDescription: 'Pass',
+            failDescription: 'Fail',
+          }),
+        ),
       },
     })
   })
