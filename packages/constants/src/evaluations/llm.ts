@@ -231,14 +231,16 @@ export const LLM_EVALUATION_PROMPT_PARAMETERS = [
   'actualOutput',
   'expectedOutput',
   'conversation',
-  'messages',
-  'toolCalls',
   'cost',
   'tokens',
   'duration',
-  'prompt',
   'config',
+  'toolCalls',
+  'messages',
+  'prompt',
   'parameters',
+  'context',
+  'response',
 ] as const
 
 export type LlmEvaluationPromptParameter =

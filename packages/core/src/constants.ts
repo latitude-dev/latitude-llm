@@ -207,7 +207,7 @@ export type EvaluatedDocumentLog = SerializedDocumentLog & {
   uuid: string
   createdAt: Date
   actualOutput: string
-  conversation: CompilerMessage[]
+  conversation: string
 }
 
 export const SERIALIZED_DOCUMENT_LOG_FIELDS = [

@@ -1,3 +1,4 @@
+import { RefObject, useEffect, useRef, useState } from 'react'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
@@ -16,9 +17,8 @@ import {
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
-import { RefObject, useEffect, useRef, useState } from 'react'
+import { MetadataItem } from '$/components/MetadataItem'
 import { MetadataInfoTabs } from '../../../../../_components/MetadataInfoTabs'
-import { MetadataItem } from '../../../../../_components/MetadataItem'
 import { EvaluationResultMessages } from './Messages'
 import { EvaluationResultMetadata } from './Metadata'
 

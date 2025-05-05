@@ -1,5 +1,13 @@
 'use client'
 
+import {
+  ReactNode,
+  RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import {
   buildConversation,
@@ -9,21 +17,13 @@ import {
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
-import {
-  ReactNode,
-  RefObject,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
-import { MetadataItem } from '../../../../../[documentUuid]/_components/MetadataItem'
+import { DocumentLogMessages } from '$/components/DocumentLogMessages'
+import { MetadataItem } from '$/components/MetadataItem'
 import {
   DEFAULT_TABS,
   MetadataInfoTabs,
 } from '../../../../_components/MetadataInfoTabs'
 import { DocumentLogEvaluations } from './Evaluations'
-import { DocumentLogMessages } from './Messages'
 import { DocumentLogMetadata } from './Metadata'
 
 function DocumentLogMetadataLoading() {
@@ -115,7 +115,7 @@ export function DocumentLogInfo({
                 )}
                 {selectedTab === 'messages' && (
                   <DocumentLogMessages
-                    documentLog={documentLog}
+                    documentLogParameters={documentLog.parameters}
                     messages={conversation}
                   />
                 )}

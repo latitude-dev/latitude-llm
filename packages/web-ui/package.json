@@ -107,6 +107,7 @@
     "./hooks/useLocalStorage": "./src/lib/hooks/useLocalStorage.ts",
     "./hooks/useDnD": "./src/lib/hooks/useDnD.ts",
     "./hooks/useOnClickOutside": "./src/lib/hooks/useOnClickOutside.ts",
+    "./hooks/useMonacoSetup": "./src/ds/molecules/DiffViewer/Editor/useMonacoSetup.ts",
     "./hooks/useToolContentMap": "./src/lib/hooks/useToolContentMap.ts",
     "./commonTypes": "./src/lib/commonTypes.ts",
     "./versionedMessagesHelpers": "./src/lib/versionedMessagesHelpers.ts",

@@ -17,6 +17,9 @@ export function CollapsibleBox({
   expandedHeight,
   initialExpanded = false,
   onToggle,
+  scrollable = true,
+  paddingBottom = true,
+  paddingRight = true,
   isExpanded: isExpandedProp,
 }: {
   title: string
@@ -29,6 +32,9 @@ export function CollapsibleBox({
   initialExpanded?: boolean
   onToggle?: OnToggleFn
   isExpanded?: boolean
+  scrollable?: boolean
+  paddingBottom?: boolean
+  paddingRight?: boolean
 }) {
   const [internalExpanded, setInternalExpanded] = useState(initialExpanded)
   const isControlled = isExpandedProp !== undefined
@@ -44,10 +50,12 @@ export function CollapsibleBox({
 
   return (
     <div
-      className={cn('w-full border rounded-lg custom-scrollbar relative', {
-        'h-full': isExpanded,
+      className={cn('w-full border rounded-lg relative overflow-hidden', {
         'h-auto': !isExpanded,
+        'custom-scrollbar': scrollable,
+        'flex flex-col': !scrollable,
       })}
+      style={{ minHeight: COLLAPSED_BOX_HEIGHT }}
     >
       <div
         className='flex flex-col cursor-pointer sticky top-0 z-10 bg-background'
@@ -73,14 +81,25 @@ export function CollapsibleBox({
         )}
       </div>
       <div
-        className='transition-all duration-300 ease-in-out overflow-y-auto custom-scrollbar'
+        className={cn('transition-all duration-300 ease-in-out ', {
+          'flex flex-col min-h-0': !scrollable,
+          'overflow-y-auto custom-scrollbar': scrollable,
+        })}
         style={{
           maxHeight: isExpanded ? expandedHeight : 0,
           opacity: isExpanded ? 1 : 0,
         }}
       >
         {expandedContent && (
-          <div className='pb-3.5 px-4'>{expandedContent}</div>
+          <div
+            className={cn('pl-4', {
+              'flex min-h-0': !scrollable,
+              'pr-4': paddingRight,
+              'pb-3.5': paddingBottom,
+            })}
+          >
+            {expandedContent}
+          </div>
         )}
       </div>
     </div>
