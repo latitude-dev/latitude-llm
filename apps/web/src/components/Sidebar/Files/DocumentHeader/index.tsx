@@ -12,6 +12,7 @@ import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
 import { ROUTES } from '$/services/routes'
 import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 export default function DocumentHeader({
   open,
@@ -37,6 +38,9 @@ export default function DocumentHeader({
     onRenameFile,
     sidebarLinkContext,
   } = useFileTreeContext()
+  const { enabled: evalsV2Enabled } = useFeatureFlag({
+    featureFlag: 'evaluationsV2',
+  })
   const { deleteTmpFolder, reset } = useTempNodes((state) => ({
     reset: state.reset,
     deleteTmpFolder: state.deleteTmpFolder,
@@ -126,7 +130,7 @@ export default function DocumentHeader({
       onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
       icons={[icon]}
     >
-      {selected ? (
+      {evalsV2Enabled && selected ? (
         <EvaluationList
           changeType={node.changeType}
           indentation={indentation}
