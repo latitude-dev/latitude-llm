@@ -1,10 +1,10 @@
-import type { ProviderApiKey } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createProviderApiKeyAction } from '$/actions/providerApiKeys/create'
 import { destroyProviderApiKeyAction } from '$/actions/providerApiKeys/destroy'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
+import type { ProviderApiKey } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useSWR, { SWRConfiguration } from 'swr'
 
 type SerializedProviderApiKey = Omit<
@@ -34,33 +34,41 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
     fetcher,
     opts,
   )
-  const { execute: create } = useLatitudeAction(createProviderApiKeyAction, {
-    onSuccess: async ({ data: apikey }) => {
-      toast({
-        title: 'Success',
-        description: `${apikey.name} created successfully`,
-      })
+  const { execute: create, isPending: isCreating } = useLatitudeAction(
+    createProviderApiKeyAction,
+    {
+      onSuccess: async ({ data: apikey }) => {
+        toast({
+          title: 'Success',
+          description: `${apikey.name} created successfully`,
+        })
 
-      mutate([...data, apikey])
+        mutate([...data, apikey])
+      },
     },
-  })
+  )
 
-  const { execute: destroy } = useLatitudeAction(destroyProviderApiKeyAction, {
-    onSuccess: async ({ data: apikey }) => {
-      toast({
-        title: 'Success',
-        description: `${apikey.name} destroyed successfully`,
-      })
+  const { execute: destroy, isPending: isDestroying } = useLatitudeAction(
+    destroyProviderApiKeyAction,
+    {
+      onSuccess: async ({ data: apikey }) => {
+        toast({
+          title: 'Success',
+          description: `${apikey.name} destroyed successfully`,
+        })
 
-      mutate(data.filter((item) => item.id !== apikey.id))
+        mutate(data.filter((item) => item.id !== apikey.id))
+      },
     },
-  })
+  )
 
   return {
     data,
     create,
     destroy,
     mutate,
+    isCreating,
+    isDestroying,
     ...rest,
   }
 }
