@@ -2,6 +2,8 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import {
   EvaluationType,
+  LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
+  LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA,
   LlmEvaluationCustomSpecification,
   LlmEvaluationMetric,
 } from '@latitude-data/constants'
@@ -19,6 +21,8 @@ import {
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect } from 'react'
+import { stringify } from 'yaml'
+import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
@@ -54,47 +58,14 @@ function ConfigurationForm({
     setConfiguration({
       ...configuration,
       prompt: `
+${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
+
 ---
 provider: ${configuration.provider}
 model: ${configuration.model}
 temperature: 0.7
-schema:
-  type: object
-  properties:
-    score:
-      type: number
-      minimum: 0
-      maximum: 100
-    reason:
-      type: string
-  required:
-    - score
-    - reason
-  additionalProperties: false
+${stringify({ schema: zodToJsonSchema(LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA, { target: 'openAi' }) })}
 ---
-
-/*
-  IMPORTANT: The evaluation MUST return an object with the score and reason fields.
-
-  These are the available variables:
-  - {{ actualOutput }} (string): The actual output to evaluate
-  - {{ expectedOutput }} (string/undefined): The, optional, expected output to compare against
-  - {{ conversation }} (string): The full conversation of the evaluated log
-
-  - {{ messages }} (array of objects): All the messages of the conversation
-  - {{ toolCalls }} (array of objects): All the tool calls of the conversation
-  - {{ cost }} (number): The cost, in cents, of the evaluated log
-  - {{ tokens }} (number): The tokens of the evaluated log
-  - {{ duration }} (number): The duration, in seconds, of the evaluated log
-
-  More info on messages and tool calls format in: https://docs.latitude.so/promptl/syntax/messages
-
-  - {{ prompt }} (string): The prompt of the evaluated log
-  - {{ config }} (object): The configuration of the evaluated log
-  - {{ parameters }} (object): The parameters of the evaluated log
-
-  More info on configuration and parameters format in: https://docs.latitude.so/promptl/syntax/configuration
-*/
 
 You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), follows the given instructions.
 
@@ -116,7 +87,7 @@ You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the res
   {{ actualOutput }}
   \`\`\`
 </user>
-  `.trim(),
+`.trim(),
     })
   }, [mode, configuration.provider, configuration.model])
 

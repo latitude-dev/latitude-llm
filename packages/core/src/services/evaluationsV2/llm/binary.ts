@@ -1,9 +1,13 @@
 import yaml from 'js-yaml'
+import util from 'util'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   EvaluationType,
   formatConversation,
+  LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
+  LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA,
+  LlmEvaluationCustomSpecification,
   LlmEvaluationMetric,
   ProviderApiKey,
   LlmEvaluationBinarySpecification as specification,
@@ -188,7 +192,22 @@ async function clone(
       reverseScale: evaluation.configuration.reverseScale,
       provider: evaluation.configuration.provider,
       model: evaluation.configuration.model,
-      prompt: buildPrompt({ ...evaluation.configuration, provider }),
+      prompt: `
+${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
+
+${buildPrompt({ ...evaluation.configuration, provider })}
+
+/*
+  This step has been added automatically when cloning the original evaluation.
+  It will adapt the original evaluation "${specification.name}" metric scale to the "${LlmEvaluationCustomSpecification.name}" metric scale.
+  Feel free to remove this step and change the prompt considering the score should be an integer between \`0\` and \`100\`.
+*/
+
+<step schema={{${util.inspect(zodToJsonSchema(LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA, { target: 'openAi' }), { depth: Infinity, breakLength: Infinity })}}}>
+  The scoring schema has been changed to be an integer between \`0\` and \`100\`.
+  Taking into account the instructions from previous messages, if the verdict is \`false\` return a \`0\`, whereas if the verdict is \`true\` return a \`100\`.
+</step>
+`.trim(),
       minThreshold: thresholdToCustomScale(0.5, 0, 1),
       maxThreshold: undefined,
     },

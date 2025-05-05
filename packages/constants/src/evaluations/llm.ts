@@ -159,6 +159,36 @@ export type LlmEvaluationCustomResultError = z.infer<
   typeof LlmEvaluationCustomSpecification.resultError
 >
 
+export const LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA = z.object({
+  score: z.number().min(0).max(100),
+  reason: z.string(),
+})
+
+export const LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION = `
+/*
+  IMPORTANT: The evaluation MUST return an object with the score and reason fields.
+
+  These are the available variables:
+  - {{ actualOutput }} (string): The actual output to evaluate
+  - {{ expectedOutput }} (string/undefined): The, optional, expected output to compare against
+  - {{ conversation }} (string): The full conversation of the evaluated log
+
+  - {{ messages }} (array of objects): All the messages of the conversation
+  - {{ toolCalls }} (array of objects): All the tool calls of the conversation
+  - {{ cost }} (number): The cost, in cents, of the evaluated log
+  - {{ tokens }} (number): The tokens of the evaluated log
+  - {{ duration }} (number): The duration, in seconds, of the evaluated log
+
+  More info on messages and tool calls format in: https://docs.latitude.so/promptl/syntax/messages
+
+  - {{ prompt }} (string): The prompt of the evaluated log
+  - {{ config }} (object): The configuration of the evaluated log
+  - {{ parameters }} (object): The parameters of the evaluated log
+
+  More info on configuration and parameters format in: https://docs.latitude.so/promptl/syntax/configuration
+*/
+`.trim()
+
 // CUSTOM LABELED
 
 export const LlmEvaluationCustomLabeledSpecification = {

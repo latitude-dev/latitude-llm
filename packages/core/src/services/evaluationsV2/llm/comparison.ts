@@ -4,6 +4,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   EvaluationType,
   formatConversation,
+  LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationMetric,
   ProviderApiKey,
   LlmEvaluationComparisonSpecification as specification,
@@ -18,7 +19,7 @@ import {
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { promptTask, runPrompt, thresholdToCustomScale } from './shared'
+import { promptTask, runPrompt } from './shared'
 
 export const LlmEvaluationComparisonSpecification = {
   ...specification,
@@ -235,23 +236,7 @@ async function clone(
     return Result.error(new BadRequestError('Provider is required'))
   }
 
-  let minThreshold = undefined
-  if (evaluation.configuration.minThreshold !== undefined) {
-    minThreshold = thresholdToCustomScale(
-      evaluation.configuration.minThreshold,
-      0,
-      100,
-    )
-  }
-
-  let maxThreshold = undefined
-  if (evaluation.configuration.maxThreshold !== undefined) {
-    maxThreshold = thresholdToCustomScale(
-      evaluation.configuration.maxThreshold,
-      0,
-      100,
-    )
-  }
+  // Note: no scale conversion required for this metric
 
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original evaluation object
@@ -264,9 +249,13 @@ async function clone(
       reverseScale: evaluation.configuration.reverseScale,
       provider: evaluation.configuration.provider,
       model: evaluation.configuration.model,
-      prompt: buildPrompt({ ...evaluation.configuration, provider }),
-      minThreshold: minThreshold,
-      maxThreshold: maxThreshold,
+      prompt: `
+${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
+
+${buildPrompt({ ...evaluation.configuration, provider })}
+`.trim(),
+      minThreshold: evaluation.configuration.minThreshold,
+      maxThreshold: evaluation.configuration.maxThreshold,
     },
   })
 }
