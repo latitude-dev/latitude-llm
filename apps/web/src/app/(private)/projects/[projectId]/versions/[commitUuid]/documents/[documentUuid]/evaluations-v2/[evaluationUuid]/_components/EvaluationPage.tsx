@@ -2,7 +2,6 @@
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
-import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import {
   EventArgs,
   useSockets,
@@ -19,16 +18,9 @@ import {
   EvaluationV2,
   EvaluationV2Stats,
 } from '@latitude-data/core/browser'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-} from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import {
   useCurrentCommit,
   useCurrentProject,
@@ -36,6 +28,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useDebounce, useDebouncedCallback } from 'use-debounce'
+import { EvaluationTitle } from '../../_components/EvaluationTitle'
 import { EvaluationActions } from './EvaluationActions'
 import { EvaluationFilters } from './EvaluationFilters'
 import { EvaluationResultsTable } from './EvaluationResults/Table'
@@ -94,6 +87,21 @@ const useEvaluationResultsV2Socket = <
   useSockets({ event: 'evaluationResultV2Created', onMessage })
 }
 
+function StatsInfo({ evaluation }: { evaluation: EvaluationV2 }) {
+  const reverseScale = evaluation.configuration.reverseScale
+  const icon = reverseScale ? 'arrowDown' : 'arrowUp'
+  return (
+    <span className='flex items-center gap-x-2 min-w-0'>
+      <div className='flex gap-x-1 min-w-0'>
+        <Text.H6 color='foregroundMuted' ellipsis noWrap>
+          A {reverseScale ? 'lower' : 'higher'} score is better
+        </Text.H6>
+        <Icon name={icon} color='foregroundMuted' />
+      </div>
+    </span>
+  )
+}
+
 export function EvaluationPage<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
@@ -114,10 +122,6 @@ export function EvaluationPage<
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const { evaluation } = useCurrentEvaluationV2<T, M>()
-
-  const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
-  const metricSpecification = typeSpecification.metrics[evaluation.metric]
-
   const router = useRouter()
   const [search, setSearch] = useState(serverSearch)
   useEffect(() => setSearch(serverSearch), [serverSearch])
@@ -161,55 +165,12 @@ export function EvaluationPage<
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full gap-4 p-6'>
       <TableWithHeader
-        title={
-          <Breadcrumb>
-            <BreadcrumbItem>
-              <Text.H4M noWrap ellipsis>
-                {evaluation.name}
-              </Text.H4M>
-              <div className='flex flex-row items-center gap-x-2 min-w-0'>
-                <Tooltip
-                  asChild
-                  trigger={
-                    <Badge variant='outline' className='truncate'>
-                      <span className='truncate'>{typeSpecification.name}</span>
-                    </Badge>
-                  }
-                >
-                  {typeSpecification.description}
-                </Tooltip>
-                <Text.H5 color='foregroundMuted'>/</Text.H5>
-                <Tooltip
-                  asChild
-                  trigger={
-                    <Badge variant='outline' className='truncate'>
-                      <span className='truncate'>
-                        {metricSpecification.name}
-                      </span>
-                    </Badge>
-                  }
-                >
-                  {metricSpecification.description}
-                </Tooltip>
-              </div>
-              <ClickToCopyUuid uuid={evaluation.uuid} />
-            </BreadcrumbItem>
-          </Breadcrumb>
-        }
+        verticalAligment='bottom'
+        title={<EvaluationTitle evaluation={evaluation} />}
         actions={<EvaluationActions />}
       />
-      <div className='w-full flex items-center justify-between'>
-        <span className='flex items-center gap-x-2'>
-          <Text.H4 color='foregroundMuted'>
-            A {evaluation.configuration.reverseScale ? 'lower' : 'higher'} score
-            is better
-          </Text.H4>
-          {evaluation.configuration.reverseScale ? (
-            <Icon name='arrowDown' color='foregroundMuted' />
-          ) : (
-            <Icon name='arrowUp' color='foregroundMuted' />
-          )}
-        </span>
+      <div className='w-full flex items-end justify-between gap-x-2'>
+        <StatsInfo evaluation={evaluation} />
         <EvaluationFilters
           commits={commits}
           search={search}
@@ -217,9 +178,8 @@ export function EvaluationPage<
           isLoading={isLoading}
         />
       </div>
-      <div className='min-h-64 h-64 max-h-64'>
-        <EvaluationStats stats={stats} isLoading={isLoading} />
-      </div>
+      <EvaluationStats stats={stats} isLoading={isLoading} />
+
       <EvaluationResultsTable
         results={results}
         selectedResult={selectedResult}

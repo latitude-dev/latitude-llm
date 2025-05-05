@@ -27,7 +27,7 @@ import {
   useLogHistoryParams,
 } from './HistoryLogParams/useLogHistoryParams'
 import { ManualParams } from './ManualParams'
-import { ParametersPaginationNav } from './PaginationNav'
+import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 
 export const TABS: TabSelectorOption<InputSource>[] = [
   { label: 'Manual', value: INPUT_SOURCE.manual },

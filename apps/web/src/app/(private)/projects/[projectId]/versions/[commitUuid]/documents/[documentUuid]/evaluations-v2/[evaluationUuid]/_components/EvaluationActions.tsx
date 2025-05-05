@@ -128,7 +128,7 @@ function EditPrompt<M extends LlmEvaluationMetric>({
   }, [
     evaluation.metric,
     baseEvaluationRoute,
-    cloneModal.onOpen,
+    cloneModal,
     navigate,
     evaluation.uuid,
   ])
@@ -150,11 +150,9 @@ function EditPrompt<M extends LlmEvaluationMetric>({
     isCloningEvaluation,
     cloneEvaluation,
     evaluation,
-    cloneModal.onClose,
-    project,
-    commit,
-    document,
     navigate,
+    baseEvaluationRoute,
+    cloneModal,
   ])
 
   return (
@@ -182,9 +180,7 @@ function EditPrompt<M extends LlmEvaluationMetric>({
         onConfirm={onClone}
         onCancel={cloneModal.onClose}
         confirm={{
-          label: isCloningEvaluation
-            ? 'Cloning...'
-            : `Clone ${evaluation.name}`,
+          label: isCloningEvaluation ? 'Cloning...' : 'Clone',
           description: `The prompt of ${getEvaluationMetricSpecification(evaluation).name} evaluations cannot be edited. A new ${LlmEvaluationCustomSpecification.name} evaluation will be created.`,
           disabled: isCloningEvaluation,
           isConfirming: isCloningEvaluation,

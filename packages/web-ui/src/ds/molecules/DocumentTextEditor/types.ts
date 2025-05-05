@@ -25,6 +25,7 @@ export type DocumentTextEditorProps = {
     requestSuggestion: (_: string) => void
     disabledMessage?: string
   }
+  autoCompleteParameters?: string[]
 }
 
 export type DocumentError = {

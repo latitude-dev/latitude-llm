@@ -9,37 +9,39 @@ import {
   Commit,
   DocumentVersion,
   EvaluationType,
+  LLM_EVALUATION_PROMPT_PARAMETERS,
   LlmEvaluationMetricAnyCustom,
   ProviderApiKey,
 } from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { TextEditor } from './TextEditor'
 import { Playground } from './Playground'
 import { useEvaluationParameters } from './hooks/useEvaluationParamaters'
-import { BreadcrumbSeparator } from '@latitude-data/web-ui/molecules/Breadcrumb'
-import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import useIntegrations from '$/stores/integrations'
+import { EvaluationTitle } from '../../../../_components/EvaluationTitle'
 
+const ALLOWED_PARAMETERS =
+  LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
 export function EvaluationEditor({
   document,
   commit,
   providerApiKeys,
   freeRunsCount,
   copilotEnabled,
+  selectedDocumentLogUuid,
 }: {
   document: DocumentVersion
   commit: Commit
   providerApiKeys: ProviderApiKey[]
   copilotEnabled: boolean
   freeRunsCount?: number
+  selectedDocumentLogUuid?: string
 }) {
   const { project } = useCurrentProject()
   const { evaluation } = useCurrentEvaluationV2<
@@ -59,6 +61,27 @@ export function EvaluationEditor({
   const [value, setValue] = useState(originalPrompt)
   const { toast } = useToast()
   const providerNames = useMemo(() => providers.map((p) => p.name), [providers])
+  const { data: integrations } = useIntegrations()
+  const integrationNames = useMemo(
+    () => integrations?.map((i) => i.name) ?? [],
+    [integrations],
+  )
+  const buildPromptMetadata = useCallback(
+    ({ promptValue }: { promptValue: string }) => {
+      return {
+        prompt: promptValue,
+        promptlVersion: 1,
+        providerNames,
+        integrationNames,
+        withParameters: ALLOWED_PARAMETERS,
+        noOutputSchemaConfig: {
+          message:
+            'The evaluation output schema is system-managed and cannot be modified manually.',
+        },
+      }
+    },
+    [providerNames, integrationNames],
+  )
   const debouncedSave = useDebouncedCallback(
     async (val: string) => {
       const [_, error] = await updateEvaluation({
@@ -80,11 +103,8 @@ export function EvaluationEditor({
 
         setValue(originalPrompt) // Revert to the original prompt if save fails
       } else {
-        runReadMetadata({
-          prompt: val,
-          promptlVersion: 1,
-          providerNames,
-        })
+        const metadataProps = buildPromptMetadata({ promptValue: val })
+        runReadMetadata(metadataProps)
       }
     },
     500,
@@ -106,14 +126,13 @@ export function EvaluationEditor({
     evaluation,
     metadata,
   })
+
   useEffect(() => {
-    runReadMetadata({
-      prompt: value,
-      promptlVersion: 1,
-      providerNames,
-    })
-  }, [providerNames, value, runReadMetadata])
-  const backUrl = ROUTES.projects
+    const metadataProps = buildPromptMetadata({ promptValue: value })
+    runReadMetadata(metadataProps)
+  }, [value, buildPromptMetadata, runReadMetadata])
+
+  const backHref = ROUTES.projects
     .detail({ id: project.id })
     .commits.detail({ uuid: commit.uuid })
     .documents.detail({ uuid: document.documentUuid })
@@ -134,25 +153,12 @@ export function EvaluationEditor({
                 canUseSubagents={false}
                 providers={providers}
                 disabledMetadataSelectors={commit.mergedAt !== null}
+                titleVerticalAlign='top'
                 title={
-                  <div className='flex flex-row items-center min-w-0 gap-x-2'>
-                    <Link
-                      href={backUrl}
-                      className='flex flex-row items-center min-w-0 gap-x-2'
-                    >
-                      <Icon name='chevronLeft' />
-                      <Text.H4 ellipsis noWrap>
-                        {evaluation.name}
-                      </Text.H4>
-                    </Link>
-                    <BreadcrumbSeparator />
-                    <Text.H4 color='foregroundMuted'>Editor</Text.H4>
-                  </div>
-                }
-                leftActions={
-                  <ClickToCopyUuid
-                    tooltipContent='Click to copy the evaluation UUID'
-                    uuid={evaluation.uuid}
+                  <EvaluationTitle
+                    evaluation={evaluation}
+                    backHref={backHref}
+                    subSection='Editor'
                   />
                 }
                 metadata={metadata}
@@ -163,7 +169,8 @@ export function EvaluationEditor({
               />
               <TextEditor
                 compileErrors={metadata?.errors}
-                value={originalPrompt}
+                defaultValue={originalPrompt}
+                value={value}
                 isMerged={commit.mergedAt !== null}
                 isSaved={!isUpdatingEvaluation}
                 onChange={onChange}
@@ -179,6 +186,7 @@ export function EvaluationEditor({
                 document={document}
                 evaluation={evaluation}
                 metadata={metadata!}
+                selectedDocumentLogUuid={selectedDocumentLogUuid}
               />
             </div>
           </SplitPane.Pane>

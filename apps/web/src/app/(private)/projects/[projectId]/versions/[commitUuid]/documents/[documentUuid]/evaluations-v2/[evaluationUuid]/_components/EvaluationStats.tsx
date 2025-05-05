@@ -19,12 +19,12 @@ export function EvaluationStats<
   const { evaluation } = useCurrentEvaluationV2<T, M>()
 
   return (
-    <div className='h-full w-full grid xl:grid-cols-3 gap-4 flex-grow'>
+    <div className='w-full grid xl:grid-cols-3 gap-4'>
       <div className='h-full w-full col-span-2 grid grid-cols-2 gap-4'>
         <DailyOverviewChart stats={stats} isLoading={isLoading} />
         <VersionOverviewChart stats={stats} isLoading={isLoading} />
       </div>
-      <div className='h-full w-full col-span-1 grid grid-rows-2 gap-4'>
+      <div className='h-full w-full col-span-2 xl:col-span-1 grid grid-rows-2 gap-4'>
         <div
           className={cn('grid gap-4', {
             'grid-cols-1': evaluation.type !== EvaluationType.Llm,

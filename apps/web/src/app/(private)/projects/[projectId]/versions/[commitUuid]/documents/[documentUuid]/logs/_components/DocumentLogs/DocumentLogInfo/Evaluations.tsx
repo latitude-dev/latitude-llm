@@ -29,6 +29,8 @@ import {
 import Link from 'next/link'
 import { ResultCellContent } from '../../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
 import { MetadataItem } from '$/components/MetadataItem'
+import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 
 type Props<
   T extends EvaluationType = EvaluationType,
@@ -109,18 +111,6 @@ function EvaluationEditorLinkV1({ result, evaluation }: ResultWithEvaluation) {
   )
 }
 
-function EvaluationEditorLinkV2<
-  T extends EvaluationType = EvaluationType,
-  M extends EvaluationMetric<T> = EvaluationMetric<T>,
->({ evaluation, project, commit, document }: Props<T, M>) {
-  // TODO(evalsv2): Go to LLM evaluation editor when LLM V2 evaluations are available
-  return ROUTES.projects
-    .detail({ id: project.id })
-    .commits.detail({ uuid: commit.uuid })
-    .documents.detail({ uuid: document.documentUuid })
-    .evaluationsV2.detail({ uuid: evaluation.uuid }).root
-}
-
 function DocumentLogEvaluationsV1({
   result,
   evaluation,
@@ -189,13 +179,20 @@ function DocumentLogEvaluationsV2<
 export function DocumentLogEvaluations({
   evaluationResults = [],
   commit,
+  documentLog,
 }: {
+  documentLog: DocumentLogWithMetadataAndError
   evaluationResults?: ResultWithEvaluationTmp[]
   commit: Commit
 }) {
   const { project } = useCurrentProject()
   const { commit: currentCommit } = useCurrentCommit()
   const { document } = useCurrentDocument()
+  const getEvaluationV2Url = useEvaluationEditorLink({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+  })
 
   if (!evaluationResults.length) {
     return (
@@ -221,11 +218,9 @@ export function DocumentLogEvaluations({
             <Link
               href={
                 item.version === 'v2'
-                  ? EvaluationEditorLinkV2({
-                      project: project,
-                      commit: commit,
-                      document: document,
-                      ...item,
+                  ? getEvaluationV2Url({
+                      evaluationUuid: item.evaluation.uuid,
+                      documentLogUuid: documentLog.uuid,
                     })
                   : EvaluationEditorLinkV1(item)
               }

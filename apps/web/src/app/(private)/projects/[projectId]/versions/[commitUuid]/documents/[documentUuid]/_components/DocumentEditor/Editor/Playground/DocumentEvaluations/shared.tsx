@@ -24,6 +24,7 @@ export type Props = {
   runCount: number
   isLoading: boolean
   isWaiting: boolean
+  documentLog: DocumentLogWithMetadata | undefined
 }
 
 export type Snapshot = {

@@ -21,7 +21,7 @@ import {
 const specification = LlmEvaluationCustomSpecification
 export default {
   ...specification,
-  icon: 'fileCode' as IconName,
+  icon: 'code' as IconName,
   ConfigurationSimpleForm: ConfigurationSimpleForm,
   ConfigurationAdvancedForm: ConfigurationAdvancedForm,
   ResultBadge: ResultBadge,

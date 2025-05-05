@@ -123,6 +123,7 @@ export function DocumentLogInfo({
                   <DocumentLogEvaluations
                     evaluationResults={evaluationResults}
                     commit={documentLog.commit}
+                    documentLog={documentLog}
                   />
                 )}
                 {children}
