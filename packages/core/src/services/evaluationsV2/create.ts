@@ -39,7 +39,7 @@ export async function createEvaluationV2<
   if (!options) options = {}
   options = compactObject(options)
 
-  const { settings: vSettings, options: vOptions } = await validateEvaluationV2(
+  const validationResult = await validateEvaluationV2(
     {
       settings: settings,
       options: options,
@@ -48,7 +48,10 @@ export async function createEvaluationV2<
       workspace: workspace,
     },
     db,
-  ).then((r) => r.unwrap())
+  )
+  if (validationResult.error) return validationResult
+
+  const { settings: vSettings, options: vOptions } = validationResult.value
   settings = vSettings
   options = vOptions
 

@@ -1,8 +1,8 @@
+import * as loadModules from './replReload'
+import * as models from '@latitude-data/core/schema'
 import repl from 'node:repl'
 import { database, dbUtils } from '@latitude-data/core/client'
-import * as models from '@latitude-data/core/schema'
 import { setupReplHistory } from './replHistory'
-import * as loadModules from './replReload'
 
 const hasS3 = process.env.S3_BUCKET
 

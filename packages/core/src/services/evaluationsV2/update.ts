@@ -36,7 +36,7 @@ export async function updateEvaluationV2<
   },
   db: Database = database,
 ) {
-  assertCommitIsDraft(commit).unwrap()
+  //assertCommitIsDraft(commit).unwrap()
 
   const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
   const document = await documentsRepository

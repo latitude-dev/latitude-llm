@@ -51,26 +51,28 @@ export async function validateEvaluationV2<
 
   typeSpecification.configuration.parse(settings.configuration)
 
-  settings.configuration = await typeSpecification
-    .validate(
-      {
-        metric: settings.metric,
-        configuration: settings.configuration,
-        document: document,
-        commit: commit,
-        workspace: workspace,
-      },
-      db,
-    )
-    .then((r) => r.unwrap())
+  const validationResult = await typeSpecification.validate(
+    {
+      metric: settings.metric,
+      configuration: settings.configuration,
+      document: document,
+      commit: commit,
+      workspace: workspace,
+    },
+    db,
+  )
+  if (validationResult.error) return validationResult
+
+  settings.configuration = validationResult.value
 
   const repository = new EvaluationsV2Repository(workspace.id, db)
-  const evaluations = await repository
-    .listAtCommitByDocument({
-      commitUuid: commit.uuid,
-      documentUuid: document.documentUuid,
-    })
-    .then((r) => r.unwrap())
+  const evaluationsResult = await repository.listAtCommitByDocument({
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+  })
+  if (evaluationsResult.error) return evaluationsResult
+
+  const evaluations = evaluationsResult.value
   if (
     evaluations.find(
       (e) => e.name === settings.name && e.uuid !== evaluation?.uuid,

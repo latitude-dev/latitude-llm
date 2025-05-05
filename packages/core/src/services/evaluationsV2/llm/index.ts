@@ -75,9 +75,12 @@ async function validate<M extends LlmEvaluationMetric>(
     return Result.error(new BadRequestError('Model is required'))
   }
 
-  configuration = await metricSpecification
+  const configurationResult = await metricSpecification
     .validate({ configuration, workspace, ...rest }, db)
-    .then((r) => r.unwrap())
+
+  if (configurationResult.error) return configurationResult
+
+  configuration = configurationResult.value
 
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original settings object
@@ -165,7 +168,6 @@ async function clone<M extends LlmEvaluationMetric>(
   }
 
   const providers = await buildProvidersMap({ workspaceId: workspace.id })
-
   const settings = await metricSpecification
     .clone({ providers, workspace, ...rest }, db)
     .then((r) => r.unwrap())
