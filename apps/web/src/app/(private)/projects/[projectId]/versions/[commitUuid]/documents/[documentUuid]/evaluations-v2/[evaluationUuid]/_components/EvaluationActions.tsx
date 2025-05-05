@@ -24,6 +24,7 @@ import {
   LlmEvaluationMetric,
   Project,
 } from '@latitude-data/core/browser'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import {
@@ -216,7 +217,7 @@ function EditEvaluation<
     useState<ActionErrors<typeof useEvaluationsV2, 'updateEvaluation'>>()
 
   const onUpdate = useCallback(async () => {
-    if (isUpdatingEvaluation || !!commit.mergedAt) return
+    if (isUpdatingEvaluation) return
     const [_, errors] = await updateEvaluation({
       evaluationUuid: evaluation.uuid,
       settings: settings,
@@ -229,7 +230,6 @@ function EditEvaluation<
     }
   }, [
     isUpdatingEvaluation,
-    commit,
     evaluation,
     settings,
     options,
@@ -248,11 +248,12 @@ function EditEvaluation<
       </TableWithHeader.Button>
       <ConfirmModal
         dismissible
+        size='medium'
         open={openUpdateModal}
         title={`Update ${evaluation.name}`}
         description={
           commit.mergedAt
-            ? 'Merged commits cannot be edited.'
+            ? undefined
             : 'Not all settings and options can be updated once the evaluation is created.'
         }
         onOpenChange={setOpenUpdateModal}
@@ -261,10 +262,17 @@ function EditEvaluation<
           label: isUpdatingEvaluation
             ? 'Updating...'
             : `Update ${evaluation.name}`,
-          disabled: isUpdatingEvaluation || !!commit.mergedAt,
+          disabled: isUpdatingEvaluation,
           isConfirming: isUpdatingEvaluation,
         }}
       >
+        {!!commit.mergedAt && (
+          <Alert
+            variant='warning'
+            title='Version published'
+            description='Only options can be updated in a published commit. Create a draft to edit the evaluation.'
+          />
+        )}
         <EvaluationV2Form
           mode='update'
           settings={settings}
@@ -272,7 +280,8 @@ function EditEvaluation<
           options={options}
           setOptions={setOptions}
           errors={errors}
-          disabled={isUpdatingEvaluation || !!commit.mergedAt}
+          commit={commit}
+          disabled={isUpdatingEvaluation}
         />
       </ConfirmModal>
     </>

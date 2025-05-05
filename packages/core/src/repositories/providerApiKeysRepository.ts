@@ -104,6 +104,7 @@ export class ProviderApiKeysRepository extends RepositoryLegacy<
           commitId: documentVersions.commitId,
           documentUuid: documentVersions.documentUuid,
           documentPath: documentVersions.path,
+          updatedAt: documentVersions.updatedAt,
           deletedAt: documentVersions.deletedAt,
         })
         .from(documentVersions)
@@ -132,6 +133,7 @@ export class ProviderApiKeysRepository extends RepositoryLegacy<
           evaluationProvider: sql<
             string | null
           >`${evaluationVersions.configuration}->>'provider'`.as('provider'),
+          updatedAt: evaluationVersions.updatedAt,
           deletedAt: evaluationVersions.deletedAt,
         })
         .from(evaluationVersions)
@@ -151,7 +153,6 @@ export class ProviderApiKeysRepository extends RepositoryLegacy<
         projectId: liveCommits.projectId,
         projectName: liveCommits.projectName,
         commitUuid: liveCommits.commitUuid,
-        commitLive: sql<true>`TRUE`,
         documentUuid: liveDocuments.documentUuid,
         documentPath: liveDocuments.documentPath,
         evaluationUuid: liveEvaluations.evaluationUuid,
@@ -175,6 +176,7 @@ export class ProviderApiKeysRepository extends RepositoryLegacy<
           eq(liveEvaluations.evaluationProvider, name),
         ),
       )
+      .orderBy(desc(liveEvaluations.updatedAt))
 
     const items = evaluations
 

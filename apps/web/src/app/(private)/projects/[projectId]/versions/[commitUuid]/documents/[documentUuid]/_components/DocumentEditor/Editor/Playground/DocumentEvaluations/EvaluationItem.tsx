@@ -1,4 +1,5 @@
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
+import EvaluateLiveLogsSwitch from '$/components/evaluations/EvaluateLiveLogsSwitch'
 import ResultBadge from '$/components/evaluations/ResultBadge'
 import { EvaluationRoutes, ROUTES } from '$/services/routes'
 import {
@@ -20,7 +21,6 @@ import { useMemo } from 'react'
 import LiveEvaluationToggle from '../../../../../evaluations/[evaluationId]/_components/Actions/LiveEvaluationToggle'
 import { ResultCellContent as OriginalResultCellContent } from '../../../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
 import { Props } from './shared'
-import EvaluateLiveLogsSwitch from '$/components/evaluations/EvaluateLiveLogsSwitch'
 
 function ResultCellContent({
   result,

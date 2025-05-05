@@ -4,7 +4,6 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { useProviderApiKeyUsage } from '$/stores/providerApiKeys/usage'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
@@ -99,11 +98,6 @@ export default function DestroyProviderApiKey({
                         className='flex-shrink-0'
                       />
                       <span className='truncate'>{path}</span>
-                      {item.commitLive && (
-                        <Badge variant='accent' className='flex-shrink-0'>
-                          live
-                        </Badge>
-                      )}
                       <Icon
                         name='arrowRight'
                         widthClass='w-4'

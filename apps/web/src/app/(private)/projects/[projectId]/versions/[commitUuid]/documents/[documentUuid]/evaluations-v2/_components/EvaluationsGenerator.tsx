@@ -185,6 +185,7 @@ export function EvaluationsGenerator({
           options={options}
           setOptions={setOptions}
           errors={errors}
+          commit={commit}
           disabled={isCreatingEvaluation}
         />
       ),

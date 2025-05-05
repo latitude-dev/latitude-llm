@@ -28,7 +28,7 @@ export default function EvaluateLiveLogsSwitch<
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
-  const { toggleLiveMode, isTogglingLiveMode } = useEvaluationsV2({
+  const { updateEvaluation, isUpdatingEvaluation } = useEvaluationsV2({
     project: project,
     commit: commit,
     document: document,
@@ -39,18 +39,18 @@ export default function EvaluateLiveLogsSwitch<
 
   const isDisabled =
     disabled ||
-    isTogglingLiveMode ||
+    isUpdatingEvaluation ||
     !metricSpecification?.supportsLiveEvaluation
 
   const setEvaluateLiveLogs = useCallback(
     async (value: boolean) => {
       if (isDisabled) return
-      await toggleLiveMode({
+      await updateEvaluation({
         evaluationUuid: evaluation.uuid,
-        live: value,
+        options: { evaluateLiveLogs: value },
       })
     },
-    [isDisabled, evaluation, toggleLiveMode],
+    [isDisabled, evaluation, updateEvaluation],
   )
 
   return !metricSpecification?.supportsLiveEvaluation ? (
