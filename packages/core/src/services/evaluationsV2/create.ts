@@ -27,11 +27,15 @@ export async function createEvaluationV2<
     settings,
     options,
     workspace,
+    createdAt = new Date(),
+    updatedAt = new Date(),
   }: {
     document: DocumentVersion
     commit: Commit
     settings: EvaluationSettings<T, M>
     options?: Partial<EvaluationOptions>
+    createdAt?: Date
+    updatedAt?: Date
     workspace: Workspace
   },
   db: Database = database,
@@ -61,6 +65,8 @@ export async function createEvaluationV2<
         documentUuid: document.documentUuid,
         ...settings,
         ...options,
+        createdAt,
+        updatedAt,
       })
       .returning()
       .then((r) => r[0]!)

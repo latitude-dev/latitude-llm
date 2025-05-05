@@ -32,6 +32,8 @@ export async function createEvaluationResultV2<
     value,
     usedForSuggestion,
     workspace,
+    createdAt,
+    updatedAt,
   }: {
     uuid?: string
     evaluation: EvaluationV2<T, M>
@@ -43,6 +45,8 @@ export async function createEvaluationResultV2<
     value: EvaluationResultValue<T, M>
     usedForSuggestion?: boolean
     workspace: Workspace
+    createdAt?: Date
+    updatedAt?: Date
   },
   db: Database = database,
 ) {
@@ -60,6 +64,8 @@ export async function createEvaluationResultV2<
         evaluatedLogId: providerLog.id,
         ...value,
         usedForSuggestion: usedForSuggestion,
+        createdAt: createdAt ?? new Date(),
+        updatedAt: updatedAt ?? new Date(),
       })
       .returning()
       .then((r) => r[0]!)) as EvaluationResultV2<T, M>
