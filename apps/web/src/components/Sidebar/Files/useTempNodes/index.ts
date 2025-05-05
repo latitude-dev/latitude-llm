@@ -112,7 +112,7 @@ export const useTempNodes = create<TmpFoldersState>((set, get) => ({
   },
   addToRootFolder: ({ path }) => {
     set((state) => {
-      const existingNodes = state.tmpFolders[path]
+      const existingNodes = state.tmpFolders[''] || []
       const node = createEmptyNode({
         name: path,
         parent: undefined,
@@ -121,7 +121,7 @@ export const useTempNodes = create<TmpFoldersState>((set, get) => ({
       return {
         tmpFolders: {
           ...state.tmpFolders,
-          ['']: existingNodes ? [node, ...existingNodes] : [node],
+          ['']: [node, ...existingNodes],
         },
       }
     })
