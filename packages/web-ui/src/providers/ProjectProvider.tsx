@@ -25,9 +25,11 @@ const ProjectProvider = ({
 
 const useCurrentProject = () => {
   const context = useContext(ProjectContext)
+
   if (!context) {
     throw new Error('useCurrentProject must be used within a ProjectProvider')
   }
+
   return context
 }
 

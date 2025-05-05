@@ -74,6 +74,8 @@ export type FileNodeProps = {
   onRenameFile: (args: { node: Node; path: string }) => Promise<void>
 }
 
+const EMPTY_TMP_NODES: Node[] = []
+
 function FileNode({
   isMerged,
   node,
@@ -92,10 +94,11 @@ function FileNode({
     },
   })
   const allTmpFolders = useTempNodes((state) => state.tmpFolders)
-  const tmpNodes = allTmpFolders[node.path] ?? []
+  const tmpNodes = allTmpFolders[node.path] ?? EMPTY_TMP_NODES
   const { currentUuid } = useFileTreeContext()
+  const documentUuid = node.doc?.documentUuid
   const [selected, setSelected] = useState(
-    !!currentUuid && currentUuid === node.doc?.documentUuid,
+    !!currentUuid && currentUuid === documentUuid,
   )
   const allNodes = useMemo(
     () => [...tmpNodes, ...node.children],
@@ -113,11 +116,11 @@ function FileNode({
     if (lastSegment === '' || lastSegment === ' ') return
 
     togglePath(node.path)
-  }, [togglePath, node.path, node.isPersisted])
+  }, [togglePath, node.path])
 
   useEffect(() => {
-    setSelected(!!currentUuid && currentUuid === node.doc?.documentUuid)
-  }, [currentUuid])
+    setSelected(!!currentUuid && currentUuid === documentUuid)
+  }, [currentUuid, documentUuid])
 
   const overMyself =
     droppable.over && droppable.over.id === droppable.active?.id
@@ -242,6 +245,10 @@ export function FilesTree({
   }, [currentUuid, documents])
 
   useEffect(() => {
+    if (currentPath) {
+      togglePath(currentPath)
+    }
+
     if (!isMount.current) {
       const oneFolder = thereisOnlyOneFolder(rootNode)
       if (!oneFolder) return
@@ -250,10 +257,6 @@ export function FilesTree({
       togglePath(oneFolder.path)
       isMount.current = true
       return
-    }
-
-    if (currentPath) {
-      togglePath(currentPath)
     }
   }, [currentPath, togglePath, isOpenThisPath, rootNode])
 
@@ -267,7 +270,7 @@ export function FilesTree({
 
       setDeletable(null)
     },
-    [destroyFile, destroyFolder, deletableNode, setDeletable],
+    [destroyFile, destroyFolder, setDeletable],
   )
 
   const deletingFolder = deletableNode?.type === 'folder'
