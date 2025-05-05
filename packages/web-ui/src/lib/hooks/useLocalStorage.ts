@@ -12,6 +12,7 @@ export enum AppLocalStorage {
   editorLineNumbers = 'editorLineNumbers',
   editorWrapText = 'editorWrapText',
   editorMinimap = 'editorMinimap',
+  editorAutoClosingTags = 'editorAutoClosingTags',
   editorCopilot = 'editorCopilot',
   playgroundParameters = 'playgroundParameters',
   evaluationPlaygroundParameters = 'evaluationPlaygroundParameters',

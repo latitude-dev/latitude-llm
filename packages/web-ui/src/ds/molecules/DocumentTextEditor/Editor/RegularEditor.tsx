@@ -11,6 +11,7 @@ import { registerActions } from './actions'
 import { EditorWrapper } from './EditorWrapper'
 import { useEditorOptions } from './useEditorOptions'
 import { useMonacoSetup } from './useMonacoSetup'
+import { registerFeatures } from './features'
 
 function getEditorLine({ model }: { model: editor.ITextModel }): number {
   const lastLine = model.getLineCount()
@@ -91,6 +92,7 @@ export function RegularMonacoEditor({
       }
 
       registerActions(editor, monaco)
+      registerFeatures(editor, monaco)
       setIsEditorMounted(true)
     },
     [autoFocus, editorRef, monacoRef, setIsEditorMounted],
