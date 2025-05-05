@@ -1,14 +1,7 @@
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  Providers,
-  User,
-  Workspace,
-} from '../../browser'
+import { Providers, User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import {
@@ -22,25 +15,13 @@ import { destroyProviderApiKey } from './destroy'
 describe('destroyProviderApiKey', () => {
   let workspace: Workspace
   let user: User
-  let project: Project
-  let commit: Commit
-  let document: DocumentVersion
 
   beforeEach(async () => {
-    const {
-      workspace: w,
-      user: u,
-      project: p,
-      commit: c,
-      documents,
-    } = await factories.createProject({
+    const { workspace: w, user: u } = await factories.createProject({
       documents: { prompt: 'prompt' },
     })
     workspace = w
     user = u
-    project = p
-    commit = c
-    document = documents[0]!
   })
 
   it('fails when deleting the default latitude provider', async () => {
