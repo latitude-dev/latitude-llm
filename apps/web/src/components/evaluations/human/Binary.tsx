@@ -37,7 +37,7 @@ function ConfigurationForm({
         name='passDescription'
         label='Pass description'
         description='When should the response pass?'
-        placeholder='The response demonstrates continued interaction'
+        placeholder='No pass description'
         onChange={(e) =>
           setConfiguration({
             ...configuration,
@@ -54,7 +54,7 @@ function ConfigurationForm({
         name='failDescription'
         label='Fail description'
         description='When should the response fail?'
-        placeholder='The response discourages interaction'
+        placeholder='No fail description'
         onChange={(e) =>
           setConfiguration({
             ...configuration,
@@ -98,12 +98,30 @@ function AnnotationForm({
     [],
   )
 
+  const description = useMemo(() => {
+    const description = []
+
+    if (evaluation.configuration.passDescription) {
+      description.push(
+        `The response should pass when: ${evaluation.configuration.passDescription}`,
+      )
+    }
+
+    if (evaluation.configuration.failDescription) {
+      description.push(
+        `The response should fail when: ${evaluation.configuration.failDescription}`,
+      )
+    }
+
+    return description.join('. ')
+  }, [evaluation.configuration])
+
   return (
     <>
       <TabSelect
         value={resultScore ?? undefined}
         name='resultScore'
-        description={`The response should pass when: ${evaluation.configuration.passDescription}. The response should fail when: ${evaluation.configuration.failDescription}`}
+        description={description || 'Whether the response passes or fails'}
         options={options}
         onChange={(value) => setResultScore(value)}
         disabled={disabled}

@@ -6,7 +6,7 @@ import {
 } from './shared'
 
 const humanEvaluationConfiguration = BaseEvaluationConfiguration.extend({
-  criteria: z.string(),
+  criteria: z.string().optional(),
 })
 const humanEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({
   reason: z.string().optional(),
@@ -16,8 +16,8 @@ const humanEvaluationResultError = BaseEvaluationResultError.extend({})
 // BINARY
 
 const humanEvaluationBinaryConfiguration = humanEvaluationConfiguration.extend({
-  passDescription: z.string(),
-  failDescription: z.string(),
+  passDescription: z.string().optional(),
+  failDescription: z.string().optional(),
 })
 const humanEvaluationBinaryResultMetadata =
   humanEvaluationResultMetadata.extend({
@@ -50,9 +50,9 @@ export type HumanEvaluationBinaryResultError = z.infer<
 
 const humanEvaluationRatingConfiguration = humanEvaluationConfiguration.extend({
   minRating: z.number(),
-  minRatingDescription: z.string(),
+  minRatingDescription: z.string().optional(),
   maxRating: z.number(),
-  maxRatingDescription: z.string(),
+  maxRatingDescription: z.string().optional(),
   minThreshold: z.number().optional(), // Threshold in rating range
   maxThreshold: z.number().optional(), // Threshold in rating range
 })

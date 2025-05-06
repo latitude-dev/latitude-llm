@@ -56,7 +56,7 @@ function ConfigurationForm<M extends HumanEvaluationMetric>({
         name='criteria'
         label='Criteria'
         description='The criteria to judge against'
-        placeholder='Judge the engagement of the response'
+        placeholder='No criteria'
         minRows={2}
         maxRows={4}
         onChange={(e) =>
@@ -109,11 +109,13 @@ function AnnotationForm<M extends HumanEvaluationMetric>({
 
   return (
     <>
-      <div className='flex flex-col gap-y-2'>
-        <Text.H6M>
-          Criteria: <Text.H6>{evaluation.configuration.criteria}</Text.H6>
-        </Text.H6M>
-      </div>
+      {!!evaluation.configuration.criteria && (
+        <div className='flex flex-col gap-y-2'>
+          <Text.H6M>
+            Criteria: <Text.H6>{evaluation.configuration.criteria}</Text.H6>
+          </Text.H6M>
+        </div>
+      )}
       {!!metricSpecification.AnnotationForm && (
         <metricSpecification.AnnotationForm
           evaluation={evaluation}

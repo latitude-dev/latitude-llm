@@ -33,18 +33,6 @@ async function validate(
     )
   }
 
-  if (!configuration.minRatingDescription) {
-    return Result.error(
-      new BadRequestError('Minimum rating description is required'),
-    )
-  }
-
-  if (!configuration.maxRatingDescription) {
-    return Result.error(
-      new BadRequestError('Maximum rating description is required'),
-    )
-  }
-
   if (
     configuration.minThreshold !== undefined &&
     (configuration.minThreshold < configuration.minRating ||
