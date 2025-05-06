@@ -202,6 +202,17 @@ export const ROUTES = {
                     [DocumentRoutes.logs]: {
                       root: `${root}/${DocumentRoutes.logs}`,
                       upload: `${root}/${DocumentRoutes.logs}/upload`,
+                      withFilters: ({
+                        experimentId,
+                      }: {
+                        experimentId?: number
+                      }) => {
+                        const base = `${root}/${DocumentRoutes.logs}`
+                        if (experimentId) {
+                          return `${base}?experimentId=${experimentId}`
+                        }
+                        return base
+                      },
                     },
                     [DocumentRoutes.experiments]: {
                       root: experimentsRoot,

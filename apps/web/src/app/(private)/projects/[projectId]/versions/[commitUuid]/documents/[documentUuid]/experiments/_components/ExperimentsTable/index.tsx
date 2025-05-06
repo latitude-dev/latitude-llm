@@ -137,16 +137,16 @@ export function ExperimentsTable({
           return (
             <TableRow
               key={experiment.id}
-              className={cn('border-b-[0.5px] h-12 max-h-12 border-border', {
-                'animate-pulse': isRunning,
-                'bg-accent hover:bg-accent/50': isSelected,
-              })}
+              className={cn(
+                'border-b-[0.5px] h-12 max-h-12 border-border cursor-pointer',
+                {
+                  'animate-pulse': isRunning,
+                  'bg-accent hover:bg-accent/50': isSelected,
+                },
+              )}
+              onClick={() => onSelectExperiment(experiment.uuid)}
             >
-              <TableCell
-                preventDefault
-                align='left'
-                onClick={() => onSelectExperiment(experiment.uuid)}
-              >
+              <TableCell preventDefault align='left'>
                 <Checkbox
                   fullWidth={false}
                   checked={selectedExperiments.includes(experiment.uuid)}

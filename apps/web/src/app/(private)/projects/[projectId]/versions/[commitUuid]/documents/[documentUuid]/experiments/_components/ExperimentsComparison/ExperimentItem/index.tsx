@@ -16,6 +16,13 @@ import {
   ExperimentEvaluationScores,
   ExperimentEvaluationScoresPlaceholder,
 } from './EvaluationScores'
+import Link from 'next/link'
+import { DocumentRoutes, ROUTES } from '$/services/routes'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 
 export function ExperimentItemPlaceholder({
   isLast,
@@ -56,6 +63,10 @@ export function ExperimentItem({
   isLast: boolean
   onUnselect?: () => void
 }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+
   if (!experiment) {
     return (
       <ExperimentItemPlaceholder
@@ -99,6 +110,29 @@ export function ExperimentItem({
         experiment={experiment}
         evaluations={evaluations}
       />
+      <div className='flex flex-row items-center justify-center w-full'>
+        <Link
+          href={ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid })
+            .documents.detail({ uuid: document.documentUuid })
+            [DocumentRoutes.logs].withFilters({
+              experimentId: experiment.id,
+            })}
+          className='w-fit'
+        >
+          <Button
+            variant='link'
+            className='p-0'
+            iconProps={{
+              name: 'externalLink',
+              placement: 'right',
+            }}
+          >
+            See {experiment.logsMetadata.count} Logs
+          </Button>
+        </Link>
+      </div>
     </div>
   )
 }

@@ -36,6 +36,7 @@ const FILTER_OPTIONS: DocumentLogFilterOptions = {
   logSources: LOG_SOURCES,
   createdAt: undefined,
   customIdentifier: undefined,
+  experimentId: undefined,
 }
 
 describe('useProcessLogFilters', () => {
