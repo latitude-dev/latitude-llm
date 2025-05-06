@@ -140,7 +140,7 @@ export function ParametersSelection({
           options={labels}
           value={parametersMap[param]}
           onChange={(headerIndex) => {
-            selectParameter(param, headerIndex)
+            selectParameter(param, Number(headerIndex))
           }}
           placeholder='Select column'
         />
