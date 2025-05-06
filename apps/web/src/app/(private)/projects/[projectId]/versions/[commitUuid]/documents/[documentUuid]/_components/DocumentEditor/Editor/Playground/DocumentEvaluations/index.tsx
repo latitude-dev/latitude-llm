@@ -133,11 +133,13 @@ export default function DocumentEvaluations({
     })
   const evaluationsV1 = useMemo(
     () =>
-      connectedEvaluations.map(({ evaluation, live }) => ({
-        ...evaluation,
-        live,
-      })),
-    [connectedEvaluations],
+      (evaluationsV2Enabled ? [] : connectedEvaluations).map(
+        ({ evaluation, live }) => ({
+          ...evaluation,
+          live,
+        }),
+      ),
+    [evaluationsV2Enabled, connectedEvaluations],
   )
 
   const { data: evaluationsV2, isLoading: isEvaluationsV2Loading } =

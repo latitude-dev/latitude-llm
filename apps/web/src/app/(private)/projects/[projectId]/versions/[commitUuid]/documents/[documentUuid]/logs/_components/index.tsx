@@ -1,7 +1,9 @@
 'use client'
+
 import { useCallback, useMemo, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import {
   EventArgs,
   useSockets,
@@ -97,6 +99,10 @@ export function DocumentLogsPage({
   const page = searchParams.get('page')
   const pageSize = searchParams.get('pageSize')
 
+  const { enabled: evaluationsV2Enabled } = useFeatureFlag({
+    featureFlag: 'evaluationsV2',
+  })
+
   const [documentLogFilterOptions, setDocumentLogFilterOptions] = useState(
     initialDocumentLogFilterOptions,
   )
@@ -124,7 +130,7 @@ export function DocumentLogsPage({
 
   const { data: resultsV1, isLoading: isEvaluationResultsV1Loading } =
     useEvaluationResultsByDocumentLogs({
-      documentLogIds: documentLogs.map((l) => l.id),
+      documentLogIds: evaluationsV2Enabled ? [] : documentLogs.map((l) => l.id),
     })
   const evaluationResultsV1 = useMemo(
     () =>
