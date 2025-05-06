@@ -168,7 +168,6 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
       console.error(error)
     }
 
-    // Note: The job system will retry it with exponential backoff
     if (isErrorRetryable(error as Error)) throw error
 
     if (experiment) {

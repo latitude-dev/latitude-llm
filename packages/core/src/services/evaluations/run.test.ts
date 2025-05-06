@@ -412,5 +412,32 @@ describe('run', () => {
 
       expect(spy).toHaveBeenCalledOnce()
     })
+
+    it('does not save when rate limited', async () => {
+      runChainSpy = vi.spyOn(runChainModule, 'runChain').mockReturnValueOnce({
+        stream,
+        resolvedContent: 'chain resolved text',
+        errorableUuid: FAKE_GENERATED_UUID,
+        duration: Promise.resolve(1000),
+        lastResponse: Promise.resolve(lastResponse),
+        messages: Promise.resolve([]),
+        error: Promise.resolve(
+          new ChainError({
+            code: RunErrorCodes.RateLimit,
+            message: 'rate limited!',
+          }),
+        ),
+        toolCalls: Promise.resolve([]),
+        conversation: Promise.resolve({ config: {}, messages: [] }),
+      })
+
+      const result = await runEvaluation({
+        providerLog,
+        documentUuid,
+        evaluation,
+      })
+
+      expect(result.error).toBeDefined()
+    })
   })
 })

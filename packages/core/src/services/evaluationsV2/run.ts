@@ -181,6 +181,7 @@ export async function runEvaluationV2<
     }
   } catch (error) {
     if (isErrorRetryable(error as Error)) return Result.error(error as Error)
+
     value = { error: { message: (error as Error).message } }
   }
 

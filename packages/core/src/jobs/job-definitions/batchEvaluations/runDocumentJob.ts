@@ -7,8 +7,7 @@ import { ProgressTracker } from '../../utils/progressTracker'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
 import { runEvaluationV2JobKey } from '../evaluations'
 import { evaluationsQueue } from '../../queues'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 
 export type RunDocumentForEvaluationJobData = {
   workspaceId: number
@@ -91,12 +90,7 @@ export const runDocumentForEvaluationJob = async (
       })
     }
   } catch (error) {
-    if (
-      error instanceof ChainError &&
-      error.errorCode === RunErrorCodes.RateLimit
-    ) {
-      throw error // The job system will retry it with exponential backoff
-    }
+    if (isErrorRetryable(error as Error)) throw error
 
     await progressTracker.incrementErrors()
 

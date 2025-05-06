@@ -3,6 +3,7 @@ import { RunErrorCodes, RunErrorDetails } from '@latitude-data/constants/errors'
 import { ErrorableEntity, RunError } from '../../../browser'
 import { LatitudeErrorDetails, UnprocessableEntityError } from '../../errors'
 import { createRunError } from '../../../services/runErrors/create'
+import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 
 export class ChainError<
   T extends RunErrorCodes,
@@ -65,7 +66,7 @@ export async function createChainRunError({
   }
 
   let dbError
-  if (chainError.errorCode !== RunErrorCodes.RateLimit) {
+  if (!isErrorRetryable(chainError)) {
     dbError = await createRunError({
       data: {
         errorableUuid,
