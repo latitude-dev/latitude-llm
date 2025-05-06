@@ -301,27 +301,6 @@ export class ExperimentsRepository extends Repository<Experiment> {
         .groupBy(documentLogs.experimentId),
     )
 
-    const query = this.db
-      .with(experimentsCte, documentLogStats, providerLogStats)
-      .select({
-        id: experimentsCte.id,
-        count: documentLogStats.logsCount,
-        totalDuration: documentLogStats.totalDuration,
-        totalCost: providerLogStats.totalCost,
-      })
-      .from(experimentsCte)
-      .leftJoin(
-        documentLogStats,
-        eq(documentLogStats.experimentId, experimentsCte.id),
-      )
-      .leftJoin(
-        providerLogStats,
-        eq(providerLogStats.experimentId, experimentsCte.id),
-      )
-      .toSQL().sql
-
-    console.log(query)
-
     const [row] = await this.db
       .with(experimentsCte, documentLogStats, providerLogStats)
       .select({
