@@ -1,6 +1,4 @@
-import yaml from 'js-yaml'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   EvaluationType,
   formatConversation,
@@ -120,7 +118,6 @@ function buildPrompt({
 provider: ${provider.name}
 model: ${model}
 temperature: 0.7
-${yaml.dump({ schema: zodToJsonSchema(promptSchema, { target: 'openAi' }) })}
 ---
 
 You're an expert LLM-as-a-judge evaluator. Your task is to judge how well the response, from another LLM model (the assistant), compares to the expected output, following the criteria:
@@ -236,8 +233,6 @@ async function clone(
     return Result.error(new BadRequestError('Provider is required'))
   }
 
-  // Note: no scale conversion required for this metric
-
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original evaluation object
   return Result.ok({
@@ -254,6 +249,8 @@ ${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
 
 ${buildPrompt({ ...evaluation.configuration, provider })}
 `.trim(),
+      minScore: 0,
+      maxScore: 100,
       minThreshold: evaluation.configuration.minThreshold,
       maxThreshold: evaluation.configuration.maxThreshold,
     },

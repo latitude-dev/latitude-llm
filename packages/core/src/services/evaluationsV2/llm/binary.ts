@@ -1,13 +1,8 @@
-import yaml from 'js-yaml'
-import util from 'util'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   EvaluationType,
   formatConversation,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
-  LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA,
-  LlmEvaluationCustomSpecification,
   LlmEvaluationMetric,
   ProviderApiKey,
   LlmEvaluationBinarySpecification as specification,
@@ -22,7 +17,7 @@ import {
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { promptTask, runPrompt, thresholdToCustomScale } from './shared'
+import { promptTask, runPrompt } from './shared'
 
 export const LlmEvaluationBinarySpecification = {
   ...specification,
@@ -87,7 +82,6 @@ export function buildPrompt({
 provider: ${provider.name}
 model: ${model}
 temperature: 0.7
-${yaml.dump({ schema: zodToJsonSchema(promptSchema, { target: 'openAi' }) })}
 ---
 
 You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), meets the following criteria:
@@ -195,21 +189,16 @@ async function clone(
       prompt: `
 ${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
 
-${buildPrompt({ ...evaluation.configuration, provider })}
-
 /*
-  This step has been added automatically when cloning the original evaluation.
-  It will adapt the original evaluation "${specification.name}" metric scale to the "${LlmEvaluationCustomSpecification.name}" metric scale.
-  Feel free to remove this step and change the prompt considering the score should be an integer between \`0\` and \`100\`.
+  This evaluation has been cloned. The verdict has been changed from "false" / "true" to "0" / "1". Feel free to modify the prompt.
 */
 
-<step schema={{${util.inspect(zodToJsonSchema(LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA, { target: 'openAi' }), { depth: Infinity, breakLength: Infinity })}}}>
-  The scoring schema has been changed to be an integer between \`0\` and \`100\`.
-  Taking into account the instructions from previous messages, if the verdict is \`false\` return a \`0\`, whereas if the verdict is \`true\` return a \`100\`.
-</step>
+${buildPrompt({ ...evaluation.configuration, provider })}
 `.trim(),
-      minThreshold: thresholdToCustomScale(0.5, 0, 1),
-      maxThreshold: undefined,
+      minScore: 0,
+      maxScore: 1,
+      minThreshold: evaluation.configuration.reverseScale ? undefined : 1,
+      maxThreshold: evaluation.configuration.reverseScale ? 1 : undefined,
     },
   })
 }
