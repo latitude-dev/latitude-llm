@@ -1,13 +1,8 @@
-import yaml from 'js-yaml'
-import util from 'util'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   EvaluationType,
   formatConversation,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
-  LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA,
-  LlmEvaluationCustomSpecification,
   LlmEvaluationMetric,
   ProviderApiKey,
   LlmEvaluationRatingSpecification as specification,
@@ -22,7 +17,7 @@ import {
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { promptTask, runPrompt, thresholdToCustomScale } from './shared'
+import { promptTask, runPrompt } from './shared'
 
 export const LlmEvaluationRatingSpecification = {
   ...specification,
@@ -117,7 +112,6 @@ async function validate(
 function buildPrompt({
   provider,
   model,
-  schema,
   criteria,
   minRating,
   minRatingDescription,
@@ -126,7 +120,6 @@ function buildPrompt({
 }: {
   provider: ProviderApiKey
   model: string
-  schema: z.ZodSchema
   criteria: string
   minRating: number
   minRatingDescription: string
@@ -138,7 +131,6 @@ function buildPrompt({
 provider: ${provider.name}
 model: ${model}
 temperature: 0.7
-${yaml.dump({ schema: zodToJsonSchema(schema, { target: 'openAi' }) })}
 ---
 
 You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), meets the following criteria:
@@ -197,11 +189,7 @@ async function run(
   })
 
   const { response, stats, verdict } = await runPrompt({
-    prompt: buildPrompt({
-      ...metadata.configuration,
-      schema: promptSchema,
-      provider: provider,
-    }),
+    prompt: buildPrompt({ ...metadata.configuration, provider: provider }),
     parameters: {
       ...evaluatedLog,
       actualOutput: actualOutput,
@@ -262,32 +250,6 @@ async function clone(
     return Result.error(new BadRequestError('Provider is required'))
   }
 
-  const promptSchema = z.object({
-    rating: z
-      .number()
-      .min(evaluation.configuration.minRating)
-      .max(evaluation.configuration.maxRating),
-    reason: z.string(),
-  })
-
-  let minThreshold = undefined
-  if (evaluation.configuration.minThreshold !== undefined) {
-    minThreshold = thresholdToCustomScale(
-      evaluation.configuration.minThreshold,
-      evaluation.configuration.minRating,
-      evaluation.configuration.maxRating,
-    )
-  }
-
-  let maxThreshold = undefined
-  if (evaluation.configuration.maxThreshold !== undefined) {
-    maxThreshold = thresholdToCustomScale(
-      evaluation.configuration.maxThreshold,
-      evaluation.configuration.minRating,
-      evaluation.configuration.maxRating,
-    )
-  }
-
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original evaluation object
   return Result.ok({
@@ -302,25 +264,16 @@ async function clone(
       prompt: `
 ${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
 
-${buildPrompt({
-  ...evaluation.configuration,
-  schema: promptSchema,
-  provider: provider,
-})}
+${buildPrompt({ ...evaluation.configuration, provider })}
 
 /*
-  This step has been added automatically when cloning the original evaluation.
-  It will adapt the original evaluation "${specification.name}" metric scale to the "${LlmEvaluationCustomSpecification.name}" metric scale.
-  Feel free to remove this step and change the prompt considering the score should be an integer between \`0\` and \`100\`.
+  This evaluation has been cloned. The verdict has been changed from "rating" to "score". Feel free to modify the prompt.
 */
-
-<step schema={{${util.inspect(zodToJsonSchema(LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA, { target: 'openAi' }), { depth: Infinity, breakLength: Infinity })}}}>
-  The scoring schema has been changed to be an integer between \`0\` and \`100\`.
-  Taking into account the instructions from previous messages, scale the verdict to an integer between \`0\` and \`100\`.
-</step>
 `.trim(),
-      minThreshold: minThreshold,
-      maxThreshold: maxThreshold,
+      minScore: evaluation.configuration.minRating,
+      maxScore: evaluation.configuration.maxRating,
+      minThreshold: evaluation.configuration.minThreshold,
+      maxThreshold: evaluation.configuration.maxThreshold,
     },
   })
 }

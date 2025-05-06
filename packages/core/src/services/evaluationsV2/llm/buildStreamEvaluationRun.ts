@@ -1,14 +1,15 @@
 import { ChainEvent } from '@latitude-data/constants'
+import { z } from 'zod'
 import {
   EvaluationType,
   EvaluationV2,
   LlmEvaluationMetricAnyCustom,
   Workspace,
 } from '../../../browser'
-import { buildLlmEvaluationRunFunction } from './shared'
-import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { Result, TypedResult } from '../../../lib/Result'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import { buildProvidersMap } from '../../providerApiKeys/buildMap'
+import { buildLlmEvaluationRunFunction } from './shared'
 
 const buildStreamHandler =
   (stream: ReadableStream<ChainEvent>) =>
@@ -74,6 +75,13 @@ export async function buildStreamEvaluationRun({
     evaluation,
     prompt: evaluation.configuration.prompt,
     parameters,
+    schema: z.object({
+      score: z
+        .number()
+        .min(evaluation.configuration.minScore)
+        .max(evaluation.configuration.maxScore),
+      reason: z.string(),
+    }),
     runArgs: { generateUUID: () => resultUuid },
   })
 

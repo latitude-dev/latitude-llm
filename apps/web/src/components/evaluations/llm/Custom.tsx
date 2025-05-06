@@ -1,28 +1,17 @@
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { ROUTES } from '$/services/routes'
+import { formatCount } from '$/lib/formatCount'
 import {
   EvaluationType,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
-  LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA,
   LlmEvaluationCustomSpecification,
   LlmEvaluationMetric,
 } from '@latitude-data/constants'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormField } from '@latitude-data/web-ui/atoms/FormField'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
-import Link from 'next/link'
-import { useParams } from 'next/navigation'
 import { useEffect } from 'react'
-import { stringify } from 'yaml'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   ChartConfigurationArgs,
   ConfigurationFormProps,
@@ -47,11 +36,6 @@ function ConfigurationForm({
   errors,
   disabled,
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
-  const { document } = useCurrentDocument()
-  const { evaluationUuid } = useParams()
-
   useEffect(() => {
     if (mode !== 'create') return
     if (!configuration.provider || !configuration.model) return
@@ -64,7 +48,6 @@ ${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
 provider: ${configuration.provider}
 model: ${configuration.model}
 temperature: 0.7
-${stringify({ schema: zodToJsonSchema(LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA, { target: 'openAi' }) })}
 ---
 
 You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), follows the given instructions.
@@ -93,48 +76,18 @@ You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the res
 
   return (
     <>
-      <FormField
-        label='Prompt'
-        description='The custom evaluation prompt to judge against'
-        errors={errors?.['prompt']}
-      >
-        {mode === 'update' ? (
-          <div className='w-full flex justify-center items-start p-0 !m-0 !-mt-2'>
-            <Link
-              href={
-                ROUTES.projects
-                  .detail({ id: project.id })
-                  .commits.detail({ uuid: commit.uuid })
-                  .documents.detail({ uuid: document.documentUuid })
-                  .evaluationsV2.detail({ uuid: evaluationUuid as string })
-                  .editor.root
-              }
-              className={
-                disabled ? 'pointer-events-none' : 'pointer-events-auto'
-              }
-            >
-              <Button
-                variant='link'
-                size='none'
-                iconProps={{
-                  name: 'arrowRight',
-                  widthClass: 'w-4',
-                  heightClass: 'h-4',
-                  placement: 'right',
-                }}
-                disabled={disabled}
-              >
-                Go to the editor
-              </Button>
-            </Link>
-          </div>
-        ) : (
+      {mode === 'create' && (
+        <FormField
+          label='Prompt'
+          description='The custom evaluation prompt to judge against'
+          errors={errors?.['prompt']}
+        >
           <Alert
             variant='default'
             description='You will configure the prompt after creating the evaluation'
           />
-        )}
-      </FormField>
+        </FormField>
+      )}
       <SwitchInput
         checked={
           // @ts-expect-error this component is reused for
@@ -160,15 +113,50 @@ You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the res
       />
       <FormFieldGroup
         layout='horizontal'
-        description='The minimum and maximum percentage of criteria met of the response'
+        description='The minimum and maximum score of the response'
+      >
+        <NumberInput
+          value={configuration.minScore ?? undefined}
+          name='minScore'
+          label='Minimum score'
+          placeholder='0'
+          onChange={(value) => {
+            if (value === undefined) return
+            setConfiguration({ ...configuration, minScore: value })
+          }}
+          errors={errors?.['minScore']}
+          defaultAppearance
+          className='w-full'
+          disabled={disabled}
+          required
+        />
+        <NumberInput
+          value={configuration.maxScore ?? undefined}
+          name='maxScore'
+          label='Maximum score'
+          placeholder='5'
+          onChange={(value) => {
+            if (value === undefined) return
+            setConfiguration({ ...configuration, maxScore: value })
+          }}
+          errors={errors?.['maxScore']}
+          defaultAppearance
+          className='w-full'
+          disabled={disabled}
+          required
+        />
+      </FormFieldGroup>
+      <FormFieldGroup
+        layout='horizontal'
+        description='The minimum and maximum score threshold of the response'
       >
         <NumberInput
           value={configuration.minThreshold ?? undefined}
           name='minThreshold'
           label='Minimum threshold'
           placeholder='No minimum'
-          min={0}
-          max={100}
+          min={configuration.minScore}
+          max={configuration.maxScore}
           onChange={(value) =>
             setConfiguration({ ...configuration, minThreshold: value })
           }
@@ -183,8 +171,8 @@ You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the res
           name='maxThreshold'
           label='Maximum threshold'
           placeholder='No maximum'
-          min={0}
-          max={100}
+          min={configuration.minScore}
+          max={configuration.maxScore}
           onChange={(value) =>
             setConfiguration({ ...configuration, maxThreshold: value })
           }
@@ -202,21 +190,21 @@ You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the res
 function ResultBadge({
   result,
 }: ResultBadgeProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
-  return <>{result.score!.toFixed(0)}% met</>
+  return <>{formatCount(result.score!)}</>
 }
 
 function chartConfiguration({
   evaluation,
 }: ChartConfigurationArgs<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
   return {
-    min: 0,
-    max: 100,
+    min: evaluation.configuration.minScore,
+    max: evaluation.configuration.maxScore,
     thresholds: {
       lower: evaluation.configuration.minThreshold,
       upper: evaluation.configuration.maxThreshold,
     },
     scale: (point: number) => point,
     format: (point: number, short?: boolean) =>
-      short ? `${point.toFixed(0)}%` : `${point.toFixed(0)}% met`,
+      short ? `${formatCount(point)}` : `${point.toFixed(2)}`,
   }
 }

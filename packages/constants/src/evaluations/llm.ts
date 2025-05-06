@@ -107,7 +107,7 @@ const llmEvaluationComparisonResultError = llmEvaluationResultError.extend({})
 export const LlmEvaluationComparisonSpecification = {
   name: 'Comparison',
   description:
-    'Judges the response by comparing the criteria to the expected output. The resulting score is the percentage of the compared criteria that is met',
+    'Judges the response by comparing the criteria to the expected output. The resulting score is the percentage of compared criteria that is met',
   configuration: llmEvaluationComparisonConfiguration,
   resultMetadata: llmEvaluationComparisonResultMetadata,
   resultError: llmEvaluationComparisonResultError,
@@ -130,6 +130,8 @@ export type LlmEvaluationComparisonResultError = z.infer<
 
 const llmEvaluationCustomConfiguration = llmEvaluationConfiguration.extend({
   prompt: z.string(),
+  minScore: z.number(),
+  maxScore: z.number(),
   minThreshold: z.number().optional(), // Threshold percentage
   maxThreshold: z.number().optional(), // Threshold percentage
 })
@@ -140,7 +142,7 @@ const llmEvaluationCustomResultError = llmEvaluationResultError.extend({})
 export const LlmEvaluationCustomSpecification = {
   name: 'Custom',
   description:
-    'Judges the response under a criteria using a custom prompt. The resulting score is the percentage of the criteria that is met',
+    'Judges the response under a criteria using a custom prompt. The resulting score is the value of criteria that is met',
   configuration: llmEvaluationCustomConfiguration,
   resultMetadata: llmEvaluationCustomResultMetadata,
   resultError: llmEvaluationCustomResultError,
@@ -158,11 +160,6 @@ export type LlmEvaluationCustomResultMetadata = z.infer<
 export type LlmEvaluationCustomResultError = z.infer<
   typeof LlmEvaluationCustomSpecification.resultError
 >
-
-export const LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA = z.object({
-  score: z.number().min(0).max(100),
-  reason: z.string(),
-})
 
 export const LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION = `
 /*

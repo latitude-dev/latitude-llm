@@ -1,8 +1,8 @@
 import { scan } from 'promptl-ai'
+import { z } from 'zod'
 import {
   EvaluationType,
   formatConversation,
-  LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA,
   LlmEvaluationMetric,
   LlmEvaluationCustomSpecification as specification,
 } from '../../../browser'
@@ -32,9 +32,6 @@ async function validate(
   >,
   _: Database = database,
 ) {
-  // Note: we allow to save an invalid prompt to avoid bad
-  // user experience when automatically saving the prompt
-
   if (configuration.prompt === undefined) {
     return Result.error(new BadRequestError('Prompt is required'))
   }
@@ -44,27 +41,36 @@ async function validate(
     configuration.provider = (config.provider as string | undefined) ?? ''
     configuration.model = (config.model as string | undefined) ?? ''
   } catch (_) {
-    // Fail silently
+    // Note: we allow to save an invalid prompt to avoid bad
+    // user experience when automatically saving the prompt
+  }
+
+  if (configuration.minScore >= configuration.maxScore) {
+    return Result.error(
+      new BadRequestError('Minimum score must be less than maximum score'),
+    )
   }
 
   if (
     configuration.minThreshold !== undefined &&
-    (configuration.minThreshold < 0 || configuration.minThreshold > 100)
+    (configuration.minThreshold < configuration.minScore ||
+      configuration.minThreshold > configuration.maxScore)
   ) {
     return Result.error(
       new BadRequestError(
-        'Minimum threshold must be a number between 0 and 100',
+        `Minimum threshold must be a number between ${configuration.minScore} and ${configuration.maxScore}`,
       ),
     )
   }
 
   if (
     configuration.maxThreshold !== undefined &&
-    (configuration.maxThreshold < 0 || configuration.maxThreshold > 100)
+    (configuration.maxThreshold < configuration.minScore ||
+      configuration.maxThreshold > configuration.maxScore)
   ) {
     return Result.error(
       new BadRequestError(
-        'Maximum threshold must be a number between 0 and 100',
+        `Maximum threshold must be a number between ${configuration.minScore} and ${configuration.maxScore}`,
       ),
     )
   }
@@ -88,6 +94,8 @@ async function validate(
     provider: configuration.provider,
     model: configuration.model,
     prompt: configuration.prompt,
+    minScore: configuration.minScore,
+    maxScore: configuration.maxScore,
     minThreshold: configuration.minThreshold,
     maxThreshold: configuration.maxThreshold,
   })
@@ -131,6 +139,14 @@ async function run(
     db,
   ).then((r) => r.unwrap())
 
+  const promptSchema = z.object({
+    score: z
+      .number()
+      .min(metadata.configuration.minScore)
+      .max(metadata.configuration.maxScore),
+    reason: z.string(),
+  })
+
   const { response, stats, verdict } = await runPrompt({
     prompt: metadata.configuration.prompt,
     parameters: {
@@ -139,7 +155,7 @@ async function run(
       expectedOutput: expectedOutput,
       conversation: formatConversation(conversation),
     },
-    schema: LLM_EVALUATION_CUSTOM_PROMPT_SCHEMA,
+    schema: promptSchema,
     resultUuid: resultUuid,
     evaluation: evaluation,
     providers: providers!,
@@ -152,15 +168,28 @@ async function run(
   metadata.cost = stats.costInMillicents
   metadata.duration = stats.duration
 
-  const score = Math.min(Math.max(Number(verdict.score.toFixed(0)), 0), 100)
+  const score = Math.min(
+    Math.max(Number(verdict.score.toFixed(0)), metadata.configuration.minScore),
+    metadata.configuration.maxScore,
+  )
 
-  let normalizedScore = normalizeScore(score, 0, 100)
+  let normalizedScore = normalizeScore(
+    score,
+    metadata.configuration.minScore,
+    metadata.configuration.maxScore,
+  )
   if (metadata.configuration.reverseScale) {
-    normalizedScore = normalizeScore(score, 100, 0)
+    normalizedScore = normalizeScore(
+      score,
+      metadata.configuration.maxScore,
+      metadata.configuration.minScore,
+    )
   }
 
-  const minThreshold = metadata.configuration.minThreshold ?? 0
-  const maxThreshold = metadata.configuration.maxThreshold ?? 100
+  const minThreshold =
+    metadata.configuration.minThreshold ?? metadata.configuration.minScore
+  const maxThreshold =
+    metadata.configuration.maxThreshold ?? metadata.configuration.maxScore
   const hasPassed = score >= minThreshold && score <= maxThreshold
 
   return { score, normalizedScore, metadata, hasPassed }
