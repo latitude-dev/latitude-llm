@@ -84,10 +84,9 @@ describe('clone', () => {
       autoApplySuggestions: null,
       workspaceId: workspace.id,
       configuration: {
-        model: 'gpt-4',
-        minThreshold: 50,
         reverseScale: false,
         provider: 'openai',
+        model: 'gpt-4',
         prompt: expect.stringContaining(
           buildPrompt({
             provider,
@@ -97,6 +96,10 @@ describe('clone', () => {
             failDescription: 'Fail',
           }),
         ),
+        minScore: 0,
+        maxScore: 1,
+        minThreshold: 1,
+        maxThreshold: undefined,
       },
     })
   })

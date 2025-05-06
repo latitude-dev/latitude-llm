@@ -264,11 +264,11 @@ async function clone(
       prompt: `
 ${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
 
+${buildPrompt({ ...evaluation.configuration, provider })}
+
 /*
   This evaluation has been cloned. The verdict has been changed from "rating" to "score". Feel free to modify the prompt.
 */
-
-${buildPrompt({ ...evaluation.configuration, provider })}
 `.trim(),
       minScore: evaluation.configuration.minRating,
       maxScore: evaluation.configuration.maxRating,
