@@ -4,7 +4,6 @@ import {
   HumanEvaluationBinarySpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
-import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {
   EvaluationMetricAnnotateArgs,
@@ -27,14 +26,6 @@ async function validate(
   >,
   _: Database = database,
 ) {
-  if (!configuration.passDescription) {
-    return Result.error(new BadRequestError('Pass description is required'))
-  }
-
-  if (!configuration.failDescription) {
-    return Result.error(new BadRequestError('Fail description is required'))
-  }
-
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original settings object
   return Result.ok({

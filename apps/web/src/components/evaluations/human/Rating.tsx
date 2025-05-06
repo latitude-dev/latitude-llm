@@ -58,7 +58,7 @@ function ConfigurationForm({
         <Input
           value={configuration.minRatingDescription ?? ''}
           name='minRatingDescription'
-          placeholder='The response discourages interaction'
+          placeholder='No minimum rating description'
           onChange={(e) =>
             setConfiguration({
               ...configuration,
@@ -94,7 +94,7 @@ function ConfigurationForm({
         <Input
           value={configuration.maxRatingDescription ?? ''}
           name='maxRatingDescription'
-          placeholder='The response demonstrates continued interaction'
+          placeholder='No maximum rating description'
           onChange={(e) =>
             setConfiguration({
               ...configuration,
@@ -182,13 +182,31 @@ function AnnotationForm({
     return options
   }, [range, evaluation])
 
+  const description = useMemo(() => {
+    const description = []
+
+    if (evaluation.configuration.minRatingDescription) {
+      description.push(
+        `The response should be rated low when: ${evaluation.configuration.minRatingDescription}`,
+      )
+    }
+
+    if (evaluation.configuration.maxRatingDescription) {
+      description.push(
+        `The response should be rated high when: ${evaluation.configuration.maxRatingDescription}`,
+      )
+    }
+
+    return description.join('. ')
+  }, [evaluation.configuration])
+
   return (
     <>
       {range > 10 ? (
         <NumberInput
           value={resultScore ?? undefined}
           name='resultScore'
-          description={`The response should be rated low when: ${evaluation.configuration.minRatingDescription}. The response should be rated high when: ${evaluation.configuration.maxRatingDescription}`}
+          description={description || 'The rating of the response'}
           placeholder='No rating'
           min={evaluation.configuration.minRating}
           max={evaluation.configuration.maxRating}
@@ -205,7 +223,7 @@ function AnnotationForm({
         <TabSelect
           value={resultScore ?? undefined}
           name='resultScore'
-          description={`The response should be rated low when: ${evaluation.configuration.minRatingDescription}. The response should be rated high when: ${evaluation.configuration.maxRatingDescription}`}
+          description={description || 'The rating of the response'}
           options={options}
           onChange={(value) => setResultScore(value)}
           disabled={disabled}
