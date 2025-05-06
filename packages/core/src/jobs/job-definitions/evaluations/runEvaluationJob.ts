@@ -1,4 +1,3 @@
-import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import {
@@ -164,10 +163,6 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
       }
     }
   } catch (error) {
-    if (env.NODE_ENV === 'development') {
-      console.error(error)
-    }
-
     if (isErrorRetryable(error as Error)) throw error
 
     if (experiment) {
