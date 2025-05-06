@@ -239,73 +239,114 @@ export class ExperimentsRepository extends Repository<Experiment> {
   async getLogsMetadata(
     uuid: string,
   ): PromisedResult<ExperimentLogsMetadata, LatitudeError> {
-    const docStats = this.db
+    const experimentsCte = this.db.$with('experiments_cte').as(
+      this.db
+        .select({ id: experiments.id })
+        .from(experiments)
+        .where(and(this.scopeFilter, eq(experiments.uuid, uuid))),
+    )
+
+    const documentLogStats = this.db.$with('document_log_stats').as(
+      this.db
+        .with(experimentsCte)
+        .select({
+          experimentId: documentLogs.experimentId,
+          logsCount: count(documentLogs.id).mapWith(Number).as('logs_count'),
+          totalDuration: sum(documentLogs.duration)
+            .mapWith(Number)
+            .as('total_duration'),
+        })
+        .from(documentLogs)
+        .leftJoin(
+          runErrors,
+          and(
+            eq(runErrors.errorableUuid, documentLogs.uuid),
+            eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+          ),
+        )
+        .innerJoin(
+          experimentsCte,
+          eq(documentLogs.experimentId, experimentsCte.id),
+        )
+        .where(isNull(runErrors.id))
+        .groupBy(documentLogs.experimentId),
+    )
+
+    const providerLogStats = this.db.$with('provider_log_stats').as(
+      this.db
+        .with(experimentsCte)
+        .select({
+          experimentId: documentLogs.experimentId,
+          totalCost: sum(providerLogs.costInMillicents)
+            .mapWith(Number)
+            .as('total_cost'),
+        })
+        .from(documentLogs)
+        .innerJoin(
+          providerLogs,
+          eq(providerLogs.documentLogUuid, documentLogs.uuid),
+        )
+        .leftJoin(
+          runErrors,
+          and(
+            eq(runErrors.errorableUuid, documentLogs.uuid),
+            eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+          ),
+        )
+        .innerJoin(
+          experimentsCte,
+          eq(documentLogs.experimentId, experimentsCte.id),
+        )
+        .where(isNull(runErrors.id))
+        .groupBy(documentLogs.experimentId),
+    )
+
+    const query = this.db
+      .with(experimentsCte, documentLogStats, providerLogStats)
       .select({
-        experimentId: documentLogs.experimentId,
-        docCount: count(documentLogs.id).as('docCount'),
-        totalDuration: sum(documentLogs.duration)
-          .mapWith(Number)
-          .as('totalDuration'),
+        id: experimentsCte.id,
+        count: documentLogStats.logsCount,
+        totalDuration: documentLogStats.totalDuration,
+        totalCost: providerLogStats.totalCost,
       })
-      .from(documentLogs)
+      .from(experimentsCte)
       .leftJoin(
-        runErrors,
-        and(
-          eq(runErrors.errorableUuid, documentLogs.uuid),
-          eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
-        ),
-      )
-      .where(isNull(runErrors.id))
-      .groupBy(documentLogs.experimentId)
-      .as('doc_stats')
-
-    const costStats = this.db
-      .select({
-        experimentId: documentLogs.experimentId,
-        totalCost: sum(providerLogs.costInMillicents)
-          .mapWith(Number)
-          .as('totalCost'),
-      })
-      .from(documentLogs)
-      .innerJoin(
-        providerLogs,
-        eq(providerLogs.documentLogUuid, documentLogs.uuid),
+        documentLogStats,
+        eq(documentLogStats.experimentId, experimentsCte.id),
       )
       .leftJoin(
-        runErrors,
-        and(
-          eq(runErrors.errorableUuid, documentLogs.uuid),
-          eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
-        ),
+        providerLogStats,
+        eq(providerLogStats.experimentId, experimentsCte.id),
       )
-      .where(isNull(runErrors.id))
-      .groupBy(documentLogs.experimentId)
-      .as('cost_stats')
+      .toSQL().sql
 
-    const result = await this.db
+    console.log(query)
+
+    const [row] = await this.db
+      .with(experimentsCte, documentLogStats, providerLogStats)
       .select({
-        id: experiments.id,
-        count: docStats.docCount,
-        totalDuration: docStats.totalDuration,
-        totalCost: costStats.totalCost,
+        id: experimentsCte.id,
+        count: documentLogStats.logsCount,
+        totalDuration: documentLogStats.totalDuration,
+        totalCost: providerLogStats.totalCost,
       })
-      .from(experiments)
-      .leftJoin(docStats, eq(docStats.experimentId, experiments.id))
-      .leftJoin(costStats, eq(costStats.experimentId, experiments.id))
-      .where(and(this.scopeFilter, eq(experiments.uuid, uuid)))
+      .from(experimentsCte)
+      .leftJoin(
+        documentLogStats,
+        eq(documentLogStats.experimentId, experimentsCte.id),
+      )
+      .leftJoin(
+        providerLogStats,
+        eq(providerLogStats.experimentId, experimentsCte.id),
+      )
 
-    if (!result.length) {
-      return Result.ok({
-        count: 0,
-        totalCost: 0,
-        totalDuration: 0,
-      })
+    if (!row) {
+      return Result.ok({ count: 0, totalCost: 0, totalDuration: 0 })
     }
-
     return Result.ok({
-      count: result[0]!.count,
-      totalCost: result[0]!.totalCost,
-      totalDuration: result[0]!.totalDuration,
+      count: row.count,
+      totalCost: row.totalCost,
+      totalDuration: row.totalDuration,
     })
   }
 
