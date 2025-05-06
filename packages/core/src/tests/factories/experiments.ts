@@ -5,9 +5,15 @@ import {
   EvaluationV2,
   User,
   Workspace,
+  Experiment,
+  LogSources,
+  ProviderApiKey,
 } from '../../browser'
 import { createExperiment as createExperimentFn } from '../../services/experiments/create'
 import { createDataset, ICreateDatasetV2 } from './datasets'
+import { createEvaluationResultV2 } from './evaluationResultsV2'
+import { createDocumentLog } from './documentLogs'
+import { createProviderLog } from './providerLogs'
 
 export type ICreateExperiment = {
   name?: string
@@ -64,5 +70,56 @@ export async function createExperiment(args: ICreateExperiment) {
     experiment,
     dataset: datasetResult.dataset,
     workspace: args.workspace,
+  }
+}
+
+export async function createExperimentResults({
+  workspace,
+  commit,
+  document,
+  provider,
+  experiment,
+  costInMillicents,
+  duration,
+  scores,
+}: {
+  workspace: Workspace
+  commit: Commit
+  document: DocumentVersion
+  provider: ProviderApiKey
+  experiment: Experiment
+  costInMillicents: number
+  duration: number
+  scores: { evaluation: EvaluationV2; score: number }[]
+}) {
+  const { documentLog } = await createDocumentLog({
+    document,
+    commit,
+    source: LogSources.Experiment,
+    experimentId: experiment.id,
+    totalDuration: duration,
+    skipProviderLogs: true,
+  })
+
+  const providerLog = await createProviderLog({
+    workspace,
+    documentLogUuid: documentLog.uuid,
+    providerId: provider.id,
+    providerType: provider.provider,
+    source: LogSources.Experiment,
+    costInMillicents,
+    duration,
+  })
+
+  for await (const { evaluation, score } of scores) {
+    await createEvaluationResultV2({
+      workspace,
+      evaluation,
+      experiment,
+      commit,
+      providerLog,
+      score,
+      normalizedScore: score,
+    })
   }
 }

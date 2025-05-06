@@ -239,20 +239,35 @@ export class ExperimentsRepository extends Repository<Experiment> {
   async getLogsMetadata(
     uuid: string,
   ): PromisedResult<ExperimentLogsMetadata, LatitudeError> {
-    const result = await this.db
+    const docStats = this.db
       .select({
-        id: experiments.id,
-        count: count(documentLogs.id).as('count'),
-        totalCost: sum(providerLogs.costInMillicents)
-          .mapWith(Number)
-          .as('total_cost'),
+        experimentId: documentLogs.experimentId,
+        docCount: count(documentLogs.id).as('docCount'),
         totalDuration: sum(documentLogs.duration)
           .mapWith(Number)
-          .as('total_duration'),
+          .as('totalDuration'),
       })
-      .from(experiments)
-      .leftJoin(documentLogs, eq(documentLogs.experimentId, experiments.id))
+      .from(documentLogs)
       .leftJoin(
+        runErrors,
+        and(
+          eq(runErrors.errorableUuid, documentLogs.uuid),
+          eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+        ),
+      )
+      .where(isNull(runErrors.id))
+      .groupBy(documentLogs.experimentId)
+      .as('doc_stats')
+
+    const costStats = this.db
+      .select({
+        experimentId: documentLogs.experimentId,
+        totalCost: sum(providerLogs.costInMillicents)
+          .mapWith(Number)
+          .as('totalCost'),
+      })
+      .from(documentLogs)
+      .innerJoin(
         providerLogs,
         eq(providerLogs.documentLogUuid, documentLogs.uuid),
       )
@@ -263,10 +278,21 @@ export class ExperimentsRepository extends Repository<Experiment> {
           eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
         ),
       )
-      .where(
-        and(this.scopeFilter, eq(experiments.uuid, uuid), isNull(runErrors.id)),
-      )
-      .groupBy(experiments.id)
+      .where(isNull(runErrors.id))
+      .groupBy(documentLogs.experimentId)
+      .as('cost_stats')
+
+    const result = await this.db
+      .select({
+        id: experiments.id,
+        count: docStats.docCount,
+        totalDuration: docStats.totalDuration,
+        totalCost: costStats.totalCost,
+      })
+      .from(experiments)
+      .leftJoin(docStats, eq(docStats.experimentId, experiments.id))
+      .leftJoin(costStats, eq(costStats.experimentId, experiments.id))
+      .where(and(this.scopeFilter, eq(experiments.uuid, uuid)))
 
     if (!result.length) {
       return Result.ok({
