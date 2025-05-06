@@ -10,9 +10,9 @@ import {
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useExperimentFormPayload } from './ExperimentForm/useExperimentFormPayload'
-import DatasetForm from './ExperimentForm'
+import ExperimentModalForm from './ExperimentForm'
 import { useNavigate } from '$/hooks/useNavigate'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
 
@@ -36,6 +36,13 @@ export function RunExperimentModal({
   navigateOnCreate?: boolean
 }) {
   const router = useNavigate()
+
+  const { count } = useExperiments({
+    projectId: project.id,
+    documentUuid: document.documentUuid,
+    page: 1,
+    pageSize: 1,
+  })
 
   const { create, isCreating } = useExperiments(
     {
@@ -66,6 +73,7 @@ export function RunExperimentModal({
     commit,
     document,
     initialEvaluation,
+    experimentCount: count,
   })
 
   const createExperiment = useCallback(() => {
@@ -86,6 +94,13 @@ export function RunExperimentModal({
     })
   }, [formPayload, project.id, commit.uuid, document.documentUuid, create])
 
+  const { setVariants, addNewVariant } = formPayload
+
+  useEffect(() => {
+    setVariants([])
+    addNewVariant()
+  }, [setVariants, addNewVariant, isOpen])
+
   return (
     <Modal
       open={isOpen}
@@ -93,6 +108,7 @@ export function RunExperimentModal({
       size='xl'
       title='Run New Experiment'
       description='Create and evaluate a batch of logs for this document based on a selected dataset.'
+      dismissible
       footer={
         <>
           <CloseTrigger />
@@ -107,7 +123,7 @@ export function RunExperimentModal({
       }
     >
       <div className='w-full max-w-full relative'>
-        <DatasetForm {...formPayload} />
+        <ExperimentModalForm {...formPayload} />
       </div>
     </Modal>
   )

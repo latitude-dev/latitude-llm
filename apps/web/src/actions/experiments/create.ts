@@ -8,12 +8,15 @@ import {
   EvaluationsV2Repository,
 } from '@latitude-data/core/repositories'
 import { z } from 'zod'
+import { scan } from 'promptl-ai'
 
 export const createExperimentAction = withDocument
   .createServerAction()
   .input(
     z.object({
-      variants: z.array(z.object({ name: z.string(), prompt: z.string() })),
+      variants: z.array(
+        z.object({ name: z.string(), provider: z.string(), model: z.string() }),
+      ),
       evaluationUuids: z.array(z.string()),
       datasetId: z.number(),
       parametersMap: z.record(z.string(), z.number()),
@@ -56,11 +59,21 @@ export const createExperimentAction = withDocument
       )
     }
 
+    const { config: originalConfig, setConfig } = await scan({
+      prompt: ctx.document.content,
+    })
+
     const experiments = await Promise.all(
-      variants.map((variant) =>
-        createExperiment({
+      variants.map((variant) => {
+        const customPrompt = setConfig({
+          ...originalConfig,
+          provider: variant.provider,
+          model: variant.model,
+        })
+
+        return createExperiment({
           name: variant.name,
-          customPrompt: variant.prompt,
+          customPrompt,
           document: ctx.document,
           commit: ctx.commit,
           evaluations,
@@ -70,8 +83,8 @@ export const createExperimentAction = withDocument
           fromRow,
           toRow,
           workspace: ctx.workspace,
-        }).then((r) => r.unwrap()),
-      ),
+        }).then((r) => r.unwrap())
+      }),
     )
 
     await Promise.all(
