@@ -1,5 +1,6 @@
 import AverageScoreBadge from '$/components/EvaluationAggregatedResult'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
 import { useEvaluationsV2, useEvaluationV2Stats } from '$/stores/evaluationsV2'
@@ -45,6 +46,10 @@ export function Step1({
   setEvaluationId: (id: number) => void
   setEvaluationUuid: (uuid: string) => void
 }) {
+  const { enabled: evaluationsV2Enabled } = useFeatureFlag({
+    featureFlag: 'evaluationsV2',
+  })
+
   const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationTmp>()
 
   const { data: evaluationsV1, isLoading: isEvaluationsV1Loading } =
@@ -57,7 +62,7 @@ export function Step1({
 
   const evaluations = useMemo<EvaluationTmp[]>(() => {
     return [
-      ...evaluationsV1.map((evaluation) => ({
+      ...(evaluationsV2Enabled ? [] : evaluationsV1).map((evaluation) => ({
         ...evaluation,
         version: 'v1' as const,
       })),
