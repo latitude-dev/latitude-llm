@@ -1,10 +1,8 @@
 import useModelOptions from '$/hooks/useModelOptions'
-import { updatePromptMetadata } from '$/lib/promptMetadata'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { Config, ConversationMetadata } from 'promptl-ai'
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 
 export function VariantPromptSettingsPlaceholder() {
   return (
@@ -15,38 +13,27 @@ export function VariantPromptSettingsPlaceholder() {
 }
 
 export function VariantPromptSettings({
-  prompt,
-  setPrompt,
-  metadata,
+  provider,
+  setProvider,
+  model,
+  setModel,
 }: {
-  prompt: string
-  setPrompt: (prompt: string) => void
-  metadata?: ConversationMetadata
+  provider: string
+  setProvider: (provider: string) => void
+  model: string
+  setModel: (model: string) => void
 }) {
   const { data: providers, isLoading: isLoadingProviders } =
     useProviderApiKeys()
 
-  const setConfig = useCallback(
-    (newConfig: Config) => {
-      const newPrompt = updatePromptMetadata(prompt, newConfig)
-      setPrompt(newPrompt)
-    },
-    [prompt, setPrompt],
-  )
   const selectedProvider = useMemo(() => {
-    if (!metadata) return undefined
-    const provider = providers.find((p) => p.name === metadata.config.provider)
-    return provider
-  }, [metadata, providers])
+    return providers.find((p) => p.name === provider)
+  }, [provider, providers])
 
   const modelOptions = useModelOptions({
     provider: selectedProvider?.provider,
     name: selectedProvider?.name,
   })
-
-  if (!metadata) {
-    return <VariantPromptSettingsPlaceholder />
-  }
 
   return (
     <div className='flex flex-col gap-2'>
@@ -61,25 +48,19 @@ export function VariantPromptSettings({
         }))}
         onChange={(value) => {
           const newProvider = providers.find((p) => p.name === value)
-          setConfig({
-            provider: value,
-            model: newProvider?.defaultModel,
-          })
+          setProvider(value as string)
+          setModel(newProvider?.defaultModel ?? '')
         }}
         loading={isLoadingProviders}
         required
       />
       <Select
-        value={metadata?.config.model}
+        value={model}
         name='model'
         label='Model'
         placeholder='Select a model'
         options={modelOptions}
-        onChange={(value) =>
-          setConfig({
-            model: value,
-          })
-        }
+        onChange={(value) => setModel(value as string)}
         loading={isLoadingProviders}
         required
       />

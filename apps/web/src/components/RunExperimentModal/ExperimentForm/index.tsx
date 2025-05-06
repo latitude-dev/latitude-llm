@@ -4,17 +4,9 @@ import { DatasetSelector } from './_components/DatasetSelector'
 import { DatasetRowsInput } from './_components/DatasetRowsInput'
 import { ParametersSelection } from './_components/ParametersSelection'
 import { EvaluationsSelector } from './_components/EvaluationsSelector'
-import { useMemo } from 'react'
 import { ExperimentVariantsInput } from './_components/VariantsInput'
 
-export default function DatasetForm(payload: ExperimentFormPayload) {
-  const parameters = useMemo(() => {
-    const set = new Set<string>([
-      ...payload.variants.flatMap((v) => v.parameters),
-    ])
-    return Array.from(set)
-  }, [payload.variants])
-
+export default function ExperimentModalForm(payload: ExperimentFormPayload) {
   return (
     <NumeredList>
       <NumeredList.Item
@@ -30,9 +22,9 @@ export default function DatasetForm(payload: ExperimentFormPayload) {
 
       <NumeredList.Item title='Select your dataset and configure parameters'>
         <div className='flex flex-col gap-2'>
-          <DatasetSelector {...payload} parameters={parameters} />
+          <DatasetSelector {...payload} />
           <DatasetRowsInput {...payload} />
-          <ParametersSelection {...payload} parameters={parameters} />
+          <ParametersSelection {...payload} />
         </div>
       </NumeredList.Item>
     </NumeredList>

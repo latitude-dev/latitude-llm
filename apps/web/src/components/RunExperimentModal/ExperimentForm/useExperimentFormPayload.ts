@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Commit,
   Dataset,
@@ -7,23 +7,26 @@ import {
   Project,
 } from '@latitude-data/core/browser'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { useMetadata } from '$/hooks/useMetadata'
 
 export type ExperimentFormPayload = {
   project: Project
   commit: Commit
   document: DocumentVersion
+  isLoadingMetadata: boolean
   variants: {
     name: string
-    prompt: string
-    parameters: string[]
+    provider: string
+    model: string
   }[]
   setVariants: ReactStateDispatch<
     {
       name: string
-      prompt: string
-      parameters: string[]
+      provider: string
+      model: string
     }[]
   >
+  addNewVariant: () => void
   selectedDataset?: Dataset
   onSelectDataset: (dataset: Dataset) => void
   fromLine?: number
@@ -36,6 +39,7 @@ export type ExperimentFormPayload = {
   setSelectedEvaluations: ReactStateDispatch<EvaluationV2[]>
   datasetLabels: Record<string, string>
   setDatasetLabels: ReactStateDispatch<Record<string, string>>
+  parameters: string[]
 }
 
 export function useExperimentFormPayload({
@@ -43,25 +47,26 @@ export function useExperimentFormPayload({
   commit,
   document,
   initialEvaluation,
+  experimentCount,
 }: {
   project: Project
   commit: Commit
   document: DocumentVersion
   initialEvaluation?: EvaluationV2
+  experimentCount?: number
 }): ExperimentFormPayload {
-  const [variants, setVariants] = useState<
-    {
-      name: string
-      prompt: string
-      parameters: string[]
-    }[]
-  >([
-    {
-      name: '',
+  const { metadata, runReadMetadata } = useMetadata()
+  useEffect(() => {
+    runReadMetadata({
+      promptlVersion: document.promptlVersion,
       prompt: document.content,
-      parameters: [],
-    },
-  ])
+      document,
+    })
+  }, [document, runReadMetadata])
+
+  const parameters = useMemo(() => {
+    return Array.from(metadata?.parameters ?? [])
+  }, [metadata])
   const [selectedDataset, setSelectedDataset] = useState<Dataset>()
   const [fromLine, setFromLine] = useState<number>()
   const [toLine, setToLine] = useState<number>()
@@ -71,12 +76,37 @@ export function useExperimentFormPayload({
   >(initialEvaluation ? [initialEvaluation] : [])
   const [datasetLabels, setDatasetLabels] = useState<Record<string, string>>({})
 
+  const [variants, setVariants] = useState<
+    {
+      name: string
+      provider: string
+      model: string
+    }[]
+  >([])
+  const addNewVariant = useCallback(() => {
+    setVariants((prev) => {
+      const newVariants = [...prev]
+      const name = experimentCount
+        ? `#${experimentCount + 1} v${newVariants.length + 1}`
+        : `v${newVariants.length + 1}`
+
+      newVariants.push({
+        name,
+        provider: (metadata?.config?.provider as string) ?? '',
+        model: (metadata?.config?.model as string) ?? '',
+      })
+      return newVariants
+    })
+  }, [experimentCount, metadata])
+
   return {
     project,
     commit,
     document,
+    isLoadingMetadata: metadata === undefined,
     variants,
     setVariants,
+    addNewVariant,
     selectedDataset,
     onSelectDataset: setSelectedDataset,
     fromLine,
@@ -89,5 +119,6 @@ export function useExperimentFormPayload({
     setSelectedEvaluations,
     datasetLabels,
     setDatasetLabels,
+    parameters,
   }
 }

@@ -80,9 +80,7 @@ export function ParametersSelection({
   datasetLabels,
   setDatasetLabels,
   parameters,
-}: ExperimentFormPayload & {
-  parameters?: string[]
-}) {
+}: ExperimentFormPayload) {
   const { labels, buildLabels } = useLabels()
   useEffect(() => {
     if (!selectedDataset) return

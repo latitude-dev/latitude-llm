@@ -1,11 +1,13 @@
-import { useMetadata } from '$/hooks/useMetadata'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useCallback, useEffect } from 'react'
+import { useCallback } from 'react'
 import { ExperimentFormPayload } from '../../useExperimentFormPayload'
-import { VariantPromptSettings } from './PromptSettings'
+import {
+  VariantPromptSettings,
+  VariantPromptSettingsPlaceholder,
+} from './PromptSettings'
 
 export function NewVariantCard({ onClick }: { onClick: () => void }) {
   return (
@@ -26,9 +28,9 @@ export function ExperimentVariantCard({
   index,
   variants,
   setVariants,
-  document,
+  isLoadingMetadata,
 }: ExperimentFormPayload & { index: number }) {
-  const { name, prompt } = variants[index]!
+  const { name, provider, model } = variants[index]!
 
   const setName = useCallback(
     (name: string) => {
@@ -41,22 +43,22 @@ export function ExperimentVariantCard({
     [setVariants, index],
   )
 
-  const setPrompt = useCallback(
-    (prompt: string) => {
+  const setProvider = useCallback(
+    (newProvider: string) => {
       setVariants((prev) => {
         const newVariants = [...prev]
-        newVariants[index]!.prompt = prompt
+        newVariants[index]!.provider = newProvider
         return newVariants
       })
     },
     [setVariants, index],
   )
 
-  const setParameters = useCallback(
-    (parameters: string[]) => {
+  const setModel = useCallback(
+    (newModel: string) => {
       setVariants((prev) => {
         const newVariants = [...prev]
-        newVariants[index]!.parameters = parameters
+        newVariants[index]!.model = newModel
         return newVariants
       })
     },
@@ -70,20 +72,6 @@ export function ExperimentVariantCard({
       return newVariants
     })
   }, [setVariants, index])
-
-  const { metadata, runReadMetadata } = useMetadata()
-  useEffect(() => {
-    runReadMetadata({
-      promptlVersion: document.promptlVersion,
-      prompt,
-      document,
-    })
-  }, [document, prompt, runReadMetadata])
-
-  useEffect(() => {
-    if (!metadata) return
-    setParameters(Array.from(metadata.parameters))
-  }, [metadata, setParameters])
 
   return (
     <div className='flex flex-col relative gap-2 p-4 border border-border rounded-md min-w-[300px]'>
@@ -107,11 +95,16 @@ export function ExperimentVariantCard({
         onChange={(e) => setName(e.target.value)}
         placeholder='Describe this variant'
       />
-      <VariantPromptSettings
-        prompt={prompt}
-        setPrompt={setPrompt}
-        metadata={metadata}
-      />
+      {isLoadingMetadata ? (
+        <VariantPromptSettingsPlaceholder />
+      ) : (
+        <VariantPromptSettings
+          provider={provider}
+          setProvider={setProvider}
+          model={model}
+          setModel={setModel}
+        />
+      )}
     </div>
   )
 }

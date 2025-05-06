@@ -13,9 +13,7 @@ export function DatasetSelector({
   selectedDataset,
   onSelectDataset,
   parameters,
-}: ExperimentFormPayload & {
-  parameters?: string[]
-}) {
+}: ExperimentFormPayload) {
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
 
   const selectOptions = useMemo(
