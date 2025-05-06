@@ -255,7 +255,7 @@ export function ExperimentsTable({
                 <DatasetCell
                   isLoading={isLoadingDatasets}
                   datasets={datasets}
-                  datasetId={experiment.datasetId}
+                  datasetId={experiment.datasetId ?? undefined}
                 />
               </TableCell>
               <TableCell>

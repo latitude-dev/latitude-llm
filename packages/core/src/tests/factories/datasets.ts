@@ -12,8 +12,13 @@ import getTestDisk from '../testDrive'
 
 const defaultTestDisk = getTestDisk()
 
-function generateCsvContent(delimiter: string): string {
-  const headers = ['id', 'name', 'email', 'age']
+export function generateCsvContent({
+  delimiter = ',',
+  headers = ['id', 'name', 'email', 'age'],
+}: {
+  delimiter?: string
+  headers?: string[]
+}): string {
   const rows = Array.from({ length: 10 }, (_, i) => [
     i + 1,
     faker.person.fullName(),
@@ -58,7 +63,7 @@ export async function createDataset(datasetData: Props) {
 
   const csvDelimiter = datasetData.csvDelimiter ?? ','
   const fileContent =
-    datasetData.fileContent ?? generateCsvContent(csvDelimiter)
+    datasetData.fileContent ?? generateCsvContent({ delimiter: csvDelimiter })
 
   const { file } = await createTestCsvFile({ fileContent, name })
   const result = await createDatasetFromFileFn({

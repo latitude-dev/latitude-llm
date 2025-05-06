@@ -56,6 +56,9 @@ describe('ExperimentsRepository', () => {
     const { dataset: createdDataset } = await factories.createDataset({
       workspace,
       author: user,
+      fileContent: factories.generateCsvContent({
+        headers: ['a', 'b', 'c'],
+      }),
     })
 
     dataset = createdDataset

@@ -77,7 +77,7 @@ export function RunExperimentModal({
   })
 
   const createExperiment = useCallback(() => {
-    if (!formPayload.selectedDataset) {
+    if (formPayload.parameters.length > 0 && !formPayload.selectedDataset) {
       return
     }
     create({
@@ -85,7 +85,7 @@ export function RunExperimentModal({
       commitUuid: commit.uuid,
       documentUuid: document.documentUuid,
       variants: formPayload.variants,
-      datasetId: formPayload.selectedDataset.id,
+      datasetId: formPayload.selectedDataset?.id,
       parametersMap: formPayload.parametersMap,
       datasetLabels: formPayload.datasetLabels,
       fromRow: formPayload.fromLine ?? 1,
@@ -113,7 +113,13 @@ export function RunExperimentModal({
         <>
           <CloseTrigger />
           <Button
-            disabled={!document || isCreating || !formPayload.selectedDataset}
+            disabled={
+              !document ||
+              isCreating ||
+              formPayload.isLoadingMetadata ||
+              (formPayload.parameters.length > 0 &&
+                !formPayload.selectedDataset)
+            }
             fancy
             onClick={createExperiment}
           >

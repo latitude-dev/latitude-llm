@@ -18,7 +18,7 @@ export const createExperimentAction = withDocument
         z.object({ name: z.string(), provider: z.string(), model: z.string() }),
       ),
       evaluationUuids: z.array(z.string()),
-      datasetId: z.number(),
+      datasetId: z.number().optional(),
       parametersMap: z.record(z.string(), z.number()),
       datasetLabels: z.record(z.string(), z.string()),
       fromRow: z.number(),
@@ -36,7 +36,9 @@ export const createExperimentAction = withDocument
       toRow,
     } = input
     const datasetsScope = new DatasetsRepository(ctx.workspace.id)
-    const dataset = await datasetsScope.find(datasetId).then((r) => r.unwrap())
+    const dataset = datasetId
+      ? await datasetsScope.find(datasetId).then((r) => r.unwrap())
+      : undefined
 
     const evaluationsScope = new EvaluationsV2Repository(ctx.workspace.id)
     const docEvaluations = await evaluationsScope
