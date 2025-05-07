@@ -9,7 +9,6 @@ import {
 } from '@latitude-data/core/repositories'
 import { z } from 'zod'
 import { scan } from 'promptl-ai'
-import { omit } from 'lodash-es'
 
 export const createExperimentAction = withDocument
   .createServerAction()
@@ -67,14 +66,14 @@ export const createExperimentAction = withDocument
     })
 
     const experiments = await Promise.all(
-      variants.map(async (variant) => {
+      variants.map((variant) => {
         const customPrompt = setConfig({
-          ...omit(originalConfig, ['provider', 'model']),
+          ...originalConfig,
           provider: variant.provider,
           model: variant.model,
         })
 
-        return await createExperiment({
+        return createExperiment({
           name: variant.name,
           customPrompt,
           document: ctx.document,
