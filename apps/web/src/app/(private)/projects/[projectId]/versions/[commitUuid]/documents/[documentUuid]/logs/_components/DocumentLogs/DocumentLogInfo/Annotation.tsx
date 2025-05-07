@@ -92,7 +92,7 @@ export function DocumentLogAnnotation<
       onToggle={setIsExpanded}
       scrollable={false}
       expandedContent={
-        <div className='flex flex-col gap-y-4'>
+        <div className='w-full flex flex-col gap-y-4'>
           <AnnotationForm
             evaluation={evaluation}
             resultScore={resultScore}
