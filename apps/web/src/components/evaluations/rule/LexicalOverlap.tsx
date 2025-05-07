@@ -17,7 +17,7 @@ const specification = RuleEvaluationLexicalOverlapSpecification
 export default {
   ...specification,
   icon: 'blend' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,
 }
@@ -28,7 +28,7 @@ const ALGORITHM_OPTIONS =
     value: option,
   }))
 
-function ConfigurationForm({
+function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
   errors,

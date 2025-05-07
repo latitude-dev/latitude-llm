@@ -33,13 +33,14 @@ const specification = RuleEvaluationSpecification
 export default {
   ...specification,
   icon: 'computer' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
+  ConfigurationAdvancedForm: ConfigurationAdvancedForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,
   metrics: METRICS,
 }
 
-function ConfigurationForm<M extends RuleEvaluationMetric>({
+function ConfigurationSimpleForm<M extends RuleEvaluationMetric>({
   metric,
   ...rest
 }: ConfigurationFormProps<EvaluationType.Rule, M> & {
@@ -50,7 +51,25 @@ function ConfigurationForm<M extends RuleEvaluationMetric>({
 
   return (
     <>
-      <metricSpecification.ConfigurationForm {...rest} />
+      <metricSpecification.ConfigurationSimpleForm {...rest} />
+    </>
+  )
+}
+
+function ConfigurationAdvancedForm<M extends RuleEvaluationMetric>({
+  metric,
+  ...rest
+}: ConfigurationFormProps<EvaluationType.Rule, M> & {
+  metric: M
+}) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) return null
+
+  return (
+    <>
+      {!!metricSpecification.ConfigurationAdvancedForm && (
+        <metricSpecification.ConfigurationAdvancedForm {...rest} />
+      )}
     </>
   )
 }

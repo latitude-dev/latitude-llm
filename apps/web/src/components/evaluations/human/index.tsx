@@ -29,14 +29,15 @@ const specification = HumanEvaluationSpecification
 export default {
   ...specification,
   icon: 'userRound' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
+  ConfigurationAdvancedForm: ConfigurationAdvancedForm,
   ResultBadge: ResultBadge,
   AnnotationForm: AnnotationForm,
   chartConfiguration: chartConfiguration,
   metrics: METRICS,
 }
 
-function ConfigurationForm<M extends HumanEvaluationMetric>({
+function ConfigurationSimpleForm<M extends HumanEvaluationMetric>({
   metric,
   configuration,
   setConfiguration,
@@ -67,13 +68,31 @@ function ConfigurationForm<M extends HumanEvaluationMetric>({
         disabled={disabled}
         required
       />
-      <metricSpecification.ConfigurationForm
+      <metricSpecification.ConfigurationSimpleForm
         configuration={configuration}
         setConfiguration={setConfiguration}
         errors={errors}
         disabled={disabled}
         {...rest}
       />
+    </>
+  )
+}
+
+function ConfigurationAdvancedForm<M extends HumanEvaluationMetric>({
+  metric,
+  ...rest
+}: ConfigurationFormProps<EvaluationType.Human, M> & {
+  metric: M
+}) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) return null
+
+  return (
+    <>
+      {!!metricSpecification.ConfigurationAdvancedForm && (
+        <metricSpecification.ConfigurationAdvancedForm {...rest} />
+      )}
     </>
   )
 }

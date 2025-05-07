@@ -17,10 +17,14 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
-import { useEffect, useMemo } from 'react'
-import ConfigurationForm from './ConfigurationForm'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  ConfigurationAdvancedForm,
+  ConfigurationSimpleForm,
+} from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
 
 const EVALUATION_TYPE_OPTIONS = Object.values(EvaluationType).map((type) => {
@@ -96,6 +100,8 @@ export default function EvaluationV2Form<
     featureFlag: 'evaluationsV2',
   })
 
+  const [expanded, setExpanded] = useState(mode === 'update')
+
   // TODO(evalsv2): Temporal hot garbage hack for old evaluation creation modal
   useEffect(() => {
     if (!forceTypeChange) return
@@ -146,7 +152,7 @@ export default function EvaluationV2Form<
       ...settings,
       metric: EVALUATION_METRIC_OPTIONS(settings.type)[0]!.value as M,
     })
-  }, [metricSpecification?.ConfigurationForm])
+  }, [metricSpecification?.ConfigurationSimpleForm])
 
   useEffect(() => {
     if (mode === 'update') return
@@ -222,7 +228,7 @@ export default function EvaluationV2Form<
             required
           />
         )}
-        <ConfigurationForm
+        <ConfigurationSimpleForm
           mode={mode}
           type={settings.type}
           metric={settings.metric}
@@ -249,36 +255,56 @@ export default function EvaluationV2Form<
             description='You will be able to manually evaluate responses in the document logs table'
           />
         )}
-        {mode === 'update' && (
-          <FormFieldGroup label='Options' layout='vertical'>
-            {metricSpecification?.supportsLiveEvaluation && (
-              <SwitchInput
-                checked={!!options.evaluateLiveLogs}
-                name='evaluateLiveLogs'
-                label='Evaluate live logs'
-                description='Evaluate production and playground logs automatically'
-                onCheckedChange={(value) =>
-                  setOptions({ ...options, evaluateLiveLogs: value })
+        <CollapsibleBox
+          title='Advanced configuration'
+          icon='settings'
+          isExpanded={expanded}
+          onToggle={setExpanded}
+          scrollable={false}
+          expandedContent={
+            <FormWrapper>
+              <ConfigurationAdvancedForm
+                mode={mode}
+                type={settings.type}
+                metric={settings.metric}
+                configuration={settings.configuration}
+                setConfiguration={(value) =>
+                  setSettings({ ...settings, configuration: value })
                 }
-                errors={errors?.['evaluateLiveLogs']}
-                disabled={
-                  disabled || !metricSpecification?.supportsLiveEvaluation
-                }
+                settings={settings}
+                setSettings={setSettings}
+                errors={errors}
+                disabled={disabled || commitMerged}
               />
-            )}
-            <SwitchInput
-              checked={!!options.enableSuggestions}
-              name='enableSuggestions'
-              label='Prompt suggestions'
-              description='Generate suggestions to improve your prompt based on the latest evaluations results'
-              onCheckedChange={(value) =>
-                setOptions({ ...options, enableSuggestions: value })
-              }
-              errors={errors?.['enableSuggestions']}
-              disabled={disabled}
-            />
-            {/* TODO(exps): Uncomment when experiments are implemented */}
-            {/* <SwitchInput
+              <FormFieldGroup label='Options' layout='vertical'>
+                {metricSpecification?.supportsLiveEvaluation && (
+                  <SwitchInput
+                    checked={!!options.evaluateLiveLogs}
+                    name='evaluateLiveLogs'
+                    label='Evaluate live logs'
+                    description='Evaluate production and playground logs automatically'
+                    onCheckedChange={(value) =>
+                      setOptions({ ...options, evaluateLiveLogs: value })
+                    }
+                    errors={errors?.['evaluateLiveLogs']}
+                    disabled={
+                      disabled || !metricSpecification?.supportsLiveEvaluation
+                    }
+                  />
+                )}
+                <SwitchInput
+                  checked={!!options.enableSuggestions}
+                  name='enableSuggestions'
+                  label='Prompt suggestions'
+                  description='Generate suggestions to improve your prompt based on the latest evaluations results'
+                  onCheckedChange={(value) =>
+                    setOptions({ ...options, enableSuggestions: value })
+                  }
+                  errors={errors?.['enableSuggestions']}
+                  disabled={disabled}
+                />
+                {/* TODO(exps): Uncomment when experiments are implemented */}
+                {/* <SwitchInput
                   checked={!!options.autoApplySuggestions}
                   name='autoApplySuggestions'
                   label='Auto apply suggestions'
@@ -289,8 +315,10 @@ export default function EvaluationV2Form<
                   errors={errors?.['autoApplySuggestions']}
                   disabled={disabled}
                 /> */}
-          </FormFieldGroup>
-        )}
+              </FormFieldGroup>
+            </FormWrapper>
+          }
+        />
       </FormWrapper>
     </form>
   )

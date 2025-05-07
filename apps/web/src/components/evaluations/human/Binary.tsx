@@ -18,13 +18,13 @@ const specification = HumanEvaluationBinarySpecification
 export default {
   ...specification,
   icon: 'thumbsUp' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
   ResultBadge: ResultBadge,
   AnnotationForm: AnnotationForm,
   chartConfiguration: chartConfiguration,
 }
 
-function ConfigurationForm({
+function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
   errors,

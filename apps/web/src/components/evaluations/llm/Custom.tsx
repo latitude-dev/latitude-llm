@@ -22,12 +22,13 @@ const specification = LlmEvaluationCustomSpecification
 export default {
   ...specification,
   icon: 'fileCode' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
+  ConfigurationAdvancedForm: ConfigurationAdvancedForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,
 }
 
-function ConfigurationForm({
+function ConfigurationSimpleForm({
   mode,
   configuration,
   setConfiguration,
@@ -146,6 +147,18 @@ You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the res
           required
         />
       </FormFieldGroup>
+    </>
+  )
+}
+
+function ConfigurationAdvancedForm({
+  configuration,
+  setConfiguration,
+  errors,
+  disabled,
+}: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
+  return (
+    <>
       <FormFieldGroup
         layout='horizontal'
         description='The minimum and maximum score threshold of the response'

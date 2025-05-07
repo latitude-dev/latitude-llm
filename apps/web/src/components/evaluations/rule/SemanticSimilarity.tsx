@@ -19,7 +19,7 @@ const specification = RuleEvaluationSemanticSimilaritySpecification
 export default {
   ...specification,
   icon: 'equalApproximately' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,
 }
@@ -31,7 +31,7 @@ export default {
 //     value: option,
 //   }))
 
-function ConfigurationForm({
+function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
   errors,

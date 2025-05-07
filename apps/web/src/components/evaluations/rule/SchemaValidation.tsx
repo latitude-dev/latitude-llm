@@ -18,7 +18,7 @@ const specification = RuleEvaluationSchemaValidationSpecification
 export default {
   ...specification,
   icon: 'clipboardCheck' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,
 }
@@ -31,7 +31,7 @@ export default {
 //   }),
 // )
 
-function ConfigurationForm({
+function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
   errors,

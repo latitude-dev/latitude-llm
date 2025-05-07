@@ -21,13 +21,14 @@ const specification = HumanEvaluationRatingSpecification
 export default {
   ...specification,
   icon: 'star' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
+  ConfigurationAdvancedForm: ConfigurationAdvancedForm,
   ResultBadge: ResultBadge,
   AnnotationForm: AnnotationForm,
   chartConfiguration: chartConfiguration,
 }
 
-function ConfigurationForm({
+function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
   errors,
@@ -107,6 +108,18 @@ function ConfigurationForm({
           required
         />
       </FormFieldGroup>
+    </>
+  )
+}
+
+function ConfigurationAdvancedForm({
+  configuration,
+  setConfiguration,
+  errors,
+  disabled,
+}: ConfigurationFormProps<EvaluationType.Human, HumanEvaluationMetric.Rating>) {
+  return (
+    <>
       <FormFieldGroup
         layout='horizontal'
         description='The minimum and maximum rating threshold of the response'

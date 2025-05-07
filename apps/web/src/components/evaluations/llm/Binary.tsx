@@ -16,12 +16,12 @@ const specification = LlmEvaluationBinarySpecification
 export default {
   ...specification,
   icon: 'thumbsUp' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,
 }
 
-function ConfigurationForm({
+function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
   errors,

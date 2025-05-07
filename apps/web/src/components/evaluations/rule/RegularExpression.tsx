@@ -15,12 +15,12 @@ const specification = RuleEvaluationRegularExpressionSpecification
 export default {
   ...specification,
   icon: 'regex' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,
 }
 
-function ConfigurationForm({
+function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
   errors,
