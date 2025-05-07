@@ -16,12 +16,8 @@ function InnerApplyButton({ disabled }: { disabled?: boolean }) {
       fullWidth
       disabled={disabled}
       fancy
-      iconProps={{
-        name: 'pencil',
-        placement: 'right',
-      }}
     >
-      Apply this prompt
+      Use prompt
     </Button>
   )
 }
