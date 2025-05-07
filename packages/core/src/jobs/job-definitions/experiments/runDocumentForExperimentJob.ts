@@ -16,7 +16,6 @@ export type RunDocumentForExperimentJobData = {
   experimentId: number
   experiment: Experiment
   commitUuid: string
-  prompt: string
   parameters: Record<string, unknown>
   datasetRowId?: number
 }
@@ -30,7 +29,6 @@ export const runDocumentForExperimentJob = async (
     projectId,
     commitUuid,
     parameters,
-    prompt,
     datasetRowId,
   } = job.data
   const experimentScope = new ExperimentsRepository(workspaceId)
@@ -44,7 +42,7 @@ export const runDocumentForExperimentJob = async (
       projectId,
       commitUuid,
       documentUuid: experiment.documentUuid,
-      customPrompt: prompt,
+      customPrompt: experiment.metadata.prompt,
       parameters,
       experiment,
       autoRespondToolCalls: true,
