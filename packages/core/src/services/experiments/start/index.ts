@@ -65,9 +65,9 @@ export async function startExperiment(
       projectId: commit.projectId,
       experimentId: experiment.id,
       commitUuid: commit.uuid,
-      parameters: row.parameters,
+      parameters: row?.parameters ?? {},
       prompt: experiment.metadata.prompt,
-      datasetRowId: row.id,
+      datasetRowId: row?.id,
     } as RunDocumentForExperimentJobData)
   }
 

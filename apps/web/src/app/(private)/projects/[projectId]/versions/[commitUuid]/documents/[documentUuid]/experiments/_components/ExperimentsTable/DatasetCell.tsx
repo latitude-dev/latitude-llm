@@ -12,13 +12,21 @@ export function DatasetCell({
 }: {
   isLoading: boolean
   datasets?: Dataset[]
-  datasetId: number
+  datasetId?: number
 }) {
   const dataset = useMemo(() => {
     if (isLoading) return undefined
     if (!datasets) return undefined
     return datasets.find((dataset) => dataset.id === datasetId)
   }, [isLoading, datasets, datasetId])
+
+  if (!datasetId) {
+    return (
+      <Badge variant='secondary' className='mr-1'>
+        No dataset
+      </Badge>
+    )
+  }
 
   if (isLoading) {
     return <Skeleton height='h5' className='w-12' />

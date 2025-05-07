@@ -18,7 +18,7 @@ export type RunDocumentForExperimentJobData = {
   commitUuid: string
   prompt: string
   parameters: Record<string, unknown>
-  datasetRowId: number
+  datasetRowId?: number
 }
 
 export const runDocumentForExperimentJob = async (
@@ -72,7 +72,7 @@ export const runDocumentForExperimentJob = async (
         commitId: experiment.commitId,
         evaluationUuid,
         providerLogUuid: providerLog.uuid,
-        datasetId: experiment.datasetId,
+        datasetId: experiment.datasetId ?? undefined,
         datasetLabel: experiment.metadata.datasetLabels[evaluationUuid],
         datasetRowId,
         experimentUuid: experiment.uuid,
