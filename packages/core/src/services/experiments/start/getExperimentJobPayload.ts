@@ -53,7 +53,7 @@ async function getExperimentRows(
       parameters: Object.fromEntries(
         Object.entries(parametersMap!).map(([parameter, index]) => {
           const column = dataset.columns[index]!
-          const value = row.values[column.name] as string
+          const value = row.values[column.identifier] as string
 
           return [parameter, value]
         }),

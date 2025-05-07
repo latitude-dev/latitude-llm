@@ -18,12 +18,14 @@ export type ExperimentFormPayload = {
     name: string
     provider: string
     model: string
+    temperature: number
   }[]
   setVariants: ReactStateDispatch<
     {
       name: string
       provider: string
       model: string
+      temperature: number
     }[]
   >
   addNewVariant: () => void
@@ -81,19 +83,27 @@ export function useExperimentFormPayload({
       name: string
       provider: string
       model: string
+      temperature: number
     }[]
   >([])
   const addNewVariant = useCallback(() => {
     setVariants((prev) => {
       const newVariants = [...prev]
-      const name = experimentCount
-        ? `#${experimentCount + 1} v${newVariants.length + 1}`
-        : `v${newVariants.length + 1}`
+      const model = metadata?.config?.model as string | undefined
+
+      const name = [
+        experimentCount ? `#${experimentCount + 1}` : undefined, // Experiment number
+        `v${newVariants.length + 1}`, // Variant number
+        model ? `— ${model}` : undefined, // Model name
+      ]
+        .filter(Boolean)
+        .join(' ')
 
       newVariants.push({
         name,
         provider: (metadata?.config?.provider as string) ?? '',
         model: (metadata?.config?.model as string) ?? '',
+        temperature: (metadata?.config?.temperature as number) ?? 1,
       })
       return newVariants
     })

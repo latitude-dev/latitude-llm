@@ -48,27 +48,14 @@ describe('getExperimentJobPayload', () => {
       author: user,
       fileContent: factories.generateCsvContent({
         headers: ['a', 'b', 'c'],
+        rows: Array.from({ length: 50 }).map((_, i) => [
+          `a${i}`,
+          `b${i}`,
+          `c${i}`,
+        ]),
       }),
     })
-
     dataset = createdDataset
-
-    for await (const i of Array.from({ length: 50 }).keys()) {
-      await factories.createDatasetRow({
-        workspace,
-        dataset,
-        columns: [
-          { identifier: 'a', name: 'a', role: 'parameter' },
-          { identifier: 'b', name: 'b', role: 'parameter' },
-          { identifier: 'c', name: 'c', role: 'parameter' },
-        ],
-        rowData: {
-          a: `a${i}`,
-          b: `b${i}`,
-          c: `c${i}`,
-        },
-      })
-    }
 
     evaluations = await Promise.all([
       factories.createEvaluationV2({

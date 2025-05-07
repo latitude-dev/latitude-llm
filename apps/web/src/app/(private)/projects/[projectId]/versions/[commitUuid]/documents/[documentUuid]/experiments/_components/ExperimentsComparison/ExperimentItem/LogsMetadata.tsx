@@ -15,18 +15,18 @@ function ExperimentLogMetadataItem({
   isBest?: boolean
   onlyOneBest?: boolean
 }) {
-  const bgClass = isBest ? 'bg-accent' : 'bg-secondary'
+  const bgClass = isBest ? 'bg-accent' : undefined
   const fgColor = isBest ? 'accentForeground' : 'foregroundMuted'
 
   return (
     <div
       className={cn(
-        'flex flex-col w-full gap-2 items-center p-4 rounded-md',
+        'flex flex-col w-full gap-2 items-center px-2 py-4 rounded-md',
         bgClass,
       )}
     >
-      <Text.H5B color={fgColor}>{value}</Text.H5B>
       <Text.H6 color={fgColor}>{label}</Text.H6>
+      <Text.H5B color={fgColor}>{value}</Text.H5B>
     </div>
   )
 }
@@ -41,7 +41,7 @@ export function ExperimentLogsMetadata({
   return (
     <div className='flex flex-row items-center gap-4'>
       <ExperimentLogMetadataItem
-        label='avg duration'
+        label='Duration'
         value={
           experiment.logsMetadata.count > 0
             ? formatDuration(
@@ -54,7 +54,20 @@ export function ExperimentLogsMetadata({
         onlyOneBest={bestLogsMetadata.duration.length === 1}
       />
       <ExperimentLogMetadataItem
-        label='avg cost'
+        label='Tokens'
+        value={
+          experiment.logsMetadata.count > 0
+            ? Math.floor(
+                experiment.logsMetadata.totalTokens /
+                  experiment.logsMetadata.count,
+              ).toString()
+            : '—'
+        }
+        isBest={bestLogsMetadata.tokens.includes(experiment.uuid)}
+        onlyOneBest={bestLogsMetadata.tokens.length === 1}
+      />
+      <ExperimentLogMetadataItem
+        label='Cost'
         value={
           experiment.logsMetadata.count > 0
             ? formatCostInMillicents(
