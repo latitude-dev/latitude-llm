@@ -3,6 +3,59 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-05-07'>
+
+## Experiments
+
+We've added a new Experiments tab to the playground. Now, whenever you run an experiment, you'll be able to see the results in a dedicated tab that groups all the runs you've made for that experiment and it lets you compare them side by side.
+
+Additionally, when setting up an experiment, you can now add variants to quickly test different models, providers, and temperature settings; as well as run many instances of the same prompt without having to select a dataset.
+
+![](/assets/changelog/250507/experiments.png)
+
+## Evaluations rework
+
+We've completely revamped the evaluations section, here are some of the changes:
+
+- Evaluations can now be accessed from the sidebar, whenever you select a prompt you'll see the evaluations associated with it.
+- You can now edit and test the prompt of LLM-as-Judge evaluations in a fully featured prompt playground
+- Now you can set a minimum (or maximum) scoring threshold for an evaluation to pass
+- Redesigned annotation experience for Human-in-the-Loop evaluations:
+  - You can now manually evaluate logs for several evaluations inside the logs table with all the filtering options
+  - You can now leave instructions to the annotators to help them make the right decision
+- Improved prompt refiner and suggestions
+  - Refiner now optimizes for a lower or higher evaluation score depending if the evaluation is negative
+  - New smarter algorithm to select the best evaluation results to improve the prompt
+  - You can now disable automatic suggestions from specific evaluations
+- You can now pass custom instructions to guide the evaluation generator
+- Evaluations are now versioned along with the project
+
+![](/assets/changelog/250507/eval-editor.png)
+
+You might remember from our changelog last month that we added a new evaluation type called "Rule-based evaluation". This evaluation type allows you to create custom evaluations by defining a set of rules. Each rule can have a threshold and a metric.
+
+Since we have a lot of evaluation types, here's a refresher of the different types and what they do:
+
+1. Programmatic Rule: Evaluate responses using algorithmic metrics
+  - Exact Match: Checks if the response is exactly the same as the expected output
+  - Regular Expression: Checks if the response matches the regular expression
+  - Schema Validation: Checks if the response follows the schema
+  - Length Count: Checks if the response is of a certain length
+  - Lexical Overlap: Checks if the response contains the expected output
+  - Semantic Similarity: Checks if the response is semantically similar to the expected output
+2. LLM-as-a-Judge: Evaluate responses using an LLM as a judge
+  - Binary: Judges whether the response meets the criteria
+  - Rating: Judges the response by rating it under a criteria
+  - [New] Comparison: Judges the response by comparing the criteria to the expected output
+  - Custom: Judges the response under a criteria using a custom prompt
+3. Human-in-the-Loop: Evaluate responses using a human as a judge
+  - Binary: Judges whether the response meets the criteria. The resulting score is "passed" or "failed"
+  - Rating: Judges the response by rating it under a criteria. The resulting score is the rating
+
+![](/assets/changelog/250507/eval-new.png)
+
+</Update>
+
 <Update label='2025-04-21'>
 
 ## New Onboarding
