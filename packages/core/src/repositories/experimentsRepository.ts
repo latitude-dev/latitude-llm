@@ -280,6 +280,9 @@ export class ExperimentsRepository extends Repository<Experiment> {
           totalCost: sum(providerLogs.costInMillicents)
             .mapWith(Number)
             .as('total_cost'),
+          totalTokens: sum(providerLogs.tokens)
+            .mapWith(Number)
+            .as('total_tokens'),
         })
         .from(documentLogs)
         .innerJoin(
@@ -308,6 +311,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
         count: documentLogStats.logsCount,
         totalDuration: documentLogStats.totalDuration,
         totalCost: providerLogStats.totalCost,
+        totalTokens: providerLogStats.totalTokens,
       })
       .from(experimentsCte)
       .leftJoin(
@@ -320,12 +324,19 @@ export class ExperimentsRepository extends Repository<Experiment> {
       )
 
     if (!row) {
-      return Result.ok({ count: 0, totalCost: 0, totalDuration: 0 })
+      return Result.ok({
+        count: 0,
+        totalCost: 0,
+        totalTokens: 0,
+        totalDuration: 0,
+      })
     }
+
     return Result.ok({
       count: row.count,
       totalCost: row.totalCost,
       totalDuration: row.totalDuration,
+      totalTokens: row.totalTokens,
     })
   }
 

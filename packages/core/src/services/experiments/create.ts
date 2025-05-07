@@ -115,7 +115,7 @@ export async function createExperiment(
     )
   }
 
-  const datasetRowsScope = new DatasetRowsRepository(workspace.id)
+  const datasetRowsScope = new DatasetRowsRepository(workspace.id, db)
   const countResult = dataset
     ? await datasetRowsScope.getCountByDataset(dataset.id)
     : undefined

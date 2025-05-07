@@ -119,11 +119,12 @@ export function ExperimentItem({
             [DocumentRoutes.logs].withFilters({
               experimentId: experiment.id,
             })}
-          className='w-fit'
+          className='w-full'
         >
           <Button
-            variant='link'
-            className='p-0'
+            variant='outline'
+            fullWidth
+            fancy
             iconProps={{
               name: 'externalLink',
               placement: 'right',

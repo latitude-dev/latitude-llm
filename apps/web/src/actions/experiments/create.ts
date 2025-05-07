@@ -1,21 +1,25 @@
 'use server'
 
 import { withDocument } from '../procedures'
-import { createExperiment } from '@latitude-data/core/services/experiments/create'
+import { createExperimentVariants } from '@latitude-data/core/services/experiments/createVariants'
 import { startExperiment } from '@latitude-data/core/services/experiments/start/index'
 import {
   DatasetsRepository,
   EvaluationsV2Repository,
 } from '@latitude-data/core/repositories'
 import { z } from 'zod'
-import { scan } from 'promptl-ai'
 
 export const createExperimentAction = withDocument
   .createServerAction()
   .input(
     z.object({
       variants: z.array(
-        z.object({ name: z.string(), provider: z.string(), model: z.string() }),
+        z.object({
+          name: z.string(),
+          provider: z.string(),
+          model: z.string(),
+          temperature: z.number(),
+        }),
       ),
       evaluationUuids: z.array(z.string()),
       datasetId: z.number().optional(),
@@ -61,33 +65,18 @@ export const createExperimentAction = withDocument
       )
     }
 
-    const { config: originalConfig, setConfig } = await scan({
-      prompt: ctx.document.content,
-    })
-
-    const experiments = await Promise.all(
-      variants.map((variant) => {
-        const customPrompt = setConfig({
-          ...originalConfig,
-          provider: variant.provider,
-          model: variant.model,
-        })
-
-        return createExperiment({
-          name: variant.name,
-          customPrompt,
-          document: ctx.document,
-          commit: ctx.commit,
-          evaluations,
-          dataset,
-          parametersMap,
-          datasetLabels,
-          fromRow,
-          toRow,
-          workspace: ctx.workspace,
-        }).then((r) => r.unwrap())
-      }),
-    )
+    const experiments = await createExperimentVariants({
+      workspace: ctx.workspace,
+      commit: ctx.commit,
+      document: ctx.document,
+      variants,
+      evaluations,
+      dataset,
+      parametersMap,
+      datasetLabels,
+      fromRow,
+      toRow,
+    }).then((r) => r.unwrap())
 
     await Promise.all(
       experiments.map((experiment) =>

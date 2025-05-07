@@ -2,6 +2,8 @@ import useModelOptions from '$/hooks/useModelOptions'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Slider } from '@latitude-data/web-ui/atoms/Slider'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useMemo } from 'react'
 
 export function VariantPromptSettingsPlaceholder() {
@@ -17,11 +19,15 @@ export function VariantPromptSettings({
   setProvider,
   model,
   setModel,
+  temperature,
+  setTemperature,
 }: {
   provider: string
   setProvider: (provider: string) => void
   model: string
   setModel: (model: string) => void
+  temperature: number
+  setTemperature: (temperature: number) => void
 }) {
   const { data: providers, isLoading: isLoadingProviders } =
     useProviderApiKeys()
@@ -36,7 +42,7 @@ export function VariantPromptSettings({
   })
 
   return (
-    <div className='flex flex-col gap-2'>
+    <div className='flex flex-col gap-3'>
       <Select
         value={selectedProvider?.name}
         name='provider'
@@ -64,6 +70,31 @@ export function VariantPromptSettings({
         loading={isLoadingProviders}
         required
       />
+      <div className='flex flex-col gap-2'>
+        <Text.H5M>Temperature</Text.H5M>
+        <div className='flex flex-row items-center gap-2'>
+          <Text.H6
+            color={temperature === 0 ? 'accentForeground' : 'foregroundMuted'}
+          >
+            0
+          </Text.H6>
+          <div className='relative flex-grow min-w-0'>
+            <Slider
+              showMiddleRange
+              min={0}
+              max={2}
+              step={0.1}
+              value={[temperature]}
+              onValueChange={(value) => setTemperature(value[0]!)}
+            />
+          </div>
+          <Text.H6
+            color={temperature === 2 ? 'accentForeground' : 'foregroundMuted'}
+          >
+            2
+          </Text.H6>
+        </div>
+      </div>
     </div>
   )
 }

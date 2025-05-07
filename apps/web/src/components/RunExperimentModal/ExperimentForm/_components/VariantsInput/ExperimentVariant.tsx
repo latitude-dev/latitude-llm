@@ -30,7 +30,7 @@ export function ExperimentVariantCard({
   setVariants,
   isLoadingMetadata,
 }: ExperimentFormPayload & { index: number }) {
-  const { name, provider, model } = variants[index]!
+  const { name, provider, model, temperature } = variants[index]!
 
   const setName = useCallback(
     (name: string) => {
@@ -58,7 +58,23 @@ export function ExperimentVariantCard({
     (newModel: string) => {
       setVariants((prev) => {
         const newVariants = [...prev]
+        const prevModel = newVariants[index]!.model
         newVariants[index]!.model = newModel
+
+        const prevName = newVariants[index]!.name
+        newVariants[index]!.name = prevName.replace(prevModel, newModel)
+
+        return newVariants
+      })
+    },
+    [setVariants, index],
+  )
+
+  const setTemperature = useCallback(
+    (newTemperature: number) => {
+      setVariants((prev) => {
+        const newVariants = [...prev]
+        newVariants[index]!.temperature = newTemperature
         return newVariants
       })
     },
@@ -103,6 +119,8 @@ export function ExperimentVariantCard({
           setProvider={setProvider}
           model={model}
           setModel={setModel}
+          temperature={temperature}
+          setTemperature={setTemperature}
         />
       )}
     </div>

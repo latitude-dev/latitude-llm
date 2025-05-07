@@ -17,7 +17,6 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import {
   useCurrentCommit,
   useCurrentProject,
@@ -34,6 +33,8 @@ import { DatasetCell } from './DatasetCell'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { EvaluationsCell } from './EvaluationsCell'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { relativeTime } from '$/lib/relativeTime'
+import { ResultsCell } from './ResultsCell'
 
 type ExperimentStatus = {
   isPending: boolean
@@ -185,50 +186,7 @@ export function ExperimentsTable({
                 </div>
               </TableCell>
               <TableCell>
-                <div className='flex items-center gap-1'>
-                  <Tooltip
-                    trigger={
-                      <Badge
-                        variant='successMuted'
-                        className={isLoading ? 'animate-pulse' : ''}
-                      >
-                        {experiment.results.passed}
-                      </Badge>
-                    }
-                  >
-                    Passed
-                  </Tooltip>
-                  <Text.H5 noWrap color='foregroundMuted'>
-                    /
-                  </Text.H5>
-                  <Tooltip
-                    trigger={
-                      <Badge
-                        variant='warningMuted'
-                        className={isLoading ? 'animate-pulse' : ''}
-                      >
-                        {experiment.results.failed}
-                      </Badge>
-                    }
-                  >
-                    Failed
-                  </Tooltip>
-                  <Text.H5 noWrap color='foregroundMuted'>
-                    /
-                  </Text.H5>
-                  <Tooltip
-                    trigger={
-                      <Badge
-                        variant='destructiveMuted'
-                        className={isLoading ? 'animate-pulse' : ''}
-                      >
-                        {experiment.results.errors}
-                      </Badge>
-                    }
-                  >
-                    Errors
-                  </Tooltip>
-                </div>
+                <ResultsCell experiment={experiment} isLoading={isLoading} />
               </TableCell>
               <TableCell>
                 <EvaluationsCell experiment={experiment} />
@@ -237,18 +195,23 @@ export function ExperimentsTable({
                 {isLoadingCommits ? (
                   <Skeleton height='h5' className='w-12' />
                 ) : (
-                  <Tooltip
-                    trigger={
-                      <Badge
-                        variant={commit?.mergedAt ? 'accent' : 'muted'}
-                        className={isLoading ? 'animate-pulse' : ''}
-                      >
-                        {commit?.title ?? 'Unknown version'}
-                      </Badge>
-                    }
-                  >
-                    {commit?.uuid ?? 'Unknown version'}
-                  </Tooltip>
+                  <div className='flex flex-row gap-2 items-center min-w-0 max-w-xs'>
+                    <Badge
+                      variant={commit?.version ? 'accent' : 'muted'}
+                      shape='square'
+                    >
+                      <Text.H6 noWrap>
+                        {commit?.version ? `v${commit.version}` : 'Draft'}
+                      </Text.H6>
+                    </Badge>
+                    <Text.H5
+                      noWrap
+                      ellipsis
+                      color={commit?.version ? 'foreground' : 'foregroundMuted'}
+                    >
+                      {commit?.title ?? 'Removed draft'}
+                    </Text.H5>
+                  </div>
                 )}
               </TableCell>
               <TableCell>
@@ -267,7 +230,9 @@ export function ExperimentsTable({
               </TableCell>
               <TableCell>
                 <Text.H5 noWrap color={textColor}>
-                  {experiment.createdAt?.toLocaleString()}
+                  <time dateTime={new Date(experiment.createdAt).toISOString()}>
+                    {relativeTime(new Date(experiment.createdAt))}
+                  </time>
                 </Text.H5>
               </TableCell>
             </TableRow>

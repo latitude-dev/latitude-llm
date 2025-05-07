@@ -15,17 +15,17 @@ const defaultTestDisk = getTestDisk()
 export function generateCsvContent({
   delimiter = ',',
   headers = ['id', 'name', 'email', 'age'],
+  rows = Array.from({ length: 10 }, (_, i) => [
+    String(i + 1),
+    faker.person.fullName(),
+    faker.internet.email(),
+    String(faker.number.int({ min: 18, max: 80 })),
+  ]),
 }: {
   delimiter?: string
   headers?: string[]
+  rows?: string[][]
 }): string {
-  const rows = Array.from({ length: 10 }, (_, i) => [
-    i + 1,
-    faker.person.fullName(),
-    faker.internet.email(),
-    faker.number.int({ min: 18, max: 80 }),
-  ])
-
   return [
     headers.join(delimiter),
     ...rows.map((row) => row.join(delimiter)),
