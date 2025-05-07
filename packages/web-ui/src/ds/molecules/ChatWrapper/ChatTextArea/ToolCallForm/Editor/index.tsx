@@ -14,28 +14,31 @@ export function useUpdateEditorHeight({
   limitToInitialHeight?: boolean
 }) {
   const [heightState, setHeight] = useState(initialHeight)
-  const updateHeight = useCallback((editor: editor.IStandaloneCodeEditor) => {
-    const el = editor.getDomNode()
-    if (!el) return
+  const updateHeight = useCallback(
+    (editor: editor.IStandaloneCodeEditor) => {
+      const el = editor.getDomNode()
+      if (!el) return
 
-    requestAnimationFrame(() => {
-      let height = editor.getContentHeight()
+      requestAnimationFrame(() => {
+        let height = editor.getContentHeight()
 
-      // Max height
-      if (height >= maxHeight) {
-        height = maxHeight
-      }
+        // Max height
+        if (height >= maxHeight) {
+          height = maxHeight
+        }
 
-      if (limitToInitialHeight) {
-        height = height < initialHeight ? initialHeight : height
-      }
+        if (limitToInitialHeight) {
+          height = height < initialHeight ? initialHeight : height
+        }
 
-      setHeight(height)
-      el.style.height = height + 'px'
+        setHeight(height)
+        el.style.height = height + 'px'
 
-      editor.layout()
-    })
-  }, [])
+        editor.layout()
+      })
+    },
+    [initialHeight, limitToInitialHeight, maxHeight],
+  )
   return { height: heightState, updateHeight }
 }
 
@@ -123,7 +126,7 @@ export default function TextEditor({
 
       isMountedRef.current = true
     },
-    [updateHeight, isMountedRef, monacoRef, placeholder, onCmdEnter, onChange],
+    [updateHeight, isMountedRef, monacoRef, onCmdEnter],
   )
 
   // Refresh onCmdEnter prop callback when it changes
@@ -137,7 +140,7 @@ export default function TextEditor({
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       onCmdEnter?.(editor.getValue())
     })
-  }, [onCmdEnter])
+  }, [onCmdEnter, monacoRef])
   return (
     <>
       <Editor

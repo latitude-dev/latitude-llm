@@ -107,7 +107,7 @@ const llmEvaluationComparisonResultError = llmEvaluationResultError.extend({})
 export const LlmEvaluationComparisonSpecification = {
   name: 'Comparison',
   description:
-    'Judges the response by comparing the criteria to the expected output. The resulting score is the percentage of the compared criteria that is met',
+    'Judges the response by comparing the criteria to the expected output. The resulting score is the percentage of compared criteria that is met',
   configuration: llmEvaluationComparisonConfiguration,
   resultMetadata: llmEvaluationComparisonResultMetadata,
   resultError: llmEvaluationComparisonResultError,
@@ -130,6 +130,8 @@ export type LlmEvaluationComparisonResultError = z.infer<
 
 const llmEvaluationCustomConfiguration = llmEvaluationConfiguration.extend({
   prompt: z.string(),
+  minScore: z.number(),
+  maxScore: z.number(),
   minThreshold: z.number().optional(), // Threshold percentage
   maxThreshold: z.number().optional(), // Threshold percentage
 })
@@ -140,7 +142,7 @@ const llmEvaluationCustomResultError = llmEvaluationResultError.extend({})
 export const LlmEvaluationCustomSpecification = {
   name: 'Custom',
   description:
-    'Judges the response under a criteria using a custom prompt. The resulting score is the percentage of the criteria that is met',
+    'Judges the response under a criteria using a custom prompt. The resulting score is the value of criteria that is met',
   configuration: llmEvaluationCustomConfiguration,
   resultMetadata: llmEvaluationCustomResultMetadata,
   resultError: llmEvaluationCustomResultError,
@@ -158,6 +160,31 @@ export type LlmEvaluationCustomResultMetadata = z.infer<
 export type LlmEvaluationCustomResultError = z.infer<
   typeof LlmEvaluationCustomSpecification.resultError
 >
+
+export const LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION = `
+/*
+  IMPORTANT: The evaluation MUST return an object with the score and reason fields.
+
+  These are the available variables:
+  - {{ actualOutput }} (string): The actual output to evaluate
+  - {{ expectedOutput }} (string/undefined): The, optional, expected output to compare against
+  - {{ conversation }} (string): The full conversation of the evaluated log
+
+  - {{ messages }} (array of objects): All the messages of the conversation
+  - {{ toolCalls }} (array of objects): All the tool calls of the conversation
+  - {{ cost }} (number): The cost, in cents, of the evaluated log
+  - {{ tokens }} (number): The tokens of the evaluated log
+  - {{ duration }} (number): The duration, in seconds, of the evaluated log
+
+  More info on messages and tool calls format in: https://docs.latitude.so/promptl/syntax/messages
+
+  - {{ prompt }} (string): The prompt of the evaluated log
+  - {{ config }} (object): The configuration of the evaluated log
+  - {{ parameters }} (object): The parameters of the evaluated log
+
+  More info on configuration and parameters format in: https://docs.latitude.so/promptl/syntax/configuration
+*/
+`.trim()
 
 // CUSTOM LABELED
 
@@ -231,14 +258,16 @@ export const LLM_EVALUATION_PROMPT_PARAMETERS = [
   'actualOutput',
   'expectedOutput',
   'conversation',
-  'messages',
-  'toolCalls',
   'cost',
   'tokens',
   'duration',
-  'prompt',
   'config',
+  'toolCalls',
+  'messages',
+  'prompt',
   'parameters',
+  'context',
+  'response',
 ] as const
 
 export type LlmEvaluationPromptParameter =

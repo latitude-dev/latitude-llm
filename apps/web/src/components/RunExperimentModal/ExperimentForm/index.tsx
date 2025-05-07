@@ -4,16 +4,39 @@ import { DatasetSelector } from './_components/DatasetSelector'
 import { DatasetRowsInput } from './_components/DatasetRowsInput'
 import { ParametersSelection } from './_components/ParametersSelection'
 import { EvaluationsSelector } from './_components/EvaluationsSelector'
-import { useMemo } from 'react'
 import { ExperimentVariantsInput } from './_components/VariantsInput'
+import { EvaluationV2 } from '@latitude-data/constants'
+import { getEvaluationMetricSpecification } from '$/components/evaluations'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { NoDatasetRangeInput } from './_components/NoDatasetRangeInput'
+import { useMemo } from 'react'
 
-export default function DatasetForm(payload: ExperimentFormPayload) {
-  const parameters = useMemo(() => {
-    const set = new Set<string>([
-      ...payload.variants.flatMap((v) => v.parameters),
-    ])
-    return Array.from(set)
-  }, [payload.variants])
+function hasToSelectDataset({
+  parametersCount,
+  selectedEvaluations,
+}: {
+  parametersCount: number
+  selectedEvaluations: EvaluationV2[]
+}): boolean {
+  const evaluationRequiresLabel = selectedEvaluations.some((evaluation) => {
+    const specification = getEvaluationMetricSpecification(evaluation)
+    return specification.requiresExpectedOutput
+  })
+
+  if (evaluationRequiresLabel) return true
+  return parametersCount > 0
+}
+
+export default function ExperimentModalForm(payload: ExperimentFormPayload) {
+  const { parameters, selectedEvaluations } = payload
+  const showDatasetInput = useMemo(
+    () =>
+      hasToSelectDataset({
+        parametersCount: parameters.length,
+        selectedEvaluations: selectedEvaluations,
+      }),
+    [parameters.length, selectedEvaluations],
+  )
 
   return (
     <NumeredList>
@@ -28,12 +51,18 @@ export default function DatasetForm(payload: ExperimentFormPayload) {
         <EvaluationsSelector {...payload} />
       </NumeredList.Item>
 
-      <NumeredList.Item title='Select your dataset and configure parameters'>
-        <div className='flex flex-col gap-2'>
-          <DatasetSelector {...payload} parameters={parameters} />
-          <DatasetRowsInput {...payload} />
-          <ParametersSelection {...payload} parameters={parameters} />
-        </div>
+      <NumeredList.Item title='Select how to run the prompt'>
+        {payload.isLoadingMetadata ? (
+          <Skeleton className='h-6 w-full' />
+        ) : showDatasetInput ? (
+          <div className='flex flex-col gap-2'>
+            <DatasetSelector {...payload} />
+            <DatasetRowsInput {...payload} />
+            <ParametersSelection {...payload} />
+          </div>
+        ) : (
+          <NoDatasetRangeInput {...payload} />
+        )}
       </NumeredList.Item>
     </NumeredList>
   )

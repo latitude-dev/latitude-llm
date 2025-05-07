@@ -239,47 +239,104 @@ export class ExperimentsRepository extends Repository<Experiment> {
   async getLogsMetadata(
     uuid: string,
   ): PromisedResult<ExperimentLogsMetadata, LatitudeError> {
-    const result = await this.db
-      .select({
-        id: experiments.id,
-        count: count(documentLogs.id).as('count'),
-        totalCost: sum(providerLogs.costInMillicents)
-          .mapWith(Number)
-          .as('total_cost'),
-        totalDuration: sum(documentLogs.duration)
-          .mapWith(Number)
-          .as('total_duration'),
-      })
-      .from(experiments)
-      .leftJoin(documentLogs, eq(documentLogs.experimentId, experiments.id))
-      .leftJoin(
-        providerLogs,
-        eq(providerLogs.documentLogUuid, documentLogs.uuid),
-      )
-      .leftJoin(
-        runErrors,
-        and(
-          eq(runErrors.errorableUuid, documentLogs.uuid),
-          eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
-        ),
-      )
-      .where(
-        and(this.scopeFilter, eq(experiments.uuid, uuid), isNull(runErrors.id)),
-      )
-      .groupBy(experiments.id)
+    const experimentsCte = this.db.$with('experiments_cte').as(
+      this.db
+        .select({ id: experiments.id })
+        .from(experiments)
+        .where(and(this.scopeFilter, eq(experiments.uuid, uuid))),
+    )
 
-    if (!result.length) {
+    const documentLogStats = this.db.$with('document_log_stats').as(
+      this.db
+        .with(experimentsCte)
+        .select({
+          experimentId: documentLogs.experimentId,
+          logsCount: count(documentLogs.id).mapWith(Number).as('logs_count'),
+          totalDuration: sum(documentLogs.duration)
+            .mapWith(Number)
+            .as('total_duration'),
+        })
+        .from(documentLogs)
+        .leftJoin(
+          runErrors,
+          and(
+            eq(runErrors.errorableUuid, documentLogs.uuid),
+            eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+          ),
+        )
+        .innerJoin(
+          experimentsCte,
+          eq(documentLogs.experimentId, experimentsCte.id),
+        )
+        .where(isNull(runErrors.id))
+        .groupBy(documentLogs.experimentId),
+    )
+
+    const providerLogStats = this.db.$with('provider_log_stats').as(
+      this.db
+        .with(experimentsCte)
+        .select({
+          experimentId: documentLogs.experimentId,
+          totalCost: sum(providerLogs.costInMillicents)
+            .mapWith(Number)
+            .as('total_cost'),
+          totalTokens: sum(providerLogs.tokens)
+            .mapWith(Number)
+            .as('total_tokens'),
+        })
+        .from(documentLogs)
+        .innerJoin(
+          providerLogs,
+          eq(providerLogs.documentLogUuid, documentLogs.uuid),
+        )
+        .leftJoin(
+          runErrors,
+          and(
+            eq(runErrors.errorableUuid, documentLogs.uuid),
+            eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+          ),
+        )
+        .innerJoin(
+          experimentsCte,
+          eq(documentLogs.experimentId, experimentsCte.id),
+        )
+        .where(isNull(runErrors.id))
+        .groupBy(documentLogs.experimentId),
+    )
+
+    const [row] = await this.db
+      .with(experimentsCte, documentLogStats, providerLogStats)
+      .select({
+        id: experimentsCte.id,
+        count: documentLogStats.logsCount,
+        totalDuration: documentLogStats.totalDuration,
+        totalCost: providerLogStats.totalCost,
+        totalTokens: providerLogStats.totalTokens,
+      })
+      .from(experimentsCte)
+      .leftJoin(
+        documentLogStats,
+        eq(documentLogStats.experimentId, experimentsCte.id),
+      )
+      .leftJoin(
+        providerLogStats,
+        eq(providerLogStats.experimentId, experimentsCte.id),
+      )
+
+    if (!row) {
       return Result.ok({
         count: 0,
         totalCost: 0,
+        totalTokens: 0,
         totalDuration: 0,
       })
     }
 
     return Result.ok({
-      count: result[0]!.count,
-      totalCost: result[0]!.totalCost,
-      totalDuration: result[0]!.totalDuration,
+      count: row.count,
+      totalCost: row.totalCost,
+      totalDuration: row.totalDuration,
+      totalTokens: row.totalTokens,
     })
   }
 

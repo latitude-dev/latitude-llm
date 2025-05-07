@@ -118,7 +118,12 @@ export type EvaluationMetricFrontendSpecification<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = EvaluationMetricSpecification<T, M> & {
   icon: IconName
-  ConfigurationForm: (props: ConfigurationFormProps<T, M>) => React.ReactNode
+  ConfigurationSimpleForm: (
+    props: ConfigurationFormProps<T, M>,
+  ) => React.ReactNode
+  ConfigurationAdvancedForm?: (
+    props: ConfigurationFormProps<T, M>,
+  ) => React.ReactNode
   ResultBadge: (props: ResultBadgeProps<T, M>) => React.ReactNode
   ResultRowHeaders?: (props: ResultRowHeadersProps<T, M>) => React.ReactNode
   ResultRowCells?: (props: ResultRowCellsProps<T, M>) => React.ReactNode
@@ -135,7 +140,14 @@ export type EvaluationFrontendSpecification<
   T extends EvaluationType = EvaluationType,
 > = Omit<EvaluationSpecification<T>, 'metrics'> & {
   icon: IconName
-  ConfigurationForm: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
+  ConfigurationSimpleForm: <
+    M extends EvaluationMetric<T> = EvaluationMetric<T>,
+  >(
+    props: ConfigurationFormProps<T, M> & { metric: M },
+  ) => React.ReactNode
+  ConfigurationAdvancedForm?: <
+    M extends EvaluationMetric<T> = EvaluationMetric<T>,
+  >(
     props: ConfigurationFormProps<T, M> & { metric: M },
   ) => React.ReactNode
   ResultBadge: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(

@@ -1,12 +1,13 @@
 import { ExperimentFormPayload } from '../useExperimentFormPayload'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { debounce } from 'lodash-es'
 
 type Range = { from: number; to: number }
 
@@ -25,6 +26,16 @@ function LineRangeInputs({
   onChangeRange: ReactStateDispatch<Range>
   max: number | undefined
 }) {
+  const [fromText, setFromText] = useState(defaultRange.from.toString())
+  const [toText, setToText] = useState(defaultRange.to.toString())
+
+  useEffect(() => {
+    setFromText(defaultRange.from.toString())
+  }, [defaultRange.from])
+  useEffect(() => {
+    setToText(defaultRange.to.toString())
+  }, [defaultRange.to])
+
   const setFromValue = useCallback(
     (value: number) => {
       const newVal = scopedInRange(value, 1, max ?? value)
@@ -47,6 +58,9 @@ function LineRangeInputs({
     [onChangeRange, max],
   )
 
+  const debouncedFrom = useRef(debounce(setFromValue, 500)).current
+  const debouncedTo = useRef(debounce(setToValue, 500)).current
+
   return (
     <FormFieldGroup>
       <Input
@@ -54,20 +68,29 @@ function LineRangeInputs({
         type='number'
         name='fromLine'
         label='From line'
-        value={defaultRange.from}
+        value={fromText}
         placeholder='Starting line'
-        onChange={(e) => setFromValue(Number(e.target.value))}
+        onChange={(e) => {
+          setFromText(e.target.value)
+          const n = Number(e.target.value)
+          if (!isNaN(n)) debouncedFrom(n)
+        }}
         min={1}
         max={max}
       />
+
       <Input
         disabled={disabled}
         type='number'
         name='toLine'
         label='To line'
+        value={toText}
         placeholder='Ending line'
-        value={defaultRange.to}
-        onChange={(e) => setToValue(Number(e.target.value))}
+        onChange={(e) => {
+          setToText(e.target.value)
+          const n = Number(e.target.value)
+          if (!isNaN(n)) debouncedTo(n)
+        }}
         min={1}
         max={max}
       />

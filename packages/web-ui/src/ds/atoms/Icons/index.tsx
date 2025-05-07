@@ -31,11 +31,9 @@ import {
   CircleIcon,
   CirclePlus,
   CircleUser,
-  ClipboardCheck,
   Clock,
   Code,
   Code2,
-  Computer,
   Copy,
   Database,
   Ellipsis,
@@ -46,7 +44,6 @@ import {
   ExternalLink,
   Eye,
   File,
-  FileCode2,
   FileDown,
   FilePlus,
   FileQuestion,
@@ -111,6 +108,7 @@ import {
   WholeWord,
   XIcon,
   Youtube,
+  CpuIcon,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -175,6 +173,7 @@ const Icons = {
   barChart4: BarChart4,
   blocks: Blocks,
   bot: Bot,
+  cpu: CpuIcon,
   braces: Braces,
   brain: Brain,
   brave: Brave,
@@ -200,7 +199,6 @@ const Icons = {
   close: XIcon,
   code2: Code2,
   code: Code,
-  computer: Computer,
   database: Database,
   deletion: SquareMinus,
   discord: Discord,
@@ -217,7 +215,6 @@ const Icons = {
   filePlus: FilePlus,
   fileQuestion: FileQuestion,
   fileUp: FileUpIcon,
-  fileCode: FileCode2,
   folderClose: FolderClosed,
   folderOpen: FolderOpen,
   folderPlus: FolderPlus,
@@ -297,7 +294,6 @@ const Icons = {
   wholeWord: WholeWord,
   wordpress: Wordpress,
   youtube: Youtube,
-  clipboardCheck: ClipboardCheck,
   space: Space,
   blend: Blend,
   exa: Exa,
@@ -320,7 +316,7 @@ export type IconProps = {
   className?: string
 }
 
-type Size = 'small' | 'normal' | 'large' | 'xlarge' | 'xxxlarge'
+type Size = 'xsmall' | 'small' | 'normal' | 'large' | 'xlarge' | 'xxxlarge'
 
 export function Icon({
   name,
@@ -338,6 +334,7 @@ export function Icon({
         {
           [colors.textColors[color!]]: color,
           [colors.darkTextColors[darkColor!]]: darkColor,
+          'w-2.5 h-2.5': size === 'xsmall',
           'w-3 h-3': size === 'small',
           'w-4 h-4': size === 'normal',
           'w-6 h-6': size === 'large',

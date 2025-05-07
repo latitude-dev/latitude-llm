@@ -14,6 +14,7 @@ import { cn } from '../../../lib/utils'
 import {
   colors,
   font,
+  opacity,
   overflow as overflowOptions,
   TextAlign,
   whiteSpace as whiteSpaceOptions,
@@ -25,6 +26,7 @@ import {
   type TextColor,
   type WhiteSpace,
   type WordBreak,
+  type TextOpacity,
 } from '../../tokens'
 
 type Display = 'inline' | 'inline-block' | 'block'
@@ -32,6 +34,7 @@ export type Common = {
   children: ReactNode
   theme?: CurrentTheme
   color?: TextColor
+  textOpacity?: TextOpacity
   darkColor?: TextColor
   align?: TextAlign
   capitalize?: boolean
@@ -70,6 +73,7 @@ const TextAtom = memo(
       children,
       size = 'h4',
       color = 'foreground',
+      textOpacity = 100,
       darkColor,
       theme,
       spacing = 'normal',
@@ -112,6 +116,7 @@ const TextAtom = memo(
           weightClass,
           spacingClass,
           colorClass,
+          opacity.text[textOpacity],
           wordBreakClass,
           whiteSpaceClass,
           alignClass,

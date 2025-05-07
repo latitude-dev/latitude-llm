@@ -1,5 +1,5 @@
 import { endOfDay } from 'date-fns'
-import { and, between, inArray, like, or, sql } from 'drizzle-orm'
+import { and, between, eq, inArray, like, or, sql } from 'drizzle-orm'
 import { DocumentLogFilterOptions } from '../../../constants'
 import { documentLogs } from '../../../schema'
 
@@ -18,6 +18,7 @@ export function buildLogsFilterSQLConditions({
   logSources,
   createdAt: unsafeCreatedAt,
   customIdentifier,
+  experimentId,
 }: DocumentLogFilterOptions) {
   const createdAt = safeCreatedAt(unsafeCreatedAt)
   return and(
@@ -33,5 +34,6 @@ export function buildLogsFilterSQLConditions({
     customIdentifier
       ? and(like(documentLogs.customIdentifier, `%${customIdentifier}%`))
       : sql`1 = 1`, // Return all if customIdentifier is not set
+    experimentId ? eq(documentLogs.experimentId, experimentId) : sql`1 = 1`, // Return all if experimentUuid is not set
   )
 }

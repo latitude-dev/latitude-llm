@@ -1,9 +1,8 @@
-import yaml from 'js-yaml'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   EvaluationType,
   formatConversation,
+  LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationMetric,
   ProviderApiKey,
   LlmEvaluationComparisonSpecification as specification,
@@ -18,7 +17,7 @@ import {
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { promptTask, runPrompt, thresholdToCustomScale } from './shared'
+import { promptTask, runPrompt } from './shared'
 
 export const LlmEvaluationComparisonSpecification = {
   ...specification,
@@ -97,7 +96,7 @@ async function validate(
 }
 
 const promptSchema = z.object({
-  score: z.number().min(0).max(100),
+  score: z.number().int().min(0).max(100),
   reason: z.string(),
 })
 
@@ -119,7 +118,6 @@ function buildPrompt({
 provider: ${provider.name}
 model: ${model}
 temperature: 0.7
-${yaml.dump({ schema: zodToJsonSchema(promptSchema, { target: 'openAi' }) })}
 ---
 
 You're an expert LLM-as-a-judge evaluator. Your task is to judge how well the response, from another LLM model (the assistant), compares to the expected output, following the criteria:
@@ -235,24 +233,6 @@ async function clone(
     return Result.error(new BadRequestError('Provider is required'))
   }
 
-  let minThreshold = undefined
-  if (evaluation.configuration.minThreshold !== undefined) {
-    minThreshold = thresholdToCustomScale(
-      evaluation.configuration.minThreshold,
-      0,
-      100,
-    )
-  }
-
-  let maxThreshold = undefined
-  if (evaluation.configuration.maxThreshold !== undefined) {
-    maxThreshold = thresholdToCustomScale(
-      evaluation.configuration.maxThreshold,
-      0,
-      100,
-    )
-  }
-
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original evaluation object
   return Result.ok({
@@ -264,9 +244,15 @@ async function clone(
       reverseScale: evaluation.configuration.reverseScale,
       provider: evaluation.configuration.provider,
       model: evaluation.configuration.model,
-      prompt: buildPrompt({ ...evaluation.configuration, provider }),
-      minThreshold: minThreshold,
-      maxThreshold: maxThreshold,
+      prompt: `
+${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
+
+${buildPrompt({ ...evaluation.configuration, provider })}
+`.trim(),
+      minScore: 0,
+      maxScore: 100,
+      minThreshold: evaluation.configuration.minThreshold,
+      maxThreshold: evaluation.configuration.maxThreshold,
     },
   })
 }

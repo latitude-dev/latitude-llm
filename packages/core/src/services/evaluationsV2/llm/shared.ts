@@ -7,6 +7,7 @@ import {
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
+import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   DocumentType,
   EvaluationType,
@@ -20,10 +21,10 @@ import {
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+import { Result } from '../../../lib/Result'
 import { ProviderLogsRepository } from '../../../repositories'
 import { runAgent } from '../../agents/run'
 import { runChain } from '../../chains/run'
-import { Result } from '../../../lib/Result'
 
 export function promptTask({ provider }: { provider: ProviderApiKey }) {
   return `
@@ -65,6 +66,7 @@ export async function buildLlmEvaluationRunFunction<
   evaluation,
   prompt,
   parameters,
+  schema,
   runArgs: inputRunArgs = {},
 }: {
   workspace: Workspace
@@ -72,6 +74,7 @@ export async function buildLlmEvaluationRunFunction<
   evaluation: EvaluationV2<EvaluationType.Llm, M>
   prompt: string
   parameters?: Record<string, unknown>
+  schema: z.ZodSchema
   runArgs?: {
     generateUUID?: () => string
   }
@@ -92,7 +95,10 @@ export async function buildLlmEvaluationRunFunction<
       )
     }
 
-    promptConfig = result.config as PromptConfig
+    promptConfig = {
+      ...result.config,
+      ...(schema && { schema: zodToJsonSchema(schema, { target: 'openAi' }) }),
+    } as PromptConfig
     promptChain = new PromptlChain({
       prompt: prompt,
       parameters: parameters,
@@ -113,6 +119,12 @@ export async function buildLlmEvaluationRunFunction<
     ...inputRunArgs,
     chain: promptChain,
     globalConfig: promptConfig,
+    configOverrides: schema
+      ? {
+          schema: zodToJsonSchema(schema, { target: 'openAi' }),
+          output: 'object' as const,
+        }
+      : undefined,
     source: LogSources.Evaluation,
     promptlVersion: 1,
     persistErrors: false as false, // Note: required so TypeScript doesn't infer true
@@ -142,7 +154,7 @@ export async function runPrompt<
   }: {
     prompt: string
     parameters?: Record<string, unknown>
-    schema?: S
+    schema: S
     resultUuid: string
     evaluation: EvaluationV2<EvaluationType.Llm, M>
     providers: Map<string, ProviderApiKey>
@@ -157,6 +169,7 @@ export async function runPrompt<
       evaluation,
       prompt,
       parameters,
+      schema,
       runArgs: {
         generateUUID: () => resultUuid, // Note: this makes documentLogUuid = resultUuid
       },
@@ -240,13 +253,4 @@ function parseVerdict(
   }
 
   return response.object
-}
-
-export function thresholdToCustomScale(
-  threshold: number,
-  lower: number,
-  upper: number,
-) {
-  const map = ((threshold - lower) * 100) / (upper - lower)
-  return Math.min(Math.max(Number(map.toFixed(0)), 0), 100)
 }

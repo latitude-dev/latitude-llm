@@ -20,6 +20,7 @@ export type ReadMetadataWorkerProps = Parameters<typeof readMetadata>[0] & {
   providerNames?: string[]
   integrationNames?: string[]
   agentToolsMap?: AgentToolsMap
+  noOutputSchemaConfig?: { message: string }
 }
 
 self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
@@ -31,6 +32,7 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
     providerNames,
     agentToolsMap,
     integrationNames,
+    noOutputSchemaConfig,
     ...rest
   } = event.data
 
@@ -38,15 +40,15 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
     document && documents
       ? readDocument(document, documents, prompt)
       : undefined
-  const configSchema =
-    document && providerNames
-      ? promptConfigSchema({
-          providerNames,
-          integrationNames,
-          fullPath: document.path,
-          agentToolsMap,
-        })
-      : undefined
+  const configSchema = providerNames
+    ? promptConfigSchema({
+        providerNames,
+        integrationNames,
+        fullPath: document?.path,
+        agentToolsMap,
+        noOutputSchemaConfig,
+      })
+    : undefined
 
   const props = {
     ...rest,

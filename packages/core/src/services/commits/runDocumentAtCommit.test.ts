@@ -15,6 +15,7 @@ import { ChainEventTypes } from '@latitude-data/constants'
 import { Ok } from './../../lib/Result'
 import { Result } from './../../lib/Result'
 import { UnprocessableEntityError } from './../../lib/errors'
+import { APICallError, RetryError } from 'ai'
 
 const mocks = {
   publish: vi.fn(),
@@ -310,6 +311,62 @@ model: gpt-4o
           createDocumentLogSpy.mock.calls.length - 1
         ]![0].data.customIdentifier,
       ).toEqual('custom-identifier')
+    })
+
+    it('Does not create a document log when rate limited', async () => {
+      const fullStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            type: 'error',
+            error: new RetryError({
+              message: 'wat',
+              reason: 'maxRetriesExceeded',
+              errors: [
+                new APICallError({
+                  statusCode: 429,
+                  message: 'wat',
+                  url: 'http://localhost:3000',
+                  requestBodyValues: {},
+                }),
+              ],
+            }),
+          })
+          controller.close()
+        },
+      })
+
+      mocks.runAi.mockResolvedValueOnce(
+        Result.ok({
+          type: 'text',
+          text: Promise.resolve('Fake AI generated text'),
+          providerLog: Promise.resolve({ uuid: 'fake-provider-log-uuid' }),
+          usage: Promise.resolve({
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          }),
+          toolCalls: Promise.resolve([]),
+          fullStream,
+        }),
+      )
+
+      const { workspace, document, commit } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
+      const parameters = { testParam: 'testValue' }
+      const { lastResponse } = await runDocumentAtCommit({
+        workspace,
+        document,
+        commit,
+        parameters,
+        customIdentifier: 'custom-identifier',
+        source: LogSources.API,
+      }).then((r) => r.unwrap())
+
+      // Wait for the lastResponse promise to resolve
+      await lastResponse
+
+      expect(createDocumentLogSpy).not.toHaveBeenCalled()
     })
   })
 })

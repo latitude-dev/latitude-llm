@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 
 import { Message } from '@latitude-data/compiler'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
@@ -11,10 +10,10 @@ import {
 import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
 
 export function DocumentLogMessages({
-  documentLog,
+  documentLogParameters,
   messages,
 }: {
-  documentLog: DocumentLogWithMetadataAndError
+  documentLogParameters: Record<string, unknown>
   messages: Message[]
 }) {
   const sourceMapAvailable = useMemo(() => {
@@ -22,7 +21,7 @@ export function DocumentLogMessages({
       if (typeof message.content !== 'object') return false
       return message.content.some((content) => '_promptlSourceMap' in content)
     })
-  }, [documentLog.uuid, messages])
+  }, [messages])
 
   const { value: expandParameters, setValue: setExpandParameters } =
     useLocalStorage({
@@ -56,7 +55,7 @@ export function DocumentLogMessages({
       </div>
       <MessageList
         messages={messages}
-        parameters={Object.keys(documentLog.parameters)}
+        parameters={Object.keys(documentLogParameters)}
         collapseParameters={!expandParameters}
       />
     </>

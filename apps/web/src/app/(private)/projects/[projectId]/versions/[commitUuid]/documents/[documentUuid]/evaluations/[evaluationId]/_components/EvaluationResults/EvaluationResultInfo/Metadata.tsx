@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-
+import { format } from 'date-fns'
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import useProviderApiKeys from '$/stores/providerApiKeys'
@@ -7,12 +7,8 @@ import { EvaluationDto, ProviderLogDto } from '@latitude-data/core/browser'
 import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
-import { format } from 'date-fns'
+import { MetadataItem, MetadataItemTooltip } from '$/components/MetadataItem'
 
-import {
-  MetadataItem,
-  MetadataItemTooltip,
-} from '../../../../../../[documentUuid]/_components/MetadataItem'
 import { ResultCellContent } from '../EvaluationResultsTable'
 
 function ProviderLogItems({

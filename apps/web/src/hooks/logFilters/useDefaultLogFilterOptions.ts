@@ -14,6 +14,7 @@ export function useDefaultLogFilterOptions() {
       logSources: LOG_SOURCES,
       createdAt: undefined,
       customIdentifier: undefined,
+      experimentId: undefined,
     }
   }, [commits, commit])
 }

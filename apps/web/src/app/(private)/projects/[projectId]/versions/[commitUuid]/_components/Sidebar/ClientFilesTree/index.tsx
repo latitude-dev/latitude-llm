@@ -48,7 +48,7 @@ export default function ClientFilesTree({
 
       return router.push(documentDetails.root)
     },
-    [sidebarLinkContext],
+    [sidebarLinkContext, router],
   )
   const { toast } = useToast()
 

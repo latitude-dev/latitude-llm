@@ -8,6 +8,7 @@ import { eq } from 'drizzle-orm'
 import { getExperimentJobPayload } from './getExperimentJobPayload'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'
+import { RunDocumentForExperimentJobData } from '../../../jobs/job-definitions'
 
 export async function startExperiment(
   {
@@ -64,10 +65,9 @@ export async function startExperiment(
       projectId: commit.projectId,
       experimentId: experiment.id,
       commitUuid: commit.uuid,
-      parameters: row.parameters,
-      customPrompt: experiment.metadata.prompt,
-      datasetRowId: row.id,
-    })
+      parameters: row?.parameters ?? {},
+      datasetRowId: row?.id,
+    } as RunDocumentForExperimentJobData)
   }
 
   return Result.ok(experiment)

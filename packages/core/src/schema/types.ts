@@ -320,6 +320,7 @@ export type ExperimentDto = Experiment & {
 }
 export type ExperimentLogsMetadata = {
   totalCost: number
+  totalTokens: number
   totalDuration: number
   count: number
 }

@@ -3,11 +3,10 @@ import { randomUUID } from 'crypto'
 import { Job } from 'bullmq'
 
 import { LogSources } from '@latitude-data/constants'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { WebsocketClient, WorkerSocket } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { runDocumentAtCommitWithAutoToolResponses } from './runDocumentAtCommitWithAutoToolResponses'
+import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 
 export type RunDocumentJobData = {
   workspaceId: number
@@ -76,12 +75,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
       progressTracker,
     )
   } catch (error) {
-    if (
-      error instanceof ChainError &&
-      error.errorCode === RunErrorCodes.RateLimit
-    ) {
-      throw error // The job system will retry it with exponential backoff
-    }
+    if (isErrorRetryable(error as Error)) throw error
 
     await progressTracker.incrementErrors()
     await emitDocumentBatchRunStatus(

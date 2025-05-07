@@ -24,6 +24,7 @@ import { NotFoundError } from './../../lib/errors'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { Result } from './../../lib/Result'
 import { EvaluationRunChecker } from './EvaluationRunChecker'
+import { isErrorRetryable } from '../evaluationsV2/run'
 
 interface RunEvaluationParams {
   providerLog: ProviderLog
@@ -99,7 +100,7 @@ export async function runEvaluation(
     | undefined
   const providerLog = response?.providerLog
   const responseError = await run.error
-  if (responseError?.errorCode === RunErrorCodes.RateLimit) {
+  if (responseError && isErrorRetryable(responseError)) {
     return Result.error(responseError)
   }
 

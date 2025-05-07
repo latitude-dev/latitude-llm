@@ -11,6 +11,9 @@ import NodeHeaderWrapper, {
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
 import { ROUTES } from '$/services/routes'
+import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { UseEvaluationPathReturn } from '$/components/Sidebar/Files/useEvaluationPath'
 
 export default function DocumentHeader({
   open,
@@ -19,12 +22,14 @@ export default function DocumentHeader({
   indentation,
   draggble,
   canDrag,
+  currentEvaluationUuid,
 }: {
   open: boolean
   selected: boolean
   node: Node
   indentation: IndentType[]
   draggble: NodeHeaderWrapperProps['draggble']
+  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
   canDrag: boolean
 }) {
   const {
@@ -36,6 +41,9 @@ export default function DocumentHeader({
     onRenameFile,
     sidebarLinkContext,
   } = useFileTreeContext()
+  const { enabled: evalsV2Enabled } = useFeatureFlag({
+    featureFlag: 'evaluationsV2',
+  })
   const { deleteTmpFolder, reset } = useTempNodes((state) => ({
     reset: state.reset,
     deleteTmpFolder: state.deleteTmpFolder,
@@ -52,18 +60,25 @@ export default function DocumentHeader({
       }
       reset()
     },
-    [reset, onCreateFile, onRenameFile, node.path, node.isPersisted],
+    [reset, onCreateFile, onRenameFile, node],
   )
+  const documentUuid = node.doc!.documentUuid
   const url = useMemo(() => {
-    if (selected) return undefined
+    if (selected && !currentEvaluationUuid) return undefined
     if (!node.isPersisted) return undefined
-    if (!node.doc?.documentUuid) return undefined
+    if (!documentUuid) return undefined
 
     return ROUTES.projects
       .detail({ id: sidebarLinkContext.projectId })
       .commits.detail({ uuid: sidebarLinkContext.commitUuid })
-      .documents.detail({ uuid: node.doc.documentUuid }).root
-  }, [node.doc!.documentUuid, selected, node.isPersisted, sidebarLinkContext])
+      .documents.detail({ uuid: documentUuid }).root
+  }, [
+    documentUuid,
+    selected,
+    node.isPersisted,
+    sidebarLinkContext,
+    currentEvaluationUuid,
+  ])
   const [isEditing, setIsEditing] = useState(node.name === ' ')
   const actions = useMemo<MenuOption[]>(
     () => [
@@ -91,18 +106,12 @@ export default function DocumentHeader({
           if (isMerged) {
             onMergeCommitClick()
           } else {
-            onDeleteFile({ node, documentUuid: node.doc!.documentUuid })
+            onDeleteFile({ node, documentUuid })
           }
         },
       },
     ],
-    [
-      node.doc!.documentUuid,
-      onDeleteFile,
-      isLoading,
-      isMerged,
-      onMergeCommitClick,
-    ],
+    [node, documentUuid, onDeleteFile, isLoading, isMerged, onMergeCommitClick],
   )
   const icon = useMemo<IconName>(() => {
     const docType = node.doc?.documentType
@@ -111,6 +120,7 @@ export default function DocumentHeader({
     if (docType === DocumentType.Agent) return 'bot'
     return 'file'
   }, [node.doc?.documentType])
+
   return (
     <NodeHeaderWrapper
       isFile
@@ -129,6 +139,16 @@ export default function DocumentHeader({
       onSaveValue={onSaveValue}
       onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
       icons={[icon]}
-    />
+      childrenSelected={!!currentEvaluationUuid}
+    >
+      {evalsV2Enabled && selected ? (
+        <EvaluationList
+          changeType={node.changeType}
+          indentation={indentation}
+          documentUuid={documentUuid}
+          currentEvaluationUuid={currentEvaluationUuid}
+        />
+      ) : null}
+    </NodeHeaderWrapper>
   )
 }

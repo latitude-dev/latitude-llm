@@ -139,6 +139,22 @@ export function useProcessLogFilters({
     }
   }, [])
 
+  const onExperimentIdChange = useCallback(
+    (selectedExperimentId: number | undefined) => {
+      onFiltersChanged((currentFilters) => ({
+        ...currentFilters,
+        experimentId: selectedExperimentId,
+      }))
+
+      if (!selectedExperimentId) {
+        setSearchParams('experimentId', undefined)
+      } else {
+        setSearchParams('experimentId', String(selectedExperimentId))
+      }
+    },
+    [],
+  )
+
   return {
     isCommitsDefault,
     isLogSourcesDefault,
@@ -146,5 +162,6 @@ export function useProcessLogFilters({
     onSelectCommits,
     onCreatedAtChange,
     onCustomIdentifierChange,
+    onExperimentIdChange,
   }
 }

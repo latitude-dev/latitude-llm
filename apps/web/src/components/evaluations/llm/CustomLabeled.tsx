@@ -16,12 +16,13 @@ const specification = LlmEvaluationCustomLabeledSpecification
 export default {
   ...LlmEvaluationCustomSpecification,
   ...specification,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
+  ConfigurationAdvancedForm: ConfigurationAdvancedForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,
 }
 
-function ConfigurationForm({
+function ConfigurationSimpleForm({
   settings,
   setSettings,
   ...rest
@@ -30,7 +31,36 @@ function ConfigurationForm({
   LlmEvaluationMetric.CustomLabeled
 >) {
   return (
-    <LlmEvaluationCustomSpecification.ConfigurationForm
+    <LlmEvaluationCustomSpecification.ConfigurationSimpleForm
+      settings={
+        settings as unknown as EvaluationSettings<
+          EvaluationType.Llm,
+          LlmEvaluationMetric.Custom
+        >
+      }
+      setSettings={
+        setSettings as unknown as (
+          settings: EvaluationSettings<
+            EvaluationType.Llm,
+            LlmEvaluationMetric.Custom
+          >,
+        ) => void
+      }
+      {...rest}
+    />
+  )
+}
+
+function ConfigurationAdvancedForm({
+  settings,
+  setSettings,
+  ...rest
+}: ConfigurationFormProps<
+  EvaluationType.Llm,
+  LlmEvaluationMetric.CustomLabeled
+>) {
+  return (
+    <LlmEvaluationCustomSpecification.ConfigurationAdvancedForm
       settings={
         settings as unknown as EvaluationSettings<
           EvaluationType.Llm,

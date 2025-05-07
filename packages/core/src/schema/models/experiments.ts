@@ -39,12 +39,13 @@ export const experiments = latitudeSchema.table(
       .array()
       .notNull()
       .default(sql`'{}'::uuid[]`),
-    datasetId: bigint('dataset_id', { mode: 'number' })
-      .notNull()
-      .references(() => datasets.id, {
+    datasetId: bigint('dataset_id', { mode: 'number' }).references(
+      () => datasets.id,
+      {
         onDelete: 'restrict',
         onUpdate: 'cascade',
-      }),
+      },
+    ),
     metadata: jsonb('metadata').$type<ExperimentMetadata>().notNull(),
     startedAt: timestamp('started_at'), // Start time can be null if experiment is still pending
     finishedAt: timestamp('finished_at'), // Finish time can be null if experiment has still not finished

@@ -1,5 +1,5 @@
-import { MetadataItem } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataItem'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
+import { MetadataItem } from '$/components/MetadataItem'
 import useModelOptions from '$/hooks/useModelOptions'
 import { formatCount } from '$/lib/formatCount'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
@@ -61,7 +61,8 @@ const specification = LlmEvaluationSpecification
 export default {
   ...specification,
   icon: 'bot' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
+  ConfigurationAdvancedForm: ConfigurationAdvancedForm,
   ResultBadge: ResultBadge,
   ResultRowHeaders: ResultRowHeaders,
   ResultRowCells: ResultRowCells,
@@ -72,7 +73,7 @@ export default {
   metrics: METRICS,
 }
 
-function ConfigurationForm<M extends LlmEvaluationMetric>({
+function ConfigurationSimpleForm<M extends LlmEvaluationMetric>({
   mode,
   metric,
   configuration,
@@ -157,7 +158,7 @@ function ConfigurationForm<M extends LlmEvaluationMetric>({
           />
         )}
       </FormFieldGroup>
-      <metricSpecification.ConfigurationForm
+      <metricSpecification.ConfigurationSimpleForm
         mode={mode}
         configuration={configuration}
         setConfiguration={setConfiguration}
@@ -165,6 +166,24 @@ function ConfigurationForm<M extends LlmEvaluationMetric>({
         disabled={disabled || isLoading}
         {...rest}
       />
+    </>
+  )
+}
+
+function ConfigurationAdvancedForm<M extends LlmEvaluationMetric>({
+  metric,
+  ...rest
+}: ConfigurationFormProps<EvaluationType.Llm, M> & {
+  metric: M
+}) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) return null
+
+  return (
+    <>
+      {!!metricSpecification.ConfigurationAdvancedForm && (
+        <metricSpecification.ConfigurationAdvancedForm {...rest} />
+      )}
     </>
   )
 }

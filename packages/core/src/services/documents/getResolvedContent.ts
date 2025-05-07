@@ -35,7 +35,11 @@ export async function getResolvedContent({
     )
   }
 
-  if (commit.mergedAt != null && document.resolvedContent != null) {
+  if (
+    customPrompt === undefined &&
+    commit.mergedAt != null &&
+    document.resolvedContent != null
+  ) {
     return Result.ok(document.resolvedContent!)
   }
 

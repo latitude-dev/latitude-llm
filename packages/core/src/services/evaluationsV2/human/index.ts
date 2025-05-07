@@ -46,10 +46,6 @@ async function validate<M extends HumanEvaluationMetric>(
 
   metricSpecification.configuration.parse(configuration)
 
-  if (!configuration.criteria) {
-    return Result.error(new BadRequestError('Criteria is required'))
-  }
-
   configuration = await metricSpecification
     .validate({ configuration, ...rest }, db)
     .then((r) => r.unwrap())

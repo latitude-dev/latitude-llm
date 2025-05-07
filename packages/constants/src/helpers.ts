@@ -68,12 +68,18 @@ export function promptConfigSchema({
   integrationNames,
   fullPath,
   agentToolsMap,
+  noOutputSchemaConfig,
 }: {
   providerNames: string[]
   integrationNames?: string[]
   fullPath?: string
   agentToolsMap?: AgentToolsMap
+  noOutputSchemaConfig?: { message: string }
 }) {
+  const outputSchema = noOutputSchemaConfig
+    ? z.never({ message: noOutputSchemaConfig?.message }).optional()
+    : undefined
+
   const agentsConfigSchema =
     fullPath && agentToolsMap
       ? z.array(
@@ -173,6 +179,7 @@ export function promptConfigSchema({
       .array(z.nativeEnum(LatitudeTool))
       .optional(),
     agents: agentsConfigSchema.optional(),
+    ...(outputSchema ? { schema: outputSchema } : {}),
   })
 }
 

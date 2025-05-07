@@ -16,7 +16,17 @@ export const MODIFICATION_COLORS: Record<ModifiedDocumentType, TextColor> = {
 }
 export const MODIFICATION_BACKGROUNDS: Record<ModifiedDocumentType, string> = {
   [ModifiedDocumentType.Created]: 'bg-success/10',
-  [ModifiedDocumentType.Updated]: 'bg-accent-foreground/10',
-  [ModifiedDocumentType.UpdatedPath]: 'bg-accent-foreground/10',
+  [ModifiedDocumentType.Updated]: 'bg-accent-foreground/5',
+  [ModifiedDocumentType.UpdatedPath]: 'bg-accent-foreground/5',
   [ModifiedDocumentType.Deleted]: 'bg-destructive/10',
+}
+
+export const MODIFICATION_BACKGROUNDS_HOVER: Record<
+  ModifiedDocumentType,
+  string
+> = {
+  [ModifiedDocumentType.Created]: 'hover:bg-success/10',
+  [ModifiedDocumentType.Updated]: 'hover:bg-accent-foreground/5',
+  [ModifiedDocumentType.UpdatedPath]: 'hover:bg-accent-foreground/5',
+  [ModifiedDocumentType.Deleted]: 'hover:bg-destructive/10',
 }

@@ -62,6 +62,10 @@
   .custom-scrollbar::-webkit-scrollbar-corner {
     background-color: transparent;
   }
+
+  .sidebar-icon-mask {
+    clip-path: polygon(0 0, 100% 0, 100% 48%, 48% 48%, 48% 100%, 0 100%);
+  }
 }
 
 @layer base {

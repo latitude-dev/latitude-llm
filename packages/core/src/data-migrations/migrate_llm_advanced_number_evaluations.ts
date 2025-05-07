@@ -124,6 +124,7 @@ expect output with a value between 0 and 100.
           description: evval.description,
           type: EvaluationType.Llm,
           metric: LlmEvaluationMetric.Custom,
+          // @ts-expect-error - TODO(Gerardo): fix this
           configuration: {
             model: config.model as string,
             provider: config.provider as string,

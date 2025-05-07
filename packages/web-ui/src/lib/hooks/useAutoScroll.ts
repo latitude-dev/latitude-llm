@@ -9,7 +9,7 @@ export function useAutoScroll(
     onScrollChange?: (isScrolledToBottom: boolean) => void
   },
 ) {
-  const { startAtBottom = false } = options || {}
+  const { startAtBottom = false, onScrollChange } = options || {}
 
   useEffect(() => {
     const container = ref.current
@@ -26,7 +26,7 @@ export function useAutoScroll(
 
       if (newIsScrolledToBottom !== isScrolledToBottom) {
         isScrolledToBottom = newIsScrolledToBottom
-        options?.onScrollChange?.(isScrolledToBottom)
+        onScrollChange?.(isScrolledToBottom)
       }
     }
 
@@ -52,5 +52,5 @@ export function useAutoScroll(
       mutationObserver.disconnect()
       container.removeEventListener('scroll', scrollHandler)
     }
-  }, [])
+  }, [startAtBottom, onScrollChange, ref])
 }

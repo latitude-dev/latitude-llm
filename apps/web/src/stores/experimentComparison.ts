@@ -20,6 +20,7 @@ const EMPTY_ARRAY: [] = []
 export type BestLogsMetadata = {
   cost: string[]
   duration: string[]
+  tokens: string[]
 }
 
 function getExperimentUuidsWithBestScore(
@@ -62,6 +63,7 @@ function getExperimentUuidsWithBestLogsMetadata(
     (
       acc: {
         cost: { bestValue: number; experimentUuids: string[] }
+        tokens: { bestValue: number; experimentUuids: string[] }
         duration: { bestValue: number; experimentUuids: string[] }
       },
       experiment,
@@ -72,6 +74,7 @@ function getExperimentUuidsWithBestLogsMetadata(
       if (logsMetadata.count === 0) return acc // Invalid logsMetadata
 
       const cost = logsMetadata.totalCost / logsMetadata.count
+      const tokens = logsMetadata.totalTokens / logsMetadata.count
       const duration = logsMetadata.totalDuration / logsMetadata.count
 
       // Evaluate cost
@@ -79,6 +82,13 @@ function getExperimentUuidsWithBestLogsMetadata(
         acc.cost = { bestValue: cost, experimentUuids: [experiment.uuid] }
       } else if (cost === acc.cost.bestValue) {
         acc.cost.experimentUuids.push(experiment.uuid)
+      }
+
+      // Evaluate tokens
+      if (tokens < acc.tokens.bestValue) {
+        acc.tokens = { bestValue: tokens, experimentUuids: [experiment.uuid] }
+      } else if (tokens === acc.tokens.bestValue) {
+        acc.tokens.experimentUuids.push(experiment.uuid)
       }
 
       // Evaluate duration
@@ -95,12 +105,14 @@ function getExperimentUuidsWithBestLogsMetadata(
     },
     {
       cost: { bestValue: Infinity, experimentUuids: [] },
+      tokens: { bestValue: Infinity, experimentUuids: [] },
       duration: { bestValue: Infinity, experimentUuids: [] },
     },
   )
 
   return {
     cost: results.cost.experimentUuids,
+    tokens: results.tokens.experimentUuids,
     duration: results.duration.experimentUuids,
   }
 }
@@ -227,6 +239,7 @@ export function useExperimentComparison(
           logsMetadata: {
             count: 0,
             totalCost: 0,
+            totalTokens: 0,
             totalDuration: 0,
           },
           ...prevExperiment, // If it did exist, we keep the previous scores
@@ -292,6 +305,7 @@ export function useExperimentComparison(
   const [bestLogsMetadata, setBestLogsMetadata] = useState<BestLogsMetadata>({
     cost: [],
     duration: [],
+    tokens: [],
   })
 
   useEffect(() => {
@@ -321,6 +335,7 @@ export function useExperimentComparison(
         const prevLogsMetadata = prevExperiment.logsMetadata ?? {
           count: 0,
           totalCost: 0,
+          totalTokens: 0,
           totalDuration: 0,
         }
 
@@ -333,6 +348,9 @@ export function useExperimentComparison(
             totalCost:
               prevLogsMetadata.totalCost +
               (documentLogWithMetadata.costInMillicents ?? 0),
+            totalTokens:
+              prevLogsMetadata.totalTokens +
+              (documentLogWithMetadata.tokens ?? 0),
             totalDuration:
               prevLogsMetadata.totalDuration +
               (documentLogWithMetadata.duration ?? 0),

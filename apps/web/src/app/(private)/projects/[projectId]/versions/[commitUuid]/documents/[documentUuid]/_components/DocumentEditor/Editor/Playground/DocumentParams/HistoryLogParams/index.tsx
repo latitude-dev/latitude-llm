@@ -13,7 +13,6 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 
-import { ParametersPaginationNav } from '../PaginationNav'
 import { type UseLogHistoryParams } from './useLogHistoryParams'
 import {
   asPromptLFile,
@@ -23,6 +22,7 @@ import { ChangeEvent, useCallback, useEffect, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { ParametersWrapper } from '../ParametersWrapper'
 import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
+import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 
 function DebouncedTextArea({
   input,

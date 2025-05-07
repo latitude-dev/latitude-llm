@@ -18,7 +18,7 @@ const specification = RuleEvaluationLengthCountSpecification
 export default {
   ...specification,
   icon: 'wholeWord' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,
 }
@@ -29,7 +29,7 @@ const ALGORITHM_OPTIONS =
     value: option,
   }))
 
-function ConfigurationForm({
+function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
   errors,

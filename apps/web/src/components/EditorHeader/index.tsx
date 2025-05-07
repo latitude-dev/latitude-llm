@@ -27,6 +27,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { PromptConfiguration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptConfiguration'
 import { PromptIntegrations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptIntegrations'
@@ -37,6 +38,7 @@ export type IProviderByName = Record<string, ProviderApiKey>
 export const EditorHeader = memo(
   ({
     title,
+    titleVerticalAlign = 'center',
     metadata,
     onChangePrompt,
     rightActions,
@@ -49,6 +51,7 @@ export const EditorHeader = memo(
     canUseSubagents = true,
   }: {
     title: string | ReactNode
+    titleVerticalAlign?: 'top' | 'center'
     metadata: ConversationMetadata | undefined
     prompt: string
     onChangePrompt: (prompt: string) => void
@@ -185,13 +188,18 @@ export const EditorHeader = memo(
       provider === envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME
 
     return (
-      <div className='flex flex-col gap-y-2'>
-        <div className='flex flex-row h-8 justify-between items-center gap-x-4'>
+      <div className='flex flex-col gap-y-3'>
+        <div
+          className={cn('flex flex-row justify-between gap-x-4', {
+            'items-center': titleVerticalAlign === 'center',
+            'items-start': titleVerticalAlign === 'top',
+          })}
+        >
           <div className='flex flex-row items-center gap-2 min-w-0'>
             {typeof title === 'string' ? <Text.H4M>{title}</Text.H4M> : title}
             {leftActions}
           </div>
-          <div className='flex flex-row items-center gap-2'>
+          <div className='flex flex-row items-start gap-2'>
             {rightActions}
             <DropdownMenu
               options={[

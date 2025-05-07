@@ -80,9 +80,7 @@ export function ParametersSelection({
   datasetLabels,
   setDatasetLabels,
   parameters,
-}: ExperimentFormPayload & {
-  parameters?: string[]
-}) {
+}: ExperimentFormPayload) {
   const { labels, buildLabels } = useLabels()
   useEffect(() => {
     if (!selectedDataset) return
@@ -140,7 +138,7 @@ export function ParametersSelection({
           options={labels}
           value={parametersMap[param]}
           onChange={(headerIndex) => {
-            selectParameter(param, headerIndex)
+            selectParameter(param, Number(headerIndex))
           }}
           placeholder='Select column'
         />

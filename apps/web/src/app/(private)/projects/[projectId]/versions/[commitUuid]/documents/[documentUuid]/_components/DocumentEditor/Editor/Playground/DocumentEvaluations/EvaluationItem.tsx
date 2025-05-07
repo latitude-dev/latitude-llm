@@ -1,4 +1,5 @@
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
+import EvaluateLiveLogsSwitch from '$/components/evaluations/EvaluateLiveLogsSwitch'
 import ResultBadge from '$/components/evaluations/ResultBadge'
 import { EvaluationRoutes, ROUTES } from '$/services/routes'
 import {
@@ -20,7 +21,7 @@ import { useMemo } from 'react'
 import LiveEvaluationToggle from '../../../../../evaluations/[evaluationId]/_components/Actions/LiveEvaluationToggle'
 import { ResultCellContent as OriginalResultCellContent } from '../../../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
 import { Props } from './shared'
-import EvaluateLiveLogsSwitch from '$/components/evaluations/EvaluateLiveLogsSwitch'
+import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
 
 function ResultCellContent({
   result,
@@ -129,18 +130,23 @@ export default function EvaluationItem({
   project,
   runCount,
   isWaiting,
+  documentLog,
 }: Omit<Props, 'results' | 'evaluations'> & {
   result?: EvaluationResultTmp
   evaluation: Props['evaluations'][number]
 }) {
+  const goToEvaluationsV2Editor = useEvaluationEditorLink({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+  })
   const route = useMemo(() => {
+    const documentLogUuid = documentLog?.uuid
     if (evaluation.version === 'v2') {
-      // TODO(evalsv2): Go to LLM evaluation editor when LLM V2 evaluations are available
-      return ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({ uuid: commit.uuid })
-        .documents.detail({ uuid: document.documentUuid })
-        .evaluationsV2.detail({ uuid: evaluation.uuid }).root
+      return goToEvaluationsV2Editor({
+        evaluationUuid: evaluation.uuid,
+        documentLogUuid,
+      })
     }
 
     const resultV1 = result as EvaluationResultDto
@@ -161,7 +167,16 @@ export default function EvaluationItem({
         EvaluationRoutes.editor
       ].root + `?${query.toString()}`
     )
-  }, [project, commit, document, result, evaluation, isWaiting])
+  }, [
+    project,
+    commit,
+    document,
+    result,
+    evaluation,
+    isWaiting,
+    documentLog,
+    goToEvaluationsV2Editor,
+  ])
 
   return (
     <div

@@ -203,6 +203,7 @@ function AddEvaluation({
           options={options}
           setOptions={setOptions}
           errors={errors}
+          commit={commit}
           disabled={isCreatingEvaluation}
         />
       </ConfirmModal>

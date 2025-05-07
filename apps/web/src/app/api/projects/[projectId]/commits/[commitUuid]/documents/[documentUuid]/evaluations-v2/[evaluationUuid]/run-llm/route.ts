@@ -124,7 +124,7 @@ export const POST = errorHandler(
 
       if (!isCustomLlmEvaluation(evaluation)) {
         throw new UnprocessableEntityError(
-          'Evaluation is not a custom LLM evaluation and you can not run their prompt',
+          'Only custom LLM evaluations can be ran on the playground',
         )
       }
 

@@ -1,9 +1,8 @@
-import yaml from 'js-yaml'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   EvaluationType,
   formatConversation,
+  LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationMetric,
   ProviderApiKey,
   LlmEvaluationBinarySpecification as specification,
@@ -18,7 +17,7 @@ import {
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { promptTask, runPrompt, thresholdToCustomScale } from './shared'
+import { promptTask, runPrompt } from './shared'
 
 export const LlmEvaluationBinarySpecification = {
   ...specification,
@@ -83,7 +82,6 @@ export function buildPrompt({
 provider: ${provider.name}
 model: ${model}
 temperature: 0.7
-${yaml.dump({ schema: zodToJsonSchema(promptSchema, { target: 'openAi' }) })}
 ---
 
 You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), meets the following criteria:
@@ -188,9 +186,19 @@ async function clone(
       reverseScale: evaluation.configuration.reverseScale,
       provider: evaluation.configuration.provider,
       model: evaluation.configuration.model,
-      prompt: buildPrompt({ ...evaluation.configuration, provider }),
-      minThreshold: thresholdToCustomScale(0.5, 0, 1),
-      maxThreshold: undefined,
+      prompt: `
+${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
+
+${buildPrompt({ ...evaluation.configuration, provider })}
+
+/*
+  This evaluation has been cloned. The verdict has been changed from "false" / "true" to "0" / "1". Feel free to modify the prompt.
+*/
+`.trim(),
+      minScore: 0,
+      maxScore: 1,
+      minThreshold: evaluation.configuration.reverseScale ? undefined : 1,
+      maxThreshold: evaluation.configuration.reverseScale ? 1 : undefined,
     },
   })
 }

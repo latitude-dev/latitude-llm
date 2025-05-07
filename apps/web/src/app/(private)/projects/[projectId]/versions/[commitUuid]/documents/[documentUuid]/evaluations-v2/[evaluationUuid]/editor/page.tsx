@@ -17,9 +17,12 @@ import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
 import { env } from '@latitude-data/env'
 import { redirect } from 'next/navigation'
 import { EvaluationEditor } from './_components/EvaluationEditor'
+import { LOG_UUID_PARAM } from '$/lib/useEvaluationEditorLink'
+import { DocumentLogsRepository } from '@latitude-data/core/repositories'
 
 export default async function EvaluationEditorPage({
   params,
+  searchParams,
 }: {
   params: Promise<{
     projectId: string
@@ -36,6 +39,7 @@ export default async function EvaluationEditorPage({
     evaluationUuid,
   } = await params
   const projectId = Number(pjid)
+  const queryParams = await searchParams
   const document = await getDocumentByUuidCached({
     documentUuid: documentUuid,
     projectId,
@@ -76,6 +80,18 @@ export default async function EvaluationEditorPage({
     )
   }
 
+  const logUuid = queryParams[LOG_UUID_PARAM]?.toString()
+
+  let selectedDocumentLogUuid: string | undefined = undefined
+
+  if (logUuid) {
+    const logsRepo = new DocumentLogsRepository(workspace.id)
+    const logResult = await logsRepo.findByUuid(logUuid)
+    if (!logResult.error) {
+      selectedDocumentLogUuid = logResult.value.uuid
+    }
+  }
+
   const freeRunsCount = await getFreeRuns(workspace.id)
 
   return (
@@ -84,6 +100,7 @@ export default async function EvaluationEditorPage({
       commit={commit}
       providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
       freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
+      selectedDocumentLogUuid={selectedDocumentLogUuid}
       copilotEnabled={env.LATITUDE_CLOUD}
     />
   )

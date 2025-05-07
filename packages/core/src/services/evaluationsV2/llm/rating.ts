@@ -1,9 +1,8 @@
-import yaml from 'js-yaml'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   EvaluationType,
   formatConversation,
+  LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationMetric,
   ProviderApiKey,
   LlmEvaluationRatingSpecification as specification,
@@ -18,7 +17,7 @@ import {
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { promptTask, runPrompt, thresholdToCustomScale } from './shared'
+import { promptTask, runPrompt } from './shared'
 
 export const LlmEvaluationRatingSpecification = {
   ...specification,
@@ -113,7 +112,6 @@ async function validate(
 function buildPrompt({
   provider,
   model,
-  schema,
   criteria,
   minRating,
   minRatingDescription,
@@ -122,7 +120,6 @@ function buildPrompt({
 }: {
   provider: ProviderApiKey
   model: string
-  schema: z.ZodSchema
   criteria: string
   minRating: number
   minRatingDescription: string
@@ -134,7 +131,6 @@ function buildPrompt({
 provider: ${provider.name}
 model: ${model}
 temperature: 0.7
-${yaml.dump({ schema: zodToJsonSchema(schema, { target: 'openAi' }) })}
 ---
 
 You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), meets the following criteria:
@@ -187,17 +183,14 @@ async function run(
   const promptSchema = z.object({
     rating: z
       .number()
+      .int()
       .min(metadata.configuration.minRating)
       .max(metadata.configuration.maxRating),
     reason: z.string(),
   })
 
   const { response, stats, verdict } = await runPrompt({
-    prompt: buildPrompt({
-      ...metadata.configuration,
-      schema: promptSchema,
-      provider: provider,
-    }),
+    prompt: buildPrompt({ ...metadata.configuration, provider: provider }),
     parameters: {
       ...evaluatedLog,
       actualOutput: actualOutput,
@@ -258,32 +251,6 @@ async function clone(
     return Result.error(new BadRequestError('Provider is required'))
   }
 
-  const promptSchema = z.object({
-    rating: z
-      .number()
-      .min(evaluation.configuration.minRating)
-      .max(evaluation.configuration.maxRating),
-    reason: z.string(),
-  })
-
-  let minThreshold = undefined
-  if (evaluation.configuration.minThreshold !== undefined) {
-    minThreshold = thresholdToCustomScale(
-      evaluation.configuration.minThreshold,
-      evaluation.configuration.minRating,
-      evaluation.configuration.maxRating,
-    )
-  }
-
-  let maxThreshold = undefined
-  if (evaluation.configuration.maxThreshold !== undefined) {
-    maxThreshold = thresholdToCustomScale(
-      evaluation.configuration.maxThreshold,
-      evaluation.configuration.minRating,
-      evaluation.configuration.maxRating,
-    )
-  }
-
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original evaluation object
   return Result.ok({
@@ -295,13 +262,19 @@ async function clone(
       reverseScale: evaluation.configuration.reverseScale,
       provider: evaluation.configuration.provider,
       model: evaluation.configuration.model,
-      prompt: buildPrompt({
-        ...evaluation.configuration,
-        schema: promptSchema,
-        provider: provider,
-      }),
-      minThreshold: minThreshold,
-      maxThreshold: maxThreshold,
+      prompt: `
+${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
+
+${buildPrompt({ ...evaluation.configuration, provider })}
+
+/*
+  This evaluation has been cloned. The verdict has been changed from "rating" to "score". Feel free to modify the prompt.
+*/
+`.trim(),
+      minScore: evaluation.configuration.minRating,
+      maxScore: evaluation.configuration.maxRating,
+      minThreshold: evaluation.configuration.minThreshold,
+      maxThreshold: evaluation.configuration.maxThreshold,
     },
   })
 }

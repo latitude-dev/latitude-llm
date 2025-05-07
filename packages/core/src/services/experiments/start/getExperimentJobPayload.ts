@@ -52,12 +52,10 @@ async function getExperimentRows(
       id: row.id,
       parameters: Object.fromEntries(
         Object.entries(parametersMap!).map(([parameter, index]) => {
-          return [
-            parameter,
-            (row.values as Record<string, string>)[
-              dataset.columns[index]!.identifier
-            ]!,
-          ]
+          const column = dataset.columns[index]!
+          const value = row.values[column.identifier] as string
+
+          return [parameter, value]
         }),
       ),
     }
@@ -76,7 +74,7 @@ export async function getExperimentJobPayload(
 ): PromisedResult<{
   commit: Commit
   evaluations: EvaluationV2[]
-  rows: ExperimentRow[]
+  rows: (ExperimentRow | undefined)[]
 }> {
   const commitResult = await new CommitsRepository(
     workspace.id,
@@ -97,22 +95,43 @@ export async function getExperimentJobPayload(
   }
   const documentEvaluations = documentEvaluationsResult.unwrap()
 
-  const evaluations = experiment.evaluationUuids.map((uuid) => {
-    const evaluation = documentEvaluations.find((e) => e.uuid === uuid)
-    if (!evaluation) {
-      throw new NotFoundError(
-        `Evaluation '${uuid}' not found in commit '${commit.uuid}'`,
-      )
-    }
-    return evaluation
-  })
+  const evaluations = experiment.evaluationUuids.map((uuid) =>
+    documentEvaluations.find((e) => e.uuid === uuid),
+  ) as EvaluationV2[]
+
+  const missingEvalIndex = evaluations.findIndex((evaluation) => !evaluation)
+  if (missingEvalIndex !== -1) {
+    const missingEvalUuid = experiment.evaluationUuids[missingEvalIndex]!
+    return Result.error(
+      new NotFoundError(
+        `Evaluation '${missingEvalUuid}' not found in commit '${commit.uuid}'`,
+      ),
+    )
+  }
 
   const requirementsResult = assertEvaluationRequirements({
     evaluations,
     datasetLabels: experiment.metadata.datasetLabels,
   })
 
-  if (requirementsResult.error) throw requirementsResult.error
+  if (requirementsResult.error) return requirementsResult
+
+  if (!experiment.datasetId) {
+    const from = experiment.metadata.fromRow
+    const to = experiment.metadata.toRow
+
+    if (from === undefined || to === undefined) {
+      return Result.error(
+        new Error('Experiments without a dataset must have a range defined'),
+      )
+    }
+
+    return Result.ok({
+      commit,
+      evaluations,
+      rows: new Array(to - from + 1).fill(undefined),
+    })
+  }
 
   const datasetScope = new DatasetsRepository(workspace.id, db)
   const datasetResult = await datasetScope.find(experiment.datasetId)

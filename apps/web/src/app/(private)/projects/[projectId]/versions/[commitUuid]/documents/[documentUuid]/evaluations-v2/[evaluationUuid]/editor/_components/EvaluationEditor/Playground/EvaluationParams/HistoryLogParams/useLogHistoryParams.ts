@@ -9,14 +9,20 @@ import { useCallback } from 'react'
 import { useEvaluationParameters } from '../../../hooks/useEvaluationParamaters/index'
 import { useSerializedLogs, type OnHistoryFetchedFn } from './useSerializedLogs'
 
+/**
+ * `selectedDocumentLogUuid` is the log that comes from
+ * the URL when people link to the editor with that documentLog
+ */
 export function useLogHistoryParams({
   document,
   evaluation,
   commitVersionUuid,
+  selectedDocumentLogUuid,
 }: {
   document: DocumentVersion
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
   commitVersionUuid: string
+  selectedDocumentLogUuid?: string
 }) {
   const {
     history: { setHistoryLog, logUuid, mapLogParametersToInputs },
@@ -33,9 +39,10 @@ export function useLogHistoryParams({
     },
     [setHistoryLog, mapLogParametersToInputs],
   )
+
   return useSerializedLogs({
     document,
-    logUuid,
+    logUuid: selectedDocumentLogUuid ?? logUuid,
     onHistoryFetched,
   })
 }

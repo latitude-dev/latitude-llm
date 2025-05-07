@@ -1,33 +1,21 @@
 'use client'
 
-import React, { memo, useMemo } from 'react'
-
+import React, { memo, ReactNode } from 'react'
 import { useTheme } from 'next-themes'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import {
-  oneDark,
-  oneLight,
-} from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 import { CurrentTheme } from '../../../constants'
 import { cn } from '../../../lib/utils'
 import { ClientOnly } from '../ClientOnly'
 import { CopyButton } from '../CopyButton'
+import { SyntaxHighlighter } from './SyntaxHightlighter'
 
 interface CodeBlockProps {
   language: string
   children: string
   copy?: boolean
+  action?: ReactNode
   className?: string
 }
-
-export const CodeBlock = memo((props: CodeBlockProps) => {
-  return (
-    <ClientOnly>
-      <Content {...props} />
-    </ClientOnly>
-  )
-})
 
 export function useCodeBlockBackgroundColor() {
   const { resolvedTheme } = useTheme()
@@ -36,20 +24,24 @@ export function useCodeBlockBackgroundColor() {
 }
 
 const Content = memo(
-  ({ language, children, copy = true, className }: CodeBlockProps) => {
+  ({ language, children, copy = true, action, className }: CodeBlockProps) => {
     const { resolvedTheme } = useTheme()
     const bgColor = useCodeBlockBackgroundColor()
     return (
       <div className={cn('relative max-w-full overflow-x-auto', bgColor)}>
-        {copy && (
+        {copy || action ? (
           <div className='absolute top-4 right-2'>
-            <CopyButton content={children} color='foregroundMuted' />
+            {copy ? (
+              <CopyButton content={children} color='foregroundMuted' />
+            ) : action ? (
+              action
+            ) : null}
           </div>
-        )}
+        ) : null}
         <SyntaxHighlighter
           className={cn('text-sm', className)}
+          currentTheme={resolvedTheme}
           language={language}
-          style={resolvedTheme === CurrentTheme.Dark ? oneDark : oneLight}
           customStyle={{
             borderRadius: '0.375rem',
             padding: '1rem',
@@ -57,9 +49,17 @@ const Content = memo(
             margin: '0',
           }}
         >
-          {useMemo(() => children, [children])}
+          {children}
         </SyntaxHighlighter>
       </div>
     )
   },
 )
+
+export const CodeBlock = memo((props: CodeBlockProps) => {
+  return (
+    <ClientOnly>
+      <Content {...props} />
+    </ClientOnly>
+  )
+})

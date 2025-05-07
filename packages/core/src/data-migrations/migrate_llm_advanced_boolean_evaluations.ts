@@ -123,6 +123,7 @@ account the instructions from previous messages, if the result is falsy return
           description: evval.description,
           type: EvaluationType.Llm,
           metric: LlmEvaluationMetric.Custom,
+          // @ts-expect-error - TODO(Gerardo): fix this
           configuration: {
             model: config.model as string,
             provider: config.provider as string,

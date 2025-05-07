@@ -116,8 +116,8 @@ function EvaluationsColumn({
       {evaluationResults.length > 0 && (
         <Badge
           variant={
-            passedResults
-              ? passedResults >= evaluationResults.length / 2
+            passedResults >= evaluationResults.length * 0.25
+              ? passedResults >= evaluationResults.length * 0.75
                 ? 'successMuted'
                 : 'warningMuted'
               : 'destructiveMuted'

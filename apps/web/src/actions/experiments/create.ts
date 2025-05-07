@@ -1,7 +1,7 @@
 'use server'
 
 import { withDocument } from '../procedures'
-import { createExperiment } from '@latitude-data/core/services/experiments/create'
+import { createExperimentVariants } from '@latitude-data/core/services/experiments/createVariants'
 import { startExperiment } from '@latitude-data/core/services/experiments/start/index'
 import {
   DatasetsRepository,
@@ -13,9 +13,16 @@ export const createExperimentAction = withDocument
   .createServerAction()
   .input(
     z.object({
-      variants: z.array(z.object({ name: z.string(), prompt: z.string() })),
+      variants: z.array(
+        z.object({
+          name: z.string(),
+          provider: z.string(),
+          model: z.string(),
+          temperature: z.number(),
+        }),
+      ),
       evaluationUuids: z.array(z.string()),
-      datasetId: z.number(),
+      datasetId: z.number().optional(),
       parametersMap: z.record(z.string(), z.number()),
       datasetLabels: z.record(z.string(), z.string()),
       fromRow: z.number(),
@@ -33,7 +40,9 @@ export const createExperimentAction = withDocument
       toRow,
     } = input
     const datasetsScope = new DatasetsRepository(ctx.workspace.id)
-    const dataset = await datasetsScope.find(datasetId).then((r) => r.unwrap())
+    const dataset = datasetId
+      ? await datasetsScope.find(datasetId).then((r) => r.unwrap())
+      : undefined
 
     const evaluationsScope = new EvaluationsV2Repository(ctx.workspace.id)
     const docEvaluations = await evaluationsScope
@@ -56,23 +65,18 @@ export const createExperimentAction = withDocument
       )
     }
 
-    const experiments = await Promise.all(
-      variants.map((variant) =>
-        createExperiment({
-          name: variant.name,
-          customPrompt: variant.prompt,
-          document: ctx.document,
-          commit: ctx.commit,
-          evaluations,
-          dataset,
-          parametersMap,
-          datasetLabels,
-          fromRow,
-          toRow,
-          workspace: ctx.workspace,
-        }).then((r) => r.unwrap()),
-      ),
-    )
+    const experiments = await createExperimentVariants({
+      workspace: ctx.workspace,
+      commit: ctx.commit,
+      document: ctx.document,
+      variants,
+      evaluations,
+      dataset,
+      parametersMap,
+      datasetLabels,
+      fromRow,
+      toRow,
+    }).then((r) => r.unwrap())
 
     await Promise.all(
       experiments.map((experiment) =>

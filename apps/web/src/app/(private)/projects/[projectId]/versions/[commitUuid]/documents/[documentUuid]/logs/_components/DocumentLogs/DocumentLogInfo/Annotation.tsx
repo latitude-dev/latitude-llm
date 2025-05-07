@@ -89,9 +89,10 @@ export function DocumentLogAnnotation<
       title={evaluation.name}
       icon={getEvaluationMetricSpecification(evaluation).icon}
       isExpanded={isExpanded}
-      onToggle={(value) => setIsExpanded(value)}
+      onToggle={setIsExpanded}
+      scrollable={false}
       expandedContent={
-        <div className='flex flex-col gap-y-4'>
+        <div className='w-full flex flex-col gap-y-4'>
           <AnnotationForm
             evaluation={evaluation}
             resultScore={resultScore}

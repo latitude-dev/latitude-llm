@@ -151,8 +151,8 @@ export function CollapsedContentHeader({
       {evaluations.length - count.skipped > 0 && (
         <Badge
           variant={
-            count.passed
-              ? count.passed >= (evaluations.length - count.skipped) / 2
+            count.passed >= (evaluations.length - count.skipped) * 0.25
+              ? count.passed >= (evaluations.length - count.skipped) * 0.75
                 ? 'successMuted'
                 : 'warningMuted'
               : 'destructiveMuted'

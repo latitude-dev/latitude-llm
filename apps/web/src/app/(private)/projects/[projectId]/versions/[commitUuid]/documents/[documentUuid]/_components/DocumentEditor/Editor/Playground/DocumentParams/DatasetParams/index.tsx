@@ -6,7 +6,7 @@ import { ICommitContextType } from '@latitude-data/web-ui/providers'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import Link from 'next/link'
 
-import { ParametersPaginationNav } from '../PaginationNav'
+import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { InputMapper } from './InputsMapper'
 import { type OnSelectRowCellFn } from './InputsMapper/InputsMapperItem'
 import { type UseSelectDataset } from './useSelectDataset'

@@ -1,10 +1,10 @@
 import useModelOptions from '$/hooks/useModelOptions'
-import { updatePromptMetadata } from '$/lib/promptMetadata'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { Config, ConversationMetadata } from 'promptl-ai'
-import { useCallback, useMemo } from 'react'
+import { Slider } from '@latitude-data/web-ui/atoms/Slider'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useMemo } from 'react'
 
 export function VariantPromptSettingsPlaceholder() {
   return (
@@ -15,41 +15,34 @@ export function VariantPromptSettingsPlaceholder() {
 }
 
 export function VariantPromptSettings({
-  prompt,
-  setPrompt,
-  metadata,
+  provider,
+  setProvider,
+  model,
+  setModel,
+  temperature,
+  setTemperature,
 }: {
-  prompt: string
-  setPrompt: (prompt: string) => void
-  metadata?: ConversationMetadata
+  provider: string
+  setProvider: (provider: string) => void
+  model: string
+  setModel: (model: string) => void
+  temperature: number
+  setTemperature: (temperature: number) => void
 }) {
   const { data: providers, isLoading: isLoadingProviders } =
     useProviderApiKeys()
 
-  const setConfig = useCallback(
-    (newConfig: Config) => {
-      const newPrompt = updatePromptMetadata(prompt, newConfig)
-      setPrompt(newPrompt)
-    },
-    [prompt, setPrompt],
-  )
   const selectedProvider = useMemo(() => {
-    if (!metadata) return undefined
-    const provider = providers.find((p) => p.name === metadata.config.provider)
-    return provider
-  }, [metadata, providers])
+    return providers.find((p) => p.name === provider)
+  }, [provider, providers])
 
   const modelOptions = useModelOptions({
     provider: selectedProvider?.provider,
     name: selectedProvider?.name,
   })
 
-  if (!metadata) {
-    return <VariantPromptSettingsPlaceholder />
-  }
-
   return (
-    <div className='flex flex-col gap-2'>
+    <div className='flex flex-col gap-3'>
       <Select
         value={selectedProvider?.name}
         name='provider'
@@ -61,28 +54,47 @@ export function VariantPromptSettings({
         }))}
         onChange={(value) => {
           const newProvider = providers.find((p) => p.name === value)
-          setConfig({
-            provider: value,
-            model: newProvider?.defaultModel,
-          })
+          setProvider(value as string)
+          setModel(newProvider?.defaultModel ?? '')
         }}
         loading={isLoadingProviders}
         required
       />
       <Select
-        value={metadata?.config.model}
+        value={model}
         name='model'
         label='Model'
         placeholder='Select a model'
         options={modelOptions}
-        onChange={(value) =>
-          setConfig({
-            model: value,
-          })
-        }
+        onChange={(value) => setModel(value as string)}
         loading={isLoadingProviders}
         required
       />
+      <div className='flex flex-col gap-2'>
+        <Text.H5M>Temperature</Text.H5M>
+        <div className='flex flex-row items-center gap-2'>
+          <Text.H6
+            color={temperature === 0 ? 'accentForeground' : 'foregroundMuted'}
+          >
+            0
+          </Text.H6>
+          <div className='relative flex-grow min-w-0'>
+            <Slider
+              showMiddleRange
+              min={0}
+              max={2}
+              step={0.1}
+              value={[temperature]}
+              onValueChange={(value) => setTemperature(value[0]!)}
+            />
+          </div>
+          <Text.H6
+            color={temperature === 2 ? 'accentForeground' : 'foregroundMuted'}
+          >
+            2
+          </Text.H6>
+        </div>
+      </div>
     </div>
   )
 }

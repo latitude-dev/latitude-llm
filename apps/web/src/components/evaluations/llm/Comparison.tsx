@@ -18,12 +18,13 @@ const specification = LlmEvaluationComparisonSpecification
 export default {
   ...specification,
   icon: 'gitCompareArrows' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
+  ConfigurationAdvancedForm: ConfigurationAdvancedForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,
 }
 
-function ConfigurationForm({
+function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
   errors,
@@ -81,6 +82,18 @@ function ConfigurationForm({
         disabled={disabled}
         required
       />
+    </>
+  )
+}
+
+function ConfigurationAdvancedForm({
+  configuration,
+  setConfiguration,
+  errors,
+  disabled,
+}: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Comparison>) {
+  return (
+    <>
       <FormFieldGroup
         layout='horizontal'
         description='The minimum and maximum percentage of criteria met of the response'

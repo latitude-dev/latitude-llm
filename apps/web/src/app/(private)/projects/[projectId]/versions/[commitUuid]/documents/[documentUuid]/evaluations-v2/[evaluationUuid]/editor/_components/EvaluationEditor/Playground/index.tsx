@@ -1,11 +1,6 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import type { ConversationMetadata } from 'promptl-ai'
-import { cn } from '@latitude-data/web-ui/utils'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
-import {
-  PLAYGROUND_COLLAPSED_SIZE,
-  PLAYGROUND_GAP_PADDING,
-} from '$/hooks/playgrounds/constants'
 import {
   AppLocalStorage,
   useLocalStorage,
@@ -24,29 +19,30 @@ import { useEvaluationParameters } from '../hooks/useEvaluationParamaters'
 import { useRunEvaluationPlaygroundPrompt } from './useRunEvaluationPlaygroundPrompt'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import EvaluationParams from './EvaluationParams'
+import { COLLAPSED_BOX_HEIGHT } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 
+const PARAMETERS_COLLAPSED_HEIGHT = COLLAPSED_BOX_HEIGHT
 export const Playground = memo(
   ({
     commit,
     document,
     evaluation,
     metadata,
+    selectedDocumentLogUuid,
   }: {
     commit: Commit
     document: DocumentVersion
     evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
     metadata: ConversationMetadata
+    selectedDocumentLogUuid?: string
   }) => {
     const { project } = useCurrentProject()
     const [mode, setMode] = useState<'preview' | 'chat'>('preview')
-    const [forcedSize, setForcedSize] = useState<number | undefined>()
     const expander = useExpandParametersOrEvaluations({
       initialExpanded: 'parameters',
     })
     const collapsed = expander.expandedSection === null
-    useEffect(() => {
-      setForcedSize(collapsed ? PLAYGROUND_COLLAPSED_SIZE : undefined)
-    }, [collapsed])
+    const forcedSize = collapsed ? PARAMETERS_COLLAPSED_HEIGHT : undefined
     const { value: expandParameters, setValue: setExpandParameters } =
       useLocalStorage({
         key: AppLocalStorage.expandParameters,
@@ -68,17 +64,18 @@ export const Playground = memo(
     })
     const firstPane = useMemo(() => {
       return (
-        <div className={cn('grid gap-2 w-full pr-0.5', expander.cssClass)}>
+        <div className='grid w-full pr-0.5'>
           <EvaluationParams
             document={document}
             commit={commit}
             evaluation={evaluation}
             onToggle={expander.onToggle('parameters')}
             isExpanded={expander.parametersExpanded}
+            selectedDocumentLogUuid={selectedDocumentLogUuid}
           />
         </div>
       )
-    }, [expander, commit, document, evaluation])
+    }, [expander, commit, document, evaluation, selectedDocumentLogUuid])
 
     const secondPane = useMemo(() => {
       if (!parametersReady) return null
@@ -121,9 +118,9 @@ export const Playground = memo(
       <SplitPane
         direction='vertical'
         gap={4}
-        initialPercentage={30}
+        initialPercentage={50}
         forcedSize={forcedSize}
-        minSize={PLAYGROUND_COLLAPSED_SIZE + PLAYGROUND_GAP_PADDING}
+        minSize={PARAMETERS_COLLAPSED_HEIGHT}
         dragDisabled={collapsed}
         firstPane={firstPane}
         secondPane={secondPane}

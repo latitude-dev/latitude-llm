@@ -19,6 +19,7 @@ import { RunDocumentChecker } from './RunDocumentChecker'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { Result } from './../../lib/Result'
 import { createDocumentLog } from '../documentLogs/create'
+import { isErrorRetryable } from '../evaluationsV2/run'
 
 async function createDocumentRunResult({
   workspace,
@@ -169,6 +170,9 @@ export async function runDocumentAtCommit({
     resolvedContent: result.value,
     errorableUuid,
     lastResponse: runResult.lastResponse.then(async (response) => {
+      const error = await runResult.error
+      if (error && isErrorRetryable(error)) return response
+
       await createDocumentRunResult({
         workspace,
         document,

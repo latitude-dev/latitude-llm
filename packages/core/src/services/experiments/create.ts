@@ -7,7 +7,7 @@ import { DatasetRowsRepository } from '../../repositories'
 import { assertEvaluationRequirements } from './assertRequirements'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { Result } from '../../lib/Result'
-import { LatitudeError } from '../../lib/errors'
+import { BadRequestError, LatitudeError } from '../../lib/errors'
 
 function calculateSelectedRangeCount({
   firstIndex,
@@ -16,10 +16,13 @@ function calculateSelectedRangeCount({
 }: {
   firstIndex: number
   lastIndex?: number
-  totalCount: number
+  totalCount?: number
 }): number {
   const firstRow = Math.max(0, firstIndex)
-  const lastRow = Math.min(totalCount, lastIndex ?? totalCount)
+  const lastRow = Math.min(
+    totalCount ?? Infinity, // upper limit
+    lastIndex ?? totalCount ?? firstIndex, // lower limit
+  )
   return lastRow - firstRow + 1 // +1 because both first and last rows are inclusive
 }
 
@@ -36,14 +39,8 @@ async function getPromptMetadata({
 }): PromisedResult<{
   resolvedPrompt: string
   promptHash: string
+  parameters: string[]
 }> {
-  if (commit.mergedAt && document.resolvedContent && document.contentHash) {
-    return Result.ok({
-      resolvedPrompt: document.resolvedContent,
-      promptHash: document.contentHash,
-    })
-  }
-
   const metadata = await scanDocumentContent({
     workspaceId: workspace.id,
     document: {
@@ -56,8 +53,12 @@ async function getPromptMetadata({
   if (metadata.error) {
     return Result.error(metadata.error)
   }
-  const { resolvedPrompt, hash } = metadata.unwrap()
-  return Result.ok({ resolvedPrompt, promptHash: hash })
+  const { resolvedPrompt, hash, parameters } = metadata.unwrap()
+  return Result.ok({
+    resolvedPrompt,
+    promptHash: hash,
+    parameters: Array.from(parameters),
+  })
 }
 
 export async function createExperiment(
@@ -79,7 +80,7 @@ export async function createExperiment(
     evaluations: EvaluationV2[]
     document: DocumentVersion
     customPrompt?: string // Prompt can be different than the current one (for drafts, or tweaked experiments)
-    dataset: Dataset
+    dataset?: Dataset
     parametersMap: Record<string, number>
     datasetLabels: Record<string, string>
     fromRow?: number
@@ -106,9 +107,19 @@ export async function createExperiment(
   }
   const promptMetadata = promptMetadataResult.unwrap()
 
-  const datasetRowsScope = new DatasetRowsRepository(workspace.id)
-  const countResult = await datasetRowsScope.getCountByDataset(dataset.id)
-  const rowCount = countResult[0]?.count ?? 0
+  if (!!promptMetadata.parameters.length && !dataset) {
+    return Result.error(
+      new BadRequestError(
+        'A dataset is required when the prompt contains parameters',
+      ),
+    )
+  }
+
+  const datasetRowsScope = new DatasetRowsRepository(workspace.id, db)
+  const countResult = dataset
+    ? await datasetRowsScope.getCountByDataset(dataset.id)
+    : undefined
+  const rowCount = countResult?.[0]?.count
 
   return Transaction.call(async (tx) => {
     const result = await tx
@@ -119,7 +130,7 @@ export async function createExperiment(
         commitId: commit.id,
         documentUuid: document.documentUuid,
         evaluationUuids: evaluations.map((e) => e.uuid),
-        datasetId: dataset.id,
+        datasetId: dataset?.id,
         metadata: {
           prompt: promptMetadata.resolvedPrompt,
           promptHash: promptMetadata.promptHash,

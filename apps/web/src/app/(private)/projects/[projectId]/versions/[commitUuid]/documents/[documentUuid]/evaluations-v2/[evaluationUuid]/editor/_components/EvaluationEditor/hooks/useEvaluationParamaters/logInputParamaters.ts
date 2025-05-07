@@ -6,8 +6,11 @@ import {
   LLM_EVALUATION_PROMPT_PARAMETERS,
 } from '@latitude-data/core/browser'
 
-type LogInput = { value: string; metadata: { includedInPrompt: boolean } }
-type EvaluatedLogParamaters = Pick<
+export type LogInput = {
+  value: string
+  metadata: { includedInPrompt: boolean }
+}
+type EvaluatedLogParameters = Pick<
   EvaluatedDocumentLog,
   | 'actualOutput'
   | 'conversation'
@@ -19,6 +22,8 @@ type EvaluatedLogParamaters = Pick<
   | 'prompt'
   | 'config'
   | 'parameters'
+  | 'context'
+  | 'response'
 >
 
 function typedFilterObject<T extends object>(
@@ -46,7 +51,7 @@ function safeStringify(value: unknown): string {
 }
 
 function serializeInputs(
-  params: EvaluatedLogParamaters,
+  params: EvaluatedLogParameters,
   includedInPromptKeys: string[],
 ): Record<string, LogInput> {
   return Object.entries(params).reduce(
@@ -69,7 +74,7 @@ function safeParseJson<T>(value: string): T | null {
   }
 }
 
-type ReturnDeserializedInputs = EvaluatedLogParamaters & {
+type ReturnDeserializedInputs = EvaluatedLogParameters & {
   expectedOutput: string
 }
 function deserializeInputs(
@@ -87,6 +92,8 @@ function deserializeInputs(
 
       case 'actualOutput':
       case 'expectedOutput':
+      case 'context':
+      case 'response':
       case 'prompt':
         result[key] = value
         break
@@ -146,8 +153,8 @@ const INITIAL_INPUTS = LLM_EVALUATION_PROMPT_PARAMETERS.reduce(
 type EvaluatedLogInputsState = {
   logsInitiallyLoaded: boolean
   inputs: Record<string, LogInput>
-  parameters: EvaluatedLogParamaters | undefined
-  filteredParameters: Partial<EvaluatedLogParamaters> | undefined
+  parameters: EvaluatedLogParameters | undefined
+  filteredParameters: Partial<EvaluatedLogParameters> | undefined
   metadataParameters: string[]
   expectedOutput: LogInput
   mapLogParametersToInputs: (log: EvaluatedDocumentLog) => void
@@ -160,8 +167,8 @@ export const useEvaluatedLogInputs = create<EvaluatedLogInputsState>(
     logsInitiallyLoaded: false,
     inputs: INITIAL_INPUTS,
     expectedOutput: { value: '', metadata: { includedInPrompt: false } },
-    parameters: {} as EvaluatedLogParamaters,
-    filteredParameters: {} as Partial<EvaluatedLogParamaters>,
+    parameters: {} as EvaluatedLogParameters,
+    filteredParameters: {} as Partial<EvaluatedLogParameters>,
     metadataParameters: [],
     mapLogParametersToInputs: (log: EvaluatedDocumentLog) => {
       const { expectedOutput, metadataParameters } = get()
@@ -176,10 +183,12 @@ export const useEvaluatedLogInputs = create<EvaluatedLogInputsState>(
         prompt: log.prompt,
         config: log.config,
         parameters: log.parameters,
+        context: log.context,
+        response: log.response,
       }
       const filteredParameters = typedFilterObject(
         { ...parameters, expectedOutput: expectedOutput.value },
-        metadataParameters as (keyof EvaluatedLogParamaters)[],
+        metadataParameters as (keyof EvaluatedLogParameters)[],
       )
       const inputs = serializeInputs(parameters, metadataParameters)
       set({ parameters, filteredParameters, inputs, logsInitiallyLoaded: true })
@@ -189,10 +198,10 @@ export const useEvaluatedLogInputs = create<EvaluatedLogInputsState>(
 
       const metadataParameters = Array.from(metadata.parameters)
       const { expectedOutput, parameters } = get()
-      const params = parameters ?? ({} as EvaluatedLogParamaters)
+      const params = parameters ?? ({} as EvaluatedLogParameters)
       const filteredParameters = typedFilterObject(
         { ...params, expectedOutput: expectedOutput.value },
-        metadataParameters as (keyof EvaluatedLogParamaters)[],
+        metadataParameters as (keyof EvaluatedLogParameters)[],
       )
       const inputs = serializeInputs(params, metadataParameters)
       expectedOutput.metadata.includedInPrompt =
@@ -201,7 +210,7 @@ export const useEvaluatedLogInputs = create<EvaluatedLogInputsState>(
     },
     setInputs: (allUpdatedInputs: Record<string, string>) => {
       const {
-        parameters = {} as EvaluatedLogParamaters,
+        parameters = {} as EvaluatedLogParameters,
         expectedOutput,
         inputs,
         metadataParameters,
@@ -217,7 +226,7 @@ export const useEvaluatedLogInputs = create<EvaluatedLogInputsState>(
           : expectedOutput.value
 
       deserializedParameters.expectedOutput
-      const newParameters: Partial<EvaluatedLogParamaters> = {
+      const newParameters: Partial<EvaluatedLogParameters> = {
         ...parameters,
         ...deserializedParameters,
       }
@@ -240,11 +249,11 @@ export const useEvaluatedLogInputs = create<EvaluatedLogInputsState>(
 
       const filteredParameters = typedFilterObject(
         { ...newParameters, expectedOutput: expectedOutputValue },
-        metadataParameters as (keyof EvaluatedLogParamaters)[],
+        metadataParameters as (keyof EvaluatedLogParameters)[],
       )
 
       set({
-        parameters: newParameters as EvaluatedLogParamaters,
+        parameters: newParameters as EvaluatedLogParameters,
         filteredParameters,
         inputs: newInputs,
         expectedOutput: {

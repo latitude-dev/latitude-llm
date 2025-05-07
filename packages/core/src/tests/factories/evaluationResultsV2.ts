@@ -9,6 +9,7 @@ import {
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
+  Experiment,
   ProviderLog,
   ProviderLogDto,
   RuleEvaluationMetric,
@@ -32,6 +33,7 @@ type CreateEvaluationResultV2Args<
   usedForSuggestion?: boolean
   workspace: Workspace
   createdAt?: Date
+  experiment?: Experiment
 } & Partial<EvaluationResultValue<T, M>>
 
 // prettier-ignore
@@ -53,6 +55,7 @@ export async function createEvaluationResultV2<
 >(args: CreateEvaluationResultV2Args<T, M>): Promise<EvaluationResultV2<T, M>> {
   const { result } = await createEvaluationResultSvc({
     evaluation: args.evaluation,
+    experiment: args.experiment,
     providerLog:
       'response' in args.providerLog
         ? args.providerLog

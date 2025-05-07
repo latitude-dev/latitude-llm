@@ -29,14 +29,15 @@ const specification = HumanEvaluationSpecification
 export default {
   ...specification,
   icon: 'userRound' as IconName,
-  ConfigurationForm: ConfigurationForm,
+  ConfigurationSimpleForm: ConfigurationSimpleForm,
+  ConfigurationAdvancedForm: ConfigurationAdvancedForm,
   ResultBadge: ResultBadge,
   AnnotationForm: AnnotationForm,
   chartConfiguration: chartConfiguration,
   metrics: METRICS,
 }
 
-function ConfigurationForm<M extends HumanEvaluationMetric>({
+function ConfigurationSimpleForm<M extends HumanEvaluationMetric>({
   metric,
   configuration,
   setConfiguration,
@@ -56,7 +57,7 @@ function ConfigurationForm<M extends HumanEvaluationMetric>({
         name='criteria'
         label='Criteria'
         description='The criteria to judge against'
-        placeholder='Judge the engagement of the response'
+        placeholder='No criteria'
         minRows={2}
         maxRows={4}
         onChange={(e) =>
@@ -67,13 +68,31 @@ function ConfigurationForm<M extends HumanEvaluationMetric>({
         disabled={disabled}
         required
       />
-      <metricSpecification.ConfigurationForm
+      <metricSpecification.ConfigurationSimpleForm
         configuration={configuration}
         setConfiguration={setConfiguration}
         errors={errors}
         disabled={disabled}
         {...rest}
       />
+    </>
+  )
+}
+
+function ConfigurationAdvancedForm<M extends HumanEvaluationMetric>({
+  metric,
+  ...rest
+}: ConfigurationFormProps<EvaluationType.Human, M> & {
+  metric: M
+}) {
+  const metricSpecification = METRICS[metric]
+  if (!metricSpecification) return null
+
+  return (
+    <>
+      {!!metricSpecification.ConfigurationAdvancedForm && (
+        <metricSpecification.ConfigurationAdvancedForm {...rest} />
+      )}
     </>
   )
 }
@@ -109,11 +128,13 @@ function AnnotationForm<M extends HumanEvaluationMetric>({
 
   return (
     <>
-      <div className='flex flex-col gap-y-2'>
-        <Text.H6M>
-          Criteria: <Text.H6>{evaluation.configuration.criteria}</Text.H6>
-        </Text.H6M>
-      </div>
+      {!!evaluation.configuration.criteria && (
+        <div className='flex flex-col gap-y-2'>
+          <Text.H6M>
+            Criteria: <Text.H6>{evaluation.configuration.criteria}</Text.H6>
+          </Text.H6M>
+        </div>
+      )}
       {!!metricSpecification.AnnotationForm && (
         <metricSpecification.AnnotationForm
           evaluation={evaluation}

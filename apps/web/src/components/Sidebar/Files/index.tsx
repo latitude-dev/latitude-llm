@@ -12,6 +12,10 @@ import { TreeToolbar } from './TreeToolbar'
 import { useOpenPaths } from './useOpenPaths'
 import { useTempNodes } from './useTempNodes'
 import { Node, SidebarDocument, useTree } from './useTree'
+import {
+  UseEvaluationPathReturn,
+  useSelectedEvaluationUuid,
+} from '$/components/Sidebar/Files/useEvaluationPath'
 
 function NodeHeader({
   selected,
@@ -20,6 +24,7 @@ function NodeHeader({
   node,
   indentation,
   canDrag,
+  currentEvaluationUuid,
 }: {
   selected: boolean
   open: boolean
@@ -27,6 +32,7 @@ function NodeHeader({
   indentation: IndentType[]
   onToggleOpen: () => void
   canDrag: boolean
+  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
 }) {
   const draggable = useDraggable({
     id: node.id,
@@ -51,6 +57,7 @@ function NodeHeader({
         indentation={indentation}
         canDrag={canDrag}
         draggble={draggable}
+        currentEvaluationUuid={currentEvaluationUuid}
       />
     )
   }
@@ -72,13 +79,17 @@ export type FileNodeProps = {
   node: Node
   indentation?: IndentType[]
   onRenameFile: (args: { node: Node; path: string }) => Promise<void>
+  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
 }
+
+const EMPTY_TMP_NODES: Node[] = []
 
 function FileNode({
   isMerged,
   node,
   indentation = [],
   onRenameFile,
+  currentEvaluationUuid,
 }: FileNodeProps) {
   const droppable = useDroppable({
     id: node.id,
@@ -92,10 +103,11 @@ function FileNode({
     },
   })
   const allTmpFolders = useTempNodes((state) => state.tmpFolders)
-  const tmpNodes = allTmpFolders[node.path] ?? []
+  const tmpNodes = allTmpFolders[node.path] ?? EMPTY_TMP_NODES
   const { currentUuid } = useFileTreeContext()
+  const documentUuid = node.doc?.documentUuid
   const [selected, setSelected] = useState(
-    !!currentUuid && currentUuid === node.doc?.documentUuid,
+    !!currentUuid && currentUuid === documentUuid,
   )
   const allNodes = useMemo(
     () => [...tmpNodes, ...node.children],
@@ -113,11 +125,11 @@ function FileNode({
     if (lastSegment === '' || lastSegment === ' ') return
 
     togglePath(node.path)
-  }, [togglePath, node.path, node.isPersisted])
+  }, [togglePath, node.path])
 
   useEffect(() => {
-    setSelected(!!currentUuid && currentUuid === node.doc?.documentUuid)
-  }, [currentUuid])
+    setSelected(!!currentUuid && currentUuid === documentUuid)
+  }, [currentUuid, documentUuid])
 
   const overMyself =
     droppable.over && droppable.over.id === droppable.active?.id
@@ -137,6 +149,7 @@ function FileNode({
         open={open}
         onToggleOpen={onToggleOpen}
         canDrag={canDrag}
+        currentEvaluationUuid={currentEvaluationUuid}
       />
 
       {node.isFile ? null : (
@@ -156,6 +169,7 @@ function FileNode({
                   node={node}
                   onRenameFile={onRenameFile}
                   isMerged={isMerged}
+                  currentEvaluationUuid={currentEvaluationUuid}
                 />
               </li>
             )
@@ -223,6 +237,7 @@ export function FilesTree({
   currentUuid: string | undefined
   isDestroying: boolean
 }) {
+  const { currentEvaluationUuid } = useSelectedEvaluationUuid()
   const isMount = useRef(false)
   const { togglePath, isOpenThisPath } = useOpenPaths((state) => ({
     isOpenThisPath: state.isOpen,
@@ -242,6 +257,10 @@ export function FilesTree({
   }, [currentUuid, documents])
 
   useEffect(() => {
+    if (currentPath) {
+      togglePath(currentPath)
+    }
+
     if (!isMount.current) {
       const oneFolder = thereisOnlyOneFolder(rootNode)
       if (!oneFolder) return
@@ -250,10 +269,6 @@ export function FilesTree({
       togglePath(oneFolder.path)
       isMount.current = true
       return
-    }
-
-    if (currentPath) {
-      togglePath(currentPath)
     }
   }, [currentPath, togglePath, isOpenThisPath, rootNode])
 
@@ -267,7 +282,7 @@ export function FilesTree({
 
       setDeletable(null)
     },
-    [destroyFile, destroyFolder, deletableNode, setDeletable],
+    [destroyFile, destroyFolder, setDeletable],
   )
 
   const deletingFolder = deletableNode?.type === 'folder'
@@ -314,6 +329,7 @@ export function FilesTree({
             node={rootNode}
             onRenameFile={onRenameFile}
             isMerged={isMerged}
+            currentEvaluationUuid={currentEvaluationUuid}
           />
         </div>
       </FileTreeProvider>

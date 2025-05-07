@@ -8,6 +8,7 @@ import { MarkerSeverity, Range, Selection, type editor } from 'monaco-editor'
 import { TextEditorPlaceholder } from '../../TextEditorPlaceholder'
 import { DocumentError } from '../types'
 import { registerActions } from './actions'
+import { registerAutocompleteParameters } from './autocompleParamaters'
 import { EditorWrapper } from './EditorWrapper'
 import { useEditorOptions } from './useEditorOptions'
 import { useMonacoSetup } from './useMonacoSetup'
@@ -57,6 +58,7 @@ export function RegularMonacoEditor({
   onChange,
   errorFixFn,
   autoFocus = false,
+  autoCompleteParameters = [],
 }: {
   className?: string
   editorRef: MutableRefObject<editor.IStandaloneCodeEditor | null>
@@ -69,6 +71,7 @@ export function RegularMonacoEditor({
   onChange?: (value?: string) => void
   errorFixFn?: (errors: DocumentError[]) => void
   autoFocus?: boolean
+  autoCompleteParameters?: string[]
 }) {
   const { monacoRef, handleEditorWillMount } = useMonacoSetup({ errorFixFn })
   const { registerAutoClosingTags } = useAutoClosingTags()
@@ -93,14 +96,25 @@ export function RegularMonacoEditor({
       }
 
       registerActions(editor, monaco)
+      registerAutocompleteParameters({
+        monaco,
+        language,
+        autoCompleteParameters,
+      })
       registerAutoClosingTags(editor, monaco)
       setIsEditorMounted(true)
     },
     [
       autoFocus,
+
       editorRef,
+
       monacoRef,
+
       setIsEditorMounted,
+      autoCompleteParameters,
+      language,
+      ,
       registerAutoClosingTags,
     ],
   )
@@ -121,7 +135,7 @@ export function RegularMonacoEditor({
     })
 
     monacoRef.current.editor.setModelMarkers(model, '', modelMarkers)
-  }, [errorMarkers, isEditorMounted])
+  }, [errorMarkers, isEditorMounted, monacoRef, editorRef])
 
   return (
     <EditorWrapper className={className}>

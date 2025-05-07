@@ -207,7 +207,7 @@ export type EvaluatedDocumentLog = SerializedDocumentLog & {
   uuid: string
   createdAt: Date
   actualOutput: string
-  conversation: CompilerMessage[]
+  conversation: string
 }
 
 export const SERIALIZED_DOCUMENT_LOG_FIELDS = [
@@ -426,6 +426,7 @@ export type DocumentLogFilterOptions = {
   logSources: LogSources[]
   createdAt: { from: Date | undefined; to?: Date } | undefined
   customIdentifier: string | undefined
+  experimentId: number | undefined
 }
 
 export const RELATIVE_DATES = {
@@ -506,3 +507,13 @@ export const DATASET_COLUMN_ROLES = {
 
 export type DatasetColumnRole =
   (typeof DATASET_COLUMN_ROLES)[keyof typeof DATASET_COLUMN_ROLES]
+
+export type ProviderApiKeyUsage = {
+  projectId: number
+  projectName: string
+  commitUuid: string
+  documentUuid: string
+  documentPath: string
+  evaluationUuid?: string
+  evaluationName?: string
+}[]

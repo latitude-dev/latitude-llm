@@ -1,4 +1,3 @@
-import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
 import { LogSources } from '@latitude-data/constants'
@@ -9,6 +8,7 @@ import { updateExperimentStatus } from './shared'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
 import { ExperimentsRepository } from '../../../repositories'
 import { RunEvaluationV2JobData, runEvaluationV2JobKey } from '../evaluations'
+import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 
 export type RunDocumentForExperimentJobData = {
   workspaceId: number
@@ -16,9 +16,8 @@ export type RunDocumentForExperimentJobData = {
   experimentId: number
   experiment: Experiment
   commitUuid: string
-  prompt: string
   parameters: Record<string, unknown>
-  datasetRowId: number
+  datasetRowId?: number
 }
 
 export const runDocumentForExperimentJob = async (
@@ -30,7 +29,6 @@ export const runDocumentForExperimentJob = async (
     projectId,
     commitUuid,
     parameters,
-    prompt,
     datasetRowId,
   } = job.data
   const experimentScope = new ExperimentsRepository(workspaceId)
@@ -44,7 +42,7 @@ export const runDocumentForExperimentJob = async (
       projectId,
       commitUuid,
       documentUuid: experiment.documentUuid,
-      customPrompt: prompt,
+      customPrompt: experiment.metadata.prompt,
       parameters,
       experiment,
       autoRespondToolCalls: true,
@@ -72,7 +70,7 @@ export const runDocumentForExperimentJob = async (
         commitId: experiment.commitId,
         evaluationUuid,
         providerLogUuid: providerLog.uuid,
-        datasetId: experiment.datasetId,
+        datasetId: experiment.datasetId ?? undefined,
         datasetLabel: experiment.metadata.datasetLabels[evaluationUuid],
         datasetRowId,
         experimentUuid: experiment.uuid,
@@ -83,9 +81,7 @@ export const runDocumentForExperimentJob = async (
       })
     })
   } catch (error) {
-    if (env.NODE_ENV === 'development') {
-      console.error(error)
-    }
+    if (isErrorRetryable(error as Error)) throw error
 
     await updateExperimentStatus(
       {

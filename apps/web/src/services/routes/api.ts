@@ -17,6 +17,9 @@ export const API_ROUTES = {
   },
   providerApiKeys: {
     root: '/api/providerApiKeys',
+    detail: (id: number) => ({
+      usage: `/api/providerApiKeys/${id}/usage`,
+    }),
   },
   integrations: {
     root: '/api/integrations',

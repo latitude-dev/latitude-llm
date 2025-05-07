@@ -312,6 +312,7 @@ export default function CreateEvaluationModal({
             options={optionsV2}
             setOptions={setOptionsV2}
             errors={errorsV2}
+            commit={commit}
             disabled={isCreating}
             forceTypeChange={
               /* TODO(evalsv2): Temporal hot garbage hack */

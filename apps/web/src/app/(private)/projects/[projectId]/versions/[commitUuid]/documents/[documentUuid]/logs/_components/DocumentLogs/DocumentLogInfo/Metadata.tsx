@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from 'react'
-
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import useProviderApiKeys from '$/stores/providerApiKeys'
@@ -30,11 +29,8 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useCurrentCommit } from 'node_modules/@latitude-data/web-ui/src/providers/CommitProvider'
 import { useCurrentProject } from 'node_modules/@latitude-data/web-ui/src/providers/ProjectProvider'
-import {
-  FinishReasonItem,
-  MetadataItem,
-  MetadataItemTooltip,
-} from '../../../../../[documentUuid]/_components/MetadataItem'
+import { MetadataItem, MetadataItemTooltip } from '$/components/MetadataItem'
+import { FinishReasonItem } from '../../../../../[documentUuid]/_components/FinishReasonItem'
 
 function costNotCalculatedReason({
   provider,

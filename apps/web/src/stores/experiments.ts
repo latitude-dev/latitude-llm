@@ -33,20 +33,6 @@ export function useExperiments(
       .detail(projectId)
       .documents.detail(documentUuid)
       .experiments.paginated({ page, pageSize }),
-    {
-      serializer: (item: unknown) => {
-        if (Array.isArray(item)) {
-          return item
-            .map((experiment) => experiment as ExperimentDto)
-            .sort(
-              (a, b) =>
-                new Date(b.createdAt).getTime() -
-                new Date(a.createdAt).getTime(),
-            )
-        }
-        return []
-      },
-    },
   )
 
   const countFetcher = useFetcher<number>(
