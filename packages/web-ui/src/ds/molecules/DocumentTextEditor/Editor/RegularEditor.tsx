@@ -106,15 +106,11 @@ export function RegularMonacoEditor({
     },
     [
       autoFocus,
-
       editorRef,
-
       monacoRef,
-
       setIsEditorMounted,
       autoCompleteParameters,
       language,
-      ,
       registerAutoClosingTags,
     ],
   )
