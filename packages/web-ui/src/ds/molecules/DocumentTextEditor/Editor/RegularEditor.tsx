@@ -11,7 +11,7 @@ import { registerActions } from './actions'
 import { EditorWrapper } from './EditorWrapper'
 import { useEditorOptions } from './useEditorOptions'
 import { useMonacoSetup } from './useMonacoSetup'
-import { registerFeatures } from './features'
+import { useAutoClosingTags } from './useAutoClosingTags'
 
 function getEditorLine({ model }: { model: editor.ITextModel }): number {
   const lastLine = model.getLineCount()
@@ -71,6 +71,7 @@ export function RegularMonacoEditor({
   autoFocus?: boolean
 }) {
   const { monacoRef, handleEditorWillMount } = useMonacoSetup({ errorFixFn })
+  const { registerAutoClosingTags } = useAutoClosingTags()
 
   // to avoid race conditions
   const [isEditorMounted, setIsEditorMounted] = useState(false)
@@ -92,10 +93,16 @@ export function RegularMonacoEditor({
       }
 
       registerActions(editor, monaco)
-      registerFeatures(editor, monaco)
+      registerAutoClosingTags(editor, monaco)
       setIsEditorMounted(true)
     },
-    [autoFocus, editorRef, monacoRef, setIsEditorMounted],
+    [
+      autoFocus,
+      editorRef,
+      monacoRef,
+      setIsEditorMounted,
+      registerAutoClosingTags,
+    ],
   )
 
   useEffect(() => {
