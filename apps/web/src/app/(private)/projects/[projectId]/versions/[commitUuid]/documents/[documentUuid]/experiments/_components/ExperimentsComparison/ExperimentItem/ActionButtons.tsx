@@ -11,17 +11,8 @@ import Link from 'next/link'
 
 function InnerApplyButton({ disabled }: { disabled?: boolean }) {
   return (
-    <Button
-      variant='outline'
-      fullWidth
-      disabled={disabled}
-      fancy
-      iconProps={{
-        name: 'pencil',
-        placement: 'right',
-      }}
-    >
-      Apply this prompt
+    <Button variant='outline' fullWidth disabled={disabled} fancy>
+      Use prompt
     </Button>
   )
 }
