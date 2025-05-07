@@ -32,12 +32,14 @@ export default function DocumentEditor({
   providerApiKeys,
   freeRunsCount,
   copilotEnabled,
+  initialDiff,
 }: {
   document: DocumentVersion
   documents: DocumentVersion[]
   providerApiKeys?: ProviderApiKey[]
   freeRunsCount?: number
   copilotEnabled: boolean
+  initialDiff?: string
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -68,7 +70,6 @@ export default function DocumentEditor({
   )
 
   const [value, setValue] = useState(document.content)
-  const [diff, setDiff] = useState<DiffOptions>()
   const { toast } = useToast()
   const debouncedSave = useDebouncedCallback(
     async (val: string) => {
@@ -144,6 +145,35 @@ export default function DocumentEditor({
       debouncedSave(newValue)
     },
     [debouncedSave, setValue],
+  )
+
+  const [diff, setDiff] = useState<DiffOptions | undefined>(
+    initialDiff
+      ? {
+          newValue: initialDiff,
+          onAccept: (newValue: string) => {
+            setDiff(undefined)
+            onChange(newValue)
+
+            // Remove applyExperimentId from URL
+            if (window?.location) {
+              const url = new URL(window.location.href)
+              url.searchParams.delete('applyExperimentId')
+              window.history.replaceState({}, '', url.toString())
+            }
+          },
+          onReject: () => {
+            setDiff(undefined)
+
+            // Remove applyExperimentId from URL
+            if (window?.location) {
+              const url = new URL(window.location.href)
+              url.searchParams.delete('applyExperimentId')
+              window.history.replaceState({}, '', url.toString())
+            }
+          },
+        }
+      : undefined,
   )
 
   const isMerged = commit.mergedAt !== null

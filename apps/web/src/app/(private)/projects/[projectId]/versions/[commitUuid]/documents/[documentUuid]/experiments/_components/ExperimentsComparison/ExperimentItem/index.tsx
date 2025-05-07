@@ -1,4 +1,8 @@
-import { ExperimentWithScores } from '@latitude-data/core/browser'
+import {
+  Commit,
+  ExperimentWithScores,
+  Project,
+} from '@latitude-data/core/browser'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -16,13 +20,13 @@ import {
   ExperimentEvaluationScores,
   ExperimentEvaluationScoresPlaceholder,
 } from './EvaluationScores'
-import Link from 'next/link'
-import { DocumentRoutes, ROUTES } from '$/services/routes'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { ActionButtons } from './ActionButtons'
+import { DocumentVersion } from '@latitude-data/constants'
 
 export function ExperimentItemPlaceholder({
   isLast,
@@ -110,30 +114,12 @@ export function ExperimentItem({
         experiment={experiment}
         evaluations={evaluations}
       />
-      <div className='flex flex-row items-center justify-center w-full'>
-        <Link
-          href={ROUTES.projects
-            .detail({ id: project.id })
-            .commits.detail({ uuid: commit.uuid })
-            .documents.detail({ uuid: document.documentUuid })
-            [DocumentRoutes.logs].withFilters({
-              experimentId: experiment.id,
-            })}
-          className='w-full'
-        >
-          <Button
-            variant='outline'
-            fullWidth
-            fancy
-            iconProps={{
-              name: 'externalLink',
-              placement: 'right',
-            }}
-          >
-            See {experiment.logsMetadata.count} Logs
-          </Button>
-        </Link>
-      </div>
+      <ActionButtons
+        project={project as Project}
+        commit={commit as Commit}
+        document={document as DocumentVersion}
+        experiment={experiment}
+      />
     </div>
   )
 }
