@@ -142,6 +142,7 @@ async function run(
   const promptSchema = z.object({
     score: z
       .number()
+      .int()
       .min(metadata.configuration.minScore)
       .max(metadata.configuration.maxScore),
     reason: z.string(),

@@ -30,6 +30,7 @@ export function DocumentTextEditor({
   copilot,
   compileErrors,
   autoFocus = false,
+  autoCompleteParameters = [],
 }: DocumentTextEditorProps) {
   const errors = compileErrors ?? NO_ERRORS
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
@@ -139,6 +140,7 @@ export function DocumentTextEditor({
           onChange={handleValueChange}
           errorMarkers={errorMarkers}
           errorFixFn={errorFixFn}
+          autoCompleteParameters={autoCompleteParameters}
         />
       )}
       {diff && (

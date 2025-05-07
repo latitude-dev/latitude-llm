@@ -73,8 +73,8 @@ export async function buildLlmEvaluationRunFunction<
   providers: Map<string, ProviderApiKey>
   evaluation: EvaluationV2<EvaluationType.Llm, M>
   prompt: string
+  schema: z.ZodSchema
   parameters?: Record<string, unknown>
-  schema?: z.ZodSchema
   runArgs?: {
     generateUUID?: () => string
   }
@@ -154,7 +154,7 @@ export async function runPrompt<
   }: {
     prompt: string
     parameters?: Record<string, unknown>
-    schema?: S
+    schema: S
     resultUuid: string
     evaluation: EvaluationV2<EvaluationType.Llm, M>
     providers: Map<string, ProviderApiKey>

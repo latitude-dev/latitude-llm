@@ -32,7 +32,7 @@ const METRICS: {
 const specification = RuleEvaluationSpecification
 export default {
   ...specification,
-  icon: 'computer' as IconName,
+  icon: 'cpu' as IconName,
   ConfigurationSimpleForm: ConfigurationSimpleForm,
   ConfigurationAdvancedForm: ConfigurationAdvancedForm,
   ResultBadge: ResultBadge,

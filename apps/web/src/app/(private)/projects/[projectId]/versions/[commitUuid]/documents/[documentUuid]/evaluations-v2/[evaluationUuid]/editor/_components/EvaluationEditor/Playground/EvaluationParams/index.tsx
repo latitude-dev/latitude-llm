@@ -17,6 +17,7 @@ export type Props = {
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
   onToggle?: OnToggleFn
   isExpanded?: boolean
+  selectedDocumentLogUuid?: string
 }
 export default function EvaluationParams({
   onToggle,
@@ -24,11 +25,13 @@ export default function EvaluationParams({
   document,
   evaluation,
   commit,
+  selectedDocumentLogUuid,
 }: Props) {
   const historyInfo = useLogHistoryParams({
     commitVersionUuid: commit.uuid,
     document,
     evaluation,
+    selectedDocumentLogUuid,
   })
 
   return (

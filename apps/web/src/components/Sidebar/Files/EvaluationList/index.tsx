@@ -8,21 +8,46 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useMemo } from 'react'
 import { ROUTES } from '$/services/routes'
-import { usePathname } from 'next/navigation'
-import { getEvaluationMetricSpecification } from '$/components/evaluations'
+import {
+  getEvaluationMetricSpecification,
+  getEvaluationTypeSpecification,
+} from '$/components/evaluations'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { TextColor } from '@latitude-data/web-ui/tokens'
-import { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
 import { ModifiedDocumentType } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
-import { IndentationBar } from '$/components/Sidebar/Files/IndentationBar'
+import { IndentationLine } from '$/components/Sidebar/Files/IndentationBar'
+import { UseEvaluationPathReturn } from '$/components/Sidebar/Files/useEvaluationPath'
+import { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
+
+const INDENTATION_UNIT_PX = 24
+function IndentationBar({
+  promptIndentationSize,
+  isLast,
+}: {
+  promptIndentationSize: number
+  isLast: boolean
+}) {
+  return (
+    <div className='flex flex-row'>
+      <div
+        style={{ width: promptIndentationSize * INDENTATION_UNIT_PX }}
+        className='h-6'
+      />
+      <div className='flex justify-center min-w-6 h-6'>
+        <IndentationLine showCurve={isLast} />
+      </div>
+    </div>
+  )
+}
 
 function EvaluationItem({
   isLast,
   color,
-  indentation: promptIndentation,
+  indentation,
   selectedBackgroundColor,
+  selectedBackgroundColorHover,
   commitUuid,
   projectId,
   documentUuid,
@@ -31,15 +56,17 @@ function EvaluationItem({
 }: {
   isLast: boolean
   color: TextColor
-  indentation: IndentType[]
   selectedBackgroundColor: string
+  selectedBackgroundColorHover: string
+  indentation?: IndentType[]
   evaluation: EvaluationV2
   commitUuid: string
   projectId: number
   documentUuid: string
-  currentEvaluationUuid?: string | null
+  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
 }) {
-  const spec = getEvaluationMetricSpecification(evaluation)
+  const spec = getEvaluationTypeSpecification(evaluation)
+  const metricSpec = getEvaluationMetricSpecification(evaluation)
   const isSelected = evaluation.uuid === currentEvaluationUuid
   const url = isSelected
     ? '#'
@@ -49,38 +76,58 @@ function EvaluationItem({
         .documents.detail({ uuid: documentUuid })
         .evaluationsV2.detail({ uuid: evaluation.uuid }).root
   const ItemComponent = isSelected ? 'div' : Link
-  const indentation = useMemo(
-    () => [...promptIndentation, { isLast }],
-    [isLast, promptIndentation],
-  )
   return (
     <ItemComponent
       href={url}
       className={cn('flex flex-row items-center gap-x-1 min-w-0 py-0.5 pr-2', {
         [selectedBackgroundColor]: isSelected,
-        'hover:bg-muted cursor-pointer': !isSelected,
+        [`${selectedBackgroundColorHover} cursor-pointer`]: !isSelected,
       })}
     >
-      <IndentationBar indentation={indentation} hasChildren={false} />
-      <Icon name={spec.icon} className='flex-none' color={color} />
-      <Text.H5M ellipsis noWrap userSelect={false} color={color}>
+      <IndentationBar
+        promptIndentationSize={indentation?.length ?? 0}
+        isLast={isLast}
+      />
+      <div className='flex-none relative w-6 h-6 -ml-2'>
+        <div
+          className={cn('sidebar-icon-mask absolute inset-0 z-50', {
+            'opacity-1': isSelected,
+            'opacity-70': !isSelected,
+          })}
+        >
+          <Icon
+            name={spec.icon}
+            color={color}
+            className='absolute top-1 left-0'
+          />
+        </div>
+        <div className='z-10 absolute bottom-1 right-0.5'>
+          <Icon name={metricSpec.icon} color={color} size='xsmall' />
+        </div>
+      </div>
+      <Text.H5M
+        ellipsis
+        noWrap
+        userSelect={false}
+        color={color}
+        textOpacity={isSelected ? 100 : 70}
+      >
         {evaluation.name}
       </Text.H5M>
     </ItemComponent>
   )
 }
 
-const EVALUATION_PATH_REGEX =
-  /evaluations-v2\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/
-
 export function EvaluationList({
-  indentation,
   changeType,
+  indentation,
   documentUuid,
+  currentEvaluationUuid,
 }: {
   changeType?: ModifiedDocumentType | undefined
-  indentation: IndentType[]
+  indentation?: IndentType[]
   documentUuid: string
+  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -88,21 +135,18 @@ export function EvaluationList({
     () => ({ documentUuid, commitId: commit.id }),
     [documentUuid, commit.id],
   )
-  const pathname = usePathname()
-  const match = pathname.match(EVALUATION_PATH_REGEX)
-  const currentEvaluationUuid = match ? match[1] : null
-  const { color, selectedBackgroundColor } = useModifiedColors({
-    changeType,
-  })
+  const { color, selectedBackgroundColor, selectedBackgroundColorHover } =
+    useModifiedColors({
+      changeType,
+    })
   const { data } = useEvaluationsV2({
     project,
     commit,
     document,
   })
   const evaluationsSize = data.length
-
   return (
-    <ul className='flex flex-col gap-y-1 min-w-0'>
+    <ul className='flex flex-col min-w-0'>
       {data.map((evaluation, index) => (
         <li key={evaluation.uuid}>
           <EvaluationItem
@@ -110,6 +154,7 @@ export function EvaluationList({
             indentation={indentation}
             color={color}
             selectedBackgroundColor={selectedBackgroundColor}
+            selectedBackgroundColorHover={selectedBackgroundColorHover}
             projectId={project.id}
             commitUuid={commit.uuid}
             documentUuid={documentUuid}

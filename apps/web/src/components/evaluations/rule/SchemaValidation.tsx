@@ -17,7 +17,7 @@ import {
 const specification = RuleEvaluationSchemaValidationSpecification
 export default {
   ...specification,
-  icon: 'clipboardCheck' as IconName,
+  icon: 'braces' as IconName,
   ConfigurationSimpleForm: ConfigurationSimpleForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,

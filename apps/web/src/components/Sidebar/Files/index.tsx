@@ -12,6 +12,10 @@ import { TreeToolbar } from './TreeToolbar'
 import { useOpenPaths } from './useOpenPaths'
 import { useTempNodes } from './useTempNodes'
 import { Node, SidebarDocument, useTree } from './useTree'
+import {
+  UseEvaluationPathReturn,
+  useSelectedEvaluationUuid,
+} from '$/components/Sidebar/Files/useEvaluationPath'
 
 function NodeHeader({
   selected,
@@ -20,6 +24,7 @@ function NodeHeader({
   node,
   indentation,
   canDrag,
+  currentEvaluationUuid,
 }: {
   selected: boolean
   open: boolean
@@ -27,6 +32,7 @@ function NodeHeader({
   indentation: IndentType[]
   onToggleOpen: () => void
   canDrag: boolean
+  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
 }) {
   const draggable = useDraggable({
     id: node.id,
@@ -51,6 +57,7 @@ function NodeHeader({
         indentation={indentation}
         canDrag={canDrag}
         draggble={draggable}
+        currentEvaluationUuid={currentEvaluationUuid}
       />
     )
   }
@@ -72,6 +79,7 @@ export type FileNodeProps = {
   node: Node
   indentation?: IndentType[]
   onRenameFile: (args: { node: Node; path: string }) => Promise<void>
+  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
 }
 
 const EMPTY_TMP_NODES: Node[] = []
@@ -81,6 +89,7 @@ function FileNode({
   node,
   indentation = [],
   onRenameFile,
+  currentEvaluationUuid,
 }: FileNodeProps) {
   const droppable = useDroppable({
     id: node.id,
@@ -140,6 +149,7 @@ function FileNode({
         open={open}
         onToggleOpen={onToggleOpen}
         canDrag={canDrag}
+        currentEvaluationUuid={currentEvaluationUuid}
       />
 
       {node.isFile ? null : (
@@ -159,6 +169,7 @@ function FileNode({
                   node={node}
                   onRenameFile={onRenameFile}
                   isMerged={isMerged}
+                  currentEvaluationUuid={currentEvaluationUuid}
                 />
               </li>
             )
@@ -226,6 +237,7 @@ export function FilesTree({
   currentUuid: string | undefined
   isDestroying: boolean
 }) {
+  const { currentEvaluationUuid } = useSelectedEvaluationUuid()
   const isMount = useRef(false)
   const { togglePath, isOpenThisPath } = useOpenPaths((state) => ({
     isOpenThisPath: state.isOpen,
@@ -317,6 +329,7 @@ export function FilesTree({
             node={rootNode}
             onRenameFile={onRenameFile}
             isMerged={isMerged}
+            currentEvaluationUuid={currentEvaluationUuid}
           />
         </div>
       </FileTreeProvider>

@@ -28,11 +28,13 @@ export const Playground = memo(
     document,
     evaluation,
     metadata,
+    selectedDocumentLogUuid,
   }: {
     commit: Commit
     document: DocumentVersion
     evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
     metadata: ConversationMetadata
+    selectedDocumentLogUuid?: string
   }) => {
     const { project } = useCurrentProject()
     const [mode, setMode] = useState<'preview' | 'chat'>('preview')
@@ -69,10 +71,11 @@ export const Playground = memo(
             evaluation={evaluation}
             onToggle={expander.onToggle('parameters')}
             isExpanded={expander.parametersExpanded}
+            selectedDocumentLogUuid={selectedDocumentLogUuid}
           />
         </div>
       )
-    }, [expander, commit, document, evaluation])
+    }, [expander, commit, document, evaluation, selectedDocumentLogUuid])
 
     const secondPane = useMemo(() => {
       if (!parametersReady) return null

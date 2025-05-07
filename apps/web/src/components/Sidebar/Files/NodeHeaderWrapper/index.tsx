@@ -12,10 +12,10 @@ import { ModifiedDocumentType } from '@latitude-data/core/browser'
 import { MODIFICATION_ICONS } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { useHover } from '@latitude-data/web-ui/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
 import { useNodeValidator } from './useNodeValidator'
 import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
 import { IndentationBar } from '$/components/Sidebar/Files/IndentationBar'
+import { colors } from '@latitude-data/web-ui/tokens'
 
 export type IndentType = { isLast: boolean }
 
@@ -34,6 +34,7 @@ export type NodeHeaderWrapperProps = {
   hasChildren?: boolean
   isFile?: boolean
   selected?: boolean
+  childrenSelected?: boolean
   isEditing: boolean
   changeType?: ModifiedDocumentType
   setIsEditing: (isEditing: boolean) => void
@@ -68,6 +69,7 @@ function NodeHeaderWrapper({
   url,
   onClick,
   children,
+  childrenSelected,
 }: NodeHeaderWrapperProps) {
   const [tmpName, setTmpName] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -99,9 +101,11 @@ function NodeHeaderWrapper({
     }
   }, [inputRef])
   const showActions = !isEditing && actions && actions.length > 0
-  const { color, selectedBackgroundColor } = useModifiedColors({ changeType })
+  const { color, selectedBackgroundColor, selectedBackgroundColorHover } =
+    useModifiedColors({ changeType })
   const changeIcon = changeType ? MODIFICATION_ICONS[changeType] : undefined
   const ItemComponent = url ? Link : 'div'
+  const itemSelected = selected && !childrenSelected
   return (
     <div
       tabIndex={0}
@@ -109,7 +113,6 @@ function NodeHeaderWrapper({
       className={cn(
         'max-w-full group/row flex flex-col my-0.5 cursor-pointer',
         {
-          'hover:bg-muted': !selected,
           [selectedBackgroundColor]: selected,
         },
       )}
@@ -117,6 +120,8 @@ function NodeHeaderWrapper({
       <div
         className={cn('w-full flex flex-row gap-x-2 items-center', {
           'pr-2': showActions || !!changeIcon,
+          [selectedBackgroundColorHover]: !itemSelected,
+          [selectedBackgroundColor]: itemSelected,
         })}
       >
         <ItemComponent
@@ -147,7 +152,7 @@ function NodeHeaderWrapper({
               <Icon key={index} name={icon} color={color} />
             ))}
           </div>
-          <div className='flex flex-col'>
+          <div className='flex flex-col min-w-0'>
             {isEditing ? (
               <div className='pr-1 flex items-center'>
                 <Input
@@ -173,12 +178,15 @@ function NodeHeaderWrapper({
                 />
               </div>
             ) : (
-              <div className='flex-grow flex-shrink truncate'>
-                <TruncatedTooltip content={name}>
-                  <Text.H5M ellipsis noWrap userSelect={false} color={color}>
-                    {name && name !== ' ' ? name : tmpName}
-                  </Text.H5M>
-                </TruncatedTooltip>
+              <div
+                className={cn(
+                  'flex-grow flex-shrink truncate',
+                  colors.textColors[color],
+                )}
+              >
+                <Text.H5M ellipsis noWrap userSelect={false} color={color}>
+                  {name && name !== ' ' ? name : tmpName}
+                </Text.H5M>
               </div>
             )}
           </div>

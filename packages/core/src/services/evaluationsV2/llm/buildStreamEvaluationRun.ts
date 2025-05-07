@@ -78,6 +78,7 @@ export async function buildStreamEvaluationRun({
     schema: z.object({
       score: z
         .number()
+        .int()
         .min(evaluation.configuration.minScore)
         .max(evaluation.configuration.maxScore),
       reason: z.string(),

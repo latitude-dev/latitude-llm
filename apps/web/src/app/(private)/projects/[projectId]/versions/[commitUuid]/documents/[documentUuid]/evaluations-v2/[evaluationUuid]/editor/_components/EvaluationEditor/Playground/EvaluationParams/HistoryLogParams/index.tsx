@@ -13,8 +13,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
 import { type UseLogHistoryParams } from './useLogHistoryParams'
 import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
-// TODO: maybe move to common
-import { ParametersPaginationNav } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/DocumentParams/PaginationNav'
+import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { EditableParameters } from './EditableParameters'
 
 function DocumentLogsNavigation({ data }: { data: UseLogHistoryParams }) {

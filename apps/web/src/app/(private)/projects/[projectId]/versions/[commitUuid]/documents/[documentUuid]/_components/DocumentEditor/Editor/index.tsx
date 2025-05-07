@@ -164,7 +164,7 @@ export default function DocumentEditor({
               <EditorHeader
                 providers={providers}
                 disabledMetadataSelectors={isMerged}
-                title={name.length > 30 ? name.slice(0, 30) + '...' : name}
+                title={name}
                 rightActions={useMemo(
                   () => (
                     <>

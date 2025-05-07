@@ -33,7 +33,7 @@ import {
   ExpandedContent,
   ExpandedContentHeader,
 } from './BoxContent'
-import { EvaluationTmp, Snapshot } from './shared'
+import { EvaluationTmp, Snapshot, Props as SharedProps } from './shared'
 
 const useEvaluationResultsSocket = ({
   evaluations,
@@ -186,7 +186,7 @@ export default function DocumentEvaluations({
       }),
       {} as Record<string, EvaluationResultDto & { documentLogUuid: string }>,
     )
-  }, [evaluationResultsV1])
+  }, [evaluationResultsV1, documentLog])
 
   const { data: evaluationResultsV2, mutate: mutateV2 } =
     useEvaluationResultsV2ByDocumentLogs({
@@ -208,7 +208,7 @@ export default function DocumentEvaluations({
       }),
       {} as Record<string, EvaluationResultV2 & { documentLogUuid: string }>,
     )
-  }, [evaluationResultsV2])
+  }, [evaluationResultsV2, documentLog])
 
   const results = useMemo<
     Record<string, EvaluationResultTmp & { documentLogUuid: string }>
@@ -231,17 +231,25 @@ export default function DocumentEvaluations({
   )
 
   const [snapshot, setSnapshot] = useState<Snapshot>()
-  useEffect(() => {
-    if (!documentLog || snapshot?.documentLog.id === documentLog.id) return
-    setSnapshot({
-      documentLog: documentLog,
-      evaluations: evaluations.filter(
+  const liveEvaluations = useMemo(
+    () =>
+      evaluations.filter(
         (evaluation) =>
           (evaluation.version === 'v1' && evaluation.live) ||
           (evaluation.version === 'v2' && evaluation.evaluateLiveLogs),
       ),
+    [evaluations],
+  )
+
+  const snapshotDocumentLogId = snapshot?.documentLog.id
+  useEffect(() => {
+    if (!documentLog || snapshotDocumentLogId === documentLog.id) return
+
+    setSnapshot({
+      documentLog,
+      evaluations: liveEvaluations,
     })
-  }, [documentLog])
+  }, [documentLog, liveEvaluations, snapshotDocumentLogId])
 
   const isWaiting = useMemo(
     () =>
@@ -252,16 +260,32 @@ export default function DocumentEvaluations({
     [snapshot, results],
   )
 
-  const props = {
-    results,
-    evaluations,
-    document,
-    commit,
-    project,
-    runCount,
-    isLoading: isEvaluationsV1Loading || isEvaluationsV2Loading,
-    isWaiting: isWaiting || isDocumentLogLoading,
-  }
+  const props = useMemo<SharedProps>(
+    () => ({
+      results,
+      evaluations,
+      document,
+      commit,
+      project,
+      runCount,
+      isLoading: isEvaluationsV1Loading || isEvaluationsV2Loading,
+      isWaiting: isWaiting || isDocumentLogLoading,
+      documentLog,
+    }),
+    [
+      results,
+      evaluations,
+      document,
+      commit,
+      project,
+      runCount,
+      isEvaluationsV1Loading,
+      isEvaluationsV2Loading,
+      isWaiting,
+      isDocumentLogLoading,
+      documentLog,
+    ],
+  )
 
   return (
     <ClientOnly>
