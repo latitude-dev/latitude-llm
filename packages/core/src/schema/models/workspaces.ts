@@ -3,6 +3,7 @@ import {
   bigint,
   bigserial,
   text,
+  uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
 
@@ -14,6 +15,7 @@ import { subscriptions } from './subscriptions'
 
 export const workspaces = latitudeSchema.table('workspaces', {
   id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
+  uuid: uuid('uuid').notNull().defaultRandom(),
   name: varchar('name', { length: 256 }).notNull(),
   currentSubscriptionId: bigint('current_subscription_id', {
     mode: 'number',
