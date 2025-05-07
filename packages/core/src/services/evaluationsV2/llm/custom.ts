@@ -101,6 +101,22 @@ async function validate(
   })
 }
 
+// Note: match legacy and cloned verdict schemas to avoid breaking prompts
+const ALIAS_VERDICT_KEYS = ['passed', 'rating', 'value', 'result'] as const
+function aliasVerdict(raw: unknown) {
+  if (typeof raw !== 'object') return raw
+  if (raw === null || raw === undefined) return raw
+  if ('score' in raw) return raw
+
+  const obj = { ...raw } as Record<string, unknown>
+  for (const key of ALIAS_VERDICT_KEYS) {
+    if (key in obj) obj.score = Number(obj[key])
+    delete obj[key]
+  }
+
+  return obj
+}
+
 async function run(
   {
     resultUuid,
@@ -139,14 +155,17 @@ async function run(
     db,
   ).then((r) => r.unwrap())
 
-  const promptSchema = z.object({
-    score: z
-      .number()
-      .int()
-      .min(metadata.configuration.minScore)
-      .max(metadata.configuration.maxScore),
-    reason: z.string(),
-  })
+  const promptSchema = z.preprocess(
+    aliasVerdict,
+    z.object({
+      score: z
+        .number()
+        .int()
+        .min(metadata.configuration.minScore)
+        .max(metadata.configuration.maxScore),
+      reason: z.string(),
+    }),
+  )
 
   const { response, stats, verdict } = await runPrompt({
     prompt: metadata.configuration.prompt,

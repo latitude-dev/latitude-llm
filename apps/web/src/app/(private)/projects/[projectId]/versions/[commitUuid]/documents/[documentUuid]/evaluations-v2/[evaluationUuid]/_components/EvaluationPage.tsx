@@ -18,8 +18,8 @@ import {
   EvaluationV2,
   EvaluationV2Stats,
 } from '@latitude-data/core/browser'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import {
   useCurrentCommit,
@@ -87,7 +87,10 @@ const useEvaluationResultsV2Socket = <
   useSockets({ event: 'evaluationResultV2Created', onMessage })
 }
 
-function StatsInfo({ evaluation }: { evaluation: EvaluationV2 }) {
+function EvaluationScaleInfo<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+>({ evaluation }: { evaluation: EvaluationV2<T, M> }) {
   const reverseScale = evaluation.configuration.reverseScale
   const icon = reverseScale ? 'arrowDown' : 'arrowUp'
   return (
@@ -170,7 +173,7 @@ export function EvaluationPage<
         actions={<EvaluationActions />}
       />
       <div className='w-full flex items-end justify-between gap-x-2'>
-        <StatsInfo evaluation={evaluation} />
+        <EvaluationScaleInfo evaluation={evaluation} />
         <EvaluationFilters
           commits={commits}
           search={search}
@@ -179,7 +182,6 @@ export function EvaluationPage<
         />
       </div>
       <EvaluationStats stats={stats} isLoading={isLoading} />
-
       <EvaluationResultsTable
         results={results}
         selectedResult={selectedResult}
