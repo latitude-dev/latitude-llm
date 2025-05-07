@@ -11,12 +11,7 @@ import Link from 'next/link'
 
 function InnerApplyButton({ disabled }: { disabled?: boolean }) {
   return (
-    <Button
-      variant='outline'
-      fullWidth
-      disabled={disabled}
-      fancy
-    >
+    <Button variant='outline' fullWidth disabled={disabled} fancy>
       Use prompt
     </Button>
   )
