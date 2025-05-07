@@ -58,11 +58,16 @@ export function ExperimentVariantCard({
     (newModel: string) => {
       setVariants((prev) => {
         const newVariants = [...prev]
-        const prevModel = newVariants[index]!.model
+        const prevModel = newVariants[index]?.model
         newVariants[index]!.model = newModel
 
-        const prevName = newVariants[index]!.name
-        newVariants[index]!.name = prevName.replace(prevModel, newModel)
+        if (prevModel?.length) {
+          // Change the model from the name too
+          const prevName = newVariants[index]!.name
+          const newName = prevName.replace(prevModel, newModel)
+
+          newVariants[index]!.name = newName
+        }
 
         return newVariants
       })
