@@ -13,6 +13,7 @@ import { updatePromptMetadata } from '$/lib/promptMetadata'
 import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
+  DocumentVersion,
   findFirstModelForProvider,
   ProviderApiKey,
 } from '@latitude-data/core/browser'
@@ -31,6 +32,7 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { PromptConfiguration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptConfiguration'
 import { PromptIntegrations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptIntegrations'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 
 type PromptMetadata = { provider?: string; model?: string }
 export type IProviderByName = Record<string, ProviderApiKey>
@@ -49,6 +51,7 @@ export const EditorHeader = memo(
     showCopilotSetting,
     prompt,
     canUseSubagents = true,
+    documentVersion,
   }: {
     title: string | ReactNode
     titleVerticalAlign?: 'top' | 'center'
@@ -62,6 +65,7 @@ export const EditorHeader = memo(
     freeRunsCount?: number
     showCopilotSetting?: boolean
     canUseSubagents?: boolean
+    documentVersion: DocumentVersion
   }) => {
     const { data: providerApiKeys, isLoading } = useProviderApiKeys({
       fallbackData: providers,
@@ -310,6 +314,13 @@ export const EditorHeader = memo(
               </Text.H6>
             )}
           </div>
+        )}
+        {documentVersion.promptlVersion === 0 && (
+          <Alert
+            title='Upgrade syntax'
+            description='As of May 31st, 2025, Latitude will no longer support this prompt syntax. Please upgrade this prompt to the new PromptL syntax.'
+            variant='warning'
+          />
         )}
       </div>
     )

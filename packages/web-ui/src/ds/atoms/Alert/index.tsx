@@ -41,7 +41,7 @@ export function Alert({
         />
       )}
       <div className='flex flex-row items-center gap-4 lg:gap-8 justify-between'>
-        <div className='flex flex-col gap-2 whitespace-pre-wrap break-all'>
+        <div className='flex flex-col gap-2 whitespace-pre-wrap'>
           {title && <AlertTitle>{title}</AlertTitle>}
           {description && <AlertDescription>{description}</AlertDescription>}
         </div>

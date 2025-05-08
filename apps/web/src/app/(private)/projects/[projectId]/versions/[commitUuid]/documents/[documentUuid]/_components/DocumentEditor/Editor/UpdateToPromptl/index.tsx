@@ -18,7 +18,7 @@ import useDocumentVersions from '$/stores/documentVersions'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-function UpgradeToPromptlModal({
+export function UpgradeToPromptlModal({
   open,
   onOpenChange,
 }: {
