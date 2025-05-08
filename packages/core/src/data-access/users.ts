@@ -35,8 +35,8 @@ export function unsafelyGetUserByEmail(email?: string) {
   }) as Promise<User | null>
 }
 
-export async function unsafelyFindUserByEmail(email: string) {
-  return database.query.users.findFirst({
+export async function unsafelyFindUserByEmail(email: string, db = database) {
+  return db.query.users.findFirst({
     columns: {
       id: true,
       email: true,

@@ -1,9 +1,7 @@
 import { LatitudeErrorCodes } from '@latitude-data/constants/errors'
 
 export type LatitudeErrorDetails = {
-  [key: string]: string[] | string | undefined
-  [key: number]: string[] | string | undefined
-  [key: symbol]: string[] | string | undefined
+  [key: string | number | symbol]: string[] | string | undefined
 }
 
 export class LatitudeError extends Error {

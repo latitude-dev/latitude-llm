@@ -97,6 +97,8 @@ if (environment === 'development' || environment === 'test') {
       GOOGLE_REDIRECT_URI: 'http://localhost:3000/api/auth/google/callback',
       ENABLE_ALL_FLAGS: 'false',
       DEFAULT_PROVIDER_API_KEY: 'openai-api-key',
+      STRIPE_SECRET_KEY: '',
+      STRIPE_WEBHOOK_SECRET: '',
     },
     { path: pathToEnv },
   )
@@ -140,6 +142,10 @@ export const env = createEnv({
     WEBSOCKET_SECRET_TOKEN_KEY: z.string(),
     WEBSOCKETS_COOKIES_DOMAIN: z.string().optional().default('localhost'),
     WEBSOCKETS_COOKIES_PATH: z.string().optional().default('/'),
+
+    // Stripe
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
     // Support app (intercom)
     SUPPORT_APP_ID: z.string(),
