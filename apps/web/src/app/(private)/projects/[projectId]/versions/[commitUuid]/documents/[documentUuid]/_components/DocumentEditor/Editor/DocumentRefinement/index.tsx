@@ -4,7 +4,7 @@ import {
 } from '$/hooks/usePlaygroundAction'
 import { useRefiner } from '$/hooks/useRefiner'
 import { ROUTES } from '$/services/routes'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion, EvaluationTmp } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -70,19 +70,34 @@ export function DocumentRefinement({
     playgroundAction?.version === 'v2' ? playgroundAction.resultUuids : [],
   )
 
+  const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationTmp>()
+  const [selectedResultIds, setSelectedResultIds] = useState<number[]>([])
+  const [selectedResultUuids, setSelectedResultUuids] = useState<string[]>([])
+
   const reset = useCallback(() => {
     resetPlaygroundAction()
     setEvaluationId(undefined)
     setResultIds([])
     setEvaluationUuid(undefined)
     setResultUuids([])
+    setSelectedEvaluation(undefined)
+    setSelectedResultIds([])
+    setSelectedResultUuids([])
   }, [
     resetPlaygroundAction,
     setEvaluationId,
     setResultIds,
     setEvaluationUuid,
     setResultUuids,
+    setSelectedEvaluation,
+    setSelectedResultIds,
+    setSelectedResultUuids,
   ])
+
+  const close = useCallback(() => {
+    setOpenModal(false)
+    reset()
+  }, [setOpenModal, reset])
 
   const refine = useCallback(async () => {
     const [refinement, error] = await refinePrompt({
@@ -119,8 +134,7 @@ export function DocumentRefinement({
       })
     }
 
-    setOpenModal(false)
-    reset()
+    close()
   }, [
     evaluationId,
     evaluationUuid,
@@ -131,8 +145,7 @@ export function DocumentRefinement({
     setDiff,
     setPrompt,
     refineApply,
-    setOpenModal,
-    reset,
+    close,
     project,
     document,
     router,
@@ -153,6 +166,11 @@ export function DocumentRefinement({
             refine={refine}
           />
         ),
+        footer: (
+          <Button variant='outline' fancy onClick={close}>
+            Close
+          </Button>
+        ),
       }
     }
 
@@ -168,11 +186,33 @@ export function DocumentRefinement({
             commit={commit}
             document={document}
             evaluationId={evaluationId}
-            setResultIds={setResultIds}
+            selectedResultIds={selectedResultIds}
+            setSelectedResultIds={setSelectedResultIds}
             evaluationUuid={evaluationUuid}
-            setResultUuids={setResultUuids}
-            reset={reset}
+            selectedResultUuids={selectedResultUuids}
+            setSelectedResultUuids={setSelectedResultUuids}
           />
+        ),
+        footer: (
+          <>
+            <Button variant='outline' fancy onClick={reset}>
+              Go back
+            </Button>
+            <Button
+              fancy
+              onClick={() => {
+                if (evaluationUuid) setResultUuids(selectedResultUuids)
+                else setResultIds(selectedResultIds)
+              }}
+              disabled={
+                evaluationUuid
+                  ? !selectedResultUuids.length
+                  : !selectedResultIds.length
+              }
+            >
+              Select results
+            </Button>
+          </>
         ),
       }
     }
@@ -187,9 +227,27 @@ export function DocumentRefinement({
           project={project}
           commit={commit}
           document={document}
-          setEvaluationId={setEvaluationId}
-          setEvaluationUuid={setEvaluationUuid}
+          selectedEvaluation={selectedEvaluation}
+          setSelectedEvaluation={setSelectedEvaluation}
         />
+      ),
+      footer: (
+        <>
+          <Button variant='outline' fancy onClick={close}>
+            Close
+          </Button>
+          <Button
+            fancy
+            onClick={() => {
+              if (selectedEvaluation!.version === 'v2') {
+                setEvaluationUuid(selectedEvaluation!.uuid)
+              } else setEvaluationId(selectedEvaluation!.id)
+            }}
+            disabled={!selectedEvaluation}
+          >
+            Select evaluation
+          </Button>
+        </>
       ),
     }
   }, [
@@ -202,10 +260,17 @@ export function DocumentRefinement({
     resultUuids,
     setEvaluationId,
     setEvaluationUuid,
+    selectedEvaluation,
+    setSelectedEvaluation,
     setResultIds,
+    selectedResultIds,
+    setSelectedResultIds,
     setResultUuids,
+    selectedResultUuids,
+    setSelectedResultUuids,
     refine,
     reset,
+    close,
   ])
 
   if (!refinementEnabled) return null
@@ -232,10 +297,13 @@ export function DocumentRefinement({
           open={openModal}
           onOpenChange={(open) => {
             setOpenModal(open)
-            if (!open) reset()
+            if (!open) close()
           }}
           steps={{ current: step.number, total: 3 }}
           dismissible
+          footer={
+            <div className='w-full flex justify-end gap-2'>{step.footer}</div>
+          }
         >
           {step.content}
         </Modal>

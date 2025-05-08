@@ -197,10 +197,10 @@ export function EvaluationsGenerator({
     settings,
     options,
     errors,
+    commit,
     setInstructions,
     setSettings,
     setOptions,
-    setErrors,
     onGenerate,
     onCreate,
   ])

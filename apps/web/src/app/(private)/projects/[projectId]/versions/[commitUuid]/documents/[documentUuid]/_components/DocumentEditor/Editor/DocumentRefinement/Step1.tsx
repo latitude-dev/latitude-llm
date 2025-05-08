@@ -1,6 +1,7 @@
 import AverageScoreBadge from '$/components/EvaluationAggregatedResult'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
 import { useEvaluationsV2, useEvaluationV2Stats } from '$/stores/evaluationsV2'
@@ -13,6 +14,7 @@ import {
 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
   Table,
@@ -31,26 +33,24 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 
 export function Step1({
   project,
   commit,
   document,
-  setEvaluationId,
-  setEvaluationUuid,
+  selectedEvaluation,
+  setSelectedEvaluation,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
-  setEvaluationId: (id: number) => void
-  setEvaluationUuid: (uuid: string) => void
+  selectedEvaluation?: EvaluationTmp
+  setSelectedEvaluation: (evaluation?: EvaluationTmp) => void
 }) {
   const { enabled: evaluationsV2Enabled } = useFeatureFlag({
     featureFlag: 'evaluationsV2',
   })
-
-  const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationTmp>()
 
   const { data: evaluationsV1, isLoading: isEvaluationsV1Loading } =
     useEvaluations({
@@ -71,7 +71,24 @@ export function Step1({
         version: 'v2' as const,
       })),
     ]
-  }, [evaluationsV1, evaluationsV2])
+  }, [evaluationsV1, evaluationsV2, evaluationsV2Enabled])
+
+  const selectableState = useSelectableRows<string>({
+    rowIds: evaluations.map((e) => e.uuid),
+    initialSelection: selectedEvaluation ? [selectedEvaluation.uuid] : [],
+  })
+
+  // Keep parent in sync with selection
+  useEffect(() => {
+    const selectedUuids = selectableState.getSelectedRowIds()
+    if (selectedUuids.length === 1) {
+      const selected = evaluations.find((e) => e.uuid === selectedUuids[0])
+      setSelectedEvaluation(selected)
+    } else {
+      setSelectedEvaluation(undefined)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectableState.getSelectedRowIds])
 
   if (isEvaluationsV1Loading || isEvaluationsV2Loading) {
     return (
@@ -105,6 +122,7 @@ export function Step1({
       <Table className='table-auto'>
         <TableHeader className='sticky top-0 z-10'>
           <TableRow>
+            <TableHead />
             <TableHead>Name</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Average score</TableHead>
@@ -114,21 +132,43 @@ export function Step1({
           {evaluations.map((evaluation) => (
             <TableRow
               key={evaluation.uuid}
+              onClick={() => {
+                if (!selectableState.isSelected(evaluation.uuid)) {
+                  selectableState.clearSelections()
+                  selectableState.toggleRow(evaluation.uuid, true)
+                } else {
+                  selectableState.clearSelections()
+                }
+              }}
               className={cn(
                 'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors',
                 {
                   'bg-secondary hover:bg-secondary/50':
-                    selectedEvaluation?.uuid === evaluation.uuid,
+                    selectableState.isSelected(evaluation.uuid),
                 },
               )}
-              onClick={() => setSelectedEvaluation(evaluation)}
             >
+              <TableCell align='left' onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={selectableState.isSelected(evaluation.uuid)}
+                  onCheckedChange={() => {
+                    if (!selectableState.isSelected(evaluation.uuid)) {
+                      selectableState.clearSelections()
+                      selectableState.toggleRow(evaluation.uuid, true)
+                    } else {
+                      selectableState.clearSelections()
+                    }
+                  }}
+                  fullWidth={false}
+                  aria-label={`Select evaluation ${evaluation.name}`}
+                />
+              </TableCell>
               <TableCell>
                 <Text.H5 noWrap ellipsis>
                   {evaluation.name}
                 </Text.H5>
               </TableCell>
-              <TableCell>
+              <TableCell className='max-w-72'>
                 <Text.H5>{evaluation.description || '-'}</Text.H5>
               </TableCell>
               <TableCell>
@@ -151,19 +191,6 @@ export function Step1({
           ))}
         </TableBody>
       </Table>
-      <div className='w-full flex justify-end gap-4'>
-        <Button
-          fancy
-          onClick={() => {
-            if (selectedEvaluation!.version === 'v2') {
-              setEvaluationUuid(selectedEvaluation!.uuid)
-            } else setEvaluationId(selectedEvaluation!.id)
-          }}
-          disabled={!selectedEvaluation}
-        >
-          Select evaluation
-        </Button>
-      </div>
     </div>
   )
 }

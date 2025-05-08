@@ -32,29 +32,49 @@ import {
   ICommitContextType,
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
+import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const PAGE_SIZE = 7
 
 export function Step2({
   evaluationId,
   evaluationUuid,
+  selectedResultIds,
+  setSelectedResultIds,
+  selectedResultUuids,
+  setSelectedResultUuids,
   ...rest
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
   evaluationId?: number
-  setResultIds: (ids: number[]) => void
+  selectedResultIds: number[]
+  setSelectedResultIds: (ids: number[]) => void
   evaluationUuid?: string
-  setResultUuids: (uuids: string[]) => void
-  reset: () => void
+  selectedResultUuids: string[]
+  setSelectedResultUuids: (uuids: string[]) => void
 }) {
   if (evaluationUuid)
-    return <Step2V2 evaluationUuid={evaluationUuid} {...rest} />
+    return (
+      <Step2V2
+        evaluationUuid={evaluationUuid}
+        selectedResultUuids={selectedResultUuids}
+        setSelectedResultUuids={setSelectedResultUuids}
+        {...rest}
+      />
+    )
 
-  return <Step2V1 evaluationId={evaluationId!} {...rest} />
+  return (
+    <Step2V1
+      evaluationId={evaluationId!}
+      selectedResultIds={selectedResultIds}
+      setSelectedResultIds={setSelectedResultIds}
+      {...rest}
+    />
+  )
 }
 
 function Step2V2({
@@ -62,15 +82,15 @@ function Step2V2({
   commit,
   document,
   evaluationUuid,
-  setResultUuids,
-  reset,
+  selectedResultUuids,
+  setSelectedResultUuids,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
   evaluationUuid: string
-  setResultUuids: (uuids: string[]) => void
-  reset: () => void
+  selectedResultUuids: string[]
+  setSelectedResultUuids: (uuids: string[]) => void
 }) {
   const { data: commits, isLoading: isCommitsLoading } = useCommits()
 
@@ -118,7 +138,12 @@ function Step2V2({
 
   const selectableState = useSelectableRows({
     rowIds: results.map((r) => r.uuid),
+    initialSelection: selectedResultUuids,
   })
+
+  useEffect(() => {
+    setSelectedResultUuids(selectableState.getSelectedRowIds().map(String))
+  }, [selectableState.getSelectedRowIds])
 
   const isLoading = isEvaluationsLoading || isResultsLoading || isCommitsLoading
 
@@ -134,7 +159,7 @@ function Step2V2({
   if (!results.length) {
     return (
       <TableBlankSlate
-        description='No logs evaluated in this version yet. You need to evaluate some logs to refine the prompt.'
+        description='No logs evaluated in this version yet. Evaluate some logs to refine the prompt.'
         link={
           <Link
             href={
@@ -187,7 +212,13 @@ function Step2V2({
                   !selectableState.isSelected(result.uuid),
                 )
               }
-              className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors'
+              className={cn(
+                'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors',
+                {
+                  'bg-secondary hover:bg-secondary/50':
+                    selectableState.isSelected(result.uuid),
+                },
+              )}
             >
               <TableCell align='left'>
                 <Checkbox
@@ -226,20 +257,6 @@ function Step2V2({
           ))}
         </TableBody>
       </Table>
-      <div className='w-full flex justify-end gap-4'>
-        <Button variant='outline' fancy onClick={() => reset()}>
-          Go back
-        </Button>
-        <Button
-          fancy
-          onClick={() =>
-            setResultUuids(selectableState.getSelectedRowIds().map(String))
-          }
-          disabled={!selectableState.selectedCount}
-        >
-          Select results
-        </Button>
-      </div>
     </div>
   )
 }
@@ -249,15 +266,15 @@ function Step2V1({
   commit,
   document,
   evaluationId,
-  setResultIds,
-  reset,
+  selectedResultIds,
+  setSelectedResultIds,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
   evaluationId: number
-  setResultIds: (ids: number[]) => void
-  reset: () => void
+  selectedResultIds: number[]
+  setSelectedResultIds: (ids: number[]) => void
 }) {
   const { data: evaluations, isLoading: isEvaluationsLoading } = useEvaluations(
     { params: { documentUuid: document.documentUuid } },
@@ -290,7 +307,12 @@ function Step2V1({
 
   const selectableState = useSelectableRows({
     rowIds: results.map((r) => r.id),
+    initialSelection: selectedResultIds,
   })
+
+  useEffect(() => {
+    setSelectedResultIds(selectableState.getSelectedRowIds())
+  }, [selectableState.getSelectedRowIds])
 
   const isLoading = isEvaluationsLoading || isResultsLoading
 
@@ -306,7 +328,7 @@ function Step2V1({
   if (!results.length) {
     return (
       <TableBlankSlate
-        description='No logs evaluated in this version yet. You need to evaluate some logs to refine the prompt.'
+        description='No logs evaluated in this version yet. Evaluate some logs to refine the prompt.'
         link={
           <Link
             href={
@@ -359,7 +381,13 @@ function Step2V1({
                   !selectableState.isSelected(result.id),
                 )
               }
-              className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors'
+              className={cn(
+                'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors',
+                {
+                  'bg-secondary hover:bg-secondary/50':
+                    selectableState.isSelected(result.id),
+                },
+              )}
             >
               <TableCell align='left'>
                 <Checkbox
@@ -401,18 +429,6 @@ function Step2V1({
           ))}
         </TableBody>
       </Table>
-      <div className='w-full flex justify-end gap-4'>
-        <Button variant='outline' fancy onClick={() => reset()}>
-          Go back
-        </Button>
-        <Button
-          fancy
-          onClick={() => setResultIds(selectableState.getSelectedRowIds())}
-          disabled={!selectableState.selectedCount}
-        >
-          Select results
-        </Button>
-      </div>
     </div>
   )
 }
