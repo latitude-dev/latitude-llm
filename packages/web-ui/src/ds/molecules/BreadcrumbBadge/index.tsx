@@ -3,7 +3,7 @@ import { HEAD_COMMIT } from '@latitude-data/core/browser'
 
 import { Badge } from '../../atoms/Badge'
 import { Text } from '../../atoms/Text'
-import { ClickToCopy } from '../ClickToCopy'
+import { ClickToCopy } from '../ClicktoCopy'
 
 export function BreadcrumbBadge({
   uuid: fullUuid,
