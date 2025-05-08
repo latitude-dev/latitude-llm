@@ -36,6 +36,10 @@ export const runDocumentForExperimentJob = async (
     .find(experimentId)
     .then((r) => r.unwrap())
 
+  if (experiment.finishedAt) {
+    return
+  }
+
   try {
     const result = await runDocumentAtCommitWithAutoToolResponses({
       workspaceId,
