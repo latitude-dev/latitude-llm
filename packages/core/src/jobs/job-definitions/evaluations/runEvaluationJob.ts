@@ -67,9 +67,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
       .findByUuid(experimentUuid)
       .then((r) => r.unwrap())
 
-    if (experiment.finishedAt) {
-      return
-    }
+    if (experiment.finishedAt) return
   }
 
   try {
