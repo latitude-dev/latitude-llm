@@ -162,6 +162,7 @@ export default function DocumentEditor({
           <SplitPane.Pane>
             <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0 pl-6 pb-6'>
               <EditorHeader
+                documentVersion={document}
                 providers={providers}
                 disabledMetadataSelectors={isMerged}
                 title={name}
