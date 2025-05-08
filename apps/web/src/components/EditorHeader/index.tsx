@@ -65,7 +65,7 @@ export const EditorHeader = memo(
     freeRunsCount?: number
     showCopilotSetting?: boolean
     canUseSubagents?: boolean
-    documentVersion: DocumentVersion
+    documentVersion?: DocumentVersion
   }) => {
     const { data: providerApiKeys, isLoading } = useProviderApiKeys({
       fallbackData: providers,
@@ -315,7 +315,7 @@ export const EditorHeader = memo(
             )}
           </div>
         )}
-        {documentVersion.promptlVersion === 0 && (
+        {documentVersion?.promptlVersion === 0 && (
           <Alert
             title='Upgrade syntax'
             description='As of May 31st, 2025, Latitude will no longer support this prompt syntax. Please upgrade this prompt to the new PromptL syntax.'
