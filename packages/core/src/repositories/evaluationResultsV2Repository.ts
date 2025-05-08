@@ -130,8 +130,18 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       eq(evaluationResultsV2.evaluationUuid, evaluationUuid),
     ]
 
-    if (filters?.commitIds?.length) {
-      filter.push(inArray(evaluationResultsV2.commitId, filters.commitIds))
+    if (filters?.commitIds !== undefined) {
+      if (filters.commitIds.length > 0) {
+        filter.push(inArray(evaluationResultsV2.commitId, filters.commitIds))
+      } else filter.push(eq(sql`TRUE`, sql`FALSE`))
+    }
+
+    if (filters?.experimentIds !== undefined) {
+      if (filters.experimentIds.length > 0) {
+        filter.push(
+          inArray(evaluationResultsV2.experimentId, filters.experimentIds),
+        )
+      } else filter.push(isNull(evaluationResultsV2.experimentId))
     }
 
     if (filters?.errored !== undefined) {
