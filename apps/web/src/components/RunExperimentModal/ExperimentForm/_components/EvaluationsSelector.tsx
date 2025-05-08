@@ -30,14 +30,19 @@ export function EvaluationsSelector({
         label='Evaluations'
         name='evaluations'
         defaultValue={selectedEvaluations.map((ev) => ev.uuid)}
-        options={evaluations.map((evaluation) => {
-          const spec = getEvaluationMetricSpecification(evaluation)
-          return {
-            icon: spec.icon,
-            value: evaluation.uuid,
-            label: evaluation.name,
-          }
-        })}
+        options={evaluations
+          .filter((evaluation) => {
+            const spec = getEvaluationMetricSpecification(evaluation)
+            return spec.supportsBatchEvaluation
+          })
+          .map((evaluation) => {
+            const spec = getEvaluationMetricSpecification(evaluation)
+            return {
+              icon: spec.icon,
+              value: evaluation.uuid,
+              label: evaluation.name,
+            }
+          })}
         onChange={(uuids) => {
           setSelectedEvaluations(
             uuids.map((uuid) => evaluations.find((ev) => ev.uuid === uuid)!),
