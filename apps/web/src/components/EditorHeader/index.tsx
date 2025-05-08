@@ -84,6 +84,11 @@ export const EditorHeader = memo(
       key: AppLocalStorage.editorCopilot,
       defaultValue: true,
     })
+    const { value: autoClosingTags, setValue: setAutoClosingTags } =
+      useLocalStorage({
+        key: AppLocalStorage.editorAutoClosingTags,
+        defaultValue: true,
+      })
 
     const [provider, setProvider] = useState<string | undefined>()
     const [model, setModel] = useState<string | undefined | null>()
@@ -212,6 +217,11 @@ export const EditorHeader = memo(
                   label: 'Show minimap',
                   onClick: () => setShowMinimap(!showMinimap),
                   checked: showMinimap,
+                },
+                {
+                  label: 'Auto closing tags',
+                  onClick: () => setAutoClosingTags(!autoClosingTags),
+                  checked: autoClosingTags,
                 },
                 ...(showCopilotSetting
                   ? [

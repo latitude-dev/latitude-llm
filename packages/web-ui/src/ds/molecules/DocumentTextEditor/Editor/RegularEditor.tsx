@@ -12,6 +12,7 @@ import { registerAutocompleteParameters } from './autocompleParamaters'
 import { EditorWrapper } from './EditorWrapper'
 import { useEditorOptions } from './useEditorOptions'
 import { useMonacoSetup } from './useMonacoSetup'
+import { useAutoClosingTags } from './useAutoClosingTags'
 
 function getEditorLine({ model }: { model: editor.ITextModel }): number {
   const lastLine = model.getLineCount()
@@ -73,6 +74,7 @@ export function RegularMonacoEditor({
   autoCompleteParameters?: string[]
 }) {
   const { monacoRef, handleEditorWillMount } = useMonacoSetup({ errorFixFn })
+  const { registerAutoClosingTags } = useAutoClosingTags()
 
   // to avoid race conditions
   const [isEditorMounted, setIsEditorMounted] = useState(false)
@@ -99,6 +101,7 @@ export function RegularMonacoEditor({
         language,
         autoCompleteParameters,
       })
+      registerAutoClosingTags(editor, monaco)
       setIsEditorMounted(true)
     },
     [
@@ -108,6 +111,7 @@ export function RegularMonacoEditor({
       setIsEditorMounted,
       autoCompleteParameters,
       language,
+      registerAutoClosingTags,
     ],
   )
 
