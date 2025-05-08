@@ -15,6 +15,7 @@ import {
   ScatterChart,
 } from '@latitude-data/web-ui/molecules/Charts'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo } from 'react'
 
 export default function VersionOverviewChart<
@@ -59,6 +60,7 @@ export default function VersionOverviewChart<
     <ChartWrapper
       label='Results over versions'
       tooltip={`The overview (${evaluation.configuration.reverseScale ? 'lower' : 'higher'} is better) of results per version for this evaluation`}
+      className={cn({ 'pb-4': isLoading, 'pb-0': !isLoading })}
       loading={isLoading}
     >
       {data.length > 0 ? (

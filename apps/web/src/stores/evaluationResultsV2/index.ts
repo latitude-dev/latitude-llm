@@ -95,7 +95,14 @@ export function useEvaluationResultsV2Pagination<
     .documents.detail(document.documentUuid)
     .evaluationsV2.detail(evaluation.uuid).results.pagination.root
   const query = useMemo(
-    () => (search ? evaluationResultsV2SearchToQueryParams(search) : ''),
+    () =>
+      search
+        ? evaluationResultsV2SearchToQueryParams({
+            ...search,
+            // Note: no need to react to pagination changes
+            pagination: { page: 0, pageSize: 0 },
+          })
+        : '',
     [search],
   )
   const fetcher = useFetcher<IPagination>(`${route}?${query}`)
