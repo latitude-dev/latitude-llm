@@ -46,7 +46,7 @@ const createAutoClosingTagsHandler = (
     // wait for next tick to avoid adding the closing tag before the '>' key is inserted
     setTimeout(() => {
       editor.executeEdits('auto-close-tag', [edit], [nextCursorPosition])
-    }, 0)
+    }, 10)
   })
 }
 
