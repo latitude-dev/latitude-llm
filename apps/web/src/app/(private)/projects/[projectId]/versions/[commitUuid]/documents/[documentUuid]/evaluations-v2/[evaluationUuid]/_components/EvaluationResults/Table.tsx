@@ -22,6 +22,7 @@ export function EvaluationResultsTable<
   selectedResult,
   setSelectedResult,
   search,
+  setSearch,
   refinementEnabled,
   isLoading,
 }: {
@@ -31,7 +32,7 @@ export function EvaluationResultsTable<
   search: EvaluationResultsV2Search
   setSearch: (search: EvaluationResultsV2Search) => void
   refinementEnabled: boolean
-  isLoading: boolean
+  isLoading?: boolean
 }) {
   const { evaluation } = useCurrentEvaluationV2<T, M>()
 
@@ -60,6 +61,7 @@ export function EvaluationResultsTable<
               setSelectedResult={setSelectedResult}
               selectableState={selectableState}
               search={search}
+              setSearch={setSearch}
               isLoading={isLoading}
             />
             <EvaluationResultsTableActions

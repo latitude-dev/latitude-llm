@@ -6,7 +6,6 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
-import { useCommits } from '$/stores/commitsStore'
 import { useEvaluationResultsV2 } from '$/stores/evaluationResultsV2'
 import { useEvaluationV2Stats } from '$/stores/evaluationsV2'
 import {
@@ -16,7 +15,6 @@ import {
   EvaluationResultV2WithDetails,
   EvaluationType,
   EvaluationV2,
-  EvaluationV2Stats,
 } from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -25,7 +23,6 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useDebounce, useDebouncedCallback } from 'use-debounce'
 import { EvaluationTitle } from '../../_components/EvaluationTitle'
@@ -111,13 +108,11 @@ export function EvaluationPage<
 >({
   results: serverResults,
   selectedResult: serverSelectedResult,
-  stats: serverStats,
   search: serverSearch,
   refinementEnabled,
 }: {
   results: EvaluationResultV2WithDetails<T, M>[]
   selectedResult?: EvaluationResultV2WithDetails<T, M>
-  stats?: EvaluationV2Stats
   search: EvaluationResultsV2Search
   refinementEnabled: boolean
 }) {
@@ -125,29 +120,39 @@ export function EvaluationPage<
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const { evaluation } = useCurrentEvaluationV2<T, M>()
-  const router = useRouter()
+
   const [search, setSearch] = useState(serverSearch)
   useEffect(() => setSearch(serverSearch), [serverSearch])
-  const [debouncedSearch] = useDebounce(search, 500)
+  const [debouncedSearch] = useDebounce(search, 250)
+
   useEffect(() => {
     const currentUrl = window.location.origin + window.location.pathname
     const queryParams = evaluationResultsV2SearchToQueryParams(debouncedSearch)
     const targetUrl = `${currentUrl}?${queryParams}`
     if (targetUrl !== window.location.href) {
-      router.replace(targetUrl, { scroll: false })
+      window.history.replaceState(null, '', targetUrl)
     }
-  }, [debouncedSearch, router])
+  }, [debouncedSearch])
 
-  const { data: commits, isLoading: isLoadingCommits } = useCommits()
-
-  const {
-    data: results,
-    mutate,
-    isLoading: isLoadingResults,
-  } = useEvaluationResultsV2<T, M>(
+  const { data: results, mutate } = useEvaluationResultsV2<T, M>(
     { project, commit, document, evaluation, search: debouncedSearch },
-    { fallbackData: serverResults },
+    { fallbackData: serverResults, keepPreviousData: true },
   )
+
+  // Note: prefetch next results
+  useEvaluationResultsV2<T, M>({
+    project: project,
+    commit: commit,
+    document: document,
+    evaluation: evaluation,
+    search: {
+      ...debouncedSearch,
+      pagination: {
+        ...debouncedSearch.pagination,
+        page: debouncedSearch.pagination.page + 1,
+      },
+    },
+  })
 
   const [selectedResult, setSelectedResult] = useState(serverSelectedResult)
 
@@ -155,15 +160,16 @@ export function EvaluationPage<
     data: stats,
     mutate: mutateStats,
     isLoading: isLoadingStats,
-  } = useEvaluationV2Stats<T, M>(
-    { project, commit, document, evaluation, search: debouncedSearch },
-    { fallbackData: serverStats },
-  )
+  } = useEvaluationV2Stats<T, M>({
+    project: project,
+    commit: commit,
+    document: document,
+    evaluation: evaluation,
+    search: debouncedSearch,
+  })
   const refetchStats = useDebouncedCallback(mutateStats, 1000)
 
   useEvaluationResultsV2Socket({ evaluation, mutate, refetchStats })
-
-  const isLoading = isLoadingResults || isLoadingStats || isLoadingCommits
 
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full gap-4 p-6'>
@@ -174,14 +180,9 @@ export function EvaluationPage<
       />
       <div className='w-full flex items-end justify-between gap-x-2'>
         <EvaluationScaleInfo evaluation={evaluation} />
-        <EvaluationFilters
-          commits={commits}
-          search={search}
-          setSearch={setSearch}
-          isLoading={isLoading}
-        />
+        <EvaluationFilters search={search} setSearch={setSearch} />
       </div>
-      <EvaluationStats stats={stats} isLoading={isLoading} />
+      <EvaluationStats stats={stats} isLoading={isLoadingStats} />
       <EvaluationResultsTable
         results={results}
         selectedResult={selectedResult}
@@ -189,7 +190,6 @@ export function EvaluationPage<
         search={search}
         setSearch={setSearch}
         refinementEnabled={refinementEnabled}
-        isLoading={isLoading}
       />
     </div>
   )

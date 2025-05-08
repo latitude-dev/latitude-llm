@@ -26,7 +26,6 @@ export function EvaluationsPage({
 
   const {
     data: evaluations,
-    isLoading,
     createEvaluation,
     deleteEvaluation,
     generateEvaluation,
@@ -67,7 +66,6 @@ export function EvaluationsPage({
         deleteEvaluation={deleteEvaluation}
         generateEvaluation={generateEvaluation}
         generatorEnabled={generatorEnabled}
-        isLoading={isLoading}
         isCreatingEvaluation={isCreatingEvaluation}
         isDeletingEvaluation={isDeletingEvaluation}
         isGeneratingEvaluation={isGeneratingEvaluation}
@@ -75,7 +73,6 @@ export function EvaluationsPage({
       <EvaluationsTemplates
         evaluations={evaluations}
         createEvaluation={createEvaluation}
-        isLoading={isLoading}
         isCreatingEvaluation={isCreatingEvaluation}
       />
     </div>

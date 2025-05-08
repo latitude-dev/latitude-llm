@@ -20,7 +20,7 @@ import { useMemo } from 'react'
 export default function VersionOverviewChart<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
->({ stats, isLoading }: { stats?: EvaluationV2Stats; isLoading: boolean }) {
+>({ stats, isLoading }: { stats?: EvaluationV2Stats; isLoading?: boolean }) {
   const { commit } = useCurrentCommit()
   const { evaluation } = useCurrentEvaluationV2<T, M>()
 

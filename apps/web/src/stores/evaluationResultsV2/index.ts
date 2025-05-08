@@ -119,3 +119,60 @@ export function useEvaluationResultsV2Pagination<
     ...rest,
   }
 }
+
+export function useEvaluationResultsV2Count<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+>(
+  {
+    project,
+    commit,
+    document,
+    evaluation,
+    search,
+  }: {
+    project: Pick<Project, 'id'>
+    commit: Pick<Commit, 'uuid'>
+    document: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
+    evaluation: Pick<EvaluationV2<T, M>, 'uuid'>
+    search?: EvaluationResultsV2Search
+  },
+  opts?: SWRConfiguration,
+) {
+  const route = ROUTES.api.projects
+    .detail(project.id)
+    .commits.detail(commit.uuid)
+    .documents.detail(document.documentUuid)
+    .evaluationsV2.detail(evaluation.uuid).results.count.root
+  const query = useMemo(
+    () =>
+      search
+        ? evaluationResultsV2SearchToQueryParams({
+            ...search,
+            // Note: no need to react to pagination changes
+            pagination: { page: 0, pageSize: 0 },
+          })
+        : '',
+    [search],
+  )
+  const fetcher = useFetcher<number>(`${route}?${query}`)
+
+  const { data = 0, ...rest } = useSWR<number>(
+    compact([
+      'evaluationResultsV2Count',
+      project.id,
+      commit.uuid,
+      document.commitId,
+      document.documentUuid,
+      evaluation.uuid,
+      query,
+    ]),
+    fetcher,
+    opts,
+  )
+
+  return {
+    data,
+    ...rest,
+  }
+}

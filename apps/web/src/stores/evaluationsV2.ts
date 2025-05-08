@@ -340,7 +340,14 @@ export function useEvaluationV2Stats<
     .documents.detail(document.documentUuid)
     .evaluationsV2.detail(evaluation.uuid).stats.root
   const query = useMemo(
-    () => (search ? evaluationResultsV2SearchToQueryParams(search) : ''),
+    () =>
+      search
+        ? evaluationResultsV2SearchToQueryParams({
+            ...search,
+            // Note: no need to react to pagination changes
+            pagination: { page: 0, pageSize: 0 },
+          })
+        : '',
     [search],
   )
   const fetcher = useFetcher<EvaluationV2Stats | undefined, EvaluationV2Stats>(

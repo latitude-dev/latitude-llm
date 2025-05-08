@@ -149,6 +149,9 @@ export const API_ROUTES = {
                         root: evaluationRoot,
                         results: {
                           root: `${evaluationRoot}/results`,
+                          count: {
+                            root: `${evaluationRoot}/results/count`,
+                          },
                           pagination: {
                             root: `${evaluationRoot}/results/pagination`,
                           },

@@ -44,7 +44,7 @@ export function EvaluationsTemplates({
 }: {
   evaluations: EvaluationV2[]
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
-  isLoading: boolean
+  isLoading?: boolean
   isCreatingEvaluation: boolean
 }) {
   const navigate = useNavigate()

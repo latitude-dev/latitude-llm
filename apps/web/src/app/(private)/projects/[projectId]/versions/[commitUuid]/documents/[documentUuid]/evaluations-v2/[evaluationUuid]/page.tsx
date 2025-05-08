@@ -64,21 +64,12 @@ export default async function EvaluationPage({
     (r) => r.uuid === search.pagination.resultUuid,
   )
 
-  const stats = await repository
-    .statsByEvaluation({
-      projectId: Number(projectId),
-      commitUuid: commitUuid,
-      documentUuid: documentUuid,
-      evaluationUuid: evaluationUuid,
-      params: search,
-    })
-    .then((r) => r.unwrap())
+  // Note: stats are lazily loaded in the client
 
   return (
     <ClientEvaluationPage
       results={results}
       selectedResult={selectedResult}
-      stats={stats}
       search={search}
       refinementEnabled={env.LATITUDE_CLOUD}
     />
