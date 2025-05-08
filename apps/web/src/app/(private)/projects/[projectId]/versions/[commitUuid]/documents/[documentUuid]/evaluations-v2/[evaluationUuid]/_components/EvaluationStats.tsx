@@ -15,12 +15,12 @@ import VersionOverviewChart from './charts/VersionOverview'
 export function EvaluationStats<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
->({ stats, isLoading }: { stats?: EvaluationV2Stats; isLoading: boolean }) {
+>({ stats, isLoading }: { stats?: EvaluationV2Stats; isLoading?: boolean }) {
   const { evaluation } = useCurrentEvaluationV2<T, M>()
 
   return (
     <div className='w-full grid xl:grid-cols-3 gap-4'>
-      <div className='h-full w-full col-span-2 grid grid-cols-2 gap-4'>
+      <div className='h-full w-full col-span-2 grid grid-cols-2 gap-4 min-h-56'>
         <DailyOverviewChart stats={stats} isLoading={isLoading} />
         <VersionOverviewChart stats={stats} isLoading={isLoading} />
       </div>

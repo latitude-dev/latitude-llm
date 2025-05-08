@@ -4,9 +4,9 @@ import {
   ResultRowCells,
   ResultRowHeaders,
 } from '$/components/evaluations/ResultRow'
-import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { LogicTablePaginationFooter } from '$/components/TablePaginationFooter/LogicTablePaginationFooter'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
-import { useEvaluationResultsV2Pagination } from '$/stores/evaluationResultsV2'
+import { useEvaluationResultsV2Count } from '$/stores/evaluationResultsV2'
 import {
   DEFAULT_PAGINATION_SIZE,
   EvaluationMetric,
@@ -105,6 +105,7 @@ export function EvaluationResultsTableBody<
   setSelectedResult,
   selectableState,
   search,
+  setSearch,
   isLoading,
   ref,
 }: {
@@ -113,7 +114,8 @@ export function EvaluationResultsTableBody<
   setSelectedResult: (result?: EvaluationResultV2WithDetails<T, M>) => void
   selectableState: ReturnType<typeof useSelectableRows>
   search: EvaluationResultsV2Search
-  isLoading: boolean
+  setSearch: (search: EvaluationResultsV2Search) => void
+  isLoading?: boolean
   ref: Ref<HTMLTableElement>
 }) {
   const { project } = useCurrentProject()
@@ -121,8 +123,8 @@ export function EvaluationResultsTableBody<
   const { document } = useCurrentDocument()
   const { evaluation } = useCurrentEvaluationV2<T, M>()
 
-  const { data: pagination, isLoading: isPaginationLoading } =
-    useEvaluationResultsV2Pagination({
+  const { data: count, isLoading: isCountLoading } =
+    useEvaluationResultsV2Count({
       project: project,
       commit: commit,
       document: document,
@@ -135,10 +137,15 @@ export function EvaluationResultsTableBody<
       ref={ref}
       className='table-auto'
       externalFooter={
-        <LinkableTablePaginationFooter
-          isLoading={isLoading || isPaginationLoading}
-          pagination={pagination}
+        <LogicTablePaginationFooter
+          page={search.pagination.page}
+          pageSize={search.pagination.pageSize}
+          count={count}
           countLabel={countLabel(selectableState.selectedCount)}
+          onPageChange={(page) =>
+            setSearch({ ...search, pagination: { ...search.pagination, page } })
+          }
+          isLoading={isLoading || isCountLoading}
         />
       }
     >

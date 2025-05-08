@@ -10,13 +10,14 @@ import {
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { AreaChart, ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
+import { cn } from '@latitude-data/web-ui/utils'
 import { format } from 'date-fns'
 import { useMemo } from 'react'
 
 export default function DailyOverviewChart<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
->({ stats, isLoading }: { stats?: EvaluationV2Stats; isLoading: boolean }) {
+>({ stats, isLoading }: { stats?: EvaluationV2Stats; isLoading?: boolean }) {
   const { evaluation } = useCurrentEvaluationV2<T, M>()
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
@@ -49,6 +50,7 @@ export default function DailyOverviewChart<
     <ChartWrapper
       label='Results over time'
       tooltip={`The daily overview (${evaluation.configuration.reverseScale ? 'lower' : 'higher'} is better) of results for this evaluation. Average score is computed as the running average along previous days.`}
+      className={cn({ 'pb-4': isLoading, 'pb-0': !isLoading })}
       loading={isLoading}
     >
       {data.length > 0 ? (

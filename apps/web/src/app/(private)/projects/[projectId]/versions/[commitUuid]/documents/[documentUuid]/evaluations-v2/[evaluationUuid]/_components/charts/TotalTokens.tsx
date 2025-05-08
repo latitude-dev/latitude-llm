@@ -1,14 +1,16 @@
 import { EvaluationV2Stats } from '@latitude-data/core/browser'
-import { ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
-import { PanelChart } from '@latitude-data/web-ui/molecules/Charts'
+import {
+  ChartWrapper,
+  PanelChart,
+} from '@latitude-data/web-ui/molecules/Charts'
 
 export default function TotalTokensChart({
   stats,
   isLoading,
 }: {
   stats?: EvaluationV2Stats
-  isLoading: boolean
+  isLoading?: boolean
 }) {
   return (
     <ChartWrapper

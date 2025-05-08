@@ -23,7 +23,7 @@ export function EvaluationResultsTableActions<
 }: {
   selectableState: ReturnType<typeof useSelectableRows>
   refinementEnabled: boolean
-  isLoading: boolean
+  isLoading?: boolean
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()

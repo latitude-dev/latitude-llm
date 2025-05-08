@@ -301,9 +301,7 @@ export function DocumentRefinement({
           }}
           steps={{ current: step.number, total: 3 }}
           dismissible
-          footer={
-            <div className='w-full flex justify-end gap-2'>{step.footer}</div>
-          }
+          footer={step.footer}
         >
           {step.content}
         </Modal>

@@ -78,16 +78,13 @@ export function Step1({
     initialSelection: selectedEvaluation ? [selectedEvaluation.uuid] : [],
   })
 
-  // Keep parent in sync with selection
   useEffect(() => {
     const selectedUuids = selectableState.getSelectedRowIds()
-    if (selectedUuids.length === 1) {
-      const selected = evaluations.find((e) => e.uuid === selectedUuids[0])
-      setSelectedEvaluation(selected)
-    } else {
-      setSelectedEvaluation(undefined)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (selectedUuids.length) {
+      setSelectedEvaluation(
+        evaluations.find((e) => e.uuid === selectedUuids[0]),
+      )
+    } else setSelectedEvaluation(undefined)
   }, [selectableState.getSelectedRowIds])
 
   if (isEvaluationsV1Loading || isEvaluationsV2Loading) {
@@ -133,11 +130,9 @@ export function Step1({
             <TableRow
               key={evaluation.uuid}
               onClick={() => {
+                selectableState.clearSelections()
                 if (!selectableState.isSelected(evaluation.uuid)) {
-                  selectableState.clearSelections()
                   selectableState.toggleRow(evaluation.uuid, true)
-                } else {
-                  selectableState.clearSelections()
                 }
               }}
               className={cn(
@@ -148,19 +143,10 @@ export function Step1({
                 },
               )}
             >
-              <TableCell align='left' onClick={(e) => e.stopPropagation()}>
+              <TableCell align='left'>
                 <Checkbox
-                  checked={selectableState.isSelected(evaluation.uuid)}
-                  onCheckedChange={() => {
-                    if (!selectableState.isSelected(evaluation.uuid)) {
-                      selectableState.clearSelections()
-                      selectableState.toggleRow(evaluation.uuid, true)
-                    } else {
-                      selectableState.clearSelections()
-                    }
-                  }}
                   fullWidth={false}
-                  aria-label={`Select evaluation ${evaluation.name}`}
+                  checked={selectableState.isSelected(evaluation.uuid)}
                 />
               </TableCell>
               <TableCell>

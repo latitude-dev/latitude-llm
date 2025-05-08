@@ -48,7 +48,7 @@ export function EvaluationsTable({
   deleteEvaluation: ReturnType<typeof useEvaluationsV2>['deleteEvaluation']
   generateEvaluation: ReturnType<typeof useEvaluationsV2>['generateEvaluation']
   generatorEnabled: boolean
-  isLoading: boolean
+  isLoading?: boolean
   isCreatingEvaluation: boolean
   isDeletingEvaluation: boolean
   isGeneratingEvaluation: boolean
