@@ -67,7 +67,7 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
       .findByUuid(experimentUuid)
       .then((r) => r.unwrap())
 
-    if (experiment.finishedAt) return
+    // TODO(exps): Do not run evaluation if experiment is finished/cancelled/paused
   }
 
   try {

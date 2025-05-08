@@ -16,9 +16,7 @@ import { redirect } from 'next/navigation'
 import { EvaluationPage as ClientEvaluationPage } from './_components/EvaluationPage'
 
 const DEFAULT_SEARCH: EvaluationResultsV2Search = {
-  filters: {
-    experimentIds: [], // Note: don't show experiment results by default
-  },
+  filters: {},
   orders: {
     recency: 'desc',
   },
