@@ -66,6 +66,10 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     experiment = await experimentsRepository
       .findByUuid(experimentUuid)
       .then((r) => r.unwrap())
+
+    if (experiment.finishedAt) {
+      return
+    }
   }
 
   try {
