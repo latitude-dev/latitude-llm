@@ -3,7 +3,7 @@
 import {
   EvaluationType,
   RuleEvaluationMetric,
-  RuleEvaluationSemanticSimilaritySpecification,
+  RuleEvaluationNumericSimilaritySpecification,
 } from '@latitude-data/constants'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
@@ -15,10 +15,10 @@ import {
   ResultBadgeProps,
 } from '../index'
 
-const specification = RuleEvaluationSemanticSimilaritySpecification
+const specification = RuleEvaluationNumericSimilaritySpecification
 export default {
   ...specification,
-  icon: 'aLargeSmall' as IconName,
+  icon: 'equalApproximately' as IconName,
   ConfigurationSimpleForm: ConfigurationSimpleForm,
   ResultBadge: ResultBadge,
   chartConfiguration: chartConfiguration,
@@ -38,11 +38,11 @@ function ConfigurationSimpleForm({
   disabled,
 }: ConfigurationFormProps<
   EvaluationType.Rule,
-  RuleEvaluationMetric.SemanticSimilarity
+  RuleEvaluationMetric.NumericSimilarity
 >) {
   // TODO: Remove this default when more algorithms are implemented
   useEffect(() => {
-    setConfiguration({ ...configuration, algorithm: 'cosine_distance' })
+    setConfiguration({ ...configuration, algorithm: 'relative_difference' })
   }, [])
 
   return (
@@ -107,7 +107,7 @@ function ResultBadge({
   result,
 }: ResultBadgeProps<
   EvaluationType.Rule,
-  RuleEvaluationMetric.SemanticSimilarity
+  RuleEvaluationMetric.NumericSimilarity
 >) {
   return <>{result.score!.toFixed(0)}% similar</>
 }
@@ -116,7 +116,7 @@ function chartConfiguration({
   evaluation,
 }: ChartConfigurationArgs<
   EvaluationType.Rule,
-  RuleEvaluationMetric.SemanticSimilarity
+  RuleEvaluationMetric.NumericSimilarity
 >) {
   return {
     min: 0,

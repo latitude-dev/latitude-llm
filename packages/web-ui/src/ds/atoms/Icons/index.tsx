@@ -1,4 +1,5 @@
 import {
+  ALargeSmallIcon,
   AlertCircle,
   AppWindow,
   ArrowDownIcon,
@@ -35,6 +36,7 @@ import {
   Code,
   Code2,
   Copy,
+  CpuIcon,
   Database,
   Ellipsis,
   EllipsisVertical,
@@ -62,10 +64,10 @@ import {
   ImageUp,
   InfoIcon,
   LetterText,
+  Lightbulb,
   ListCheck,
   ListOrdered,
   ListVideo,
-  Lightbulb,
   LoaderCircle,
   Lock,
   Logs,
@@ -108,7 +110,6 @@ import {
   WholeWord,
   XIcon,
   Youtube,
-  CpuIcon,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -300,6 +301,7 @@ const Icons = {
   yepcode: YepCode,
   monday: Monday,
   gitCompareArrows: GitCompareArrows,
+  aLargeSmall: ALargeSmallIcon,
 }
 
 export type IconName = keyof typeof Icons

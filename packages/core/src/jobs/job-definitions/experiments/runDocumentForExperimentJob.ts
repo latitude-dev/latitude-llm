@@ -1,14 +1,14 @@
 import { Job } from 'bullmq'
 
 import { LogSources } from '@latitude-data/constants'
-import { NotFoundError } from '../../../lib/errors'
-import { evaluationsQueue } from '../../queues'
 import { Experiment } from '../../../browser'
-import { updateExperimentStatus } from './shared'
-import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
+import { NotFoundError } from '../../../lib/errors'
 import { ExperimentsRepository } from '../../../repositories'
-import { RunEvaluationV2JobData, runEvaluationV2JobKey } from '../evaluations'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'
+import { evaluationsQueue } from '../../queues'
+import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
+import { RunEvaluationV2JobData, runEvaluationV2JobKey } from '../evaluations'
+import { updateExperimentStatus } from './shared'
 
 export type RunDocumentForExperimentJobData = {
   workspaceId: number
@@ -36,9 +36,7 @@ export const runDocumentForExperimentJob = async (
     .find(experimentId)
     .then((r) => r.unwrap())
 
-  if (experiment.finishedAt) {
-    return
-  }
+  if (experiment.finishedAt) return
 
   try {
     const result = await runDocumentAtCommitWithAutoToolResponses({

@@ -14,6 +14,7 @@ import {
 import { RuleEvaluationExactMatchSpecification } from './exactMatch'
 import { RuleEvaluationLengthCountSpecification } from './lengthCount'
 import { RuleEvaluationLexicalOverlapSpecification } from './lexicalOverlap'
+import { RuleEvaluationNumericSimilaritySpecification } from './numericSimilarity'
 import { RuleEvaluationRegularExpressionSpecification } from './regularExpression'
 import { RuleEvaluationSchemaValidationSpecification } from './schemaValidation'
 import { RuleEvaluationSemanticSimilaritySpecification } from './semanticSimilarity'
@@ -28,6 +29,7 @@ const METRICS: {
   [RuleEvaluationMetric.LengthCount]: RuleEvaluationLengthCountSpecification,
   [RuleEvaluationMetric.LexicalOverlap]: RuleEvaluationLexicalOverlapSpecification,
   [RuleEvaluationMetric.SemanticSimilarity]: RuleEvaluationSemanticSimilaritySpecification,
+  [RuleEvaluationMetric.NumericSimilarity]: RuleEvaluationNumericSimilaritySpecification,
 }
 
 export const RuleEvaluationSpecification = {

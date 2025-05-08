@@ -220,6 +220,42 @@ export type RuleEvaluationSemanticSimilarityResultError = z.infer<
   typeof RuleEvaluationSemanticSimilaritySpecification.resultError
 >
 
+// NUMERIC SIMILARITY
+
+const ruleEvaluationNumericSimilarityConfiguration =
+  ruleEvaluationConfiguration.extend({
+    algorithm: z.enum(['relative_difference']),
+    minSimilarity: z.number().optional(), // Percentage of similarity
+    maxSimilarity: z.number().optional(), // Percentage of similarity
+  })
+const ruleEvaluationNumericSimilarityResultMetadata =
+  ruleEvaluationResultMetadata.extend({
+    configuration: ruleEvaluationNumericSimilarityConfiguration,
+  })
+const ruleEvaluationNumericSimilarityResultError =
+  ruleEvaluationResultError.extend({})
+export const RuleEvaluationNumericSimilaritySpecification = {
+  name: 'Numeric Similarity',
+  description:
+    'Checks if the response is numerically similar to the expected output. The resulting score is the percentage of similarity',
+  configuration: ruleEvaluationNumericSimilarityConfiguration,
+  resultMetadata: ruleEvaluationNumericSimilarityResultMetadata,
+  resultError: ruleEvaluationNumericSimilarityResultError,
+  requiresExpectedOutput: true,
+  supportsLiveEvaluation: false,
+  supportsBatchEvaluation: true,
+  supportsManualEvaluation: false,
+}
+export type RuleEvaluationNumericSimilarityConfiguration = z.infer<
+  typeof RuleEvaluationNumericSimilaritySpecification.configuration
+>
+export type RuleEvaluationNumericSimilarityResultMetadata = z.infer<
+  typeof RuleEvaluationNumericSimilaritySpecification.resultMetadata
+>
+export type RuleEvaluationNumericSimilarityResultError = z.infer<
+  typeof RuleEvaluationNumericSimilaritySpecification.resultError
+>
+
 /* ------------------------------------------------------------------------- */
 
 export enum RuleEvaluationMetric {
@@ -229,6 +265,7 @@ export enum RuleEvaluationMetric {
   LengthCount = 'length_count',
   LexicalOverlap = 'lexical_overlap',
   SemanticSimilarity = 'semantic_similarity',
+  NumericSimilarity = 'numeric_similarity',
 }
 
 // prettier-ignore
@@ -239,6 +276,7 @@ export type RuleEvaluationConfiguration<M extends RuleEvaluationMetric = RuleEva
   M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountConfiguration :
   M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapConfiguration :
   M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityConfiguration :
+  M extends RuleEvaluationMetric.NumericSimilarity ? RuleEvaluationNumericSimilarityConfiguration :
   never;
 
 // prettier-ignore
@@ -249,6 +287,7 @@ export type RuleEvaluationResultMetadata<M extends RuleEvaluationMetric = RuleEv
   M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountResultMetadata :
   M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapResultMetadata :
   M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityResultMetadata :
+  M extends RuleEvaluationMetric.NumericSimilarity ? RuleEvaluationNumericSimilarityResultMetadata :
   never;
 
 // prettier-ignore
@@ -259,6 +298,7 @@ export type RuleEvaluationResultError<M extends RuleEvaluationMetric = RuleEvalu
   M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountResultError :
   M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapResultError :
   M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityResultError :
+  M extends RuleEvaluationMetric.NumericSimilarity ? RuleEvaluationNumericSimilarityResultError :
   never;
 
 export const RuleEvaluationSpecification = {
@@ -275,5 +315,6 @@ export const RuleEvaluationSpecification = {
     [RuleEvaluationMetric.LengthCount]: RuleEvaluationLengthCountSpecification,
     [RuleEvaluationMetric.LexicalOverlap]: RuleEvaluationLexicalOverlapSpecification,
     [RuleEvaluationMetric.SemanticSimilarity]: RuleEvaluationSemanticSimilaritySpecification,
+    [RuleEvaluationMetric.NumericSimilarity]: RuleEvaluationNumericSimilaritySpecification,
   },
 }

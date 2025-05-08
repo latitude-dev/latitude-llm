@@ -40,8 +40,8 @@ Latitude provides a complete suite of built-in metrics for evaluating prompts pr
 Checks if the response is exactly the same as the expected output. The resulting score is "matched" or "unmatched".
 
 <Note>
-  Exact Match evaluation require an expected output, so it does not support live
-  evaluation.
+  Exact Match evaluation requires an expected output, so it does not support
+  live evaluation.
 </Note>
 
 ### Regular Expression
@@ -61,16 +61,25 @@ Checks if the response is of a certain length. The resulting score is the length
 Checks if the response contains the expected output. The resulting score is the percentage of overlap. Overlap can be measured with longest common substring, Levenshtein distance and ROUGE algorithms.
 
 <Note>
-  Lexical Overlap evaluation require an expected output, so it does not support
+  Lexical Overlap evaluation requires an expected output, so it does not support
   live evaluation.
 </Note>
 
 ### Semantic Similarity
 
-Checks if the response is semantically similar to the expected output. The resulting score is the percentage of similarity. Similarity is measured by computing the cosine similarity.
+Checks if the response is semantically similar to the expected output. The resulting score is the percentage of similarity. Similarity is measured by computing the cosine distance.
 
 <Note>
-  Semantic Similarity evaluation require an expected output, so it does not
+  Semantic Similarity evaluation requires an expected output, so it does not
+  support live evaluation.
+</Note>
+
+### Numeric Similarity
+
+Checks if the response is numerically similar to the expected output. The resulting score is the percentage of similarity. Similarity is measured by computing the relative difference.
+
+<Note>
+  Numeric Similarity evaluation requires an expected output, so it does not
   support live evaluation.
 </Note>
 
