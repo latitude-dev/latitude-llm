@@ -6,12 +6,12 @@ import {
   StreamType,
 } from '@latitude-data/constants'
 import { parseISO } from 'date-fns'
+import { ProviderLog, ProviderLogDto } from './browser'
 import {
   DEFAULT_PAGINATION_SIZE,
   type CsvData,
   type DateRange,
 } from './constants'
-import { ProviderLog, ProviderLogDto } from './browser'
 import type { QueryParams } from './lib/pagination'
 
 export function buildCsvFile(csvData: CsvData, name: string): File {
@@ -157,6 +157,7 @@ export function formatConversation(conversation: Message[]) {
 export type EvaluationResultsV2Search = {
   filters?: {
     commitIds?: number[]
+    experimentIds?: number[]
     errored?: boolean
     createdAt?: DateRange
   }
@@ -182,8 +183,19 @@ export function evaluationResultsV2SearchFromQueryParams(params: QueryParams) {
     },
   } as EvaluationResultsV2Search
 
-  if (params.commitIds && typeof params.commitIds === 'string') {
+  if (params.commitIds !== undefined && typeof params.commitIds === 'string') {
     search.filters!.commitIds = [...new Set(params.commitIds.split(','))]
+      .filter(Boolean)
+      .map(Number)
+  }
+
+  if (
+    params.experimentIds !== undefined &&
+    typeof params.experimentIds === 'string'
+  ) {
+    search.filters!.experimentIds = [
+      ...new Set(params.experimentIds.split(',')),
+    ]
       .filter(Boolean)
       .map(Number)
   }
@@ -234,9 +246,16 @@ export function evaluationResultsV2SearchToQueryParams(
 ) {
   const params = new URLSearchParams()
 
-  if (search.filters?.commitIds?.length) {
+  if (search.filters?.commitIds !== undefined) {
     const commitIds = [...new Set(search.filters.commitIds)].filter(Boolean)
     params.set('commitIds', commitIds.join(','))
+  }
+
+  if (search.filters?.experimentIds !== undefined) {
+    const experimentIds = [...new Set(search.filters.experimentIds)].filter(
+      Boolean,
+    )
+    params.set('experimentIds', experimentIds.join(','))
   }
 
   if (search.filters?.errored !== undefined) {
