@@ -36,10 +36,12 @@ const useEvaluationResultsV2Socket = <
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 >({
   evaluation,
+  search,
   mutate,
   refetchStats,
 }: {
   evaluation: EvaluationV2<T, M>
+  search: EvaluationResultsV2Search
   mutate: ReturnType<typeof useEvaluationResultsV2<T, M>>['mutate']
   refetchStats: () => void
 }) => {
@@ -47,6 +49,12 @@ const useEvaluationResultsV2Socket = <
     (args: EventArgs<'evaluationResultV2Created'>) => {
       if (!args) return
       if (args.result.evaluationUuid !== evaluation.uuid) return
+      const experimentIds = search.filters?.experimentIds
+      if (experimentIds !== undefined) {
+        if (experimentIds.length > 0) {
+          if (!experimentIds.includes(args.result.experimentId ?? -1)) return
+        } else if (args.result.experimentId) return
+      }
 
       mutate(
         (prev) => [
@@ -78,7 +86,7 @@ const useEvaluationResultsV2Socket = <
 
       refetchStats()
     },
-    [evaluation, mutate, refetchStats],
+    [evaluation, search, mutate, refetchStats],
   )
 
   useSockets({ event: 'evaluationResultV2Created', onMessage })
@@ -169,7 +177,7 @@ export function EvaluationPage<
   })
   const refetchStats = useDebouncedCallback(mutateStats, 1000)
 
-  useEvaluationResultsV2Socket({ evaluation, mutate, refetchStats })
+  useEvaluationResultsV2Socket({ evaluation, search, mutate, refetchStats })
 
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full gap-4 p-6'>
