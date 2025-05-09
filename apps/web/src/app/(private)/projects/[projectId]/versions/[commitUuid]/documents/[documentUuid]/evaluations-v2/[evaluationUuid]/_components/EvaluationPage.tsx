@@ -6,6 +6,7 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
+import { RealtimeToggle } from '$/components/RealtimeToggle'
 import { useEvaluationResultsV2 } from '$/stores/evaluationResultsV2'
 import { useEvaluationV2Stats } from '$/stores/evaluationsV2'
 import {
@@ -39,14 +40,17 @@ const useEvaluationResultsV2Socket = <
   search,
   mutate,
   refetchStats,
+  realtimeEnabled,
 }: {
   evaluation: EvaluationV2<T, M>
   search: EvaluationResultsV2Search
   mutate: ReturnType<typeof useEvaluationResultsV2<T, M>>['mutate']
   refetchStats: () => void
+  realtimeEnabled: boolean
 }) => {
   const onMessage = useCallback(
     (args: EventArgs<'evaluationResultV2Created'>) => {
+      if (!realtimeEnabled) return
       if (!args) return
       if (args.result.evaluationUuid !== evaluation.uuid) return
       const experimentIds = search.filters?.experimentIds
@@ -86,7 +90,7 @@ const useEvaluationResultsV2Socket = <
 
       refetchStats()
     },
-    [evaluation, search, mutate, refetchStats],
+    [evaluation, search, mutate, refetchStats, realtimeEnabled],
   )
 
   useSockets({ event: 'evaluationResultV2Created', onMessage })
@@ -177,7 +181,14 @@ export function EvaluationPage<
   })
   const refetchStats = useDebouncedCallback(mutateStats, 1000)
 
-  useEvaluationResultsV2Socket({ evaluation, search, mutate, refetchStats })
+  const [realtimeEnabled, setRealtimeEnabled] = useState(true)
+  useEvaluationResultsV2Socket({
+    evaluation: evaluation,
+    search: search,
+    mutate: mutate,
+    refetchStats: refetchStats,
+    realtimeEnabled: realtimeEnabled,
+  })
 
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full gap-4 p-6'>
@@ -188,7 +199,13 @@ export function EvaluationPage<
       />
       <div className='w-full flex items-end justify-between gap-x-2'>
         <EvaluationScaleInfo evaluation={evaluation} />
-        <EvaluationFilters search={search} setSearch={setSearch} />
+        <div className='flex items-center gap-4'>
+          <EvaluationFilters search={search} setSearch={setSearch} />
+          <RealtimeToggle
+            enabled={realtimeEnabled}
+            setEnabled={setRealtimeEnabled}
+          />
+        </div>
       </div>
       <EvaluationStats stats={stats} isLoading={isLoadingStats} />
       <EvaluationResultsTable
