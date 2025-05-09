@@ -83,7 +83,7 @@ export type ToolDefinition = JSONSchema7 & {
     type: 'object'
     properties: Record<string, JSONSchema7>
     required?: string[]
-    additionalProperties?: boolean
+    additionalProperties: boolean
   }
 }
 

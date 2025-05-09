@@ -50,10 +50,10 @@ describe('respondToToolCalls', () => {
                     location: {
                       type: 'string',
                       description: "location, e.g., 'Valencia, Spain'.",
-                      required: ['location'],
-                      additionalProperties: false,
                     },
                   },
+                  required: ['location'],
+                  additionalProperties: false,
                 },
               },
               get_the_time: {
@@ -64,15 +64,19 @@ describe('respondToToolCalls', () => {
                     location: {
                       type: 'string',
                       description: "location, e.g., 'Valencia, Spain'.",
-                      required: ['location'],
-                      additionalProperties: false,
                     },
                   },
+                  required: ['location'],
+                  additionalProperties: false,
                 },
               },
               not_called_tool: {
                 description: 'This should not be used to generate the response',
-                parameters: { type: 'object', properties: {} },
+                parameters: {
+                  type: 'object',
+                  properties: {},
+                  additionalProperties: false,
+                },
               },
             },
           },
@@ -160,12 +164,12 @@ describe('respondToToolCalls', () => {
               type: 'object',
               properties: {
                 location: {
-                  type: 'string',
                   description: "location, e.g., 'Valencia, Spain'.",
-                  required: ['location'],
-                  additionalProperties: false,
+                  type: 'string',
                 },
               },
+              required: ['location'],
+              additionalProperties: false,
             },
           },
           get_the_time: {
@@ -174,12 +178,12 @@ describe('respondToToolCalls', () => {
               type: 'object',
               properties: {
                 location: {
-                  type: 'string',
                   description: "location, e.g., 'Valencia, Spain'.",
-                  required: ['location'],
-                  additionalProperties: false,
+                  type: 'string',
                 },
               },
+              additionalProperties: false,
+              required: ['location'],
             },
           },
         },
