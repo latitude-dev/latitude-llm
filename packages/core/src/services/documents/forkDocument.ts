@@ -28,7 +28,6 @@ type ForkProps = {
     user: User
   }
   defaultProviderName?: string
-  evaluationsV2Enabled?: boolean
 }
 const ATTEMPTS_BEFORE_RANDOM_SUFFIX = 4
 async function createProjectFromDocument({
@@ -69,7 +68,6 @@ async function createProjectFromDocument({
 async function createDocuments({
   origin,
   destination,
-  evaluationsV2Enabled,
 }: {
   origin: ForkProps['origin']
   destination: {
@@ -81,7 +79,6 @@ async function createDocuments({
       modelName: string | undefined
     }
   }
-  evaluationsV2Enabled?: boolean
 }) {
   const documents = await getIncludedDocuments({
     workspace: origin.workspace,
@@ -104,7 +101,6 @@ async function createDocuments({
         ...docData,
         user: destination.user,
         commit: destination.commit,
-        evaluationsV2Enabled,
         createDemoEvaluation: true,
       }),
     ),
@@ -129,7 +125,6 @@ export async function forkDocument({
   origin,
   destination,
   defaultProviderName,
-  evaluationsV2Enabled,
 }: ForkProps) {
   const { commit, project } = await createProjectFromDocument({
     title,
@@ -171,7 +166,6 @@ export async function forkDocument({
         modelName: model,
       },
     },
-    evaluationsV2Enabled,
   }).then((r) => r.unwrap())
 
   return Result.ok({ project, commit, document: copiedDocument })
