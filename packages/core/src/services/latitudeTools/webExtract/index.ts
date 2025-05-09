@@ -84,6 +84,7 @@ export default {
         },
       },
       required: ['url'],
+      additionalProperties: false,
     },
   },
 } as LatitudeToolDefinition

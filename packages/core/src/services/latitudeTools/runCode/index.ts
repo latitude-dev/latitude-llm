@@ -94,6 +94,7 @@ export default {
         },
       },
       required: ['language', 'code'],
+      additionalProperties: false,
     },
   },
 } as LatitudeToolDefinition

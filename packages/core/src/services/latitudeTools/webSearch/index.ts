@@ -69,6 +69,7 @@ export default {
         },
       },
       required: ['query'],
+      additionalProperties: false,
     },
   },
 } as LatitudeToolDefinition
