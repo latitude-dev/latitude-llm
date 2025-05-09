@@ -1,4 +1,3 @@
-import './tracer'
 import './utils/sentry'
 
 import express from 'express'
