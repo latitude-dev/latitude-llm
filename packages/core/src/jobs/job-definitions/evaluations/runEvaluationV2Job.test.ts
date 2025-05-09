@@ -215,7 +215,7 @@ describe('runEvaluationV2Job', () => {
       await runEvaluationV2Job(jobData)
 
       expect(incrementFailedSpy).toHaveBeenCalledTimes(1)
-      expect(incrementCompletedSpy).not.toHaveBeenCalled()
+      expect(incrementCompletedSpy).toHaveBeenCalledTimes(1) // 1 for batchId
       expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
       expect(incrementErrorsSpy).not.toHaveBeenCalled()
     })
@@ -234,7 +234,7 @@ describe('runEvaluationV2Job', () => {
 
       await runEvaluationV2Job(jobData)
 
-      expect(incrementErrorsSpy).toHaveBeenCalledTimes(1)
+      expect(incrementErrorsSpy).toHaveBeenCalledTimes(2) // 1 for batchId and 1 for experiment
       expect(incrementFailedSpy).not.toHaveBeenCalled()
       expect(incrementCompletedSpy).not.toHaveBeenCalled()
       expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
