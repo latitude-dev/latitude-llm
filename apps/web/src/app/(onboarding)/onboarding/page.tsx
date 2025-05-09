@@ -7,10 +7,11 @@ import { findOnboardingDocument } from '@latitude-data/core/services/documents/f
 import { findOnboardingDataset } from '@latitude-data/core/services/datasets/findOnboardingDataset'
 
 export default async function OnboardingRedirect() {
-  const isCompleted = await isOnboardingCompleted()
-  if (isCompleted) {
-    redirect('/dashboard')
-  }
+  // FIXME: Uncomment this when onboarding is ready
+  // const isCompleted = await isOnboardingCompleted()
+  // if (isCompleted) {
+  //   redirect('/dashboard')
+  // }
 
   const { workspace } = await getCurrentUser()
   if (!workspace?.id) {

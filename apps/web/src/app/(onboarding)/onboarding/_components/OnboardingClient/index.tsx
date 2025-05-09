@@ -1,9 +1,6 @@
 'use client'
 
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import Link from 'next/link'
-import { LATITUDE_DOCS_URL } from '@latitude-data/core/browser'
-import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
 import {
   DocumentVersion,
   Project,
@@ -14,16 +11,16 @@ import { useCallback, useState } from 'react'
 import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { ParameterTable } from './ParameterTable'
+import { ParameterTable } from '../ParameterTable'
 import { cn } from '@latitude-data/web-ui/utils'
 import { runDocumentInBatchAction } from '$/actions/documents/runDocumentInBatchAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
+import { useRunOnboardingPrompt } from '$/app/(onboarding)/onboarding/_components/OnboardingClient/useRunPrompt'
+import { OnboardingPromptStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient/PromptStep'
 
 type OnboardingStep1ContentProps = {
   workspaceName: string
@@ -33,8 +30,7 @@ type OnboardingStep1ContentProps = {
   dataset: Dataset
 }
 
-// Enum for steps
-enum OnboardingStep {
+export enum OnboardingStep {
   ShowPrompt = 1,
   ShowResultsAndExperiment = 2,
 }
@@ -46,12 +42,24 @@ export function OnboardingClient({
   commit,
   dataset,
 }: OnboardingStep1ContentProps) {
-  const { createStreamHandler, hasActiveStream } = useStreamHandler()
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(
     OnboardingStep.ShowPrompt,
   )
   const navigate = useNavigate()
   const { toast } = useToast()
+  const {
+    start,
+    streamingResponse,
+    streamingReasoning,
+    messages,
+    chainLength,
+    activeStream,
+  } = useRunOnboardingPrompt({
+    project,
+    commit,
+    document,
+    setCurrentStep,
+  })
 
   const { execute: completeOnboarding } = useLatitudeAction(
     completeOnboardingAction,
@@ -102,58 +110,6 @@ export function OnboardingClient({
     })
   }, [document, dataset, project, commit, run])
 
-  const runDocument = useCallback(async () => {
-    try {
-      const response = await fetch(
-        ROUTES.api.documents.detail(document.documentUuid).run,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            path: document.path,
-            parameters: {
-              product_name: 'Smart Home Assistant',
-              features:
-                'Voice control, Smart home integration, AI-powered recommendations',
-              target_audience: 'Tech-savvy homeowners',
-              tone: 'Professional but friendly',
-              word_count: 150,
-            },
-            commitUuid: commit.uuid,
-            projectId: project.id,
-            stream: true,
-          }),
-        },
-      )
-
-      return createStreamHandler(response)
-    } catch (error) {
-      console.error('Error running prompt:', error)
-      // Consider user-facing error handling here
-      throw error
-    }
-  }, [document, createStreamHandler, project.id, commit.uuid])
-
-  const {
-    start,
-    streamingResponse,
-    streamingReasoning,
-    messages,
-    chainLength,
-  } = usePlaygroundChat({
-    runPromptFn: () => {
-      return runDocument()
-    },
-    onPromptRan: () => {
-      setTimeout(() => {
-        setCurrentStep(OnboardingStep.ShowResultsAndExperiment)
-      }, 2000)
-    },
-  })
-
   // Sample parameter values for the table
   const sampleParameters = [
     {
@@ -182,7 +138,6 @@ export function OnboardingClient({
 
   return (
     <div className='space-y-16'>
-      {/* Top Welcome Section (Always Visible) - Adjusted spacing */}
       <div className='space-y-2'>
         <Text.H2B centered display='block'>
           Welcome to Latitude!
@@ -192,89 +147,19 @@ export function OnboardingClient({
         </Text.H5>
       </div>
 
-      {/* Stepped Content */}
       <div className='space-y-6'>
         {/* Container for Step Content with Transitions */}
         <div className='relative min-h-[450px]'>
-          {/* Step 1: Show Prompt Editor, Explanation, and Run Button */}
-          <div
-            className={cn(
-              'absolute inset-x-0 top-0 flex flex-col gap-4 transition-opacity duration-500 ease-in-out',
-              {
-                'opacity-100':
-                  currentStep === OnboardingStep.ShowPrompt &&
-                  !hasActiveStream(),
-                'opacity-0 pointer-events-none invisible':
-                  currentStep !== OnboardingStep.ShowPrompt ||
-                  hasActiveStream(),
-              },
-            )}
-          >
-            {/* Prompt Section (Moved inside Step 1) */}
-            <div className='space-y-2'>
-              <Text.H4B centered display='block'>
-                This is a prompt in Latitude
-              </Text.H4B>
-              <Text.H6 centered display='block' color='foregroundMuted'>
-                It uses{' '}
-                <Link
-                  className='underline'
-                  href={`${LATITUDE_DOCS_URL}/guides/prompt-manager/overview`}
-                >
-                  PromptL
-                </Link>
-                , our custom template syntax that gives superpowers to your
-                prompts. Notice the configuration frontmatter and the parameter
-                interpolations.
-              </Text.H6>
-            </div>
-            <div className='h-[340px]'>
-              <DocumentTextEditor
-                readOnlyMessage=' ' //
-                value={document.content}
-                path={document.path}
-                isSaved={true}
-                actionButtons={[]}
-              />
-            </div>
-
-            {/* Run Button Section */}
-            <div className='flex flex-col gap-2 justify-center pt-4'>
-              <Button
-                fancy
-                onClick={start} // Directly call start
-                disabled={hasActiveStream()}
-              >
-                Run prompt
-              </Button>
-              <Text.H6 color='foregroundMuted' centered>
-                We'll use mock values for the parameters this time
-              </Text.H6>
-            </div>
-          </div>
-
-          {/* Intermediate Step: Show Streaming Content */}
-          <div
-            className={cn(
-              'absolute inset-x-0 top-0 flex flex-col gap-3 transition-opacity duration-500 ease-in-out',
-              {
-                'opacity-100':
-                  currentStep === OnboardingStep.ShowPrompt &&
-                  hasActiveStream(),
-                'opacity-0 pointer-events-none invisible':
-                  currentStep !== OnboardingStep.ShowPrompt ||
-                  !hasActiveStream(),
-              },
-            )}
-          >
-            <MessageList messages={messages} />
-            <StreamMessage
-              responseStream={streamingResponse}
-              reasoningStream={streamingReasoning}
-              messages={messages}
-              chainLength={chainLength}
-            />
-          </div>
+          <OnboardingPromptStep
+            document={document}
+            start={start}
+            activeStream={activeStream}
+            currentStep={currentStep}
+            messages={messages}
+            streamingResponse={streamingResponse}
+            streamingReasoning={streamingReasoning}
+            chainLength={chainLength}
+          />
 
           {/* Step 2: Show Results and Experiment Button */}
           <div

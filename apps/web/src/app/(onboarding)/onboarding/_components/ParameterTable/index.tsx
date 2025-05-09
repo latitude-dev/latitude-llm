@@ -10,11 +10,7 @@ type ParameterValue = {
   word_count: number
 }
 
-type ParameterTableProps = {
-  values: ParameterValue[]
-}
-
-export function ParameterTable({ values }: ParameterTableProps) {
+export function ParameterTable({ values }: { values: ParameterValue[] }) {
   return (
     <div className='relative overflow-hidden rounded-t-lg'>
       {/* Inverted white gradient overlay - from transparent to white */}
