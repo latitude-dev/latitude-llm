@@ -17,14 +17,6 @@ const createAutoClosingTagsHandler = (
     const selection = editor.getSelection()
     if (!model || !selection) return
 
-    // position where we want the cursor to be after the closing tag is inserted
-    const nextCursorPosition = new monaco.Selection(
-      selection.selectionStartLineNumber,
-      selection.selectionStartColumn + 1,
-      selection.endLineNumber,
-      selection.endColumn + 1,
-    )
-
     const contentBeforeChange = model.getValueInRange({
       startLineNumber: selection.selectionStartLineNumber,
       startColumn: 1,
@@ -35,18 +27,26 @@ const createAutoClosingTagsHandler = (
     const match = contentBeforeChange.match(/<([\w-]+)([^>/]*)$/)
     if (!match) return
 
+    event.preventDefault()
+    event.stopPropagation()
+
     const [, tag] = match
 
     const edit = {
-      range: nextCursorPosition,
-      text: `</${tag}>`,
+      range: selection,
+      text: `></${tag}>`,
       forceMoveMarkers: true,
     }
 
-    // wait for next tick to avoid adding the closing tag before the '>' key is inserted
-    setTimeout(() => {
-      editor.executeEdits('auto-close-tag', [edit], [nextCursorPosition])
-    }, 0)
+    // position where we want the cursor to be after the closing tag is inserted
+    const nextCursorPosition = new monaco.Selection(
+      selection.selectionStartLineNumber,
+      selection.selectionStartColumn + 1,
+      selection.endLineNumber,
+      selection.endColumn + 1,
+    )
+
+    editor.executeEdits('auto-close-tag', [edit], [nextCursorPosition])
   })
 }
 
