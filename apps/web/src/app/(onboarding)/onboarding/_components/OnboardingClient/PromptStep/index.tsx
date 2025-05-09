@@ -30,14 +30,8 @@ export function OnboardingPromptStep({
   chainLength: number
 }) {
   const promptStep = currentStep === OnboardingStep.ShowPrompt
-
-  // Prompt section
   const showPrompt = promptStep && !activeStream
-  const hidePrompt = !promptStep || activeStream
-
-  // Messages section
   const showMessages = promptStep && activeStream
-  const hideMessages = !promptStep || !activeStream
   return (
     <>
       <div
@@ -45,11 +39,10 @@ export function OnboardingPromptStep({
           'absolute inset-x-0 top-0 flex flex-col gap-4 transition-opacity duration-500 ease-in-out',
           {
             'opacity-100': showPrompt,
-            'opacity-0 pointer-events-none invisible': hidePrompt,
+            'opacity-0 pointer-events-none invisible': !showPrompt,
           },
         )}
       >
-        {/* Prompt Section (Moved inside Step 1) */}
         <div className='space-y-2'>
           <Text.H4B centered display='block'>
             This is a prompt in Latitude
@@ -77,13 +70,8 @@ export function OnboardingPromptStep({
           />
         </div>
 
-        {/* Run Button Section */}
         <div className='flex flex-col gap-2 justify-center pt-4'>
-          <Button
-            fancy
-            onClick={start} // Directly call start
-            disabled={activeStream} // Disable if stream is active
-          >
+          <Button fancy onClick={start} disabled={activeStream}>
             Run prompt
           </Button>
           <Text.H6 color='foregroundMuted' centered>
@@ -92,13 +80,12 @@ export function OnboardingPromptStep({
         </div>
       </div>
 
-      {/* Show Streaming Content */}
       <div
         className={cn(
           'absolute inset-x-0 top-0 flex flex-col gap-3 transition-opacity duration-500 ease-in-out',
           {
             'opacity-100': showMessages,
-            'opacity-0 pointer-events-none invisible': hideMessages,
+            'opacity-0 pointer-events-none invisible': !showMessages,
           },
         )}
       >

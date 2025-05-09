@@ -1,12 +1,13 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { cn } from '@latitude-data/web-ui/utils'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient'
 import { Message } from '@latitude-data/compiler'
 import { ParameterTable } from './ParameterTable'
-import { ExperimentVariants, type Variant } from './ExperimentVariants'
+import { ExperimentVariants } from './ExperimentVariants'
 import {
   DocumentVersion,
   Project,
@@ -16,6 +17,8 @@ import {
 import { useExperiments } from '$/stores/experiments'
 import { OnboardingDocumentParameterKeys } from '@latitude-data/constants/onboarding'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { ExperimentVariant } from '$/actions/experiments'
+import { envClient } from '$/envClient'
 
 const PARAMETERS_MAP: Record<OnboardingDocumentParameterKeys, number> = {
   product_name: 0,
@@ -25,6 +28,12 @@ const PARAMETERS_MAP: Record<OnboardingDocumentParameterKeys, number> = {
   word_count: 4,
 }
 
+const TEMPERATURE = 1
+
+export type Variants = {
+  first: ExperimentVariant
+  second: ExperimentVariant
+}
 export function ExperimentStep({
   project,
   commit,
@@ -79,25 +88,41 @@ export function ExperimentStep({
     return [evaluation.uuid]
   }, [evaluations])
 
-  const onRunExperiment = useCallback(
-    async ({ variants }: { variants: Variant[] }) => {
-      create({
-        fromRow: 1,
-        variants,
-        projectId: project.id,
-        commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
-        datasetId: dataset.id,
-        parametersMap: PARAMETERS_MAP,
-        datasetLabels: {},
-        evaluationUuids,
-      })
+  const [variants, setVariants] = useState<Variants>({
+    first: {
+      name: '#Experiment 1',
+      provider: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
+      model: 'gpt-4o-mini',
+      temperature: TEMPERATURE,
     },
-    [create, commit, document, project.id, dataset.id, evaluationUuids],
-  )
-
-  // Get the dataset
-
+    second: {
+      name: '#Experiment 2',
+      provider: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
+      model: 'gpt-4.1-mini',
+      temperature: TEMPERATURE,
+    },
+  })
+  const onRunExperiment = useCallback(async () => {
+    create({
+      fromRow: 1,
+      variants: [variants.first, variants.second],
+      projectId: project.id,
+      commitUuid: commit.uuid,
+      documentUuid: document.documentUuid,
+      datasetId: dataset.id,
+      parametersMap: PARAMETERS_MAP,
+      datasetLabels: {},
+      evaluationUuids,
+    })
+  }, [
+    create,
+    commit,
+    document,
+    project.id,
+    dataset.id,
+    evaluationUuids,
+    variants,
+  ])
   return (
     <div
       className={cn(
@@ -138,11 +163,17 @@ export function ExperimentStep({
           </Text.H6>
         </div>
         <ParameterTable />
-        <div className='flex flex-col gap-2 justify-center'>
+        <div className='flex flex-col gap-y-2 justify-center'>
+          <div className='flex flex-col gap-y-4'>
           <ExperimentVariants
-            onRunExperiment={onRunExperiment}
-            isRunning={isCreating}
+            firstVariant={variants.first}
+            secondVariant={variants.second}
+            setVariants={setVariants}
           />
+          <Button fancy onClick={onRunExperiment} disabled={isCreating}>
+            Run experiment
+          </Button>
+          </div>
           <Text.H6 color='foregroundMuted' centered>
             Experiments test your prompt against several inputs at once.
           </Text.H6>

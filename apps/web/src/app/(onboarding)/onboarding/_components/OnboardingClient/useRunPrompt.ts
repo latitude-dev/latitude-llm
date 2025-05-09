@@ -1,13 +1,20 @@
 import { useMemo, useCallback } from 'react'
 import { DocumentVersion, Project, Commit } from '@latitude-data/core/browser'
+import { OnboardingParameters } from '@latitude-data/constants/onboarding'
 import { ROUTES } from '$/services/routes'
 import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient'
-import { DOCUMENT_PARAMETERS } from './constants'
 
 const SECONDS_BEFORE_HIDING_PROMPT_IN_SECONDS = 2000
+export const DOCUMENT_PARAMETERS: OnboardingParameters = {
+  product_name: 'Smart Home Assistant',
+  features: 'Voice control, Smart home integration, AI-powered recommendations',
+  target_audience: 'Tech-savvy homeowners',
+  tone: 'Professional but friendly',
+  word_count: 150,
+}
 
 export function useRunOnboardingPrompt({
   project,
@@ -28,9 +35,7 @@ export function useRunOnboardingPrompt({
         {
           method: 'POST',
           credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             path: document.path,
             parameters: DOCUMENT_PARAMETERS,

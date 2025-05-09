@@ -1,44 +1,82 @@
+import { ChangeEvent, useCallback } from 'react'
 import { ExperimentVariantWrapper } from '$/components/ExperimentVariantWrapper'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { useCallback, useState } from 'react'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { type ExperimentVariant } from '$/actions/experiments'
+import { type Variants } from '../index'
+import useModelOptions from '$/hooks/useModelOptions'
+import { Providers } from '@latitude-data/constants'
+import { envClient } from '$/envClient'
 
-export type Variant = { name: string; model: string }
-
-function ExperimentVariant({
+function VariantItem({
+  position,
   variant,
+  setVariants,
 }: {
-  variant: Variant
-  setVariants: ReactStateDispatch<Variant[]>
+  position: 'first' | 'second'
+  variant: ExperimentVariant
+  setVariants: ReactStateDispatch<Variants>
 }) {
-  return <ExperimentVariantWrapper>{variant.name}</ExperimentVariantWrapper>
+  const setValue = useCallback(
+    (attribute: 'model' | 'name') => (event: ChangeEvent<HTMLInputElement>) => {
+      setVariants((prev) => {
+        prev[position][attribute] = event.target.value
+        return { ...prev }
+      })
+    },
+    [setVariants, position],
+  )
+  const setName = useCallback(() => setValue('name'), [setValue])
+  const setModel = useCallback(() => setValue('model'), [setValue])
+  const modelOptions = useModelOptions({
+    provider: Providers.OpenAI,
+    name: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
+  })
+
+  return (
+    <ExperimentVariantWrapper expand>
+      <Input
+        label='Experiment Name'
+        type='text'
+        value={variant.name}
+        onChange={setName}
+        placeholder='Describe this variant'
+      />
+      <Select
+        value={variant.model}
+        name='model'
+        label='Model'
+        placeholder='Select a model'
+        options={modelOptions}
+        onChange={setModel}
+        required
+      />
+    </ExperimentVariantWrapper>
+  )
 }
 
 export function ExperimentVariants({
-  isRunning,
-  onRunExperiment,
+  firstVariant,
+  secondVariant,
+  setVariants,
 }: {
-  isRunning: boolean
-  onRunExperiment: (args: { variants: Variant[] }) => Promise<void>
+  firstVariant: ExperimentVariant
+  secondVariant: ExperimentVariant
+  setVariants: ReactStateDispatch<Variants>
 }) {
-  const [variants, setVariants] = useState<Variant[]>([])
-  const onClick = useCallback(() => {
-    onRunExperiment({ variants })
-  }, [variants, onRunExperiment])
   return (
-    <div className='flex flex-row gap-y-2'>
-      <div className='flex flex-col gap-2'>
-        {variants.map((variant, index) => (
-          <ExperimentVariant
-            key={index}
-            variant={variant}
-            setVariants={setVariants}
-          />
-        ))}
-      </div>
-      <Button fancy onClick={onClick} disabled={isRunning}>
-        Run experiment
-      </Button>
+    <div className='w-full flex flex-row gap-2'>
+      <VariantItem
+        position='first'
+        variant={firstVariant}
+        setVariants={setVariants}
+      />
+      <VariantItem
+        position='second'
+        variant={secondVariant}
+        setVariants={setVariants}
+      />
     </div>
   )
 }

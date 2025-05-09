@@ -9,18 +9,20 @@ import {
 } from '@latitude-data/core/repositories'
 import { z } from 'zod'
 
+const variantSchema = z.object({
+  name: z.string(),
+  provider: z.string(),
+  model: z.string(),
+  temperature: z.number(),
+})
+
+export type ExperimentVariant = z.infer<typeof variantSchema>
+
 export const createExperimentAction = withDocument
   .createServerAction()
   .input(
     z.object({
-      variants: z.array(
-        z.object({
-          name: z.string(),
-          provider: z.string(),
-          model: z.string(),
-          temperature: z.number(),
-        }),
-      ),
+      variants: z.array(variantSchema),
       evaluationUuids: z.array(z.string()),
       datasetId: z.number().optional(),
       parametersMap: z.record(z.string(), z.number()),
