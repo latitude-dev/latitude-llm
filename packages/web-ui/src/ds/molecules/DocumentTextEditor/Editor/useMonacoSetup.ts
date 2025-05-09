@@ -52,7 +52,7 @@ export function useMonacoSetup({
       comments: {
         blockComment: ['/*', '*/'],
       },
-      autoClosingPairs: [{ open: '{{ ', close: ' }}' }],
+      autoClosingPairs: [{ open: '{{', close: '}}' }],
     })
     applyTheme(monaco)
 
