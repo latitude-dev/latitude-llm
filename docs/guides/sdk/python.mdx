@@ -125,6 +125,13 @@ print('Conversation UUID:', result.uuid)
 print('Conversation messages:', result.conversation)
 ```
 
+<Note>
+  If your prompt is an agent, an `agent_response` property will be defined in the
+  result. The structure of the response will depend on the agent's
+  configuration, although by default it will be: `{ "response": "Your
+  agent's response" }`.
+</Note>
+
 ### Handling Streaming Responses
 
 For real-time applications (like chatbots), use streaming to get response chunks as they are generated:

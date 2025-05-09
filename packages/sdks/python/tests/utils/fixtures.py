@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import Any, cast
+from typing import Any
 from unittest import mock
 
 from promptl_ai import (
@@ -15,6 +15,7 @@ from promptl_ai import (
 )
 
 from latitude_sdk import (
+    AGENT_END_TOOL_NAME,
     ApiError,
     ApiErrorCodes,
     ChainError,
@@ -513,6 +514,19 @@ event: provider-event
 data: {
         json.dumps(
             {
+                "type": "tool-call",
+                "toolCallId": "toolu_K12398312kjadbsadZ77JAS4",
+                "toolName": AGENT_END_TOOL_NAME,
+                "args": {"response": "I used the calculator!"},
+            },
+        )
+    }
+""".strip(),
+    f"""
+event: provider-event
+data: {
+        json.dumps(
+            {
                 "type": "step-finish",
                 "finishReason": "tool-calls",
                 "isContinued": False,
@@ -567,6 +581,11 @@ data: {
                             "name": "calculator",
                             "arguments": {"expression": "9.9 less than 9.11"},
                         },
+                        {
+                            "id": "toolu_K12398312kjadbsadZ77JAS4",
+                            "name": AGENT_END_TOOL_NAME,
+                            "arguments": {"response": "I used the calculator!"},
+                        },
                     ],
                     "usage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
                 },
@@ -608,6 +627,11 @@ data: {
                                 "toolName": "calculator",
                                 "args": {"expression": "9.9 less than 9.11"},
                             },
+                            {
+                                "toolCallId": "toolu_K12398312kjadbsadZ77JAS4",
+                                "toolName": AGENT_END_TOOL_NAME,
+                                "args": {"response": "I used the calculator!"},
+                            },
                         ],
                     },
                 ],
@@ -646,6 +670,11 @@ data: {
                         "id": "toolu_B0398l23AOdTDshkg1UuQhZ3",
                         "name": "calculator",
                         "arguments": {"expression": "9.9 less than 9.11"},
+                    },
+                    {
+                        "id": "toolu_K12398312kjadbsadZ77JAS4",
+                        "name": AGENT_END_TOOL_NAME,
+                        "arguments": {"response": "I used the calculator!"},
                     },
                 ],
             },
@@ -697,6 +726,11 @@ data: {
                                 "toolCallId": "toolu_B0398l23AOdTDshkg1UuQhZ3",
                                 "toolName": "calculator",
                                 "args": {"expression": "9.9 less than 9.11"},
+                            },
+                            {
+                                "toolCallId": "toolu_K12398312kjadbsadZ77JAS4",
+                                "toolName": AGENT_END_TOOL_NAME,
+                                "args": {"response": "I used the calculator!"},
                             },
                         ],
                     },
@@ -751,6 +785,11 @@ data: {
                                 "toolCallId": "toolu_B0398l23AOdTDshkg1UuQhZ3",
                                 "toolName": "calculator",
                                 "args": {"expression": "9.9 less than 9.11"},
+                            },
+                            {
+                                "toolCallId": "toolu_K12398312kjadbsadZ77JAS4",
+                                "toolName": AGENT_END_TOOL_NAME,
+                                "args": {"response": "I used the calculator!"},
                             },
                         ],
                     },
@@ -906,6 +945,13 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
     },
     {
         "event": StreamEvents.Provider,
+        "type": "tool-call",
+        "toolCallId": "toolu_K12398312kjadbsadZ77JAS4",
+        "toolName": AGENT_END_TOOL_NAME,
+        "args": {"response": "I used the calculator!"},
+    },
+    {
+        "event": StreamEvents.Provider,
         "type": "step-finish",
         "finishReason": "tool-calls",
         "isContinued": False,
@@ -941,6 +987,11 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
                     name="calculator",
                     arguments={"expression": "9.9 less than 9.11"},
                 ),
+                ToolCall(
+                    id="toolu_K12398312kjadbsadZ77JAS4",
+                    name=AGENT_END_TOOL_NAME,
+                    arguments={"response": "I used the calculator!"},
+                ),
             ],
             usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
         ),
@@ -963,6 +1014,11 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
                         name="calculator",
                         arguments={"expression": "9.9 less than 9.11"},
                     ),
+                    ToolCallContent(
+                        id="toolu_K12398312kjadbsadZ77JAS4",
+                        name=AGENT_END_TOOL_NAME,
+                        arguments={"response": "I used the calculator!"},
+                    ),
                 ]
             ),
         ],
@@ -980,6 +1036,11 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
             ToolCall(id="toolu_01ARatRfRidTDshkg1UuQhW2", name="calculator", arguments={"expression": "9.9 > 9.11"}),
             ToolCall(
                 id="toolu_B0398l23AOdTDshkg1UuQhZ3", name="calculator", arguments={"expression": "9.9 less than 9.11"}
+            ),
+            ToolCall(
+                id="toolu_K12398312kjadbsadZ77JAS4",
+                name=AGENT_END_TOOL_NAME,
+                arguments={"response": "I used the calculator!"},
             ),
         ],
     ),
@@ -1005,6 +1066,11 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
                         id="toolu_B0398l23AOdTDshkg1UuQhZ3",
                         name="calculator",
                         arguments={"expression": "9.9 less than 9.11"},
+                    ),
+                    ToolCallContent(
+                        id="toolu_K12398312kjadbsadZ77JAS4",
+                        name=AGENT_END_TOOL_NAME,
+                        arguments={"response": "I used the calculator!"},
                     ),
                 ]
             ),
@@ -1032,6 +1098,11 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
                         id="toolu_B0398l23AOdTDshkg1UuQhZ3",
                         name="calculator",
                         arguments={"expression": "9.9 less than 9.11"},
+                    ),
+                    ToolCallContent(
+                        id="toolu_K12398312kjadbsadZ77JAS4",
+                        name=AGENT_END_TOOL_NAME,
+                        arguments={"response": "I used the calculator!"},
                     ),
                 ]
             ),
@@ -1126,6 +1197,12 @@ CONVERSATION_FINISHED_RESULT_RESPONSE: dict[str, Any] = {
                     "toolName": "calculator",
                     "args": {"expression": "9.9 less than 9.11"},
                 },
+                {
+                    "type": "tool-call",
+                    "toolCallId": "toolu_K12398312kjadbsadZ77JAS4",
+                    "toolName": AGENT_END_TOOL_NAME,
+                    "args": {"response": "I used the calculator!"},
+                },
             ],
             "toolCalls": [
                 {
@@ -1137,6 +1214,11 @@ CONVERSATION_FINISHED_RESULT_RESPONSE: dict[str, Any] = {
                     "id": "toolu_B0398l23AOdTDshkg1UuQhZ3",
                     "name": "calculator",
                     "arguments": {"expression": "9.9 less than 9.11"},
+                },
+                {
+                    "id": "toolu_K12398312kjadbsadZ77JAS4",
+                    "name": AGENT_END_TOOL_NAME,
+                    "arguments": {"response": "I used the calculator!"},
                 },
             ],
         },
@@ -1155,9 +1237,15 @@ CONVERSATION_FINISHED_RESULT_RESPONSE: dict[str, Any] = {
                 "name": "calculator",
                 "arguments": {"expression": "9.9 less than 9.11"},
             },
+            {
+                "id": "toolu_K12398312kjadbsadZ77JAS4",
+                "name": AGENT_END_TOOL_NAME,
+                "arguments": {"response": "I used the calculator!"},
+            },
         ],
         "usage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
     },
+    "agent_response": {"response": "I used the calculator!"},
 }
 
 CONVERSATION_FINISHED_RESULT = FinishedResult(
@@ -1183,6 +1271,11 @@ CONVERSATION_FINISHED_RESULT = FinishedResult(
                     name="calculator",
                     arguments={"expression": "9.9 less than 9.11"},
                 ),
+                ToolCallContent(
+                    id="toolu_K12398312kjadbsadZ77JAS4",
+                    name=AGENT_END_TOOL_NAME,
+                    arguments={"response": "I used the calculator!"},
+                ),
             ]
         ),
     ],
@@ -1199,6 +1292,11 @@ CONVERSATION_FINISHED_RESULT = FinishedResult(
                 name="calculator",
                 arguments={"expression": "9.9 less than 9.11"},
             ),
+            ToolCall(
+                id="toolu_K12398312kjadbsadZ77JAS4",
+                name=AGENT_END_TOOL_NAME,
+                arguments={"response": "I used the calculator!"},
+            ),
         ],
         usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
     ),
@@ -1214,11 +1312,10 @@ CONVERSATION_FINISHED_RESULT = FinishedResult(
             arguments={"expression": "9.9 less than 9.11"},
         ),
     ],
+    agent_response={"response": "I used the calculator!"},
 )
 
-CONVERSATION_TOOL_CALLS_MESSAGE = CONVERSATION_FINISHED_RESULT.conversation[-1]
-
-CONVERSATION_TOOL_CALLS = cast(ChainTextResponse, CONVERSATION_FINISHED_RESULT.response).tool_calls
+CONVERSATION_TOOL_CALLS = CONVERSATION_FINISHED_RESULT.tool_requests
 
 CONVERSATION_TOOL_RESULTS = [
     ToolResult(
