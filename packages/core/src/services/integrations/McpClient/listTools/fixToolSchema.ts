@@ -9,6 +9,9 @@ export function fixToolSchema(schema: JSONSchema7): JSONSchema7 {
     } else {
       schema.properties = {}
     }
+    if (!schema.additionalProperties) {
+      schema.additionalProperties = false
+    }
   }
 
   if (schema.type === 'array') {

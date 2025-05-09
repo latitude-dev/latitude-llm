@@ -6,5 +6,6 @@ export type McpTool = {
   inputSchema: {
     type: 'object'
     properties: Record<string, JSONSchema7>
+    additionalProperties: boolean
   }
 }

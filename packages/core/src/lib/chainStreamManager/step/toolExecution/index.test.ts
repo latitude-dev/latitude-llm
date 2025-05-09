@@ -169,6 +169,7 @@ describe('getBuiltInToolCallResponses', () => {
             },
           },
           required: ['location'],
+          additionalProperties: false,
         },
       },
     }
@@ -396,6 +397,7 @@ describe('getBuiltInToolCallResponses', () => {
               },
             },
             required: ['input'],
+            additionalProperties: false,
           },
         },
         sourceData: {
