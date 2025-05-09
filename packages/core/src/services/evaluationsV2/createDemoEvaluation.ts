@@ -33,12 +33,13 @@ export async function createDemoEvaluation(
     provider,
     defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
   })
+
   if (!model) return Result.nil()
 
   return await createEvaluationV2(
     {
-      document: document,
-      commit: commit,
+      document,
+      commit,
       settings: {
         name: `Accuracy`,
         description: `Evaluates how well the given instructions are followed.`,
