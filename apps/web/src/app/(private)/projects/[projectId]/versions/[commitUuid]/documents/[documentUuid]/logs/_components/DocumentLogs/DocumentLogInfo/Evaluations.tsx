@@ -3,8 +3,13 @@ import {
   evaluationResultTypes,
 } from '$/app/(private)/evaluations/_components/ActiveEvaluations/Table'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
+import {
+  EVALUATION_SPECIFICATIONS,
+  getEvaluationMetricSpecification,
+} from '$/components/evaluations'
 import ResultBadge from '$/components/evaluations/ResultBadge'
+import { MetadataItem } from '$/components/MetadataItem'
+import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
 import { EvaluationRoutes, ROUTES } from '$/services/routes'
 import {
   Commit,
@@ -18,7 +23,9 @@ import {
   ResultWithEvaluationTmp,
   ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   ICommitContextType,
@@ -28,9 +35,6 @@ import {
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 import { ResultCellContent } from '../../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
-import { MetadataItem } from '$/components/MetadataItem'
-import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 
 type Props<
   T extends EvaluationType = EvaluationType,
@@ -212,9 +216,18 @@ export function DocumentLogEvaluations({
           className='flex flex-col gap-2 pt-4 first:pt-0'
         >
           <span className='flex justify-between items-center gap-2 w-full'>
-            <Text.H4M noWrap ellipsis>
-              {item.evaluation.name}
-            </Text.H4M>
+            <span className='flex justify-center items-center gap-1.5'>
+              {item.version === 'v2' && (
+                <Icon
+                  name={getEvaluationMetricSpecification(item.evaluation).icon}
+                  color='foreground'
+                  className='flex-shrink-0'
+                />
+              )}
+              <Text.H4M noWrap ellipsis>
+                {item.evaluation.name}
+              </Text.H4M>
+            </span>
             <Link
               href={
                 item.version === 'v2'

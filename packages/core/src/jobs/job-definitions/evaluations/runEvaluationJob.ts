@@ -15,10 +15,10 @@ import {
 } from '../../../services/evaluationsV2/run'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import { WebsocketClient } from '../../../websockets/workers'
+import { captureException } from '../../../workers/sentry'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { updateExperimentStatus } from '../experiments/shared'
 import { NotFoundError } from './../../../lib/errors'
-import { captureException } from '../../../workers/sentry'
 
 export type RunEvaluationV2JobData = {
   workspaceId: number
@@ -124,17 +124,13 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
 
     if (experiment) {
       await updateExperimentStatus(
-        {
-          workspaceId,
-          experiment,
-        },
+        { workspaceId, experiment },
         async (progressTracker) => {
+          if (result.error) return await progressTracker.incrementErrors()
           if (result.hasPassed) {
             await progressTracker.incrementCompleted()
             await progressTracker.incrementTotalScore(result.normalizedScore)
-          } else {
-            await progressTracker.incrementFailed()
-          }
+          } else await progressTracker.incrementFailed()
         },
       ).then((r) => r.unwrap())
     }
@@ -172,11 +168,8 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
 
     if (experiment) {
       await updateExperimentStatus(
-        {
-          workspaceId,
-          experiment,
-        },
-        (progressTracker) => progressTracker.incrementErrors(),
+        { workspaceId, experiment },
+        async (progressTracker) => await progressTracker.incrementErrors(),
       )
     }
   }
