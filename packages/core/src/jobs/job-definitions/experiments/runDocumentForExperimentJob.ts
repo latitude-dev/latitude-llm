@@ -36,7 +36,7 @@ export const runDocumentForExperimentJob = async (
     .find(experimentId)
     .then((r) => r.unwrap())
 
-  // TODO(exps): Do not run evaluation if experiment is finished/cancelled/paused
+  if (experiment.finishedAt) return
 
   try {
     const result = await runDocumentAtCommitWithAutoToolResponses({

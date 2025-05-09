@@ -7,6 +7,7 @@ import * as runDocumentAtCommitWithAutoToolResponsesModule from '../documents/ru
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import * as shared from './shared'
+import { completeExperiment } from '../../../services/experiments/complete'
 
 describe('runDocumentForExperimentJob', () => {
   let user: User
@@ -90,5 +91,15 @@ describe('runDocumentForExperimentJob', () => {
     )
 
     expect(mocks.updateExperimentStatus).not.toHaveBeenCalled()
+  })
+
+  it('should not run the document if the experiment is finished', async () => {
+    await completeExperiment(mockExperiment).then((r) => r.unwrap())
+
+    await runDocumentForExperimentJob(mockJob)
+
+    expect(
+      mocks.runDocumentAtCommitWithAutoToolResponses,
+    ).not.toHaveBeenCalled()
   })
 })

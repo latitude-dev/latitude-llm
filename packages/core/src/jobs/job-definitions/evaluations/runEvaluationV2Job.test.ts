@@ -23,6 +23,7 @@ import {
   runEvaluationV2Job,
   type RunEvaluationV2JobData,
 } from './runEvaluationJob'
+import { completeExperiment } from '../../../services/experiments/complete'
 
 vi.mock('../../../redis', () => ({
   buildRedisConnection: vi.fn().mockResolvedValue({}),
@@ -245,6 +246,27 @@ describe('runEvaluationV2Job', () => {
           message: 'Rate limit exceeded',
         }),
       )
+    })
+
+    it('does not run evaluation if experiment is finished', async () => {
+      await completeExperiment(experiment).then((r) => r.unwrap())
+      runEvaluationV2Spy.mockResolvedValueOnce(
+        // @ts-expect-error - mock
+        Result.ok({
+          result: {
+            hasPassed: true,
+            normalizedScore: 1,
+            error: null,
+          },
+        }),
+      )
+      await runEvaluationV2Job(jobData)
+      expect(runEvaluationV2Spy).not.toHaveBeenCalled()
+      expect(incrementCompletedSpy).not.toHaveBeenCalled()
+      expect(incrementFailedSpy).not.toHaveBeenCalled()
+      expect(incrementErrorsSpy).not.toHaveBeenCalled()
+      expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
+      expect(mockEmit).not.toHaveBeenCalled()
     })
   })
 
