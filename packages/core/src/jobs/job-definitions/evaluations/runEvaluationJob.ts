@@ -44,7 +44,10 @@ export function runEvaluationV2JobKey({
   return `runEvaluationV2Job-${workspaceId}-${commitId}-${evaluationUuid}-${providerLogUuid}-${experimentUuid}-${datasetId}-${datasetLabel}-${datasetRowId}`
 }
 
-export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
+export const runEvaluationV2Job = async (
+  job: Job<RunEvaluationV2JobData>,
+  { captureException }: { captureException?: (error: Error) => void } = {},
+) => {
   const {
     workspaceId,
     commitId,
@@ -166,6 +169,8 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     }
   } catch (error) {
     if (isErrorRetryable(error as Error)) throw error
+
+    captureException?.(error as Error)
 
     if (experiment) {
       await updateExperimentStatus(

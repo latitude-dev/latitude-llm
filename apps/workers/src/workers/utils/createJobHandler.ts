@@ -17,7 +17,7 @@ export function createJobHandler<T extends Record<string, Function>>(
     }
 
     try {
-      return await jobFunction(job)
+      return await jobFunction(job, { captureException })
     } catch (error) {
       captureException(error as Error)
 
