@@ -116,7 +116,6 @@ export function ExperimentsPageContent({
           />
         </>
       )}
-
       <RunExperimentModal
         project={project as Project}
         commit={commit as Commit}

@@ -40,6 +40,7 @@ export async function validateEvaluationV2<
   }
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[settings.type]
+
   if (!typeSpecification) {
     return Result.error(new BadRequestError('Invalid type'))
   }
@@ -49,28 +50,38 @@ export async function validateEvaluationV2<
     return Result.error(new BadRequestError('Invalid metric'))
   }
 
-  typeSpecification.configuration.parse(settings.configuration)
+  const parseResult = typeSpecification.configuration.safeParse(
+    settings.configuration,
+  )
 
-  settings.configuration = await typeSpecification
-    .validate(
-      {
-        metric: settings.metric,
-        configuration: settings.configuration,
-        document: document,
-        commit: commit,
-        workspace: workspace,
-      },
-      db,
-    )
-    .then((r) => r.unwrap())
+  if (parseResult.error) {
+    return Result.error(parseResult.error)
+  }
+
+  const typeValidateResult = await typeSpecification.validate(
+    {
+      metric: settings.metric,
+      configuration: settings.configuration,
+      document: document,
+      commit: commit,
+      workspace: workspace,
+    },
+    db,
+  )
+  if (typeValidateResult.error) return typeValidateResult
+
+  settings.configuration = typeValidateResult.value
 
   const repository = new EvaluationsV2Repository(workspace.id, db)
-  const evaluations = await repository
-    .listAtCommitByDocument({
-      commitUuid: commit.uuid,
-      documentUuid: document.documentUuid,
-    })
-    .then((r) => r.unwrap())
+  const evaluationsResult = await repository.listAtCommitByDocument({
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+  })
+
+  if (evaluationsResult.error) return Result.error(evaluationsResult.error)
+
+  const evaluations = evaluationsResult.value
+
   if (
     evaluations.find(
       (e) => e.name === settings.name && e.uuid !== evaluation?.uuid,

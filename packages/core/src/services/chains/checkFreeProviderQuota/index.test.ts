@@ -93,7 +93,7 @@ describe('checkFreeProviderQuota', () => {
           new ChainError({
             code: RunErrorCodes.DefaultProviderInvalidModel,
             message:
-              "You're using o1-mini model. The default provider only supports these models: gpt-4o-mini, gpt-4o. Please use a different provider or model",
+              "You're using o1-mini model. The default provider only supports these models: gpt-4o-mini, gpt-4o, gpt-4.1, gpt-4.1-mini, gpt-4.1-nano. Please use a different provider or model",
           }),
         ),
       )

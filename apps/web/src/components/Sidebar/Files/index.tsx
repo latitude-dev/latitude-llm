@@ -12,10 +12,8 @@ import { TreeToolbar } from './TreeToolbar'
 import { useOpenPaths } from './useOpenPaths'
 import { useTempNodes } from './useTempNodes'
 import { Node, SidebarDocument, useTree } from './useTree'
-import {
-  UseEvaluationPathReturn,
-  useSelectedEvaluationUuid,
-} from '$/components/Sidebar/Files/useEvaluationPath'
+import { useParams } from 'next/navigation'
+import { type ParamValue } from 'next/dist/server/request/params'
 
 function NodeHeader({
   selected,
@@ -32,7 +30,7 @@ function NodeHeader({
   indentation: IndentType[]
   onToggleOpen: () => void
   canDrag: boolean
-  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
+  currentEvaluationUuid: ParamValue
 }) {
   const draggable = useDraggable({
     id: node.id,
@@ -79,7 +77,7 @@ export type FileNodeProps = {
   node: Node
   indentation?: IndentType[]
   onRenameFile: (args: { node: Node; path: string }) => Promise<void>
-  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
+  currentEvaluationUuid: ParamValue
 }
 
 const EMPTY_TMP_NODES: Node[] = []
@@ -237,7 +235,7 @@ export function FilesTree({
   currentUuid: string | undefined
   isDestroying: boolean
 }) {
-  const { currentEvaluationUuid } = useSelectedEvaluationUuid()
+  const { evaluationUuid: currentEvaluationUuid } = useParams()
   const isMount = useRef(false)
   const { togglePath, isOpenThisPath } = useOpenPaths((state) => ({
     isOpenThisPath: state.isOpen,

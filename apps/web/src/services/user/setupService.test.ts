@@ -94,9 +94,11 @@ describe('setupService', () => {
     expect(createdProviderApiKey?.authorId).toBe(user.id)
 
     // Check if onboarding evaluation was created
-    const createdEvaluation = await database.query.evaluations.findFirst({
-      where: dbUtils.eq(evaluations.workspaceId, workspace.id),
-    })
+    const createdEvaluation = await database.query.evaluationVersions.findFirst(
+      {
+        where: dbUtils.eq(evaluations.workspaceId, workspace.id),
+      },
+    )
     expect(createdEvaluation).toBeDefined()
   })
 
@@ -166,9 +168,11 @@ describe('setupService', () => {
     expect(importedDocuments[0]!.document_versions.content).toEqual(prompt)
 
     // Check if onboarding evaluation was created
-    const createdEvaluation = await database.query.evaluations.findFirst({
-      where: dbUtils.eq(evaluations.workspaceId, workspace.id),
-    })
+    const createdEvaluation = await database.query.evaluationVersions.findFirst(
+      {
+        where: dbUtils.eq(evaluations.workspaceId, workspace.id),
+      },
+    )
     expect(createdEvaluation).toBeDefined()
   })
 })

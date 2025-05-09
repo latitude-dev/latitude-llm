@@ -13,6 +13,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./errors": "./src/errors.ts",
+    "./onboarding": "./src/onboarding.ts",
     "./evaluations": "./src/evaluations/index.ts"
   },
   "devDependencies": {

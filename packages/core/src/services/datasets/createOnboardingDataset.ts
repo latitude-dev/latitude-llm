@@ -3,6 +3,7 @@ import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { nanoidHashAlgorithm } from './utils'
 import { Column, DatasetRowData, DatasetRowDataContent } from '../../schema'
+import { OnboardingParameters } from '@latitude-data/constants/onboarding'
 import { DATASET_COLUMN_ROLES } from '../../constants'
 import Transaction from '../../lib/Transaction'
 import { createDataset } from './create'
@@ -37,7 +38,7 @@ const ONBOARDING_DATASET_COLUMNS: Column[] = [
   },
 ]
 
-const ONBOARDING_DATASET_ROWS = [
+const ONBOARDING_DATASET_ROWS: OnboardingParameters[] = [
   {
     product_name: 'Smart Home Assistant',
     features:

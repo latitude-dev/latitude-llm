@@ -33,19 +33,22 @@ export function IdentifyUser({
 }) {
   const posthog = usePostHog()
 
+  const email = user?.email
   useEffect(() => {
+    if (!posthog || !email) return
+
     try {
-      if (user && !user.email.match(/@latitude\.so/)) {
-        posthog?.identify(user.email, {
-          email: user.email,
-        })
-        posthog?.group('workspace', String(workspace.id))
-        posthog?.startSessionRecording()
-      }
+      const isStaff = !!email.match(/@latitude\.so$/)
+
+      if (isStaff) return
+
+      posthog.identify(email, { email })
+      posthog.group('workspace', String(workspace.id))
+      posthog.startSessionRecording()
     } catch (_) {
       // do nothing, just to avoid crashing the app
     }
-  }, [posthog, user.id, user.email, workspace.id])
+  }, [posthog, email, workspace.id])
 
   return children
 }

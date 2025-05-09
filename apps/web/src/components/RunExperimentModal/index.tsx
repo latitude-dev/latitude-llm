@@ -1,5 +1,3 @@
-'use client'
-
 import { useExperiments } from '$/stores/experiments'
 import {
   Commit,
