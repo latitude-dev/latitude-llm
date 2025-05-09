@@ -15,6 +15,7 @@ import { Result } from '../../../lib/Result'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import * as evaluationsV2 from '../../../services/evaluationsV2/run'
+import { completeExperiment } from '../../../services/experiments/complete'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import * as factories from '../../../tests/factories'
 import * as websockets from '../../../websockets/workers'
@@ -23,7 +24,6 @@ import {
   runEvaluationV2Job,
   type RunEvaluationV2JobData,
 } from './runEvaluationJob'
-import { completeExperiment } from '../../../services/experiments/complete'
 
 vi.mock('../../../redis', () => ({
   buildRedisConnection: vi.fn().mockResolvedValue({}),
@@ -196,6 +196,8 @@ describe('runEvaluationV2Job', () => {
           version: 'v2',
         },
       })
+      expect(incrementFailedSpy).not.toHaveBeenCalled()
+      expect(incrementErrorsSpy).not.toHaveBeenCalled()
     })
 
     it('increments failed counter when evaluation fails', async () => {
@@ -213,10 +215,32 @@ describe('runEvaluationV2Job', () => {
       await runEvaluationV2Job(jobData)
 
       expect(incrementFailedSpy).toHaveBeenCalledTimes(1)
+      expect(incrementCompletedSpy).toHaveBeenCalledTimes(1) // 1 for batchId
       expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
+      expect(incrementErrorsSpy).not.toHaveBeenCalled()
     })
 
     it('increments error counter when evaluation errors', async () => {
+      runEvaluationV2Spy.mockResolvedValueOnce(
+        // @ts-expect-error - mock
+        Result.ok({
+          result: {
+            error: {
+              message: 'Evaluation error',
+            },
+          },
+        }),
+      )
+
+      await runEvaluationV2Job(jobData)
+
+      expect(incrementErrorsSpy).toHaveBeenCalledTimes(2) // 1 for batchId and 1 for experiment
+      expect(incrementFailedSpy).not.toHaveBeenCalled()
+      expect(incrementCompletedSpy).not.toHaveBeenCalled()
+      expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
+    })
+
+    it('increments error counter when evaluation throws', async () => {
       runEvaluationV2Spy.mockResolvedValueOnce(
         Result.error(
           new UnprocessableEntityError(
@@ -228,6 +252,9 @@ describe('runEvaluationV2Job', () => {
       await runEvaluationV2Job(jobData)
 
       expect(incrementErrorsSpy).toHaveBeenCalledTimes(1)
+      expect(incrementFailedSpy).not.toHaveBeenCalled()
+      expect(incrementCompletedSpy).not.toHaveBeenCalled()
+      expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
     })
 
     it('retries on rate limit error', async () => {
@@ -246,6 +273,11 @@ describe('runEvaluationV2Job', () => {
           message: 'Rate limit exceeded',
         }),
       )
+
+      expect(incrementCompletedSpy).not.toHaveBeenCalled()
+      expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
+      expect(incrementFailedSpy).not.toHaveBeenCalled()
+      expect(incrementErrorsSpy).not.toHaveBeenCalled()
     })
 
     it('does not run evaluation if experiment is finished', async () => {
@@ -330,6 +362,8 @@ describe('runEvaluationV2Job', () => {
       })
       expect(incrementCompletedSpy).not.toHaveBeenCalled()
       expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
+      expect(incrementFailedSpy).not.toHaveBeenCalled()
+      expect(incrementErrorsSpy).not.toHaveBeenCalled()
     })
   })
 

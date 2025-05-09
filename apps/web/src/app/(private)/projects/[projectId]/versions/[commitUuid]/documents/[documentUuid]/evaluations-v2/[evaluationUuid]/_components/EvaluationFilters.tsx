@@ -3,6 +3,7 @@ import { EvaluationResultsV2Search } from '@latitude-data/core/browser'
 import { DatePickerRange } from '@latitude-data/web-ui/atoms/DatePicker'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { endOfDay, startOfDay } from 'date-fns'
 import { isEqual } from 'lodash-es'
 import { ComponentProps, useMemo } from 'react'
@@ -25,21 +26,32 @@ export function EvaluationFilters({
 
   return (
     <div className='flex items-center gap-4'>
-      <div className='flex flex-row gap-2 items-center'>
-        <Text.H6M>Show experiments</Text.H6M>
-        <SwitchToggle
-          checked={search.filters?.experimentIds?.length !== 0}
-          onCheckedChange={(checked) =>
-            setSearch({
-              ...search,
-              filters: {
-                ...(search.filters ?? {}),
-                experimentIds: checked ? undefined : [],
-              },
-            })
-          }
-        />
-      </div>
+      <Tooltip
+        asChild
+        trigger={
+          <div className='flex flex-row gap-2 items-center'>
+            <Text.H6M>Include experiments</Text.H6M>
+            <SwitchToggle
+              checked={search.filters?.experimentIds?.length !== 0}
+              onCheckedChange={(checked) =>
+                setSearch({
+                  ...search,
+                  filters: {
+                    ...(search.filters ?? {}),
+                    experimentIds: checked ? undefined : [],
+                  },
+                })
+              }
+            />
+          </div>
+        }
+        align='center'
+        side='top'
+      >
+        {search.filters?.experimentIds?.length !== 0
+          ? 'Filter results from experiments'
+          : 'Include results from experiments'}
+      </Tooltip>
       <DatePickerRange
         showPresets
         initialRange={
