@@ -39,7 +39,9 @@ import { providerLogs } from './models/providerLogs'
 import { publishedDocuments } from './models/publishedDocuments'
 import { runErrors } from './models/runErrors'
 import { sessions } from './models/sessions'
+import { spans } from './models/spans'
 import { subscriptions } from './models/subscriptions'
+import { traces } from './models/traces'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
 import { experiments } from './models/experiments'
@@ -80,6 +82,8 @@ export type EvaluationTemplateCategory = InferSelectModel<
   typeof evaluationTemplateCategories
 >
 export type Subscription = InferSelectModel<typeof subscriptions>
+export type Trace = InferSelectModel<typeof traces>
+export type Span = InferSelectModel<typeof spans>
 
 export type McpServer = InferSelectModel<typeof mcpServers>
 

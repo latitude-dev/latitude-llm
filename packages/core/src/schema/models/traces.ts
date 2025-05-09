@@ -9,7 +9,7 @@ import {
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { workspaces } from '../models/workspaces'
+import { workspaces } from './workspaces'
 
 export const traces = latitudeSchema.table(
   'traces',
