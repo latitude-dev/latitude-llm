@@ -41,7 +41,7 @@ export async function createDemoEvaluation(
       document,
       commit,
       settings: {
-        name: `Accuracy`,
+        name: 'Accuracy',
         description: `Evaluates how well the given instructions are followed.`,
         type: EvaluationType.Llm,
         metric: LlmEvaluationMetric.Rating,

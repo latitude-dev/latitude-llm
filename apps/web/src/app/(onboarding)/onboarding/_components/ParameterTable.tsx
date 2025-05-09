@@ -2,15 +2,32 @@
 
 import { cn } from '@latitude-data/web-ui/utils'
 
-type ParameterValue = {
-  product_name: string
-  features: string
-  target_audience: string
-  tone: string
-  word_count: number
-}
+const SAMPLE_PARAMETERS = [
+  {
+    product_name: 'Smart Home Assistant',
+    features:
+      'Voice control, Smart home integration, AI-powered recommendations',
+    target_audience: 'Tech-savvy homeowners',
+    tone: 'Professional but friendly',
+    word_count: 150,
+  },
+  {
+    product_name: 'Fitness Tracker Pro',
+    features: 'Heart rate monitoring, Sleep tracking, Workout suggestions',
+    target_audience: 'Health-conscious millennials',
+    tone: 'Motivational and energetic',
+    word_count: 200,
+  },
+  {
+    product_name: 'Eco-Friendly Water Bottle',
+    features: 'Temperature control, Filtration system, Durability',
+    target_audience: 'Environmentally conscious consumers',
+    tone: 'Casual and informative',
+    word_count: 120,
+  },
+]
 
-export function ParameterTable({ values }: { values: ParameterValue[] }) {
+export function ParameterTable() {
   return (
     <div className='relative overflow-hidden rounded-t-lg'>
       {/* Inverted white gradient overlay - from transparent to white */}
@@ -39,13 +56,13 @@ export function ParameterTable({ values }: { values: ParameterValue[] }) {
               </tr>
             </thead>
             <tbody>
-              {values.map((value, index) => (
+              {SAMPLE_PARAMETERS.map((value, index) => (
                 <tr
                   key={index}
                   className={cn('border-t border-foreground/10', {
                     'bg-background': index % 2 === 0,
                     'bg-background/80': index % 2 !== 0,
-                    'border-b-0': index === values.length - 1,
+                    'border-b-0': index === SAMPLE_PARAMETERS.length - 1,
                   })}
                 >
                   <td

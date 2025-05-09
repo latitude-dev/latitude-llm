@@ -5,6 +5,9 @@ import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient'
+import { DOCUMENT_PARAMETERS } from './constants'
+
+const SECONDS_BEFORE_HIDING_PROMPT_IN_SECONDS = 2000
 
 export function useRunOnboardingPrompt({
   project,
@@ -30,14 +33,7 @@ export function useRunOnboardingPrompt({
           },
           body: JSON.stringify({
             path: document.path,
-            parameters: {
-              product_name: 'Smart Home Assistant',
-              features:
-                'Voice control, Smart home integration, AI-powered recommendations',
-              target_audience: 'Tech-savvy homeowners',
-              tone: 'Professional but friendly',
-              word_count: 150,
-            },
+            parameters: DOCUMENT_PARAMETERS,
             commitUuid: commit.uuid,
             projectId: project.id,
             stream: true,
@@ -66,7 +62,7 @@ export function useRunOnboardingPrompt({
     onPromptRan: () => {
       setTimeout(() => {
         setCurrentStep(OnboardingStep.ShowResultsAndExperiment)
-      }, 2000)
+      }, SECONDS_BEFORE_HIDING_PROMPT_IN_SECONDS)
     },
   })
 
