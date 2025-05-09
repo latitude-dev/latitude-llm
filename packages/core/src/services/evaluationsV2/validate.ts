@@ -77,12 +77,12 @@ export async function validateEvaluationV2<
   settings.configuration = typeValidateResult.value
 
   const repository = new EvaluationsV2Repository(workspace.id, db)
-  const evaluationsResult = await repository
-    .listAtCommitByDocument({
-      commitUuid: commit.uuid,
-      documentUuid: document.documentUuid,
-    })
-  if (evaluationsResult.error) return evaluationsResult
+  const evaluationsResult = await repository.listAtCommitByDocument({
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+  })
+
+  if (evaluationsResult.error) return Result.error(evaluationsResult.error)
 
   const evaluations = evaluationsResult.value
 

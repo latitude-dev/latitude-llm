@@ -85,7 +85,7 @@ export default function setupService(
       r.unwrap(),
     )
     await createDemoEvaluation(
-      { workspace, document: onboardingDocument, commit, user },
+      { workspace, document: onboardingDocument, commit },
       tx,
     ).then((r) => r.unwrap())
 

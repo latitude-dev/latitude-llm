@@ -60,7 +60,6 @@ export async function createNewDocument(
     content,
     promptlVersion = 1,
     createDemoEvaluation: demoEvaluation = false,
-    evaluationsV2Enabled = false,
   }: {
     workspace: Workspace
     user?: User
@@ -69,7 +68,6 @@ export async function createNewDocument(
     content?: string
     promptlVersion?: number
     createDemoEvaluation?: boolean
-    evaluationsV2Enabled?: boolean
   },
   db = database,
 ): Promise<TypedResult<DocumentVersion, Error>> {
@@ -136,10 +134,7 @@ export async function createNewDocument(
     })
 
     if (demoEvaluation && user) {
-      await createDemoEvaluation(
-        { commit, document, evaluationsV2Enabled, workspace, user },
-        tx,
-      )
+      await createDemoEvaluation({ commit, document, workspace }, tx)
     }
 
     return Result.ok(document)

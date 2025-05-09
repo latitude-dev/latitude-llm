@@ -26,7 +26,7 @@ export async function createDemoEvaluation(
 ) {
   // Note: failing silently to avoid not letting the user create the document
   const result = await findDefaultEvaluationProvider(workspace!, db)
-  if (result.error || !result.value) return
+  if (result.error || !result.value) return Result.nil()
   const provider = result.value
 
   const model = findFirstModelForProvider({

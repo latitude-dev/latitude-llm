@@ -1,6 +1,5 @@
 'use server'
 
-import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { createNewDocument } from '@latitude-data/core/services/documents/create'
 import { z } from 'zod'
@@ -22,17 +21,12 @@ export const createDocumentVersionAction = withProject
       .getCommitByUuid({ uuid: input.commitUuid, projectId: ctx.project.id })
       .then((r) => r.unwrap())
 
-    const flags = getFeatureFlagsForWorkspaceCached({
-      workspace: ctx.workspace,
-    })
-
     const result = await createNewDocument({
       workspace: ctx.workspace,
       user: ctx.user,
       commit,
       path: input.path,
       content: input.content,
-      evaluationsV2Enabled: flags.evaluationsV2.enabled,
       createDemoEvaluation: true,
     })
 
