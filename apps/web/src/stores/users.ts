@@ -1,7 +1,7 @@
 import type { User } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { destroyMembershipAction } from '$/actions/memberships/destroy'
-import { inviteUserAction } from '$/actions/users/invite'
+import { inviteUserAction } from '$/actions/user/invite'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
