@@ -18,6 +18,7 @@ import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { updateExperimentStatus } from '../experiments/shared'
 import { NotFoundError } from './../../../lib/errors'
+import { captureException } from '../../../workers/sentry'
 
 export type RunEvaluationV2JobData = {
   workspaceId: number
@@ -166,6 +167,8 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     }
   } catch (error) {
     if (isErrorRetryable(error as Error)) throw error
+
+    captureException(error as Error)
 
     if (experiment) {
       await updateExperimentStatus(
