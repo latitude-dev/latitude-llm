@@ -3,8 +3,10 @@ import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast' // Import useToast
 import { useFormAction } from '$/hooks/useFormAction'
 import useUsers from '$/stores/users'
+import { InviteUserOutcome } from '@latitude-data/core/services/users/invite' // Import the outcome type
 
 export default function NewUser({
   open,
@@ -14,8 +16,29 @@ export default function NewUser({
   setOpen: (open: boolean) => void
 }) {
   const { invite } = useUsers()
+  const { toast } = useToast()
   const { data, action } = useFormAction(invite, {
-    onSuccess: () => setOpen(false),
+    onSuccess: (result: InviteUserOutcome | undefined) => { // Add type to result
+      setOpen(false)
+      if (result?.status === 'invitation_created') {
+        toast({
+          title: 'Invitation Sent',
+          description: `An invitation has been sent to ${result.invitation.email}.`,
+        })
+      } else if (result?.status === 'user_added_to_workspace') {
+        toast({
+          title: 'User Added',
+          description: `${result.user.email} has been added to the workspace.`,
+        })
+      }
+    },
+    onError: (error) => { // Optional: Add specific error handling for invite if needed
+      toast({
+        title: 'Invite Failed',
+        description: error.message || 'Could not process the invitation.',
+        variant: 'destructive',
+      })
+    }
   })
   return (
     <Modal

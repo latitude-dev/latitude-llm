@@ -19,6 +19,7 @@ import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
+import { sendWorkspaceInvitationEmailJob } from './sendWorkspaceInvitationEmailJob'
 import { updateWebhookLastTriggeredAt } from './webhooks'
 
 export const EventHandlers: IEventsHandlers = {
@@ -82,4 +83,5 @@ export const EventHandlers: IEventsHandlers = {
   scaleMcpServer: [notifyClientOfScaleUpMcpServer],
   mcpServerConnected: [notifyClientOfMcpServerConnected],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],
+  userInvitationCreated: [sendWorkspaceInvitationEmailJob],
 }

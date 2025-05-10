@@ -1,5 +1,6 @@
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { SWRProvider } from '$/components/Providers/SWRProvider'
+import { FeatureFlagProvider } from '$/contexts/FeatureFlagContext' // Import FeatureFlagProvider
 import { fontMono, fontSans } from '$/helpers/fonts'
 import { ToastProvider } from '@latitude-data/web-ui/atoms/Toast'
 import { TooltipProvider } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -36,7 +37,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <TooltipProvider>{children}</TooltipProvider>
+            <FeatureFlagProvider>
+              <TooltipProvider>{children}</TooltipProvider>
+            </FeatureFlagProvider>
           </ThemeProvider>
         </SWRProvider>
         <ToastProvider duration={5000} />

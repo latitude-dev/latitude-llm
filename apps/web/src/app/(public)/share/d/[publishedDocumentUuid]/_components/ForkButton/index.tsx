@@ -13,6 +13,7 @@ import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { ButtonProps } from '@latitude-data/web-ui/atoms/Button'
 import { useMaybeSession } from '@latitude-data/web-ui/providers'
 import { MouseEvent, useCallback, useState } from 'react'
+import { useFeatureFlags } from '$/contexts/FeatureFlagContext'
 
 export function ForkButton({
   shared,
@@ -24,6 +25,8 @@ export function ForkButton({
   fullWidth?: ButtonProps['fullWidth']
 }) {
   const { currentUser } = useMaybeSession()
+  const { flags, isLoading: isLoadingFlags } = useFeatureFlags()
+  const { inviteOnly } = flags
   const [form, setForm] = useState<'login' | 'signup'>('signup')
   const { open, onOpen, onOpenChange } = useToggleModal()
   const router = useNavigate()
@@ -42,12 +45,17 @@ export function ForkButton({
   )
   const onForkClick = useCallback(() => {
     if (!currentUser) {
+      if (!isLoadingFlags && inviteOnly) {
+        setForm('login') // Default to login form if invite only and flags loaded
+      } else {
+        setForm('signup') // Default to signup otherwise
+      }
       onOpen()
       return
     }
 
     fork({ publishedDocumentUuid: shared.uuid! })
-  }, [currentUser, fork, shared.uuid!])
+  }, [currentUser, fork, shared, inviteOnly, isLoadingFlags, onOpen, setForm]) // Added shared, setForm
   const onClickSignup = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault()
     event.stopPropagation()

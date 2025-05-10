@@ -15,6 +15,7 @@ import type {
   EvaluationResultV2,
   EvaluationTmp,
   EvaluationV2,
+  Invitation,
   LogSources,
   MagicLinkToken,
   Membership,
@@ -78,6 +79,7 @@ export type Events =
   | 'mcpServerConnected'
   | 'scaleMcpServer'
   | 'webhookDeliveryCreated'
+  | 'userInvitationCreated'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -643,6 +645,16 @@ export type LatitudeEvent =
   | ScaleMcpServerEvent
   | McpServerConnectedEvent
   | WebhookDeliveryCreatedEvent
+  | UserInvitationCreatedEvent
+
+export type UserInvitationCreatedEvent = LatitudeEventGeneric<
+  'userInvitationCreated',
+  {
+    invitation: Invitation
+    invitedByUserEmail: string
+    workspaceId: number
+  }
+>
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -692,4 +704,5 @@ export interface IEventsHandlers {
   scaleMcpServer: EventHandler<ScaleMcpServerEvent>[]
   mcpServerConnected: EventHandler<McpServerConnectedEvent>[]
   webhookDeliveryCreated: EventHandler<WebhookDeliveryCreatedEvent>[]
+  userInvitationCreated: EventHandler<UserInvitationCreatedEvent>[]
 }
