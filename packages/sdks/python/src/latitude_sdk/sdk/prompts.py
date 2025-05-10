@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, AsyncGenerator, List, Optional, Sequence, Union
+from typing import Any, AsyncGenerator, List, Optional, Sequence, Tuple, Union
 
 from promptl_ai import Adapter, Message, MessageLike, Promptl, ToolMessage, ToolResultContent
 from promptl_ai.bindings.types import _Message
@@ -19,6 +19,7 @@ from latitude_sdk.client import (
 )
 from latitude_sdk.sdk.errors import ApiError, ApiErrorCodes
 from latitude_sdk.sdk.types import (
+    AGENT_END_TOOL_NAME,
     ChainEvents,
     FinishedResult,
     OnStep,
@@ -29,7 +30,6 @@ from latitude_sdk.sdk.types import (
     SdkOptions,
     StreamCallbacks,
     StreamEvents,
-    StreamTypes,
     ToolCall,
     ToolResult,
     _LatitudeEvent,
@@ -110,7 +110,7 @@ class RenderPromptOptions(Model):
 
 
 class RenderPromptResult(Model):
-    messages: list[MessageLike]
+    messages: List[MessageLike]
     config: dict[str, Any]
 
 
@@ -142,13 +142,28 @@ class Prompts:
                 response="Project ID is required",
             )
 
+    async def _extract_agent_tool_requests(
+        self, tool_requests: List[ToolCall]
+    ) -> Tuple[List[ToolCall], List[ToolCall]]:
+        agent: List[ToolCall] = []
+        other: List[ToolCall] = []
+
+        for tool in tool_requests:
+            if tool.name == AGENT_END_TOOL_NAME:
+                agent.append(tool)
+            else:
+                other.append(tool)
+
+        return agent, other
+
     async def _handle_stream(
         self, stream: AsyncGenerator[ClientEvent, Any], on_event: Optional[StreamCallbacks.OnEvent]
     ) -> FinishedResult:
         uuid = None
-        conversation: list[Message] = []
+        conversation: List[Message] = []
         response = None
-        tool_requests: list[ToolCall] = []
+        agent_response = None
+        tool_requests: List[ToolCall] = []
 
         async for stream_event in stream:
             event = None
@@ -195,7 +210,17 @@ class Prompts:
                 response="Stream ended without a chain-complete event. Missing uuid or response.",
             )
 
-        return FinishedResult(uuid=uuid, conversation=conversation, response=response, tool_requests=tool_requests)
+        agent_requests, tool_requests = await self._extract_agent_tool_requests(tool_requests)
+        if len(agent_requests) > 0:
+            agent_response = agent_requests[0].arguments
+
+        return FinishedResult(
+            uuid=uuid,
+            conversation=conversation,
+            response=response,
+            agent_response=agent_response,
+            tool_requests=tool_requests,
+        )
 
     @staticmethod
     def _pause_tool_execution() -> Any:
@@ -220,9 +245,6 @@ class Prompts:
     async def _handle_tool_calls(
         self, result: FinishedResult, options: Union[RunPromptOptions, ChatPromptOptions]
     ) -> Optional[FinishedResult]:
-        # Seems Python cannot infer the type
-        assert result.response.type == StreamTypes.Text and result.tool_requests is not None
-
         if not options.tools:
             raise ApiError(
                 status=400,
@@ -350,7 +372,7 @@ class Prompts:
                 else:
                     result = RunPromptResult.model_validate_json(response.content)
 
-            if options.tools and result.response.type == StreamTypes.Text and result.tool_requests:
+            if options.tools and result.tool_requests:
                 try:
                     # NOTE: The last sdk.chat called will already call on_finished
                     final_result = await self._handle_tool_calls(result, options)
@@ -402,7 +424,7 @@ class Prompts:
                 else:
                     result = ChatPromptResult.model_validate_json(response.content)
 
-            if options.tools and result.response.type == StreamTypes.Text and result.tool_requests:
+            if options.tools and result.tool_requests:
                 try:
                     # NOTE: The last sdk.chat called will already call on_finished
                     final_result = await self._handle_tool_calls(result, options)

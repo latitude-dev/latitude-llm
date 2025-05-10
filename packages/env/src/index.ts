@@ -26,8 +26,8 @@ function buildDevStoragePaths() {
 
   if (!devRootPath) {
     console.warn(`
-  \x1b[33m[WARNING]\x1b[0m 
-  \x1b[1mFILE_STORAGE_ROOT_PATH\x1b[0m is missing. Without it, file storage features will not work. 
+  \x1b[33m[WARNING]\x1b[0m
+  \x1b[1mFILE_STORAGE_ROOT_PATH\x1b[0m is missing. Without it, file storage features will not work.
   Please add the \x1b[1mFILE_STORAGE_ROOT_PATH\x1b[0m environment variable in \x1b[36m.env.development\x1b[0m (located in the project root).
   Example: FILE_STORAGE_ROOT_PATH=/Users/YOUR_MACHINE_NAME/your-path-to/latitude/tmp/data
   `)
@@ -131,6 +131,7 @@ export const env = createEnv({
     // Posthog
     NEXT_PUBLIC_POSTHOG_HOST: z.string(),
     NEXT_PUBLIC_POSTHOG_KEY: z.string(),
+    OPT_OUT_ANALYTICS: z.boolean().optional().default(false),
 
     // Queue
     QUEUE_HOST: z.string(),
@@ -272,6 +273,7 @@ export const env = createEnv({
     LOOPS_API_KEY: process.env.LOOPS_API_KEY ?? '',
     LATITUDE_CLOUD: process.env.LATITUDE_CLOUD === 'true',
     LATITUDE_CLOUD_PAYMENT_URL: process.env.LATITUDE_CLOUD_PAYMENT_URL,
+    OPT_OUT_ANALYTICS: process.env.OPT_OUT_ANALYTICS === 'true',
     DISABLE_EMAIL_AUTHENTICATION:
       process.env.DISABLE_EMAIL_AUTHENTICATION === 'true',
     ENABLE_ALL_FLAGS: process.env.ENABLE_ALL_FLAGS === 'true',

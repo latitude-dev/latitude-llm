@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Callable, Literal, Optional, Protocol, Sequence, Union, runtime_checkable
+from typing import Any, Callable, List, Literal, Optional, Protocol, Sequence, Union, runtime_checkable
 
 from promptl_ai import Message, MessageLike
 
@@ -59,6 +59,10 @@ class FinishReason(StrEnum):
     Unknown = "unknown"
 
 
+AGENT_START_TOOL_NAME = "start_autonomous_chain"
+AGENT_END_TOOL_NAME = "end_autonomous_chain"
+
+
 class ToolCall(Model):
     id: str
     name: str
@@ -80,7 +84,7 @@ class StreamTypes(StrEnum):
 class ChainTextResponse(Model):
     type: Literal[StreamTypes.Text] = Field(default=StreamTypes.Text, alias=str("streamType"))
     text: str
-    tool_calls: list[ToolCall] = Field(alias=str("toolCalls"))
+    tool_calls: List[ToolCall] = Field(alias=str("toolCalls"))
     usage: ModelUsage
 
 
@@ -122,7 +126,7 @@ class ChainEvents(StrEnum):
 
 class GenericChainEvent(Model):
     event: Literal[StreamEvents.Latitude] = StreamEvents.Latitude
-    messages: list[Message]
+    messages: List[Message]
     uuid: str
 
 
@@ -149,7 +153,7 @@ class ChainEventProviderCompleted(GenericChainEvent):
 
 class ChainEventToolsStarted(GenericChainEvent):
     type: Literal[ChainEvents.ToolsStarted] = ChainEvents.ToolsStarted
-    tools: list[ToolCall]
+    tools: List[ToolCall]
 
 
 class ChainEventToolCompleted(GenericChainEvent):
@@ -173,7 +177,7 @@ class ChainEventChainError(GenericChainEvent):
 
 class ChainEventToolsRequested(GenericChainEvent):
     type: Literal[ChainEvents.ToolsRequested] = ChainEvents.ToolsRequested
-    tools: list[ToolCall]
+    tools: List[ToolCall]
 
 
 ChainEvent = Union[
@@ -195,9 +199,10 @@ _LatitudeEvent = Adapter[LatitudeEvent](LatitudeEvent)
 
 class FinishedResult(Model):
     uuid: str
-    conversation: list[Message]
+    conversation: List[Message]
     response: ChainResponse
-    tool_requests: list[ToolCall] = Field(alias=str("toolRequests"))
+    agent_response: Optional[dict[str, Any]] = Field(default=None, alias=str("agentResponse"))
+    tool_requests: List[ToolCall] = Field(alias=str("toolRequests"))
 
 
 StreamEvent = Union[ProviderEvent, LatitudeEvent]
@@ -271,9 +276,9 @@ class OnToolCallDetails(Model):
     id: str
     name: str
     conversation_uuid: str
-    messages: list[Message]
+    messages: List[Message]
     pause_execution: Callable[[], ToolResult]
-    requested_tool_calls: list[ToolCall]
+    requested_tool_calls: List[ToolCall]
 
 
 @runtime_checkable
@@ -284,7 +289,7 @@ class OnToolCall(Protocol):
 @runtime_checkable
 class OnStep(Protocol):
     async def __call__(
-        self, messages: list[MessageLike], config: dict[str, Any]
+        self, messages: List[MessageLike], config: dict[str, Any]
     ) -> Union[str, MessageLike, Sequence[MessageLike]]: ...
 
 

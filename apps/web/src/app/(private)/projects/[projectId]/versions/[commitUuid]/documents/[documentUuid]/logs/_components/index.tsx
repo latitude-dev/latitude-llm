@@ -8,6 +8,7 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
+import { RealtimeToggle } from '$/components/RealtimeToggle'
 import { ROUTES } from '$/services/routes'
 import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
 import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
@@ -37,9 +38,11 @@ import { DocumentLogFilters } from './Filters'
 const useDocumentLogSocket = (
   documentUuid: string,
   mutate: ReturnType<typeof useDocumentLogs<false>>['mutate'],
+  realtimeEnabled: boolean,
 ) => {
   const onMessage = useCallback(
     (args: EventArgs<'documentLogCreated'>) => {
+      if (!realtimeEnabled) return
       if (documentUuid !== args.documentUuid) return
 
       mutate(
@@ -74,7 +77,7 @@ const useDocumentLogSocket = (
         )
       }, 1000)
     },
-    [documentUuid, mutate],
+    [documentUuid, mutate, realtimeEnabled],
   )
 
   useSockets({ event: 'documentLogCreated', onMessage })
@@ -196,7 +199,8 @@ export function DocumentLogsPage({
     isEvaluationResultsV2Loading ||
     isEvaluationsV2Loading
 
-  useDocumentLogSocket(document.documentUuid, mutate)
+  const [realtimeEnabled, setRealtimeEnabled] = useState(true)
+  useDocumentLogSocket(document.documentUuid, mutate, realtimeEnabled)
 
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-2 min-w-0'>
@@ -221,6 +225,10 @@ export function DocumentLogsPage({
                 Upload logs
               </Button>
             </Link>
+            <RealtimeToggle
+              enabled={realtimeEnabled}
+              setEnabled={setRealtimeEnabled}
+            />
           </>
         }
         table={

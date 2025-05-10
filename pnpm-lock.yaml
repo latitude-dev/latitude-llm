@@ -692,6 +692,9 @@ importers:
       '@react-email/components':
         specifier: ^0.0.35
         version: 0.0.35(react-dom@18.3.0(react@18.3.0))(react@18.3.0)
+      '@sentry/node':
+        specifier: ^9.9.0
+        version: 9.10.1
       '@sindresorhus/slugify':
         specifier: ^2.2.1
         version: 2.2.1
@@ -16565,7 +16568,7 @@ snapshots:
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 22.13.13
+      '@types/node': 22.13.14
 
   '@types/cookie-parser@1.4.8(@types/express@4.17.21)':
     dependencies:
@@ -16699,7 +16702,7 @@ snapshots:
 
   '@types/mysql@2.15.26':
     dependencies:
-      '@types/node': 22.13.13
+      '@types/node': 22.13.14
 
   '@types/nlcst@1.0.4':
     dependencies:
@@ -16759,7 +16762,7 @@ snapshots:
 
   '@types/pg@8.6.1':
     dependencies:
-      '@types/node': 22.13.13
+      '@types/node': 22.13.14
       pg-protocol: 1.8.0
       pg-types: 2.2.0
 
@@ -16827,7 +16830,7 @@ snapshots:
 
   '@types/tedious@4.0.14':
     dependencies:
-      '@types/node': 22.13.13
+      '@types/node': 22.13.14
 
   '@types/tough-cookie@4.0.5': {}
 
@@ -16843,7 +16846,7 @@ snapshots:
 
   '@types/yauzl@2.10.3':
     dependencies:
-      '@types/node': 22.13.13
+      '@types/node': 22.13.14
     optional: true
 
   '@typescript-eslint/eslint-plugin@6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.2))(eslint@8.57.1)(typescript@5.8.2)':

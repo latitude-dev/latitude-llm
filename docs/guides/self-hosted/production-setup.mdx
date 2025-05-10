@@ -58,6 +58,7 @@ Regardless of the method, ensure these are configured correctly:
 - **`.env` File**: Set strong `POSTGRES_PASSWORD`, configure `APP_DOMAIN` and `APP_URL`, set up `MAIL_TRANSPORT` (e.g., SMTP, Mailgun) with valid credentials, configure `DRIVE_DISK` (recommend `s3`).
 - **Storage**: Use S3-compatible object storage (`DRIVE_DISK=s3`) for scalability and persistence. Configure bucket names and IAM roles or access keys securely.
 - **Database & Redis**: Use managed services (RDS, ElastiCache, Memorystore) or ensure your self-hosted instances are properly configured for performance, backups, and security.
+- **Latitude Analytics**: We collect [anonymous usage data](https://github.com/latitude-dev/latitude-llm/blob/main/packages/core/src/lib/analytics/collectors/OpenSource.ts) to improve the product. You can opt-out by setting `OPT_OUT_ANALYTICS=true` in your `.env` file.
 - **Reverse Proxy/SSL**: Configure your reverse proxy (Traefik, Nginx, etc.) to handle SSL termination (e.g., using Let's Encrypt) and route traffic correctly to the Latitude services.
 - **Resource Allocation**: Ensure sufficient CPU, memory, and disk space for each service, especially the database and workers.
 

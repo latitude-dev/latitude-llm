@@ -55,7 +55,7 @@ export function ConfigurationAdvancedForm<
         label='Optimize for'
         trueLabel='Higher score'
         falseLabel='Lower score'
-        description='The refiner will use this to decide whether to choose higher or lower score evaluation results when optimizing your prompt'
+        description='Whether a higher or lower score is better for this evaluation. This will guide the refiner to select the best results when optimizing your prompt'
         onChange={(value) =>
           setConfiguration({ ...configuration, reverseScale: !value })
         }
