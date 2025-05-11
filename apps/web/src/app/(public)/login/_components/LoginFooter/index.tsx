@@ -1,3 +1,5 @@
+'use client'
+
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'

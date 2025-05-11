@@ -25,8 +25,7 @@ export function ForkButton({
   fullWidth?: ButtonProps['fullWidth']
 }) {
   const { currentUser } = useMaybeSession()
-  const { flags, isLoading: isLoadingFlags } = useFeatureFlags()
-  const { inviteOnly } = flags
+  const { inviteOnly, isLoading: isLoadingFlags } = useFeatureFlags()
   const [form, setForm] = useState<'login' | 'signup'>('signup')
   const { open, onOpen, onOpenChange } = useToggleModal()
   const router = useNavigate()

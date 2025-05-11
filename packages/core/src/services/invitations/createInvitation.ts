@@ -20,7 +20,7 @@ export async function createInvitation(
     const existingInvitation = await db.query.invitations.findFirst({
       where: and(
         eq(invitations.email, email),
-        eq(invitations.workspaceId, workspaceId), // workspaceId is now number, direct comparison with integer schema field is fine
+        eq(invitations.workspaceId, String(workspaceId)), // Convert number to string for comparison
         eq(invitations.status, 'pending'),
         gte(invitations.expiresAt, new Date()),
       ),
@@ -40,7 +40,7 @@ export async function createInvitation(
       token,
       expiresAt,
       invitedByUserId,
-      workspaceId,
+      workspaceId: String(workspaceId), // Ensure workspaceId is string for insertion
       status: 'pending',
     }
 

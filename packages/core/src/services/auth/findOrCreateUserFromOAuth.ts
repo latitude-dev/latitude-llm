@@ -200,7 +200,13 @@ export function findOrCreateUserFromOAuth(
       if (newWorkspaceResult.length === 0) {
         throw new Error('Failed to create workspace.')
       }
-      targetWorkspace = newWorkspaceResult[0]
+      const newWorkspace = newWorkspaceResult[0]
+      if (!newWorkspace) {
+        // This case should ideally not be reached if .length > 0,
+        // but adding for robustness and to satisfy TypeScript.
+        throw new Error('Failed to retrieve created workspace details after insert.')
+      }
+      targetWorkspace = newWorkspace
 
       // Add user to their new workspace
       const membershipResult = await createMembership(

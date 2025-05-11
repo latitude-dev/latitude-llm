@@ -23,13 +23,18 @@ export default function useUsers(opts?: SWRConfiguration) {
     ...rest
   } = useSWR<SerializedUser[], User[]>('api/users', fetcher, opts)
   const { execute: invite } = useLatitudeAction(inviteUserAction, {
-    onSuccess: ({ data: user }) => {
-      toast({
-        title: 'Success',
-        description: 'User invited successfully',
-      })
-
-      mutate([...data, user])
+    onSuccess: ({ data: inviteOutcome }) => {
+      // The NewUser component's useFormAction.onSuccess handles specific toasts.
+      // Here, we only update the SWR cache if a user was actually added.
+      if (inviteOutcome.status === 'user_added_to_workspace') {
+        const newUser = deserialize(inviteOutcome.user)
+        mutate([...data, newUser])
+        // Toast for this specific case can remain or be managed by the component.
+        // For consistency with how NewUser handles toasts, it might be better to let it manage all user-facing notifications.
+        // However, if a general success toast for cache update is desired here, it can be added.
+      }
+      // If inviteOutcome.status === 'invitation_created', no change to the user list cache is needed.
+      // The NewUser component will inform the user that an invitation was sent.
     },
   })
   const { execute: destroy } = useLatitudeAction(destroyMembershipAction, {
@@ -39,7 +44,7 @@ export default function useUsers(opts?: SWRConfiguration) {
         description: 'User removed successfully',
       })
 
-      mutate(data.filter((user) => user.id === membership.userId))
+      mutate(data.filter((user) => user.id !== membership.userId))
     },
   })
 
