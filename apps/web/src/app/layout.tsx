@@ -1,7 +1,13 @@
 import buildMetatags from '$/app/_lib/buildMetatags'
+import { FeatureFlagProvider } from '$/components/Providers/FeatureFlags'
+import {
+  FEATURE_FLAGS,
+  FEATURE_FLAGS_CONDITIONS,
+  ResolvedFeatureFlags,
+} from '$/components/Providers/FeatureFlags/flags'
 import { SWRProvider } from '$/components/Providers/SWRProvider'
-import { FeatureFlagProvider } from '$/contexts/FeatureFlagContext'
 import { fontMono, fontSans } from '$/helpers/fonts'
+import { env } from '@latitude-data/env'
 import { ToastProvider } from '@latitude-data/web-ui/atoms/Toast'
 import { TooltipProvider } from '@latitude-data/web-ui/atoms/Tooltip'
 import { THEMES } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
@@ -20,6 +26,20 @@ export default function RootLayout({
 }: Readonly<{
   children: ReactNode
 }>) {
+  const initialFeatureFlags: ResolvedFeatureFlags = {
+    [FEATURE_FLAGS.inviteOnly]: { enabled: env.INVITE_ONLY === true },
+    [FEATURE_FLAGS.evaluationsV2]: {
+      enabled:
+        FEATURE_FLAGS_CONDITIONS.evaluationsV2.workspaceIds === 'all' ||
+        env.ENABLE_ALL_FLAGS === true,
+    },
+    [FEATURE_FLAGS.experiments]: {
+      enabled:
+        FEATURE_FLAGS_CONDITIONS.experiments.workspaceIds === 'all' ||
+        env.ENABLE_ALL_FLAGS === true,
+    },
+  }
+
   return (
     <html lang='en' translate='no' suppressHydrationWarning>
       <head>
@@ -37,7 +57,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <FeatureFlagProvider>
+            <FeatureFlagProvider featureFlags={initialFeatureFlags}>
               <TooltipProvider>{children}</TooltipProvider>
             </FeatureFlagProvider>
           </ThemeProvider>

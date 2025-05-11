@@ -1,22 +1,20 @@
-'use client'
-
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { MouseEvent } from 'react'
-import { useFeatureFlags } from '$/contexts/FeatureFlagContext'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 export default function LoginFooter({
   onClickSignup,
 }: {
   onClickSignup?: (event: MouseEvent<HTMLAnchorElement>) => void
 }) {
-  const { inviteOnly, isLoading } = useFeatureFlags() // Correctly destructure inviteOnly
+  const { enabled: isInviteOnly } = useFeatureFlag({ featureFlag: 'inviteOnly' })
 
-  // If feature flags are loading, or if inviteOnly is true, don't show the signup link.
-  if (isLoading || inviteOnly) {
+  // If inviteOnly is true, don't show the signup link.
+  if (isInviteOnly) {
     return null
   }
 

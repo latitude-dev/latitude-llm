@@ -6,15 +6,15 @@ import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 import AuthFooter from '$/app/(public)/_components/Footer'
 import SignupFooter from '$/app/(public)/setup/_components/SignupFooter'
 import { FocusLayout } from '$/components/layouts'
-import { useFeatureFlags } from '$/contexts/FeatureFlagContext'
-import { useEffect, useState } from 'react'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+// import { useEffect, useState } from 'react' // No longer needed
 
 import SetupForm from './SetupForm'
 
 
 export default function SetupPage() {
   const searchParamsHook = useSearchParams()
-  const { inviteOnly, isLoading: isLoadingFeatureFlags } = useFeatureFlags()
+  const { enabled: isInviteOnly } = useFeatureFlag({ featureFlag: 'inviteOnly' })
 
   // Extract params once searchParamsHook is available
   const email = searchParamsHook?.get('email') ?? undefined
@@ -22,36 +22,10 @@ export default function SetupPage() {
   const companyName = searchParamsHook?.get('companyName') ?? undefined
   const invitationToken = searchParamsHook?.get('invitation_token') ?? undefined
   
-  // To prevent flash of content if inviteOnly is true but token is missing
-  const [canRenderForm, setCanRenderForm] = useState(false);
+  // Logic simplified as inviteOnly flag is available server-side
+  // No need for isLoadingFeatureFlags or canRenderForm state for this specific flag
 
-  useEffect(() => {
-    if (!isLoadingFeatureFlags) {
-      if (inviteOnly === true && !invitationToken) {
-        setCanRenderForm(false);
-      } else {
-        setCanRenderForm(true);
-      }
-    }
-  }, [inviteOnly, isLoadingFeatureFlags, invitationToken]);
-
-
-  if (isLoadingFeatureFlags) {
-    return (
-      <FocusLayout
-        header={<FocusHeader title='Loading...' />}
-        footer={<SignupFooter />}
-      >
-        <Card background='light'>
-          <CardContent standalone>
-            <p>Loading configuration...</p>
-          </CardContent>
-        </Card>
-      </FocusLayout>
-    )
-  }
-
-  if (!canRenderForm && inviteOnly) {
+  if (isInviteOnly && !invitationToken) {
      return (
       <FocusLayout
         header={
