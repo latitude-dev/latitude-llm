@@ -154,10 +154,12 @@ describe('deleteEvaluationV2', () => {
     ).toEqual([
       expect.objectContaining({
         id: evaluation.versionId,
+        commitId: commit.id,
         deletedAt: null,
       }),
       expect.objectContaining({
         id: updatedEvaluation.versionId,
+        commitId: draft.id,
         deletedAt: expect.any(Date),
       }),
     ])
@@ -198,10 +200,12 @@ describe('deleteEvaluationV2', () => {
     ).toEqual([
       expect.objectContaining({
         id: evaluation.versionId,
+        commitId: commit.id,
         deletedAt: null,
       }),
       expect.objectContaining({
         id: deletedEvaluation.versionId,
+        commitId: draft.id,
         deletedAt: expect.any(Date),
       }),
     ])
