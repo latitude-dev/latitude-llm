@@ -20,6 +20,7 @@ import { CSPostHogProvider, IdentifyUser } from '../providers'
 import { NAV_LINKS } from './_lib/constants'
 import { FeatureFlagProvider } from '$/components/Providers/FeatureFlags'
 import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
+import { FEATURE_FLAGS, ResolvedFeatureFlags } from '$/components/Providers/FeatureFlags/flags'
 
 export const metadata = buildMetatags({
   title: 'Home',
@@ -42,7 +43,19 @@ export default async function PrivateLayout({
   }
 
   const supportIdentity = createSupportUserIdentity(user)
-  const featureFlags = getFeatureFlagsForWorkspaceCached({ workspace })
+  const workspaceFeatureFlags = getFeatureFlagsForWorkspaceCached({ workspace })
+  
+  const allFeatureFlags: ResolvedFeatureFlags = {
+    ...workspaceFeatureFlags,
+    [FEATURE_FLAGS.inviteOnly]: { enabled: env.INVITE_ONLY === true },
+    // Ensure all flags from FEATURE_FLAGS are present.
+    // If getFeatureFlagsForWorkspaceCached doesn't return all conditional flags
+    // (e.g., if a new one was added to FEATURE_FLAGS but not FEATURE_FLAGS_CONDITIONS),
+    // we might need to provide defaults here too, similar to the root layout.
+    // However, getFeatureFlagsForWorkspaceCached iterates Object.keys(FEATURE_FLAGS_CONDITIONS),
+    // so it should cover all conditional flags it's aware of.
+  }
+
   const cloudInfo = env.LATITUDE_CLOUD_PAYMENT_URL
     ? { paymentUrl: env.LATITUDE_CLOUD_PAYMENT_URL }
     : undefined
@@ -57,7 +70,7 @@ export default async function PrivateLayout({
             workspace={workspace}
             subscriptionPlan={subscriptionPlan}
           >
-            <FeatureFlagProvider featureFlags={featureFlags}>
+            <FeatureFlagProvider featureFlags={allFeatureFlags}>
               <LatitudeWebsocketsProvider
                 workspace={workspace}
                 socketServer={env.WEBSOCKETS_SERVER}
