@@ -18,15 +18,10 @@ export class ProgressTracker {
 
   private async ensureConnection() {
     if (!this.redis) {
-      const redisOptions: any = {
-        // Use 'any' or a more specific type for options
+      this.redis = await buildRedisConnection({
         host: env.CACHE_HOST,
         port: env.CACHE_PORT,
-      }
-      if (env.CACHE_PASSWORD) {
-        redisOptions.password = env.CACHE_PASSWORD
-      }
-      this.redis = await buildRedisConnection(redisOptions)
+      })
     }
 
     return this.redis as Redis

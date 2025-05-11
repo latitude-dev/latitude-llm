@@ -116,7 +116,6 @@ export const env = createEnv({
     // Cache
     CACHE_HOST: z.string(),
     CACHE_PORT: z.coerce.number().optional().default(6379),
-    CACHE_PASSWORD: z.string().optional(),
 
     // Postgres
     DATABASE_URL: z.string().url(),
@@ -267,7 +266,6 @@ export const env = createEnv({
   runtimeEnv: {
     ...process.env,
     CACHE_PORT: process.env.CACHE_PORT ?? '6379',
-    CACHE_PASSWORD: process.env.CACHE_PASSWORD,
     NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: 'Latitude', // TODO: Move to env in infra
     DRIVE_DISK: process.env.DRIVE_DISK ?? 'local',
     FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? UPLOADS_PATH,
