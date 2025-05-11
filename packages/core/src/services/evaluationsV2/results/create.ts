@@ -77,6 +77,7 @@ export async function createEvaluationResultV2<
         evaluation: evaluation,
         commit: commit,
         providerLog: providerLog,
+        experiment: experiment,
         dataset: dataset,
         datasetRow: datasetRow,
         workspaceId: workspace.id,

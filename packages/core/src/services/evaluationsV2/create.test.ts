@@ -121,7 +121,7 @@ describe('createEvaluationV2', () => {
         .select()
         .from(evaluationVersions)
         .where(eq(evaluationVersions.evaluationUuid, evaluation.uuid))
-        .orderBy(desc(evaluationVersions.updatedAt)),
+        .orderBy(desc(evaluationVersions.createdAt)),
     ).toEqual([
       expect.objectContaining({
         id: evaluation.versionId,

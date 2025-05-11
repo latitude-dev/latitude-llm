@@ -15,6 +15,7 @@ import type {
   EvaluationResultV2,
   EvaluationTmp,
   EvaluationV2,
+  Experiment,
   LogSources,
   MagicLinkToken,
   Membership,
@@ -561,6 +562,7 @@ export type EvaluationResultV2CreatedEvent = LatitudeEventGeneric<
     evaluation: EvaluationV2
     commit: Commit
     providerLog: ProviderLogDto
+    experiment?: Experiment
     dataset?: DatasetV2
     datasetRow?: DatasetRow
   }
