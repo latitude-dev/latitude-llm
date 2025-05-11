@@ -1,10 +1,10 @@
-import { users } from '../../schema' // Import users table
+import { users } from '../../schema'
 import { unsafelyGetUserByEmail } from '../../data-access/users'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { InvitationMailer } from '../../mailers'
 import { UserInvitationCreatedEvent } from '../events.d'
-import { type TypedResult } from '../../lib/Result' // Use TypedResult
+import { type TypedResult } from '../../lib/Result'
 
 type CoreUser = typeof users.$inferSelect; // Infer CoreUser type
 

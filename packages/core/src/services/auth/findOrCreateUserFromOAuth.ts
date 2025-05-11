@@ -1,5 +1,4 @@
 import { eq, and } from 'drizzle-orm'
-// import { Workspace } from '../../browser' // Removed incorrect import
 import { database } from '../../client'
 import { validateInvitation } from '../invitations/validateInvitation'
 import { useInvitation } from '../invitations/useInvitation'
@@ -15,7 +14,6 @@ import {
 
 type CoreUser = typeof users.$inferSelect; // Correctly infer from users table
 type CoreWorkspace = typeof workspaces.$inferSelect; // Define correct workspace type
-// import setupServiceFn from '../users/setupService' // Will be replaced by direct calls
 import { createUser } from '../users/createUser' // Added
 import { createMembership } from '../memberships/create' // Added
 import { BadRequestError, NotFoundError } from './../../lib/errors' // Added NotFoundError

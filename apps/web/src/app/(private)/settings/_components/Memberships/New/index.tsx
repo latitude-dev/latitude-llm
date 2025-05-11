@@ -3,10 +3,10 @@ import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast' // Import useToast
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useFormAction } from '$/hooks/useFormAction'
 import useUsers from '$/stores/users'
-import { InviteUserOutcome } from '@latitude-data/core/services/users/invite' // Import the outcome type
+import { InviteUserOutcome } from '@latitude-data/core/services/users/invite'
 
 export default function NewUser({
   open,
