@@ -173,9 +173,7 @@ export function EvaluationsTable({
               onConfirm={() => onDelete(selectedEvaluation)}
               onCancel={() => setOpenDeleteModal(false)}
               confirm={{
-                label: isDeletingEvaluation
-                  ? 'Removing...'
-                  : `Remove ${selectedEvaluation.name}`,
+                label: isDeletingEvaluation ? 'Removing...' : 'Remove',
                 description:
                   'Are you sure you want to remove the evaluation? This action cannot be undone.',
                 disabled: isDeletingEvaluation,

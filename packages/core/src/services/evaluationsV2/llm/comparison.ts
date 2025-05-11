@@ -100,7 +100,7 @@ const promptSchema = z.object({
   reason: z.string(),
 })
 
-function buildPrompt({
+export function buildPrompt({
   provider,
   model,
   criteria,

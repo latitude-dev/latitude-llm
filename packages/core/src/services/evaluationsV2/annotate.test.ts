@@ -41,6 +41,7 @@ describe('annotateEvaluationV2', () => {
   beforeEach(async () => {
     vi.resetAllMocks()
     vi.clearAllMocks()
+    vi.restoreAllMocks()
 
     const {
       workspace: w,

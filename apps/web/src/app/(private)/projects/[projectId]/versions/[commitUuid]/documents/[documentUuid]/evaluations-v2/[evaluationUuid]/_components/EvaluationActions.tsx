@@ -255,9 +255,7 @@ function EditEvaluation<
         onOpenChange={setOpenUpdateModal}
         onConfirm={onUpdate}
         confirm={{
-          label: isUpdatingEvaluation
-            ? 'Updating...'
-            : `Update ${evaluation.name}`,
+          label: isUpdatingEvaluation ? 'Updating...' : 'Update',
           disabled: isUpdatingEvaluation,
           isConfirming: isUpdatingEvaluation,
         }}
