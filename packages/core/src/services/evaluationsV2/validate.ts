@@ -19,6 +19,7 @@ export async function validateEvaluationV2<
   M extends EvaluationMetric<T>,
 >(
   {
+    mode,
     evaluation,
     settings,
     options,
@@ -26,6 +27,7 @@ export async function validateEvaluationV2<
     commit,
     workspace,
   }: {
+    mode: 'create' | 'update'
     evaluation?: EvaluationV2<T, M>
     settings: EvaluationSettings<T, M>
     options: EvaluationOptions
@@ -35,12 +37,17 @@ export async function validateEvaluationV2<
   },
   db: Database = database,
 ) {
+  if (mode === 'update' && !evaluation) {
+    return Result.error(
+      new BadRequestError('Evaluation is required to update from'),
+    )
+  }
+
   if (!settings.name) {
     return Result.error(new BadRequestError('Name is required'))
   }
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[settings.type]
-
   if (!typeSpecification) {
     return Result.error(new BadRequestError('Invalid type'))
   }
@@ -53,13 +60,13 @@ export async function validateEvaluationV2<
   const parseResult = typeSpecification.configuration.safeParse(
     settings.configuration,
   )
-
   if (parseResult.error) {
     return Result.error(parseResult.error)
   }
 
   const typeValidateResult = await typeSpecification.validate(
     {
+      mode: mode,
       metric: settings.metric,
       configuration: settings.configuration,
       document: document,

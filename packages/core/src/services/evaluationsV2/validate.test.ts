@@ -65,9 +65,25 @@ describe('validateEvaluationV2', () => {
     }
   })
 
+  it('fails when evaluation is not provided when updating', async () => {
+    await expect(
+      validateEvaluationV2({
+        mode: 'update',
+        settings: settings,
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Evaluation is required to update from'),
+    )
+  })
+
   it('fails when name is not provided', async () => {
     await expect(
       validateEvaluationV2({
+        mode: 'create',
         settings: {
           ...settings,
           name: '',
@@ -83,6 +99,7 @@ describe('validateEvaluationV2', () => {
   it('fails when type is not valid', async () => {
     await expect(
       validateEvaluationV2({
+        mode: 'create',
         settings: {
           ...settings,
           type: 'invalid' as any,
@@ -98,6 +115,7 @@ describe('validateEvaluationV2', () => {
   it('fails when metric is not valid', async () => {
     await expect(
       validateEvaluationV2({
+        mode: 'create',
         settings: {
           ...settings,
           metric: 'invalid' as any,
@@ -113,6 +131,7 @@ describe('validateEvaluationV2', () => {
   it('fails when configuration is not valid', async () => {
     await expect(
       validateEvaluationV2({
+        mode: 'create',
         settings: {
           ...settings,
           configuration: {} as any,
@@ -133,6 +152,7 @@ describe('validateEvaluationV2', () => {
 
     await expect(
       validateEvaluationV2({
+        mode: 'create',
         settings: settings,
         options: options,
         document: document,
@@ -152,6 +172,7 @@ describe('validateEvaluationV2', () => {
 
     await expect(
       validateEvaluationV2({
+        mode: 'create',
         settings: settings,
         options: options,
         document: document,
@@ -168,6 +189,7 @@ describe('validateEvaluationV2', () => {
   it('fails when evaluate live logs option is not valid', async () => {
     await expect(
       validateEvaluationV2({
+        mode: 'create',
         settings: settings,
         options: {
           ...options,
@@ -185,6 +207,7 @@ describe('validateEvaluationV2', () => {
   it('succeeds when validating an evaluation from create', async () => {
     const { settings: validatedSettings, options: validatedOptions } =
       await validateEvaluationV2({
+        mode: 'create',
         settings: settings,
         options: options,
         document: document,
@@ -207,6 +230,7 @@ describe('validateEvaluationV2', () => {
 
     const { settings: validatedSettings, options: validatedOptions } =
       await validateEvaluationV2({
+        mode: 'update',
         evaluation: evaluation,
         settings: settings,
         options: options,

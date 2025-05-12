@@ -120,15 +120,14 @@ export function useEvaluationsV2(
             return evaluation
           }) ?? [],
       )
-
-      if (notifyUpdate) {
-        toast({
-          title: 'Evaluation updated successfully',
-          description: `Evaluation ${evaluation.name} updated successfully`,
-        })
-      }
+      if (!notifyUpdate) return
+      toast({
+        title: 'Evaluation updated successfully',
+        description: `Evaluation ${evaluation.name} updated successfully`,
+      })
     },
     onError: async (error) => {
+      if (!notifyUpdate) return
       if (error?.err?.name === 'ZodError') return
       toast({
         title: 'Error updating evaluation',

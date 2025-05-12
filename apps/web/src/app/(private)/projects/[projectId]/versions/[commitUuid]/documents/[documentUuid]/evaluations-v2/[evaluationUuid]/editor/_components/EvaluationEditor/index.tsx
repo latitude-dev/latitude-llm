@@ -14,17 +14,16 @@ import {
   ProviderApiKey,
 } from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
-import { TextEditor } from './TextEditor'
-import { Playground } from './Playground'
-import { useEvaluationParameters } from './hooks/useEvaluationParamaters'
 import { ROUTES } from '$/services/routes'
 import useIntegrations from '$/stores/integrations'
 import { EvaluationTitle } from '../../../../_components/EvaluationTitle'
+import { Playground } from './Playground'
+import { TextEditor } from './TextEditor'
+import { useEvaluationParameters } from './hooks/useEvaluationParamaters'
 
 const ALLOWED_PARAMETERS =
   LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
@@ -59,7 +58,6 @@ export function EvaluationEditor({
   })
   const originalPrompt = evaluation.configuration.prompt
   const [value, setValue] = useState(originalPrompt)
-  const { toast } = useToast()
   const providerNames = useMemo(() => providers.map((p) => p.name), [providers])
   const { data: integrations } = useIntegrations()
   const integrationNames = useMemo(
@@ -84,7 +82,7 @@ export function EvaluationEditor({
   )
   const debouncedSave = useDebouncedCallback(
     async (val: string) => {
-      const [_, error] = await updateEvaluation({
+      await updateEvaluation({
         evaluationUuid: evaluation.uuid,
         settings: {
           configuration: {
@@ -94,18 +92,8 @@ export function EvaluationEditor({
         },
       })
 
-      if (error) {
-        toast({
-          title: 'Error saving evaluation prompt',
-          description: 'There was an error saving the evaluation prompt.',
-          variant: 'destructive',
-        })
-
-        setValue(originalPrompt) // Revert to the original prompt if save fails
-      } else {
-        const metadataProps = buildPromptMetadata({ promptValue: val })
-        runReadMetadata(metadataProps)
-      }
+      const metadataProps = buildPromptMetadata({ promptValue: val })
+      runReadMetadata(metadataProps)
     },
     500,
     { leading: false, trailing: true },
