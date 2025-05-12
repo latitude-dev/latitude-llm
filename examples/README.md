@@ -34,3 +34,23 @@ Only needed if you are using a local version of the SDK.
 uv cache clean
 rm -rf .venv/
 ```
+
+
+## Run the examples
+All the examples has the same structure:
+```
+examples/
+  my-example/
+    prompts/
+      prompt.md
+    code/
+      example.py
+      example.ts
+```
+
+To run an example you can use node (even for Python). Check the `package.json` file
+
+Example:
+```bash
+npm run example my-example
+```
