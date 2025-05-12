@@ -63,6 +63,7 @@ export async function updateEvaluationV2<
 
   const { settings: vSettings, options: vOptions } = await validateEvaluationV2(
     {
+      mode: 'update',
       evaluation: evaluation,
       settings: { ...evaluation, ...settings },
       options: { ...evaluation, ...options },

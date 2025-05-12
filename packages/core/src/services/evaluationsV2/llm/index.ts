@@ -46,6 +46,7 @@ export const LlmEvaluationSpecification = {
 
 async function validate<M extends LlmEvaluationMetric>(
   {
+    mode,
     metric,
     configuration,
     workspace,
@@ -62,21 +63,23 @@ async function validate<M extends LlmEvaluationMetric>(
 
   metricSpecification.configuration.parse(configuration)
 
-  if (!configuration.provider) {
-    return Result.error(new BadRequestError('Provider is required'))
-  }
+  if (!metric.startsWith(LlmEvaluationMetric.Custom) || mode !== 'update') {
+    if (!configuration.provider) {
+      return Result.error(new BadRequestError('Provider is required'))
+    }
 
-  const providersRepository = new ProviderApiKeysRepository(workspace.id, db)
-  await providersRepository
-    .findByName(configuration.provider)
-    .then((r) => r.unwrap())
+    const providersRepository = new ProviderApiKeysRepository(workspace.id, db)
+    await providersRepository
+      .findByName(configuration.provider)
+      .then((r) => r.unwrap())
 
-  if (!configuration.model) {
-    return Result.error(new BadRequestError('Model is required'))
+    if (!configuration.model) {
+      return Result.error(new BadRequestError('Model is required'))
+    }
   }
 
   configuration = await metricSpecification
-    .validate({ configuration, workspace, ...rest }, db)
+    .validate({ mode, configuration, workspace, ...rest }, db)
     .then((r) => r.unwrap())
 
   // Note: all settings are explicitly returned to ensure we don't
