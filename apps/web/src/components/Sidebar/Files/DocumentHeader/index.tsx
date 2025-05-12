@@ -1,8 +1,11 @@
-import { useCallback, useMemo, useState } from 'react'
-
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
+import { ROUTES } from '$/services/routes'
 import { DocumentType } from '@latitude-data/core/browser'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { usePathname } from 'next/navigation'
+import { useCallback, useMemo, useState } from 'react'
 import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper, {
   IndentType,
@@ -10,10 +13,6 @@ import NodeHeaderWrapper, {
 } from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
-import { ROUTES } from '$/services/routes'
-import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
-import { UseEvaluationPathReturn } from '$/components/Sidebar/Files/useEvaluationPath'
 
 export default function DocumentHeader({
   open,
@@ -29,9 +28,10 @@ export default function DocumentHeader({
   node: Node
   indentation: IndentType[]
   draggble: NodeHeaderWrapperProps['draggble']
-  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
+  currentEvaluationUuid?: string
   canDrag: boolean
 }) {
+  const pathname = usePathname()
   const {
     isLoading,
     isMerged,
@@ -64,21 +64,15 @@ export default function DocumentHeader({
   )
   const documentUuid = node.doc!.documentUuid
   const url = useMemo(() => {
-    if (selected && !currentEvaluationUuid) return undefined
-    if (!node.isPersisted) return undefined
     if (!documentUuid) return undefined
+    if (!node.isPersisted) return undefined
+    if (selected && pathname.endsWith(documentUuid)) return undefined
 
     return ROUTES.projects
       .detail({ id: sidebarLinkContext.projectId })
       .commits.detail({ uuid: sidebarLinkContext.commitUuid })
       .documents.detail({ uuid: documentUuid }).root
-  }, [
-    documentUuid,
-    selected,
-    node.isPersisted,
-    sidebarLinkContext,
-    currentEvaluationUuid,
-  ])
+  }, [documentUuid, selected, node.isPersisted, sidebarLinkContext, pathname])
   const [isEditing, setIsEditing] = useState(node.name === ' ')
   const actions = useMemo<MenuOption[]>(
     () => [

@@ -1,25 +1,24 @@
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { EvaluationV2 } from '@latitude-data/constants'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import Link from 'next/link'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
-import { useMemo } from 'react'
-import { ROUTES } from '$/services/routes'
 import {
   getEvaluationMetricSpecification,
   getEvaluationTypeSpecification,
 } from '$/components/evaluations'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { TextColor } from '@latitude-data/web-ui/tokens'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
-import { cn } from '@latitude-data/web-ui/utils'
-import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
 import { IndentationLine } from '$/components/Sidebar/Files/IndentationBar'
-import { UseEvaluationPathReturn } from '$/components/Sidebar/Files/useEvaluationPath'
 import { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
+import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
+import { ROUTES } from '$/services/routes'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { EvaluationV2 } from '@latitude-data/constants'
+import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import { TextColor } from '@latitude-data/web-ui/tokens'
+import { cn } from '@latitude-data/web-ui/utils'
+import Link from 'next/link'
+import { useMemo } from 'react'
 
 const INDENTATION_UNIT_PX = 24
 function IndentationBar({
@@ -63,7 +62,7 @@ function EvaluationItem({
   commitUuid: string
   projectId: number
   documentUuid: string
-  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
+  currentEvaluationUuid?: string
 }) {
   const spec = getEvaluationTypeSpecification(evaluation)
   const metricSpec = getEvaluationMetricSpecification(evaluation)
@@ -127,7 +126,7 @@ export function EvaluationList({
   changeType?: ModifiedDocumentType | undefined
   indentation?: IndentType[]
   documentUuid: string
-  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
+  currentEvaluationUuid?: string
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()

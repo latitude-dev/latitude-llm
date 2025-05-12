@@ -1,21 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { cn } from '@latitude-data/web-ui/utils'
-import { useDraggable, useDroppable } from '@latitude-data/web-ui/hooks/useDnD'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
-
-import { type IndentType } from './NodeHeaderWrapper'
+import { useDraggable, useDroppable } from '@latitude-data/web-ui/hooks/useDnD'
+import { cn } from '@latitude-data/web-ui/utils'
+import { useParams } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import DocumentHeader from './DocumentHeader'
 import { FileTreeProvider, useFileTreeContext } from './FilesProvider'
 import FolderHeader from './FolderHeader'
+import { type IndentType } from './NodeHeaderWrapper'
 import { TreeToolbar } from './TreeToolbar'
 import { useOpenPaths } from './useOpenPaths'
 import { useTempNodes } from './useTempNodes'
 import { Node, SidebarDocument, useTree } from './useTree'
-import {
-  UseEvaluationPathReturn,
-  useSelectedEvaluationUuid,
-} from '$/components/Sidebar/Files/useEvaluationPath'
 
 function NodeHeader({
   selected,
@@ -32,7 +28,7 @@ function NodeHeader({
   indentation: IndentType[]
   onToggleOpen: () => void
   canDrag: boolean
-  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
+  currentEvaluationUuid?: string
 }) {
   const draggable = useDraggable({
     id: node.id,
@@ -79,7 +75,7 @@ export type FileNodeProps = {
   node: Node
   indentation?: IndentType[]
   onRenameFile: (args: { node: Node; path: string }) => Promise<void>
-  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
+  currentEvaluationUuid?: string
 }
 
 const EMPTY_TMP_NODES: Node[] = []
@@ -237,7 +233,7 @@ export function FilesTree({
   currentUuid: string | undefined
   isDestroying: boolean
 }) {
-  const { currentEvaluationUuid } = useSelectedEvaluationUuid()
+  const { evaluationUuid } = useParams()
   const isMount = useRef(false)
   const { togglePath, isOpenThisPath } = useOpenPaths((state) => ({
     isOpenThisPath: state.isOpen,
@@ -329,7 +325,7 @@ export function FilesTree({
             node={rootNode}
             onRenameFile={onRenameFile}
             isMerged={isMerged}
-            currentEvaluationUuid={currentEvaluationUuid}
+            currentEvaluationUuid={evaluationUuid as string | undefined}
           />
         </div>
       </FileTreeProvider>
