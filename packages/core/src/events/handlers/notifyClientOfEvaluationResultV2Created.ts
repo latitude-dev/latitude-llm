@@ -8,7 +8,15 @@ export const notifyClientOfEvaluationResultV2Created = async ({
 }: {
   data: EvaluationResultV2CreatedEvent
 }) => {
-  const { workspaceId, ...rest } = event.data
+  const {
+    workspaceId,
+    result,
+    evaluation,
+    commit,
+    providerLog,
+    dataset,
+    datasetRow,
+  } = event.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
@@ -16,6 +24,14 @@ export const notifyClientOfEvaluationResultV2Created = async ({
   const websockets = await WebsocketClient.getSocket()
   websockets.emit('evaluationResultV2Created', {
     workspaceId: workspace.id,
-    data: { workspaceId: workspace.id, ...rest },
+    data: {
+      workspaceId: workspace.id,
+      result: result,
+      evaluation: evaluation,
+      commit: commit,
+      providerLog: providerLog,
+      dataset: dataset,
+      datasetRow: datasetRow,
+    },
   })
 }
