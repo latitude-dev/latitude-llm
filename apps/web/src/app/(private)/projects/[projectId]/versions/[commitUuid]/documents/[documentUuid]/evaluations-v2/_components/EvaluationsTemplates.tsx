@@ -145,9 +145,7 @@ export function EvaluationsTemplates({
             onConfirm={() => onUse(selectedTemplate)}
             onCancel={() => setOpenUseModal(false)}
             confirm={{
-              label: isCreatingEvaluation
-                ? 'Creating...'
-                : `Use ${selectedTemplate.name}`,
+              label: isCreatingEvaluation ? 'Creating...' : 'Use template',
               description:
                 'A new evaluation will be created from this template.',
               disabled:

@@ -1,15 +1,19 @@
 import { faker } from '@faker-js/faker'
 
 import { ProviderApiKey, Providers, User, Workspace } from '../../browser'
+import { ProviderConfiguration } from '../../schema'
 import {
   createProviderApiKey as createFn,
   destroyProviderApiKey,
 } from '../../services/providerApiKeys'
 import { updateWorkspace } from '../../services/workspaces'
-import { ProviderConfiguration } from '../../schema'
 
 export function defaultProviderFakeData() {
-  return { type: Providers.OpenAI, name: faker.internet.domainName() }
+  return {
+    type: Providers.OpenAI,
+    name: faker.internet.domainName(),
+    defaultModel: undefined,
+  }
 }
 
 export type ICreateProvider = {
