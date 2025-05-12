@@ -1,0 +1,44 @@
+[project]
+name = "latitude-python-examples"
+version = "1.0.0"
+requires-python = ">=3.9, <3.13"
+dependencies = [
+    "openai>=1.58.1",
+    "devtools>=0.12.2",
+    "python-dotenv>=1.0.1",
+    "latitude-sdk>=3.0.1"
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pyright]
+pythonVersion = "3.9"
+typeCheckingMode = "off"
+reportMissingTypeStubs = false
+reportUnnecessaryIsInstance = false
+reportPrivateUsage = false
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+indent-width = 4
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.392",
+    "ruff>=0.8.3",
+]
+
+# Use monorepo version of the SDK
+# [tool.uv.sources]
+# latitude-sdk = { path = "../../../packages/sdks/python" }
+

@@ -16,7 +16,6 @@ export const createLogHandler: AppRouteHandler<CreateLogRoute> = async (c) => {
     commitUuid: versionUuid!,
     documentPath: path!,
   }).then((r) => r.unwrap())
-
   const last = messages[messages.length - 1]
   const content = last ? last.content : undefined
   const documentLog = await createDocumentLog({

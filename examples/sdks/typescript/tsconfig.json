@@ -1,6 +1,0 @@
-{
-  "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "bundler"
-  }
-}
