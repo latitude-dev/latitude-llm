@@ -11,7 +11,16 @@ async function runPrompt() {
 
   try {
     const response = await sdk.prompts.run('run-prompt', {
-      parameters: { name: 'paco' },
+      parameters: {
+        product_name: 'iPhone',
+        features: 'Camera, Battery, Display',
+        target_audience: 'Tech enthusiasts',
+        tone: 'Informal',
+        word_count: 20,
+      },
+      onEvent: (event) => {
+        console.log('Event:', event)
+      },
       onError: (error) => {
         if (error) {
           console.error('Error:', error)
