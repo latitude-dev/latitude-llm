@@ -18,8 +18,8 @@ import { ModifiedDocumentType } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
 import { IndentationLine } from '$/components/Sidebar/Files/IndentationBar'
-import { UseEvaluationPathReturn } from '$/components/Sidebar/Files/useEvaluationPath'
 import { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
+import { type ParamValue } from 'next/dist/server/request/params'
 
 const INDENTATION_UNIT_PX = 24
 function IndentationBar({
@@ -63,7 +63,7 @@ function EvaluationItem({
   commitUuid: string
   projectId: number
   documentUuid: string
-  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
+  currentEvaluationUuid: ParamValue
 }) {
   const spec = getEvaluationTypeSpecification(evaluation)
   const metricSpec = getEvaluationMetricSpecification(evaluation)
@@ -127,7 +127,7 @@ export function EvaluationList({
   changeType?: ModifiedDocumentType | undefined
   indentation?: IndentType[]
   documentUuid: string
-  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
+  currentEvaluationUuid: ParamValue
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()

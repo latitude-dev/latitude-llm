@@ -8,6 +8,7 @@ import {
   VariantPromptSettings,
   VariantPromptSettingsPlaceholder,
 } from './PromptSettings'
+import { ExperimentVariantWrapper } from '$/components/ExperimentVariantWrapper'
 
 export function NewVariantCard({ onClick }: { onClick: () => void }) {
   return (
@@ -95,7 +96,7 @@ export function ExperimentVariantCard({
   }, [setVariants, index])
 
   return (
-    <div className='flex flex-col relative gap-2 p-4 border border-border rounded-md min-w-[300px]'>
+    <ExperimentVariantWrapper>
       {variants.length > 1 && (
         <div className='absolute top-0 right-0 translate-x-1/2 -translate-y-1/2'>
           <Button
@@ -128,6 +129,6 @@ export function ExperimentVariantCard({
           setTemperature={setTemperature}
         />
       )}
-    </div>
+    </ExperimentVariantWrapper>
   )
 }

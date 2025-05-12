@@ -13,11 +13,11 @@ import { Result } from './../../lib/Result'
 import { createOnboardingDataset } from '../datasets/createOnboardingDataset'
 import { createOnboardingProject } from '../projects/createOnboardingProject'
 import { importOnboardingProject } from '../projects/import'
-import { createOnboardingEvaluation } from './createOnboardingEvaluation'
 import { Commit, DocumentVersion, User, Workspace } from '../../browser'
 import { ONBOARDING_DOCUMENT_PATH } from '../documents/findOnboardingDocument'
 import { LatitudeError } from '../../lib/errors'
 import { env } from '@latitude-data/env'
+import { createDemoEvaluation } from '../evaluationsV2/createDemoEvaluation'
 
 const DEFAULT_MODEL = 'gpt-4o-mini'
 
@@ -84,8 +84,8 @@ export default function setupService(
     await createOnboardingDataset({ workspace, author: user }, tx).then((r) =>
       r.unwrap(),
     )
-    await createOnboardingEvaluation(
-      { workspace, document: onboardingDocument, commit, user },
+    await createDemoEvaluation(
+      { workspace, document: onboardingDocument, commit },
       tx,
     ).then((r) => r.unwrap())
 

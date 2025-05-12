@@ -382,7 +382,7 @@ const ContentText = memo(
     return (
       <div className='flex flex-col gap-4'>
         <Reasoning reasoning={reasoning} isReasoning={isReasoning} />
-        <div className='flex flex-col gap-1'>{messagesList}</div>
+        <div className='flex flex-col gap-y-1'>{messagesList}</div>
       </div>
     )
   },
