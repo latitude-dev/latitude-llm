@@ -5,7 +5,32 @@ but also native SDKs for different languages. This repository contains examples 
 ## How to run the examples?
 Go to the docs to [the examples](https://docs.latitude.so/examples) section and
 click on the button "Clone examples". That will copy the prompts used in these
-examples in your Latitude account. Once the prompts are in your Latitude account
-copy the `examples/.env.example` and put the latitude API key that you can found
-in your [Latitude account > settings](https://app.latitude.so/settings)
+repo.
 
+Then you have to configure the `LATITUDE_API_KEY` and the rest of env variables
+in `examples/.env` file. You can use the `.env.example` file as a template.
+
+
+## Install Typescript dependencies
+
+- Install dependencies: `npm install`
+
+## Install Python dependencies
+
+Requires [uv](https://docs.astral.sh/uv/) `0.5.10` or higher.
+
+- Active environment: `uv venv`
+- Install dependencies: `uv venv && uv sync --all-extras --all-groups`
+- Add [dev] dependencies: `uv add [--dev] <package>`
+
+## TROUBLESHOOTING REFRESHING latitude-sdk
+
+>> NOTE
+Only needed if you are using a local version of the SDK.
+
+"uv" ends up caching the package and it needs to be refreshed.
+
+```bash
+uv cache clean
+rm -rf .venv/
+```

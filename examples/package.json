@@ -7,7 +7,10 @@
   "license": "ISC",
   "scripts": {
     "run:ts": "tsx -r dotenv/config",
-    "run_prompt:ts": "npm run run:ts -- ./run-prompt/code/runPromptExample.ts"
+    "ts:run_prompt": "npm run run:ts -- ./run-prompt/code/runPromptExample.ts",
+
+    "run:py": "dotenv -e .env -- .venv/bin/python",
+    "py:run_prompt": "npm run run:py -- ./run-prompt/code/run_prompt_example.py"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.0.8",
