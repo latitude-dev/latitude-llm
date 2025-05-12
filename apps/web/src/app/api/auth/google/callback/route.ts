@@ -48,13 +48,22 @@ export async function GET(request: NextRequest): Promise<Response> {
     const name = claimsParser.getString('name')
     const email = claimsParser.getString('email')
 
+    // Read invitation token from cookie
+    const invitationToken = cookiesStore.get('latitude_invitation_token')?.value
+
     // 3. Find or create user using the core service
     const userResult = await findOrCreateUserFromOAuth({
       providerId: OAuthProvider.GOOGLE,
       providerUserId: googleId,
       email,
-      name: name ?? email, // Use name, fallback to email
+      name: name ?? email,
+      invitationToken: invitationToken ?? undefined, // Pass token if present
     })
+
+    // Clear the cookie after attempting to use it
+    if (invitationToken) {
+      cookiesStore.set('latitude_invitation_token', '', { path: '/', expires: new Date(0) })
+    }
 
     if (userResult.error) {
       console.error(

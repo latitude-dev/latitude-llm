@@ -1,27 +1,56 @@
+'use client'
+
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
 import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
-import buildMetatags from '$/app/_lib/buildMetatags'
 import AuthFooter from '$/app/(public)/_components/Footer'
+import SignupFooter from '$/app/(public)/setup/_components/SignupFooter'
 import { FocusLayout } from '$/components/layouts'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+// import { useEffect, useState } from 'react' // No longer needed
 
 import SetupForm from './SetupForm'
-import SignupFooter from '$/app/(public)/setup/_components/SignupFooter'
 
-export const dynamic = 'force-dynamic'
 
-export const metadata = buildMetatags({
-  title: 'Create an account',
-})
+export default function SetupPage() {
+  const searchParamsHook = useSearchParams()
+  const { enabled: isInviteOnly } = useFeatureFlag({ featureFlag: 'inviteOnly' })
 
-export default async function SetupPage({
-  searchParams,
-}: {
-  searchParams: Promise<
-    { email: string; name: string; companyName: string } | undefined
-  >
-}) {
-  const result = await searchParams
-  const { email, name, companyName } = result ?? {}
+  // Extract params once searchParamsHook is available
+  const email = searchParamsHook?.get('email') ?? undefined
+  const name = searchParamsHook?.get('name') ?? undefined
+  const companyName = searchParamsHook?.get('companyName') ?? undefined
+  const invitationToken = searchParamsHook?.get('invitation_token') ?? undefined
+  
+  // Logic simplified as inviteOnly flag is available server-side
+  // No need for isLoadingFeatureFlags or canRenderForm state for this specific flag
+
+  if (isInviteOnly && !invitationToken) {
+     return (
+      <FocusLayout
+        header={
+          <FocusHeader
+            title='Invite Only'
+            description='This workspace is currently invite-only.'
+          />
+        }
+        footer={<SignupFooter />}
+      >
+        <Card background='light'>
+          <CardContent standalone className="p-6 text-center"> {/* Added padding and centering */}
+            <h3 className="font-semibold mb-2">Access Restricted</h3>
+            <p className="text-sm text-gray-600">
+              This workspace is currently invite-only. To create an account, you need a valid invitation link.
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              If you believe this is an error, please contact support.
+            </p>
+          </CardContent>
+        </Card>
+      </FocusLayout>
+    );
+  }
+
 
   return (
     <FocusLayout
@@ -39,6 +68,7 @@ export default async function SetupPage({
             email={email}
             name={name}
             companyName={companyName}
+            invitationToken={invitationToken} // Pass token to form
             footer={<AuthFooter />}
           />
         </CardContent>

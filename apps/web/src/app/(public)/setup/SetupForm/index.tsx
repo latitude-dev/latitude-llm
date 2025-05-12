@@ -12,6 +12,7 @@ import { setupAction } from '$/actions/user/setupAction'
 import { useFormAction } from '$/hooks/useFormAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import Link from 'next/link'
+import Cookies from 'js-cookie' // For setting cookie
 
 export default function SetupForm({
   email,
@@ -19,12 +20,14 @@ export default function SetupForm({
   companyName,
   footer,
   returnTo,
+  invitationToken,
 }: {
   footer: ReactNode
   email?: string
   name?: string
   companyName?: string
   returnTo?: string
+  invitationToken?: string
 }) {
   const { toast } = useToast()
   const { execute, isPending } = useLatitudeAction(setupAction)
@@ -43,6 +46,9 @@ export default function SetupForm({
   return (
     <form action={action}>
       <input type='hidden' name='returnTo' value={returnTo} />
+      {invitationToken && (
+        <input type='hidden' name='invitationToken' value={invitationToken} />
+      )}
       <FormWrapper>
         <Input
           autoFocus
@@ -88,7 +94,21 @@ export default function SetupForm({
             </div>
           </div>
 
-          <Button variant='outline' fullWidth asChild>
+          <Button
+            variant='outline'
+            fullWidth
+            asChild
+            onClick={() => {
+              if (invitationToken) {
+                Cookies.set('latitude_invitation_token', invitationToken, {
+                  path: '/',
+                  sameSite: 'lax',
+                  // secure: process.env.NODE_ENV === 'production', // Enable in production
+                  expires: 1 / 24 / 2, // Expires in 30 minutes
+                })
+              }
+            }}
+          >
             <Link
               href='/api/auth/google/start'
               className='flex items-center gap-2'

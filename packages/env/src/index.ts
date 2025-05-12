@@ -99,6 +99,7 @@ if (environment === 'development' || environment === 'test') {
       DEFAULT_PROVIDER_API_KEY: 'openai-api-key',
       STRIPE_SECRET_KEY: '',
       STRIPE_WEBHOOK_SECRET: '',
+      INVITE_ONLY: 'false',
     },
     { path: pathToEnv },
   )
@@ -259,6 +260,9 @@ export const env = createEnv({
 
     ENABLE_ALL_FLAGS: z.coerce.boolean().optional().default(false),
     IMPORT_DEFAULT_PROJECT: z.coerce.boolean().optional().default(false),
+
+    // Invite Only
+    INVITE_ONLY: z.coerce.boolean().optional().default(false),
   },
   runtimeEnv: {
     ...process.env,
@@ -277,5 +281,6 @@ export const env = createEnv({
     DISABLE_EMAIL_AUTHENTICATION:
       process.env.DISABLE_EMAIL_AUTHENTICATION === 'true',
     ENABLE_ALL_FLAGS: process.env.ENABLE_ALL_FLAGS === 'true',
+    INVITE_ONLY: process.env.INVITE_ONLY === 'true',
   },
 })
