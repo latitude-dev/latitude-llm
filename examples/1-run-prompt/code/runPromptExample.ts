@@ -4,7 +4,7 @@ import { getSDKDefaultOptions } from '../../utils/javascript'
 async function runPrompt() {
   const { apiKey, options } = getSDKDefaultOptions({
     // Configure RUN_PROMPT_PROJECT_ID in examples/.env file
-    projectId: +process.env.RUN_PROMPT_PROJECT_ID,
+    projectId: +process.env.EXAMPLE_1_PROJECT_ID,
     versionUuid: 'live',
   })
   const sdk = new Latitude(apiKey, options)

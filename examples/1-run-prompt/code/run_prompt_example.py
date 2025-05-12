@@ -4,13 +4,14 @@ import os
 from latitude_sdk import ChatPromptOptions, Latitude, LatitudeOptions, OnToolCallDetails, RunPromptOptions, InternalOptions, GatewayOptions
 from promptl_ai import ImageContent, TextContent, UserMessage
 
-from util.create_sdk import create_sdk
-
 PROJECT_ID = os.getenv("PROJECT_ID")
 COMMIT_UUID = os.getenv("COMMIT_UUID")
 DOCUMENT_PATH = os.getenv("DOCUMENT_PATH")
 
 print("PROJECT_ID", PROJECT_ID)
+
+from util.create_sdk import create_sdk
+
 
 async def main():
     assert PROJECT_ID, "PROJECT_ID is not set"
