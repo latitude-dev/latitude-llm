@@ -230,6 +230,17 @@ export const env = createEnv({
     BULL_ADMIN_USER: z.string().optional().default('admin'),
     BULL_ADMIN_PASS: z.string().optional().default('admin'),
 
+    // Websockets Admin dashboard
+    WEBSOCKETS_ADMIN_USERNAME: z.string().optional().default('admin'),
+    // This is the encrypted version of 'admin'. So you just has to go
+    // to: https://admin.socket.io/ user: admin password: admin
+    // Also in "advance" change "/socket.io" to "/websocket"
+    // Also "Websocket only" toogle to "on"
+    WEBSOCKETS_ADMIN_PASSWORD: z
+      .string()
+      .optional()
+      .default('$2b$10$/KxFQ2sHhzE6MCx5X/PUDO6ibd7fqjqn552U7rp.utC0xSKETwd06'),
+
     // MCP Server feature configurations
     EKS_CA_DATA: z.string().optional(),
     EKS_CLUSTER_NAME: z.string().optional(),

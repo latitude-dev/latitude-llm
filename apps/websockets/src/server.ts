@@ -16,6 +16,7 @@ import { env } from '@latitude-data/env'
 import cookieParser from 'cookie-parser'
 import express from 'express'
 import { Namespace, Server, Socket } from 'socket.io'
+import { instrument } from '@socket.io/admin-ui'
 
 function parseCookie(cookieString: string): Record<string, string> {
   return cookieString.split(';').reduce(
@@ -40,11 +41,22 @@ const server = http.createServer(app)
 const io = new Server(server, {
   path: '/websocket',
   cors: {
-    origin: env.APP_URL,
+    origin: [env.APP_URL, 'https://admin.socket.io'],
     credentials: true,
     methods: ['GET', 'POST'],
   },
 })
+
+instrument(io, {
+  auth: {
+    type: 'basic',
+    username: env.WEBSOCKETS_ADMIN_USERNAME,
+    password: env.WEBSOCKETS_ADMIN_PASSWORD,
+  },
+  readonly: true,
+})
+
+io.of('/admin').use((_socket, next) => next())
 
 io.on('connection', (socket: Socket) => {
   // Main namespace is not enabled. Connect to /web or /workers instead.
