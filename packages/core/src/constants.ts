@@ -19,7 +19,7 @@ import { z } from 'zod'
 import type {
   Commit,
   DocumentVersion,
-  EvaluationTmp,
+  EvaluationV2,
   ProviderLog,
 } from './browser'
 import { PromisedResult } from './lib/Transaction'
@@ -54,7 +54,6 @@ export {
   PROVIDER_MODELS,
   Providers,
 } from './services/ai/providers/models'
-export { PARAMETERS_FROM_LOG } from './services/evaluations/compiler/constants'
 
 export type Message = CompilerMessage
 
@@ -486,7 +485,7 @@ export type DocumentRunPromptSource = {
   document: DocumentVersion
   commit: Commit
 }
-export type PromptSource = EvaluationTmp | DocumentRunPromptSource
+export type PromptSource = EvaluationV2 | DocumentRunPromptSource
 
 export type LatitudeToolDefinition = {
   name: LatitudeTool

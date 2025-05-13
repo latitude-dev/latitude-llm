@@ -4,40 +4,26 @@ import { WorkspaceDto } from '../../browser'
 import { Providers } from '../../constants'
 import { deleteCommitDraft } from '../commits'
 import { computeWorkspaceUsage } from './usage'
-import { connectEvaluations } from '../evaluations/connect'
-import { destroyEvaluation } from '../evaluations/destroy'
 import { deleteEvaluationV2 } from '../evaluationsV2/delete'
 
 describe('computeWorkspaceUsage', () => {
   it('calculates usage correctly when there are evaluation results and document logs', async (ctx) => {
     const {
       workspace: wsp,
-      user,
       commit,
       documents,
-      evaluations,
     } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'test' }],
       documents: {
         foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
       },
-      evaluations: [
-        { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
-      ],
     })
 
     const NUM_DOC_LOGS = 5
     const NUM_EVAL_LOGS = 5
 
     const document = documents[0]!
-    const evaluation = evaluations[0]!
     const workspace = wsp as WorkspaceDto
-    await connectEvaluations({
-      user,
-      workspace,
-      documentUuid: document.documentUuid,
-      evaluationUuids: [evaluation.uuid],
-    })
     const evaluationV2 = await ctx.factories.createEvaluationV2({
       document: document,
       commit: commit,
@@ -53,21 +39,6 @@ describe('computeWorkspaceUsage', () => {
             document,
             commit,
           }),
-        ),
-    )
-
-    const evaluationLogs = await Promise.all(
-      Array(NUM_EVAL_LOGS)
-        .fill(null)
-        .map((_, idx) =>
-          ctx.factories
-            .createEvaluationResult({
-              documentLog: documentLogs[idx % documentLogs.length]!.documentLog,
-              evaluatedProviderLog:
-                documentLogs[idx % documentLogs.length]!.providerLogs[0]!,
-              evaluation,
-            })
-            .then((r) => r.evaluationResult),
         ),
     )
 
@@ -91,44 +62,31 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(
-      documentLogs.length + evaluationLogs.length + evaluationResultsV2.length,
-    )
+    expect(result.usage).toBe(documentLogs.length + evaluationResultsV2.length)
   })
 
   it('calculates usage correctly even if there are multiple workspaces with evaluation results and document logs', async (ctx) => {
     const {
       workspace: wsp1,
       documents: documents1,
-      evaluations: evaluations1,
       commit: commit1,
     } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'test' }],
       documents: {
         foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
       },
-      evaluations: [
-        { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
-      ],
     })
 
     const workspace1 = wsp1 as WorkspaceDto
     const {
       workspace: workspace2,
       documents: documents2,
-      evaluations: evaluations2,
       commit: commit2,
-      user,
     } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'bar' }],
       documents: {
         bar: ctx.factories.helpers.createPrompt({ provider: 'bar' }),
       },
-      evaluations: [
-        {
-          prompt: ctx.factories.helpers.createPrompt({ provider: 'bar' }),
-        },
-      ],
     })
 
     const NUM_DOC_LOGS = 5
@@ -136,8 +94,6 @@ describe('computeWorkspaceUsage', () => {
 
     const document1 = documents1[0]!
     const document2 = documents2[0]!
-    const evaluation1 = evaluations1[0]!
-    const evaluation2 = evaluations2[0]!
     const evaluationV21 = await ctx.factories.createEvaluationV2({
       document: document1,
       commit: commit1,
@@ -149,20 +105,6 @@ describe('computeWorkspaceUsage', () => {
       workspace: workspace2,
     })
 
-    await connectEvaluations({
-      workspace: workspace1,
-      user,
-      documentUuid: document1.documentUuid,
-      evaluationUuids: [evaluation1.uuid],
-    })
-
-    await connectEvaluations({
-      workspace: workspace2,
-      user,
-      documentUuid: document2.documentUuid,
-      evaluationUuids: [evaluation2.uuid],
-    })
-
     // Create document logs
     const documentLogs1 = await Promise.all(
       Array(NUM_DOC_LOGS)
@@ -172,22 +114,6 @@ describe('computeWorkspaceUsage', () => {
             document: document1,
             commit: commit1,
           }),
-        ),
-    )
-
-    const evaluationLogs1 = await Promise.all(
-      Array(NUM_EVAL_LOGS)
-        .fill(null)
-        .map((_, idx) =>
-          ctx.factories
-            .createEvaluationResult({
-              documentLog:
-                documentLogs1[idx % documentLogs1.length]!.documentLog,
-              evaluatedProviderLog:
-                documentLogs1[idx % documentLogs1.length]!.providerLogs[0]!,
-              evaluation: evaluations1[0]!,
-            })
-            .then((r) => r.evaluationResult),
         ),
     )
 
@@ -220,22 +146,6 @@ describe('computeWorkspaceUsage', () => {
       Array(NUM_EVAL_LOGS)
         .fill(null)
         .map((_, idx) =>
-          ctx.factories
-            .createEvaluationResult({
-              documentLog:
-                documentLogs2[idx % documentLogs2.length]!.documentLog,
-              evaluatedProviderLog:
-                documentLogs2[idx % documentLogs2.length]!.providerLogs[0]!,
-              evaluation: evaluations2[0]!,
-            })
-            .then((r) => r.evaluationResult),
-        ),
-    )
-
-    await Promise.all(
-      Array(NUM_EVAL_LOGS)
-        .fill(null)
-        .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV22,
             providerLog:
@@ -253,38 +163,24 @@ describe('computeWorkspaceUsage', () => {
     }).then((r) => r.unwrap())
 
     expect(result.usage).toBe(
-      documentLogs1.length +
-        evaluationLogs1.length +
-        evaluationResultsV21.length,
+      documentLogs1.length + evaluationResultsV21.length,
     )
   })
 
   it('calculates usage correctly when there are no evaluation results or document logs', async (ctx) => {
     const {
       workspace: wsp,
-      user,
       commit,
       documents,
-      evaluations,
     } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'test' }],
       documents: {
         foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
       },
-      evaluations: [
-        { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
-      ],
     })
 
     const workspace = wsp as WorkspaceDto
     const document = documents[0]!
-    const evaluation = evaluations[0]!
-    await connectEvaluations({
-      workspace,
-      user,
-      documentUuid: document.documentUuid,
-      evaluationUuids: [evaluation.uuid],
-    })
     await ctx.factories.createEvaluationV2({
       document: document,
       commit: commit,
@@ -303,36 +199,27 @@ describe('computeWorkspaceUsage', () => {
   it('calculates usage correctly across multiple projects within the workspace', async (ctx) => {
     const {
       workspace: wsp,
-      user: user1,
       commit: commit1,
       documents: documents1,
-      evaluations,
     } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'test' }],
       documents: {
         foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
       },
-      evaluations: [
-        { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
-      ],
     })
 
     const workspace = wsp as WorkspaceDto
-    const {
-      commit: commit2,
-      documents: documents2,
-      user: user2,
-    } = await ctx.factories.createProject({
-      workspace,
-      documents: {
-        bar: ctx.factories.helpers.createPrompt({ provider: 'test' }),
-      },
-    })
+    const { commit: commit2, documents: documents2 } =
+      await ctx.factories.createProject({
+        workspace,
+        documents: {
+          bar: ctx.factories.helpers.createPrompt({ provider: 'test' }),
+        },
+      })
 
     const NUM_DOC_LOGS_PER_PROJECT = 5
     const NUM_EVAL_LOGS_PER_PROJECT = 5
 
-    const evaluation = evaluations[0]!
     const document1 = documents1[0]!
     const document2 = documents2[0]!
     const evaluationV21 = await ctx.factories.createEvaluationV2({
@@ -344,20 +231,6 @@ describe('computeWorkspaceUsage', () => {
       document: document2,
       commit: commit2,
       workspace: workspace,
-    })
-
-    await connectEvaluations({
-      workspace,
-      user: user1,
-      documentUuid: document1.documentUuid,
-      evaluationUuids: [evaluation.uuid],
-    })
-
-    await connectEvaluations({
-      workspace,
-      user: user2,
-      documentUuid: document2.documentUuid,
-      evaluationUuids: [evaluation.uuid],
     })
 
     const document1Logs = await Promise.all(
@@ -379,38 +252,6 @@ describe('computeWorkspaceUsage', () => {
             document: document2,
             commit: commit2,
           }),
-        ),
-    )
-
-    const evaluation1Logs = await Promise.all(
-      Array(NUM_EVAL_LOGS_PER_PROJECT)
-        .fill(null)
-        .map((_, idx) =>
-          ctx.factories
-            .createEvaluationResult({
-              documentLog:
-                document1Logs[idx % document1Logs.length]!.documentLog,
-              evaluatedProviderLog:
-                document1Logs[idx % document1Logs.length]!.providerLogs[0]!,
-              evaluation,
-            })
-            .then((r) => r.evaluationResult),
-        ),
-    )
-
-    const evaluation2Logs = await Promise.all(
-      Array(NUM_EVAL_LOGS_PER_PROJECT)
-        .fill(null)
-        .map((_, idx) =>
-          ctx.factories
-            .createEvaluationResult({
-              documentLog:
-                document2Logs[idx % document2Logs.length]!.documentLog,
-              evaluatedProviderLog:
-                document2Logs[idx % document2Logs.length]!.providerLogs[0]!,
-              evaluation,
-            })
-            .then((r) => r.evaluationResult),
         ),
     )
 
@@ -443,7 +284,6 @@ describe('computeWorkspaceUsage', () => {
     )
 
     const documentLogs = [...document1Logs, ...document2Logs]
-    const evaluationLogs = [...evaluation1Logs, ...evaluation2Logs]
     const evaluationResultsV2 = [
       ...evaluationResultsV21,
       ...evaluationResultsV22,
@@ -454,9 +294,7 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(
-      documentLogs.length + evaluationLogs.length + evaluationResultsV2.length,
-    )
+    expect(result.usage).toBe(documentLogs.length + evaluationResultsV2.length)
   })
 
   it('takes logs from removed commits and evaluations into account', async (ctx) => {
@@ -465,15 +303,11 @@ describe('computeWorkspaceUsage', () => {
       workspace: wsp,
       project,
       documents,
-      evaluations,
     } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'test' }],
       documents: {
         foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
       },
-      evaluations: [
-        { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
-      ],
     })
     const workspace = wsp as WorkspaceDto
 
@@ -483,13 +317,6 @@ describe('computeWorkspaceUsage', () => {
     const NUM_EVAL_LOGS = 5
 
     const document = documents[0]!
-    const evaluation = evaluations[0]!
-    await connectEvaluations({
-      user,
-      workspace,
-      documentUuid: document.documentUuid,
-      evaluationUuids: [evaluation.uuid],
-    })
     const evaluationV2 = await ctx.factories.createEvaluationV2({
       document: document,
       commit: draft,
@@ -505,21 +332,6 @@ describe('computeWorkspaceUsage', () => {
             document,
             commit: draft,
           }),
-        ),
-    )
-
-    const evaluationLogs = await Promise.all(
-      Array(NUM_EVAL_LOGS)
-        .fill(null)
-        .map((_, idx) =>
-          ctx.factories
-            .createEvaluationResult({
-              documentLog: documentLogs[idx % documentLogs.length]!.documentLog,
-              evaluatedProviderLog:
-                documentLogs[idx % documentLogs.length]!.providerLogs[0]!,
-              evaluation,
-            })
-            .then((r) => r.evaluationResult),
         ),
     )
 
@@ -543,7 +355,6 @@ describe('computeWorkspaceUsage', () => {
       commit: draft,
       workspace: workspace,
     })
-    await destroyEvaluation({ evaluation })
     await deleteEvaluationV2({
       evaluation: evaluationV2,
       commit: draft,
@@ -557,9 +368,7 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(
-      documentLogs.length + evaluationLogs.length + evaluationResultsV2.length,
-    )
+    expect(result.usage).toBe(documentLogs.length + evaluationResultsV2.length)
   })
 
   // FIXME: Probably this test can be removed. cc @geclos

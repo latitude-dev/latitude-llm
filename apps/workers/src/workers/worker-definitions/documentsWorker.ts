@@ -4,8 +4,6 @@ import { createWorker } from '../utils/createWorker'
 import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
 const jobMappings = {
-  runDocumentForEvaluationJob: jobs.runDocumentForEvaluationJob,
-  runDocumentInBatchJob: jobs.runDocumentInBatchJob,
   runDocumentJob: jobs.runDocumentJob,
   runDocumentForExperimentJob: jobs.runDocumentForExperimentJob,
 }

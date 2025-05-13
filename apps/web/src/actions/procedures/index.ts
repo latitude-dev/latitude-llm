@@ -1,4 +1,6 @@
 import { getUnsafeIp } from '$/helpers/ip'
+import { DatasetsRepository } from '@latitude-data/core/repositories'
+import { Dataset } from '@latitude-data/core/browser'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { cache } from '@latitude-data/core/cache'
 import {
@@ -175,3 +177,16 @@ export async function withRateLimit<T extends TAnyCompleteProcedure>(
     },
   ) as T
 }
+
+export const withDataset = createServerActionProcedure(withDocument)
+  .input(
+    z.object({
+      datasetId: z.number(),
+    }),
+  )
+  .handler(async ({ input, ctx }) => {
+    const repo = new DatasetsRepository(ctx.workspace.id)
+    const dataset = await repo.find(input.datasetId).then((r) => r.unwrap())
+
+    return { ...ctx, dataset: dataset as Dataset }
+  })

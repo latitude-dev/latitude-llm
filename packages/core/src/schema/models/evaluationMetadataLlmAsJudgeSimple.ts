@@ -4,6 +4,7 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { providerApiKeys } from './providerApiKeys'
 
+// NOTE: Deprecated
 export const evaluationMetadataLlmAsJudgeSimple = latitudeSchema.table(
   'evaluation_metadata_llm_as_judge_simple',
   {

@@ -46,23 +46,17 @@ export function useRefiner(
     })
   const refinePrompt = useCallback(
     async ({
-      evaluationId,
       evaluationUuid,
-      resultIds,
       resultUuids,
     }: {
-      evaluationId?: number
       evaluationUuid?: string
-      resultIds?: number[]
       resultUuids?: string[]
     }) => {
       return await executeRefinePrompt({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
-        evaluationId: evaluationId,
         evaluationUuid: evaluationUuid,
-        resultIds: resultIds,
         resultUuids: resultUuids,
       })
     },

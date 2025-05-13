@@ -48,19 +48,11 @@ export function SuggestionItem({
   const router = useRouter()
 
   const evaluationLink = useMemo(() => {
-    if (suggestion.evaluation.version === 'v2') {
-      return ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({ uuid: commit.uuid })
-        .documents.detail({ uuid: document.documentUuid })
-        .evaluationsV2.detail({ uuid: suggestion.evaluation.uuid }).root
-    }
-
     return ROUTES.projects
       .detail({ id: project.id })
       .commits.detail({ uuid: commit.uuid })
       .documents.detail({ uuid: document.documentUuid })
-      .evaluations.detail(suggestion.evaluation.id).root
+      .evaluationsV2.detail({ uuid: suggestion.evaluation.uuid }).root
   }, [project, commit, document, suggestion])
 
   const onApply = useCallback(() => {

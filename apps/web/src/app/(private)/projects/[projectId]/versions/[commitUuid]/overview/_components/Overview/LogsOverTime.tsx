@@ -2,10 +2,8 @@
 import { useMemo } from 'react'
 
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { BarChart } from '@latitude-data/web-ui/molecules/Charts'
+import { BarChart, ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
-
-import { ChartWrapper } from '../../../documents/[documentUuid]/evaluations/[evaluationId]/_components/MetricsSummary/Charts/ChartContainer'
 
 const formatDate = (date: number) => {
   return new Date(date).toLocaleDateString('en-US', {

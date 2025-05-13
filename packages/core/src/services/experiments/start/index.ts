@@ -58,8 +58,6 @@ export async function startExperiment(
   const { experiment, commit, rows } = updateResult.unwrap()
 
   for await (const row of rows) {
-    // NOTE: This is running jobs for the document with different parameters
-    // then the result is evaluated with `runEvaluationJob`
     await documentsQueue.add('runDocumentForExperimentJob', {
       workspaceId: workspace.id,
       projectId: commit.projectId,

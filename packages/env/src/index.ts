@@ -192,12 +192,10 @@ export const env = createEnv({
     COPILOT_CODE_SUGGESTION_PROMPT_PATH: z.string().optional(),
     COPILOT_DATASET_GENERATOR_PROMPT_PATH: z.string().optional(),
     COPILOT_EVALUATION_GENERATOR_PROMPT_PATH: z.string().optional(),
-    COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: z.string().optional(), // TODO(evalsv2): Delete this when evaluations are migrated
     COPILOT_GENERATE_TOOL_RESPONSES_PATH: z.string().optional(),
     COPILOT_PROJECT_ID: z.coerce.number().optional(),
     COPILOT_REFINE_PROMPT_PATH: z.string().optional(),
     COPILOT_WORKSPACE_API_KEY: z.string().optional(),
-    COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH: z.string().optional(), // TODO(evalsv2): Delete this when evaluations are migrated
 
     LOOPS_API_KEY: z.string().optional(),
     CODESANDBOX_API_KEY: z.string().optional(),

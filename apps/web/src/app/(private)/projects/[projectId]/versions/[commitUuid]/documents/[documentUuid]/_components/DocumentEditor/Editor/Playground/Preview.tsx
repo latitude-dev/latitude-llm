@@ -6,7 +6,6 @@ import { ConversationMetadata } from 'promptl-ai'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 
 import { useToggleModal } from '$/hooks/useToogleModal'
-import RunPromptInBatchModal from './RunPromptInBatchModal'
 import { BATCH_MODAL_NAME } from '../../../constants'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
 import {
@@ -69,13 +68,6 @@ export default function Preview({
         document={document}
         navigateOnCreate
       />
-      {runModal.open ? (
-        <RunPromptInBatchModal
-          document={document}
-          onClose={runModal.onClose}
-          onOpenChange={runModal.onOpenChange}
-        />
-      ) : null}
     </>
   )
 }

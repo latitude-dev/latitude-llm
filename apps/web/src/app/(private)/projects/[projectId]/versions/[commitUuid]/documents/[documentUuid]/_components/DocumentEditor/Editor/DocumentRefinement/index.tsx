@@ -4,7 +4,7 @@ import {
 } from '$/hooks/usePlaygroundAction'
 import { useRefiner } from '$/hooks/useRefiner'
 import { ROUTES } from '$/services/routes'
-import { DocumentVersion, EvaluationTmp } from '@latitude-data/core/browser'
+import { DocumentVersion, EvaluationV2 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -52,32 +52,19 @@ export function DocumentRefinement({
     cancelled,
   )
 
-  const [evaluationId, setEvaluationId] = useState<number | undefined>(
-    playgroundAction?.version === 'v1'
-      ? playgroundAction.evaluationId
-      : undefined,
-  )
-  const [resultIds, setResultIds] = useState<number[]>(
-    playgroundAction?.version === 'v1' ? playgroundAction.resultIds : [],
-  )
-
   const [evaluationUuid, setEvaluationUuid] = useState<string | undefined>(
-    playgroundAction?.version === 'v2'
-      ? playgroundAction.evaluationUuid
-      : undefined,
+    playgroundAction?.evaluationUuid,
   )
   const [resultUuids, setResultUuids] = useState<string[]>(
-    playgroundAction?.version === 'v2' ? playgroundAction.resultUuids : [],
+    playgroundAction?.resultUuids || [],
   )
 
-  const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationTmp>()
+  const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationV2>()
   const [selectedResultIds, setSelectedResultIds] = useState<number[]>([])
   const [selectedResultUuids, setSelectedResultUuids] = useState<string[]>([])
 
   const reset = useCallback(() => {
     resetPlaygroundAction()
-    setEvaluationId(undefined)
-    setResultIds([])
     setEvaluationUuid(undefined)
     setResultUuids([])
     setSelectedEvaluation(undefined)
@@ -85,8 +72,6 @@ export function DocumentRefinement({
     setSelectedResultUuids([])
   }, [
     resetPlaygroundAction,
-    setEvaluationId,
-    setResultIds,
     setEvaluationUuid,
     setResultUuids,
     setSelectedEvaluation,
@@ -101,9 +86,7 @@ export function DocumentRefinement({
 
   const refine = useCallback(async () => {
     const [refinement, error] = await refinePrompt({
-      evaluationId: evaluationId,
       evaluationUuid: evaluationUuid,
-      resultIds: resultIds,
       resultUuids: resultUuids,
     })
 
@@ -136,9 +119,7 @@ export function DocumentRefinement({
 
     close()
   }, [
-    evaluationId,
     evaluationUuid,
-    resultIds,
     resultUuids,
     refinePrompt,
     cancelled,
@@ -152,7 +133,7 @@ export function DocumentRefinement({
   ])
 
   const step = useMemo(() => {
-    if (resultIds.length > 0 || resultUuids.length > 0) {
+    if (resultUuids.length > 0) {
       return {
         number: 3,
         title: 'Generating prompt suggestion',
@@ -174,7 +155,7 @@ export function DocumentRefinement({
       }
     }
 
-    if (evaluationId || evaluationUuid) {
+    if (evaluationUuid) {
       return {
         number: 2,
         title: 'Select relevant results',
@@ -185,9 +166,6 @@ export function DocumentRefinement({
             project={project}
             commit={commit}
             document={document}
-            evaluationId={evaluationId}
-            selectedResultIds={selectedResultIds}
-            setSelectedResultIds={setSelectedResultIds}
             evaluationUuid={evaluationUuid}
             selectedResultUuids={selectedResultUuids}
             setSelectedResultUuids={setSelectedResultUuids}
@@ -201,8 +179,7 @@ export function DocumentRefinement({
             <Button
               fancy
               onClick={() => {
-                if (evaluationUuid) setResultUuids(selectedResultUuids)
-                else setResultIds(selectedResultIds)
+                setResultUuids(selectedResultUuids)
               }}
               disabled={
                 evaluationUuid
@@ -239,9 +216,7 @@ export function DocumentRefinement({
           <Button
             fancy
             onClick={() => {
-              if (selectedEvaluation!.version === 'v2') {
-                setEvaluationUuid(selectedEvaluation!.uuid)
-              } else setEvaluationId(selectedEvaluation!.id)
+              setEvaluationUuid(selectedEvaluation!.uuid)
             }}
             disabled={!selectedEvaluation}
           >
@@ -254,15 +229,11 @@ export function DocumentRefinement({
     project,
     commit,
     document,
-    evaluationId,
     evaluationUuid,
-    resultIds,
     resultUuids,
-    setEvaluationId,
     setEvaluationUuid,
     selectedEvaluation,
     setSelectedEvaluation,
-    setResultIds,
     selectedResultIds,
     setSelectedResultIds,
     setResultUuids,

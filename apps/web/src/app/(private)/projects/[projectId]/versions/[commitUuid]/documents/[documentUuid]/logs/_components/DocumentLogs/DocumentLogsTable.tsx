@@ -5,17 +5,14 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
-import { normalizeNumber } from '$/lib/normalizeNumber'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import {
   DocumentLogFilterOptions,
-  EvaluationConfigurationNumerical,
-  EvaluationResultableType,
   EvaluationV2,
   LOG_FILTERS_ENCODED_PARAMS,
-  ResultWithEvaluationTmp,
+  ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
@@ -57,35 +54,13 @@ function EvaluationsColumn({
   isLoading,
 }: {
   documentLog: DocumentLogRow
-  evaluationResults?: ResultWithEvaluationTmp[]
+  evaluationResults?: ResultWithEvaluationV2[]
   evaluations: EvaluationV2[]
   color: TextColor
   isLoading: boolean
 }) {
   const passedResults = useMemo(
-    () =>
-      evaluationResults.filter(({ evaluation, result, version }) => {
-        if (version === 'v2') return !!result.hasPassed
-
-        const value = result.result
-        if (value === undefined) return false
-
-        if (result.resultableType === EvaluationResultableType.Boolean) {
-          return typeof value === 'string' ? value === 'true' : Boolean(value)
-        }
-
-        if (result.resultableType === EvaluationResultableType.Number) {
-          const minValue = (
-            evaluation.resultConfiguration as EvaluationConfigurationNumerical
-          )?.minValue
-          const maxValue = (
-            evaluation.resultConfiguration as EvaluationConfigurationNumerical
-          )?.maxValue
-          return normalizeNumber(Number(value), minValue, maxValue) >= 0.75
-        }
-
-        return true
-      }).length,
+    () => evaluationResults.filter(({ result }) => !!result.hasPassed).length,
     [evaluationResults],
   )
 
@@ -136,7 +111,7 @@ function EvaluationsColumn({
 type Props = {
   documentLogs: DocumentLogRow[]
   documentLogFilterOptions: DocumentLogFilterOptions
-  evaluationResults: Record<string, ResultWithEvaluationTmp[]>
+  evaluationResults: Record<string, ResultWithEvaluationV2[]>
   evaluations: EvaluationV2[]
   selectedLog: DocumentLogWithMetadataAndError | undefined
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void

@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import {
   EventArgs,
   useSockets,
@@ -12,13 +11,11 @@ import { RealtimeToggle } from '$/components/RealtimeToggle'
 import { ROUTES } from '$/services/routes'
 import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
 import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
-import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   DocumentLogFilterOptions,
-  ResultWithEvaluation,
-  ResultWithEvaluationTmp,
+  ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -102,10 +99,6 @@ export function DocumentLogsPage({
   const page = searchParams.get('page')
   const pageSize = searchParams.get('pageSize')
 
-  const { enabled: evaluationsV2Enabled } = useFeatureFlag({
-    featureFlag: 'evaluationsV2',
-  })
-
   const [documentLogFilterOptions, setDocumentLogFilterOptions] = useState(
     initialDocumentLogFilterOptions,
   )
@@ -131,22 +124,6 @@ export function DocumentLogsPage({
       projectId: project.id,
     })
 
-  const { data: resultsV1, isLoading: isEvaluationResultsV1Loading } =
-    useEvaluationResultsByDocumentLogs({
-      documentLogIds: evaluationsV2Enabled ? [] : documentLogs.map((l) => l.id),
-    })
-  const evaluationResultsV1 = useMemo(
-    () =>
-      documentLogs.reduce(
-        (acc, log) => ({
-          ...acc,
-          ...(resultsV1[log.id] ? { [log.uuid]: resultsV1[log.id]! } : {}),
-        }),
-        {} as Record<string, ResultWithEvaluation[]>,
-      ),
-    [documentLogs, resultsV1],
-  )
-
   const {
     data: evaluationResultsV2,
     isLoading: isEvaluationResultsV2Loading,
@@ -159,16 +136,9 @@ export function DocumentLogsPage({
   })
 
   const evaluationResults = useMemo<
-    Record<string, ResultWithEvaluationTmp[]>
+    Record<string, ResultWithEvaluationV2[]>
   >(() => {
-    let evaluationResults: Record<string, ResultWithEvaluationTmp[]> =
-      Object.fromEntries(
-        Object.entries(evaluationResultsV1).map(([documentLog, results]) => [
-          documentLog,
-          results.map((result) => ({ ...result, version: 'v1' as const })),
-        ]),
-      )
-
+    let evaluationResults: Record<string, ResultWithEvaluationV2[]> = {}
     Object.entries(evaluationResultsV2).forEach(([documentLog, results]) => {
       const resultsV2 = results.map((result) => ({
         ...result,
@@ -185,7 +155,7 @@ export function DocumentLogsPage({
     })
 
     return evaluationResults
-  }, [evaluationResultsV1, evaluationResultsV2])
+  }, [evaluationResultsV2])
 
   const {
     data: evaluations,
@@ -195,9 +165,7 @@ export function DocumentLogsPage({
   } = useEvaluationsV2({ project, commit, document })
 
   const isEvaluationsLoading =
-    isEvaluationResultsV1Loading ||
-    isEvaluationResultsV2Loading ||
-    isEvaluationsV2Loading
+    isEvaluationResultsV2Loading || isEvaluationsV2Loading
 
   const [realtimeEnabled, setRealtimeEnabled] = useState(true)
   useDocumentLogSocket(document.documentUuid, mutate, realtimeEnabled)

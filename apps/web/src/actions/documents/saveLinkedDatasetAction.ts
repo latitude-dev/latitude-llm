@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { ParameterType } from '@latitude-data/constants'
 import { saveLinkedDataset } from '@latitude-data/core/services/documents/saveLinkedDataset'
-import { withDataset } from '$/actions/evaluations/_helpers'
+import { withDataset } from '../procedures'
 
 const parameterTypeSchema = z.nativeEnum(ParameterType)
 const datasetInputMetadataSchema = z.object({

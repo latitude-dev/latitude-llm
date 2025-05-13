@@ -8,13 +8,8 @@ import { notifyClientOfEvaluationResultV2Created } from './notifyClientOfEvaluat
 import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
 import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
-import { notifyToClientEvaluationResultCreatedJob } from './notifyToClientEvaluationResultCreatedJob'
 import { pingProjectUpdateJob } from './pingProjectUpdateJob'
-import {
-  requestDocumentSuggestionJob,
-  requestDocumentSuggestionJobV2,
-} from './requestDocumentSuggestionJob'
-import { runLiveEvaluationsJob } from './runLiveEvaluationsJob'
+import { requestDocumentSuggestionJobV2 } from './requestDocumentSuggestionJob'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
@@ -25,18 +20,13 @@ import { updateWebhookLastTriggeredAt } from './webhooks'
 
 export const EventHandlers: IEventsHandlers = {
   aiProviderCallCompleted: [],
-  batchEvaluationRun: [],
   claimReferralInvitations: [createClaimInvitationReferralJob],
   commitCreated: [],
   commitPublished: [],
   datasetCreated: [],
   datasetUploaded: [createDatasetRowsJob],
   documentCreated: [],
-  documentLogCreated: [
-    runLiveEvaluationsJob,
-    evaluateLiveLogJob,
-    notifyToClientDocumentLogCreatedJob,
-  ],
+  documentLogCreated: [evaluateLiveLogJob, notifyToClientDocumentLogCreatedJob],
   experimentVariantsCreated: [],
   documentSuggestionCreated: [
     notifyClientOfDocumentSuggestionCreated,
@@ -44,15 +34,6 @@ export const EventHandlers: IEventsHandlers = {
   ],
   documentSuggestionApplied: [],
   documentSuggestionDiscarded: [],
-  documentRun: [],
-  evaluationCreated: [],
-  evaluationResultCreated: [
-    requestDocumentSuggestionJob,
-    notifyToClientEvaluationResultCreatedJob,
-  ],
-  evaluationResultUpdated: [],
-  evaluationRun: [],
-  evaluationsConnected: [],
   magicLinkTokenCreated: [sendMagicLinkJob],
   membershipCreated: [sendInvitationToUserJob],
   projectCreated: [],
@@ -67,8 +48,6 @@ export const EventHandlers: IEventsHandlers = {
   chatMessageRequested: [],
   sharedChatMessageRequested: [],
   forkDocumentRequested: [],
-  batchEvaluationRunRequested: [],
-  runDocumentInBatchRequested: [],
   copilotRefinerGenerated: [],
   copilotRefinerApplied: [],
   copilotSuggestionGenerated: [],

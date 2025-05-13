@@ -1,8 +1,6 @@
 import {
-  ConnectedEvaluation,
   DocumentVersion,
-  EvaluationDto,
-  EvaluationResultTmp,
+  EvaluationResultV2,
   EvaluationV2,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
@@ -11,13 +9,9 @@ import {
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
 
-export type EvaluationTmp =
-  | (EvaluationDto & { live: ConnectedEvaluation['live']; version: 'v1' })
-  | (EvaluationV2 & { version: 'v2' })
-
 export type Props = {
-  results: Record<string, EvaluationResultTmp>
-  evaluations: EvaluationTmp[]
+  results: Record<string, EvaluationResultV2>
+  evaluations: EvaluationV2[]
   document: DocumentVersion
   commit: ICommitContextType['commit']
   project: IProjectContextType['project']
