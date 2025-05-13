@@ -53,26 +53,40 @@ export default function EvaluateLiveLogsSwitch<
     [isDisabled, evaluation, updateEvaluation],
   )
 
-  return !metricSpecification?.supportsLiveEvaluation ? (
+  if (!metricSpecification?.supportsLiveEvaluation) {
+    return (
+      <Tooltip
+        asChild
+        trigger={
+          <div>
+            <SwitchToggle checked={false} disabled={true} />
+          </div>
+        }
+        align='center'
+        side='top'
+      >
+        {typeSpecification?.name} / {metricSpecification?.name} evaluations do
+        not support live evaluation
+      </Tooltip>
+    )
+  }
+
+  return (
     <Tooltip
       asChild
       trigger={
         <div>
-          <SwitchToggle checked={false} disabled={true} />
+          <SwitchToggle
+            checked={!!evaluation.evaluateLiveLogs}
+            onCheckedChange={setEvaluateLiveLogs}
+            disabled={isDisabled}
+          />
         </div>
       }
-      maxWidth='max-w-[400px]'
       align='center'
       side='top'
     >
-      {typeSpecification?.name} / {metricSpecification?.name} evaluations do not
-      support live evaluation
+      {evaluation.evaluateLiveLogs ? 'Disable' : 'Enable'} live evaluation
     </Tooltip>
-  ) : (
-    <SwitchToggle
-      checked={!!evaluation.evaluateLiveLogs}
-      onCheckedChange={setEvaluateLiveLogs}
-      disabled={isDisabled}
-    />
   )
 }

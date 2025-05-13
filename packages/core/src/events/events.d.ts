@@ -16,6 +16,7 @@ import type {
   EvaluationResultV2,
   EvaluationTmp,
   EvaluationV2,
+  Experiment,
   LogSources,
   MagicLinkToken,
   Membership,
@@ -73,6 +74,7 @@ export type Events =
   | 'evaluationResultUpdated'
   | 'evaluationV2Created'
   | 'evaluationV2Updated'
+  | 'evaluationV2Deleted'
   | 'evaluationV2Ran'
   | 'evaluationV2Annotated'
   | 'evaluationResultV2Created'
@@ -534,6 +536,14 @@ export type EvaluationV2UpdatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type EvaluationV2DeletedEvent = LatitudeEventGeneric<
+  'evaluationV2Deleted',
+  {
+    workspaceId: number
+    evaluation: EvaluationV2
+  }
+>
+
 export type EvaluationV2RanEvent = LatitudeEventGeneric<
   'evaluationV2Ran',
   {
@@ -564,6 +574,7 @@ export type EvaluationResultV2CreatedEvent = LatitudeEventGeneric<
     evaluation: EvaluationV2
     commit: Commit
     providerLog: ProviderLogDto
+    experiment?: Experiment
     dataset?: DatasetV2
     datasetRow?: DatasetRow
   }
@@ -649,6 +660,7 @@ export type LatitudeEvent =
   | EvaluationResultUpdatedEvent
   | EvaluationV2CreatedEvent
   | EvaluationV2UpdatedEvent
+  | EvaluationV2DeletedEvent
   | EvaluationV2RanEvent
   | EvaluationV2AnnotatedEvent
   | EvaluationResultV2CreatedEvent
@@ -699,6 +711,7 @@ export interface IEventsHandlers {
   evaluationResultUpdated: EventHandler<EvaluationResultUpdatedEvent>[]
   evaluationV2Created: EventHandler<EvaluationV2CreatedEvent>[]
   evaluationV2Updated: EventHandler<EvaluationV2UpdatedEvent>[]
+  evaluationV2Deleted: EventHandler<EvaluationV2DeletedEvent>[]
   evaluationV2Ran: EventHandler<EvaluationV2RanEvent>[]
   evaluationV2Annotated: EventHandler<EvaluationV2AnnotatedEvent>[]
   evaluationResultV2Created: EventHandler<EvaluationResultV2CreatedEvent>[]

@@ -27,13 +27,13 @@ type CreateEvaluationResultV2Args<
   evaluation: EvaluationV2<T, M>
   providerLog: ProviderLog | ProviderLogDto
   commit: Commit
+  experiment?: Experiment
   dataset?: Dataset
   datasetLabel?: string
   datasetRow?: DatasetRow
   usedForSuggestion?: boolean
   workspace: Workspace
   createdAt?: Date
-  experiment?: Experiment
 } & Partial<EvaluationResultValue<T, M>>
 
 // prettier-ignore
@@ -55,12 +55,12 @@ export async function createEvaluationResultV2<
 >(args: CreateEvaluationResultV2Args<T, M>): Promise<EvaluationResultV2<T, M>> {
   const { result } = await createEvaluationResultSvc({
     evaluation: args.evaluation,
-    experiment: args.experiment,
     providerLog:
       'response' in args.providerLog
         ? args.providerLog
         : serializeProviderLog(args.providerLog),
     commit: args.commit,
+    experiment: args.experiment,
     dataset: args.dataset,
     datasetRow: args.datasetRow,
     value: {

@@ -153,7 +153,8 @@ export async function annotateEvaluationV2<
     if (existingResult.ok) {
       const { result: updatedResult } = await updateEvaluationResultV2(
         {
-          uuid: resultUuid,
+          result: existingResult.unwrap(),
+          commit: commit,
           value: value as EvaluationResultValue<T, M>,
           workspace: workspace,
         },
