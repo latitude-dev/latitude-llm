@@ -109,7 +109,7 @@ async function validate(
   })
 }
 
-export function buildPrompt({
+function buildPrompt({
   provider,
   model,
   criteria,

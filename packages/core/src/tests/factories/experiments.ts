@@ -1,19 +1,18 @@
 import { faker } from '@faker-js/faker'
 import {
   Commit,
-  Dataset,
   DocumentVersion,
   EvaluationV2,
+  User,
+  Workspace,
   Experiment,
   LogSources,
   ProviderApiKey,
-  User,
-  Workspace,
 } from '../../browser'
 import { createExperiment as createExperimentFn } from '../../services/experiments/create'
 import { createDataset, ICreateDatasetV2 } from './datasets'
-import { createDocumentLog } from './documentLogs'
 import { createEvaluationResultV2 } from './evaluationResultsV2'
+import { createDocumentLog } from './documentLogs'
 import { createProviderLog } from './providerLogs'
 
 export type ICreateExperiment = {
@@ -22,7 +21,7 @@ export type ICreateExperiment = {
   commit: Commit
   evaluations: EvaluationV2[]
   customPrompt?: string
-  dataset?: Dataset | ICreateDatasetV2
+  dataset?: ICreateDatasetV2
   parametersMap?: Record<string, number>
   datasetLabels?: Record<string, string>
   fromRow?: number
@@ -32,25 +31,19 @@ export type ICreateExperiment = {
 }
 
 export async function createExperiment(args: ICreateExperiment) {
-  let dataset
-  if (args.dataset && 'id' in args.dataset) dataset = args.dataset
-  else if (args.dataset) {
-    const { dataset: d } = await createDataset({
-      ...args.dataset,
-      workspace: args.workspace,
-    })
-    dataset = d
-  } else {
-    const { dataset: d } = await createDataset({
-      workspace: args.workspace,
-      author: args.user,
-      fileContent: `
-input1,input2,output
-foo,bar,baz
-`.trim(),
-    })
-    dataset = d
-  }
+  // Create or use existing dataset
+  const fileContent = `input1,input2,output
+  foo,bar,baz`
+  const datasetResult = args.dataset
+    ? await createDataset({
+        ...args.dataset,
+        workspace: args.workspace,
+      })
+    : await createDataset({
+        workspace: args.workspace,
+        author: args.user,
+        fileContent,
+      })
 
   const datasetLabels =
     args.datasetLabels ??
@@ -65,7 +58,7 @@ foo,bar,baz
     commit: args.commit,
     evaluations: args.evaluations,
     customPrompt: args.customPrompt,
-    dataset: dataset,
+    dataset: datasetResult.dataset,
     parametersMap: args.parametersMap ?? {},
     datasetLabels,
     fromRow: args.fromRow,
@@ -75,7 +68,7 @@ foo,bar,baz
 
   return {
     experiment,
-    dataset: dataset,
+    dataset: datasetResult.dataset,
     workspace: args.workspace,
   }
 }

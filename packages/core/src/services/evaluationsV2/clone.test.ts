@@ -1,7 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
   Commit,
-  DocumentVersion,
   EvaluationType,
   EvaluationV2,
   LlmEvaluationMetric,
@@ -9,23 +8,17 @@ import {
   Providers,
   Workspace,
 } from '../../browser'
-import { BadRequestError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
 import { cloneEvaluationV2 } from './clone'
-import { LlmEvaluationRatingSpecification, buildPrompt } from './llm/rating'
+import { buildPrompt } from './llm/binary'
 
-describe('cloneEvaluationV2', () => {
+describe('clone', () => {
   let workspace: Workspace
-  let commit: Commit
-  let document: DocumentVersion
   let provider: ProviderApiKey
-  let evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Rating>
+  let commit: Commit
+  let evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
 
   beforeEach(async () => {
-    vi.resetAllMocks()
-    vi.clearAllMocks()
-    vi.restoreAllMocks()
-
     const {
       workspace: w,
       documents,
@@ -34,106 +27,80 @@ describe('cloneEvaluationV2', () => {
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
-        prompt: factories.helpers.createPrompt({
-          provider: 'openai',
-          model: 'gpt-4o',
-        }),
+        'test.md': 'test content',
       },
     })
 
     workspace = w
     commit = c
-    document = documents[0]!
     provider = providers[0]!
+    const document = documents[0]
+    if (!document) {
+      throw new Error('Document was not created')
+    }
 
     evaluation = await factories.createEvaluationV2({
-      document: document,
-      commit: commit,
-      workspace: workspace,
+      document,
+      commit,
+      workspace,
+      evaluateLiveLogs: false,
+      name: 'Automatic LLm Evaluation',
+      description: 'Description',
       type: EvaluationType.Llm,
-      metric: LlmEvaluationMetric.Rating,
-      name: 'evaluation',
-      description: 'description',
+      metric: LlmEvaluationMetric.Binary,
       configuration: {
         reverseScale: false,
-        provider: provider.name,
-        model: 'gpt-4o',
-        criteria: 'criteria',
-        minRating: 1,
-        minRatingDescription: 'min description',
-        maxRating: 5,
-        maxRatingDescription: 'max description',
-        minThreshold: 3,
+        provider: 'openai',
+        model: 'gpt-4',
+        criteria: 'Evaluate the response',
+        passDescription: 'Pass',
+        failDescription: 'Fail',
       },
     })
+  })
 
-    await factories.createEvaluationV2({
-      document: document,
-      commit: commit,
-      workspace: workspace,
-      name: 'evaluation (1)',
+  it('clones an evaluation', async () => {
+    const result = await cloneEvaluationV2({
+      evaluation,
+      commit,
+      workspace,
     })
-  })
-
-  it('fails when cloning is not supported for the evaluation', async () => {
-    const otherEvaluation = await factories.createEvaluationV2({
-      document: document,
-      commit: commit,
-      workspace: workspace,
-      name: 'other evaluation',
+    expect(result.value!.evaluation).toEqual({
+      id: expect.any(Number),
+      versionId: expect.any(Number),
+      uuid: expect.any(String),
+      evaluationUuid: expect.any(String),
+      createdAt: expect.any(Date),
+      updatedAt: expect.any(Date),
+      metric: LlmEvaluationMetric.Custom,
+      type: EvaluationType.Llm,
+      name: `${evaluation.name} (1)`,
+      description: 'Description',
+      evaluateLiveLogs: true,
+      commitId: commit.id,
+      deletedAt: null,
+      documentUuid: evaluation.documentUuid,
+      enableSuggestions: null,
+      autoApplySuggestions: null,
+      workspaceId: workspace.id,
+      configuration: {
+        reverseScale: false,
+        provider: 'openai',
+        model: 'gpt-4',
+        prompt: expect.stringContaining(
+          buildPrompt({
+            provider,
+            model: 'gpt-4',
+            criteria: 'Evaluate the response',
+            passDescription: 'Pass',
+            failDescription: 'Fail',
+          }),
+        ),
+        minScore: 0,
+        maxScore: 1,
+        minThreshold: 1,
+        maxThreshold: undefined,
+      },
     })
-
-    await expect(
-      cloneEvaluationV2({
-        evaluation: otherEvaluation,
-        commit: commit,
-        workspace: workspace,
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new BadRequestError('Cloning is not supported for this evaluation'),
-    )
-  })
-
-  it('fails when type and metric cloning fails', async () => {
-    vi.spyOn(LlmEvaluationRatingSpecification, 'clone').mockRejectedValue(
-      new BadRequestError('metric cloning error'),
-    )
-
-    await expect(
-      cloneEvaluationV2({
-        evaluation: evaluation,
-        commit: commit,
-        workspace: workspace,
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(new BadRequestError('metric cloning error'))
-  })
-
-  it('succeeds when cloning an evaluation', async () => {
-    const { evaluation: clonedEvaluation } = await cloneEvaluationV2({
-      evaluation: evaluation,
-      commit: commit,
-      workspace: workspace,
-    }).then((r) => r.unwrap())
-
-    expect(clonedEvaluation).toEqual(
-      expect.objectContaining({
-        name: `${evaluation.name} (2)`,
-        description: evaluation.description,
-        type: EvaluationType.Llm,
-        metric: LlmEvaluationMetric.Custom,
-        configuration: {
-          reverseScale: evaluation.configuration.reverseScale,
-          provider: evaluation.configuration.provider,
-          model: evaluation.configuration.model,
-          prompt: expect.stringContaining(
-            buildPrompt({ ...evaluation.configuration, provider }),
-          ),
-          minScore: evaluation.configuration.minRating,
-          maxScore: evaluation.configuration.maxRating,
-          minThreshold: evaluation.configuration.minThreshold,
-          maxThreshold: evaluation.configuration.maxThreshold,
-        },
-      }),
-    )
   })
 })

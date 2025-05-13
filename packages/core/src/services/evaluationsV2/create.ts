@@ -14,6 +14,7 @@ import { compactObject } from '../../lib/compactObject'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { evaluationVersions } from '../../schema'
+import { pingProjectUpdate } from '../projects'
 import { validateEvaluationV2 } from './validate'
 
 export async function createEvaluationV2<
@@ -26,11 +27,15 @@ export async function createEvaluationV2<
     settings,
     options = {},
     workspace,
+    createdAt = new Date(),
+    updatedAt = new Date(),
   }: {
     document: DocumentVersion
     commit: Commit
     settings: EvaluationSettings<T, M>
     options?: Partial<EvaluationOptions>
+    createdAt?: Date
+    updatedAt?: Date
     workspace: Workspace
   },
   db: Database = database,
@@ -55,6 +60,8 @@ export async function createEvaluationV2<
         documentUuid: document.documentUuid,
         ...validate.settings,
         ...validate.options,
+        createdAt,
+        updatedAt,
       })
       .returning()
       .then((r) => r[0]!)
@@ -68,10 +75,14 @@ export async function createEvaluationV2<
     await publisher.publishLater({
       type: 'evaluationV2Created',
       data: {
-        evaluation: evaluation,
         workspaceId: workspace.id,
+        evaluation: evaluation,
       },
     })
+
+    await pingProjectUpdate({ projectId: commit.projectId }, tx).then((r) =>
+      r.unwrap(),
+    )
 
     return Result.ok({ evaluation })
   }, db)

@@ -37,15 +37,12 @@ export async function updateEvaluationV2<
   },
   db: Database = database,
 ) {
-  let settingsChanged = false
   for (const setting in settings ?? {}) {
     const key = setting as keyof typeof settings
     if (!isEqual(settings?.[key], evaluation[key])) {
-      settingsChanged = true
-      break
+      assertCommitIsDraft(commit).unwrap()
     }
   }
-  if (settingsChanged) assertCommitIsDraft(commit).unwrap()
 
   const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
   const document = await documentsRepository

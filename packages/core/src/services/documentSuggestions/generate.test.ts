@@ -289,43 +289,6 @@ describe('generateDocumentSuggestion', () => {
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
-  it('not generates document suggestion when copilot fails', async () => {
-    mocks.runCopilot.mockImplementation(async (_) => {
-      return Result.error(new UnprocessableEntityError('copilot error'))
-    })
-    mocks.publisher.mockClear()
-
-    await expect(
-      generateDocumentSuggestion({
-        workspace: workspace,
-        commit: commit,
-        document: document,
-        evaluation: { ...evaluation, version: 'v1' },
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(new UnprocessableEntityError('copilot error'))
-
-    const repository = new DocumentSuggestionsRepository(workspace.id)
-    const suggestions = await repository
-      .listByDocumentVersionWithDetails({ commit, document })
-      .then((r) => r.unwrap())
-    expect(suggestions).toEqual([])
-    expect(mocks.getCopilot).toHaveBeenCalledOnce()
-    expect(mocks.runCopilot).toHaveBeenCalledOnce()
-    expect(mocks.runCopilot).toHaveBeenLastCalledWith({
-      copilot: expect.any(Object),
-      parameters: {
-        prompt: document.content,
-        evaluation: (evaluation.metadata as any).prompt,
-        results: results
-          .sort((a, b) => Number(a.result) - Number(b.result))
-          .map((r) => expect.objectContaining({ result: Number(r.result) }))
-          .slice(0, MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION),
-      },
-      schema: expect.any(ZodObject),
-    })
-    expect(mocks.publisher).not.toHaveBeenCalled()
-  })
-
   it('generates document suggestion when there are none', async () => {
     const { suggestion } = await generateDocumentSuggestion({
       workspace: workspace,

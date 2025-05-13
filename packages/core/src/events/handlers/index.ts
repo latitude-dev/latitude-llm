@@ -70,9 +70,8 @@ export const EventHandlers: IEventsHandlers = {
   copilotRefinerApplied: [],
   copilotSuggestionGenerated: [],
   copilotSuggestionApplied: [],
-  evaluationV2Created: [pingProjectUpdateJob],
+  evaluationV2Created: [],
   evaluationV2Updated: [pingProjectUpdateJob],
-  evaluationV2Deleted: [pingProjectUpdateJob],
   evaluationV2Ran: [],
   evaluationV2Annotated: [],
   evaluationResultV2Created: [

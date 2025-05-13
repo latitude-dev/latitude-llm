@@ -12,7 +12,6 @@ import { Result } from '../../../lib/Result'
 import { ProviderApiKeysRepository } from '../../../repositories'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { createRunError } from '../../runErrors/create'
-import { isErrorRetryable } from '../run'
 import {
   EvaluationMetricBackendSpecification,
   EvaluationMetricCloneArgs,
@@ -24,6 +23,7 @@ import { LlmEvaluationComparisonSpecification } from './comparison'
 import { LlmEvaluationCustomSpecification } from './custom'
 import { LlmEvaluationCustomLabeledSpecification } from './customLabeled'
 import { LlmEvaluationRatingSpecification } from './rating'
+import { isErrorRetryable } from '../run'
 
 // prettier-ignore
 const METRICS: {
@@ -122,10 +122,10 @@ async function run<M extends LlmEvaluationMetric>(
 
     return value
   } catch (error) {
-    if (isErrorRetryable(error as Error)) throw error
-
     let runError
     if (error instanceof ChainError) {
+      if (isErrorRetryable(error)) throw error
+
       runError = await createRunError(
         {
           data: {

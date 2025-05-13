@@ -1,6 +1,5 @@
 import { and, eq } from 'drizzle-orm'
 import {
-  Commit,
   EvaluationMetric,
   EvaluationResultV2,
   EvaluationResultValue,
@@ -18,14 +17,12 @@ export async function updateEvaluationResultV2<
   M extends EvaluationMetric<T>,
 >(
   {
-    result: { uuid },
-    commit,
+    uuid,
     value,
     workspace,
   }: {
-    result: EvaluationResultV2<T, M>
-    commit: Commit
-    value: Partial<EvaluationResultValue<T, M>>
+    uuid: string
+    value: EvaluationResultValue<T, M>
     workspace: Workspace
   },
   db: Database = database,
@@ -33,11 +30,7 @@ export async function updateEvaluationResultV2<
   return await Transaction.call(async (tx) => {
     const result = (await tx
       .update(evaluationResultsV2)
-      .set({
-        commitId: commit.id,
-        ...value,
-        updatedAt: new Date(),
-      })
+      .set({ ...value, updatedAt: new Date() })
       .where(
         and(
           eq(evaluationResultsV2.workspaceId, workspace.id),
