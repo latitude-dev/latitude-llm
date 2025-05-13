@@ -35,6 +35,7 @@ export const EventHandlers: IEventsHandlers = {
     evaluateLiveLogJob,
     notifyToClientDocumentLogCreatedJob,
   ],
+  experimentVariantsCreated: [],
   documentSuggestionCreated: [
     notifyClientOfDocumentSuggestionCreated,
     sendSuggestionNotification,

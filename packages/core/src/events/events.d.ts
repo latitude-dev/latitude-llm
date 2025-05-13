@@ -1,5 +1,6 @@
 import { FinishReason, LanguageModelUsage } from 'ai'
 
+import { ExperimentVariant } from '@latitude-data/constants/experiments'
 import type {
   ChainStepResponse,
   Commit,
@@ -36,6 +37,7 @@ export type Events =
   | 'membershipCreated'
   | 'evaluationRun'
   | 'documentRun'
+  | 'experimentVariantsCreated'
   | 'providerLogCreated'
   | 'aiProviderCallCompleted'
   | 'workspaceCreated'
@@ -130,6 +132,16 @@ export type DocumentRunEvent = LatitudeEventGeneric<
     customIdentifier?: string
     duration?: number
     response?: ChainStepResponse<StreamType>
+  }
+>
+
+export type ExperimentVariantsCreatedEvent = LatitudeEventGeneric<
+  'experimentVariantsCreated',
+  {
+    workspaceId: number
+    documentUuid: string
+    commitUuid: string
+    variants: ExperimentVariant[]
   }
 >
 
@@ -602,6 +614,7 @@ export type LatitudeEvent =
   | EvaluationRunEvent
   | DocumentRunEvent
   | ProviderLogCreatedEvent
+  | ExperimentVariantsCreatedEvent
   | AIProviderCallCompletedEvent
   | WorkspaceCreatedEvent
   | ProjectCreatedEvent
@@ -651,6 +664,7 @@ export interface IEventsHandlers {
   evaluationRun: EventHandler<EvaluationRunEvent>[]
   documentRun: EventHandler<DocumentRunEvent>[]
   providerLogCreated: EventHandler<ProviderLogCreatedEvent>[]
+  experimentVariantsCreated: EventHandler<ExperimentVariantsCreatedEvent>[]
   aiProviderCallCompleted: EventHandler<AIProviderCallCompletedEvent>[]
   workspaceCreated: EventHandler<WorkspaceCreatedEvent>[]
   projectCreated: EventHandler<ProjectCreatedEvent>[]

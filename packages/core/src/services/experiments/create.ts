@@ -26,34 +26,40 @@ function calculateSelectedRangeCount({
   return lastRow - firstRow + 1 // +1 because both first and last rows are inclusive
 }
 
-async function getPromptMetadata({
-  workspace,
-  commit,
-  document,
-  customPrompt,
-}: {
-  workspace: Workspace
-  commit: Commit
-  document: DocumentVersion
-  customPrompt?: string // Prompt can be different than the current one
-}): PromisedResult<{
+async function getPromptMetadata(
+  {
+    workspace,
+    commit,
+    document,
+    customPrompt,
+  }: {
+    workspace: Workspace
+    commit: Commit
+    document: DocumentVersion
+    customPrompt?: string // Prompt can be different than the current one
+  },
+  db = database,
+): PromisedResult<{
   resolvedPrompt: string
   promptHash: string
   parameters: string[]
 }> {
-  const metadata = await scanDocumentContent({
-    workspaceId: workspace.id,
-    document: {
-      ...document,
-      content: customPrompt ?? document.content,
+  const metadata = await scanDocumentContent(
+    {
+      workspaceId: workspace.id,
+      document: {
+        ...document,
+        content: customPrompt ?? document.content,
+      },
+      commit,
     },
-    commit,
-  })
+    db,
+  )
 
   if (metadata.error) {
     return Result.error(metadata.error)
   }
-  const { resolvedPrompt, hash, parameters } = metadata.unwrap()
+  const { resolvedPrompt, hash, parameters } = metadata.value
   return Result.ok({
     resolvedPrompt,
     promptHash: hash,
@@ -88,19 +94,22 @@ export async function createExperiment(
     workspace: Workspace
   },
   db: Database = database,
-): PromisedResult<Experiment, LatitudeError> {
+) {
   const requirementsResult = assertEvaluationRequirements({
     evaluations,
     datasetLabels,
   })
   if (requirementsResult.error) return requirementsResult
 
-  const promptMetadataResult = await getPromptMetadata({
-    workspace,
-    commit,
-    document,
-    customPrompt,
-  })
+  const promptMetadataResult = await getPromptMetadata(
+    {
+      workspace,
+      commit,
+      document,
+      customPrompt,
+    },
+    db,
+  )
 
   if (promptMetadataResult.error) {
     return Result.error(new LatitudeError(promptMetadataResult.error.message))
@@ -148,9 +157,9 @@ export async function createExperiment(
       .returning()
 
     if (!result.length) {
-      return Result.error(new LatitudeError('Failed to create experiment'))
+      throw new LatitudeError('Failed to create experiment')
     }
 
     return Result.ok(result[0]! as Experiment)
-  }, db) as PromisedResult<Experiment, LatitudeError>
+  }, db)
 }

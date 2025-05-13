@@ -1,7 +1,7 @@
 import { EvaluationV2 } from '@latitude-data/constants'
-import { BadRequestError, LatitudeError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result } from '../../lib/Result'
 import { getEvaluationMetricSpecification } from '../evaluationsV2/specifications'
+import { BadRequestError } from '../../lib/errors'
 
 export function assertEvaluationRequirements({
   evaluations,
@@ -9,7 +9,7 @@ export function assertEvaluationRequirements({
 }: {
   evaluations: EvaluationV2[]
   datasetLabels: Record<string, string>
-}): TypedResult<undefined, LatitudeError> {
+}) {
   for (const evaluation of evaluations) {
     const spec = getEvaluationMetricSpecification(evaluation)
     if (!spec.supportsBatchEvaluation) {

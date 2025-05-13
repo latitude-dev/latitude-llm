@@ -16,8 +16,8 @@ import {
 } from '@latitude-data/core/browser'
 import { useExperiments } from '$/stores/experiments'
 import { OnboardingDocumentParameterKeys } from '@latitude-data/constants/onboarding'
+import type { ExperimentVariant } from '@latitude-data/constants/experiments'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { ExperimentVariant } from '$/actions/experiments'
 import { envClient } from '$/envClient'
 
 const PARAMETERS_MAP: Record<OnboardingDocumentParameterKeys, number> = {

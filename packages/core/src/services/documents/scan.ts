@@ -9,6 +9,7 @@ import { LatitudeError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
 import { TypedResult } from './../../lib/Result'
 import { UnprocessableEntityError } from './../../lib/errors'
+import { database } from '../../client'
 
 export async function getDocumentMetadata({
   document,
@@ -54,16 +55,19 @@ export async function getDocumentMetadata({
  * workspaceId from a trusted source. Like for example API gateway that validates
  * requested documents belongs to the right workspace.
  */
-export async function scanDocumentContent({
-  workspaceId,
-  document,
-  commit,
-}: {
-  workspaceId: Workspace['id']
-  document: DocumentVersion
-  commit: Commit
-}): Promise<TypedResult<ConversationMetadata, LatitudeError>> {
-  const documentScope = new DocumentVersionsRepository(workspaceId)
+export async function scanDocumentContent(
+  {
+    workspaceId,
+    document,
+    commit,
+  }: {
+    workspaceId: Workspace['id']
+    document: DocumentVersion
+    commit: Commit
+  },
+  db = database,
+): Promise<TypedResult<ConversationMetadata, LatitudeError>> {
+  const documentScope = new DocumentVersionsRepository(workspaceId, db)
   const docs = await documentScope
     .getDocumentsAtCommit(commit)
     .then((r) => r.unwrap())
