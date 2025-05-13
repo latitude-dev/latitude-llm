@@ -298,6 +298,7 @@ describe('runEvaluationV2Job', () => {
       expect(incrementFailedSpy).not.toHaveBeenCalled()
       expect(incrementErrorsSpy).not.toHaveBeenCalled()
       expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
+      expect(mockEmit).not.toHaveBeenCalled()
     })
   })
 

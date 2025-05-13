@@ -27,9 +27,6 @@ import {
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ActionButtons } from './ActionButtons'
 import { DocumentVersion } from '@latitude-data/constants'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { stopExperimentAction } from '$/actions/experiments'
-import { useCallback } from 'react'
 
 export function ExperimentItemPlaceholder({
   isLast,
@@ -74,23 +71,6 @@ export function ExperimentItem({
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
-  const { execute } = useLatitudeAction(stopExperimentAction)
-  const stopExperiment = useCallback(() => {
-    if (!experiment) return
-    execute({
-      experimentUuid: experiment.uuid,
-      projectId: project.id,
-      commitUuid: commit.uuid,
-      documentUuid: document.documentUuid,
-    })
-  }, [
-    experiment?.uuid,
-    execute,
-    project.id,
-    commit.uuid,
-    document.documentUuid,
-  ])
-
   if (!experiment) {
     return (
       <ExperimentItemPlaceholder
@@ -110,27 +90,9 @@ export function ExperimentItem({
       )}
     >
       <div className='flex flex-row w-full items-center justify-between gap-4'>
-        <div className='w-full'>
-          <Text.H4B ellipsis noWrap>
-            {experiment.name}
-          </Text.H4B>
-        </div>
-        {!experiment.finishedAt && (
-          <Button
-            variant='outline'
-            fancy
-            className='border-destructive'
-            onClick={stopExperiment}
-            iconProps={{
-              name: 'circleStop',
-              color: 'destructive',
-            }}
-          >
-            <Text.H5 noWrap color='destructive'>
-              Stop Execution
-            </Text.H5>
-          </Button>
-        )}
+        <Text.H4B ellipsis noWrap>
+          {experiment.name}
+        </Text.H4B>
         {onUnselect && (
           <Button
             iconProps={{

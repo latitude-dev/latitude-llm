@@ -1,6 +1,5 @@
 import { Experiment } from '../../browser'
 import { database, Database } from '../../client'
-import { updateExperimentStatus } from '../../jobs/job-definitions/experiments/shared'
 import { LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
@@ -30,11 +29,6 @@ export async function completeExperiment(
   if (updateResult.error) {
     return Result.error(updateResult.error as LatitudeError)
   }
-
-  updateExperimentStatus({
-    workspaceId: experiment.workspaceId,
-    experiment: updateResult.value,
-  })
 
   return updateResult
 }
