@@ -15,7 +15,6 @@ import {
 } from '../../../services/evaluationsV2/run'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import { WebsocketClient } from '../../../websockets/workers'
-import { captureException } from '../../../workers/sentry'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { updateExperimentStatus } from '../experiments/shared'
 import { NotFoundError } from './../../../lib/errors'
