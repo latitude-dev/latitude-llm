@@ -9,7 +9,6 @@ import { evaluationsQueue } from '../../queues'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
 import { RunEvaluationV2JobData, runEvaluationV2JobKey } from '../evaluations'
 import { updateExperimentStatus } from './shared'
-import { captureException } from '../../../workers/sentry'
 
 export type RunDocumentForExperimentJobData = {
   workspaceId: number
@@ -85,8 +84,6 @@ export const runDocumentForExperimentJob = async (
     })
   } catch (error) {
     if (isErrorRetryable(error as Error)) throw error
-
-    captureException(error as Error)
 
     await updateExperimentStatus(
       {

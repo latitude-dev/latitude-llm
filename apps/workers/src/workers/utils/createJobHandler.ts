@@ -1,4 +1,4 @@
-import { captureException } from '@latitude-data/core/workers/sentry'
+import { captureException } from '$/utils/sentry'
 import { Job } from 'bullmq'
 
 /**

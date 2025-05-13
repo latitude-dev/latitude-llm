@@ -164,8 +164,6 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
   } catch (error) {
     if (isErrorRetryable(error as Error)) throw error
 
-    captureException(error as Error)
-
     if (experiment) {
       await updateExperimentStatus(
         { workspaceId, experiment },
