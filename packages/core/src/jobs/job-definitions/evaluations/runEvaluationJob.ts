@@ -18,6 +18,7 @@ import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { updateExperimentStatus } from '../experiments/shared'
 import { NotFoundError } from './../../../lib/errors'
+import { captureException } from '../../../workers/sentry'
 
 export type RunEvaluationV2JobData = {
   workspaceId: number
