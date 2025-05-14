@@ -1,7 +1,3 @@
-import {
-  evaluationMetadataTypes,
-  evaluationResultTypes,
-} from '$/app/(private)/evaluations/_components/ActiveEvaluations/Table'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   EVALUATION_SPECIFICATIONS,
@@ -10,17 +6,13 @@ import {
 import ResultBadge from '$/components/evaluations/ResultBadge'
 import { MetadataItem } from '$/components/MetadataItem'
 import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
-import { EvaluationRoutes, ROUTES } from '$/services/routes'
+import { ROUTES } from '$/services/routes'
 import {
   Commit,
   DocumentVersion,
-  EvaluationMetadataType,
   EvaluationMetric,
-  EvaluationResultableType,
   EvaluationResultV2,
   EvaluationType,
-  ResultWithEvaluation,
-  ResultWithEvaluationTmp,
   ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
@@ -28,13 +20,10 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
-  ICommitContextType,
   IProjectContextType,
-  useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
-import { ResultCellContent } from '../../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
 
 type Props<
   T extends EvaluationType = EvaluationType,
@@ -43,46 +32,6 @@ type Props<
   project: IProjectContextType['project']
   commit: Commit
   document: DocumentVersion
-}
-
-function EvaluationResultItem({ result, evaluation }: ResultWithEvaluation) {
-  if (result.resultableType === EvaluationResultableType.Text) {
-    return (
-      <Text.H5 align='left' color='foregroundMuted'>
-        {result.result || '-'}
-      </Text.H5>
-    )
-  }
-
-  return <ResultCellContent evaluation={evaluation} value={result.result} />
-}
-
-function EvaluatedLogLinkV1({
-  result,
-  evaluation,
-  project,
-  commit,
-  document,
-}: ResultWithEvaluation & {
-  project: IProjectContextType['project']
-  commit: ICommitContextType['commit']
-  document: DocumentVersion
-}) {
-  const query = new URLSearchParams()
-
-  if (evaluation.metadataType === EvaluationMetadataType.Manual) {
-    query.set('documentLogId', result.documentLogId.toString())
-  } else {
-    query.set('resultUuid', result.uuid)
-  }
-
-  return (
-    ROUTES.projects
-      .detail({ id: project.id })
-      .commits.detail({ uuid: commit.uuid })
-      .documents.detail({ uuid: document.documentUuid })
-      .evaluations.detail(evaluation.id).root + `?${query.toString()}`
-  )
 }
 
 function EvaluatedLogLinkV2<
@@ -99,41 +48,6 @@ function EvaluatedLogLinkV2<
       .documents.detail({ uuid: document.documentUuid })
       .evaluationsV2.detail({ uuid: evaluation.uuid }).root +
     `?${query.toString()}`
-  )
-}
-
-function EvaluationEditorLinkV1({ result, evaluation }: ResultWithEvaluation) {
-  const query = new URLSearchParams()
-  if (result.evaluatedProviderLogId) {
-    query.set('providerLogId', result.evaluatedProviderLogId.toString())
-  }
-
-  return (
-    ROUTES.evaluations.detail({ uuid: evaluation.uuid })[
-      EvaluationRoutes.editor
-    ].root + `?${query.toString()}`
-  )
-}
-
-function DocumentLogEvaluationsV1({
-  result,
-  evaluation,
-}: ResultWithEvaluation) {
-  return (
-    <>
-      <MetadataItem
-        label='Type'
-        value={`${evaluationResultTypes[evaluation.resultType]} - ${evaluationMetadataTypes[evaluation.metadataType]}`}
-      />
-      <MetadataItem label='Result' stacked>
-        <EvaluationResultItem result={result} evaluation={evaluation} />
-      </MetadataItem>
-      <MetadataItem
-        stacked
-        label='Reasoning'
-        value={result.reason || 'No reason reported'}
-      />
-    </>
   )
 }
 
@@ -186,11 +100,10 @@ export function DocumentLogEvaluations({
   documentLog,
 }: {
   documentLog: DocumentLogWithMetadataAndError
-  evaluationResults?: ResultWithEvaluationTmp[]
+  evaluationResults?: ResultWithEvaluationV2[]
   commit: Commit
 }) {
   const { project } = useCurrentProject()
-  const { commit: currentCommit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const getEvaluationV2Url = useEvaluationEditorLink({
     projectId: project.id,
@@ -217,26 +130,20 @@ export function DocumentLogEvaluations({
         >
           <span className='flex justify-between items-center gap-2 w-full'>
             <span className='flex justify-center items-center gap-1.5'>
-              {item.version === 'v2' && (
-                <Icon
-                  name={getEvaluationMetricSpecification(item.evaluation).icon}
-                  color='foreground'
-                  className='flex-shrink-0'
-                />
-              )}
+              <Icon
+                name={getEvaluationMetricSpecification(item.evaluation).icon}
+                color='foreground'
+                className='flex-shrink-0'
+              />
               <Text.H4M noWrap ellipsis>
                 {item.evaluation.name}
               </Text.H4M>
             </span>
             <Link
-              href={
-                item.version === 'v2'
-                  ? getEvaluationV2Url({
-                      evaluationUuid: item.evaluation.uuid,
-                      documentLogUuid: documentLog.uuid,
-                    })
-                  : EvaluationEditorLinkV1(item)
-              }
+              href={getEvaluationV2Url({
+                evaluationUuid: item.evaluation.uuid,
+                documentLogUuid: documentLog.uuid,
+              })}
               target='_blank'
             >
               <Button
@@ -253,34 +160,22 @@ export function DocumentLogEvaluations({
             </Link>
           </span>
           <div className='flex flex-col gap-2.5'>
-            {item.version === 'v2' ? (
-              <DocumentLogEvaluationsV2
-                project={project}
-                commit={commit}
-                document={document}
-                {...item}
-              />
-            ) : (
-              <DocumentLogEvaluationsV1 {...item} />
-            )}
+            <DocumentLogEvaluationsV2
+              project={project}
+              commit={commit}
+              document={document}
+              {...item}
+            />
+            )
           </div>
           <div className='w-full flex justify-start pt-2'>
             <Link
-              href={
-                item.version === 'v2'
-                  ? EvaluatedLogLinkV2({
-                      project: project,
-                      commit: commit,
-                      document: document,
-                      ...item,
-                    })
-                  : EvaluatedLogLinkV1({
-                      project: project,
-                      commit: currentCommit,
-                      document: document,
-                      ...item,
-                    })
-              }
+              href={EvaluatedLogLinkV2({
+                project: project,
+                commit: commit,
+                document: document,
+                ...item,
+              })}
               target='_blank'
             >
               <Button variant='outline' fancy>

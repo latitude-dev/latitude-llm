@@ -20,6 +20,7 @@ export const evaluationResultTypes = pgEnum('evaluation_result_types', [
   EvaluationResultableType.Number,
 ])
 
+// NOTE: Deprecated
 export const evaluationResults = latitudeSchema.table(
   'evaluation_results',
   {

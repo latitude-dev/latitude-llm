@@ -7,7 +7,10 @@ import { ExperimentsRepository } from '../../../repositories'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 import { evaluationsQueue } from '../../queues'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
-import { RunEvaluationV2JobData, runEvaluationV2JobKey } from '../evaluations'
+import {
+  RunEvaluationV2JobData,
+  runEvaluationV2JobKey,
+} from '../evaluations/runEvaluationV2Job'
 import { updateExperimentStatus } from './shared'
 import { captureException } from '../../../workers/sentry'
 

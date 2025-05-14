@@ -55,11 +55,6 @@ export function EvaluationsPage({
           />
         }
       />
-      {/* TODO(evalsv2):
-        <div className='min-h-64 h-64 max-h-64'>
-          <EvaluationsStats  />
-        </div>
-      */}
       <EvaluationsTable
         evaluations={evaluations}
         createEvaluation={createEvaluation}

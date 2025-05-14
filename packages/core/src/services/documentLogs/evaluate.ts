@@ -26,7 +26,7 @@ export async function evaluateDocumentLog(
   }
 
   evaluations?.forEach((evaluation) => {
-    evaluationsQueue.add('runEvaluationJob', {
+    evaluationsQueue.add('runEvaluationV2Job', {
       workspaceId: workspace.id,
       providerLogUuid: providerLog.uuid,
       documentUuid: documentLog.documentUuid,

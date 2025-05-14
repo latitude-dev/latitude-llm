@@ -1,20 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  ProviderApiKey,
-  User,
-} from '../../browser'
+import { Commit, DocumentVersion, Project, ProviderApiKey } from '../../browser'
 import * as cacheModule from '../../cache'
-import {
-  EvaluationMetadataType,
-  EvaluationResultableType,
-  EvaluationType,
-  LlmEvaluationMetric,
-  Providers,
-} from '../../constants'
+import { EvaluationType, LlmEvaluationMetric, Providers } from '../../constants'
 import * as factories from '../../tests/factories'
 import { computeProjectStats } from './computeProjectStats'
 
@@ -27,7 +15,6 @@ vi.mock('../../cache', () => ({
 }))
 
 describe('computeProjectStats', () => {
-  let user: User
   let project: Project
   let workspace: any
   let document: DocumentVersion
@@ -54,7 +41,6 @@ describe('computeProjectStats', () => {
         }),
       },
     })
-    user = setup.user
     provider = setup.providers[0]!
     project = setup.project
     workspace = setup.workspace
@@ -140,37 +126,6 @@ describe('computeProjectStats', () => {
       tokens: 100,
       costInMillicents: 500,
     })
-
-    const evaluationV1 = await factories.createEvaluation({
-      workspace: workspace,
-      user: user,
-      name: 'Evaluation V1',
-      metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
-      resultType: EvaluationResultableType.Number,
-      resultConfiguration: { minValue: 0, maxValue: 100 },
-    })
-
-    await factories.createConnectedEvaluation({
-      workspace: workspace,
-      user: user,
-      evaluationUuid: evaluationV1.uuid,
-      documentUuid: document.documentUuid,
-    })
-
-    await factories.createEvaluationResult({
-      evaluation: evaluationV1,
-      documentLog: documentLog,
-      evaluatedProviderLog: providerLog,
-      result: '31',
-      stepCosts: [
-        {
-          promptTokens: 100,
-          completionTokens: 100,
-          costInMillicents: 666,
-        },
-      ],
-    })
-
     const evaluationV2 = await factories.createEvaluationV2({
       document: document,
       commit: commit,

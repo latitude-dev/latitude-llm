@@ -4,6 +4,7 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { evaluationAdvancedTemplates } from './evaluationAdvancedTemplates'
 
+// NOTE: Deprecated
 export const evaluationMetadataLlmAsJudgeAdvanced = latitudeSchema.table(
   'llm_as_judge_evaluation_metadatas',
   {

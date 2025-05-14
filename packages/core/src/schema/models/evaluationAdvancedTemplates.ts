@@ -5,6 +5,7 @@ import { evaluationTemplateCategories, latitudeSchema } from '..'
 import { timestamps } from '../schemaHelpers'
 import { EvaluationResultConfiguration } from '../types'
 
+// NOTE: Deprecated
 export const evaluationAdvancedTemplates = latitudeSchema.table(
   'evaluations_templates',
   {

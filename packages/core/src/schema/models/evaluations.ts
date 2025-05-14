@@ -20,6 +20,7 @@ export const metadataTypesEnum = latitudeSchema.enum('metadata_type', [
   EvaluationMetadataType.Manual,
 ])
 
+// NOTE: Deprecated
 export const evaluations = latitudeSchema.table(
   'evaluations',
   {

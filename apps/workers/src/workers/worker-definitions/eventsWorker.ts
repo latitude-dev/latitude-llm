@@ -18,18 +18,14 @@ const eventHandlersJobMappings = {
     jobs.notifyClientOfDocumentSuggestionCreated,
   notifyClientOfEvaluationResultV2Created:
     jobs.notifyClientOfEvaluationResultV2Created,
-  notifyToClientEvaluationResultCreatedJob:
-    jobs.notifyToClientEvaluationResultCreatedJob,
   notifyClientOfScaleUpMcpServer: jobs.notifyClientOfScaleUpMcpServer,
   notifyClientOfMcpServerConnected: jobs.notifyClientOfMcpServerConnected,
   sendInvitationToUserJob: jobs.sendInvitationToUserJob,
   sendMagicLinkJob: jobs.sendMagicLinkJob,
   sendReferralInvitationJob: jobs.sendReferralInvitationJob,
   sendSuggestionNotification: jobs.sendSuggestionNotification,
-  requestDocumentSuggestionJob: jobs.requestDocumentSuggestionJob,
   requestDocumentSuggestionJobV2: jobs.requestDocumentSuggestionJobV2,
   createDatasetRowsJob: jobs.createDatasetRowsJob,
-  runLiveEvaluationsJob: jobs.runLiveEvaluationsJob,
   evaluateLiveLogJob: jobs.evaluateLiveLogJob,
   updateWebhookLastTriggeredAt: jobs.updateWebhookLastTriggeredAt,
   pingProjectUpdateJob: jobs.pingProjectUpdateJob,

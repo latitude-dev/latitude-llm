@@ -1,9 +1,4 @@
-import {
-  Commit,
-  DocumentVersion,
-  EvaluationTmp,
-  Workspace,
-} from '../../browser'
+import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
 import { database } from '../../client'
 import { documentSuggestions } from '../../schema'
 
@@ -17,7 +12,7 @@ export async function createDocumentSuggestion({
 }: {
   commit: Commit
   document: DocumentVersion
-  evaluation: EvaluationTmp
+  evaluation: EvaluationV2
   workspace: Workspace
   prompt?: string
   summary?: string
@@ -29,8 +24,7 @@ export async function createDocumentSuggestion({
       workspaceId: workspace.id,
       commitId: document.commitId,
       documentUuid: document.documentUuid,
-      evaluationUuid: evaluation.version === 'v2' ? evaluation.uuid : undefined,
-      evaluationId: evaluation.version !== 'v2' ? evaluation.id : undefined,
+      evaluationUuid: evaluation.uuid,
       oldPrompt: document.content,
       newPrompt: prompt,
       summary: summary,

@@ -9,7 +9,6 @@ import {
   Dataset,
   DocumentSuggestion,
   EvaluationResultV2,
-  EvaluationTmp,
   EvaluationV2,
   ExperimentDto,
   ProviderLogDto,
@@ -94,7 +93,7 @@ type DocumentLogCreatedArgs = {
 type DocumentSuggestionCreatedArgs = {
   workspaceId: number
   suggestion: DocumentSuggestion
-  evaluation: EvaluationTmp
+  evaluation: EvaluationV2
 }
 
 type DatasetRowsCreatedArgs =

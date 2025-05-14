@@ -23,7 +23,7 @@ import * as progressTracker from '../../utils/progressTracker'
 import {
   runEvaluationV2Job,
   type RunEvaluationV2JobData,
-} from './runEvaluationJob'
+} from './runEvaluationV2Job'
 
 vi.mock('../../../redis', () => ({
   buildRedisConnection: vi.fn().mockResolvedValue({}),

@@ -9,7 +9,6 @@ import {
 } from '../browser'
 import { Result } from '../lib/Result'
 import { documentSuggestions } from '../schema'
-import { EvaluationsRepository } from './evaluationsRepository'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'
 
@@ -113,39 +112,13 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
       })
       .then((r) => r.unwrap())
 
-    const evaluationIds = [
-      ...new Set(
-        suggestions.filter((s) => s.evaluationId).map((s) => s.evaluationId!),
-      ),
-    ]
-    const evaluationsRepository = new EvaluationsRepository(
-      this.workspaceId,
-      this.db,
-    )
-    const evaluationsV1 =
-      evaluationIds.length > 0
-        ? await evaluationsRepository
-            .filterById(evaluationIds)
-            .then((r) => r.unwrap())
-        : []
-
     const suggestionsWithDetails = []
     for (const suggestion of suggestions) {
-      let evaluation
-
-      if (suggestion.evaluationUuid) {
-        const evaluationV2 = evaluationsV2.find(
-          (e) => e.uuid === suggestion.evaluationUuid,
-        )
-        if (!evaluationV2) continue
-        evaluation = { ...evaluationV2, version: 'v2' as const }
-      } else {
-        const evaluationV1 = evaluationsV1.find(
-          (e) => e.id === suggestion.evaluationId,
-        )
-        if (!evaluationV1) continue
-        evaluation = { ...evaluationV1, version: 'v1' as const }
-      }
+      const evaluationV2 = evaluationsV2.find(
+        (e) => e.uuid === suggestion.evaluationUuid,
+      )
+      if (!evaluationV2) continue
+      const evaluation = { ...evaluationV2, version: 'v2' as const }
 
       suggestionsWithDetails.push({ ...suggestion, evaluation })
     }

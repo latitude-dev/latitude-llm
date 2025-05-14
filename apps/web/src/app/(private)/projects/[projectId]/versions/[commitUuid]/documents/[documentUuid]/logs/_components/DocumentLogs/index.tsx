@@ -11,7 +11,7 @@ import {
   DocumentLogFilterOptions,
   EvaluationResultV2,
   EvaluationV2,
-  ResultWithEvaluationTmp,
+  ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { DocumentLogsAggregations } from '@latitude-data/core/services/documentLogs/computeDocumentLogsAggregations'
@@ -48,7 +48,7 @@ export function DocumentLogs({
   selectedLog?: DocumentLogWithMetadataAndError
   aggregations?: DocumentLogsAggregations
   isAggregationsLoading: boolean
-  evaluationResults: Record<string, ResultWithEvaluationTmp[]>
+  evaluationResults: Record<string, ResultWithEvaluationV2[]>
   mutateEvaluationResults: ReturnType<
     typeof useEvaluationResultsV2ByDocumentLogs
   >['mutate']

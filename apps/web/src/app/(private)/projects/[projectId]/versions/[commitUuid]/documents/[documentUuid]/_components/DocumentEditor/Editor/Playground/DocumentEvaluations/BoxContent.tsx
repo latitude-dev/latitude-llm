@@ -1,10 +1,5 @@
-import { normalizeNumber } from '$/lib/normalizeNumber'
 import { ROUTES } from '$/services/routes'
-import {
-  EvaluationResultableType,
-  EvaluationResultDto,
-  EvaluationResultV2,
-} from '@latitude-data/core/browser'
+import { EvaluationResultV2 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -58,8 +53,7 @@ export function ExpandedContentHeader({ document, commit, project }: Props) {
   const route = ROUTES.projects
     .detail({ id: project.id })
     .commits.detail({ uuid: commit.uuid })
-    .documents.detail({ uuid: document.documentUuid }).evaluations
-    .dashboard.root
+    .documents.detail({ uuid: document.documentUuid }).evaluationsV2.root
 
   return (
     <div className='w-full flex items-center justify-end gap-4'>
@@ -82,43 +76,15 @@ export function CollapsedContentHeader({
   const count = useMemo(() => {
     return evaluations.reduce(
       (acc, evaluation) => {
-        if (evaluation.version === 'v2') {
-          const result = results[evaluation.uuid] as EvaluationResultV2
+        const result = results[evaluation.uuid] as EvaluationResultV2
 
-          if (!evaluation.evaluateLiveLogs) {
-            return { ...acc, skipped: acc.skipped + 1 }
-          }
-          if (!result) return { ...acc, skipped: acc.skipped + 1 }
-          if (result.hasPassed) return { ...acc, passed: acc.passed + 1 }
-
-          return acc
+        if (!evaluation.evaluateLiveLogs) {
+          return { ...acc, skipped: acc.skipped + 1 }
         }
-
-        const result = results[evaluation.uuid] as EvaluationResultDto
-
-        if (!evaluation.live) return { ...acc, skipped: acc.skipped + 1 }
         if (!result) return { ...acc, skipped: acc.skipped + 1 }
+        if (result.hasPassed) return { ...acc, passed: acc.passed + 1 }
 
-        let value = result.result
-        if (value === undefined) return acc
-
-        if (evaluation.resultType === EvaluationResultableType.Boolean) {
-          value = typeof value === 'string' ? value === 'true' : Boolean(value)
-          return value ? { ...acc, passed: acc.passed + 1 } : acc
-        }
-
-        if (evaluation.resultType === EvaluationResultableType.Number) {
-          value = Number(value)
-          return normalizeNumber(
-            value,
-            evaluation.resultConfiguration.minValue,
-            evaluation.resultConfiguration.maxValue,
-          ) >= 0.75
-            ? { ...acc, passed: acc.passed + 1 }
-            : acc
-        }
-
-        return { ...acc, passed: acc.passed + 1 }
+        return acc
       },
       { passed: 0, skipped: 0 },
     )

@@ -5,7 +5,6 @@ import {
   getEvaluationMetricSpecification,
 } from '$/components/evaluations'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -34,7 +33,6 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
-import CreateBatchEvaluationModal from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal'
 
 export function EvaluationActions<
   T extends EvaluationType = EvaluationType,
@@ -298,35 +296,20 @@ function RunExperiment<
 }) {
   const [open, setOpen] = useState(false)
 
-  const { enabled: experimentsEnabled } = useFeatureFlag({
-    featureFlag: 'experiments',
-  })
-
   return (
     <>
       <TableWithHeader.Button variant='default' onClick={() => setOpen(true)}>
         Run experiment
       </TableWithHeader.Button>
-      {experimentsEnabled ? (
-        <RunExperimentModal
-          project={project as Project}
-          commit={commit as Commit}
-          document={document}
-          isOpen={open}
-          setOpen={setOpen}
-          initialEvaluation={evaluation}
-          navigateOnCreate
-        />
-      ) : (
-        <CreateBatchEvaluationModal
-          open={open}
-          onClose={() => setOpen(false)}
-          projectId={project.id.toString()}
-          commitUuid={commit.uuid}
-          document={document}
-          evaluation={{ ...evaluation, version: 'v2' }}
-        />
-      )}
+      <RunExperimentModal
+        project={project as Project}
+        commit={commit as Commit}
+        document={document}
+        isOpen={open}
+        setOpen={setOpen}
+        initialEvaluation={evaluation}
+        navigateOnCreate
+      />
     </>
   )
 }
