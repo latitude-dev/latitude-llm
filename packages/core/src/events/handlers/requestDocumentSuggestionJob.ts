@@ -7,7 +7,7 @@ import { NotFoundError } from './../../lib/errors'
 
 const LIVE_SUGGESTION_SOURCES = [LogSources.Playground, LogSources.Evaluation]
 
-// TODO: add tests for evals v2
+// TODO(evalsv2): add tests for evals v2
 export const requestDocumentSuggestionJobV2 = async ({
   data: event,
 }: {
