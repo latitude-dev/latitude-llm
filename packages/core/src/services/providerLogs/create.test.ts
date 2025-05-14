@@ -1,11 +1,8 @@
 import * as factories from '../../tests/factories'
-import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ProviderApiKey, Workspace } from '../../browser'
-import { database } from '../../client'
 import { LogSources, Providers } from '../../constants'
-import { apiKeys } from '../../schema'
 import { createProviderLog, type CreateProviderLogProps } from './create'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
 
