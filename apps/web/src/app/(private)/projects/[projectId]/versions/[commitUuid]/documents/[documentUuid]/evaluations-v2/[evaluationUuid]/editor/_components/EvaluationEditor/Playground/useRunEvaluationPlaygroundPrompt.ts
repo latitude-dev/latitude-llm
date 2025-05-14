@@ -22,7 +22,8 @@ export function useRunEvaluationPlaygroundPrompt({
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
   parameters: Record<string, unknown> | undefined
 }) {
-  const { createStreamHandler } = useStreamHandler()
+  const { createStreamHandler, abortCurrentStream, hasActiveStream } =
+    useStreamHandler()
   const runPromptFn = useCallback(async () => {
     const route = ROUTES.api.projects
       .detail(projectId)
@@ -46,5 +47,5 @@ export function useRunEvaluationPlaygroundPrompt({
     evaluation.uuid,
   ])
 
-  return runPromptFn
+  return { runPromptFn, abortCurrentStream, hasActiveStream }
 }

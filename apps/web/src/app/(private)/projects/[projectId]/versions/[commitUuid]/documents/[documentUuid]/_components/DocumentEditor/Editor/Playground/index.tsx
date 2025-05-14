@@ -77,12 +77,13 @@ export const Playground = memo(
     )
     const clearChat = useCallback(() => setMode('preview'), [setMode])
     const runPrompt = useCallback(() => setMode('chat'), [setMode])
-    const { runPromptFn, addMessagesFn } = useRunPlaygroundPrompt({
-      commit,
-      projectId: project.id,
-      document,
-      parameters,
-    })
+    const { runPromptFn, addMessagesFn, abortCurrentStream, hasActiveStream } =
+      useRunPlaygroundPrompt({
+        commit,
+        projectId: project.id,
+        document,
+        parameters,
+      })
 
     return (
       <SplitPane
@@ -134,6 +135,8 @@ export const Playground = memo(
                 canChat
                 parameters={parameters}
                 clearChat={clearChat}
+                abortCurrentStream={abortCurrentStream}
+                hasActiveStream={hasActiveStream}
                 runPromptFn={runPromptFn}
                 addMessagesFn={addMessagesFn}
                 onPromptRan={onPromptRan}

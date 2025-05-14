@@ -19,7 +19,6 @@ import {
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import { useToolContentMap } from 'node_modules/@latitude-data/web-ui/src/lib/hooks/useToolContentMap'
 import Actions, { ActionsState } from '../Actions'
-import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import { StatusIndicator } from '$/components/PlaygroundCommon/StatusIndicator'
 import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
 import { Timer } from '$/components/PlaygroundCommon/Timer'
@@ -29,6 +28,8 @@ export default function Chat({
   parameters,
   clearChat,
   runPromptFn,
+  abortCurrentStream,
+  hasActiveStream,
   addMessagesFn,
   onPromptRan,
   expandParameters,
@@ -39,6 +40,8 @@ export default function Chat({
   clearChat: () => void
   onPromptRan?: (documentLogUuid?: string, error?: Error) => void
   runPromptFn: RunPromptFn
+  abortCurrentStream: () => boolean
+  hasActiveStream: () => boolean
   addMessagesFn?: AddMessagesFn
 } & ActionsState) {
   const runOnce = useRef(false)
@@ -54,7 +57,6 @@ export default function Chat({
     startAtBottom: true,
     onScrollChange: setIsScrolledToBottom,
   })
-  const { abortCurrentStream, hasActiveStream } = useStreamHandler()
   const playground = usePlaygroundChat({
     runPromptFn,
     addMessagesFn,

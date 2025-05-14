@@ -55,13 +55,14 @@ export const Playground = memo(
       document,
       evaluation,
     })
-    const runPromptFn = useRunEvaluationPlaygroundPrompt({
-      projectId: project.id,
-      commit,
-      document,
-      evaluation,
-      parameters,
-    })
+    const { runPromptFn, abortCurrentStream, hasActiveStream } =
+      useRunEvaluationPlaygroundPrompt({
+        projectId: project.id,
+        commit,
+        document,
+        evaluation,
+        parameters,
+      })
     const firstPane = useMemo(() => {
       return (
         <div className='grid w-full pr-0.5'>
@@ -98,6 +99,8 @@ export const Playground = memo(
               expandParameters={expandParameters}
               setExpandParameters={setExpandParameters}
               runPromptFn={runPromptFn}
+              abortCurrentStream={abortCurrentStream}
+              hasActiveStream={hasActiveStream}
             />
           )}
         </div>
