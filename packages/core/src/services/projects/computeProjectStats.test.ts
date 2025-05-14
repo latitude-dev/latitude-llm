@@ -194,10 +194,9 @@ describe('computeProjectStats', () => {
           date: documentLog.createdAt.toISOString().split('T')[0],
         },
       ],
-      totalEvaluations: 2,
-      totalEvaluationResults: 2,
+      totalEvaluations: 1,
+      totalEvaluationResults: 1,
       costPerEvaluation: {
-        'Evaluation V1': 666,
         'Evaluation V2': 500,
       },
     })

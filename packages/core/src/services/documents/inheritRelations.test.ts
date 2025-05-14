@@ -60,6 +60,7 @@ describe('inheritDocumentRelations', () => {
         commit: fromCommit,
         document: fromVersion,
         evaluation: await factories.createEvaluationV2({
+          name: 'wat',
           workspace,
           document: fromVersion,
           commit: fromCommit,
@@ -70,6 +71,7 @@ describe('inheritDocumentRelations', () => {
         commit: fromCommit,
         document: fromVersion,
         evaluation: await factories.createEvaluationV2({
+          name: 'wat2',
           workspace,
           document: fromVersion,
           commit: fromCommit,
