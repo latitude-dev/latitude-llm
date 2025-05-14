@@ -1,4 +1,3 @@
-import { PromptConfig } from '@latitude-data/constants'
 import {
   ChainStepResponse,
   Commit,
@@ -19,6 +18,7 @@ import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { Result } from './../../lib/Result'
 import { createDocumentLog } from '../documentLogs/create'
 import { isErrorRetryable } from '../evaluationsV2/run'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 async function createDocumentRunResult({
   document,
@@ -129,7 +129,7 @@ export async function runDocumentAtCommit({
     workspace,
     chain: checkerResult.value.chain,
     isChain: checkerResult.value.isChain,
-    globalConfig: checkerResult.value.config as PromptConfig,
+    globalConfig: checkerResult.value.config as LatitudePromptConfig,
     promptlVersion: document.promptlVersion,
     providersMap,
     source,

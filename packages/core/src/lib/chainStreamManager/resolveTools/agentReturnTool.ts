@@ -1,13 +1,13 @@
 import {
   AGENT_RETURN_TOOL_NAME,
   FAKE_AGENT_START_TOOL_NAME,
-  PromptConfig,
   ToolDefinition,
 } from '@latitude-data/constants'
 import { LatitudeError } from '../../errors'
 import { Result, TypedResult } from '../../Result'
 import { JSONSchema7 } from 'json-schema'
 import { ResolvedTools, ToolSource } from './types'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 const AGENT_RETURN_TOOL_DESCRIPTION = `
 The '${FAKE_AGENT_START_TOOL_NAME}' tool is used to start an autonomous chain-of-thought workflow.
@@ -18,6 +18,8 @@ Use this tool to stop the autonomous workflow and return a message to the user. 
 
 const DEFAULT_AGENT_RETURN_TOOL_SCHEMA: JSONSchema7 = {
   type: 'object',
+  // NOTE: OpenAI reponses endpoint requires to declare `additionalProperties: false` in the schema
+  additionalProperties: false,
   properties: {
     response: {
       type: 'string',
@@ -30,7 +32,7 @@ export function resolveAgentReturnTool({
   config,
   injectAgentFinishTool,
 }: {
-  config: PromptConfig
+  config: LatitudePromptConfig
   injectAgentFinishTool?: boolean
 }): TypedResult<ResolvedTools, LatitudeError> {
   if (!injectAgentFinishTool) {

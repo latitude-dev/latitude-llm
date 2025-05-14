@@ -1,8 +1,4 @@
-import {
-  PromptConfig,
-  resolveRelativePath,
-  ToolDefinition,
-} from '@latitude-data/constants'
+import { resolveRelativePath, ToolDefinition } from '@latitude-data/constants'
 import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
 import { PromisedResult } from '../../Transaction'
 import { Result, TypedResult } from '../../Result'
@@ -11,6 +7,7 @@ import { DocumentVersion, PromptSource, Workspace } from '../../../browser'
 import { DocumentVersionsRepository } from '../../../repositories'
 import { getAgentToolName } from '../../../services/agents/helpers'
 import { getToolDefinitionFromDocument } from '../../../services/agents/agentsAsTools'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 function findAgentDocs({
   agentPaths,
@@ -61,7 +58,7 @@ export async function resolveAgentsAsTools({
 }: {
   workspace: Workspace
   promptSource: PromptSource
-  config: PromptConfig
+  config: LatitudePromptConfig
 }): PromisedResult<ResolvedTools, LatitudeError> {
   const relativeAgentPaths = config.agents ?? []
 

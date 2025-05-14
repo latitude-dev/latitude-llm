@@ -2,7 +2,6 @@ import { PromptSource, Workspace } from '../../../browser'
 import { PromisedResult } from '../../Transaction'
 import { resolveClientTools } from './clientTools'
 import { resolveLatitudeTools } from './latitudeTools'
-import { PromptConfig } from '@latitude-data/constants'
 import { resolveAgentsAsTools } from './agentsAsTools'
 import { resolveIntegrationTools } from './integrationTools'
 import { Result } from '../../Result'
@@ -10,6 +9,8 @@ import { LatitudeError } from '../../errors'
 import { resolveAgentReturnTool } from './agentReturnTool'
 import { ResolvedTools } from './types'
 import { ChainStreamManager } from '..'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { resolveProviderTools } from './resolveProviderTools'
 
 export async function resolveToolsFromConfig({
   workspace,
@@ -20,7 +21,7 @@ export async function resolveToolsFromConfig({
 }: {
   workspace: Workspace
   promptSource: PromptSource
-  config: PromptConfig
+  config: LatitudePromptConfig
   injectAgentFinishTool?: boolean
   chainStreamManager?: ChainStreamManager
 }): PromisedResult<ResolvedTools, LatitudeError> {
@@ -42,21 +43,27 @@ export async function resolveToolsFromConfig({
     config,
     chainStreamManager,
   })
+
   if (integrationToolsResult.error) return integrationToolsResult
 
   const agentReturnResult = resolveAgentReturnTool({
     config,
     injectAgentFinishTool,
   })
+
   if (agentReturnResult.error) return agentReturnResult
+
+  const providerToolsResult = resolveProviderTools({ config })
+  if (providerToolsResult.error) return Result.error(providerToolsResult.error)
 
   return Result.ok(
     Object.assign(
-      clientToolsResult.unwrap(),
-      latitudeToolsResult.unwrap(),
-      agentsAsToolsResult.unwrap(),
-      integrationToolsResult.unwrap(),
-      agentReturnResult.unwrap(),
+      clientToolsResult.value,
+      latitudeToolsResult.value,
+      agentsAsToolsResult.value,
+      integrationToolsResult.value,
+      agentReturnResult.value,
+      providerToolsResult.value,
     ),
   )
 }

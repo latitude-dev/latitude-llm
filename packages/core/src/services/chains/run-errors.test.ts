@@ -26,7 +26,7 @@ import {
 } from '../../lib/chainStreamManager/ChainStreamConsumer/consumeStream.test'
 import * as ChainValidator from './ChainValidator'
 import { runChain } from './run'
-import { PromptConfig } from '@latitude-data/constants'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 let providersMap: Map<string, any>
 
@@ -114,7 +114,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain: mockChain as Chain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -156,7 +156,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain: mockChain as Chain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -189,7 +189,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -226,7 +226,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -264,7 +264,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -302,7 +302,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -346,7 +346,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -391,7 +391,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,

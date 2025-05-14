@@ -52,7 +52,7 @@ export function applyProviderRules({
   return rules
 }
 
-type VercelConfigWithProviderRules = VercelConfig & {
+export type VercelConfigWithProviderRules = VercelConfig & {
   providerOptions: {
     [key: string]: Record<string, JSONValue>
   }

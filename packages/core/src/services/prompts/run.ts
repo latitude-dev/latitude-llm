@@ -14,7 +14,7 @@ import { Workspace } from '../../browser'
 import { LogSources, PromptSource } from '../../constants'
 import { Result } from '../../lib/Result'
 import { CachedApiKeys, runChain } from '../chains/run'
-import { PromptConfig } from '@latitude-data/constants'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 export async function runPrompt({
   workspace,
@@ -68,7 +68,7 @@ export async function runPrompt({
     promptlVersion,
     providersMap,
     source,
-    globalConfig: metadata.config as PromptConfig,
+    globalConfig: metadata.config as LatitudePromptConfig,
     persistErrors: false,
     promptSource,
     abortSignal,

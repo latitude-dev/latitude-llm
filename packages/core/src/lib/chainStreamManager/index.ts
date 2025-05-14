@@ -5,7 +5,7 @@ import {
   ToolCall,
   ToolMessage,
 } from '@latitude-data/compiler'
-import { PromptConfig, StreamEventTypes } from '@latitude-data/constants'
+import { StreamEventTypes } from '@latitude-data/constants'
 import {
   ChainEvent,
   ChainEventTypes,
@@ -27,6 +27,7 @@ import { ToolSource } from './resolveTools/types'
 import { getBuiltInToolCallResponses } from './step/toolExecution'
 import { JSONSchema7 } from 'json-schema'
 import { createMcpClientManager } from '../../services/integrations/McpClient/McpClientManager'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 const createPromiseWithResolver = <T>(): readonly [
   Promise<T>,
@@ -193,7 +194,7 @@ export class ChainStreamManager {
     const resolvedTools = await resolveToolsFromConfig({
       workspace: this.workspace,
       promptSource: this.promptSource,
-      config: conversation.config as PromptConfig,
+      config: conversation.config as LatitudePromptConfig,
       injectAgentFinishTool,
       chainStreamManager: this,
     }).then((r) => r.unwrap())
@@ -275,7 +276,7 @@ export class ChainStreamManager {
     config,
     message,
   }: {
-    config: PromptConfig
+    config: LatitudePromptConfig
     message: AssistantMessage
   }): Promise<ToolMessage[]> {
     const resolvedTools = await resolveToolsFromConfig({

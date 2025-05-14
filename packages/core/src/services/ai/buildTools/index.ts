@@ -1,19 +1,30 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { CoreTool, jsonSchema } from 'ai'
+import { Tool, jsonSchema } from 'ai'
 import { compactObject } from '../../../lib/compactObject'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
-import { ToolDefinitionsMap } from '@latitude-data/constants'
+import { VercelTools } from '@latitude-data/constants'
 import { Result } from './../../../lib/Result'
 
-export const buildTools = (tools: ToolDefinitionsMap | undefined) => {
+export const buildTools = (tools: VercelTools | undefined) => {
   if (!tools) return Result.ok(undefined)
+
   try {
-    const data = Object.entries(tools).reduce<Record<string, CoreTool>>(
+    const data = Object.entries(tools).reduce<Record<string, Tool>>(
       (acc, [key, value]) => {
+        if (value.type === 'provider-defined') {
+          acc[key] = value
+          return acc
+        }
+
         acc[key] = compactObject({
           ...value,
+          // NOTE: `jsonSchema`
+          // is not validating the schema.
+          // To work you would need to pass `{ validate }`
+          // option. But our schema is dynamic so this
+          // does not makes sense here
           parameters: jsonSchema(value.parameters),
-        }) as unknown as CoreTool
+        }) as unknown as Tool
 
         return acc
       },

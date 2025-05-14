@@ -18,6 +18,7 @@ import {
   AmazonBedrockConfiguration,
   VertexConfiguration,
 } from '../../services/ai'
+import { OpenAIProviderConfiguration } from '../../services/ai/providers/helpers/openai'
 
 export const providersEnum = latitudeSchema.enum('provider', [
   Providers.OpenAI,
@@ -40,7 +41,9 @@ export type ProviderConfiguration<P extends Providers> =
     ? VertexConfiguration
     : P extends Providers.AmazonBedrock
       ? AmazonBedrockConfiguration
-      : never
+      : P extends Providers.OpenAI
+        ? OpenAIProviderConfiguration
+        : never
 
 export const providerApiKeys = latitudeSchema.table(
   'provider_api_keys',

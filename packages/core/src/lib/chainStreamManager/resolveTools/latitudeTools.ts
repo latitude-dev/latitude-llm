@@ -1,15 +1,12 @@
-import {
-  LatitudeTool,
-  PromptConfig,
-  ToolDefinition,
-} from '@latitude-data/constants'
+import { LatitudeTool } from '@latitude-data/constants'
 import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
 import { Result, TypedResult } from '../../Result'
-import { ResolvedTools, ToolSource, ToolSourceData } from './types'
+import { ResolvedTools, ToolSource } from './types'
 import {
   getLatitudeToolDefinition,
   getLatitudeToolInternalName,
 } from '../../../services/latitudeTools/helpers'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 const ALL_LATITUDE_RESOLVED_TOOLS = Object.fromEntries(
   Object.values(LatitudeTool).map((latitudeToolName) => [
@@ -24,44 +21,7 @@ const ALL_LATITUDE_RESOLVED_TOOLS = Object.fromEntries(
   ]),
 )
 
-function resolveLatitudeToolsFromLegacySchema({
-  latitudeTools,
-}: {
-  latitudeTools?: string[]
-}): TypedResult<ResolvedTools, LatitudeError> {
-  if (!latitudeTools?.length) {
-    return Result.ok({})
-  }
-
-  const unknownLatitudeTool = latitudeTools.find(
-    (tool) => !Object.values(LatitudeTool).includes(tool as LatitudeTool),
-  )
-  if (unknownLatitudeTool) {
-    return Result.error(
-      new NotFoundError(
-        `There is no Latitude tool with the name '${unknownLatitudeTool}'`,
-      ),
-    )
-  }
-
-  const resolvedLatitudeToolsEntries: [
-    string,
-    { definition: ToolDefinition; sourceData: ToolSourceData },
-  ][] = (latitudeTools as LatitudeTool[]).map((latitudeToolName) => [
-    getLatitudeToolInternalName(latitudeToolName),
-    {
-      definition: getLatitudeToolDefinition(latitudeToolName)!,
-      sourceData: {
-        source: ToolSource.Latitude,
-        latitudeTool: latitudeToolName,
-      },
-    },
-  ])
-
-  return Result.ok(Object.fromEntries(resolvedLatitudeToolsEntries))
-}
-
-function resolveLatitudeToolsFromNewSchema(config: PromptConfig) {
+function resolveLatitudeToolsFromNewSchema(config: LatitudePromptConfig) {
   const tools = config.tools
   if (!tools) {
     return Result.ok({})
@@ -121,16 +81,12 @@ function resolveLatitudeToolsFromNewSchema(config: PromptConfig) {
 export function resolveLatitudeTools({
   config,
 }: {
-  config: PromptConfig
+  config: LatitudePromptConfig
 }): TypedResult<ResolvedTools, LatitudeError> {
-  const oldSchemaResult = resolveLatitudeToolsFromLegacySchema(config)
-  if (oldSchemaResult.error) return oldSchemaResult
-
   const newSchemaResult = resolveLatitudeToolsFromNewSchema(config)
   if (newSchemaResult.error) return newSchemaResult
 
   return Result.ok({
-    ...oldSchemaResult.unwrap(),
     ...newSchemaResult.unwrap(),
   })
 }

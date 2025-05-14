@@ -126,6 +126,104 @@ describe('render', () => {
         system: [{ type: 'text', text: 'This is a custom prompt language' }],
       })
     })
+
+    it('adapts the config and message to openai responses', async () => {
+      const { messages, config } = await sdk.prompts.render({
+        prompt: {
+          content: `
+---
+provider: openai
+model: gpt-4o
+maxTokens: 100
+tools:
+ - openai:
+   - type: web_search_preview
+     search_context_size: low
+
+ - get_weather:
+      description: Get the weather for a location
+      parameters:
+        type: object
+        properties:
+          location:
+            type: string
+            description: The location to get the weather for
+---
+
+This is a custom prompt language
+
+<user>
+  Hi, my name is {{ name }}
+</user>
+
+<user>
+  Wow, what a cool way to write prompts!
+</user>
+`,
+        },
+        parameters: { name: 'John' },
+        adapter: Adapters.openaiResponses,
+      })
+
+      expect(messages).toEqual([
+        {
+          type: 'message',
+          role: 'system',
+          content: [
+            {
+              text: 'This is a custom prompt language',
+              type: 'input_text',
+            },
+          ],
+        },
+        {
+          type: 'message',
+          role: 'user',
+          content: [
+            {
+              text: 'Hi, my name is John',
+              type: 'input_text',
+            },
+          ],
+        },
+        {
+          type: 'message',
+          role: 'user',
+          content: [
+            {
+              text: 'Wow, what a cool way to write prompts!',
+              type: 'input_text',
+            },
+          ],
+        },
+      ])
+
+      expect(config).toEqual({
+        provider: 'openai', // Still the one defined in the prompt itself
+        model: 'gpt-4o',
+        max_tokens: 100,
+        tools: [
+          {
+            name: 'get_weather',
+            description: 'Get the weather for a location',
+            type: 'function',
+            parameters: {
+              type: 'object',
+              properties: {
+                location: {
+                  type: 'string',
+                  description: 'The location to get the weather for',
+                },
+              },
+            },
+          },
+          {
+            type: 'web_search_preview',
+            search_context_size: 'low',
+          },
+        ],
+      })
+    })
   })
 
   describe('chain', () => {

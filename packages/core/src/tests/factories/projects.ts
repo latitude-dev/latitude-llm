@@ -6,7 +6,7 @@ import { Providers, User, Workspace, WorkspaceDto } from '../../browser'
 import { database } from '../../client'
 import { unsafelyGetUser } from '../../data-access'
 import { DocumentVersionsRepository } from '../../repositories'
-import { projects } from '../../schema'
+import { projects, ProviderConfiguration } from '../../schema'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
 import { createIntegration } from '../../services/integrations'
@@ -47,11 +47,18 @@ export async function flattenDocumentStructure({
   return result
 }
 
+type IProviderData<T extends Providers> = {
+  type: T
+  name: string
+  defaultModel?: string
+  configuration?: ProviderConfiguration<T>
+}
+
 export type ICreateProject = {
   name?: string
   deletedAt?: Date | null
   workspace?: Workspace | WorkspaceDto | ICreateWorkspace
-  providers?: { type: Providers; name: string; defaultModel?: string }[]
+  providers?: IProviderData<Providers>[]
   integrations?: string[]
   documents?: IDocumentStructure
   skipMerge?: boolean
@@ -120,13 +127,14 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
       ? [defaultProviderFakeData()]
       : projectData.providers
   const providers = await Promise.all(
-    providersToCreate.map(({ type, name, defaultModel }) =>
+    providersToCreate.map(({ type, name, defaultModel, configuration }) =>
       createProviderApiKey({
         workspace,
         user,
         type,
         name,
         defaultModel,
+        configuration,
       }),
     ) ?? [],
   )

@@ -1,5 +1,5 @@
 import { Message } from 'promptl-ai'
-import { PromptConfig } from '../ai'
+import { LatitudePromptConfig } from '../latitudePromptSchema'
 
 export enum SpanKind {
   Internal = 'internal',
@@ -70,7 +70,7 @@ type BaseSpanMetadata = {
 type WorkflowSpanMetadata = BaseSpanMetadata & {}
 
 type StepSpanMetadata = BaseSpanMetadata & {
-  configuration: PromptConfig
+  configuration: LatitudePromptConfig
   input: Message[]
   output: Message[]
 }

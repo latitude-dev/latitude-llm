@@ -10,12 +10,15 @@ import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
 import { z } from 'zod'
 
 import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
-import { azureConfig, Config, googleConfig } from '../../ai/helpers'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
 import { Result } from './../../../lib/Result'
 import { TypedResult } from './../../../lib/Result'
+import {
+  azureConfig,
+  LatitudePromptConfig,
+} from '@latitude-data/constants/latitudePromptSchema'
 
 type SomeChain = LegacyChain | PromptlChain
 
@@ -45,7 +48,7 @@ export const getInputSchema = ({
   configOverrides,
   ignoreSchema = false,
 }: {
-  config: Config
+  config: LatitudePromptConfig
   configOverrides?: ConfigOverrides
   ignoreSchema?: boolean
 }): JSONSchema7 | undefined => {
@@ -62,7 +65,7 @@ export const getOutputType = ({
   configOverrides,
   ignoreSchema = false,
 }: {
-  config: Config
+  config: LatitudePromptConfig
   configOverrides?: ConfigOverrides
   ignoreSchema?: boolean
 }): 'object' | 'array' | 'no-schema' | undefined => {
@@ -152,9 +155,14 @@ const findProvider = (name: string, providersMap: CachedApiKeys) => {
   )
 }
 
+// TODO: Use latitudePromptSchema. This is duplicated
+// This is a lie
 const validateConfig = (
   config: Record<string, unknown>,
-): TypedResult<Config, ChainError<RunErrorCodes.DocumentConfigError>> => {
+): TypedResult<
+  LatitudePromptConfig,
+  ChainError<RunErrorCodes.DocumentConfigError>
+> => {
   const doc =
     'https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts'
   const schema = z
@@ -165,7 +173,6 @@ const validateConfig = (
       provider: z.string({
         message: `"provider" attribute is required. Read more here: ${doc}`,
       }),
-      google: googleConfig.optional(),
       azure: azureConfig.optional(),
     })
     .catchall(z.unknown())

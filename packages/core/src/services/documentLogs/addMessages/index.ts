@@ -12,8 +12,8 @@ import { resumePausedPrompt } from './resumePausedPrompt'
 import { addChatMessage } from './addChatMessage'
 import { resumeAgent } from './resumeAgent'
 import { scanDocumentContent } from '../../documents'
-import { PromptConfig } from '@latitude-data/constants'
 import { Result } from './../../../lib/Result'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 async function retrieveData({
   workspace,
@@ -52,7 +52,7 @@ async function retrieveData({
     commit,
   })
   if (metadataResult.error) return metadataResult
-  const globalConfig = metadataResult.value.config as PromptConfig
+  const globalConfig = metadataResult.value.config as LatitudePromptConfig
 
   return Result.ok({ commit, document, providerLog, globalConfig })
 }

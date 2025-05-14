@@ -1,6 +1,7 @@
 import { Message } from '@latitude-data/compiler'
-import { ChainEventDtoResponse, PromptConfig } from '..'
+import { ChainEventDtoResponse } from '..'
 import { FinishReason } from 'ai'
+import { LatitudePromptConfig } from '../latitudePromptSchema'
 
 export enum LegacyChainEventTypes {
   Error = 'chain-error',
@@ -12,7 +13,7 @@ export enum LegacyChainEventTypes {
 export type LegacyEventData =
   | {
       type: LegacyChainEventTypes.Step
-      config: PromptConfig
+      config: LatitudePromptConfig
       isLastStep: boolean
       messages: Message[]
       uuid?: string
@@ -24,7 +25,7 @@ export type LegacyEventData =
     }
   | {
       type: LegacyChainEventTypes.Complete
-      config: PromptConfig
+      config: LatitudePromptConfig
       finishReason?: FinishReason
       messages?: Message[]
       object?: any

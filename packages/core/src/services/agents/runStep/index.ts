@@ -14,9 +14,9 @@ import {
   ABSOLUTE_MAX_STEPS,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
-  PromptConfig,
 } from '@latitude-data/constants'
 import { Result } from './../../../lib/Result'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 function assertValidStepCount({
   stepCount,
@@ -60,7 +60,7 @@ export async function runAgentStep({
   providersMap: CachedApiKeys
   errorableUuid: string
   newMessages: Message[] | undefined
-  globalConfig: PromptConfig
+  globalConfig: LatitudePromptConfig
   previousConfig: Config
   stepCount: number
   abortSignal?: AbortSignal

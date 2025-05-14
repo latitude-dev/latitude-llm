@@ -1,6 +1,5 @@
 import {
   ChainStepResponse,
-  PromptConfig,
   LegacyChainEvent,
   LegacyChainEventTypes,
   StreamEventTypes,
@@ -13,6 +12,7 @@ import {
   MessageRole,
   ToolCall,
 } from '@latitude-data/compiler'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 function getAssistantMessageToolCallIds(message?: Message): unknown[] {
   if (message?.role !== 'assistant') return []
@@ -39,7 +39,7 @@ export function convertToLegacyChainStream(
   })
 
   let lastResponse: ChainStepResponse<StreamType>
-  let lastConfig: PromptConfig
+  let lastConfig: LatitudePromptConfig
   let messageCount = 0
   let isResumingPausedChain = false
 
@@ -86,12 +86,12 @@ export function convertToLegacyChainStream(
               documentLogUuid: data.uuid,
               messages: data.messages.slice(messageCount),
               isLastStep: false,
-              config: data.config as PromptConfig,
+              config: data.config as LatitudePromptConfig,
             },
           })
 
           messageCount = data.messages.length
-          lastConfig = data.config as PromptConfig
+          lastConfig = data.config as LatitudePromptConfig
           continue
         }
 
@@ -151,7 +151,7 @@ export function convertToLegacyChainStream(
             event: StreamEventTypes.Latitude,
             data: {
               type: LegacyChainEventTypes.Error,
-              error: await data.error,
+              error: data.error,
             },
           })
           break

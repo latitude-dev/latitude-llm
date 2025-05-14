@@ -8,7 +8,6 @@ import {
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
-import { Config } from '../../../services/ai'
 import { ChainError } from '../ChainErrors'
 import { ValidatedChainStep } from '../../../services/chains/ChainValidator'
 import { ValidatedAgentStep } from '../../../services/agents/AgentStepValidator'
@@ -16,6 +15,7 @@ import { ValidatedAgentStep } from '../../../services/agents/AgentStepValidator'
 type ValidatedStep = ValidatedChainStep | ValidatedAgentStep
 import { FinishReason } from 'ai'
 import { buildMessagesFromResponse } from '../../../helpers'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 export function enqueueChainEvent(
   controller: ReadableStreamDefaultController,
@@ -56,7 +56,7 @@ export class ChainStreamConsumer {
     isLastStep = false,
   }: {
     controller: ReadableStreamDefaultController
-    config: Config
+    config: LatitudePromptConfig
     messages: Message[]
     documentLogUuid: string
     isLastStep?: boolean
@@ -99,7 +99,7 @@ export class ChainStreamConsumer {
   }: {
     controller: ReadableStreamDefaultController
     response: ChainStepResponse<StreamType>
-    config: Config
+    config: LatitudePromptConfig
     finishReason: FinishReason
     responseMessages: Message[]
   }) {
@@ -163,7 +163,7 @@ export class ChainStreamConsumer {
 
     ChainStreamConsumer.startStep({
       controller: this.controller,
-      config: step.conversation.config as Config,
+      config: step.conversation.config as LatitudePromptConfig,
       messages: newMessages,
       documentLogUuid: this.errorableUuid,
       isLastStep: step.chainCompleted,
@@ -195,7 +195,7 @@ export class ChainStreamConsumer {
     return ChainStreamConsumer.chainCompleted({
       controller: this.controller,
       response,
-      config: step.conversation.config as Config,
+      config: step.conversation.config as LatitudePromptConfig,
       finishReason,
       responseMessages,
     })

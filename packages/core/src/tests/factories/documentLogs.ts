@@ -13,11 +13,11 @@ import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { ProviderApiKeysRepository } from '../../repositories'
 import { documentLogs } from '../../schema'
-import { Config } from '../../services/ai'
 import { createDocumentLog as ogCreateDocumentLog } from '../../services/documentLogs/create'
 import { getResolvedContent } from '../../services/documents'
 import { createProviderLog } from '../../services/providerLogs'
 import { helpers } from './helpers'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 export type IDocumentLogData = {
   document: DocumentVersion
@@ -56,7 +56,7 @@ async function generateProviderLogs({
   while (true) {
     const { completed, conversation } = await chain.step(mockedResponse)
 
-    const config = conversation.config as Config
+    const config = conversation.config as LatitudePromptConfig
     const provider = await providerScope
       .findByName(config.provider!)
       .then((r) => r.unwrap())

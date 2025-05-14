@@ -22,10 +22,11 @@ import { setCachedResponse } from '../commits/promptCache'
 import * as chainValidatorModule from './ChainValidator'
 import * as saveOrPublishProviderLogsModule from './ProviderProcessor/saveOrPublishProviderLogs'
 import { runChain } from './run'
-import { objectToString, PromptConfig } from '@latitude-data/constants'
+import { objectToString } from '@latitude-data/constants'
 import { ChainEventTypes } from '@latitude-data/constants'
 import { Result } from './../../lib/Result'
 import { TypedResult } from './../../lib/Result'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 // Mock other dependencies
 vi.mock('@latitude-data/compiler')
@@ -102,7 +103,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -140,18 +141,25 @@ describe('runChain', () => {
 
     const mockAiResponse = Result.ok({
       type: 'object',
-      object: Promise.resolve({ name: 'John', age: 30 }),
       usage: Promise.resolve({ totalTokens: 15 }),
       providerLog: Promise.resolve({
         provider: 'openai',
         model: 'gpt-3.5-turbo',
       }),
+      text: Promise.resolve(objectToString({ name: 'John', age: 30 })),
+      toolCalls: Promise.resolve([]),
       fullStream: new ReadableStream({
         start(controller) {
+          controller.enqueue({ type: 'text-delta', textDelta: '{\n' })
           controller.enqueue({
-            type: 'object',
-            object: { name: 'John', age: 30 },
+            type: 'text-delta',
+            textDelta: '"name": "John",\n',
           })
+          controller.enqueue({
+            type: 'text-delta',
+            textDelta: '"age": 30',
+          })
+          controller.enqueue({ type: 'text-delta', textDelta: '}\n' })
           controller.close()
         },
       }),
@@ -175,7 +183,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -191,8 +199,8 @@ describe('runChain', () => {
     expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
-        object: { name: 'John', age: 30 },
         text: objectToString({ name: 'John', age: 30 }),
+        object: { name: 'John', age: 30 },
         usage: { totalTokens: 15 },
       }),
     )
@@ -252,7 +260,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -297,7 +305,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -342,18 +350,25 @@ describe('runChain', () => {
 
     const mockAiResponse = Result.ok({
       type: 'object',
-      object: Promise.resolve({ name: 'John', age: 30 }),
       usage: Promise.resolve({ totalTokens: 15 }),
+      toolCalls: Promise.resolve([]),
+      text: Promise.resolve(objectToString({ name: 'John', age: 30 })),
       providerLog: Promise.resolve({
         provider: 'openai',
         model: 'gpt-3.5-turbo',
       }),
       fullStream: new ReadableStream({
         start(controller) {
+          controller.enqueue({ type: 'text-delta', textDelta: '{\n' })
           controller.enqueue({
-            type: 'object',
-            object: { name: 'John', age: 30 },
+            type: 'text-delta',
+            textDelta: '"name": "John",\n',
           })
+          controller.enqueue({
+            type: 'text-delta',
+            textDelta: '"age": 30',
+          })
+          controller.enqueue({ type: 'text-delta', textDelta: '}\n' })
           controller.close()
         },
       }),
@@ -377,7 +392,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -393,8 +408,8 @@ describe('runChain', () => {
     expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
-        object: { name: 'John', age: 30 },
         text: objectToString({ name: 'John', age: 30 }),
+        object: { name: 'John', age: 30 },
         usage: { totalTokens: 15 },
       }),
     )
@@ -427,24 +442,30 @@ describe('runChain', () => {
 
     const mockAiResponse = Result.ok({
       type: 'object',
-      object: Promise.resolve([
-        { name: 'John', age: 30 },
-        { name: 'Jane', age: 25 },
-      ]),
+      text: Promise.resolve(
+        objectToString([
+          { name: 'John', age: 30 },
+          { name: 'Jane', age: 25 },
+        ]),
+      ),
       providerLog: Promise.resolve({
         provider: 'openai',
         model: 'gpt-3.5-turbo',
       }),
+      toolCalls: Promise.resolve([]),
       usage: Promise.resolve({ totalTokens: 20 }),
       fullStream: new ReadableStream({
         start(controller) {
+          controller.enqueue({ type: 'text-delta', textDelta: '[\n' })
           controller.enqueue({
-            type: 'object',
-            object: [
-              { name: 'John', age: 30 },
-              { name: 'Jane', age: 25 },
-            ],
+            type: 'text-delta',
+            textDelta: '  {"name": "John", "age": 30},\n',
           })
+          controller.enqueue({
+            type: 'text-delta',
+            textDelta: '  {"name": "Jane", "age": 25}\n',
+          })
+          controller.enqueue({ type: 'text-delta', textDelta: ']\n' })
           controller.close()
         },
       }),
@@ -468,7 +489,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -527,7 +548,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -595,7 +616,7 @@ describe('runChain', () => {
     const result = runChain({
       workspace,
       chain: mockChain as LegacyChain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -659,7 +680,7 @@ describe('runChain', () => {
     const result = runChain({
       workspace,
       chain: mockChain as LegacyChain,
-      globalConfig: {} as PromptConfig,
+      globalConfig: {} as LatitudePromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -790,7 +811,7 @@ describe('runChain', () => {
       const run = runChain({
         workspace,
         chain: mockChain as LegacyChain,
-        globalConfig: {} as PromptConfig,
+        globalConfig: {} as LatitudePromptConfig,
         promptlVersion: 0,
         providersMap,
         source: LogSources.API,
@@ -847,7 +868,7 @@ describe('runChain', () => {
         const run = runChain({
           workspace,
           chain: mockChain as LegacyChain,
-          globalConfig: {} as PromptConfig,
+          globalConfig: {} as LatitudePromptConfig,
           promptlVersion: 0,
           providersMap,
           source: LogSources.API,
@@ -909,7 +930,7 @@ describe('runChain', () => {
         const run = runChain({
           workspace,
           chain: mockChain as LegacyChain,
-          globalConfig: {} as PromptConfig,
+          globalConfig: {} as LatitudePromptConfig,
           promptlVersion: 0,
           providersMap,
           source: LogSources.API,
