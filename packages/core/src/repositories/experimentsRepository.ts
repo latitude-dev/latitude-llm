@@ -45,25 +45,44 @@ export class ExperimentsRepository extends Repository<Experiment> {
   }
 
   private get aggregatedResultsSubquery() {
-    const evaluationAggregation = this.db.$with('evaluationAggregation').as(
+    // First get experiment-level aggregations
+    const experimentAggregations = this.db.$with('experimentAggregations').as(
+      this.db
+        .select({
+          experimentId: evaluationResultsV2.experimentId,
+          totalScore:
+            sql<number>`SUM(${evaluationResultsV2.normalizedScore})`.as(
+              'total_score',
+            ),
+          totalCount: sql<number>`COUNT(*)`.as('total_count'),
+        })
+        .from(evaluationResultsV2)
+        .where(eq(evaluationResultsV2.workspaceId, this.workspaceId))
+        .groupBy(evaluationResultsV2.experimentId),
+    )
+
+    // Then get status-specific counts
+    const statusCounts = this.db.$with('statusCounts').as(
       this.db
         .select({
           experimentId: evaluationResultsV2.experimentId,
           passedEvals: sql<number>`
-            COUNT(DISTINCT CASE WHEN ${evaluationResultsV2.hasPassed} = TRUE THEN ${evaluationResultsV2.id} END)
+            SUM(CASE WHEN ${evaluationResultsV2.hasPassed} = TRUE THEN 1 ELSE 0 END)
           `.as('passed_evals'),
           failedEvals: sql<number>`
-            COUNT(DISTINCT CASE WHEN ${evaluationResultsV2.hasPassed} = FALSE THEN ${evaluationResultsV2.id} END)
+            SUM(CASE WHEN ${evaluationResultsV2.hasPassed} = FALSE THEN 1 ELSE 0 END)
           `.as('failed_evals'),
           evalErrors: sql<number>`
-            COUNT(DISTINCT CASE WHEN ${evaluationResultsV2.error} IS NOT NULL THEN ${evaluationResultsV2.id} END)
+            SUM(CASE WHEN ${evaluationResultsV2.error} IS NOT NULL THEN 1 ELSE 0 END)
           `.as('eval_errors'),
-          totalScore: sql<number>`
-            SUM(${evaluationResultsV2.normalizedScore})
-          `.as('total_score'),
         })
         .from(evaluationResultsV2)
-        .where(eq(evaluationResultsV2.workspaceId, this.workspaceId))
+        .where(
+          and(
+            eq(evaluationResultsV2.workspaceId, this.workspaceId),
+            sql`(${evaluationResultsV2.hasPassed} IS NOT NULL OR ${evaluationResultsV2.error} IS NOT NULL)`,
+          ),
+        )
         .groupBy(evaluationResultsV2.experimentId),
     )
 
@@ -90,32 +109,32 @@ export class ExperimentsRepository extends Repository<Experiment> {
 
     return this.db.$with('aggregated_results').as(
       this.db
-        .with(evaluationAggregation, logsAggregation)
+        .with(experimentAggregations, statusCounts)
         .select({
           id: experiments.id,
-          passedEvals:
-            sql<number>`MAX(${evaluationAggregation.passedEvals})`.as(
-              'passed_evals',
-            ),
-          failedEvals:
-            sql<number>`MAX(${evaluationAggregation.failedEvals})`.as(
-              'failed_evals',
-            ),
-          evalErrors: sql<number>`MAX(${evaluationAggregation.evalErrors})`.as(
+          passedEvals: sql<number>`COALESCE(${statusCounts.passedEvals}, 0)`.as(
+            'passed_evals',
+          ),
+          failedEvals: sql<number>`COALESCE(${statusCounts.failedEvals}, 0)`.as(
+            'failed_evals',
+          ),
+          evalErrors: sql<number>`COALESCE(${statusCounts.evalErrors}, 0)`.as(
             'eval_errors',
           ),
-          totalScore: sql<number>`MAX(${evaluationAggregation.totalScore})`.as(
-            'total_score',
-          ),
-          logErrors: sql<number>`MAX(${logsAggregation.logErrors})`.as(
+          totalScore:
+            sql<number>`COALESCE(${experimentAggregations.totalScore}, 0)`.as(
+              'total_score',
+            ),
+          logErrors: sql<number>`COALESCE(${logsAggregation.logErrors}, 0)`.as(
             'log_errors',
           ),
         })
         .from(experiments)
         .leftJoin(
-          evaluationAggregation,
-          eq(evaluationAggregation.experimentId, experiments.id),
+          experimentAggregations,
+          eq(experimentAggregations.experimentId, experiments.id),
         )
+        .leftJoin(statusCounts, eq(statusCounts.experimentId, experiments.id))
         .leftJoin(
           logsAggregation,
           eq(logsAggregation.experimentId, experiments.id),
