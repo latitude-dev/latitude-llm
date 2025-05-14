@@ -7,7 +7,6 @@ import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   DocumentVersion,
   EvaluationResultV2,
-  EvaluationType,
   EvaluationV2,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
@@ -78,18 +77,8 @@ export default function DocumentEvaluations({
   isLoading: boolean
 }) {
   const { project } = useCurrentProject()
-  const { data: evaluationsV2, isLoading: isEvaluationsV2Loading } =
+  const { data: evaluations, isLoading: isEvaluationsV2Loading } =
     useEvaluationsV2({ project, commit, document })
-
-  const evaluations = useMemo<EvaluationV2[]>(
-    () =>
-      evaluationsV2.filter(
-        (evaluation) =>
-          evaluation.type === EvaluationType.Rule ||
-          evaluation.type === EvaluationType.Llm,
-      ),
-    [evaluationsV2],
-  )
 
   const { data: evaluationResultsV2, mutate } =
     useEvaluationResultsV2ByDocumentLogs({
@@ -99,7 +88,7 @@ export default function DocumentEvaluations({
       documentLogUuids: documentLog ? [documentLog.uuid] : [],
     })
 
-  useEvaluationResultsV2Socket({ evaluations: evaluationsV2, mutate })
+  useEvaluationResultsV2Socket({ evaluations, mutate })
 
   const results = useMemo(() => {
     if (!documentLog || !evaluationResultsV2[documentLog.uuid]) return {}
