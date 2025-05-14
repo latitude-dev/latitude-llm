@@ -13,10 +13,7 @@ import {
   ExperimentDto,
   ProviderLogDto,
 } from '../browser'
-import {
-  type DocumentLogWithMetadataAndError,
-  type EvaluationResultWithMetadataAndErrors,
-} from '../repositories'
+import { type DocumentLogWithMetadataAndError } from '../repositories'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
@@ -49,37 +46,8 @@ type DocumentBatchRunStatusArgs = {
   enqueued: number
 }
 
-type EvaluationStatusArgs = {
-  batchId: string
-  total: number
-  completed: number
-  errors: number
-  enqueued: number
-} & (
-  | {
-      evaluationId: number
-      documentUuid: string
-      version: 'v1'
-    }
-  | {
-      commitId: number
-      documentUuid: string
-      evaluationUuid: string
-      version: 'v2'
-    }
-)
-
 type ExperimentStatusArgs = {
   experiment: ExperimentDto
-}
-
-type EvaluationResultCreatedArgs = {
-  workspaceId: number
-  evaluationId: number
-  documentUuid: string
-  evaluationResultId: number
-  documentLogUuid: string
-  row: EvaluationResultWithMetadataAndErrors
 }
 
 type DocumentLogCreatedArgs = {
@@ -118,9 +86,7 @@ type EvaluationResultV2CreatedArgs = {
 
 export type WebServerToClientEvents = {
   documentBatchRunStatus: (args: DocumentBatchRunStatusArgs) => void
-  evaluationStatus: (args: EvaluationStatusArgs) => void
   experimentStatus: (args: ExperimentStatusArgs) => void
-  evaluationResultCreated: (args: EvaluationResultCreatedArgs) => void
   datasetRowsCreated: (args: DatasetRowsCreatedArgs) => void
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
   documentLogCreated: (args: DocumentLogCreatedArgs) => void
@@ -145,14 +111,6 @@ export type WorkersClientToServerEvents = {
   documentBatchRunStatus: (args: {
     workspaceId: number
     data: DocumentBatchRunStatusArgs
-  }) => void
-  evaluationStatus: (args: {
-    workspaceId: number
-    data: EvaluationStatusArgs
-  }) => void
-  evaluationResultCreated: (args: {
-    workspaceId: number
-    data: EvaluationResultCreatedArgs
   }) => void
   datasetRowsCreated: (args: {
     workspaceId: number

@@ -10,7 +10,6 @@ import {
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useRef } from 'react'
-import { EvaluationBatchIndicator } from '../EvaluationBatchIndicator'
 import { EvaluationResultsTableActions } from './TableActions'
 import { EvaluationResultsTableBody } from './TableBody'
 
@@ -45,7 +44,6 @@ export function EvaluationResultsTable<
 
   return (
     <div className='flex flex-col gap-4 flex-grow min-h-0'>
-      <EvaluationBatchIndicator />
       <div
         className={cn('gap-x-4 grid pb-6', {
           'grid-cols-1': !selectedResult,

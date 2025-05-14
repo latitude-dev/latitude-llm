@@ -8,7 +8,6 @@ import {
   Workspace,
   type Commit,
 } from '@latitude-data/core/browser'
-import { findAllEvaluationTemplates } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
 import {
@@ -194,13 +193,6 @@ export const getDocumentsFromMergedCommitsCache = cache(
     return documents
   },
 )
-
-export const getEvaluationTemplatesCached = cache(async () => {
-  const result = await findAllEvaluationTemplates()
-  const templates = result.unwrap()
-
-  return templates
-})
 
 export const getEvaluationByUuidCached = cache(async (uuid: string) => {
   const { workspace } = await getCurrentUser()

@@ -2,7 +2,7 @@ import { bigint, bigserial, text } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { providerApiKeys } from './providerApiKeys'
+import { providerApiKeys } from '../models/providerApiKeys'
 
 // NOTE: Deprecated
 export const evaluationMetadataLlmAsJudgeSimple = latitudeSchema.table(

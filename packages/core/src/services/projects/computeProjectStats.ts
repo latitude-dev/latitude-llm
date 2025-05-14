@@ -152,6 +152,8 @@ export async function computeProjectStats({
     .where(and(eq(commits.projectId, project.id), isNull(commits.deletedAt)))
     .then((result) => result.map((row) => row.documentUuid))
 
+  // NOTE(evalsv2): Do not delete this as it's crucial to compute historical
+  // data for the usage overview
   // Count total evaluations - v1
   const totalEvaluationsV1 = await db
     .select({ count: count() })

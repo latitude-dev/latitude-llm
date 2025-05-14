@@ -184,12 +184,7 @@ export const requestDocumentSuggestionsJob = async (
     documentSuggestionsQueue.add('generateDocumentSuggestionJob', candidate, {
       attempts: 1,
       deduplication: {
-        id: generateDocumentSuggestionJobKey({
-          workspaceId: candidate.workspaceId,
-          commitId: candidate.commitId,
-          documentUuid: candidate.documentUuid,
-          evaluationUuid: candidate.evaluationUuid,
-        }),
+        id: generateDocumentSuggestionJobKey(candidate),
       },
     })
   }

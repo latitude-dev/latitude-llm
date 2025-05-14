@@ -47,11 +47,7 @@ export function DocumentTabSelector({
   return (
     <TabSelector
       options={Object.values(options)}
-      selected={
-        (selectedSegment === 'evaluations'
-          ? DocumentRoutes.evaluations
-          : selectedSegment) ?? DocumentRoutes.editor
-      }
+      selected={selectedSegment ?? DocumentRoutes.editor}
       onSelect={(value) => router.push(options[value].route)}
     />
   )

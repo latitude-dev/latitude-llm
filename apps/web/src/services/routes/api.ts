@@ -290,9 +290,6 @@ export const API_ROUTES = {
       }
     },
   },
-  evaluationTemplates: {
-    root: '/api/evaluationTemplates',
-  },
   documentLogs: {
     detail: ({ id }: { id: number }) => ({
       root: `/api/documentLogs/${id}`,
