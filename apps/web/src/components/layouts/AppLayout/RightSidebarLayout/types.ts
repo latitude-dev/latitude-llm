@@ -1,7 +1,7 @@
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { ReactNode } from 'react'
 
-export type RightSidebarTabs = 'docs'
+export type RightSidebarTabs = 'docs' | 'latte'
 
 export type RightSidebarItem = {
   label: string
