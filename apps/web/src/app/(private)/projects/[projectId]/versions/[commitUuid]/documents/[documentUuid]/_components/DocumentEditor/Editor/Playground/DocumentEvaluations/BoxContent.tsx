@@ -52,7 +52,7 @@ export function ExpandedContentHeader({ document, commit, project }: Props) {
   const route = ROUTES.projects
     .detail({ id: project.id })
     .commits.detail({ uuid: commit.uuid })
-    .documents.detail({ uuid: document.documentUuid }).evaluationsV2.root
+    .documents.detail({ uuid: document.documentUuid }).evaluations.root
 
   return (
     <div className='w-full flex items-center justify-end gap-4'>

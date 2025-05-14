@@ -41,7 +41,7 @@ export function useEvaluationResultsV2<
     .detail(project.id)
     .commits.detail(commit.uuid)
     .documents.detail(document.documentUuid)
-    .evaluationsV2.detail(evaluation.uuid).results.root
+    .evaluations.detail(evaluation.uuid).results.root
   const query = useMemo(
     () => (search ? evaluationResultsV2SearchToQueryParams(search) : ''),
     [search],
@@ -93,7 +93,7 @@ export function useEvaluationResultsV2Pagination<
     .detail(project.id)
     .commits.detail(commit.uuid)
     .documents.detail(document.documentUuid)
-    .evaluationsV2.detail(evaluation.uuid).results.pagination.root
+    .evaluations.detail(evaluation.uuid).results.pagination.root
   const query = useMemo(
     () =>
       search
@@ -150,7 +150,7 @@ export function useEvaluationResultsV2Count<
     .detail(project.id)
     .commits.detail(commit.uuid)
     .documents.detail(document.documentUuid)
-    .evaluationsV2.detail(evaluation.uuid).results.count.root
+    .evaluations.detail(evaluation.uuid).results.count.root
   const query = useMemo(
     () =>
       search

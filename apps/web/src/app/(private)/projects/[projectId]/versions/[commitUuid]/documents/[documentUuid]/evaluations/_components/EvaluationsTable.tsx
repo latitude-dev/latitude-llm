@@ -112,7 +112,7 @@ export function EvaluationsTable({
                           .detail({ id: project.id })
                           .commits.detail({ uuid: commit.uuid })
                           .documents.detail({ uuid: document.documentUuid })
-                          .evaluationsV2.detail({ uuid: evaluation.uuid }).root,
+                          .evaluations.detail({ uuid: evaluation.uuid }).root,
                       )
                     }
                   >

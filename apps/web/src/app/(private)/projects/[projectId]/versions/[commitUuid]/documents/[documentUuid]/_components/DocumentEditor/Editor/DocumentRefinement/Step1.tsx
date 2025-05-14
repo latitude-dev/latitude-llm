@@ -80,7 +80,7 @@ export function Step1({
               ROUTES.projects
                 .detail({ id: project.id })
                 .commits.detail({ uuid: commit.uuid })
-                .documents.detail({ uuid: document.documentUuid }).evaluationsV2
+                .documents.detail({ uuid: document.documentUuid }).evaluations
                 .root
             }
           >

@@ -8,7 +8,7 @@ export type IDatasetSettingsModal = 'new' | 'generate'
 export enum DocumentRoutes {
   editor = 'editor',
   logs = 'logs',
-  evaluationsV2 = 'evaluationsV2',
+  evaluations = 'evaluations',
   experiments = 'experiments',
 }
 
@@ -146,14 +146,14 @@ export const ROUTES = {
                 root: rootDocuments,
                 detail: ({ uuid }: { uuid: string }) => {
                   const root = `${rootDocuments}/${uuid}`
-                  const rootEvaluations = `${root}/evaluations-v2`
+                  const rootEvaluations = `${root}/evaluations`
                   const experimentsRoot = `${root}/experiments`
                   return {
                     root,
                     [DocumentRoutes.editor]: {
                       root,
                     },
-                    [DocumentRoutes.evaluationsV2]: {
+                    [DocumentRoutes.evaluations]: {
                       root: rootEvaluations,
                       detail: ({ uuid }: { uuid: string }) => {
                         const root = `${rootEvaluations}/${uuid}`

@@ -114,16 +114,13 @@ export const API_ROUTES = {
                 const documentRoot = `${projectRoot}/commits/${commitUuid}/documents/${documentUuid}`
                 return {
                   root: documentRoot,
-                  evaluations: {
-                    root: `${documentRoot}/evaluations`,
-                  },
                   suggestions: {
                     root: `${documentRoot}/suggestions`,
                   },
-                  evaluationsV2: {
-                    root: `${documentRoot}/evaluations-v2`,
+                  evaluations: {
+                    root: `${documentRoot}/evaluations`,
                     detail: (evaluationUuid: string) => {
-                      const evaluationRoot = `${documentRoot}/evaluations-v2/${evaluationUuid}`
+                      const evaluationRoot = `${documentRoot}/evaluations/${evaluationUuid}`
                       return {
                         root: evaluationRoot,
                         results: {
@@ -144,9 +141,9 @@ export const API_ROUTES = {
                       }
                     },
                     results: {
-                      root: `${documentRoot}/evaluations-v2/results`,
+                      root: `${documentRoot}/evaluations/results`,
                       documentLogs: {
-                        root: `${documentRoot}/evaluations-v2/results/document-logs`,
+                        root: `${documentRoot}/evaluations/results/document-logs`,
                       },
                     },
                   },
@@ -314,17 +311,5 @@ export const API_ROUTES = {
     downloadLogs: {
       root: `/api/documentLogs/download-logs`,
     },
-  },
-  evaluations: {
-    root: '/api/evaluations',
-    detail: (id: number) => ({
-      root: `/api/evaluations/${id}`,
-      connectedDocuments: {
-        root: `/api/evaluations/${id}/connected-documents`,
-      },
-      prompt: {
-        root: `/api/evaluations/${id}/prompt`,
-      },
-    }),
   },
 }

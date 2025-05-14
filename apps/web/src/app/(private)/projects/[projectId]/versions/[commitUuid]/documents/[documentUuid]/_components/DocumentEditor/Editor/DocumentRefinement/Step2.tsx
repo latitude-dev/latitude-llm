@@ -32,29 +32,6 @@ import { useEffect, useMemo, useState } from 'react'
 const PAGE_SIZE = 7
 
 export function Step2({
-  evaluationUuid,
-  selectedResultUuids,
-  setSelectedResultUuids,
-  ...rest
-}: {
-  project: IProjectContextType['project']
-  commit: ICommitContextType['commit']
-  document: DocumentVersion
-  evaluationUuid: string
-  selectedResultUuids: string[]
-  setSelectedResultUuids: (uuids: string[]) => void
-}) {
-  return (
-    <Step2V2
-      evaluationUuid={evaluationUuid}
-      selectedResultUuids={selectedResultUuids}
-      setSelectedResultUuids={setSelectedResultUuids}
-      {...rest}
-    />
-  )
-}
-
-function Step2V2({
   project,
   commit,
   document,
@@ -143,7 +120,7 @@ function Step2V2({
               ROUTES.projects
                 .detail({ id: project.id })
                 .commits.detail({ uuid: commit.uuid })
-                .documents.detail({ uuid: document.documentUuid }).evaluationsV2
+                .documents.detail({ uuid: document.documentUuid }).evaluations
                 .root
             }
           >

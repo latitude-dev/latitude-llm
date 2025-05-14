@@ -50,7 +50,7 @@ export function useEvaluationsV2(
     ROUTES.api.projects
       .detail(project.id)
       .commits.detail(commit.uuid)
-      .documents.detail(document.documentUuid).evaluationsV2.root,
+      .documents.detail(document.documentUuid).evaluations.root,
   )
 
   const {
@@ -337,7 +337,7 @@ export function useEvaluationV2Stats<
     .detail(project.id)
     .commits.detail(commit.uuid)
     .documents.detail(document.documentUuid)
-    .evaluationsV2.detail(evaluation.uuid).stats.root
+    .evaluations.detail(evaluation.uuid).stats.root
   const query = useMemo(
     () =>
       search

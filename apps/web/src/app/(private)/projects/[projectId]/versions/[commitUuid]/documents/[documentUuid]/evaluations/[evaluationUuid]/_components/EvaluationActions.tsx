@@ -111,7 +111,7 @@ function EditPrompt<M extends LlmEvaluationMetric>({
         .detail({ id: project.id })
         .commits.detail({ uuid: commit.uuid })
         .documents.detail({ uuid: document.documentUuid })
-        .evaluationsV2.detail({ uuid: evaluationUuid }),
+        .evaluations.detail({ uuid: evaluationUuid }),
     [project.id, commit.uuid, document.documentUuid],
   )
 

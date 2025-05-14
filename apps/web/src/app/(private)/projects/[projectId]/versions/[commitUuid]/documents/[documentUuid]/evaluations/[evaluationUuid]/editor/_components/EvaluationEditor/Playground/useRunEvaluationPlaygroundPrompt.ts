@@ -29,7 +29,7 @@ export function useRunEvaluationPlaygroundPrompt({
       .detail(projectId)
       .commits.detail(commit.uuid)
       .documents.detail(document.documentUuid)
-      .evaluationsV2.detail(evaluation.uuid).runLlm.root
+      .evaluations.detail(evaluation.uuid).runLlm.root
     const response = await fetch(route, {
       method: 'POST',
       credentials: 'include',

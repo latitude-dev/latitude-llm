@@ -99,7 +99,7 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
       this.workspaceId,
       this.db,
     )
-    const evaluationsV2 = await evaluationsV2Repository
+    const evaluations = await evaluationsV2Repository
       .listAtCommitByDocument({
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
@@ -108,7 +108,7 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
 
     const suggestionsWithDetails = []
     for (const suggestion of suggestions) {
-      const evaluation = evaluationsV2.find(
+      const evaluation = evaluations.find(
         (e) => e.uuid === suggestion.evaluationUuid,
       )
       if (!evaluation) continue
