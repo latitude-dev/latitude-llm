@@ -17,6 +17,7 @@ export * from '../../events/handlers/sendReferralInvitation'
 export * from '../../events/handlers/sendSuggestionNotification'
 export * from '../../events/handlers/touchProviderApiKeyJob'
 export * from '../../events/handlers/touchApiKeyJob'
+export * from '../../events/handlers/webhooks'
 
 // Jobs
 export * from './documentLogs/createDocumentLogJob'

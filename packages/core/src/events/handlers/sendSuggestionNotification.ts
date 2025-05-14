@@ -26,7 +26,7 @@ function hasExceededNotificationLimits(user: User) {
   )
 }
 
-// TODO: add tests for evals v2
+// TODO(evalsv2): add tests for evals v2
 export const sendSuggestionNotification = async ({
   data: event,
 }: {
