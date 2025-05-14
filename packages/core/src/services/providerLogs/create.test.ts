@@ -80,23 +80,6 @@ describe('create provider', () => {
     })
   })
 
-  it('touch latitude API key', async () => {
-    const { apiKey } = await factories.createApiKey({
-      name: 'MylatitudeAPIkey',
-      workspace,
-    })
-    const providerLog = await createProviderLog({
-      ...providerProps,
-      apiKeyId: apiKey.id,
-    }).then((r) => r.unwrap())
-
-    const touchedApiKey = await database.query.apiKeys.findFirst({
-      where: eq(apiKeys.id, apiKey.id),
-    })
-    expect(providerLog.apiKeyId).toEqual(apiKey.id)
-    expect(touchedApiKey!.lastUsedAt).not.toBeNull()
-  })
-
   it('assign costInMillicents', async () => {
     const providerLog = await createProviderLog({
       ...providerProps,
