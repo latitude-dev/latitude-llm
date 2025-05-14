@@ -93,7 +93,6 @@ export default function EvaluationV2Form<
   >
   commit: ICommitContextType['commit']
   disabled?: boolean
-  forceTypeChange?: T
 }) {
   const { enabled: evaluationsV2Enabled } = useFeatureFlag({
     featureFlag: 'evaluationsV2',

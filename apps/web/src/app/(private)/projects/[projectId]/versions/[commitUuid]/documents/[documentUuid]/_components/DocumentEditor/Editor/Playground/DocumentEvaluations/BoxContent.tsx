@@ -1,5 +1,4 @@
 import { ROUTES } from '$/services/routes'
-import { EvaluationResultV2 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -76,11 +75,10 @@ export function CollapsedContentHeader({
   const count = useMemo(() => {
     return evaluations.reduce(
       (acc, evaluation) => {
-        const result = results[evaluation.uuid] as EvaluationResultV2
+        const result = results[evaluation.uuid]
 
-        if (!evaluation.evaluateLiveLogs) {
+        if (!evaluation.evaluateLiveLogs)
           return { ...acc, skipped: acc.skipped + 1 }
-        }
         if (!result) return { ...acc, skipped: acc.skipped + 1 }
         if (result.hasPassed) return { ...acc, passed: acc.passed + 1 }
 

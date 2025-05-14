@@ -9,7 +9,6 @@ import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs from '$/stores/providerLogs'
 import {
   DocumentLogFilterOptions,
-  EvaluationResultV2,
   EvaluationV2,
   ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
@@ -172,7 +171,7 @@ export function DocumentLogs({
                       result={
                         evaluationResults[selectedLog.uuid]?.find(
                           (r) => r.evaluation.uuid === evaluation.uuid,
-                        )?.result as EvaluationResultV2
+                        )?.result
                       }
                       mutateEvaluationResults={mutateEvaluationResults}
                       providerLog={responseLog}

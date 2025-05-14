@@ -17,7 +17,6 @@ export enum PlaygroundAction {
 type PlaygroundActionPayload = {
   evaluationUuid: string
   resultUuids: string[]
-  version: 'v2'
 }
 
 type IPlaygroundAction = {

@@ -40,13 +40,13 @@ export function Step2({
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
-  evaluationUuid?: string
+  evaluationUuid: string
   selectedResultUuids: string[]
   setSelectedResultUuids: (uuids: string[]) => void
 }) {
   return (
     <Step2V2
-      evaluationUuid={evaluationUuid!}
+      evaluationUuid={evaluationUuid}
       selectedResultUuids={selectedResultUuids}
       setSelectedResultUuids={setSelectedResultUuids}
       {...rest}

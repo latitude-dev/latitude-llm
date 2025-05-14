@@ -39,12 +39,10 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
     commitId,
     documentUuid,
     evaluationUuid,
-    evaluationId,
   }: {
     commitId: number
     documentUuid: string
     evaluationUuid?: string
-    evaluationId?: number
   }) {
     const filter = [
       this.scopeFilter,
@@ -55,10 +53,6 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
 
     if (evaluationUuid) {
       filter.push(eq(documentSuggestions.evaluationUuid, evaluationUuid))
-    }
-
-    if (evaluationId) {
-      filter.push(eq(documentSuggestions.evaluationId, evaluationId))
     }
 
     const result = await this.db
@@ -114,11 +108,10 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
 
     const suggestionsWithDetails = []
     for (const suggestion of suggestions) {
-      const evaluationV2 = evaluationsV2.find(
+      const evaluation = evaluationsV2.find(
         (e) => e.uuid === suggestion.evaluationUuid,
       )
-      if (!evaluationV2) continue
-      const evaluation = { ...evaluationV2, version: 'v2' as const }
+      if (!evaluation) continue
 
       suggestionsWithDetails.push({ ...suggestion, evaluation })
     }

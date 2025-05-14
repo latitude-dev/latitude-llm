@@ -349,7 +349,6 @@ export type CopilotRefinerGenerated = LatitudeEventGeneric<
     userEmail: string
   } & {
     evaluationUuid: string
-    version: 'v2'
   }
 >
 export type CopilotRefinerApplied = LatitudeEventGeneric<

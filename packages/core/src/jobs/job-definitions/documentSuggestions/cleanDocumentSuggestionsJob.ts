@@ -7,6 +7,7 @@ import { documentSuggestions } from '../../../schema'
 
 export type CleanDocumentSuggestionsJobData = {}
 
+// TODO(evalsv2): Add tests
 export const cleanDocumentSuggestionsJob = async (
   _: Job<CleanDocumentSuggestionsJobData>,
 ) => {

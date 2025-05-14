@@ -29,6 +29,7 @@ import { documentSuggestionsQueue } from '../../queues'
 
 export type RequestDocumentSuggestionsJobData = {}
 
+// TODO(evalsv2): Add tests
 export const requestDocumentSuggestionsJob = async (
   _: Job<RequestDocumentSuggestionsJobData>,
 ) => {
@@ -158,7 +159,6 @@ export const requestDocumentSuggestionsJob = async (
       commitId: liveCommits.commitId,
       documentUuid: liveDocuments.documentUuid,
       evaluationUuid: liveEvaluations.evaluationUuid,
-      version: sql<'v2'>`'v2'`,
     })
     .from(liveCommits)
     .innerJoin(
@@ -181,25 +181,16 @@ export const requestDocumentSuggestionsJob = async (
     )
 
   for (const candidate of candidatesV2) {
-    documentSuggestionsQueue.add(
-      'generateDocumentSuggestionJob',
-      {
-        workspaceId: candidate.workspaceId,
-        commitId: candidate.commitId,
-        documentUuid: candidate.documentUuid,
-        evaluationUuid: candidate.evaluationUuid,
+    documentSuggestionsQueue.add('generateDocumentSuggestionJob', candidate, {
+      attempts: 1,
+      deduplication: {
+        id: generateDocumentSuggestionJobKey({
+          workspaceId: candidate.workspaceId,
+          commitId: candidate.commitId,
+          documentUuid: candidate.documentUuid,
+          evaluationUuid: candidate.evaluationUuid,
+        }),
       },
-      {
-        attempts: 1,
-        deduplication: {
-          id: generateDocumentSuggestionJobKey({
-            workspaceId: candidate.workspaceId,
-            commitId: candidate.commitId,
-            documentUuid: candidate.documentUuid,
-            evaluationUuid: candidate.evaluationUuid,
-          }),
-        },
-      },
-    )
+    })
   }
 }
