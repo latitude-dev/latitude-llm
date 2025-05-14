@@ -19,6 +19,8 @@ import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
+import { touchApiKeyJob } from './touchApiKeyJob'
+import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
 import { updateWebhookLastTriggeredAt } from './webhooks'
 
 export const EventHandlers: IEventsHandlers = {
@@ -55,7 +57,7 @@ export const EventHandlers: IEventsHandlers = {
   membershipCreated: [sendInvitationToUserJob],
   projectCreated: [],
   providerApiKeyCreated: [],
-  providerLogCreated: [],
+  providerLogCreated: [touchProviderApiKeyJob, touchApiKeyJob],
   sendReferralInvitation: [sendReferralInvitationJob],
   userCreated: [createLoopsContact],
   userInvited: [],
