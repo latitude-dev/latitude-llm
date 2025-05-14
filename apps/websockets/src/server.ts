@@ -181,6 +181,12 @@ workers.on('connection', (socket) => {
     const workspace = buildWorkspaceRoom({ workspaceId })
     web.to(workspace).emit('experimentStatus', data)
   })
+
+  socket.on('copilotChatMessage', (args) => {
+    const { workspaceId, data } = args
+    const workspace = buildWorkspaceRoom({ workspaceId })
+    web.to(workspace).emit('copilotChatMessage', data)
+  })
 })
 
 const PORT = process.env.WEBSOCKETS_SERVER_PORT || 4002

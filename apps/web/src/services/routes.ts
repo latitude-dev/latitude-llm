@@ -142,6 +142,9 @@ export const ROUTES = {
                   root: `${root}/history/${uuid}`,
                 }),
               },
+              copilot: {
+                root: `${root}/copilot`,
+              },
               documents: {
                 root: rootDocuments,
                 detail: ({ uuid }: { uuid: string }) => {

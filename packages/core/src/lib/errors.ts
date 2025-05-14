@@ -80,6 +80,11 @@ export class RateLimitError extends LatitudeError {
   }
 }
 
+export class NotImplementedError extends LatitudeError {
+  public statusCode = 501
+  public name = LatitudeErrorCodes.NotImplementedError
+}
+
 export const databaseErrorCodes = {
   foreignKeyViolation: '23503',
   uniqueViolation: '23505',

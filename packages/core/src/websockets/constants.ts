@@ -3,6 +3,7 @@
 // All this can be seen in the browser. If you want something private
 // put in other place.
 
+import type { Message } from '@latitude-data/compiler'
 import {
   Commit,
   DatasetRow,
@@ -135,6 +136,7 @@ export type WebServerToClientEvents = {
     workspaceId: number
     mcpServerId: number
   }) => void
+  copilotChatMessage: (args: { chatUuid: string; message: Message }) => void
 }
 
 export type WebClientToServerEvents = {
@@ -187,6 +189,13 @@ export type WorkersClientToServerEvents = {
     data: {
       workspaceId: number
       mcpServerId: number
+    }
+  }) => void
+  copilotChatMessage: (args: {
+    workspaceId: number
+    data: {
+      chatUuid: string
+      message: Message
     }
   }) => void
 }
