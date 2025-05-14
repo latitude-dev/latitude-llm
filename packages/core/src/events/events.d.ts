@@ -98,6 +98,7 @@ export type MembershipCreatedEvent = LatitudeEventGeneric<
 export type ExperimentVariantsCreatedEvent = LatitudeEventGeneric<
   'experimentVariantsCreated',
   {
+    userEmail: string
     workspaceId: number
     documentUuid: string
     commitUuid: string

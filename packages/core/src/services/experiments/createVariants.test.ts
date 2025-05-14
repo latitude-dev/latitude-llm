@@ -7,6 +7,7 @@ import {
   EvaluationV2,
   Workspace,
   Providers,
+  User,
 } from '../../browser'
 import * as factories from '../../tests/factories'
 import { createExperimentVariants } from './createVariants'
@@ -15,6 +16,7 @@ import { database } from '../../client'
 const publisherSpy = vi.spyOn(publisher, 'publishLater')
 
 describe('createExperimentVariants', () => {
+  let user: User
   let workspace: Workspace
   let document: DocumentVersion
   let commit: Commit
@@ -29,7 +31,7 @@ describe('createExperimentVariants', () => {
 
   beforeEach(async () => {
     const {
-      user,
+      user: usr,
       workspace: createdWorkspace,
       commit: createdCommit,
       documents,
@@ -46,6 +48,7 @@ describe('createExperimentVariants', () => {
         }),
       },
     })
+    user = usr
     workspace = createdWorkspace
     document = documents[0]!
     commit = createdCommit
@@ -113,6 +116,7 @@ describe('createExperimentVariants', () => {
     const result = await createExperimentVariants(
       {
         workspace,
+        user,
         commit,
         document,
         variants,
@@ -155,6 +159,7 @@ describe('createExperimentVariants', () => {
     expect(publisherSpy).toHaveBeenCalledWith({
       type: 'experimentVariantsCreated',
       data: {
+        userEmail: user.email,
         workspaceId: workspace.id,
         documentUuid: document.documentUuid,
         commitUuid: commit.uuid,
@@ -193,6 +198,7 @@ describe('createExperimentVariants', () => {
     ]
     const result = await createExperimentVariants({
       workspace,
+      user,
       commit,
       document,
       variants,

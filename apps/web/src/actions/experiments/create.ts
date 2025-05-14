@@ -60,6 +60,7 @@ export const createExperimentAction = withDocument
     }
 
     const experiments = await createExperimentVariants({
+      user: ctx.user,
       workspace: ctx.workspace,
       commit: ctx.commit,
       document: ctx.document,

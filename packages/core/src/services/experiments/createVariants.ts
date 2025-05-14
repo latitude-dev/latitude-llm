@@ -1,5 +1,5 @@
 import type { ExperimentVariant } from '@latitude-data/constants/experiments'
-import { Dataset, Experiment } from '../../browser'
+import { Dataset, Experiment, User } from '../../browser'
 import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
 import { database, Database } from '../../client'
 import { ProviderApiKeysRepository } from '../../repositories'
@@ -13,6 +13,7 @@ import { publisher } from '../../events/publisher'
 export async function createExperimentVariants(
   {
     workspace,
+    user,
     commit,
     document,
     variants: inputVariants,
@@ -23,6 +24,7 @@ export async function createExperimentVariants(
     fromRow = 0,
     toRow,
   }: {
+    user: User
     workspace: Workspace
     commit: Commit
     variants: ExperimentVariant[]
@@ -89,6 +91,7 @@ export async function createExperimentVariants(
     publisher.publishLater({
       type: 'experimentVariantsCreated',
       data: {
+        userEmail: user.email,
         workspaceId: workspace.id,
         documentUuid: document.documentUuid,
         commitUuid: commit.uuid,
