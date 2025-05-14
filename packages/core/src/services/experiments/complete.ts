@@ -5,6 +5,8 @@ import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { experiments } from '../../schema'
 import { eq } from 'drizzle-orm'
+import { WebsocketClient } from '../../websockets/workers'
+import { ProgressTracker } from '../../jobs/utils/progressTracker'
 
 export async function completeExperiment(
   experiment: Experiment,
@@ -30,11 +32,24 @@ export async function completeExperiment(
     return Result.error(updateResult.error as LatitudeError)
   }
 
-  // TODO: uncomment when we've removed the circular dependency
-  // await updateExperimentStatus({
-  //   workspaceId: experiment.workspaceId,
-  //   experiment: updateResult.value,
-  // })
+  const websockets = await WebsocketClient.getSocket()
+  const progressTracker = new ProgressTracker(experiment.uuid)
+  const progress = await progressTracker.getProgress()
+
+  websockets.emit('experimentStatus', {
+    workspaceId: experiment.workspaceId,
+    data: {
+      experiment: {
+        ...experiment,
+        results: {
+          passed: progress.completed,
+          failed: progress.failed,
+          errors: progress.errors,
+          totalScore: progress.totalScore,
+        },
+      },
+    },
+  })
 
   return updateResult
 }
