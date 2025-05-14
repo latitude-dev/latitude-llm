@@ -90,6 +90,7 @@ export enum HostedIntegrationType {
   Vectorize = 'vectorize',
   Xero = 'xero',
   Readwise = 'readwise',
+  Airbnb = 'airbnb',
 
   // Require all auth file :point_down:
   // Gmail = 'google_drive',
