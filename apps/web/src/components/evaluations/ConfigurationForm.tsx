@@ -1,6 +1,17 @@
-import { EvaluationMetric, EvaluationType } from '@latitude-data/constants'
+import {
+  BaseEvaluationConfiguration,
+  EvaluationMetric,
+  EvaluationType,
+} from '@latitude-data/constants'
 import { SelectableSwitch } from '@latitude-data/web-ui/molecules/SelectableSwitch'
 import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
+
+const FORMAT_OPTIONS = BaseEvaluationConfiguration.shape.outputFormat
+  .removeDefault()
+  .options.map((option) => ({
+    label: option.toUpperCase().split('_').join(' '),
+    value: option,
+  }))
 
 export function ConfigurationSimpleForm<
   T extends EvaluationType,
@@ -63,6 +74,11 @@ export function ConfigurationAdvancedForm<
         disabled={disabled}
         required
       />
+      {/*
+         TODO:
+         - Add a Select input like the one in components/evaluations/rule/LexicalOverlap.tsx : this will set the outputFormat configuration
+         - If outputFormat is json, then show an input field like the one in components/evaluations/rule/ExactMatch.tsx to set the outputField configuration
+    */}
     </>
   )
 }

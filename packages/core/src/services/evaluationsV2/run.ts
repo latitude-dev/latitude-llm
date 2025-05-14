@@ -150,6 +150,13 @@ export async function runEvaluationV2<
 
   let value
   try {
+    // TODO: Parse actualOutput and expectedOutput (if exists) to the evaluation.configuration.outputFormat
+    // - If string return both outputs as is
+    // - If json, use the evaluation.configuration.outputField to get the output from
+    //    - If not exists in either actualOutput or expectedOutput, or they can be stringified, then raise an error
+    // Set the actualOutput and expectedOutput to the new values so they can be used in the metrics below.
+    // This code must be inside this try catch and should raise an error if it fails so then it can get converted to a result error
+
     value = (await typeSpecification.run(
       {
         metric: evaluation.metric,
