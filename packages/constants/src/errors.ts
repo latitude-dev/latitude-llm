@@ -7,6 +7,7 @@ export enum LatitudeErrorCodes {
   NotFoundError = 'NotFoundError',
   ConflictError = 'ConflictError',
   UnprocessableEntityError = 'UnprocessableEntityError',
+  NotImplementedError = 'NotImplementedError',
 }
 
 // NOTE: If you add a new error code, please add it to the pg enum in models/runErrors.ts

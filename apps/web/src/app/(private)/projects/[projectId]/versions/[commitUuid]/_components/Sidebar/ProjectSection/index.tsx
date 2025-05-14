@@ -6,6 +6,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 type ProjectRoute = { label: string; route: string; iconName: IconName }
 
@@ -40,6 +41,8 @@ export default function ProjectSection({
   project: Project
   commit: Commit
 }) {
+  const { enabled: latteEnabled } = useFeatureFlag({ featureFlag: 'latte' })
+
   const PROJECT_ROUTES: ProjectRoute[] = [
     {
       label: 'Overview',
@@ -55,6 +58,17 @@ export default function ProjectSection({
         .commits.detail({ uuid: commit.uuid }).history.root,
       iconName: 'history',
     },
+    ...(latteEnabled
+      ? [
+          {
+            label: 'Copilot',
+            route: ROUTES.projects
+              .detail({ id: project.id })
+              .commits.detail({ uuid: commit.uuid }).copilot.root,
+            iconName: 'bot',
+          } as ProjectRoute,
+        ]
+      : []),
   ]
 
   return (
