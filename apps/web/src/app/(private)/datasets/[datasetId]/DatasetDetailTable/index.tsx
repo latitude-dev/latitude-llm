@@ -16,6 +16,18 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 import { useDatasetRowsSocket } from './useDatasetRowsSocket'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { format } from 'date-fns'
+
+export const DeletedDatasetAlert = ({ deletedAt }: { deletedAt: Date }) => {
+  return (
+    <Alert
+      title='This dataset has been deleted'
+      description={`This dataset was deleted on the ${format(deletedAt, 'MM/dd/yyyy')}`}
+      variant='warning'
+    />
+  )
+}
 
 const DataGrid = dynamic(() => import('./DataGrid'), {
   ssr: false,
@@ -118,6 +130,11 @@ export function DatasetDetailTable({
     <TableWithHeader
       takeVertialSpace
       title={dataset.name}
+      description={
+        dataset.deletedAt ? (
+          <DeletedDatasetAlert deletedAt={dataset.deletedAt} />
+        ) : undefined
+      }
       actions={
         <>
           {isProcessing ? (

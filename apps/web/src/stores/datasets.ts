@@ -31,7 +31,7 @@ export default function useDatasets(
   const fetcher = useFetcher<Dataset[], Dataset[]>(
     enabled ? ROUTES.api.datasets.root : undefined,
     {
-      serializer: (rows) => rows.map(deserialize),
+      serializer: (rows) => rows.map(deserializeDataset),
       searchParams: compactObject({
         page: page ? String(page) : undefined,
         pageSize: pageSize ? String(pageSize) : undefined,
@@ -101,7 +101,7 @@ export default function useDatasets(
   }
 }
 
-function deserialize(item: Dataset) {
+export function deserializeDataset(item: Dataset) {
   return {
     ...item,
     createdAt: new Date(item.createdAt),

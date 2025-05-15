@@ -16,7 +16,8 @@ export async function destroyDataset(
 ) {
   return Transaction.call(async (tx) => {
     const result = await tx
-      .delete(datasets)
+      .update(datasets)
+      .set({ deletedAt: new Date() })
       .where(eq(datasets.id, dataset.id))
       .returning()
     const deleted = result[0]!

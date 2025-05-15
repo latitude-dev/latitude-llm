@@ -1,4 +1,4 @@
-import { eq, and, sql, getTableColumns, desc } from 'drizzle-orm'
+import { eq, and, sql, getTableColumns, desc, isNull } from 'drizzle-orm'
 
 import { Dataset, DEFAULT_PAGINATION_SIZE } from '../browser'
 import { datasets, users } from '../schema'
@@ -32,7 +32,13 @@ export class DatasetsRepository extends Repository<Dataset> {
       .select(datasetColumns)
       .from(datasets)
       .leftJoin(users, eq(users.id, datasets.authorId))
-      .where(and(this.scopeFilter, eq(datasets.name, name)))
+      .where(
+        and(
+          this.scopeFilter,
+          eq(datasets.name, name),
+          isNull(datasets.deletedAt),
+        ),
+      )
   }
 
   findAllPaginated({
@@ -44,7 +50,7 @@ export class DatasetsRepository extends Repository<Dataset> {
   }) {
     const offset = calculateOffset(page, pageSize)
     return this.scope
-      .where(and(this.scopeFilter))
+      .where(and(this.scopeFilter, isNull(datasets.deletedAt)))
       .limit(parseInt(pageSize))
       .offset(offset)
       .orderBy(desc(datasets.createdAt))

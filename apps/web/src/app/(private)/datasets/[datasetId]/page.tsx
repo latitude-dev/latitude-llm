@@ -35,7 +35,6 @@ async function getData({
 }): Promise<TypedResult<GetDataResult, Error>> {
   const scope = new DatasetsRepository(workspace.id)
   const result = await scope.find(Number(datasetId))
-
   if (result.error) return Result.error(result.error)
 
   const dataset = result.value

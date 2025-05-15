@@ -103,6 +103,7 @@ function EvaluatedDatasetRowModal({
   return (
     <Modal
       title={`Editing ${dataset.name}`}
+      description='Edit the dataset for future evaluations. Existing evaluation results will not change.'
       open={open}
       onOpenChange={onOpenChange}
       size='full'
@@ -191,7 +192,7 @@ function ResultPanelMetadata<
               label='Expected output'
               tooltip='Batch data from the dataset column'
               action={
-                dataset && evaluatedDatasetRow ? (
+                dataset && !dataset.deletedAt && evaluatedDatasetRow ? (
                   <Button
                     variant='link'
                     size='none'
