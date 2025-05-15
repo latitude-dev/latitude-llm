@@ -166,7 +166,6 @@ export function DocumentLogEvaluations({
               document={document}
               {...item}
             />
-            )
           </div>
           <div className='w-full flex justify-start pt-2'>
             <Link
