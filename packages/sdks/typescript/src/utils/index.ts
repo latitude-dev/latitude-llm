@@ -1,6 +1,6 @@
 import {
   ChatUrlParams,
-  EvaluationResultUrlParams,
+  AnnotateUrlParams,
   GetAllDocumentsParams,
   GetDocumentUrlParams,
   GetOrCreateDocumentUrlParams,
@@ -60,14 +60,10 @@ export class RouteResolver {
         )
       case HandlerType.Log:
         return this.documents(params as LogUrlParams).log
-      case HandlerType.Evaluate:
-        return this.conversations().evaluate(
+      case HandlerType.Annotate:
+        return this.conversations().annotate(
           (params as ChatUrlParams).conversationUuid,
-        )
-      case HandlerType.EvaluationResult:
-        return this.conversations().evaluationResult(
-          (params as ChatUrlParams).conversationUuid,
-          (params as EvaluationResultUrlParams).evaluationUuid,
+          (params as AnnotateUrlParams).evaluationUuid,
         )
       default:
         throw new Error(`Unknown handler: ${handler satisfies never}`)
@@ -78,9 +74,8 @@ export class RouteResolver {
     const base = `${this.baseUrl}/conversations`
     return {
       chat: (uuid: string) => `${base}/${uuid}/chat`,
-      evaluate: (uuid: string) => `${base}/${uuid}/evaluate`,
-      evaluationResult: (uuid: string, evaluationUuid: string) =>
-        `${base}/${uuid}/evaluations/${evaluationUuid}/evaluation-results`,
+      annotate: (uuid: string, evaluationUuid: string) =>
+        `${base}/${uuid}/evaluations/${evaluationUuid}/annotate`,
     }
   }
 

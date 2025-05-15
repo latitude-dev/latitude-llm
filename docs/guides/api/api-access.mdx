@@ -259,21 +259,26 @@ The API uses standard HTTP status codes. In case of an error, the response body 
 }
 ```
 
-#### 5. Evaluate a Conversation
+#### 5. Annotate a Log
 
-Evaluate a conversation using configured evaluations.
+Add an annotation (evaluation score) to a log.
 
-**Endpoint:** `POST /conversations/{conversationUuid}/evaluate`
+**Endpoint:** `POST /conversations/{conversationUuid}/evaluations/{evaluationUuid}/annotate`
 
 **Path Parameters:**
 
-- `conversationUuid`: UUID of the conversation to evaluate
+- `conversationUuid`: UUID of the conversation to annotate
+- `evaluationUuid`: UUID of the evaluation to use
 
 **Request Body:**
 
 ```json
 {
-  "evaluationUuids": ["evaluation-uuid-1", "evaluation-uuid-2"] // optional, defaults to all evaluations connected to the conversation prompt
+  "score": 2,
+  "versionUuid": "version-uuid", // optional
+  "metadata": {
+    "reason": "The output is not relevant to the prompt"
+  }
 }
 ```
 
@@ -281,7 +286,15 @@ Evaluate a conversation using configured evaluations.
 
 ```json
 {
-  "evaluations": ["evaluation-uuid-1", "evaluation-uuid-2"] // array of evaluation UUIDs that will be run
+  "uuid": "annotation-uuid",
+  "score": 2,
+  "normalizedScore": 0.5,
+  "metadata": {
+    "reason": "The output is not relevant to the prompt"
+  },
+  "hasPassed": false,
+  "error": "optional-error-message",
+  "versionUuid": "version-uuid"
 }
 ```
 
@@ -330,38 +343,6 @@ Create a log entry for a document.
   "customIdentifier": "custom-identifier",
   "duration": "duration",
   "source": "source",
-  "createdAt": "created-at",
-  "updatedAt": "updated-at"
-}
-```
-
-#### 7. Create Evaluation Result
-
-Create an evaluation result for a conversation using a configured evaluation.
-
-**Endpoint:** `POST /conversations/{conversationUuid}/evaluations/{evaluationUuid}/results`
-
-**Path Parameters:**
-
-- `conversationUuid`: UUID of the conversation to evaluate
-- `evaluationUuid`: UUID of the evaluation to use
-
-**Request Body:**
-
-```json
-{
-  "result": 2,
-  "reason": "The output is not relevant to the prompt"
-}
-```
-
-**Response:**
-
-```json
-{
-  "id": "evaluation-result-id",
-  "result": 2,
-  "reason": "The output is not relevant to the prompt",
   "createdAt": "created-at",
   "updatedAt": "updated-at"
 }

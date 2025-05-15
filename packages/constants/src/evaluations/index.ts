@@ -111,13 +111,23 @@ export type EvaluationSpecification<T extends EvaluationType = EvaluationType> =
     metrics: { [M in EvaluationMetric<T>]: EvaluationMetricSpecification<T, M> }
   }
 
-export const EVALUATION_SPECIFICATIONS: {
-  [T in EvaluationType]: EvaluationSpecification<T>
-} = {
+export const EVALUATION_SPECIFICATIONS = {
   [EvaluationType.Rule]: RuleEvaluationSpecification,
   [EvaluationType.Llm]: LlmEvaluationSpecification,
   [EvaluationType.Human]: HumanEvaluationSpecification,
+} as const satisfies {
+  [T in EvaluationType]: EvaluationSpecification<T>
 }
+type EvaluationSpecifications = typeof EVALUATION_SPECIFICATIONS
+
+// prettier-ignore
+export type ManualEvaluationMetric<T extends EvaluationType = EvaluationType> =
+  { [K in EvaluationType]: {
+      [M in keyof EvaluationSpecifications[K]['metrics']]:
+        // @ts-expect-error supportsManualEvaluation can indeed index M type
+        EvaluationSpecifications[K]['metrics'][M]['supportsManualEvaluation'] extends true ? M : never
+    }[keyof EvaluationSpecifications[K]['metrics']]
+  }[T] & EvaluationMetric<T>
 
 export type EvaluationV2<
   T extends EvaluationType = EvaluationType,
@@ -177,6 +187,17 @@ export type EvaluationResultV2<
   createdAt: Date
   updatedAt: Date
 } & EvaluationResultValue<T, M>
+
+export type PublicManualEvaluationResultV2 = Pick<
+  EvaluationResultV2<EvaluationType.Human, HumanEvaluationMetric>,
+  | 'uuid'
+  | 'score'
+  | 'normalizedScore'
+  | 'metadata'
+  | 'hasPassed'
+  | 'createdAt'
+  | 'updatedAt'
+> & { versionUuid: string; error: string | null }
 
 export type EvaluationSettings<
   T extends EvaluationType = EvaluationType,

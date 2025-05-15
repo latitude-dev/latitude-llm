@@ -42,7 +42,7 @@ export const LlmEvaluationBinarySpecification = {
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
-}
+} as const
 export type LlmEvaluationBinaryConfiguration = z.infer<
   typeof LlmEvaluationBinarySpecification.configuration
 >
@@ -79,7 +79,7 @@ export const LlmEvaluationRatingSpecification = {
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
-}
+} as const
 export type LlmEvaluationRatingConfiguration = z.infer<
   typeof LlmEvaluationRatingSpecification.configuration
 >
@@ -115,7 +115,7 @@ export const LlmEvaluationComparisonSpecification = {
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
-}
+} as const
 export type LlmEvaluationComparisonConfiguration = z.infer<
   typeof LlmEvaluationComparisonSpecification.configuration
 >
@@ -150,7 +150,7 @@ export const LlmEvaluationCustomSpecification = {
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
-}
+} as const
 export type LlmEvaluationCustomConfiguration = z.infer<
   typeof LlmEvaluationCustomSpecification.configuration
 >
@@ -195,7 +195,7 @@ export const LlmEvaluationCustomLabeledSpecification = {
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
-}
+} as const
 
 /* ------------------------------------------------------------------------- */
 
@@ -252,7 +252,7 @@ export const LlmEvaluationSpecification = {
     [LlmEvaluationMetric.Custom]: LlmEvaluationCustomSpecification,
     [LlmEvaluationMetric.CustomLabeled]: LlmEvaluationCustomLabeledSpecification,
   },
-}
+} as const
 
 export const LLM_EVALUATION_PROMPT_PARAMETERS = [
   'actualOutput',

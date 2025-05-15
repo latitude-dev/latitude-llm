@@ -7,9 +7,9 @@ import {
 import {
   AGENT_RETURN_TOOL_NAME,
   Providers,
+  PublicManualEvaluationResultV2,
   type ChainEventDto,
   type DocumentLog,
-  type EvaluationResultDto,
   type ToolCallResponse,
 } from '@latitude-data/constants'
 
@@ -37,7 +37,6 @@ import { syncChat } from '$sdk/utils/syncChat'
 import { syncRun } from '$sdk/utils/syncRun'
 import {
   ChatOptions,
-  EvalOptions,
   GetOrCreatePromptOptions,
   GetPromptOptions,
   HandlerType,
@@ -80,12 +79,15 @@ type Options = {
 class Latitude {
   protected options: SDKOptions
   public evaluations: {
-    trigger: (uuid: string, options?: EvalOptions) => Promise<{ uuid: string }>
-    createResult: (
+    annotate: (
       uuid: string,
+      score: number,
       evaluationUuid: string,
-      options: { result: string | boolean | number; reason: string },
-    ) => Promise<{ uuid: string }>
+      opts?: {
+        reason?: string
+        versionUuid?: string
+      },
+    ) => Promise<PublicManualEvaluationResultV2>
   }
 
   public logs: {
@@ -158,8 +160,7 @@ class Latitude {
 
     // Initialize evaluations namespace
     this.evaluations = {
-      trigger: this.triggerEvaluation.bind(this),
-      createResult: this.createResult.bind(this),
+      annotate: this.annotate.bind(this),
     }
 
     // Initialize logs namespace
@@ -573,50 +574,27 @@ class Latitude {
     return [responseMessage, ...toolResponseMessages]
   }
 
-  private async triggerEvaluation(uuid: string, options: EvalOptions = {}) {
-    const response = await makeRequest({
-      method: 'POST',
-      handler: HandlerType.Evaluate,
-      params: { conversationUuid: uuid },
-      body: { evaluationUuids: options.evaluationUuids },
-      options: this.options,
-    })
-
-    if (!response.ok) {
-      const json = (await response.json()) as ApiErrorJsonResponse
-      throw new LatitudeApiError({
-        status: response.status,
-        serverResponse: JSON.stringify(json),
-        message: json.message,
-        errorCode: json.errorCode,
-        dbErrorRef: json.dbErrorRef,
-      })
-    }
-
-    return (await response.json()) as { uuid: string }
-  }
-
-  private async createResult(
+  private async annotate(
     uuid: string,
+    score: number,
     evaluationUuid: string,
-    {
-      result,
-      reason,
-    }: {
-      result: string | boolean | number
-      reason: string
-    },
+    opts: {
+      reason?: string
+      versionUuid?: string
+    } = {},
   ) {
+    const { reason, versionUuid } = opts
     const response = await makeRequest({
       method: 'POST',
-      handler: HandlerType.EvaluationResult,
+      handler: HandlerType.Annotate,
       params: {
         conversationUuid: uuid,
         evaluationUuid,
       },
       body: {
-        result,
-        reason,
+        score,
+        metadata: reason ? { reason } : undefined,
+        versionUuid: versionUuid ?? this.options.versionUuid,
       },
       options: this.options,
     })
@@ -632,7 +610,7 @@ class Latitude {
       })
     }
 
-    return (await response.json()) as EvaluationResultDto
+    return (await response.json()) as PublicManualEvaluationResultV2
   }
 }
 

@@ -30,6 +30,7 @@ function createLogRouteFactory({
     path,
     operationId: 'createDocumentLog',
     method: http.Methods.POST,
+    description: 'Create a prompt log',
     tags,
     request: {
       params: documentParamsSchema,

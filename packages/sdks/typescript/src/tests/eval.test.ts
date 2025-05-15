@@ -15,42 +15,10 @@ import {
 } from 'vitest'
 
 const latitudeApiKey = randomUUID()
-const conversationUuid = randomUUID()
 
 const server = setupServer()
 
-function mockEvalRequest({
-  server,
-  apiVersion,
-  response = {},
-  status = 200,
-}: {
-  server: ReturnType<typeof setupServer>
-  apiVersion: string
-  response?: object
-  status?: number
-}) {
-  const mockAuthHeader = vi.fn()
-  const mockUrl = vi.fn()
-  const mockBody = vi.fn()
-
-  server.use(
-    http.post(
-      `http://localhost:8787/api/${apiVersion}/conversations/${conversationUuid}/evaluate`,
-      async (info) => {
-        mockAuthHeader(info.request.headers.get('Authorization'))
-        mockUrl(info.request.url)
-        const body = await info.request.json()
-        mockBody(body)
-        return HttpResponse.json(response, { status })
-      },
-    ),
-  )
-
-  return { mockAuthHeader, mockUrl, mockBody }
-}
-
-function mockEvalResultRequest({
+function mockAnnotateRequest({
   server,
   apiVersion,
   evaluationUuid,
@@ -71,7 +39,7 @@ function mockEvalResultRequest({
 
   server.use(
     http.post(
-      `http://localhost:8787/api/${apiVersion}/conversations/${conversationUuid}/evaluations/${evaluationUuid}/evaluation-results`,
+      `http://localhost:8787/api/${apiVersion}/conversations/${conversationUuid}/evaluations/${evaluationUuid}/annotate`,
       async (info) => {
         mockAuthHeader(info.request.headers.get('Authorization'))
         mockUrl(info.request.url)
@@ -85,92 +53,17 @@ function mockEvalResultRequest({
   return { mockAuthHeader, mockUrl, mockBody }
 }
 
-describe('evaluations.trigger', () => {
+describe('evaluations', () => {
   beforeAll(() => server.listen())
   afterEach(() => server.resetHandlers())
   afterAll(() => server.close())
 
   const sdk = new Latitude(latitudeApiKey)
 
-  it('sends auth header', async () => {
-    const { mockAuthHeader } = mockEvalRequest({
-      server,
-      apiVersion: 'v3',
-    })
-
-    await sdk.evaluations.trigger(conversationUuid)
-    expect(mockAuthHeader).toHaveBeenCalledWith(`Bearer ${latitudeApiKey}`)
-  })
-
-  it('sends evaluation uuids in body when provided', async () => {
-    const { mockBody } = mockEvalRequest({
-      server,
-      apiVersion: 'v3',
-    })
-
-    const evaluationUuids = [randomUUID(), randomUUID()]
-    await sdk.evaluations.trigger(conversationUuid, { evaluationUuids })
-
-    expect(mockBody).toHaveBeenCalledWith({
-      evaluationUuids,
-      __internal: { source: LogSources.API },
-    })
-  })
-
-  it('sends empty evaluationUuids when not provided', async () => {
-    const { mockBody } = mockEvalRequest({
-      server,
-      apiVersion: 'v3',
-    })
-
-    await sdk.evaluations.trigger(conversationUuid)
-
-    expect(mockBody).toHaveBeenCalledWith({
-      evaluationUuids: undefined,
-      __internal: { source: LogSources.API },
-    })
-  })
-
-  it('returns evaluation uuid on success', async () => {
-    const expectedResponse = { uuid: randomUUID() }
-    mockEvalRequest({
-      server,
-      apiVersion: 'v3',
-      response: expectedResponse,
-    })
-
-    const result = await sdk.evaluations.trigger(conversationUuid)
-    expect(result).toEqual(expectedResponse)
-  })
-
-  it('throws LatitudeApiError on error response', async () => {
-    const errorResponse = {
-      name: 'LatitudeError',
-      message: 'Invalid conversation UUID',
-      errorCode: ApiErrorCodes.HTTPException,
-    }
-
-    mockEvalRequest({
-      server,
-      apiVersion: 'v3',
-      response: errorResponse,
-      status: 400,
-    })
-
-    await expect(sdk.evaluations.trigger(conversationUuid)).rejects.toThrow(
-      new LatitudeApiError({
-        status: 400,
-        serverResponse: JSON.stringify(errorResponse),
-        message: errorResponse.message,
-        errorCode: errorResponse.errorCode,
-      }),
-    )
-  })
-
-  describe('evaluations.result', () => {
+  describe('annotate', () => {
     it('should successfully submit an evaluation result', async () => {
       const mockResponse = { uuid: 'eval-result-uuid' }
-      const { mockBody, mockAuthHeader } = mockEvalResultRequest({
+      const { mockBody, mockAuthHeader } = mockAnnotateRequest({
         server,
         apiVersion: 'v3',
         response: mockResponse,
@@ -178,11 +71,11 @@ describe('evaluations.trigger', () => {
         evaluationUuid: 'eval-uuid',
       })
 
-      const result = await sdk.evaluations.createResult(
+      const result = await sdk.evaluations.annotate(
         'conversation-uuid',
+        5,
         'eval-uuid',
         {
-          result: true,
           reason: 'Test reason',
         },
       )
@@ -190,8 +83,42 @@ describe('evaluations.trigger', () => {
       expect(result).toEqual(mockResponse)
       expect(mockAuthHeader).toHaveBeenCalledWith(`Bearer ${latitudeApiKey}`)
       expect(mockBody).toHaveBeenCalledWith({
-        result: true,
-        reason: 'Test reason',
+        score: 5,
+        metadata: {
+          reason: 'Test reason',
+        },
+        __internal: { source: LogSources.API },
+      })
+    })
+
+    it('should send the versionUuid when provided', async () => {
+      const mockResponse = { uuid: 'eval-result-uuid' }
+      const { mockBody, mockAuthHeader } = mockAnnotateRequest({
+        server,
+        apiVersion: 'v3',
+        response: mockResponse,
+        conversationUuid: 'conversation-uuid',
+        evaluationUuid: 'eval-uuid',
+      })
+
+      const result = await sdk.evaluations.annotate(
+        'conversation-uuid',
+        5,
+        'eval-uuid',
+        {
+          reason: 'Test reason',
+          versionUuid: 'eval-version-uuid',
+        },
+      )
+
+      expect(result).toEqual(mockResponse)
+      expect(mockAuthHeader).toHaveBeenCalledWith(`Bearer ${latitudeApiKey}`)
+      expect(mockBody).toHaveBeenCalledWith({
+        score: 5,
+        versionUuid: 'eval-version-uuid',
+        metadata: {
+          reason: 'Test reason',
+        },
         __internal: { source: LogSources.API },
       })
     })
@@ -202,7 +129,7 @@ describe('evaluations.trigger', () => {
         errorCode: ApiErrorCodes.HTTPException,
       }
 
-      mockEvalResultRequest({
+      mockAnnotateRequest({
         server,
         apiVersion: 'v3',
         response: errorResponse,
@@ -212,8 +139,7 @@ describe('evaluations.trigger', () => {
       })
 
       await expect(
-        sdk.evaluations.createResult('conversation-uuid', 'eval-uuid', {
-          result: true,
+        sdk.evaluations.annotate('conversation-uuid', 5, 'eval-uuid', {
           reason: 'Test reason',
         }),
       ).rejects.toThrow(
