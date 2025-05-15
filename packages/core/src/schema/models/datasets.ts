@@ -4,7 +4,8 @@ import {
   index,
   jsonb,
   text,
-  uniqueIndex,
+  timestamp,
+  unique,
   varchar,
 } from 'drizzle-orm/pg-core'
 
@@ -37,6 +38,7 @@ export const datasets = latitudeSchema.table(
       .notNull()
       .default(sql`'{}'::varchar[]`),
     columns: jsonb('columns').$type<Column[]>().notNull(),
+    deletedAt: timestamp('deleted_at'),
     ...timestamps(),
   },
   (table) => ({
@@ -44,9 +46,8 @@ export const datasets = latitudeSchema.table(
       table.workspaceId,
     ),
     authorIdx: index('datasets_table_author_idx').on(table.authorId),
-    uniqueDatasetNameInWorkspace: uniqueIndex().on(
-      table.workspaceId,
-      table.name,
-    ),
+    uniqueDatasetNameInWorkspace: unique()
+      .on(table.workspaceId, table.name, table.deletedAt)
+      .nullsNotDistinct(),
   }),
 )

@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."datasets_v2" ADD COLUMN "deleted_at" timestamp;
