@@ -5,8 +5,6 @@ import { DocumentRoutes, ROUTES } from '$/services/routes'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { useSelectedLayoutSegment } from 'next/navigation'
 
-const evaluationsV2Route = 'evaluations-v2' as DocumentRoutes.evaluationsV2
-
 export function DocumentTabSelector({
   projectId,
   commitUuid,
@@ -29,10 +27,10 @@ export function DocumentTabSelector({
       value: DocumentRoutes.editor,
       route: baseRoute.root,
     },
-    [DocumentRoutes.evaluationsV2]: {
+    [DocumentRoutes.evaluations]: {
       label: 'Evaluations',
-      value: DocumentRoutes.evaluationsV2,
-      route: baseRoute.evaluationsV2.root,
+      value: DocumentRoutes.evaluations,
+      route: baseRoute.evaluations.root,
     },
     [DocumentRoutes.experiments]: {
       label: 'Experiments',
@@ -49,11 +47,7 @@ export function DocumentTabSelector({
   return (
     <TabSelector
       options={Object.values(options)}
-      selected={
-        (selectedSegment === evaluationsV2Route
-          ? DocumentRoutes.evaluationsV2
-          : selectedSegment) ?? DocumentRoutes.editor
-      }
+      selected={selectedSegment ?? DocumentRoutes.editor}
       onSelect={(value) => router.push(options[value].route)}
     />
   )

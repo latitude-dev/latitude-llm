@@ -52,7 +52,7 @@ export function SuggestionItem({
       .detail({ id: project.id })
       .commits.detail({ uuid: commit.uuid })
       .documents.detail({ uuid: document.documentUuid })
-      .evaluationsV2.detail({ uuid: suggestion.evaluation.uuid }).root
+      .evaluations.detail({ uuid: suggestion.evaluation.uuid }).root
   }, [project, commit, document, suggestion])
 
   const onApply = useCallback(() => {

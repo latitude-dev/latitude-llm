@@ -70,7 +70,7 @@ export default function DestroyProviderApiKey({
                 .commits.detail({ uuid: item.commitUuid })
                 .documents.detail({ uuid: item.documentUuid })
               const url = item.evaluationUuid
-                ? baseUrl.evaluationsV2.detail({
+                ? baseUrl.evaluations.detail({
                     uuid: item.evaluationUuid,
                   }).root
                 : baseUrl.root

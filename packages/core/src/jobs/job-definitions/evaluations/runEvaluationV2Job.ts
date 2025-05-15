@@ -14,8 +14,6 @@ import {
   runEvaluationV2,
 } from '../../../services/evaluationsV2/run'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
-import { WebsocketClient } from '../../../websockets/workers'
-import { ProgressTracker } from '../../utils/progressTracker'
 import { updateExperimentStatus } from '../experiments/shared'
 import { NotFoundError } from './../../../lib/errors'
 import { captureException } from '../../../workers/sentry'
@@ -29,7 +27,6 @@ export type RunEvaluationV2JobData = {
   datasetId?: number
   datasetLabel?: string
   datasetRowId?: number
-  batchId?: string // TODO(exps): Deprecated
 }
 
 export function runEvaluationV2JobKey({
@@ -55,7 +52,6 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     datasetId,
     datasetLabel,
     datasetRowId,
-    batchId,
   } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
@@ -133,33 +129,6 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
           } else await progressTracker.incrementFailed()
         },
       ).then((r) => r.unwrap())
-    }
-
-    // TODO(exps): Deprecated
-    if (batchId) {
-      const websockets = await WebsocketClient.getSocket()
-      const tracker = new ProgressTracker(batchId)
-
-      try {
-        if (result.error) await tracker.incrementErrors()
-        else await tracker.incrementCompleted()
-
-        const progress = await tracker.getProgress()
-
-        websockets.emit('evaluationStatus', {
-          workspaceId,
-          data: {
-            batchId,
-            commitId: commit.id,
-            documentUuid: documentLog.documentUuid,
-            evaluationUuid: evaluation.uuid,
-            version: 'v2',
-            ...progress,
-          },
-        })
-      } finally {
-        await tracker.cleanup()
-      }
     }
   } catch (error) {
     if (isErrorRetryable(error as Error)) throw error

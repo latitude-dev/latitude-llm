@@ -119,7 +119,6 @@ export async function generateDocumentSuggestion(
         evaluationUuid: evaluation.uuid,
       })
       .then((r) => r.unwrap())
-      .then((r) => r.map((r) => ({ ...r, version: 'v2' as const })))
   }
 
   if (!results || !results!.length) {
@@ -144,10 +143,9 @@ export async function generateDocumentSuggestion(
 
   const serializedResults = await Promise.all(
     results.map((result) =>
-      serializeEvaluationResultV2(
-        { evaluation: evaluation as EvaluationV2, result, workspace },
-        db,
-      ).then((r) => r.unwrap()),
+      serializeEvaluationResultV2({ evaluation, result, workspace }, db).then(
+        (r) => r.unwrap(),
+      ),
     ),
   )
 

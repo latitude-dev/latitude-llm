@@ -15,7 +15,7 @@ import {
   evaluationMetadataLlmAsJudgeSimple,
   evaluations,
 } from '../schema'
-import { evaluationMetadataManual } from '../schema/models/evaluationMetadataDefault'
+import { evaluationMetadataManual } from '../schema/legacyModels/evaluationMetadataDefault'
 import { getSharedTableColumns } from '../schema/schemaHelpers'
 import RepositoryLegacy from './repository'
 

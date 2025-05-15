@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
@@ -13,10 +13,7 @@ import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
 import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import {
-  DocumentLogFilterOptions,
-  ResultWithEvaluationV2,
-} from '@latitude-data/core/browser'
+import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
@@ -125,7 +122,7 @@ export function DocumentLogsPage({
     })
 
   const {
-    data: evaluationResultsV2,
+    data: evaluationResults,
     isLoading: isEvaluationResultsV2Loading,
     mutate: mutateEvaluationResultsV2,
   } = useEvaluationResultsV2ByDocumentLogs({
@@ -134,28 +131,6 @@ export function DocumentLogsPage({
     document: document,
     documentLogUuids: documentLogs.map((l) => l.uuid),
   })
-
-  const evaluationResults = useMemo<
-    Record<string, ResultWithEvaluationV2[]>
-  >(() => {
-    let evaluationResults: Record<string, ResultWithEvaluationV2[]> = {}
-    Object.entries(evaluationResultsV2).forEach(([documentLog, results]) => {
-      const resultsV2 = results.map((result) => ({
-        ...result,
-        version: 'v2' as const,
-      }))
-      if (evaluationResults[documentLog]) {
-        evaluationResults[documentLog] = [
-          ...evaluationResults[documentLog],
-          ...resultsV2,
-        ]
-      } else {
-        evaluationResults[documentLog] = resultsV2
-      }
-    })
-
-    return evaluationResults
-  }, [evaluationResultsV2])
 
   const {
     data: evaluations,

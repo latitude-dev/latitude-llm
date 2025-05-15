@@ -28,7 +28,6 @@ export const GET = errorHandler(
         workspace,
       }: {
         params: {
-          evaluationId: number
           documentUuid: string
           commitUuid: string
           projectId: number

@@ -60,7 +60,6 @@ export function DocumentRefinement({
   )
 
   const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationV2>()
-  const [selectedResultIds, setSelectedResultIds] = useState<number[]>([])
   const [selectedResultUuids, setSelectedResultUuids] = useState<string[]>([])
 
   const reset = useCallback(() => {
@@ -68,14 +67,12 @@ export function DocumentRefinement({
     setEvaluationUuid(undefined)
     setResultUuids([])
     setSelectedEvaluation(undefined)
-    setSelectedResultIds([])
     setSelectedResultUuids([])
   }, [
     resetPlaygroundAction,
     setEvaluationUuid,
     setResultUuids,
     setSelectedEvaluation,
-    setSelectedResultIds,
     setSelectedResultUuids,
   ])
 
@@ -181,11 +178,7 @@ export function DocumentRefinement({
               onClick={() => {
                 setResultUuids(selectedResultUuids)
               }}
-              disabled={
-                evaluationUuid
-                  ? !selectedResultUuids.length
-                  : !selectedResultIds.length
-              }
+              disabled={!selectedResultUuids.length}
             >
               Select results
             </Button>
@@ -234,8 +227,6 @@ export function DocumentRefinement({
     setEvaluationUuid,
     selectedEvaluation,
     setSelectedEvaluation,
-    selectedResultIds,
-    setSelectedResultIds,
     setResultUuids,
     selectedResultUuids,
     setSelectedResultUuids,

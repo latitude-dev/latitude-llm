@@ -65,12 +65,10 @@ function buildJobData(
     datasetId: data.datasetId,
     datasetLabel: data.datasetLabel,
     datasetRowId: data.datasetRowId,
-    batchId: data.batchId || 'batch-123',
   }
 }
 
 let workspace: Workspace
-let documentUuid: string
 let providerLog: ProviderLog
 let evaluation: EvaluationV2
 let experiment: Experiment
@@ -130,7 +128,6 @@ describe('runEvaluationV2Job', () => {
     experiment = exp
     dataset = ds
     datasetRow = dsRow
-    documentUuid = documentVersion.documentUuid
     providerLog = pl
   })
 
@@ -182,20 +179,8 @@ describe('runEvaluationV2Job', () => {
 
       await runEvaluationV2Job(jobData)
 
-      expect(incrementCompletedSpy).toHaveBeenCalledTimes(2) // 1 for batchId and 1 for experiment
+      expect(incrementCompletedSpy).toHaveBeenCalledTimes(1)
       expect(incrementTotalScoreSpy).toHaveBeenCalledWith(0.8)
-      expect(mockEmit).toHaveBeenCalledWith('evaluationStatus', {
-        workspaceId: workspace.id,
-        data: {
-          batchId: 'batch-123',
-          commitId: commit.id,
-          documentUuid,
-          evaluationUuid: evaluation.uuid,
-          completed: 1,
-          total: 1,
-          version: 'v2',
-        },
-      })
       expect(incrementFailedSpy).not.toHaveBeenCalled()
       expect(incrementErrorsSpy).not.toHaveBeenCalled()
     })
@@ -215,7 +200,7 @@ describe('runEvaluationV2Job', () => {
       await runEvaluationV2Job(jobData)
 
       expect(incrementFailedSpy).toHaveBeenCalledTimes(1)
-      expect(incrementCompletedSpy).toHaveBeenCalledTimes(1) // 1 for batchId
+      expect(incrementCompletedSpy).toHaveBeenCalledTimes(0)
       expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
       expect(incrementErrorsSpy).not.toHaveBeenCalled()
     })
@@ -234,7 +219,7 @@ describe('runEvaluationV2Job', () => {
 
       await runEvaluationV2Job(jobData)
 
-      expect(incrementErrorsSpy).toHaveBeenCalledTimes(2) // 1 for batchId and 1 for experiment
+      expect(incrementErrorsSpy).toHaveBeenCalledTimes(1)
       expect(incrementFailedSpy).not.toHaveBeenCalled()
       expect(incrementCompletedSpy).not.toHaveBeenCalled()
       expect(incrementTotalScoreSpy).not.toHaveBeenCalled()
@@ -304,7 +289,7 @@ describe('runEvaluationV2Job', () => {
   describe('without experiment', () => {
     beforeEach(async () => {
       jobData = {
-        id: '1{bc',
+        id: '1',
         data: {
           ...buildJobData({
             workspaceId: workspace.id,
@@ -315,7 +300,6 @@ describe('runEvaluationV2Job', () => {
             datasetLabel: 'test',
             datasetRowId: datasetRow.id,
           }),
-          batchId: undefined,
         },
       } as Job<RunEvaluationV2JobData>
     })

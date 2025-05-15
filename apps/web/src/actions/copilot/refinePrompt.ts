@@ -60,7 +60,6 @@ export const refinePromptAction = withDocument
         evaluationUuid: evaluationUuid!,
       })
       .then((r) => r.unwrap())
-      .then((e) => ({ ...e, version: 'v2' as const }))
 
     serializedEvaluation = await serializeEvaluationV2({ evaluation }).then(
       (r) => r.unwrap(),
@@ -72,7 +71,6 @@ export const refinePromptAction = withDocument
     results = await resultsRepository
       .findManyByUuid([...new Set(resultUuids)])
       .then((r) => r.unwrap())
-      .then((r) => r.map((r) => ({ ...r, version: 'v2' as const })))
 
     serializedResults = await Promise.all(
       results.map((result) =>
@@ -111,7 +109,6 @@ export const refinePromptAction = withDocument
         documentUuid: ctx.document.documentUuid,
         userEmail: ctx.user.email,
         evaluationUuid: evaluation.uuid,
-        version: 'v2',
       },
     })
 

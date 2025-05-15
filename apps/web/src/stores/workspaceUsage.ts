@@ -36,7 +36,6 @@ export default function useWorkspaceUsage(opts?: SWRConfiguration) {
   }, [])
 
   useSockets({ event: 'evaluationResultV2Created', onMessage })
-  useSockets({ event: 'evaluationResultCreated', onMessage })
   useSockets({ event: 'documentLogCreated', onMessage })
   useEffect(() => {
     if (isLoading || !data?.members || !users.length) return

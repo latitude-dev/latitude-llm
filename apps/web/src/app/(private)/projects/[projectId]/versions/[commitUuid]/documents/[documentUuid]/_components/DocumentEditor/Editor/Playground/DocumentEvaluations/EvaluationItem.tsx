@@ -50,10 +50,10 @@ function EvaluationItemContent({
     )
   }
 
-  if ((result as EvaluationResultV2).error) {
+  if (result.error) {
     return (
       <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
-        {(result as EvaluationResultV2).error!.message}
+        {result.error!.message}
       </Text.H6>
     )
   }
@@ -131,10 +131,7 @@ export default function EvaluationItem({
             {evaluation.name}
           </Text.H5>
           {evaluation.evaluateLiveLogs && !isWaiting && result && (
-            <ResultBadge
-              evaluation={evaluation}
-              result={result as EvaluationResultV2}
-            />
+            <ResultBadge evaluation={evaluation} result={result} />
           )}
         </span>
         <div className='flex flex-row items-center gap-2 flex-shrink-0'>

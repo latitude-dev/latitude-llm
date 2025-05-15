@@ -29,7 +29,7 @@ export default function useEvaluationResultsV2ByDocumentLogs(
   const route = ROUTES.api.projects
     .detail(project.id)
     .commits.detail(commit.uuid)
-    .documents.detail(document.documentUuid).evaluationsV2.results
+    .documents.detail(document.documentUuid).evaluations.results
     .documentLogs.root
   const query = useMemo(() => {
     const query = new URLSearchParams()

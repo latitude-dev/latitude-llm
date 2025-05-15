@@ -5,6 +5,21 @@ export * from './legacyModels/datasetsV1'
 export * from './legacyModels/traces'
 export * from './legacyModels/spans'
 
+export * from './legacyModels/evaluations'
+export * from './legacyModels/evaluationMetadataLlmAsJudgeAdvanced'
+export * from './legacyModels/evaluationMetadataLlmAsJudgeSimple'
+export * from './legacyModels/evaluationMetadataDefault'
+export * from './legacyModels/evaluationConfigurationBoolean'
+export * from './legacyModels/evaluationConfigurationNumerical'
+export * from './legacyModels/evaluationConfigurationText'
+export * from './legacyModels/connectedEvaluations'
+export * from './legacyModels/evaluationResults'
+export * from './legacyModels/evaluationAdvancedTemplates'
+export * from './legacyModels/evaluationTemplateCategories'
+export * from './legacyModels/evaluationResultableNumbers'
+export * from './legacyModels/evaluationResultableTexts'
+export * from './legacyModels/evaluationResultableBooleans'
+
 // Tenancy tables
 export * from './models/users'
 export * from './models/sessions'
@@ -31,30 +46,12 @@ export * from './models/providerLogs'
 // Evaluations tables
 export * from './models/datasets'
 export * from './models/datasetRows'
-export * from './models/evaluations'
 
 export * from './models/evaluationVersions'
 export * from './models/evaluationResultsV2'
 
-export * from './models/evaluationMetadataLlmAsJudgeAdvanced'
-export * from './models/evaluationMetadataLlmAsJudgeSimple'
-export * from './models/evaluationMetadataDefault'
-
-export * from './models/evaluationConfigurationBoolean'
-export * from './models/evaluationConfigurationNumerical'
-export * from './models/evaluationConfigurationText'
-
-export * from './models/connectedEvaluations'
-export * from './models/evaluationResults'
-export * from './models/evaluationAdvancedTemplates'
-export * from './models/evaluationTemplateCategories'
-
 export * from './models/magicLinkTokens'
 export * from './models/events'
-
-export * from './models/evaluationResultableNumbers'
-export * from './models/evaluationResultableTexts'
-export * from './models/evaluationResultableBooleans'
 
 export * from './models/experiments'
 

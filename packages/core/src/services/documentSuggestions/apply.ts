@@ -15,6 +15,7 @@ import { documentSuggestions } from '../../schema'
 import { createCommit } from '../commits/create'
 import { updateDocument } from '../documents/update'
 
+// TODO(evalsv2): Add tests
 export async function applyDocumentSuggestion(
   {
     suggestion,

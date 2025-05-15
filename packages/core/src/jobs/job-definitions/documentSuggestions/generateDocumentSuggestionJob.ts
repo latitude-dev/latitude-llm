@@ -15,17 +15,16 @@ export type GenerateDocumentSuggestionJobData = {
   commitId: number
   documentUuid: string
   evaluationUuid: string
-  evaluationId?: number
 }
 
+// TODO(evalsv2): Add tests
 export function generateDocumentSuggestionJobKey({
   workspaceId,
   commitId,
   documentUuid,
   evaluationUuid,
-  evaluationId,
 }: GenerateDocumentSuggestionJobData) {
-  return `generateDocumentSuggestionJob-${workspaceId}-${commitId}-${documentUuid}-${evaluationUuid}-${evaluationId}`
+  return `generateDocumentSuggestionJob-${workspaceId}-${commitId}-${documentUuid}-${evaluationUuid}`
 }
 
 export const generateDocumentSuggestionJob = async (
@@ -59,7 +58,6 @@ export const generateDocumentSuggestionJob = async (
       evaluationUuid,
     })
     .then((r) => r.unwrap())
-    .then((e) => ({ ...e, version: 'v2' as const }))
 
   const result = await generateDocumentSuggestion({
     document: document,

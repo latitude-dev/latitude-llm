@@ -74,7 +74,7 @@ function EvaluationItem({
         .detail({ id: projectId })
         .commits.detail({ uuid: commitUuid })
         .documents.detail({ uuid: documentUuid })
-        .evaluationsV2.detail({ uuid: evaluation.uuid }).root
+        .evaluations.detail({ uuid: evaluation.uuid }).root
   const ItemComponent = isSelected ? 'div' : Link
   return (
     <ItemComponent
