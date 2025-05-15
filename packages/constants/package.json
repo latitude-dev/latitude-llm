@@ -15,7 +15,8 @@
     "./errors": "./src/errors.ts",
     "./onboarding": "./src/onboarding.ts",
     "./evaluations": "./src/evaluations/index.ts",
-    "./experiments": "./src/experiments.ts"
+    "./experiments": "./src/experiments.ts",
+    "./latte": "./src/latte.ts"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
