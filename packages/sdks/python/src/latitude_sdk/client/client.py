@@ -36,7 +36,7 @@ class ClientOptions(Model):
     api_key: str
     retries: int
     delay: float
-    timeout: float
+    timeout: Optional[float]
     source: LogSources
     router: RouterOptions
 
