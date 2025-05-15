@@ -1,0 +1,30 @@
+{
+  "name": "latitude-examples",
+  "version": "1.0.0",
+  "description": "Examples of using Latitude platform and SDKs",
+  "main": "index.js",
+  "type": "module",
+  "license": "ISC",
+  "scripts": {
+    "run:ts": "tsx -r dotenv/config",
+    "ts:run_prompt": "npm run run:ts -- ./run-prompt/code/runPromptExample.ts",
+
+    "run:py": "dotenv -e .env -- .venv/bin/python",
+    "py:run_prompt": "npm run run:py -- ./run-prompt/code/run_prompt_example.py"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.0.8",
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@latitude-data/sdk": "^3.0.3",
+    "@vercel/otel": "^1.10.0",
+    "ai": "^4.0.18",
+    "chalk": "^5.4.1",
+    "dotenv": "^16.5.0",
+    "dotenv-cli": "^8.0.0",
+    "openai": "^4.68.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
