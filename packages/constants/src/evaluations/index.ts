@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { SpanSource } from '../tracing'
 import {
   HumanEvaluationConfiguration,
   HumanEvaluationMetric,
@@ -229,3 +230,8 @@ export const EvaluationOptionsSchema = z.object({
 export const EVALUATION_SCORE_SCALE = 100
 
 export const DEFAULT_DATASET_LABEL = 'output'
+
+export const NON_LIVE_EVALUABLE_LOG_SOURCES = [
+  SpanSource.Evaluation,
+  SpanSource.Experiment,
+]
