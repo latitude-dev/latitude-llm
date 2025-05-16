@@ -9,7 +9,10 @@ export const openAIConfigSchema = z.object({
     .object({
       responses: z
         .object({
-          tools: z.array(FileSearchToolSchema, WebSearchToolSchema).optional().nullable(),
+          tools: z
+            .array(FileSearchToolSchema, WebSearchToolSchema)
+            .optional()
+            .nullable(),
         })
         .optional(),
     })

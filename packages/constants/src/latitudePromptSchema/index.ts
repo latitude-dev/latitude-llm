@@ -71,20 +71,20 @@ export function latitudePromptConfigSchema({
   const agentsConfigSchema =
     fullPath && agentToolsMap
       ? z.array(
-        z.string().refine(
-          (relativeAgentPath) => {
-            const fullAgentPath = resolveRelativePath(
-              relativeAgentPath,
-              fullPath,
-            )
+          z.string().refine(
+            (relativeAgentPath) => {
+              const fullAgentPath = resolveRelativePath(
+                relativeAgentPath,
+                fullPath,
+              )
 
-            return Object.values(agentToolsMap).includes(fullAgentPath)
-          },
-          {
-            message: 'This document does not exist or is not an agent',
-          },
-        ),
-      )
+              return Object.values(agentToolsMap).includes(fullAgentPath)
+            },
+            {
+              message: 'This document does not exist or is not an agent',
+            },
+          ),
+        )
       : z.never({ message: 'Subagents are not allowed in this context ' })
 
   const toolDefinitionObject = z.record(

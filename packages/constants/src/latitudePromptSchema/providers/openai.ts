@@ -56,7 +56,7 @@ export const UserLocationSchema: z.ZodType<UserLocation> = z.object({
   country: z.string().nullable().optional(),
   region: z.string().nullable().optional(),
   timezone: z.string().nullable().optional(),
-});
+})
 
 // WebSearchTool schema
 export const WebSearchToolSchema: z.ZodType<WebSearchTool> = z.object({

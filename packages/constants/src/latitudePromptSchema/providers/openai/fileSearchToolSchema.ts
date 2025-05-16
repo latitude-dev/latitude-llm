@@ -1,4 +1,3 @@
-
 import { z } from 'zod'
 
 type ComparisonFilter = {
@@ -50,4 +49,3 @@ export const FileSearchToolSchema = z.object({
   max_num_results: z.number().int().min(1).max(50).optional(),
   ranking_options: RankingOptionsSchema.optional(),
 })
-

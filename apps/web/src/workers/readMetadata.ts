@@ -39,12 +39,12 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
       : undefined
   const configSchema = providerNames
     ? latitudePromptConfigSchema({
-      providerNames,
-      integrationNames,
-      fullPath: document?.path,
-      agentToolsMap,
-      noOutputSchemaConfig,
-    })
+        providerNames,
+        integrationNames,
+        fullPath: document?.path,
+        agentToolsMap,
+        noOutputSchemaConfig,
+      })
     : undefined
 
   const props = {
