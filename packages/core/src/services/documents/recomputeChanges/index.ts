@@ -9,7 +9,9 @@ import {
 import { and, eq, inArray, not } from 'drizzle-orm'
 import { scan } from 'promptl-ai'
 
-import { AgentToolsMap, promptConfigSchema } from '@latitude-data/constants'
+import { AgentToolsMap } from '@latitude-data/constants'
+import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
+
 import {
   Commit,
   DocumentVersion,
@@ -67,7 +69,7 @@ async function resolveDocumentChanges({
 
   const newDocumentsWithUpdatedHash = await Promise.all(
     newDocuments.map(async (d) => {
-      const configSchema = promptConfigSchema({
+      const configSchema = latitudePromptConfigSchema({
         fullPath: d.path,
         providerNames: providers.map((p) => p.name),
         agentToolsMap,

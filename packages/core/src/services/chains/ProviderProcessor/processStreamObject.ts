@@ -12,8 +12,9 @@ export async function processStreamObject({
   return {
     streamType: aiResult.type,
     documentLogUuid,
-    usage: await aiResult.usage,
     text: objectToString(object),
+    usage: await aiResult.usage,
+
     object,
   }
 }

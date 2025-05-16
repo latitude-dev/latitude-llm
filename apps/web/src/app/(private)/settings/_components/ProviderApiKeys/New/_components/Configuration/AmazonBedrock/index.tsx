@@ -1,5 +1,5 @@
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { buildConfigFieldName } from '../../buildProviderPayload'
+import { buildConfigFieldName } from '../../../buildProviderPayload'
 
 export function AmazonBedrockConfiguration() {
   return (

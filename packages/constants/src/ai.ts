@@ -1,6 +1,6 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
 import {
-  CoreTool,
+  Tool,
   FinishReason,
   LanguageModelUsage,
   ObjectStreamPart,
@@ -11,7 +11,7 @@ import { z } from 'zod'
 
 import { ProviderLog } from './models'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
-import { LatitudeTool, ParameterType } from './config'
+import { ParameterType } from './config'
 
 export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
 
@@ -100,27 +100,20 @@ export type VercelConfig = {
   cacheControl?: boolean
   schema?: JSONSchema7
   parameters?: Record<string, { type: ParameterType }>
-  azure?: AzureConfig
-  google?: GoogleConfig
   disableAgentOptimization?: boolean
   tools?: ToolDefinitionsMap
+
+  // TODO: Replace with settings from `createAzure` provider
+  azure?: AzureConfig
+  // TODO: Review this. I think is not correct config. Check `createGoogleGenerativeAI`
+  google?: GoogleConfig
 }
 
-// Prompt config supported by Latitude
-export type PromptConfig = Omit<VercelConfig, 'tools'> & {
-  type?: 'agent' | undefined
-  tools?:
-    | ToolDefinitionsMap // Old tools schema
-    | (ToolDefinitionsMap | string)[] // New tools schema
-  latitudeTools?: LatitudeTool[] // deprecated
-  agents?: string[]
-}
-
-export type PartialPromptConfig = Omit<PromptConfig, 'provider'>
+export type PartialPromptConfig = Omit<LatitudePromptConfig, 'provider'>
 
 export type ProviderData =
-  | TextStreamPart<Record<string, CoreTool>>
-  | ObjectStreamPart<Record<string, CoreTool>>
+  | TextStreamPart<Record<string, Tool>>
+  | ObjectStreamPart<Record<string, Tool>>
   | ObjectStreamPart<unknown>
 
 export type ChainEventDto = ProviderData | LatitudeEventData
