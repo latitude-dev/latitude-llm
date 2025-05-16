@@ -1,10 +1,5 @@
 import { z } from 'zod'
-import {
-  LATITUDE_TOOLS_CONFIG_NAME,
-  LatitudeTool,
-  MAX_STEPS_CONFIG_NAME,
-  ParameterType,
-} from '../config'
+import { LatitudeTool, MAX_STEPS_CONFIG_NAME, ParameterType } from '../config'
 import { AgentToolsMap, resolveRelativePath } from '../index'
 import { openAIToolsList } from './providers/openai/index'
 
@@ -166,9 +161,6 @@ export function latitudePromptConfigSchema({
       .optional(),
     [MAX_STEPS_CONFIG_NAME]: z.number().min(1).max(150).optional(),
     tools: toolDefinitionSchema.optional(),
-    [LATITUDE_TOOLS_CONFIG_NAME]: z
-      .array(z.nativeEnum(LatitudeTool))
-      .optional(),
     agents: agentsConfigSchema.optional(),
     ...(outputSchema ? { schema: outputSchema } : {}),
 
@@ -179,3 +171,7 @@ export function latitudePromptConfigSchema({
     // of using Latitude through the SDK without the gateway.
   })
 }
+
+export type LatitudePromptConfig = z.infer<
+  ReturnType<typeof latitudePromptConfigSchema>
+>

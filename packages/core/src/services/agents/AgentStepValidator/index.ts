@@ -15,10 +15,7 @@ import { azureConfig, googleConfig } from '../../ai/helpers'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../chains/checkFreeProviderQuota'
 import { CachedApiKeys } from '../../chains/run'
-import {
-  AGENT_RETURN_TOOL_NAME,
-  LATITUDE_TOOLS_CONFIG_NAME,
-} from '@latitude-data/constants'
+import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 import { Result } from './../../../lib/Result'
 import { TypedResult } from './../../../lib/Result'
 
@@ -54,6 +51,8 @@ const findProvider = (name: string, providersMap: CachedApiKeys) => {
   )
 }
 
+// TODO:: Replace this with `@latitude-data/constants/latitudePromptSchema`
+// This schema is incomplete
 const validateConfig = (
   config: Record<string, unknown>,
 ): TypedResult<Config, ChainError<RunErrorCodes.DocumentConfigError>> => {
@@ -67,7 +66,6 @@ const validateConfig = (
       provider: z.string({
         message: `"provider" attribute is required. Read more here: ${doc}`,
       }),
-      [LATITUDE_TOOLS_CONFIG_NAME]: z.array(z.string()).optional(),
       google: googleConfig.optional(),
       azure: azureConfig.optional(),
     })

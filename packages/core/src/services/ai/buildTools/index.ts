@@ -7,6 +7,7 @@ import { Result } from './../../../lib/Result'
 
 export const buildTools = (tools: ToolDefinitionsMap | undefined) => {
   if (!tools) return Result.ok(undefined)
+
   try {
     const data = Object.entries(tools).reduce<Record<string, Tool>>(
       (acc, [key, value]) => {

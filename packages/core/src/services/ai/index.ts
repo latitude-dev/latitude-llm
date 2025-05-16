@@ -10,7 +10,6 @@ import {
   streamText as originalStreamText,
   Output,
   smoothStream,
-  streamObject,
   StreamObjectResult,
   StreamTextResult,
   TextStreamPart,
@@ -35,21 +34,10 @@ const DEFAULT_AI_SDK_PROVIDER = {
   streamText: originalStreamText,
 }
 type AISDKProvider = typeof DEFAULT_AI_SDK_PROVIDER
-type AIReturnObject = Pick<
-  StreamObjectResult<unknown, unknown, never>,
-  'fullStream' | 'object' | 'usage' | 'providerMetadata'
-> & {
-  type: 'object'
-  providerName: Providers
-}
 
-// A stream of partial outputs. It uses the `experimental_output` specification.
-// This could fix the issue with having a schema and tool calls in the same prompt.
-// But requires more investigation. More info:
-// https://vercel.com/blog/ai-sdk-4-1#structured-output-improvements
 type PARTIAL_OUTPUT = object
 
-type AIReturnText = Pick<
+export type AIReturn<T extends StreamType> = Pick<
   StreamTextResult<Record<string, Tool<any, any>>, PARTIAL_OUTPUT>,
   | 'fullStream'
   | 'text'
@@ -58,15 +46,9 @@ type AIReturnText = Pick<
   | 'providerMetadata'
   | 'reasoning'
 > & {
-  type: 'text'
+  type: T
   providerName: Providers
 }
-
-export type AIReturn<T extends StreamType> = T extends 'object'
-  ? AIReturnObject
-  : T extends 'text'
-    ? AIReturnText
-    : never
 
 export type StreamChunk =
   | TextStreamPart<Record<string, Tool>>
@@ -163,6 +145,7 @@ export async function ai({
     if (toolsResult.error) return toolsResult
 
     const useSchema = schema && !!output && output !== 'no-schema'
+    const resultType: StreamType = useSchema ? 'object' : 'text'
     const result = streamText({
       ...omit(config, ['schema']),
       model: languageModel,
@@ -186,7 +169,7 @@ export async function ai({
     })
 
     return Result.ok({
-      type: 'text',
+      type: resultType,
       providerName: providerType,
       fullStream: result.fullStream,
       text: result.text,

@@ -11,7 +11,7 @@ import { z } from 'zod'
 
 import { ProviderLog } from './models'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
-import { LatitudeTool, ParameterType } from './config'
+import { ParameterType } from './config'
 
 export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
 
@@ -109,17 +109,7 @@ export type VercelConfig = {
   google?: GoogleConfig
 }
 
-// Prompt config supported by Latitude
-export type PromptConfig = Omit<VercelConfig, 'tools'> & {
-  type?: 'agent' | undefined
-  tools?:
-    | ToolDefinitionsMap // Old tools schema
-    | (ToolDefinitionsMap | string)[] // New tools schema
-  latitudeTools?: LatitudeTool[] // deprecated
-  agents?: string[]
-}
-
-export type PartialPromptConfig = Omit<PromptConfig, 'provider'>
+export type PartialPromptConfig = Omit<LatitudePromptConfig, 'provider'>
 
 export type ProviderData =
   | TextStreamPart<Record<string, Tool>>
