@@ -6,6 +6,7 @@ import {
   ParameterType,
 } from '../config'
 import { AgentToolsMap, resolveRelativePath } from '../index'
+import { openAIToolsList } from './providers/openai/index'
 
 const JSON_SCHEMA_TYPES: readonly [string, ...string[]] = [
   'string',
@@ -48,8 +49,6 @@ const jsonSchema: z.ZodType<any> = z.lazy(() =>
     $ref: z.string().optional(), // Reference to another schema
   }),
 )
-
-/* type: 'file_search' | 'web_search_preview' | 'computer_use_preview' | 'web_search_preview_2025_03_11'; */
 
 export function latitudePromptConfigSchema({
   providerNames,
@@ -136,9 +135,13 @@ export function latitudePromptConfigSchema({
     (toolId) => getCustomToolErrorMessage(toolId) === undefined,
     (toolId) => ({ message: getCustomToolErrorMessage(toolId) }),
   )
+  const providersSchema = z.record(z.literal('openai'), openAIToolsList)
   const toolDefinitionSchema = z.union([
     toolDefinitionObject, // Old schema
-    z.array(z.union([toolDefinitionObject, latitudeToolSchema])), // New schema
+    providersSchema,
+    z.array(
+      z.union([toolDefinitionObject, latitudeToolSchema, providersSchema]),
+    ),
   ])
 
   return z.object({
