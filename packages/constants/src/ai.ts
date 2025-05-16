@@ -1,6 +1,6 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
 import {
-  CoreTool,
+  Tool,
   FinishReason,
   LanguageModelUsage,
   ObjectStreamPart,
@@ -100,10 +100,13 @@ export type VercelConfig = {
   cacheControl?: boolean
   schema?: JSONSchema7
   parameters?: Record<string, { type: ParameterType }>
-  azure?: AzureConfig
-  google?: GoogleConfig
   disableAgentOptimization?: boolean
   tools?: ToolDefinitionsMap
+
+  // TODO: Replace with settings from `createAzure` provider
+  azure?: AzureConfig
+  // TODO: Review this. I think is not correct config. Check `createGoogleGenerativeAI`
+  google?: GoogleConfig
 }
 
 // Prompt config supported by Latitude
@@ -119,8 +122,8 @@ export type PromptConfig = Omit<VercelConfig, 'tools'> & {
 export type PartialPromptConfig = Omit<PromptConfig, 'provider'>
 
 export type ProviderData =
-  | TextStreamPart<Record<string, CoreTool>>
-  | ObjectStreamPart<Record<string, CoreTool>>
+  | TextStreamPart<Record<string, Tool>>
+  | ObjectStreamPart<Record<string, Tool>>
   | ObjectStreamPart<unknown>
 
 export type ChainEventDto = ProviderData | LatitudeEventData

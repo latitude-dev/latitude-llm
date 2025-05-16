@@ -115,7 +115,6 @@ export async function streamAIResponse({
     abortSignal,
   }).then((r) => r.unwrap())
 
-
   const checkResult = checkValidStream({ type: aiResult.type })
   if (checkResult.error) throw checkResult.error
 

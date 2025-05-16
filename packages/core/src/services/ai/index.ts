@@ -7,9 +7,10 @@ import {
   jsonSchema,
   LanguageModel,
   ObjectStreamPart,
-  streamObject as originalStreamObject,
   streamText as originalStreamText,
+  Output,
   smoothStream,
+  streamObject,
   StreamObjectResult,
   StreamTextResult,
   TextStreamPart,
@@ -27,10 +28,11 @@ import { applyAllRules } from './providers/rules'
 import { VercelConfig } from '@latitude-data/constants'
 import { Result } from './../../lib/Result'
 import { TypedResult } from './../../lib/Result'
+import { openai } from '@ai-sdk/openai'
+import { getLanguageModel } from './getLanguageModel'
 
 const DEFAULT_AI_SDK_PROVIDER = {
   streamText: originalStreamText,
-  streamObject: originalStreamObject,
 }
 type AISDKProvider = typeof DEFAULT_AI_SDK_PROVIDER
 type AIReturnObject = Pick<
@@ -112,7 +114,7 @@ export async function ai({
     >
   >
 > {
-  const { streamText, streamObject } = {
+  const { streamText } = {
     ...DEFAULT_AI_SDK_PROVIDER,
     ...(aiSdkProvider || {}),
   }
@@ -146,69 +148,53 @@ export async function ai({
       url: url ?? undefined,
       config,
     })
+
     if (providerAdapterResult.error) return providerAdapterResult
 
-    const providerAdapter = providerAdapterResult.value
-    const languageModel = customLanguageModel
-      ? customLanguageModel
-      : // @ts-expect-error - Some provider adapters don't accept a second argument
-        providerAdapter(model, {
-          cacheControl: config.cacheControl ?? false,
-          // providerOptions are passed to streamText or streamObject not to the adapter
-          ...omit(config, ['providerOptions']),
-        })
+    const languageModel = getLanguageModel({
+      llmProvider: providerAdapterResult.value,
+      provider: provider.provider,
+      config,
+      model,
+      customLanguageModel,
+    })
 
     const toolsResult = buildTools(tools)
     if (toolsResult.error) return toolsResult
 
-    const schemaLessConfig = omit(config, ['schema'])
-    const commonOptions = {
-      ...schemaLessConfig,
+    const useSchema = schema && !!output && output !== 'no-schema'
+    const result = streamText({
+      ...omit(config, ['schema']),
       model: languageModel,
       prompt,
       messages: messages as CoreMessage[],
-      tools: toolsResult.value,
+      /* tools: toolsResult.value, */
+      tools: {
+        web_search_preview: openai.tools.webSearchPreview({
+          searchContextSize: 'high',
+        }),
+      },
       abortSignal,
       providerOptions: config.providerOptions,
       experimental_telemetry: {
         isEnabled: true,
       },
-    }
-
-    if (schema && output) {
-      const result = streamObject({
-        ...commonOptions,
-        schema: jsonSchema(schema),
-        // output is valid but depending on the type of schema
-        // there might be a mismatch (e.g you pass an object schema but the
-        // output is "array"). Not really an issue we need to defend atm.
-        output: output as any,
-      })
-
-      return Result.ok({
-        fullStream: result.fullStream,
-        object: result.object,
-        usage: result.usage,
-        providerMetadata: result.providerMetadata,
-        type: 'object',
-        providerName: providerType,
-      })
-    }
-
-    const result = streamText({
-      ...commonOptions,
       experimental_transform: smoothStream(),
+      experimental_output: useSchema
+        ? Output.object({ schema: jsonSchema(schema) })
+        : undefined,
     })
 
     return Result.ok({
+      type: 'text',
+      providerName: providerType,
       fullStream: result.fullStream,
       text: result.text,
       reasoning: result.reasoning,
       usage: result.usage,
       toolCalls: result.toolCalls,
       providerMetadata: result.providerMetadata,
-      type: 'text',
-      providerName: providerType,
+      sources: result.sources,
     })
   } catch (e) {
     return handleAICallAPIError(e)

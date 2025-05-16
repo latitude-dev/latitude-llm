@@ -2,11 +2,8 @@ import {
   readMetadata,
   CompileError as CompilerCompileError,
 } from '@latitude-data/compiler'
-import {
-  AgentToolsMap,
-  promptConfigSchema,
-  resolveRelativePath,
-} from '@latitude-data/constants'
+import { AgentToolsMap, resolveRelativePath } from '@latitude-data/constants'
+import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 import type { DocumentVersion } from '@latitude-data/core/browser'
 
 import { CompileError as PromptlCompileError, scan } from 'promptl-ai'
@@ -41,13 +38,13 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
       ? readDocument(document, documents, prompt)
       : undefined
   const configSchema = providerNames
-    ? promptConfigSchema({
-        providerNames,
-        integrationNames,
-        fullPath: document?.path,
-        agentToolsMap,
-        noOutputSchemaConfig,
-      })
+    ? latitudePromptConfigSchema({
+      providerNames,
+      integrationNames,
+      fullPath: document?.path,
+      agentToolsMap,
+      noOutputSchemaConfig,
+    })
     : undefined
 
   const props = {

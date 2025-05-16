@@ -9,7 +9,9 @@ import {
 import { and, eq, inArray, not } from 'drizzle-orm'
 import { scan } from 'promptl-ai'
 
-import { AgentToolsMap, promptConfigSchema } from '@latitude-data/constants'
+import { AgentToolsMap } from '@latitude-data/constants'
+import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
+
 import {
   Commit,
   DocumentVersion,
@@ -67,7 +69,7 @@ async function resolveDocumentChanges({
 
   const newDocumentsWithUpdatedHash = await Promise.all(
     newDocuments.map(async (d) => {
-      const configSchema = promptConfigSchema({
+      const configSchema = latitudePromptConfigSchema({
         fullPath: d.path,
         providerNames: providers.map((p) => p.name),
         agentToolsMap,
@@ -174,36 +176,36 @@ async function replaceCommitChanges(
 
     const insertedDocs = docsToInsert.length
       ? await trx
-          .insert(documentVersions)
-          .values(
-            docsToInsert.map((d) => ({
-              ...omit(d, ['id', 'commitId', 'updatedAt']),
-              commitId,
-            })),
-          )
-          .returning()
+        .insert(documentVersions)
+        .values(
+          docsToInsert.map((d) => ({
+            ...omit(d, ['id', 'commitId', 'updatedAt']),
+            commitId,
+          })),
+        )
+        .returning()
       : []
 
     const updatedDocs = docsToUpdate.length
       ? await Promise.all(
-          docsToUpdate.map(async (doc) => {
-            const updatedDoc = await trx
-              .update(documentVersions)
-              .set({
-                ...omit(doc, ['id', 'commitId', 'updatedAt']),
-                updatedAt: new Date(),
-              })
-              .where(
-                and(
-                  eq(documentVersions.documentUuid, doc.documentUuid),
-                  eq(documentVersions.commitId, commitId),
-                ),
-              )
-              .returning()
+        docsToUpdate.map(async (doc) => {
+          const updatedDoc = await trx
+            .update(documentVersions)
+            .set({
+              ...omit(doc, ['id', 'commitId', 'updatedAt']),
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(documentVersions.documentUuid, doc.documentUuid),
+                eq(documentVersions.commitId, commitId),
+              ),
+            )
+            .returning()
 
-            return updatedDoc[0]!
-          }),
-        )
+          return updatedDoc[0]!
+        }),
+      )
       : []
 
     await Promise.all(
