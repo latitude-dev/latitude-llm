@@ -60,7 +60,8 @@ type ChatBodyParams = {
   stream?: boolean
 }
 
-export type EvaluationResultUrlParams = {
+export type AnnotateUrlParams = {
+  conversationUuid: string
   evaluationUuid: string
 }
 
@@ -79,8 +80,7 @@ export enum HandlerType {
   RunDocument = 'run-document',
   Chat = 'chat',
   Log = 'log',
-  Evaluate = 'evaluate',
-  EvaluationResult = 'evaluationResult',
+  Annotate = 'annotate',
 }
 
 export type UrlParams<T extends HandlerType> = T extends HandlerType.GetDocument
@@ -93,13 +93,14 @@ export type UrlParams<T extends HandlerType> = T extends HandlerType.GetDocument
         ? ChatUrlParams
         : T extends HandlerType.Log
           ? LogUrlParams
-          : T extends HandlerType.Evaluate
-            ? { conversationUuid: string }
-            : T extends HandlerType.EvaluationResult
-              ? { conversationUuid: string; evaluationUuid: string }
-              : T extends HandlerType.GetAllDocuments
-                ? GetAllDocumentsParams
-                : never
+          : T extends HandlerType.Annotate
+            ? {
+                conversationUuid: string
+                evaluationUuid: string
+              }
+            : T extends HandlerType.GetAllDocuments
+              ? GetAllDocumentsParams
+              : never
 
 export type BodyParams<T extends HandlerType> =
   T extends HandlerType.GetOrCreateDocument
@@ -110,14 +111,15 @@ export type BodyParams<T extends HandlerType> =
         ? ChatBodyParams
         : T extends HandlerType.Log
           ? LogBodyParams
-          : T extends HandlerType.Evaluate
-            ? { evaluationUuids?: string[] }
-            : T extends HandlerType.EvaluationResult
-              ? {
-                  result: string | boolean | number
+          : T extends HandlerType.Annotate
+            ? {
+                score: number
+                metadata?: {
                   reason: string
                 }
-              : never
+                versionUuid?: string
+              }
+            : never
 
 export type StreamChainResponse = {
   uuid: string

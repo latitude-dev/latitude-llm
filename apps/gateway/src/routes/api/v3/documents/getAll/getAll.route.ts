@@ -9,6 +9,7 @@ function getRouteFactory({ path, tags }: { path: string; tags: string[] }) {
   return createRoute({
     operationId: 'getDocument',
     method: http.Methods.GET,
+    description: 'Get all prompts in a version',
     path,
     tags,
     request: {

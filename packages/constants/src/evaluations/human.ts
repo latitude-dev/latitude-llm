@@ -35,7 +35,7 @@ export const HumanEvaluationBinarySpecification = {
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,
   supportsManualEvaluation: true,
-}
+} as const
 export type HumanEvaluationBinaryConfiguration = z.infer<
   typeof HumanEvaluationBinarySpecification.configuration
 >
@@ -72,7 +72,7 @@ export const HumanEvaluationRatingSpecification = {
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,
   supportsManualEvaluation: true,
-}
+} as const
 export type HumanEvaluationRatingConfiguration = z.infer<
   typeof HumanEvaluationRatingSpecification.configuration
 >
@@ -119,4 +119,4 @@ export const HumanEvaluationSpecification = {
     [HumanEvaluationMetric.Binary]: HumanEvaluationBinarySpecification,
     [HumanEvaluationMetric.Rating]: HumanEvaluationRatingSpecification,
   },
-}
+} as const

@@ -1,8 +1,9 @@
 import { ContentType, Latitude, MessageRole } from '@latitude-data/sdk'
 import OpenAI from 'openai'
 
-const sdk = new Latitude(process.env.LATITUDE_API_KEY, {
-  projectId: 1,
+const sdk = new Latitude('626ec0c7-9473-4897-b405-f9a07b737e1e', {
+  projectId: 9,
+  versionUuid: '3f7c3aa1-433a-4494-837e-d14ba276dc46',
 })
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -24,14 +25,11 @@ const chatCompletion = await openai.chat.completions.create({
   model: 'gpt-4o-mini',
 })
 
-// Push the log to the live version of our prompt called 'joker'
 const { uuid } = await sdk.logs.create('joker', messages, {
   response: chatCompletion.choices[0].message.content,
 })
 
-// Push the evaluation result to the evaluation with the UUID 'evaluationUuid'
-const evaluationUuid = '53975dcb-2a86-4ea1-ab53-b54587e01231'
-await sdk.evaluations.createResult(uuid, evaluationUuid, {
-  result: 5, // This result would be computed on your end and is just an example
-  reason: 'This is a good joke',
+const evaluationUuid = 'd1be55cb-b953-4c81-a8b9-72255c47bf1f'
+await sdk.evaluations.annotate(uuid, 100, evaluationUuid, {
+  reason: 'This is a good joke!',
 })
