@@ -16,6 +16,7 @@ import { Message } from '@latitude-data/core/browser'
 import { useCallback, useState } from 'react'
 import { CopilotChatInteraction } from './types'
 import { getDescriptionFromToolCall } from './helpers'
+import { LatteSuggestion } from '@latitude-data/constants/latte'
 
 export function useCopilotChat({
   projectId,
@@ -26,9 +27,11 @@ export function useCopilotChat({
 }) {
   const [chatUuid, setChatUuid] = useState<string>()
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string>()
 
   const [messages, setMessages] = useState<Message[]>([])
   const [interactions, setInteractions] = useState<CopilotChatInteraction[]>([])
+  const [suggestions, setSuggestions] = useState<LatteSuggestion[]>([])
 
   const { execute: createNewChat } = useLatitudeAction(
     createNewCopilotChatAction,
@@ -175,11 +178,29 @@ export function useCopilotChat({
     onMessage: handleNewMessage,
   })
 
+  useSockets({
+    event: 'copilotChatSuggestions',
+    onMessage: ({ chatUuid: incomingChatUuid, suggestions }) => {
+      if (incomingChatUuid !== chatUuid) return
+      setSuggestions(suggestions)
+    },
+  })
+
+  useSockets({
+    event: 'copilotChatError',
+    onMessage: ({ chatUuid: incomingChatUuid, message }) => {
+      if (incomingChatUuid !== chatUuid) return
+      setIsLoading(false)
+      setError(message)
+    },
+  })
+
   return {
     sendMessage,
     isLoading,
-    // isThinking,
     messages,
     interactions,
+    suggestions,
+    error,
   }
 }

@@ -11,6 +11,7 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { DynamicBot } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Icons/custom-icons'
 import { KeyboardEvent, useCallback, useState } from 'react'
 import { LatteMessageList } from './MessageList'
+import { Suggestions } from './Suggestions'
 
 export function MainPage() {
   const { project } = useCurrentProject()
@@ -18,10 +19,11 @@ export function MainPage() {
   const placeholder = useTypeWriterValue(INPUT_PLACEHOLDERS)
   const [isActive, setIsActive] = useState(false)
 
-  const { sendMessage, isLoading, interactions } = useCopilotChat({
-    projectId: project.id,
-    commitUuid: commit.uuid,
-  })
+  const { sendMessage, isLoading, interactions, suggestions, error } =
+    useCopilotChat({
+      projectId: project.id,
+      commitUuid: commit.uuid,
+    })
 
   const [value, setValue] = useState('')
   const onSubmit = useCallback(() => {
@@ -96,35 +98,41 @@ export function MainPage() {
           className={cn('flex w-full transition-all ease-in-out duration-300')}
         />
       </div>
-      <div
-        className={cn(
-          'h-full w-full flex flex-col items-center py-8 transition-all ease-in-out duration-300',
-          {
-            'max-h-[0%] overflow-hidden': !inConversation,
-            'max-h-full custom-scrollbar': inConversation,
-          },
-        )}
-      >
-        {interactions.length > 0 && (
-          <div className='w-full max-w-[600px]'>
-            <LatteMessageList interactions={interactions} />
+      <div className='w-full flex flex-row h-full'>
+        <div className='flex-1 flex flex-col items-center justify-center gap-2 h-full'>
+          <div
+            className={cn(
+              'h-full w-full flex flex-col items-center transition-all ease-in-out duration-300',
+              {
+                'max-h-[0%] overflow-hidden': !inConversation,
+                'max-h-full custom-scrollbar': inConversation,
+              },
+            )}
+          >
+            {interactions.length > 0 && (
+              <div className='w-full flex flex-col gap-8 max-w-[600px]'>
+                <LatteMessageList interactions={interactions} />
+                {error && <Text.H5 color='destructive'>{error}</Text.H5>}
+              </div>
+            )}
           </div>
-        )}
-      </div>
-      <div className='flex w-full max-w-[600px] p-4 pt-0'>
-        <TextArea
-          className='bg-transparent w-full px-2 pt-2 pb-14 resize-none text-sm'
-          placeholder={inConversation ? 'Ask anything' : placeholder}
-          autoGrow
-          disabled={isLoading}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          minRows={2}
-          maxRows={5}
-          onFocus={() => setIsActive(true)}
-          onBlur={() => setIsActive(false)}
-        />
+          <div className='flex w-full max-w-[600px] p-4 pt-0'>
+            <TextArea
+              className='bg-transparent w-full px-2 pt-2 pb-14 resize-none text-sm'
+              placeholder={inConversation ? 'Ask anything' : placeholder}
+              autoGrow
+              disabled={isLoading || !!error}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              minRows={2}
+              maxRows={5}
+              onFocus={() => setIsActive(true)}
+              onBlur={() => setIsActive(false)}
+            />
+          </div>
+        </div>
+        <Suggestions suggestions={suggestions} />
       </div>
     </div>
   )

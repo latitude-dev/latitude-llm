@@ -1,14 +1,19 @@
+import { LatteDocumentList } from '@latitude-data/constants/latte'
 import { Result } from '../../../../../lib/Result'
+import { PromisedResult } from '../../../../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../../../../repositories'
 import { CopilotTool } from '../types'
 
-const listPrompts: CopilotTool = async ({ workspace, commit }) => {
+const listPrompts: CopilotTool = async (
+  _,
+  { workspace, commit },
+): PromisedResult<LatteDocumentList> => {
   const docsScope = new DocumentVersionsRepository(workspace.id)
 
-  const docsResult = await docsScope.getDocumentsAtCommit(commit)
-  if (!docsResult.ok) return docsResult
+  const documents = await docsScope
+    .getDocumentsAtCommit(commit)
+    .then((r) => r.unwrap())
 
-  const documents = docsResult.unwrap()
   return Result.ok(
     documents.map((doc) => ({
       path: doc.path,

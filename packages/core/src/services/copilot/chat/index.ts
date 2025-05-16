@@ -5,7 +5,13 @@ import { LatitudeError } from '../../../lib/errors'
 import { PromisedResult } from '../../../lib/Transaction'
 import { runDocumentAtCommit } from '../../commits'
 import { extractAgentToolCalls, LogSources } from '@latitude-data/constants'
-import { Commit, Project, Workspace, DocumentVersion } from '../../../browser'
+import {
+  Commit,
+  Project,
+  Workspace,
+  DocumentVersion,
+  buildAllMessagesFromResponse,
+} from '../../../browser'
 import { sendWebsockets } from './helpers'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { documentsQueue } from '../../../jobs/queues'
@@ -23,7 +29,7 @@ async function generateCopilotResponse({
   clientCommit,
   chatUuid,
   initialMessage,
-  messages,
+  messages: newMessages,
 }: {
   websockets: WorkerSocket
   copilotWorkspace: Workspace
@@ -36,6 +42,7 @@ async function generateCopilotResponse({
   initialMessage?: string // for the first “new” request
   messages?: Message[] // for subsequent “add” requests
 }): PromisedResult<undefined> {
+  console.log('running latte')
   const runResult = initialMessage
     ? await runDocumentAtCommit({
         workspace: copilotWorkspace,
@@ -49,7 +56,7 @@ async function generateCopilotResponse({
     : await addMessages({
         workspace: copilotWorkspace,
         documentLogUuid: chatUuid,
-        messages: messages!,
+        messages: newMessages!,
         source: LogSources.API,
       })
   if (!runResult.ok) return runResult as ErrorResult<LatitudeError>
@@ -66,12 +73,18 @@ async function generateCopilotResponse({
     await run.toolCalls,
   )
 
+  const response = await run.lastResponse
+  const messages = buildAllMessagesFromResponse({ response: response! })
+
   const toolMessages = await Promise.all(
     otherToolCalls.map(async (toolCall) => {
       const r = await handleToolRequest({
+        websockets,
         workspace: clientWorkspace,
         project: clientProject,
         commit: clientCommit,
+        chatUuid,
+        messages,
         tool: toolCall,
         onFinish: async (msg) => {
           websockets.emit('copilotChatMessage', {

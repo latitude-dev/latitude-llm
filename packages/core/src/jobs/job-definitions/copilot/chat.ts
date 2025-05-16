@@ -26,31 +26,58 @@ export type RunCopilotChatJobData = {
 
 export const runCopilotChatJob = async (job: Job<RunCopilotChatJobData>) => {
   const { workspaceId, projectId, commitId, chatUuid, message } = job.data
-  const workspace = await unsafelyFindWorkspace(workspaceId).then((w) => w!)
-  const project = await unsafelyFindProject(projectId).then((p) => p!)
-
-  const commitScope = new CommitsRepository(workspace.id)
-  const commitResult = await commitScope.find(commitId)
-  if (!commitResult.ok) return commitResult
-  const commit = commitResult.unwrap()
-
-  const copilotResult = await getCopilotDocument()
-  if (!copilotResult.ok) return copilotResult
-
-  const {
-    workspace: copilotWorkspace,
-    commit: copilotCommit,
-    document: copilotDocument,
-  } = copilotResult.unwrap()
-
-  const documentLogsScope = new DocumentLogsRepository(copilotWorkspace.id)
-  const documentLogResult = await documentLogsScope.findByUuid(chatUuid)
-
   const websockets = await WebsocketClient.getSocket()
 
-  if (!documentLogResult.ok) {
-    // Chat still does not exist, we create a new one
-    await runNewCopilotChat({
+  try {
+    const workspace = await unsafelyFindWorkspace(workspaceId).then((w) => w!)
+    const project = await unsafelyFindProject(projectId).then((p) => p!)
+
+    const commitScope = new CommitsRepository(workspace.id)
+    const commitResult = await commitScope.find(commitId)
+    if (!commitResult.ok) return commitResult
+    const commit = commitResult.unwrap()
+
+    const copilotResult = await getCopilotDocument()
+    if (!copilotResult.ok) return copilotResult
+
+    const {
+      workspace: copilotWorkspace,
+      commit: copilotCommit,
+      document: copilotDocument,
+    } = copilotResult.unwrap()
+
+    const documentLogsScope = new DocumentLogsRepository(copilotWorkspace.id)
+    const documentLogResult = await documentLogsScope.findByUuid(chatUuid)
+
+    if (!documentLogResult.ok) {
+      // Chat still does not exist, we create a new one
+      await runNewCopilotChat({
+        websockets,
+        copilotWorkspace,
+        copilotCommit,
+        copilotDocument,
+        clientWorkspace: workspace,
+        clientProject: project,
+        clientCommit: commit,
+        chatUuid,
+        message,
+      }).then((r) => r.unwrap())
+
+      return
+    }
+
+    const messages: Message[] = [
+      {
+        role: MessageRole.user,
+        content: [
+          {
+            type: ContentType.text,
+            text: message,
+          },
+        ],
+      },
+    ]
+    await addMessageToExistingCopilotChat({
       websockets,
       copilotWorkspace,
       copilotCommit,
@@ -59,32 +86,15 @@ export const runCopilotChatJob = async (job: Job<RunCopilotChatJobData>) => {
       clientProject: project,
       clientCommit: commit,
       chatUuid,
-      message,
+      messages,
     }).then((r) => r.unwrap())
-
-    return
+  } catch (error) {
+    websockets.emit('copilotChatError', {
+      workspaceId,
+      data: {
+        chatUuid,
+        message: (error as Error).message,
+      },
+    })
   }
-
-  const messages: Message[] = [
-    {
-      role: MessageRole.user,
-      content: [
-        {
-          type: ContentType.text,
-          text: message,
-        },
-      ],
-    },
-  ]
-  await addMessageToExistingCopilotChat({
-    websockets,
-    copilotWorkspace,
-    copilotCommit,
-    copilotDocument,
-    clientWorkspace: workspace,
-    clientProject: project,
-    clientCommit: commit,
-    chatUuid,
-    messages,
-  }).then((r) => r.unwrap())
 }
