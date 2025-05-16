@@ -228,20 +228,6 @@ export interface AverageResultOverTime {
   count: number
 }
 
-export type SpanEvent = {
-  name: string
-  timestamp: string
-  attributes?: Record<string, string | number | boolean>
-}
-
-export type SpanLink = {
-  traceId: string
-  spanId: string
-  attributes?: Record<string, string | number | boolean>
-}
-
-export type TraceAttributes = Record<string, string | number | boolean>
-
 export type DocumentSuggestionWithDetails = DocumentSuggestion & {
   evaluation: EvaluationV2
 }
