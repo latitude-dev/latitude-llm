@@ -15,6 +15,7 @@ interface CodeBlockProps {
   copy?: boolean
   action?: ReactNode
   className?: string
+  textWrap?: boolean
 }
 
 export function useCodeBlockBackgroundColor() {
@@ -24,11 +25,18 @@ export function useCodeBlockBackgroundColor() {
 }
 
 const Content = memo(
-  ({ language, children, copy = true, action, className }: CodeBlockProps) => {
+  ({
+    language,
+    children,
+    copy = true,
+    action,
+    className,
+    textWrap,
+  }: CodeBlockProps) => {
     const { resolvedTheme } = useTheme()
     const bgColor = useCodeBlockBackgroundColor()
     return (
-      <div className={cn('relative max-w-full overflow-x-auto', bgColor)}>
+      <div className={cn('w-full relative max-w-full', bgColor)}>
         {copy || action ? (
           <div className='absolute top-4 right-2'>
             {copy ? (
@@ -39,7 +47,11 @@ const Content = memo(
           </div>
         ) : null}
         <SyntaxHighlighter
-          className={cn('text-sm', className)}
+          className={cn('text-sm', className, {
+            'break-words whitespace-pre-wrap [&>code]:!whitespace-pre-wrap':
+              textWrap,
+          })}
+          wrapLongLines={textWrap}
           currentTheme={resolvedTheme}
           language={language}
           customStyle={{
@@ -56,10 +68,20 @@ const Content = memo(
   },
 )
 
-export const CodeBlock = memo((props: CodeBlockProps) => {
-  return (
-    <ClientOnly>
-      <Content {...props} />
-    </ClientOnly>
-  )
-})
+export const CodeBlock = memo(
+  ({ children, textWrap = true, ...rest }: CodeBlockProps) => {
+    return (
+      <ClientOnly>
+        <Content
+          language={rest.language}
+          copy={rest.copy}
+          action={rest.action}
+          className={rest.className}
+          textWrap={textWrap}
+        >
+          {children}
+        </Content>
+      </ClientOnly>
+    )
+  },
+)
