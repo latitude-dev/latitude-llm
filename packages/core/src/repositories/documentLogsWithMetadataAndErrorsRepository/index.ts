@@ -14,6 +14,7 @@ import { DocumentLogWithMetadataAndError } from '../runErrors/documentLogsReposi
 import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
 
+// TODO: remove
 export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<DocumentLogWithMetadataAndError> {
   get scopeFilter() {
     return eq(workspaces.id, this.workspaceId)
@@ -24,6 +25,7 @@ export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<Docu
       .select({
         ...getTableColumns(documentLogs),
         commit: getTableColumns(commits),
+        // TODO: Denormalize these aggregations and persist them at write time
         tokens: sum(providerLogs.tokens).mapWith(Number).as('tokens'),
         duration: sum(providerLogs.duration)
           .mapWith(Number)
@@ -31,6 +33,7 @@ export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<Docu
         costInMillicents: sum(providerLogs.costInMillicents)
           .mapWith(Number)
           .as('cost_in_millicents'),
+        // TODO: Denormalize the errors and persist them at write time
         error: {
           code: sql<string>`${runErrors.code}`.as('document_log_error_code'),
           message: sql<string>`${runErrors.message}`.as(

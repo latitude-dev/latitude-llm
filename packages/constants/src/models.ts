@@ -71,7 +71,7 @@ export type DocumentVersion = {
   documentUuid: string
   path: string
   content: string
-  resolvedContent: string
+  resolvedContent: string | null
   contentHash: string
   promptlVersion: number
   commitId: number

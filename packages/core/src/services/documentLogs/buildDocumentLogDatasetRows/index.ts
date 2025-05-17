@@ -1,7 +1,6 @@
 import { Dataset, Workspace } from '../../../browser'
 import { Column, DatasetRowData, documentLogs } from '../../../schema'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from '../../datasets/utils'
-import { DocumentLogsWithMetadataAndErrorsRepository } from '../../../repositories/documentLogsWithMetadataAndErrorsRepository'
 import {
   DocumentLogWithMetadataAndError,
   ProviderLogsRepository,
@@ -12,6 +11,7 @@ import { buildResponseMessage, ProviderLog } from '@latitude-data/constants'
 import { desc } from 'drizzle-orm'
 import { PromisedResult } from './../../../lib/Transaction'
 import { Result } from './../../../lib/Result'
+import { DocumentLogsWithMetadataAndErrorsRepository } from '../../../repositories/documentLogsWithMetadataAndErrorsRepository'
 
 export type ExportedDocumentLogs = {
   columns: Column[]
@@ -26,10 +26,11 @@ async function findLogs({
   documentLogIds: number[]
 }) {
   const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspace.id)
-  const logsWithErrors = await repo
+  const results = await repo
     .findMany(documentLogIds, { ordering: [desc(documentLogs.createdAt)] })
     .then((r) => r.unwrap())
-  return logsWithErrors.filter((log) => !log.error.message)
+
+  return results.filter((r) => !r.error.message)
 }
 
 // This should never happen
@@ -128,7 +129,6 @@ async function findExpectedOutputs({
       if (provider.generatedAt === null) return acc
 
       const existing = acc.get(provider.documentLogUuid)
-
       if (existing && existing.generatedAt > provider.generatedAt) return acc
 
       const output = getOutput(provider)

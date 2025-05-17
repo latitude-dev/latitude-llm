@@ -179,6 +179,30 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     return Result.ok(document)
   }
 
+  async getSomeDocumentByUuid({
+    projectId,
+    documentUuid,
+  }: {
+    projectId: number
+    documentUuid: string
+  }) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(
+        and(
+          eq(this.scope.projectId, projectId),
+          eq(this.scope.documentUuid, documentUuid),
+        ),
+      )
+      .limit(1)
+
+    const document = result[0]
+    if (!document) return Result.error(new NotFoundError('Document not found'))
+
+    return Result.ok(document)
+  }
+
   async getDocumentByUuid({
     commitUuid,
     documentUuid,
