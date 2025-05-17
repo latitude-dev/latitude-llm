@@ -2,8 +2,10 @@ import {
   and,
   desc,
   eq,
+  getTableColumns,
   inArray,
   isNotNull,
+  isNull,
   or,
   SQL,
   sql,
@@ -56,8 +58,15 @@ export async function computeDocumentLogsWithMetadata(
   ].filter(Boolean) as SQL<unknown>[]
 
   const logs = await db
-    .select()
+    .select({
+      ...getTableColumns(documentLogs),
+      commit: getTableColumns(commits),
+    })
     .from(documentLogs)
+    .innerJoin(
+      commits,
+      and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
+    )
     .where(and(...conditions))
     .orderBy(...ordering)
     .limit(parseInt(pageSize))
@@ -110,7 +119,7 @@ export async function computeDocumentLogsWithMetadata(
     costInMillicents:
       providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)
         ?.costInMillicents ?? 0,
-    errors: errors.filter((e) => e.documentLogUuid === log.uuid),
+    error: errors.filter((e) => e.documentLogUuid === log.uuid),
   }))
 }
 
