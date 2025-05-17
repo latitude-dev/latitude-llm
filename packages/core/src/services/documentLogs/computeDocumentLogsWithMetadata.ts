@@ -18,14 +18,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
-import {
-  commits,
-  documentLogs,
-  projects,
-  providerLogs,
-  runErrors,
-  workspaces,
-} from '../../schema'
+import { commits, documentLogs, providerLogs, runErrors } from '../../schema'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export function getCommitFilter(draft?: Commit) {
@@ -34,7 +27,7 @@ export function getCommitFilter(draft?: Commit) {
     : isNotNull(commits.mergedAt)
 }
 
-export async function computeDocumentLogsWithMetadataQuery(
+export async function computeDocumentLogsWithMetadata(
   {
     documentUuid,
     page = '1',

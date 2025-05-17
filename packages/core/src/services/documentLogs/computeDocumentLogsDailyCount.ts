@@ -1,8 +1,8 @@
 import { and, count, eq, isNull, sql } from 'drizzle-orm'
 
-import { DocumentLogFilterOptions } from '../../browser'
+import { DocumentLogFilterOptions, ErrorableEntity } from '../../browser'
 import { database } from '../../client'
-import { commits, documentLogs } from '../../schema'
+import { commits, documentLogs, runErrors } from '../../schema'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export type DailyCount = {
@@ -27,6 +27,7 @@ export async function computeDocumentLogsDailyCount(
       String(days),
     )} days'`,
     eq(documentLogs.documentUuid, documentUuid),
+    isNull(runErrors.id),
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
 
@@ -39,6 +40,13 @@ export async function computeDocumentLogsDailyCount(
     .innerJoin(
       commits,
       and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
+    )
+    .leftJoin(
+      runErrors,
+      and(
+        eq(runErrors.errorableUuid, documentLogs.uuid),
+        eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+      ),
     )
     .where(and(...conditions))
     .groupBy(sql`DATE(${documentLogs.createdAt})`)

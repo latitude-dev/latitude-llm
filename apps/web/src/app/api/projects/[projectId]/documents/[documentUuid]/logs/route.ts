@@ -1,6 +1,6 @@
 import { Workspace } from '@latitude-data/core/browser'
 import { computeDocumentLogsQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogs'
-import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
+import { computeDocumentLogsWithMetadata } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
@@ -31,7 +31,7 @@ export const GET = errorHandler(
 
       const buildQueryFn = queryParams.excludeErrors
         ? computeDocumentLogsQuery
-        : computeDocumentLogsWithMetadataQuery
+        : computeDocumentLogsWithMetadata
 
       const rows = await buildQueryFn({
         documentUuid,

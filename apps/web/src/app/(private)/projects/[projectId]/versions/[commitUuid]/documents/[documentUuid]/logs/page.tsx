@@ -9,7 +9,7 @@ import {
   Workspace,
 } from '@latitude-data/core/browser'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
-import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
+import { computeDocumentLogsWithMetadata } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
 import { redirect } from 'next/navigation'
 
@@ -98,7 +98,7 @@ export default async function DocumentPage({
     return redirect(`${route}?${parameters.join('&')}`)
   }
 
-  const rows = await computeDocumentLogsWithMetadataQuery({
+  const rows = await computeDocumentLogsWithMetadata({
     documentUuid,
     filterOptions,
     page,
