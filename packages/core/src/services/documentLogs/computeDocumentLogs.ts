@@ -17,6 +17,7 @@ import {
 } from '../../schema'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
+// TODO: remove workspaceId
 export function computeDocumentLogsQuery(
   {
     workspaceId,

@@ -34,7 +34,6 @@ export const GET = errorHandler(
         : computeDocumentLogsWithMetadataQuery
 
       const rows = await buildQueryFn({
-        workspaceId: workspace.id,
         documentUuid,
         filterOptions: queryParams.filterOptions,
         page: queryParams.page,

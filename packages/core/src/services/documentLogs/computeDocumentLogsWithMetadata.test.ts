@@ -98,7 +98,6 @@ describe('getDocumentLogsWithMetadata', () => {
 
     it('return all logs from merged commits', async () => {
       const result = await computeDocumentLogsWithMetadataQuery({
-        workspaceId: project.workspaceId,
         documentUuid: doc.documentUuid,
         filterOptions: {
           commitIds: [commit.id, commit2.id],
@@ -129,7 +128,6 @@ describe('getDocumentLogsWithMetadata', () => {
         commit,
       })
       const result = await computeDocumentLogsWithMetadataQuery({
-        workspaceId: project.workspaceId,
         filterOptions: {
           commitIds: [commit.id, commit2.id],
           logSources: LOG_SOURCES,
@@ -221,7 +219,7 @@ describe('getDocumentLogsWithMetadata', () => {
           '2024-12-11T00:00:00 01:00,2024-12-11T23:59:59 01:00',
         )
         const result = await computeDocumentLogsWithMetadataQuery({
-          workspaceId: workspace.id,
+          documentUuid: doc.documentUuid,
           filterOptions: {
             commitIds: [commit.id, commit2.id, anotherCommit.id],
             logSources: LOG_SOURCES,
@@ -243,7 +241,7 @@ describe('getDocumentLogsWithMetadata', () => {
       it('filter logs by createdAt only with from', async () => {
         const createdAt = parseSafeCreatedAtRange('2024-12-11T00:00:00 01:00')
         const result = await computeDocumentLogsWithMetadataQuery({
-          workspaceId: workspace.id,
+          documentUuid: doc.documentUuid,
           filterOptions: {
             commitIds: [commit.id, commit2.id, anotherCommit.id],
             logSources: LOG_SOURCES,
@@ -265,7 +263,6 @@ describe('getDocumentLogsWithMetadata', () => {
 
     it('paginate logs', async () => {
       const result = await computeDocumentLogsWithMetadataQuery({
-        workspaceId: project.workspaceId,
         documentUuid: doc.documentUuid,
         filterOptions: {
           commitIds: [commit.id, commit2.id],
@@ -282,7 +279,6 @@ describe('getDocumentLogsWithMetadata', () => {
 
     it('count logs', async () => {
       const result = await computeDocumentLogsWithMetadataCount({
-        workspaceId: project.workspaceId,
         documentUuid: doc.documentUuid,
         filterOptions: {
           commitIds: [commit.id, commit2.id],
@@ -349,7 +345,6 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     const result = await computeDocumentLogsWithMetadataQuery({
-      workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
       filterOptions: {
         commitIds: [commit1.id, commit2.id, draft.id],
@@ -415,7 +410,6 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     const result = await computeDocumentLogsWithMetadataQuery({
-      workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
       filterOptions: {
         commitIds: [commit1.id, draft1.id],
@@ -484,7 +478,6 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     const result = await computeDocumentLogsWithMetadataQuery({
-      workspaceId: project.workspaceId,
       documentUuid: document.documentUuid,
       filterOptions: {
         commitIds: [commit.id],
@@ -526,7 +519,6 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     const result = await computeDocumentLogsWithMetadataQuery({
-      workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
       filterOptions: {
         commitIds: [commit.id],
@@ -565,7 +557,6 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     const result = await computeDocumentLogsWithMetadataQuery({
-      workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
       filterOptions: {
         commitIds: [commit.id],
@@ -607,7 +598,6 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     const result = await computeDocumentLogsWithMetadataQuery({
-      workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
       filterOptions: {
         commitIds: [commit0.id, commit1.id],

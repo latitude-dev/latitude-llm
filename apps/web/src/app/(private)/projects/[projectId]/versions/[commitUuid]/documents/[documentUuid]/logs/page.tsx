@@ -99,7 +99,6 @@ export default async function DocumentPage({
   }
 
   const rows = await computeDocumentLogsWithMetadataQuery({
-    workspaceId: workspace.id,
     documentUuid,
     filterOptions,
     page,

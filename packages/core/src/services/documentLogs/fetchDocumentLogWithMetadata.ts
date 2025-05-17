@@ -36,6 +36,7 @@ export async function fetchDocumentLogWithMetadata(
   const type = documentLogUuid ? 'uuid' : 'id'
   if (identifier === undefined) return throwNotFound({ identifier, type })
 
+  // TODO: change this
   const scope = computeDocumentLogsWithMetadataQuery({ workspaceId }, db)
   let logs: DocumentLogWithMetadataAndError[] = []
   if (documentLogUuid) {

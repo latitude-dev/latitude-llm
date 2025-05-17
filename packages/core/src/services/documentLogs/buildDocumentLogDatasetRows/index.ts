@@ -25,6 +25,7 @@ async function findLogs({
   workspace: Workspace
   documentLogIds: number[]
 }) {
+  // TODO: remove
   const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspace.id)
   const logsWithErrors = await repo
     .findMany(documentLogIds, { ordering: [desc(documentLogs.createdAt)] })
