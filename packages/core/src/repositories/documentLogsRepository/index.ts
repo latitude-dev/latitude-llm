@@ -58,39 +58,6 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
     return Result.ok(result[0]!)
   }
 
-  async hasLogs(documentUuid: string) {
-    const result = await this.db
-      .select({
-        count: count(documentLogs.id),
-      })
-      .from(documentLogs)
-      .innerJoin(
-        commits,
-        and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
-      )
-      .innerJoin(projects, eq(projects.id, commits.projectId))
-      .leftJoin(
-        runErrors,
-        and(
-          eq(runErrors.errorableUuid, documentLogs.uuid),
-          eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
-        ),
-      )
-      .where(
-        and(
-          eq(projects.workspaceId, this.workspaceId),
-          eq(documentLogs.documentUuid, documentUuid),
-        ),
-      )
-      .$dynamic()
-
-    const firstValue = result[0]
-
-    if (!firstValue) return false
-
-    return firstValue.count > 0
-  }
-
   async totalCountSinceDate(minDate: Date) {
     const result = await this.db
       .select({
@@ -105,14 +72,7 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
           eq(projects.workspaceId, this.workspaceId),
         ),
       )
-      .leftJoin(
-        runErrors,
-        and(
-          eq(runErrors.errorableUuid, documentLogs.uuid),
-          eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
-        ),
-      )
-      .where(and(this.scopeFilter, gte(documentLogs.createdAt, minDate)))
+      .where(gte(documentLogs.createdAt, minDate))
 
     return result[0]?.count ?? 0
   }

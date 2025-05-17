@@ -74,34 +74,5 @@ describe('DocumentLogsRepository', () => {
       const data = await repo.findAll().then((r) => r.unwrap())
       expect(data.length).toBe(1)
     })
-
-    describe('hasLogs', () => {
-      it('returns true', async () => {
-        const repo = new DocumentLogsRepository(workspace.id)
-        const data = await repo.hasLogs(document.documentUuid)
-
-        expect(data).toBe(true)
-      })
-
-      it('returns false', async () => {
-        const {
-          documents: [document2],
-          commit: commit2,
-        } = await createProject({
-          providers: [{ type: Providers.OpenAI, name: 'openai' }],
-          documents: {
-            bar: helpers.createPrompt({
-              provider: 'openai',
-            }),
-          },
-        })
-
-        await createDocumentLog({ document: document2!, commit: commit2 })
-
-        const repo = new DocumentLogsRepository(workspace.id)
-        const data = await repo.hasLogs(document2!.documentUuid)
-        expect(data).toBe(false)
-      })
-    })
   })
 })

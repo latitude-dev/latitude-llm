@@ -13,7 +13,7 @@ import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/servic
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
 import { redirect } from 'next/navigation'
 
-import { DocumentLogsRepository } from '@latitude-data/core/repositories'
+import { countDocumentLogs } from '@latitude-data/core/services/documentLogs/countDocumentLogs'
 import { DocumentLogsPage } from './_components'
 import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
 import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseLogFilterParams'
@@ -55,10 +55,8 @@ export default async function DocumentPage({
   const { projectId: pjid, commitUuid, documentUuid } = await params
   const projectId = Number(pjid)
 
-  const documentLogsRepo = new DocumentLogsRepository(workspace.id)
-
-  const hasLogs = await documentLogsRepo.hasLogs(documentUuid)
-  if (!hasLogs) {
+  const logCount = await countDocumentLogs(documentUuid)
+  if (!logCount) {
     const uploadUrl = ROUTES.projects
       .detail({ id: projectId })
       .commits.detail({ uuid: commitUuid })
