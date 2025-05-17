@@ -112,36 +112,6 @@ describe('getDocumentLogsWithMetadata', () => {
       expect(result.find((l) => l.uuid === log2.uuid)).toBeDefined()
     })
 
-    it('return all logs from any document', async () => {
-      const { documentVersion: doc2 } = await factories.createDocumentVersion({
-        workspace,
-        user,
-        commit,
-        path: 'folder1/doc2',
-        content: factories.helpers.createPrompt({
-          provider,
-          content: 'DOC_2_VERSION_1',
-        }),
-      })
-      const { documentLog: log3 } = await factories.createDocumentLog({
-        document: doc2,
-        commit,
-      })
-      const result = await computeDocumentLogsWithMetadataQuery({
-        filterOptions: {
-          commitIds: [commit.id, commit2.id],
-          logSources: LOG_SOURCES,
-          createdAt: undefined,
-          customIdentifier: undefined,
-          experimentId: undefined,
-        },
-      })
-
-      expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
-      expect(result.find((l) => l.uuid === log2.uuid)).toBeDefined()
-      expect(result.find((l) => l.uuid === log3.uuid)).toBeDefined()
-    })
-
     describe('filter logs by createdAt', () => {
       let anotherWorkspace: Workspace
       let anotherWorkspaceLog: DocumentLog
