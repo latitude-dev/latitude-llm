@@ -5,11 +5,7 @@ import {
   DocumentVersion,
   ErrorableEntity,
   LogSources,
-  Project,
-  ProviderApiKey,
   Providers,
-  User,
-  Workspace,
 } from '../../browser'
 import * as factories from '../../tests/factories'
 import {
@@ -19,11 +15,7 @@ import {
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 describe('computeDocumentLogs', () => {
-  let workspace: Workspace
-  let user: User
   let doc: DocumentVersion
-  let project: Project
-  let provider: ProviderApiKey
   let commit: Commit
 
   beforeEach(async () => {
@@ -40,10 +32,6 @@ describe('computeDocumentLogs', () => {
         }),
       },
     })
-    workspace = setup.workspace
-    user = setup.user
-    project = setup.project
-    provider = setup.providers[0]!
     doc = setup.documents[0]!
     commit = setup.commit
   })
