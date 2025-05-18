@@ -188,9 +188,8 @@ export function AreaChart({
           stroke={color}
           fill='url(#chartGradient)'
           data={config.data}
-          dot={{
-            fill: color,
-          }}
+          dot={false}
+          activeDot={{ fill: color }}
         />
         <ChartTooltip
           content={
