@@ -12,6 +12,7 @@ import { Events, LatitudeEvent } from '../../../events/events'
 import { processWebhookPayload } from './utils/processWebhookPayload'
 import { WEBHOOK_EVENTS } from './processWebhookJob'
 import { findCommitById } from '../../../data-access/commits'
+import { DocumentLogsRepository } from '../../../repositories'
 
 export type ProcessIndividualWebhookJobData = {
   event: typeof events.$inferSelect
@@ -100,7 +101,11 @@ async function fetchProjectIdFromEvent(event: LatitudeEvent) {
     case 'commitPublished':
       return event.data.commit.projectId
     case 'documentLogCreated':
-      return await findCommitById({ id: event.data.commitId })
+      const { id, workspaceId } = event.data
+      const repo = new DocumentLogsRepository(workspaceId)
+      const log = await repo.find(id).then((r) => r.unwrap())
+
+      return await findCommitById({ id: log.commitId })
         .then((r) => r.unwrap())
         .then((c) => c.projectId)
     default:

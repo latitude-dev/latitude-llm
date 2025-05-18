@@ -172,6 +172,7 @@ describe('run chain error handling', () => {
       message: 'Something undefined happened',
       details: {
         errorCode: RunErrorCodes.Unknown,
+        stack: expect.any(String),
       },
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
