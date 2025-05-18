@@ -45,6 +45,7 @@ export async function computeDocumentLogsWithMetadata(
   db = database,
 ) {
   const conditions = [
+    isNull(commits.deletedAt),
     eq(documentLogs.documentUuid, document.documentUuid),
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
@@ -64,10 +65,7 @@ export async function computeDocumentLogsWithMetadata(
       commit: getTableColumns(commits),
     })
     .from(documentLogs)
-    .innerJoin(
-      commits,
-      and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
-    )
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .where(and(...conditions))
     .orderBy(...ordering)
     .limit(parseInt(pageSize))

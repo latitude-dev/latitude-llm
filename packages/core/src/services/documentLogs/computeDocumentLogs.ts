@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, SQL, sql } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, isNull, SQL, sql } from 'drizzle-orm'
 
 import {
   DEFAULT_PAGINATION_SIZE,
@@ -41,8 +41,15 @@ export function computeDocumentLogs(
   ].filter(Boolean) as SQL<unknown>[]
 
   return db
-    .select()
+    .select(getTableColumns(documentLogs))
     .from(documentLogs)
+    .leftJoin(
+      runErrors,
+      and(
+        eq(runErrors.errorableUuid, documentLogs.uuid),
+        eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+      ),
+    )
     .where(and(...conditions))
     .orderBy(...ordering)
     .limit(parseInt(pageSize))
