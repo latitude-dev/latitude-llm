@@ -4,7 +4,7 @@ import { Providers } from '@latitude-data/constants'
 import * as factories from '../../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../../tests/factories'
 import { identityHashAlgorithm } from '../../datasets/utils'
-import { buildDocumentLogDatasetRows } from './index'
+import { buildDocumentLogDataset } from './index'
 import { ProviderLogsRepository } from '../../../repositories'
 import { Dataset, DocumentLog, ErrorableEntity } from '../../../browser'
 import getTestDisk from '../../../tests/testDrive'
@@ -15,7 +15,7 @@ let setup: FactoryCreateProjectReturn
 let documentLog: DocumentLog
 let dataset: Dataset
 
-describe('buildDocumentLogDatasetRows', async () => {
+describe('buildDocumentLogDataset', async () => {
   beforeAll(async () => {
     setup = await factories.createProject({
       providers: [
@@ -55,7 +55,7 @@ describe('buildDocumentLogDatasetRows', async () => {
     })
 
     it('build correct dataset rows', async () => {
-      const result = await buildDocumentLogDatasetRows({
+      const result = await buildDocumentLogDataset({
         workspace: setup.workspace,
         documentLogIds: [documentLog.id],
         hashAlgorithm: identityHashAlgorithm,
@@ -110,7 +110,7 @@ describe('buildDocumentLogDatasetRows', async () => {
             age: 49,
           },
         })
-      const result = await buildDocumentLogDatasetRows({
+      const result = await buildDocumentLogDataset({
         workspace: setup.workspace,
         documentLogIds: [documentLog.id, anotherDocumentLog.id],
         hashAlgorithm: identityHashAlgorithm,
@@ -184,7 +184,7 @@ describe('buildDocumentLogDatasetRows', async () => {
       })
 
       it('build correct dataset rows', async () => {
-        const result = await buildDocumentLogDatasetRows({
+        const result = await buildDocumentLogDataset({
           workspace: setup.workspace,
           dataset,
           documentLogIds: [documentLog.id],
@@ -264,7 +264,7 @@ describe('buildDocumentLogDatasetRows', async () => {
         document: another.documents[0]!,
         commit: another.commit,
       })
-    const result = await buildDocumentLogDatasetRows({
+    const result = await buildDocumentLogDataset({
       workspace: setup.workspace,
       documentLogIds: [anotherWorkspaceLog.id],
       hashAlgorithm: identityHashAlgorithm,
@@ -306,7 +306,7 @@ describe('buildDocumentLogDatasetRows', async () => {
       code: RunErrorCodes.Unknown,
       message: 'Error message',
     })
-    const result = await buildDocumentLogDatasetRows({
+    const result = await buildDocumentLogDataset({
       workspace: setup.workspace,
       documentLogIds: [logWithErrors.id],
       hashAlgorithm: identityHashAlgorithm,

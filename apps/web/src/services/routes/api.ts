@@ -301,8 +301,8 @@ export const API_ROUTES = {
   },
   datasets: {
     root: '/api/datasets',
-    previewLogs: {
-      root: '/api/datasets/preview-logs',
+    previewLog: {
+      root: '/api/datasets/preview-log',
     },
   },
   datasetsRows: {

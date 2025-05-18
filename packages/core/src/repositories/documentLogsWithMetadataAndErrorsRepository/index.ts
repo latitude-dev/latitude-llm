@@ -1,4 +1,14 @@
-import { and, eq, getTableColumns, isNull, sql, sum } from 'drizzle-orm'
+import {
+  and,
+  eq,
+  getTableColumns,
+  inArray,
+  isNull,
+  sql,
+  sum,
+  SQL,
+  desc,
+} from 'drizzle-orm'
 
 import { ErrorableEntity } from '../../browser'
 import {
@@ -13,6 +23,7 @@ import Repository from '../repositoryV2'
 import { DocumentLogWithMetadataAndError } from '../runErrors/documentLogsRepository'
 import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
+import { PromisedResult } from '../../lib/Transaction'
 
 export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<DocumentLogWithMetadataAndError> {
   get scopeFilter() {
@@ -82,5 +93,21 @@ export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<Docu
     }
 
     return Result.ok(result[0]!)
+  }
+
+  async findManyWithoutErrors(
+    ids: number[],
+    ordering: SQL<unknown>[] = [desc(documentLogs.createdAt)],
+  ): PromisedResult<DocumentLogWithMetadataAndError[]> {
+    const result: DocumentLogWithMetadataAndError[] = await this.scope
+      .where(
+        and(
+          this.scopeFilter,
+          inArray(documentLogs.id, ids),
+          isNull(runErrors.message),
+        ),
+      )
+      .orderBy(...ordering)
+    return Result.ok(result)
   }
 }

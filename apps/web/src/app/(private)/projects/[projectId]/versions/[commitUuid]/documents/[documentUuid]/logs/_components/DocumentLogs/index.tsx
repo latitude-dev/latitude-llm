@@ -26,9 +26,10 @@ import { AggregationPanels } from './AggregationPanels'
 import { DocumentLogInfo } from './DocumentLogInfo'
 import { DocumentLogAnnotation } from './DocumentLogInfo/Annotation'
 import { DocumentLogsTable } from './DocumentLogsTable'
-import { DownloadLogsButton } from './DownloadLogsButton'
+import { DownloadLogsModal } from './DownloadLogsModal'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
-import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
+import { useSaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal/useSaveLogsAsDatasetModal'
+import { useDownloadLogsModal } from './DownloadLogsModal/useDownloadLogsModal'
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -87,7 +88,12 @@ export function DocumentLogs({
   const selectableState = useSelectableRows({
     rowIds: documentLogIds,
   })
-  const previewLogsState = useSelectedLogs({ selectableState })
+  const saveLogsAsDatasetModalState = useSaveLogsAsDatasetModal({
+    selectableState,
+  })
+  const downloadLogsModalState = useDownloadLogsModal({
+    selectableState,
+  })
 
   const manualEvaluations = useMemo(
     () =>
@@ -193,11 +199,18 @@ export function DocumentLogs({
               <Button
                 fancy
                 disabled={selectableState.selectedCount === 0}
-                onClick={previewLogsState.onClickShowPreview}
+                onClick={saveLogsAsDatasetModalState.onClickShowPreview}
               >
                 Save logs to dataset
               </Button>
-              <DownloadLogsButton selectableState={selectableState} />
+              <Button
+                disabled={selectableState.selectedCount === 0}
+                fancy
+                variant='outline'
+                onClick={downloadLogsModalState.showModal}
+              >
+                Download Logs
+              </Button>
               <Button
                 fancy
                 variant='outline'
@@ -208,7 +221,8 @@ export function DocumentLogs({
             </div>
           </FloatingPanel>
         </div>
-        <SaveLogsAsDatasetModal {...previewLogsState} />
+        <DownloadLogsModal {...downloadLogsModalState} />
+        <SaveLogsAsDatasetModal {...saveLogsAsDatasetModalState} />
       </div>
     </div>
   )

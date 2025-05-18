@@ -6,13 +6,6 @@ import Repository from '../repositoryV2'
 import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
 
-export type DocumentLogWithMetadata = DocumentLog & {
-  commit: Commit
-  tokens: number | null
-  duration: number | null
-  costInMillicents: number | null
-}
-
 const tt = getTableColumns(documentLogs)
 
 export class DocumentLogsRepository extends Repository<DocumentLog> {

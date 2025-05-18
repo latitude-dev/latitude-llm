@@ -4,7 +4,10 @@ import Transaction from './../../lib/Transaction'
 import { findOrCreateDataset } from './findOrCreate'
 import { User, Workspace } from '../../browser'
 import { HashAlgorithmFn } from './utils'
-import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
+import {
+  buildDocumentLogDataset,
+  ColumnFilters,
+} from '../documentLogs/buildDocumentLogDataset'
 import { updateDataset } from './update'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
 export const createDatasetFromLogs = async (
@@ -19,6 +22,7 @@ export const createDatasetFromLogs = async (
     data: {
       name: string
       documentLogIds: number[]
+      columnFilters?: ColumnFilters
     }
     hashAlgorithm?: HashAlgorithmFn
   },
@@ -31,9 +35,10 @@ export const createDatasetFromLogs = async (
   if (result.error) return result
 
   const dataset = result.value
-  const builtLogsResult = await buildDocumentLogDatasetRows({
+  const builtLogsResult = await buildDocumentLogDataset({
     workspace,
     documentLogIds: data.documentLogIds,
+    columnFilters: data.columnFilters,
     dataset,
     hashAlgorithm,
   })

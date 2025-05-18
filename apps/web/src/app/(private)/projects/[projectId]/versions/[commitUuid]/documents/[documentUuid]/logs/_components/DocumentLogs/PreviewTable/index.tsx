@@ -9,25 +9,31 @@ import {
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import { cn } from '@latitude-data/web-ui/utils'
-import { type OutputItem } from '../useSelectedLogs'
 import { Column } from '@latitude-data/core/schema'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
+import { OutputItem } from '$/stores/previewLogs'
+import { useCallback } from 'react'
 
 function PreviewCell({
   cell,
   column,
   lineClamp,
   oldData = false,
+  className,
 }: {
   cell: string
   column: Column
   lineClamp: 1 | 3
   oldData?: boolean
+  className?: string
 }) {
   const { backgroundCssClasses } = useDatasetRole()
   return (
-    <TableCell verticalBorder className={backgroundCssClasses[column.role]}>
+    <TableCell
+      verticalBorder
+      className={cn(backgroundCssClasses[column.role], className)}
+    >
       <Text.H5
         color={oldData ? 'foregroundMuted' : 'foreground'}
         wordBreak='breakAll'
@@ -42,19 +48,48 @@ function PreviewCell({
 
 export function PreviewTable({
   previewData,
+  selectedStaticColumns,
+  selectedParameterColumns,
+  onSelectStaticColumn,
+  onSelectParameterColumn,
+  selectable = false,
   isLoading,
+  subtitle,
 }: {
   previewData: OutputItem
   isLoading: boolean
+  subtitle?: string
+  selectedStaticColumns?: string[]
+  selectedParameterColumns?: string[]
+  selectable?: boolean
+  onSelectStaticColumn?: (column: string) => void
+  onSelectParameterColumn?: (column: string) => void
 }) {
+  const isColumnDisabled = (column: Column) => {
+    if (!selectable) return false
+    if (column.role === 'parameter') {
+      return !selectedParameterColumns?.includes(column.name)
+    } else if (column.role === 'label' || column.role === 'metadata') {
+      return !selectedStaticColumns?.includes(column.name)
+    }
+  }
+
+  const handleColumnClick = useCallback(
+    (column: Column) => {
+      if (column.role === 'parameter') {
+        onSelectParameterColumn?.(column.name)
+      } else if (column.role === 'label' || column.role === 'metadata') {
+        onSelectStaticColumn?.(column.name)
+      }
+    },
+    [onSelectParameterColumn, onSelectStaticColumn],
+  )
+
   const { backgroundCssClasses } = useDatasetRole()
   return (
     <div className='flex flex-col gap-y-2'>
       <Text.H4>Logs preview</Text.H4>
-      <Text.H6 color='foregroundMuted'>
-        This is a preview of existing items in the dataset if you picked one.
-        And the new items from the logs you selected.
-      </Text.H6>
+      {subtitle && <Text.H6 color='foregroundMuted'>{subtitle}</Text.H6>}
       {isLoading ? (
         <TableSkeleton rows={10} cols={5} maxHeight={320} />
       ) : (
@@ -66,7 +101,13 @@ export function PreviewTable({
                   <TableHead
                     verticalBorder
                     key={column.identifier}
-                    className={backgroundCssClasses[column.role]}
+                    className={cn(
+                      'select-none transition-all',
+                      backgroundCssClasses[column.role],
+                      isColumnDisabled(column) && 'opacity-20',
+                      selectable && 'cursor-pointer',
+                    )}
+                    onClick={() => selectable && handleColumnClick(column)}
                   >
                     <DatasetHeadText text={column.name} role={column.role} />
                   </TableHead>
@@ -108,6 +149,11 @@ export function PreviewTable({
                     cell={cell}
                     lineClamp={1}
                     column={previewData.columns[index]!}
+                    className={cn(
+                      'transition-opacity',
+                      isColumnDisabled(previewData.columns[index]!) &&
+                        'opacity-20',
+                    )}
                   />
                 ))}
               </TableRow>

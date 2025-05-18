@@ -1,6 +1,9 @@
 import { Result } from '../../lib/Result'
 import { Dataset, Workspace } from '../../browser'
-import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
+import {
+  buildDocumentLogDataset,
+  ColumnFilters,
+} from '../documentLogs/buildDocumentLogDataset'
 import { DatasetRowsRepository, DatasetsRepository } from '../../repositories'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 
@@ -19,7 +22,7 @@ async function getFirstRowsFromDataset({
   return rows.map((row) => row.rowData)
 }
 
-export const previewDatasetFromLogs = async ({
+export const previewDatasetFromLog = async ({
   workspace,
   data,
   hashAlgorithm = nanoidHashAlgorithm,
@@ -28,16 +31,18 @@ export const previewDatasetFromLogs = async ({
   data: {
     name: string
     documentLogIds: number[]
+    columnFilters?: ColumnFilters
   }
   hashAlgorithm?: HashAlgorithmFn
 }) => {
   const repo = new DatasetsRepository(workspace.id)
   const datasets = await repo.findByName(data.name)
   const dataset = datasets[0]
-  const result = await buildDocumentLogDatasetRows({
+  const result = await buildDocumentLogDataset({
     workspace,
     documentLogIds: data.documentLogIds,
     dataset,
+    columnFilters: data.columnFilters,
     hashAlgorithm,
   })
   const datasetRows = await getFirstRowsFromDataset({ dataset })

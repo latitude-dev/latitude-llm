@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid'
 
 import {
   Commit,
+  DocumentLog,
   DocumentVersion,
   LogSources,
   ProviderLog,
@@ -11,7 +12,10 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
-import { ProviderApiKeysRepository } from '../../repositories'
+import {
+  DocumentLogWithMetadataAndError,
+  ProviderApiKeysRepository,
+} from '../../repositories'
 import { documentLogs } from '../../schema'
 import { Config } from '../../services/ai'
 import { createDocumentLog as ogCreateDocumentLog } from '../../services/documentLogs/create'
@@ -168,5 +172,54 @@ export async function createDocumentLog({
   return {
     providerLogs,
     documentLog,
+  }
+}
+
+export async function createDocumentLogWithMetadataAndError({
+  document,
+  commit,
+  parameters,
+  customIdentifier,
+  source,
+  experimentId,
+  totalDuration,
+  createdAt,
+  skipProviderLogs,
+  automaticProvidersGeneratedAt,
+}: IDocumentLogData): Promise<DocumentLogWithMetadataAndError> {
+  const { providerLogs, documentLog } = await createDocumentLog({
+    document,
+    commit,
+    parameters,
+    customIdentifier,
+    source,
+    experimentId,
+    totalDuration,
+    createdAt,
+    skipProviderLogs,
+    automaticProvidersGeneratedAt,
+  })
+  const tokens = providerLogs.reduce((acc, log) => acc + (log?.tokens ?? 0), 0)
+  const costInMillicents = providerLogs.reduce(
+    (acc, log) => acc + (log?.costInMillicents ?? 0),
+    0,
+  )
+  const duration = providerLogs.reduce(
+    (acc, log) => acc + (log?.duration ?? 0),
+    0,
+  )
+  const error = {
+    code: null,
+    message: null,
+    details: null,
+  }
+
+  return {
+    ...documentLog,
+    commit,
+    tokens,
+    costInMillicents,
+    duration,
+    error,
   }
 }
