@@ -3,42 +3,32 @@ import { and, desc, eq, isNull, SQL, sql } from 'drizzle-orm'
 import {
   DEFAULT_PAGINATION_SIZE,
   DocumentLogFilterOptions,
+  DocumentVersion,
   ErrorableEntity,
 } from '../../browser'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
-import { DocumentLogsRepository } from '../../repositories'
-import {
-  commits,
-  documentLogs,
-  projects,
-  runErrors,
-  workspaces,
-} from '../../schema'
+import { commits, documentLogs, runErrors } from '../../schema'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
-export function computeDocumentLogsQuery(
+export function computeDocumentLogs(
   {
-    workspaceId,
-    documentUuid,
+    document,
     page = '1',
     pageSize = String(DEFAULT_PAGINATION_SIZE),
     filterOptions,
   }: {
-    workspaceId: number
-    documentUuid?: string
+    document: DocumentVersion
     page?: string
     pageSize?: string
     filterOptions?: DocumentLogFilterOptions
   },
   db = database,
 ) {
-  const repo = new DocumentLogsRepository(workspaceId, db)
   const offset = calculateOffset(page, pageSize)
   const conditions = [
     isNull(runErrors.id),
-    eq(projects.workspaceId, workspaceId),
-    documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
+    eq(documentLogs.documentUuid, document.documentUuid),
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
   const ordering = [
@@ -50,7 +40,9 @@ export function computeDocumentLogsQuery(
     desc(documentLogs.createdAt),
   ].filter(Boolean) as SQL<unknown>[]
 
-  return repo.scope
+  return db
+    .select()
+    .from(documentLogs)
     .where(and(...conditions))
     .orderBy(...ordering)
     .limit(parseInt(pageSize))
@@ -59,20 +51,18 @@ export function computeDocumentLogsQuery(
 
 export async function computeDocumentLogsCount(
   {
-    workspaceId,
-    documentUuid,
+    document,
     filterOptions,
   }: {
-    workspaceId: number
-    documentUuid: string
+    document: DocumentVersion
     filterOptions?: DocumentLogFilterOptions
   },
   db = database,
 ) {
   const conditions = [
     isNull(runErrors.id),
-    eq(workspaces.id, workspaceId),
-    documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
+    isNull(commits.deletedAt),
+    eq(documentLogs.documentUuid, document.documentUuid),
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
 
@@ -81,12 +71,7 @@ export async function computeDocumentLogsCount(
       count: sql`count(*)`.mapWith(Number).as('total_count'),
     })
     .from(documentLogs)
-    .innerJoin(
-      commits,
-      and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
-    )
-    .innerJoin(projects, eq(projects.id, commits.projectId))
-    .innerJoin(workspaces, eq(workspaces.id, projects.workspaceId))
+    .innerJoin(commits, and(eq(commits.id, documentLogs.commitId)))
     .leftJoin(
       runErrors,
       and(

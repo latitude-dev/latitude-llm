@@ -1,12 +1,13 @@
-import { eq } from 'drizzle-orm'
-
 import { database } from '../../client'
-import { DocumentLogWithMetadataAndError } from '../../repositories'
-import { documentLogs } from '../../schema'
-import { computeDocumentLogsWithMetadataQuery } from './computeDocumentLogsWithMetadata'
+import {
+  DocumentLogsRepository,
+  DocumentLogWithMetadataAndError,
+} from '../../repositories'
 import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
 import { TypedResult } from './../../lib/Result'
+import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
+import { DocumentLog } from '@latitude-data/constants'
 
 function throwNotFound({
   identifier,
@@ -36,16 +37,20 @@ export async function fetchDocumentLogWithMetadata(
   const type = documentLogUuid ? 'uuid' : 'id'
   if (identifier === undefined) return throwNotFound({ identifier, type })
 
-  const scope = computeDocumentLogsWithMetadataQuery({ workspaceId }, db)
-  let logs: DocumentLogWithMetadataAndError[] = []
+  const repo = new DocumentLogsRepository(workspaceId, db)
+  let documentLog: DocumentLog | undefined = undefined
   if (documentLogUuid) {
-    logs = await scope.where(eq(documentLogs.uuid, documentLogUuid)).limit(1)
+    documentLog = await repo.findByUuid(documentLogUuid).then((r) => r.unwrap())
   } else if (documentLogId) {
-    logs = await scope.where(eq(documentLogs.id, documentLogId)).limit(1)
+    documentLog = await repo.find(documentLogId).then((r) => r.unwrap())
   }
-
-  const documentLog = logs[0]
   if (!documentLog) return throwNotFound({ identifier, type })
 
-  return Result.ok(documentLog)
+  // TODO: change this
+  const documentLogWithMetadata = await computeDocumentLogWithMetadata(
+    documentLog,
+    db,
+  ).then((r) => r.unwrap())
+
+  return Result.ok(documentLogWithMetadata)
 }

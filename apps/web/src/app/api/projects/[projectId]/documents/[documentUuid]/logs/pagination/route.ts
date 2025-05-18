@@ -7,6 +7,7 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { ROUTES } from '$/services/routes'
 import { NextRequest, NextResponse } from 'next/server'
 import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
+import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 
 function pageUrl(params: {
   projectId: string
@@ -29,8 +30,9 @@ export const GET = errorHandler(
       }: {
         params: {
           documentUuid: string
+          // FIXME: This is broken! CommitUuid is not a non-existing parameter (check the route)
           commitUuid: string
-          projectId: number
+          projectId: string
         }
         workspace: Workspace
       },
@@ -41,18 +43,26 @@ export const GET = errorHandler(
       const queryFn = excludeErrors
         ? computeDocumentLogsCount
         : computeDocumentLogsWithMetadataCount
+      const { documentUuid, commitUuid, projectId } = params
+      const repo = new DocumentVersionsRepository(workspace.id)
+      const document = await repo
+        .getSomeDocumentByUuid({
+          projectId: Number(projectId),
+          documentUuid,
+        })
+        .then((r) => r.unwrap())
 
       const count = await queryFn({
-        workspaceId: workspace.id,
-        documentUuid: params.documentUuid,
+        document,
         filterOptions: queryParams.filterOptions,
       })
 
+      // FIXME: This is broken! CommitUuid is not a non-existing parameter (check the route)
       const pagination = buildPagination({
         baseUrl: pageUrl({
-          projectId: params.projectId.toString(),
-          commitUuid: params.commitUuid,
-          documentUuid: params.documentUuid,
+          commitUuid,
+          projectId,
+          documentUuid,
         }),
         count,
         page: +queryParams.page,
