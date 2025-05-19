@@ -59,12 +59,17 @@ export function ExperimentsTable({
 
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
 
-  const { data: experiments, isLoading } = useExperiments({
-    projectId: project.id,
-    documentUuid: document.documentUuid,
-    page: Number(page),
-    pageSize: Number(pageSize),
-  })
+  const { data: experiments, isLoading } = useExperiments(
+    {
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+      page: Number(page),
+      pageSize: Number(pageSize),
+    },
+    {
+      refreshInterval: 5000, // 5 seconds
+    },
+  )
 
   const { data: commits, isLoading: isLoadingCommits } = useCommitsFromProject(
     project.id,

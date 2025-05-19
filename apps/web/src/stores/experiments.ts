@@ -60,25 +60,25 @@ export function useExperiments(
     event: 'experimentStatus',
     onMessage: (message: EventArgs<'experimentStatus'>) => {
       if (!message) return
+      if (page > 1) {
+        // Do not add any new experiments if we are not on the first page
+        return
+      }
+
       const { experiment: updatedExperiment } = message
       if (updatedExperiment.documentUuid !== documentUuid) return
 
       mutate(
         (prev) => {
           if (!prev) return prev
+
           const prevExperimentIdx = prev.findIndex(
             (exp) => exp.uuid === updatedExperiment.uuid,
           )
-
           if (prevExperimentIdx !== -1) {
             // Substitute the previous experiment with the updated one, without moving it in the array
             prev[prevExperimentIdx] = updatedExperiment
             return prev
-          }
-
-          if (page > 1) {
-            // Do not add any new experiments if we are not on the first page
-            return
           }
 
           return [updatedExperiment, ...prev]
