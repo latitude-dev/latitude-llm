@@ -1,18 +1,12 @@
-import { and, avg, count, eq, isNull, sql, sum } from 'drizzle-orm'
+import { and, count, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 
 import {
   DocumentLogFilterOptions,
+  DocumentVersion,
   ErrorableEntity,
-  Workspace,
 } from '../../browser'
 import { database } from '../../client'
-import {
-  commits,
-  documentLogs,
-  projects,
-  providerLogs,
-  runErrors,
-} from '../../schema'
+import { commits, documentLogs, providerLogs, runErrors } from '../../schema'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export type DocumentLogsAggregations = {
@@ -28,51 +22,32 @@ export type DocumentLogsAggregations = {
 
 export async function computeDocumentLogsAggregations(
   {
-    workspace,
-    documentUuid,
+    document,
     filterOptions,
   }: {
-    workspace: Workspace
-    documentUuid: string
+    document: DocumentVersion
     filterOptions?: DocumentLogFilterOptions
   },
   db = database,
 ): Promise<DocumentLogsAggregations> {
   const conditions = [
-    eq(projects.workspaceId, workspace.id),
     isNull(runErrors.id),
-    documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
+    isNull(commits.deletedAt),
+    eq(documentLogs.documentUuid, document.documentUuid),
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
 
-  // TODO(perf): This query is very slow. We should optimize it.
-  const baseQuery = db
+  const { totalCount, averageDuration, medianDuration } = await db
     .select({
       totalCount: count(documentLogs.id),
-      totalTokens: sum(providerLogs.tokens).mapWith(Number),
-      totalCostInMillicents: sum(providerLogs.costInMillicents).mapWith(Number),
-      averageTokens: avg(providerLogs.tokens).mapWith(Number),
-      averageCostInMillicents: avg(providerLogs.costInMillicents).mapWith(
-        Number,
-      ),
-      medianCostInMillicents: sql<number>`
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${providerLogs.costInMillicents})
-      `.mapWith(Number),
-      averageDuration: avg(documentLogs.duration).mapWith(Number),
+      averageDuration:
+        sql<number>`coalesce(avg(${documentLogs.duration}), 0)`.mapWith(Number),
       medianDuration: sql<number>`
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${documentLogs.duration})
+        COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${documentLogs.duration}), 0)
       `.mapWith(Number),
     })
     .from(documentLogs)
-    .innerJoin(
-      commits,
-      and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
-    )
-    .leftJoin(
-      projects,
-      and(isNull(projects.deletedAt), eq(projects.id, commits.projectId)),
-    )
-    .leftJoin(providerLogs, eq(providerLogs.documentLogUuid, documentLogs.uuid))
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .leftJoin(
       runErrors,
       and(
@@ -81,17 +56,73 @@ export async function computeDocumentLogsAggregations(
       ),
     )
     .where(and(...conditions))
+    .then(
+      (r) =>
+        r[0] ?? {
+          totalCount: 0,
+          averageDuration: 0,
+          medianDuration: 0,
+        },
+    )
 
-  const result = await baseQuery.limit(1)
+  const {
+    totalTokens,
+    totalCostInMillicents,
+    averageTokens,
+    averageCostInMillicents,
+    medianCostInMillicents,
+  } = await db
+    .select({
+      totalTokens:
+        sql<number>`coalesce(sum(${providerLogs.tokens}), 0)`.mapWith(Number),
+      totalCostInMillicents:
+        sql<number>`coalesce(sum(${providerLogs.costInMillicents}), 0)`.mapWith(
+          Number,
+        ),
+      averageTokens:
+        sql<number>`coalesce(avg(${providerLogs.tokens}), 0)`.mapWith(Number),
+      averageCostInMillicents:
+        sql<number>`coalesce(avg(${providerLogs.costInMillicents}), 0)`.mapWith(
+          Number,
+        ),
+      medianCostInMillicents: sql<number>`
+        COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${providerLogs.costInMillicents}), 0)
+      `.mapWith(Number),
+    })
+    .from(providerLogs)
+    .innerJoin(
+      documentLogs,
+      eq(documentLogs.uuid, providerLogs.documentLogUuid),
+    )
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
+    .where(
+      and(
+        eq(documentLogs.documentUuid, document.documentUuid),
+        isNull(commits.deletedAt),
+        isNotNull(providerLogs.tokens),
+        isNotNull(providerLogs.costInMillicents),
+        filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
+      ),
+    )
+    .then(
+      (r) =>
+        r[0] ?? {
+          totalTokens: 0,
+          totalCostInMillicents: 0,
+          averageTokens: 0,
+          averageCostInMillicents: 0,
+          medianCostInMillicents: 0,
+        },
+    )
 
   return {
-    totalCount: result[0]?.totalCount ?? 0,
-    totalTokens: result[0]?.totalTokens ?? 0,
-    totalCostInMillicents: result[0]?.totalCostInMillicents ?? 0,
-    averageTokens: result[0]?.averageTokens ?? 0,
-    averageCostInMillicents: result[0]?.averageCostInMillicents ?? 0,
-    medianCostInMillicents: result[0]?.medianCostInMillicents ?? 0,
-    averageDuration: result[0]?.averageDuration ?? 0,
-    medianDuration: result[0]?.medianDuration ?? 0,
+    totalCount,
+    totalTokens,
+    totalCostInMillicents,
+    averageTokens,
+    averageCostInMillicents,
+    medianCostInMillicents,
+    averageDuration,
+    medianDuration,
   }
 }
