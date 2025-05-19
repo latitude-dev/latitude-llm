@@ -18,6 +18,7 @@ export class WebsocketClient {
       path: '/websocket',
       auth: { token },
       transports: ['websocket'],
+      retries: 10,
     })
     const instance = new WebsocketClient(websockets)
     WebsocketClient.instance = instance

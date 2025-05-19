@@ -1,13 +1,10 @@
 import { createExperimentAction } from '$/actions/experiments'
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import { Experiment, ExperimentDto } from '@latitude-data/core/browser'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
+import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
 const EMPTY_ARRAY: [] = []
@@ -55,40 +52,6 @@ export function useExperiments(
     countFetcher,
     opts,
   )
-
-  useSockets({
-    event: 'experimentStatus',
-    onMessage: (message: EventArgs<'experimentStatus'>) => {
-      if (!message) return
-      if (page > 1) {
-        // Do not add any new experiments if we are not on the first page
-        return
-      }
-
-      const { experiment: updatedExperiment } = message
-      if (updatedExperiment.documentUuid !== documentUuid) return
-
-      mutate(
-        (prev) => {
-          if (!prev) return prev
-
-          const prevExperimentIdx = prev.findIndex(
-            (exp) => exp.uuid === updatedExperiment.uuid,
-          )
-          if (prevExperimentIdx !== -1) {
-            // Substitute the previous experiment with the updated one, without moving it in the array
-            prev[prevExperimentIdx] = updatedExperiment
-            return prev
-          }
-
-          return [updatedExperiment, ...prev]
-        },
-        {
-          revalidate: false,
-        },
-      )
-    },
-  })
 
   const { execute: create, isPending: isCreating } = useLatitudeAction(
     createExperimentAction,
@@ -153,11 +116,15 @@ export function useExperiments(
     },
   )
 
-  return {
-    count,
-    data,
-    isLoading,
-    create,
-    isCreating,
-  }
+  return useMemo(
+    () => ({
+      mutate,
+      count,
+      data,
+      isLoading,
+      create,
+      isCreating,
+    }),
+    [mutate, count, data, isLoading, create, isCreating],
+  )
 }
