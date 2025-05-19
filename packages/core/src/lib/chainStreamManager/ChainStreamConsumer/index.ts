@@ -34,6 +34,9 @@ function parseError(e: unknown) {
       code: RunErrorCodes.Unknown,
       message: error.message,
       stack: error.stack,
+      details: {
+        stack: error.stack || '',
+      },
     })
   }
 

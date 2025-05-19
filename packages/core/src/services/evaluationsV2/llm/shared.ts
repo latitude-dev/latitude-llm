@@ -184,9 +184,15 @@ export async function runPrompt<
     response = await result.lastResponse
   } catch (error) {
     if (error instanceof ChainError) throw error
+
+    const e = error as Error
+
     throw new ChainError({
       code: RunErrorCodes.Unknown,
-      message: (error as Error).message,
+      message: e.message,
+      details: {
+        stack: e.stack || '',
+      },
     })
   }
 
