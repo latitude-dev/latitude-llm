@@ -31,8 +31,10 @@ export {
   LogSources,
   StreamEventTypes,
   type LegacyChainEvent,
+  type PromptConfig,
 } from '@latitude-data/constants'
 export * from '@latitude-data/constants/evaluations'
+export * from '@latitude-data/constants/tracing'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
@@ -370,30 +372,6 @@ export interface ProjectStats {
   totalEvaluationResults: number
   costPerEvaluation: Record<string, number>
 }
-
-export enum SpanKind {
-  // Default type. Represents operations that happen within a service
-  // Example: Database queries, file I/O, or business logic processing
-  Internal = 'internal',
-
-  // Represents the handling of an incoming request from a client
-  // Example: HTTP server handling a request, gRPC service receiving a call
-  Server = 'server',
-
-  // Represents outgoing requests to a remote service
-  // Example: HTTP client making an API call, gRPC client initiating a call
-  Client = 'client',
-
-  // Represents the creation/enqueuing of a message to be processed later
-  // Example: Publishing a message to a message queue, sending to a stream
-  Producer = 'producer',
-
-  // Represents the processing of a message from a message queue/stream
-  // Example: Processing a message from RabbitMQ, handling a Kafka message
-  Consumer = 'consumer',
-}
-
-export type SpanMetadataTypes = 'default' | 'generation'
 
 // TODO: Review if it's used
 export type CsvData = {
