@@ -4,6 +4,7 @@ import { findDocumentFromLog } from '../../../../data-access/documentLogs'
 import { Result, TypedResult } from '../../../../lib/Result'
 import { findLastProviderLogFromDocumentLogUuid } from '../../../../data-access'
 import { buildProviderLogResponse } from '../../../../services/providerLogs'
+import { DocumentLogsRepository } from '../../../../repositories'
 
 export async function processWebhookPayload(
   event: LatitudeEvent,
@@ -11,20 +12,23 @@ export async function processWebhookPayload(
   try {
     switch (event.type) {
       case 'documentLogCreated':
+        const { id, workspaceId } = event.data
+        const repo = new DocumentLogsRepository(workspaceId)
+        const log = await repo.find(id).then((r) => r.unwrap())
         const providerLog = await findLastProviderLogFromDocumentLogUuid(
-          event.data.uuid,
+          log.uuid,
         )
 
         return Result.ok({
           eventType: event.type,
           payload: {
-            prompt: await findDocumentFromLog(event.data),
-            uuid: event.data.uuid,
-            parameters: event.data.parameters,
-            customIdentifier: event.data.customIdentifier,
-            duration: event.data.duration,
-            source: event.data.source,
-            commitId: event.data.commitId,
+            prompt: await findDocumentFromLog(log),
+            uuid: log.uuid,
+            parameters: log.parameters,
+            customIdentifier: log.customIdentifier,
+            duration: log.duration,
+            source: log.source,
+            commitId: log.commitId,
             messages: providerLog?.messages,
             toolCalls: providerLog?.toolCalls,
             response: providerLog

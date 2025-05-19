@@ -108,7 +108,7 @@ export type ExperimentVariantsCreatedEvent = LatitudeEventGeneric<
 
 export type ProviderLogCreatedEvent = LatitudeEventGeneric<
   'providerLogCreated',
-  ProviderLog
+  Pick<ProviderLog, 'id'> & { workspaceId: number }
 >
 
 export type StreamCommonData = {
@@ -181,7 +181,7 @@ export type CommitCreatedEvent = LatitudeEventGeneric<
 
 export type DocumentLogCreatedEvent = LatitudeEventGeneric<
   'documentLogCreated',
-  DocumentLog & { workspaceId: number }
+  Pick<DocumentLog, 'id'> & { workspaceId: number }
 >
 
 export type DocumentSuggestionCreatedEvent = LatitudeEventGeneric<

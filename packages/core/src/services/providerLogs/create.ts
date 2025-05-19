@@ -100,7 +100,10 @@ export async function createProviderLog(
 
     publisher.publishLater({
       type: 'providerLogCreated',
-      data: log,
+      data: {
+        id: log.id,
+        workspaceId: workspace.id,
+      },
     })
 
     return Result.ok(log)
