@@ -1,5 +1,6 @@
 import {
   ContentType,
+  Message,
   MessageRole,
   type ToolCall,
   type ToolMessage,
@@ -9,27 +10,36 @@ import { PromisedResult } from '../../../../lib/Transaction'
 import { Result } from '../../../../lib/Result'
 import type { CopilotTool } from './types'
 
+import { LatteTool } from '@latitude-data/constants/latte'
 import listPrompts from './documents/list'
 import listCommitChanges from './commit/list_changes'
 import readPrompt from './documents/read'
-import { LatteTool } from '@latitude-data/constants/latte'
+import addSuggestion from './suggestions/add'
+import { WorkerSocket } from '../../../../websockets/workers'
 
 const COPILOT_TOOLS: Record<LatteTool, CopilotTool<any>> = {
   [LatteTool.listPrompts]: listPrompts,
   [LatteTool.readPrompt]: readPrompt,
   [LatteTool.listCommitChanges]: listCommitChanges,
+  [LatteTool.addSuggestions]: addSuggestion,
 } as const
 
 export async function handleToolRequest({
+  websockets,
   workspace,
   project,
   commit,
+  chatUuid,
+  messages,
   tool,
   onFinish,
 }: {
+  websockets: WorkerSocket
   workspace: Workspace
   project: Project
   commit: Commit
+  messages: Message[]
+  chatUuid: string
   tool: ToolCall
   onFinish?: (toolMessage: ToolMessage) => Promise<void>
 }): PromisedResult<ToolMessage> {
@@ -41,14 +51,22 @@ export async function handleToolRequest({
     )
   }
 
-  const result = await copilotTool({
-    workspace,
-    project,
-    commit,
-    parameters: tool.arguments,
-  })
+  let result
+  try {
+    result = await copilotTool(tool.arguments, {
+      workspace,
+      project,
+      commit,
+      chatUuid,
+      messages,
+      toolCall: tool,
+      websockets,
+    })
+  } catch (error) {
+    result = Result.error(error as Error)
+  }
 
-  const message: ToolMessage = {
+  const resultMessage: ToolMessage = {
     role: MessageRole.tool,
     content: [
       {
@@ -61,6 +79,6 @@ export async function handleToolRequest({
     ],
   }
 
-  await onFinish?.(message)
-  return Result.ok(message)
+  await onFinish?.(resultMessage)
+  return Result.ok(resultMessage)
 }

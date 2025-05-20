@@ -14,7 +14,7 @@ export function LatteMessageList({
   interactions: CopilotChatInteraction[]
 }) {
   return (
-    <div className='flex flex-col gap-8 w-full'>
+    <div className='flex flex-col gap-8 p-4 w-full'>
       {interactions.map((interaction, i) => {
         return <ChatInteraction key={i} interaction={interaction} />
       })}

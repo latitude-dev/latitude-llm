@@ -64,7 +64,11 @@ export async function getCopilotDocument(): PromisedResult<
   )
 
   const commitScope = new CommitsRepository(workspace.id)
-  const commitResult = await commitScope.getHeadCommit(project.id)
+  // const commitResult = await commitScope.getHeadCommit(project.id)
+  const commitResult = await commitScope.getCommitByUuid({
+    projectId: project.id,
+    uuid: '152471e0-a25f-4f5e-a41f-8faf8972bde1',
+  })
   if (!commitResult.ok || !commitResult.value) {
     return Result.error(
       new NotImplementedError(

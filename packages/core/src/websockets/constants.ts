@@ -18,6 +18,7 @@ import {
   type DocumentLogWithMetadataAndError,
   type EvaluationResultWithMetadataAndErrors,
 } from '../repositories'
+import { LatteSuggestion } from '@latitude-data/constants/latte'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
@@ -137,6 +138,11 @@ export type WebServerToClientEvents = {
     mcpServerId: number
   }) => void
   copilotChatMessage: (args: { chatUuid: string; message: Message }) => void
+  copilotChatError: (args: { chatUuid: string; message: string }) => void
+  copilotChatSuggestions: (args: {
+    chatUuid: string
+    suggestions: LatteSuggestion[]
+  }) => void
 }
 
 export type WebClientToServerEvents = {
@@ -196,6 +202,20 @@ export type WorkersClientToServerEvents = {
     data: {
       chatUuid: string
       message: Message
+    }
+  }) => void
+  copilotChatError: (args: {
+    workspaceId: number
+    data: {
+      chatUuid: string
+      message: string
+    }
+  }) => void
+  copilotChatSuggestions: (args: {
+    workspaceId: number
+    data: {
+      chatUuid: string
+      suggestions: LatteSuggestion[]
     }
   }) => void
 }
