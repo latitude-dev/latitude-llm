@@ -1,12 +1,13 @@
 import {
   DocumentLog,
+  EvaluatedDocumentLog,
   ProviderLog,
+  buildConversation,
   formatConversation,
   formatMessage,
-  EvaluatedDocumentLog,
-  buildConversation,
 } from '@latitude-data/core/browser'
 import { serializeAggregatedProviderLog } from '../../documentLogs/serialize'
+import serializeProviderLog from '../../providerLogs/serialize'
 
 export function serializeEvaluatedDocumentLog({
   documentLog,
@@ -19,7 +20,9 @@ export function serializeEvaluatedDocumentLog({
     documentLog,
     providerLogs,
   }).unwrap()
-  const providerLog = providerLogs[providerLogs.length - 1]!
+  const providerLog = serializeProviderLog(
+    providerLogs[providerLogs.length - 1]!,
+  )
   const conversationList = buildConversation(providerLog)
   const conversation = formatConversation(conversationList)
   const actualOutput = formatMessage(conversationList.at(-1)!)
