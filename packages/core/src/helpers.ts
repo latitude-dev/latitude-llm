@@ -68,6 +68,7 @@ export function buildConversation(providerLog: ProviderLogDto) {
     type: 'text',
     data: {
       text: providerLog.response,
+      reasoning: providerLog.responseReasoning ?? undefined,
       toolCalls: providerLog.toolCalls,
     },
   })
