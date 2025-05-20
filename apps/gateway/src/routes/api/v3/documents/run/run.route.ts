@@ -13,6 +13,7 @@ export const runRoute = createRoute({
   method: http.Methods.POST,
   path: ROUTES.api.v3.documents.run,
   tags: ['Documents'],
+  description: 'Run a prompt',
   request: {
     params: documentParamsSchema,
     body: {

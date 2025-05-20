@@ -14,36 +14,27 @@ export enum PlaygroundAction {
   RefinePrompt = 'refinePrompt',
 }
 
-export type PlaygroundActionPayload = {
-  [PlaygroundAction.RefinePrompt]:
-    | {
-        evaluationId: number
-        resultIds: number[]
-        version: 'v1'
-      }
-    | {
-        evaluationUuid: string
-        resultUuids: string[]
-        version: 'v2'
-      }
+type PlaygroundActionPayload = {
+  evaluationUuid: string
+  resultUuids: string[]
 }
 
-type playgroundAction<A extends PlaygroundAction> = {
-  action: A
-  payload: PlaygroundActionPayload[A]
+type IPlaygroundAction = {
+  action: 'refinePrompt'
+  payload: PlaygroundActionPayload
   projectId: number
   commitUuid: string
   documentUuid: string
 }
-type PlaygroundActions = { [key: string]: playgroundAction<PlaygroundAction> }
+type PlaygroundActions = { [key: string]: IPlaygroundAction }
 
-export function usePlaygroundAction<A extends PlaygroundAction>({
+export function usePlaygroundAction({
   action: actionType,
   project,
   commit,
   document,
 }: {
-  action: A
+  action: PlaygroundAction
   project: Pick<Project, 'id'>
   commit: Pick<Commit, 'uuid'>
   document: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
@@ -61,7 +52,7 @@ export function usePlaygroundAction<A extends PlaygroundAction>({
     })
 
   const actionId = useSearchParams().get('actionId')
-  const [action, setAction] = useState<PlaygroundActionPayload[A] | undefined>(
+  const [action, setAction] = useState<PlaygroundActionPayload | undefined>(
     actionId &&
       playgroundActions[actionId]?.action === actionType &&
       playgroundActions[actionId]?.projectId === project.id &&
@@ -72,7 +63,7 @@ export function usePlaygroundAction<A extends PlaygroundAction>({
   )
 
   const setPlaygroundAction = useCallback(
-    (payload: PlaygroundActionPayload[A]) => {
+    (payload: PlaygroundActionPayload) => {
       const actionId = Math.random().toString(36).substring(2, 10)
       setPlaygroundActions({
         ...playgroundActions,

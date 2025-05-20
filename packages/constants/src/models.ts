@@ -24,6 +24,7 @@ export enum EvaluationResultableType {
   Number = 'evaluation_resultable_numbers',
 }
 
+// TODO(evalsv2): Remove
 export type EvaluationResult = {
   id: number
   uuid: string
@@ -39,6 +40,7 @@ export type EvaluationResult = {
   updatedAt: Date
 }
 
+// TODO(evalsv2): Remove
 export type EvaluationResultDto = EvaluationResult & {
   result: string | number | boolean | undefined
 }
@@ -69,7 +71,7 @@ export type DocumentVersion = {
   documentUuid: string
   path: string
   content: string
-  resolvedContent: string
+  resolvedContent: string | null
   contentHash: string
   promptlVersion: number
   commitId: number

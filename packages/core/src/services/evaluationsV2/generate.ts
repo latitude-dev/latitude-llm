@@ -28,7 +28,7 @@ const generatorSchema = z.object({
 })
 
 const generatorKey = (document: DocumentVersion, instructions?: string) =>
-  `evaluations-v2:generator:${hashContent(document.content)}:${instructions}`
+  `evaluations:generator:${hashContent(document.content)}:${instructions}`
 
 export async function generateEvaluationV2(
   {

@@ -1,14 +1,27 @@
-import { and, desc, eq, isNotNull, or, SQL, sql } from 'drizzle-orm'
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  SQL,
+  sql,
+  sum,
+} from 'drizzle-orm'
 
 import {
   Commit,
   DEFAULT_PAGINATION_SIZE,
   DocumentLogFilterOptions,
+  DocumentVersion,
+  ErrorableEntity,
 } from '../../browser'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
-import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
-import { commits, documentLogs, projects, workspaces } from '../../schema'
+import { commits, documentLogs, providerLogs, runErrors } from '../../schema'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export function getCommitFilter(draft?: Commit) {
@@ -17,29 +30,26 @@ export function getCommitFilter(draft?: Commit) {
     : isNotNull(commits.mergedAt)
 }
 
-export function computeDocumentLogsWithMetadataQuery(
+export async function computeDocumentLogsWithMetadata(
   {
-    workspaceId,
-    documentUuid,
+    document,
     page = '1',
     pageSize = String(DEFAULT_PAGINATION_SIZE),
     filterOptions,
   }: {
-    workspaceId: number
-    documentUuid?: string
+    document: DocumentVersion
     page?: string
     pageSize?: string
     filterOptions?: DocumentLogFilterOptions
   },
   db = database,
 ) {
-  const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspaceId, db)
-  const offset = calculateOffset(page, pageSize)
   const conditions = [
-    repo.scopeFilter,
-    documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
+    isNull(commits.deletedAt),
+    eq(documentLogs.documentUuid, document.documentUuid),
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
+  const offset = calculateOffset(page, pageSize)
   const ordering = [
     filterOptions?.customIdentifier
       ? desc(
@@ -49,28 +59,87 @@ export function computeDocumentLogsWithMetadataQuery(
     desc(documentLogs.createdAt),
   ].filter(Boolean) as SQL<unknown>[]
 
-  return repo.scope
+  const logs = await db
+    .select({
+      ...getTableColumns(documentLogs),
+      commit: getTableColumns(commits),
+    })
+    .from(documentLogs)
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .where(and(...conditions))
     .orderBy(...ordering)
     .limit(parseInt(pageSize))
     .offset(offset)
+  const providerLogAggregations = await db
+    .select({
+      documentLogUuid: providerLogs.documentLogUuid,
+      tokens: sum(providerLogs.tokens).mapWith(Number).as('tokens'),
+      duration: sum(providerLogs.duration).mapWith(Number).as('duration_in_ms'),
+      costInMillicents: sum(providerLogs.costInMillicents)
+        .mapWith(Number)
+        .as('cost_in_millicents'),
+    })
+    .from(providerLogs)
+    .where(
+      and(
+        inArray(
+          providerLogs.documentLogUuid,
+          logs.map((l) => l.uuid),
+        ),
+      ),
+    )
+    .groupBy(providerLogs.documentLogUuid)
+  const errors = await db
+    .select({
+      code: sql<string>`${runErrors.code}`,
+      message: sql<string>`${runErrors.message}`,
+      details: sql<string>`${runErrors.details}`,
+      documentLogUuid: runErrors.errorableUuid,
+    })
+    .from(runErrors)
+    .where(
+      and(
+        inArray(
+          runErrors.errorableUuid,
+          logs.map((l) => l.uuid),
+        ),
+        eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+      ),
+    )
+
+  return logs.map((log) => {
+    return {
+      ...log,
+      tokens:
+        providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)
+          ?.tokens ?? 0,
+      duration:
+        providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)
+          ?.duration ?? 0,
+      costInMillicents:
+        providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)
+          ?.costInMillicents ?? 0,
+      error: errors.find((e) => e.documentLogUuid === log.uuid) || {
+        code: null,
+        message: null,
+        details: null,
+      },
+    }
+  })
 }
 
 export async function computeDocumentLogsWithMetadataCount(
   {
-    workspaceId,
-    documentUuid,
+    document,
     filterOptions,
   }: {
-    workspaceId: number
-    documentUuid: string
+    document: DocumentVersion
     filterOptions?: DocumentLogFilterOptions
   },
   db = database,
 ) {
   const conditions = [
-    eq(workspaces.id, workspaceId),
-    documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
+    eq(documentLogs.documentUuid, document.documentUuid),
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
   const countList = await db
@@ -78,9 +147,6 @@ export async function computeDocumentLogsWithMetadataCount(
       count: sql<number>`count(*)`.as('total_count'),
     })
     .from(documentLogs)
-    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
-    .innerJoin(projects, eq(projects.id, commits.projectId))
-    .innerJoin(workspaces, eq(workspaces.id, projects.workspaceId))
     .where(and(...conditions))
 
   return countList?.[0]?.count ? Number(countList[0].count) : 0

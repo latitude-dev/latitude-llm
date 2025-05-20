@@ -9,7 +9,6 @@ import {
 } from '../browser'
 import { Result } from '../lib/Result'
 import { documentSuggestions } from '../schema'
-import { EvaluationsRepository } from './evaluationsRepository'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'
 
@@ -40,12 +39,10 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
     commitId,
     documentUuid,
     evaluationUuid,
-    evaluationId,
   }: {
     commitId: number
     documentUuid: string
     evaluationUuid?: string
-    evaluationId?: number
   }) {
     const filter = [
       this.scopeFilter,
@@ -56,10 +53,6 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
 
     if (evaluationUuid) {
       filter.push(eq(documentSuggestions.evaluationUuid, evaluationUuid))
-    }
-
-    if (evaluationId) {
-      filter.push(eq(documentSuggestions.evaluationId, evaluationId))
     }
 
     const result = await this.db
@@ -106,46 +99,19 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
       this.workspaceId,
       this.db,
     )
-    const evaluationsV2 = await evaluationsV2Repository
+    const evaluations = await evaluationsV2Repository
       .listAtCommitByDocument({
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
       })
       .then((r) => r.unwrap())
 
-    const evaluationIds = [
-      ...new Set(
-        suggestions.filter((s) => s.evaluationId).map((s) => s.evaluationId!),
-      ),
-    ]
-    const evaluationsRepository = new EvaluationsRepository(
-      this.workspaceId,
-      this.db,
-    )
-    const evaluationsV1 =
-      evaluationIds.length > 0
-        ? await evaluationsRepository
-            .filterById(evaluationIds)
-            .then((r) => r.unwrap())
-        : []
-
     const suggestionsWithDetails = []
     for (const suggestion of suggestions) {
-      let evaluation
-
-      if (suggestion.evaluationUuid) {
-        const evaluationV2 = evaluationsV2.find(
-          (e) => e.uuid === suggestion.evaluationUuid,
-        )
-        if (!evaluationV2) continue
-        evaluation = { ...evaluationV2, version: 'v2' as const }
-      } else {
-        const evaluationV1 = evaluationsV1.find(
-          (e) => e.id === suggestion.evaluationId,
-        )
-        if (!evaluationV1) continue
-        evaluation = { ...evaluationV1, version: 'v1' as const }
-      }
+      const evaluation = evaluations.find(
+        (e) => e.uuid === suggestion.evaluationUuid,
+      )
+      if (!evaluation) continue
 
       suggestionsWithDetails.push({ ...suggestion, evaluation })
     }

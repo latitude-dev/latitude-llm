@@ -6,9 +6,14 @@ import packageJson from '../../package.json'
 import { tags } from '$/openApi/tags'
 import { env } from '@latitude-data/env'
 
+const port = env.GATEWAY_PORT
+const url = port
+  ? `${env.GATEWAY_SSL ? 'https' : 'http'}://${env.GATEWAY_HOSTNAME}:${env.GATEWAY_PORT}`
+  : `${env.GATEWAY_SSL ? 'https' : 'http'}://${env.GATEWAY_HOSTNAME}`
+
 let servers = [
   {
-    url: `${env.GATEWAY_SSL ? 'https' : 'http'}://${env.GATEWAY_HOSTNAME}:${env.GATEWAY_PORT}`,
+    url,
     description: 'Latitude',
   },
 ]

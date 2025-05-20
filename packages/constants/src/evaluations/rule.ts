@@ -31,7 +31,7 @@ export const RuleEvaluationExactMatchSpecification = {
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
-}
+} as const
 export type RuleEvaluationExactMatchConfiguration = z.infer<
   typeof RuleEvaluationExactMatchSpecification.configuration
 >
@@ -65,7 +65,7 @@ export const RuleEvaluationRegularExpressionSpecification = {
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
-}
+} as const
 export type RuleEvaluationRegularExpressionConfiguration = z.infer<
   typeof RuleEvaluationRegularExpressionSpecification.configuration
 >
@@ -100,7 +100,7 @@ export const RuleEvaluationSchemaValidationSpecification = {
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
-}
+} as const
 export type RuleEvaluationSchemaValidationConfiguration = z.infer<
   typeof RuleEvaluationSchemaValidationSpecification.configuration
 >
@@ -137,7 +137,7 @@ export const RuleEvaluationLengthCountSpecification = {
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
-}
+} as const
 export type RuleEvaluationLengthCountConfiguration = z.infer<
   typeof RuleEvaluationLengthCountSpecification.configuration
 >
@@ -173,7 +173,7 @@ export const RuleEvaluationLexicalOverlapSpecification = {
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
-}
+} as const
 export type RuleEvaluationLexicalOverlapConfiguration = z.infer<
   typeof RuleEvaluationLexicalOverlapSpecification.configuration
 >
@@ -209,7 +209,7 @@ export const RuleEvaluationSemanticSimilaritySpecification = {
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
-}
+} as const
 export type RuleEvaluationSemanticSimilarityConfiguration = z.infer<
   typeof RuleEvaluationSemanticSimilaritySpecification.configuration
 >
@@ -245,7 +245,7 @@ export const RuleEvaluationNumericSimilaritySpecification = {
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
-}
+} as const
 export type RuleEvaluationNumericSimilarityConfiguration = z.infer<
   typeof RuleEvaluationNumericSimilaritySpecification.configuration
 >
@@ -317,4 +317,4 @@ export const RuleEvaluationSpecification = {
     [RuleEvaluationMetric.SemanticSimilarity]: RuleEvaluationSemanticSimilaritySpecification,
     [RuleEvaluationMetric.NumericSimilarity]: RuleEvaluationNumericSimilaritySpecification,
   },
-}
+} as const

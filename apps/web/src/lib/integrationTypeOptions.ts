@@ -344,6 +344,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Readwise',
     icon: 'readwise',
   },
+  [HostedIntegrationType.Airbnb]: {
+    label: 'Airbnb',
+    icon: 'airbnb',
+  },
 }
 
 export function integrationOptions(

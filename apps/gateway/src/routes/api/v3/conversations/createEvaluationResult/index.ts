@@ -1,2 +1,2 @@
-export * from './createEvaluationResult.route'
-export * from './createEvaluationResult.handler'
+export * from './createEvaluationResultRoute'
+export * from './createEvaluationResultHandler'

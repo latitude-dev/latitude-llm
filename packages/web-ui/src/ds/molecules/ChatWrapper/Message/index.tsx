@@ -13,8 +13,11 @@ import {
   ToolContent,
 } from '@latitude-data/compiler'
 
+import { AgentToolsMap } from '@latitude-data/constants'
+import { roleVariant } from '..'
 import { cn } from '../../../../lib/utils'
 import { Badge, BadgeProps } from '../../../atoms/Badge'
+import { Button } from '../../../atoms/Button'
 import { CodeBlock } from '../../../atoms/CodeBlock'
 import { Icon, IconName } from '../../../atoms/Icons'
 import { Image } from '../../../atoms/Image'
@@ -22,12 +25,9 @@ import { Skeleton } from '../../../atoms/Skeleton'
 import { Text } from '../../../atoms/Text'
 import { Tooltip } from '../../../atoms/Tooltip'
 import { colors, font, TextColor } from '../../../tokens'
-import { roleVariant } from '..'
 import { isAgentToolResponse, roleToString } from './helpers'
 import { ToolCallContent } from './ToolCall'
 import { UnresolvedToolResultContent } from './ToolResult'
-import { AgentToolsMap } from '@latitude-data/constants'
-import { Button } from '../../../atoms/Button'
 
 export { roleToString, roleVariant } from './helpers'
 
@@ -357,6 +357,7 @@ const ContentText = memo(
       <TextComponent
         color={color}
         whiteSpace='preWrap'
+        wordBreak='breakAll'
         key={`${index}-group-${groupIndex}`}
       >
         {group.length > 0
@@ -381,7 +382,7 @@ const ContentText = memo(
     return (
       <div className='flex flex-col gap-4'>
         <Reasoning reasoning={reasoning} isReasoning={isReasoning} />
-        {messagesList}
+        <div className='flex flex-col gap-y-1'>{messagesList}</div>
       </div>
     )
   },

@@ -10,7 +10,6 @@ import {
   type DocumentVersion,
   type Workspace,
 } from '../../browser'
-import { publisher } from '../../events/publisher'
 import { runAgent } from '../agents/run'
 import { runChain } from '../chains/run'
 import { getResolvedContent } from '../documents'
@@ -22,7 +21,6 @@ import { createDocumentLog } from '../documentLogs/create'
 import { isErrorRetryable } from '../evaluationsV2/run'
 
 async function createDocumentRunResult({
-  workspace,
   document,
   commit,
   errorableUuid,
@@ -30,9 +28,7 @@ async function createDocumentRunResult({
   parameters,
   resolvedContent,
   customIdentifier,
-  publishEvent,
   source,
-  response,
   duration,
 }: {
   workspace: Workspace
@@ -49,24 +45,6 @@ async function createDocumentRunResult({
   response?: ChainStepResponse<StreamType>
 }) {
   const durantionInMs = duration ?? 0
-
-  if (publishEvent) {
-    publisher.publishLater({
-      type: 'documentRun',
-      data: {
-        workspaceId: workspace.id,
-        projectId: commit.projectId,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        documentLogUuid: errorableUuid,
-        response,
-        resolvedContent,
-        parameters,
-        duration: durantionInMs,
-        source,
-      },
-    })
-  }
 
   return await createDocumentLog({
     commit,

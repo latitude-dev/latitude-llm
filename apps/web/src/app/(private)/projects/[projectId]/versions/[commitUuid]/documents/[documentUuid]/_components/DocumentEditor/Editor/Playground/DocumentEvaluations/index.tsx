@@ -1,20 +1,12 @@
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
-import useConnectedEvaluations from '$/stores/connectedEvaluations'
-import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
-  ConnectedEvaluation,
   DocumentVersion,
-  EvaluationDto,
-  EvaluationResultDto,
-  EvaluationResultTmp,
   EvaluationResultV2,
-  EvaluationType,
   EvaluationV2,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
@@ -33,38 +25,7 @@ import {
   ExpandedContent,
   ExpandedContentHeader,
 } from './BoxContent'
-import { EvaluationTmp, Snapshot, Props as SharedProps } from './shared'
-
-const useEvaluationResultsSocket = ({
-  evaluations,
-  mutate,
-}: {
-  evaluations: (EvaluationDto & { live: ConnectedEvaluation['live'] })[]
-  mutate: ReturnType<typeof useEvaluationResultsByDocumentLogs>['mutate']
-}) => {
-  const onMessage = useCallback(
-    (args: EventArgs<'evaluationResultCreated'>) => {
-      if (!args?.row?.resultableId || !args?.row?.evaluatedProviderLogId) return
-      const evaluation = evaluations.find(
-        (e) => e.live && e.id === args.row.evaluationId,
-      )
-      if (!evaluation) return
-
-      mutate(
-        (prev) => ({
-          ...(prev ?? {}),
-          [args.row.documentLogId]: (
-            prev?.[args.row.documentLogId] ?? []
-          ).concat([{ result: args.row, evaluation }]),
-        }),
-        { revalidate: false },
-      )
-    },
-    [evaluations, mutate],
-  )
-
-  useSockets({ event: 'evaluationResultCreated', onMessage })
-}
+import { Snapshot, Props as SharedProps } from './shared'
 
 const useEvaluationResultsV2Socket = ({
   evaluations,
@@ -116,87 +77,20 @@ export default function DocumentEvaluations({
   isLoading: boolean
 }) {
   const { project } = useCurrentProject()
-
-  const { enabled: evaluationsV2Enabled } = useFeatureFlag({
-    featureFlag: 'evaluationsV2',
-  })
-
-  const { enabled: experimentsEnabled } = useFeatureFlag({
-    featureFlag: 'experiments',
-  })
-
-  const { data: connectedEvaluations, isLoading: isEvaluationsV1Loading } =
-    useConnectedEvaluations({
-      documentUuid: document.documentUuid,
-      projectId: project.id,
-      commitUuid: commit.uuid,
-    })
-  const evaluationsV1 = useMemo(
-    () =>
-      (evaluationsV2Enabled ? [] : connectedEvaluations).map(
-        ({ evaluation, live }) => ({
-          ...evaluation,
-          live,
-        }),
-      ),
-    [evaluationsV2Enabled, connectedEvaluations],
-  )
-
-  const { data: evaluationsV2, isLoading: isEvaluationsV2Loading } =
+  const { data: evaluations, isLoading: isEvaluationsV2Loading } =
     useEvaluationsV2({ project, commit, document })
 
-  const evaluations = useMemo<EvaluationTmp[]>(() => {
-    return [
-      ...(evaluationsV2Enabled ? [] : evaluationsV1).map((evaluation) => ({
-        ...evaluation,
-        version: 'v1' as const,
-      })),
-      ...evaluationsV2
-        .filter((evaluation) => {
-          if (evaluationsV2Enabled) return true
-          if (experimentsEnabled) {
-            return (
-              evaluation.type === EvaluationType.Rule ||
-              evaluation.type === EvaluationType.Llm
-            )
-          }
-          return evaluation.type === EvaluationType.Rule
-        })
-        .map((evaluation) => ({
-          ...evaluation,
-          version: 'v2' as const,
-        })),
-    ]
-  }, [evaluationsV1, evaluationsV2, evaluationsV2Enabled, experimentsEnabled])
-
-  const { data: evaluationResultsV1, mutate: mutateV1 } =
-    useEvaluationResultsByDocumentLogs({
-      documentLogIds: documentLog ? [documentLog.id] : [],
-    })
-  useEvaluationResultsSocket({ evaluations: evaluationsV1, mutate: mutateV1 })
-  const resultsV1 = useMemo(() => {
-    if (!documentLog || !evaluationResultsV1[documentLog.id]) return {}
-    return evaluationResultsV1[documentLog.id]!.reduce(
-      (acc, { evaluation, result }) => ({
-        ...acc,
-        [evaluation.uuid]: {
-          ...result,
-          documentLogUuid: documentLog.uuid,
-        },
-      }),
-      {} as Record<string, EvaluationResultDto & { documentLogUuid: string }>,
-    )
-  }, [evaluationResultsV1, documentLog])
-
-  const { data: evaluationResultsV2, mutate: mutateV2 } =
+  const { data: evaluationResultsV2, mutate } =
     useEvaluationResultsV2ByDocumentLogs({
       project: project,
       commit: commit,
       document: document,
       documentLogUuids: documentLog ? [documentLog.uuid] : [],
     })
-  useEvaluationResultsV2Socket({ evaluations: evaluationsV2, mutate: mutateV2 })
-  const resultsV2 = useMemo(() => {
+
+  useEvaluationResultsV2Socket({ evaluations, mutate })
+
+  const results = useMemo(() => {
     if (!documentLog || !evaluationResultsV2[documentLog.uuid]) return {}
     return evaluationResultsV2[documentLog.uuid]!.reduce(
       (acc, { result }) => ({
@@ -210,34 +104,9 @@ export default function DocumentEvaluations({
     )
   }, [evaluationResultsV2, documentLog])
 
-  const results = useMemo<
-    Record<string, EvaluationResultTmp & { documentLogUuid: string }>
-  >(
-    () => ({
-      ...Object.fromEntries(
-        Object.entries(resultsV1).map(([evaluation, result]) => [
-          evaluation,
-          { ...result, version: 'v1' as const },
-        ]),
-      ),
-      ...Object.fromEntries(
-        Object.entries(resultsV2).map(([evaluation, result]) => [
-          evaluation,
-          { ...result, version: 'v2' as const },
-        ]),
-      ),
-    }),
-    [resultsV1, resultsV2],
-  )
-
   const [snapshot, setSnapshot] = useState<Snapshot>()
   const liveEvaluations = useMemo(
-    () =>
-      evaluations.filter(
-        (evaluation) =>
-          (evaluation.version === 'v1' && evaluation.live) ||
-          (evaluation.version === 'v2' && evaluation.evaluateLiveLogs),
-      ),
+    () => evaluations.filter((evaluation) => evaluation.evaluateLiveLogs),
     [evaluations],
   )
 
@@ -268,7 +137,7 @@ export default function DocumentEvaluations({
       commit,
       project,
       runCount,
-      isLoading: isEvaluationsV1Loading || isEvaluationsV2Loading,
+      isLoading: isEvaluationsV2Loading,
       isWaiting: isWaiting || isDocumentLogLoading,
       documentLog,
     }),
@@ -279,7 +148,6 @@ export default function DocumentEvaluations({
       commit,
       project,
       runCount,
-      isEvaluationsV1Loading,
       isEvaluationsV2Loading,
       isWaiting,
       isDocumentLogLoading,

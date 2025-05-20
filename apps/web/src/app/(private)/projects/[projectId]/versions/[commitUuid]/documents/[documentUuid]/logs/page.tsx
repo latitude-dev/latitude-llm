@@ -1,6 +1,7 @@
 import {
   findCommitCached,
   findCommitsByProjectCached,
+  getDocumentByUuidCached,
 } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
@@ -9,11 +10,11 @@ import {
   Workspace,
 } from '@latitude-data/core/browser'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
-import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
+import { computeDocumentLogsWithMetadata } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
 import { redirect } from 'next/navigation'
 
-import { DocumentLogsRepository } from '@latitude-data/core/repositories'
+import { countDocumentLogs } from '@latitude-data/core/services/documentLogs/countDocumentLogs'
 import { DocumentLogsPage } from './_components'
 import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
 import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseLogFilterParams'
@@ -54,15 +55,19 @@ export default async function DocumentPage({
   const { workspace } = await getCurrentUser()
   const { projectId: pjid, commitUuid, documentUuid } = await params
   const projectId = Number(pjid)
+  const document = await getDocumentByUuidCached({
+    documentUuid: documentUuid,
+    projectId,
+    commitUuid,
+  })
 
-  const documentLogsRepo = new DocumentLogsRepository(workspace.id)
-
-  const hasLogs = await documentLogsRepo.hasLogs(documentUuid)
-  if (!hasLogs) {
+  const logCount = await countDocumentLogs(document)
+  if (!logCount) {
     const uploadUrl = ROUTES.projects
       .detail({ id: projectId })
       .commits.detail({ uuid: commitUuid })
       .documents.detail({ uuid: documentUuid }).logs.upload
+
     return <DocumentLogBlankSlate uploadUrl={uploadUrl} />
   }
 
@@ -100,9 +105,8 @@ export default async function DocumentPage({
     return redirect(`${route}?${parameters.join('&')}`)
   }
 
-  const rows = await computeDocumentLogsWithMetadataQuery({
-    workspaceId: workspace.id,
-    documentUuid,
+  const rows = await computeDocumentLogsWithMetadata({
+    document,
     filterOptions,
     page,
     pageSize: pageSize as string | undefined,

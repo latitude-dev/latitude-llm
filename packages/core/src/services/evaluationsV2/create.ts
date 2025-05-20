@@ -14,7 +14,6 @@ import { compactObject } from '../../lib/compactObject'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { evaluationVersions } from '../../schema'
-import { pingProjectUpdate } from '../projects'
 import { validateEvaluationV2 } from './validate'
 
 export async function createEvaluationV2<
@@ -25,36 +24,27 @@ export async function createEvaluationV2<
     document,
     commit,
     settings,
-    options,
+    options = {},
     workspace,
-    createdAt = new Date(),
-    updatedAt = new Date(),
   }: {
     document: DocumentVersion
     commit: Commit
     settings: EvaluationSettings<T, M>
     options?: Partial<EvaluationOptions>
-    createdAt?: Date
-    updatedAt?: Date
     workspace: Workspace
   },
   db: Database = database,
 ) {
-  if (!options) options = {}
   options = compactObject(options)
 
-  const { settings: vSettings, options: vOptions } = await validateEvaluationV2(
-    {
-      settings: settings,
-      options: options,
-      document: document,
-      commit: commit,
-      workspace: workspace,
-    },
+  const validateResult = await validateEvaluationV2(
+    { mode: 'create', settings, options, document, commit, workspace },
     db,
-  ).then((r) => r.unwrap())
-  settings = vSettings
-  options = vOptions
+  )
+
+  if (validateResult.error) return validateResult
+
+  const validate = validateResult.value
 
   return await Transaction.call(async (tx) => {
     const result = await tx
@@ -63,10 +53,8 @@ export async function createEvaluationV2<
         workspaceId: workspace.id,
         commitId: commit.id,
         documentUuid: document.documentUuid,
-        ...settings,
-        ...options,
-        createdAt,
-        updatedAt,
+        ...validate.settings,
+        ...validate.options,
       })
       .returning()
       .then((r) => r[0]!)
@@ -80,14 +68,10 @@ export async function createEvaluationV2<
     await publisher.publishLater({
       type: 'evaluationV2Created',
       data: {
-        workspaceId: workspace.id,
         evaluation: evaluation,
+        workspaceId: workspace.id,
       },
     })
-
-    await pingProjectUpdate({ projectId: commit.projectId }, tx).then((r) =>
-      r.unwrap(),
-    )
 
     return Result.ok({ evaluation })
   }, db)

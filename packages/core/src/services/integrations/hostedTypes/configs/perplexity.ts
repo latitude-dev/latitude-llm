@@ -6,7 +6,7 @@ export default {
     'Integration for interacting with the Perplexity API, enabling chat completions with citations.',
   command: uvxCommand({
     name: 'mcp-server-perplexity',
-    repository: 'https://github.com/adhikasp/mcp-reddit.git',
+    repository: 'https://github.com/jsonallen/perplexity-mcp.git',
   }),
   env: {
     PERPLEXITY_API_KEY: {

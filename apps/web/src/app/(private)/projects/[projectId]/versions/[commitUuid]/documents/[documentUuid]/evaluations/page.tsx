@@ -1,20 +1,30 @@
-import { ROUTES } from '$/services/routes'
-import { redirect } from 'next/navigation'
+'use server'
+
+import { listEvaluationsV2AtCommitByDocumentCached } from '$/app/(private)/_data-access'
+import { env } from '@latitude-data/env'
+import { EvaluationsPage as ClientEvaluationsPage } from './_components/EvaluationsPage'
 
 export default async function EvaluationsPage({
   params,
 }: {
   params: Promise<{
     projectId: string
-    documentUuid: string
     commitUuid: string
+    documentUuid: string
   }>
 }) {
-  const { projectId, documentUuid, commitUuid } = await params
-  redirect(
-    ROUTES.projects
-      .detail({ id: Number(projectId) })
-      .commits.detail({ uuid: commitUuid })
-      .documents.detail({ uuid: documentUuid }).evaluations.dashboard.root,
+  const { projectId, commitUuid, documentUuid } = await params
+
+  const evaluations = await listEvaluationsV2AtCommitByDocumentCached({
+    projectId: Number(projectId),
+    commitUuid: commitUuid,
+    documentUuid: documentUuid,
+  })
+
+  return (
+    <ClientEvaluationsPage
+      evaluations={evaluations}
+      generatorEnabled={env.LATITUDE_CLOUD}
+    />
   )
 }

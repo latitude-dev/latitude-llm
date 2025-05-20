@@ -19,6 +19,7 @@ export async function validateEvaluationV2<
   M extends EvaluationMetric<T>,
 >(
   {
+    mode,
     evaluation,
     settings,
     options,
@@ -26,6 +27,7 @@ export async function validateEvaluationV2<
     commit,
     workspace,
   }: {
+    mode: 'create' | 'update'
     evaluation?: EvaluationV2<T, M>
     settings: EvaluationSettings<T, M>
     options: EvaluationOptions
@@ -35,6 +37,12 @@ export async function validateEvaluationV2<
   },
   db: Database = database,
 ) {
+  if (mode === 'update' && !evaluation) {
+    return Result.error(
+      new BadRequestError('Evaluation is required to update from'),
+    )
+  }
+
   if (!settings.name) {
     return Result.error(new BadRequestError('Name is required'))
   }
@@ -49,28 +57,38 @@ export async function validateEvaluationV2<
     return Result.error(new BadRequestError('Invalid metric'))
   }
 
-  typeSpecification.configuration.parse(settings.configuration)
+  const parseResult = typeSpecification.configuration.safeParse(
+    settings.configuration,
+  )
+  if (parseResult.error) {
+    return Result.error(parseResult.error)
+  }
 
-  settings.configuration = await typeSpecification
-    .validate(
-      {
-        metric: settings.metric,
-        configuration: settings.configuration,
-        document: document,
-        commit: commit,
-        workspace: workspace,
-      },
-      db,
-    )
-    .then((r) => r.unwrap())
+  const typeValidateResult = await typeSpecification.validate(
+    {
+      mode: mode,
+      metric: settings.metric,
+      configuration: settings.configuration,
+      document: document,
+      commit: commit,
+      workspace: workspace,
+    },
+    db,
+  )
+  if (typeValidateResult.error) return typeValidateResult
+
+  settings.configuration = typeValidateResult.value
 
   const repository = new EvaluationsV2Repository(workspace.id, db)
-  const evaluations = await repository
-    .listAtCommitByDocument({
-      commitUuid: commit.uuid,
-      documentUuid: document.documentUuid,
-    })
-    .then((r) => r.unwrap())
+  const evaluationsResult = await repository.listAtCommitByDocument({
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+  })
+
+  if (evaluationsResult.error) return Result.error(evaluationsResult.error)
+
+  const evaluations = evaluationsResult.value
+
   if (
     evaluations.find(
       (e) => e.name === settings.name && e.uuid !== evaluation?.uuid,

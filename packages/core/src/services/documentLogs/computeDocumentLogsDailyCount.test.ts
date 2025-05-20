@@ -9,13 +9,11 @@ import {
   Project,
   Providers,
   User,
-  Workspace,
 } from '../../browser'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogsDailyCount } from './computeDocumentLogsDailyCount'
 
 describe('computeDocumentLogsDailyCount', () => {
-  let workspace: Workspace
   let user: User
   let project: Project
   let document: DocumentVersion
@@ -40,7 +38,6 @@ describe('computeDocumentLogsDailyCount', () => {
     project = setup.project
     commit = setup.commit
     document = setup.documents[0]!
-    workspace = setup.workspace
   })
 
   it('returns daily counts for document logs', async () => {
@@ -92,8 +89,7 @@ describe('computeDocumentLogsDailyCount', () => {
     ])
 
     const result = await computeDocumentLogsDailyCount({
-      workspace,
-      documentUuid: document.documentUuid,
+      document,
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
@@ -137,8 +133,7 @@ describe('computeDocumentLogsDailyCount', () => {
     ])
 
     const result = await computeDocumentLogsDailyCount({
-      workspace,
-      documentUuid: document.documentUuid,
+      document,
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
@@ -183,8 +178,7 @@ describe('computeDocumentLogsDailyCount', () => {
     ])
 
     const result = await computeDocumentLogsDailyCount({
-      workspace,
-      documentUuid: document.documentUuid,
+      document,
       filterOptions: {
         commitIds: [draft.id],
         logSources: LOG_SOURCES,
@@ -213,8 +207,7 @@ describe('computeDocumentLogsDailyCount', () => {
     await factories.createDocumentLog({ document, commit })
 
     const result = await computeDocumentLogsDailyCount({
-      workspace,
-      documentUuid: document.documentUuid,
+      document,
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
@@ -244,8 +237,7 @@ describe('computeDocumentLogsDailyCount', () => {
     })
 
     const result = await computeDocumentLogsDailyCount({
-      workspace,
-      documentUuid: document.documentUuid,
+      document,
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,

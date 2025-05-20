@@ -111,6 +111,8 @@ export async function getUsageOverview(
       .groupBy(workspaces.id),
   )
 
+  // NOTE(evalsv2): Do not delete this as it's crucial to compute historical
+  // data for the usage overview
   const evaluationResultsCTE = db.$with('evaluation_results_counts').as(
     db
       .with(errorsCTE)

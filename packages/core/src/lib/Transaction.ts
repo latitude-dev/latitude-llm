@@ -38,7 +38,12 @@ export default class Transaction {
   ): PromisedResult<ResultType> {
     try {
       let result: TypedResult<ResultType, Error>
-      await db.transaction(async (trx) => (result = await callback(trx)))
+
+      await db.transaction(async (trx) => {
+        result = await callback(trx)
+
+        if (result.error) throw result.error
+      })
 
       return result!
     } catch (error) {

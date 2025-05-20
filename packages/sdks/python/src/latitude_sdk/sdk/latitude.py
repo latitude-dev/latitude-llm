@@ -34,7 +34,7 @@ DEFAULT_INTERNAL_OPTIONS = InternalOptions(
     source=LogSources.Api,
     retries=3,
     delay=0.5,
-    timeout=30,
+    timeout=None,
 )
 
 
@@ -63,7 +63,6 @@ class Latitude:
         assert self._options.internal.source is not None
         assert self._options.internal.retries is not None
         assert self._options.internal.delay is not None
-        assert self._options.internal.timeout is not None
 
         self._client = Client(
             ClientOptions(

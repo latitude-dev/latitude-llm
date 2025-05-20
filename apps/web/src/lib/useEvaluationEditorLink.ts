@@ -23,7 +23,7 @@ export function useEvaluationEditorLink({
         .detail({ id: +projectId })
         .commits.detail({ uuid: commitUuid })
         .documents.detail({ uuid: documentUuid })
-        .evaluationsV2.detail({ uuid: evaluationUuid }).editor.root
+        .evaluations.detail({ uuid: evaluationUuid }).editor.root
 
       if (!documentLogUuid) return path
 

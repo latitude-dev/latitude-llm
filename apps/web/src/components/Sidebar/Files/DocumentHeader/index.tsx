@@ -13,7 +13,7 @@ import { Node } from '../useTree'
 import { ROUTES } from '$/services/routes'
 import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
-import { UseEvaluationPathReturn } from '$/components/Sidebar/Files/useEvaluationPath'
+import { type ParamValue } from 'next/dist/server/request/params'
 
 export default function DocumentHeader({
   open,
@@ -29,7 +29,7 @@ export default function DocumentHeader({
   node: Node
   indentation: IndentType[]
   draggble: NodeHeaderWrapperProps['draggble']
-  currentEvaluationUuid: UseEvaluationPathReturn['currentEvaluationUuid']
+  currentEvaluationUuid: ParamValue
   canDrag: boolean
 }) {
   const {
@@ -64,9 +64,15 @@ export default function DocumentHeader({
   )
   const documentUuid = node.doc!.documentUuid
   const url = useMemo(() => {
-    if (selected && !currentEvaluationUuid) return undefined
-    if (!node.isPersisted) return undefined
     if (!documentUuid) return undefined
+    if (!node.isPersisted) return undefined
+    if (
+      selected &&
+      !currentEvaluationUuid &&
+      window.location.pathname.endsWith(documentUuid)
+    ) {
+      return undefined
+    }
 
     return ROUTES.projects
       .detail({ id: sidebarLinkContext.projectId })

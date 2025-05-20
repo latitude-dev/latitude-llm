@@ -9,7 +9,6 @@ export enum DocumentRoutes {
   editor = 'editor',
   logs = 'logs',
   evaluations = 'evaluations',
-  evaluationsV2 = 'evaluationsV2',
   experiments = 'experiments',
 }
 
@@ -119,20 +118,6 @@ export const ROUTES = {
     },
     detail: (id: string | number) => `/datasets/${id}`,
   },
-  evaluations: {
-    detail: ({ uuid }: { uuid: string }) => {
-      const root = `/evaluations/${uuid}`
-      return {
-        root,
-        [EvaluationRoutes.editor]: {
-          root: `${root}/editor`,
-          importLogs: {
-            root: `${root}/editor/import-logs`,
-          },
-        },
-      }
-    },
-  },
   projects: {
     root: '/projects',
     detail: ({ id }: { id: number }) => {
@@ -161,8 +146,7 @@ export const ROUTES = {
                 root: rootDocuments,
                 detail: ({ uuid }: { uuid: string }) => {
                   const root = `${rootDocuments}/${uuid}`
-                  const evaluationsRoot = `${root}/evaluations`
-                  const rootEvaluations = `${root}/evaluations-v2`
+                  const rootEvaluations = `${root}/evaluations`
                   const experimentsRoot = `${root}/experiments`
                   return {
                     root,
@@ -170,24 +154,6 @@ export const ROUTES = {
                       root,
                     },
                     [DocumentRoutes.evaluations]: {
-                      root: evaluationsRoot,
-                      dashboard: {
-                        root: `${evaluationsRoot}/dashboard`,
-                        generate: {
-                          root: `${evaluationsRoot}/dashboard/generate`,
-                        },
-                        destroy: (id: number) =>
-                          `${evaluationsRoot}/destroy/${id}`,
-                      },
-                      detail: (id: number) => {
-                        const detailRoot = `${evaluationsRoot}/${id}`
-                        return {
-                          root: detailRoot,
-                          createBatch: `${detailRoot}/create-batch`,
-                        }
-                      },
-                    },
-                    [DocumentRoutes.evaluationsV2]: {
                       root: rootEvaluations,
                       detail: ({ uuid }: { uuid: string }) => {
                         const root = `${rootEvaluations}/${uuid}`

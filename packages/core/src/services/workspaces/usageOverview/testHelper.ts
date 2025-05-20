@@ -1,5 +1,4 @@
 import {
-  EvaluationResultDto,
   EvaluationResultV2,
   EvaluationV2,
   Providers,
@@ -8,15 +7,11 @@ import { addDays, format } from 'date-fns'
 import { orderBy } from 'lodash-es'
 import {
   Commit,
-  DocumentLog,
   DocumentVersion,
-  Evaluation,
-  EvaluationDto,
   ProviderLog,
   Workspace,
 } from '../../../browser'
 import * as factories from '../../../tests/factories'
-import { connectEvaluations } from '../../evaluations/connect'
 import { createMembership } from '../../memberships/create'
 import { generateWorkspaceFixtures, type WorkspaceInfo } from './fixtures'
 import { GetUsageOverview, GetUsageOverviewRow } from './getUsageOverview'
@@ -56,27 +51,6 @@ async function createDocumentLog({
     createdAt: info.createdAt,
     skipProviderLogs: !isFirst,
   })
-}
-
-async function createResult({
-  evaluation,
-  documentLog,
-  evaluatedProviderLog,
-  info,
-}: {
-  evaluation: Evaluation
-  documentLog: DocumentLog
-  evaluatedProviderLog: ProviderLog
-  info: WorkspaceInfo['results'][0]
-}) {
-  return await factories
-    .createEvaluationResult({
-      documentLog,
-      evaluatedProviderLog,
-      evaluation: evaluation as EvaluationDto,
-      evaluationResultCreatedAt: info.createdAt,
-    })
-    .then((r) => r.evaluationResult)
 }
 
 async function createResultV2({
@@ -123,47 +97,28 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
     ),
   )
 
-  // Project and evaluation
-  const { commit, documents, evaluations, project } =
-    await factories.createProject({
-      workspace,
-      providers: [{ type: Providers.OpenAI, name: 'test' }],
-      documents: {
-        foo: factories.helpers.createPrompt({ provider: 'test' }),
-      },
-      evaluations: [
-        { prompt: factories.helpers.createPrompt({ provider: 'test' }) },
-      ],
-    })
+  const { commit, documents, project } = await factories.createProject({
+    workspace,
+    providers: [{ type: Providers.OpenAI, name: 'test' }],
+    documents: {
+      foo: factories.helpers.createPrompt({ provider: 'test' }),
+    },
+  })
 
   const document = documents[0]!
-  const evaluation = evaluations[0]!
-  await connectEvaluations({
-    user: creator,
-    workspace,
-    documentUuid: document.documentUuid,
-    evaluationUuids: [evaluation.uuid],
-  })
 
   const documentLogs = await Promise.all(
     workspaceInfo.logs.map((info, index) =>
       createDocumentLog({ commit, document, info, isFirst: index === 0 }),
     ),
   )
-  let evaluationResults: EvaluationResultDto[] = []
   let evaluationResultsV2: EvaluationResultV2[] = []
 
   const log = documentLogs[0]!
 
   if (log) {
-    const { documentLog, providerLogs } = log
+    const { providerLogs } = log
     const evaluatedProviderLog = providerLogs[0]!
-
-    evaluationResults = await Promise.all(
-      workspaceInfo.results.map((info) =>
-        createResult({ evaluation, documentLog, evaluatedProviderLog, info }),
-      ),
-    )
 
     evaluationResultsV2 = await Promise.all(
       workspaceInfo.resultsV2.map(async (info) => {
@@ -189,7 +144,6 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
     subcription: workspace.currentSubscription,
     projectId: project.id,
     documentLogs,
-    evaluationResults,
     evaluationResultsV2,
     membersCount: workspaceInfo.memberEmails.length + 1,
     emails: orderBy([creator, ...remainderMembers], (u) => u.createdAt, 'desc')
@@ -225,7 +179,6 @@ async function createWorkspaces({
       info: {
         fixture: w.originalInfo,
         logs: w.documentLogs,
-        evaluationResults: w.evaluationResults,
         evaluationResultsV2: w.evaluationResultsV2,
       },
     }

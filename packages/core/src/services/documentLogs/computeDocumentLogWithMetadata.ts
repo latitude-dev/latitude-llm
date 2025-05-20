@@ -14,6 +14,7 @@ export async function computeDocumentLogWithMetadata(
   const workspace = await findWorkspaceFromDocumentLog(documentLog, db)
   if (!workspace) return Result.error(new NotFoundError('Workspace not found'))
 
+  // TODO: remove
   const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspace.id, db)
 
   const result = await repo.find(documentLog.id)

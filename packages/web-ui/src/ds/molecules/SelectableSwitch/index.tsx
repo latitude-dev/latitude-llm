@@ -3,18 +3,20 @@ import { ReactNode, useEffect, useId, useRef, useState } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Button } from '../../atoms/Button'
-import { Label } from '../../atoms/Label'
-import { Text } from '../../atoms/Text'
 import {
   FormControl,
   FormDescription,
   InlineFormErrorMessage,
 } from '../../atoms/FormField'
+import { Label } from '../../atoms/Label'
+import { Text } from '../../atoms/Text'
 
 const ButtonBaseClassName =
   'w-full h-8 flex items-center justify-center gap-1 px-3 rounded-md'
-const ButtonSelectableClassName = 'cursor-pointer pointer-events-auto'
-const ButtonUnselectableClassName = 'cursor-default pointer-events-none'
+const ButtonSelectableClassName =
+  'cursor-pointer pointer-events-auto group-disabled:!cursor-not-allowed group-disabled:!opacity-80 disabled:!opacity-100'
+const ButtonUnselectableClassName =
+  'cursor-default pointer-events-none group-disabled:!cursor-not-allowed group-disabled:!opacity-90 disabled:!opacity-100'
 
 export function SelectableSwitch({
   trueLabel,
@@ -107,6 +109,7 @@ export function SelectableSwitch({
           className={cn(
             'relative flex flex-row justify-between gap-2 p-1 w-[calc(100%+2px)]',
             'bg-background rounded-lg border border-input',
+            { '!cursor-not-allowed': disabled },
           )}
         >
           <div

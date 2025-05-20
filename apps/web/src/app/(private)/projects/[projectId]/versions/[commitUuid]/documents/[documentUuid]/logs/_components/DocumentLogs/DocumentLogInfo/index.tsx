@@ -12,7 +12,7 @@ import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import {
   buildConversation,
   ProviderLogDto,
-  ResultWithEvaluationTmp,
+  ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
@@ -54,7 +54,7 @@ export function DocumentLogInfo({
 }: {
   documentLog: DocumentLogWithMetadataAndError
   providerLogs?: ProviderLogDto[]
-  evaluationResults?: ResultWithEvaluationTmp[]
+  evaluationResults?: ResultWithEvaluationV2[]
   isLoading?: boolean
   error?: Error
   className?: string

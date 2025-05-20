@@ -8,8 +8,6 @@ import { Result } from '../../lib/Result'
 import Transaction from './../../lib/Transaction'
 import { providerLogs } from '../../schema'
 import { estimateCost, PartialConfig } from '../ai'
-import { touchApiKey } from '../apiKeys'
-import { touchProviderApiKey } from '../providerApiKeys/touch'
 const TO_MILLICENTS_FACTOR = 100_000
 
 export type CreateProviderLogProps = {
@@ -99,9 +97,6 @@ export async function createProviderLog(
       .returning()
 
     const log = inserts[0]! as ProviderLog
-
-    if (providerId) await touchProviderApiKey(providerId, trx)
-    if (apiKeyId) await touchApiKey(apiKeyId, trx)
 
     publisher.publishLater({
       type: 'providerLogCreated',

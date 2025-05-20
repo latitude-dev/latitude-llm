@@ -7,20 +7,14 @@ import {
   DatasetsRepository,
   EvaluationsV2Repository,
 } from '@latitude-data/core/repositories'
+import { experimentVariantSchema } from '@latitude-data/constants/experiments'
 import { z } from 'zod'
 
 export const createExperimentAction = withDocument
   .createServerAction()
   .input(
     z.object({
-      variants: z.array(
-        z.object({
-          name: z.string(),
-          provider: z.string(),
-          model: z.string(),
-          temperature: z.number(),
-        }),
-      ),
+      variants: z.array(experimentVariantSchema),
       evaluationUuids: z.array(z.string()),
       datasetId: z.number().optional(),
       parametersMap: z.record(z.string(), z.number()),
@@ -66,6 +60,7 @@ export const createExperimentAction = withDocument
     }
 
     const experiments = await createExperimentVariants({
+      user: ctx.user,
       workspace: ctx.workspace,
       commit: ctx.commit,
       document: ctx.document,

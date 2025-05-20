@@ -1,14 +1,10 @@
-import AverageScoreBadge from '$/components/EvaluationAggregatedResult'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { ROUTES } from '$/services/routes'
-import useEvaluations from '$/stores/evaluations'
 import { useEvaluationsV2, useEvaluationV2Stats } from '$/stores/evaluationsV2'
 import {
   DocumentVersion,
   EvaluationMetric,
-  EvaluationTmp,
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/core/browser'
@@ -45,33 +41,14 @@ export function Step1({
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
-  selectedEvaluation?: EvaluationTmp
-  setSelectedEvaluation: (evaluation?: EvaluationTmp) => void
+  selectedEvaluation?: EvaluationV2
+  setSelectedEvaluation: (evaluation?: EvaluationV2) => void
 }) {
-  const { enabled: evaluationsV2Enabled } = useFeatureFlag({
-    featureFlag: 'evaluationsV2',
+  const { data: evaluations, isLoading } = useEvaluationsV2({
+    project,
+    commit,
+    document,
   })
-
-  const { data: evaluationsV1, isLoading: isEvaluationsV1Loading } =
-    useEvaluations({
-      params: { documentUuid: document.documentUuid },
-    })
-
-  const { data: evaluationsV2, isLoading: isEvaluationsV2Loading } =
-    useEvaluationsV2({ project, commit, document })
-
-  const evaluations = useMemo<EvaluationTmp[]>(() => {
-    return [
-      ...(evaluationsV2Enabled ? [] : evaluationsV1).map((evaluation) => ({
-        ...evaluation,
-        version: 'v1' as const,
-      })),
-      ...evaluationsV2.map((evaluation) => ({
-        ...evaluation,
-        version: 'v2' as const,
-      })),
-    ]
-  }, [evaluationsV1, evaluationsV2, evaluationsV2Enabled])
 
   const selectableState = useSelectableRows<string>({
     rowIds: evaluations.map((e) => e.uuid),
@@ -87,7 +64,7 @@ export function Step1({
     } else setSelectedEvaluation(undefined)
   }, [selectableState.getSelectedRowIds])
 
-  if (isEvaluationsV1Loading || isEvaluationsV2Loading) {
+  if (isLoading) {
     return (
       <TableSkeleton rows={7} cols={['Name', 'Description', 'Average score']} />
     )
@@ -158,20 +135,12 @@ export function Step1({
                 <Text.H5>{evaluation.description || '-'}</Text.H5>
               </TableCell>
               <TableCell>
-                {evaluation.version === 'v2' ? (
-                  <AverageScoreBadgeV2
-                    project={project}
-                    commit={commit}
-                    document={document}
-                    evaluation={evaluation}
-                  />
-                ) : (
-                  <AverageScoreBadge
-                    commitUuid={commit.uuid}
-                    documentUuid={document.documentUuid}
-                    evaluation={evaluation}
-                  />
-                )}
+                <AverageScoreBadgeV2
+                  project={project}
+                  commit={commit}
+                  document={document}
+                  evaluation={evaluation}
+                />
               </TableCell>
             </TableRow>
           ))}

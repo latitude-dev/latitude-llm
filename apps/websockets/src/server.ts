@@ -127,19 +127,6 @@ workers.use(async (socket, next) => {
 })
 
 workers.on('connection', (socket) => {
-  socket.on('evaluationStatus', (args) => {
-    const { workspaceId, data } = args
-    const workspace = buildWorkspaceRoom({ workspaceId })
-    web.to(workspace).emit('evaluationStatus', data)
-  })
-
-  socket.on('evaluationResultCreated', (args) => {
-    const { workspaceId, data } = args
-    const workspace = buildWorkspaceRoom({ workspaceId })
-
-    web.to(workspace).emit('evaluationResultCreated', data)
-  })
-
   socket.on('documentLogCreated', (args) => {
     const { workspaceId, data } = args
     const workspace = buildWorkspaceRoom({ workspaceId })

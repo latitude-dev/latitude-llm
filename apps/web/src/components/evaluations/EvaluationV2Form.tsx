@@ -81,7 +81,6 @@ export default function EvaluationV2Form<
   errors: actionErrors,
   commit,
   disabled,
-  forceTypeChange,
 }: {
   mode: 'create' | 'update'
   settings: EvaluationSettings<T, M>
@@ -94,52 +93,12 @@ export default function EvaluationV2Form<
   >
   commit: ICommitContextType['commit']
   disabled?: boolean
-  forceTypeChange?: T
 }) {
   const { enabled: evaluationsV2Enabled } = useFeatureFlag({
     featureFlag: 'evaluationsV2',
   })
 
   const [expanded, setExpanded] = useState(mode === 'update')
-
-  // TODO(evalsv2): Temporal hot garbage hack for old evaluation creation modal
-  useEffect(() => {
-    if (!forceTypeChange) return
-    if (forceTypeChange === settings.type) return
-    if (mode !== 'create') return
-    if (forceTypeChange === EvaluationType.Llm) {
-      setSettings({
-        ...settings,
-        type: forceTypeChange,
-        metric: LlmEvaluationMetric.Rating as M,
-        configuration: {
-          ...settings.configuration,
-          reverseScale: false,
-          provider: undefined,
-          model: undefined,
-          criteria:
-            'Assess how well the response follows the given instructions.',
-          minRating: 1,
-          minRatingDescription:
-            "Not faithful, doesn't follow the instructions.",
-          maxRating: 5,
-          maxRatingDescription: 'Very faithful, does follow the instructions.',
-          minThreshold: 3,
-        },
-      })
-    } else if (forceTypeChange === EvaluationType.Rule) {
-      setSettings({
-        ...settings,
-        type: forceTypeChange,
-        configuration: {
-          ...settings.configuration,
-          reverseScale: false,
-          caseInsensitive: false,
-        },
-      })
-    }
-  }, [forceTypeChange])
-
   const errors = useMemo(() => parseActionErrors(actionErrors), [actionErrors])
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[settings.type]

@@ -1,47 +1,19 @@
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import EvaluateLiveLogsSwitch from '$/components/evaluations/EvaluateLiveLogsSwitch'
 import ResultBadge from '$/components/evaluations/ResultBadge'
-import { EvaluationRoutes, ROUTES } from '$/services/routes'
 import {
-  EvaluationDto,
-  EvaluationResultDto,
-  EvaluationResultTmp,
   EvaluationResultV2,
-  EvaluationResultableType,
   EvaluationType,
+  EvaluationV2,
 } from '@latitude-data/core/browser'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useMemo } from 'react'
-import LiveEvaluationToggle from '../../../../../evaluations/[evaluationId]/_components/Actions/LiveEvaluationToggle'
-import { ResultCellContent as OriginalResultCellContent } from '../../../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
 import { Props } from './shared'
 import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
-
-function ResultCellContent({
-  result,
-  evaluation,
-}: {
-  result: EvaluationResultDto
-  evaluation: EvaluationDto
-}) {
-  if (result.resultableType === EvaluationResultableType.Text) {
-    return (
-      <Tooltip asChild trigger={<Badge variant='outline'>text</Badge>}>
-        {result.result}
-      </Tooltip>
-    )
-  }
-
-  return (
-    <OriginalResultCellContent evaluation={evaluation} value={result.result} />
-  )
-}
 
 function EvaluationItemContent({
   result,
@@ -49,17 +21,12 @@ function EvaluationItemContent({
   runCount,
   isWaiting,
 }: {
-  result?: EvaluationResultTmp
-  evaluation: Props['evaluations'][number]
+  result?: EvaluationResultV2
+  evaluation: EvaluationV2
   runCount: number
   isWaiting: boolean
 }) {
-  if (
-    !runCount ||
-    (evaluation.version === 'v2' && !evaluation.evaluateLiveLogs) ||
-    (evaluation.version !== 'v2' && !evaluation.live) ||
-    (!isWaiting && !result)
-  ) {
+  if (!runCount || !evaluation.evaluateLiveLogs || (!isWaiting && !result)) {
     return (
       <Text.H6
         userSelect={false}
@@ -83,41 +50,33 @@ function EvaluationItemContent({
     )
   }
 
-  if (evaluation.version === 'v2') {
-    if ((result as EvaluationResultV2).error) {
-      return (
-        <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
-          {(result as EvaluationResultV2).error!.message}
-        </Text.H6>
-      )
-    }
-
-    if (
-      evaluation.type === EvaluationType.Llm ||
-      evaluation.type === EvaluationType.Human
-    ) {
-      return (
-        <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
-          {(
-            result as EvaluationResultV2<
-              EvaluationType.Llm | EvaluationType.Human
-            >
-          ).metadata!.reason || 'No reason reported'}
-        </Text.H6>
-      )
-    }
-
+  if (result.error) {
     return (
       <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
-        {EVALUATION_SPECIFICATIONS[evaluation.type].name} evaluations do not
-        report a reason
+        {result.error!.message}
+      </Text.H6>
+    )
+  }
+
+  if (
+    evaluation.type === EvaluationType.Llm ||
+    evaluation.type === EvaluationType.Human
+  ) {
+    return (
+      <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
+        {(
+          result as EvaluationResultV2<
+            EvaluationType.Llm | EvaluationType.Human
+          >
+        ).metadata!.reason || 'No reason reported'}
       </Text.H6>
     )
   }
 
   return (
     <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
-      {(result as EvaluationResultDto).reason || 'No reason reported'}
+      {EVALUATION_SPECIFICATIONS[evaluation.type].name} evaluations do not
+      report a reason
     </Text.H6>
   )
 }
@@ -132,7 +91,7 @@ export default function EvaluationItem({
   isWaiting,
   documentLog,
 }: Omit<Props, 'results' | 'evaluations'> & {
-  result?: EvaluationResultTmp
+  result?: EvaluationResultV2
   evaluation: Props['evaluations'][number]
 }) {
   const goToEvaluationsV2Editor = useEvaluationEditorLink({
@@ -142,31 +101,10 @@ export default function EvaluationItem({
   })
   const route = useMemo(() => {
     const documentLogUuid = documentLog?.uuid
-    if (evaluation.version === 'v2') {
-      return goToEvaluationsV2Editor({
-        evaluationUuid: evaluation.uuid,
-        documentLogUuid,
-      })
-    }
-
-    const resultV1 = result as EvaluationResultDto
-    const query = new URLSearchParams()
-    query.set(
-      'back',
-      ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({ uuid: commit.uuid })
-        .documents.detail({ uuid: document.documentUuid }).root,
-    )
-    if (evaluation.live && !isWaiting && resultV1?.evaluatedProviderLogId) {
-      query.set('providerLogId', resultV1.evaluatedProviderLogId.toString())
-    }
-
-    return (
-      ROUTES.evaluations.detail({ uuid: evaluation.uuid })[
-        EvaluationRoutes.editor
-      ].root + `?${query.toString()}`
-    )
+    return goToEvaluationsV2Editor({
+      evaluationUuid: evaluation.uuid,
+      documentLogUuid,
+    })
   }, [
     project,
     commit,
@@ -192,38 +130,15 @@ export default function EvaluationItem({
           <Text.H5 ellipsis noWrap>
             {evaluation.name}
           </Text.H5>
-          {evaluation.version === 'v2' &&
-            evaluation.evaluateLiveLogs &&
-            !isWaiting &&
-            result && (
-              <ResultBadge
-                evaluation={evaluation}
-                result={result as EvaluationResultV2}
-              />
-            )}
-          {evaluation.version !== 'v2' &&
-            evaluation.live &&
-            !isWaiting &&
-            result && (
-              <ResultCellContent
-                result={result as EvaluationResultDto}
-                evaluation={evaluation}
-              />
-            )}
+          {evaluation.evaluateLiveLogs && !isWaiting && result && (
+            <ResultBadge evaluation={evaluation} result={result} />
+          )}
         </span>
         <div className='flex flex-row items-center gap-2 flex-shrink-0'>
-          {evaluation.version === 'v2' ? (
-            <EvaluateLiveLogsSwitch
-              evaluation={evaluation}
-              disabled={isWaiting}
-            />
-          ) : (
-            <LiveEvaluationToggle
-              documentUuid={document.documentUuid}
-              evaluation={evaluation}
-              disabled={isWaiting}
-            />
-          )}
+          <EvaluateLiveLogsSwitch
+            evaluation={evaluation}
+            disabled={isWaiting}
+          />
           <Link href={route}>
             <Button
               variant='ghost'

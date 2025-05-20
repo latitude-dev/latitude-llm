@@ -13,6 +13,7 @@ import { messageSchema } from '@latitude-data/core/browser'
 export const chatRoute = createRoute({
   operationId: 'createChat',
   tags: ['Conversations'],
+  description: 'Chat with an existing conversation',
   method: http.Methods.POST,
   path: ROUTES.api.v3.conversations.chat,
   request: {

@@ -12,6 +12,7 @@ import { Result } from '../../../lib/Result'
 import { ProviderApiKeysRepository } from '../../../repositories'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { createRunError } from '../../runErrors/create'
+import { isErrorRetryable } from '../run'
 import {
   EvaluationMetricBackendSpecification,
   EvaluationMetricCloneArgs,
@@ -23,7 +24,6 @@ import { LlmEvaluationComparisonSpecification } from './comparison'
 import { LlmEvaluationCustomSpecification } from './custom'
 import { LlmEvaluationCustomLabeledSpecification } from './customLabeled'
 import { LlmEvaluationRatingSpecification } from './rating'
-import { isErrorRetryable } from '../run'
 
 // prettier-ignore
 const METRICS: {
@@ -46,6 +46,7 @@ export const LlmEvaluationSpecification = {
 
 async function validate<M extends LlmEvaluationMetric>(
   {
+    mode,
     metric,
     configuration,
     workspace,
@@ -62,21 +63,23 @@ async function validate<M extends LlmEvaluationMetric>(
 
   metricSpecification.configuration.parse(configuration)
 
-  if (!configuration.provider) {
-    return Result.error(new BadRequestError('Provider is required'))
-  }
+  if (!metric.startsWith(LlmEvaluationMetric.Custom) || mode !== 'update') {
+    if (!configuration.provider) {
+      return Result.error(new BadRequestError('Provider is required'))
+    }
 
-  const providersRepository = new ProviderApiKeysRepository(workspace.id, db)
-  await providersRepository
-    .findByName(configuration.provider)
-    .then((r) => r.unwrap())
+    const providersRepository = new ProviderApiKeysRepository(workspace.id, db)
+    await providersRepository
+      .findByName(configuration.provider)
+      .then((r) => r.unwrap())
 
-  if (!configuration.model) {
-    return Result.error(new BadRequestError('Model is required'))
+    if (!configuration.model) {
+      return Result.error(new BadRequestError('Model is required'))
+    }
   }
 
   configuration = await metricSpecification
-    .validate({ configuration, workspace, ...rest }, db)
+    .validate({ mode, configuration, workspace, ...rest }, db)
     .then((r) => r.unwrap())
 
   // Note: all settings are explicitly returned to ensure we don't
@@ -119,10 +122,10 @@ async function run<M extends LlmEvaluationMetric>(
 
     return value
   } catch (error) {
+    if (isErrorRetryable(error as Error)) throw error
+
     let runError
     if (error instanceof ChainError) {
-      if (isErrorRetryable(error)) throw error
-
       runError = await createRunError(
         {
           data: {

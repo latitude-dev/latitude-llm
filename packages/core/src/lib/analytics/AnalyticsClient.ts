@@ -55,6 +55,7 @@ export class AnalyticsClient {
       debug('Latitude analytics disabled')
       return
     }
+
     if (!this.userEmail) return
 
     const data = await this.getData()

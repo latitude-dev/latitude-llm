@@ -11,7 +11,7 @@ import {
 import { apiKeys } from './models/apiKeys'
 import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
-import { connectedEvaluations } from './models/connectedEvaluations'
+import { connectedEvaluations } from './legacyModels/connectedEvaluations'
 import { EvaluationResultDto, ExperimentScores } from '@latitude-data/constants'
 import { DocumentTriggerWithConfiguration } from '../services/documentTriggers/helpers/schema'
 import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
@@ -20,15 +20,15 @@ import { datasets } from './models/datasets'
 import { documentSuggestions } from './models/documentSuggestions'
 import { documentTriggers } from './models/documentTriggers'
 import { documentVersions } from './models/documentVersions'
-import { evaluationAdvancedTemplates } from './models/evaluationAdvancedTemplates'
-import { evaluationConfigurationBoolean } from './models/evaluationConfigurationBoolean'
-import { evaluationConfigurationNumerical } from './models/evaluationConfigurationNumerical'
-import { evaluationConfigurationText } from './models/evaluationConfigurationText'
-import { evaluationMetadataManual } from './models/evaluationMetadataDefault'
-import { evaluationMetadataLlmAsJudgeAdvanced } from './models/evaluationMetadataLlmAsJudgeAdvanced'
-import { evaluationMetadataLlmAsJudgeSimple } from './models/evaluationMetadataLlmAsJudgeSimple'
-import { evaluations } from './models/evaluations'
-import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
+import { evaluationAdvancedTemplates } from './legacyModels/evaluationAdvancedTemplates'
+import { evaluationConfigurationBoolean } from './legacyModels/evaluationConfigurationBoolean'
+import { evaluationConfigurationNumerical } from './legacyModels/evaluationConfigurationNumerical'
+import { evaluationConfigurationText } from './legacyModels/evaluationConfigurationText'
+import { evaluationMetadataManual } from './legacyModels/evaluationMetadataDefault'
+import { evaluationMetadataLlmAsJudgeAdvanced } from './legacyModels/evaluationMetadataLlmAsJudgeAdvanced'
+import { evaluationMetadataLlmAsJudgeSimple } from './legacyModels/evaluationMetadataLlmAsJudgeSimple'
+import { evaluations } from './legacyModels/evaluations'
+import { evaluationTemplateCategories } from './legacyModels/evaluationTemplateCategories'
 import { integrations } from './models/integrations'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { mcpServers } from './models/mcpServers'
@@ -243,7 +243,7 @@ export type SpanLink = {
 export type TraceAttributes = Record<string, string | number | boolean>
 
 export type DocumentSuggestionWithDetails = DocumentSuggestion & {
-  evaluation: EvaluationTmp
+  evaluation: EvaluationV2
 }
 
 export type Integration = InferSelectModel<typeof integrations>
@@ -292,21 +292,6 @@ export type EvaluationV2Stats = EvaluationV2BaseStats & {
     version: Commit
   })[]
 }
-
-// TODO(evalsv2): Remove when we migrate to v2
-export type EvaluationTmp =
-  | (EvaluationDto & { version: 'v1' })
-  | (EvaluationV2 & { version: 'v2' })
-
-// TODO(evalsv2): Remove when we migrate to v2
-export type EvaluationResultTmp =
-  | (EvaluationResultDto & { version: 'v1' })
-  | (EvaluationResultV2 & { version: 'v2' })
-
-// TODO(evalsv2): Remove when we migrate to v2
-export type ResultWithEvaluationTmp =
-  | (ResultWithEvaluation & { version: 'v1' })
-  | (ResultWithEvaluationV2 & { version: 'v2' })
 
 export type Experiment = InferSelectModel<typeof experiments>
 export type ExperimentAggregatedResults = {

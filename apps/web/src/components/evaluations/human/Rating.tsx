@@ -178,7 +178,7 @@ function AnnotationForm({
   )
 
   const options = useMemo(() => {
-    if (range > 10) return []
+    if (range > 6) return []
 
     const options = []
     for (
@@ -215,7 +215,7 @@ function AnnotationForm({
 
   return (
     <>
-      {range > 10 ? (
+      {range > 6 ? (
         <NumberInput
           value={resultScore ?? undefined}
           name='resultScore'

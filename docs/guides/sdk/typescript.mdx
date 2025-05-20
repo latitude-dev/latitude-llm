@@ -338,28 +338,16 @@ const log = await latitude.logs.create('prompt-path', messages, {
 
 ## Evaluations
 
-### Triggering Evaluations
+### Annotate a log
 
-Trigger an evaluation manually for a conversation:
-
-```typescript
-const result = await latitude.evaluations.trigger('conversation-uuid', {
-  // Optional: trigger all or specific evaluations
-  evaluationUuids: ['eval-uuid-1', 'eval-uuid-2'],
-})
-```
-
-### Creating Evaluation Results
-
-Push a result to Latitude manually for an evaluation:
+Push an evaluation result (annotate) to Latitude:
 
 ```typescript
-const result = await latitude.evaluations.createResult(
+const result = await latitude.evaluations.annotate(
   'conversation-uuid',
+  100,
   'evaluation-uuid',
   {
-    // The result can be a string, boolean, or number
-    result: true,
     reason: 'I liked it!',
   },
 )

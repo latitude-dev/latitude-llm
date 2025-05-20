@@ -1,7 +1,7 @@
 import { FinishReason, LanguageModelUsage } from 'ai'
 
+import { ExperimentVariant } from '@latitude-data/constants/experiments'
 import type {
-  ChainStepResponse,
   Commit,
   Dataset,
   DatasetRow,
@@ -9,12 +9,9 @@ import type {
   DocumentLog,
   DocumentSuggestion,
   DocumentVersion,
-  Evaluation,
-  EvaluationDto,
-  EvaluationResultDto,
   EvaluationResultV2,
-  EvaluationTmp,
   EvaluationV2,
+  Experiment,
   LogSources,
   MagicLinkToken,
   Membership,
@@ -34,8 +31,7 @@ export type Events =
   | 'magicLinkTokenCreated'
   | 'userCreated'
   | 'membershipCreated'
-  | 'evaluationRun'
-  | 'documentRun'
+  | 'experimentVariantsCreated'
   | 'providerLogCreated'
   | 'aiProviderCallCompleted'
   | 'workspaceCreated'
@@ -46,31 +42,25 @@ export type Events =
   | 'documentSuggestionDiscarded'
   | 'sendReferralInvitation'
   | 'claimReferralInvitations'
-  | 'evaluationCreated'
   | 'datasetCreated'
   | 'datasetUploaded'
   | 'providerApiKeyCreated'
   | 'userInvited'
   | 'commitCreated'
   | 'commitPublished'
-  | 'evaluationsConnected'
-  | 'batchEvaluationRun'
   | 'documentCreated'
-  | 'evaluationResultCreated'
   | 'documentRunRequested'
   | 'publicDocumentRunRequested'
   | 'chatMessageRequested'
   | 'sharedChatMessageRequested'
   | 'forkDocumentRequested'
-  | 'batchEvaluationRunRequested'
-  | 'runDocumentInBatchRequested'
   | 'copilotRefinerGenerated'
   | 'copilotRefinerApplied'
   | 'copilotSuggestionGenerated'
   | 'copilotSuggestionApplied'
-  | 'evaluationResultUpdated'
   | 'evaluationV2Created'
   | 'evaluationV2Updated'
+  | 'evaluationV2Deleted'
   | 'evaluationV2Ran'
   | 'evaluationV2Annotated'
   | 'evaluationResultV2Created'
@@ -105,31 +95,14 @@ export type MembershipCreatedEvent = LatitudeEventGeneric<
   'membershipCreated',
   Membership & { authorId?: string; userEmail?: string }
 >
-export type EvaluationRunEvent = LatitudeEventGeneric<
-  'evaluationRun',
+export type ExperimentVariantsCreatedEvent = LatitudeEventGeneric<
+  'experimentVariantsCreated',
   {
-    documentUuid: string
-    evaluationId: number
-    documentLogUuid: string
-    workspaceId: number
-    providerLogUuid: string | undefined
-    response: ChainStepResponse<StreamType> | undefined
-  }
->
-export type DocumentRunEvent = LatitudeEventGeneric<
-  'documentRun',
-  {
+    userEmail: string
     workspaceId: number
     documentUuid: string
     commitUuid: string
-    projectId: number
-    documentLogUuid: string
-    resolvedContent: string
-    parameters: Record<string, unknown>
-    source: LogSources
-    customIdentifier?: string
-    duration?: number
-    response?: ChainStepResponse<StreamType>
+    variants: ExperimentVariant[]
   }
 >
 
@@ -216,7 +189,7 @@ export type DocumentSuggestionCreatedEvent = LatitudeEventGeneric<
   {
     workspaceId: number
     suggestion: DocumentSuggestion
-    evaluation: EvaluationTmp
+    evaluation: EvaluationV2
   }
 >
 
@@ -251,17 +224,6 @@ export type ClaimReferralInvitationEvent = LatitudeEventGeneric<
   'claimReferralInvitations',
   {
     newUser: User
-  }
->
-
-export type EvaluationCreatedEvent = LatitudeEventGeneric<
-  'evaluationCreated',
-  {
-    evaluation: Evaluation
-    userEmail: string
-    workspaceId: number
-    projectId?: number
-    documentUuid?: string
   }
 >
 
@@ -304,15 +266,6 @@ export type UserInvitedEvent = LatitudeEventGeneric<
   }
 >
 
-export type EvaluationsConnectedEvent = LatitudeEventGeneric<
-  'evaluationsConnected',
-  {
-    evaluations: Partial<Evaluation>[] // it includes the basic stuff
-    userEmail: string
-    workspaceId: number
-  }
->
-
 export type CommitPublishedEvent = LatitudeEventGeneric<
   'commitPublished',
   {
@@ -322,42 +275,12 @@ export type CommitPublishedEvent = LatitudeEventGeneric<
   }
 >
 
-export type BatchEvaluationRunEvent = LatitudeEventGeneric<
-  'batchEvaluationRun',
-  {
-    workspaceId: number
-    userEmail: string
-    autoRespondToolCalls: boolean
-  } & (
-    | {
-        evaluationId: number
-        version: 'v1'
-      }
-    | {
-        commitId: number
-        documentUuid: string
-        evaluationUuid: string
-        version: 'v2'
-      }
-  )
->
-
 export type DocumentCreatedEvent = LatitudeEventGeneric<
   'documentCreated',
   {
     document: DocumentVersion
     workspaceId: number
     userEmail?: string
-  }
->
-
-export type EvaluationResultCreatedEvent = LatitudeEventGeneric<
-  'evaluationResultCreated',
-  {
-    evaluationResult: EvaluationResultDto
-    evaluation: EvaluationDto
-    documentLog: DocumentLog
-    workspaceId: number
   }
 >
 
@@ -417,36 +340,6 @@ export type ForkDocumentRequestedEvent = LatitudeEventGeneric<
   }
 >
 
-export type BatchEvaluationRunRequestedEvent = LatitudeEventGeneric<
-  'batchEvaluationRunRequested',
-  {
-    workspaceId: number
-    userEmail: string
-    autoRespondToolCalls: boolean
-  } & (
-    | {
-        evaluationIds: number[]
-        documentUuid: string
-        version: 'v1'
-      }
-    | {
-        commitId: number
-        documentUuid: string
-        evaluationUuids: string[]
-        version: 'v2'
-      }
-  )
->
-
-export type RunDocumentInBatchRequestedEvent = LatitudeEventGeneric<
-  'runDocumentInBatchRequested',
-  {
-    document: DocumentVersion
-    workspaceId: number
-    userEmail: string
-  }
->
-
 export type CopilotRefinerGenerated = LatitudeEventGeneric<
   'copilotRefinerGenerated',
   {
@@ -455,16 +348,9 @@ export type CopilotRefinerGenerated = LatitudeEventGeneric<
     commitUuid: string
     documentUuid: string
     userEmail: string
-  } & (
-    | {
-        evaluationId: number
-        version: 'v1'
-      }
-    | {
-        evaluationUuid: string
-        version: 'v2'
-      }
-  )
+  } & {
+    evaluationUuid: string
+  }
 >
 export type CopilotRefinerApplied = LatitudeEventGeneric<
   'copilotRefinerApplied',
@@ -498,14 +384,6 @@ export type CopilotSuggestionApplied = LatitudeEventGeneric<
   }
 >
 
-export type EvaluationResultUpdatedEvent = LatitudeEventGeneric<
-  'evaluationResultUpdated',
-  {
-    evaluationResult: EvaluationResultDto
-    workspaceId: number
-  }
->
-
 export type EvaluationV2CreatedEvent = LatitudeEventGeneric<
   'evaluationV2Created',
   {
@@ -516,6 +394,14 @@ export type EvaluationV2CreatedEvent = LatitudeEventGeneric<
 
 export type EvaluationV2UpdatedEvent = LatitudeEventGeneric<
   'evaluationV2Updated',
+  {
+    workspaceId: number
+    evaluation: EvaluationV2
+  }
+>
+
+export type EvaluationV2DeletedEvent = LatitudeEventGeneric<
+  'evaluationV2Deleted',
   {
     workspaceId: number
     evaluation: EvaluationV2
@@ -552,6 +438,7 @@ export type EvaluationResultV2CreatedEvent = LatitudeEventGeneric<
     evaluation: EvaluationV2
     commit: Commit
     providerLog: ProviderLogDto
+    experiment?: Experiment
     dataset?: DatasetV2
     datasetRow?: DatasetRow
   }
@@ -599,9 +486,8 @@ export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
   | MagicLinkTokenCreated
-  | EvaluationRunEvent
-  | DocumentRunEvent
   | ProviderLogCreatedEvent
+  | ExperimentVariantsCreatedEvent
   | AIProviderCallCompletedEvent
   | WorkspaceCreatedEvent
   | ProjectCreatedEvent
@@ -611,31 +497,25 @@ export type LatitudeEvent =
   | DocumentSuggestionDiscardedEvent
   | SendReferralInvitationEvent
   | ClaimReferralInvitationEvent
-  | EvaluationCreatedEvent
   | DatasetCreatedEvent
   | DatasetV2CreatedEvent
   | ProviderApiKeyCreatedEvent
   | UserInvitedEvent
   | CommitCreatedEvent
   | CommitPublishedEvent
-  | EvaluationsConnectedEvent
-  | BatchEvaluationRunEvent
   | DocumentCreatedEvent
-  | EvaluationResultCreatedEvent
   | DocumentRunRequestedEvent
   | PublicDocumentRunRequestedEvent
   | ChatMessageRequestedEvent
   | SharedChatMessageRequestedEvent
   | ForkDocumentRequestedEvent
-  | BatchEvaluationRunRequestedEvent
-  | RunDocumentInBatchRequestedEvent
   | CopilotRefinerGenerated
   | CopilotRefinerApplied
   | CopilotSuggestionGenerated
   | CopilotSuggestionApplied
-  | EvaluationResultUpdatedEvent
   | EvaluationV2CreatedEvent
   | EvaluationV2UpdatedEvent
+  | EvaluationV2DeletedEvent
   | EvaluationV2RanEvent
   | EvaluationV2AnnotatedEvent
   | EvaluationResultV2CreatedEvent
@@ -648,9 +528,8 @@ export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
   membershipCreated: EventHandler<MembershipCreatedEvent>[]
   userCreated: EventHandler<UserCreatedEvent>[]
-  evaluationRun: EventHandler<EvaluationRunEvent>[]
-  documentRun: EventHandler<DocumentRunEvent>[]
   providerLogCreated: EventHandler<ProviderLogCreatedEvent>[]
+  experimentVariantsCreated: EventHandler<ExperimentVariantsCreatedEvent>[]
   aiProviderCallCompleted: EventHandler<AIProviderCallCompletedEvent>[]
   workspaceCreated: EventHandler<WorkspaceCreatedEvent>[]
   projectCreated: EventHandler<ProjectCreatedEvent>[]
@@ -660,31 +539,25 @@ export interface IEventsHandlers {
   documentSuggestionDiscarded: EventHandler<DocumentSuggestionDiscardedEvent>[]
   sendReferralInvitation: EventHandler<SendReferralInvitationEvent>[]
   claimReferralInvitations: EventHandler<ClaimReferralInvitationEvent>[]
-  evaluationCreated: EventHandler<EvaluationCreatedEvent>[]
   datasetCreated: EventHandler<DatasetCreatedEvent>[]
   datasetUploaded: EventHandler<DatasetV2CreatedEvent>[]
   providerApiKeyCreated: EventHandler<ProviderApiKeyCreatedEvent>[]
   userInvited: EventHandler<UserInvitedEvent>[]
   commitCreated: EventHandler<CommitCreatedEvent>[]
   commitPublished: EventHandler<CommitPublishedEvent>[]
-  evaluationsConnected: EventHandler<EvaluationsConnectedEvent>[]
-  batchEvaluationRun: EventHandler<BatchEvaluationRunEvent>[]
   documentCreated: EventHandler<DocumentCreatedEvent>[]
-  evaluationResultCreated: EventHandler<EvaluationResultCreatedEvent>[]
   documentRunRequested: EventHandler<DocumentRunRequestedEvent>[]
   publicDocumentRunRequested: EventHandler<PublicDocumentRunRequestedEvent>[]
   chatMessageRequested: EventHandler<ChatMessageRequestedEvent>[]
   sharedChatMessageRequested: EventHandler<SharedChatMessageRequestedEvent>[]
   forkDocumentRequested: EventHandler<ForkDocumentRequestedEvent>[]
-  batchEvaluationRunRequested: EventHandler<BatchEvaluationRunRequestedEvent>[]
-  runDocumentInBatchRequested: EventHandler<RunDocumentInBatchRequestedEvent>[]
   copilotRefinerGenerated: EventHandler<CopilotRefinerGenerated>[]
   copilotRefinerApplied: EventHandler<CopilotRefinerApplied>[]
   copilotSuggestionGenerated: EventHandler<CopilotSuggestionGenerated>[]
   copilotSuggestionApplied: EventHandler<CopilotSuggestionApplied>[]
-  evaluationResultUpdated: EventHandler<EvaluationResultUpdatedEvent>[]
   evaluationV2Created: EventHandler<EvaluationV2CreatedEvent>[]
   evaluationV2Updated: EventHandler<EvaluationV2UpdatedEvent>[]
+  evaluationV2Deleted: EventHandler<EvaluationV2DeletedEvent>[]
   evaluationV2Ran: EventHandler<EvaluationV2RanEvent>[]
   evaluationV2Annotated: EventHandler<EvaluationV2AnnotatedEvent>[]
   evaluationResultV2Created: EventHandler<EvaluationResultV2CreatedEvent>[]

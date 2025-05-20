@@ -7,11 +7,11 @@ import {
   Workspace,
 } from '../../browser'
 import { database, Database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
 import { EvaluationsV2Repository } from '../../repositories'
 import { evaluationVersions } from '../../schema'
-import { pingProjectUpdate } from '../projects'
+import Transaction from './../../lib/Transaction'
 
 export async function deleteEvaluationV2<
   T extends EvaluationType = EvaluationType,
@@ -69,9 +69,13 @@ export async function deleteEvaluationV2<
       evaluation.deletedAt = new Date()
     }
 
-    await pingProjectUpdate({ projectId: commit.projectId }, tx).then((r) =>
-      r.unwrap(),
-    )
+    await publisher.publishLater({
+      type: 'evaluationV2Deleted',
+      data: {
+        evaluation: evaluation,
+        workspaceId: workspace.id,
+      },
+    })
 
     return Result.ok({ evaluation })
   }, db)

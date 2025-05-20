@@ -63,6 +63,7 @@ export const API_ROUTES = {
       chat: `${V3_CONVERSATION_DETAIL}/chat`,
       evaluate: `${V3_CONVERSATION_DETAIL}/evaluate`,
       createEvaluationResult: `${V3_EVALUATION_DETAIL}/evaluation-results`,
+      annotate: `${V3_EVALUATION_DETAIL}/annotate`,
     },
   },
 }

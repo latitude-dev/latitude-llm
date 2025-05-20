@@ -1,19 +1,22 @@
-import { Dataset, Experiment } from '../../browser'
+import type { ExperimentVariant } from '@latitude-data/constants/experiments'
+import { Dataset, Experiment, User } from '../../browser'
 import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
 import { database, Database } from '../../client'
 import { ProviderApiKeysRepository } from '../../repositories'
-import { PromisedResult } from '../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { Result } from '../../lib/Result'
-import { LatitudeError, NotFoundError } from '../../lib/errors'
+import { NotFoundError } from '../../lib/errors'
 import { scan } from 'promptl-ai'
 import { createExperiment } from './create'
+import { publisher } from '../../events/publisher'
 
 export async function createExperimentVariants(
   {
     workspace,
+    user,
     commit,
     document,
-    variants,
+    variants: inputVariants,
     evaluations,
     dataset,
     parametersMap,
@@ -21,14 +24,10 @@ export async function createExperimentVariants(
     fromRow = 0,
     toRow,
   }: {
+    user: User
     workspace: Workspace
     commit: Commit
-    variants: {
-      name: string
-      provider: string
-      model: string
-      temperature: number
-    }[]
+    variants: ExperimentVariant[]
     evaluations: EvaluationV2[]
     document: DocumentVersion
     dataset?: Dataset
@@ -38,10 +37,10 @@ export async function createExperimentVariants(
     toRow?: number
   },
   db: Database = database,
-): PromisedResult<Experiment[], LatitudeError> {
+) {
   const providersScope = new ProviderApiKeysRepository(workspace.id, db)
   const providers = await providersScope.findAll().then((r) => r.unwrap())
-  const nonExistingProvider = variants.find(
+  const nonExistingProvider = inputVariants.find(
     (variant) =>
       !providers.some((provider) => provider.name === variant.provider),
   )
@@ -60,9 +59,9 @@ export async function createExperimentVariants(
     prompt: originalPrompt,
   })
 
-  try {
+  return Transaction.call<Experiment[]>(async (tx) => {
     const experiments = await Promise.all(
-      variants.map((variant) => {
+      inputVariants.map(async (variant) => {
         const variantPrompt = setConfig({
           ...originalConfig,
           provider: variant.provider,
@@ -70,7 +69,7 @@ export async function createExperimentVariants(
           temperature: variant.temperature,
         })
 
-        return createExperiment(
+        return await createExperiment(
           {
             name: variant.name,
             customPrompt: variantPrompt,
@@ -84,14 +83,22 @@ export async function createExperimentVariants(
             toRow,
             workspace,
           },
-          db,
+          tx,
         ).then((r) => r.unwrap())
       }),
     )
 
-    return Result.ok(experiments)
-  } catch (err) {
-    const error = err as LatitudeError
-    return Result.error(error)
-  }
+    publisher.publishLater({
+      type: 'experimentVariantsCreated',
+      data: {
+        userEmail: user.email,
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        variants: inputVariants,
+      },
+    })
+
+    return Result.ok(experiments as Experiment[])
+  }, db)
 }

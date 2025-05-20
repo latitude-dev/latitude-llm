@@ -31,6 +31,7 @@ import {
   CircleHelp,
   CircleIcon,
   CirclePlus,
+  CircleStop,
   CircleUser,
   Clock,
   Code,
@@ -93,6 +94,7 @@ import {
   Slack,
   Space,
   Sparkles,
+  Square,
   SquareArrowRight,
   SquareDot,
   SquareMinus,
@@ -120,6 +122,7 @@ import {
   LatitudeLogoMonochrome,
   MCP,
 } from './custom-icons'
+import Airbnb from './custom-icons/logos/Airbnb'
 import Airtable from './custom-icons/logos/Airtable'
 import Apify from './custom-icons/logos/Apify'
 import Attio from './custom-icons/logos/Attio'
@@ -157,6 +160,7 @@ const Icons = {
   // hubspot: Hubspot,
   addCircle: CirclePlus,
   addSquare: SquarePlus,
+  airbnb: Airbnb,
   airtable: Airtable,
   alert: CircleAlert,
   alertCircle: AlertCircle,
@@ -194,6 +198,7 @@ const Icons = {
   circleChevronRight: CircleChevronRight,
   circleDollarSign: CircleDollarSign,
   circleHelp: CircleHelp,
+  circleStop: CircleStop,
   circleUser: CircleUser,
   clipboard: Copy,
   clock: Clock,
@@ -276,6 +281,7 @@ const Icons = {
   settings: SettingsIcon,
   slack: Slack,
   sparkles: Sparkles,
+  square: Square,
   squareArrowRight: SquareArrowRight,
   star: Star,
   stripe: Stripe,

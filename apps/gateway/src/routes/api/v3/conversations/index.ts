@@ -1,17 +1,16 @@
 import { createRouter } from '$/openApi/createApp'
 import { chatRoute, chatHandler } from './chat'
+import { annotateRoute, annotateHandler } from './annotate'
+import { evaluateRoute, evaluateHandler } from './evaluate'
 import {
+  createEvaluationResultRoute,
   createEvaluationResultHandler,
-  createEvaluationResultV2Route,
-  createEvaluationResultV3Route,
 } from './createEvaluationResult'
-import { evaluateHandler, evaluateV2Route, evaluateV3Route } from './evaluate'
 
 const router = createRouter()
   .openapi(chatRoute, chatHandler)
-  .openapi(evaluateV2Route, evaluateHandler)
-  .openapi(evaluateV3Route, evaluateHandler)
-  .openapi(createEvaluationResultV2Route, createEvaluationResultHandler)
-  .openapi(createEvaluationResultV3Route, createEvaluationResultHandler)
+  .openapi(annotateRoute, annotateHandler)
+  .openapi(evaluateRoute, evaluateHandler)
+  .openapi(createEvaluationResultRoute, createEvaluationResultHandler)
 
 export default router

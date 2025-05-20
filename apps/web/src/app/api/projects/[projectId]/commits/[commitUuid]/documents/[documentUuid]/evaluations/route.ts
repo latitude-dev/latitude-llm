@@ -1,7 +1,11 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { Workspace } from '@latitude-data/core/browser'
-import { ConnectedEvaluationsRepository } from '@latitude-data/core/repositories'
+import {
+  CommitsRepository,
+  DocumentVersionsRepository,
+  EvaluationsV2Repository,
+} from '@latitude-data/core/repositories'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
@@ -13,18 +17,42 @@ export const GET = errorHandler(
         workspace,
       }: {
         params: {
+          projectId: number
+          commitUuid: string
           documentUuid: string
         }
         workspace: Workspace
       },
     ) => {
-      const { documentUuid } = params
-      const scope = new ConnectedEvaluationsRepository(workspace.id)
-      const connectedEvaluations = await scope
-        .filterWithDetailsByDocumentUuid(documentUuid)
+      const { projectId, commitUuid, documentUuid } = params
+
+      const commitsRepository = new CommitsRepository(workspace.id)
+      const commit = await commitsRepository
+        .getCommitByUuid({
+          projectId: projectId,
+          uuid: commitUuid,
+        })
         .then((r) => r.unwrap())
 
-      return NextResponse.json(connectedEvaluations, { status: 200 })
+      const documentsRepository = new DocumentVersionsRepository(workspace.id)
+      const document = await documentsRepository
+        .getDocumentAtCommit({
+          projectId: projectId,
+          commitUuid: commit.uuid,
+          documentUuid: documentUuid,
+        })
+        .then((r) => r.unwrap())
+
+      const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
+      const evaluations = await evaluationsRepository
+        .listAtCommitByDocument({
+          projectId: projectId,
+          commitUuid: commit.uuid,
+          documentUuid: document.documentUuid,
+        })
+        .then((r) => r.unwrap())
+
+      return NextResponse.json(evaluations, { status: 200 })
     },
   ),
 )

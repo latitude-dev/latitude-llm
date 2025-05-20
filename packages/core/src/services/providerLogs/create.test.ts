@@ -1,11 +1,8 @@
 import * as factories from '../../tests/factories'
-import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ProviderApiKey, Workspace } from '../../browser'
-import { database } from '../../client'
 import { LogSources, Providers } from '../../constants'
-import { apiKeys } from '../../schema'
 import { createProviderLog, type CreateProviderLogProps } from './create'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
 
@@ -78,23 +75,6 @@ describe('create provider', () => {
       type: 'providerLogCreated',
       data: providerLog,
     })
-  })
-
-  it('touch latitude API key', async () => {
-    const { apiKey } = await factories.createApiKey({
-      name: 'MylatitudeAPIkey',
-      workspace,
-    })
-    const providerLog = await createProviderLog({
-      ...providerProps,
-      apiKeyId: apiKey.id,
-    }).then((r) => r.unwrap())
-
-    const touchedApiKey = await database.query.apiKeys.findFirst({
-      where: eq(apiKeys.id, apiKey.id),
-    })
-    expect(providerLog.apiKeyId).toEqual(apiKey.id)
-    expect(touchedApiKey!.lastUsedAt).not.toBeNull()
   })
 
   it('assign costInMillicents', async () => {

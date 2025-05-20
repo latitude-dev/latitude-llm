@@ -16,7 +16,8 @@ export function useRunPlaygroundPrompt({
   projectId: number
   parameters: Record<string, unknown> | undefined
 }) {
-  const { createStreamHandler } = useStreamHandler()
+  const { createStreamHandler, abortCurrentStream, hasActiveStream } =
+    useStreamHandler()
   const runPromptFn = useCallback(async () => {
     const response = await fetch(
       ROUTES.api.documents.detail(document.documentUuid).run,
@@ -74,7 +75,7 @@ export function useRunPlaygroundPrompt({
   )
 
   return useMemo(
-    () => ({ runPromptFn, addMessagesFn }),
-    [runPromptFn, addMessagesFn],
+    () => ({ runPromptFn, addMessagesFn, abortCurrentStream, hasActiveStream }),
+    [runPromptFn, addMessagesFn, abortCurrentStream, hasActiveStream],
   )
 }

@@ -1,35 +1,24 @@
 import { faker } from '@faker-js/faker'
 import { eq } from 'drizzle-orm'
 
-import {
-  EvaluationMetadataType,
-  Providers,
-  User,
-  Workspace,
-  WorkspaceDto,
-} from '../../browser'
+import { IntegrationType } from '@latitude-data/constants'
+import { Providers, User, Workspace, WorkspaceDto } from '../../browser'
 import { database } from '../../client'
 import { unsafelyGetUser } from '../../data-access'
+import { DocumentVersionsRepository } from '../../repositories'
 import { projects } from '../../schema'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
+import { createIntegration } from '../../services/integrations'
 import { updateProject } from '../../services/projects'
 import { createProject as createProjectFn } from '../../services/projects/create'
 import { createApiKey } from './apiKeys'
 import { createDraft } from './commits'
 import {
-  createEvaluation,
-  createLlmAsJudgeEvaluation,
-  IEvaluationData,
-} from './evaluations'
-import {
   createProviderApiKey,
   defaultProviderFakeData,
 } from './providerApiKeys'
 import { createWorkspace, type ICreateWorkspace } from './workspaces'
-import { DocumentVersionsRepository } from '../../repositories'
-import { createIntegration } from '../../services/integrations'
-import { IntegrationType } from '@latitude-data/constants'
 
 export type IDocumentStructure = { [key: string]: string | IDocumentStructure }
 
@@ -62,9 +51,8 @@ export type ICreateProject = {
   name?: string
   deletedAt?: Date | null
   workspace?: Workspace | WorkspaceDto | ICreateWorkspace
-  providers?: { type: Providers; name: string }[]
+  providers?: { type: Providers; name: string; defaultModel?: string }[]
   integrations?: string[]
-  evaluations?: Omit<IEvaluationData, 'workspace' | 'user'>[]
   documents?: IDocumentStructure
   skipMerge?: boolean
 }
@@ -132,28 +120,15 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
       ? [defaultProviderFakeData()]
       : projectData.providers
   const providers = await Promise.all(
-    providersToCreate.map(({ type, name }) =>
+    providersToCreate.map(({ type, name, defaultModel }) =>
       createProviderApiKey({
         workspace,
         user,
         type,
         name,
+        defaultModel,
       }),
     ) ?? [],
-  )
-
-  const evaluations = await Promise.all(
-    projectData.evaluations?.map((evaluationData) => {
-      if (evaluationData.metadataType === EvaluationMetadataType.Manual) {
-        return createEvaluation({
-          workspace,
-          user,
-          ...evaluationData,
-          metadataType: EvaluationMetadataType.Manual,
-        })
-      }
-      return createLlmAsJudgeEvaluation({ workspace, user, ...evaluationData })
-    }) ?? [],
   )
 
   if (projectData.documents) {
@@ -194,7 +169,6 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     providers,
     documents,
     commit,
-    evaluations,
   }
 }
 

@@ -41,6 +41,7 @@ describe('annotateEvaluationV2', () => {
   beforeEach(async () => {
     vi.resetAllMocks()
     vi.clearAllMocks()
+    vi.restoreAllMocks()
 
     const {
       workspace: w,
@@ -190,7 +191,7 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
-  it('fails when annotated result metadata is invalid', async () => {
+  it('succeeds when annotated result metadata is invalid', async () => {
     mocks.publisher.mockClear()
 
     const { result } = await annotateEvaluationV2({
@@ -224,7 +225,6 @@ describe('annotateEvaluationV2', () => {
         },
       }),
     )
-
     expect(mocks.publisher).toHaveBeenCalledTimes(2)
     expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
       type: 'evaluationResultV2Created',
@@ -248,7 +248,7 @@ describe('annotateEvaluationV2', () => {
     })
   })
 
-  it('fails when type and metric annotation fails', async () => {
+  it('succeeds when type and metric annotation fails', async () => {
     mocks.publisher.mockClear()
 
     vi.spyOn(HumanEvaluationRatingSpecification, 'annotate').mockRejectedValue(
@@ -281,7 +281,6 @@ describe('annotateEvaluationV2', () => {
         },
       }),
     )
-
     expect(mocks.publisher).toHaveBeenCalledTimes(2)
     expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
       type: 'evaluationResultV2Created',
@@ -305,7 +304,7 @@ describe('annotateEvaluationV2', () => {
     })
   })
 
-  it('fails when resulting normalized score is out of range', async () => {
+  it('succeeds when resulting normalized score is out of range', async () => {
     mocks.publisher.mockClear()
 
     vi.spyOn(HumanEvaluationRatingSpecification, 'annotate').mockResolvedValue({
@@ -345,7 +344,6 @@ describe('annotateEvaluationV2', () => {
         },
       }),
     )
-
     expect(mocks.publisher).toHaveBeenCalledTimes(2)
     expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
       type: 'evaluationResultV2Created',
@@ -400,7 +398,6 @@ describe('annotateEvaluationV2', () => {
         error: null,
       }),
     )
-
     expect(mocks.publisher).toHaveBeenCalledTimes(2)
     expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
       type: 'evaluationResultV2Created',
@@ -452,7 +449,6 @@ describe('annotateEvaluationV2', () => {
         error: null,
       }),
     )
-
     expect(mocks.publisher).toHaveBeenCalledTimes(2)
     expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
       type: 'evaluationResultV2Created',
@@ -513,7 +509,6 @@ describe('annotateEvaluationV2', () => {
         updatedAt: expect.any(Date),
       }),
     )
-
     expect(mocks.publisher).toHaveBeenCalledTimes(2)
     expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
       type: 'evaluationResultV2Updated',

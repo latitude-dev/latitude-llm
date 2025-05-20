@@ -4,9 +4,7 @@ import { createWorker } from '../utils/createWorker'
 import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
 const jobMappings = {
-  runEvaluationJob: jobs.runEvaluationJob,
   runEvaluationV2Job: jobs.runEvaluationV2Job,
-  runBatchEvaluationJob: jobs.runBatchEvaluationJob,
 }
 
 export function startEvaluationsWorker() {

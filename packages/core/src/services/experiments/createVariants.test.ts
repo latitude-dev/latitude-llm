@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { vi, beforeEach, describe, expect, it } from 'vitest'
+import { publisher } from '@latitude-data/core/events/publisher'
 import {
   Commit,
   Dataset,
@@ -6,11 +7,16 @@ import {
   EvaluationV2,
   Workspace,
   Providers,
+  User,
 } from '../../browser'
 import * as factories from '../../tests/factories'
 import { createExperimentVariants } from './createVariants'
+import { database } from '../../client'
+
+const publisherSpy = vi.spyOn(publisher, 'publishLater')
 
 describe('createExperimentVariants', () => {
+  let user: User
   let workspace: Workspace
   let document: DocumentVersion
   let commit: Commit
@@ -25,7 +31,7 @@ describe('createExperimentVariants', () => {
 
   beforeEach(async () => {
     const {
-      user,
+      user: usr,
       workspace: createdWorkspace,
       commit: createdCommit,
       documents,
@@ -42,6 +48,7 @@ describe('createExperimentVariants', () => {
         }),
       },
     })
+    user = usr
     workspace = createdWorkspace
     document = documents[0]!
     commit = createdCommit
@@ -106,18 +113,22 @@ describe('createExperimentVariants', () => {
         temperature: 2,
       },
     ]
-    const result = await createExperimentVariants({
-      workspace,
-      commit,
-      document,
-      variants,
-      evaluations,
-      dataset,
-      parametersMap,
-      datasetLabels,
-      fromRow: 0,
-      toRow: 1,
-    })
+    const result = await createExperimentVariants(
+      {
+        workspace,
+        user,
+        commit,
+        document,
+        variants,
+        evaluations,
+        dataset,
+        parametersMap,
+        datasetLabels,
+        fromRow: 0,
+        toRow: 1,
+      },
+      database,
+    )
 
     expect(result.ok).toBe(true)
     const experiments = result.unwrap()
@@ -143,6 +154,37 @@ describe('createExperimentVariants', () => {
     expect(variant3.metadata.prompt).toContain('temperature: 2')
     expect(variant3.metadata.prompt).not.toContain('provider: openai')
     expect(variant3.metadata.prompt).not.toContain('model: gpt-4o')
+
+    // Create experiment variant event
+    expect(publisherSpy).toHaveBeenCalledWith({
+      type: 'experimentVariantsCreated',
+      data: {
+        userEmail: user.email,
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        variants: [
+          {
+            name: 'Variant 1',
+            provider: 'openai',
+            model: 'gpt-4o',
+            temperature: 0,
+          },
+          {
+            name: 'Variant 2',
+            provider: 'openai',
+            model: 'gpt-4o-mini',
+            temperature: 1,
+          },
+          {
+            name: 'Variant 3',
+            provider: 'anthropic',
+            model: 'claude-3',
+            temperature: 2,
+          },
+        ],
+      },
+    })
   })
 
   it('fails when a provider is not found', async () => {
@@ -156,6 +198,7 @@ describe('createExperimentVariants', () => {
     ]
     const result = await createExperimentVariants({
       workspace,
+      user,
       commit,
       document,
       variants,

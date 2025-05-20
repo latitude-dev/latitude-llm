@@ -82,7 +82,7 @@ export const POST = errorHandler(
             try {
               await writer.close()
             } catch (error) {
-              captureException(error as Error)
+              // do nothion, writer might be closed already
             }
           }
         }

@@ -15,6 +15,7 @@ function getOrCreateRouteFactory({
   return createRoute({
     operationId: 'getOrCreateDocument',
     method: http.Methods.POST,
+    description: 'Find or create a prompt',
     path,
     tags,
     request: {

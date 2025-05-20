@@ -44,6 +44,8 @@ export async function computeDocumentLogsAggregations(
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
+
+  // TODO(perf): This query is very slow. We should optimize it.
   const baseQuery = db
     .select({
       totalCount: count(documentLogs.id),

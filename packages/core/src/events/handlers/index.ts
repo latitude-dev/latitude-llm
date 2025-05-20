@@ -8,53 +8,37 @@ import { notifyClientOfEvaluationResultV2Created } from './notifyClientOfEvaluat
 import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
 import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
-import { notifyToClientEvaluationResultCreatedJob } from './notifyToClientEvaluationResultCreatedJob'
 import { pingProjectUpdateJob } from './pingProjectUpdateJob'
-import {
-  requestDocumentSuggestionJob,
-  requestDocumentSuggestionJobV2,
-} from './requestDocumentSuggestionJob'
-import { runLiveEvaluationsJob } from './runLiveEvaluationsJob'
+import { requestDocumentSuggestionJobV2 } from './requestDocumentSuggestionJob'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
+import { touchApiKeyJob } from './touchApiKeyJob'
+import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
 import { updateWebhookLastTriggeredAt } from './webhooks'
 
 export const EventHandlers: IEventsHandlers = {
   aiProviderCallCompleted: [],
-  batchEvaluationRun: [],
   claimReferralInvitations: [createClaimInvitationReferralJob],
   commitCreated: [],
   commitPublished: [],
   datasetCreated: [],
   datasetUploaded: [createDatasetRowsJob],
   documentCreated: [],
-  documentLogCreated: [
-    runLiveEvaluationsJob,
-    evaluateLiveLogJob,
-    notifyToClientDocumentLogCreatedJob,
-  ],
+  documentLogCreated: [evaluateLiveLogJob, notifyToClientDocumentLogCreatedJob],
+  experimentVariantsCreated: [],
   documentSuggestionCreated: [
     notifyClientOfDocumentSuggestionCreated,
     sendSuggestionNotification,
   ],
   documentSuggestionApplied: [],
   documentSuggestionDiscarded: [],
-  documentRun: [],
-  evaluationCreated: [],
-  evaluationResultCreated: [
-    requestDocumentSuggestionJob,
-    notifyToClientEvaluationResultCreatedJob,
-  ],
-  evaluationResultUpdated: [],
-  evaluationRun: [],
-  evaluationsConnected: [],
   magicLinkTokenCreated: [sendMagicLinkJob],
   membershipCreated: [sendInvitationToUserJob],
   projectCreated: [],
   providerApiKeyCreated: [],
-  providerLogCreated: [],
+  providerLogCreated: [touchProviderApiKeyJob, touchApiKeyJob],
   sendReferralInvitation: [sendReferralInvitationJob],
   userCreated: [createLoopsContact],
   userInvited: [],
@@ -64,14 +48,13 @@ export const EventHandlers: IEventsHandlers = {
   chatMessageRequested: [],
   sharedChatMessageRequested: [],
   forkDocumentRequested: [],
-  batchEvaluationRunRequested: [],
-  runDocumentInBatchRequested: [],
   copilotRefinerGenerated: [],
   copilotRefinerApplied: [],
   copilotSuggestionGenerated: [],
   copilotSuggestionApplied: [],
-  evaluationV2Created: [],
+  evaluationV2Created: [pingProjectUpdateJob],
   evaluationV2Updated: [pingProjectUpdateJob],
+  evaluationV2Deleted: [pingProjectUpdateJob],
   evaluationV2Ran: [],
   evaluationV2Annotated: [],
   evaluationResultV2Created: [

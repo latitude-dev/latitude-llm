@@ -27,6 +27,7 @@ export type EvaluationMetricValidateArgs<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
+  mode: 'create' | 'update'
   configuration: EvaluationConfiguration<T, M>
   document: DocumentVersion
   commit: Commit

@@ -5,8 +5,7 @@ import {
   CLOUD_MESSAGES,
   Commit,
   DocumentVersion,
-  EvaluationResultTmp,
-  EvaluationTmp,
+  EvaluationResultV2,
   EvaluationV2,
   MAX_DOCUMENT_SUGGESTIONS_PER_EVALUATION,
   Workspace,
@@ -17,16 +16,12 @@ import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import {
-  ConnectedEvaluationsRepository,
   DocumentSuggestionsRepository,
   DocumentVersionsRepository,
-  EvaluationResultsRepository,
   EvaluationResultsV2Repository,
 } from '../../repositories'
 import { documentSuggestions, evaluationResultsV2 } from '../../schema'
 import { getCopilot, runCopilot } from '../copilot'
-import { serialize as serializeEvaluationResult } from '../evaluationResults'
-import { getEvaluationPrompt as serializeEvaluation } from '../evaluations/prompt'
 import {
   serializeEvaluationResult as serializeEvaluationResultV2,
   serializeEvaluation as serializeEvaluationV2,
@@ -39,7 +34,7 @@ async function checkSuggestionLimits(
     workspace,
   }: {
     document: DocumentVersion
-    evaluation: EvaluationTmp
+    evaluation: EvaluationV2
     commit: Commit
     workspace: Workspace
   },
@@ -50,8 +45,7 @@ async function checkSuggestionLimits(
     .countByDocumentVersionAndEvaluation({
       commitId: document.commitId,
       documentUuid: document.documentUuid,
-      evaluationUuid: evaluation.version === 'v2' ? evaluation.uuid : undefined,
-      evaluationId: evaluation.version !== 'v2' ? evaluation.id : undefined,
+      evaluationUuid: evaluation.uuid,
     })
     .then((r) => r.unwrap())
   if (count >= MAX_DOCUMENT_SUGGESTIONS_PER_EVALUATION) {
@@ -70,6 +64,7 @@ const refinerSchema = z.object({
   summary: z.string(),
 })
 
+// TODO: Add tests for evals v2
 export async function generateDocumentSuggestion(
   {
     document,
@@ -79,8 +74,8 @@ export async function generateDocumentSuggestion(
     workspace,
   }: {
     document: DocumentVersion
-    evaluation: EvaluationTmp
-    results?: EvaluationResultTmp[]
+    evaluation: EvaluationV2
+    results?: EvaluationResultV2[]
     commit: Commit
     workspace: Workspace
   },
@@ -99,29 +94,12 @@ export async function generateDocumentSuggestion(
     db,
   ).then((r) => r.unwrap())
 
-  if (evaluation.version === 'v2') {
-    if (!evaluation.enableSuggestions) {
-      return Result.error(
-        new UnprocessableEntityError(
-          'Suggestions are not enabled for this evaluation',
-        ),
-      )
-    }
-  } else {
-    const connectedsRepository = new ConnectedEvaluationsRepository(
-      workspace.id,
-      db,
+  if (!evaluation.enableSuggestions) {
+    return Result.error(
+      new UnprocessableEntityError(
+        'Suggestions are not enabled for this evaluation',
+      ),
     )
-    const connected = await connectedsRepository
-      .findByDocumentAndEvaluation(document.documentUuid, evaluation.id)
-      .then((r) => r.unwrap())
-    if (!connected || !connected.live) {
-      return Result.error(
-        new UnprocessableEntityError(
-          'Suggestions not available for this evaluation',
-        ),
-      )
-    }
   }
 
   const limits = await checkSuggestionLimits(
@@ -131,28 +109,16 @@ export async function generateDocumentSuggestion(
   if (limits.error) return limits
 
   if (!results) {
-    if (evaluation.version === 'v2') {
-      const resultsRepository = new EvaluationResultsV2Repository(
-        workspace.id,
-        db,
-      )
-      results = await resultsRepository
-        .selectForDocumentSuggestion({
-          commitId: commit.id,
-          evaluationUuid: evaluation.uuid,
-        })
-        .then((r) => r.unwrap())
-        .then((r) => r.map((r) => ({ ...r, version: 'v2' as const })))
-    } else {
-      const resultsRepository = new EvaluationResultsRepository(
-        workspace.id,
-        db,
-      )
-      results = await resultsRepository
-        .selectForDocumentSuggestion(evaluation.id)
-        .then((r) => r.unwrap())
-        .then((r) => r.map((r) => ({ ...r, version: 'v1' as const })))
-    }
+    const resultsRepository = new EvaluationResultsV2Repository(
+      workspace.id,
+      db,
+    )
+    results = await resultsRepository
+      .selectForDocumentSuggestion({
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+      })
+      .then((r) => r.unwrap())
   }
 
   if (!results || !results!.length) {
@@ -162,43 +128,24 @@ export async function generateDocumentSuggestion(
   }
 
   for (const result of results) {
-    if (result.version === 'v2') {
-      if (result.hasPassed || result.error || result.usedForSuggestion) {
-        return Result.error(
-          new UnprocessableEntityError(
-            'Cannot use these results for a suggestion',
-          ),
-        )
-      }
-    } else {
-      if (!result.evaluatedProviderLogId || result.result === undefined) {
-        return Result.error(
-          new UnprocessableEntityError(
-            'Cannot use these results for a suggestion',
-          ),
-        )
-      }
+    if (result.hasPassed || result.error || result.usedForSuggestion) {
+      return Result.error(
+        new UnprocessableEntityError(
+          'Cannot use these results for a suggestion',
+        ),
+      )
     }
   }
 
-  const serializedEvaluation =
-    evaluation.version === 'v2'
-      ? await serializeEvaluationV2({ evaluation }).then((r) => r.unwrap())
-      : await serializeEvaluation({ workspace, evaluation }, db).then((r) =>
-          r.unwrap(),
-        )
+  const serializedEvaluation = await serializeEvaluationV2({ evaluation }).then(
+    (r) => r.unwrap(),
+  )
 
   const serializedResults = await Promise.all(
     results.map((result) =>
-      result.version === 'v2'
-        ? serializeEvaluationResultV2(
-            { evaluation: evaluation as EvaluationV2, result, workspace },
-            db,
-          ).then((r) => r.unwrap())
-        : serializeEvaluationResult(
-            { workspace, evaluationResult: result },
-            db,
-          ).then((r) => r.unwrap()),
+      serializeEvaluationResultV2({ evaluation, result, workspace }, db).then(
+        (r) => r.unwrap(),
+      ),
     ),
   )
 
@@ -232,9 +179,7 @@ export async function generateDocumentSuggestion(
         workspaceId: workspace.id,
         commitId: document.commitId,
         documentUuid: document.documentUuid,
-        evaluationUuid:
-          evaluation.version === 'v2' ? evaluation.uuid : undefined,
-        evaluationId: evaluation.version !== 'v2' ? evaluation.id : undefined,
+        evaluationUuid: evaluation.uuid,
         oldPrompt: document.content,
         newPrompt: result.prompt,
         summary: result.summary,
@@ -242,22 +187,20 @@ export async function generateDocumentSuggestion(
       .returning()
       .then((r) => r[0]!)
 
-    if (evaluation.version === 'v2') {
-      await tx
-        .update(evaluationResultsV2)
-        .set({
-          usedForSuggestion: true,
-        })
-        .where(
-          and(
-            eq(evaluationResultsV2.workspaceId, workspace.id),
-            inArray(
-              evaluationResultsV2.id,
-              results.map((r) => r.id),
-            ),
+    await tx
+      .update(evaluationResultsV2)
+      .set({
+        usedForSuggestion: true,
+      })
+      .where(
+        and(
+          eq(evaluationResultsV2.workspaceId, workspace.id),
+          inArray(
+            evaluationResultsV2.id,
+            results.map((r) => r.id),
           ),
-        )
-    }
+        ),
+      )
 
     publisher.publishLater({
       type: 'documentSuggestionCreated',

@@ -1,6 +1,5 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
-
-import Panel from '../../../evaluations/[evaluationId]/_components/MetricsSummary/BigNumberPanels/Panel'
+import Panel from '$/components/Panel'
 
 export function AggregationPanels({
   aggregations,

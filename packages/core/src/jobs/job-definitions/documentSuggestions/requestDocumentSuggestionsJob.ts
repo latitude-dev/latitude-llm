@@ -18,10 +18,8 @@ import {
 import { database } from '../../../client'
 import {
   commits,
-  connectedEvaluations,
   documentSuggestions,
   documentVersions,
-  evaluationResults,
   evaluationResultsV2,
   evaluationVersions,
   projects,
@@ -31,6 +29,7 @@ import { documentSuggestionsQueue } from '../../queues'
 
 export type RequestDocumentSuggestionsJobData = {}
 
+// TODO(evalsv2): Add tests
 export const requestDocumentSuggestionsJob = async (
   _: Job<RequestDocumentSuggestionsJobData>,
 ) => {
@@ -113,67 +112,6 @@ export const requestDocumentSuggestionsJob = async (
   )
 
   // Note: just coarse-grained filter here
-  const hasRecentResults = exists(
-    database
-      .select({ exists: sql`TRUE` })
-      .from(evaluationResults)
-      .where(
-        and(
-          eq(evaluationResults.evaluationId, connectedEvaluations.evaluationId),
-          gte(
-            evaluationResults.updatedAt,
-            subDays(new Date(), EVALUATION_RESULT_RECENCY_DAYS),
-          ),
-        ),
-      ),
-  )
-
-  // Note: just coarse-grained filter here
-  const notHasRecentSuggestions = notExists(
-    database
-      .select({ exists: sql`TRUE` })
-      .from(documentSuggestions)
-      .where(
-        and(
-          eq(documentSuggestions.commitId, liveDocuments.commitId),
-          eq(documentSuggestions.documentUuid, liveDocuments.documentUuid),
-          eq(
-            documentSuggestions.evaluationId,
-            connectedEvaluations.evaluationId,
-          ),
-          gte(
-            documentSuggestions.createdAt,
-            subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS),
-          ),
-        ),
-      ),
-  )
-
-  const candidates = await database
-    .with(liveDocuments)
-    .select({
-      workspaceId: liveDocuments.workspaceId,
-      commitId: liveDocuments.commitId,
-      documentUuid: liveDocuments.documentUuid,
-      evaluationId: connectedEvaluations.evaluationId,
-      version: sql<'v1'>`'v1'`,
-    })
-    .from(connectedEvaluations)
-    .innerJoin(
-      liveDocuments,
-      eq(liveDocuments.documentUuid, connectedEvaluations.documentUuid),
-    )
-    .where(
-      and(
-        isNull(connectedEvaluations.deletedAt),
-        isNull(liveDocuments.deletedAt),
-        eq(connectedEvaluations.live, true),
-        hasRecentResults,
-        notHasRecentSuggestions,
-      ),
-    )
-
-  // Note: just coarse-grained filter here
   const hasRecentResultsV2 = exists(
     database
       .select({ exists: sql`TRUE` })
@@ -221,7 +159,6 @@ export const requestDocumentSuggestionsJob = async (
       commitId: liveCommits.commitId,
       documentUuid: liveDocuments.documentUuid,
       evaluationUuid: liveEvaluations.evaluationUuid,
-      version: sql<'v2'>`'v2'`,
     })
     .from(liveCommits)
     .innerJoin(
@@ -243,32 +180,12 @@ export const requestDocumentSuggestionsJob = async (
       ),
     )
 
-  for (const candidate of [...candidates, ...candidatesV2]) {
-    documentSuggestionsQueue.add(
-      'generateDocumentSuggestionJob',
-      {
-        workspaceId: candidate.workspaceId,
-        commitId: candidate.commitId,
-        documentUuid: candidate.documentUuid,
-        evaluationUuid:
-          candidate.version === 'v2' ? candidate.evaluationUuid : undefined,
-        evaluationId:
-          candidate.version !== 'v2' ? candidate.evaluationId : undefined,
+  for (const candidate of candidatesV2) {
+    documentSuggestionsQueue.add('generateDocumentSuggestionJob', candidate, {
+      attempts: 1,
+      deduplication: {
+        id: generateDocumentSuggestionJobKey(candidate),
       },
-      {
-        attempts: 1,
-        deduplication: {
-          id: generateDocumentSuggestionJobKey({
-            workspaceId: candidate.workspaceId,
-            commitId: candidate.commitId,
-            documentUuid: candidate.documentUuid,
-            evaluationUuid:
-              candidate.version === 'v2' ? candidate.evaluationUuid : undefined,
-            evaluationId:
-              candidate.version !== 'v2' ? candidate.evaluationId : undefined,
-          }),
-        },
-      },
-    )
+    })
   }
 }
