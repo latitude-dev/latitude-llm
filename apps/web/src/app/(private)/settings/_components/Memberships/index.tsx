@@ -20,6 +20,8 @@ import useUsers from '$/stores/users'
 import Link from 'next/link'
 
 import NewUser from './New'
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 
 export default function Memberships() {
   const [open, setOpen] = useState(false)
@@ -29,7 +31,10 @@ export default function Memberships() {
     <div className='flex flex-col gap-4'>
       <NewUser open={open} setOpen={setOpen} />
       <div className='flex flex-row items-center justify-between'>
-        <Text.H4B>Workspace Members</Text.H4B>
+        <div className='flex flex-row items-center gap-2'>
+          <Text.H4B>Workspace Members</Text.H4B>
+          <OpenInDocsButton route={DocsRoute.Invite} />
+        </div>
         <Button fancy variant='outline' onClick={() => setOpen(true)}>
           Add Member
         </Button>

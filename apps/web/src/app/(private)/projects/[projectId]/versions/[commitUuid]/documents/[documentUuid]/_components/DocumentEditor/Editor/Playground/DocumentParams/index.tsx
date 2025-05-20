@@ -28,6 +28,8 @@ import {
 } from './HistoryLogParams/useLogHistoryParams'
 import { ManualParams } from './ManualParams'
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 
 export const TABS: TabSelectorOption<InputSource>[] = [
   { label: 'Manual', value: INPUT_SOURCE.manual },
@@ -96,31 +98,33 @@ function CollapsedContentHeader({
   historyInfo,
 }: ContentProps) {
   const src = INPUT_SOURCE
-  if (source === src.manual) return null
   const isDataset =
     source === INPUT_SOURCE.dataset && datasetInfo.selectedDataset
   const isHistory = source === src.history && historyInfo.count > 0
   return (
-    <div className='w-full flex items-center justify-end gap-4'>
-      {isDataset && (
-        <ParametersPaginationNav
-          zeroIndex
-          label='rows in dataset'
-          currentIndex={datasetInfo.position}
-          totalCount={datasetInfo.count}
-          onPrevPage={datasetInfo.onPrevPage}
-          onNextPage={datasetInfo.onNextPage}
-        />
-      )}
-      {isHistory && (
-        <ParametersPaginationNav
-          label='history logs'
-          currentIndex={historyInfo.position}
-          totalCount={historyInfo.count}
-          onPrevPage={historyInfo.onPrevPage}
-          onNextPage={historyInfo.onNextPage}
-        />
-      )}
+    <div className='w-full flex items-center justify-between gap-4'>
+      <OpenInDocsButton route={DocsRoute.Playground} />
+      <div className='flex items-center gap-4'>
+        {isDataset && (
+          <ParametersPaginationNav
+            zeroIndex
+            label='rows in dataset'
+            currentIndex={datasetInfo.position}
+            totalCount={datasetInfo.count}
+            onPrevPage={datasetInfo.onPrevPage}
+            onNextPage={datasetInfo.onNextPage}
+          />
+        )}
+        {isHistory && (
+          <ParametersPaginationNav
+            label='history logs'
+            currentIndex={historyInfo.position}
+            totalCount={historyInfo.count}
+            onPrevPage={historyInfo.onPrevPage}
+            onNextPage={historyInfo.onNextPage}
+          />
+        )}
+      </div>
     </div>
   )
 }
@@ -165,6 +169,11 @@ export default function DocumentParams({
         onToggle={onToggle}
         collapsedContentHeader={<CollapsedContentHeader {...contentProps} />}
         expandedContent={<ParamsTabs {...contentProps} />}
+        expandedContentHeader={
+          <div className='flex flex-row flex-grow items-center justify-start'>
+            <OpenInDocsButton route={DocsRoute.Playground} />
+          </div>
+        }
       />
     </ClientOnly>
   )

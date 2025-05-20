@@ -6,6 +6,9 @@ import { RootDatasetHeader } from './_components/RootHeader'
 import { DatasetsTable } from './_components/DatasetsTable'
 import { IDatasetSettingsModal } from '$/services/routes'
 import Layout from './_components/Layout'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 
 export default async function DatasetsRoot({
   searchParams,
@@ -37,7 +40,12 @@ export default async function DatasetsRoot({
   return (
     <Layout>
       <TableWithHeader
-        title='Datasets'
+        title={
+          <div className='flex flex-row items-center gap-2'>
+            <Text.H4B>Datasets</Text.H4B>
+            <OpenInDocsButton route={DocsRoute.Datasets} />
+          </div>
+        }
         actions={
           <RootDatasetHeader
             backUrl={backUrl}

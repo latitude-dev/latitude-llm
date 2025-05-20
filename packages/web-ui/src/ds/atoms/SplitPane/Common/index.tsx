@@ -1,6 +1,12 @@
 'use client'
 
-import { ReactNode, RefObject, SyntheticEvent, useCallback } from 'react'
+import {
+  ReactNode,
+  RefObject,
+  SyntheticEvent,
+  useCallback,
+  useState,
+} from 'react'
 
 import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable'
 
@@ -42,13 +48,15 @@ export const PaneWrapper = ({
 const SplitHandle =
   (visibleHandle: boolean) =>
   (resizeHandle: ResizeHandle, ref: RefObject<HTMLDivElement>) => {
-    const direction = resizeHandle === 'e' ? 'horizontal' : 'vertical'
+    const direction =
+      resizeHandle === 'e' || resizeHandle === 'w' ? 'horizontal' : 'vertical'
     return (
       <div
         ref={ref}
         className={cn('group/handler z-10 flex justify-center bg-transparent', {
-          'w-2 h-full -right-1 cursor-col-resize absolute':
-            direction === 'horizontal',
+          'absolute w-2 h-full cursor-col-resize': direction === 'horizontal',
+          '-right-1': resizeHandle === 'e',
+          '-left-1': resizeHandle === 'w',
           'h-3 items-center w-full cursor-row-resize': direction === 'vertical',
         })}
       >
@@ -70,41 +78,49 @@ const SplitHandle =
 
 export function ResizablePane({
   direction,
+  reversed = false,
   visibleHandle = true,
   minSize,
   children,
   paneSize,
   widthClassWhileNoPaneWidth,
   onResizePane,
+  onDragStop,
   onResizeStop,
   dragDisabled,
 }: {
   direction: SplitDirection
+  reversed?: boolean
   visibleHandle?: boolean
   minSize: number
   children: ReactNode
   paneSize: number
   onResizePane: (size: number) => void
   onResizeStop?: (size: number) => void
+  onDragStop?: (size: number) => void
   widthClassWhileNoPaneWidth?: string
   dragDisabled?: boolean
 }) {
+  const [size, setSize] = useState<number>(paneSize)
+
   const onResize = (_: SyntheticEvent, data: ResizeCallbackData) => {
     const size = direction === 'horizontal' ? data.size.width : data.size.height
     const lessThanMinSize = minSize ? size < minSize : false
 
+    setSize(size)
     if (lessThanMinSize) return
 
     onResizePane(size)
   }
 
   const onStop = useCallback(
-    (_e: SyntheticEvent, data: ResizeCallbackData) => {
-      const size =
-        direction === 'horizontal' ? data.size.width : data.size.height
-      onResizeStop?.(size)
+    (_e: SyntheticEvent) => {
+      onDragStop?.(size)
+
+      onResizeStop?.(Math.max(size, minSize))
+      if (size < minSize) setSize(minSize)
     },
-    [onResizeStop, direction],
+    [onResizeStop, onDragStop, minSize, size],
   )
 
   if (direction === 'horizontal') {
@@ -113,7 +129,7 @@ export function ResizablePane({
         width={paneSize}
         axis='x'
         minConstraints={[minSize, Infinity]}
-        resizeHandles={dragDisabled ? [] : ['e']}
+        resizeHandles={dragDisabled ? [] : reversed ? ['w'] : ['e']}
         className={cn('flex relative flex-shrink-0 flex-grow-0', {
           [`${widthClassWhileNoPaneWidth}`]:
             !paneSize && widthClassWhileNoPaneWidth,
@@ -132,7 +148,7 @@ export function ResizablePane({
       height={paneSize}
       axis='y'
       minConstraints={[Infinity, minSize]}
-      resizeHandles={dragDisabled ? [] : ['s']}
+      resizeHandles={dragDisabled ? [] : reversed ? ['n'] : ['s']}
       className='flex flex-col relative flex-shrink-0 flex-grow-0 w-full'
       handle={SplitHandle(visibleHandle)}
       onResize={onResize}
