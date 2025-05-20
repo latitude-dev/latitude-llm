@@ -122,13 +122,24 @@ export const EVALUATION_SPECIFICATIONS = {
 type EvaluationSpecifications = typeof EVALUATION_SPECIFICATIONS
 
 // prettier-ignore
+type EvaluationMetricSpecificationFilter<
+  F extends keyof EvaluationMetricSpecification,
+  T extends EvaluationType = EvaluationType
+> = { [K in EvaluationType]: {
+    [M in keyof EvaluationSpecifications[K]['metrics']]:
+      // @ts-expect-error F can indeed index M type
+      EvaluationSpecifications[K]['metrics'][M][F] extends true ? M : never
+  }[keyof EvaluationSpecifications[K]['metrics']]
+}[T] & EvaluationMetric<T>
+
+export type LiveEvaluationMetric<T extends EvaluationType = EvaluationType> =
+  EvaluationMetricSpecificationFilter<'supportsLiveEvaluation', T>
+
+export type BatchEvaluationMetric<T extends EvaluationType = EvaluationType> =
+  EvaluationMetricSpecificationFilter<'supportsBatchEvaluation', T>
+
 export type ManualEvaluationMetric<T extends EvaluationType = EvaluationType> =
-  { [K in EvaluationType]: {
-      [M in keyof EvaluationSpecifications[K]['metrics']]:
-        // @ts-expect-error supportsManualEvaluation can indeed index M type
-        EvaluationSpecifications[K]['metrics'][M]['supportsManualEvaluation'] extends true ? M : never
-    }[keyof EvaluationSpecifications[K]['metrics']]
-  }[T] & EvaluationMetric<T>
+  EvaluationMetricSpecificationFilter<'supportsManualEvaluation', T>
 
 export type EvaluationV2<
   T extends EvaluationType = EvaluationType,
