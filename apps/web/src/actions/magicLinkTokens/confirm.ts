@@ -1,6 +1,9 @@
 'use server'
 
-import { unsafelyGetUser } from '@latitude-data/core/data-access'
+import {
+  unsafelyFindMagicLinkByToken,
+  unsafelyGetUser,
+} from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
 import { getFirstWorkspace } from '$/data-access'
@@ -18,12 +21,17 @@ export const confirmMagicLinkTokenAction = createServerAction()
     }),
   )
   .handler(async ({ input }) => {
-    const magicLinkToken = await confirmMagicLinkToken(input.token).then((r) =>
-      r.unwrap(),
+    const magicLinkToken = await unsafelyFindMagicLinkByToken(input.token).then(
+      (r) => r[0],
     )
+    if (!magicLinkToken || !!magicLinkToken.expiredAt) {
+      redirect(ROUTES.auth.login)
+    }
 
     const user = await unsafelyGetUser(magicLinkToken.userId)
     if (!user) throw new NotFoundError('User not found')
+
+    await confirmMagicLinkToken(input.token).then((r) => r.unwrap())
 
     const workspace = await getFirstWorkspace({ userId: user.id }).then((r) =>
       r.unwrap(),
