@@ -6,7 +6,6 @@ import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
-import { ROUTES } from '$/services/routes'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import {
   DocumentLogFilterOptions,
@@ -148,8 +147,9 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
     const { data: pagination, isLoading: isPaginationLoading } =
       useDocumentLogsPagination({
         projectId: project.id,
-        filterOptions: documentLogFilterOptions,
+        commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
+        filterOptions: documentLogFilterOptions,
         page,
         pageSize,
       })
@@ -174,23 +174,15 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
           <LinkableTablePaginationFooter
             countLabel={countLabel(selectedCount)}
             isLoading={isPaginationLoading}
-            pagination={
-              pagination
-                ? buildPagination({
-                    baseUrl: ROUTES.projects
-                      .detail({ id: project.id })
-                      .commits.detail({ uuid: commit.uuid })
-                      .documents.detail({ uuid: document.documentUuid }).logs
-                      .root,
-                    count: pagination.count,
-                    queryParams: queryParamsObject,
-                    encodeQueryParams: false,
-                    paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
-                    page: Number(page),
-                    pageSize: Number(pageSize),
-                  })
-                : undefined
-            }
+            pagination={buildPagination({
+              baseUrl: pagination?.baseUrl ?? '',
+              count: pagination?.count ?? 0,
+              queryParams: queryParamsObject,
+              encodeQueryParams: false,
+              paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
+              page: Number(page),
+              pageSize: Number(pageSize),
+            })}
           />
         }
       >
