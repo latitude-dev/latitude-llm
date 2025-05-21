@@ -926,8 +926,8 @@ importers:
         specifier: 3.3.2
         version: 3.3.2
       promptl-ai:
-        specifier: ^0.6.1
-        version: 0.6.1(ws@8.18.1)
+        specifier: ^0.6.2
+        version: 0.6.2(ws@8.18.1)
       typescript:
         specifier: ^5.5.4
         version: 5.8.2
@@ -10245,6 +10245,9 @@ packages:
 
   promptl-ai@0.6.1:
     resolution: {integrity: sha512-NNd6rji4IT0S5NSw0D6Jce3ohw63qGJaIe1OycPdrVGYdJ4O1hdzOFB/ydUusr5QRPYoqXWlTasfTeyuPyNLMQ==}
+
+  promptl-ai@0.6.2:
+    resolution: {integrity: sha512-NLUD9tpZYD3QxvdZxuLs2fQMy4r9pVHnQbuPg32kguGialnx1d5VbnT93P9Qnsi35DmfMsg2rSi1U91/q2rtjw==}
 
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
@@ -22790,6 +22793,19 @@ snapshots:
   progress@2.0.3: {}
 
   promptl-ai@0.6.1(ws@8.18.1):
+    dependencies:
+      acorn: 8.14.1
+      code-red: 1.0.4
+      fast-sha256: 1.3.0
+      locate-character: 3.0.0
+      openai: 4.98.0(ws@8.18.1)(zod@3.24.2)
+      yaml: 2.7.0
+      zod: 3.24.2
+    transitivePeerDependencies:
+      - encoding
+      - ws
+
+  promptl-ai@0.6.2(ws@8.18.1):
     dependencies:
       acorn: 8.14.1
       code-red: 1.0.4
