@@ -20,6 +20,8 @@ import useWebhooks, { type Webhook } from '$/stores/webhooks'
 import useProjects from '$/stores/projects'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 
 export default function Webhooks() {
   const router = useRouter()
@@ -141,7 +143,12 @@ export default function Webhooks() {
   return (
     <>
       <TableWithHeader
-        title='Webhooks'
+        title={
+          <div className='flex flex-row items-center gap-2'>
+            <Text.H4B>Webhooks</Text.H4B>
+            <OpenInDocsButton route={DocsRoute.Webhooks} />
+          </div>
+        }
         actions={
           <Link href={ROUTES.settings.webhooks.new.root}>
             <Button fancy variant='outline'>

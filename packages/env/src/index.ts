@@ -77,6 +77,7 @@ if (environment === 'development' || environment === 'test') {
       GATEWAY_BIND_PORT: environment === 'development' ? '8787' : '8788',
       APP_DOMAIN: 'latitude.so',
       APP_URL: 'http://localhost:3000',
+      NEXT_PUBLIC_DOCS_URL: 'http://localhost:3001',
       NEXT_PUBLIC_POSTHOG_HOST: '',
       NEXT_PUBLIC_POSTHOG_KEY: '',
       NODE_ENV: environment,

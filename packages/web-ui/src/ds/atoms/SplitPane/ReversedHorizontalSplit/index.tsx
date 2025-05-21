@@ -5,7 +5,7 @@ import { cn } from '../../../../lib/utils'
 import { PaneWrapper, ResizablePane } from '../Common'
 import { getGap, getGapWrapperPadding, SplitGap } from '../index'
 
-export function HorizontalSplit({
+export function ReversedHorizontalSplit({
   leftPane,
   rightPane,
   visibleHandle = true,
@@ -26,47 +26,37 @@ export function HorizontalSplit({
   rightPane: ReactNode
   visibleHandle?: boolean
   initialWidth?: number
-  initialWidthClass?: string
   initialPercentage?: number
   minWidth: number
   forcedWidth?: number
   onResizeStop?: (width: number) => void
   onDragStop?: (width: number) => void
   classNamePanelWrapper?: string
+  initialWidthClass?: string
   className?: string
   gap?: SplitGap
   autoResize?: boolean
   dragDisabled?: boolean
 }) {
-  const [ref, { width: initialWidthFromRef }] = useMeasure<HTMLDivElement>()
+  const [ref, { width: containerWidth }] = useMeasure<HTMLDivElement>()
   const [paneWidth, setPaneWidth] = useState<number>(initialWidth ?? 0)
-
-  const oldWidthRef = useRef<number>(0)
+  const prevContainerRef = useRef<number>(0)
 
   useEffect(() => {
-    if (!initialPercentage) return
-    if (paneWidth > 0) return
-    if (initialWidthFromRef === 0) return
-
-    const percentage = initialPercentage / 100
-    setPaneWidth(Math.max(initialWidthFromRef * percentage, minWidth))
-  }, [
-    initialWidth,
-    initialWidthFromRef,
-    initialPercentage,
-    paneWidth,
-    minWidth,
-  ])
+    if (!initialPercentage || paneWidth > 0 || containerWidth === 0) return
+    const pct = initialPercentage / 100
+    setPaneWidth(Math.max(containerWidth * pct, minWidth))
+  }, [initialPercentage, containerWidth, paneWidth, minWidth])
 
   useEffect(() => {
     if (!autoResize) return
-    if (oldWidthRef.current && oldWidthRef.current > 0 && paneWidth > 0) {
-      const ratio = paneWidth / oldWidthRef.current
-      const newPaneWidth = Math.max(initialWidthFromRef * ratio, minWidth)
-      setPaneWidth(newPaneWidth)
+    if (prevContainerRef.current > 0 && paneWidth > 0) {
+      const ratio = paneWidth / prevContainerRef.current
+      const newW = Math.max(containerWidth * ratio, minWidth)
+      setPaneWidth(newW)
     }
-    oldWidthRef.current = initialWidthFromRef
-  }, [initialWidthFromRef, paneWidth, minWidth])
+    prevContainerRef.current = containerWidth
+  }, [autoResize, containerWidth, paneWidth, minWidth])
 
   return (
     <div
@@ -77,8 +67,13 @@ export function HorizontalSplit({
         getGap('horizontal', gap),
       )}
     >
+      <PaneWrapper direction='horizontal' className={classNamePanelWrapper}>
+        {leftPane}
+      </PaneWrapper>
+
       <ResizablePane
         direction='horizontal'
+        reversed
         visibleHandle={visibleHandle}
         minSize={minWidth}
         paneSize={forcedWidth !== undefined ? forcedWidth : paneWidth}
@@ -96,12 +91,9 @@ export function HorizontalSplit({
             dragDisabled ? '' : getGapWrapperPadding('horizontal', gap),
           )}
         >
-          {leftPane}
+          {rightPane}
         </PaneWrapper>
       </ResizablePane>
-      <PaneWrapper direction='horizontal' className={classNamePanelWrapper}>
-        {rightPane}
-      </PaneWrapper>
     </div>
   )
 }

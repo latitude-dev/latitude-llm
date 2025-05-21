@@ -5,7 +5,7 @@ import { cn } from '../../../../lib/utils'
 import { PaneWrapper, ResizablePane } from '../Common'
 import { getGap, getGapWrapperPadding, SplitGap } from '../index'
 
-export function VerticalSplit({
+export function ReversedVerticalSplit({
   topPane,
   bottomPane,
   visibleHandle = true,
@@ -36,29 +36,25 @@ export function VerticalSplit({
   dragDisabled?: boolean
   autoResize?: boolean
 }) {
-  const [ref, { height: initialHeightFromRef }] = useMeasure<HTMLDivElement>()
+  const [ref, { height: containerHeight }] = useMeasure<HTMLDivElement>()
   const [paneHeight, setPaneHeight] = useState<number>(initialHeight ?? 0)
-
-  const oldHeightRef = useRef<number>(0)
+  const prevContainerRef = useRef<number>(0)
 
   useEffect(() => {
-    if (!initialPercentage) return
-    if (paneHeight > 0) return
-    if (initialHeightFromRef === 0) return
-
-    const percentage = initialPercentage / 100
-    setPaneHeight(Math.max(initialHeightFromRef * percentage, minHeight))
-  }, [initialHeight, initialHeightFromRef, initialPercentage])
+    if (!initialPercentage || paneHeight > 0 || containerHeight === 0) return
+    const pct = initialPercentage / 100
+    setPaneHeight(Math.max(containerHeight * pct, minHeight))
+  }, [initialPercentage, containerHeight, paneHeight, minHeight])
 
   useEffect(() => {
     if (!autoResize) return
-    if (oldHeightRef.current && oldHeightRef.current > 0 && paneHeight > 0) {
-      const ratio = paneHeight / oldHeightRef.current
-      const newPaneHeight = Math.max(initialHeightFromRef * ratio, minHeight)
-      setPaneHeight(newPaneHeight)
+    if (prevContainerRef.current > 0 && paneHeight > 0) {
+      const ratio = paneHeight / prevContainerRef.current
+      const newH = Math.max(containerHeight * ratio, minHeight)
+      setPaneHeight(newH)
     }
-    oldHeightRef.current = initialHeightFromRef
-  }, [initialHeightFromRef, paneHeight, minHeight])
+    prevContainerRef.current = containerHeight
+  }, [autoResize, containerHeight, paneHeight, minHeight])
 
   return (
     <div
@@ -69,8 +65,13 @@ export function VerticalSplit({
         getGap('vertical', gap),
       )}
     >
+      <PaneWrapper direction='vertical' className={classNamePanelWrapper}>
+        {topPane}
+      </PaneWrapper>
+
       <ResizablePane
         direction='vertical'
+        reversed
         visibleHandle={visibleHandle}
         minSize={minHeight}
         paneSize={forcedHeight !== undefined ? forcedHeight : paneHeight}
@@ -87,12 +88,9 @@ export function VerticalSplit({
             dragDisabled ? '' : getGapWrapperPadding('vertical', gap),
           )}
         >
-          {topPane}
+          {bottomPane}
         </PaneWrapper>
       </ResizablePane>
-      <PaneWrapper direction='vertical' className={classNamePanelWrapper}>
-        {bottomPane}
-      </PaneWrapper>
     </div>
   )
 }

@@ -12,7 +12,11 @@ import {
 export const THEMES = ['light', 'dark', 'system'] as const
 export type ThemeValue = (typeof THEMES)[number]
 
-export function TripleThemeToggle() {
+export function TripleThemeToggle({
+  direction = 'horizontal',
+}: {
+  direction?: 'horizontal' | 'vertical'
+}) {
   const { theme: initialTheme, setTheme } = useTheme()
   const { value: theme, setValue: setLocalTheme } = useLocalStorage<ThemeValue>(
     {
@@ -31,8 +35,17 @@ export function TripleThemeToggle() {
   )
   return (
     <ClientOnly>
-      <div className='p-1 bg-gray-100 dark:bg-background-gray rounded-full flex items-center'>
-        <div className='relative flex'>
+      <div
+        className={cn(
+          'p-1 bg-gray-100 dark:bg-background-gray rounded-full flex items-center',
+          { 'flex-col': direction === 'vertical' },
+        )}
+      >
+        <div
+          className={cn('relative flex', {
+            'flex-col': direction === 'vertical',
+          })}
+        >
           {THEMES.map((t) => (
             <Button
               key={t}
@@ -50,13 +63,23 @@ export function TripleThemeToggle() {
           ))}
           <div
             className={cn(
-              'absolute top-0 left-0 w-6 h-full',
+              'absolute top-0 left-0',
               'bg-background dark:bg-foreground/70 rounded-full',
               'transition-transform duration-200 ease-in-out',
               {
-                'translate-x-0': theme === 'light',
-                'translate-x-6': theme === 'dark',
-                'translate-x-12': theme === 'system',
+                'w-6 h-full': direction === 'horizontal',
+                'h-6 w-full': direction === 'vertical',
+
+                'translate-x-0':
+                  theme === 'light' && direction === 'horizontal',
+                'translate-x-6': theme === 'dark' && direction === 'horizontal',
+                'translate-x-12':
+                  theme === 'system' && direction === 'horizontal',
+
+                'translate-y-0': theme === 'light' && direction === 'vertical',
+                'translate-y-6': theme === 'dark' && direction === 'vertical',
+                'translate-y-12':
+                  theme === 'system' && direction === 'vertical',
               },
             )}
           />

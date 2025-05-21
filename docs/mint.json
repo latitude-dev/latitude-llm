@@ -188,7 +188,10 @@
     },
     {
       "group": "Agents",
-      "pages": ["/examples/agents/joke-generator", "/examples/agents/deep-search"]
+      "pages": [
+        "/examples/agents/joke-generator",
+        "/examples/agents/deep-search"
+      ]
     },
     {
       "group": "Changelog",
@@ -201,4 +204,3 @@
     "linkedin": "https://www.linkedin.com/company/trylatitude/"
   }
 }
-

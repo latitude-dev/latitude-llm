@@ -4,6 +4,7 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { SessionUser } from '@latitude-data/web-ui/providers'
 
 import AppHeader, { AppHeaderProps } from './Header'
+import RightSidebarLayout from './RightSidebarLayout'
 
 export type AppLayoutProps = AppHeaderProps & {
   children: ReactNode
@@ -29,9 +30,11 @@ export default function AppLayout({
         currentUser={currentUser}
         cloudInfo={cloudInfo}
       />
-      <main className='w-full flex-grow min-h-0 h-full relative'>
-        {children}
-      </main>
+      <RightSidebarLayout>
+        <main className='w-full flex-grow min-h-0 h-full relative'>
+          {children}
+        </main>
+      </RightSidebarLayout>
     </div>
   )
 }

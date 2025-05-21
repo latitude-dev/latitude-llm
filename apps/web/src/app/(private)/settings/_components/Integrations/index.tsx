@@ -22,6 +22,8 @@ import { integrationOptions } from '$/lib/integrationTypeOptions'
 import { IntegrationType } from '@latitude-data/constants'
 import { McpServerStatus } from '../../integrations/[integrationId]/details/_components/McpServerStatus'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 
 export default function Integrations() {
   const { data: integrations, isLoading: isLoading } = useIntegrations()
@@ -29,7 +31,10 @@ export default function Integrations() {
   return (
     <div className='flex flex-col gap-4'>
       <div className='flex flex-row items-center justify-between'>
-        <Text.H4B>Integrations</Text.H4B>
+        <div className='flex flex-row items-center gap-2'>
+          <Text.H4B>Integrations</Text.H4B>
+          <OpenInDocsButton route={DocsRoute.MCP} />
+        </div>
         <Link href={ROUTES.settings.integrations.new.root}>
           <Button fancy variant='outline'>
             Create Integration

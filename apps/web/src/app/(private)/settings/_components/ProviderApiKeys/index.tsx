@@ -25,6 +25,8 @@ import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 
 export default function ProviderApiKeys() {
   const { data: providerApiKeys, isLoading: isProviderApiKeysLoading } =
@@ -36,7 +38,10 @@ export default function ProviderApiKeys() {
   return (
     <div className='flex flex-col gap-4'>
       <div className='flex flex-row items-center justify-between'>
-        <Text.H4B>Providers</Text.H4B>
+        <div className='flex flex-row items-center gap-2'>
+          <Text.H4B>Providers</Text.H4B>
+          <OpenInDocsButton route={DocsRoute.Providers} />
+        </div>
         <Link href={ROUTES.settings.providerApiKeys.new.root}>
           <Button fancy variant='outline'>
             Create Provider
