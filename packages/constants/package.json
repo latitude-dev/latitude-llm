@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@latitude-data/compiler": "workspace:^",
+    "@opentelemetry/semantic-conventions": "^1.22.0",
     "ai": "^4.2.9",
     "json-schema": "^0.4.0",
     "promptl-ai": "^0.6.1",

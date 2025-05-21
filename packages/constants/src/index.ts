@@ -17,6 +17,11 @@ export enum Providers {
   Perplexity = 'perplexity',
 }
 
+export enum DocumentType {
+  Prompt = 'prompt',
+  Agent = 'agent',
+}
+
 export enum DocumentTriggerType {
   Email = 'email',
   Scheduled = 'scheduled',

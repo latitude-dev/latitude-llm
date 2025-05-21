@@ -9,6 +9,7 @@ import { experiments } from './experiments'
 import { providerApiKeys } from './providerApiKeys'
 import { workspaces } from './workspaces'
 
+// TODO(tracing): fix span table when telemetry sdk is ready
 export const spans = latitudeSchema.table(
   'spans',
   {

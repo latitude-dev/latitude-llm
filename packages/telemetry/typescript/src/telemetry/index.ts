@@ -1,263 +1,451 @@
-import { NodeSDK } from '@opentelemetry/sdk-node'
 import {
-  SimpleSpanProcessor,
+  ATTR_LATITUDE_DOCUMENT_TYPE,
+  ATTR_LATITUDE_DOCUMENT_UUID,
+  ATTR_LATITUDE_EXPERIMENT_UUID,
+  ATTR_LATITUDE_EXTERNAL_ID,
+  ATTR_LATITUDE_HTTP_REQUEST,
+  ATTR_LATITUDE_HTTP_RESPONSE,
+  ATTR_LATITUDE_PROMPT_HASH,
+  ATTR_LATITUDE_SEGMENT_ID,
+  ATTR_LATITUDE_SEGMENT_NAME,
+  ATTR_LATITUDE_SEGMENT_PARENT_ID,
+  ATTR_LATITUDE_SEGMENT_TYPE,
+  ATTR_LATITUDE_SOURCE,
+  ATTR_LATITUDE_TOOL_ARGUMENTS,
+  ATTR_LATITUDE_TOOL_RESULT,
+  ATTR_LATITUDE_TYPE,
+  ATTR_LATITUDE_VERSION_UUID,
+  SegmentType,
+  SpanSource,
+  SpanType,
+} from '@latitude-data/constants'
+import * as tracing from '@opentelemetry/api'
+import { context, propagation } from '@opentelemetry/api'
+import {
+  ALLOW_ALL_BAGGAGE_KEYS,
+  BaggageSpanProcessor,
+} from '@opentelemetry/baggage-span-processor'
+import {
+  W3CBaggagePropagator,
+  W3CTraceContextPropagator,
+} from '@opentelemetry/core'
+import { OTLPTraceExporter as HttpExporter } from '@opentelemetry/exporter-trace-otlp-http'
+import {
+  InstrumentationBase,
+  registerInstrumentations,
+} from '@opentelemetry/instrumentation'
+import { Resource } from '@opentelemetry/resources'
+import {
   BatchSpanProcessor,
-  SpanExporter,
+  NodeTracerProvider,
+  RandomIdGenerator,
+  SimpleSpanProcessor,
 } from '@opentelemetry/sdk-trace-node'
-
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
 import { AnthropicInstrumentation } from '@traceloop/instrumentation-anthropic'
-import { OpenAIInstrumentation } from '@traceloop/instrumentation-openai'
 import { AzureOpenAIInstrumentation } from '@traceloop/instrumentation-azure'
+import { BedrockInstrumentation } from '@traceloop/instrumentation-bedrock'
+import { CohereInstrumentation } from '@traceloop/instrumentation-cohere'
+import { LangChainInstrumentation } from '@traceloop/instrumentation-langchain'
+import { LlamaIndexInstrumentation } from '@traceloop/instrumentation-llamaindex'
+import { OpenAIInstrumentation } from '@traceloop/instrumentation-openai'
+import { TogetherInstrumentation } from '@traceloop/instrumentation-together'
 import {
   AIPlatformInstrumentation,
   VertexAIInstrumentation,
 } from '@traceloop/instrumentation-vertexai'
-import { BedrockInstrumentation } from '@traceloop/instrumentation-bedrock'
-import { CohereInstrumentation } from '@traceloop/instrumentation-cohere'
+import {
+  DocumentSegmentOptions,
+  HttpSpanOptions,
+  LATITUDE_TRACES_URL,
+  SegmentOptions,
+  SpanOptions,
+  TELEMETRY_INSTRUMENTATION_NAME,
+  TELEMETRY_SERVICE_NAME,
+  TelemetryOptions,
+  ToolSpanOptions,
+} from './shared'
 
-import type * as openai from 'openai'
-import type * as anthropic from '@anthropic-ai/sdk'
-import type * as azure from '@azure/openai'
-import type * as cohere from 'cohere-ai'
-import type * as bedrock from '@aws-sdk/client-bedrock-runtime'
-import type * as aiplatform from '@google-cloud/aiplatform'
-import type * as vertexAI from '@google-cloud/vertexai'
-import type * as pinecone from '@pinecone-database/pinecone'
-import type * as ChainsModule from 'langchain/chains'
-import type * as AgentsModule from 'langchain/agents'
-import type * as ToolsModule from 'langchain/tools'
-import type * as RunnableModule from '@langchain/core/runnables'
-import type * as VectorStoreModule from '@langchain/core/vectorstores'
-import type * as llamaindex from 'llamaindex'
-import type * as chromadb from 'chromadb'
-import type * as qdrant from '@qdrant/js-client-rest'
-import { Resource } from '@opentelemetry/resources'
-import { context, trace } from '@opentelemetry/api'
+export * from './shared'
 
-type IModules = {
-  openAI?: typeof openai.OpenAI
-  anthropic?: typeof anthropic
-  azureOpenAI?: typeof azure
-  cohere?: typeof cohere
-  bedrock?: typeof bedrock
-  google_vertexai?: typeof vertexAI
-  google_aiplatform?: typeof aiplatform
-  pinecone?: typeof pinecone
-  langchain?: {
-    chainsModule?: typeof ChainsModule
-    agentsModule?: typeof AgentsModule
-    toolsModule?: typeof ToolsModule
-    runnablesModule?: typeof RunnableModule
-    vectorStoreModule?: typeof VectorStoreModule
-  }
-  llamaIndex?: typeof llamaindex
-  chromadb?: typeof chromadb
-  qdrant?: typeof qdrant
-}
+export class LatitudeTelemetry {
+  private options: TelemetryOptions
+  public tracer: NodeTracerProvider
+  private generator: RandomIdGenerator
+  private instrumentations: InstrumentationBase[]
 
-type SpanAttributes = {
-  name?: string
-  metadata?: Record<string, unknown>
-  prompt?: {
-    uuid: string
-    versionUuid?: string
-    parameters?: Record<string, unknown>
-  }
-  distinctId?: string
-}
+  constructor(apiKey: string, options?: TelemetryOptions) {
+    this.options = options || {}
 
-export type LatitudeTelemetrySDKConfig = {
-  exporter: SpanExporter
-  modules?: IModules
-  disableBatch?: boolean
-  processors?: (typeof SimpleSpanProcessor)[] | (typeof BatchSpanProcessor)[]
-}
-
-export class LatitudeTelemetrySDK {
-  private exporter: SpanExporter
-
-  constructor({
-    exporter,
-    modules = {},
-    disableBatch = false,
-    processors = [],
-  }: LatitudeTelemetrySDKConfig) {
-    this.exporter = exporter
-
-    this._init(modules, { disableBatch, processors })
-  }
-
-  private _init(
-    modules: IModules,
-    options?: {
-      disableBatch?: boolean
-      processors?:
-        | (typeof SimpleSpanProcessor)[]
-        | (typeof BatchSpanProcessor)[]
-    },
-  ) {
-    const instrumentations = []
-
-    if (modules?.openAI) {
-      const openAIInstrumentation = new OpenAIInstrumentation({
-        enrichTokens: true,
+    if (!this.options.exporter) {
+      this.options.exporter = new HttpExporter({
+        url: LATITUDE_TRACES_URL,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeoutMillis: 30 * 1000,
       })
-      // @ts-ignore
-      openAIInstrumentation.manuallyInstrument(modules.openAI!)
-      instrumentations.push(openAIInstrumentation)
     }
 
-    if (modules?.anthropic) {
-      const anthropicInstrumentation = new AnthropicInstrumentation()
-      anthropicInstrumentation.manuallyInstrument(modules.anthropic!)
-      instrumentations.push(new AnthropicInstrumentation())
-    }
+    propagation.setGlobalPropagator(new W3CBaggagePropagator())
+    propagation.setGlobalPropagator(new W3CTraceContextPropagator())
 
-    if (modules?.azureOpenAI) {
-      const azureOpenAIInstrumentation = new AzureOpenAIInstrumentation()
-      azureOpenAIInstrumentation.manuallyInstrument(modules.azureOpenAI!)
-      instrumentations.push(azureOpenAIInstrumentation)
-    }
-
-    if (modules?.cohere) {
-      const cohereInstrumentation = new CohereInstrumentation()
-      cohereInstrumentation.manuallyInstrument(modules.cohere!)
-      instrumentations.push(cohereInstrumentation)
-    }
-
-    if (modules?.google_vertexai) {
-      const vertexAIInstrumentation = new VertexAIInstrumentation()
-      vertexAIInstrumentation.manuallyInstrument(modules.google_vertexai!)
-      instrumentations.push(vertexAIInstrumentation)
-    }
-
-    if (modules?.google_aiplatform) {
-      const aiplatformInstrumentation = new AIPlatformInstrumentation()
-      aiplatformInstrumentation.manuallyInstrument(modules.google_aiplatform!)
-      instrumentations.push(aiplatformInstrumentation)
-    }
-
-    if (modules?.bedrock) {
-      const bedrockInstrumentation = new BedrockInstrumentation()
-      bedrockInstrumentation.manuallyInstrument(modules.bedrock!)
-      instrumentations.push(bedrockInstrumentation)
-    }
-
-    // TODO: Enable these once we have manually tested them
-    //if (modules?.langchain) {
-    //  const langchainInstrumentation = new LangChainInstrumentation()
-    //  langchainInstrumentation.manuallyInstrument(modules.langchain!)
-    //  instrumentations.push(langchainInstrumentation)
-    //}
-    //
-    //if (modules?.llamaIndex) {
-    //  const llamaindexInstrumentation = new LlamaIndexInstrumentation()
-    //  llamaindexInstrumentation.manuallyInstrument(modules.llamaIndex!)
-    //  instrumentations.push(llamaindexInstrumentation)
-    //}
-
-    //if (modules?.pinecone) {
-    //  const pineconeInstrumentation = new PineconeInstrumentation()
-    //  pineconeInstrumentation.manuallyInstrument(modules.pinecone!)
-    //  instrumentations.push(pineconeInstrumentation)
-    //}
-
-    //if (modules?.chromadb) {
-    //  const chromadbInstrumentation = new ChromaDBInstrumentation()
-    //  chromadbInstrumentation.manuallyInstrument(modules.chromadb!)
-    //  instrumentations.push(chromadbInstrumentation)
-    //}
-
-    //if (modules?.qdrant) {
-    //  const qdrantInstrumentation = new QdrantInstrumentation()
-    //  qdrantInstrumentation.manuallyInstrument(modules.qdrant!)
-    //  instrumentations.push(qdrantInstrumentation)
-    //}
-
-    if (!instrumentations.length && !options?.processors?.length) {
-      console.warn('Latitude: No instrumentations or processors to initialize')
-      return
-    }
-
-    const processors = options?.disableBatch
-      ? [
-          new SimpleSpanProcessor(this.exporter),
-          ...(options?.processors?.map(
-            (processor) => new processor(this.exporter),
-          ) || []),
-        ]
-      : [
-          new BatchSpanProcessor(this.exporter),
-          ...(options?.processors?.map(
-            (processor) => new processor(this.exporter),
-          ) || []),
-        ]
-
-    const sdk = new NodeSDK({
-      resource: new Resource({
-        'service.name': process.env.npm_package_name,
-      }),
-      instrumentations,
-      traceExporter: this.exporter,
-      // @ts-ignore
-      spanProcessors: processors,
+    this.tracer = new NodeTracerProvider({
+      resource: new Resource({ [ATTR_SERVICE_NAME]: TELEMETRY_SERVICE_NAME }),
     })
 
-    sdk.start()
+    // Note: important, must run before the exporter span processors
+    this.tracer.addSpanProcessor(
+      new BaggageSpanProcessor(ALLOW_ALL_BAGGAGE_KEYS),
+    )
+
+    if (this.options.disableBatch) {
+      this.tracer.addSpanProcessor(
+        new SimpleSpanProcessor(this.options.exporter),
+      )
+    } else {
+      this.tracer.addSpanProcessor(
+        new BatchSpanProcessor(this.options.exporter),
+      )
+    }
+
+    this.tracer.register()
+    process.on('SIGTERM', async () => {
+      await this.tracer.forceFlush()
+      await this.tracer.shutdown()
+      await this.options.exporter!.forceFlush?.()
+      await this.options.exporter!.shutdown?.()
+      process.exit(0)
+    })
+
+    this.generator = new RandomIdGenerator()
+
+    this.instrumentations = []
+    this.initInstrumentations()
+    this.instrument()
   }
 
-  span<T>(s: SpanAttributes, fn: (span: any) => T): Promise<T> {
-    const c = context.active()
-    return context.with(c, () =>
-      trace
-        .getTracer('latitude')
-        .startActiveSpan(s.name ?? 'latitude.span', {}, c, async (span) => {
-          try {
-            if (s.prompt) {
-              try {
-                span.setAttribute('latitude.prompt', JSON.stringify(s.prompt))
-              } catch (e) {
-                console.error(
-                  'Latitude: Could not serialize latitude.prompt attribute',
-                  e,
-                )
-              }
-            }
+  // TODO(tracing): auto instrument outgoing HTTP requests
+  private initInstrumentations() {
+    const instrumentations = []
 
-            if (s.distinctId) {
-              span.setAttribute('latitude.distinctId', s.distinctId)
-            }
+    // TODO(tracing): LatitudeInstrumentation
 
-            if (s.metadata) {
-              try {
-                span.setAttribute(
-                  'latitude.metadata',
-                  JSON.stringify(s.metadata),
-                )
-              } catch (e) {
-                console.error(
-                  'Latitude: Could not serialize latitude.metadata attribute',
-                  e,
-                )
-              }
-            }
-          } catch (error) {
-            console.error(error)
-          }
+    const openai = this.options.instrumentations?.openai
+    if (openai) {
+      const instrumentation = new OpenAIInstrumentation({ enrichTokens: true })
+      // @ts-expect-error todo: fix openai module type incompatibility
+      instrumentation.manuallyInstrument(openai)
+      instrumentations.push(instrumentation)
+    }
 
-          const res = fn(span)
-          if (res instanceof Promise) {
-            return res.then((resolvedRes) => {
-              span.end()
+    const anthropic = this.options.instrumentations?.anthropic
+    if (anthropic) {
+      const instrumentation = new AnthropicInstrumentation()
+      instrumentation.manuallyInstrument(anthropic)
+      instrumentations.push(instrumentation)
+    }
 
-              return resolvedRes
-            })
-          }
+    const azure = this.options.instrumentations?.azure
+    if (azure) {
+      const instrumentation = new AzureOpenAIInstrumentation()
+      instrumentation.manuallyInstrument(azure)
+      instrumentations.push(instrumentation)
+    }
 
-          span.end()
+    const vertexai = this.options.instrumentations?.vertexai
+    if (vertexai) {
+      const instrumentation = new VertexAIInstrumentation()
+      instrumentation.manuallyInstrument(vertexai)
+      instrumentations.push(instrumentation)
+    }
 
-          return res
-        }),
+    const aiplatform = this.options.instrumentations?.aiplatform
+    if (aiplatform) {
+      const instrumentation = new AIPlatformInstrumentation()
+      instrumentation.manuallyInstrument(aiplatform)
+      instrumentations.push(instrumentation)
+    }
+
+    const bedrock = this.options.instrumentations?.bedrock
+    if (bedrock) {
+      const instrumentation = new BedrockInstrumentation()
+      instrumentation.manuallyInstrument(bedrock)
+      instrumentations.push(instrumentation)
+    }
+
+    const togetherai = this.options.instrumentations?.togetherai
+    if (togetherai) {
+      const instrumentation = new TogetherInstrumentation({
+        enrichTokens: true,
+      })
+      instrumentation.manuallyInstrument(togetherai)
+      instrumentations.push(instrumentation)
+    }
+
+    const cohere = this.options.instrumentations?.cohere
+    if (cohere) {
+      const instrumentation = new CohereInstrumentation()
+      instrumentation.manuallyInstrument(cohere)
+      instrumentations.push(instrumentation)
+    }
+
+    const langchain = this.options.instrumentations?.langchain
+    if (langchain) {
+      const instrumentation = new LangChainInstrumentation()
+      instrumentation.manuallyInstrument(langchain)
+      instrumentations.push(instrumentation)
+    }
+
+    const llamaindex = this.options.instrumentations?.llamaindex
+    if (llamaindex) {
+      const instrumentation = new LlamaIndexInstrumentation()
+      instrumentation.manuallyInstrument(llamaindex)
+      instrumentations.push(instrumentation)
+    }
+
+    instrumentations.forEach((instrumentation) =>
+      instrumentation.setTracerProvider(this.tracer),
+    )
+    registerInstrumentations({ instrumentations })
+    this.instrumentations = instrumentations as any
+  }
+
+  instrument() {
+    this.instrumentations.forEach((instrumentation) => {
+      if (!instrumentation.isEnabled()) instrumentation.enable()
+    })
+  }
+
+  uninstrument() {
+    this.instrumentations.forEach((instrumentation) => {
+      if (instrumentation.isEnabled()) instrumentation.disable()
+    })
+  }
+
+  private span<F extends (span: tracing.Span) => ReturnType<F>>(
+    name: string,
+    type: SpanType,
+    { externalId, attributes }: SpanOptions,
+    fn: F,
+  ) {
+    attributes = {
+      ...(attributes || {}),
+      ...(externalId && { [ATTR_LATITUDE_EXTERNAL_ID]: externalId }),
+      [ATTR_LATITUDE_SOURCE]: SpanSource.API,
+      [ATTR_LATITUDE_TYPE]: type,
+    }
+
+    const tracer = this.tracer.getTracer(TELEMETRY_INSTRUMENTATION_NAME)
+    return tracer.startActiveSpan(
+      name,
+      { attributes },
+      context.active(),
+      (span) => {
+        const result = fn(span)
+        if (result instanceof Promise) {
+          return result.then((resolved) => {
+            span.end()
+            return resolved
+          })
+        }
+        span.end()
+        return result
+      },
+    )
+  }
+
+  tool<F extends (span: tracing.Span) => ReturnType<F>>(
+    { name, externalId, attributes, arguments: args, result }: ToolSpanOptions,
+    fn: F,
+  ) {
+    let jsonArguments = ''
+    try {
+      jsonArguments = JSON.stringify(args)
+    } catch (error) {
+      jsonArguments = JSON.stringify({})
+    }
+
+    let jsonResult = ''
+    try {
+      jsonResult = JSON.stringify(result)
+    } catch (error) {
+      jsonResult = JSON.stringify({ value: '' })
+    }
+
+    attributes = {
+      ...(attributes || {}),
+      [ATTR_LATITUDE_TOOL_ARGUMENTS]: jsonArguments,
+      [ATTR_LATITUDE_TOOL_RESULT]: jsonResult,
+    }
+
+    return this.span(
+      name || 'Tool',
+      SpanType.Tool,
+      { externalId, attributes },
+      fn,
+    )
+  }
+
+  completion<F extends (span: tracing.Span) => ReturnType<F>>(
+    { name, externalId, attributes }: SpanOptions,
+    fn: F,
+  ) {
+    return this.span(
+      name || 'Completion',
+      SpanType.Completion,
+      { externalId, attributes },
+      fn,
+    )
+  }
+
+  embedding<F extends (span: tracing.Span) => ReturnType<F>>(
+    { name, externalId, attributes }: SpanOptions,
+    fn: F,
+  ) {
+    return this.span(
+      name || 'Embedding',
+      SpanType.Embedding,
+      { externalId, attributes },
+      fn,
+    )
+  }
+
+  retrieval<F extends (span: tracing.Span) => ReturnType<F>>(
+    { name, externalId, attributes }: SpanOptions,
+    fn: F,
+  ) {
+    return this.span(
+      name || 'Retrieval',
+      SpanType.Retrieval,
+      { externalId, attributes },
+      fn,
+    )
+  }
+
+  reranking<F extends (span: tracing.Span) => ReturnType<F>>(
+    { name, externalId, attributes }: SpanOptions,
+    fn: F,
+  ) {
+    return this.span(
+      name || 'Reranking',
+      SpanType.Reranking,
+      { externalId, attributes },
+      fn,
+    )
+  }
+
+  http<F extends (span: tracing.Span) => ReturnType<F>>(
+    { name, externalId, attributes, request, response }: HttpSpanOptions,
+    fn: F,
+  ) {
+    let jsonRequest = ''
+    try {
+      jsonRequest = JSON.stringify(request)
+    } catch (error) {
+      jsonRequest = JSON.stringify({
+        method: 'UNKNOWN',
+        url: 'UNKNOWN',
+        headers: {},
+        body: {},
+      })
+    }
+
+    let jsonResponse = ''
+    try {
+      jsonResponse = JSON.stringify(response)
+    } catch (error) {
+      jsonResponse = JSON.stringify({
+        status: -1,
+        headers: {},
+        body: {},
+      })
+    }
+
+    attributes = {
+      ...(attributes || {}),
+      [ATTR_LATITUDE_HTTP_REQUEST]: jsonRequest,
+      [ATTR_LATITUDE_HTTP_RESPONSE]: jsonResponse,
+    }
+
+    return this.span(
+      name || 'Http',
+      SpanType.Http,
+      { externalId, attributes },
+      fn,
+    )
+  }
+
+  private segment<F extends () => ReturnType<F>>(
+    name: string,
+    type: SegmentType,
+    { externalId, attributes }: SegmentOptions,
+    fn: F,
+  ) {
+    const parent_id = propagation
+      .getActiveBaggage()
+      ?.getEntry(ATTR_LATITUDE_SEGMENT_ID)
+
+    const baggage = propagation.createBaggage({
+      ...(externalId && { [ATTR_LATITUDE_EXTERNAL_ID]: { value: externalId } }),
+      [ATTR_LATITUDE_SOURCE]: { value: SpanSource.API },
+      ...Object.fromEntries(
+        Object.entries(attributes || {}).map(([key, value]) => [
+          key,
+          { value: String(value) },
+        ]),
+      ),
+      [ATTR_LATITUDE_SEGMENT_ID]: { value: this.generator.generateSpanId() },
+      ...(parent_id && { [ATTR_LATITUDE_SEGMENT_PARENT_ID]: parent_id }),
+      [ATTR_LATITUDE_SEGMENT_NAME]: { value: name },
+      [ATTR_LATITUDE_SEGMENT_TYPE]: { value: type },
+    })
+
+    return context.with(propagation.setBaggage(context.active(), baggage), fn)
+  }
+
+  document<F extends () => ReturnType<F>>(
+    {
+      name,
+      externalId,
+      attributes,
+      versionUuid,
+      documentUuid,
+      documentType,
+      experimentUuid,
+      promptHash,
+    }: DocumentSegmentOptions,
+    fn: F,
+  ) {
+    attributes = {
+      ...(attributes || {}),
+      [ATTR_LATITUDE_VERSION_UUID]: versionUuid,
+      [ATTR_LATITUDE_DOCUMENT_UUID]: documentUuid,
+      [ATTR_LATITUDE_DOCUMENT_TYPE]: documentType,
+      ...(experimentUuid && {
+        [ATTR_LATITUDE_EXPERIMENT_UUID]: experimentUuid,
+      }),
+      [ATTR_LATITUDE_PROMPT_HASH]: promptHash,
+    }
+
+    return this.segment(
+      name || 'Document',
+      SegmentType.Document,
+      { externalId, attributes },
+      fn,
+    )
+  }
+
+  step<F extends () => ReturnType<F>>(
+    { name, externalId, attributes }: SegmentOptions,
+    fn: F,
+  ) {
+    return this.segment(
+      name || 'Step',
+      SegmentType.Step,
+      { externalId, attributes },
+      fn,
     )
   }
 }

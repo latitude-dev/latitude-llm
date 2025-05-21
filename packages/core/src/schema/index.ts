@@ -37,7 +37,8 @@ export * from './models/documentSuggestions'
 export * from './models/providerApiKeys'
 
 // Observability tables
-export * from './models/spans'
+// TODO(tracing): add spans and segments tables when telemetry sdk is ready
+// export * from './models/spans'
 
 // Log tables
 export * from './models/documentLogs'
