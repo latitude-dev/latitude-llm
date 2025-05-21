@@ -95,7 +95,6 @@ export function DocumentLogsPage({
   const searchParams = useSearchParams()
   const page = searchParams.get('page')
   const pageSize = searchParams.get('pageSize')
-
   const [documentLogFilterOptions, setDocumentLogFilterOptions] = useState(
     initialDocumentLogFilterOptions,
   )

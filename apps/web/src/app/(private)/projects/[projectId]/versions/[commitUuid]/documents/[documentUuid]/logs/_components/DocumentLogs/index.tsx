@@ -1,5 +1,3 @@
-'use client'
-
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { useSelectableRows } from '$/hooks/useSelectableRows'

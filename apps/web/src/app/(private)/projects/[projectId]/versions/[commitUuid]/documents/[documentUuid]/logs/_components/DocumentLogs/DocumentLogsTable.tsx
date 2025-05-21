@@ -14,6 +14,7 @@ import {
   LOG_FILTERS_ENCODED_PARAMS,
   ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
+import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
@@ -153,7 +154,17 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
         pageSize,
       })
     const queryParams =
-      typeof window !== 'undefined' ? window.location.search : ''
+      typeof window !== 'undefined' ? window.location.search : undefined
+
+    const queryParamsObject = useMemo<QueryParams | undefined>(() => {
+      if (queryParams === undefined) return undefined
+
+      const searchParams = new URLSearchParams(queryParams)
+      // NOTE: Remove logUuid from pagination. Otherwhise never moves from
+      // selected log (`logUuid` is always present in the URL)
+      searchParams.delete('logUuid')
+      return Object.fromEntries(searchParams)
+    }, [queryParams])
 
     return (
       <Table
@@ -172,7 +183,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                       .documents.detail({ uuid: document.documentUuid }).logs
                       .root,
                     count: pagination.count,
-                    queryParams,
+                    queryParams: queryParamsObject,
                     encodeQueryParams: false,
                     paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
                     page: Number(page),
