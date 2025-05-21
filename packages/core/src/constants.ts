@@ -10,7 +10,6 @@ import {
   LatitudeTool,
   LatitudeToolInternalName,
   LogSources,
-  ProviderData,
   type ToolDefinition,
 } from '@latitude-data/constants'
 import { FinishReason, LanguageModelUsage } from 'ai'
@@ -31,7 +30,6 @@ export {
   LogSources,
   StreamEventTypes,
   type LegacyChainEvent,
-  type PromptConfig,
 } from '@latitude-data/constants'
 export * from '@latitude-data/constants/evaluations'
 export * from '@latitude-data/constants/tracing'
@@ -103,8 +101,6 @@ export enum ErrorableEntity {
   DocumentLog = 'document_log',
   EvaluationResult = 'evaluation_result',
 }
-
-export type ProviderDataType = ProviderData['type']
 
 export enum EvaluationMetadataType {
   LlmAsJudgeAdvanced = 'llm_as_judge',

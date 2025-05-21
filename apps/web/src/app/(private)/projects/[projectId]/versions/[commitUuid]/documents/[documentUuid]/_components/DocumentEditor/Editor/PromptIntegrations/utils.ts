@@ -1,6 +1,6 @@
-import { PromptConfig, ToolsItem } from '@latitude-data/constants'
+import { ToolsItem } from '@latitude-data/constants'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { IntegrationDto } from '@latitude-data/core/browser'
-import { omit } from 'lodash-es'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
@@ -10,7 +10,7 @@ function readActiveIntegrations({
   config,
   integrations,
 }: {
-  config: PromptConfig
+  config: LatitudePromptConfig
   integrations: IntegrationDto[]
 }) {
   const selectedIntegrations: ActiveIntegrations = {}
@@ -30,26 +30,19 @@ function readActiveIntegrations({
           toolName === '*' ? true : [...existing, toolName]
       }
     })
-
-    config.latitudeTools?.forEach((latitudeTool) => {
-      if (selectedIntegrations['latitude'] === true) return
-      const existing = selectedIntegrations['latitude'] ?? []
-      selectedIntegrations['latitude'] = [...existing, latitudeTool]
-    })
   }
   return selectedIntegrations
 }
 
 // Converts the old tools format to the regular one
-function normalizeIntegrations(config: PromptConfig) {
-  if (!config.tools && !config.latitudeTools) return config
+function normalizeIntegrations(config: LatitudePromptConfig) {
+  if (!config.tools) return config
   if (config.tools && !Array.isArray(config.tools)) {
     config.tools = Object.entries(config.tools).map(
       ([toolName, toolDefinition]) => ({ [toolName]: toolDefinition }),
     )
   }
-  ;(config.tools as ToolsItem[]).push(...(config.latitudeTools ?? []))
-  return omit(config, 'latitudeTools')
+  return config
 }
 
 function addIntegrationToConfig({
@@ -57,7 +50,7 @@ function addIntegrationToConfig({
   integrationName,
   toolName,
 }: {
-  config: PromptConfig
+  config: LatitudePromptConfig
   integrationName: string
   toolName: string
 }) {
@@ -98,7 +91,7 @@ function removeIntegrationFromConfig({
   toolName: removedToolName,
   integrationToolNames,
 }: {
-  config: PromptConfig
+  config: LatitudePromptConfig
   integrationName: string
   toolName: string
   integrationToolNames: string[]
@@ -144,12 +137,12 @@ export const useActiveIntegrations = ({
   integrations: IntegrationDto[]
   disabled?: boolean
 }) => {
-  const [localConfig, setLocalConfig] = useState<PromptConfig>(
-    promptConfig as PromptConfig,
+  const [localConfig, setLocalConfig] = useState<LatitudePromptConfig>(
+    promptConfig as LatitudePromptConfig,
   )
   const activeIntegrations = useMemo(
     () => readActiveIntegrations({ config: localConfig, integrations }),
-    [localConfig],
+    [localConfig, integrations],
   )
   const debouncedSetPromptConfig = useDebouncedCallback(
     (config: Record<string, unknown>) => {
@@ -160,13 +153,16 @@ export const useActiveIntegrations = ({
   )
 
   useEffect(() => {
-    setLocalConfig(promptConfig as PromptConfig)
+    setLocalConfig(promptConfig as LatitudePromptConfig)
   }, [promptConfig])
 
-  const setConfig = (config: Record<string, unknown>) => {
-    setLocalConfig(config as PromptConfig)
-    debouncedSetPromptConfig(config)
-  }
+  const setConfig = useCallback(
+    (config: Record<string, unknown>) => {
+      setLocalConfig(config as LatitudePromptConfig)
+      debouncedSetPromptConfig(config)
+    },
+    [debouncedSetPromptConfig, setLocalConfig],
+  )
 
   const addIntegrationTool = useCallback(
     (integrationName: string, toolName: string) => {
@@ -178,7 +174,7 @@ export const useActiveIntegrations = ({
         }),
       )
     },
-    [localConfig],
+    [localConfig, setConfig],
   )
   const removeIntegrationTool = useCallback(
     (
@@ -195,7 +191,7 @@ export const useActiveIntegrations = ({
         }),
       )
     },
-    [localConfig],
+    [localConfig, setConfig],
   )
 
   return {

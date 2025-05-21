@@ -7,10 +7,9 @@ import {
   jsonSchema,
   LanguageModel,
   ObjectStreamPart,
-  streamObject as originalStreamObject,
   streamText as originalStreamText,
+  Output,
   smoothStream,
-  StreamObjectResult,
   StreamTextResult,
   TextStreamPart,
   Tool,
@@ -27,27 +26,16 @@ import { applyAllRules } from './providers/rules'
 import { VercelConfig } from '@latitude-data/constants'
 import { Result } from './../../lib/Result'
 import { TypedResult } from './../../lib/Result'
+import { getLanguageModel } from './getLanguageModel'
 
 const DEFAULT_AI_SDK_PROVIDER = {
   streamText: originalStreamText,
-  streamObject: originalStreamObject,
 }
 type AISDKProvider = typeof DEFAULT_AI_SDK_PROVIDER
-type AIReturnObject = Pick<
-  StreamObjectResult<unknown, unknown, never>,
-  'fullStream' | 'object' | 'usage' | 'providerMetadata'
-> & {
-  type: 'object'
-  providerName: Providers
-}
 
-// A stream of partial outputs. It uses the `experimental_output` specification.
-// This could fix the issue with having a schema and tool calls in the same prompt.
-// But requires more investigation. More info:
-// https://vercel.com/blog/ai-sdk-4-1#structured-output-improvements
 type PARTIAL_OUTPUT = object
 
-type AIReturnText = Pick<
+export type AIReturn<T extends StreamType> = Pick<
   StreamTextResult<Record<string, Tool<any, any>>, PARTIAL_OUTPUT>,
   | 'fullStream'
   | 'text'
@@ -56,15 +44,10 @@ type AIReturnText = Pick<
   | 'providerMetadata'
   | 'reasoning'
 > & {
-  type: 'text'
+  type: T
   providerName: Providers
+  object?: T extends 'object' ? PARTIAL_OUTPUT : undefined
 }
-
-export type AIReturn<T extends StreamType> = T extends 'object'
-  ? AIReturnObject
-  : T extends 'text'
-    ? AIReturnText
-    : never
 
 export type StreamChunk =
   | TextStreamPart<Record<string, Tool>>
@@ -112,7 +95,7 @@ export async function ai({
     >
   >
 > {
-  const { streamText, streamObject } = {
+  const { streamText } = {
     ...DEFAULT_AI_SDK_PROVIDER,
     ...(aiSdkProvider || {}),
   }
@@ -146,24 +129,25 @@ export async function ai({
       url: url ?? undefined,
       config,
     })
+
     if (providerAdapterResult.error) return providerAdapterResult
 
-    const providerAdapter = providerAdapterResult.value
-    const languageModel = customLanguageModel
-      ? customLanguageModel
-      : // @ts-expect-error - Some provider adapters don't accept a second argument
-        providerAdapter(model, {
-          cacheControl: config.cacheControl ?? false,
-          // providerOptions are passed to streamText or streamObject not to the adapter
-          ...omit(config, ['providerOptions']),
-        })
+    const languageModel = getLanguageModel({
+      llmProvider: providerAdapterResult.value,
+      provider,
+      config,
+      model,
+      customLanguageModel,
+    })
 
     const toolsResult = buildTools(tools)
     if (toolsResult.error) return toolsResult
 
-    const schemaLessConfig = omit(config, ['schema'])
-    const commonOptions = {
-      ...schemaLessConfig,
+    const useSchema = schema && !!output && output !== 'no-schema'
+    const resultType: StreamType = useSchema ? 'object' : 'text'
+
+    const result = streamText({
+      ...omit(config, ['schema']),
       model: languageModel,
       prompt,
       messages: messages as CoreMessage[],
@@ -173,42 +157,21 @@ export async function ai({
       experimental_telemetry: {
         isEnabled: true,
       },
-    }
-
-    if (schema && output) {
-      const result = streamObject({
-        ...commonOptions,
-        schema: jsonSchema(schema),
-        // output is valid but depending on the type of schema
-        // there might be a mismatch (e.g you pass an object schema but the
-        // output is "array"). Not really an issue we need to defend atm.
-        output: output as any,
-      })
-
-      return Result.ok({
-        fullStream: result.fullStream,
-        object: result.object,
-        usage: result.usage,
-        providerMetadata: result.providerMetadata,
-        type: 'object',
-        providerName: providerType,
-      })
-    }
-
-    const result = streamText({
-      ...commonOptions,
       experimental_transform: smoothStream(),
+      experimental_output: useSchema
+        ? Output.object({ schema: jsonSchema(schema) })
+        : undefined,
     })
-
     return Result.ok({
+      type: resultType,
+      providerName: providerType,
       fullStream: result.fullStream,
       text: result.text,
       reasoning: result.reasoning,
       usage: result.usage,
       toolCalls: result.toolCalls,
       providerMetadata: result.providerMetadata,
-      type: 'text',
-      providerName: providerType,
+      sources: result.sources,
     })
   } catch (e) {
     return handleAICallAPIError(e)
@@ -216,7 +179,7 @@ export async function ai({
 }
 
 export { estimateCost, getCostPer1M } from './estimateCost'
-export type { Config, PartialConfig } from './helpers'
+export type { PartialConfig } from './helpers'
 export {
   vertexConfigurationSchema,
   type VertexConfiguration,

@@ -1,14 +1,7 @@
 import { capitalize } from 'lodash-es'
 
+import { APICallError, FinishReason, RetryError } from 'ai'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import {
-  APICallError,
-  Tool,
-  FinishReason,
-  ObjectStreamPart,
-  TextStreamPart,
-  RetryError,
-} from 'ai'
 
 import {
   LegacyChainEvent,
@@ -19,10 +12,7 @@ import {
 import { streamToGenerator } from '../../streamToGenerator'
 import { AIReturn } from '../../../services/ai'
 import { ChainError } from '../ChainErrors'
-
-type StreamChunk =
-  | TextStreamPart<Record<string, Tool>>
-  | ObjectStreamPart<unknown>
+import { ProviderData } from '@latitude-data/constants'
 
 interface ConsumeStreamParams {
   result: AIReturn<StreamType>
@@ -46,7 +36,9 @@ export async function consumeStream({
     | undefined
   let finishReason: FinishReason = 'stop'
 
-  for await (const chunk of streamToGenerator<StreamChunk>(result.fullStream)) {
+  for await (const chunk of streamToGenerator<ProviderData>(
+    result.fullStream,
+  )) {
     if (chunk.type === 'error') {
       finishReason = 'error'
       error = createAIError(

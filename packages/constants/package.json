@@ -16,7 +16,8 @@
     "./onboarding": "./src/onboarding.ts",
     "./evaluations": "./src/evaluations/index.ts",
     "./experiments": "./src/experiments.ts",
-    "./tracing": "./src/tracing/index.ts"
+    "./tracing": "./src/tracing/index.ts",
+    "./latitudePromptSchema": "./src/latitudePromptSchema/index.ts"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
@@ -27,7 +28,7 @@
     "@latitude-data/compiler": "workspace:^",
     "ai": "^4.2.9",
     "json-schema": "^0.4.0",
-    "promptl-ai": "^0.5.6",
+    "promptl-ai": "^0.6.1",
     "zod": "^3.23.8"
   }
 }

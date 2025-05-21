@@ -18,8 +18,8 @@ import {
   StreamType,
 } from '../../../../constants'
 import { runAgent } from '../../../agents/run'
-import { PromptConfig } from '@latitude-data/constants'
 import { Result } from './../../../../lib/Result'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 /**
  * Resuming a prompt
@@ -48,7 +48,7 @@ export async function resumePausedPrompt({
   workspace: Workspace
   commit: Commit
   document: DocumentVersion
-  globalConfig: PromptConfig
+  globalConfig: LatitudePromptConfig
   documentLogUuid: string
   pausedChain: PromptlChain
   responseMessages: Message[]

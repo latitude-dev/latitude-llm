@@ -10,20 +10,19 @@ import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
 import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
-import { Config } from '../../ai'
-import { azureConfig, googleConfig } from '../../ai/helpers'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../chains/checkFreeProviderQuota'
 import { CachedApiKeys } from '../../chains/run'
-import {
-  AGENT_RETURN_TOOL_NAME,
-  LATITUDE_TOOLS_CONFIG_NAME,
-} from '@latitude-data/constants'
+import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 import { Result } from './../../../lib/Result'
 import { TypedResult } from './../../../lib/Result'
+import {
+  azureConfig,
+  LatitudePromptConfig,
+} from '@latitude-data/constants/latitudePromptSchema'
 
 export type ValidatedAgentStep = {
-  config: Config
+  config: LatitudePromptConfig
   provider: ProviderApiKey
   conversation: Conversation
   chainCompleted: boolean
@@ -54,9 +53,14 @@ const findProvider = (name: string, providersMap: CachedApiKeys) => {
   )
 }
 
+// TODO:: Replace this with `@latitude-data/constants/latitudePromptSchema`
+// This schema is incomplete
 const validateConfig = (
   config: Record<string, unknown>,
-): TypedResult<Config, ChainError<RunErrorCodes.DocumentConfigError>> => {
+): TypedResult<
+  LatitudePromptConfig,
+  ChainError<RunErrorCodes.DocumentConfigError>
+> => {
   const doc =
     'https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts'
   const schema = z
@@ -67,8 +71,6 @@ const validateConfig = (
       provider: z.string({
         message: `"provider" attribute is required. Read more here: ${doc}`,
       }),
-      [LATITUDE_TOOLS_CONFIG_NAME]: z.array(z.string()).optional(),
-      google: googleConfig.optional(),
       azure: azureConfig.optional(),
     })
     .catchall(z.unknown())
@@ -88,7 +90,7 @@ const validateConfig = (
     )
   }
 
-  return Result.ok(parseResult.data as Config)
+  return Result.ok(parseResult.data as LatitudePromptConfig)
 }
 
 function isChainCompleted(newMessages?: Message[]) {
@@ -146,7 +148,7 @@ export const validateAgentStep = async ({
 
   return Result.ok({
     provider,
-    config: rule.config as Config,
+    config: rule.config as LatitudePromptConfig,
     conversation: {
       ...conversation,
       config,

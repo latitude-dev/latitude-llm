@@ -52,6 +52,7 @@ describe('createProviderApiKeyAction', () => {
         provider: Providers.OpenAI,
         token: 'test-token',
         name: 'Test API Key',
+        configuration: { endpoint: 'chat_completions' },
       })
 
       expect(error).toBeNull()
@@ -62,6 +63,22 @@ describe('createProviderApiKeyAction', () => {
       expect(provider.name).toEqual('Test API Key')
       expect(provider.token).toEqual('tes********oken')
       expect(provider.defaultModel).toEqual(null)
+      expect(provider.configuration).toEqual({
+        endpoint: 'chat_completions',
+      })
+    })
+
+    it('successfully creates an OpenAI provider for responses endpoint', async () => {
+      const [result] = await createProviderApiKeyAction({
+        provider: Providers.OpenAI,
+        token: 'test-token',
+        name: 'Test API Key',
+        configuration: { endpoint: 'responses' },
+      })
+
+      expect(result!.configuration).toEqual({
+        endpoint: 'responses',
+      })
     })
 
     it('successfully creates a provider API key with a default model', async () => {
@@ -70,6 +87,7 @@ describe('createProviderApiKeyAction', () => {
         token: 'test-token',
         name: 'Test API Key',
         defaultModel: 'gpt-4o',
+        configuration: { endpoint: 'chat_completions' },
       })
 
       expect(error).toBeNull()
@@ -112,6 +130,7 @@ describe('createProviderApiKeyAction', () => {
         name: 'foo',
         // @ts-expect-error - Mock
         user,
+        configuration: { endpoint: 'chat_completions' },
       })
 
       const [data, error] = await createProviderApiKeyAction({
@@ -133,6 +152,7 @@ describe('createProviderApiKeyAction', () => {
         // @ts-expect-error - Mock
         user,
         deletedAt: new Date(),
+        configuration: { endpoint: 'chat_completions' },
       })
 
       const [_, error] = await createProviderApiKeyAction({
@@ -140,6 +160,7 @@ describe('createProviderApiKeyAction', () => {
         token: 'test-token',
         name: 'foo',
         url: 'https://api.openai.com',
+        configuration: { endpoint: 'chat_completions' },
       })
 
       expect(error).toBeNull()

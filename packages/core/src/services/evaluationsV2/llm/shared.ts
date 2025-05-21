@@ -1,9 +1,9 @@
 import {
   AGENT_RETURN_TOOL_NAME,
   ChainStepResponse,
-  PromptConfig,
   StreamType,
 } from '@latitude-data/constants'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
@@ -79,7 +79,7 @@ export async function buildLlmEvaluationRunFunction<
     generateUUID?: () => string
   }
 }) {
-  let promptConfig
+  let promptConfig: LatitudePromptConfig
   let promptChain
   try {
     const result = await scan({
@@ -98,7 +98,7 @@ export async function buildLlmEvaluationRunFunction<
     promptConfig = {
       ...result.config,
       ...(schema && { schema: zodToJsonSchema(schema, { target: 'openAi' }) }),
-    } as PromptConfig
+    } as LatitudePromptConfig
     promptChain = new PromptlChain({
       prompt: prompt,
       parameters: parameters,

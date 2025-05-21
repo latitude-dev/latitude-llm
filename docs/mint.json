@@ -64,6 +64,7 @@
           "group": "Providers",
           "pages": [
             "guides/getting-started/providers",
+            "guides/getting-started/providers/openai",
             "guides/getting-started/providers/anthropic",
             "guides/getting-started/providers/azure",
             "guides/getting-started/providers/google"

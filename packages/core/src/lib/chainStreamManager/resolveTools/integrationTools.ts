@@ -1,4 +1,4 @@
-import { PromptConfig, ToolDefinition } from '@latitude-data/constants'
+import { ToolDefinition } from '@latitude-data/constants'
 import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
 import { PromisedResult } from '../../Transaction'
 import { Result } from '../../Result'
@@ -7,6 +7,7 @@ import { IntegrationsRepository } from '../../../repositories'
 import { Workspace } from '../../../browser'
 import { listTools } from '../../../services/integrations'
 import { ChainStreamManager } from '..'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 export async function resolveIntegrationTools({
   workspace,
@@ -14,7 +15,7 @@ export async function resolveIntegrationTools({
   chainStreamManager,
 }: {
   workspace: Workspace
-  config: PromptConfig
+  config: LatitudePromptConfig
   chainStreamManager?: ChainStreamManager
 }): PromisedResult<ResolvedTools, LatitudeError> {
   const tools = config.tools

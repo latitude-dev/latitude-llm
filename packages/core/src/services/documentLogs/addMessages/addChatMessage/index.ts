@@ -15,11 +15,11 @@ import { ChainError } from '../../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
 import serializeProviderLog from '../../../providerLogs/serialize'
 import { ChainStreamManager } from '../../../../lib/chainStreamManager'
-import { PromptConfig } from '@latitude-data/constants'
 import { getInputSchema, getOutputType } from '../../../chains/ChainValidator'
 import { NotFoundError } from './../../../../lib/errors'
 import { Result } from './../../../../lib/Result'
 import { TypedResult } from './../../../../lib/Result'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
@@ -43,7 +43,7 @@ export async function addChatMessage({
   workspace: Workspace
   providerLog: ProviderLog
   messages: Message[]
-  globalConfig: PromptConfig
+  globalConfig: LatitudePromptConfig
   source: LogSources
   promptSource: PromptSource
   abortSignal?: AbortSignal

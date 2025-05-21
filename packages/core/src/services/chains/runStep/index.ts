@@ -17,10 +17,10 @@ import {
   ChainStepResponse,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
-  PromptConfig,
   StreamType,
 } from '@latitude-data/constants'
 import { Result } from './../../../lib/Result'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 function assertValidStepCount({
   stepCount,
@@ -61,7 +61,7 @@ export type StepProps = {
   configOverrides?: ConfigOverrides
   removeSchema?: boolean
   stepCount?: number
-  previousConfig: PromptConfig
+  previousConfig: LatitudePromptConfig
   abortSignal?: AbortSignal
   previousResponse?: ChainStepResponse<StreamType>
   injectAgentFinishTool?: boolean
@@ -176,7 +176,7 @@ export async function runStep({
     errorableUuid,
     stepCount: stepCount + 1,
     newMessages: buildMessagesFromResponse({ response }),
-    previousConfig: step.conversation.config as PromptConfig,
+    previousConfig: step.conversation.config as LatitudePromptConfig,
     configOverrides,
     removeSchema,
     abortSignal,

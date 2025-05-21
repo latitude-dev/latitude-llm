@@ -13,6 +13,7 @@ export function defaultProviderFakeData() {
     type: Providers.OpenAI,
     name: faker.internet.domainName(),
     defaultModel: undefined,
+    configuration: { endpoint: 'chat_completions' as const },
   }
 }
 

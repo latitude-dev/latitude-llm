@@ -2,7 +2,7 @@ import { stringify as stringifyObjectToYaml } from 'yaml'
 import { faker } from '@faker-js/faker'
 
 import { ProviderApiKey } from '../../browser'
-import { PromptConfig } from '@latitude-data/constants'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 const randomSentence = () => {
   const randomSentenceGenerators = [
@@ -17,6 +17,8 @@ const randomSentence = () => {
   ]!()
 }
 
+type ExtraConfig = Omit<LatitudePromptConfig, 'provider' | 'model'>
+
 function createFrontMatter({
   provider,
   model,
@@ -24,7 +26,7 @@ function createFrontMatter({
 }: {
   provider: ProviderApiKey | string
   model?: string
-  extraConfig?: Omit<PromptConfig, 'provider' | 'model'>
+  extraConfig?: ExtraConfig
 }) {
   const providerName = typeof provider === 'string' ? provider : provider.name
   const modelName = model ?? faker.internet.domainName()
@@ -51,7 +53,7 @@ function createPrompt({
   model?: string
   content?: string
   steps?: number
-  extraConfig?: Omit<PromptConfig, 'provider' | 'model'>
+  extraConfig?: ExtraConfig
 }) {
   const frontMatter = createFrontMatter({ provider, model, extraConfig })
   const prompt = `

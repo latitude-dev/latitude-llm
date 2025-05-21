@@ -23,8 +23,9 @@ import { ConfigOverrides } from './ChainValidator'
 import { runStep } from './runStep'
 import { ChainStreamManager } from '../../lib/chainStreamManager'
 import { LanguageModelUsage } from 'ai'
-import { MAX_STEPS_CONFIG_NAME, PromptConfig } from '@latitude-data/constants'
+import { MAX_STEPS_CONFIG_NAME } from '@latitude-data/constants'
 import { TypedResult } from './../../lib/Result'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
 export type SomeChain = LegacyChain | PromptlChain
@@ -44,7 +45,7 @@ type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
   chain: C
   isChain?: boolean
   promptSource: PromptSource
-  globalConfig: PromptConfig
+  globalConfig: LatitudePromptConfig
 
   persistErrors?: T
   generateUUID?: () => string
