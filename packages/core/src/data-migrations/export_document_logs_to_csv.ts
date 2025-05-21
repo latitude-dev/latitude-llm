@@ -3,6 +3,7 @@ import { documentLogs } from '../schema/models/documentLogs'
 import { providerLogs } from '../schema/models/providerLogs'
 import { and, eq, lt, desc, sql } from 'drizzle-orm'
 import { createWriteStream } from 'fs'
+// @ts-expect-error - No types for fast-csv
 import { format } from 'fast-csv'
 
 const BATCH_SIZE = 1000
