@@ -26,7 +26,6 @@ function serializeRowData(rowData: DatasetRowData): string[] {
 }
 
 function serializeRows(item: InputItem): OutputItem {
-  console.log('item', item)
   const columns = item.columns
   return {
     columns,
@@ -55,7 +54,7 @@ export function usePreviewLogs(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(ROUTES.api.datasets.previewLog.root, {
+  const fetcher = useFetcher(ROUTES.api.datasets.previewLogs.root, {
     serializer: serializeRows,
     searchParams: compactObject({
       name: dataset?.name,
@@ -68,6 +67,8 @@ export function usePreviewLogs(
     'previewLogsForDataset',
     dataset?.id ?? 'no_dataset',
     documentLogIds,
+    staticColumnNames,
+    parameterColumnNames,
   ]
   const {
     data = EMPTY_DATA,

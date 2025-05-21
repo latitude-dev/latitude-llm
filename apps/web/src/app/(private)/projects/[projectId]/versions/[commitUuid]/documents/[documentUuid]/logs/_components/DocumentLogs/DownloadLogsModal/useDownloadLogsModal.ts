@@ -5,18 +5,24 @@ import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
 import { usePreviewLogs } from '$/stores/previewLogs'
-import { Column } from '@latitude-data/core/schema'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useEffect, useState } from 'react'
 
-const DEFAULT_STATIC_COLUMNS = [
-  'output',
-  'id',
-  'commit.title',
-  'duration',
-  'costInMillicents',
-  'tokens',
-]
+// TODO: Add timestamp (createdAt?)
+// Map() to maintain the order of the columns
+const DEFAULT_STATIC_COLUMNS: Map<string, boolean> = new Map([
+  ['output', true],
+  ['id', true],
+  ['commit.title', true],
+  ['duration', true],
+  ['costInMillicents', true],
+  ['tokens', true],
+])
+
+const getSelectedColumns = (columns?: Map<string, boolean>) => {
+  if (!columns) return []
+  return [...columns.entries()].filter(([, value]) => value).map(([key]) => key)
+}
 
 export function useDownloadLogsModal({
   selectableState,
@@ -29,15 +35,15 @@ export function useDownloadLogsModal({
   const previewModalState = useToggleModal()
   const [selectedLogIds, setSelectedLogIds] = useState<(string | number)[]>([])
   const { previewData, fetchPreview, isLoading } = usePreviewLogs({
-    documentLogIds: selectedLogIds[0] ? [selectedLogIds[0]] : [],
-    staticColumnNames: DEFAULT_STATIC_COLUMNS,
+    documentLogIds: selectedLogIds,
+    staticColumnNames: [...DEFAULT_STATIC_COLUMNS.keys()],
   })
   const [isDownloading, setIsDownloading] = useState(false)
-  const [selectedStaticColumns, setSelectedStaticColumns] = useState<string[]>(
+  const [staticColumns, setStaticColumns] = useState<Map<string, boolean>>(
     DEFAULT_STATIC_COLUMNS,
   )
-  const [selectedParameterColumns, setSelectedParameterColumns] =
-    useState<string[]>()
+  const [parameterColumns, setParameterColumns] =
+    useState<Map<string, boolean>>()
 
   const showModal = useCallback(() => {
     previewModalState.onOpen()
@@ -52,6 +58,8 @@ export function useDownloadLogsModal({
 
   const downloadLogs = useCallback(async () => {
     const ids = selectableState.getSelectedRowIds()
+    const selectedStaticColumns = getSelectedColumns(staticColumns)
+    const selectedParameterColumns = getSelectedColumns(parameterColumns)
     const formData = new FormData()
     formData.append('ids', JSON.stringify(ids))
     formData.append('staticColumnNames', JSON.stringify(selectedStaticColumns))
@@ -82,40 +90,36 @@ export function useDownloadLogsModal({
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-  }, [
-    selectableState.getSelectedRowIds,
-    selectedStaticColumns,
-    selectedParameterColumns,
-  ])
+  }, [selectableState.getSelectedRowIds, staticColumns, parameterColumns])
 
   useEffect(() => {
-    const parameterColumnNames = previewData?.columns
+    const parameterColumns: Map<string, boolean> = previewData?.columns
       .filter((c) => c.role === 'parameter')
-      .map((c) => c.name)
-    setSelectedParameterColumns(parameterColumnNames)
+      .reduce((acc, column) => {
+        acc.set(column.name, true)
+        return acc
+      }, new Map())
+    setParameterColumns(parameterColumns)
   }, [previewData])
 
   const handleSelectStaticColumn = useCallback(
     (column: string) => {
-      setSelectedStaticColumns((prev) =>
-        prev.includes(column)
-          ? prev.filter((name) => name !== column)
-          : [...prev, column],
-      )
+      setStaticColumns((prev) => {
+        if (!prev.has(column)) return prev
+        return new Map(prev.set(column, !prev.get(column)))
+      })
     },
-    [setSelectedStaticColumns],
+    [setStaticColumns],
   )
 
   const handleSelectParameterColumn = useCallback(
     (column: string) => {
-      setSelectedParameterColumns((prev) => {
-        if (!prev) return
-        return prev.includes(column)
-          ? prev.filter((name) => name !== column)
-          : [...prev, column]
+      setParameterColumns((prev) => {
+        if (!prev?.has(column)) return prev
+        return new Map(prev.set(column, !prev.get(column)))
       })
     },
-    [setSelectedParameterColumns],
+    [setParameterColumns],
   )
 
   return {
@@ -126,8 +130,8 @@ export function useDownloadLogsModal({
     isLoadingPreview: isLoading,
     isDownloading,
     fetchPreview,
-    selectedStaticColumns,
-    selectedParameterColumns,
+    previewStaticColumns: staticColumns,
+    previewParameterColumns: parameterColumns,
     handleSelectStaticColumn,
     handleSelectParameterColumn,
   }

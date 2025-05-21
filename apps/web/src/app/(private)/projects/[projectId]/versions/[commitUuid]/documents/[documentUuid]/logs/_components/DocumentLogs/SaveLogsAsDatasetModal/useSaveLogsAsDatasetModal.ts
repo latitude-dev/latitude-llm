@@ -6,6 +6,8 @@ import { usePreviewLogs } from '$/stores/previewLogs'
 import { Dataset } from '@latitude-data/core/browser'
 import { useCallback, useState } from 'react'
 
+const DEFAULT_STATIC_COLUMNS = ['output', 'id', 'tokens']
+
 export function useSaveLogsAsDatasetModal({
   selectableState,
 }: {
@@ -18,7 +20,8 @@ export function useSaveLogsAsDatasetModal({
   const [selectedDataset, setSelectedDataset] = useState<Dataset>()
   const { previewData, fetchPreview, isLoading } = usePreviewLogs({
     dataset: selectedDataset,
-    documentLogIds: selectedLogsIds[0] ? [selectedLogsIds[0]] : [],
+    documentLogIds: selectedLogsIds,
+    staticColumnNames: DEFAULT_STATIC_COLUMNS,
   })
   const onClickShowPreview = useCallback(() => {
     previewModalState.onOpen()

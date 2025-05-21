@@ -48,8 +48,8 @@ function PreviewCell({
 
 export function PreviewTable({
   previewData,
-  selectedStaticColumns,
-  selectedParameterColumns,
+  previewStaticColumns,
+  previewParameterColumns,
   onSelectStaticColumn,
   onSelectParameterColumn,
   selectable = false,
@@ -59,8 +59,8 @@ export function PreviewTable({
   previewData: OutputItem
   isLoading: boolean
   subtitle?: string
-  selectedStaticColumns?: string[]
-  selectedParameterColumns?: string[]
+  previewStaticColumns?: Map<string, boolean>
+  previewParameterColumns?: Map<string, boolean>
   selectable?: boolean
   onSelectStaticColumn?: (column: string) => void
   onSelectParameterColumn?: (column: string) => void
@@ -68,9 +68,9 @@ export function PreviewTable({
   const isColumnDisabled = (column: Column) => {
     if (!selectable) return false
     if (column.role === 'parameter') {
-      return !selectedParameterColumns?.includes(column.name)
+      return !previewParameterColumns?.get(column.name)
     } else if (column.role === 'label' || column.role === 'metadata') {
-      return !selectedStaticColumns?.includes(column.name)
+      return !previewStaticColumns?.get(column.name)
     }
   }
 

@@ -15,20 +15,20 @@ function flattenJSON(obj: any, res: any = {}, prefix: string = '') {
 
 function buildRow(
   log: DocumentLogWithMetadataAndError,
-  expectedOutputs: Map<string, ProviderOutput>,
+  providerOutputs: Map<string, ProviderOutput>,
   columns: Column[],
 ): DatasetRowData {
-  const expectedOutput = expectedOutputs.get(log.uuid)?.output
+  const providerOutput = providerOutputs.get(log.uuid)?.output
   const parameters = log.parameters ?? {}
   const logObject = flattenJSON(log)
 
   return columns.reduce((acc, column) => {
     if (column.role === 'parameter') {
-      acc[column.identifier] = parameters[column.name] ?? ''
+      acc[column.identifier] = parameters[column.name] ?? null
     } else if (column.role === 'label') {
-      acc[column.identifier] = expectedOutput
+      acc[column.identifier] = providerOutput ?? null
     } else if (column.role === 'metadata') {
-      acc[column.identifier] = logObject[column.name] ?? ''
+      acc[column.identifier] = logObject[column.name] ?? null
     }
     return acc
   }, {} as DatasetRowData)
@@ -36,8 +36,8 @@ function buildRow(
 
 export function buildRows(
   logs: DocumentLogWithMetadataAndError[],
-  expectedOutputs: Map<string, ProviderOutput>,
+  providerOutputs: Map<string, ProviderOutput>,
   columns: Column[],
 ): DatasetRowData[] {
-  return logs.map((log) => buildRow(log, expectedOutputs, columns))
+  return logs.map((log) => buildRow(log, providerOutputs, columns))
 }

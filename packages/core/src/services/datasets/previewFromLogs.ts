@@ -3,9 +3,11 @@ import { Dataset, Workspace } from '../../browser'
 import {
   buildDocumentLogDataset,
   ColumnFilters,
+  DocumentLogDataset,
 } from '../documentLogs/buildDocumentLogDataset'
 import { DatasetRowsRepository, DatasetsRepository } from '../../repositories'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
+import { DatasetRowData } from '../../schema'
 
 async function getFirstRowsFromDataset({
   dataset,
@@ -22,7 +24,32 @@ async function getFirstRowsFromDataset({
   return rows.map((row) => row.rowData)
 }
 
-export const previewDatasetFromLog = async ({
+function getRelevantLogRows(documentLogDataset: DocumentLogDataset) {
+  const parameterColumns = documentLogDataset.columns.filter(
+    (column) => column.role === 'parameter',
+  )
+  return documentLogDataset.rows.reduce(
+    (acc: { columnSet: Set<string>; rows: DatasetRowData[] }, row) => {
+      const informedParameters = parameterColumns
+        .filter((column) => row[column.identifier])
+        .map((column) => column.name)
+      if (!acc.columnSet.has(informedParameters.toString())) {
+        acc.rows.push(row)
+        // Stringify the array to avoid comparing by reference https://stackoverflow.com/questions/29760644/storing-arrays-in-es6-set-and-accessing-them-by-value
+        acc.columnSet.add(informedParameters.toString())
+      }
+      return acc
+    },
+    { columnSet: new Set<string>(), rows: [] },
+  ).rows
+}
+
+/**
+ * This service is responsible of obtaining a preview of the dataset that would be generated
+ * including the logs provided. The dataset rows are limited to the first 5 and the logs are
+ * choosen keeping only the ones with different parameters.
+ */
+export const previewDatasetFromLogs = async ({
   workspace,
   data,
   hashAlgorithm = nanoidHashAlgorithm,
@@ -38,20 +65,21 @@ export const previewDatasetFromLog = async ({
   const repo = new DatasetsRepository(workspace.id)
   const datasets = await repo.findByName(data.name)
   const dataset = datasets[0]
-  const result = await buildDocumentLogDataset({
+  const documentLogDataset = await buildDocumentLogDataset({
     workspace,
-    documentLogIds: data.documentLogIds,
     dataset,
+    documentLogIds: data.documentLogIds,
     columnFilters: data.columnFilters,
     hashAlgorithm,
   })
-  const datasetRows = await getFirstRowsFromDataset({ dataset })
+  if (documentLogDataset.error) return documentLogDataset
 
-  if (result.error) return result
+  const datasetRows = await getFirstRowsFromDataset({ dataset })
+  const logRows = getRelevantLogRows(documentLogDataset.value)
 
   return Result.ok({
-    columns: result.value.columns,
+    columns: documentLogDataset.value.columns,
     existingRows: datasetRows,
-    newRows: result.value.rows,
+    newRows: logRows,
   })
 }

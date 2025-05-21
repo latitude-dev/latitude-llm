@@ -1,6 +1,6 @@
 import { Workspace } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
-import { previewDatasetFromLog } from '@latitude-data/core/services/datasets/previewFromLogs'
+import { previewDatasetFromLogs } from '@latitude-data/core/services/datasets/previewFromLogs'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
@@ -19,7 +19,7 @@ export const GET = errorHandler(
       const ids = query.get('documentLogIds')?.split(',').map(Number) ?? []
       const staticColumnNames = query.get('staticColumnNames')?.split(',')
       const parameterColumnNames = query.get('parameterColumnNames')?.split(',')
-      const result = await previewDatasetFromLog({
+      const result = await previewDatasetFromLogs({
         workspace,
         data: {
           name: query.get('name') ?? '',

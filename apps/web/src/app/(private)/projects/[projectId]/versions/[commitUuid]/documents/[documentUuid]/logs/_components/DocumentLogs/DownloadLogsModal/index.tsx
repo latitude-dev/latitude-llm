@@ -11,8 +11,8 @@ export function DownloadLogsModal({
   isDownloading,
   downloadLogs,
   isLoadingPreview,
-  selectedStaticColumns,
-  selectedParameterColumns,
+  previewStaticColumns,
+  previewParameterColumns,
   handleSelectStaticColumn,
   handleSelectParameterColumn,
 }: Props) {
@@ -43,8 +43,8 @@ export function DownloadLogsModal({
         previewData={data}
         isLoading={isLoadingPreview}
         subtitle='Customize the columns you want to export by clicking in the heading.'
-        selectedStaticColumns={selectedStaticColumns}
-        selectedParameterColumns={selectedParameterColumns}
+        previewStaticColumns={previewStaticColumns}
+        previewParameterColumns={previewParameterColumns}
         onSelectStaticColumn={handleSelectStaticColumn}
         onSelectParameterColumn={handleSelectParameterColumn}
         selectable

@@ -8,7 +8,7 @@ import { Result } from '../../../lib/Result'
 import { findProviderOutputs } from './findProviderOutputs'
 import { buildRows } from './buildRows'
 
-export type ExportedDocumentLogs = {
+export type DocumentLogDataset = {
   columns: Column[]
   rows: DatasetRowData[]
 }
@@ -35,7 +35,7 @@ export async function buildDocumentLogDataset({
   columnFilters?: ColumnFilters
   dataset?: Dataset
   hashAlgorithm?: HashAlgorithmFn
-}): PromisedResult<ExportedDocumentLogs> {
+}): PromisedResult<DocumentLogDataset> {
   const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspace.id)
   const logs = await repo
     .findManyWithoutErrors(documentLogIds)
@@ -46,7 +46,7 @@ export async function buildDocumentLogDataset({
     logs,
     columnFilters,
   })
-  const expectedOutputs = await findProviderOutputs(workspace, logs)
-  const rows = buildRows(logs, expectedOutputs, columns)
+  const providerOutputs = await findProviderOutputs(workspace, logs)
+  const rows = buildRows(logs, providerOutputs, columns)
   return Result.ok({ columns, rows })
 }

@@ -4,7 +4,7 @@ import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../tests/factories'
 import { DocumentLog } from '../../browser'
-import { previewDatasetFromLog } from './previewFromLogs'
+import { previewDatasetFromLogs } from './previewFromLogs'
 import { ProviderLogsRepository } from '../../repositories'
 import { identityHashAlgorithm } from './utils'
 
@@ -47,7 +47,7 @@ describe('previewDatasetFromLog', async () => {
       providerType: Providers.OpenAI,
       responseText: 'Last provider response. Hello!',
     })
-    const result = await previewDatasetFromLog({
+    const result = await previewDatasetFromLogs({
       workspace: setup.workspace,
       data: { name: 'paco', documentLogId: documentLog.id },
       hashAlgorithm: identityHashAlgorithm,
