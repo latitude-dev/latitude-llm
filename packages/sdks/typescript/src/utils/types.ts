@@ -1,25 +1,25 @@
 // TODO: Right now it takes a lot of work to add a simple new route to this file
 // We should refactor this to make it easier to add new routes
 
+import { RouteResolver } from '$sdk/utils'
+import { LatitudeApiError } from '$sdk/utils/errors'
 import type { Config, Message, ToolCall } from '@latitude-data/compiler'
+import {
+  ChainCallResponseDto,
+  LegacyChainEvent as ChainEvent,
+  ChainEventDto,
+  LegacyChainEventTypes as ChainEventTypes,
+  ChatSyncAPIResponse,
+  ParameterType,
+  Providers,
+  RunSyncAPIResponse,
+  StreamEventTypes,
+} from '@latitude-data/constants'
 import {
   AdapterMessageType,
   ProviderAdapter,
   type Message as PromptlMessage,
 } from 'promptl-ai'
-import { RouteResolver } from '$sdk/utils'
-import { LatitudeApiError } from '$sdk/utils/errors'
-import {
-  ChatSyncAPIResponse,
-  RunSyncAPIResponse,
-  LegacyChainEvent as ChainEvent,
-  LegacyChainEventTypes as ChainEventTypes,
-  ChainEventDto,
-  StreamEventTypes,
-  ChainCallResponseDto,
-  Providers,
-  ParameterType,
-} from '@latitude-data/constants'
 
 export type GetAllDocumentsParams = {
   projectId: number
@@ -265,10 +265,15 @@ export type EvalPromptOptions = {
 }
 
 export type Prompt = {
+  versionUuid: string
   uuid: string
   path: string
   content: string
+  contentHash?: string
   config: Config
   parameters: Record<string, { type: ParameterType }>
   provider?: Providers
 }
+
+// TODO(tracing) do interface composition
+export interface Instrumentation {}

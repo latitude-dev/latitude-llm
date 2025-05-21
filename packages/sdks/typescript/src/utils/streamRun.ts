@@ -1,21 +1,22 @@
 import { Readable } from 'stream'
 
+import { LatitudeApiError } from '$sdk/utils/errors'
+import { handleStream } from '$sdk/utils/handleStream'
+import { makeRequest } from '$sdk/utils/request'
+import { streamChat } from '$sdk/utils/streamChat'
+import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
+import {
+  HandlerType,
+  Instrumentation,
+  RunPromptOptions,
+  SDKOptions,
+  ToolSpec,
+} from '$sdk/utils/types'
 import {
   ApiErrorCodes,
   ApiErrorJsonResponse,
   LatitudeErrorCodes,
 } from '@latitude-data/constants/errors'
-import { LatitudeApiError } from '$sdk/utils/errors'
-import { handleStream } from '$sdk/utils/handleStream'
-import { makeRequest } from '$sdk/utils/request'
-import {
-  HandlerType,
-  RunPromptOptions,
-  SDKOptions,
-  ToolSpec,
-} from '$sdk/utils/types'
-import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
-import { streamChat } from '$sdk/utils/streamChat'
 
 export async function streamRun<Tools extends ToolSpec>(
   path: string,
@@ -30,8 +31,10 @@ export async function streamRun<Tools extends ToolSpec>(
     onFinished,
     onError,
     options,
+    instrumentation,
   }: RunPromptOptions<Tools> & {
     options: SDKOptions
+    instrumentation: Instrumentation
   },
 ) {
   projectId = projectId ?? options.projectId
@@ -93,6 +96,7 @@ export async function streamRun<Tools extends ToolSpec>(
         chatFn: streamChat,
         tools,
         options,
+        instrumentation,
       })
     }
 

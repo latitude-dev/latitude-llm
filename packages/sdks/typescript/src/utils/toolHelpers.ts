@@ -3,6 +3,7 @@ import type { streamChat } from '$sdk/utils/streamChat'
 import type { syncChat } from '$sdk/utils/syncChat'
 import {
   ChatOptionsWithSDKOptions,
+  Instrumentation,
   ToolCalledFn,
   ToolHandler,
   ToolSpec,
@@ -86,11 +87,13 @@ async function buildToolResponseMessages<Tools extends ToolSpec>({
   toolRequests,
   conversationUuid,
   messages,
+  // instrumentation, // TODO(tracing) instrument
 }: {
   tools: ToolCalledFn<Tools>
   toolRequests: ToolCall[]
   conversationUuid: string
   messages: Message[]
+  instrumentation: Instrumentation
 }) {
   const toolNames = Object.keys(tools)
   const toolRequestsWithoutHandler = toolRequests.filter(
@@ -166,11 +169,13 @@ export async function handleToolRequests<
   chatFn,
   originalResponse,
   toolRequests,
+  instrumentation,
   ...options
 }: ChatOptionsWithSDKOptions<Tools> & {
   originalResponse: OriginalResponse
   toolRequests: ToolCall[]
   chatFn: T extends false ? typeof syncChat : typeof streamChat
+  instrumentation: Instrumentation
 }): Promise<ChatSyncAPIResponse | undefined> {
   const toolHandlers = options.tools!
   const toolResponseMessages = await buildToolResponseMessages({
@@ -178,6 +183,7 @@ export async function handleToolRequests<
     toolRequests,
     conversationUuid: originalResponse.uuid,
     messages: originalResponse.conversation,
+    instrumentation,
   })
 
   if (toolResponseMessages.length === 0) {
@@ -188,5 +194,6 @@ export async function handleToolRequests<
   return await chatFn(originalResponse.uuid, {
     ...options,
     messages: toolResponseMessages,
+    instrumentation,
   })
 }

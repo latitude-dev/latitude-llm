@@ -1,19 +1,20 @@
-import {
-  ApiErrorCodes,
-  ApiErrorJsonResponse,
-  LatitudeErrorCodes,
-} from '@latitude-data/constants/errors'
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
+import { syncChat } from '$sdk/utils/syncChat'
+import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
 import {
   HandlerType,
+  Instrumentation,
   RunPromptOptions,
   RunSyncAPIResponse,
   SDKOptions,
   ToolSpec,
 } from '$sdk/utils/types'
-import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
-import { syncChat } from '$sdk/utils/syncChat'
+import {
+  ApiErrorCodes,
+  ApiErrorJsonResponse,
+  LatitudeErrorCodes,
+} from '@latitude-data/constants/errors'
 
 export async function syncRun<Tools extends ToolSpec>(
   path: string,
@@ -26,8 +27,10 @@ export async function syncRun<Tools extends ToolSpec>(
     onError,
     tools,
     options,
+    instrumentation,
   }: RunPromptOptions<Tools> & {
     options: SDKOptions
+    instrumentation: Instrumentation
   },
 ) {
   projectId = projectId ?? options.projectId
@@ -90,6 +93,7 @@ export async function syncRun<Tools extends ToolSpec>(
       chatFn: syncChat,
       tools,
       options,
+      instrumentation,
     })
   }
 
