@@ -35,7 +35,7 @@ jobs:
         id: check_version
         run: |
           cd packages/sdks/python
-          PYPI_VERSION=$(uv pip show latitude-data-sdk | grep Version | awk '{print $2}')
+          PYPI_VERSION=$(uv pip show latitude-sdk | grep Version | awk '{print $2}')
           if [ "${{ steps.get_version.outputs.version }}" != "$PYPI_VERSION" ]; then
             echo "should_publish=true" >> $GITHUB_OUTPUT
           else
