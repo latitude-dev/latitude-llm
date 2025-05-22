@@ -2,6 +2,14 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { CheckedState } from '@latitude-data/web-ui/atoms/Checkbox'
 
+type SelectionMode = 'NONE' | 'PARTIAL' | 'ALL' | 'ALL_EXCEPT'
+
+interface SelectionState<T> {
+  mode: SelectionMode
+  selectedIds: Set<T>
+  excludedIds: Set<T>
+}
+
 export function useSelectableRows<T extends string | number>({
   rowIds,
   initialSelection = [],
@@ -11,65 +19,142 @@ export function useSelectableRows<T extends string | number>({
   initialSelection?: T[]
   totalRowCount: number
 }) {
-  const [selectedRowIds, setSelectedRowIds] = useState<Set<T> | undefined>(
-    new Set(initialSelection),
+  const [selectionState, setSelectionState] = useState<SelectionState<T>>(
+    () => ({
+      mode: initialSelection.length > 0 ? 'PARTIAL' : 'NONE',
+      selectedIds: new Set(initialSelection),
+      excludedIds: new Set(),
+    }),
   )
 
   const headerState = useMemo<CheckedState>(() => {
-    if (!selectedRowIds) return true
-
-    const visibleSelectedCount = rowIds.filter((id) =>
-      selectedRowIds.has(id),
-    ).length
-
-    if (selectedRowIds.size === 0) return false
-    if (visibleSelectedCount === rowIds.length && rowIds.length > 0) {
-      return true
+    switch (selectionState.mode) {
+      case 'ALL':
+        return true
+      case 'NONE':
+        return false
+      case 'PARTIAL':
+      case 'ALL_EXCEPT':
+        return 'indeterminate'
     }
-
-    return 'indeterminate'
-  }, [selectedRowIds, rowIds])
+  }, [selectionState.mode])
 
   const isSelected = <I extends T = T>(id: I | undefined) => {
-    return id === undefined
-      ? false
-      : !selectedRowIds
-        ? true
-        : selectedRowIds.has(id)
+    if (id === undefined) return false
+
+    switch (selectionState.mode) {
+      case 'ALL':
+        return !selectionState.excludedIds.has(id)
+      case 'NONE':
+        return false
+      case 'PARTIAL':
+        return selectionState.selectedIds.has(id)
+      case 'ALL_EXCEPT':
+        return !selectionState.excludedIds.has(id)
+    }
   }
 
   const toggleRow = useCallback(
     <I extends T = T>(id: I | undefined, checked: CheckedState) => {
       if (id === undefined) return
 
-      setSelectedRowIds((prev) => {
-        const newSelected = new Set(prev)
-        if (checked) {
-          newSelected.add(id)
-        } else {
-          newSelected.delete(id)
+      setSelectionState((prev) => {
+        const newState = { ...prev }
+
+        switch (prev.mode) {
+          case 'ALL':
+            if (!checked) {
+              newState.mode = 'ALL_EXCEPT'
+              newState.excludedIds = new Set([id])
+            }
+            break
+          case 'NONE':
+            if (checked) {
+              newState.mode = 'PARTIAL'
+              newState.selectedIds = new Set([id])
+            }
+            break
+          case 'PARTIAL':
+            if (checked) {
+              newState.selectedIds.add(id)
+            } else {
+              newState.selectedIds.delete(id)
+              if (newState.selectedIds.size === 0) {
+                newState.mode = 'NONE'
+              }
+            }
+            break
+          case 'ALL_EXCEPT':
+            if (checked) {
+              newState.excludedIds.delete(id)
+              if (newState.excludedIds.size === 0) {
+                newState.mode = 'ALL'
+              }
+            } else {
+              newState.excludedIds.add(id)
+            }
+            break
         }
-        return newSelected
+
+        return newState
       })
     },
     [],
   )
 
   const clearSelections = useCallback(() => {
-    setSelectedRowIds(new Set())
+    setSelectionState({
+      mode: 'NONE',
+      selectedIds: new Set(),
+      excludedIds: new Set(),
+    })
   }, [])
 
   const toggleAll = useCallback(() => {
-    setSelectedRowIds((prev) => (!prev ? new Set() : undefined))
-  }, [rowIds, setSelectedRowIds])
+    setSelectionState((prev) => {
+      if (prev.mode === 'ALL') {
+        return {
+          mode: 'NONE',
+          selectedIds: new Set(),
+          excludedIds: new Set(),
+        }
+      }
+      return {
+        mode: 'ALL',
+        selectedIds: new Set(),
+        excludedIds: new Set(),
+      }
+    })
+  }, [])
 
-  const getSelectedRowIds = useCallback(
-    () => (selectedRowIds ? Array.from(selectedRowIds) : []),
-    [selectedRowIds],
-  )
+  const getSelectedRowIds = useCallback(() => {
+    switch (selectionState.mode) {
+      case 'ALL':
+        return rowIds.filter((id) => !selectionState.excludedIds.has(id))
+      case 'NONE':
+        return []
+      case 'PARTIAL':
+        return Array.from(selectionState.selectedIds)
+      case 'ALL_EXCEPT':
+        return rowIds.filter((id) => !selectionState.excludedIds.has(id))
+    }
+  }, [selectionState, rowIds])
+
+  const selectedCount = useMemo(() => {
+    switch (selectionState.mode) {
+      case 'ALL':
+        return totalRowCount - selectionState.excludedIds.size
+      case 'NONE':
+        return 0
+      case 'PARTIAL':
+        return selectionState.selectedIds.size
+      case 'ALL_EXCEPT':
+        return totalRowCount - selectionState.excludedIds.size
+    }
+  }, [selectionState, totalRowCount])
 
   return {
-    selectedCount: selectedRowIds ? selectedRowIds.size : totalRowCount,
+    selectedCount,
     getSelectedRowIds,
     toggleRow,
     toggleAll,
