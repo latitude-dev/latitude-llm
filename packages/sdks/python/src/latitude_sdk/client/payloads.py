@@ -75,21 +75,17 @@ class EvaluationRequestParams(Model):
     conversation_uuid: str
 
 
-class TriggerEvaluationRequestParams(EvaluationRequestParams, Model):
-    pass
-
-
-class TriggerEvaluationRequestBody(Model):
-    evaluation_uuids: Optional[List[str]] = Field(default=None, alias=str("evaluationUuids"))
-
-
-class CreateEvaluationResultRequestParams(EvaluationRequestParams, Model):
+class AnnotateEvaluationRequestParams(EvaluationRequestParams, Model):
     evaluation_uuid: str
 
 
-class CreateEvaluationResultRequestBody(Model):
-    result: Union[str, bool, int]
-    reason: str
+class AnnotateEvaluationRequestBody(Model):
+    score: int
+
+    class Metadata(Model):
+        reason: str
+
+    metadata: Optional[Metadata] = None
 
 
 RequestParams = Union[
@@ -99,8 +95,7 @@ RequestParams = Union[
     RunPromptRequestParams,
     ChatPromptRequestParams,
     CreateLogRequestParams,
-    TriggerEvaluationRequestParams,
-    CreateEvaluationResultRequestParams,
+    AnnotateEvaluationRequestParams,
 ]
 
 
@@ -109,8 +104,7 @@ RequestBody = Union[
     RunPromptRequestBody,
     ChatPromptRequestBody,
     CreateLogRequestBody,
-    TriggerEvaluationRequestBody,
-    CreateEvaluationResultRequestBody,
+    AnnotateEvaluationRequestBody,
 ]
 
 
@@ -121,5 +115,4 @@ class RequestHandler(StrEnum):
     RunPrompt = "RUN_PROMPT"
     ChatPrompt = "CHAT_PROMPT"
     CreateLog = "CREATE_LOG"
-    TriggerEvaluation = "TRIGGER_EVALUATION"
-    CreateEvaluationResult = "CREATE_EVALUATION_RESULT"
+    AnnotateEvaluation = "ANNOTATE_EVALUATION"
