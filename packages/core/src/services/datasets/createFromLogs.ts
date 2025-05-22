@@ -1,39 +1,29 @@
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from './../../lib/Transaction'
-import { findOrCreateDataset } from './findOrCreate'
-import { User, Workspace } from '../../browser'
+import { Dataset, Workspace } from '../../browser'
 import { HashAlgorithmFn } from './utils'
 import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
 import { updateDataset } from './update'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
-export const createDatasetFromLogs = async (
+
+export const updateDatasetFromLogs = async (
   {
-    author,
     workspace,
-    data,
+    dataset,
+    documentLogIds,
     hashAlgorithm,
   }: {
-    author: User
     workspace: Workspace
-    data: {
-      name: string
-      documentLogIds: number[]
-    }
+    dataset: Dataset
+    documentLogIds: number[]
     hashAlgorithm?: HashAlgorithmFn
   },
   db = database,
 ) => {
-  const result = await findOrCreateDataset(
-    { name: data.name, author, workspace },
-    db,
-  )
-  if (result.error) return result
-
-  const dataset = result.value
   const builtLogsResult = await buildDocumentLogDatasetRows({
     workspace,
-    documentLogIds: data.documentLogIds,
+    documentLogIds,
     dataset,
     hashAlgorithm,
   })
@@ -45,6 +35,7 @@ export const createDatasetFromLogs = async (
       { dataset, data: { columns: exportedLogs.columns } },
       trx,
     ).then((r) => r.unwrap())
+
     await insertRowsInBatch(
       {
         dataset,
@@ -52,6 +43,7 @@ export const createDatasetFromLogs = async (
       },
       trx,
     ).then((r) => r.unwrap())
+
     return Result.ok(ds)
   }, db)
 }

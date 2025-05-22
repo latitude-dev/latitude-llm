@@ -5,7 +5,7 @@ import { Providers } from '@latitude-data/constants'
 import getTestDisk from '../../tests/testDrive'
 import { Dataset, DocumentLog } from '../../browser'
 import { identityHashAlgorithm } from './utils'
-import { createDatasetFromLogs } from './createFromLogs'
+import { updateDatasetFromLogs } from './createFromLogs'
 import { DatasetRowsRepository } from '../../repositories'
 
 const testDrive = getTestDisk()
@@ -47,58 +47,6 @@ describe('createFromLogs', async () => {
     })
   })
 
-  it('creates a new dataset from logs', async () => {
-    const result = await createDatasetFromLogs({
-      author: setup.user,
-      workspace: setup.workspace,
-      data: {
-        name: 'my-dataset-from-logs',
-        documentLogIds: [documentLog.id],
-      },
-      hashAlgorithm: identityHashAlgorithm,
-    })
-
-    const dataset = result.value!
-    expect(dataset.columns).toEqual([
-      {
-        identifier: 'age_identifier',
-        name: 'age',
-        role: 'parameter',
-      },
-      {
-        identifier: 'location_identifier',
-        name: 'location',
-        role: 'parameter',
-      },
-      {
-        identifier: 'output_identifier',
-        name: 'output',
-        role: 'label',
-      },
-      {
-        identifier: 'document_log_id_identifier',
-        name: 'document_log_id',
-        role: 'metadata',
-      },
-      { identifier: 'tokens_identifier', name: 'tokens', role: 'metadata' },
-    ])
-    const repo = new DatasetRowsRepository(setup.workspace.id)
-    const rows = await repo.findByDatasetPaginated({
-      datasetId: dataset.id,
-      page: '1',
-      pageSize: '100',
-    })
-    expect(rows.map((r) => r.rowData)).toEqual([
-      {
-        age_identifier: 25,
-        location_identifier: 'San Francisco',
-        output_identifier: 'Last provider response. Hello!',
-        document_log_id_identifier: documentLog.id,
-        tokens_identifier: expect.any(Number),
-      },
-    ])
-  })
-
   it('insert rows in an existing dataset', async () => {
     dataset = await factories
       .createDataset({
@@ -113,13 +61,10 @@ describe('createFromLogs', async () => {
       `,
       })
       .then((r) => r.dataset)
-    const result = await createDatasetFromLogs({
-      author: setup.user,
+    const result = await updateDatasetFromLogs({
+      dataset,
       workspace: setup.workspace,
-      data: {
-        name: dataset.name,
-        documentLogIds: [documentLog.id],
-      },
+      documentLogIds: [documentLog.id],
       hashAlgorithm: identityHashAlgorithm,
     })
     const updatedDataset = result.value!

@@ -94,12 +94,6 @@ describe('useDatasetRows', () => {
           FdBuNWV: '4',
           KhdzZS0: 'Paco Merlo',
         },
-        cells: [
-          'tortilla de patatas',
-          '["patatas", "huevos", "aceite", "sal"]',
-          'Paco Merlo',
-          '4',
-        ],
       },
     ])
   })

@@ -40,6 +40,7 @@ export function EvaluationResultsTable<
 
   const selectableState = useSelectableRows({
     rowIds: results.filter((r) => !r.error).map((r) => r.uuid),
+    totalRowCount: results.length,
   })
 
   return (

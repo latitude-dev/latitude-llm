@@ -5,6 +5,7 @@ import { createLoopsContact } from './createLoopsContact'
 import { evaluateLiveLogJob } from './evaluateLiveLog'
 import { notifyClientOfDocumentSuggestionCreated } from './notifyClientOfDocumentSuggestionCreated'
 import { notifyClientOfEvaluationResultV2Created } from './notifyClientOfEvaluationResultV2Created'
+import { notifyClientOfExportReady } from './notifyClientOfExportReady'
 import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
 import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
@@ -34,6 +35,7 @@ export const EventHandlers: IEventsHandlers = {
   ],
   documentSuggestionApplied: [],
   documentSuggestionDiscarded: [],
+  exportReady: [notifyClientOfExportReady],
   magicLinkTokenCreated: [sendMagicLinkJob],
   membershipCreated: [sendInvitationToUserJob],
   projectCreated: [],

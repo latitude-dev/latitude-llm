@@ -68,6 +68,7 @@ export type Events =
   | 'mcpServerConnected'
   | 'scaleMcpServer'
   | 'webhookDeliveryCreated'
+  | 'exportReady'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -482,6 +483,15 @@ export type WebhookDeliveryCreatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type ExportReadyEvent = LatitudeEventGeneric<
+  'exportReady',
+  {
+    workspaceId: number
+    userId: string
+    uuid: string
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -523,6 +533,7 @@ export type LatitudeEvent =
   | ScaleMcpServerEvent
   | McpServerConnectedEvent
   | WebhookDeliveryCreatedEvent
+  | ExportReadyEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -565,4 +576,5 @@ export interface IEventsHandlers {
   scaleMcpServer: EventHandler<ScaleMcpServerEvent>[]
   mcpServerConnected: EventHandler<McpServerConnectedEvent>[]
   webhookDeliveryCreated: EventHandler<WebhookDeliveryCreatedEvent>[]
+  exportReady: EventHandler<ExportReadyEvent>[]
 }

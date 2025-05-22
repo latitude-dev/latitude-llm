@@ -41,9 +41,11 @@ function PreviewCell({
 }
 
 export function PreviewTable({
+  selectedCount,
   previewData,
   isLoading,
 }: {
+  selectedCount: number
   previewData: OutputItem
   isLoading: boolean
 }) {
@@ -52,8 +54,9 @@ export function PreviewTable({
     <div className='flex flex-col gap-y-2'>
       <Text.H4>Logs preview</Text.H4>
       <Text.H6 color='foregroundMuted'>
-        This is a preview of existing items in the dataset if you picked one.
-        And the new items from the logs you selected.
+        {selectedCount} logs will be added to{' '}
+        {previewData.datasetRows.length > 0 ? 'the dataset' : 'a new dataset'}.
+        Here's a preview.
       </Text.H6>
       {isLoading ? (
         <TableSkeleton rows={10} cols={5} maxHeight={320} />

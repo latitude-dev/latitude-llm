@@ -31,6 +31,7 @@ const eventHandlersJobMappings = {
   pingProjectUpdateJob: jobs.pingProjectUpdateJob,
   touchProviderApiKeyJob: jobs.touchProviderApiKeyJob,
   touchApiKeyJob: jobs.touchApiKeyJob,
+  notifyClientOfExportReady: jobs.notifyClientOfExportReady,
 }
 
 export function startEventsWorker() {

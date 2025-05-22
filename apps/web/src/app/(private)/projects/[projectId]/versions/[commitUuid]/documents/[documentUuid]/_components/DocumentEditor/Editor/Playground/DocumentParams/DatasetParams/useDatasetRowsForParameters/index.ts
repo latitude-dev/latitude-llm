@@ -77,7 +77,7 @@ function mapInputs({
 }) {
   const mapped = Object.entries(mappedInputs).reduce((acc, [key, value]) => {
     const rawCell = row.rowData[value] ?? ''
-    const cell = parseRowCell({ cell: rawCell, parseDates: false })
+    const cell = parseRowCell({ cell: rawCell })
     acc[key] = {
       value: cell,
       metadata: {

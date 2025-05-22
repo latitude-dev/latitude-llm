@@ -5,13 +5,12 @@ import {
   DocumentLogWithMetadataAndError,
   ProviderLogsRepository,
 } from '../../../repositories'
-import { ContentType, Message, MessageContent } from '@latitude-data/compiler'
 import { buildColumns, FixedColumnsByName } from './buildColumns'
-import { buildResponseMessage, ProviderLog } from '@latitude-data/constants'
 import { desc } from 'drizzle-orm'
 import { PromisedResult } from './../../../lib/Transaction'
 import { Result } from './../../../lib/Result'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../../repositories/documentLogsWithMetadataAndErrorsRepository'
+import { buildProviderLogResponse } from '../../providerLogs'
 
 export type ExportedDocumentLogs = {
   columns: Column[]
@@ -32,83 +31,6 @@ async function findLogs({
     .then((r) => r.unwrap())
 
   return results.filter((r) => !r.error.message)
-}
-
-// This should never happen
-const NO_RESPONSE_FOUND = 'NO RESPONSE FOUND'
-
-function isJsonString(str: string) {
-  try {
-    JSON.parse(str)
-    return true
-  } catch (e) {
-    return false
-  }
-}
-
-function itemContentByType(item: MessageContent) {
-  switch (item.type) {
-    case ContentType.text:
-      return item.text!
-    case ContentType.image:
-      return item.image.toString()
-    case ContentType.file:
-      return item.file.toString()
-    case ContentType.toolCall:
-      return JSON.stringify(item)
-    case ContentType.toolResult:
-      return JSON.stringify(item)
-    default:
-      return item
-  }
-}
-
-function parseContentItem(item: MessageContent | string) {
-  try {
-    const content = typeof item === 'string' ? item : itemContentByType(item)
-    const isJson = isJsonString(content)
-
-    if (!isJson) return content
-
-    return JSON.stringify(content, null, 2)
-  } catch (e) {
-    return NO_RESPONSE_FOUND
-  }
-}
-
-function parseOutputFromMessage(message: Message) {
-  const content = message.content
-  if (typeof content === 'string' || !Array.isArray(content)) {
-    return parseContentItem(content)
-  }
-
-  return content.map(parseContentItem).join('\n')
-}
-
-function getOutput(provider: ProviderLog) {
-  const typeByResponse = provider.responseText ? 'text' : 'object'
-  let responseMessage: Message | undefined
-
-  if (typeByResponse === 'text') {
-    responseMessage = buildResponseMessage({
-      type: 'text',
-      data: {
-        text: provider.responseText ?? '',
-        toolCalls: provider.toolCalls,
-      },
-    })
-  } else {
-    responseMessage = buildResponseMessage({
-      type: 'object',
-      data: {
-        object: provider.responseObject,
-        text: provider.responseText ?? undefined,
-      },
-    })
-  }
-  if (!responseMessage) return NO_RESPONSE_FOUND
-
-  return parseOutputFromMessage(responseMessage)
 }
 
 type ExpectedOutputByLog = { output: string; generatedAt: Date }
@@ -132,7 +54,7 @@ async function findExpectedOutputs({
       const existing = acc.get(provider.documentLogUuid)
       if (existing && existing.generatedAt > provider.generatedAt) return acc
 
-      const output = getOutput(provider)
+      const output = buildProviderLogResponse(provider)
 
       acc.set(provider.documentLogUuid, {
         output,

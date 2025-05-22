@@ -51,7 +51,7 @@ export default function useDatasetRows(
   opts?: SWRConfiguration,
 ) {
   const serializer = useMemo(() => {
-    return dataset ? serializeRows(dataset.columns) : undefined
+    return dataset ? serializeRows : undefined
   }, [dataset])
   const datasetId = dataset?.id
   const pageStr = page ? String(page) : undefined
@@ -88,7 +88,7 @@ export default function useDatasetRows(
     ...opts,
     fallbackData: opts?.fallbackData
       ? dataset
-        ? serializeRows(dataset.columns)(opts.fallbackData)
+        ? serializeRows(opts.fallbackData)
         : undefined
       : undefined,
     onSuccess,
@@ -104,10 +104,7 @@ export default function useDatasetRows(
         const updatedRowsMap = new Map()
 
         updatedRows.forEach((row) => {
-          updatedRowsMap.set(
-            row.id,
-            serializeRow({ row, columns: dataset.columns }),
-          )
+          updatedRowsMap.set(row.id, serializeRow({ row }))
         })
         mutate(prevRows.map((row) => updatedRowsMap.get(row.id) || row))
       },
@@ -149,7 +146,7 @@ export default function useDatasetRows(
       onSuccess: ({ data: createdRow }) => {
         if (!createdRow || !dataset) return
 
-        const row = serializeRow({ row: createdRow, columns: dataset.columns })
+        const row = serializeRow({ row: createdRow })
         mutate([row, ...data])
       },
     },

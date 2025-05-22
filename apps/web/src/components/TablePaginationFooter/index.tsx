@@ -51,7 +51,7 @@ export function LinkableTablePaginationFooter({
                 : pagination.count}{' '}
             </Text.H5M>
           ) : (
-            <span />
+            <Text.H5M color='foregroundMuted'>{pagination.count} rows</Text.H5M>
           )}
         </>
       ) : null}
@@ -72,11 +72,9 @@ export function LinkableTablePaginationFooter({
                 baseUrl={pagination.baseUrl}
               />
             </div>
-            {countLabel ? (
-              <Text.H5M color='foregroundMuted'>
-                of {pagination.totalPages}
-              </Text.H5M>
-            ) : null}
+            <Text.H5M color='foregroundMuted'>
+              of {pagination.totalPages}
+            </Text.H5M>
           </div>
           <NavLink url={pagination.nextPage?.url} direction='next' />
         </div>
