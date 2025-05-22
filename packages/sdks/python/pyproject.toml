@@ -1,6 +1,6 @@
 [project]
 name = "latitude-sdk"
-version = "3.0.0"
+version = "3.0.1"
 description = "Latitude SDK for Python"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
@@ -24,7 +24,7 @@ dev = [
     "pytest-xdist>=3.6.1",
     "pytest>=8.3.4",
     "respx>=0.22.0",
-    "pyright>=1.1.392",
+    "pyright>=1.1.401",
     "ruff>=0.8.3",
     "sh>=1.14.3",
 ]

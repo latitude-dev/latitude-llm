@@ -16,7 +16,7 @@ class TestCreateEvaluationResult(TestCase):
             return_value=httpx.Response(200, json=fixtures.EVALUATION_RESULT_RESPONSE)
         )
 
-        result = await self.sdk.evaluations.annotate(conversation_uuid, evaluation_uuid, 1, options)
+        result = await self.sdk.evaluations.annotate(conversation_uuid, 1, evaluation_uuid, options)
         request, _ = endpoint_mock.calls.last
 
         self.assert_requested(
@@ -44,7 +44,7 @@ class TestCreateEvaluationResult(TestCase):
         )
 
         with self.assertRaisesRegex(type(fixtures.ERROR), fixtures.ERROR.message):
-            await self.sdk.evaluations.annotate(conversation_uuid, evaluation_uuid, 1, options)
+            await self.sdk.evaluations.annotate(conversation_uuid, 1, evaluation_uuid, options)
         requests = cast(List[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore
 
         [

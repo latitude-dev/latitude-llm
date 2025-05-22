@@ -38,8 +38,8 @@ class Evaluations:
     async def annotate(
         self,
         uuid: str,
-        evaluation_uuid: str,
         score: int,
+        evaluation_uuid: str,
         options: Optional[AnnotateEvaluationOptions] = None,
     ) -> AnnotateEvaluationResult:
         options = AnnotateEvaluationOptions(**{**dict(self._options), **dict(options or {})})
