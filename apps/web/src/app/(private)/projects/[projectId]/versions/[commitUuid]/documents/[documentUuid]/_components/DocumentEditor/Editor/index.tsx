@@ -265,7 +265,7 @@ export default function DocumentEditor({
         }
         secondPane={
           <SplitPane.Pane>
-            <div className='flex-1 relative max-h-full pl-4'>
+            <div className='flex-1 relative max-h-full px-4'>
               <Playground
                 document={document}
                 prompt={document.content}
