@@ -2,20 +2,21 @@ from typing import List, cast
 
 import httpx
 
-from latitude_sdk import TriggerEvaluationOptions, TriggerEvaluationResult
+from latitude_sdk import AnnotateEvaluationOptions, AnnotateEvaluationResult
 from tests.utils import TestCase, fixtures
 
 
-class TestTriggerEvaluation(TestCase):
+class TestCreateEvaluationResult(TestCase):
     async def test_success(self):
         conversation_uuid = "conversation-uuid"
-        options = TriggerEvaluationOptions(evaluation_uuids=["evaluation-uuid-1", "evaluation-uuid-2"])
-        endpoint = f"/conversations/{conversation_uuid}/evaluate"
+        evaluation_uuid = "evaluation-uuid"
+        options = AnnotateEvaluationOptions(reason="Because Yes")
+        endpoint = f"/conversations/{conversation_uuid}/evaluations/{evaluation_uuid}/annotate"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
-            return_value=httpx.Response(200, json=fixtures.EVALUATIONS_RESPONSE)
+            return_value=httpx.Response(200, json=fixtures.EVALUATION_RESULT_RESPONSE)
         )
 
-        result = await self.sdk.evaluations.trigger(conversation_uuid, options)
+        result = await self.sdk.evaluations.annotate(conversation_uuid, evaluation_uuid, 1, options)
         request, _ = endpoint_mock.calls.last
 
         self.assert_requested(
@@ -23,21 +24,27 @@ class TestTriggerEvaluation(TestCase):
             method="POST",
             endpoint=endpoint,
             body={
-                "evaluationUuids": options.evaluation_uuids,
+                "score": 1,
+                "metadata": {"reason": options.reason},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, TriggerEvaluationResult(evaluations=fixtures.EVALUATIONS))
+        self.assertEqual(
+            result,
+            AnnotateEvaluationResult(**dict(fixtures.EVALUATION_RESULT)),
+        )
 
     async def test_fails(self):
         conversation_uuid = "conversation-uuid"
-        endpoint = f"/conversations/{conversation_uuid}/evaluate"
+        evaluation_uuid = "evaluation-uuid"
+        options = AnnotateEvaluationOptions(reason="Because Yes")
+        endpoint = f"/conversations/{conversation_uuid}/evaluations/{evaluation_uuid}/annotate"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
             return_value=httpx.Response(500, json=fixtures.ERROR_RESPONSE)
         )
 
         with self.assertRaisesRegex(type(fixtures.ERROR), fixtures.ERROR.message):
-            await self.sdk.evaluations.trigger(conversation_uuid)
+            await self.sdk.evaluations.annotate(conversation_uuid, evaluation_uuid, 1, options)
         requests = cast(List[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore
 
         [
@@ -45,7 +52,10 @@ class TestTriggerEvaluation(TestCase):
                 request,
                 method="POST",
                 endpoint=endpoint,
-                body={},
+                body={
+                    "score": 1,
+                    "metadata": {"reason": options.reason},
+                },
             )
             for request in requests
         ]
