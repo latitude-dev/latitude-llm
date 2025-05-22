@@ -185,13 +185,12 @@ export default function DocumentEditor({
         className='pt-6'
         direction='horizontal'
         reversed
-        gap={4}
         initialWidthClass='min-w-1/2'
         minSize={350}
         initialPercentage={40}
         firstPane={
           <SplitPane.Pane>
-            <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0 pl-6 pb-6'>
+            <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0 pl-6 pb-6 pr-4'>
               <EditorHeader
                 documentVersion={document}
                 providers={providers}

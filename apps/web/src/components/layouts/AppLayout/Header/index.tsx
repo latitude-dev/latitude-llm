@@ -21,9 +21,9 @@ export function AppHeaderWrapper({
     <header
       className={cn(
         'flex flex-row items-center justify-between',
-        'border-b border-b-border bg-background',
-        'sticky top-0 isolate px-6 py-3 z-10',
-        { 'px-6': xPadding === 'normal', 'px-0': xPadding === 'none' },
+        'border-b border-border bg-background',
+        'sticky top-0 isolate py-3 z-10',
+        { 'pl-6 pr-3': xPadding === 'normal', 'px-0': xPadding === 'none' },
       )}
     >
       {children}
