@@ -153,7 +153,6 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
         className='table-auto'
         externalFooter={
           <LinkableTablePaginationFooter
-            countLabel={countLabel(selectedCount)}
             pagination={buildPagination({
               baseUrl: pagination?.baseUrl ?? '',
               count: pagination?.count ?? 0,
