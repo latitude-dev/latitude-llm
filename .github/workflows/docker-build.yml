@@ -153,7 +153,7 @@ jobs:
           cache-to: type=inline
           secrets: ${{ matrix.private && format('SENTRY_AUTH_TOKEN={0}', secrets.SENTRY_AUTH_TOKEN) || '' }}
           build-args: |
-            NEXT_PUBLIC_DOCS_URL={{ matrix.private && vars.NEXT_PUBLIC_DOCS_URL || '' }}
+            NEXT_PUBLIC_DOCS_URL=${{ matrix.private && vars.NEXT_PUBLIC_DOCS_URL || '' }}
             NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ matrix.private && vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL || '' }}
             NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
             NEXT_PUBLIC_POSTHOG_KEY=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_KEY || '' }}
