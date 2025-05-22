@@ -1,12 +1,8 @@
 import { and, count, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 
-import {
-  DocumentLogFilterOptions,
-  DocumentVersion,
-  ErrorableEntity,
-} from '../../browser'
+import { DocumentLogFilterOptions, DocumentVersion } from '../../browser'
 import { database } from '../../client'
-import { commits, documentLogs, providerLogs, runErrors } from '../../schema'
+import { commits, documentLogs, providerLogs } from '../../schema'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export type DocumentLogsAggregations = {
@@ -31,7 +27,6 @@ export async function computeDocumentLogsAggregations(
   db = database,
 ): Promise<DocumentLogsAggregations> {
   const conditions = [
-    isNull(runErrors.id),
     isNull(commits.deletedAt),
     eq(documentLogs.documentUuid, document.documentUuid),
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
@@ -48,13 +43,6 @@ export async function computeDocumentLogsAggregations(
     })
     .from(documentLogs)
     .innerJoin(commits, eq(commits.id, documentLogs.commitId))
-    .leftJoin(
-      runErrors,
-      and(
-        eq(runErrors.errorableUuid, documentLogs.uuid),
-        eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
-      ),
-    )
     .where(and(...conditions))
     .then(
       (r) =>
@@ -97,10 +85,10 @@ export async function computeDocumentLogsAggregations(
     .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .where(
       and(
-        eq(documentLogs.documentUuid, document.documentUuid),
-        isNull(commits.deletedAt),
         isNotNull(providerLogs.tokens),
         isNotNull(providerLogs.costInMillicents),
+        isNull(commits.deletedAt),
+        eq(documentLogs.documentUuid, document.documentUuid),
         filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
       ),
     )

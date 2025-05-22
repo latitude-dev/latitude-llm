@@ -153,15 +153,26 @@ export function useSelectableRows<T extends string | number>({
     }
   }, [selectionState, totalRowCount])
 
-  return {
-    selectedCount,
-    getSelectedRowIds,
-    toggleRow,
-    toggleAll,
-    clearSelections,
-    isSelected,
-    headerState,
-  }
+  return useMemo(
+    () => ({
+      selectedCount,
+      getSelectedRowIds,
+      toggleRow,
+      toggleAll,
+      clearSelections,
+      isSelected,
+      headerState,
+    }),
+    [
+      selectedCount,
+      getSelectedRowIds,
+      toggleRow,
+      toggleAll,
+      clearSelections,
+      isSelected,
+      headerState,
+    ],
+  )
 }
 
 export type SelectableRowsHook = ReturnType<typeof useSelectableRows>

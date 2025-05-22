@@ -7,7 +7,7 @@ import { ROUTES } from '$/services/routes'
 import { Dataset, parseRowCell } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { DatasetRowData } from '@latitude-data/core/schema'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
 type InputItem = {
@@ -88,6 +88,7 @@ export function useSelectedLogs({
   const [selectedLogsIds, setSelectedLogsIds] = useState<(string | number)[]>(
     [],
   )
+  const [selectedCount, setSelectedCount] = useState(0)
   const [selectedDataset, setSelectedDataset] = useState<Dataset>()
   const { previewData, fetchPreview, isLoading } = usePreviewRowsStore({
     dataset: selectedDataset,
@@ -96,12 +97,14 @@ export function useSelectedLogs({
   const onClickShowPreview = useCallback(() => {
     previewModalState.onOpen()
     setSelectedLogsIds(selectableState.getSelectedRowIds())
+    setSelectedCount(selectableState.selectedCount)
     fetchPreview()
   }, [
     fetchPreview,
     setSelectedLogsIds,
     previewModalState.onOpen,
     selectableState.getSelectedRowIds,
+    selectableState.selectedCount,
   ])
   const {
     execute: createDatasetFromLogs,
@@ -118,6 +121,7 @@ export function useSelectedLogs({
 
       setSelectedDataset(undefined)
       setSelectedLogsIds([])
+      setSelectedCount(0)
       selectableState.clearSelections()
       previewModalState.onClose()
     },
@@ -130,18 +134,34 @@ export function useSelectedLogs({
       selectableState.clearSelections,
     ],
   )
-  return {
-    previewData,
-    onClickShowPreview,
-    saveDataset,
-    isLoadingPreview: isLoading,
-    previewModalState,
-    setSelectedDataset,
-    selectedDataset,
-    isSaving,
-    fetchPreview,
-    error,
-  }
+  return useMemo(
+    () => ({
+      previewData,
+      onClickShowPreview,
+      saveDataset,
+      isLoadingPreview: isLoading,
+      previewModalState,
+      setSelectedDataset,
+      selectedDataset,
+      isSaving,
+      fetchPreview,
+      error,
+      selectedCount,
+    }),
+    [
+      previewData,
+      onClickShowPreview,
+      saveDataset,
+      isLoading,
+      previewModalState,
+      setSelectedDataset,
+      selectedDataset,
+      isSaving,
+      fetchPreview,
+      error,
+      selectedCount,
+    ],
+  )
 }
 
 export type PreviewLogsState = ReturnType<typeof useSelectedLogs>

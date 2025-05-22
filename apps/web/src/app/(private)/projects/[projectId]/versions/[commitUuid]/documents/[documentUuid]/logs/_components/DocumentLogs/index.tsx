@@ -31,6 +31,7 @@ import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
 import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import { useSearchParams } from 'next/navigation'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -206,22 +207,31 @@ export function DocumentLogs({
         )}
         <div className='flex justify-center sticky bottom-4 pointer-events-none'>
           <FloatingPanel visible={selectableState.selectedCount > 0}>
-            <div className='flex flex-row justify-between gap-x-4'>
-              <Button
-                fancy
-                disabled={selectableState.selectedCount === 0}
-                onClick={previewLogsState.onClickShowPreview}
-              >
-                Save {selectableState.selectedCount} logs to dataset
-              </Button>
-              <DownloadLogsButton selectableState={selectableState} />
-              <Button
-                fancy
-                variant='outline'
-                onClick={selectableState.clearSelections}
+            <div className='flex flex-row items-center gap-x-4'>
+              <div className='flex flex-row gap-x-2'>
+                <Button
+                  fancy
+                  disabled={selectableState.selectedCount === 0}
+                  onClick={previewLogsState.onClickShowPreview}
+                >
+                  Add {selectableState.selectedCount} logs to dataset
+                </Button>
+                <DownloadLogsButton selectableState={selectableState} />
+              </div>
+              <Tooltip
+                trigger={
+                  <Button
+                    iconProps={{
+                      name: 'close',
+                    }}
+                    className='p-0'
+                    variant='ghost'
+                    onClick={selectableState.clearSelections}
+                  />
+                }
               >
                 Clear selection
-              </Button>
+              </Tooltip>
             </div>
           </FloatingPanel>
         </div>
