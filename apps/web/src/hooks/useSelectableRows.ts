@@ -5,15 +5,19 @@ import { CheckedState } from '@latitude-data/web-ui/atoms/Checkbox'
 export function useSelectableRows<T extends string | number>({
   rowIds,
   initialSelection = [],
+  totalRowCount,
 }: {
   rowIds: T[]
   initialSelection?: T[]
+  totalRowCount: number
 }) {
-  const [selectedRowIds, setSelectedRowIds] = useState<Set<T>>(
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<T> | undefined>(
     new Set(initialSelection),
   )
 
   const headerState = useMemo<CheckedState>(() => {
+    if (!selectedRowIds) return true
+
     const visibleSelectedCount = rowIds.filter((id) =>
       selectedRowIds.has(id),
     ).length
@@ -22,11 +26,16 @@ export function useSelectableRows<T extends string | number>({
     if (visibleSelectedCount === rowIds.length && rowIds.length > 0) {
       return true
     }
+
     return 'indeterminate'
   }, [selectedRowIds, rowIds])
 
   const isSelected = <I extends T = T>(id: I | undefined) => {
-    return id === undefined ? false : selectedRowIds.has(id)
+    return id === undefined
+      ? false
+      : !selectedRowIds
+        ? true
+        : selectedRowIds.has(id)
   }
 
   const toggleRow = useCallback(
@@ -51,23 +60,16 @@ export function useSelectableRows<T extends string | number>({
   }, [])
 
   const toggleAll = useCallback(() => {
-    setSelectedRowIds((prev) => {
-      const newSelected = new Set(prev)
-      const allVisibleSelected = rowIds.every((id) => newSelected.has(id))
-      if (allVisibleSelected) return new Set()
-
-      rowIds.forEach((id) => newSelected.add(id))
-      return newSelected
-    })
+    setSelectedRowIds((prev) => (!prev ? new Set() : undefined))
   }, [rowIds, setSelectedRowIds])
 
   const getSelectedRowIds = useCallback(
-    () => Array.from(selectedRowIds),
+    () => (selectedRowIds ? Array.from(selectedRowIds) : []),
     [selectedRowIds],
   )
 
   return {
-    selectedCount: selectedRowIds.size,
+    selectedCount: selectedRowIds ? selectedRowIds.size : totalRowCount,
     getSelectedRowIds,
     toggleRow,
     toggleAll,

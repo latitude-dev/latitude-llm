@@ -53,7 +53,9 @@ export function DownloadLogsButton({
       variant='outline'
       onClick={onClick}
     >
-      {isDownloading ? 'Downloading...' : 'Download Logs'}
+      {isDownloading
+        ? 'Downloading...'
+        : `Download ${selectableState.selectedCount} logs`}
     </Button>
   )
 }
