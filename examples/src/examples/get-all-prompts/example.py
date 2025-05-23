@@ -9,8 +9,6 @@ async def run():
     sdk_options = LatitudeOptions(
         project_id=int(os.getenv("PROJECT_ID")),
         version_uuid="live",
-        # Uncomment to use the local gateway
-        # internal=InternalOptions(gateway=get_local_gateway()),
     )
     sdk = Latitude(api_key, sdk_options)
     results = await sdk.prompts.get_all()

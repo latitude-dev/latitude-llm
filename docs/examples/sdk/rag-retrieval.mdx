@@ -1,3 +1,41 @@
+---
+title: RAG retrieval
+description: Learn how to use RAG retrieval with the Latitude SDK
+---
+
+## Prompt
+
+In your prompt, you can define a tool that will be used to retrieve information.
+
+<CodeGroup>
+```markdown rag-retrieval/example.promptl
+---
+provider: Latitude
+model: gpt-4o-mini
+temperature: 0.7
+tools:
+  - get_answer:
+      description: Ask this tool for the answer when user do a question.
+      parameters:
+        type: object
+        additionalProperties: false
+        required: ['question']
+        properties:
+          question:
+            type: string
+            description: Question to ask
+---
+
+Give user's question {{ question }} a concise answer.
+```
+</CodeGroup>
+
+## Code
+
+Performing RAG retrieval with the Latitude SDK simply involves defining a tool in your prompt. In your code, you can then get the results from the RAG solution you use.
+
+<CodeGroup>
+```typescript Typescript
 import { Pinecone } from '@pinecone-database/pinecone'
 import OpenAI from 'openai'
 import { Latitude } from '@latitude-data/sdk'
@@ -49,3 +87,6 @@ async function run() {
 }
 
 run()
+```
+</CodeGroup>
+
