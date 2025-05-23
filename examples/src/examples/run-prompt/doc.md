@@ -1,6 +1,6 @@
 ---
 title: Run prompt
-description: Learn how to run a prompt with Latitude SDK
+description: Learn how to run a prompt with the Latitude SDK
 ---
 
 ## Prompt
@@ -9,6 +9,6 @@ description: Learn how to run a prompt with Latitude SDK
 
 ## Code
 
-Check out the code below to see how to run a prompt with Latitude SDK.
+See the code below for how to run a prompt using the Latitude SDK.
 
 [CODE]

@@ -9,7 +9,11 @@ const CODE_BLOCK_TYPE_BY_FILE_EXTENSION: Record<
   py: { lang: 'python', label: 'Python' },
 }
 
-export function buildMarkdownDoc({ examplePath }: { examplePath: string }): string {
+export function buildMarkdownDoc({
+  examplePath,
+}: {
+  examplePath: string
+}): string {
   const docPath = path.join(examplePath, 'doc.md')
 
   if (!fs.existsSync(docPath)) {
@@ -57,7 +61,10 @@ export function buildMarkdownDoc({ examplePath }: { examplePath: string }): stri
   const codeBlock =
     '<CodeGroup>\n' +
     codeFiles
-      .map(({ label, content }) => `\`\`\`${label}\n${content.trim()}\n\`\`\``)
+      .map(
+        ({ lang, label, content }) =>
+          `\`\`\`${lang} ${label}\n${content.trim()}\n\`\`\``,
+      )
       .join('\n') +
     '\n</CodeGroup>'
 
@@ -66,4 +73,3 @@ export function buildMarkdownDoc({ examplePath }: { examplePath: string }): stri
 
   return doc
 }
-

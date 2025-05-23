@@ -113,7 +113,10 @@
     },
     {
       "group": "Datasets",
-      "pages": ["guides/datasets/overview", "guides/datasets/golden-datasets"]
+      "pages": [
+        "guides/datasets/overview",
+        "guides/datasets/golden-datasets"
+      ]
     },
     {
       "group": "Deployment",
@@ -123,8 +126,7 @@
           "group": "Latitude SDK",
           "pages": [
             "guides/sdk/typescript",
-            "guides/sdk/python",
-            "guides/cookbook/overview"
+            "guides/sdk/python"
           ]
         },
         {
@@ -147,11 +149,15 @@
     },
     {
       "group": "Support",
-      "pages": ["guides/integration/community-support"]
+      "pages": [
+        "guides/integration/community-support"
+      ]
     },
     {
       "group": "Getting Started",
-      "pages": ["promptl/getting-started/introduction"]
+      "pages": [
+        "promptl/getting-started/introduction"
+      ]
     },
     {
       "group": "Syntax",
@@ -180,15 +186,30 @@
     },
     {
       "group": "Advanced",
-      "pages": ["promptl/advanced/chains", "promptl/advanced/snippets"]
+      "pages": [
+        "promptl/advanced/chains",
+        "promptl/advanced/snippets"
+      ]
     },
     {
       "group": "SDK examples",
-      "pages": ["/examples/sdk/run-prompt"]
+      "pages": [
+        "/examples/sdk/annotate-log",
+        "/examples/sdk/create-log",
+        "/examples/sdk/create-prompt",
+        "/examples/sdk/get-all-prompts",
+        "/examples/sdk/get-prompt",
+        "/examples/sdk/rag-retrieval",
+        "/examples/sdk/render-chain",
+        "/examples/sdk/run-prompt",
+        "/examples/sdk/run-prompt-with-tools"
+      ]
     },
     {
       "group": "Custom Tools",
-      "pages": ["/examples/custom-tools/weather-chatbot"]
+      "pages": [
+        "/examples/custom-tools/weather-chatbot"
+      ]
     },
     {
       "group": "Agents",
@@ -199,7 +220,9 @@
     },
     {
       "group": "Changelog",
-      "pages": ["changelog/changelog"]
+      "pages": [
+        "changelog/changelog"
+      ]
     }
   ],
   "footerSocials": {
