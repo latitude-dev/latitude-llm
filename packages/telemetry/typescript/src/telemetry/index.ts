@@ -8,6 +8,7 @@ import {
   ATTR_LATITUDE_TOOL_ARGUMENTS,
   ATTR_LATITUDE_TOOL_RESULT,
   ATTR_LATITUDE_TYPE,
+  HEAD_COMMIT,
   SegmentBaggage,
   SegmentType,
   SpanSource,
@@ -251,7 +252,7 @@ export class LatitudeTelemetry {
   }
 
   tool<F extends (span: tracing.Span) => ReturnType<F>>(
-    { name, externalId, attributes, arguments: args, result }: ToolSpanOptions,
+    { name, attributes, arguments: args, result, ...rest }: ToolSpanOptions,
     fn: F,
   ) {
     let jsonArguments = ''
@@ -274,64 +275,39 @@ export class LatitudeTelemetry {
       [ATTR_LATITUDE_TOOL_RESULT]: jsonResult,
     }
 
-    return this.span(
-      name || 'Tool',
-      SpanType.Tool,
-      { externalId, attributes },
-      fn,
-    )
+    return this.span(name || 'Tool', SpanType.Tool, { attributes, ...rest }, fn)
   }
 
   completion<F extends (span: tracing.Span) => ReturnType<F>>(
-    { name, externalId, attributes }: SpanOptions,
+    { name, ...rest }: SpanOptions,
     fn: F,
   ) {
-    return this.span(
-      name || 'Completion',
-      SpanType.Completion,
-      { externalId, attributes },
-      fn,
-    )
+    return this.span(name || 'Completion', SpanType.Completion, { ...rest }, fn)
   }
 
   embedding<F extends (span: tracing.Span) => ReturnType<F>>(
-    { name, externalId, attributes }: SpanOptions,
+    { name, ...rest }: SpanOptions,
     fn: F,
   ) {
-    return this.span(
-      name || 'Embedding',
-      SpanType.Embedding,
-      { externalId, attributes },
-      fn,
-    )
+    return this.span(name || 'Embedding', SpanType.Embedding, { ...rest }, fn)
   }
 
   retrieval<F extends (span: tracing.Span) => ReturnType<F>>(
-    { name, externalId, attributes }: SpanOptions,
+    { name, ...rest }: SpanOptions,
     fn: F,
   ) {
-    return this.span(
-      name || 'Retrieval',
-      SpanType.Retrieval,
-      { externalId, attributes },
-      fn,
-    )
+    return this.span(name || 'Retrieval', SpanType.Retrieval, { ...rest }, fn)
   }
 
   reranking<F extends (span: tracing.Span) => ReturnType<F>>(
-    { name, externalId, attributes }: SpanOptions,
+    { name, ...rest }: SpanOptions,
     fn: F,
   ) {
-    return this.span(
-      name || 'Reranking',
-      SpanType.Reranking,
-      { externalId, attributes },
-      fn,
-    )
+    return this.span(name || 'Reranking', SpanType.Reranking, { ...rest }, fn)
   }
 
   http<F extends (span: tracing.Span) => ReturnType<F>>(
-    { name, externalId, attributes, request, response }: HttpSpanOptions,
+    { name, attributes, request, response, ...rest }: HttpSpanOptions,
     fn: F,
   ) {
     let jsonRequest = ''
@@ -363,18 +339,12 @@ export class LatitudeTelemetry {
       [ATTR_LATITUDE_HTTP_RESPONSE]: jsonResponse,
     }
 
-    return this.span(
-      name || 'Http',
-      SpanType.Http,
-      { externalId, attributes },
-      fn,
-    )
+    return this.span(name || 'Http', SpanType.Http, { attributes, ...rest }, fn)
   }
 
   private segment<F extends () => ReturnType<F>>(
-    name: string,
     type: SegmentType,
-    { externalId, attributes, baggage }: SegmentOptions,
+    { name, externalId, attributes, baggage }: SegmentOptions,
     fn: F,
   ) {
     const segmentsEntry = propagation
@@ -399,7 +369,7 @@ export class LatitudeTelemetry {
       ...baggage,
       id: segmentId,
       ...(segments.at(-1)?.id === parentId && { parentId }),
-      name: name,
+      ...(name && { name }),
       type: type,
     })
 
@@ -423,44 +393,29 @@ export class LatitudeTelemetry {
 
   document<F extends () => ReturnType<F>>(
     {
-      name,
-      externalId,
-      attributes,
       baggage,
       versionUuid,
       documentUuid,
       documentType,
       experimentUuid,
       promptHash,
+      ...rest
     }: DocumentSegmentOptions,
     fn: F,
   ) {
     baggage = {
       ...(baggage || {}),
-      versionUuid,
-      documentUuid,
-      documentType,
+      versionUuid: versionUuid || HEAD_COMMIT,
+      documentUuid: documentUuid,
+      ...(documentType && { documentType }),
       ...(experimentUuid && { experimentUuid }),
-      promptHash,
+      ...(promptHash && { promptHash }),
     }
 
-    return this.segment(
-      name || 'Document',
-      SegmentType.Document,
-      { externalId, attributes, baggage },
-      fn,
-    )
+    return this.segment(SegmentType.Document, { baggage, ...rest }, fn)
   }
 
-  step<F extends () => ReturnType<F>>(
-    { name, externalId, attributes, baggage }: SegmentOptions,
-    fn: F,
-  ) {
-    return this.segment(
-      name || 'Step',
-      SegmentType.Step,
-      { externalId, attributes, baggage },
-      fn,
-    )
+  step<F extends () => ReturnType<F>>(options: SegmentOptions, fn: F) {
+    return this.segment(SegmentType.Step, options, fn)
   }
 }

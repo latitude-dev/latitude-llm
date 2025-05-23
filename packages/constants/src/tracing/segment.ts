@@ -50,8 +50,9 @@ type BaseSegment<T extends SegmentType = SegmentType> = {
 
 export type BaseSegmentBaggage<T extends SegmentType = SegmentType> = Pick<
   BaseSegment<T>,
-  'id' | 'parentId' | 'name' | 'type'
->
+  'id' | 'parentId' | 'type'
+> &
+  Partial<Pick<BaseSegment<T>, 'name'>>
 
 type StepSegment = BaseSegment<SegmentType.Step> & {
   provider: string // Provider of the first span that created this segment
@@ -70,13 +71,12 @@ type DocumentSegment = BaseSegment<SegmentType.Document> &
   }
 
 export type DocumentSegmentBaggage = BaseSegmentBaggage<SegmentType.Document> &
-  Pick<
-    DocumentSegment,
-    | 'versionUuid'
-    | 'documentUuid'
-    | 'documentType'
-    | 'experimentUuid'
-    | 'promptHash'
+  Pick<DocumentSegment, 'documentUuid'> &
+  Partial<
+    Pick<
+      DocumentSegment,
+      'versionUuid' | 'documentType' | 'experimentUuid' | 'promptHash'
+    >
   >
 
 // prettier-ignore

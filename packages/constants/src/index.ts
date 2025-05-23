@@ -1,6 +1,8 @@
 // TODO(tracing): deprecated
 export { SpanSource as LogSources } from './tracing'
 
+export const HEAD_COMMIT = 'live'
+
 export enum Providers {
   OpenAI = 'openai',
   Anthropic = 'anthropic',
