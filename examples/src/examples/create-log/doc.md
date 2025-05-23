@@ -14,4 +14,3 @@ In this example, the specific prompt is not important—you just need to have a 
 Here’s how you can upload a log to your prompt using the Latitude SDK:
 
 [CODE]
-

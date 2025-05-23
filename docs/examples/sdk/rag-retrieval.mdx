@@ -1,11 +1,12 @@
 ---
 title: RAG retrieval
-description: Learn how to use a RAG retrieval with Latitude SDK
+description: Learn how to use RAG retrieval with the Latitude SDK
 ---
 
 ## Prompt
 
-In your prompt you can define a tool that will be used to retrieve information.
+In your prompt, you can define a tool that will be used to retrieve information.
+
 <CodeGroup>
 ```markdown rag-retrieval/example.promptl
 ---
@@ -31,8 +32,7 @@ Give user's question {{ question }} a concise answer.
 
 ## Code
 
-Doing RAG retrieval with Latitude SDK is just defining a tool in your prompt and
-in your code you can get the results from the RAG solution you use
+Performing RAG retrieval with the Latitude SDK simply involves defining a tool in your prompt. In your code, you can then get the results from the RAG solution you use.
 
 <CodeGroup>
 ```typescript Typescript
@@ -48,9 +48,6 @@ async function run() {
   const sdk = new Latitude(process.env.LATITUDE_API_KEY, {
     projectId: Number(process.env.PROJECT_ID),
     versionUuid: 'live',
-
-    // Uncomment this to use a local gateway
-    // __internal: { gateway: getLocalGateway() },
   })
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY })
@@ -65,6 +62,7 @@ async function run() {
     parameters: { question },
     tools: {
       get_answer: async ({ question }) => {
+        // Do the embedding
         const embedding = await openai.embeddings
           .create({
             input: question,
@@ -72,6 +70,7 @@ async function run() {
           })
           .then((res) => res.data[0].embedding)
 
+        // Query your RAG backend. In this case, Pinecone
         const queryResponse = await pc.query({
           vector: embedding,
           topK: 10,
@@ -90,3 +89,4 @@ async function run() {
 run()
 ```
 </CodeGroup>
+
