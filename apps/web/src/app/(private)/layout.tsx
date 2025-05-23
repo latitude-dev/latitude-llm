@@ -3,7 +3,7 @@ import { ReactNode } from 'react'
 import { SessionProvider } from '@latitude-data/web-ui/browser'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { createSupportUserIdentity } from '$/app/(private)/_lib/createSupportUserIdentity'
-import { SupportChat } from '$/components/IntercomSupportChat'
+import { IntercomProvider } from '$/components/IntercomSupportChat'
 import { AppLayout } from '$/components/layouts'
 import {
   LatitudeWebsocketsProvider,
@@ -50,29 +50,30 @@ export default async function PrivateLayout({
   return (
     <CSPostHogProvider>
       <IdentifyUser user={user} workspace={workspace}>
-        <SupportChat identity={supportIdentity} />
-        <SocketIOProvider>
-          <SessionProvider
-            currentUser={user}
-            workspace={workspace}
-            subscriptionPlan={subscriptionPlan}
-          >
-            <FeatureFlagProvider featureFlags={featureFlags}>
-              <LatitudeWebsocketsProvider
-                workspace={workspace}
-                socketServer={env.WEBSOCKETS_SERVER}
-              >
-                <AppLayout
-                  currentUser={user}
-                  navigationLinks={NAV_LINKS}
-                  cloudInfo={cloudInfo}
+        <IntercomProvider identity={supportIdentity}>
+          <SocketIOProvider>
+            <SessionProvider
+              currentUser={user}
+              workspace={workspace}
+              subscriptionPlan={subscriptionPlan}
+            >
+              <FeatureFlagProvider featureFlags={featureFlags}>
+                <LatitudeWebsocketsProvider
+                  workspace={workspace}
+                  socketServer={env.WEBSOCKETS_SERVER}
                 >
-                  {children}
-                </AppLayout>
-              </LatitudeWebsocketsProvider>
-            </FeatureFlagProvider>
-          </SessionProvider>
-        </SocketIOProvider>
+                  <AppLayout
+                    currentUser={user}
+                    navigationLinks={NAV_LINKS}
+                    cloudInfo={cloudInfo}
+                  >
+                    {children}
+                  </AppLayout>
+                </LatitudeWebsocketsProvider>
+              </FeatureFlagProvider>
+            </SessionProvider>
+          </SocketIOProvider>
+        </IntercomProvider>
       </IdentifyUser>
     </CSPostHogProvider>
   )

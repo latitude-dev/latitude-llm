@@ -158,6 +158,7 @@ import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import YepCode from './custom-icons/logos/YepCode'
+import IntercomChat from './custom-icons/logos/IntercomChat'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -242,6 +243,7 @@ const Icons = {
   imageUp: ImageUp,
   info: InfoIcon,
   intercom: Intercom,
+  intercomChat: IntercomChat,
   jira: Jira,
   letterText: LetterText,
   lightBulb: Lightbulb,

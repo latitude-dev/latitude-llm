@@ -6,6 +6,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { TripleThemeToggle } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
 import { forwardRef } from 'react'
+import { IntercomTrigger } from '$/components/IntercomSupportChat/IntercomTrigger'
 
 const SidebarButton = forwardRef<
   HTMLButtonElement,
@@ -83,6 +84,7 @@ export function RightSidebar({
             </Tooltip>
           ))}
         </div>
+        <IntercomTrigger />
         <TripleThemeToggle direction='vertical' />
       </div>
       <div className='flex-grow h-full min-w-0 border-l border-border overflow-hidden relative'>
