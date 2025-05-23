@@ -43,6 +43,7 @@ import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
 import { experiments } from './models/experiments'
+import { latitudeExports } from './models/exports'
 
 export type {
   DocumentLog,
@@ -80,6 +81,8 @@ export type EvaluationTemplateCategory = InferSelectModel<
   typeof evaluationTemplateCategories
 >
 export type Subscription = InferSelectModel<typeof subscriptions>
+export type Export = typeof latitudeExports.$inferSelect
+export type NewExport = typeof latitudeExports.$inferInsert
 
 export type McpServer = InferSelectModel<typeof mcpServers>
 

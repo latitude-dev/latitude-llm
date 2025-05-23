@@ -1,11 +1,11 @@
-import { exports } from '../../schema/models/exports'
 import { updateExport } from '.'
 import { publisher } from '../../events/publisher'
+import { Export } from '../../browser'
 
 export async function markExportReady({
   export: exportRecord,
 }: {
-  export: typeof exports.$inferSelect
+  export: Export
 }) {
   const result = await updateExport({
     export: exportRecord,

@@ -1,9 +1,8 @@
 import { database } from '../../client'
-import { exports, type NewExport } from '../../schema/models/exports'
-import { Workspace } from '../../browser'
+import { latitudeExports } from '../../schema/models/exports'
+import { Export, NewExport, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import { eq } from 'drizzle-orm'
-import { nanoid } from 'nanoid'
 import Transaction from '../../lib/Transaction'
 
 export async function findOrCreateExport({
@@ -14,13 +13,11 @@ export async function findOrCreateExport({
   token: string
   workspace: Workspace
   userId: string
-}) {
-  try {
-    // Try to find existing export
-    const existingExport = await database
+}, db = database) {
+    const existingExport = await db
       .select()
-      .from(exports)
-      .where(eq(exports.token, token))
+      .from(latitudeExports)
+      .where(eq(latitudeExports.token, token))
       .limit(1)
       .then((rows) => rows[0])
 
@@ -28,26 +25,25 @@ export async function findOrCreateExport({
       return Result.ok(existingExport)
     }
 
-    // Create new export if not found
-    const newExportData: NewExport = {
-      token,
-      workspaceId: String(workspace.id),
-      userId,
-    }
+    return Transaction.call(async (tx) => {
+      // Create new export if not found
+      const newExportData: NewExport = {
+        token,
+        workspaceId: String(workspace.id),
+        userId,
+      }
 
-    const [newExport] = await database
-      .insert(exports)
-      .values(newExportData)
-      .returning()
+      const [newExport] = await tx
+        .insert(latitudeExports)
+        .values(newExportData)
+        .returning()
 
-    if (!newExport) {
-      throw new Error('Failed to create export')
-    }
+      if (!newExport) {
+        throw new Error('Failed to create export')
+      }
 
-    return Result.ok(newExport)
-  } catch (error) {
-    return Result.error(error as Error)
-  }
+      return Result.ok(newExport)
+    })
 }
 
 export async function updateExport(
@@ -55,19 +51,19 @@ export async function updateExport(
     export: exportRecord,
     readyAt,
   }: {
-    export: typeof exports.$inferSelect
+    export: Export
     readyAt: Date
   },
   db = database,
 ) {
   return Transaction.call(async (tx) => {
     const [updatedExport] = await tx
-      .update(exports)
+      .update(latitudeExports)
       .set({
         readyAt,
         updatedAt: new Date(),
       })
-      .where(eq(exports.id, exportRecord.id))
+      .where(eq(latitudeExports.id, exportRecord.id))
       .returning()
 
     if (!updatedExport) {
