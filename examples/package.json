@@ -1,0 +1,46 @@
+{
+  "name": "latitude-examples",
+  "version": "1.0.0",
+  "description": "Examples of using Latitude platform and SDKs",
+  "main": "index.js",
+  "type": "module",
+  "license": "ISC",
+  "scripts": {
+    "help": "tsx -r dotenv/config ./src/utils/help.ts",
+    "run:ts": "tsx -r dotenv/config",
+    "ts:get_prompt": "npm run run:ts -- ./src/examples/get-prompt/example.ts",
+    "ts:get_all_prompts": "npm run run:ts -- ./src/examples/get-all-prompts/example.ts",
+    "ts:create_prompt": "npm run run:ts -- ./src/examples/create-prompt/example.ts",
+    "ts:run_prompt": "npm run run:ts -- ./src/examples/run-prompt/example.ts",
+    "ts:run_prompt_with_tools": "npm run run:ts -- ./src/examples/run-prompt-with-tools/example.ts",
+    "ts:run_chain": "npm run run:ts -- ./src/examples/run-chain/example.ts",
+    "ts:create_log": "npm run run:ts -- ./src/examples/create-log/example.ts",
+    "ts:annotate_log": "npm run run:ts -- ./src/examples/annotate-log/example.ts",
+    "ts:rag_retrieval": "npm run run:ts -- ./src/examples/rag-retrieval/example.ts",
+
+    "run:py": "PYTHONPATH=src dotenv -e .env -- .venv/bin/python",
+    "py:get_prompt": "npm run run:py -- ./src/examples/get-prompt/example.py",
+    "py:get_all_prompts": "npm run run:py -- ./src/examples/get-all-prompts/example.py",
+    "py:create_prompt": "npm run run:py -- ./src/examples/create-prompt/example.py",
+    "py:run_prompt": "npm run run:py -- ./src/examples/run-prompt/example.py",
+    "py:run_prompt_with_tools": "npm run run:py -- ./src/examples/run-prompt-with-tools/example.py",
+    "py:run_chain": "npm run run:py -- ./src/examples/run-chain/example.py",
+    "py:create_log": "npm run run:py -- ./src/examples/create-log/example.py",
+    "py:annotate_log": "npm run run:py -- ./src/examples/annotate-log/example.py"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.0.8",
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@latitude-data/sdk": "^4.1.2",
+    "@pinecone-database/pinecone": "^6.0.1",
+    "@vercel/otel": "^1.10.0",
+    "ai": "^4.0.18",
+    "dotenv": "^16.5.0",
+    "dotenv-cli": "^8.0.0",
+    "openai": "^4.68.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
