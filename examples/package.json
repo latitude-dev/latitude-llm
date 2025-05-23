@@ -7,6 +7,7 @@
   "license": "ISC",
   "scripts": {
     "help": "tsx -r dotenv/config ./src/utils/help.ts",
+    "tool:build_docs": "tsx ./scripts/docs/buildDocs.ts",
     "run:ts": "tsx -r dotenv/config",
     "ts:get_prompt": "npm run run:ts -- ./src/examples/get-prompt/example.ts",
     "ts:get_all_prompts": "npm run run:ts -- ./src/examples/get-all-prompts/example.ts",
