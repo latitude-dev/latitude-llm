@@ -105,7 +105,7 @@ describe('POST /api/webhooks/stripe', () => {
       method: 'POST',
       headers: { 'stripe-signature': 'valid-signature' },
       body: JSON.stringify({
-        type: 'customer.subscription.created',
+        type: 'customer.subscription.updated',
         data: { object: { status: 'active' } },
       }),
     })
@@ -126,7 +126,7 @@ describe('POST /api/webhooks/stripe', () => {
       method: 'POST',
       headers: { 'stripe-signature': 'valid-signature' },
       body: JSON.stringify({
-        type: 'customer.subscription.created',
+        type: 'customer.subscription.updated',
         data: { object: { status: 'active' } },
       }),
     })
@@ -170,7 +170,7 @@ describe('POST /api/webhooks/stripe', () => {
     )
   })
 
-  describe('when event is customer.subscription.created', () => {
+  describe('when event is customer.subscription.updated', () => {
     const mockSubscriptionActive = {
       id: 'sub_active_123',
       status: 'active',
@@ -184,7 +184,7 @@ describe('POST /api/webhooks/stripe', () => {
 
     it('should call handleSubscriptionUpdate if status is active and return 200', async () => {
       const eventPayload = {
-        type: 'customer.subscription.created',
+        type: 'customer.subscription.updated',
         data: { object: mockSubscriptionActive },
       }
       mockRequest = new NextRequest('http://localhost/api/webhooks/stripe', {
@@ -204,7 +204,7 @@ describe('POST /api/webhooks/stripe', () => {
       expect(response.status).toBe(200)
       const responseBody = await response.json()
       expect(responseBody.received).toBe(true)
-      expect(responseBody.event_type).toBe('customer.subscription.created')
+      expect(responseBody.event_type).toBe('customer.subscription.updated')
       expect(mocks.handleSubscriptionUpdate).toHaveBeenCalledWith({
         stripeSubscription: mockSubscriptionActive,
         stripe: expect.anything(), // The mocked stripe instance
@@ -213,7 +213,7 @@ describe('POST /api/webhooks/stripe', () => {
 
     it('should NOT call handleSubscriptionUpdate if status is not active and return 200', async () => {
       const eventPayload = {
-        type: 'customer.subscription.created',
+        type: 'customer.subscription.updated',
         data: { object: mockSubscriptionInactive },
       }
       mockRequest = new NextRequest('http://localhost/api/webhooks/stripe', {
@@ -229,7 +229,7 @@ describe('POST /api/webhooks/stripe', () => {
       expect(response.status).toBe(200)
       const responseBody = await response.json()
       expect(responseBody.received).toBe(true)
-      expect(responseBody.event_type).toBe('customer.subscription.created')
+      expect(responseBody.event_type).toBe('customer.subscription.updated')
       expect(mocks.handleSubscriptionUpdate).not.toHaveBeenCalled()
     })
   })
