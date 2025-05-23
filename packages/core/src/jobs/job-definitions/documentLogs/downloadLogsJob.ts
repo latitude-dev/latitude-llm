@@ -87,31 +87,53 @@ export const downloadLogsJob = async (
   if (!workspace) {
     throw new NotFoundError('Workspace not found')
   }
+
+  console.log(`[DownloadLogsJob] Starting export job for user ${user.id}, workspace ${workspace.id}, document ${document.documentUuid}`)
+  console.log(`[DownloadLogsJob] Selection mode: ${selectionMode}, excluded IDs count: ${excludedDocumentLogIds.length}`)
+  console.log(`[DownloadLogsJob] Filters:`, JSON.stringify(filters, null, 2))
+
   const exportRecord = await findOrCreateExport({
     token,
     workspace,
     userId: user.id,
   }).then((r) => r.unwrap())
 
+  console.log(`[DownloadLogsJob] Export record created/found with token: ${token}`)
+
   const cursorState = new CursorState(token)
   const disk = diskFactory()
   const fileKey = `workspaces/${workspace.id}/exports/${token}.csv`
+
+  console.log(`[DownloadLogsJob] File will be saved to: ${fileKey}`)
 
   // Create a readable stream that we can write to
   const writeStream = new Readable()
 
   try {
     lastCreatedAt = await cursorState.getCursor()
+    
+    if (lastCreatedAt) {
+      console.log(`[DownloadLogsJob] Resuming from cursor: ${lastCreatedAt.toISOString()}`)
+    } else {
+      console.log(`[DownloadLogsJob] Starting fresh export (no cursor found)`)
+    }
 
+    console.log(`[DownloadLogsJob] Initializing write stream to disk...`)
     const writeResult = await disk.putStream(fileKey, writeStream)
     if (writeResult.error) {
       throw new Error(
         `Failed to initialize write stream: ${writeResult.error.message}`,
       )
     }
+    console.log(`[DownloadLogsJob] Write stream initialized successfully`)
 
+    let batchCount = 0
     while (true) {
+      batchCount++
+      console.log(`[DownloadLogsJob] Processing batch ${batchCount} (cursor: ${lastCreatedAt?.toISOString() || 'none'})`)
+      
       // Build the query with cursor-based pagination
+      const queryStart = Date.now()
       const results = await database
         .select({
           uuid: documentLogs.uuid,
@@ -162,9 +184,16 @@ export const downloadLogsJob = async (
         .orderBy(desc(documentLogs.createdAt))
         .limit(BATCH_SIZE)
 
-      if (results.length === 0) break
+      const queryTime = Date.now() - queryStart
+      console.log(`[DownloadLogsJob] Query completed in ${queryTime}ms, found ${results.length} records`)
+
+      if (results.length === 0) {
+        console.log(`[DownloadLogsJob] No more records found, finishing export`)
+        break
+      }
 
       // Process the batch and write to CSV
+      const processingStart = Date.now()
       const csvRows = results.map((row) => ({
         uuid: row.uuid,
         versionUuid: row.versionUuid,
@@ -188,29 +217,41 @@ export const downloadLogsJob = async (
       })
       writeStream.push(csvString)
 
-      console.log(results)
+      const processingTime = Date.now() - processingStart
+      console.log(`[DownloadLogsJob] Batch ${batchCount} processed and written in ${processingTime}ms`)
 
       // Update cursor and save state
       lastCreatedAt = results[results.length - 1]!.createdAt
       await cursorState.setCursor(lastCreatedAt)
       totalProcessed += results.length
 
+      console.log(`[DownloadLogsJob] Progress: ${totalProcessed} records processed, cursor updated to ${lastCreatedAt.toISOString()}`)
+
       // Update job progress
-      await job.updateProgress(
-        Math.floor((totalProcessed / (totalProcessed + BATCH_SIZE)) * 100),
-      )
+      const progress = Math.floor((totalProcessed / (totalProcessed + BATCH_SIZE)) * 100)
+      await job.updateProgress(progress)
+      console.log(`[DownloadLogsJob] Job progress updated to ${progress}%`)
 
       if (results.length < BATCH_SIZE) {
+        console.log(`[DownloadLogsJob] Last batch (${results.length} < ${BATCH_SIZE}), finishing export`)
         break
       }
     }
 
+    console.log(`[DownloadLogsJob] Finalizing stream...`)
     writeStream.push(null) // End the stream
 
+    console.log(`[DownloadLogsJob] Marking export as ready...`)
     await markExportReady({ export: exportRecord }).then((r) => r.unwrap())
 
+    console.log(`[DownloadLogsJob] Export completed successfully! Total records: ${totalProcessed}, batches: ${batchCount}`)
     return { totalProcessed }
+  } catch (error) {
+    console.error(`[DownloadLogsJob] Error during export:`, error)
+    throw error
   } finally {
+    console.log(`[DownloadLogsJob] Cleaning up cursor state...`)
     await cursorState.cleanup()
+    console.log(`[DownloadLogsJob] Cleanup completed`)
   }
 }
