@@ -152,17 +152,19 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
         ref={ref}
         className='table-auto'
         externalFooter={
-          <LinkableTablePaginationFooter
-            pagination={buildPagination({
-              baseUrl: pagination?.baseUrl ?? '',
-              count: pagination?.count ?? 0,
-              queryParams: queryParamsObject,
-              encodeQueryParams: false,
-              paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
-              page: Number(pagination?.page),
-              pageSize: Number(pagination?.pageSize),
-            })}
-          />
+          pagination ? (
+            <LinkableTablePaginationFooter
+              pagination={buildPagination({
+                baseUrl: pagination.baseUrl ?? '',
+                count: pagination.count ?? 0,
+                queryParams: queryParamsObject,
+                encodeQueryParams: false,
+                paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
+                page: Number(pagination.page),
+                pageSize: Number(pagination.pageSize),
+              })}
+            />
+          ) : null
         }
       >
         <TableHeader className='sticky top-0 z-10'>
