@@ -96,6 +96,7 @@
     "./molecules/TruncatedTooltip": "./src/ds/molecules/TruncatedTooltip/index.tsx",
     "./molecules/TrippleThemeToggle": "./src/ds/molecules/TrippleThemeToggle/index.tsx",
     "./molecules/ClickToCopy": "./src/ds/molecules/ClickToCopy/index.tsx",
+    "./molecules/DynamicBot": "./src/ds/molecules/DynamicBot/index.tsx",
     "./organisms/ClickToCopyUuid": "./src/ds/organisms/ClickToCopyUuid/index.tsx",
     "./tokens": "./src/ds/tokens/index.ts",
     "./providers": "./src/providers/index.ts",

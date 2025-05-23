@@ -158,6 +158,7 @@ export default {
           '--tw-prose-headings': 'hsl(var(--foreground))',
           '--tw-prose-links': 'hsl(var(--accent-foreground))',
           '--tw-prose-border': 'hsl(var(--border))',
+          '--tw-prose-pre-bg': 'hsl(var(--background-code))',
         },
       })
     },

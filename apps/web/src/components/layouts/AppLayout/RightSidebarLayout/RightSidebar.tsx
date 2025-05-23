@@ -5,7 +5,7 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { TripleThemeToggle } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
-import { forwardRef } from 'react'
+import { forwardRef, useCallback } from 'react'
 import { IntercomTrigger } from '$/components/IntercomSupportChat/IntercomTrigger'
 
 const SidebarButton = forwardRef<
@@ -39,12 +39,31 @@ const SidebarButton = forwardRef<
 export function RightSidebar({
   items,
   selected,
-  onSelect,
+  setSelected,
 }: {
   items: RightSidebarItem[]
   selected: RightSidebarTabs | undefined
-  onSelect: ReactStateDispatch<RightSidebarTabs | undefined>
+  setSelected: ReactStateDispatch<RightSidebarTabs | undefined>
 }) {
+  const selectItem = useCallback(
+    (item: RightSidebarItem) => {
+      items
+        .filter((i) => i.value === selected)
+        .forEach((i) => {
+          i.onUnselect?.()
+        })
+
+      if (selected === item.value) {
+        setSelected(undefined)
+        return
+      }
+
+      setSelected(item.value)
+      item.onSelect?.()
+    },
+    [setSelected, selected, items],
+  )
+
   return (
     <div
       className={cn('flex flex-row w-full h-full overflow-hidden', {
@@ -65,17 +84,12 @@ export function RightSidebar({
                   <SidebarButton
                     iconName={item.icon}
                     isSelected={selected === item.value}
-                    onClick={() =>
-                      onSelect(selected === item.value ? undefined : item.value)
-                    }
+                    onClick={() => selectItem(item)}
                   />
                 ) : (
                   item.icon({
                     isSelected: selected === item.value,
-                    onClick: () =>
-                      onSelect(
-                        selected === item.value ? undefined : item.value,
-                      ),
+                    onClick: () => selectItem(item),
                   })
                 )
               }

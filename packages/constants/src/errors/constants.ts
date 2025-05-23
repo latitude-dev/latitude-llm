@@ -7,6 +7,7 @@ export enum LatitudeErrorCodes {
   NotFoundError = 'NotFoundError',
   ConflictError = 'ConflictError',
   UnprocessableEntityError = 'UnprocessableEntityError',
+  NotImplementedError = 'NotImplementedError',
 }
 
 export type LatitudeErrorDetails = {
