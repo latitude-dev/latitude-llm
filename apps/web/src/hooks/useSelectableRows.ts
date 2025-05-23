@@ -156,6 +156,8 @@ export function useSelectableRows<T extends string | number>({
   return useMemo(
     () => ({
       selectedCount,
+      selectionMode: selectionState.mode,
+      excludedIds: selectionState.excludedIds,
       getSelectedRowIds,
       toggleRow,
       toggleAll,
@@ -165,6 +167,8 @@ export function useSelectableRows<T extends string | number>({
     }),
     [
       selectedCount,
+      selectionState.mode,
+      selectionState.excludedIds,
       getSelectedRowIds,
       toggleRow,
       toggleAll,

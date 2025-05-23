@@ -16,7 +16,8 @@ import { Readable } from 'stream'
 import { findWorkspaceFromDocument } from '../../../data-access'
 import { NotFoundError } from '../../../lib/errors'
 import { buildProviderLogResponse } from '../../../services/providerLogs'
-import { findOrCreateExport, updateExport } from '../../../services/exports'
+import { findOrCreateExport } from '../../../services/exports'
+import { markExportReady } from '../../../services/exports/markExportReady'
 
 const BATCH_SIZE = 1000
 
@@ -206,10 +207,7 @@ export const downloadLogsJob = async (
 
     writeStream.push(null) // End the stream
 
-    await updateExport({
-      export: exportRecord,
-      readyAt: new Date(),
-    }).then((r) => r.unwrap())
+    await markExportReady({ export: exportRecord }).then((r) => r.unwrap())
 
     return { totalProcessed }
   } finally {

@@ -9,6 +9,7 @@ const jobMappings = {
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   processScheduledTriggerJob: jobs.processScheduledTriggerJob,
   runEmailTriggerJob: jobs.runEmailTriggerJob,
+  downloadLogsJob: jobs.downloadLogsJob,
 }
 
 export function startDefaultWorker() {

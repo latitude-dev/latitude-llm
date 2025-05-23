@@ -4,6 +4,7 @@ import { Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import { eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
+import Transaction from '../../lib/Transaction'
 
 export async function findOrCreateExport({
   token,
@@ -49,15 +50,18 @@ export async function findOrCreateExport({
   }
 }
 
-export async function updateExport({
-  export: exportRecord,
-  readyAt,
-}: {
-  export: typeof exports.$inferSelect
-  readyAt: Date
-}) {
-  try {
-    const [updatedExport] = await database
+export async function updateExport(
+  {
+    export: exportRecord,
+    readyAt,
+  }: {
+    export: typeof exports.$inferSelect
+    readyAt: Date
+  },
+  db = database,
+) {
+  return Transaction.call(async (tx) => {
+    const [updatedExport] = await tx
       .update(exports)
       .set({
         readyAt,
@@ -71,7 +75,5 @@ export async function updateExport({
     }
 
     return Result.ok(updatedExport)
-  } catch (error) {
-    return Result.error(error as Error)
-  }
+  }, db)
 }
