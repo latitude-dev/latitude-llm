@@ -183,6 +183,10 @@
       "pages": ["promptl/advanced/chains", "promptl/advanced/snippets"]
     },
     {
+      "group": "SDK examples",
+      "pages": ["/examples/sdk/run-prompt"]
+    },
+    {
       "group": "Custom Tools",
       "pages": ["/examples/custom-tools/weather-chatbot"]
     },
