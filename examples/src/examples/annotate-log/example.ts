@@ -9,9 +9,6 @@ async function run() {
   const sdk = new Latitude(process.env.LATITUDE_API_KEY, {
     projectId: Number(process.env.PROJECT_ID),
     versionUuid: 'live',
-
-    // Uncomment this to use a local gateway
-    // __internal: { gateway: getLocalGateway() },
   })
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -38,7 +35,7 @@ async function run() {
   })
 
   // Score from 1 to 5 because the evaluation we created is of type `
-  // More info: https://docs.latitude.so/guides/evaluations/manual_evaluations
+  // More info: https://docs.latitude.so/guides/evaluations/humans-in-the-loop
   const result = await sdk.evaluations.annotate(uuid, 5, EVALUATION_UUID, {
     reason: 'This is a good joke!',
   })

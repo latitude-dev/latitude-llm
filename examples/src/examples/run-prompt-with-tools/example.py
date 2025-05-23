@@ -16,10 +16,7 @@ from latitude_sdk import (
 async def get_weather(arguments: dict[str, Any], details: OnToolCallDetails) -> str:
     pprint(details)
 
-    # You can pause the execution of the tools if you need it, and resume the conversation
-    # later, returning the tool results in the sdk.prompts.chat method
-    # return details.pause_execution()
-
+    # Simulate a call to a weather API
     return "2°C"
 
 
@@ -28,8 +25,6 @@ async def run():
     sdk_options = LatitudeOptions(
         project_id=int(os.getenv("PROJECT_ID")),
         version_uuid="live",
-        # Uncomment to use the local gateway
-        # internal=InternalOptions(gateway=get_local_gateway()),
     )
 
     sdk = Latitude(api_key, sdk_options)

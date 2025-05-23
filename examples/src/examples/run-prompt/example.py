@@ -9,8 +9,6 @@ async def run():
     sdk_options = LatitudeOptions(
         project_id=int(os.getenv("PROJECT_ID")),
         version_uuid="live",
-        # Uncomment to use the local gateway
-        # internal=InternalOptions(gateway=get_local_gateway()),
     )
     sdk = Latitude(api_key, sdk_options)
     try:
@@ -24,10 +22,6 @@ async def run():
                     "tone": "Informal",
                     "word_count": 20,
                 },
-                # To get streaming you can use `on_event`
-                # on_event=lambda event: print(event, "\n" * 2),
-                # To get the final result you can use `on_finished`
-                # on_finished=lambda result: print(result, "\n" * 2),
                 on_error=lambda error: print(error, "\n" * 2),
                 stream=True,
             ),
@@ -37,7 +31,6 @@ async def run():
         return
 
     if result:
-        # Also you can wait for the result
         print(result.response.text, "\n" * 2)
 
 

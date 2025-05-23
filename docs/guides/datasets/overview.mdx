@@ -3,7 +3,7 @@ title: Overview
 description: Learn how to create, manage, and utilize datasets for batch testing and evaluation.
 ---
 
-Datasets in Latitude are collections of data, typically stored as CSV files, used primarily for running prompt evaluations in batch mode. They allow you to test your prompts against a consistent set of inputs and expected outputs.
+Datasets in Latitude are collections of data, used primarily for running prompt experiments in the [playground](/guides/prompt-manager/playground) or in the context of [an evaluation](/guides/evaluations/running-evaluations#running-evaluations-on-datasets-run-experiment). They allow you to test your prompts against a consistent set of inputs and expected outputs.
 
 ## What is a Dataset?
 
@@ -13,6 +13,7 @@ A dataset consists of rows and columns, where:
 - **Output/Label Columns (Optional)**: Contain the ground truth or expected outputs for specific inputs (e.g., `expected_sentiment`, `ideal_summary`). These are required for evaluations like Exact Match or Semantic Similarity.
 
 Each row represents a single test case for your prompt.
+![Golden NPS Dataset Example](/assets/golden-nps-dataset.png)
 
 ## Creating Datasets
 
@@ -36,13 +37,13 @@ This is the most common method for bringing existing test data into Latitude.
 
 Latitude can use an AI model to generate synthetic datasets based on your specifications, useful for quickly creating test cases or exploring variations.
 
-1.  Navigate to the "Datasets" section.
-2.  Click "Generate Dataset".
+1.  Navigate to the [Datasets](https://app.latitude.so/datasets) section.
+2.  Click **Generate Dataset**.
 3.  Describe the data you need:
     - Specify the desired columns (e.g., `user_query`, `expected_category`).
     - Provide instructions on the type of data for each column (e.g., "Generate realistic user support questions", "Assign a category from [Billing, Technical, General]").
     - Indicate the number of rows to generate.
-      ![](/assets/generate-dataset.png)
+      ![](/assets/generate_dataset.png)
 4.  Click "Generate Dataset".
 
 <Note>
@@ -55,9 +56,9 @@ Latitude can use an AI model to generate synthetic datasets based on your specif
 
 You can create a new dataset directly from existing production logs, which is excellent for evaluating prompts against real-world interactions.
 
-1.  Navigate to the "Logs" section.
+1.  Navigate to the **Logs** section of one of your prompts.
 2.  Select the logs you want to include in the dataset.
-3.  Click the "Save logs to Dataset" button (or similar option).
+3.  Click the **Save logs to Dataset** button (or similar option).
     ![](/assets/save-logs-to-dataset.png)
 4.  Choose in the form whether to create a new dataset or save the logs to an existing dataset.
 5.  Confirm your selection
@@ -77,7 +78,7 @@ Once created, you can manage your datasets from the main "Datasets" page:
 The primary use of datasets is to run evaluations in batch mode:
 
 1.  Go to the specific evaluation you want to run (under a prompt's "Evaluations" tab).
-2.  Initiate a [batch evaluation run](/guides/evaluations/running-evaluations#running-evaluations-on-datasets-batch-mode).
+2.  Initiate an [Experiment in the evaluation](/guides/evaluations/running-evaluations#running-evaluations-on-datasets-batch-mode).
 3.  Select the dataset you want to use.
 4.  If the evaluation requires ground truth (e.g., Exact Match), map the evaluation's expected output requirement to the relevant column in your dataset (e.g., link `expected_output` to the `ideal_summary` column).
 

@@ -16,27 +16,14 @@ MCP (Model Context Protocol) is a standardized way for AI platforms like Latitud
 
 ## Setting Up an MCP Integration
 
-The exact setup process depends on the specific MCP server you want to integrate.
+The exact setup process depends on the specific MCP server you want to integrate. First thing is to go to [settings](https://app.latitude.so/settings) and scroll down **Integrations** section.
 
-### Option 1: Using Pre-built MCP Servers
+At the moment Latitude had some hosted MCP servers available. For example if you click on **Slack** you will see the following:
+![Slack MCP Server](/assets/slack-mcp-creation-modal.png)
 
-Several open-source or third-party MCP servers might exist for common tools (check community resources or the specific tool's integrations).
+You can also point to a third-party MCP server by providing the URL of the server choosing **Custom MCP server**
+![Custom MCP Server](/assets/third-party-mcp-server.png)
 
-1.  **Deploy the MCP Server**: Follow the server's instructions to deploy it (e.g., as a container, serverless function).
-2.  **Configure in Latitude**: In your Latitude project settings (or potentially self-hosted configuration), add the MCP server's URL and any required authentication details.
-3.  **Enable Tools in Prompts**: In your Latitude prompts, [enable the specific tools](/guides/prompt-manager/tools) provided by that MCP server in the `tools` configuration block.
-
-### Option 2: Building a Custom MCP Server
-
-If you need to connect to a custom internal tool or a service without a pre-built MCP server, you can build your own.
-
-1.  **Choose a Framework**: Use any web server framework (e.g., Node.js/Express, Python/Flask, Go/Echo).
-2.  **Implement MCP Endpoints**: Implement the required HTTP endpoints specified by the MCP protocol standard (details typically found in Latitude's advanced/developer documentation or community resources).
-    - Handle incoming tool call requests from Latitude.
-    - Parse tool names and arguments.
-    - Interact with your target third-party service/API.
-    - Format and return the results according to the MCP specification.
-3.  **Deploy and Configure**: Deploy your custom server and configure it in Latitude as described in Option 1.
 
 ## Example Use Cases
 
@@ -47,7 +34,7 @@ If you need to connect to a custom internal tool or a service without a pre-buil
 
 ## Self-Hosting MCP Integrations
 
-If you are [self-hosting Latitude](/guides/self-hosted/overview), you will also need to deploy and manage any required MCP servers within your own infrastructure and configure Latitude to communicate with them.
+If you are [self-hosting Latitude](/guides/self-hosted/production-setup), you will also need to deploy and manage any required MCP servers within your own infrastructure and configure Latitude to communicate with them.
 
 ## Next Steps
 

@@ -13,8 +13,6 @@ async def run():
     sdk_options = LatitudeOptions(
         project_id=int(os.getenv("PROJECT_ID")),
         version_uuid="live",
-        # Uncomment to use the local gateway
-        # internal=InternalOptions(gateway=get_local_gateway()),
     )
     sdk = Latitude(api_key, sdk_options)
 
@@ -32,7 +30,7 @@ async def run():
 
         return response.choices[0].message.model_dump()
 
-    prompt = await sdk.prompts.get("run-chain/example")
+    prompt = await sdk.prompts.get("render-chain/example")
 
     # Here we render the chain and each step will be sent to OpenAI
     result = await sdk.prompts.render_chain(
