@@ -394,13 +394,18 @@ export type DocumentVersionDto = DocumentVersion & {
   commitUuid: string
 }
 
-export type DocumentLogFilterOptions = {
-  commitIds: number[]
-  logSources: LogSources[]
-  createdAt: { from: Date | undefined; to?: Date } | undefined
-  customIdentifier: string | undefined
-  experimentId: number | undefined
-}
+export const documentLogFilterOptionsSchema = z.object({
+  commitIds: z.array(z.number()),
+  logSources: z.array(z.nativeEnum(LogSources)),
+  createdAt: z
+    .object({ from: z.date().optional(), to: z.date().optional() })
+    .optional(),
+  customIdentifier: z.string().optional(),
+  experimentId: z.number().optional(),
+})
+export type DocumentLogFilterOptions = z.infer<
+  typeof documentLogFilterOptionsSchema
+>
 
 export const RELATIVE_DATES = {
   today: 'today',

@@ -66,3 +66,6 @@ export * from './models/mcpServers'
 
 export * from './models/webhooks'
 export * from './models/workspaceOnboarding'
+
+// Export tables
+export * from './models/exports'
