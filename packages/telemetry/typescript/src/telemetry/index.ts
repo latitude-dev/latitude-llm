@@ -1,20 +1,14 @@
 import {
-  ATTR_LATITUDE_DOCUMENT_TYPE,
-  ATTR_LATITUDE_DOCUMENT_UUID,
-  ATTR_LATITUDE_EXPERIMENT_UUID,
   ATTR_LATITUDE_EXTERNAL_ID,
   ATTR_LATITUDE_HTTP_REQUEST,
   ATTR_LATITUDE_HTTP_RESPONSE,
-  ATTR_LATITUDE_PROMPT_HASH,
   ATTR_LATITUDE_SEGMENT_ID,
-  ATTR_LATITUDE_SEGMENT_NAME,
-  ATTR_LATITUDE_SEGMENT_PARENT_ID,
-  ATTR_LATITUDE_SEGMENT_TYPE,
+  ATTR_LATITUDE_SEGMENTS,
   ATTR_LATITUDE_SOURCE,
   ATTR_LATITUDE_TOOL_ARGUMENTS,
   ATTR_LATITUDE_TOOL_RESULT,
   ATTR_LATITUDE_TYPE,
-  ATTR_LATITUDE_VERSION_UUID,
+  SegmentBaggage,
   SegmentType,
   SpanSource,
   SpanType,
@@ -380,14 +374,37 @@ export class LatitudeTelemetry {
   private segment<F extends () => ReturnType<F>>(
     name: string,
     type: SegmentType,
-    { externalId, attributes }: SegmentOptions,
+    { externalId, attributes, baggage }: SegmentOptions,
     fn: F,
   ) {
-    const parent_id = propagation
+    const segmentsEntry = propagation
       .getActiveBaggage()
-      ?.getEntry(ATTR_LATITUDE_SEGMENT_ID)
+      ?.getEntry(ATTR_LATITUDE_SEGMENTS)?.value
 
-    const baggage = propagation.createBaggage({
+    let segments: SegmentBaggage<any>[] = []
+    if (segmentsEntry) {
+      try {
+        segments = JSON.parse(segmentsEntry)
+      } catch (error) {
+        segments = []
+      }
+    }
+
+    const parentId = propagation
+      .getActiveBaggage()
+      ?.getEntry(ATTR_LATITUDE_SEGMENT_ID)?.value
+
+    const segmentId = this.generator.generateSpanId()
+    segments.push({
+      ...baggage,
+      id: segmentId,
+      ...(segments.at(-1)?.id === parentId && { parentId }),
+      name: name,
+      type: type,
+    })
+
+    const payload = propagation.createBaggage({
+      // Note: this is not baggage, just a way to pass attributes down more easily
       ...(externalId && { [ATTR_LATITUDE_EXTERNAL_ID]: { value: externalId } }),
       [ATTR_LATITUDE_SOURCE]: { value: SpanSource.API },
       ...Object.fromEntries(
@@ -396,13 +413,12 @@ export class LatitudeTelemetry {
           { value: String(value) },
         ]),
       ),
-      [ATTR_LATITUDE_SEGMENT_ID]: { value: this.generator.generateSpanId() },
-      ...(parent_id && { [ATTR_LATITUDE_SEGMENT_PARENT_ID]: parent_id }),
-      [ATTR_LATITUDE_SEGMENT_NAME]: { value: name },
-      [ATTR_LATITUDE_SEGMENT_TYPE]: { value: type },
+      // Segments baggage
+      [ATTR_LATITUDE_SEGMENT_ID]: { value: segmentId },
+      [ATTR_LATITUDE_SEGMENTS]: { value: JSON.stringify(segments) },
     })
 
-    return context.with(propagation.setBaggage(context.active(), baggage), fn)
+    return context.with(propagation.setBaggage(context.active(), payload), fn)
   }
 
   document<F extends () => ReturnType<F>>(
@@ -410,6 +426,7 @@ export class LatitudeTelemetry {
       name,
       externalId,
       attributes,
+      baggage,
       versionUuid,
       documentUuid,
       documentType,
@@ -418,33 +435,31 @@ export class LatitudeTelemetry {
     }: DocumentSegmentOptions,
     fn: F,
   ) {
-    attributes = {
-      ...(attributes || {}),
-      [ATTR_LATITUDE_VERSION_UUID]: versionUuid,
-      [ATTR_LATITUDE_DOCUMENT_UUID]: documentUuid,
-      [ATTR_LATITUDE_DOCUMENT_TYPE]: documentType,
-      ...(experimentUuid && {
-        [ATTR_LATITUDE_EXPERIMENT_UUID]: experimentUuid,
-      }),
-      [ATTR_LATITUDE_PROMPT_HASH]: promptHash,
+    baggage = {
+      ...(baggage || {}),
+      versionUuid,
+      documentUuid,
+      documentType,
+      ...(experimentUuid && { experimentUuid }),
+      promptHash,
     }
 
     return this.segment(
       name || 'Document',
       SegmentType.Document,
-      { externalId, attributes },
+      { externalId, attributes, baggage },
       fn,
     )
   }
 
   step<F extends () => ReturnType<F>>(
-    { name, externalId, attributes }: SegmentOptions,
+    { name, externalId, attributes, baggage }: SegmentOptions,
     fn: F,
   ) {
     return this.segment(
       name || 'Step',
       SegmentType.Step,
-      { externalId, attributes },
+      { externalId, attributes, baggage },
       fn,
     )
   }

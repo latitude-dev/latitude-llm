@@ -1,6 +1,7 @@
 import {
+  BaseSegmentBaggage,
   BaseSpanMetadata,
-  DocumentType,
+  DocumentSegmentBaggage,
   HttpSpanMetadata,
   ToolSpanMetadata,
 } from '@latitude-data/constants'
@@ -85,12 +86,9 @@ export type ToolSpanOptions = SpanOptions &
 export type HttpSpanOptions = SpanOptions &
   Omit<HttpSpanMetadata, keyof BaseSpanMetadata>
 
-export type SegmentOptions = SpanOptions & {}
-
-export type DocumentSegmentOptions = SegmentOptions & {
-  versionUuid: string
-  documentUuid: string
-  documentType: DocumentType
-  experimentUuid?: string
-  promptHash: string
+export type SegmentOptions = SpanOptions & {
+  baggage?: Record<string, unknown>
 }
+
+export type DocumentSegmentOptions = SegmentOptions &
+  Omit<DocumentSegmentBaggage, keyof BaseSegmentBaggage>

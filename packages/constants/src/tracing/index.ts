@@ -21,23 +21,14 @@ export const ATTR_LATITUDE_EXTERNAL_ID = `${ATTR_LATITUDE}.external_id`
 export const ATTR_LATITUDE_SOURCE = `${ATTR_LATITUDE}.source`
 export const ATTR_LATITUDE_TYPE = `${ATTR_LATITUDE}.type`
 
-export const ATTR_LATITUDE_VERSION_UUID = `${ATTR_LATITUDE}.version_uuid`
-export const ATTR_LATITUDE_DOCUMENT_UUID = `${ATTR_LATITUDE}.document_uuid`
-export const ATTR_LATITUDE_DOCUMENT_TYPE = `${ATTR_LATITUDE}.document_type`
-export const ATTR_LATITUDE_EXPERIMENT_UUID = `${ATTR_LATITUDE}.experiment_uuid`
-export const ATTR_LATITUDE_PROMPT_HASH = `${ATTR_LATITUDE}.prompt_hash`
-
 export const ATTR_LATITUDE_TOOL_ARGUMENTS = `${ATTR_LATITUDE}.tool.arguments`
 export const ATTR_LATITUDE_TOOL_RESULT = `${ATTR_LATITUDE}.tool.result`
 
 export const ATTR_LATITUDE_HTTP_REQUEST = `${ATTR_LATITUDE}.http.request`
 export const ATTR_LATITUDE_HTTP_RESPONSE = `${ATTR_LATITUDE}.http.response`
 
-export const ATTR_LATITUDE_SEGMENT = `${ATTR_LATITUDE}.segment`
-export const ATTR_LATITUDE_SEGMENT_ID = `${ATTR_LATITUDE_SEGMENT}.id`
-export const ATTR_LATITUDE_SEGMENT_PARENT_ID = `${ATTR_LATITUDE_SEGMENT}.parent_id`
-export const ATTR_LATITUDE_SEGMENT_NAME = `${ATTR_LATITUDE_SEGMENT}.name`
-export const ATTR_LATITUDE_SEGMENT_TYPE = `${ATTR_LATITUDE_SEGMENT}.type`
+export const ATTR_LATITUDE_SEGMENT_ID = `${ATTR_LATITUDE}.segment_id`
+export const ATTR_LATITUDE_SEGMENTS = `${ATTR_LATITUDE}.segments`
 
 /* Note: non-standard OpenTelemetry semantic conventions used in other systems */
 

@@ -48,6 +48,11 @@ type BaseSegment<T extends SegmentType = SegmentType> = {
   updatedAt: Date
 }
 
+export type BaseSegmentBaggage<T extends SegmentType = SegmentType> = Pick<
+  BaseSegment<T>,
+  'id' | 'parentId' | 'name' | 'type'
+>
+
 type StepSegment = BaseSegment<SegmentType.Step> & {
   provider: string // Provider of the first span that created this segment
   model: string // Model of the first span that created this segment
@@ -64,10 +69,26 @@ type DocumentSegment = BaseSegment<SegmentType.Document> &
     promptHash: string // Document content hash of the first span that created this segment
   }
 
+export type DocumentSegmentBaggage = BaseSegmentBaggage<SegmentType.Document> &
+  Pick<
+    DocumentSegment,
+    | 'versionUuid'
+    | 'documentUuid'
+    | 'documentType'
+    | 'experimentUuid'
+    | 'promptHash'
+  >
+
 // prettier-ignore
 export type Segment<T extends SegmentType = SegmentType> =
   T extends SegmentType.Document ? DocumentSegment :
   T extends SegmentType.Step ? StepSegment :
+  never;
+
+// prettier-ignore
+export type SegmentBaggage<T extends SegmentType = SegmentType> =
+  T extends SegmentType.Document ? DocumentSegmentBaggage :
+  T extends SegmentType.Step ? BaseSegmentBaggage<T> :
   never;
 
 export type SegmentWithDetails<T extends SegmentType = SegmentType> =
