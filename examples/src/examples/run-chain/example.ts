@@ -1,5 +1,4 @@
 import { Latitude, Adapters, Message } from '@latitude-data/sdk'
-import { getLocalGateway } from '@/utils/javascript'
 import OpenAI from 'openai'
 
 async function run() {

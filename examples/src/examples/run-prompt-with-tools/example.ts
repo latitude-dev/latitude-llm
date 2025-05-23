@@ -1,5 +1,4 @@
 import { Latitude } from '@latitude-data/sdk'
-import { getLocalGateway } from '@/utils/javascript'
 
 // You can type the tools you are using
 type Tools = { get_weather: { location: string } }

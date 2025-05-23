@@ -1,5 +1,4 @@
 import { Latitude } from '@latitude-data/sdk'
-import { getLocalGateway } from '@/utils/javascript'
 
 async function run() {
   const sdk = new Latitude(process.env.LATITUDE_API_KEY, {
