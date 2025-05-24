@@ -130,7 +130,6 @@ export class LatitudeTelemetry {
     const openai = this.options.instrumentations?.openai
     if (openai) {
       const instrumentation = new OpenAIInstrumentation({ enrichTokens: true })
-      // @ts-expect-error todo: fix openai module type incompatibility
       instrumentation.manuallyInstrument(openai)
       instrumentations.push(instrumentation)
     }
@@ -347,33 +346,33 @@ export class LatitudeTelemetry {
     { name, externalId, attributes, baggage }: SegmentOptions,
     fn: F,
   ) {
-    const segmentsEntry = propagation
-      .getActiveBaggage()
-      ?.getEntry(ATTR_LATITUDE_SEGMENTS)?.value
+    const parentBaggage = Object.fromEntries(
+      propagation.getActiveBaggage()?.getAllEntries() || [],
+    )
 
     let segments: SegmentBaggage<any>[] = []
-    if (segmentsEntry) {
+    if (ATTR_LATITUDE_SEGMENTS in parentBaggage) {
       try {
-        segments = JSON.parse(segmentsEntry)
+        segments = JSON.parse(parentBaggage[ATTR_LATITUDE_SEGMENTS].value)
       } catch (error) {
         segments = []
       }
     }
 
-    const parentId = propagation
-      .getActiveBaggage()
-      ?.getEntry(ATTR_LATITUDE_SEGMENT_ID)?.value
-
+    const parentId = parentBaggage[ATTR_LATITUDE_SEGMENT_ID]?.value
     const segmentId = this.generator.generateSpanId()
+
     segments.push({
       ...baggage,
       id: segmentId,
-      ...(segments.at(-1)?.id === parentId && { parentId }),
+      ...(parentId && { parentId }),
       ...(name && { name }),
       type: type,
     })
 
     const payload = propagation.createBaggage({
+      // Cascade parent baggage
+      ...parentBaggage,
       // Note: this is not baggage, just a way to pass attributes down more easily
       ...(externalId && { [ATTR_LATITUDE_EXTERNAL_ID]: { value: externalId } }),
       [ATTR_LATITUDE_SOURCE]: { value: SpanSource.API },
@@ -383,7 +382,7 @@ export class LatitudeTelemetry {
           { value: String(value) },
         ]),
       ),
-      // Segments baggage
+      // Current segment baggage
       [ATTR_LATITUDE_SEGMENT_ID]: { value: segmentId },
       [ATTR_LATITUDE_SEGMENTS]: { value: JSON.stringify(segments) },
     })
