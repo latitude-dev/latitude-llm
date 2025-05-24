@@ -45,6 +45,7 @@ type BaseSegment<T extends SegmentType = SegmentType> = {
   statusMessage?: string // Status message of the last span in the segment (errored spans have priority)
   duration: number // Elapsed time between the first and last span in the segment
   startedAt: Date
+  createdAt: Date
   updatedAt: Date
 }
 
@@ -55,28 +56,27 @@ export type BaseSegmentBaggage<T extends SegmentType = SegmentType> = Pick<
   Partial<Pick<BaseSegment<T>, 'name'>>
 
 type StepSegment = BaseSegment<SegmentType.Step> & {
-  provider: string // Provider of the first span that created this segment
-  model: string // Model of the first span that created this segment
+  provider: string // Provider of the current document or first span that created this segment
+  model: string // Model of the current document or first span that created this segment
   tokens: number // Aggregated tokens of all spans in the segment
   cost: number // Aggregated cost of all spans in the segment
 }
 
 type DocumentSegment = BaseSegment<SegmentType.Document> &
   Omit<StepSegment, keyof BaseSegment<SegmentType.Step>> & {
-    versionUuid: string // Commit uuid of the first span that created this segment
-    documentUuid: string // Document uuid of the first span that created this segment. When running an LLM evaluation this is the evaluation uuid
-    documentType: DocumentType // Document type of the first span that created this segment
-    experimentUuid?: string // Experiment uuid of the first span that created this segment
-    promptHash: string // Document content hash of the first span that created this segment
+    commitUuid: string
+    documentUuid: string // When running an LLM evaluation this is the evaluation uuid
+    documentType: DocumentType
+    experimentUuid?: string
+    promptHash: string
   }
 
 export type DocumentSegmentBaggage = BaseSegmentBaggage<SegmentType.Document> &
   Pick<DocumentSegment, 'documentUuid'> &
   Partial<
-    Pick<
-      DocumentSegment,
-      'versionUuid' | 'documentType' | 'experimentUuid' | 'promptHash'
-    >
+    Pick<DocumentSegment, 'documentType' | 'experimentUuid' | 'promptHash'> & {
+      versionUuid: string // Alias for commitUuid
+    }
   >
 
 // prettier-ignore

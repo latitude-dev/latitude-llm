@@ -350,7 +350,7 @@ export class LatitudeTelemetry {
       propagation.getActiveBaggage()?.getAllEntries() || [],
     )
 
-    let segments: SegmentBaggage<any>[] = []
+    let segments: SegmentBaggage[] = []
     if (ATTR_LATITUDE_SEGMENTS in parentBaggage) {
       try {
         segments = JSON.parse(parentBaggage[ATTR_LATITUDE_SEGMENTS].value)
@@ -368,7 +368,7 @@ export class LatitudeTelemetry {
       ...(parentId && { parentId }),
       ...(name && { name }),
       type: type,
-    })
+    } as SegmentBaggage)
 
     const payload = propagation.createBaggage({
       // Cascade parent baggage

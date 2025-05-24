@@ -113,6 +113,8 @@ export type Span<T extends SpanType = SpanType> = {
   duration: number
   startedAt: Date
   endedAt: Date
+  createdAt: Date
+  updatedAt: Date
 }
 
 export type SpanWithDetails<T extends SpanType = SpanType> = Span<T> & {
