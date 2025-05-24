@@ -38,6 +38,7 @@ export * from './models/providerApiKeys'
 
 // Observability tables
 export * from './models/spans'
+export * from './models/segments'
 
 // Log tables
 export * from './models/documentLogs'

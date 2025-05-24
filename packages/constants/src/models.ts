@@ -18,6 +18,7 @@ export type DocumentLog = {
   experimentId: number | null
 }
 
+// TODO(evalsv2): Remove
 export enum EvaluationResultableType {
   Boolean = 'evaluation_resultable_booleans',
   Text = 'evaluation_resultable_texts',
