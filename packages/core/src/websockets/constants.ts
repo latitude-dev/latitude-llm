@@ -3,6 +3,7 @@
 // All this can be seen in the browser. If you want something private
 // put in other place.
 
+import type { Message } from '@latitude-data/compiler'
 import {
   Commit,
   DatasetRow,
@@ -101,6 +102,8 @@ export type WebServerToClientEvents = {
     workspaceId: number
     mcpServerId: number
   }) => void
+  latteMessage: (args: { chatUuid: string; message: Message }) => void
+  latteError: (args: { chatUuid: string; error: string }) => void
 }
 
 export type WebClientToServerEvents = {
@@ -145,6 +148,20 @@ export type WorkersClientToServerEvents = {
     data: {
       workspaceId: number
       mcpServerId: number
+    }
+  }) => void
+  latteMessage: (args: {
+    workspaceId: number
+    data: {
+      chatUuid: string
+      message: Message
+    }
+  }) => void
+  latteError: (args: {
+    workspaceId: number
+    data: {
+      chatUuid: string
+      error: string
     }
   }) => void
 }

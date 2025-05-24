@@ -71,6 +71,7 @@ export async function runDocumentAtCommit({
   abortSignal,
   customPrompt,
   experiment,
+  errorableUuid,
 }: {
   workspace: Workspace
   commit: Commit
@@ -81,9 +82,10 @@ export async function runDocumentAtCommit({
   abortSignal?: AbortSignal
   customPrompt?: string
   experiment?: Experiment
+  errorableUuid?: string
 }) {
   const errorableType = ErrorableEntity.DocumentLog
-  const errorableUuid = generateUUIDIdentifier()
+  errorableUuid = errorableUuid ?? generateUUIDIdentifier()
   const providersMap = await buildProvidersMap({
     workspaceId: workspace.id,
   })
