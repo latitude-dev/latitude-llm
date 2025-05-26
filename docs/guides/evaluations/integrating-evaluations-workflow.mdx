@@ -9,7 +9,7 @@ Effective prompt evaluation isn't just about running tests; it's about integrati
 
 - **Identify Key Metrics**: What defines a "good" response for this prompt? (e.g., Accuracy, Helpfulness, Conciseness, Safety, Format Adherence).
 - **Set Acceptance Criteria**: Define minimum acceptable scores or pass rates for your key evaluations.
-- **Choose Evaluation Types**: Select the right mix of [LLM-as-Judge](/guides/evaluations/llm_as_judge_evaluations), [Programmatic Rules](/guides/evaluations/programmatic_rules), and [Manual Evaluations](/guides/evaluations/manual_evaluations) to cover your criteria.
+- **Choose Evaluation Types**: Select the right mix of [LLM-as-Judge](/guides/evaluations/llm-as-judges), [Programmatic Rules](/guides/evaluations/programmatic_rules), and [Manual Evaluations](/guides/evaluations/humans-in-the-loop) to cover your criteria.
 
 ## 2. Establish Golden Datasets
 
@@ -20,12 +20,12 @@ Effective prompt evaluation isn't just about running tests; it's about integrati
 ## 3. Evaluation During Development
 
 - **Playground Testing**: Use the [Playground](/guides/prompt-manager/playground) to get immediate evaluation feedback while iterating on prompts.
-- **Draft Evaluations**: Run batch evaluations on your golden dataset _before_ merging changes from a draft version.
+- **Draft Evaluations**: Run [experiments](/guides/evaluations/running-evaluations#running-evaluations-on-datasets-run-experiment) on your golden dataset _before_ merging changes from a draft version.
 - **Peer Review**: Include evaluation results (especially for failing cases) as part of the review process for prompt changes.
 
 ## 4. Continuous Monitoring in Production
 
-- **Live Evaluations**: Enable [live evaluations](/guides/evaluations/running-evaluations#running-evaluations-continuously-live-mode--ongoing) for critical metrics (e.g., format validation, safety checks, basic relevance) to monitor real-time performance.
+- **Live Evaluations**: Enable [live evaluations](/guides/evaluations/running-evaluations#running-evaluations-continuously-live-mode-%2F-ongoing) for critical metrics (e.g., format validation, safety checks, basic relevance) to monitor real-time performance.
 
 ## 6. Feedback Loops and Improvement
 

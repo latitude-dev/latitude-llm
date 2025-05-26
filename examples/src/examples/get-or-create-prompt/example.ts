@@ -1,5 +1,4 @@
 import { Latitude } from '@latitude-data/sdk'
-import { getLocalGateway } from '@/utils/javascript'
 
 const PROMPT = `
 Answer succinctly yet complete.
@@ -14,9 +13,6 @@ async function run() {
     // versionUuid='live',
     // More info: https://docs.latitude.so/guides/prompt-manager/version-control
     versionUuid: '[CREATE_A_NEW_VERSION_UUID]',
-
-    // Uncomment this to use a local gateway
-    __internal: { gateway: getLocalGateway() },
   })
 
   const response = await sdk.prompts.getOrCreate('create-prompt/example', {

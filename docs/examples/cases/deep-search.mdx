@@ -152,7 +152,7 @@ Here are some improvements we can do to the agent:
  - Make sure the agent can perform multiple iterations of research, and not just one.
  - Fact-check the information it finds, and not just return the first search result.
  - Include citations in the final answer.
-  
+
 ```markdown main {14-43,48}
 ---
 provider: openai
@@ -208,7 +208,7 @@ Now we have a much more robust agent that can handle ambiguous queries, and will
 
 ### Optimizing the agent
 
-This agent works, but now it has too many responsibilities: 
+This agent works, but now it has too many responsibilities:
  - It has to understand the user's request.
  - It has to perform the research.
  - It has to fact-check the information it finds.
@@ -279,10 +279,10 @@ Now, we can modify the original agent to use this new `researcher` agent to perf
 +   - researcher
   temperature: 0.4
   ---
-  
+
   You're an autonomous AI agent. Your task will be to answer any of your user's
   request.
-  
+
   Some questions may be too broad or generic. If you need more specifics or
   additional information in order to correctly fulfill, you must ask the user
   at any time. For example, when asking about a person or place, there may be
@@ -316,11 +316,11 @@ Now, we can modify the original agent to use this new `researcher` agent to perf
 
   Do not perform multiple steps in the same message. Each time, generate only the
   process of a single step as a different independent message.
-  
+
   If a research result is not conclusive enough, you can perform this process over
   again. Start by thinking if you need more information or details, stop the loop
   to ask the user if you need to, and keep doing research and iterations.
-  
+
   You must cite all your sources in the final report.
 
   <user>

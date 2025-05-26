@@ -12,7 +12,7 @@ Human-in-the-Loop (HITL), or Manual Evaluations, involve direct human review and
 3.  **Manual Review**: A team member (or designated reviewer) examines the prompt's input and output within a specific log entry.
 4.  **Feedback Submission**: The reviewer submits their judgment (score, label, text feedback) for that log through:
     - The Latitude Dashboard (Logs or Evaluations section).
-    - Programmatically via the Latitude [API](/guides/api/api-access) or [SDKs](/guides/sdk/typescript) (useful for integrating feedback from end-users or custom review tools).
+    - Programmatically via the Latitude [API](/guides/api/api-access) or [SDKs](/guides/sdk/typescript) (useful for integrating feedback from end-users or custom review tools). You can see a [code example here](/examples/sdk/annotate-log).
 5.  **Result Storage**: The human-provided evaluation result is stored alongside the corresponding log.
 
 <Note>
@@ -62,6 +62,8 @@ Manual evaluations are best for:
 - Pass the `log_id`, the `evaluation_id` (for the specific HITL evaluation), and the evaluation `result` (score, boolean, text).
 - This allows you to build custom review interfaces or pipe in feedback collected directly from your application's users.
 
+Check [how to annotate a log](/examples/sdk/annotate-log). A log is the result of running your prompt. So the person can annotate that result and tell if it was good or bad, or provide a score.
+
 ## Viewing Evaluation Results
 
 Manually submitted results appear alongside other evaluation results:
@@ -71,6 +73,6 @@ Manually submitted results appear alongside other evaluation results:
 
 ## Next Steps
 
-- Learn about [LLM-as-Judge Evaluations](/guides/evaluations/llm_as_judge_evaluations)
+- Learn about [LLM-as-Judge Evaluations](/guides/evaluations/llm-as-judges)
 - Explore [Programmatic Rule Evaluations](/guides/evaluations/programmatic_rules)
 - Understand how to [Run Automated Evaluations](/guides/evaluations/running-evaluations)

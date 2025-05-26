@@ -20,9 +20,6 @@ provider: openai
 model: gpt-4o
 tools:
   - latitude/search # Use a built-in Latitude tool
-  - get_weather # Use a custom tool defined below
-
-  # Custom tool definition (see below)
   - get_weather:
       description: Get the current weather for a specified location.
       parameters: # JSON Schema for parameters
@@ -61,9 +58,6 @@ Define custom tools directly within the configuration block, outside the main `t
 provider: openai
 model: gpt-4o
 tools:
-  - get_stock_price # Enable the custom tool
-
-  # Define the custom tool
   - get_stock_price:
       description: Retrieves the current stock price for a given ticker symbol.
       parameters:

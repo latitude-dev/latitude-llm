@@ -41,7 +41,7 @@ latitude = Latitude(os.getenv("LATITUDE_API_KEY"), LatitudeOptions(
 
 ## Examples
 
-Check out our [cookbook](/guides/cookbook/overview#python) for more examples of how to use the Latitude SDK.
+Check out our [Examples](/examples) section  for more examples of how to use the Latitude SDK.
 
 ## SDK Usage
 
@@ -289,27 +289,17 @@ log = await latitude.logs.create('prompt-path', messages, CreateLogOptions(
 
 ## Evaluations
 
-### Triggering Evaluations
+### Annotate a log
 
-Trigger an evaluation manually for a conversation:
-
-```python
-result = await latitude.evaluations.trigger('conversation-uuid', TriggerEvaluationOptions(
-    # Optional: trigger all or specific evaluations
-    evaluation_uuids=['eval-uuid-1', 'eval-uuid-2'],
-))
-```
-
-### Creating Evaluation Results
-
-Push a result to Latitude manually for an evaluation:
+Push an evaluation result (annotate) to Latitude:
 
 ```python
-result = await latitude.evaluations.create_result('conversation-uuid', 'evaluation-uuid', CreateEvaluationResultOptions(
-    # The result can be a string, boolean, or number
-    result=True,
-    reason='I liked it!',
-))
+result = await sdk.evaluations.annotate(
+    'conversation-uuid',
+    4, # In this case, the score is 4 out of 5
+    "evaluation-uuid",
+    AnnotateEvaluationOptions(reason="I liked it!")
+)
 ```
 
 ## Complete Method Reference

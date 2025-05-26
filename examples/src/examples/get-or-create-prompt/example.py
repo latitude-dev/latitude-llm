@@ -24,8 +24,6 @@ async def run():
         # version_uuid='live',
         # More info: https://docs.latitude.so/guides/prompt-manager/version-control
         version_uuid="[CREATE_A_NEW_VERSION_UUID]",
-        # Uncomment to use the local gateway
-        # internal=InternalOptions(gateway=get_local_gateway()),
     )
 
     sdk = Latitude(api_key, sdk_options)
