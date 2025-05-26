@@ -983,8 +983,8 @@ importers:
         specifier: ^0.11.1
         version: 0.11.6(@opentelemetry/api@1.9.0)
       '@traceloop/instrumentation-azure':
-        specifier: ^0.11.1
-        version: 0.11.6(@opentelemetry/api@1.9.0)
+        specifier: ^0.13.0
+        version: 0.13.0(@opentelemetry/api@1.9.0)
       '@traceloop/instrumentation-bedrock':
         specifier: ^0.11.1
         version: 0.11.6(@opentelemetry/api@1.9.0)
@@ -6247,12 +6247,16 @@ packages:
     resolution: {integrity: sha512-fYfcGYsw6HGJvlUnUSu7VZT/cJENir+Ok0guolFsTkx2gGy+qhtnLPWXLVONxKeD0Bo3lfbxwqQPJdhA6957tg==}
     engines: {node: '>=14'}
 
+  '@traceloop/ai-semantic-conventions@0.13.0':
+    resolution: {integrity: sha512-6aAbaZkeezijSBnsKpVnc+MBXwG+ByDK70gZCexSykkwkwhWSFdVeoXkWUBeLt+STFQWjK5EQE087qkaVC3o+w==}
+    engines: {node: '>=14'}
+
   '@traceloop/instrumentation-anthropic@0.11.6':
     resolution: {integrity: sha512-g6/HjcyLvENfor/U5Ht8pzxUquGD7akn8VIYbIX8Ft2sJ/LfTPeuLn9YMdCP6G9j3HYhPh6lWwR/Gxb0oO6qyA==}
     engines: {node: '>=14'}
 
-  '@traceloop/instrumentation-azure@0.11.6':
-    resolution: {integrity: sha512-EfvlRi5aSw1wQWEmTYROjpNOAnI7HbEq963d1bL9k1EUcnvLPe2h0zCK0hYFLwXmB3RsvF55iwxNZO14Jo+XvQ==}
+  '@traceloop/instrumentation-azure@0.13.0':
+    resolution: {integrity: sha512-QajC6OsBzABgnet7/mXa7kx9WVBuFMdMKgRghg7UqInhrCIpuIkNox2jurVQbDThW1S4vE4Q1/QQBfefhA792w==}
     engines: {node: '>=14'}
 
   '@traceloop/instrumentation-bedrock@0.11.6':
@@ -9706,6 +9710,9 @@ packages:
   import-in-the-middle@1.13.1:
     resolution: {integrity: sha512-k2V9wNm9B+ysuelDTHjI9d5KPc4l8zAZTGqj+pcynvWkypZd857ryzN8jNC7Pg2YZXNMJcHRPpaDyCBbNyVRpA==}
 
+  import-in-the-middle@1.13.2:
+    resolution: {integrity: sha512-Yjp9X7s2eHSXvZYQ0aye6UvwYPrVB5C2k47fuXjFKnYinAByaDZjh4t9MT2wEga9775n6WaIqyHnQhBxYtX2mg==}
+
   imurmurhash@0.1.4:
     resolution: {integrity: sha512-JmXMZ6wuvDmLiHEml9ykzqO6lwFbof0GG4IkcGaENdCRDDmMVnny7s5HsIgHCbaq0w2MyPhDqkhTUgS2LU2PHA==}
     engines: {node: '>=0.8.19'}
@@ -10997,6 +11004,9 @@ packages:
 
   module-details-from-path@1.0.3:
     resolution: {integrity: sha512-ySViT69/76t8VhE1xXHK6Ch4NcDd26gx0MzKXLO+F7NOtnqH68d9zF94nT8ZWSxXh8ELOERsnJO/sWt1xZYw5A==}
+
+  module-details-from-path@1.0.4:
+    resolution: {integrity: sha512-EGWKgxALGMgzvxYF1UyGTy0HXX/2vHLkw6+NvDKW2jypWbHpjQuj4UMcqQWXHERJhVGKikolT06G3bcKe4fi7w==}
 
   monaco-editor@0.50.0:
     resolution: {integrity: sha512-8CclLCmrRRh+sul7C08BmPBP3P8wVWfBHomsTcndxg5NRCEPfu/mc2AGU8k37ajjDVXcXFc12ORAMUkmk+lkFA==}
@@ -17197,7 +17207,7 @@ snapshots:
       nopt: 5.0.0
       npmlog: 5.0.1
       rimraf: 3.0.2
-      semver: 7.7.1
+      semver: 7.7.2
       tar: 6.2.1
     transitivePeerDependencies:
       - encoding
@@ -18211,9 +18221,9 @@ snapshots:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/api-logs': 0.56.0
       '@types/shimmer': 1.2.0
-      import-in-the-middle: 1.13.1
+      import-in-the-middle: 1.13.2
       require-in-the-middle: 7.5.2
-      semver: 7.7.1
+      semver: 7.7.2
       shimmer: 1.2.1
     transitivePeerDependencies:
       - supports-color
@@ -18534,7 +18544,7 @@ snapshots:
       extract-zip: 2.0.1
       progress: 2.0.3
       proxy-agent: 6.5.0
-      semver: 7.7.1
+      semver: 7.7.2
       tar-fs: 3.0.8
       unbzip2-stream: 1.4.3
       yargs: 17.7.2
@@ -20478,6 +20488,10 @@ snapshots:
     dependencies:
       '@opentelemetry/api': 1.9.0
 
+  '@traceloop/ai-semantic-conventions@0.13.0':
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+
   '@traceloop/instrumentation-anthropic@0.11.6(@opentelemetry/api@1.9.0)':
     dependencies:
       '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.9.0)
@@ -20489,12 +20503,12 @@ snapshots:
       - '@opentelemetry/api'
       - supports-color
 
-  '@traceloop/instrumentation-azure@0.11.6(@opentelemetry/api@1.9.0)':
+  '@traceloop/instrumentation-azure@0.13.0(@opentelemetry/api@1.9.0)':
     dependencies:
       '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.9.0)
       '@opentelemetry/instrumentation': 0.56.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/semantic-conventions': 1.30.0
-      '@traceloop/ai-semantic-conventions': 0.11.6
+      '@traceloop/ai-semantic-conventions': 0.13.0
       tslib: 2.8.1
     transitivePeerDependencies:
       - '@opentelemetry/api'
@@ -21057,7 +21071,7 @@ snapshots:
       debug: 4.4.0
       globby: 11.1.0
       is-glob: 4.0.3
-      semver: 7.7.1
+      semver: 7.7.2
       tsutils: 3.21.0(typescript@5.8.2)
     optionalDependencies:
       typescript: 5.8.2
@@ -21072,7 +21086,7 @@ snapshots:
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 9.0.3
-      semver: 7.7.1
+      semver: 7.7.2
       ts-api-utils: 1.4.3(typescript@5.8.2)
     optionalDependencies:
       typescript: 5.8.2
@@ -21104,7 +21118,7 @@ snapshots:
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.8.2)
       eslint: 8.57.1
       eslint-scope: 5.1.1
-      semver: 7.7.1
+      semver: 7.7.2
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -24625,6 +24639,13 @@ snapshots:
       cjs-module-lexer: 1.4.3
       module-details-from-path: 1.0.3
 
+  import-in-the-middle@1.13.2:
+    dependencies:
+      acorn: 8.14.1
+      acorn-import-attributes: 1.9.5(acorn@8.14.1)
+      cjs-module-lexer: 1.4.3
+      module-details-from-path: 1.0.4
+
   imurmurhash@0.1.4: {}
 
   indent-string@4.0.0: {}
@@ -24732,7 +24753,7 @@ snapshots:
 
   is-bun-module@1.3.0:
     dependencies:
-      semver: 7.7.1
+      semver: 7.7.2
 
   is-callable@1.2.7: {}
 
@@ -25082,7 +25103,7 @@ snapshots:
       lodash.isstring: 4.0.1
       lodash.once: 4.1.1
       ms: 2.1.3
-      semver: 7.7.1
+      semver: 7.7.2
 
   jsx-ast-utils@3.3.5:
     dependencies:
@@ -26399,6 +26420,8 @@ snapshots:
 
   module-details-from-path@1.0.3: {}
 
+  module-details-from-path@1.0.4: {}
+
   monaco-editor@0.50.0: {}
 
   mongodb-connection-string-url@3.0.2:
@@ -26656,7 +26679,7 @@ snapshots:
 
   node-abi@3.75.0:
     dependencies:
-      semver: 7.7.1
+      semver: 7.7.2
 
   node-abort-controller@3.1.1: {}
 
@@ -28553,7 +28576,7 @@ snapshots:
       detect-libc: 2.0.3
       node-addon-api: 6.1.0
       prebuild-install: 7.1.3
-      semver: 7.7.1
+      semver: 7.7.2
       simple-get: 4.0.1
       tar-fs: 3.0.8
       tunnel-agent: 0.6.0
@@ -28564,7 +28587,7 @@ snapshots:
     dependencies:
       color: 4.2.3
       detect-libc: 2.0.3
-      semver: 7.7.1
+      semver: 7.7.2
     optionalDependencies:
       '@img/sharp-darwin-arm64': 0.33.5
       '@img/sharp-darwin-x64': 0.33.5
@@ -28782,7 +28805,7 @@ snapshots:
       get-stdin: 9.0.0
       git-hooks-list: 3.2.0
       is-plain-obj: 4.1.0
-      semver: 7.7.1
+      semver: 7.7.2
       sort-object-keys: 1.1.3
       tinyglobby: 0.2.12
 
