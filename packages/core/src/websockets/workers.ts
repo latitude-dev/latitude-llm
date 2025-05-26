@@ -1,35 +1,50 @@
 import { env } from '@latitude-data/env'
-import { io, Socket } from 'socket.io-client'
-
-import { WorkersClientToServerEvents } from './constants'
 import { generateWorkerWebsocketToken } from './utils'
-
-export type WorkerSocket = Socket<{}, WorkersClientToServerEvents>
 
 export class WebsocketClient {
   private static instance: WebsocketClient
-  private websockets: WorkerSocket
+  private token: string | null = null
 
-  static async getSocket(): Promise<WorkerSocket> {
-    if (WebsocketClient.instance) return WebsocketClient.instance.websockets
+  static async getInstance(): Promise<WebsocketClient> {
+    if (WebsocketClient.instance) return WebsocketClient.instance
 
-    const token = await generateWorkerWebsocketToken()
-    const websockets: WorkerSocket = io(`${env.WEBSOCKETS_SERVER}/workers`, {
-      path: '/websocket',
-      auth: { token },
-      transports: ['websocket'],
-      retries: 10,
-    })
-    const instance = new WebsocketClient(websockets)
+    const instance = new WebsocketClient()
     WebsocketClient.instance = instance
-    return new Promise<WorkerSocket>((resolve) => {
-      websockets.on('connect', () => {
-        resolve(websockets)
-      })
-    })
+    return instance
   }
 
-  constructor(websockets: Socket) {
-    this.websockets = websockets
+  static async sendEvent(event: string, data: any) {
+    const instance = await WebsocketClient.getInstance()
+    return instance.sendEvent(event, data)
+  }
+
+  private async getToken(): Promise<string> {
+    if (this.token) return this.token
+
+    this.token = await generateWorkerWebsocketToken()
+    return this.token
+  }
+
+  async sendEvent(event: string, data: any) {
+    const token = await this.getToken()
+    const response = await fetch(`${env.WEBSOCKETS_SERVER}/worker-events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        event,
+        workspaceId: data.workspaceId,
+        data: data.data,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(`Failed to send event: ${error.error}`)
+    }
+
+    return response.json()
   }
 }
