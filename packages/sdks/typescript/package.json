@@ -3,7 +3,7 @@
   "version": "4.1.2",
   "description": "Latitude SDK for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
-  "license": "LGPL-3.0",
+  "license": "MIT",
   "keywords": [
     "AI",
     "Prompt engineering",
