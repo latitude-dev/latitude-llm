@@ -47,7 +47,7 @@
     "@opentelemetry/sdk-trace-node": "^1.22.0",
     "@opentelemetry/semantic-conventions": "^1.22.0",
     "@traceloop/instrumentation-anthropic": "^0.11.1",
-    "@traceloop/instrumentation-azure": "^0.11.1",
+    "@traceloop/instrumentation-azure": "^0.13.0",
     "@traceloop/instrumentation-bedrock": "^0.11.1",
     "@traceloop/instrumentation-chromadb": "^0.11.3",
     "@traceloop/instrumentation-cohere": "^0.11.1",
