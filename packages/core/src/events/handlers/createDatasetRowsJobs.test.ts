@@ -8,6 +8,8 @@ vi.mock('../../services/datasetRows/createRowsFromUploadedDataset', () => ({
   createRowsFromUploadedDataset: vi.fn(),
 }))
 
+vi.spyOn(WebsocketClient, 'sendEvent').mockImplementation(vi.fn())
+
 const FAKE_EVENT = {
   type: 'datasetUploaded' as DatasetV2CreatedEvent['type'],
   data: {
@@ -20,12 +22,8 @@ const FAKE_EVENT = {
 }
 
 describe('createDatasetRowsJob', () => {
-  const websocketsMock = { emit: vi.fn() }
-
   beforeEach(() => {
     vi.clearAllMocks()
-    // @ts-expect-error - not a real implementation
-    vi.spyOn(WebsocketClient, 'getSocket').mockResolvedValue(websocketsMock)
   })
 
   it('should emit datasetRowsCreated with rows on success', async () => {
@@ -38,15 +36,18 @@ describe('createDatasetRowsJob', () => {
 
     await createDatasetRowsJob({ data: FAKE_EVENT })
 
-    expect(websocketsMock.emit).toHaveBeenCalledWith('datasetRowsCreated', {
-      workspaceId: FAKE_EVENT.data.workspaceId,
-      data: {
-        datasetId: FAKE_EVENT.data.datasetId,
-        rows,
-        error: null,
-        finished: false,
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
+      'datasetRowsCreated',
+      {
+        workspaceId: FAKE_EVENT.data.workspaceId,
+        data: {
+          datasetId: FAKE_EVENT.data.datasetId,
+          rows,
+          error: null,
+          finished: false,
+        },
       },
-    })
+    )
   })
 
   it('should emit datasetRowsCreated with error on failure', async () => {
@@ -59,14 +60,17 @@ describe('createDatasetRowsJob', () => {
 
     await createDatasetRowsJob({ data: FAKE_EVENT })
 
-    expect(websocketsMock.emit).toHaveBeenCalledWith('datasetRowsCreated', {
-      workspaceId: FAKE_EVENT.data.workspaceId,
-      data: {
-        datasetId: FAKE_EVENT.data.datasetId,
-        rows: null,
-        finished: false,
-        error,
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
+      'datasetRowsCreated',
+      {
+        workspaceId: FAKE_EVENT.data.workspaceId,
+        data: {
+          datasetId: FAKE_EVENT.data.datasetId,
+          rows: null,
+          finished: false,
+          error,
+        },
       },
-    })
+    )
   })
 })

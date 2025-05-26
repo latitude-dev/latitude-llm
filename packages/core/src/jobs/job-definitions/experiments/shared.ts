@@ -15,7 +15,6 @@ export async function updateExperimentStatus(
   { workspaceId, experiment }: UpdateExperimentStatusData,
   updateProgressFn?: (progressTracker: ProgressTracker) => Promise<void>,
 ): PromisedResult<undefined, LatitudeError> {
-  const websockets = await WebsocketClient.getSocket()
   const progressTracker = new ProgressTracker(experiment.uuid)
 
   await updateProgressFn?.(progressTracker)
@@ -36,7 +35,7 @@ export async function updateExperimentStatus(
     experiment = completeResult.unwrap()
   }
 
-  websockets.emit('experimentStatus', {
+  WebsocketClient.sendEvent('experimentStatus', {
     workspaceId,
     data: {
       experiment: {
