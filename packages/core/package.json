@@ -133,7 +133,7 @@
     "pg-transactional-tests": "^1.0.9",
     "supertest": "^7.0.0",
     "svelte": "^4.2.19",
-    "vitest": "^3.1.1",
+    "vitest": "^3.1.4",
     "vue": "^3.4.38",
     "yaml": "^2.4.5"
   }

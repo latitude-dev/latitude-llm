@@ -63,7 +63,7 @@
     "node-fetch": "3.3.2",
     "rollup": "^4.21.1",
     "rollup-plugin-dts": "^6.1.1",
-    "vitest": "^2.0.5"
+    "vitest": "^3.1.4"
   },
   "peerDependencies": {
     "typescript": "^5.5.4"
