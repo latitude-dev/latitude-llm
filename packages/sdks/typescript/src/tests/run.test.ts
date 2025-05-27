@@ -222,6 +222,7 @@ data: ${JSON.stringify({
           apiVersion: 'v3',
           customChunks,
         })
+
         await sdk.prompts.run('path/to/document', {
           projectId,
           parameters: { foo: 'bar', lol: 'foo' },
@@ -229,10 +230,16 @@ data: ${JSON.stringify({
           onFinished: onFinishMock,
           onError: onErrorMock,
         })
-        // TODO: fix this, we are reporting errors too many times
+
+        // FIXME: we are reporting errors too many times
         expect(onErrorMock).toHaveBeenCalledTimes(2)
         expect(onErrorMock).toHaveBeenCalledWith(
-          new Error('Something bad happened'),
+          new LatitudeApiError({
+            status: 402,
+            message: 'Something bad happened',
+            serverResponse: 'Something bad happened',
+            errorCode: RunErrorCodes.AIRunError,
+          }),
         )
         expect(onFinishMock).not.toHaveBeenCalled()
       }),
@@ -925,7 +932,7 @@ data: ${JSON.stringify({
       ).rejects.toThrowError(
         new LatitudeApiError({
           status: 502,
-          serverResponse: failedResponse,
+          serverResponse: 'Bad Gateway',
           message: 'Bad Gateway',
           errorCode: ApiErrorCodes.InternalServerError,
           dbErrorRef: undefined,
@@ -952,7 +959,7 @@ data: ${JSON.stringify({
           serverResponse: JSON.stringify({
             name: 'LatitudeError',
             message: 'Something bad happened',
-            errorCode: 'LatitudeError',
+            errorCode: 'internal_server_error',
           }),
           message: 'Something bad happened',
           errorCode: ApiErrorCodes.InternalServerError,
