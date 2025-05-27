@@ -3,13 +3,22 @@ title: Joke Generator
 description: Learn how to build a prompt that thinks like a human and generates jokes.
 ---
 
+<Card
+  title="Live example"
+  href="https://app.latitude.so/share/d/658d47ee-cef7-4e38-a5a7-71a7b5017755"
+  arrow="true"
+  cta="Copy to your Latitude"
+>
+  You can play with this example in the Latitude Playground.
+</Card>
+
 ## Overview
 
 Have you ever tried to ask an LLM for a joke, and they either always tell the same one or give you a response that doesn't make any sense?
 
 In this example, we will use the Agent's capability to think like a human using Chain Of Thought reasoning to generate a joke. The Agent will first think about the joke, then tell it to you.
 
-## Prompt
+## The prompt
 
 ```yaml
 ---
@@ -35,10 +44,7 @@ Finally, return your final joke you all agree on.
 </assistant>
 ```
 
-## Step-by-step guide
-
-**Related documentation**:
-- [Autonomous Agents](/guides/prompt-manager/agents)
+## Breakdown
 
 ### Agent configuration
 
@@ -52,9 +58,7 @@ type: agent
 ---
 ```
 
-Read about [Agentic behaviour](/guides/prompt-manager/agents) for more information.
-
-### Prompt
+### Simple prompt
 
 Now, let's first define the prompt. We want to add a simple description of the task, and an input topic given by the user.
 
@@ -97,7 +101,7 @@ evaluate and build upon them until you are all happy with a final response.
 Finally, return your final joke you all agree on.
 ```
 
-And just for giving the AI a little push, we can fake the first message of this conversation, so it can start thinking right away.
+And just for giving the AI a little push, we can **fake the first message of this conversation**, so it can start thinking right away.
 
 ```yaml {19-21}
 ---
@@ -122,3 +126,7 @@ Finally, return your final joke you all agree on.
   Okay! Let's work together on this. How should we start?
 </assistant>
 ```
+
+## Resources
+- [Playground docs](/guides/prompt-manager/playground) - Learn how to use the Playground to test and run prompts.
+- [Autonomous Agents](/guides/prompt-manager/agents) - Learn how to build autonomous agents that can think like humans.

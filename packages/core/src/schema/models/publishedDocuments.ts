@@ -35,6 +35,7 @@ export const publishedDocuments = latitudeSchema.table(
     canFollowConversation: boolean('can_follow_conversation')
       .notNull()
       .default(false),
+    displayPromptOnly: boolean('display_prompt_only').notNull().default(false),
     ...timestamps(),
   },
   (table) => ({
