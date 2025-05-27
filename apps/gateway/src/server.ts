@@ -1,9 +1,6 @@
-import './common/sentry'
-
 import { serve } from '@hono/node-server'
 import app from '$/routes/app'
 
-import { captureException, captureMessage } from './common/sentry'
 import { env } from '@latitude-data/env'
 
 const HOSTNAME = env.GATEWAY_BIND_ADDRESS
@@ -41,11 +38,3 @@ function gracefulShutdown() {
 
 process.on('SIGTERM', gracefulShutdown)
 process.on('SIGINT', gracefulShutdown)
-
-process.on('uncaughtException', function (err) {
-  captureException(err)
-})
-
-process.on('unhandledRejection', (reason: string) => {
-  captureMessage(reason)
-})

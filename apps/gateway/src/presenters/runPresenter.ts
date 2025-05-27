@@ -1,6 +1,5 @@
 import { LatitudeError } from '@latitude-data/core/lib/errors'
 import { Result, TypedResult } from '@latitude-data/core/lib/Result'
-import { captureException } from '$/common/sentry'
 import {
   ChainStepObjectResponse,
   ChainStepTextResponse,
@@ -8,6 +7,7 @@ import {
   extractAgentToolCalls,
 } from '@latitude-data/constants'
 import { ToolCall } from '@latitude-data/compiler'
+import * as Sentry from '@sentry/cloudflare'
 
 type DocumentResponse = ChainStepObjectResponse | ChainStepTextResponse
 export function v2RunPresenter(
@@ -24,7 +24,7 @@ export function v2RunPresenter(
   const error = errorMessage ? new LatitudeError(errorMessage) : undefined
 
   if (error) {
-    captureException(error)
+    Sentry.captureException(error)
     return Result.error(error)
   }
 
@@ -60,7 +60,7 @@ export function runPresenter({
   const error = errorMessage ? new LatitudeError(errorMessage) : undefined
 
   if (error) {
-    captureException(error)
+    Sentry.captureException(error)
     return Result.error(error)
   }
 

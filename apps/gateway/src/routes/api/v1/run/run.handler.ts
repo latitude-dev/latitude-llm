@@ -2,8 +2,8 @@ import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
-import { captureException } from '$/common/sentry'
 import { streamSSE } from 'hono/streaming'
+import * as Sentry from '@sentry/cloudflare'
 import {
   legacyChainEventPresenter,
   getData,
@@ -66,7 +66,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
       const unknownError = getUnknownError(error)
 
       if (unknownError) {
-        captureException(error)
+        Sentry.captureException(error)
       }
 
       return Promise.resolve()

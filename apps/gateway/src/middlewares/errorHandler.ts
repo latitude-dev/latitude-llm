@@ -4,9 +4,9 @@ import {
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
 import http from '$/common/http'
-import { captureException } from '$/common/sentry'
 import { HTTPException } from 'hono/http-exception'
 import { ChainError } from '@latitude-data/core/lib/chainStreamManager/ChainErrors/index'
+import * as Sentry from '@sentry/cloudflare'
 
 function unprocessableExtraParameters(error: UnprocessableEntityError) {
   const isChainError = error instanceof ChainError
@@ -58,7 +58,7 @@ const errorHandlerMiddleware = (err: Error) => {
     )
   } else {
     if (process.env.NODE_ENV !== 'test') {
-      captureException(err)
+      Sentry.captureException(err)
     }
 
     return Response.json(

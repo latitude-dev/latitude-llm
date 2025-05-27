@@ -1,8 +1,8 @@
 import { LogSources } from '@latitude-data/core/browser'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { addMessages } from '@latitude-data/core/services/documentLogs/addMessages/index'
-import { captureException } from '@sentry/node'
 import { streamSSE } from 'hono/streaming'
+import * as Sentry from '@sentry/cloudflare'
 
 import { AppRouteHandler } from '$/openApi/types'
 import { ChatRoute } from '$/routes/api/v1/chat/chat.route'
@@ -40,7 +40,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
       }
     },
     (error: Error) => {
-      captureException(error)
+      Sentry.captureException(error)
 
       return Promise.resolve()
     },

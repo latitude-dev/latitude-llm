@@ -5,7 +5,7 @@ import { LogSources } from '@latitude-data/core/browser'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
-import { captureException } from '$/common/sentry'
+import * as Sentry from '@sentry/cloudflare'
 import {
   legacyChainEventPresenter,
   getData,
@@ -78,7 +78,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
         const unknownError = getUnknownError(error)
 
         if (unknownError) {
-          captureException(error)
+          Sentry.captureException(error)
         }
 
         return Promise.resolve()
