@@ -4,7 +4,7 @@ import { createMiddleware } from 'hono/factory'
 import { ReplyError } from 'ioredis'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 
-const RATE_LIMIT_POINTS = 20
+const RATE_LIMIT_POINTS = 40
 const RATE_LIMIT_DURATION = 1
 
 const rateLimiter = new RateLimiterRedis({
