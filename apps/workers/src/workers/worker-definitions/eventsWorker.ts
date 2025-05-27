@@ -1,6 +1,7 @@
 import { Queues } from '@latitude-data/core/queues/types'
 import * as jobs from '@latitude-data/core/jobs/definitions'
 import { createWorker } from '../utils/createWorker'
+import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
 // Events Queue job mappings
 const eventsJobMappings = {
@@ -39,5 +40,8 @@ export function startEventsWorker() {
 }
 
 export function startEventHandlersWorker() {
-  return createWorker(Queues.eventHandlersQueue, eventHandlersJobMappings)
+  return createWorker(Queues.eventHandlersQueue, eventHandlersJobMappings, {
+    concurrency: 25,
+    connection: WORKER_CONNECTION_CONFIG,
+  })
 }
