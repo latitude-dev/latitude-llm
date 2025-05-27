@@ -20,11 +20,7 @@ describe('runDocumentJob', () => {
   let document: any
   let commit: any
 
-  // Set up spies
-  vi.spyOn(WebsocketClient, 'getSocket').mockResolvedValue({
-    emit: vi.fn(),
-  } as any)
-
+  vi.spyOn(WebsocketClient, 'sendEvent').mockImplementation(vi.fn())
   vi.mock('../../../redis', () => ({
     buildRedisConnection: vi.fn().mockResolvedValue({} as any),
   }))
@@ -102,16 +98,18 @@ describe('runDocumentJob', () => {
       autoRespondToolCalls: true,
     })
 
-    const socket = await WebsocketClient.getSocket()
-    expect(socket.emit).toHaveBeenCalledWith('documentBatchRunStatus', {
-      workspaceId: workspace.id,
-      data: expect.objectContaining({
-        documentUuid: document.documentUuid,
-        completed: 0,
-        errors: 0,
-        total: 1,
-      }),
-    })
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
+      'documentBatchRunStatus',
+      {
+        workspaceId: workspace.id,
+        data: expect.objectContaining({
+          documentUuid: document.documentUuid,
+          completed: 0,
+          errors: 0,
+          total: 1,
+        }),
+      },
+    )
 
     expect(incrementErrorsMock).not.toHaveBeenCalled()
   })
@@ -126,16 +124,18 @@ describe('runDocumentJob', () => {
 
     await runDocumentJob(mockJob)
 
-    const socket = await WebsocketClient.getSocket()
-    expect(socket.emit).toHaveBeenCalledWith('documentBatchRunStatus', {
-      workspaceId: workspace.id,
-      data: expect.objectContaining({
-        documentUuid: document.documentUuid,
-        completed: 0,
-        errors: 0,
-        total: 1,
-      }),
-    })
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
+      'documentBatchRunStatus',
+      {
+        workspaceId: workspace.id,
+        data: expect.objectContaining({
+          documentUuid: document.documentUuid,
+          completed: 0,
+          errors: 0,
+          total: 1,
+        }),
+      },
+    )
 
     expect(
       runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,

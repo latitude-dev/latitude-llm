@@ -32,11 +32,10 @@ export async function completeExperiment(
     return Result.error(updateResult.error as LatitudeError)
   }
 
-  const websockets = await WebsocketClient.getSocket()
   const progressTracker = new ProgressTracker(experiment.uuid)
   const progress = await progressTracker.getProgress()
 
-  websockets.emit('experimentStatus', {
+  WebsocketClient.sendEvent('experimentStatus', {
     workspaceId: experiment.workspaceId,
     data: {
       experiment: {

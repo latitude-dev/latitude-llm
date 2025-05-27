@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import { Job } from 'bullmq'
 
 import { LogSources } from '@latitude-data/constants'
-import { WebsocketClient, WorkerSocket } from '../../../websockets/workers'
+import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { runDocumentAtCommitWithAutoToolResponses } from './runDocumentAtCommitWithAutoToolResponses'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'
@@ -19,13 +19,12 @@ export type RunDocumentJobData = {
 }
 
 const emitDocumentBatchRunStatus = async (
-  websockets: WorkerSocket,
   workspaceId: number,
   documentUuid: string,
   progressTracker: ProgressTracker,
 ) => {
   const progress = await progressTracker.getProgress()
-  websockets.emit('documentBatchRunStatus', {
+  WebsocketClient.sendEvent('documentBatchRunStatus', {
     workspaceId,
     data: {
       documentUuid,
@@ -52,7 +51,6 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     autoRespondToolCalls,
   } = job.data
 
-  const websockets = await WebsocketClient.getSocket()
   const progressTracker = new ProgressTracker(batchId)
 
   try {
@@ -68,22 +66,12 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
 
     await progressTracker.incrementCompleted()
 
-    await emitDocumentBatchRunStatus(
-      websockets,
-      workspaceId,
-      documentUuid,
-      progressTracker,
-    )
+    await emitDocumentBatchRunStatus(workspaceId, documentUuid, progressTracker)
   } catch (error) {
     if (isErrorRetryable(error as Error)) throw error
 
     await progressTracker.incrementErrors()
-    await emitDocumentBatchRunStatus(
-      websockets,
-      workspaceId,
-      documentUuid,
-      progressTracker,
-    )
+    await emitDocumentBatchRunStatus(workspaceId, documentUuid, progressTracker)
   } finally {
     await progressTracker.cleanup()
   }

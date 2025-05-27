@@ -9,19 +9,13 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 // Mock dependencies
 vi.mock('../../websockets/workers', () => ({
   WebsocketClient: {
-    getSocket: vi.fn(),
+    sendEvent: vi.fn(),
   },
 }))
 
 describe('notifyToClientDocumentLogCreatedJob', () => {
-  const mockSocket = {
-    emit: vi.fn(),
-  }
-
   beforeEach(() => {
     vi.clearAllMocks()
-    // @ts-ignore
-    vi.mocked(WebsocketClient.getSocket).mockResolvedValue(mockSocket)
   })
 
   it('should emit documentLogCreated event with correct data', async () => {
@@ -57,16 +51,19 @@ describe('notifyToClientDocumentLogCreatedJob', () => {
     // @ts-ignore
     await notifyToClientDocumentLogCreatedJob({ data: event })
 
-    expect(mockSocket.emit).toHaveBeenCalledWith('documentLogCreated', {
-      workspaceId: workspace.id,
-      data: {
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
+      'documentLogCreated',
+      {
         workspaceId: workspace.id,
-        documentUuid: documentLog.documentUuid,
-        documentLogId: documentLog.id,
-        commitUuid: commit.uuid,
-        documentLogWithMetadata: expect.any(Object),
+        data: {
+          workspaceId: workspace.id,
+          documentUuid: documentLog.documentUuid,
+          documentLogId: documentLog.id,
+          commitUuid: commit.uuid,
+          documentLogWithMetadata: expect.any(Object),
+        },
       },
-    })
+    )
   })
 
   it('should handle document logs with errors', async () => {
@@ -108,6 +105,6 @@ describe('notifyToClientDocumentLogCreatedJob', () => {
     // @ts-ignore
     await notifyToClientDocumentLogCreatedJob({ data: event })
 
-    expect(mockSocket.emit).toHaveBeenCalled()
+    expect(WebsocketClient.sendEvent).toHaveBeenCalled()
   })
 })

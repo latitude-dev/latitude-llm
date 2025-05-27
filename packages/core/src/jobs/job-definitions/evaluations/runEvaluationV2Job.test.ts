@@ -18,12 +18,12 @@ import * as evaluationsV2 from '../../../services/evaluationsV2/run'
 import { completeExperiment } from '../../../services/experiments/complete'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import * as factories from '../../../tests/factories'
-import * as websockets from '../../../websockets/workers'
 import * as progressTracker from '../../utils/progressTracker'
 import {
   runEvaluationV2Job,
   type RunEvaluationV2JobData,
 } from './runEvaluationV2Job'
+import { WebsocketClient } from '../../../websockets/workers'
 
 vi.mock('../../../redis', () => ({
   buildRedisConnection: vi.fn().mockResolvedValue({}),
@@ -31,16 +31,13 @@ vi.mock('../../../redis', () => ({
 
 const runEvaluationV2Spy = vi.spyOn(evaluationsV2, 'runEvaluationV2')
 
-const mockEmit = vi.fn()
-vi.spyOn(websockets.WebsocketClient, 'getSocket').mockResolvedValue({
-  emit: mockEmit,
-} as any)
-
 // Spy on ProgressTracker
 const incrementCompletedSpy = vi.fn()
 const incrementFailedSpy = vi.fn()
 const incrementErrorsSpy = vi.fn()
 const incrementTotalScoreSpy = vi.fn()
+
+vi.spyOn(WebsocketClient, 'sendEvent').mockImplementation(vi.fn())
 vi.spyOn(progressTracker, 'ProgressTracker').mockImplementation(() => ({
   incrementCompleted: incrementCompletedSpy,
   incrementFailed: incrementFailedSpy,

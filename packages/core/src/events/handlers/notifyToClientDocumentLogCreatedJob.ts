@@ -37,9 +37,7 @@ export const notifyToClientDocumentLogCreatedJob = async ({
     return
   }
 
-  const websockets = await WebsocketClient.getSocket()
-
-  websockets.emit('documentLogCreated', {
+  await WebsocketClient.sendEvent('documentLogCreated', {
     workspaceId: workspace.id,
     data: {
       workspaceId: workspace.id,
