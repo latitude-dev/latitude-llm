@@ -1,13 +1,23 @@
 import { createDatasetFromLogsAction } from '$/actions/datasets/createFromLogs'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
-import { Dataset, parseRowCell } from '@latitude-data/core/browser'
+import {
+  Dataset,
+  DocumentLogFilterOptions,
+  parseRowCell,
+} from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { DatasetRowData } from '@latitude-data/core/schema'
-import { useCallback, useState } from 'react'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import { useCallback, useMemo, useState } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
 type InputItem = {
@@ -26,7 +36,7 @@ function serializeRowData(rowData: DatasetRowData): string[] {
   const keys = Object.keys(rowData)
   return keys.map((key) => {
     const cell = rowData[key]
-    return parseRowCell({ cell, parseDates: false })
+    return parseRowCell({ cell })
   })
 }
 
@@ -81,13 +91,20 @@ function usePreviewRowsStore(
 
 export function useSelectedLogs({
   selectableState,
+  filterOptions,
 }: {
   selectableState: SelectableRowsHook
+  filterOptions: DocumentLogFilterOptions
 }) {
+  const { toast } = useToast()
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
   const previewModalState = useToggleModal()
   const [selectedLogsIds, setSelectedLogsIds] = useState<(string | number)[]>(
     [],
   )
+  const [selectedCount, setSelectedCount] = useState(0)
   const [selectedDataset, setSelectedDataset] = useState<Dataset>()
   const { previewData, fetchPreview, isLoading } = usePreviewRowsStore({
     dataset: selectedDataset,
@@ -96,30 +113,67 @@ export function useSelectedLogs({
   const onClickShowPreview = useCallback(() => {
     previewModalState.onOpen()
     setSelectedLogsIds(selectableState.getSelectedRowIds())
+    setSelectedCount(selectableState.selectedCount)
     fetchPreview()
   }, [
     fetchPreview,
     setSelectedLogsIds,
     previewModalState.onOpen,
     selectableState.getSelectedRowIds,
+    selectableState.selectedCount,
   ])
   const {
     execute: createDatasetFromLogs,
     isPending: isSaving,
     error,
-  } = useLatitudeAction(createDatasetFromLogsAction)
-  const saveDataset = useCallback(
-    async ({ name }: { name: string }) => {
-      const [_data, err] = await createDatasetFromLogs({
-        name,
-        documentLogIds: selectedLogsIds,
-      })
-      if (err) return
+  } = useLatitudeAction(createDatasetFromLogsAction, {
+    onSuccess: ({ data }) => {
+      if (data.mode === 'sync') {
+        toast({
+          title: selectedDataset ? 'Updated dataset' : 'Created dataset',
+          description: selectedDataset
+            ? `The selected logs have been added to dataset ${selectedDataset.name}.`
+            : 'The selected logs have been added to a new dataset.',
+        })
+      } else {
+        toast({
+          title: selectedDataset
+            ? 'Updating dataset...'
+            : 'Creating dataset...',
+          description: selectedDataset
+            ? 'The selected logs are being added to the selected dataset. You will be notified by email when the dataset is ready.'
+            : 'The selected logs are being added to a new dataset. You will be notified by email when the dataset is ready.',
+        })
+      }
 
       setSelectedDataset(undefined)
       setSelectedLogsIds([])
+      setSelectedCount(0)
       selectableState.clearSelections()
       previewModalState.onClose()
+    },
+    onError: ({ err }) => {
+      toast({
+        title: 'Error',
+        description: err.message,
+        variant: 'destructive',
+      })
+    },
+  })
+  const saveDataset = useCallback(
+    async ({ name }: { name: string }) => {
+      if (selectableState.selectionMode === 'NONE') return // invalid state
+
+      await createDatasetFromLogs({
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+        name,
+        selectionMode: selectableState.selectionMode,
+        selectedDocumentLogIds: selectedLogsIds,
+        excludedDocumentLogIds: Array.from(selectableState.excludedIds),
+        filterOptions: filterOptions,
+      })
     },
     [
       setSelectedDataset,
@@ -130,18 +184,34 @@ export function useSelectedLogs({
       selectableState.clearSelections,
     ],
   )
-  return {
-    previewData,
-    onClickShowPreview,
-    saveDataset,
-    isLoadingPreview: isLoading,
-    previewModalState,
-    setSelectedDataset,
-    selectedDataset,
-    isSaving,
-    fetchPreview,
-    error,
-  }
+  return useMemo(
+    () => ({
+      previewData,
+      onClickShowPreview,
+      saveDataset,
+      isLoadingPreview: isLoading,
+      previewModalState,
+      setSelectedDataset,
+      selectedDataset,
+      isSaving,
+      fetchPreview,
+      error,
+      selectedCount,
+    }),
+    [
+      previewData,
+      onClickShowPreview,
+      saveDataset,
+      isLoading,
+      previewModalState,
+      setSelectedDataset,
+      selectedDataset,
+      isSaving,
+      fetchPreview,
+      error,
+      selectedCount,
+    ],
+  )
 }
 
 export type PreviewLogsState = ReturnType<typeof useSelectedLogs>

@@ -63,7 +63,9 @@ export default function WorkspaceApiKeys() {
                           >
                             <div className='flex flex-row items-center gap-2'>
                               <Text.H5 color='foregroundMuted'>
-                                {apiKey.token}
+                                {apiKey.token.slice(0, 3) +
+                                  '********' +
+                                  apiKey.token.slice(-4)}
                               </Text.H5>
                               <Icon name='clipboard' color='foregroundMuted' />
                             </div>

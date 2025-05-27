@@ -93,6 +93,7 @@ export function Step2({
   const selectableState = useSelectableRows({
     rowIds: results.map((r) => r.uuid),
     initialSelection: selectedResultUuids,
+    totalRowCount: results.length,
   })
 
   useEffect(() => {

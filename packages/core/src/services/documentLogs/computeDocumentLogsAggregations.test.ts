@@ -127,7 +127,7 @@ describe('computeDocumentLogsAggregations', () => {
     expect(result.totalCount).toBe(1)
   })
 
-  it('excludes logs with errors', async () => {
+  it('includes logs with errors in the total count', async () => {
     const { documentLog } = await factories.createDocumentLog({
       document,
       commit,
@@ -146,7 +146,7 @@ describe('computeDocumentLogsAggregations', () => {
       document,
     })
 
-    expect(result.totalCount).toBe(1)
+    expect(result.totalCount).toBe(2)
   })
 
   it('returns zero values when no logs exist', async () => {
