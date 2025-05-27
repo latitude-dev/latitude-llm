@@ -5,14 +5,17 @@ import * as factories from '../../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../../tests/factories'
 import { identityHashAlgorithm } from '../../datasets/utils'
 import { buildDocumentLogDataset } from './index'
-import { ProviderLogsRepository } from '../../../repositories'
-import { Dataset, DocumentLog, ErrorableEntity } from '../../../browser'
+import {
+  DocumentLogWithMetadataAndError,
+  ProviderLogsRepository,
+} from '../../../repositories'
+import { Dataset, ErrorableEntity, ProviderLog } from '../../../browser'
 import getTestDisk from '../../../tests/testDrive'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { DEFAULT_STATIC_COLUMNS } from './buildColumns'
 
 const testDrive = getTestDisk()
 let setup: FactoryCreateProjectReturn
-let documentLog: DocumentLog
 let dataset: Dataset
 
 describe('buildDocumentLogDataset', async () => {
@@ -33,9 +36,11 @@ describe('buildDocumentLogDataset', async () => {
     })
   })
 
-  describe('with valid logs', () => {
+  describe('without dataset', () => {
+    let documentLog: DocumentLogWithMetadataAndError
+
     beforeEach(async () => {
-      const { documentLog: dl } = await factories.createDocumentLog({
+      documentLog = await factories.createDocumentLogWithMetadataAndError({
         document: setup.documents[0]!,
         commit: setup.commit,
         parameters: {
@@ -43,37 +48,31 @@ describe('buildDocumentLogDataset', async () => {
           age: 25,
         },
         automaticProvidersGeneratedAt: new Date(2022, 1, 1),
-      })
-      documentLog = dl
-      await factories.createProviderLog({
-        workspace: setup.workspace,
-        documentLogUuid: documentLog.uuid,
-        providerId: setup.providers[0]!.id,
-        providerType: Providers.OpenAI,
-        responseText: 'Last provider response. Hello!',
+        skipProviderLogs: true,
       })
     })
 
-    it('build correct dataset rows', async () => {
+    it('build correct dataset rows without columnFilters', async () => {
       const result = await buildDocumentLogDataset({
         workspace: setup.workspace,
         documentLogIds: [documentLog.id],
         hashAlgorithm: identityHashAlgorithm,
       })
 
-      const repo = new ProviderLogsRepository(setup.workspace.id)
-      const providers = await repo.findManyByDocumentLogUuid([documentLog.uuid])
-      const tokens = sum(providers.map((p) => p.tokens ?? 0))
-      expect(result.value).toEqual({
-        columns: [
-          {
-            identifier: 'age_identifier',
-            name: 'age',
-            role: 'parameter',
-          },
+      expect(result.value!.columns).toHaveLength(
+        DEFAULT_STATIC_COLUMNS.length +
+          Object.keys(documentLog.parameters).length,
+      )
+      expect(result.value!.columns).toEqual(
+        expect.arrayContaining([
           {
             identifier: 'location_identifier',
             name: 'location',
+            role: 'parameter',
+          },
+          {
+            identifier: 'age_identifier',
+            name: 'age',
             role: 'parameter',
           },
           {
@@ -82,22 +81,33 @@ describe('buildDocumentLogDataset', async () => {
             role: 'label',
           },
           {
-            identifier: 'document_log_id_identifier',
-            name: 'document_log_id',
+            identifier: 'id_identifier',
+            name: 'id',
             role: 'metadata',
           },
-          { identifier: 'tokens_identifier', name: 'tokens', role: 'metadata' },
-        ],
-        rows: [
           {
-            age_identifier: 25,
-            location_identifier: 'San Francisco',
-            output_identifier: 'Last provider response. Hello!',
-            document_log_id_identifier: documentLog.id,
-            tokens_identifier: tokens,
+            identifier: 'duration_identifier',
+            name: 'duration',
+            role: 'metadata',
           },
-        ],
-      })
+          {
+            identifier: 'tokens_identifier',
+            name: 'tokens',
+            role: 'metadata',
+          },
+        ]),
+      )
+
+      expect(result.value!.rows).toEqual([
+        {
+          age_identifier: documentLog.parameters.age,
+          location_identifier: documentLog.parameters.location,
+          output_identifier: expect.any(String),
+          id_identifier: documentLog.id,
+          duration_identifier: documentLog.duration,
+          tokens_identifier: documentLog.tokens,
+        },
+      ])
     })
 
     it('set as columns parameters of all the document logs', async () => {

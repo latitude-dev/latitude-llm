@@ -4,7 +4,6 @@ import { v4 as uuid } from 'uuid'
 
 import {
   Commit,
-  DocumentLog,
   DocumentVersion,
   LogSources,
   ProviderLog,
@@ -13,6 +12,7 @@ import {
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import {
+  DocumentLogsWithErrorsRepository,
   DocumentLogWithMetadataAndError,
   ProviderApiKeysRepository,
 } from '../../repositories'
@@ -22,6 +22,7 @@ import { createDocumentLog as ogCreateDocumentLog } from '../../services/documen
 import { getResolvedContent } from '../../services/documents'
 import { createProviderLog } from '../../services/providerLogs'
 import { helpers } from './helpers'
+import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
 
 export type IDocumentLogData = {
   document: DocumentVersion
@@ -184,10 +185,9 @@ export async function createDocumentLogWithMetadataAndError({
   experimentId,
   totalDuration,
   createdAt,
-  skipProviderLogs,
   automaticProvidersGeneratedAt,
 }: IDocumentLogData): Promise<DocumentLogWithMetadataAndError> {
-  const { providerLogs, documentLog } = await createDocumentLog({
+  const { documentLog } = await createDocumentLog({
     document,
     commit,
     parameters,
@@ -196,30 +196,10 @@ export async function createDocumentLogWithMetadataAndError({
     experimentId,
     totalDuration,
     createdAt,
-    skipProviderLogs,
     automaticProvidersGeneratedAt,
   })
-  const tokens = providerLogs.reduce((acc, log) => acc + (log?.tokens ?? 0), 0)
-  const costInMillicents = providerLogs.reduce(
-    (acc, log) => acc + (log?.costInMillicents ?? 0),
-    0,
-  )
-  const duration = providerLogs.reduce(
-    (acc, log) => acc + (log?.duration ?? 0),
-    0,
-  )
-  const error = {
-    code: null,
-    message: null,
-    details: null,
-  }
-
-  return {
-    ...documentLog,
-    commit,
-    tokens,
-    costInMillicents,
-    duration,
-    error,
-  }
+  const workspace = (await findWorkspaceFromCommit(commit))!
+  const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspace.id)
+  const result = await repo.findByUuid(documentLog.uuid)
+  return result.unwrap()
 }

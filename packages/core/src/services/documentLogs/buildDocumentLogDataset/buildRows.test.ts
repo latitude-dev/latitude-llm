@@ -1,11 +1,10 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import * as factories from '../../../tests/factories'
 import { FactoryCreateProjectReturn } from '../../../tests/factories'
 import { Providers } from '@latitude-data/constants'
 import { Column } from '../../../schema/models/datasets'
 import { buildRows } from './buildRows'
 import { ProviderOutput } from './findProviderOutputs'
-import { beforeEach } from 'node:test'
 import { DocumentLogWithMetadataAndError } from '../../../repositories'
 
 let setup: FactoryCreateProjectReturn
@@ -28,7 +27,7 @@ describe('buildRows', async () => {
     })
   })
 
-  describe('withValidLog', async () => {
+  describe('with valid log', async () => {
     let documentLog: DocumentLogWithMetadataAndError
 
     beforeEach(async () => {
@@ -39,10 +38,11 @@ describe('buildRows', async () => {
           location: 'San Francisco',
           age: 25,
         },
+        experimentId: undefined,
       })
     })
 
-    it('buildRowSuccessfully', async () => {
+    it('build row successfully', async () => {
       const providerOutputs: Map<string, ProviderOutput> = new Map([
         [documentLog.uuid, { output: 'test', generatedAt: new Date() }],
       ])
@@ -58,6 +58,11 @@ describe('buildRows', async () => {
           role: 'metadata',
         },
         {
+          identifier: 'createdAt',
+          name: 'createdAt',
+          role: 'metadata',
+        },
+        {
           identifier: 'output',
           name: 'output',
           role: 'label',
@@ -70,12 +75,37 @@ describe('buildRows', async () => {
         {
           location: 'San Francisco',
           id: documentLog.id,
+          createdAt: documentLog.createdAt,
           output: 'test',
         },
       ])
     })
 
-    it('buildRowsSuccessfullyWithNestedFieldColumns', async () => {
+    it('build rows successfully with null field columns', async () => {
+      const columns: Column[] = [
+        {
+          identifier: 'id',
+          name: 'id',
+          role: 'metadata',
+        },
+        {
+          identifier: 'experimentId',
+          name: 'experimentId',
+          role: 'metadata',
+        },
+      ]
+
+      const result = buildRows([documentLog], new Map(), columns)
+
+      expect(result).toStrictEqual([
+        {
+          id: documentLog.id,
+          experimentId: documentLog.experimentId,
+        },
+      ])
+    })
+
+    it('build rows successfully with nested field columns', async () => {
       const columns: Column[] = [
         {
           identifier: 'id',
@@ -100,7 +130,7 @@ describe('buildRows', async () => {
     })
   })
 
-  describe('withUnexpectedMetadataColumns', async () => {
+  describe('with unexpected metadata columns', async () => {
     it('buildRowSuccessfully', async () => {
       const documentLog = await factories.createDocumentLogWithMetadataAndError(
         {
@@ -132,8 +162,8 @@ describe('buildRows', async () => {
     })
   })
 
-  describe('withMultipleLogsWithDifferentParameters', async () => {
-    it('buildRowsSuccessfully', async () => {
+  describe('with multiple logs with different parameters', async () => {
+    it('build rows successfully', async () => {
       const oneDocumentLog =
         await factories.createDocumentLogWithMetadataAndError({
           document: setup.documents[0]!,

@@ -4,10 +4,15 @@ import { ProviderOutput } from './findProviderOutputs'
 
 function flattenJSON(obj: any, res: any = {}, prefix: string = '') {
   for (const key in obj) {
-    if (typeof obj[key] !== 'object') {
-      res[prefix + key] = obj[key]
+    const value = obj[key]
+    if (
+      value !== null &&
+      typeof value === 'object' &&
+      value.constructor === Object
+    ) {
+      flattenJSON(value, res, `${prefix}${key}.`)
     } else {
-      flattenJSON(obj[key], res, `${prefix}${key}.`)
+      res[prefix + key] = value
     }
   }
   return res
