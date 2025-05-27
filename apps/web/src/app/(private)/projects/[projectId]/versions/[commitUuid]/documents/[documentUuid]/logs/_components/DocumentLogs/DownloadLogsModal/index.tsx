@@ -42,7 +42,7 @@ export function DownloadLogsModal({
       <PreviewTable
         previewData={data}
         isLoading={isLoadingPreview}
-        subtitle='Customize the columns you want to export by clicking in the heading.'
+        subtitle='This is a preview of representative logs based on its parameters. Customize the columns you want to export by clicking in the heading.'
         previewStaticColumns={previewStaticColumns}
         previewParameterColumns={previewParameterColumns}
         onSelectStaticColumn={handleSelectStaticColumn}

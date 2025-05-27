@@ -8,16 +8,16 @@ import { usePreviewLogs } from '$/stores/previewLogs'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useEffect, useState } from 'react'
 
-// TODO: Add timestamp (createdAt?)
 // Map() to maintain the order of the columns
-const DEFAULT_STATIC_COLUMNS: Map<string, boolean> = new Map([
-  ['output', true],
-  ['id', true],
-  ['commit.title', true],
-  ['duration', true],
-  ['costInMillicents', true],
-  ['tokens', true],
-])
+const DEFAULT_STATIC_COLUMNS = [
+  'output',
+  'id',
+  'commit.title',
+  'duration',
+  'costInMillicents',
+  'tokens',
+  'createdAt',
+]
 
 const getSelectedColumns = (columns?: Map<string, boolean>) => {
   if (!columns) return []
@@ -36,12 +36,10 @@ export function useDownloadLogsModal({
   const [selectedLogIds, setSelectedLogIds] = useState<(string | number)[]>([])
   const { previewData, fetchPreview, isLoading } = usePreviewLogs({
     documentLogIds: selectedLogIds,
-    staticColumnNames: [...DEFAULT_STATIC_COLUMNS.keys()],
+    staticColumnNames: DEFAULT_STATIC_COLUMNS,
   })
   const [isDownloading, setIsDownloading] = useState(false)
-  const [staticColumns, setStaticColumns] = useState<Map<string, boolean>>(
-    DEFAULT_STATIC_COLUMNS,
-  )
+  const [staticColumns, setStaticColumns] = useState<Map<string, boolean>>()
   const [parameterColumns, setParameterColumns] =
     useState<Map<string, boolean>>()
 
@@ -93,19 +91,24 @@ export function useDownloadLogsModal({
   }, [selectableState.getSelectedRowIds, staticColumns, parameterColumns])
 
   useEffect(() => {
-    const parameterColumns: Map<string, boolean> = previewData?.columns
-      .filter((c) => c.role === 'parameter')
-      .reduce((acc, column) => {
-        acc.set(column.name, true)
-        return acc
-      }, new Map())
+    if (!previewData?.columns) return
+    const [parameterColumns, staticColumns] = previewData.columns.reduce(
+      ([parameterColumns, staticColumns], column) => {
+        const toMap =
+          column.role === 'parameter' ? parameterColumns : staticColumns
+        toMap.set(column.name, true)
+        return [parameterColumns, staticColumns]
+      },
+      [new Map(), new Map()],
+    )
     setParameterColumns(parameterColumns)
+    setStaticColumns(staticColumns)
   }, [previewData])
 
   const handleSelectStaticColumn = useCallback(
     (column: string) => {
       setStaticColumns((prev) => {
-        if (!prev.has(column)) return prev
+        if (!prev?.has(column)) return prev
         return new Map(prev.set(column, !prev.get(column)))
       })
     },
