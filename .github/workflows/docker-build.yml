@@ -9,6 +9,11 @@ env:
   PUBLIC_REGISTRY: ghcr.io
   PUBLIC_OWNER: latitude-dev
 
+# Note on concurrency strategy:
+# - lint and test jobs have no concurrency limits
+# - build-and-push job has its own concurrency group, allowing builds to start while deployments are still running
+# - run-migrations, deploy-bluegreen, and deploy-rolling jobs have a shared concurrency group to ensure
+#   only one deployment process runs at a time, preventing conflicts in the target environment
 jobs:
   lint:
     uses: ./.github/workflows/lint.yml
@@ -23,6 +28,9 @@ jobs:
   build-and-push:
     needs: [lint]
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-build-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
@@ -176,6 +184,9 @@ jobs:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       SSH_USER: ${{ secrets.SSH_USER }}
+    concurrency:
+      group: ${{ github.workflow }}-deploy-${{ github.ref }}
+      cancel-in-progress: false
 
   deploy-bluegreen:
     needs: [run-migrations, build-and-push]
@@ -188,6 +199,9 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+    concurrency:
+      group: ${{ github.workflow }}-deploy-${{ github.ref }}
+      cancel-in-progress: false
 
   deploy-rolling:
     needs: [run-migrations, build-and-push]
@@ -200,10 +214,6 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-
-# Concurrency settings to manage multiple workflow runs
-# - Groups runs by workflow name and git ref
-# - For main branch: Never cancel running builds (queue them instead)
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+    concurrency:
+      group: ${{ github.workflow }}-deploy-${{ github.ref }}
+      cancel-in-progress: false
