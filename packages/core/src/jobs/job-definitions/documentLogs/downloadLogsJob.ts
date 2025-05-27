@@ -18,6 +18,7 @@ import { buildProviderLogResponse } from '../../../services/providerLogs'
 import { markExportReady } from '../../../services/exports/markExportReady'
 import { findOrCreateExport } from '../../../services/exports/findOrCreate'
 import { buildLogsFilterSQLConditions } from '../../../services/documentLogs/logsFilterUtils'
+import { Readable } from 'stream'
 
 const BATCH_SIZE = 1000
 
@@ -104,17 +105,19 @@ export const downloadLogsJob = async (
   const cursorState = new CursorState(token)
   const disk = diskFactory()
 
-  let csvContent = ''
+  // Create a buffer to store the CSV content
+  const csvChunks: Buffer[] = []
 
   try {
     lastCreatedAt = await cursorState.getCursor()
+    let isFirstBatch = true
 
     while (true) {
       // Build the query with cursor-based pagination with distinct on
       // documentLogs.uuid to ensure we only get the latest provider log per
       // document log
       const results = await database
-        .selectDistinctOn([documentLogs.uuid], {
+        .selectDistinctOn([documentLogs.createdAt, documentLogs.uuid], {
           uuid: documentLogs.uuid,
           versionUuid: commits.uuid,
           duration: providerLogs.duration,
@@ -159,7 +162,11 @@ export const downloadLogsJob = async (
               : undefined,
           ),
         )
-        .orderBy(documentLogs.uuid, desc(providerLogs.generatedAt))
+        .orderBy(
+          desc(documentLogs.createdAt),
+          documentLogs.uuid,
+          desc(providerLogs.generatedAt),
+        )
         .limit(BATCH_SIZE)
 
       if (results.length === 0) {
@@ -185,22 +192,17 @@ export const downloadLogsJob = async (
 
       // Convert the batch to CSV
       const csvString = stringify(csvRows, {
-        header: totalProcessed === 0, // Only include headers in the first batch
+        header: isFirstBatch, // Only include headers in the first batch
       })
 
-      // Append to existing CSV content
-      csvContent += csvString
-
-      // Write the updated content to disk
-      const writeResult = await disk.put(fileKey, csvContent)
-      if (writeResult.error) {
-        throw new Error(`Failed to write to disk: ${writeResult.error.message}`)
-      }
+      // Add to buffer
+      csvChunks.push(Buffer.from(csvString))
 
       // Update cursor and save state
       lastCreatedAt = results[results.length - 1]!.createdAt
       await cursorState.setCursor(lastCreatedAt)
       totalProcessed += results.length
+      isFirstBatch = false
 
       // Update job progress
       const progress = Math.floor(
@@ -208,10 +210,29 @@ export const downloadLogsJob = async (
       )
       await job.updateProgress(progress)
 
-      if (results.length < BATCH_SIZE) {
-        break
-      }
+      if (results.length < BATCH_SIZE) break
     }
+
+    // Combine all buffer chunks
+    const combinedBuffer = Buffer.concat(csvChunks)
+
+    // Create a readable stream properly - first parameter is buffer options
+    const readStream = new Readable({
+      highWaterMark: combinedBuffer.length,
+    })
+
+    // Push the buffer and mark end of stream
+    readStream.push(combinedBuffer)
+    readStream.push(null)
+
+    const exists = await disk.exists(fileKey)
+    if (exists) await disk.delete(fileKey)
+
+    await disk
+      .putStream(fileKey, readStream, {
+        contentType: 'text/csv',
+      })
+      .then((r) => r.unwrap())
 
     await markExportReady({ export: exportRecord }).then((r) => r.unwrap())
 

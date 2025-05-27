@@ -122,6 +122,10 @@ export class DiskWrapper {
     return this.disk.getStream(key)
   }
 
+  async exists(key: string) {
+    return this.disk.exists(key)
+  }
+
   async putStream(key: string, contents: Readable, options?: WriteOptions) {
     try {
       await this.disk.putStream(key, contents, {

@@ -69,7 +69,8 @@ describe('downloadLogsJob', () => {
 
     // Mock disk operations
     mockDisk = {
-      put: vi.fn().mockResolvedValue({ error: null }),
+      putStream: vi.fn().mockResolvedValue(Result.nil()),
+      exists: vi.fn().mockResolvedValue(false),
     }
     vi.mocked(diskFactory).mockReturnValue(mockDisk)
 
@@ -122,7 +123,7 @@ describe('downloadLogsJob', () => {
 
     // Verify results
     expect(result).toEqual({ totalProcessed: 1 })
-    expect(mockDisk.put).toHaveBeenCalled()
+    expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
   })
@@ -133,7 +134,7 @@ describe('downloadLogsJob', () => {
 
     // Verify results
     expect(result).toEqual({ totalProcessed: 0 })
-    expect(mockDisk.put).not.toHaveBeenCalled()
+    expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).not.toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
   })
@@ -147,14 +148,12 @@ describe('downloadLogsJob', () => {
     })
 
     // Mock disk write error
-    mockDisk.put.mockResolvedValue({
-      error: new Error('Disk write failed'),
-    })
+    mockDisk.putStream.mockResolvedValue(
+      Result.error(new Error('Disk write failed')),
+    )
 
     // Run the job and expect error
-    await expect(downloadLogsJob(mockJob)).rejects.toThrow(
-      'Failed to write to disk: Disk write failed',
-    )
+    await expect(downloadLogsJob(mockJob)).rejects.toThrow('Disk write failed')
   })
 
   it('should process multiple batches of logs', async () => {
@@ -174,7 +173,7 @@ describe('downloadLogsJob', () => {
 
     // Verify results
     expect(result).toEqual({ totalProcessed: 3 })
-    expect(mockDisk.put).toHaveBeenCalled()
+    expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
   })
@@ -203,7 +202,7 @@ describe('downloadLogsJob', () => {
 
     // Verify results
     expect(result).toEqual({ totalProcessed: 1 })
-    expect(mockDisk.put).toHaveBeenCalled()
+    expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
   })
@@ -238,7 +237,7 @@ describe('downloadLogsJob', () => {
 
     // Verify results
     expect(result).toEqual({ totalProcessed: 1 })
-    expect(mockDisk.put).toHaveBeenCalled()
+    expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
   })
@@ -275,7 +274,7 @@ describe('downloadLogsJob', () => {
 
     // Verify results
     expect(result).toEqual({ totalProcessed: 2 })
-    expect(mockDisk.put).toHaveBeenCalled()
+    expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
   })

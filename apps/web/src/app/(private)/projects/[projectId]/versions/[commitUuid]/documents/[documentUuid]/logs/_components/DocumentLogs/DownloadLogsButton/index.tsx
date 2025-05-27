@@ -113,7 +113,7 @@ export function DownloadLogsButton({
     if (selectedCount <= MAX_IMMEDIATE_DOWNLOAD) {
       return `Are you sure you want to download ${selectedCount} logs?`
     }
-    return `You are about to download ${selectedCount} logs. Due to the large number of logs, you will receive an email with the download link once the file is ready.`
+    return `You are about to download ${selectedCount} logs. Due to the large number of logs, you will receive an email with the download link once the file is ready. The actual number of exported logs might be different because logs with execution errors are excluded.`
   }
 
   return (
