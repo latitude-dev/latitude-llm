@@ -23,13 +23,12 @@ app.get('/health', (c) => {
 
 configureOpenAPI(app)
 
-// Middlewares
 app.use(rateLimitMiddleware())
+
 configureWebhookRoutes(app)
 
 app.use(authMiddleware())
 
-// Routes
 configureApiRoutes(app)
 
 app.onError(errorHandlerMiddleware)
