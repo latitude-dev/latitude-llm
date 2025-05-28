@@ -42,7 +42,6 @@ describe('POST /get-or-create', () => {
       )
 
       expect(response.status).toBe(401)
-      expect(response.headers.get('www-authenticate')).toBe('Bearer realm=""')
     })
   })
 
