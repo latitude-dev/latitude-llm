@@ -1,7 +1,7 @@
 import { logger } from 'hono/logger'
 
 import authMiddleware from '$/middlewares/auth'
-import rateLimitMiddleware from '$/middlewares/rateLimit'
+import { rateLimitMiddleware } from '$/middlewares/rateLimit'
 import errorHandlerMiddleware from '$/middlewares/errorHandler'
 
 import createApp from '$/openApi/createApp'

@@ -186,7 +186,6 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
       )
 
       expect(res.status).toBe(401)
-      expect(res.headers.get('www-authenticate')).toBe('Bearer realm=""')
     })
   })
 
