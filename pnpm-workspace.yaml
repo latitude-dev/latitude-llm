@@ -4,3 +4,4 @@ packages:
   - '!packages/**/python'
   - 'tools/*'
   - '!examples/**'
+  - '!packages/telemetry/**'
