@@ -7,8 +7,8 @@ import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamM
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { addMessages } from '@latitude-data/core/services/documentLogs/addMessages/index'
+import { captureException } from '@sentry/node'
 import { streamSSE } from 'hono/streaming'
-import * as Sentry from '@sentry/cloudflare'
 
 // @ts-expect-error: streamSSE has type issues
 export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
@@ -51,7 +51,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
         const unknownError = getUnknownError(error)
 
         if (unknownError) {
-          Sentry.captureException(error)
+          captureException(error)
         }
 
         return Promise.resolve()
