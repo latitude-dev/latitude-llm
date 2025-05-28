@@ -46,7 +46,7 @@ describe('buildColumns', async () => {
       ]
     })
 
-    it('returns parameters and default static columns from logs without columnFilters', () => {
+    it('returns parameters and default static columns from logs without column filters', () => {
       const paramNames = ['foo', 'bar', 'baz']
       const staticNames = DEFAULT_STATIC_COLUMNS
 
@@ -77,7 +77,7 @@ describe('buildColumns', async () => {
       })
     })
 
-    it('uses parameterColumnNames and staticColumnNames from columnFilters', () => {
+    it('uses column filters', () => {
       const columns = buildColumns({
         logs,
         hashAlgorithm: identityHashAlgorithm,

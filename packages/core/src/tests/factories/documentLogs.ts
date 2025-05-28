@@ -5,6 +5,7 @@ import { v4 as uuid } from 'uuid'
 import {
   Commit,
   DocumentVersion,
+  ErrorableEntity,
   LogSources,
   ProviderLog,
   Workspace,
@@ -12,7 +13,6 @@ import {
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import {
-  DocumentLogsWithErrorsRepository,
   DocumentLogWithMetadataAndError,
   ProviderApiKeysRepository,
 } from '../../repositories'
@@ -23,6 +23,8 @@ import { getResolvedContent } from '../../services/documents'
 import { createProviderLog } from '../../services/providerLogs'
 import { helpers } from './helpers'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
+import { createRunError } from './runErrors'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 export type IDocumentLogData = {
   document: DocumentVersion
@@ -35,6 +37,13 @@ export type IDocumentLogData = {
   createdAt?: Date
   automaticProvidersGeneratedAt?: Date
   skipProviderLogs?: boolean
+}
+
+export type ICreateDocumentLogWithMetadataAndErrorData = IDocumentLogData & {
+  runError?: {
+    code: RunErrorCodes
+    message: string
+  }
 }
 
 async function generateProviderLogs({
@@ -186,7 +195,8 @@ export async function createDocumentLogWithMetadataAndError({
   totalDuration,
   createdAt,
   automaticProvidersGeneratedAt,
-}: IDocumentLogData): Promise<DocumentLogWithMetadataAndError> {
+  runError,
+}: ICreateDocumentLogWithMetadataAndErrorData): Promise<DocumentLogWithMetadataAndError> {
   const { documentLog } = await createDocumentLog({
     document,
     commit,
@@ -200,6 +210,14 @@ export async function createDocumentLogWithMetadataAndError({
   })
   const workspace = (await findWorkspaceFromCommit(commit))!
   const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspace.id)
-  const result = await repo.findByUuid(documentLog.uuid)
-  return result.unwrap()
+  const result = (await repo.findByUuid(documentLog.uuid)).unwrap()
+  if (runError) {
+    await createRunError({
+      errorableType: ErrorableEntity.DocumentLog,
+      errorableUuid: result.uuid,
+      code: runError.code,
+      message: runError.message,
+    })
+  }
+  return result
 }

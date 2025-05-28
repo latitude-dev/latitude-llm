@@ -44,6 +44,14 @@ function getRelevantLogRows(documentLogDataset: DocumentLogDataset) {
   ).rows
 }
 
+async function getDataset(workspace: Workspace, name?: string) {
+  if (!name) return
+  const repo = new DatasetsRepository(workspace.id)
+  const datasets = await repo.findByName(name)
+  if (datasets.length === 0) return
+  return datasets[0]
+}
+
 /**
  * This service is responsible of obtaining a preview of the dataset that would be generated
  * including the logs provided. The dataset rows are limited to the first 5 and the logs are
@@ -56,15 +64,13 @@ export const previewDatasetFromLogs = async ({
 }: {
   workspace: Workspace
   data: {
-    name: string
+    name?: string
     documentLogIds: number[]
     columnFilters?: ColumnFilters
   }
   hashAlgorithm?: HashAlgorithmFn
 }) => {
-  const repo = new DatasetsRepository(workspace.id)
-  const datasets = await repo.findByName(data.name)
-  const dataset = datasets[0]
+  const dataset = await getDataset(workspace, data.name)
   const documentLogDataset = await buildDocumentLogDataset({
     workspace,
     dataset,

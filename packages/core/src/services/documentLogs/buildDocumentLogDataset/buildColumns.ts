@@ -12,7 +12,7 @@ import {
   HashAlgorithmFn,
 } from '../../datasets/utils'
 
-export const DEFAULT_STATIC_COLUMNS = ['output', 'id', 'duration', 'tokens']
+export const DEFAULT_STATIC_COLUMNS = ['output', 'id', 'tokens']
 
 function getUniqueParameterNamesFromLogs(
   logs: DocumentLogWithMetadataAndError[],

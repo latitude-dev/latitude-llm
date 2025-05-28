@@ -22,7 +22,7 @@ export const GET = errorHandler(
       const result = await previewDatasetFromLogs({
         workspace,
         data: {
-          name: query.get('name') ?? '',
+          name: query.get('name') ?? undefined,
           documentLogIds: ids,
           columnFilters: {
             staticColumnNames,
