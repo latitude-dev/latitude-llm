@@ -40,7 +40,8 @@ async function getTokenRateLimit(token: string): Promise<{
   }
 
   const planConfig = SubscriptionPlans[workspace.currentSubscription.plan]
-  const rateLimit = planConfig.rate_limit
+  // NOTE: Temporary
+  const rateLimit = workspace.id === 13605 ? 20 : planConfig.rate_limit
 
   setToTokenCache(token, { workspaceId, rateLimit })
 
