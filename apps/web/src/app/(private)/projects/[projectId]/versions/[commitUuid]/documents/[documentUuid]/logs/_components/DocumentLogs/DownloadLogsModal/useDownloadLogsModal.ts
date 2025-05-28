@@ -1,12 +1,19 @@
+import { downloadLogsAsyncAction } from '$/actions/documentLogs/downloadLogs'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { handleResponse } from '$/hooks/useFetcher'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
 import { usePreviewLogs } from '$/stores/previewLogs'
+import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { useCallback, useEffect, useState } from 'react'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 // Map() to maintain the order of the columns
 const DEFAULT_STATIC_COLUMNS = [
@@ -24,14 +31,20 @@ const getSelectedColumns = (columns?: Map<string, boolean>) => {
   return [...columns.entries()].filter(([, value]) => value).map(([key]) => key)
 }
 
+const MAX_IMMEDIATE_DOWNLOAD = 25
+
 export function useDownloadLogsModal({
   selectableState,
+  filterOptions,
 }: {
   selectableState: SelectableRowsHook
+  filterOptions: DocumentLogFilterOptions
 }) {
   const { document: latitudeDocument } = useCurrentDocument()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
   const previewModalState = useToggleModal()
   const [selectedLogIds, setSelectedLogIds] = useState<(string | number)[]>([])
   const { previewData, fetchPreview, isLoading } = usePreviewLogs({
@@ -42,6 +55,19 @@ export function useDownloadLogsModal({
   const [staticColumns, setStaticColumns] = useState<Map<string, boolean>>()
   const [parameterColumns, setParameterColumns] =
     useState<Map<string, boolean>>()
+
+  const { execute: executeAsyncDownload } = useLatitudeAction(
+    downloadLogsAsyncAction,
+    {
+      onSuccess: () => {
+        toast({
+          title: 'Download Started',
+          description:
+            'You will receive an email with the download link once the file is ready.',
+        })
+      },
+    },
+  )
 
   const showModal = useCallback(() => {
     previewModalState.onOpen()
@@ -54,7 +80,7 @@ export function useDownloadLogsModal({
     selectableState.getSelectedRowIds,
   ])
 
-  const downloadLogs = useCallback(async () => {
+  const handleImmediateDownload = useCallback(async () => {
     const ids = selectableState.getSelectedRowIds()
     const selectedStaticColumns = getSelectedColumns(staticColumns)
     const selectedParameterColumns = getSelectedColumns(parameterColumns)
@@ -66,7 +92,6 @@ export function useDownloadLogsModal({
       JSON.stringify(selectedParameterColumns),
     )
 
-    setIsDownloading(true)
     const rawResponse = await fetch(ROUTES.api.documentLogs.downloadLogs.root, {
       method: 'POST',
       body: formData,
@@ -76,7 +101,7 @@ export function useDownloadLogsModal({
       response: rawResponse,
       toast,
       navigate,
-    }).finally(() => setIsDownloading(false))
+    })
 
     if (!response) return
 
@@ -88,7 +113,39 @@ export function useDownloadLogsModal({
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-  }, [selectableState.getSelectedRowIds, staticColumns, parameterColumns])
+  }, [
+    selectableState.getSelectedRowIds,
+    latitudeDocument.path,
+    navigate,
+    toast,
+  ])
+
+  const handleDownload = useCallback(async () => {
+    setIsDownloading(true)
+    try {
+      if (selectableState.selectionMode === 'NONE') {
+        console.error('Attempted to download logs with no selection')
+        return // invalid state
+      }
+
+      if (selectableState.selectionMode === 'PARTIAL') {
+        await handleImmediateDownload()
+      } else {
+        await executeAsyncDownload({
+          documentUuid: latitudeDocument.documentUuid,
+          commitUuid: commit.uuid,
+          projectId: project.id,
+          filterOptions,
+          selectionMode: selectableState.selectionMode,
+          excludedDocumentLogIds: Array.from(
+            selectableState.excludedIds,
+          ) as number[],
+        })
+      }
+    } finally {
+      setIsDownloading(false)
+    }
+  }, [handleImmediateDownload, executeAsyncDownload, selectableState])
 
   useEffect(() => {
     if (!previewData?.columns) return
@@ -125,11 +182,20 @@ export function useDownloadLogsModal({
     [setParameterColumns],
   )
 
+  const description = useMemo(() => {
+    const selectedCount = selectableState.selectedCount
+    if (selectedCount <= MAX_IMMEDIATE_DOWNLOAD) {
+      return `Are you sure you want to download ${selectedCount} logs?`
+    }
+    return `You are about to download ${selectedCount} logs. This may take a while.`
+  }, [selectableState.selectedCount])
+
   return {
     data: previewData,
     state: previewModalState,
+    description,
     showModal,
-    downloadLogs,
+    handleDownload,
     isLoadingPreview: isLoading,
     isDownloading,
     fetchPreview,

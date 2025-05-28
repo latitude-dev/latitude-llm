@@ -21,7 +21,7 @@ function serializeRowData(rowData: DatasetRowData): string[] {
   const keys = Object.keys(rowData)
   return keys.map((key) => {
     const cell = rowData[key]
-    return parseRowCell({ cell, parseDates: false })
+    return parseRowCell({ cell })
   })
 }
 

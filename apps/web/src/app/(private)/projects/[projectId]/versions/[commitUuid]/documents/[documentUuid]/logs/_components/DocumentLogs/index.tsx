@@ -104,15 +104,13 @@ export function DocumentLogs({
     rowIds: documentLogIds,
     totalRowCount: pagination?.count ?? 0,
   })
-  const previewLogsState = useSelectedLogs({
+  const saveLogsAsDatasetModalState = useSaveLogsAsDatasetModal({
     selectableState,
     filterOptions: documentLogFilterOptions,
   })
-  const saveLogsAsDatasetModalState = useSaveLogsAsDatasetModal({
-    selectableState,
-  })
   const downloadLogsModalState = useDownloadLogsModal({
     selectableState,
+    filterOptions: documentLogFilterOptions,
   })
 
   const manualEvaluations = useMemo(

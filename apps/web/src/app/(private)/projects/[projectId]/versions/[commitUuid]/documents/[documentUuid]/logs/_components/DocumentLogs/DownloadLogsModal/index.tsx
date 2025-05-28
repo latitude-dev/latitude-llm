@@ -8,8 +8,9 @@ import { PreviewTable } from '../PreviewTable'
 export function DownloadLogsModal({
   data,
   state,
+  description,
   isDownloading,
-  downloadLogs,
+  handleDownload,
   isLoadingPreview,
   previewStaticColumns,
   previewParameterColumns,
@@ -23,7 +24,7 @@ export function DownloadLogsModal({
       onOpenChange={(open) => state.onOpenChange(open)}
       size='xl'
       title='Download logs'
-      description='Download selected logs as a csv file.'
+      description={description}
       footer={
         <>
           <CloseTrigger />
@@ -32,7 +33,7 @@ export function DownloadLogsModal({
             fancy
             variant='default'
             disabled={isDownloading}
-            onClick={downloadLogs}
+            onClick={handleDownload}
           >
             {isDownloading ? 'Downloading...' : 'Download'}
           </Button>
