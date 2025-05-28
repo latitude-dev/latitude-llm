@@ -40,9 +40,9 @@ function ConfigurationSimpleForm({
   useEffect(() => {
     if (mode !== 'create') return
     if (!configuration.provider || !configuration.model) return
-    setConfiguration({
-      ...configuration,
-      prompt: `
+    setConfiguration(
+      Object.assign(configuration, {
+        prompt: `
 ${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
 
 ---
@@ -58,22 +58,29 @@ You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the res
   \`\`\`
   {{ conversation }}
   \`\`\`
-
+${
+  // @ts-expect-error this component is reused for
+  // both custom and custom labeled evaluations
+  settings.metric === LlmEvaluationMetric.CustomLabeled
+    ? `
   {{ if expectedOutput }}
     This is the expected output to compare against:
     \`\`\`
     {{ expectedOutput }}
     \`\`\`
   {{ endif }}
-
+`
+    : ''
+}
   Evaluate the assistant response:
   \`\`\`
   {{ actualOutput }}
   \`\`\`
 </user>
 `.trim(),
-    })
-  }, [mode, configuration.provider, configuration.model])
+      }),
+    )
+  }, [mode, configuration.provider, configuration.model, settings.metric])
 
   return (
     <>
@@ -96,7 +103,7 @@ You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the res
           settings.metric === LlmEvaluationMetric.CustomLabeled
         }
         label='Use expected output'
-        description='Use the {{expectedOutput}} variable in the evaluation prompt'
+        description={`Use the {{expectedOutput}} variable in the evaluation prompt${mode !== 'create' ? '. You cannot change this setting once the evaluation is created' : ''}`}
         onCheckedChange={(checked) => {
           if (checked) {
             setSettings({

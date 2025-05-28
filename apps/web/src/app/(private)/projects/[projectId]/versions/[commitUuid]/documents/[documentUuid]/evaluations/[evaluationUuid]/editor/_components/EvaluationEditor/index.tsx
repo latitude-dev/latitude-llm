@@ -27,6 +27,7 @@ import { useEvaluationParameters } from './hooks/useEvaluationParamaters'
 
 const ALLOWED_PARAMETERS =
   LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
+
 export function EvaluationEditor({
   document,
   commit,
@@ -130,13 +131,13 @@ export function EvaluationEditor({
       <SplitPane
         className='pt-6'
         direction='horizontal'
-        gap={4}
-        initialPercentage={52}
+        reversed
         initialWidthClass='min-w-1/2'
-        minSize={300}
+        minSize={350}
+        initialPercentage={40}
         firstPane={
           <SplitPane.Pane>
-            <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0 pl-6 pb-6'>
+            <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0 pl-6 pb-6 pr-4'>
               <EditorHeader
                 canUseSubagents={false}
                 providers={providers}
@@ -168,7 +169,7 @@ export function EvaluationEditor({
         }
         secondPane={
           <SplitPane.Pane>
-            <div className='flex-1 relative max-h-full pr-6'>
+            <div className='flex-1 relative max-h-full px-4'>
               <Playground
                 commit={commit}
                 document={document}

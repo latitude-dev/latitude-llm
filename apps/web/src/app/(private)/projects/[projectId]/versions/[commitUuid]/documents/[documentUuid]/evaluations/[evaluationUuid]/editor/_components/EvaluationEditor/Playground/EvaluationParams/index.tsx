@@ -10,6 +10,8 @@ import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { useLogHistoryParams } from './HistoryLogParams/useLogHistoryParams'
 import { HistoryLogParams } from './HistoryLogParams'
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 
 export type Props = {
   document: DocumentVersion
@@ -40,10 +42,15 @@ export default function EvaluationParams({
         paddingBottom={false}
         paddingRight={false}
         scrollable={false}
-        title='Log parameters'
+        title='Parameters'
         icon='braces'
         isExpanded={isExpanded}
         onToggle={onToggle}
+        collapsedContentHeader={
+          <div className='flex flex-row flex-grow items-center justify-start'>
+            <OpenInDocsButton route={DocsRoute.Playground} />
+          </div>
+        }
         expandedContent={
           <HistoryLogParams
             commit={commit}
@@ -51,6 +58,11 @@ export default function EvaluationParams({
             evaluation={evaluation}
             data={historyInfo}
           />
+        }
+        expandedContentHeader={
+          <div className='flex flex-row flex-grow items-center justify-start'>
+            <OpenInDocsButton route={DocsRoute.Playground} />
+          </div>
         }
       />
     </ClientOnly>
