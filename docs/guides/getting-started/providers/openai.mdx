@@ -13,13 +13,18 @@ To select your preferred endpoint when creating the provider, follow these steps
 2. Click on **Providers**.
 3. Select **OpenAI** from the list of providers.
 4. Choose the endpoint you want to use.
-![Create an OpenAI provider](/assets/new-openai-provider.png)
+   ![Create an OpenAI provider](/assets/new-openai-provider.png)
 
 <Note>
-  Once you select an endpoint, all prompts using this provider will use that same endpoint.
+  Once you select an endpoint, all prompts using this provider will use that
+  same endpoint.
 </Note>
 
-When using [Responses](https://platform.openai.com/docs/api-reference/responses), you can access OpenAI's [built-in tools](https://platform.openai.com/docs/guides/tools?api-mode=responses) such as web search.
+### Responses API
+
+#### OpenAI built-in tools
+
+When using [Responses](https://platform.openai.com/docs/api-reference/responses), you can access OpenAI's [built-in tools](https://platform.openai.com/docs/guides/tools?api-mode=responses), such as web search:
 
 ```markdown {6-8}
 ---
@@ -31,3 +36,4 @@ tools:
       - type: web_search_preview
         search_context_size: low
 ---
+```
