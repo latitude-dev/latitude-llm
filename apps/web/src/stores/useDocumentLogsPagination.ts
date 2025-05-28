@@ -43,7 +43,15 @@ export default function useDocumentLogsPagination(
   )
 
   const { data, isLoading, error, mutate } = useSWR<IPagination>(
-    ['documentLogsCount', documentUuid, projectId, commitUuid, filterOptions],
+    [
+      'documentLogsCount',
+      documentUuid,
+      projectId,
+      commitUuid,
+      filterOptions,
+      page,
+      pageSize,
+    ],
     fetcher,
     opts,
   )
