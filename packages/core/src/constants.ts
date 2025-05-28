@@ -25,6 +25,7 @@ import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
 
 export {
+  DocumentType,
   EvaluationResultableType,
   LegacyChainEventTypes,
   LogSources,
@@ -106,16 +107,6 @@ export enum EvaluationMetadataType {
   LlmAsJudgeAdvanced = 'llm_as_judge',
   LlmAsJudgeSimple = 'llm_as_judge_simple',
   Manual = 'manual',
-}
-
-export enum EvaluationMode {
-  Live = 'live',
-  Batch = 'batch',
-}
-
-export enum DocumentType {
-  Prompt = 'prompt',
-  Agent = 'agent',
 }
 
 export enum RewardType {
