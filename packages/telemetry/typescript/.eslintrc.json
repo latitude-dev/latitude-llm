@@ -1,7 +1,5 @@
 {
-  "extends": [
-    "./node_modules/@latitude-data/eslint-config/library.js"
-  ],
+  "extends": ["./node_modules/@latitude-data/eslint-config/library.js"],
   "env": {
     "node": true
   },
