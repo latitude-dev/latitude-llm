@@ -39,7 +39,7 @@ const mocks = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('@sentry/cloudflare', async (importOriginal) => {
+vi.mock('$/common/sentry', async (importOriginal) => {
   const original = (await importOriginal()) as typeof importOriginal
 
   return {
