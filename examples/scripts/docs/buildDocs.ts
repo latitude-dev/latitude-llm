@@ -2,70 +2,119 @@ import fs from 'fs'
 import path from 'path'
 import { buildMarkdownDoc } from './buildMarkdown'
 
-// We specify these examples first because are the basics
-const SDK_EXAMPLES_ORDER = [
-  'run-prompt',
-  'run-prompt-with-tools',
-  'pause-tool',
-  'get-prompt',
-  'get-or-create-prompt',
-  'get-all-prompts',
-  'create-log',
-]
+function getFolderName(pagePath: string) {
+  return pagePath.split('/').pop()
+}
 
-function writeAllExampleDocsAndUpdateMintJson() {
-  const EXAMPLE_ROOT_PATH = path.join(
-    process.cwd(),
-    'examples',
-    'src',
-    'examples',
-  )
-  const OUTPUT_DIR = path.join(process.cwd(), 'docs', 'examples', 'sdk')
-  const MINT_JSON_PATH = path.join(process.cwd(), 'docs', 'mint.json')
-
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true })
+function writeDocs({
+  type,
+  mintlify,
+  inputPath,
+  outputDir,
+  folderListOrdered,
+}: {
+  type: 'sdk' | 'cases'
+  mintlify: {
+    path: string
+    sidebarGroupName: string
+  }
+  inputPath: string
+  outputDir: string
+  folderListOrdered: string[]
+}) {
+  fs.mkdirSync(outputDir, { recursive: true })
 
   const folders = fs
-    .readdirSync(EXAMPLE_ROOT_PATH, { withFileTypes: true })
+    .readdirSync(inputPath, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
 
   const orderedFolders = [
-    ...SDK_EXAMPLES_ORDER.filter((name) => folders.includes(name)),
-    ...folders.filter((name) => !SDK_EXAMPLES_ORDER.includes(name)),
+    ...folderListOrdered.filter((name) => folders.includes(name)),
+    ...folders.filter((name) => !folderListOrdered.includes(name)),
   ]
 
   const navPaths: string[] = []
 
   orderedFolders.forEach((folderName) => {
-    const examplePath = path.join(EXAMPLE_ROOT_PATH, folderName)
-    const outputPath = path.join(OUTPUT_DIR, `${folderName}.mdx`)
+    const examplePath = path.join(inputPath, folderName)
+    const outputPath = path.join(outputDir, `${folderName}.mdx`)
 
     try {
       const markdown = buildMarkdownDoc({ examplePath })
       fs.writeFileSync(outputPath, markdown)
-      navPaths.push(`/examples/sdk/${folderName}`)
+      navPaths.push(`/examples/${type}/${folderName}`)
     } catch (err) {
       console.warn(`⚠️ Skipped ${folderName}: ${err}`)
     }
   })
 
-  if (!fs.existsSync(MINT_JSON_PATH)) {
+  if (!fs.existsSync(mintlify.path)) {
     console.error('❌ mint.json not found')
     process.exit(1)
   }
 
-  const mintJson = JSON.parse(fs.readFileSync(MINT_JSON_PATH, 'utf8'))
-  const examplesPages = mintJson.navigation.find(
-    (item: { group: string }) => item.group === 'SDK examples',
+  const mintJson = JSON.parse(fs.readFileSync(mintlify.path, 'utf8'))
+  const pageGroup = mintJson.navigation.find(
+    (item: { group: string }) => item.group === mintlify.sidebarGroupName,
   ) as { group: string; pages: string[] }
 
-  if (!examplesPages) {
-    console.log('"SDK examples" section not found in docs/mint.json')
+  if (!pageGroup) {
+    console.log(
+      `"${mintlify.sidebarGroupName}" section not found in docs/mint.json`,
+    )
   }
 
-  examplesPages.pages = navPaths
-  fs.writeFileSync(MINT_JSON_PATH, JSON.stringify(mintJson, null, 2))
+  const uniquePages = Array.from(new Set([...pageGroup.pages, ...navPaths]))
+  const folderOrderMap = Object.fromEntries(
+    folderListOrdered.map((name, i) => [name, i]),
+  )
+  uniquePages.sort((a, b) => {
+    const aIndex = folderOrderMap[getFolderName(a)]
+    const bIndex = folderOrderMap[getFolderName(b)]
+    if (aIndex !== undefined && bIndex !== undefined) return aIndex - bIndex
+    if (aIndex !== undefined) return -1
+    if (bIndex !== undefined) return 1
+    return 0
+  })
+  pageGroup.pages = uniquePages
+  fs.writeFileSync(mintlify.path, JSON.stringify(mintJson, null, 2))
+}
+
+function writeAllExampleDocsAndUpdateMintJson() {
+  const EXAMPLES_SRC_PATH = path.join(process.cwd(), 'examples', 'src')
+  const DOCS_BASE_PATH = path.join(process.cwd(), 'docs')
+  const MINT_JSON_PATH = path.join(DOCS_BASE_PATH, 'mint.json')
+  const DOCS_EXAMPLES_BASE_PATH = path.join(DOCS_BASE_PATH, 'examples')
+
+  writeDocs({
+    type: 'sdk',
+    mintlify: { path: MINT_JSON_PATH, sidebarGroupName: 'SDK examples' },
+    inputPath: path.join(EXAMPLES_SRC_PATH, 'sdk'),
+    outputDir: path.join(DOCS_EXAMPLES_BASE_PATH, 'sdk'),
+    folderListOrdered: [
+      'run-prompt',
+      'run-prompt-with-tools',
+      'pause-tool',
+      'get-prompt',
+      'get-or-create-prompt',
+      'get-all-prompts',
+      'create-log',
+    ],
+  })
+
+  writeDocs({
+    type: 'cases',
+    mintlify: { path: MINT_JSON_PATH, sidebarGroupName: 'Use cases' },
+    inputPath: path.join(EXAMPLES_SRC_PATH, 'cases'),
+    outputDir: path.join(DOCS_EXAMPLES_BASE_PATH, 'cases'),
+    folderListOrdered: [
+      'weather-chatbot',
+      'joke-generator',
+      'deep-search',
+      'customer-support-email',
+    ],
+  })
 }
 
 writeAllExampleDocsAndUpdateMintJson()

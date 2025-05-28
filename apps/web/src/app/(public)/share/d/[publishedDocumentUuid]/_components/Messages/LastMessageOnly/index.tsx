@@ -1,4 +1,4 @@
-import { LastMessage } from '../../SharedDocument/usePrompt'
+import { LastMessage } from '../../SharedDocument/RunPrompt/usePrompt'
 import {
   ContentType,
   Message as ConversationMessage,

@@ -222,7 +222,8 @@
       "pages": [
         "/examples/cases/weather-chatbot",
         "/examples/cases/joke-generator",
-        "/examples/cases/deep-search"
+        "/examples/cases/deep-search",
+        "/examples/cases/customer-support-email"
       ]
     },
     {

@@ -22,15 +22,18 @@ export function buildMarkdownDoc({
 
   let doc = fs.readFileSync(docPath, 'utf8')
 
-  const folderName = path.basename(examplePath)
-
   const promptFiles = fs
     .readdirSync(examplePath)
     .filter((f) => f.endsWith('.promptl'))
     .map((file) => ({
-      name: `${folderName}/${file}`,
+      name: file.replace(/\.promptl$/, ''), // name without extension
       content: fs.readFileSync(path.join(examplePath, file), 'utf8'),
     }))
+    .sort((a, b) => {
+      if (a.name === 'main') return -1 // "main" goes first
+      if (b.name === 'main') return 1 // "main" goes first
+      return a.name.localeCompare(b.name)
+    })
 
   const promptsBlock =
     '<CodeGroup>\n' +

@@ -7,7 +7,11 @@ import Transaction from './../../lib/Transaction'
 import { publishedDocuments } from '../../schema'
 type UpdatablePublishedDocument = Pick<
   PublishedDocument,
-  'isPublished' | 'canFollowConversation' | 'title' | 'description'
+  | 'isPublished'
+  | 'canFollowConversation'
+  | 'title'
+  | 'description'
+  | 'displayPromptOnly'
 >
 export async function updatePublishedDocument(
   {

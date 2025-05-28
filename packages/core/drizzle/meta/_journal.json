@@ -1212,6 +1212,13 @@
       "when": 1748275025272,
       "tag": "0173_cloudy_carmella_unuscione",
       "breakpoints": true
+    },
+    {
+      "idx": 174,
+      "version": "7",
+      "when": 1748361885492,
+      "tag": "0174_clever_vindicator",
+      "breakpoints": true
     }
   ]
 }

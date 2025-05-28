@@ -85,7 +85,7 @@ export function useChat({
         setResponseStream(undefined)
       }
     },
-    [setMessages, setError, documentLogUuid],
+    [setMessages, setError, documentLogUuid, setResponseStream, shared.uuid],
   )
 
   return { onChat }

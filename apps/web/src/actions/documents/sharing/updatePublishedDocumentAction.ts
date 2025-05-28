@@ -10,6 +10,7 @@ const input = z.object({
   uuid: z.string(),
   isPublished: z.boolean().optional(),
   canFollowConversation: z.boolean().optional(),
+  displayPromptOnly: z.boolean().optional(),
   title: z.string().optional(),
   description: z.string().optional(),
 })
