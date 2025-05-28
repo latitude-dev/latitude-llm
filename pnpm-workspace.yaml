@@ -4,7 +4,6 @@ packages:
   - '!packages/**/python'
   - 'tools/*'
   - '!examples/**'
-  - '!packages/telemetry/**'
 catalog:
   drizzle-orm: ^0.44.0
   drizzle-kit: ^0.31.1

@@ -1,6 +1,6 @@
 {
   "extends": "@latitude-data/typescript-config/base.json",
-  "include": ["src", "../../constants/src"],
+  "include": ["src", "../../constants/src", "tests"],
   "exclude": ["node_modules", "dist"],
   "compilerOptions": {
     "moduleResolution": "Bundler",
