@@ -31,7 +31,8 @@
     "py:sdk:create_log": "npm run run:py -- ./src/sdk/create-log/example.py",
     "py:sdk:annotate_log": "npm run run:py -- ./src/sdk/annotate-log/example.py",
 
-    "ts:cases:customer_support": "npm run run:ts -- ./src/cases/customer-support-email/example.ts"
+    "ts:cases:customer_support": "npm run run:ts -- ./src/cases/customer-support-email/example.ts",
+    "ts:cases:content_moderation": "npm run run:ts -- ./src/cases/content-moderation-system/example.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.0.8",
