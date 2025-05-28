@@ -1,12 +1,9 @@
-import { memo, useCallback, useMemo, useState } from 'react'
-import type { ConversationMetadata } from 'promptl-ai'
-import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
-import PreviewPrompt from '$/components/PlaygroundCommon/PreviewPrompt'
 import Chat from '$/components/PlaygroundCommon/Chat'
+import PreviewPrompt from '$/components/PlaygroundCommon/PreviewPrompt'
+import {
+  EVALUATION_PLAYGROUND_COLLAPSED_SIZE,
+  EVALUATION_PLAYGROUND_GAP_PADDING,
+} from '$/hooks/playgrounds/constants'
 import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
 import {
   Commit,
@@ -15,13 +12,18 @@ import {
   EvaluationV2,
   LlmEvaluationMetricAnyCustom,
 } from '@latitude-data/core/browser'
-import { useEvaluationParameters } from '../hooks/useEvaluationParamaters'
-import { useRunEvaluationPlaygroundPrompt } from './useRunEvaluationPlaygroundPrompt'
+import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
+import {
+  AppLocalStorage,
+  useLocalStorage,
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import type { ConversationMetadata } from 'promptl-ai'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { useEvaluationParameters } from '../hooks/useEvaluationParamaters'
 import EvaluationParams from './EvaluationParams'
-import { COLLAPSED_BOX_HEIGHT } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { useRunEvaluationPlaygroundPrompt } from './useRunEvaluationPlaygroundPrompt'
 
-const PARAMETERS_COLLAPSED_HEIGHT = COLLAPSED_BOX_HEIGHT
 export const Playground = memo(
   ({
     commit,
@@ -42,7 +44,9 @@ export const Playground = memo(
       initialExpanded: 'parameters',
     })
     const collapsed = expander.expandedSection === null
-    const forcedSize = collapsed ? PARAMETERS_COLLAPSED_HEIGHT : undefined
+    const forcedSize = collapsed
+      ? EVALUATION_PLAYGROUND_COLLAPSED_SIZE
+      : undefined
     const { value: expandParameters, setValue: setExpandParameters } =
       useLocalStorage({
         key: AppLocalStorage.expandParameters,
@@ -115,6 +119,8 @@ export const Playground = memo(
       runPrompt,
       setExpandParameters,
       parametersReady,
+      abortCurrentStream,
+      hasActiveStream,
     ])
 
     return (
@@ -123,7 +129,10 @@ export const Playground = memo(
         gap={4}
         initialPercentage={50}
         forcedSize={forcedSize}
-        minSize={PARAMETERS_COLLAPSED_HEIGHT}
+        minSize={
+          EVALUATION_PLAYGROUND_COLLAPSED_SIZE +
+          EVALUATION_PLAYGROUND_GAP_PADDING
+        }
         dragDisabled={collapsed}
         firstPane={firstPane}
         secondPane={secondPane}

@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from 'react'
-
+import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
+import { ROUTES } from '$/services/routes'
 import { DocumentType } from '@latitude-data/core/browser'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { type ParamValue } from 'next/dist/server/request/params'
+import { useCallback, useMemo, useState } from 'react'
 import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper, {
   IndentType,
@@ -10,10 +12,6 @@ import NodeHeaderWrapper, {
 } from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
-import { ROUTES } from '$/services/routes'
-import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
-import { type ParamValue } from 'next/dist/server/request/params'
 
 export default function DocumentHeader({
   open,
@@ -41,9 +39,6 @@ export default function DocumentHeader({
     onRenameFile,
     sidebarLinkContext,
   } = useFileTreeContext()
-  const { enabled: evalsV2Enabled } = useFeatureFlag({
-    featureFlag: 'evaluationsV2',
-  })
   const { deleteTmpFolder, reset } = useTempNodes((state) => ({
     reset: state.reset,
     deleteTmpFolder: state.deleteTmpFolder,
@@ -147,14 +142,14 @@ export default function DocumentHeader({
       icons={[icon]}
       childrenSelected={!!currentEvaluationUuid}
     >
-      {evalsV2Enabled && selected ? (
+      {selected && (
         <EvaluationList
           changeType={node.changeType}
           indentation={indentation}
           documentUuid={documentUuid}
           currentEvaluationUuid={currentEvaluationUuid}
         />
-      ) : null}
+      )}
     </NodeHeaderWrapper>
   )
 }

@@ -3,29 +3,29 @@ import { memo, useCallback, useEffect, useState } from 'react'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
 import { DocumentVersion } from '@latitude-data/core/browser'
+import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { cn } from '@latitude-data/web-ui/utils'
-import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import { cn } from '@latitude-data/web-ui/utils'
 import type { ConversationMetadata } from 'promptl-ai'
 
+import Chat from '$/components/PlaygroundCommon/Chat'
+import {
+  DOCUMENT_PLAYGROUND_COLLAPSED_SIZE,
+  DOCUMENT_PLAYGROUND_GAP_PADDING,
+} from '$/hooks/playgrounds/constants'
+import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
 import DocumentEvaluations from './DocumentEvaluations'
 import DocumentParams from './DocumentParams'
-import Preview from './Preview'
 import DocumentParamsLoading from './DocumentParams/DocumentParamsLoading'
-import {
-  PLAYGROUND_COLLAPSED_SIZE,
-  PLAYGROUND_GAP_PADDING,
-} from '$/hooks/playgrounds/constants'
-import Chat from '$/components/PlaygroundCommon/Chat'
 import { useRunPlaygroundPrompt } from './hooks/useRunPlaygroundPrompt'
-import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
+import Preview from './Preview'
 
 export const Playground = memo(
   ({
@@ -48,7 +48,7 @@ export const Playground = memo(
     })
     const collapsed = expander.expandedSection === null
     useEffect(() => {
-      setForcedSize(collapsed ? PLAYGROUND_COLLAPSED_SIZE : undefined)
+      setForcedSize(collapsed ? DOCUMENT_PLAYGROUND_COLLAPSED_SIZE : undefined)
     }, [collapsed])
     const { parameters, source, setSource } = useDocumentParameters({
       commitVersionUuid: commit.uuid,
@@ -91,7 +91,9 @@ export const Playground = memo(
         gap={4}
         initialPercentage={50}
         forcedSize={forcedSize}
-        minSize={PLAYGROUND_COLLAPSED_SIZE + PLAYGROUND_GAP_PADDING}
+        minSize={
+          DOCUMENT_PLAYGROUND_COLLAPSED_SIZE + DOCUMENT_PLAYGROUND_GAP_PADDING
+        }
         dragDisabled={collapsed}
         firstPane={
           <div className={cn('grid gap-2 w-full pr-0.5', expander.cssClass)}>
