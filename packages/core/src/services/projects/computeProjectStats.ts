@@ -6,12 +6,9 @@ import { EvaluationType, ProjectStats } from '../../constants'
 import { Result } from '../../lib/Result'
 import {
   commits,
-  connectedEvaluations,
   documentLogs,
   documentVersions,
-  evaluationResults,
   evaluationResultsV2,
-  evaluations,
   evaluationVersions,
   providerLogs,
 } from '../../schema'
@@ -54,6 +51,17 @@ export async function computeProjectStats({
     }
   }
 
+  const commitIds = await db
+    .select({ commitId: commits.id })
+    .from(commits)
+    .where(eq(commits.projectId, project.id))
+    .then((result) => result.map((r) => r.commitId))
+  const activeCommitIds = await db
+    .select({ commitId: commits.id })
+    .from(commits)
+    .where(and(eq(commits.projectId, project.id), isNull(commits.deletedAt)))
+    .then((result) => result.map((r) => r.commitId))
+
   // Get total runs (document logs count)
   const totalRunsResult = await computeTotalRuns(project, db)
   if (totalRunsResult.error) return totalRunsResult
@@ -73,8 +81,7 @@ export async function computeProjectStats({
       documentLogs,
       eq(documentLogs.uuid, providerLogs.documentLogUuid),
     )
-    .innerJoin(commits, eq(documentLogs.commitId, commits.id))
-    .where(and(eq(commits.projectId, project.id)))
+    .where(inArray(documentLogs.commitId, commitIds))
     .groupBy(providerLogs.model)
 
   // Calculate total tokens
@@ -108,10 +115,7 @@ export async function computeProjectStats({
       db
         .selectDistinct({ documentUuid: documentVersions.documentUuid })
         .from(documentVersions)
-        .innerJoin(commits, eq(documentVersions.commitId, commits.id))
-        .where(
-          and(eq(commits.projectId, project.id), isNull(commits.deletedAt)),
-        )
+        .where(inArray(documentVersions.commitId, activeCommitIds))
         .as('unique_docs'),
     )
     .then((result) => result[0]?.count ?? 0)
@@ -125,13 +129,9 @@ export async function computeProjectStats({
       count: count(documentLogs.id).as('count'),
     })
     .from(documentLogs)
-    .innerJoin(
-      commits,
-      and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
-    )
     .where(
       and(
-        eq(commits.projectId, project.id),
+        inArray(documentLogs.commitId, activeCommitIds),
         sql`${documentLogs.createdAt} >= NOW() - INTERVAL '30 days'`,
       ),
     )
@@ -144,94 +144,24 @@ export async function computeProjectStats({
       })),
     )
 
-  // Get document UUIDs for evaluation queries
-  const documentUuids = await db
-    .select({ documentUuid: documentVersions.documentUuid })
-    .from(documentVersions)
-    .innerJoin(commits, eq(documentVersions.commitId, commits.id))
-    .where(and(eq(commits.projectId, project.id), isNull(commits.deletedAt)))
-    .then((result) => result.map((row) => row.documentUuid))
-
-  // NOTE(evalsv2): Do not delete this as it's crucial to compute historical
-  // data for the usage overview
-  // Count total evaluations - v1
-  const totalEvaluationsV1 = await db
-    .select({ count: count() })
-    .from(connectedEvaluations)
-    .innerJoin(
-      evaluations,
-      eq(connectedEvaluations.evaluationId, evaluations.id),
-    )
-    .where(inArray(connectedEvaluations.documentUuid, documentUuids))
-    .then((result) => result[0]?.count ?? 0)
-
-  // Count total evaluations - v2
-  const totalEvaluationsV2 = await db
+  // Count total evaluations
+  const totalEvaluations = await db
     .select({ count: count() })
     .from(
       db
         .selectDistinct({ evaluationUuid: evaluationVersions.evaluationUuid })
         .from(evaluationVersions)
-        .innerJoin(commits, eq(commits.id, evaluationVersions.commitId))
-        .where(
-          and(eq(commits.projectId, project.id), isNull(commits.deletedAt)),
-        )
+        .where(inArray(evaluationVersions.commitId, activeCommitIds))
         .as('unique_evals'),
     )
     .then((result) => result[0]?.count ?? 0)
 
-  const totalEvaluations = totalEvaluationsV1 + totalEvaluationsV2
-
-  // Count total evaluation results - v1
-  const totalEvaluationResultsV1 = await db
-    .select({ count: count() })
-    .from(evaluationResults)
-    .innerJoin(evaluations, eq(evaluationResults.evaluationId, evaluations.id))
-    .innerJoin(
-      connectedEvaluations,
-      eq(evaluations.id, connectedEvaluations.evaluationId),
-    )
-    .where(inArray(connectedEvaluations.documentUuid, documentUuids))
-    .then((result) => result[0]?.count ?? 0)
-
-  // Count total evaluation results - v2
-  const totalEvaluationResultsV2 = await db
+  // Count total evaluation results
+  const totalEvaluationResults = await db
     .select({ count: count() })
     .from(evaluationResultsV2)
-    .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
-    .where(and(eq(commits.projectId, project.id), isNull(commits.deletedAt)))
+    .where(inArray(evaluationResultsV2.commitId, activeCommitIds))
     .then((result) => result[0]?.count ?? 0)
-
-  const totalEvaluationResults =
-    totalEvaluationResultsV1 + totalEvaluationResultsV2
-
-  // Calculate cost per evaluation from evaluation provider logs - v1
-  const costPerEvaluationV1 = await db
-    .select({
-      evaluation: evaluations.name,
-      totalCost: sum(providerLogs.costInMillicents).mapWith(Number),
-    })
-    .from(evaluationResults)
-    .innerJoin(
-      providerLogs,
-      eq(evaluationResults.evaluationProviderLogId, providerLogs.id),
-    )
-    .innerJoin(evaluations, eq(evaluationResults.evaluationId, evaluations.id))
-    .innerJoin(
-      connectedEvaluations,
-      eq(evaluations.id, connectedEvaluations.evaluationId),
-    )
-    .where(inArray(connectedEvaluations.documentUuid, documentUuids))
-    .groupBy(evaluations.name)
-    .then((result) =>
-      result.reduce<Record<string, number>>(
-        (acc, stat) => ({
-          ...acc,
-          [stat.evaluation]: stat.totalCost ?? 0,
-        }),
-        {},
-      ),
-    )
 
   // Get latest evaluation versions for v2
   const latestEvaluationsVersions = db.$with('latest_evaluations_versions').as(
@@ -242,13 +172,13 @@ export async function computeProjectStats({
         name: evaluationVersions.name,
       })
       .from(evaluationVersions)
-      .innerJoin(commits, eq(commits.id, evaluationVersions.commitId))
+      .innerJoin(commits, eq(commits.id, evaluationVersions.commitId)) // NOTE: can't remove this join because of the sorting
       .where(and(eq(commits.projectId, project.id), isNull(commits.deletedAt)))
       .orderBy(desc(evaluationVersions.evaluationUuid), desc(commits.mergedAt)),
   )
 
   // Calculate cost per evaluation from evaluation provider logs - v2
-  const costPerEvaluationV2 = await db
+  const costPerEvaluation = await db
     .with(latestEvaluationsVersions)
     .select({
       evaluation: latestEvaluationsVersions.name,
@@ -262,11 +192,9 @@ export async function computeProjectStats({
       latestEvaluationsVersions,
       eq(latestEvaluationsVersions.uuid, evaluationResultsV2.evaluationUuid),
     )
-    .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
     .where(
       and(
-        eq(commits.projectId, project.id),
-        isNull(commits.deletedAt),
+        inArray(evaluationResultsV2.commitId, activeCommitIds),
         eq(latestEvaluationsVersions.type, EvaluationType.Llm),
       ),
     )
@@ -280,11 +208,6 @@ export async function computeProjectStats({
         {},
       ),
     )
-
-  const costPerEvaluation = {
-    ...costPerEvaluationV1,
-    ...costPerEvaluationV2,
-  }
 
   const stats: ProjectStats = {
     totalTokens,
