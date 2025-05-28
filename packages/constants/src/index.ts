@@ -1,6 +1,8 @@
 // TODO(tracing): deprecated
 export { SpanSource as LogSources } from './tracing'
 
+export const HEAD_COMMIT = 'live'
+
 export enum Providers {
   OpenAI = 'openai',
   Anthropic = 'anthropic',
@@ -15,6 +17,11 @@ export enum Providers {
   AmazonBedrock = 'amazon_bedrock',
   DeepSeek = 'deepseek',
   Perplexity = 'perplexity',
+}
+
+export enum DocumentType {
+  Prompt = 'prompt',
+  Agent = 'agent',
 }
 
 export enum DocumentTriggerType {

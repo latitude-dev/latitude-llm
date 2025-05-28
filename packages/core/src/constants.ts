@@ -25,7 +25,9 @@ import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
 
 export {
+  DocumentType,
   EvaluationResultableType,
+  HEAD_COMMIT,
   LegacyChainEventTypes,
   LogSources,
   StreamEventTypes,
@@ -40,7 +42,6 @@ export const LATITUDE_EMAIL = 'hello@latitude.so'
 export const LATITUDE_SLACK_URL =
   'https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw'
 export const LATITUDE_HELP_URL = LATITUDE_SLACK_URL
-export const HEAD_COMMIT = 'live'
 export const DEFAULT_PROVIDER_MAX_FREE_RUNS = 1000
 
 export enum CommitStatus {
@@ -106,16 +107,6 @@ export enum EvaluationMetadataType {
   LlmAsJudgeAdvanced = 'llm_as_judge',
   LlmAsJudgeSimple = 'llm_as_judge_simple',
   Manual = 'manual',
-}
-
-export enum EvaluationMode {
-  Live = 'live',
-  Batch = 'batch',
-}
-
-export enum DocumentType {
-  Prompt = 'prompt',
-  Agent = 'agent',
 }
 
 export enum RewardType {
