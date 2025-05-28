@@ -1,4 +1,3 @@
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { ActionErrors, parseActionErrors } from '$/hooks/useLatitudeAction'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
@@ -94,10 +93,6 @@ export default function EvaluationV2Form<
   commit: ICommitContextType['commit']
   disabled?: boolean
 }) {
-  const { enabled: evaluationsV2Enabled } = useFeatureFlag({
-    featureFlag: 'evaluationsV2',
-  })
-
   const [expanded, setExpanded] = useState(mode === 'update')
   const errors = useMemo(() => parseActionErrors(actionErrors), [actionErrors])
 
@@ -127,7 +122,7 @@ export default function EvaluationV2Form<
   return (
     <form className='min-w-0' id='evaluationV2Form'>
       <FormWrapper>
-        {evaluationsV2Enabled && mode === 'create' && (
+        {mode === 'create' && (
           <TabSelect
             value={settings.type}
             name='type'

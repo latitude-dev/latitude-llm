@@ -1,20 +1,21 @@
 'use client'
+
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
-import { ROUTES } from '$/services/routes'
-import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import {
-  DocumentLogFilterOptions,
   EvaluationV2,
   LOG_FILTERS_ENCODED_PARAMS,
   ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
-import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
+import {
+  buildPagination,
+  IPagination,
+} from '@latitude-data/core/lib/pagination/buildPagination'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
@@ -28,19 +29,10 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import { capitalize } from 'lodash-es'
-import { useSearchParams } from 'next/navigation'
 import { forwardRef, useMemo } from 'react'
-
-const countLabel = (selected: number) => (count: number) => {
-  return selected ? `${selected} of ${count} logs selected` : `${count} logs`
-}
 
 type DocumentLogRow = DocumentLogWithMetadataAndError & {
   realtimeAdded?: boolean
@@ -110,7 +102,7 @@ function EvaluationsColumn({
 
 type Props = {
   documentLogs: DocumentLogRow[]
-  documentLogFilterOptions: DocumentLogFilterOptions
+  pagination?: IPagination
   evaluationResults: Record<string, ResultWithEvaluationV2[]>
   evaluations: EvaluationV2[]
   selectedLog: DocumentLogWithMetadataAndError | undefined
@@ -122,65 +114,47 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
   function DocumentLogsTable(
     {
       documentLogs,
-      documentLogFilterOptions,
+      pagination,
       evaluationResults,
       evaluations,
       selectedLog,
       setSelectedLog,
       isLoading,
-      selectableState: {
-        headerState,
-        isSelected,
-        toggleRow,
-        toggleAll,
-        selectedCount,
-      },
+      selectableState: { headerState, isSelected, toggleRow, toggleAll },
     },
     ref,
   ) {
-    const searchParams = useSearchParams()
-    const page = searchParams.get('page') ?? '1'
-    const pageSize = searchParams.get('pageSize') ?? '25'
-    const { commit } = useCurrentCommit()
-    const { project } = useCurrentProject()
-    const { document } = useCurrentDocument()
-    const { data: pagination, isLoading: isPaginationLoading } =
-      useDocumentLogsPagination({
-        projectId: project.id,
-        filterOptions: documentLogFilterOptions,
-        documentUuid: document.documentUuid,
-        page,
-        pageSize,
-      })
     const queryParams =
-      typeof window !== 'undefined' ? window.location.search : ''
+      typeof window !== 'undefined' ? window.location.search : undefined
+
+    const queryParamsObject = useMemo<QueryParams | undefined>(() => {
+      if (queryParams === undefined) return undefined
+
+      const searchParams = new URLSearchParams(queryParams)
+      // NOTE: Remove logUuid from pagination. Otherwhise never moves from
+      // selected log (`logUuid` is always present in the URL)
+      searchParams.delete('logUuid')
+      return Object.fromEntries(searchParams)
+    }, [queryParams])
 
     return (
       <Table
         ref={ref}
         className='table-auto'
         externalFooter={
-          <LinkableTablePaginationFooter
-            countLabel={countLabel(selectedCount)}
-            isLoading={isPaginationLoading}
-            pagination={
-              pagination
-                ? buildPagination({
-                    baseUrl: ROUTES.projects
-                      .detail({ id: project.id })
-                      .commits.detail({ uuid: commit.uuid })
-                      .documents.detail({ uuid: document.documentUuid }).logs
-                      .root,
-                    count: pagination.count,
-                    queryParams,
-                    encodeQueryParams: false,
-                    paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
-                    page: Number(page),
-                    pageSize: Number(pageSize),
-                  })
-                : undefined
-            }
-          />
+          pagination ? (
+            <LinkableTablePaginationFooter
+              pagination={buildPagination({
+                baseUrl: pagination.baseUrl ?? '',
+                count: pagination.count ?? 0,
+                queryParams: queryParamsObject,
+                encodeQueryParams: false,
+                paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
+                page: Number(pagination.page),
+                pageSize: Number(pagination.pageSize),
+              })}
+            />
+          ) : null
         }
       >
         <TableHeader className='sticky top-0 z-10'>

@@ -5,7 +5,7 @@ import { Providers } from '@latitude-data/constants'
 import getTestDisk from '../../tests/testDrive'
 import { Dataset, DocumentLog } from '../../browser'
 import { identityHashAlgorithm } from './utils'
-import { createDatasetFromLogs } from './createFromLogs'
+import { updateDatasetFromLogs } from './createFromLogs'
 import { DatasetRowsRepository } from '../../repositories'
 
 const testDrive = getTestDisk()
@@ -113,13 +113,10 @@ describe('createFromLogs', async () => {
       `,
       })
       .then((r) => r.dataset)
-    const result = await createDatasetFromLogs({
-      author: setup.user,
+    const result = await updateDatasetFromLogs({
+      dataset,
       workspace: setup.workspace,
-      data: {
-        name: dataset.name,
-        documentLogIds: [documentLog.id],
-      },
+      documentLogIds: [documentLog.id],
       hashAlgorithm: identityHashAlgorithm,
     })
     const updatedDataset = result.value!

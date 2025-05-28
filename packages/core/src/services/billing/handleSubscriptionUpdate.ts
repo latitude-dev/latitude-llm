@@ -98,23 +98,16 @@ export async function handleSubscriptionUpdate(
 
     // 5. If the subscription is active and plan is not team_v1, create/update
     if (stripeSubscription.status === 'active') {
-      // For this example, we're focusing on upgrading to TeamV1
       const targetPlan = SubscriptionPlan.TeamV1
       if (currentSubscription?.plan === targetPlan) {
         return Result.ok({ workspace, subscription: currentSubscription })
       }
 
-      // Create new subscription record with the target plan
       const [newSubscription] = await tx
         .insert(subscriptions)
         .values({
           workspaceId: workspace.id,
           plan: targetPlan,
-          // TODO: Potentially store Stripe subscription ID, current period end, etc.
-          // stripeSubscriptionId: stripeSubscription.id,
-          // currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
-          // currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
-          // status: stripeSubscription.status,
         })
         .returning()
       if (!newSubscription) {

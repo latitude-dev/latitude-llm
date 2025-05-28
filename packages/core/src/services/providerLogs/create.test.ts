@@ -73,7 +73,10 @@ describe('create provider', () => {
     )
     expect(publisherSpy).toHaveBeenCalledWith({
       type: 'providerLogCreated',
-      data: providerLog,
+      data: {
+        id: providerLog.id,
+        workspaceId: workspace.id,
+      },
     })
   })
 

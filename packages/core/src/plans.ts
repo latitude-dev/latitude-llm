@@ -10,21 +10,29 @@ export const SubscriptionPlans = {
     name: 'Hobby',
     credits: 10_000,
     users: 1,
+    retention_period: 30,
+    rate_limit: 10, // per second
   },
   [SubscriptionPlan.HobbyV1]: {
     name: 'Hobby',
     credits: 50_000,
     users: 1,
+    retention_period: 30,
+    rate_limit: 10, // per second
   },
   [SubscriptionPlan.TeamV1]: {
     name: 'Team',
     credits: 100_000,
     users: 5,
+    retention_period: 1825,
+    rate_limit: 166, // per second
   },
   [SubscriptionPlan.EnterpriseV1]: {
     name: 'Enterprise',
     credits: 1_000_000,
     users: 1000,
+    retention_period: 3650,
+    rate_limit: 500, // per second
   },
 }
 

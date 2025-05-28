@@ -53,6 +53,7 @@ export function Step1({
   const selectableState = useSelectableRows<string>({
     rowIds: evaluations.map((e) => e.uuid),
     initialSelection: selectedEvaluation ? [selectedEvaluation.uuid] : [],
+    totalRowCount: evaluations.length,
   })
 
   useEffect(() => {

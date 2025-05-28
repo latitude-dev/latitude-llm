@@ -1,0 +1,92 @@
+{
+  "name": "@latitude-data/telemetry",
+  "version": "1.0.0",
+  "description": "Latitude Telemetry for Typescript",
+  "author": "Latitude Data SL <hello@latitude.so>",
+  "license": "LGPL-3.0",
+  "keywords": [
+    "AI",
+    "Telemetry",
+    "sdk",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/typescript"
+  },
+  "homepage": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/typescript#readme",
+  "scripts": {
+    "dev": "rollup -w -c ./rollup.config.mjs",
+    "build": "NODE_ENV=production rollup -c ./rollup.config.mjs",
+    "test": "vitest run --pool=forks",
+    "test:watch": "vitest",
+    "tc": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/resources": "^1.30.1",
+    "@opentelemetry/instrumentation": "^0.57.2",
+    "@opentelemetry/sdk-trace-node": "^1.30.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.57.2",
+    "@opentelemetry/baggage-span-processor": "^0.3.0",
+    "@opentelemetry/semantic-conventions": "^1.34.0",
+    "@traceloop/instrumentation-anthropic": "^0.13.0",
+    "@traceloop/instrumentation-azure": "^0.13.0",
+    "@traceloop/instrumentation-bedrock": "^0.13.0",
+    "@traceloop/instrumentation-cohere": "^0.13.0",
+    "@traceloop/instrumentation-langchain": "^0.13.0",
+    "@traceloop/instrumentation-llamaindex": "^0.13.0",
+    "@traceloop/instrumentation-openai": "^0.13.0",
+    "@traceloop/instrumentation-together": "^0.13.0",
+    "@traceloop/instrumentation-vertexai": "^0.13.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@latitude-data/constants": "workspace:*",
+    "@latitude-data/eslint-config": "workspace:*",
+    "@latitude-data/typescript-config": "workspace:*",
+    "@rollup/plugin-alias": "^5.1.1",
+    "@rollup/plugin-replace": "^6.0.2",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/node": "^22.15.21",
+    "rollup": "^4.41.0",
+    "rollup-plugin-dts": "^6.2.1",
+    "vitest": "^3.1.4",
+    "@latitude-data/sdk": "workspace:*",
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@aws-sdk/client-bedrock-runtime": "^3.812.0",
+    "@azure/openai": "^2.0.0",
+    "@google-cloud/aiplatform": "^3.35.0",
+    "@google-cloud/vertexai": "^1.10.0",
+    "@langchain/core": "^0.3.57",
+    "ai": "^4.3.16",
+    "cohere-ai": "^7.17.1",
+    "langchain": "^0.3.27",
+    "llamaindex": "^0.8.37",
+    "openai": "^4.102.0",
+    "together-ai": "^0.16.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.5.4"
+  }
+}

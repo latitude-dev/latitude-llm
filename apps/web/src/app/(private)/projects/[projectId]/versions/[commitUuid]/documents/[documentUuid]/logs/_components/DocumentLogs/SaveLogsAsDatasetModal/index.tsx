@@ -40,6 +40,7 @@ function ExistingDatasetSelector({
   )
   return (
     <Select
+      required
       name='name'
       label='Your existing datasets'
       placeholder='Select dataset'
@@ -60,12 +61,14 @@ export function SaveLogsAsDatasetModal({
   setSelectedDataset,
   isLoadingPreview,
   fetchPreview,
+  selectedCount,
   error,
 }: Props) {
   const [showDatasetSelector, setShowDatasetSelector] = useState(false)
   const onShowDatasetSelector = useCallback(
     (value: string) => {
       setShowDatasetSelector(value === 'existing_dataset')
+      if (value !== 'existing_dataset') setSelectedDataset(undefined)
     },
     [setSelectedDataset, setShowDatasetSelector],
   )
@@ -102,8 +105,8 @@ export function SaveLogsAsDatasetModal({
       open={state.open}
       onOpenChange={onOpenChange}
       size='xl'
-      title='Save logs as dataset'
-      description='Save the selected logs as a dataset to use in other parts of the platform.'
+      title='Add logs to dataset'
+      description='Add the selected logs to a new or existing dataset'
       footer={
         <>
           <CloseTrigger />
@@ -114,7 +117,7 @@ export function SaveLogsAsDatasetModal({
             variant='default'
             disabled={isSaving}
           >
-            {isSaving ? 'Saving...' : 'Save to Dataset'}
+            {isSaving ? 'Saving...' : 'Add to Dataset'}
           </Button>
         </>
       }
@@ -141,6 +144,7 @@ export function SaveLogsAsDatasetModal({
             />
           ) : (
             <Input
+              required
               name='name'
               label='Dataset name'
               placeholder='Enter name'
@@ -151,7 +155,7 @@ export function SaveLogsAsDatasetModal({
         <PreviewTable
           previewData={data}
           isLoading={isLoadingPreview}
-          subtitle='This is a preview of existing items in the dataset if you picked one plus the new items from the logs you selected.'
+          subtitle={`${selectedCount} logs will be added to{' '}{previewData.datasetRows.length > 0 ? 'the dataset' : 'a new dataset'}. Here's a preview.`}
         />
       </div>
     </Modal>

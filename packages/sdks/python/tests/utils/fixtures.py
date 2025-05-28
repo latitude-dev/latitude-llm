@@ -16,6 +16,7 @@ from promptl_ai import (
 
 from latitude_sdk import (
     AGENT_END_TOOL_NAME,
+    AnnotateEvaluationResult,
     ApiError,
     ApiErrorCodes,
     ChainError,
@@ -29,8 +30,6 @@ from latitude_sdk import (
     ChainEventStepStarted,
     ChainEventToolsRequested,
     ChainTextResponse,
-    EvaluationResult,
-    EvaluationResultType,
     FinishedResult,
     FinishReason,
     Log,
@@ -173,36 +172,28 @@ EVALUATIONS = [
 ]
 
 EVALUATION_RESULT_RESPONSE: dict[str, Any] = {
-    "id": 31,
     "uuid": "e25a317b-c682-4c25-a704-a87ac79507c4",
-    "evaluationId": 31,
-    "documentLogId": 31,
-    "evaluatedProviderLogId": 31,
-    "evaluationProviderLogId": None,
-    "resultableType": "evaluation_resultable_booleans",
-    "resultableId": 31,
-    "result": True,
-    "source": "api",
-    "reason": "Because Yes",
+    "score": 1,
+    "normalizedScore": 1,
+    "metadata": {"reason": "Because Yes"},
+    "hasPassed": True,
     "createdAt": "2025-01-01 00:00:00.000",
     "updatedAt": "2025-01-01 00:00:00.000",
+    "versionUuid": "e25a317b-c682-4c25-a704-a87ac79507c4",
+    "error": None,
 }
 
 
-EVALUATION_RESULT = EvaluationResult(
-    id=31,
+EVALUATION_RESULT = AnnotateEvaluationResult(
     uuid="e25a317b-c682-4c25-a704-a87ac79507c4",
-    evaluation_id=31,
-    document_log_id=31,
-    evaluated_provider_log_id=31,
-    evaluation_provider_log_id=None,
-    resultable_type=EvaluationResultType.Boolean,
-    resultable_id=31,
-    result=True,
-    source=LogSources.Api,
-    reason="Because Yes",
+    score=1,
+    normalized_score=1,
+    metadata={"reason": "Because Yes"},
+    has_passed=True,
     created_at=datetime(2025, 1, 1, 0, 0, 0, 0),
     updated_at=datetime(2025, 1, 1, 0, 0, 0, 0),
+    version_uuid="e25a317b-c682-4c25-a704-a87ac79507c4",
+    error=None,
 )
 
 CONVERSATION_EVENTS_STREAM: list[str] = [
@@ -843,7 +834,10 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
         "finishReason": "stop",
         "isContinued": False,
         "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
-        "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
+        "response": {
+            "timestamp": "2025-01-02T12:29:13.000Z",
+            "modelId": "gpt-4o-mini-latest",
+        },
         "usage": {"promptTokens": 31, "completionTokens": 9, "totalTokens": 40},
     },
     {
@@ -851,7 +845,10 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
         "type": "finish",
         "finishReason": "stop",
         "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
-        "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
+        "response": {
+            "timestamp": "2025-01-02T12:29:13.000Z",
+            "modelId": "gpt-4o-mini-latest",
+        },
         "usage": {"promptTokens": 31, "completionTokens": 9, "totalTokens": 40},
     },
     ChainEventProviderCompleted(
@@ -956,7 +953,10 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
         "finishReason": "tool-calls",
         "isContinued": False,
         "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
-        "response": {"timestamp": "2025-01-02T12:29:16.000Z", "modelId": "gpt-4o-mini-latest"},
+        "response": {
+            "timestamp": "2025-01-02T12:29:16.000Z",
+            "modelId": "gpt-4o-mini-latest",
+        },
         "usage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
     },
     {
@@ -964,7 +964,10 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
         "type": "finish",
         "finishReason": "tool-calls",
         "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
-        "response": {"timestamp": "2025-01-02T12:29:16.000Z", "modelId": "gpt-4o-mini-latest"},
+        "response": {
+            "timestamp": "2025-01-02T12:29:16.000Z",
+            "modelId": "gpt-4o-mini-latest",
+        },
         "usage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
     },
     ChainEventProviderCompleted(
@@ -1033,9 +1036,15 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
             AssistantMessage(content=[TextContent(text="I should look at their decimals.")]),
         ],
         tools=[
-            ToolCall(id="toolu_01ARatRfRidTDshkg1UuQhW2", name="calculator", arguments={"expression": "9.9 > 9.11"}),
             ToolCall(
-                id="toolu_B0398l23AOdTDshkg1UuQhZ3", name="calculator", arguments={"expression": "9.9 less than 9.11"}
+                id="toolu_01ARatRfRidTDshkg1UuQhW2",
+                name="calculator",
+                arguments={"expression": "9.9 > 9.11"},
+            ),
+            ToolCall(
+                id="toolu_B0398l23AOdTDshkg1UuQhZ3",
+                name="calculator",
+                arguments={"expression": "9.9 less than 9.11"},
             ),
             ToolCall(
                 id="toolu_K12398312kjadbsadZ77JAS4",
@@ -1173,11 +1182,26 @@ CONVERSATION_FINISHED_RESULT_RESPONSE: dict[str, Any] = {
         },
     ],
     "conversation": [
-        {"role": "system", "content": [{"type": "text", "text": "Reason before answering."}]},
-        {"role": "user", "content": [{"type": "text", "text": "My question is: Is 9.9 greater than 9.11?"}]},
-        {"role": "assistant", "content": [{"type": "text", "text": "I should look at their decimals."}]},
-        {"role": "system", "content": [{"type": "text", "text": "Now answer succinctly."}]},
-        {"role": "user", "content": [{"type": "text", "text": "My question was: Is 9.9 greater than 9.11?"}]},
+        {
+            "role": "system",
+            "content": [{"type": "text", "text": "Reason before answering."}],
+        },
+        {
+            "role": "user",
+            "content": [{"type": "text", "text": "My question is: Is 9.9 greater than 9.11?"}],
+        },
+        {
+            "role": "assistant",
+            "content": [{"type": "text", "text": "I should look at their decimals."}],
+        },
+        {
+            "role": "system",
+            "content": [{"type": "text", "text": "Now answer succinctly."}],
+        },
+        {
+            "role": "user",
+            "content": [{"type": "text", "text": "My question was: Is 9.9 greater than 9.11?"}],
+        },
         {
             "role": "assistant",
             "content": [
@@ -1522,7 +1546,10 @@ FOLLOW_UP_CONVERSATION_EVENTS: list[StreamEvent] = [
         "finishReason": "stop",
         "isContinued": False,
         "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
-        "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
+        "response": {
+            "timestamp": "2025-01-02T12:29:13.000Z",
+            "modelId": "gpt-4o-mini-latest",
+        },
         "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
     },
     {
@@ -1530,7 +1557,10 @@ FOLLOW_UP_CONVERSATION_EVENTS: list[StreamEvent] = [
         "type": "finish",
         "finishReason": "stop",
         "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
-        "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
+        "response": {
+            "timestamp": "2025-01-02T12:29:13.000Z",
+            "modelId": "gpt-4o-mini-latest",
+        },
         "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
     },
     ChainEventProviderCompleted(

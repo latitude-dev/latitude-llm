@@ -1,5 +1,3 @@
-'use client'
-
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
@@ -17,7 +15,10 @@ import { DocumentLogsAggregations } from '@latitude-data/core/services/documentL
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo, useRef, useState } from 'react'
 import { LogsOverTime } from '../../../../../overview/_components/Overview/LogsOverTime'
@@ -29,6 +30,9 @@ import { DownloadLogsModal } from './DownloadLogsModal'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
 import { useSaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal/useSaveLogsAsDatasetModal'
 import { useDownloadLogsModal } from './DownloadLogsModal/useDownloadLogsModal'
+import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
+import { useSearchParams } from 'next/navigation'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -60,6 +64,7 @@ export function DocumentLogs({
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
   const { document } = useCurrentDocument()
+  const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const [selectedLog, setSelectedLog] = useState<
     DocumentLogWithMetadataAndError | undefined
@@ -79,6 +84,17 @@ export function DocumentLogs({
     filterOptions: documentLogFilterOptions,
     projectId: project.id,
   })
+  const searchParams = useSearchParams()
+  const page = searchParams.get('page') ?? '1'
+  const pageSize = searchParams.get('pageSize') ?? '25'
+  const { data: pagination } = useDocumentLogsPagination({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+    filterOptions: documentLogFilterOptions,
+    page,
+    pageSize,
+  })
 
   const documentLogIds = useMemo(
     () => documentLogs.map((r) => r.id),
@@ -86,6 +102,11 @@ export function DocumentLogs({
   )
   const selectableState = useSelectableRows({
     rowIds: documentLogIds,
+    totalRowCount: pagination?.count ?? 0,
+  })
+  const previewLogsState = useSelectedLogs({
+    selectableState,
+    filterOptions: documentLogFilterOptions,
   })
   const saveLogsAsDatasetModalState = useSaveLogsAsDatasetModal({
     selectableState,
@@ -105,9 +126,11 @@ export function DocumentLogs({
   const responseLog = useMemo(() => {
     if (!selectedLog) return undefined
     if (selectedLog.error.code) return undefined
+
     const lastProviderLog = providerLogs.at(-1)
     if (!lastProviderLog) return undefined
     if (lastProviderLog.documentLogUuid != selectedLog.uuid) return undefined
+
     return lastProviderLog
   }, [selectedLog, providerLogs])
 
@@ -149,7 +172,7 @@ export function DocumentLogs({
         <DocumentLogsTable
           ref={stickyRef}
           documentLogs={documentLogs}
-          documentLogFilterOptions={documentLogFilterOptions}
+          pagination={pagination}
           evaluationResults={evaluationResults}
           evaluations={evaluations}
           selectedLog={selectedLog}
@@ -194,29 +217,38 @@ export function DocumentLogs({
         )}
         <div className='flex justify-center sticky bottom-4 pointer-events-none'>
           <FloatingPanel visible={selectableState.selectedCount > 0}>
-            <div className='flex flex-row justify-between gap-x-4'>
-              <Button
-                fancy
-                disabled={selectableState.selectedCount === 0}
-                onClick={saveLogsAsDatasetModalState.onClickShowPreview}
-              >
-                Save logs to dataset
-              </Button>
-              <Button
-                disabled={selectableState.selectedCount === 0}
-                fancy
-                variant='outline'
-                onClick={downloadLogsModalState.showModal}
-              >
-                Download Logs
-              </Button>
-              <Button
-                fancy
-                variant='outline'
-                onClick={selectableState.clearSelections}
+            <div className='flex flex-row items-center gap-x-4'>
+              <div className='flex flex-row gap-x-2'>
+                <Button
+                  fancy
+                  disabled={selectableState.selectedCount === 0}
+                  onClick={saveLogsAsDatasetModalState.onClickShowPreview}
+                >
+                  Add {selectableState.selectedCount} logs to dataset
+                </Button>
+                <Button
+                  disabled={selectableState.selectedCount === 0}
+                  fancy
+                  variant='outline'
+                  onClick={downloadLogsModalState.showModal}
+                >
+                  Download Logs
+                </Button>
+              </div>
+              <Tooltip
+                trigger={
+                  <Button
+                    iconProps={{
+                      name: 'close',
+                    }}
+                    className='p-0'
+                    variant='ghost'
+                    onClick={selectableState.clearSelections}
+                  />
+                }
               >
                 Clear selection
-              </Button>
+              </Tooltip>
             </div>
           </FloatingPanel>
         </div>

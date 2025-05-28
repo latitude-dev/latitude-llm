@@ -1,6 +1,15 @@
+import { ToolInputMap } from '$sdk/utils/adapters/types'
 import type { Config } from '@latitude-data/compiler'
 import { ToolDefinitionsMap } from '@latitude-data/constants/ai'
 import { Adapters, ProviderAdapter } from 'promptl-ai'
+import { getAIProviderTools } from './getProviderTools'
+import { getOpenAIResponseTools } from '$sdk/utils/adapters/openai/getFunctionTools'
+
+const ADAPTERS_WITH_SNAKE_CASE = [
+  Adapters.openai.type,
+  Adapters.openaiResponses.type,
+  Adapters.anthropic.type,
+]
 
 /**
  * Configuration parameters in Latitude are defined using camelCase,
@@ -14,12 +23,12 @@ export function adaptPromptConfigToProvider(
 ): Config {
   if (config.tools) {
     config.tools = adaptToolsConfig(
-      config.tools as ToolDefinitionsMap | ToolDefinitionsMap[],
+      config.tools as ToolInputMap | ToolInputMap[],
       adapter,
     )
   }
 
-  if (adapter == Adapters.openai || adapter == Adapters.anthropic) {
+  if (ADAPTERS_WITH_SNAKE_CASE.includes(adapter.type)) {
     return Object.keys(config).reduce((acc: Config, key: string) => {
       if (key in SNAKE_CASE_CONFIGURATION_ATTRIBUTES) {
         acc[SNAKE_CASE_CONFIGURATION_ATTRIBUTES[key]!] = config[key]
@@ -42,14 +51,23 @@ const SNAKE_CASE_CONFIGURATION_ATTRIBUTES: Record<string, string> = {
 }
 
 export function adaptToolsConfig(
-  tools: ToolDefinitionsMap | ToolDefinitionsMap[],
+  tools: ToolInputMap | ToolInputMap[],
   adapter: ProviderAdapter<object>,
-): object {
+) {
+  let allTools: ToolInputMap
+
   if (Array.isArray(tools)) {
-    tools = Object.assign({}, ...tools) as ToolDefinitionsMap
+    allTools = Object.assign({}, ...tools) as ToolDefinitionsMap
+  } else {
+    allTools = tools
   }
 
-  if (adapter == Adapters.openai) {
+  const splitTools = getAIProviderTools({
+    adapter,
+    tools: allTools,
+  })
+
+  if (adapter.type === Adapters.openai.type) {
     return Object.entries(tools).map(([name, definition]) => ({
       type: 'function',
       function: {
@@ -57,6 +75,10 @@ export function adaptToolsConfig(
         ...definition,
       },
     }))
+  }
+
+  if (adapter.type === Adapters.openaiResponses.type) {
+    return getOpenAIResponseTools(splitTools)
   }
 
   if (adapter == Adapters.anthropic) {
@@ -70,5 +92,6 @@ export function adaptToolsConfig(
     })
   }
 
+  // No manipulation needed for other adapters
   return tools
 }

@@ -47,7 +47,7 @@ export default function NewProviderApiKey() {
 
       if (!error) onOpenChange(false)
     },
-    [create],
+    [create, onOpenChange],
   )
 
   const [provider, setProvider] = useState<Providers | undefined>()
@@ -89,10 +89,10 @@ export default function NewProviderApiKey() {
           />
           <Select
             required
+            label='Provider'
             name='provider'
             options={PROVIDER_OPTIONS}
             onChange={(value) => setProvider(value as Providers)}
-            label='Provider'
           />
 
           {!isCustom && MODEL_OPTIONS.length ? (

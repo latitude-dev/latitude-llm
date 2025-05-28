@@ -1,0 +1,55 @@
+name: Publish Python SDK
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13.x
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: '0.5.10'
+          enable-cache: true
+
+      - name: Install Python dependencies
+        run: |
+          cd packages/sdks/python
+          uv venv
+          uv sync --all-extras --all-groups
+
+      - name: Check version on pypi
+        id: check_version
+        run: |
+          cd packages/sdks/python
+          PYPI_VERSION=$(uv pip show latitude-sdk | grep Version | awk '{print $2}')
+          if [ "${{ steps.get_version.outputs.version }}" != "$PYPI_VERSION" ]; then
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build package (with workspace dependencies)
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          cd packages/sdks/python
+          uv build
+
+      - name: Publish to pypi
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          cd packages/sdks/python
+          uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }}

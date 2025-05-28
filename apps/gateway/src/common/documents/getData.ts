@@ -17,7 +17,7 @@ import {
   ProjectsRepository,
   ProviderApiKeysRepository,
 } from '@latitude-data/core/repositories'
-import { Config } from '@latitude-data/core/services/ai/helpers'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import {
   ChainCallResponseDto,
   LegacyChainEvent,
@@ -186,7 +186,7 @@ function latitudeLegacyEventPresenter(event: {
         uuid: event.data.documentLogUuid!,
       } as {
         type: LegacyChainEventTypes.Step
-        config: Config
+        config: LatitudePromptConfig
         isLastStep: boolean
         messages: Message[]
         uuid?: string

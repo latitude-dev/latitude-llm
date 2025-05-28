@@ -1,19 +1,25 @@
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { type AnthropicProvider, createAnthropic } from '@ai-sdk/anthropic'
 import { createAzure } from '@ai-sdk/azure'
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createVertex } from '@ai-sdk/google-vertex/edge'
-import { createVertexAnthropic } from '@ai-sdk/google-vertex/anthropic/edge'
-import { createMistral } from '@ai-sdk/mistral'
-import { createOpenAI } from '@ai-sdk/openai'
-import { createXai } from '@ai-sdk/xai'
-import { createDeepSeek } from '@ai-sdk/deepseek'
-import { createPerplexity } from '@ai-sdk/perplexity'
+import {
+  createGoogleGenerativeAI,
+  GoogleGenerativeAIProvider,
+} from '@ai-sdk/google'
+import { createVertex, GoogleVertexProvider } from '@ai-sdk/google-vertex/edge'
+import {
+  createVertexAnthropic,
+  GoogleVertexAnthropicProvider,
+} from '@ai-sdk/google-vertex/anthropic/edge'
+import { createMistral, MistralProvider } from '@ai-sdk/mistral'
+import { createOpenAI, type OpenAIProvider } from '@ai-sdk/openai'
+import { createXai, XaiProvider } from '@ai-sdk/xai'
+import { createDeepSeek, DeepSeekProvider } from '@ai-sdk/deepseek'
+import { createPerplexity, PerplexityProvider } from '@ai-sdk/perplexity'
 import { type Message, MessageRole } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { Providers } from '../../constants'
-import { Result } from '../../lib/Result'
+import { Result, TypedResult } from '../../lib/Result'
 import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 
 import { PartialPromptConfig } from '@latitude-data/constants'
@@ -24,12 +30,8 @@ import {
   AmazonBedrockConfiguration,
   amazonBedrockConfigurationSchema,
 } from './providers/helpers/amazonBedrock'
-export {
-  type PromptConfig as Config,
-  type PartialPromptConfig as PartialConfig,
-  googleConfig,
-  azureConfig,
-} from '@latitude-data/constants'
+
+export { type PartialPromptConfig as PartialConfig } from '@latitude-data/constants'
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1'
 
@@ -98,6 +100,17 @@ function validateVertexConfig({
   )
 }
 
+export type LlmProvider =
+  | OpenAIProvider
+  | AnthropicProvider
+  | XaiProvider
+  | MistralProvider
+  | GoogleGenerativeAIProvider
+  | GoogleVertexProvider
+  | GoogleVertexAnthropicProvider
+  | DeepSeekProvider
+  | PerplexityProvider
+
 export function createProvider({
   provider,
   messages,
@@ -110,7 +123,7 @@ export function createProvider({
   apiKey: string
   url?: string
   config?: PartialPromptConfig
-}) {
+}): TypedResult<LlmProvider, ChainError<RunErrorCodes.AIProviderConfigError>> {
   const type = provider.provider
   switch (type) {
     case Providers.OpenAI:
@@ -155,7 +168,6 @@ export function createProvider({
       return Result.ok(
         createGoogleGenerativeAI({
           apiKey,
-          ...(config?.google ?? {}),
         }),
       )
     }

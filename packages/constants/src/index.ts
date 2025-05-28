@@ -1,18 +1,7 @@
-export enum LogSources {
-  API = 'api',
-  Playground = 'playground',
-  Evaluation = 'evaluation', // This is actually for "batch" evaluations (now Experiments)
-  Experiment = 'experiment',
-  User = 'user',
-  SharedPrompt = 'shared_prompt',
-  AgentAsTool = 'agent_as_tool',
-  EmailTrigger = 'email_trigger',
-  ScheduledTrigger = 'scheduled_trigger',
-}
-export const NON_LIVE_EVALUABLE_LOG_SOURCES = [
-  LogSources.Evaluation,
-  LogSources.Experiment,
-]
+// TODO(tracing): deprecated
+export { SpanSource as LogSources } from './tracing'
+
+export const HEAD_COMMIT = 'live'
 
 export enum Providers {
   OpenAI = 'openai',
@@ -28,6 +17,11 @@ export enum Providers {
   AmazonBedrock = 'amazon_bedrock',
   DeepSeek = 'deepseek',
   Perplexity = 'perplexity',
+}
+
+export enum DocumentType {
+  Prompt = 'prompt',
+  Agent = 'agent',
 }
 
 export enum DocumentTriggerType {
@@ -72,6 +66,11 @@ export * from './helpers'
 export * from './mcp'
 export * from './evaluations'
 export * from './integrations'
+export * from './tracing'
 
 // TODO: Move to env
 export const EMAIL_TRIGGER_DOMAIN = 'run.latitude.so' as const
+export const OPENAI_PROVIDER_ENDPOINTS = [
+  'chat_completions',
+  'responses',
+] as const

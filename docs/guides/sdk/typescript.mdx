@@ -40,7 +40,7 @@ const latitude = new Latitude(process.env.LATITUDE_API_KEY, {
 
 ## Examples
 
-Check out our [cookbook](/guides/cookbook/overview#typescript) for more examples of how to use the Latitude SDK.
+Check out our [Examples](/examples) section for more examples of how to use the Latitude SDK.
 
 ## SDK Structure
 
@@ -473,29 +473,23 @@ latitude.logs.create(
     projectId?: number,
     versionUuid?: string
   }
-): Promise<DocumentLog>
+)
 ```
 
 ### Evaluations Namespace
 
 ```typescript
-// Trigger an evaluation
-latitude.evaluations.trigger(
-  uuid: string,
-  options?: {
-    evaluationUuids?: string[]
-  }
-): Promise<{ uuid: string }>
-
-// Create an evaluation result
-latitude.evaluations.createResult(
-  uuid: string,
+// Annotate a log
+latitude.evaluations.annotate(
+  conversationUuid: string,
+  score: number,
   evaluationUuid: string,
-  options: {
-    result: string | boolean | number,
-    reason: string
+  options?: {
+    reason?: string,
+    projectId?: number,
+    versionUuid?: string
   }
-): Promise<{ uuid: string }>
+)
 ```
 
 ## Error Handling

@@ -1,4 +1,4 @@
-import { captureException } from '@latitude-data/core/workers/sentry'
+import { initSentry } from '@latitude-data/core/workers/sentry'
 import { Job } from 'bullmq'
 
 /**
@@ -10,18 +10,30 @@ export function createJobHandler<T extends Record<string, Function>>(
   jobMappings: T,
 ) {
   return async (job: Job) => {
-    const jobName = job.name
-    const jobFunction = jobMappings[jobName as keyof T]
-    if (!jobFunction) {
-      throw new Error(`Job function not found: ${jobName}`)
+    const s = initSentry()
+    const fn = async () => {
+      const jobName = job.name
+      const jobFunction = jobMappings[jobName as keyof T]
+      if (!jobFunction) {
+        throw new Error(`Job function not found: ${jobName}`)
+      }
+
+      return await jobFunction(job)
     }
 
-    try {
-      return await jobFunction(job)
-    } catch (error) {
-      captureException(error as Error)
-
-      throw error
+    if (s) {
+      return s?.tracer?.startActiveSpan(
+        job.name,
+        {
+          attributes: {
+            jobId: job.id,
+            data: job.data,
+          },
+        },
+        fn,
+      )
+    } else {
+      return await fn()
     }
   }
 }

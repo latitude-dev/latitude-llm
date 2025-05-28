@@ -2,9 +2,6 @@ export * from './db-schema'
 
 // Legacy models
 export * from './legacyModels/datasetsV1'
-export * from './legacyModels/traces'
-export * from './legacyModels/spans'
-
 export * from './legacyModels/evaluations'
 export * from './legacyModels/evaluationMetadataLlmAsJudgeAdvanced'
 export * from './legacyModels/evaluationMetadataLlmAsJudgeSimple'
@@ -38,6 +35,10 @@ export * from './models/documentSuggestions'
 
 export * from './models/providerApiKeys'
 
+// Observability tables
+export * from './models/spans'
+export * from './models/segments'
+
 // Log tables
 export * from './models/documentLogs'
 export * from './models/runErrors'
@@ -65,3 +66,6 @@ export * from './models/mcpServers'
 
 export * from './models/webhooks'
 export * from './models/workspaceOnboarding'
+
+// Export tables
+export * from './models/exports'

@@ -22,7 +22,7 @@ function useCachedRows({
   const currentPage = useRef<number>(startingPage)
   return useCallback(
     (rows: DatasetRow[]) => {
-      const newRows = serializeRows(dataset.columns)(rows)
+      const newRows = serializeRows(rows)
       let leftoverRows = [...newRows]
 
       const size = Number(pageSize)

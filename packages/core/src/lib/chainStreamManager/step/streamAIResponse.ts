@@ -116,12 +116,14 @@ export async function streamAIResponse({
   }).then((r) => r.unwrap())
 
   const checkResult = checkValidStream({ type: aiResult.type })
+
   if (checkResult.error) throw checkResult.error
 
   const { error, finishReason } = await consumeStream({
     controller,
     result: aiResult,
   })
+
   if (error) throw error
 
   const processedResponse = await processResponse({

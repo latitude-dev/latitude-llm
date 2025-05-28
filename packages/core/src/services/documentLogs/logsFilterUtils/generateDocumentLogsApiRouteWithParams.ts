@@ -59,6 +59,7 @@ export function generateDocumentLogsApiRouteWithParams({
     page?: number
     pageSize?: number
     excludeErrors?: boolean
+    commitUuid?: string
     days?: number | undefined
   }
 }) {

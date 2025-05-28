@@ -14,6 +14,7 @@ export function VerticalSplit({
   minHeight,
   forcedHeight,
   onResizeStop,
+  onDragStop,
   classNamePanelWrapper,
   className,
   gap,
@@ -28,6 +29,7 @@ export function VerticalSplit({
   minHeight: number
   forcedHeight?: number
   onResizeStop?: (height: number) => void
+  onDragStop?: (height: number) => void
   classNamePanelWrapper?: string
   className?: string
   gap?: SplitGap
@@ -74,6 +76,7 @@ export function VerticalSplit({
         paneSize={forcedHeight !== undefined ? forcedHeight : paneHeight}
         onResizePane={setPaneHeight}
         onResizeStop={onResizeStop}
+        onDragStop={onDragStop}
         dragDisabled={dragDisabled}
       >
         <PaneWrapper

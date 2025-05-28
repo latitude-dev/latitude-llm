@@ -103,6 +103,8 @@ function formatMessages(messages: Message[]) {
   }
 }
 
+// TODO(evalsv2): This is v1 deprecated but is mantained
+// for backwards compatibility with v1 llm evaluations
 export function serializeForEvaluation(
   providerLog: ProviderLog,
 ): SerializedProviderLog {

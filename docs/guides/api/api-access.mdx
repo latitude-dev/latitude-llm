@@ -23,7 +23,7 @@ Authorization: Bearer YOUR_API_KEY
 
 The base URL for API requests depends on your environment:
 
-`https://gateway.latitude.so/api/v2`
+`https://gateway.latitude.so/api/v3`
 
 ### Rate Limiting
 
@@ -31,8 +31,21 @@ The API enforces rate limits based on your API key to ensure fair usage and prev
 
 **Limits:**
 
-- **Rate Limit Points:** 10 requests
-- **Rate Limit Duration:** 1 second
+Rate limits are enforced based on your subscription plan. The following limits apply:
+
+- **Hobby Plan:**
+
+  - 10 requests per second
+
+- **Team Plan:**
+
+  - 166 requests per second (10000 requests per minute)
+
+- **Enterprise Plan:**
+
+  - 500 requests per second (30000 requests per minute)
+
+Contact sales to request a custom rate limit in the enterprise plan.
 
 When the rate limit is exceeded, the following headers are included in the response to help you manage your request rate:
 

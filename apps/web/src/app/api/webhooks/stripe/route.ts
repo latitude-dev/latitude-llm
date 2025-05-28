@@ -47,7 +47,7 @@ export const POST = errorHandler(async (req: NextRequest) => {
     throw new UnprocessableEntityError(`Webhook Error: ${error.message}`)
   }
 
-  if (event.type === 'customer.subscription.created') {
+  if (event.type === 'customer.subscription.updated') {
     const subscription = event.data.object as Stripe.Subscription
 
     if (subscription.status === 'active') {

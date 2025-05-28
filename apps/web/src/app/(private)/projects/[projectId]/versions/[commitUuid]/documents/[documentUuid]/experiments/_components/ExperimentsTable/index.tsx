@@ -35,6 +35,10 @@ import { relativeTime } from '$/lib/relativeTime'
 import { ResultsCell } from './ResultsCell'
 import { getStatus } from './shared'
 import { ExperimentStatus } from './ExperimentStatus'
+import {
+  EventArgs,
+  useSockets,
+} from '$/components/Providers/WebsocketsProvider/useSockets'
 
 const countLabel = (count: number): string => {
   return `${count} experiments`
@@ -54,16 +58,56 @@ export function ExperimentsTable({
   const { document } = useCurrentDocument()
 
   const searchParams = useSearchParams()
-  const page = searchParams.get('page') ?? '1'
-  const pageSize = searchParams.get('pageSize') ?? '25'
+  const page = Number(searchParams.get('page') ?? '1')
+  const pageSize = Number(searchParams.get('pageSize') ?? '25')
 
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
 
-  const { data: experiments, isLoading } = useExperiments({
-    projectId: project.id,
-    documentUuid: document.documentUuid,
-    page: Number(page),
-    pageSize: Number(pageSize),
+  const {
+    mutate,
+    data: experiments,
+    isLoading,
+  } = useExperiments(
+    {
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+      page,
+      pageSize,
+    },
+    {
+      refreshInterval: 5000, // 5 seconds
+    },
+  )
+
+  useSockets({
+    event: 'experimentStatus',
+    onMessage: (message: EventArgs<'experimentStatus'>) => {
+      if (!message) return
+      if (page > 1) return
+
+      const { experiment: updatedExperiment } = message
+      if (updatedExperiment.documentUuid !== document.documentUuid) return
+
+      mutate(
+        (prev) => {
+          if (!prev) return prev
+
+          const prevExperimentIdx = prev.findIndex(
+            (exp) => exp.uuid === updatedExperiment.uuid,
+          )
+          if (prevExperimentIdx !== -1) {
+            // Substitute the previous experiment with the updated one, without moving it in the array
+            prev[prevExperimentIdx] = updatedExperiment
+            return prev
+          }
+
+          return [updatedExperiment, ...prev]
+        },
+        {
+          revalidate: false,
+        },
+      )
+    },
   })
 
   const { data: commits, isLoading: isLoadingCommits } = useCommitsFromProject(
@@ -71,7 +115,7 @@ export function ExperimentsTable({
   )
 
   if (isLoading) {
-    return <TableSkeleton cols={9} rows={Math.min(count, Number(pageSize))} />
+    return <TableSkeleton cols={9} rows={Math.min(count, pageSize)} />
   }
 
   return (
@@ -89,8 +133,8 @@ export function ExperimentsTable({
                 DocumentRoutes.experiments
               ].root,
               count: count ?? 0,
-              page: Number(page),
-              pageSize: Number(pageSize),
+              page,
+              pageSize,
               queryParams: selectedExperiments.length
                 ? `selected=${selectedExperiments.join(',')}`
                 : undefined,

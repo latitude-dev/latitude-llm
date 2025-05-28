@@ -1,30 +1,16 @@
-import { DatasetRow, Dataset, parseRowCell } from '@latitude-data/core/browser'
-import { DatasetRowData } from '@latitude-data/core/schema'
+import { DatasetRow, parseRowCell } from '@latitude-data/core/browser'
 
 export type ClientDatasetRow = DatasetRow & {
-  cells: DatasetRowData[keyof DatasetRowData][]
   processedRowData: { [key: string]: string }
 }
 
-export function serializeRow({
-  row,
-  columns,
-}: {
-  row: DatasetRow
-  columns: Dataset['columns']
-}): ClientDatasetRow {
+export function serializeRow({ row }: { row: DatasetRow }): ClientDatasetRow {
   return {
     ...row,
-    // DEPRECATED: We don't need this. Remove once
-    // DataGrid is used without feature flag.
-    cells: columns.map(({ identifier }) => {
-      const cell = row.rowData[identifier]
-      return parseRowCell({ cell, parseDates: true })
-    }),
     processedRowData: Object.keys(row.rowData).reduce(
       (acc, key) => {
         const rawCell = row.rowData[key]
-        const cell = parseRowCell({ cell: rawCell, parseDates: true })
+        const cell = parseRowCell({ cell: rawCell })
         return { ...acc, [key]: cell }
       },
       {} as ClientDatasetRow['processedRowData'],
@@ -34,8 +20,6 @@ export function serializeRow({
   }
 }
 
-export const serializeRows =
-  (columns: Dataset['columns']) =>
-  (rows: DatasetRow[]): ClientDatasetRow[] => {
-    return rows.map((item) => serializeRow({ row: item, columns }))
-  }
+export const serializeRows = (rows: DatasetRow[]): ClientDatasetRow[] => {
+  return rows.map((item) => serializeRow({ row: item }))
+}

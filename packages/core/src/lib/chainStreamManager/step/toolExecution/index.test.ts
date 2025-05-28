@@ -4,7 +4,6 @@ import { Commit, Providers, User, Workspace } from '../../../../browser'
 import {
   AGENT_RETURN_TOOL_NAME,
   LatitudeTool,
-  PromptConfig,
   ToolDefinition,
 } from '@latitude-data/constants'
 import { Result } from '../../../Result'
@@ -15,6 +14,7 @@ import * as runDocumentAtCommitMod from '../../../../services/commits/runDocumen
 import * as callIntegrationToolMod from '../../../../services/integrations/McpClient/callTool'
 import * as executeLatitudeToolCallMod from '../../../../services/latitudeTools'
 import { ResolvedTools, ToolSource } from '../../resolveTools/types'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 const agentAsToolResponse = { response: 'Agent response' }
 const integrationToolResponse = { executed: 'integrationTool' }
@@ -79,7 +79,7 @@ async function setupDocument({
     }),
   })
 
-  return { document, config: config as PromptConfig }
+  return { document, config: config as LatitudePromptConfig }
 }
 
 let getBuiltInToolCallResponses: typeof import('./index').getBuiltInToolCallResponses
@@ -268,7 +268,7 @@ describe('getBuiltInToolCallResponses', () => {
     const resolvedTools = await resolveToolsFromConfig({
       workspace,
       promptSource: { document, commit },
-      config: {} as PromptConfig,
+      config: {} as LatitudePromptConfig,
       injectAgentFinishTool: true,
     }).then((r) => r.unwrap())
 
@@ -298,21 +298,11 @@ describe('getBuiltInToolCallResponses', () => {
   })
 
   it('Returns the response from Latitude Tools', async () => {
-    const { document: oldSchemaDoc, config: oldSchemaConfig } =
-      await setupDocument({
-        latitudeTools: [LatitudeTool.RunCode],
-        useLegacySchema: true,
-      })
     const { document: newSchemaDoc, config: newSchemaConfig } =
       await setupDocument({
         latitudeTools: [LatitudeTool.RunCode],
       })
 
-    const oldSchemaTools = await resolveToolsFromConfig({
-      workspace,
-      promptSource: { document: oldSchemaDoc, commit },
-      config: oldSchemaConfig,
-    }).then((r) => r.unwrap())
     const newSchemaTools = await resolveToolsFromConfig({
       workspace,
       promptSource: { document: newSchemaDoc, commit },
@@ -338,17 +328,6 @@ describe('getBuiltInToolCallResponses', () => {
       responseMessagePromisesWithNewSchema,
     )
 
-    const responseMessagePromisesWithOldSchema = getBuiltInToolCallResponses({
-      workspace,
-      promptSource: { document: oldSchemaDoc, commit },
-      toolCalls,
-      resolvedTools: oldSchemaTools,
-      onFinish: () => {},
-    })
-    const responseMessagesWithOldSchema = await Promise.all(
-      responseMessagePromisesWithOldSchema,
-    )
-
     expect(responseMessagesWithNewSchema).toEqual([
       {
         role: MessageRole.tool,
@@ -356,20 +335,6 @@ describe('getBuiltInToolCallResponses', () => {
           {
             type: ContentType.toolResult,
             toolName: Object.keys(newSchemaTools)[0]!,
-            toolCallId: '1',
-            isError: false,
-            result: latitudeToolResponse,
-          },
-        ],
-      },
-    ])
-    expect(responseMessagesWithOldSchema).toEqual([
-      {
-        role: MessageRole.tool,
-        content: [
-          {
-            type: ContentType.toolResult,
-            toolName: Object.keys(oldSchemaTools)[0]!,
             toolCallId: '1',
             isError: false,
             result: latitudeToolResponse,

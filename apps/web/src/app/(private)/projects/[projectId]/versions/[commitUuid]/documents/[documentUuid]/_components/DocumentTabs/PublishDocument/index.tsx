@@ -93,9 +93,15 @@ function PublishedDocumentSettings({
   const [title, setTitle] = useState<string | undefined>()
   const [description, setDescription] = useState<string | undefined>()
   const [canChat, setCanChat] = useState<boolean | undefined>()
+  const [displayPromptOnly, setdisplayPromptOnly] = useState<
+    boolean | undefined
+  >()
 
   const hasEdits =
-    title !== undefined || description !== undefined || canChat !== undefined
+    title !== undefined ||
+    description !== undefined ||
+    canChat !== undefined ||
+    displayPromptOnly !== undefined
   useEffect(() => {
     if (isUpdating) return
     setTitle(undefined)
@@ -112,8 +118,9 @@ function PublishedDocumentSettings({
       title,
       description,
       canFollowConversation: canChat,
+      displayPromptOnly,
     })
-  }, [title, description, canChat, isUpdating])
+  }, [title, description, canChat, displayPromptOnly, isUpdating, update])
 
   return (
     <div className='flex flex-col w-full gap-4 p-4'>
@@ -146,6 +153,13 @@ function PublishedDocumentSettings({
         checked={canChat ?? data?.canFollowConversation ?? false}
         disabled={isUpdating || !canEdit}
         onCheckedChange={setCanChat}
+      />
+      <SwitchInput
+        label='Display prompt only'
+        checked={displayPromptOnly ?? data?.displayPromptOnly ?? false}
+        disabled={isUpdating || !canEdit}
+        onCheckedChange={setdisplayPromptOnly}
+        description='When enabled, the prompt will be displayed without the chat interface.'
       />
       <div className='flex flex-row w-full items-center justify-between gap-4'>
         <Button

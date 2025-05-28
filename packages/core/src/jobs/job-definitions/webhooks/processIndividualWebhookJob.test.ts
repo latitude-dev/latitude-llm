@@ -347,16 +347,8 @@ describe('processIndividualWebhookJob', () => {
     const event = {
       type: 'documentLogCreated',
       data: {
-        uuid: documentLog.uuid,
-        documentUuid: document.documentUuid,
-        duration: 1000,
-        parameters: { test: 'value' },
-        customIdentifier: undefined,
-        source: 'playground',
+        id: documentLog.id,
         workspaceId: workspace.id,
-        commitId: commit.id,
-        userEmail: 'test@example.com',
-        messages,
       },
     }
 
@@ -390,7 +382,7 @@ describe('processIndividualWebhookJob', () => {
           prompt: expect.any(Object),
           uuid: documentLog.uuid,
           parameters: { test: 'value' },
-          customIdentifier: undefined,
+          customIdentifier: null,
           duration: expect.any(Number),
           source: expect.any(String),
           commitId: commit.id,

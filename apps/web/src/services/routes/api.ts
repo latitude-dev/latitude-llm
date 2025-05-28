@@ -211,9 +211,11 @@ export const API_ROUTES = {
                 pagination: ({
                   page,
                   pageSize,
+                  commitUuid,
                   excludeErrors,
                   filterOptions,
                 }: PaginationParameters & {
+                  commitUuid: string
                   excludeErrors?: boolean
                   filterOptions: DocumentLogFilterOptions
                 }) =>
@@ -222,6 +224,7 @@ export const API_ROUTES = {
                     params: {
                       page,
                       pageSize,
+                      commitUuid,
                       excludeErrors,
                       filterOptions,
                     },

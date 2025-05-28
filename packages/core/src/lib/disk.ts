@@ -82,6 +82,7 @@ export class DiskWrapper {
 
   async getSignedUrl(key: string, options?: SignedURLOptions) {
     if (this.disk.driver instanceof FSDriver) return this.disk.getUrl(key)
+
     return this.disk.getSignedUrl(key, options)
   }
 
@@ -104,20 +105,37 @@ export class DiskWrapper {
     }
   }
 
+  async put(key: string, contents: string, options?: WriteOptions) {
+    try {
+      await this.disk.put(key, contents, {
+        ...options,
+        contentLength: contents.length,
+      })
+
+      return Result.nil()
+    } catch (e) {
+      return Result.error(e as Error)
+    }
+  }
+
+  async getStream(key: string) {
+    return this.disk.getStream(key)
+  }
+
+  async exists(key: string) {
+    return this.disk.exists(key)
+  }
+
   async putStream(key: string, contents: Readable, options?: WriteOptions) {
     try {
       await this.disk.putStream(key, contents, {
         ...options,
         contentLength: contents.readableLength,
       })
+
       return Result.nil()
     } catch (e) {
-      if (e instanceof errors.E_CANNOT_WRITE_FILE) {
-        return Result.error(new Error('Cannot write file'))
-      }
-
-      const error = e as Error
-      return Result.error(error)
+      return Result.error(e as Error)
     }
   }
 

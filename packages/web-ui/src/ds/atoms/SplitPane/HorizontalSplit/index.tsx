@@ -14,11 +14,13 @@ export function HorizontalSplit({
   minWidth,
   forcedWidth,
   onResizeStop,
+  onDragStop,
   classNamePanelWrapper,
   initialWidthClass,
   className,
   gap,
   autoResize,
+  dragDisabled,
 }: {
   leftPane: ReactNode
   rightPane: ReactNode
@@ -29,10 +31,12 @@ export function HorizontalSplit({
   minWidth: number
   forcedWidth?: number
   onResizeStop?: (width: number) => void
+  onDragStop?: (width: number) => void
   classNamePanelWrapper?: string
   className?: string
   gap?: SplitGap
   autoResize?: boolean
+  dragDisabled?: boolean
 }) {
   const [ref, { width: initialWidthFromRef }] = useMeasure<HTMLDivElement>()
   const [paneWidth, setPaneWidth] = useState<number>(initialWidth ?? 0)
@@ -81,13 +85,15 @@ export function HorizontalSplit({
         widthClassWhileNoPaneWidth={initialWidthClass}
         onResizePane={setPaneWidth}
         onResizeStop={onResizeStop}
+        onDragStop={onDragStop}
+        dragDisabled={dragDisabled}
       >
         <PaneWrapper
           direction='horizontal'
           isResizable
           className={cn(
             classNamePanelWrapper,
-            getGapWrapperPadding('horizontal', gap),
+            dragDisabled ? '' : getGapWrapperPadding('horizontal', gap),
           )}
         >
           {leftPane}

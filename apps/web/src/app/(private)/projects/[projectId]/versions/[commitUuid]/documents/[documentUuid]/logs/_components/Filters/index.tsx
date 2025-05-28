@@ -29,7 +29,11 @@ export function DocumentLogFilters({
     <>
       <DatePickerRange
         showPresets
-        initialRange={filterOptions.createdAt}
+        initialRange={
+          filterOptions?.createdAt?.from
+            ? (filterOptions.createdAt as { from: Date; to: Date | undefined })
+            : undefined
+        }
         onCloseChange={filters.onCreatedAtChange}
       />
       <CommitFilter

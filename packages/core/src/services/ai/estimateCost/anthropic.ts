@@ -4,6 +4,7 @@ import { createModelSpec } from './helpers'
 export const ANTHROPIC_MODELS = createModelSpec({
   defaultModel: 'claude-3-5-sonnet-20241022',
   models: {
+    'claude-sonnet-4-20250514': { cost: { input: 3.0, output: 15.0 } },
     'claude-3-7-sonnet-latest': { cost: { input: 3.0, output: 15.0 } },
     'claude-3-7-sonnet-20250219': {
       cost: { input: 3.0, output: 15.0 },
@@ -23,6 +24,7 @@ export const ANTHROPIC_MODELS = createModelSpec({
       cost: { input: 3.0, output: 15.0, hidden: true },
     },
 
+    'claude-opus-4-20250514': { cost: { input: 15.0, output: 75.0 } },
     'claude-3-opus-latest': { cost: { input: 15.0, output: 75.0 } },
     'claude-3-opus-20240229': {
       cost: { input: 15.0, output: 75.0, hidden: true },

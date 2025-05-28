@@ -12,8 +12,8 @@ import {
 import { PromptSource } from '../../../../constants'
 import { runAgentStep } from '../../../agents/runStep'
 import { ChainStreamManager } from '../../../../lib/chainStreamManager'
-import { PromptConfig } from '@latitude-data/constants'
 import { Result } from './../../../../lib/Result'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
   const toolContents: ToolRequestContent[] = providerLog.toolCalls.map(
@@ -53,7 +53,7 @@ export async function resumeAgent({
 }: {
   workspace: Workspace
   providerLog: ProviderLog
-  globalConfig: PromptConfig
+  globalConfig: LatitudePromptConfig
   messages: Message[]
   source: LogSources
   promptSource: PromptSource

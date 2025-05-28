@@ -1,7 +1,14 @@
 import { ChainStepResponse, StreamType } from '../../../browser'
 import { AIReturn } from '../../ai'
-import { processStreamObject } from './processStreamObject'
-import { processStreamText } from './processStreamText'
+
+function parseObject(text: string) {
+  const parsed = text
+  try {
+    return JSON.parse(parsed)
+  } catch {
+    return {}
+  }
+}
 
 /**
  * This function is responsible for processing the AI response
@@ -13,9 +20,21 @@ export async function processResponse({
   aiResult: Awaited<AIReturn<StreamType>>
   documentLogUuid?: string
 }): Promise<ChainStepResponse<StreamType>> {
-  if (aiResult.type === 'text') {
-    return processStreamText({ aiResult, documentLogUuid })
-  }
+  const isObject = aiResult.type === 'object'
 
-  return processStreamObject({ aiResult, documentLogUuid })
+  const text = await aiResult.text
+
+  return {
+    streamType: aiResult.type,
+    documentLogUuid,
+    text,
+    object: isObject ? parseObject(text) : undefined,
+    usage: await aiResult.usage,
+    reasoning: await aiResult.reasoning,
+    toolCalls: (await aiResult.toolCalls).map((t) => ({
+      id: t.toolCallId,
+      name: t.toolName,
+      arguments: t.args,
+    })),
+  }
 }

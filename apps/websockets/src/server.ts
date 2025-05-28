@@ -5,7 +5,6 @@ import {
   WebClientToServerEvents,
   WebServerToClientEvents,
   WebSocketData,
-  WorkersClientToServerEvents,
 } from '@latitude-data/core/browser'
 import {
   buildWorkspaceRoom,
@@ -32,8 +31,39 @@ function parseCookie(cookieString: string): Record<string, string> {
 
 const app = express()
 app.use(cookieParser())
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ limit: '10mb', extended: true }))
+
 app.get('/health', (_, res) => {
   res.json({ status: 'Websockets server running' })
+})
+
+// Worker events endpoint
+app.post('/worker-events', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1]
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' })
+    }
+
+    const result = await verifyWorkerWebsocketToken(token)
+    if (result.error) {
+      return res.status(401).json({ error: result.error.message })
+    }
+
+    const { event, workspaceId, data } = req.body
+    if (!event || !workspaceId || !data) {
+      return res.status(400).json({ error: 'Missing required fields' })
+    }
+
+    const workspace = buildWorkspaceRoom({ workspaceId })
+    web.to(workspace).emit(event, data)
+
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Error processing worker event:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
 })
 
 const server = http.createServer(app)
@@ -47,7 +77,7 @@ const io = new Server(server, {
 })
 
 io.on('connection', (socket: Socket) => {
-  // Main namespace is not enabled. Connect to /web or /workers instead.
+  // Main namespace is not enabled. Connect to /web instead.
   socket.disconnect()
 })
 
@@ -101,72 +131,6 @@ web.on('connection', (socket) => {
       const room = buildWorkspaceRoom({ workspaceId })
       socket.join(room)
     }
-  })
-})
-
-const workers: Namespace<WorkersClientToServerEvents> = io.of('/workers')
-
-workers.use(async (socket, next) => {
-  try {
-    const token = socket.handshake.auth?.token
-    if (!token) {
-      return next(new Error('Authentication error: No token provided'))
-    }
-
-    const result = await verifyWorkerWebsocketToken(token)
-
-    if (result.error) {
-      return next(new Error(`Authentication error: ${result.error.message}`))
-    }
-
-    return next()
-  } catch (err) {
-    console.error('JWT verification failed for worker:', err)
-    return next(new Error('Authentication error'))
-  }
-})
-
-workers.on('connection', (socket) => {
-  socket.on('documentLogCreated', (args) => {
-    const { workspaceId, data } = args
-    const workspace = buildWorkspaceRoom({ workspaceId })
-    web.to(workspace).emit('documentLogCreated', data)
-  })
-
-  socket.on('documentSuggestionCreated', (args) => {
-    const { workspaceId, data } = args
-    const workspace = buildWorkspaceRoom({ workspaceId })
-    web.to(workspace).emit('documentSuggestionCreated', data)
-  })
-
-  socket.on('evaluationResultV2Created', (args) => {
-    const { workspaceId, data } = args
-    const workspace = buildWorkspaceRoom({ workspaceId })
-    web.to(workspace).emit('evaluationResultV2Created', data)
-  })
-
-  socket.on('datasetRowsCreated', (args) => {
-    const { workspaceId, data } = args
-    const workspace = buildWorkspaceRoom({ workspaceId })
-    web.to(workspace).emit('datasetRowsCreated', data)
-  })
-
-  socket.on('mcpServerScaleEvent', (args) => {
-    const { workspaceId, data } = args
-    const workspace = buildWorkspaceRoom({ workspaceId })
-    web.to(workspace).emit('mcpServerScaleEvent', data)
-  })
-
-  socket.on('mcpServerConnected', (args) => {
-    const { workspaceId, data } = args
-    const workspace = buildWorkspaceRoom({ workspaceId })
-    web.to(workspace).emit('mcpServerConnected', data)
-  })
-
-  socket.on('experimentStatus', (args) => {
-    const { workspaceId, data } = args
-    const workspace = buildWorkspaceRoom({ workspaceId })
-    web.to(workspace).emit('experimentStatus', data)
   })
 })
 

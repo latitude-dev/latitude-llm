@@ -19,18 +19,12 @@ describe('completeExperiment', () => {
   let user: User
   let workspace: Workspace
 
-  const mockWebsocketClient = {
-    emit: vi.fn(),
-  }
   const mockProgressTracker = {
     getProgress: vi.fn(),
   }
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    vi.mocked(WebsocketClient.getSocket).mockResolvedValue(
-      mockWebsocketClient as any,
-    )
     vi.mocked(ProgressTracker).mockImplementation(
       () => mockProgressTracker as any,
     )
@@ -106,7 +100,7 @@ describe('completeExperiment', () => {
 
     await completeExperiment(experiment)
 
-    expect(mockWebsocketClient.emit).toHaveBeenCalledWith('experimentStatus', {
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith('experimentStatus', {
       workspaceId: experiment.workspaceId,
       data: {
         experiment: {

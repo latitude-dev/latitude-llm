@@ -1,8 +1,8 @@
 from typing import Callable, Optional, Tuple
 
 from latitude_sdk.client.payloads import (
+    AnnotateEvaluationRequestParams,
     ChatPromptRequestParams,
-    CreateEvaluationResultRequestParams,
     CreateLogRequestParams,
     GetAllPromptRequestParams,
     GetOrCreatePromptRequestParams,
@@ -10,7 +10,6 @@ from latitude_sdk.client.payloads import (
     RequestHandler,
     RequestParams,
     RunPromptRequestParams,
-    TriggerEvaluationRequestParams,
 )
 from latitude_sdk.sdk.types import GatewayOptions
 from latitude_sdk.util import Model
@@ -40,26 +39,35 @@ class Router:
         if handler == RequestHandler.GetAllPrompts:
             assert isinstance(params, GetAllPromptRequestParams)
 
-            return "GET", self.prompts(
-                project_id=params.project_id,
-                version_uuid=params.version_uuid,
-            ).all_prompts
+            return (
+                "GET",
+                self.prompts(
+                    project_id=params.project_id,
+                    version_uuid=params.version_uuid,
+                ).all_prompts,
+            )
 
         elif handler == RequestHandler.GetOrCreatePrompt:
             assert isinstance(params, GetOrCreatePromptRequestParams)
 
-            return "POST", self.prompts(
-                project_id=params.project_id,
-                version_uuid=params.version_uuid,
-            ).get_or_create
+            return (
+                "POST",
+                self.prompts(
+                    project_id=params.project_id,
+                    version_uuid=params.version_uuid,
+                ).get_or_create,
+            )
 
         elif handler == RequestHandler.RunPrompt:
             assert isinstance(params, RunPromptRequestParams)
 
-            return "POST", self.prompts(
-                project_id=params.project_id,
-                version_uuid=params.version_uuid,
-            ).run
+            return (
+                "POST",
+                self.prompts(
+                    project_id=params.project_id,
+                    version_uuid=params.version_uuid,
+                ).run,
+            )
 
         elif handler == RequestHandler.ChatPrompt:
             assert isinstance(params, ChatPromptRequestParams)
@@ -69,36 +77,31 @@ class Router:
         elif handler == RequestHandler.CreateLog:
             assert isinstance(params, CreateLogRequestParams)
 
-            return "POST", self.prompts(
-                project_id=params.project_id,
-                version_uuid=params.version_uuid,
-            ).logs
+            return (
+                "POST",
+                self.prompts(
+                    project_id=params.project_id,
+                    version_uuid=params.version_uuid,
+                ).logs,
+            )
 
-        elif handler == RequestHandler.TriggerEvaluation:
-            assert isinstance(params, TriggerEvaluationRequestParams)
+        elif handler == RequestHandler.AnnotateEvaluation:
+            assert isinstance(params, AnnotateEvaluationRequestParams)
 
-            return "POST", self.conversations().evaluate(params.conversation_uuid)
-
-        elif handler == RequestHandler.CreateEvaluationResult:
-            assert isinstance(params, CreateEvaluationResultRequestParams)
-
-            return "POST", self.conversations().evaluation_result(params.conversation_uuid, params.evaluation_uuid)
+            return "POST", self.conversations().annotate(params.conversation_uuid, params.evaluation_uuid)
 
         raise TypeError(f"Unknown handler: {handler}")
 
     class Conversations(Model):
         chat: Callable[[str], str]
-        evaluate: Callable[[str], str]
-        evaluation_result: Callable[[str, str], str]
+        annotate: Callable[[str, str], str]
 
     def conversations(self) -> Conversations:
         base_url = f"{self.options.gateway.base_url}/conversations"
 
         return self.Conversations(
             chat=lambda uuid: f"{base_url}/{uuid}/chat",
-            evaluate=lambda uuid: f"{base_url}/{uuid}/evaluate",
-            evaluation_result=lambda conversation_uuid,
-            evaluation_uuid: f"{base_url}/{conversation_uuid}/evaluations/{evaluation_uuid}/evaluation-results",
+            annotate=lambda uuid, evaluation_uuid: f"{base_url}/{uuid}/evaluations/{evaluation_uuid}/annotate",
         )
 
     class Prompts(Model):

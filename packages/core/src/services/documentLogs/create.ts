@@ -99,7 +99,7 @@ export async function createDocumentLog(
     publisher.publishLater({
       type: 'documentLogCreated',
       data: {
-        ...documentLog,
+        id: documentLog.id,
         workspaceId: workspace.id,
       },
     })

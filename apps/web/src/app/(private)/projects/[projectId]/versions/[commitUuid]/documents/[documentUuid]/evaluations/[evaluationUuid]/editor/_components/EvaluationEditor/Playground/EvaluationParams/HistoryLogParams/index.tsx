@@ -1,4 +1,5 @@
-import Link from 'next/link'
+import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
+import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
 import {
   DocumentVersion,
   EvaluationType,
@@ -6,15 +7,14 @@ import {
   LlmEvaluationMetricAnyCustom,
 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
-import { type UseLogHistoryParams } from './useLogHistoryParams'
-import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
-import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
+import { cn } from '@latitude-data/web-ui/utils'
+import Link from 'next/link'
 import { EditableParameters } from './EditableParameters'
+import { type UseLogHistoryParams } from './useLogHistoryParams'
 
 function DocumentLogsNavigation({ data }: { data: UseLogHistoryParams }) {
   const urlData = usePaginatedDocumentLogUrl({
@@ -90,9 +90,12 @@ export function HistoryLogParams({
         </div>
       </div>
       <div
-        className={cn('w-full pb-3.5 flex flex-col gap-y-4 custom-scrollbar', {
-          'opacity-50': data.isLoading,
-        })}
+        className={cn(
+          'w-full p-1 pb-3.5 flex flex-col gap-y-4 custom-scrollbar',
+          {
+            'opacity-50': data.isLoading,
+          },
+        )}
       >
         <EditableParameters
           commit={commit}

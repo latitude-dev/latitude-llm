@@ -10,7 +10,6 @@ import {
   LatitudeTool,
   LatitudeToolInternalName,
   LogSources,
-  ProviderData,
   type ToolDefinition,
 } from '@latitude-data/constants'
 import { FinishReason, LanguageModelUsage } from 'ai'
@@ -26,21 +25,23 @@ import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
 
 export {
+  DocumentType,
   EvaluationResultableType,
+  HEAD_COMMIT,
   LegacyChainEventTypes,
   LogSources,
   StreamEventTypes,
   type LegacyChainEvent,
 } from '@latitude-data/constants'
 export * from '@latitude-data/constants/evaluations'
+export * from '@latitude-data/constants/tracing'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
 export const LATITUDE_EMAIL = 'hello@latitude.so'
 export const LATITUDE_SLACK_URL =
-  'https://join.slack.com/t/trylatitude/shared_invite/zt-2vlnnz3xi-mO1DArzBX0lTJJBATVhR7w'
+  'https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw'
 export const LATITUDE_HELP_URL = LATITUDE_SLACK_URL
-export const HEAD_COMMIT = 'live'
 export const DEFAULT_PROVIDER_MAX_FREE_RUNS = 1000
 
 export enum CommitStatus {
@@ -102,22 +103,10 @@ export enum ErrorableEntity {
   EvaluationResult = 'evaluation_result',
 }
 
-export type ProviderDataType = ProviderData['type']
-
 export enum EvaluationMetadataType {
   LlmAsJudgeAdvanced = 'llm_as_judge',
   LlmAsJudgeSimple = 'llm_as_judge_simple',
   Manual = 'manual',
-}
-
-export enum EvaluationMode {
-  Live = 'live',
-  Batch = 'batch',
-}
-
-export enum DocumentType {
-  Prompt = 'prompt',
-  Agent = 'agent',
 }
 
 export enum RewardType {
@@ -371,30 +360,6 @@ export interface ProjectStats {
   costPerEvaluation: Record<string, number>
 }
 
-export enum SpanKind {
-  // Default type. Represents operations that happen within a service
-  // Example: Database queries, file I/O, or business logic processing
-  Internal = 'internal',
-
-  // Represents the handling of an incoming request from a client
-  // Example: HTTP server handling a request, gRPC service receiving a call
-  Server = 'server',
-
-  // Represents outgoing requests to a remote service
-  // Example: HTTP client making an API call, gRPC client initiating a call
-  Client = 'client',
-
-  // Represents the creation/enqueuing of a message to be processed later
-  // Example: Publishing a message to a message queue, sending to a stream
-  Producer = 'producer',
-
-  // Represents the processing of a message from a message queue/stream
-  // Example: Processing a message from RabbitMQ, handling a Kafka message
-  Consumer = 'consumer',
-}
-
-export type SpanMetadataTypes = 'default' | 'generation'
-
 // TODO: Review if it's used
 export type CsvData = {
   headers: string[]
@@ -420,13 +385,18 @@ export type DocumentVersionDto = DocumentVersion & {
   commitUuid: string
 }
 
-export type DocumentLogFilterOptions = {
-  commitIds: number[]
-  logSources: LogSources[]
-  createdAt: { from: Date | undefined; to?: Date } | undefined
-  customIdentifier: string | undefined
-  experimentId: number | undefined
-}
+export const documentLogFilterOptionsSchema = z.object({
+  commitIds: z.array(z.number()),
+  logSources: z.array(z.nativeEnum(LogSources)),
+  createdAt: z
+    .object({ from: z.date().optional(), to: z.date().optional() })
+    .optional(),
+  customIdentifier: z.string().optional(),
+  experimentId: z.number().optional(),
+})
+export type DocumentLogFilterOptions = z.infer<
+  typeof documentLogFilterOptionsSchema
+>
 
 export const RELATIVE_DATES = {
   today: 'today',

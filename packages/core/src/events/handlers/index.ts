@@ -5,6 +5,7 @@ import { createLoopsContact } from './createLoopsContact'
 import { evaluateLiveLogJob } from './evaluateLiveLog'
 import { notifyClientOfDocumentSuggestionCreated } from './notifyClientOfDocumentSuggestionCreated'
 import { notifyClientOfEvaluationResultV2Created } from './notifyClientOfEvaluationResultV2Created'
+import { notifyClientOfExportReady } from './notifyClientOfExportReady'
 import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
 import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
@@ -14,8 +15,6 @@ import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
-import { touchApiKeyJob } from './touchApiKeyJob'
-import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
 import { updateWebhookLastTriggeredAt } from './webhooks'
 
 export const EventHandlers: IEventsHandlers = {
@@ -34,11 +33,12 @@ export const EventHandlers: IEventsHandlers = {
   ],
   documentSuggestionApplied: [],
   documentSuggestionDiscarded: [],
+  exportReady: [notifyClientOfExportReady],
   magicLinkTokenCreated: [sendMagicLinkJob],
   membershipCreated: [sendInvitationToUserJob],
   projectCreated: [],
   providerApiKeyCreated: [],
-  providerLogCreated: [touchProviderApiKeyJob, touchApiKeyJob],
+  providerLogCreated: [],
   sendReferralInvitation: [sendReferralInvitationJob],
   userCreated: [createLoopsContact],
   userInvited: [],

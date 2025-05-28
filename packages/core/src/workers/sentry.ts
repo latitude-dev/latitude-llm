@@ -3,33 +3,37 @@ import { env } from '@latitude-data/env'
 
 let sentry: Sentry.NodeClient | undefined
 
-const initSentry = () => {
+export const initSentry = () => {
+  if (sentry) return sentry
+
   if (env.SENTRY_WORKERS_DSN) {
-    return Sentry.init({
+    sentry = Sentry.init({
       dsn: env.SENTRY_WORKERS_DSN,
       enabled: !!env.SENTRY_WORKERS_DSN,
       environment: env.NODE_ENV,
       integrations: [],
       defaultIntegrations: false,
     })
+
+    return sentry
   }
 }
 
 export const captureException = (error: Error) => {
-  if (!sentry) sentry = initSentry()
+  const s = initSentry()
 
-  if (sentry) {
-    sentry?.captureException(error)
+  if (s) {
+    s?.captureException(error)
   } else {
     console.error(error)
   }
 }
 
 export const captureMessage = (message: string) => {
-  if (!sentry) sentry = initSentry()
+  const s = initSentry()
 
-  if (sentry) {
-    sentry?.captureMessage(message)
+  if (s) {
+    s?.captureMessage(message)
   } else {
     console.log(message)
   }

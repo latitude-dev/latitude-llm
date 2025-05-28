@@ -6,8 +6,9 @@ import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useDocumentLogsPagination(
   {
-    documentUuid,
     projectId,
+    commitUuid,
+    documentUuid,
     filterOptions,
     page,
     pageSize,
@@ -15,6 +16,7 @@ export default function useDocumentLogsPagination(
   }: {
     documentUuid?: string
     projectId: number
+    commitUuid: string
     filterOptions: DocumentLogFilterOptions
     page: string | null
     pageSize: string | null
@@ -30,6 +32,7 @@ export default function useDocumentLogsPagination(
           .logs.pagination({
             page: Number(page ?? 1),
             pageSize: Number(pageSize ?? 10),
+            commitUuid,
             filterOptions,
             excludeErrors,
           })
@@ -40,7 +43,15 @@ export default function useDocumentLogsPagination(
   )
 
   const { data, isLoading, error, mutate } = useSWR<IPagination>(
-    ['documentLogsCount', documentUuid, projectId, filterOptions],
+    [
+      'documentLogsCount',
+      documentUuid,
+      projectId,
+      commitUuid,
+      filterOptions,
+      page,
+      pageSize,
+    ],
     fetcher,
     opts,
   )

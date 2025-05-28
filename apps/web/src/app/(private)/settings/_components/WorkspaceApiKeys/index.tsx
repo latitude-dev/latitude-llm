@@ -15,13 +15,20 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useApiKeys from '$/stores/apiKeys'
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 
 export default function WorkspaceApiKeys() {
   const { data: apiKeys, isLoading, destroy } = useApiKeys()
   const { toast } = useToast()
   return (
     <TableWithHeader
-      title='API Keys'
+      title={
+        <div className='flex flex-row items-center gap-2'>
+          <Text.H4B>API Keys</Text.H4B>
+          <OpenInDocsButton route={DocsRoute.HttpApi} />
+        </div>
+      }
       table={
         isLoading ? (
           <TableSkeleton cols={3} rows={3} />
@@ -56,7 +63,9 @@ export default function WorkspaceApiKeys() {
                           >
                             <div className='flex flex-row items-center gap-2'>
                               <Text.H5 color='foregroundMuted'>
-                                {apiKey.token}
+                                {apiKey.token.slice(0, 3) +
+                                  '********' +
+                                  apiKey.token.slice(-4)}
                               </Text.H5>
                               <Icon name='clipboard' color='foregroundMuted' />
                             </div>

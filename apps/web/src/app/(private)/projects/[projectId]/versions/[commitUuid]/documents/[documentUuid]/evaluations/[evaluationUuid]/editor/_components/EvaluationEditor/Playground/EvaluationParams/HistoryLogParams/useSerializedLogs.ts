@@ -1,7 +1,10 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import useDocumentLogWithPaginationPosition, {
   LogWithPosition,
 } from '$/stores/documentLogWithPaginationPosition'
@@ -24,11 +27,13 @@ export function useSerializedLogs({
   logUuid?: string
 }) {
   const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
   const filterOptions = useDefaultLogFilterOptions()
   const { data: pagination, isLoading: isLoadingCounter } =
     useDocumentLogsPagination({
-      documentUuid: document.documentUuid,
       projectId: project.id,
+      commitUuid: commit.uuid,
+      documentUuid: document.documentUuid,
       filterOptions,
       page: '1', // Not used really. This is only for the counter.
       pageSize: ONLY_ONE_PAGE,

@@ -91,7 +91,8 @@ You can guide the agent's final output by specifying a response `schema` using [
 provider: openai
 model: gpt-4o
 type: agent
-tools: [latitude/search]
+tools:
+  - latitude/search
 schema:
   type: object
   properties:

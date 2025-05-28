@@ -11,7 +11,7 @@ import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 import { resumePausedPrompt } from '../../../../services/documentLogs/addMessages/resumePausedPrompt'
 import { DocumentVersionsRepository } from '../../../../repositories'
 import { getDocumentMetadata } from '../../../../services/documents'
-import { PromptConfig } from '@latitude-data/constants'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Result } from './../../../../lib/Result'
 import { UnprocessableEntityError } from './../../../../lib/errors'
 
@@ -81,7 +81,7 @@ export async function respondToToolCalls({
     document,
     documentLogUuid,
     source,
-    globalConfig: metadata.config as PromptConfig,
+    globalConfig: metadata.config as LatitudePromptConfig,
     pausedChain: cachedData.chain,
     previousResponse: cachedData.previousResponse,
     responseMessages: responseMessagesResult.value as unknown as Message[],

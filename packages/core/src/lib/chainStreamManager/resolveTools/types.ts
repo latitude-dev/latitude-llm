@@ -1,4 +1,9 @@
-import { LatitudeTool, ToolDefinition } from '@latitude-data/constants'
+import {
+  LatitudeTool,
+  Providers,
+  ToolDefinition,
+  VercelProviderTool,
+} from '@latitude-data/constants'
 
 export enum ToolSource {
   Client = 'client',
@@ -6,6 +11,7 @@ export enum ToolSource {
   AgentReturn = 'agentReturn',
   AgentAsTool = 'agentAsTool',
   Integration = 'integration',
+  ProviderTool = 'providerTool',
 }
 
 interface BaseToolSourceData {
@@ -43,10 +49,17 @@ export type ToolSourceData =
   | AgentAsToolSourceData
   | IntegrationToolSourceData
 
-export type ResolvedTools = Record<
-  string,
-  {
-    definition: ToolDefinition
-    sourceData: ToolSourceData
+type ResolvedTool = {
+  definition: ToolDefinition
+  sourceData: ToolSourceData
+}
+
+export type ResolvedProviderTool = {
+  definition: VercelProviderTool
+  sourceData: {
+    source: ToolSource.ProviderTool
+    provider: Providers
   }
->
+}
+
+export type ResolvedTools = Record<string, ResolvedTool | ResolvedProviderTool>

@@ -13,8 +13,7 @@ export const notifyClientOfMcpServerConnected = async ({
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
-  const websockets = await WebsocketClient.getSocket()
-  websockets.emit('mcpServerConnected', {
+  await WebsocketClient.sendEvent('mcpServerConnected', {
     workspaceId: workspace.id,
     data: {
       workspaceId: workspace.id,

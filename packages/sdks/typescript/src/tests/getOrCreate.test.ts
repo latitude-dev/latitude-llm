@@ -133,7 +133,7 @@ describe('/get-or-create', () => {
           serverResponse: JSON.stringify({
             name: 'LatitudeError',
             message: 'Something bad happened',
-            errorCode: 'LatitudeError',
+            errorCode: ApiErrorCodes.InternalServerError,
           }),
           message: 'Something bad happened',
           errorCode: ApiErrorCodes.InternalServerError,

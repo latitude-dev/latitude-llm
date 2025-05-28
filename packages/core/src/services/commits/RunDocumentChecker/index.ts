@@ -16,12 +16,12 @@ import {
 import { DocumentVersion, ErrorableEntity } from '../../../browser'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { createRunError } from '../../runErrors/create'
-import { PromptConfig } from '@latitude-data/constants'
 import { BadRequestError } from './../../../lib/errors'
 import { ErrorResult } from './../../../lib/Result'
 import { LatitudeError } from './../../../lib/errors'
 import { PromisedResult } from './../../../lib/Transaction'
 import { Result } from './../../../lib/Result'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 type RunDocumentErrorCodes = RunErrorCodes.ChainCompileError
 
@@ -83,7 +83,7 @@ export class RunDocumentChecker {
 
         const processedParameters = await this.processParameters({
           parameters: this.parameters,
-          config: metadata.config as PromptConfig,
+          config: metadata.config as LatitudePromptConfig,
         })
 
         if (processedParameters.error) return processedParameters
@@ -127,7 +127,7 @@ export class RunDocumentChecker {
     config,
   }: {
     parameters: Record<string, unknown>
-    config: PromptConfig
+    config: LatitudePromptConfig
   }): PromisedResult<Record<string, unknown>, LatitudeError> {
     const result = Object.entries(parameters).reduce(
       (acc, [key, value]) => {
@@ -198,7 +198,7 @@ export class RunDocumentChecker {
     config,
   }: {
     parameters: Record<string, unknown>
-    config: PromptConfig
+    config: LatitudePromptConfig
   }): PromisedResult<Record<string, unknown>, LatitudeError> {
     if (!config.parameters) return Result.ok(parameters)
 

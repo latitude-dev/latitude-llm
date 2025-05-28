@@ -1,4 +1,4 @@
-import { LogSources } from '@latitude-data/constants'
+import { AGENT_RETURN_TOOL_NAME, LogSources } from '@latitude-data/constants'
 import { runDocumentAtCommit as runDocumentAtCommitFn } from '../../../../services/commits/runDocumentAtCommit'
 import {
   Commit,
@@ -67,7 +67,11 @@ export async function runDocumentUntilItStops<T extends boolean>(
   if (!autoRespondToolCalls) return Result.ok(result)
 
   const toolCalls = await result.toolCalls
-  if (toolCalls.length) {
+  const clientToolCalls = toolCalls.filter(
+    (toolCall) => toolCall.name !== AGENT_RETURN_TOOL_NAME,
+  )
+
+  if (clientToolCalls.length) {
     return recursiveFn(
       {
         hasToolCalls: true,
@@ -75,7 +79,7 @@ export async function runDocumentUntilItStops<T extends boolean>(
         data: {
           ...data,
           documentLogUuid: result.errorableUuid,
-          toolCalls,
+          toolCalls: clientToolCalls,
         },
       },
       recursiveFn,

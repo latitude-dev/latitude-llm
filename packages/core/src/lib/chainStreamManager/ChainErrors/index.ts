@@ -62,6 +62,9 @@ export async function createChainRunError({
       message: error.message,
       stack: error.stack,
       code: RunErrorCodes.Unknown,
+      details: {
+        stack: error.stack || '',
+      },
     })
   }
 

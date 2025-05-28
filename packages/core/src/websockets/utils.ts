@@ -51,11 +51,11 @@ export async function verifyWebsocketToken({
   }
 }
 
-export async function generateWorkerWebsocketToken() {
+export async function generateWorkerWebsocketToken(expiration = '1h') {
   const secret = new TextEncoder().encode(env.WEBSOCKET_SECRET_TOKEN_KEY)
   const token = await new SignJWT({})
     .setProtectedHeader({ alg: 'HS256' })
-    .setExpirationTime('1h')
+    .setExpirationTime(expiration)
     .sign(secret)
 
   return token

@@ -3,14 +3,14 @@ import { database } from '../../client'
 import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
 import {
   ClaimedRewardsRepository,
-  EvaluationResultsRepository,
   EvaluationResultsV2Repository,
   MembershipsRepository,
 } from '../../repositories'
-import { DocumentLogsRepository } from '../../repositories/documentLogsRepository'
 import { getLatestRenewalDate } from './utils/calculateRenewalDate'
 import { PromisedResult } from './../../lib/Transaction'
 import { Result } from './../../lib/Result'
+import { commits, documentLogs, projects } from '../../schema'
+import { count, eq, inArray } from 'drizzle-orm'
 
 export async function computeWorkspaceUsage(
   workspace: {
@@ -20,33 +20,32 @@ export async function computeWorkspaceUsage(
   },
   db = database,
 ): PromisedResult<WorkspaceUsage, Error> {
-  const documentLogsScope = new DocumentLogsRepository(workspace.id, db)
-  const evaluationResultsScope = new EvaluationResultsRepository(
-    workspace.id,
-    db,
-  )
+  const createdAtDate = workspace.currentSubscriptionCreatedAt
+  const targetDate = new Date(Date.now())
+  const latestRenewalDate = getLatestRenewalDate(createdAtDate, targetDate)
   const evaluationResultsV2Scope = new EvaluationResultsV2Repository(
     workspace.id,
     db,
   )
 
-  const createdAtDate = workspace.currentSubscriptionCreatedAt
-  const targetDate = new Date(Date.now())
-  const latestRenewalDate = getLatestRenewalDate(createdAtDate, targetDate)
+  const commitIds = await db
+    .select({ commitId: commits.id })
+    .from(commits)
+    .innerJoin(projects, eq(projects.id, commits.projectId))
+    .where(eq(projects.workspaceId, workspace.id))
+    .then((r) => r.map((r) => r.commitId))
 
-  const documentLogsCount =
-    await documentLogsScope.totalCountSinceDate(latestRenewalDate)
+  const documentLogsCount = await db
+    .select({ count: count() })
+    .from(documentLogs)
+    .where(inArray(documentLogs.commitId, commitIds))
+    .then((r) => r[0]!.count)
 
   const claimedRewardsScope = new ClaimedRewardsRepository(workspace.id, db)
   const extraRuns = await claimedRewardsScope
     .getExtraRunsOptimistic()
     .then((r) => r.unwrap())
-
   const currentSubscriptionPlan = SubscriptionPlans[workspace.plan]
-
-  const evaluationResultsCount =
-    await evaluationResultsScope.totalCountSinceDate(latestRenewalDate)
-
   const evaluationResultsV2Count = await evaluationResultsV2Scope
     .countSinceDate(latestRenewalDate)
     .then((r) => r.unwrap())
@@ -55,8 +54,7 @@ export async function computeWorkspaceUsage(
   const members = await membersRepo.findAll().then((r) => r.unwrap())
 
   return Result.ok({
-    usage:
-      evaluationResultsCount + evaluationResultsV2Count + documentLogsCount,
+    usage: evaluationResultsV2Count + documentLogsCount,
     max: currentSubscriptionPlan.credits + extraRuns,
     members: members.length,
     maxMembers: currentSubscriptionPlan.users,

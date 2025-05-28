@@ -45,6 +45,7 @@
     "LATITUDE_CLOUD",
     "LATITUDE_CLOUD_PAYMENT_URL",
     "npm_package_name",
+    "npm_package_version",
     "DISABLE_EMAIL_AUTHENTICATION",
     "DD_TRACING_ENABLED",
     "FILE_STORAGE_ROOT_PATH",

@@ -1,0 +1,39 @@
+---
+title: OpenAI
+description: Common questions about the OpenAI provider
+---
+
+## How do I set the OpenAI endpoint?
+
+You can use either the classic OpenAI [Chat Completions](https://platform.openai.com/docs/api-reference/chat) or [Responses](https://platform.openai.com/docs/api-reference/responses) endpoints.
+
+To select your preferred endpoint when creating the provider, follow these steps:
+
+1. Go to the **Settings** section.
+2. Click on **Providers**.
+3. Select **OpenAI** from the list of providers.
+4. Choose the endpoint you want to use.
+   ![Create an OpenAI provider](/assets/new-openai-provider.png)
+
+<Note>
+  Once you select an endpoint, all prompts using this provider will use that
+  same endpoint.
+</Note>
+
+### Responses API
+
+#### OpenAI built-in tools
+
+When using [Responses](https://platform.openai.com/docs/api-reference/responses), you can access OpenAI's [built-in tools](https://platform.openai.com/docs/guides/tools?api-mode=responses), such as web search:
+
+```markdown {6-8}
+---
+provider: my-openai-provider
+model: gpt-4.1
+temperature: 0.1
+tools:
+  - openai:
+      - type: web_search_preview
+        search_context_size: low
+---
+```

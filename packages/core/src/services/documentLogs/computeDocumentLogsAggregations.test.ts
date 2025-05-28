@@ -9,13 +9,11 @@ import {
   Project,
   Providers,
   User,
-  Workspace,
 } from '../../browser'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogsAggregations } from './computeDocumentLogsAggregations'
 
 describe('computeDocumentLogsAggregations', () => {
-  let workspace: Workspace
   let user: User
   let project: Project
   let document: DocumentVersion
@@ -41,7 +39,6 @@ describe('computeDocumentLogsAggregations', () => {
     project = setup.project
     commit = setup.commit
     document = setup.documents[0]!
-    workspace = setup.workspace
   })
 
   it('computes correct aggregations for document logs', async () => {
@@ -55,8 +52,7 @@ describe('computeDocumentLogsAggregations', () => {
     })
 
     const result = await computeDocumentLogsAggregations({
-      workspace,
-      documentUuid: document.documentUuid,
+      document,
     })
 
     expect(result.totalCount).toBe(2)
@@ -82,8 +78,7 @@ describe('computeDocumentLogsAggregations', () => {
     await factories.createDocumentLog({ document, commit: otherCommit })
 
     const result = await computeDocumentLogsAggregations({
-      workspace,
-      documentUuid: document.documentUuid,
+      document,
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
@@ -119,8 +114,7 @@ describe('computeDocumentLogsAggregations', () => {
     await factories.createDocumentLog({ document, commit: draft })
 
     const result = await computeDocumentLogsAggregations({
-      workspace,
-      documentUuid: document.documentUuid,
+      document,
       filterOptions: {
         commitIds: [draft.id],
         logSources: LOG_SOURCES,
@@ -133,7 +127,7 @@ describe('computeDocumentLogsAggregations', () => {
     expect(result.totalCount).toBe(1)
   })
 
-  it('excludes logs with errors', async () => {
+  it('includes logs with errors in the total count', async () => {
     const { documentLog } = await factories.createDocumentLog({
       document,
       commit,
@@ -149,17 +143,15 @@ describe('computeDocumentLogsAggregations', () => {
     await factories.createDocumentLog({ document, commit })
 
     const result = await computeDocumentLogsAggregations({
-      workspace,
-      documentUuid: document.documentUuid,
+      document,
     })
 
-    expect(result.totalCount).toBe(1)
+    expect(result.totalCount).toBe(2)
   })
 
   it('returns zero values when no logs exist', async () => {
     const result = await computeDocumentLogsAggregations({
-      workspace,
-      documentUuid: document.documentUuid,
+      document,
     })
 
     expect(result).toEqual({
@@ -182,8 +174,7 @@ describe('computeDocumentLogsAggregations', () => {
     })
 
     const result = await computeDocumentLogsAggregations({
-      workspace,
-      documentUuid: document.documentUuid,
+      document,
     })
 
     expect(result.totalCount).toBe(1)

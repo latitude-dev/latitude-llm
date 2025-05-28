@@ -5,6 +5,8 @@ import { memo, ReactNode, useEffect, useState } from 'react'
 import { JS_PANEL_CLASS } from './Common'
 import { HorizontalSplit } from './HorizontalSplit'
 import { VerticalSplit } from './VerticalSplit'
+import { ReversedHorizontalSplit } from './ReversedHorizontalSplit'
+import { ReversedVerticalSplit } from './ReversedVerticalSplit'
 
 export type SplitDirection = 'horizontal' | 'vertical'
 export type SplitGap = 2 | 4 | 8
@@ -62,6 +64,7 @@ function Pane({ children }: { children: ReactNode }) {
 
 const SplitPane = ({
   direction,
+  reversed,
   firstPane,
   secondPane,
   initialSize,
@@ -71,6 +74,7 @@ const SplitPane = ({
   minSize,
   gap,
   onResizeStop,
+  onDragStop,
   classNamePanelWrapper,
   className,
   visibleHandle = true,
@@ -78,6 +82,7 @@ const SplitPane = ({
   autoResize,
 }: {
   direction: SplitDirection
+  reversed?: boolean
   firstPane: ReactNode
   secondPane: ReactNode
   initialSize?: number
@@ -87,6 +92,7 @@ const SplitPane = ({
   minSize: number
   gap?: SplitGap
   onResizeStop?: (size: number) => void
+  onDragStop?: (size: number) => void
   classNamePanelWrapper?: string
   className?: string
   visibleHandle?: boolean
@@ -94,6 +100,27 @@ const SplitPane = ({
   autoResize?: boolean
 }) => {
   if (direction === 'horizontal') {
+    if (reversed) {
+      return (
+        <ReversedHorizontalSplit
+          className={className}
+          classNamePanelWrapper={classNamePanelWrapper}
+          visibleHandle={visibleHandle}
+          leftPane={firstPane}
+          rightPane={secondPane}
+          initialWidth={initialSize}
+          forcedWidth={forcedSize}
+          initialPercentage={initialPercentage}
+          initialWidthClass={initialWidthClass}
+          minWidth={minSize}
+          gap={gap}
+          onResizeStop={onResizeStop}
+          onDragStop={onDragStop}
+          dragDisabled={dragDisabled}
+          autoResize={autoResize}
+        />
+      )
+    }
     return (
       <HorizontalSplit
         className={className}
@@ -102,11 +129,35 @@ const SplitPane = ({
         leftPane={firstPane}
         rightPane={secondPane}
         initialWidth={initialSize}
+        forcedWidth={forcedSize}
         initialPercentage={initialPercentage}
         initialWidthClass={initialWidthClass}
         minWidth={minSize}
         gap={gap}
         onResizeStop={onResizeStop}
+        onDragStop={onDragStop}
+        dragDisabled={dragDisabled}
+        autoResize={autoResize}
+      />
+    )
+  }
+
+  if (reversed) {
+    return (
+      <ReversedVerticalSplit
+        className={className}
+        classNamePanelWrapper={classNamePanelWrapper}
+        visibleHandle={visibleHandle}
+        topPane={firstPane}
+        bottomPane={secondPane}
+        initialHeight={initialSize}
+        forcedHeight={forcedSize}
+        initialPercentage={initialPercentage}
+        minHeight={minSize}
+        gap={gap}
+        onResizeStop={onResizeStop}
+        onDragStop={onDragStop}
+        dragDisabled={dragDisabled}
         autoResize={autoResize}
       />
     )
@@ -125,6 +176,7 @@ const SplitPane = ({
       minHeight={minSize}
       gap={gap}
       onResizeStop={onResizeStop}
+      onDragStop={onDragStop}
       dragDisabled={dragDisabled}
       autoResize={autoResize}
     />

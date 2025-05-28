@@ -8,6 +8,7 @@ import { ROUTES } from '$/services/routes'
 import { NextRequest, NextResponse } from 'next/server'
 import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
+import { UnprocessableEntityError } from '@latitude-data/core/lib/errors'
 
 function pageUrl(params: {
   projectId: string
@@ -30,20 +31,26 @@ export const GET = errorHandler(
       }: {
         params: {
           documentUuid: string
-          // FIXME: This is broken! CommitUuid is not a non-existing parameter (check the route)
-          commitUuid: string
           projectId: string
         }
         workspace: Workspace
       },
     ) => {
       const searchParams = req.nextUrl.searchParams
+      const commitUuid = searchParams.get('commitUuid')
+
+      if (!commitUuid) {
+        throw new UnprocessableEntityError(
+          'Cannot generate logs pagination without commitUuid',
+        )
+      }
+
       const queryParams = parseApiDocumentLogParams({ searchParams })
       const excludeErrors = searchParams.get('excludeErrors') === 'true'
       const queryFn = excludeErrors
         ? computeDocumentLogsCount
         : computeDocumentLogsWithMetadataCount
-      const { documentUuid, commitUuid, projectId } = params
+      const { documentUuid, projectId } = params
       const repo = new DocumentVersionsRepository(workspace.id)
       const document = await repo
         .getSomeDocumentByUuid({
@@ -57,7 +64,6 @@ export const GET = errorHandler(
         filterOptions: queryParams.filterOptions,
       })
 
-      // FIXME: This is broken! CommitUuid is not a non-existing parameter (check the route)
       const pagination = buildPagination({
         baseUrl: pageUrl({
           commitUuid,

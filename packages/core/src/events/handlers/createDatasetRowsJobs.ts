@@ -7,11 +7,10 @@ export async function createDatasetRowsJob({
 }: {
   data: DatasetV2CreatedEvent
 }) {
-  const websockets = await WebsocketClient.getSocket()
   return await createRowsFromUploadedDataset({
     event,
     onRowsCreated: ({ rows }) => {
-      websockets.emit('datasetRowsCreated', {
+      WebsocketClient.sendEvent('datasetRowsCreated', {
         workspaceId: event.data.workspaceId,
         data: {
           datasetId: event.data.datasetId,
@@ -23,7 +22,7 @@ export async function createDatasetRowsJob({
     },
     onFinished: () => {
       // TODO: Test this
-      websockets.emit('datasetRowsCreated', {
+      WebsocketClient.sendEvent('datasetRowsCreated', {
         workspaceId: event.data.workspaceId,
         data: {
           datasetId: event.data.datasetId,
@@ -34,7 +33,7 @@ export async function createDatasetRowsJob({
       })
     },
     onError: (error) => {
-      websockets.emit('datasetRowsCreated', {
+      WebsocketClient.sendEvent('datasetRowsCreated', {
         workspaceId: event.data.workspaceId,
         data: {
           datasetId: event.data.datasetId,

@@ -30,8 +30,9 @@ export function useLogHistoryParams({
   const filterOptions = useDefaultLogFilterOptions()
   const { data: pagination, isLoading: isLoadingCounter } =
     useDocumentLogsPagination({
-      documentUuid: document.documentUuid,
       projectId: project.id,
+      commitUuid: commitVersionUuid,
+      documentUuid: document.documentUuid,
       filterOptions,
       page: '1', // Not used really. This is only for the counter.
       pageSize: ONLY_ONE_PAGE,

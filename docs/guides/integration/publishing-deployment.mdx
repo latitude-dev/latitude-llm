@@ -18,9 +18,11 @@ This decouples your application deployment cycle from your prompt iteration cycl
 ## Publishing a Prompt Version
 
 1.  Ensure your desired prompt changes are saved in the current [draft version](/guides/prompt-manager/version-control).
-2.  Thoroughly test the draft in the [Playground](/guides/prompt-manager/playground) and potentially using [batch evaluations](/guides/evaluations/running-evaluations#running-evaluations-on-datasets-batch-mode).
+2.  Thoroughly test the draft in the [Playground](/guides/prompt-manager/playground) and potentially running [experiments with evaluations](/guides/evaluations/running-evaluations#running-evaluations-on-datasets-batch-mode).
 3.  Click the "Publish" button within the prompt editor or version management interface.
+![Publish Prompt Button](/assets/publish-button.png)
 4.  Add a descriptive version note (e.g., "Added handling for Spanish language queries").
+![Publish Prompt modal](/assets/publish-modal.png)
 5.  Confirm the publication.
 
 Your draft is now the new "Published" version.
@@ -32,7 +34,8 @@ After publishing, your prompt is accessible via a unique, stable API endpoint.
 ### Finding the Endpoint URL
 
 - Navigate to the prompt in the Latitude UI.
-- Click the "Deploy this prompt" button.
+- Click the **Deploy this prompt** button on the right top corner of the prompt editor.
+![Deploy button](/assets/deploy-button.png)
 - Copy the endpoint URL under the HTTP API section.
 
 ### Using the Endpoint

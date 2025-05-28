@@ -97,7 +97,6 @@ describe('POST /chat', () => {
       )
 
       expect(res.status).toBe(401)
-      expect(res.headers.get('www-authenticate')).toBe('Bearer realm=""')
     })
   })
 

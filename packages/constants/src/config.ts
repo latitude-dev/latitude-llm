@@ -4,7 +4,6 @@ export enum ParameterType {
   File = 'file',
 }
 
-export const LATITUDE_TOOLS_CONFIG_NAME = 'latitudeTools' // deprecated
 export const LATITUDE_TOOL_PREFIX = 'lat_tool'
 export const AGENT_TOOL_PREFIX = 'lat_agent'
 export const AGENT_RETURN_TOOL_NAME = 'end_autonomous_chain'

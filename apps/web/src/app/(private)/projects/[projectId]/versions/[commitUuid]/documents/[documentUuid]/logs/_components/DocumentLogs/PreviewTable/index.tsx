@@ -47,6 +47,7 @@ function PreviewCell({
 }
 
 export function PreviewTable({
+  selectedCount,
   previewData,
   previewStaticColumns,
   previewParameterColumns,
@@ -56,6 +57,7 @@ export function PreviewTable({
   isLoading,
   subtitle,
 }: {
+  selectedCount: number
   previewData: OutputItem
   isLoading: boolean
   subtitle?: string

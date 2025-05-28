@@ -67,7 +67,6 @@ export function generatePreviewRowsFromJson({
       const cellValue = (row[col.name] as DatasetRowDataContent) ?? ''
       return parseRowCell({
         cell: cellValue,
-        parseDates: false,
       })
     }),
   )

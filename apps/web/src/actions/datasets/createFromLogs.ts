@@ -1,25 +1,61 @@
 'use server'
 
-import { createDatasetFromLogs } from '@latitude-data/core/services/datasets/createFromLogs'
 import { z } from 'zod'
 
-import { authProcedure } from '../procedures'
+import { withDocument } from '../procedures'
+import { documentLogFilterOptionsSchema } from '@latitude-data/core/browser'
+import { defaultQueue } from '@latitude-data/core/queues'
+import { findOrCreateDataset } from '@latitude-data/core/services/datasets/findOrCreate'
+import { updateDatasetFromLogs } from '@latitude-data/core/services/datasets/createFromLogs'
 
-export const createDatasetFromLogsAction = authProcedure
+const MAX_SYNC_LOGS_BATCH_SIZE = 25
+
+export const createDatasetFromLogsAction = withDocument
   .createServerAction()
   .input(
     z.object({
-      name: z.string().min(1, { message: 'Name is required' }),
-      documentLogIds: z.array(z.union([z.number(), z.string()])),
+      name: z.string(),
+      selectionMode: z.enum(['ALL', 'ALL_EXCEPT', 'PARTIAL']),
+      selectedDocumentLogIds: z.array(z.number().or(z.string())),
+      excludedDocumentLogIds: z.array(z.number().or(z.string())),
+      filterOptions: documentLogFilterOptionsSchema,
     }),
   )
   .handler(async ({ input, ctx }) => {
-    return await createDatasetFromLogs({
-      workspace: ctx.workspace,
-      author: ctx.user,
-      data: {
+    if (
+      input.selectionMode === 'PARTIAL' &&
+      input.selectedDocumentLogIds.length <= MAX_SYNC_LOGS_BATCH_SIZE
+    ) {
+      const dataset = await findOrCreateDataset({
         name: input.name,
-        documentLogIds: input.documentLogIds.map((id) => Number(id)),
-      },
-    }).then((r) => r.unwrap())
+        author: ctx.user,
+        workspace: ctx.workspace,
+      }).then((r) => r.unwrap())
+
+      const result = await updateDatasetFromLogs({
+        dataset,
+        workspace: ctx.workspace,
+        documentLogIds: input.selectedDocumentLogIds as number[],
+      }).then((r) => r.unwrap())
+
+      return {
+        mode: 'sync',
+        result,
+      }
+    }
+
+    defaultQueue.add('createDatasetFromLogsJob', {
+      name: input.name,
+      userId: ctx.user.id,
+      workspaceId: ctx.workspace.id,
+      documentVersionId: ctx.document.id,
+      selectionMode: input.selectionMode,
+      selectedDocumentLogIds: input.selectedDocumentLogIds,
+      excludedDocumentLogIds: input.excludedDocumentLogIds,
+      filterOptions: input.filterOptions,
+    })
+
+    return {
+      mode: 'async',
+    }
   })

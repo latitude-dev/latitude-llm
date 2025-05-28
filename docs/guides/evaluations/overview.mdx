@@ -17,7 +17,7 @@ Evaluations are crucial for understanding and improving the quality of your AI p
 
 Latitude supports three main approaches to evaluation, each suited for different needs:
 
-1.  [**LLM-as-Judge**](/guides/evaluations/llm_as_judge_evaluations):
+1.  [**LLM-as-Judge**](/guides/evaluations/llm-as-judges):
 
     - **How it works**: Uses another language model (the "judge") to score or critique the output of your target prompt based on specific criteria (e.g., helpfulness, clarity, adherence to instructions).
     - **Best for**: Subjective criteria, complex assessments, evaluating nuanced qualities like creativity or tone.
@@ -29,7 +29,7 @@ Latitude supports three main approaches to evaluation, each suited for different
     - **Best for**: Objective checks, ground truth comparisons (using datasets), format validation (JSON, regex), safety checks (keyword detection), length constraints.
     - **Requires**: Defining specific rules (e.g., exact match, contains keyword, JSON schema validation) and potentially providing a [Dataset](/guides/datasets/overview) with expected outputs.
 
-3.  [**Human-in-the-Loop (Manual Evaluations)**](/guides/evaluations/manual_evaluations):
+3.  [**Human-in-the-Loop (Manual Evaluations)**](/guides/evaluations/humans-in-the-loop):
     - **How it works**: Team members manually review prompt outputs (logs) and assign scores or labels based on their judgment.
     - **Best for**: Capturing nuanced human preferences, evaluating criteria difficult for LLMs to judge, initial quality assessment, creating golden datasets for other evaluation types.
     - **Requires**: Setting up manual review workflows and criteria for reviewers.
@@ -45,14 +45,17 @@ Latitude supports three main approaches to evaluation, each suited for different
 
 Sometimes, you want to measure undesirable traits (e.g., toxicity, hallucination presence), where a _lower_ score is better. Latitude allows you to mark evaluations as "negative".
 
-- Go to the evaluation's settings.
-- Configure whether a higher or lower score indicates better performance.
+1. Go to the evaluation's settings by clicking on the right-side button in the evaluation detail:
+![Evaluation settings button](/assets/evaluation-settings-button.png)
+2. Click on **Advandced configuration**
+2. Configure whether a higher or lower score indicates better performance.
+![Evaluation settings button](/assets/evaluation-settings-advance.png)
 - The [Prompt Suggestions](/guides/evaluations/prompt-suggestions) feature will use this setting to optimize correctly.
 
 ## Next Steps
 
 Dive deeper into each evaluation type:
 
-- [LLM-as-Judge Evaluations](/guides/evaluations/llm_as_judge_evaluations)
+- [LLM-as-Judge Evaluations](/guides/evaluations/llm-as-judges)
 - [Programmatic Rule Evaluations](/guides/evaluations/programmatic_rules)
-- [Human-in-the-Loop Evaluations](/guides/evaluations/manual_evaluations)
+- [HITL (Humans in the Loop) Evaluations](/guides/evaluations/humans-in-the-loop)

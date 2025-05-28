@@ -1,5 +1,15 @@
 from datetime import datetime
-from typing import Any, Callable, List, Literal, Optional, Protocol, Sequence, Union, runtime_checkable
+from typing import (
+    Any,
+    Callable,
+    List,
+    Literal,
+    Optional,
+    Protocol,
+    Sequence,
+    Union,
+    runtime_checkable,
+)
 
 from promptl_ai import Message, MessageLike
 
@@ -226,28 +236,6 @@ class Log(Model):
     parameters: dict[str, Any]
     custom_identifier: Optional[str] = Field(default=None, alias=str("customIdentifier"))
     duration: Optional[int] = None
-    created_at: datetime = Field(alias=str("createdAt"))
-    updated_at: datetime = Field(alias=str("updatedAt"))
-
-
-class EvaluationResultType(StrEnum):
-    Boolean = "evaluation_resultable_booleans"
-    Text = "evaluation_resultable_texts"
-    Number = "evaluation_resultable_numbers"
-
-
-class EvaluationResult(Model):
-    id: int
-    uuid: str
-    evaluation_id: int = Field(alias=str("evaluationId"))
-    document_log_id: int = Field(alias=str("documentLogId"))
-    evaluated_provider_log_id: Optional[int] = Field(default=None, alias=str("evaluatedProviderLogId"))
-    evaluation_provider_log_id: Optional[int] = Field(default=None, alias=str("evaluationProviderLogId"))
-    resultable_type: Optional[EvaluationResultType] = Field(default=None, alias=str("resultableType"))
-    resultable_id: Optional[int] = Field(default=None, alias=str("resultableId"))
-    result: Optional[Union[str, bool, int]] = None
-    source: Optional[LogSources] = None
-    reason: Optional[str] = None
     created_at: datetime = Field(alias=str("createdAt"))
     updated_at: datetime = Field(alias=str("updatedAt"))
 

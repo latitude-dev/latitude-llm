@@ -31,6 +31,8 @@ import { ArchivedCommitsList } from './ArchivedCommitsList'
 import { BadgeCommit, BadgeType, SimpleUser } from './CommitItem'
 import { CurrentCommitsList } from './CurrentCommitsList'
 import DeleteDraftCommitModal from './DeleteDraftCommitModal'
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 
 const MIN_WIDTH_SELECTOR_PX = 380
 const TRIGGER_X_PADDING_PX = 26
@@ -90,7 +92,10 @@ function CommitSelectorHeader({
     <>
       <div className='flex flex-col gap-y-4'>
         <div className='flex flex-row items-center justify-between'>
-          <Text.H4M>Versions</Text.H4M>
+          <div className='flex flex-row items-center gap-2'>
+            <Text.H4M>Versions</Text.H4M>
+            <OpenInDocsButton route={DocsRoute.VersionControl} />
+          </div>
           <Button fancy variant='outline' onClick={() => setOpen(true)}>
             New version
           </Button>

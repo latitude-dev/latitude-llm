@@ -11,6 +11,7 @@ import {
   BarChart4,
   Blend,
   Blocks,
+  BookMarked,
   Bot,
   Braces,
   Brain,
@@ -60,6 +61,7 @@ import {
   Gitlab,
   Globe,
   History,
+  House,
   Image,
   ImageOff,
   ImageUp,
@@ -88,6 +90,7 @@ import {
   Puzzle,
   RefreshCcw,
   RegexIcon,
+  RotateCcw,
   ScrollTextIcon,
   SearchIcon,
   SettingsIcon,
@@ -155,6 +158,7 @@ import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import YepCode from './custom-icons/logos/YepCode'
+import IntercomChat from './custom-icons/logos/IntercomChat'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -177,6 +181,7 @@ const Icons = {
   awsBedrock: AwsBedrock,
   barChart4: BarChart4,
   blocks: Blocks,
+  bookMarked: BookMarked,
   bot: Bot,
   cpu: CpuIcon,
   braces: Braces,
@@ -231,12 +236,14 @@ const Icons = {
   googleWorkspace: Google,
   gridVertical: GridVertical,
   history: History,
+  house: House,
   hyperbrowser: Hyperbrowser,
   image: Image,
   imageOff: ImageOff,
   imageUp: ImageUp,
   info: InfoIcon,
   intercom: Intercom,
+  intercomChat: IntercomChat,
   jira: Jira,
   letterText: LetterText,
   lightBulb: Lightbulb,
@@ -276,6 +283,7 @@ const Icons = {
   refresh: RefreshCcw,
   regex: RegexIcon,
   rollText: ScrollTextIcon,
+  rotate: RotateCcw,
   search: SearchIcon,
   sentry: Sentry,
   settings: SettingsIcon,

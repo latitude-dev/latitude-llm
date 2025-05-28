@@ -6,7 +6,7 @@ import {
   StreamType,
 } from '@latitude-data/constants'
 import { parseISO } from 'date-fns'
-import { ProviderLog, ProviderLogDto } from './browser'
+import { ProviderLogDto } from './browser'
 import {
   DEFAULT_PAGINATION_SIZE,
   type CsvData,
@@ -61,24 +61,14 @@ export function buildAllMessagesFromResponse<T extends StreamType>({
   return [...previousMessages, ...messages]
 }
 
-export function buildConversation(providerLog: ProviderLogDto | ProviderLog) {
+export function buildConversation(providerLog: ProviderLogDto) {
   let messages: Message[] = [...providerLog.messages]
-
-  const responseText =
-    // if ProviderLog
-    'responseText' in providerLog
-      ? (providerLog.responseText ?? undefined)
-      : // if ProviderLogDto
-        'response' in providerLog
-        ? providerLog.response
-        : // otherwise
-          undefined
 
   const message = buildResponseMessage({
     type: 'text',
     data: {
-      text: responseText,
-      reasoning: providerLog.responseReasoning || undefined,
+      text: providerLog.response,
+      reasoning: providerLog.responseReasoning ?? undefined,
       toolCalls: providerLog.toolCalls,
     },
   })

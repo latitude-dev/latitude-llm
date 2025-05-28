@@ -34,7 +34,9 @@ export enum RunErrorCodes {
 export type RunErrorDetails<C extends RunErrorCodes> =
   C extends RunErrorCodes.ChainCompileError
     ? { compileCode: string; message: string }
-    : never
+    : C extends RunErrorCodes.Unknown
+      ? { stack: string }
+      : never
 
 export enum ApiErrorCodes {
   HTTPException = 'http_exception',
