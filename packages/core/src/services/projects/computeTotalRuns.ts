@@ -7,7 +7,7 @@ import { Project } from '../../browser'
 export async function computeTotalRuns(project: Project, db = database) {
   try {
     const commitIds = await db
-      .select({ commitId: documentLogs.commitId })
+      .select({ commitId: commits.id })
       .from(commits)
       .where(eq(commits.projectId, project.id))
       .then((result) => result.map((r) => r.commitId))

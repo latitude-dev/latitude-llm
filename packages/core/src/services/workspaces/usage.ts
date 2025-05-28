@@ -29,9 +29,10 @@ export async function computeWorkspaceUsage(
   )
 
   const commitIds = await db
-    .select({ commitId: documentLogs.commitId })
+    .select({ commitId: commits.id })
     .from(commits)
     .innerJoin(projects, eq(projects.id, commits.projectId))
+    .where(eq(projects.workspaceId, workspace.id))
     .then((r) => r.map((r) => r.commitId))
 
   const documentLogsCount = await db
