@@ -277,7 +277,7 @@ describe('run chain error handling', () => {
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
       code: RunErrorCodes.ChainCompileError,
-      message: 'Error validating chain',
+      message: "Error validating chain:\n Unknown tag: 'ref'",
       details: {
         errorCode: RunErrorCodes.ChainCompileError,
         compileCode: 'unknown-tag',

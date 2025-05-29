@@ -131,7 +131,7 @@ const safeChain = async ({
     const error = e as CompileError
     return Result.error(
       new ChainError({
-        message: 'Error validating chain',
+        message: `Error validating chain:\n ${error.message}`,
         code: RunErrorCodes.ChainCompileError,
         details: {
           compileCode: error.code ?? 'unknown_compile_error',
