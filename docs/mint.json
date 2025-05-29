@@ -227,7 +227,8 @@
         "/examples/cases/customer-support-email",
         "/examples/cases/stock-market-analysis",
         "/examples/cases/content-moderation-system",
-        "/examples/cases/customer-support-quality-assurance"
+        "/examples/cases/customer-support-quality-assurance",
+        "/examples/cases/startup-analysis"
       ]
     },
     {

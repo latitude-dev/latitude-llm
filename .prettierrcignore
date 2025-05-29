@@ -3,3 +3,5 @@ dist
 build
 .next
 **/tests/fixtures
+examples/src/**
+docs/examples/**
