@@ -118,6 +118,8 @@ export function useDownloadLogsModal({
     latitudeDocument.path,
     navigate,
     toast,
+    staticColumns,
+    parameterColumns,
   ])
 
   const handleDownload = useCallback(async () => {
@@ -128,7 +130,7 @@ export function useDownloadLogsModal({
         return // invalid state
       }
 
-      if (selectableState.selectionMode === 'PARTIAL') {
+      if (selectableState.selectedCount < MAX_IMMEDIATE_DOWNLOAD) {
         await handleImmediateDownload()
       } else {
         await executeAsyncDownload({
@@ -187,7 +189,7 @@ export function useDownloadLogsModal({
     if (selectedCount <= MAX_IMMEDIATE_DOWNLOAD) {
       return `Are you sure you want to download ${selectedCount} logs?`
     }
-    return `You are about to download ${selectedCount} logs. This may take a while.`
+    return `You are about to download ${selectedCount} logs. Due to the large number of logs, you will receive an email with the download link once the file is ready. The actual number of exported logs might be different because logs with execution errors are excluded.`
   }, [selectableState.selectedCount])
 
   return {

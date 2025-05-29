@@ -10,7 +10,7 @@ export const downloadLogsAsyncAction = withDocument
   .createServerAction()
   .input(
     z.object({
-      selectionMode: z.enum(['ALL', 'ALL_EXCEPT']),
+      selectionMode: z.enum(['ALL', 'ALL_EXCEPT', 'PARTIAL']),
       excludedDocumentLogIds: z.array(z.number()),
       filterOptions: documentLogFilterOptionsSchema,
     }),

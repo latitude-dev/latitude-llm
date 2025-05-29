@@ -5,14 +5,14 @@ import { Providers } from '@latitude-data/constants'
 import getTestDisk from '../../tests/testDrive'
 import { Dataset, DocumentLog } from '../../browser'
 import { identityHashAlgorithm } from './utils'
-import { updateDatasetFromLogs } from './createFromLogs'
+import { updateDatasetFromLogs } from './updateFromLogs'
 import { DatasetRowsRepository } from '../../repositories'
 
 const testDrive = getTestDisk()
 let setup: FactoryCreateProjectReturn
 let dataset: Dataset
 let documentLog: DocumentLog
-describe('createFromLogs', async () => {
+describe('updateFromLogs', async () => {
   beforeAll(async () => {
     setup = await factories.createProject({
       providers: [
@@ -45,58 +45,6 @@ describe('createFromLogs', async () => {
       providerType: Providers.OpenAI,
       responseText: 'Last provider response. Hello!',
     })
-  })
-
-  it('creates a new dataset from logs', async () => {
-    const result = await createDatasetFromLogs({
-      author: setup.user,
-      workspace: setup.workspace,
-      data: {
-        name: 'my-dataset-from-logs',
-        documentLogIds: [documentLog.id],
-      },
-      hashAlgorithm: identityHashAlgorithm,
-    })
-
-    const dataset = result.value!
-    expect(dataset.columns).toEqual([
-      {
-        identifier: 'age_identifier',
-        name: 'age',
-        role: 'parameter',
-      },
-      {
-        identifier: 'location_identifier',
-        name: 'location',
-        role: 'parameter',
-      },
-      {
-        identifier: 'output_identifier',
-        name: 'output',
-        role: 'label',
-      },
-      {
-        identifier: 'id_identifier',
-        name: 'id',
-        role: 'metadata',
-      },
-      { identifier: 'tokens_identifier', name: 'tokens', role: 'metadata' },
-    ])
-    const repo = new DatasetRowsRepository(setup.workspace.id)
-    const rows = await repo.findByDatasetPaginated({
-      datasetId: dataset.id,
-      page: '1',
-      pageSize: '100',
-    })
-    expect(rows.map((r) => r.rowData)).toEqual([
-      {
-        age_identifier: 25,
-        location_identifier: 'San Francisco',
-        output_identifier: 'Last provider response. Hello!',
-        id_identifier: documentLog.id,
-        tokens_identifier: expect.any(Number),
-      },
-    ])
   })
 
   it('insert rows in an existing dataset', async () => {

@@ -230,7 +230,7 @@ export function DocumentLogs({
                   variant='outline'
                   onClick={downloadLogsModalState.showModal}
                 >
-                  Download Logs
+                  Download {selectableState.selectedCount} logs
                 </Button>
               </div>
               <Tooltip
