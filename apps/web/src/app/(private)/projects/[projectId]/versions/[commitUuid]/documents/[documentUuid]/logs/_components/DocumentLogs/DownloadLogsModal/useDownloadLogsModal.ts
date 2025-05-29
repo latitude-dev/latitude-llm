@@ -15,7 +15,6 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-// Map() to maintain the order of the columns
 const DEFAULT_STATIC_COLUMNS = [
   'output',
   'id',
@@ -45,9 +44,13 @@ export function useDownloadLogsModal({
   const navigate = useNavigate()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const previewModalState = useToggleModal()
+  const state = useToggleModal()
   const [selectedLogIds, setSelectedLogIds] = useState<(string | number)[]>([])
-  const { previewData, fetchPreview, isLoading } = usePreviewLogs({
+  const {
+    previewData: data,
+    fetchPreview,
+    isLoading,
+  } = usePreviewLogs({
     documentLogIds: selectedLogIds,
     staticColumnNames: DEFAULT_STATIC_COLUMNS,
   })
@@ -70,13 +73,13 @@ export function useDownloadLogsModal({
   )
 
   const showModal = useCallback(() => {
-    previewModalState.onOpen()
+    state.onOpen()
     setSelectedLogIds(selectableState.getSelectedRowIds())
     fetchPreview()
   }, [
     fetchPreview,
     setSelectedLogIds,
-    previewModalState.onOpen,
+    state.onOpen,
     selectableState.getSelectedRowIds,
   ])
 
@@ -150,8 +153,8 @@ export function useDownloadLogsModal({
   }, [handleImmediateDownload, executeAsyncDownload, selectableState])
 
   useEffect(() => {
-    if (!previewData?.columns) return
-    const [parameterColumns, staticColumns] = previewData.columns.reduce(
+    if (!data?.columns) return
+    const [parameterColumns, staticColumns] = data.columns.reduce(
       ([parameterColumns, staticColumns], column) => {
         const toMap =
           column.role === 'parameter' ? parameterColumns : staticColumns
@@ -162,7 +165,7 @@ export function useDownloadLogsModal({
     )
     setParameterColumns(parameterColumns)
     setStaticColumns(staticColumns)
-  }, [previewData])
+  }, [data])
 
   const handleSelectStaticColumn = useCallback(
     (column: string) => {
@@ -192,20 +195,36 @@ export function useDownloadLogsModal({
     return `You are about to download ${selectedCount} logs. Due to the large number of logs, you will receive an email with the download link once the file is ready. The actual number of exported logs might be different because logs with execution errors are excluded.`
   }, [selectableState.selectedCount])
 
-  return {
-    data: previewData,
-    state: previewModalState,
-    description,
-    showModal,
-    handleDownload,
-    isLoadingPreview: isLoading,
-    isDownloading,
-    fetchPreview,
-    previewStaticColumns: staticColumns,
-    previewParameterColumns: parameterColumns,
-    handleSelectStaticColumn,
-    handleSelectParameterColumn,
-  }
+  return useMemo(
+    () => ({
+      data,
+      state,
+      description,
+      showModal,
+      handleDownload,
+      isLoadingPreview: isLoading,
+      isDownloading,
+      fetchPreview,
+      previewStaticColumns: staticColumns,
+      previewParameterColumns: parameterColumns,
+      handleSelectStaticColumn,
+      handleSelectParameterColumn,
+    }),
+    [
+      data,
+      state,
+      description,
+      showModal,
+      handleDownload,
+      isLoading,
+      isDownloading,
+      fetchPreview,
+      staticColumns,
+      parameterColumns,
+      handleSelectStaticColumn,
+      handleSelectParameterColumn,
+    ],
+  )
 }
 
 export type DownloadLogsModalState = ReturnType<typeof useDownloadLogsModal>

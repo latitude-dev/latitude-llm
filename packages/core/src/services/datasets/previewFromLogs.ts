@@ -55,7 +55,7 @@ async function getDataset(workspace: Workspace, name?: string) {
 /**
  * This service is responsible of obtaining a preview of the dataset that would be generated
  * including the logs provided. The dataset rows are limited to the first 5 and the logs are
- * choosen keeping only the ones with different parameters.
+ * chosen keeping only the ones with different parameters.
  */
 export const previewDatasetFromLogs = async ({
   workspace,

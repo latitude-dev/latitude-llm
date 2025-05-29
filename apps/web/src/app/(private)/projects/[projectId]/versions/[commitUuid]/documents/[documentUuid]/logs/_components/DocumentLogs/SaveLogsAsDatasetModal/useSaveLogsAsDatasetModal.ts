@@ -25,27 +25,31 @@ export function useSaveLogsAsDatasetModal({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-  const previewModalState = useToggleModal()
+  const state = useToggleModal()
   const [selectedLogsIds, setSelectedLogsIds] = useState<(string | number)[]>(
     [],
   )
   const [selectedCount, setSelectedCount] = useState(0)
   const [selectedDataset, setSelectedDataset] = useState<Dataset>()
-  const { previewData, fetchPreview, isLoading } = usePreviewLogs({
+  const {
+    previewData: data,
+    fetchPreview,
+    isLoading,
+  } = usePreviewLogs({
     dataset: selectedDataset,
     documentLogIds: selectedLogsIds,
     staticColumnNames: DEFAULT_STATIC_COLUMNS,
   })
 
   const onClickShowPreview = useCallback(() => {
-    previewModalState.onOpen()
+    state.onOpen()
     setSelectedLogsIds(selectableState.getSelectedRowIds())
     setSelectedCount(selectableState.selectedCount)
     fetchPreview()
   }, [
     fetchPreview,
     setSelectedLogsIds,
-    previewModalState.onOpen,
+    state.onOpen,
     selectableState.getSelectedRowIds,
   ])
 
@@ -77,7 +81,7 @@ export function useSaveLogsAsDatasetModal({
       setSelectedLogsIds([])
       setSelectedCount(0)
       selectableState.clearSelections()
-      previewModalState.onClose()
+      state.onClose()
     },
     onError: ({ err }) => {
       toast({
@@ -108,14 +112,14 @@ export function useSaveLogsAsDatasetModal({
       selectedLogsIds,
       setSelectedLogsIds,
       createDatasetFromLogs,
-      previewModalState.onClose,
+      state.onClose,
       selectableState.clearSelections,
     ],
   )
   return useMemo(
     () => ({
-      data: previewData,
-      state: previewModalState,
+      data,
+      state,
       onClickShowPreview,
       saveDataset,
       isLoadingPreview: isLoading,
@@ -127,11 +131,11 @@ export function useSaveLogsAsDatasetModal({
       selectedCount,
     }),
     [
-      previewData,
+      data,
+      state,
       onClickShowPreview,
       saveDataset,
       isLoading,
-      previewModalState,
       setSelectedDataset,
       selectedDataset,
       isSaving,

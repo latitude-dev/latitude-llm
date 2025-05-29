@@ -76,10 +76,6 @@ export function usePreviewLogs(
     isLoading,
   } = useSWR<OutputItem>(cacheKey, fetcher, {
     ...opts,
-    revalidateOnMount: false,
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-    dedupingInterval: 60000,
   })
 
   return { previewData: data, fetchPreview, isLoading }
