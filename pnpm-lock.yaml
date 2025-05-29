@@ -6,6 +6,9 @@ settings:
 
 catalogs:
   default:
+    dd-trace:
+      specifier: ^5.43.0
+      version: 5.43.0
     drizzle-kit:
       specifier: ^0.31.1
       version: 0.31.1
@@ -113,6 +116,9 @@ importers:
       '@t3-oss/env-core':
         specifier: ^0.10.1
         version: 0.10.1(typescript@5.8.2)(zod@3.24.2)
+      dd-trace:
+        specifier: 'catalog:'
+        version: 5.43.0
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.44.0(@opentelemetry/api@1.9.0)(@types/pg@8.11.11)(pg@8.14.1)
@@ -499,7 +505,7 @@ importers:
         specifier: ^5.41.3
         version: 5.44.4
       dd-trace:
-        specifier: ^5.37.1
+        specifier: 'catalog:'
         version: 5.43.0
       express:
         specifier: ^4.21.2

@@ -22,7 +22,7 @@
     "@sentry/node": "^9.9.0",
     "@t3-oss/env-core": "*",
     "bullmq": "^5.41.3",
-    "dd-trace": "^5.37.1",
+    "dd-trace": "catalog:",
     "express": "^4.21.2"
   },
   "devDependencies": {

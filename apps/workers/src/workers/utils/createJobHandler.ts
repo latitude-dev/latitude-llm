@@ -1,5 +1,5 @@
-import { initSentry } from '@latitude-data/core/workers/sentry'
 import { Job } from 'bullmq'
+import tracer from './tracer'
 
 /**
  * Creates a job handler function for a BullMQ worker
@@ -10,30 +10,27 @@ export function createJobHandler<T extends Record<string, Function>>(
   jobMappings: T,
 ) {
   return async (job: Job) => {
-    const s = initSentry()
-    const fn = async () => {
-      const jobName = job.name
-      const jobFunction = jobMappings[jobName as keyof T]
-      if (!jobFunction) {
-        throw new Error(`Job function not found: ${jobName}`)
-      }
-
-      return await jobFunction(job)
-    }
-
-    if (s) {
-      return s?.tracer?.startActiveSpan(
-        job.name,
-        {
-          attributes: {
+    return await tracer.wrap(
+      'bullmq.process',
+      { resource: job.name },
+      async () => {
+        const span = tracer.scope().active()
+        if (span) {
+          span.addTags({
             jobId: job.id,
-            data: job.data,
-          },
-        },
-        fn,
-      )
-    } else {
-      return await fn()
-    }
+            jobName: job.name,
+            jobQueue: job.queueName,
+            jobData: job.data ? JSON.stringify(job.data) : undefined,
+          })
+        }
+        const jobName = job.name
+        const jobFunction = jobMappings[jobName as keyof T]
+        if (!jobFunction) {
+          throw new Error(`Job function not found: ${jobName}`)
+        }
+
+        return await jobFunction(job)
+      },
+    )()
   }
 }
