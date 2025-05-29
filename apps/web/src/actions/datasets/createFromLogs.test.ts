@@ -27,7 +27,7 @@ vi.mock('@latitude-data/core/services/datasets/findOrCreate', () => ({
   findOrCreateDataset: mocks.findOrCreateDataset,
 }))
 
-vi.mock('@latitude-data/core/services/datasets/createFromLogs', () => ({
+vi.mock('@latitude-data/core/services/datasets/updateFromLogs', () => ({
   updateDatasetFromLogs: mocks.updateDatasetFromLogs,
 }))
 
@@ -147,7 +147,7 @@ describe('createDatasetFromLogsAction', () => {
       })
 
       expect(error).toBeNull()
-      expect(result).toEqual({ mode: 'sync', result: undefined })
+      expect(result).toEqual({ mode: 'sync', result: { success: true } })
 
       // Verify findOrCreateDataset was called with correct params
       expect(mocks.findOrCreateDataset).toHaveBeenCalledWith({
