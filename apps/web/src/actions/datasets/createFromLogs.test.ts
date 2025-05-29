@@ -132,7 +132,7 @@ describe('createDatasetFromLogsAction', () => {
   })
 
   describe('authorized - sync mode', () => {
-    it('processes logs synchronously when in PARTIAL mode with fewer logs than the batch limit', async () => {
+    it('processes logs synchronously when in fewer logs than the batch limit', async () => {
       const selectedDocumentLogIds = [1, 2, 3]
 
       const [result, error] = await createDatasetFromLogsAction({
@@ -140,7 +140,7 @@ describe('createDatasetFromLogsAction', () => {
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
         name: 'Test Dataset',
-        selectionMode: 'PARTIAL',
+        selectionMode: 'ALL',
         selectedDocumentLogIds,
         excludedDocumentLogIds: [],
         filterOptions,
