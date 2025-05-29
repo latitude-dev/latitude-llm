@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - '.github/workflows/**'
+      - 'package.json'
+      - 'yarn.lock'
+      - 'pnpm-lock.yaml'
 
 env:
   PUBLIC_REGISTRY: ghcr.io
@@ -20,8 +27,44 @@ jobs:
     with:
       workflow_call: true
 
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      gateway: ${{ steps.filter.outputs.gateway }}
+      workers: ${{ steps.filter.outputs.workers }}
+      websockets: ${{ steps.filter.outputs.websockets }}
+      migrations: ${{ steps.filter.outputs.migrations }}
+      shared: ${{ steps.filter.outputs.shared }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'apps/web/**'
+            gateway:
+              - 'apps/gateway/**'
+            workers:
+              - 'apps/workers/**'
+            websockets:
+              - 'apps/websockets/**'
+            migrations:
+              - 'packages/core/**'
+            shared:
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/**'
+              - 'packages/**'
+
   build-and-push:
-    needs: [lint]
+    needs: [lint, check-changes]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -37,47 +80,56 @@ jobs:
             registry: ghcr.io
             owner: latitude-dev
             repo_name: web
+            build_if: ${{ needs.check-changes.outputs.web == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: gateway
             dockerfile: apps/gateway/docker/Dockerfile
             private: false
             registry: ghcr.io
             owner: latitude-dev
             repo_name: gateway
+            build_if: ${{ needs.check-changes.outputs.gateway == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: workers
             dockerfile: apps/workers/docker/Dockerfile
             private: false
             registry: ghcr.io
             owner: latitude-dev
             repo_name: workers
+            build_if: ${{ needs.check-changes.outputs.workers == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: websockets
             dockerfile: apps/websockets/docker/Dockerfile
             private: false
             registry: ghcr.io
             owner: latitude-dev
             repo_name: websockets
+            build_if: ${{ needs.check-changes.outputs.websockets == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: migrations
             dockerfile: packages/core/docker/Dockerfile
             private: false
             registry: ghcr.io
             owner: latitude-dev
             repo_name: migrations
+            build_if: ${{ needs.check-changes.outputs.migrations == 'true' || needs.check-changes.outputs.shared == 'true' }}
           # Private images on AWS ECR (with Sentry)
           - app: web
             dockerfile: apps/web/docker/Dockerfile
             private: true
             repo_name: latitude-llm-app-repo-43d71dc
+            build_if: ${{ needs.check-changes.outputs.web == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: gateway
             dockerfile: apps/gateway/docker/Dockerfile
             private: true
             repo_name: latitude-llm-gateway-repo-b859826
+            build_if: ${{ needs.check-changes.outputs.gateway == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: workers
             dockerfile: apps/workers/docker/Dockerfile
             private: true
             repo_name: latitude-llm-workers-repo-184cb29
+            build_if: ${{ needs.check-changes.outputs.workers == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: websockets
             dockerfile: apps/websockets/docker/Dockerfile
             private: true
             repo_name: latitude-llm-websockets-repo-eea3d9a
+            build_if: ${{ needs.check-changes.outputs.websockets == 'true' || needs.check-changes.outputs.shared == 'true' }}
 
     steps:
       - name: Checkout repository
