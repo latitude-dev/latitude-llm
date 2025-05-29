@@ -87,7 +87,8 @@ export function createProviderApiKey(
       }
 
       return Result.ok(providerApiKey)
-    } catch (error) {
+    } catch (e) {
+      const error = 'cause' in (e as Error) ? (e as Error).cause : undefined
       if (error instanceof DatabaseError) {
         if (error.code === databaseErrorCodes.uniqueViolation) {
           if (error.constraint?.includes('name')) {
@@ -102,7 +103,7 @@ export function createProviderApiKey(
         }
       }
 
-      throw error
+      throw e
     }
   }, db)
 }

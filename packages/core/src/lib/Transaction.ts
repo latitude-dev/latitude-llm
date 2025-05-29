@@ -40,6 +40,7 @@ export default class Transaction {
       let result: TypedResult<ResultType, Error>
 
       await db.transaction(async (trx) => {
+        // @ts-expect-error - good luck typing this
         result = await callback(trx)
 
         if (result.error) throw result.error
@@ -55,10 +56,12 @@ export default class Transaction {
    * Refer to the errors list at
    * https://github.com/rails/rails/blob/main/activerecord/lib/active_record/connection_adapters/postgresql_adapter.rb#L769.
    */
-  static toResultError(error: unknown): ErrorResult<Error> {
+  static toResultError(e: unknown): ErrorResult<Error> {
     if (env.NODE_ENV === 'development') {
-      console.error(error)
+      console.error(e)
     }
+
+    const error = 'cause' in (e as Error) ? (e as Error).cause : undefined
 
     const code = (error as DatabaseError)?.code
     switch (code) {
@@ -71,7 +74,7 @@ export default class Transaction {
           }),
         )
       default:
-        return Result.error(error as Error)
+        return Result.error(e as Error)
     }
   }
 }

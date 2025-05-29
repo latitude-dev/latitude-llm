@@ -25,9 +25,7 @@ export default abstract class RepositoryLegacy<
   abstract get scope(): SubqueryWithSelection<U, string> | PgSelect<string>
 
   async findAll(opts: QueryOptions = {}) {
-    let query = this.db
-      .select()
-      .from(this.scope as SubqueryWithSelection<U, string>)
+    let query = this.db.select().from(this.scope as any)
 
     if (opts.limit !== undefined) {
       // @ts-expect-error
@@ -47,7 +45,7 @@ export default abstract class RepositoryLegacy<
   async find(id: string | number | undefined | null) {
     const result = await this.db
       .select()
-      .from(this.scope as SubqueryWithSelection<U, string>)
+      .from(this.scope as any)
       // TODO: This is correct but I don't have time to fix the types
       // as it involves some generics with the return value of scope
       // in the child classes
@@ -65,7 +63,7 @@ export default abstract class RepositoryLegacy<
   async findMany(ids: (string | number)[]) {
     const result = await this.db
       .select()
-      .from(this.scope as SubqueryWithSelection<U, string>)
+      .from(this.scope as any)
       // @ts-expect-error
       .where(inArray(this.scope.id, ids))
       .limit(ids.length)
@@ -76,7 +74,7 @@ export default abstract class RepositoryLegacy<
   async findFirst() {
     const result = await this.db
       .select()
-      .from(this.scope as SubqueryWithSelection<U, string>)
+      .from(this.scope as any)
       .limit(1)
 
     return Result.ok(result[0] as T | undefined)

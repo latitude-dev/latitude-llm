@@ -88,7 +88,8 @@ export const createDataset = async (
           name: author.name,
         },
       })
-    } catch (error) {
+    } catch (e) {
+      const error = 'cause' in (e as Error) ? (e as Error).cause : undefined
       if (error instanceof DatabaseError) {
         if (error.code === databaseErrorCodes.uniqueViolation) {
           if (error.constraint?.includes('name')) {
