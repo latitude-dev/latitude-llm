@@ -28,14 +28,16 @@ export const MIN_LOGS_FOR_CACHING = 5000
  * @param forceRefresh Whether to force a refresh of the cache
  * @returns Project stats
  */
-export async function computeProjectStats({
-  project,
-  forceRefresh = false,
-}: {
-  project: Project
-  forceRefresh?: boolean
-}) {
-  const db = database
+export async function computeProjectStats(
+  {
+    project,
+    forceRefresh = false,
+  }: {
+    project: Project
+    forceRefresh?: boolean
+  },
+  db = database,
+) {
   const redis = await cache()
   const cacheKey = `${PROJECT_STATS_CACHE_PREFIX}${project.id}`
 

@@ -40,6 +40,7 @@ export default class Transaction {
       let result: TypedResult<ResultType, Error>
 
       await db.transaction(async (trx) => {
+        // @ts-expect-error - good luck typing this
         result = await callback(trx)
 
         if (result.error) throw result.error
