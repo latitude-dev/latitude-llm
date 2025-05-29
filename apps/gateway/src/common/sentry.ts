@@ -7,8 +7,6 @@ if (env.SENTRY_GATEWAY_DSN) {
     enabled: !!env.SENTRY_GATEWAY_DSN,
     environment: env.NODE_ENV,
     integrations: [],
-    profilesSampleRate: 1.0,
-    tracesSampleRate: 1.0,
   })
 }
 
