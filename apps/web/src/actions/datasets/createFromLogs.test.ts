@@ -132,7 +132,7 @@ describe('createDatasetFromLogsAction', () => {
   })
 
   describe('authorized - sync mode', () => {
-    it('processes logs synchronously when in fewer logs than the batch limit', async () => {
+    it('processes logs synchronously when in PARTIAL mode with fewer logs than the batch limit', async () => {
       const selectedDocumentLogIds = [1, 2, 3]
 
       const [result, error] = await createDatasetFromLogsAction({
@@ -140,14 +140,14 @@ describe('createDatasetFromLogsAction', () => {
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
         name: 'Test Dataset',
-        selectionMode: 'ALL',
+        selectionMode: 'PARTIAL',
         selectedDocumentLogIds,
         excludedDocumentLogIds: [],
         filterOptions,
       })
 
       expect(error).toBeNull()
-      expect(result).toEqual({ mode: 'sync', result: { success: true } })
+      expect(result).toEqual({ mode: 'sync', result: undefined })
 
       // Verify findOrCreateDataset was called with correct params
       expect(mocks.findOrCreateDataset).toHaveBeenCalledWith({
