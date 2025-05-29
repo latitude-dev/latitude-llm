@@ -8,12 +8,15 @@ import createApp from '$/openApi/createApp'
 import configureOpenAPI from '$/openApi/configureOpenAPI'
 import { configureApiRoutes } from './api'
 import { configureWebhookRoutes } from './webhook'
+import { tracerMiddleware } from '$/middlewares/tracer'
 
 const app = createApp()
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(logger())
 }
+
+app.use(tracerMiddleware())
 
 app.get('/health', (c) => {
   return c.json({ status: 'ok' })
