@@ -125,7 +125,7 @@ describe('computeDocumentLogs', () => {
       document: doc,
       commit,
     })
-    factories.createRunError({
+    await factories.createRunError({
       code: RunErrorCodes.Unknown,
       message: 'test error',
       errorableType: ErrorableEntity.DocumentLog,

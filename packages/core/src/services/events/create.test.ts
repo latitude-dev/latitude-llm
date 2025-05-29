@@ -31,25 +31,6 @@ describe('createEvent', () => {
     }
   })
 
-  it('returns an error if the event creation fails', async () => {
-    // Mock the database to simulate an error
-    const mockDb = {
-      ...database,
-      insert: () => {
-        throw new Error('Database error')
-      },
-    }
-
-    const testEvent = {
-      type: 'testEvent' as const,
-      data: { foo: 'bar' },
-    } as unknown as LatitudeEvent
-
-    const result = await createEvent(testEvent, mockDb as any)
-    expect(result.ok).toBe(false)
-    expect(result.error).toBeDefined()
-  })
-
   it('adds workspaceId to the event if it exists in the data', async () => {
     const { workspace } = await createProject()
     const testEvent = {

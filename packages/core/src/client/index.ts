@@ -5,10 +5,13 @@ import pg from 'pg'
 
 import * as schema from '../schema'
 import { PgWithReplicas, withReplicas } from 'drizzle-orm/pg-core'
+import type { Pool as IPool } from 'pg'
 
 const { Pool } = pg
 
-export type Database = PgWithReplicas<NodePgDatabase<typeof schema>>
+export type Database = PgWithReplicas<
+  NodePgDatabase<typeof schema> & { $client: IPool }
+>
 
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
