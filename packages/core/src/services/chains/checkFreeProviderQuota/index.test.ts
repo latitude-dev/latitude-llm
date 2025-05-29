@@ -1,11 +1,10 @@
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { ProviderApiKey, Providers, Workspace } from '../../../browser'
 import { cache } from '../../../cache'
 import * as factories from '../../../tests/factories'
 import { buildFreeRunCacheKey, getFreeRuns } from '../../freeRunsManager'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from './index'
 import { Result } from './../../../lib/Result'
 

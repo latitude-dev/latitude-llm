@@ -1,4 +1,4 @@
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
   LegacyChainEvent,
@@ -8,7 +8,6 @@ import {
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
-import { ChainError } from '../ChainErrors'
 import { ValidatedChainStep } from '../../../services/chains/ChainValidator'
 import { ValidatedAgentStep } from '../../../services/agents/AgentStepValidator'
 

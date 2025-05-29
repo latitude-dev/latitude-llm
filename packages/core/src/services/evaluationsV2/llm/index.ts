@@ -1,3 +1,4 @@
+import { ChainError } from '@latitude-data/constants/errors'
 import {
   ErrorableEntity,
   EvaluationResultValue,
@@ -6,7 +7,6 @@ import {
   LlmEvaluationSpecification as specification,
 } from '../../../browser'
 import { database, Database } from '../../../client'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { ProviderApiKeysRepository } from '../../../repositories'

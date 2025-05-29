@@ -7,8 +7,7 @@ import {
   ValidatedChainStep,
 } from '../ChainValidator'
 import { CachedApiKeys, SomeChain, stepLimitExceededErrorMessage } from '../run'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { buildMessagesFromResponse, Workspace } from '../../../browser'
 import { cacheChain } from '../chainCache'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'

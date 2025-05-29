@@ -1,6 +1,6 @@
 'use server'
 
-import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { BadRequestError } from '@latitude-data/constants/errors'
 import {
   CommitsRepository,
   DocumentVersionsRepository,

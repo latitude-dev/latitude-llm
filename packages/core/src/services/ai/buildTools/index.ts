@@ -1,7 +1,6 @@
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Tool, jsonSchema } from 'ai'
 import { compactObject } from '../../../lib/compactObject'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { VercelTools } from '@latitude-data/constants'
 import { Result } from './../../../lib/Result'
 

@@ -4,7 +4,7 @@ import {
   unsafelyFindWorkspacesFromUser,
   unsafelyGetUser,
 } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import { PromisedResult } from '@latitude-data/core/lib/Transaction'
 import { users } from '@latitude-data/core/schema'

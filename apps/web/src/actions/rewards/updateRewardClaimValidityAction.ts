@@ -1,7 +1,7 @@
 'use server'
 
 import { ClaimedReward } from '@latitude-data/core/browser'
-import { UnauthorizedError } from '@latitude-data/core/lib/errors'
+import { UnauthorizedError } from '@latitude-data/constants/errors'
 import { updateRewardClaim } from '@latitude-data/core/services/claimedRewards/update'
 import { z } from 'zod'
 

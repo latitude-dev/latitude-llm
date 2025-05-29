@@ -1,5 +1,5 @@
 import type { Message } from '@latitude-data/compiler'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
   buildConversation,
@@ -11,7 +11,6 @@ import {
   PromptSource,
 } from '../../../../browser'
 import { unsafelyFindProviderApiKey } from '../../../../data-access'
-import { ChainError } from '../../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
 import serializeProviderLog from '../../../providerLogs/serialize'
 import { ChainStreamManager } from '../../../../lib/chainStreamManager'

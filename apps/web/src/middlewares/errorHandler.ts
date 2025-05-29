@@ -1,6 +1,6 @@
 import { debuglog } from 'util'
 
-import { LatitudeError } from '@latitude-data/core/lib/errors'
+import { LatitudeError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import { captureException } from '$/helpers/captureException'
 import { NextRequest, NextResponse } from 'next/server'

@@ -4,7 +4,7 @@ import {
   createChain,
   MessageRole,
 } from '@latitude-data/compiler'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -18,7 +18,6 @@ import {
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
-import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import {
   AsyncStreamIteable,
   PARTIAL_FINISH_CHUNK,
@@ -281,6 +280,12 @@ describe('run chain error handling', () => {
       details: {
         errorCode: RunErrorCodes.ChainCompileError,
         compileCode: 'unknown-tag',
+        frame: `4:         model: gpt-4o-mini
+5:         ---
+6:         <ref>NOT VALID TAG</ref>
+
+            ^~~~~~~~~~~~~~~~~~~~~~~~
+7:       `,
         message: "Unknown tag: 'ref'",
       },
       createdAt: expect.any(Date),

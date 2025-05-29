@@ -6,7 +6,7 @@ import { publisher } from '@latitude-data/core/events/publisher'
 import {
   BadRequestError,
   UnprocessableEntityError,
-} from '@latitude-data/core/lib/errors'
+} from '@latitude-data/constants/errors'
 import {
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,

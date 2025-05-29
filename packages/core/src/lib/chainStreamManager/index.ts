@@ -18,8 +18,7 @@ import { streamAIResponse } from './step/streamAIResponse'
 import type { PromptSource } from '../../constants'
 import { buildMessagesFromResponse } from '../../helpers'
 import { FinishReason, LanguageModelUsage } from 'ai'
-import { ChainError } from './ChainErrors'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { RunErrorCodes, ChainError } from '@latitude-data/constants/errors'
 import { IntegrationDto, ProviderApiKey, Workspace } from '../../browser'
 import { resolveToolsFromConfig } from './resolveTools'
 import { omit } from 'lodash-es'
@@ -387,6 +386,7 @@ export class ChainStreamManager {
       error: {
         name: error.name,
         message: error.message,
+        details: error.details,
         stack: error.stack,
       },
     })

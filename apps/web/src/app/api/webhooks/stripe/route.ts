@@ -3,7 +3,7 @@ import Stripe from 'stripe'
 import {
   BadRequestError,
   UnprocessableEntityError,
-} from '@latitude-data/core/lib/errors'
+} from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import { handleSubscriptionUpdate } from '@latitude-data/core/services/billing/handleSubscriptionUpdate'
 import { errorHandler } from '$/middlewares/errorHandler'

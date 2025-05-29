@@ -8,8 +8,7 @@ import * as factories from '../../../tests/factories'
 import { mockToolRequestsCopilot } from '../../../tests/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
 import * as utils from '../../utils/progressTracker'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 const incrementErrorsMock = vi.hoisted(() => vi.fn())
 

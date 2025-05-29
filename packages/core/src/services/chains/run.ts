@@ -3,7 +3,7 @@ import {
   Chain as LegacyChain,
   Message,
 } from '@latitude-data/compiler'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Chain as PromptlChain } from 'promptl-ai'
 
 import { ProviderApiKey, Workspace } from '../../browser'
@@ -15,10 +15,7 @@ import {
   StreamType,
 } from '../../constants'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
-import {
-  ChainError,
-  createChainRunError,
-} from '../../lib/chainStreamManager/ChainErrors'
+import { createChainRunError } from '../../lib/chainStreamManager/ChainErrors'
 import { ConfigOverrides } from './ChainValidator'
 import { runStep } from './runStep'
 import { ChainStreamManager } from '../../lib/chainStreamManager'

@@ -4,13 +4,12 @@ import {
   Chain as LegacyChain,
   Message,
 } from '@latitude-data/compiler'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
 import { z } from 'zod'
 
 import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
 import { Result } from './../../../lib/Result'
@@ -19,6 +18,7 @@ import {
   azureConfig,
   LatitudePromptConfig,
 } from '@latitude-data/constants/latitudePromptSchema'
+import { CompileError as PromptlCompileError } from 'promptl-ai'
 
 type SomeChain = LegacyChain | PromptlChain
 
@@ -128,7 +128,10 @@ const safeChain = async ({
       conversation: { messages, config },
     })
   } catch (e) {
-    const error = e as CompileError
+    const error = e as PromptlCompileError
+    const isPromptlCompileError = error instanceof PromptlCompileError
+    const isOldCompileError = error instanceof CompileError
+    const isCompileError = isPromptlCompileError || isOldCompileError
     return Result.error(
       new ChainError({
         message: `Error validating chain:\n ${error.message}`,
@@ -136,6 +139,12 @@ const safeChain = async ({
         details: {
           compileCode: error.code ?? 'unknown_compile_error',
           message: error.message,
+          ...(isCompileError
+            ? {
+                compileCode: error.code,
+                frame: error.frame,
+              }
+            : {}),
         },
       }),
     )

@@ -9,6 +9,10 @@ export enum LatitudeErrorCodes {
   UnprocessableEntityError = 'UnprocessableEntityError',
 }
 
+export type LatitudeErrorDetails = {
+  [key: string | number | symbol]: string[] | string | undefined
+}
+
 // NOTE: If you add a new error code, please add it to the pg enum in models/runErrors.ts
 export enum RunErrorCodes {
   Unknown = 'unknown_error',

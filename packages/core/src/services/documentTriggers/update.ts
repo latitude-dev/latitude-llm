@@ -4,7 +4,7 @@ import { documentTriggers } from '../../schema'
 import { database } from '../../client'
 import { and, eq } from 'drizzle-orm'
 import { buildConfiguration } from './helpers/buildConfiguration'
-import { LatitudeError } from './../../lib/errors'
+import { LatitudeError } from '@latitude-data/constants/errors'
 import Transaction, { PromisedResult } from './../../lib/Transaction'
 import { Result } from './../../lib/Result'
 

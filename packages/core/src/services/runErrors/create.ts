@@ -10,6 +10,6 @@ export async function createRunError(
 ) {
   return await Transaction.call<RunError>(async (trx) => {
     const inserts = await trx.insert(runErrors).values(data).returning()
-    return Result.ok(inserts[0]!)
+    return Result.ok(inserts[0]! as RunError)
   }, db)
 }

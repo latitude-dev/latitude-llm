@@ -5,6 +5,7 @@ import { runAgentStep } from './runStep'
 import { deleteCachedChain } from '../chains/chainCache'
 import { ChainStreamManager } from '../../lib/chainStreamManager'
 import { ChainEventTypes } from '@latitude-data/constants'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 export function runAgent<T extends boolean, C extends SomeChain>({
   workspace,
@@ -65,7 +66,16 @@ export function runAgent<T extends boolean, C extends SomeChain>({
 
       // Handle chain-finishing events
       if (value.data.type === ChainEventTypes.ChainError) {
-        throw value.data.error
+        // Serialized error is not a ChainError but at this point
+        // we throw the error converted again into a ChainError so the gateway can
+        // catch it with all the details
+        const streamError = value.data.error as ChainError<RunErrorCodes>
+        throw new ChainError({
+          message: streamError.message,
+          code: streamError.code,
+          // @ts-ignore
+          details: streamError.details,
+        })
       }
       if (value.data.type === ChainEventTypes.ChainCompleted) {
         // Ignore the ChainCompleted event
