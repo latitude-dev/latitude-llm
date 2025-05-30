@@ -194,7 +194,7 @@ export function DocumentRefinement({
           project={project}
           commit={commit}
           document={document}
-          selectedEvaluationUuid={selectedEvaluation?.uuid}
+          selectedEvaluation={selectedEvaluation}
           setSelectedEvaluation={setSelectedEvaluation}
         />
       ),
