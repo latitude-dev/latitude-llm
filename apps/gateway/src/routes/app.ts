@@ -24,9 +24,10 @@ app.get('/health', (c) => {
 
 configureOpenAPI(app)
 
+app.use(rateLimitMiddleware())
+
 configureWebhookRoutes(app)
 
-app.use(rateLimitMiddleware())
 app.use(authMiddleware())
 
 configureApiRoutes(app)
