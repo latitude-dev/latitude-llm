@@ -4,7 +4,7 @@ import { CheckedState } from '@latitude-data/web-ui/atoms/Checkbox'
 
 type SelectionMode = 'NONE' | 'PARTIAL' | 'ALL' | 'ALL_EXCEPT'
 
-interface SelectionState<T> {
+interface SelectionState<T extends string | number> {
   mode: SelectionMode
   selectedIds: Set<T>
   excludedIds: Set<T>
@@ -127,7 +127,7 @@ export function useSelectableRows<T extends string | number>({
     })
   }, [])
 
-  const getSelectedRowIds = useCallback(() => {
+  const selectedRowIds = useMemo(() => {
     switch (selectionState.mode) {
       case 'ALL':
         return rowIds.filter((id) => !selectionState.excludedIds.has(id))
@@ -138,7 +138,7 @@ export function useSelectableRows<T extends string | number>({
       case 'ALL_EXCEPT':
         return rowIds.filter((id) => !selectionState.excludedIds.has(id))
     }
-  }, [selectionState, rowIds])
+  }, [selectionState, rowIds.join('')])
 
   const selectedCount = useMemo(() => {
     switch (selectionState.mode) {
@@ -158,7 +158,7 @@ export function useSelectableRows<T extends string | number>({
       selectedCount,
       selectionMode: selectionState.mode,
       excludedIds: selectionState.excludedIds,
-      getSelectedRowIds,
+      selectedRowIds,
       toggleRow,
       toggleAll,
       clearSelections,
@@ -169,7 +169,7 @@ export function useSelectableRows<T extends string | number>({
       selectedCount,
       selectionState.mode,
       selectionState.excludedIds,
-      getSelectedRowIds,
+      selectedRowIds,
       toggleRow,
       toggleAll,
       clearSelections,

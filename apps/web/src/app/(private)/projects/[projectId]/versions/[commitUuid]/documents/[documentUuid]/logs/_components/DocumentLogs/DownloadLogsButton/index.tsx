@@ -47,9 +47,8 @@ export function DownloadLogsButton({
   )
 
   const handleImmediateDownload = useCallback(async () => {
-    const ids = selectableState.getSelectedRowIds()
     const formData = new FormData()
-    formData.append('ids', JSON.stringify(ids))
+    formData.append('ids', JSON.stringify(selectableState.selectedRowIds))
 
     const rawResponse = await fetch(ROUTES.api.documentLogs.downloadLogs.root, {
       method: 'POST',
@@ -72,12 +71,7 @@ export function DownloadLogsButton({
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-  }, [
-    selectableState.getSelectedRowIds,
-    latitudeDocument.path,
-    navigate,
-    toast,
-  ])
+  }, [selectableState.selectedRowIds, latitudeDocument.path, navigate, toast])
 
   const handleDownload = useCallback(async () => {
     setIsDownloading(true)

@@ -112,14 +112,14 @@ export function useSelectedLogs({
   })
   const onClickShowPreview = useCallback(() => {
     previewModalState.onOpen()
-    setSelectedLogsIds(selectableState.getSelectedRowIds())
+    setSelectedLogsIds(selectableState.selectedRowIds)
     setSelectedCount(selectableState.selectedCount)
     fetchPreview()
   }, [
     fetchPreview,
     setSelectedLogsIds,
     previewModalState.onOpen,
-    selectableState.getSelectedRowIds,
+    selectableState.selectedRowIds,
     selectableState.selectedCount,
   ])
   const {

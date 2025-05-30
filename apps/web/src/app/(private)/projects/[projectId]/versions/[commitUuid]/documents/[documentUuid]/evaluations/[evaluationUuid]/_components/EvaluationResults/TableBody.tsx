@@ -151,12 +151,7 @@ export function EvaluationResultsTableBody<
     >
       <TableHeader className='isolate sticky top-0 z-10'>
         <TableRow>
-          <TableHead>
-            <Checkbox
-              checked={selectableState.headerState}
-              onCheckedChange={selectableState.toggleAll}
-            />
-          </TableHead>
+          <TableHead />
           <ResultRowHeaders evaluation={evaluation} />
         </TableRow>
       </TableHeader>

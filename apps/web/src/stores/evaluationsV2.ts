@@ -295,23 +295,42 @@ export function useEvaluationsV2(
     [project, commit, document, executeAnnotateEvaluationV2],
   )
 
-  return {
-    data,
-    mutate,
-    createEvaluation,
-    isCreatingEvaluation,
-    updateEvaluation,
-    isUpdatingEvaluation,
-    deleteEvaluation,
-    isDeletingEvaluation,
-    generateEvaluation,
-    isGeneratingEvaluation,
-    cloneEvaluation,
-    isCloningEvaluation,
-    annotateEvaluation,
-    isAnnotatingEvaluation,
-    ...rest,
-  }
+  return useMemo(
+    () => ({
+      data,
+      mutate,
+      createEvaluation,
+      isCreatingEvaluation,
+      updateEvaluation,
+      isUpdatingEvaluation,
+      deleteEvaluation,
+      isDeletingEvaluation,
+      generateEvaluation,
+      isGeneratingEvaluation,
+      cloneEvaluation,
+      isCloningEvaluation,
+      annotateEvaluation,
+      isAnnotatingEvaluation,
+      ...rest,
+    }),
+    [
+      data,
+      mutate,
+      createEvaluation,
+      isCreatingEvaluation,
+      updateEvaluation,
+      isUpdatingEvaluation,
+      deleteEvaluation,
+      isDeletingEvaluation,
+      generateEvaluation,
+      isGeneratingEvaluation,
+      cloneEvaluation,
+      isCloningEvaluation,
+      annotateEvaluation,
+      isAnnotatingEvaluation,
+      rest,
+    ],
+  )
 }
 
 export function useEvaluationV2Stats<

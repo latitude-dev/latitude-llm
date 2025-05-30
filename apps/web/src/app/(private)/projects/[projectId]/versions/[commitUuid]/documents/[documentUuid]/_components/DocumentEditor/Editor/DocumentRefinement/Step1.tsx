@@ -57,13 +57,12 @@ export function Step1({
   })
 
   useEffect(() => {
-    const selectedUuids = selectableState.getSelectedRowIds()
-    if (selectedUuids.length) {
+    if (selectableState.selectedRowIds.length) {
       setSelectedEvaluation(
-        evaluations.find((e) => e.uuid === selectedUuids[0]),
+        evaluations.find((e) => e.uuid === selectableState.selectedRowIds[0]),
       )
     } else setSelectedEvaluation(undefined)
-  }, [selectableState.getSelectedRowIds])
+  }, [selectableState.selectedRowIds])
 
   if (isLoading) {
     return (
