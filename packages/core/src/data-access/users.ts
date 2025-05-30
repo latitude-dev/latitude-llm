@@ -4,11 +4,6 @@ import { User, Workspace, WorkspaceDto } from '../browser'
 import { database } from '../client'
 import { memberships, users } from '../schema'
 
-export type SessionData = {
-  user: User
-  workspace: WorkspaceDto
-}
-
 export async function findFirstUserInWorkspace(
   workspace: WorkspaceDto | Workspace,
 ) {

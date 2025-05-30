@@ -31,7 +31,10 @@ export const loginAction = errorHandlingProcedure
       )
       await setSession({
         sessionData: {
-          user,
+          user: {
+            id: user.id,
+            email: user.email,
+          },
           workspace,
         },
       })
