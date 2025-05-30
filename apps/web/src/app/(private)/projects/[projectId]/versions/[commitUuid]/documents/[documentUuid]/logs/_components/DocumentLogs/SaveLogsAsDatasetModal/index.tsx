@@ -155,7 +155,7 @@ export function SaveLogsAsDatasetModal({
         <PreviewTable
           previewData={data}
           isLoading={isLoadingPreview}
-          subtitle={`${selectedCount} logs will be added to ${data.datasetRows.length > 0 ? 'the dataset' : 'a new dataset'}. Here's a preview.`}
+          subtitle={`${selectedCount} logs will be added to ${data.datasetRows.length > 0 ? 'the dataset' : 'a new dataset'}. This is a preview of representative ones based on its parameters.`}
         />
       </div>
     </Modal>

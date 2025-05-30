@@ -1,5 +1,5 @@
 'use client'
-import { forwardRef, ReactNode, Ref } from 'react'
+import { forwardRef, ReactNode, Ref, useCallback } from 'react'
 import * as RadixPopover from '@radix-ui/react-popover'
 
 import { cn } from '../../../lib/utils'
@@ -33,11 +33,11 @@ const PopoverContent = forwardRef<HTMLDivElement, Props>(function Content(
   const props = {
     ...rest,
     className: cn(
-      className,
       'animate-in fade-in-0 slide-in-from-top-2',
       'bg-background shadow-lg rounded-md',
       'mt-1 border border-border',
       'gap-y-4 flex flex-col',
+      className,
       zIndex.popover,
       {
         'custom-scrollbar': scrollable,
@@ -71,7 +71,7 @@ export const ButtonTrigger = ({
   iconProps,
   ref,
 }: {
-  children: string | ReactNode
+  children?: string | ReactNode
   showIcon?: boolean
   buttonVariant?: ButtonProps['variant']
   className?: string
@@ -82,17 +82,23 @@ export const ButtonTrigger = ({
 }) => {
   const iconName = iconProps?.name ?? 'chevronsUpDown'
   const iconColor = iconProps?.color ?? 'foregroundMuted'
+
+  const getContent = useCallback(() => {
+    if (!children) return <></>
+    if (isString(children))
+      return (
+        <Text.H5 color={color} noWrap ellipsis>
+          <div className={overrideDarkColor}>{children}</div>
+        </Text.H5>
+      )
+    return <div className={overrideDarkColor}>{children}</div>
+  }, [children, color, overrideDarkColor])
+
   return (
     <Popover.Trigger ref={ref} asChild>
       <Button variant={buttonVariant} ellipsis className={cn(className)}>
         <div className='flex flex-row justify-between items-center w-full gap-x-2'>
-          {isString(children) ? (
-            <Text.H5 color={color} noWrap ellipsis>
-              <div className={overrideDarkColor}>{children}</div>
-            </Text.H5>
-          ) : (
-            <div className={overrideDarkColor}>{children}</div>
-          )}
+          {getContent()}
           {showIcon ? (
             <div className='flex-none'>
               <Icon name={iconName} color={iconColor} />

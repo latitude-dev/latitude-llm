@@ -159,6 +159,7 @@ import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import YepCode from './custom-icons/logos/YepCode'
 import IntercomChat from './custom-icons/logos/IntercomChat'
+import { HTMLAttributes, RefAttributes } from 'react'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -330,7 +331,7 @@ export type IconProps = {
   widthClass?: string
   heightClass?: string
   className?: string
-}
+} & HTMLAttributes<SVGElement>
 
 type Size = 'xsmall' | 'small' | 'normal' | 'large' | 'xlarge' | 'xxxlarge'
 
@@ -342,6 +343,7 @@ export function Icon({
   spinSpeed = 'normal',
   size = 'normal',
   className,
+  ...props
 }: IconProps) {
   const IconClass = Icons[name]!
   return (
@@ -361,6 +363,7 @@ export function Icon({
         },
         className,
       )}
+      {...props}
     />
   )
 }

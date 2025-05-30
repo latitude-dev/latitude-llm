@@ -9,11 +9,12 @@ import {
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import { cn } from '@latitude-data/web-ui/utils'
-import { Column } from '@latitude-data/core/schema'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
 import { OutputItem } from '$/stores/previewLogs'
-import { useCallback } from 'react'
+import { ColumnSelector } from './ColumnSelector'
+import { Column } from '@latitude-data/core/schema'
+import { usePreviewTable } from './usePreviewTable'
 
 function PreviewCell({
   cell,
@@ -65,37 +66,36 @@ export function PreviewTable({
   onSelectStaticColumn?: (column: string) => void
   onSelectParameterColumn?: (column: string) => void
 }) {
-  const isColumnDisabled = (column: Column) => {
-    if (!selectable) return false
-    if (column.role === 'parameter') {
-      return !previewParameterColumns?.get(column.name)
-    } else if (column.role === 'label' || column.role === 'metadata') {
-      return !previewStaticColumns?.get(column.name)
-    }
-  }
-
-  const handleColumnClick = useCallback(
-    (column: Column) => {
-      if (column.role === 'parameter') {
-        onSelectParameterColumn?.(column.name)
-      } else if (column.role === 'label' || column.role === 'metadata') {
-        onSelectStaticColumn?.(column.name)
-      }
-    },
-    [onSelectParameterColumn, onSelectStaticColumn],
-  )
-
   const { backgroundCssClasses } = useDatasetRole()
+  const { isColumnSelected } = usePreviewTable({
+    previewStaticColumns,
+    previewParameterColumns,
+    onSelectStaticColumn,
+    onSelectParameterColumn,
+  })
   return (
-    <div className='flex flex-col gap-y-2'>
-      <Text.H4>Logs preview</Text.H4>
-      {subtitle && <Text.H6 color='foregroundMuted'>{subtitle}</Text.H6>}
+    <div className='flex flex-col gap-y-4'>
+      <div className='w-full flex justify-between items-center'>
+        <div className='flex flex-col gap-y-2'>
+          <Text.H4>Logs preview</Text.H4>
+          {subtitle && <Text.H6 color='foregroundMuted'>{subtitle}</Text.H6>}
+        </div>
+        {selectable && (
+          <ColumnSelector
+            columns={previewData.columns}
+            previewStaticColumns={previewStaticColumns}
+            previewParameterColumns={previewParameterColumns}
+            onSelectStaticColumn={onSelectStaticColumn}
+            onSelectParameterColumn={onSelectParameterColumn}
+          />
+        )}
+      </div>
       {isLoading ? (
         <TableSkeleton rows={10} cols={5} maxHeight={320} />
       ) : (
         <Table>
           <TableHeader>
-            <TableRow verticalPadding>
+            <TableRow verticalPadding hoverable={false}>
               {previewData.columns.map((column) => {
                 return (
                   <TableHead
@@ -104,10 +104,8 @@ export function PreviewTable({
                     className={cn(
                       'select-none transition-all',
                       backgroundCssClasses[column.role],
-                      isColumnDisabled(column) && 'opacity-20',
-                      selectable && 'cursor-pointer',
+                      !isColumnSelected(column) && 'opacity-20',
                     )}
-                    onClick={() => selectable && handleColumnClick(column)}
                   >
                     <DatasetHeadText text={column.name} role={column.role} />
                   </TableHead>
@@ -151,7 +149,7 @@ export function PreviewTable({
                     column={previewData.columns[index]!}
                     className={cn(
                       'transition-opacity',
-                      isColumnDisabled(previewData.columns[index]!) &&
+                      !isColumnSelected(previewData.columns[index]!) &&
                         'opacity-20',
                     )}
                   />
