@@ -1,17 +1,10 @@
 import { and, count, eq, getTableColumns, gte, isNull } from 'drizzle-orm'
 
-import { Commit, DocumentLog, ErrorableEntity, LogSources } from '../../browser'
+import { DocumentLog, ErrorableEntity, LogSources } from '../../browser'
 import { commits, documentLogs, projects, runErrors } from '../../schema'
 import Repository from '../repositoryV2'
 import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
-
-export type DocumentLogWithMetadata = DocumentLog & {
-  commit: Commit
-  tokens: number | null
-  duration: number | null
-  costInMillicents: number | null
-}
 
 const tt = getTableColumns(documentLogs)
 

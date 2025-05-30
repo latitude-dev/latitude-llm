@@ -1,9 +1,12 @@
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { Dataset, Workspace } from '../../browser'
 import { HashAlgorithmFn } from './utils'
-import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
+import {
+  buildDocumentLogDataset,
+  ColumnFilters,
+} from '../documentLogs/buildDocumentLogDataset'
 import { updateDataset } from './update'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
 
@@ -12,18 +15,21 @@ export const updateDatasetFromLogs = async (
     workspace,
     dataset,
     documentLogIds,
+    columnFilters,
     hashAlgorithm,
   }: {
     workspace: Workspace
     dataset: Dataset
     documentLogIds: number[]
+    columnFilters?: ColumnFilters
     hashAlgorithm?: HashAlgorithmFn
   },
   db = database,
 ) => {
-  const builtLogsResult = await buildDocumentLogDatasetRows({
+  const builtLogsResult = await buildDocumentLogDataset({
     workspace,
     documentLogIds,
+    columnFilters,
     dataset,
     hashAlgorithm,
   })

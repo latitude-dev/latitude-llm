@@ -26,9 +26,10 @@ import { AggregationPanels } from './AggregationPanels'
 import { DocumentLogInfo } from './DocumentLogInfo'
 import { DocumentLogAnnotation } from './DocumentLogInfo/Annotation'
 import { DocumentLogsTable } from './DocumentLogsTable'
-import { DownloadLogsButton } from './DownloadLogsButton'
+import { DownloadLogsModal } from './DownloadLogsModal'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
-import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
+import { useSaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal/useSaveLogsAsDatasetModal'
+import { useDownloadLogsModal } from './DownloadLogsModal/useDownloadLogsModal'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import { useSearchParams } from 'next/navigation'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -103,7 +104,11 @@ export function DocumentLogs({
     rowIds: documentLogIds,
     totalRowCount: pagination?.count ?? 0,
   })
-  const previewLogsState = useSelectedLogs({
+  const saveLogsAsDatasetModalState = useSaveLogsAsDatasetModal({
+    selectableState,
+    filterOptions: documentLogFilterOptions,
+  })
+  const downloadLogsModalState = useDownloadLogsModal({
     selectableState,
     filterOptions: documentLogFilterOptions,
   })
@@ -215,14 +220,18 @@ export function DocumentLogs({
                 <Button
                   fancy
                   disabled={selectableState.selectedCount === 0}
-                  onClick={previewLogsState.onClickShowPreview}
+                  onClick={saveLogsAsDatasetModalState.onClickShowPreview}
                 >
                   Add {selectableState.selectedCount} logs to dataset
                 </Button>
-                <DownloadLogsButton
-                  filterOptions={documentLogFilterOptions}
-                  selectableState={selectableState}
-                />
+                <Button
+                  disabled={selectableState.selectedCount === 0}
+                  fancy
+                  variant='outline'
+                  onClick={downloadLogsModalState.showModal}
+                >
+                  Download {selectableState.selectedCount} logs
+                </Button>
               </div>
               <Tooltip
                 trigger={
@@ -241,7 +250,8 @@ export function DocumentLogs({
             </div>
           </FloatingPanel>
         </div>
-        <SaveLogsAsDatasetModal {...previewLogsState} />
+        <DownloadLogsModal {...downloadLogsModalState} />
+        <SaveLogsAsDatasetModal {...saveLogsAsDatasetModalState} />
       </div>
     </div>
   )

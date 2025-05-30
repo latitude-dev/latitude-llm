@@ -5,18 +5,25 @@ import { v4 as uuid } from 'uuid'
 import {
   Commit,
   DocumentVersion,
+  ErrorableEntity,
   LogSources,
   ProviderLog,
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
-import { ProviderApiKeysRepository } from '../../repositories'
+import {
+  DocumentLogWithMetadataAndError,
+  ProviderApiKeysRepository,
+} from '../../repositories'
 import { documentLogs } from '../../schema'
 import { createDocumentLog as ogCreateDocumentLog } from '../../services/documentLogs/create'
 import { getResolvedContent } from '../../services/documents'
 import { createProviderLog } from '../../services/providerLogs'
 import { helpers } from './helpers'
+import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
+import { createRunError } from './runErrors'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 export type IDocumentLogData = {
@@ -30,6 +37,13 @@ export type IDocumentLogData = {
   createdAt?: Date
   automaticProvidersGeneratedAt?: Date
   skipProviderLogs?: boolean
+}
+
+export type ICreateDocumentLogWithMetadataAndErrorData = IDocumentLogData & {
+  runError?: {
+    code: RunErrorCodes
+    message: string
+  }
 }
 
 async function generateProviderLogs({
@@ -169,4 +183,41 @@ export async function createDocumentLog({
     providerLogs,
     documentLog,
   }
+}
+
+export async function createDocumentLogWithMetadataAndError({
+  document,
+  commit,
+  parameters,
+  customIdentifier,
+  source,
+  experimentId,
+  totalDuration,
+  createdAt,
+  automaticProvidersGeneratedAt,
+  runError,
+}: ICreateDocumentLogWithMetadataAndErrorData): Promise<DocumentLogWithMetadataAndError> {
+  const { documentLog } = await createDocumentLog({
+    document,
+    commit,
+    parameters,
+    customIdentifier,
+    source,
+    experimentId,
+    totalDuration,
+    createdAt,
+    automaticProvidersGeneratedAt,
+  })
+  const workspace = (await findWorkspaceFromCommit(commit))!
+  const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspace.id)
+  const result = (await repo.findByUuid(documentLog.uuid)).unwrap()
+  if (runError) {
+    await createRunError({
+      errorableType: ErrorableEntity.DocumentLog,
+      errorableUuid: result.uuid,
+      code: runError.code,
+      message: runError.message,
+    })
+  }
+  return result
 }

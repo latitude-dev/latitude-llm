@@ -15,7 +15,7 @@ export function identityHashAlgorithm(args: hashAlgorithmArgs) {
   return `${args.columnName}_identifier`
 }
 
-type ColumnArgs = Omit<Column, 'identifier' | 'role'> & {
+export type ColumnArgs = Omit<Column, 'identifier' | 'role'> & {
   role?: DatasetColumnRole
 }
 

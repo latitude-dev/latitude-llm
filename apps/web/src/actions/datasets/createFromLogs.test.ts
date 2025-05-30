@@ -27,7 +27,7 @@ vi.mock('@latitude-data/core/services/datasets/findOrCreate', () => ({
   findOrCreateDataset: mocks.findOrCreateDataset,
 }))
 
-vi.mock('@latitude-data/core/services/datasets/createFromLogs', () => ({
+vi.mock('@latitude-data/core/services/datasets/updateFromLogs', () => ({
   updateDatasetFromLogs: mocks.updateDatasetFromLogs,
 }))
 

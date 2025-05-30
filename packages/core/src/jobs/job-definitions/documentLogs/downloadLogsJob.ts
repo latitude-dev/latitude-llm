@@ -68,7 +68,7 @@ export const downloadLogsJob = async (
     user: User
     token: string
     workspace: Workspace
-    selectionMode: 'ALL' | 'ALL_EXCEPT'
+    selectionMode: 'ALL' | 'ALL_EXCEPT' | 'PARTIAL'
     excludedDocumentLogIds: number[]
     document: DocumentVersion
     filters: Omit<DocumentLogFilterOptions, 'createdAt'> & {

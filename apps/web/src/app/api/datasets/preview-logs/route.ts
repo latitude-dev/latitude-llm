@@ -17,11 +17,17 @@ export const GET = errorHandler(
     ) => {
       const query = request.nextUrl.searchParams
       const ids = query.get('documentLogIds')?.split(',').map(Number) ?? []
+      const staticColumnNames = query.get('staticColumnNames')?.split(',')
+      const parameterColumnNames = query.get('parameterColumnNames')?.split(',')
       const result = await previewDatasetFromLogs({
         workspace,
         data: {
-          name: query.get('name') ?? '',
+          name: query.get('name') ?? undefined,
           documentLogIds: ids,
+          columnFilters: {
+            staticColumnNames,
+            parameterColumnNames,
+          },
         },
       })
 

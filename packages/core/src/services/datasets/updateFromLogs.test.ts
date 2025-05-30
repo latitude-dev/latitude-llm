@@ -5,14 +5,14 @@ import { Providers } from '@latitude-data/constants'
 import getTestDisk from '../../tests/testDrive'
 import { Dataset, DocumentLog } from '../../browser'
 import { identityHashAlgorithm } from './utils'
-import { updateDatasetFromLogs } from './createFromLogs'
+import { updateDatasetFromLogs } from './updateFromLogs'
 import { DatasetRowsRepository } from '../../repositories'
 
 const testDrive = getTestDisk()
 let setup: FactoryCreateProjectReturn
 let dataset: Dataset
 let documentLog: DocumentLog
-describe('createFromLogs', async () => {
+describe('updateFromLogs', async () => {
   beforeAll(async () => {
     setup = await factories.createProject({
       providers: [
@@ -95,8 +95,8 @@ describe('createFromLogs', async () => {
         role: 'label',
       },
       {
-        identifier: 'document_log_id_identifier',
-        name: 'document_log_id',
+        identifier: 'id_identifier',
+        name: 'id',
         role: 'metadata',
       },
       { identifier: 'tokens_identifier', name: 'tokens', role: 'metadata' },
@@ -112,9 +112,9 @@ describe('createFromLogs', async () => {
         age_identifier: 25,
         location_identifier: 'San Francisco',
         output_identifier: 'Last provider response. Hello!',
-        name_identifier: '',
-        document_log_id_identifier: documentLog.id,
-        surname_identifier: '',
+        name_identifier: null,
+        id_identifier: documentLog.id,
+        surname_identifier: null,
         tokens_identifier: expect.any(Number),
       },
       {

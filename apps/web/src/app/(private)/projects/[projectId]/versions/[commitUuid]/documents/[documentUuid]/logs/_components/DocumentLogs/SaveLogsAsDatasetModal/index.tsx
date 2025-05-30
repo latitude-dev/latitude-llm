@@ -5,10 +5,10 @@ import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { RadioButtonsInput } from '@latitude-data/web-ui/atoms/RadioButtonsInput'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
-import { type PreviewLogsState as Props } from './useSelectedLogs'
-import { PreviewTable } from './PreviewTable'
+import { type SaveLogsAsDatasetModalState as Props } from './useSaveLogsAsDatasetModal'
 import useDatasets from '$/stores/datasets'
 import { Dataset } from '@latitude-data/core/browser'
+import { PreviewTable } from '../PreviewTable'
 
 function ExistingDatasetSelector({
   selectedDataset,
@@ -53,8 +53,8 @@ function ExistingDatasetSelector({
 }
 
 export function SaveLogsAsDatasetModal({
-  previewData,
-  previewModalState,
+  data,
+  state,
   isSaving,
   saveDataset,
   selectedDataset,
@@ -81,17 +81,13 @@ export function SaveLogsAsDatasetModal({
   )
   const onOpenChange = useCallback(
     (newOpen: boolean) => {
-      previewModalState.onOpenChange(newOpen)
+      state.onOpenChange(newOpen)
       if (!newOpen) {
         setSelectedDataset(undefined)
         setShowDatasetSelector(false)
       }
     },
-    [
-      previewModalState.onOpenChange,
-      setSelectedDataset,
-      setShowDatasetSelector,
-    ],
+    [state.onOpenChange, setSelectedDataset, setShowDatasetSelector],
   )
   const onSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -106,7 +102,7 @@ export function SaveLogsAsDatasetModal({
   return (
     <Modal
       dismissible
-      open={previewModalState.open}
+      open={state.open}
       onOpenChange={onOpenChange}
       size='xl'
       title='Add logs to dataset'
@@ -157,9 +153,9 @@ export function SaveLogsAsDatasetModal({
           )}
         </form>
         <PreviewTable
-          previewData={previewData}
+          previewData={data}
           isLoading={isLoadingPreview}
-          selectedCount={selectedCount}
+          subtitle={`${selectedCount} logs will be added to ${data.datasetRows.length > 0 ? 'the dataset' : 'a new dataset'}. Here's a preview.`}
         />
       </div>
     </Modal>

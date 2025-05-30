@@ -57,7 +57,7 @@ describe('buildDocumentLogDatasetRows', async () => {
     const providers = await repo.findManyByDocumentLogUuid([documentLog.uuid])
     const tokens = sum(providers.map((p) => p.tokens ?? 0))
     expect(result.value)
-      .toEqual(`age,location,simpleJson,listOfThings,output,document_log_id,tokens
+      .toEqual(`age,location,simpleJson,listOfThings,output,id,tokens
 25,San Francisco,"{""thing"":""thing1""}","[{""thing"":""thing1""},{""thing"":""thing2""}]",Last provider response. Hello!,${documentLog.id},${tokens}\n`)
   })
 })

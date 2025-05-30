@@ -1,95 +1,20 @@
 import { createDatasetFromLogsAction } from '$/actions/datasets/createFromLogs'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
-import { ROUTES } from '$/services/routes'
-import {
-  Dataset,
-  DocumentLogFilterOptions,
-  parseRowCell,
-} from '@latitude-data/core/browser'
-import { compactObject } from '@latitude-data/core/lib/compactObject'
-import { DatasetRowData } from '@latitude-data/core/schema'
+import { usePreviewLogs } from '$/stores/previewLogs'
+import { Dataset, DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { useCallback, useMemo, useState } from 'react'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useCallback, useMemo, useState } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 
-type InputItem = {
-  columns: Dataset['columns']
-  existingRows: DatasetRowData[]
-  newRows: DatasetRowData[]
-}
+const DEFAULT_STATIC_COLUMNS = ['output', 'id', 'tokens']
 
-export type OutputItem = {
-  columns: Dataset['columns']
-  datasetRows: string[][]
-  previewRows: string[][]
-}
-
-function serializeRowData(rowData: DatasetRowData): string[] {
-  const keys = Object.keys(rowData)
-  return keys.map((key) => {
-    const cell = rowData[key]
-    return parseRowCell({ cell })
-  })
-}
-
-function serializeRows(item: InputItem): OutputItem {
-  const columns = item.columns
-  return {
-    columns,
-    datasetRows: item.existingRows.map(serializeRowData),
-    previewRows: item.newRows.map(serializeRowData),
-  }
-}
-
-const EMPTY_DATA = {
-  columns: [] as Dataset['columns'],
-  datasetRows: [] as string[][],
-  previewRows: [] as string[][],
-}
-
-function usePreviewRowsStore(
-  {
-    dataset,
-    documentLogIds,
-  }: { dataset?: Dataset; documentLogIds: (string | number)[] },
-  opts?: SWRConfiguration,
-) {
-  const fetcher = useFetcher(ROUTES.api.datasets.previewLogs.root, {
-    serializer: serializeRows,
-    searchParams: compactObject({
-      name: dataset?.name,
-      documentLogIds,
-    }) as Record<string, string>,
-  })
-  const cacheKey = [
-    'previewLogsForDataset',
-    dataset?.id ?? 'no_dataset',
-    documentLogIds,
-  ]
-  const {
-    data = EMPTY_DATA,
-    mutate: fetchPreview,
-    isLoading,
-  } = useSWR<OutputItem>(cacheKey, fetcher, {
-    ...opts,
-    revalidateOnMount: false,
-    revalidateOnFocus: false,
-    revalidateIfStale: false,
-    dedupingInterval: 60000,
-  })
-
-  return { previewData: data, fetchPreview, isLoading }
-}
-
-export function useSelectedLogs({
+export function useSaveLogsAsDatasetModal({
   selectableState,
   filterOptions,
 }: {
@@ -100,28 +25,34 @@ export function useSelectedLogs({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
-  const previewModalState = useToggleModal()
+  const state = useToggleModal()
   const [selectedLogsIds, setSelectedLogsIds] = useState<(string | number)[]>(
     [],
   )
   const [selectedCount, setSelectedCount] = useState(0)
   const [selectedDataset, setSelectedDataset] = useState<Dataset>()
-  const { previewData, fetchPreview, isLoading } = usePreviewRowsStore({
+  const {
+    previewData: data,
+    fetchPreview,
+    isLoading,
+  } = usePreviewLogs({
     dataset: selectedDataset,
     documentLogIds: selectedLogsIds,
+    staticColumnNames: DEFAULT_STATIC_COLUMNS,
   })
+
   const onClickShowPreview = useCallback(() => {
-    previewModalState.onOpen()
+    state.onOpen()
     setSelectedLogsIds(selectableState.getSelectedRowIds())
     setSelectedCount(selectableState.selectedCount)
     fetchPreview()
   }, [
     fetchPreview,
     setSelectedLogsIds,
-    previewModalState.onOpen,
+    state.onOpen,
     selectableState.getSelectedRowIds,
-    selectableState.selectedCount,
   ])
+
   const {
     execute: createDatasetFromLogs,
     isPending: isSaving,
@@ -150,7 +81,7 @@ export function useSelectedLogs({
       setSelectedLogsIds([])
       setSelectedCount(0)
       selectableState.clearSelections()
-      previewModalState.onClose()
+      state.onClose()
     },
     onError: ({ err }) => {
       toast({
@@ -160,6 +91,7 @@ export function useSelectedLogs({
       })
     },
   })
+
   const saveDataset = useCallback(
     async ({ name }: { name: string }) => {
       if (selectableState.selectionMode === 'NONE') return // invalid state
@@ -180,17 +112,17 @@ export function useSelectedLogs({
       selectedLogsIds,
       setSelectedLogsIds,
       createDatasetFromLogs,
-      previewModalState.onClose,
+      state.onClose,
       selectableState.clearSelections,
     ],
   )
   return useMemo(
     () => ({
-      previewData,
+      data,
+      state,
       onClickShowPreview,
       saveDataset,
       isLoadingPreview: isLoading,
-      previewModalState,
       setSelectedDataset,
       selectedDataset,
       isSaving,
@@ -199,11 +131,11 @@ export function useSelectedLogs({
       selectedCount,
     }),
     [
-      previewData,
+      data,
+      state,
       onClickShowPreview,
       saveDataset,
       isLoading,
-      previewModalState,
       setSelectedDataset,
       selectedDataset,
       isSaving,
@@ -214,4 +146,6 @@ export function useSelectedLogs({
   )
 }
 
-export type PreviewLogsState = ReturnType<typeof useSelectedLogs>
+export type SaveLogsAsDatasetModalState = ReturnType<
+  typeof useSaveLogsAsDatasetModal
+>

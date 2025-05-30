@@ -17,12 +17,20 @@ export const POST = errorHandler(
     ) => {
       const formData = await request.formData()
       const idsRaw = formData.get('ids')
+      const staticColumnNamesRaw = formData.get('staticColumnNames')
+      const parameterColumnNamesRaw = formData.get('parameterColumnNames')
 
       if (!idsRaw) {
         throw new BadRequestError('No document log ids provided')
       }
 
       const ids: string[] = JSON.parse(idsRaw as string)
+      const staticColumnNames: string[] = JSON.parse(
+        staticColumnNamesRaw as string,
+      )
+      const parameterColumnNames: string[] = JSON.parse(
+        parameterColumnNamesRaw as string,
+      )
 
       if (!ids?.length) {
         throw new BadRequestError('No document log ids provided')
@@ -34,7 +42,13 @@ export const POST = errorHandler(
       const documentLogIds = ids.map(Number)
       const csvFile = await generateCsvFromLogs({
         workspace,
-        data: { documentLogIds },
+        data: {
+          documentLogIds,
+          columnFilters: {
+            staticColumnNames,
+            parameterColumnNames,
+          },
+        },
       }).then((r) => r.unwrap())
 
       return new NextResponse(csvFile, {
