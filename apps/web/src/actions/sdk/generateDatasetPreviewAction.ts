@@ -1,7 +1,7 @@
 'use server'
 
 import { CLOUD_MESSAGES, LogSources } from '@latitude-data/core/browser'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { BadRequestError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { generatePreviewRowsFromJson } from '@latitude-data/core/services/datasetRows/generatePreviewRowsFromJson'

@@ -2,7 +2,7 @@ import { asc, eq, getTableColumns, inArray } from 'drizzle-orm'
 
 import { EvaluationTemplate, EvaluationTemplateWithCategory } from '../browser'
 import { database } from '../client'
-import { NotFoundError } from '../lib/errors'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result, TypedResult } from '../lib/Result'
 import {
   evaluationAdvancedTemplates,

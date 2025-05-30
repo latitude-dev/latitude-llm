@@ -9,7 +9,7 @@ import {
 } from '@latitude-data/core/browser'
 import { findFirstUserInWorkspace } from '@latitude-data/core/data-access'
 import { publisher } from '@latitude-data/core/events/publisher'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import {
   CommitsRepository,

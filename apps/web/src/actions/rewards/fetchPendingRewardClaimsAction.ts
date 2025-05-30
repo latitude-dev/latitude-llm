@@ -1,7 +1,7 @@
 'use server'
 
 import { findAllRewardClaimsPendingToValidate } from '@latitude-data/core/data-access'
-import { UnauthorizedError } from '@latitude-data/core/lib/errors'
+import { UnauthorizedError } from '@latitude-data/constants/errors'
 
 import { authProcedure } from '../procedures'
 

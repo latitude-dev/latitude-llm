@@ -6,6 +6,7 @@ import {
   StreamType,
 } from '..'
 import { FinishReason, LanguageModelUsage } from 'ai'
+import { ChainError, RunErrorCodes } from '../errors'
 
 export enum ChainEventTypes {
   ChainStarted = 'chain-started',
@@ -76,7 +77,7 @@ export interface LatitudeChainCompletedEventData
 
 export interface LatitudeChainErrorEventData extends GenericLatitudeEventData {
   type: ChainEventTypes.ChainError
-  error: Error
+  error: Error | ChainError<RunErrorCodes>
 }
 
 export interface LatitudeToolsRequestedEventData

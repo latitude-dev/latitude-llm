@@ -5,7 +5,7 @@ import {
   NotFoundError,
   RateLimitError,
   UnauthorizedError,
-} from '@latitude-data/core/lib/errors'
+} from '@latitude-data/constants/errors'
 import { createMiddleware } from 'hono/factory'
 import { ReplyError } from 'ioredis'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'

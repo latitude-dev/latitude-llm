@@ -3,7 +3,7 @@ import { diskFactory } from '@latitude-data/core/lib/disk'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { Workspace } from '@latitude-data/core/browser'
-import { BadRequestError, NotFoundError } from '@latitude-data/core/lib/errors'
+import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { findByUuid } from '@latitude-data/core/data-access/exports/findByUuid'
 import { env } from '@latitude-data/env'
 

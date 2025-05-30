@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
-import { ForbiddenError } from '@latitude-data/core/lib/errors'
+import { ForbiddenError } from '@latitude-data/constants/errors'
 import { setSession } from '$/services/auth/setSession'
 
 export const impersonateAction = authProcedure

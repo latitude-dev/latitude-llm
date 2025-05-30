@@ -1,10 +1,9 @@
 import { ContentType, type Message, MessageRole } from '@latitude-data/compiler'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError } from 'ai'
 import { describe, expect, it, vi } from 'vitest'
 
 import { ProviderApiKey, Providers } from '../../browser'
-import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import { ai } from './index'
 
 const PROVIDER_PAYLOAD: ProviderApiKey = {

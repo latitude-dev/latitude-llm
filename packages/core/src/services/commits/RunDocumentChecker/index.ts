@@ -3,7 +3,7 @@ import {
   readMetadata,
   type ReferencePromptFn,
 } from '@latitude-data/compiler'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   Adapters,
   isPromptLFile,
@@ -14,7 +14,6 @@ import {
 } from 'promptl-ai'
 
 import { DocumentVersion, ErrorableEntity } from '../../../browser'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { createRunError } from '../../runErrors/create'
 import { BadRequestError } from './../../../lib/errors'
 import { ErrorResult } from './../../../lib/Result'

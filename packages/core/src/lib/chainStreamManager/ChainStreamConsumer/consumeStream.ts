@@ -1,7 +1,7 @@
 import { capitalize } from 'lodash-es'
 
 import { APICallError, FinishReason, RetryError } from 'ai'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
   LegacyChainEvent,
@@ -11,7 +11,6 @@ import {
 } from '../../../constants'
 import { streamToGenerator } from '../../streamToGenerator'
 import { AIReturn } from '../../../services/ai'
-import { ChainError } from '../ChainErrors'
 import { ProviderData } from '@latitude-data/constants'
 
 interface ConsumeStreamParams {
@@ -19,10 +18,11 @@ interface ConsumeStreamParams {
   controller: ReadableStreamDefaultController
 }
 
+type NoRunError = object
+type PosibleErrorCode = RunErrorCodes.AIRunError | RunErrorCodes.RateLimit
+
 interface ConsumeStreamResult {
-  error?:
-    | ChainError<RunErrorCodes.AIRunError>
-    | ChainError<RunErrorCodes.RateLimit>
+  error?: ChainError<PosibleErrorCode, NoRunError>
   finishReason: FinishReason
 }
 
@@ -30,10 +30,7 @@ export async function consumeStream({
   controller,
   result,
 }: ConsumeStreamParams): Promise<ConsumeStreamResult> {
-  let error:
-    | ChainError<RunErrorCodes.AIRunError>
-    | ChainError<RunErrorCodes.RateLimit>
-    | undefined
+  let error: ChainError<PosibleErrorCode, NoRunError> | undefined
   let finishReason: FinishReason = 'stop'
 
   for await (const chunk of streamToGenerator<ProviderData>(
@@ -56,7 +53,10 @@ export async function consumeStream({
       finishReason = chunk.finishReason
 
       if (chunk.finishReason === 'error') {
-        error = createAIError('AI run finished with error')
+        error = createAIError(
+          'AI run finished with error',
+          RunErrorCodes.AIRunError,
+        )
         break
       }
     }
@@ -97,11 +97,9 @@ function enqueueChainEvent(
 
 function createAIError(
   message: string,
-  code:
-    | RunErrorCodes.AIRunError
-    | RunErrorCodes.RateLimit = RunErrorCodes.AIRunError,
-): ChainError<RunErrorCodes.AIRunError> | ChainError<RunErrorCodes.RateLimit> {
-  return new ChainError({
+  code: PosibleErrorCode,
+): ChainError<PosibleErrorCode, NoRunError> {
+  return new ChainError<PosibleErrorCode, NoRunError>({
     code,
     message,
   })

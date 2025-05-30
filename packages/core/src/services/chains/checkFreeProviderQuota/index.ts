@@ -1,4 +1,4 @@
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 
 import {
@@ -8,7 +8,6 @@ import {
   Workspace,
 } from '../../../browser'
 import { incrFreeRuns } from '../../freeRunsManager'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { Result } from './../../../lib/Result'
 
 export async function checkFreeProviderQuota({
