@@ -20,22 +20,23 @@ import {
   vi,
 } from 'vitest'
 
+import { RUN_TEXT_RESPONSE } from '$sdk/test/run-sync-response'
+import {
+  buildMockTools,
+  MockedTools,
+  mockToolsServers,
+} from '$sdk/tests/helpers/mockTools/server'
+import {
+  AGENT_RETURN_TOOL_NAME,
+  ChainEventTypes,
+} from '@latitude-data/constants'
+import { MockInstrumentation } from './helpers/mockTools/instrumentation'
 import {
   mock502Response,
   mockNonStreamResponse,
   mockRequest,
   mockStreamResponse,
 } from './helpers/run'
-import { RUN_TEXT_RESPONSE } from '$sdk/test/run-sync-response'
-import {
-  mockToolsServers,
-  buildMockTools,
-  MockedTools,
-} from '$sdk/tests/helpers/mockTools/server'
-import {
-  ChainEventTypes,
-  AGENT_RETURN_TOOL_NAME,
-} from '@latitude-data/constants'
 
 let latitudeApiKey = 'fake-api-key'
 let projectId = 123
@@ -254,6 +255,10 @@ data: ${JSON.stringify({
         mockChatBody = mocks.mockChatBody
 
         vi.clearAllMocks()
+      })
+
+      afterEach(() => {
+        Latitude.uninstrument()
       })
 
       it(
@@ -609,6 +614,121 @@ data: ${JSON.stringify({
               },
             }),
           ).rejects.toThrowError(new Error('Coordinates service is down'))
+        }),
+      )
+
+      it(
+        'handles instrumentation',
+        server.boundary(async () => {
+          const instrumentation = new MockInstrumentation()
+          Latitude.instrument(instrumentation)
+
+          await sdk.prompts.run<MockedTools>('path/to/document', {
+            projectId,
+            parameters: {},
+            stream: true,
+            tools: buildMockTools(),
+          })
+
+          expect(mockRunBody).toHaveBeenCalledTimes(1)
+          expect(mockChatBody).toHaveBeenNthCalledWith(1, {
+            body: {
+              stream: true,
+              __internal: { source: 'api' },
+              messages: [
+                {
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'get_coordinates',
+                      toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                      isError: false,
+                      result: {
+                        latitude: '41.3851',
+                        longitude: '2.1734',
+                      },
+                    },
+                  ],
+                },
+                {
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'get_coordinates',
+                      toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                      isError: false,
+                      result: {
+                        latitude: '25.7617',
+                        longitude: '-80.1918',
+                      },
+                    },
+                  ],
+                },
+                {
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'get_coordinates',
+                      toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                      isError: false,
+                      result: {
+                        latitude: '42.3601',
+                        longitude: '-71.0589',
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          })
+          expect(mockChatBody).toHaveBeenNthCalledWith(2, {
+            body: {
+              stream: true,
+              __internal: { source: 'api' },
+              messages: [
+                {
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'get_weather',
+                      toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                      isError: false,
+                      result: { temperature: 24 },
+                    },
+                  ],
+                },
+                {
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'get_weather',
+                      toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                      isError: false,
+                      result: { temperature: 30 },
+                    },
+                  ],
+                },
+                {
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'get_weather',
+                      toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                      isError: false,
+                      result: { temperature: 10 },
+                    },
+                  ],
+                },
+              ],
+            },
+          })
+          expect(instrumentation.wrapToolHandler).toHaveBeenCalledTimes(6)
         }),
       )
     })
@@ -972,14 +1092,16 @@ data: ${JSON.stringify({
       let mockRunBody: Mock
       let mockChatBody: Mock
 
-      beforeAll(() => {
+      beforeEach(() => {
         const mocks = mockedTools.setupSyncToolsServer(server)
         mockRunBody = mocks.mockRunBody
         mockChatBody = mocks.mockChatBody
+
+        vi.clearAllMocks()
       })
 
-      beforeEach(() => {
-        vi.clearAllMocks()
+      afterEach(() => {
+        Latitude.uninstrument()
       })
 
       it(
@@ -1092,6 +1214,124 @@ data: ${JSON.stringify({
               ],
             },
           })
+        }),
+      )
+
+      it(
+        'handles instrumentation',
+        server.boundary(async () => {
+          const instrumentation = new MockInstrumentation()
+          Latitude.instrument(instrumentation)
+
+          const onFinished = vi.fn()
+          await sdk.prompts.run<MockedTools>('path/to/document', {
+            projectId,
+            parameters: {},
+            onFinished,
+            stream: false,
+            tools: buildMockTools(),
+          })
+
+          expect(onFinished).toHaveBeenCalledTimes(1)
+          expect(mockRunBody).toHaveBeenCalledTimes(1)
+          expect(mockChatBody).toHaveBeenNthCalledWith(1, {
+            body: {
+              stream: false,
+              __internal: { source: 'api' },
+              messages: [
+                {
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'get_coordinates',
+                      toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                      isError: false,
+                      result: {
+                        latitude: '41.3851',
+                        longitude: '2.1734',
+                      },
+                    },
+                  ],
+                },
+                {
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'get_coordinates',
+                      toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                      isError: false,
+                      result: {
+                        latitude: '25.7617',
+                        longitude: '-80.1918',
+                      },
+                    },
+                  ],
+                },
+                {
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'get_coordinates',
+                      toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                      isError: false,
+                      result: {
+                        latitude: '42.3601',
+                        longitude: '-71.0589',
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          })
+          expect(mockChatBody).toHaveBeenNthCalledWith(2, {
+            body: {
+              stream: false,
+              __internal: { source: 'api' },
+              messages: [
+                {
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'get_weather',
+                      toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                      isError: false,
+                      result: { temperature: 24 },
+                    },
+                  ],
+                },
+                {
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'get_weather',
+                      toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                      isError: false,
+                      result: { temperature: 30 },
+                    },
+                  ],
+                },
+                {
+                  role: 'tool',
+                  content: [
+                    {
+                      type: 'tool-result',
+                      toolName: 'get_weather',
+                      toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                      isError: false,
+                      result: { temperature: 10 },
+                    },
+                  ],
+                },
+              ],
+            },
+          })
+          expect(instrumentation.wrapToolHandler).toHaveBeenCalledTimes(6)
         }),
       )
     })

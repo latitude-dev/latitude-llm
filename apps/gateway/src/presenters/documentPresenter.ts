@@ -1,3 +1,6 @@
+import { z } from '@hono/zod-openapi'
+import { ConversationMetadata as CompilerConversationMetadata } from '@latitude-data/compiler'
+import { ParameterType } from '@latitude-data/constants'
 import {
   Commit,
   DocumentVersion,
@@ -6,18 +9,17 @@ import {
 } from '@latitude-data/core/browser'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
-import { z } from '@hono/zod-openapi'
-import { ConversationMetadata as CompilerConversationMetadata } from '@latitude-data/compiler'
 import { ConversationMetadata as PromptlConversationMetadata } from 'promptl-ai'
-import { ParameterType } from '@latitude-data/constants'
 
 type ConversationMetadata =
   | CompilerConversationMetadata
   | PromptlConversationMetadata
 export const documentPresenterSchema = z.object({
+  versionUuid: z.string(),
   uuid: z.string(),
   path: z.string(),
   content: z.string(),
+  contentHash: z.string().optional(),
   config: z.object({}).passthrough(),
   parameters: z.record(z.object({ type: z.nativeEnum(ParameterType) })),
   provider: z.nativeEnum(Providers).optional(),
@@ -28,10 +30,12 @@ export function documentPresenterWithProviderAndMetadata({
   document,
   metadata,
   provider,
+  commit,
 }: {
   document: DocumentVersion
   metadata: ConversationMetadata | undefined
   provider: Providers | undefined
+  commit: Commit
 }) {
   const configParams = (metadata?.config['parameters'] ?? {}) as Parameters
   const rawParams = metadata?.parameters
@@ -51,9 +55,11 @@ export function documentPresenterWithProviderAndMetadata({
       : configParams
 
   return {
+    versionUuid: commit.uuid,
     uuid: document.documentUuid,
     path: document.path,
     content: document.content,
+    contentHash: document.contentHash ?? undefined,
     config: metadata?.config,
     parameters,
     provider,
@@ -96,5 +102,6 @@ export async function documentPresenter({
     document,
     metadata,
     provider,
+    commit,
   })
 }

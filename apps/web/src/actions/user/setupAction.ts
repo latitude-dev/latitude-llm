@@ -45,7 +45,10 @@ export const setupAction = errorHandlingProcedure
 
     await setSession({
       sessionData: {
-        user,
+        user: {
+          id: user.id,
+          email: user.email,
+        },
         workspace,
       },
     })

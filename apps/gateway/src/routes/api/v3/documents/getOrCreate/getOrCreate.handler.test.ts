@@ -1,5 +1,12 @@
+import app from '$/routes/app'
 import { LatitudeErrorCodes } from '@latitude-data/constants/errors'
-import { Commit, Project, User, Workspace } from '@latitude-data/core/browser'
+import {
+  Commit,
+  Project,
+  ProviderApiKey,
+  User,
+  Workspace,
+} from '@latitude-data/core/browser'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import {
   createDocumentVersion,
@@ -12,7 +19,6 @@ import {
   ProviderApiKeysRepository,
 } from '@latitude-data/core/repositories'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
-import app from '$/routes/app'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -52,16 +58,23 @@ describe('POST /get-or-create', () => {
     let project: Project
     let user: User
     let commit: Commit
+    let providers: ProviderApiKey[]
 
     beforeEach(async () => {
       vi.clearAllMocks()
 
-      const { workspace: w, project: p, user: u } = await createProject()
+      const {
+        workspace: w,
+        project: p,
+        user: u,
+        providers: ps,
+      } = await createProject()
       workspace = w
       project = p
       user = u
       const { commit: c } = await createDraft({ project, user })
       commit = c
+      providers = ps
 
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
@@ -81,7 +94,7 @@ describe('POST /get-or-create', () => {
         commit,
         path: 'fake-path',
         content: helpers.createPrompt({
-          provider: 'fake-provider',
+          provider: providers[0]!.name,
           model: 'fake-model',
         }),
       })
@@ -95,14 +108,18 @@ describe('POST /get-or-create', () => {
       })
 
       expect(response.status).toBe(200)
-      expect(await response.json()).toMatchObject({
+      expect(await response.json()).toEqual({
+        versionUuid: commit.uuid,
         uuid: document.documentUuid,
         path: document.path,
         content: document.content,
+        contentHash: undefined,
         config: {
-          provider: 'fake-provider',
+          provider: providers[0]!.name,
           model: 'fake-model',
         },
+        parameters: {},
+        provider: providers[0]!.provider,
       })
     })
 
@@ -115,7 +132,7 @@ describe('POST /get-or-create', () => {
       expect(document.error!.name).toEqual(LatitudeErrorCodes.NotFoundError)
 
       const prompt = helpers.createPrompt({
-        provider: 'fake-provider',
+        provider: providers[0]!.name,
         model: 'fake-model',
       })
       const response = await app.request(route, {
@@ -128,13 +145,18 @@ describe('POST /get-or-create', () => {
       })
 
       expect(response.status).toBe(200)
-      expect(await response.json()).toMatchObject({
+      expect(await response.json()).toEqual({
+        versionUuid: commit.uuid,
+        uuid: expect.any(String),
         path: 'fake-path',
         content: prompt,
+        contentHash: undefined,
         config: {
-          provider: 'fake-provider',
+          provider: providers[0]!.name,
           model: 'fake-model',
         },
+        parameters: {},
+        provider: providers[0]!.provider,
       })
     })
 

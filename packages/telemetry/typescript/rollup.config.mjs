@@ -22,8 +22,8 @@ const aliasEntries = {
 }
 
 const EXTERNALS = [
-  '@opentelemetry/core',
   '@opentelemetry/api',
+  '@opentelemetry/core',
   '@opentelemetry/resources',
   '@opentelemetry/instrumentation',
   '@opentelemetry/sdk-trace-node',
@@ -53,7 +53,10 @@ const EXTERNALS = [
   'llamaindex',
   'openai',
   'together-ai',
+  'promptl-ai',
   'zod',
+  'uuid',
+  '@types/uuid',
 ]
 
 const config = [

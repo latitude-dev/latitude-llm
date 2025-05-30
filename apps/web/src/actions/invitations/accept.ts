@@ -35,7 +35,10 @@ export const acceptInvitationAction = createServerAction()
     await acceptInvitation({ membership, user })
     await setSession({
       sessionData: {
-        user,
+        user: {
+          id: user.id,
+          email: user.email,
+        },
         workspace,
       },
     })

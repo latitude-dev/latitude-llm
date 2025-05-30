@@ -24,7 +24,7 @@ export async function createEvaluationV2<
     document,
     commit,
     settings,
-    options = {},
+    options,
     workspace,
   }: {
     document: DocumentVersion
@@ -35,13 +35,13 @@ export async function createEvaluationV2<
   },
   db: Database = database,
 ) {
+  if (!options) options = {}
   options = compactObject(options)
 
   const validateResult = await validateEvaluationV2(
     { mode: 'create', settings, options, document, commit, workspace },
     db,
   )
-
   if (validateResult.error) return validateResult
 
   const validate = validateResult.value
