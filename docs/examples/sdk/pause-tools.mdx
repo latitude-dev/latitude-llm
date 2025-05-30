@@ -10,6 +10,7 @@ However, for more complex calculations, you can pause the execution of the tool,
 
 <CodeGroup>
 ```markdown example
+---
 provider: Latitude
 model: gpt-4o-mini
 tools:
@@ -43,9 +44,11 @@ Plan my trip to {{ destination }} from {{ start_date }} to {{ end_date }}.
 I like {{ preferences.join(', ') }}.
 
 # Example response to user
+
 Great! I’m planning your trip to {{ destination }} with your preferences.
 This may take a few minutes, as I’ll be gathering up-to-date info from multiple sources. I’ll notify you as soon as your custom itinerary is ready!
-```
+
+````
 </CodeGroup>
 
 ## Code
@@ -157,7 +160,8 @@ async function run() {
 }
 
 run()
-```
+````
+
 ```python Python
 import asyncio
 import os
@@ -266,4 +270,5 @@ async def run():
 
 asyncio.run(run())
 ```
+
 </CodeGroup>
