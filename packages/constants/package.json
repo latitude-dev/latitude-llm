@@ -17,7 +17,8 @@
     "./evaluations": "./src/evaluations/index.ts",
     "./experiments": "./src/experiments.ts",
     "./tracing": "./src/tracing/index.ts",
-    "./latitudePromptSchema": "./src/latitudePromptSchema/index.ts"
+    "./latitudePromptSchema": "./src/latitudePromptSchema/index.ts",
+    "./latte": "./src/latte.ts"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
