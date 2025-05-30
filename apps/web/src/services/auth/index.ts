@@ -6,7 +6,12 @@ import { Lucia } from 'lucia'
 import { env } from '@latitude-data/env'
 import { Google } from 'arctic'
 
-const adapter = new DrizzlePostgreSQLAdapter(database, sessions, users)
+const adapter = new DrizzlePostgreSQLAdapter(
+  // @ts-expect-error - No idea why this is happening
+  database,
+  sessions,
+  users,
+)
 
 interface DatabaseUserAttributes {
   email: string

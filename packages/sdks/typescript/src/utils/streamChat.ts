@@ -1,20 +1,19 @@
 import { Readable } from 'stream'
 
-import { LatitudeApiError } from '$sdk/utils/errors'
-import { handleStream } from '$sdk/utils/handleStream'
-import { makeRequest } from '$sdk/utils/request'
-import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
-import {
-  ChatOptionsWithSDKOptions,
-  ChatSyncAPIResponse,
-  HandlerType,
-  ToolInstrumentation,
-  ToolSpec,
-} from '$sdk/utils/types'
 import {
   ApiErrorCodes,
   ApiErrorJsonResponse,
 } from '@latitude-data/constants/errors'
+import { LatitudeApiError } from '$sdk/utils/errors'
+import { handleStream } from '$sdk/utils/handleStream'
+import { makeRequest } from '$sdk/utils/request'
+import {
+  ChatOptionsWithSDKOptions,
+  ChatSyncAPIResponse,
+  HandlerType,
+  ToolSpec,
+} from '$sdk/utils/types'
+import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
 
 export async function streamChat<Tools extends ToolSpec>(
   uuid: string,
@@ -25,10 +24,7 @@ export async function streamChat<Tools extends ToolSpec>(
     onError,
     tools,
     options,
-    instrumentation,
-  }: ChatOptionsWithSDKOptions<Tools> & {
-    instrumentation?: ToolInstrumentation
-  },
+  }: ChatOptionsWithSDKOptions<Tools>,
 ): Promise<ChatSyncAPIResponse | undefined> {
   try {
     const response = await makeRequest({
@@ -70,8 +66,6 @@ export async function streamChat<Tools extends ToolSpec>(
         chatFn: streamChat,
         tools,
         options,
-        // TODO(tracing): get trace context from the response
-        instrumentation,
       })
     }
 

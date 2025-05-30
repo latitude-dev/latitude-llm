@@ -70,10 +70,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     await setSession(
       {
         sessionData: {
-          user: {
-            id: user.id,
-            email: user.email,
-          },
+          user,
           workspace,
         },
       },

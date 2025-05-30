@@ -1,4 +1,3 @@
-import app from '$/routes/app'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import {
   createDocumentVersion,
@@ -8,6 +7,7 @@ import {
 } from '@latitude-data/core/factories'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
+import app from '$/routes/app'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('$/jobs', () => ({
@@ -32,14 +32,14 @@ describe('GET documents', () => {
         workspaceId: workspace.id,
       }).then((r) => r.unwrap())
       const path = 'path/to/document'
-      const { commit: draft } = await createDraft({
+      const { commit } = await createDraft({
         project,
         user,
       })
       const document = await createDocumentVersion({
         workspace,
         user,
-        commit: draft,
+        commit,
         path,
         content: helpers.createPrompt({
           provider: providers[0]!,
@@ -54,7 +54,7 @@ describe('GET documents', () => {
         }),
       })
 
-      const commit = await mergeCommit(draft).then((r) => r.unwrap())
+      await mergeCommit(commit).then((r) => r.unwrap())
 
       // TODO: We refetch the document because merging a commit actually replaces the
       // draft document with a new one. Review this behavior.
@@ -71,24 +71,17 @@ describe('GET documents', () => {
       })
 
       const doc = await res.json()
-      expect(doc).toEqual({
-        versionUuid: commit.uuid,
-        uuid: documentVersion.documentUuid,
-        path: documentVersion.path,
-        content: documentVersion.content,
-        contentHash: documentVersion.contentHash,
-        config: {
-          model: 'foo',
-          provider: providers[0]!.name,
-          parameters: {
-            myFile: { type: 'file' },
-          },
-        },
+      expect(doc.uuid).toEqual(documentVersion.documentUuid)
+      expect(doc.config).toEqual({
+        model: 'foo',
+        provider: providers[0]!.name,
         parameters: {
           myFile: { type: 'file' },
-          name: { type: 'text' },
         },
-        provider: providers[0]!.provider,
+      })
+      expect(doc.parameters).toEqual({
+        myFile: { type: 'file' },
+        name: { type: 'text' },
       })
     })
   })

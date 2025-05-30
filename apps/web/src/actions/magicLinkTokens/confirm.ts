@@ -38,10 +38,7 @@ export const confirmMagicLinkTokenAction = createServerAction()
     )
     await setSession({
       sessionData: {
-        user: {
-          id: user.id,
-          email: user.email,
-        },
+        user,
         workspace,
       },
     })

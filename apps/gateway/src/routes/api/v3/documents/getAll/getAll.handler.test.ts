@@ -1,5 +1,3 @@
-import app from '$/routes/app'
-import { Commit } from '@latitude-data/core/browser'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import {
   createDocumentVersion,
@@ -9,7 +7,9 @@ import {
 } from '@latitude-data/core/factories'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
+import app from '$/routes/app'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { Commit } from '@latitude-data/core/browser'
 
 vi.mock('$/jobs', () => ({
   queues: { jobs: { enqueueUpdateApiKeyProviderJob: vi.fn() } },
@@ -32,7 +32,6 @@ describe('GET documents', () => {
     let commit: Commit
     let headers: Record<string, unknown>
     let content: string
-    let contentHash: string | undefined
     let providerName: string
 
     beforeAll(async () => {
@@ -41,14 +40,15 @@ describe('GET documents', () => {
         workspaceId: workspace.id,
       }).then((r) => r.unwrap())
       const path = 'path/to/document'
-      const { commit: draft } = await createDraft({
+      const { commit: cmt } = await createDraft({
         project,
         user,
       })
+      commit = cmt
       await createDocumentVersion({
         workspace,
         user,
-        commit: draft,
+        commit,
         path,
         content: helpers.createPrompt({
           provider: providers[0]!,
@@ -63,7 +63,7 @@ describe('GET documents', () => {
         }),
       })
 
-      commit = await mergeCommit(draft).then((r) => r.unwrap())
+      await mergeCommit(commit).then((r) => r.unwrap())
       // TODO: We refetch the document because merging a commit actually replaces the
       // draft document with a new one. Review this behavior.
       const docsScope = new DocumentVersionsRepository(workspace.id)
@@ -72,7 +72,6 @@ describe('GET documents', () => {
         .then((r) => r.unwrap())
       documentUuid = documentVersion.documentUuid
       content = documentVersion.content
-      contentHash = documentVersion.contentHash ?? undefined
       projectId = project!.id
       headers = {
         headers: {
@@ -89,11 +88,9 @@ describe('GET documents', () => {
 
       expect(data).toEqual([
         {
-          versionUuid: commit.uuid,
           uuid: documentUuid,
           path: 'path/to/document',
-          content: content,
-          contentHash: contentHash,
+          content,
           config: {
             model: 'foo',
             provider: providerName,
@@ -117,11 +114,9 @@ describe('GET documents', () => {
 
       expect(data).toEqual([
         {
-          versionUuid: commit.uuid,
           uuid: documentUuid,
           path: 'path/to/document',
-          content: content,
-          contentHash: contentHash,
+          content,
           config: {
             model: 'foo',
             provider: providerName,

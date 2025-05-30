@@ -30,10 +30,7 @@ export const impersonateAction = authProcedure
     await setSession({
       sessionData: {
         impersonating: true,
-        user: {
-          id: userToImpersonate.id,
-          email: userToImpersonate.email,
-        },
+        user: userToImpersonate,
         workspace: workspaceToImpersonate,
       },
     })

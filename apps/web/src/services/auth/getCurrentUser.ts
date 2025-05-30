@@ -1,6 +1,6 @@
 import { cache } from 'react'
 
-import { Workspace } from '@latitude-data/core/browser'
+import { User, Workspace } from '@latitude-data/core/browser'
 import {
   getCurrentUserFromDB,
   unsafelyGetCurrentUserFromDb,
@@ -11,10 +11,7 @@ import { getSession } from './getSession'
 
 export type SessionData = {
   session: Session
-  user: {
-    id: string
-    email: string
-  }
+  user: User
   workspace: Workspace
   impersonating?: true
 }

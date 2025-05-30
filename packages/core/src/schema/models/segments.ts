@@ -1,15 +1,11 @@
 import { sql } from 'drizzle-orm'
 import { bigint, index, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
-import {
-  DocumentType,
-  SegmentType,
-  SpanSource,
-  SpanStatusCode,
-} from '../../constants'
+import { SegmentType, SpanSource, SpanStatusCode } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { apiKeys } from './apiKeys'
 import { commits } from './commits'
+import { documentTypesEnum } from './documentVersions'
 import { experiments } from './experiments'
 import { workspaces } from './workspaces'
 
@@ -34,18 +30,15 @@ export const segments = latitudeSchema.table(
       .$type<SpanStatusCode>(),
     statusMessage: varchar('status_message', { length: 1024 }),
     // Denormalized fields for filtering and aggregation
-    documentRunUuid: uuid('document_run_uuid').unique(),
     commitUuid: uuid('commit_uuid').references(() => commits.uuid, {
       onDelete: 'restrict',
     }),
     documentUuid: uuid('document_uuid'),
-    documentHash: varchar('document_hash', { length: 64 }),
-    documentType: varchar('document_type', {
-      length: 128,
-    }).$type<DocumentType>(),
+    documentType: documentTypesEnum('document_type'),
     experimentUuid: uuid('experiment_uuid').references(() => experiments.uuid, {
       onDelete: 'set null',
     }),
+    promptHash: varchar('prompt_hash', { length: 64 }),
     provider: varchar('provider', { length: 128 }),
     model: varchar('model', { length: 128 }),
     tokens: bigint('tokens', { mode: 'number' }),
@@ -63,15 +56,12 @@ export const segments = latitudeSchema.table(
       'gin',
       sql`${table.externalId} gin_trgm_ops`,
     ),
-    documentRunUuidIdx: index('segments_document_run_uuid_idx').on(
-      table.documentRunUuid,
-    ),
     commitUuidIdx: index('segments_commit_uuid_idx').on(table.commitUuid),
     documentUuidIdx: index('segments_document_uuid_idx').on(table.documentUuid),
-    documentHashIdx: index('segments_document_hash_idx').on(table.documentHash),
     experimentUuidIdx: index('segments_experiment_uuid_idx').on(
       table.experimentUuid,
     ),
+    promptHashIdx: index('segments_prompt_hash_idx').on(table.promptHash),
     providerIdx: index('segments_provider_idx').on(table.provider),
     modelIdx: index('segments_model_idx').on(table.model),
     startedAtIdx: index('segments_started_at_idx').on(table.startedAt),

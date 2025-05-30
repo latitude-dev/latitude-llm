@@ -1,8 +1,9 @@
-import { getOpenAIResponseTools } from '$sdk/utils/adapters/openai/getFunctionTools'
 import { ToolInputMap } from '$sdk/utils/adapters/types'
 import type { Config } from '@latitude-data/compiler'
+import { ToolDefinitionsMap } from '@latitude-data/constants/ai'
 import { Adapters, ProviderAdapter } from 'promptl-ai'
 import { getAIProviderTools } from './getProviderTools'
+import { getOpenAIResponseTools } from '$sdk/utils/adapters/openai/getFunctionTools'
 
 const ADAPTERS_WITH_SNAKE_CASE = [
   Adapters.openai.type,
@@ -53,13 +54,21 @@ export function adaptToolsConfig(
   tools: ToolInputMap | ToolInputMap[],
   adapter: ProviderAdapter<object>,
 ) {
-  const { clientTools, providerTools } = getAIProviderTools({
-    adapter: adapter,
-    tools: Array.isArray(tools) ? Object.assign({}, ...tools) : tools,
+  let allTools: ToolInputMap
+
+  if (Array.isArray(tools)) {
+    allTools = Object.assign({}, ...tools) as ToolDefinitionsMap
+  } else {
+    allTools = tools
+  }
+
+  const splitTools = getAIProviderTools({
+    adapter,
+    tools: allTools,
   })
 
   if (adapter.type === Adapters.openai.type) {
-    return Object.entries(clientTools).map(([name, definition]) => ({
+    return Object.entries(tools).map(([name, definition]) => ({
       type: 'function',
       function: {
         name,
@@ -69,11 +78,11 @@ export function adaptToolsConfig(
   }
 
   if (adapter.type === Adapters.openaiResponses.type) {
-    return getOpenAIResponseTools({ clientTools, providerTools })
+    return getOpenAIResponseTools(splitTools)
   }
 
   if (adapter == Adapters.anthropic) {
-    return Object.entries(clientTools).map(([name, definition]) => {
+    return Object.entries(tools).map(([name, definition]) => {
       const { parameters, ...rest } = definition
       return {
         name,

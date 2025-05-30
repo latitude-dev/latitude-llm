@@ -1,5 +1,6 @@
 import { database } from '../../client'
 import { Providers } from '../../constants'
+import { SessionData } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { createApiKey } from '../apiKeys'
 import { createMembership } from '../memberships/create'
@@ -39,7 +40,7 @@ export default function setupService(
     importDefaultProject?: boolean
   },
   db = database,
-): PromisedResult<{ user: User; workspace: Workspace }> {
+): PromisedResult<SessionData> {
   return Transaction.call(async (tx) => {
     const user = await createUser(
       { email, name, confirmedAt: new Date() },

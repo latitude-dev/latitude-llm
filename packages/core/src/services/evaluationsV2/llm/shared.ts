@@ -162,7 +162,7 @@ export async function runPrompt<
   db: Database = database,
 ) {
   const { promptChain, promptConfig, runFunction, runArgs } =
-    await buildLlmEvaluationRunFunction({
+    await buildLlmEvaluationRunFunction<M>({
       workspace,
       providers,
       evaluation,

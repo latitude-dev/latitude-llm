@@ -1,20 +1,19 @@
-import { LatitudeApiError } from '$sdk/utils/errors'
-import { makeRequest } from '$sdk/utils/request'
-import { syncChat } from '$sdk/utils/syncChat'
-import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
-import {
-  HandlerType,
-  RunPromptOptions,
-  RunSyncAPIResponse,
-  SDKOptions,
-  ToolInstrumentation,
-  ToolSpec,
-} from '$sdk/utils/types'
 import {
   ApiErrorCodes,
   ApiErrorJsonResponse,
   LatitudeErrorCodes,
 } from '@latitude-data/constants/errors'
+import { LatitudeApiError } from '$sdk/utils/errors'
+import { makeRequest } from '$sdk/utils/request'
+import {
+  HandlerType,
+  RunPromptOptions,
+  RunSyncAPIResponse,
+  SDKOptions,
+  ToolSpec,
+} from '$sdk/utils/types'
+import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
+import { syncChat } from '$sdk/utils/syncChat'
 
 export async function syncRun<Tools extends ToolSpec>(
   path: string,
@@ -27,10 +26,8 @@ export async function syncRun<Tools extends ToolSpec>(
     onError,
     tools,
     options,
-    instrumentation,
   }: RunPromptOptions<Tools> & {
     options: SDKOptions
-    instrumentation?: ToolInstrumentation
   },
 ) {
   projectId = projectId ?? options.projectId
@@ -93,8 +90,6 @@ export async function syncRun<Tools extends ToolSpec>(
       chatFn: syncChat,
       tools,
       options,
-      // TODO(tracing): get trace context from the response
-      instrumentation,
     })
   }
 

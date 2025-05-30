@@ -120,7 +120,6 @@ export async function getAllDocumentsAtCommitWithMetadata({
         document,
         metadata: doc?.metadata,
         provider: llmProviders[provider as string],
-        commit,
       })
     }),
   )
