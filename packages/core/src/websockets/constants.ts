@@ -6,8 +6,8 @@
 import type { Message } from '@latitude-data/compiler'
 import {
   Commit,
-  DatasetRow,
   Dataset,
+  DatasetRow,
   DocumentSuggestion,
   EvaluationResultV2,
   EvaluationV2,
@@ -85,6 +85,17 @@ type EvaluationResultV2CreatedArgs = {
   datasetRow?: DatasetRow
 }
 
+type McpServerScaleEventArgs = {
+  workspaceId: number
+  replicas: number
+  mcpServerId: number
+}
+
+type McpServerConnectedArgs = {
+  workspaceId: number
+  mcpServerId: number
+}
+
 export type WebServerToClientEvents = {
   documentBatchRunStatus: (args: DocumentBatchRunStatusArgs) => void
   experimentStatus: (args: ExperimentStatusArgs) => void
@@ -93,15 +104,8 @@ export type WebServerToClientEvents = {
   documentLogCreated: (args: DocumentLogCreatedArgs) => void
   documentSuggestionCreated: (args: DocumentSuggestionCreatedArgs) => void
   evaluationResultV2Created: (args: EvaluationResultV2CreatedArgs) => void
-  mcpServerScaleEvent: (args: {
-    workspaceId: number
-    replicas: number
-    mcpServerId: number
-  }) => void
-  mcpServerConnected: (args: {
-    workspaceId: number
-    mcpServerId: number
-  }) => void
+  mcpServerScaleEvent: (args: McpServerScaleEventArgs) => void
+  mcpServerConnected: (args: McpServerConnectedArgs) => void
   latteMessage: (args: { chatUuid: string; message: Message }) => void
   latteError: (args: { chatUuid: string; error: string }) => void
 }
@@ -137,18 +141,11 @@ export type WorkersClientToServerEvents = {
   }) => void
   mcpServerScaleEvent: (args: {
     workspaceId: number
-    data: {
-      workspaceId: number
-      replicas: number
-      mcpServerId: number
-    }
+    data: McpServerScaleEventArgs
   }) => void
   mcpServerConnected: (args: {
     workspaceId: number
-    data: {
-      workspaceId: number
-      mcpServerId: number
-    }
+    data: McpServerConnectedArgs
   }) => void
   latteMessage: (args: {
     workspaceId: number

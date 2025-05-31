@@ -1,16 +1,17 @@
-import {
-  ApiErrorCodes,
-  ApiErrorJsonResponse,
-} from '@latitude-data/constants/errors'
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
+import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
 import {
   ChatOptionsWithSDKOptions,
   ChatSyncAPIResponse,
   HandlerType,
+  ToolInstrumentation,
   ToolSpec,
 } from '$sdk/utils/types'
-import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
+import {
+  ApiErrorCodes,
+  ApiErrorJsonResponse,
+} from '@latitude-data/constants/errors'
 
 export async function syncChat<Tools extends ToolSpec>(
   uuid: string,
@@ -20,7 +21,10 @@ export async function syncChat<Tools extends ToolSpec>(
     onError,
     tools,
     options,
-  }: ChatOptionsWithSDKOptions<Tools>,
+    instrumentation,
+  }: ChatOptionsWithSDKOptions<Tools> & {
+    instrumentation?: ToolInstrumentation
+  },
 ) {
   try {
     const response = await makeRequest({
@@ -57,6 +61,8 @@ export async function syncChat<Tools extends ToolSpec>(
         chatFn: syncChat,
         tools,
         options,
+        // TODO(tracing): get trace context from the response
+        instrumentation,
       })
     }
 

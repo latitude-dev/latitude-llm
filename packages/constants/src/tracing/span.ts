@@ -50,53 +50,54 @@ export type SpanLink = {
   attributes?: Record<string, SpanAttribute>
 }
 
-export type BaseSpanMetadata = {
+export type BaseSpanMetadata<T extends SpanType = SpanType> = {
   traceId: string
   spanId: string
+  type: T
   attributes: Record<string, SpanAttribute>
   events: SpanEvent[]
   links: SpanLink[]
 }
 
-export type ToolSpanMetadata = BaseSpanMetadata & {
+export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
   name: string
   call: {
     id: string
     arguments: Record<string, unknown>
-    result:
-      | {
-          value: Required<any>
-          error: undefined
-        }
-      | {
-          value: undefined
-          error: Required<any>
-        }
+  }
+  // Fields below are optional if the span had an error
+  result?: {
+    value: unknown
+    isError: boolean
   }
 }
 
-export type CompletionSpanMetadata = BaseSpanMetadata & {
+export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   provider: string
   model: string
-  tokens: {
+  configuration: Record<string, unknown>
+  template?: string
+  parameters?: Record<string, unknown>
+  input: Record<string, unknown>[]
+  // Fields below are optional if the span had an error
+  output?: Record<string, unknown>[]
+  tokens?: {
     input: number
     output: number
   }
-  cost: number
-  configuration: Record<string, unknown>
-  input: Record<string, unknown>[]
-  output: Record<string, unknown>[]
-  finishReason: string
+  cost?: number
+  finishReason?: string
 }
 
-export type HttpSpanMetadata = BaseSpanMetadata & {
+export type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> & {
   request: {
     method: string
     url: string
     headers: Record<string, string>
     body: string | Record<string, unknown>
   }
-  response: {
+  // Fields below are optional if the span had an error
+  response?: {
     status: number
     headers: Record<string, string>
     body: string | Record<string, unknown>
@@ -107,11 +108,11 @@ export type HttpSpanMetadata = BaseSpanMetadata & {
 export type SpanMetadata<T extends SpanType = SpanType> =
   T extends SpanType.Tool ? ToolSpanMetadata :
   T extends SpanType.Completion ? CompletionSpanMetadata :
-  T extends SpanType.Embedding ? BaseSpanMetadata :
-  T extends SpanType.Retrieval ? BaseSpanMetadata :
-  T extends SpanType.Reranking ? BaseSpanMetadata :
+  T extends SpanType.Embedding ? BaseSpanMetadata<T> :
+  T extends SpanType.Retrieval ? BaseSpanMetadata<T> :
+  T extends SpanType.Reranking ? BaseSpanMetadata<T> :
   T extends SpanType.Http ? HttpSpanMetadata :
-  T extends SpanType.Unknown ? BaseSpanMetadata :
+  T extends SpanType.Unknown ? BaseSpanMetadata<T> :
   never;
 
 export type Span<T extends SpanType = SpanType> = {
