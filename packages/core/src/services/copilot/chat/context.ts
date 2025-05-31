@@ -42,6 +42,7 @@ export async function getContextString({
     }).then((r) => r.unwrap())
 
     const contextParts = [
+      `CURRENT PATH: ${context.path}`,
       project
         ? `CURRENT PROJECT: ${JSON.stringify({ id: project.id, name: project.name })}`
         : undefined,
