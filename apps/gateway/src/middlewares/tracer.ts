@@ -30,7 +30,10 @@ export function tracerMiddleware() {
       return response
     } catch (error: unknown) {
       if (error instanceof Error) {
-        span.setTag('error', error)
+        span.setTag('error', true)
+        span.setTag('error.type', error.name)
+        span.setTag('error.message', error.message)
+        span.setTag('error.stack', error.stack)
       }
 
       throw error
