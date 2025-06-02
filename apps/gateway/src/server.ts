@@ -1,5 +1,4 @@
 import './common/sentry'
-import './common/tracer'
 
 import { serve } from '@hono/node-server'
 import app from '$/routes/app'
