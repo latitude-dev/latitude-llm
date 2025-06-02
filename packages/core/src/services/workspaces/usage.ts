@@ -11,6 +11,7 @@ import { PromisedResult } from './../../lib/Transaction'
 import { Result } from './../../lib/Result'
 import { commits, documentLogs, projects } from '../../schema'
 import { count, eq, inArray } from 'drizzle-orm'
+import { cache } from '../../cache'
 
 export async function computeWorkspaceUsage(
   workspace: {
@@ -20,6 +21,13 @@ export async function computeWorkspaceUsage(
   },
   db = database,
 ): PromisedResult<WorkspaceUsage, Error> {
+  const cacheClient = await cache()
+  const cacheKey = `workspace-usage-${workspace.id}`
+  const cachedUsage = await cacheClient.get(cacheKey)
+  if (cachedUsage) {
+    return Result.ok(JSON.parse(cachedUsage))
+  }
+
   const createdAtDate = workspace.currentSubscriptionCreatedAt
   const targetDate = new Date(Date.now())
   const latestRenewalDate = getLatestRenewalDate(createdAtDate, targetDate)
@@ -52,11 +60,14 @@ export async function computeWorkspaceUsage(
 
   const membersRepo = new MembershipsRepository(workspace.id, db)
   const members = await membersRepo.findAll().then((r) => r.unwrap())
-
-  return Result.ok({
+  const usageResult: WorkspaceUsage = {
     usage: evaluationResultsV2Count + documentLogsCount,
     max: currentSubscriptionPlan.credits + extraRuns,
     members: members.length,
     maxMembers: currentSubscriptionPlan.users,
-  })
+  }
+
+  await cacheClient.set(cacheKey, JSON.stringify(usageResult), 'EX', 86400) // cache for 24 hours
+
+  return Result.ok(usageResult)
 }
