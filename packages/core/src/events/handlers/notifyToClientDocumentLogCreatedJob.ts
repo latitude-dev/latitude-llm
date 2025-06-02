@@ -13,7 +13,15 @@ export const notifyToClientDocumentLogCreatedJob = async ({
 }) => {
   const { id, workspaceId } = event.data
   const repo = new DocumentLogsWithErrorsRepository(workspaceId)
-  const documentLog = await repo.find(id).then((r) => r.unwrap())
+
+  let documentLog
+  try {
+    documentLog = await repo.find(id).then((r) => r.unwrap())
+  } catch (error) {
+    // do nothing, we don't wanna retry the job
+    return
+  }
+
   const workspace = await findWorkspaceFromDocumentLog(documentLog)
   if (!workspace) throw new NotFoundError('Workspace not found')
 

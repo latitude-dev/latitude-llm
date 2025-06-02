@@ -11,7 +11,14 @@ export const touchProviderApiKeyJob: EventHandler<
 > = async ({ data: event }) => {
   const { id, workspaceId } = event.data
   const repo = new ProviderLogsRepository(workspaceId)
-  const providerLog = await repo.find(id).then((r) => r.unwrap())
+  let providerLog
+  try {
+    providerLog = await repo.find(id).then((r) => r.unwrap())
+  } catch (error) {
+    // do nothing, we don't wanna retry the job
+    return
+  }
+
   if (!providerLog.providerId) return
 
   const providerId = providerLog.providerId
