@@ -1,19 +1,34 @@
 'use client'
+
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
-export function LogicTablePaginationFooterWithoutCount({
+export function LimitedTablePaginationFooter({
+  count,
+  countLabel,
   page,
   onPageChange,
   nextPage = false,
 }: {
+  count?: number
+  countLabel?: (count: number) => string
   page: number
   onPageChange: (page: number) => void
   nextPage?: boolean
 }) {
   return (
     <div className='w-full flex justify-between items-center'>
-      <div />
+      {count !== undefined ? (
+        <div className='flex flex-row items-center gap-x-1'>
+          <Icon name='equalApproximately' color='foregroundMuted' />
+          <Text.H5M color='foregroundMuted'>
+            {countLabel?.(count) ?? `${count} rows`}
+          </Text.H5M>
+        </div>
+      ) : (
+        <div />
+      )}
       <div className='flex items-center'>
         <Button
           size='default'

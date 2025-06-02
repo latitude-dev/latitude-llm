@@ -1,5 +1,16 @@
 'use client'
 
+import { DocumentLogMessages } from '$/components/DocumentLogMessages'
+import { MetadataItem } from '$/components/MetadataItem'
+import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
+import {
+  buildConversation,
+  DocumentLogWithMetadataAndError,
+  ProviderLogDto,
+  ResultWithEvaluationV2,
+} from '@latitude-data/core/browser'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
 import {
   ReactNode,
   RefObject,
@@ -8,17 +19,6 @@ import {
   useRef,
   useState,
 } from 'react'
-import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
-import {
-  buildConversation,
-  ProviderLogDto,
-  ResultWithEvaluationV2,
-} from '@latitude-data/core/browser'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
-import { DocumentLogMessages } from '$/components/DocumentLogMessages'
-import { MetadataItem } from '$/components/MetadataItem'
 import {
   DEFAULT_TABS,
   MetadataInfoTabs,

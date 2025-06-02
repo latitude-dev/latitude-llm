@@ -61,6 +61,7 @@ export function generateDocumentLogsApiRouteWithParams({
     excludeErrors?: boolean
     commitUuid?: string
     days?: number | undefined
+    from?: string | null
   }
 }) {
   const { filterOptions, ...rest } = params

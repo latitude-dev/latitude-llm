@@ -9,13 +9,13 @@ import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
 import { ROUTES } from '$/services/routes'
 import {
   Commit,
+  DocumentLogWithMetadataAndError,
   DocumentVersion,
   EvaluationMetric,
   EvaluationResultV2,
   EvaluationType,
   ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'

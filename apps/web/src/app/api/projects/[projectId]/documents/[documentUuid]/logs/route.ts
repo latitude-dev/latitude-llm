@@ -28,6 +28,7 @@ export const GET = errorHandler(
       if (queryParams.isEmptyResponse) {
         return NextResponse.json([], { status: 200 })
       }
+
       const repo = new DocumentVersionsRepository(workspace.id)
       const document = await repo
         .getSomeDocumentByUuid({ projectId: Number(projectId), documentUuid })

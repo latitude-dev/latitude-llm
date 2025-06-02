@@ -4,9 +4,12 @@ import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromEr
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { KeysetTablePaginationFooter } from '$/components/TablePaginationFooter/KeysetTablePaginationFooter'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
 import {
+  DocumentLogLimitedView,
+  DocumentLogWithMetadataAndError,
   EvaluationV2,
   LOG_FILTERS_ENCODED_PARAMS,
   ResultWithEvaluationV2,
@@ -16,7 +19,6 @@ import {
   buildPagination,
   IPagination,
 } from '@latitude-data/core/lib/pagination/buildPagination'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -100,6 +102,10 @@ function EvaluationsColumn({
   )
 }
 
+const countLabel = (selected: number) => (count: number) => {
+  return selected ? `${selected} of ${count} logs selected` : `${count} logs`
+}
+
 type Props = {
   documentLogs: DocumentLogRow[]
   pagination?: IPagination
@@ -109,6 +115,9 @@ type Props = {
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void
   isLoading: boolean
   selectableState: SelectableRowsHook
+  limitedView?: DocumentLogLimitedView
+  limitedCursor?: string | null
+  setLimitedCursor?: (cursor: string | null) => void
 }
 export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
   function DocumentLogsTable(
@@ -120,7 +129,16 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
       selectedLog,
       setSelectedLog,
       isLoading,
-      selectableState: { headerState, isSelected, toggleRow, toggleAll },
+      selectableState: {
+        headerState,
+        selectedCount,
+        isSelected,
+        toggleRow,
+        toggleAll,
+      },
+      limitedView,
+      limitedCursor,
+      setLimitedCursor,
     },
     ref,
   ) {
@@ -142,19 +160,31 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
         ref={ref}
         className='table-auto'
         externalFooter={
-          pagination ? (
-            <LinkableTablePaginationFooter
-              pagination={buildPagination({
-                baseUrl: pagination.baseUrl ?? '',
-                count: pagination.count ?? 0,
-                queryParams: queryParamsObject,
-                encodeQueryParams: false,
-                paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
-                page: Number(pagination.page),
-                pageSize: Number(pagination.pageSize),
-              })}
+          limitedView ? (
+            <KeysetTablePaginationFooter
+              count={limitedView.totalCount}
+              countLabel={countLabel(selectedCount)}
+              cursor={limitedCursor ?? null}
+              setNext={setLimitedCursor!}
+              setPrev={setLimitedCursor!}
+              unknown={queryParams?.includes('logUuid')}
             />
-          ) : null
+          ) : (
+            !!pagination && (
+              <LinkableTablePaginationFooter
+                pagination={buildPagination({
+                  baseUrl: pagination.baseUrl ?? '',
+                  count: pagination.count ?? 0,
+                  queryParams: queryParamsObject,
+                  encodeQueryParams: false,
+                  paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
+                  page: Number(pagination.page),
+                  pageSize: Number(pagination.pageSize),
+                })}
+                countLabel={countLabel(selectedCount)}
+              />
+            )
+          )
         }
       >
         <TableHeader className='sticky top-0 z-10'>

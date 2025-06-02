@@ -1,9 +1,9 @@
 import {
+  DocumentLogWithMetadata,
   DocumentVersion,
   EvaluationResultV2,
   EvaluationV2,
 } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
   ICommitContextType,
   IProjectContextType,

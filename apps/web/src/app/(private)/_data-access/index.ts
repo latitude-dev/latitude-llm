@@ -13,6 +13,7 @@ import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepos
 import {
   CommitsRepository,
   ConnectedEvaluationsRepository,
+  DocumentLogsRepository,
   DocumentVersionsRepository,
   EvaluationsRepository,
   EvaluationsV2Repository,
@@ -210,6 +211,22 @@ export const getEvaluationByIdCached = cache(async (id: number) => {
   const evaluation = result.unwrap()
 
   return evaluation
+})
+
+export const getDocumentLogsApproximatedCountCached = cache(
+  async (documentUuid: string) => {
+    const { workspace } = await getCurrentUser()
+    const repository = new DocumentLogsRepository(workspace.id)
+    return await repository
+      .approximatedCount({ documentUuid })
+      .then((r) => r.unwrap())
+  },
+)
+
+export const getDocumentLogCached = cache(async (uuid: string) => {
+  const { workspace } = await getCurrentUser()
+  const repository = new DocumentLogsRepository(workspace.id)
+  return await repository.findByUuid(uuid).then((r) => r.unwrap())
 })
 
 export const getProviderLogCached = cache(async (uuid: string) => {

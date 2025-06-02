@@ -1,6 +1,11 @@
 import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
 
 import {
+  DocumentLog,
+  EvaluationResultDto,
+  ExperimentScores,
+} from '@latitude-data/constants'
+import {
   EvaluationMetadataType,
   EvaluationMetric,
   EvaluationResultableType,
@@ -8,18 +13,9 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '../constants'
-import { apiKeys } from './models/apiKeys'
-import { claimedRewards } from './models/claimedRewards'
-import { commits } from './models/commits'
-import { connectedEvaluations } from './legacyModels/connectedEvaluations'
-import { EvaluationResultDto, ExperimentScores } from '@latitude-data/constants'
 import { DocumentTriggerWithConfiguration } from '../services/documentTriggers/helpers/schema'
 import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
-import { datasetRows } from './models/datasetRows'
-import { datasets } from './models/datasets'
-import { documentSuggestions } from './models/documentSuggestions'
-import { documentTriggers } from './models/documentTriggers'
-import { documentVersions } from './models/documentVersions'
+import { connectedEvaluations } from './legacyModels/connectedEvaluations'
 import { evaluationAdvancedTemplates } from './legacyModels/evaluationAdvancedTemplates'
 import { evaluationConfigurationBoolean } from './legacyModels/evaluationConfigurationBoolean'
 import { evaluationConfigurationNumerical } from './legacyModels/evaluationConfigurationNumerical'
@@ -29,6 +25,16 @@ import { evaluationMetadataLlmAsJudgeAdvanced } from './legacyModels/evaluationM
 import { evaluationMetadataLlmAsJudgeSimple } from './legacyModels/evaluationMetadataLlmAsJudgeSimple'
 import { evaluations } from './legacyModels/evaluations'
 import { evaluationTemplateCategories } from './legacyModels/evaluationTemplateCategories'
+import { apiKeys } from './models/apiKeys'
+import { claimedRewards } from './models/claimedRewards'
+import { commits } from './models/commits'
+import { datasetRows } from './models/datasetRows'
+import { datasets } from './models/datasets'
+import { documentSuggestions } from './models/documentSuggestions'
+import { documentTriggers } from './models/documentTriggers'
+import { documentVersions } from './models/documentVersions'
+import { experiments } from './models/experiments'
+import { latitudeExports } from './models/exports'
 import { integrations } from './models/integrations'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { mcpServers } from './models/mcpServers'
@@ -42,8 +48,6 @@ import { sessions } from './models/sessions'
 import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
-import { experiments } from './models/experiments'
-import { latitudeExports } from './models/exports'
 
 export type {
   DocumentLog,
@@ -115,6 +119,8 @@ export type EvaluationConfigurationText = Omit<
   InferSelectModel<typeof evaluationConfigurationText>,
   'createdAt' | 'updatedAt'
 >
+
+export type Cursor<V = string, I = string> = { value: V; id: I }
 
 export type IEvaluationConfiguration =
   | EvaluationConfigurationBoolean
@@ -301,4 +307,36 @@ export type ExperimentLogsMetadata = {
 export type ExperimentWithScores = ExperimentDto & {
   scores: ExperimentScores
   logsMetadata: ExperimentLogsMetadata
+}
+
+export type RunErrorField = {
+  code: string | null
+  message: string | null
+  details: string | null
+}
+
+export type DocumentLogWithMetadata = DocumentLog & {
+  commit: Commit
+  tokens: number | null
+  duration: number | null
+  costInMillicents: number | null
+}
+
+export type DocumentLogWithMetadataAndError = DocumentLogWithMetadata & {
+  error: RunErrorField
+}
+
+export type DocumentLogsAggregations = {
+  totalCount: number
+  totalTokens: number
+  totalCostInMillicents: number
+  averageTokens: number
+  averageCostInMillicents: number
+  medianCostInMillicents: number
+  averageDuration: number
+  medianDuration: number
+}
+
+export type DocumentLogLimitedView = DocumentLogsAggregations & {
+  dailyCount: { date: Date; count: number }[]
 }

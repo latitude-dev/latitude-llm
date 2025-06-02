@@ -1,10 +1,10 @@
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
 import {
   DocumentLog,
   DocumentLogFilterOptions,
+  DocumentLogWithMetadataAndError,
 } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import useFetcher from '$/hooks/useFetcher'
-import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 type MaybeBoolean = boolean | undefined
@@ -21,6 +21,7 @@ export default function useDocumentLogs<T extends MaybeBoolean = boolean>(
     pageSize,
     onFetched,
     excludeErrors = false,
+    disable,
   }: {
     projectId: number
     documentUuid?: string
@@ -29,21 +30,24 @@ export default function useDocumentLogs<T extends MaybeBoolean = boolean>(
     pageSize: string | null
     onFetched?: (logs: LogResult<T>[]) => void
     excludeErrors?: T
+    disable?: boolean
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
   const fetcher = useFetcher<LogResult<T>[], LogResult<T>[]>(
-    documentUuid
-      ? ROUTES.api.projects
-          .detail(projectId)
-          .documents.detail(documentUuid)
-          .logs.root({
-            page: page ? Number(page) : undefined,
-            pageSize: pageSize ? Number(pageSize) : undefined,
-            excludeErrors,
-            filterOptions,
-          })
-      : undefined,
+    disable
+      ? undefined
+      : documentUuid
+        ? ROUTES.api.projects
+            .detail(projectId)
+            .documents.detail(documentUuid)
+            .logs.root({
+              page: page ? Number(page) : undefined,
+              pageSize: pageSize ? Number(pageSize) : undefined,
+              excludeErrors,
+              filterOptions,
+            })
+        : undefined,
     {
       serializer: (rows) => rows.map(documentLogPresenter<T>),
     },

@@ -2,22 +2,31 @@ import {
   findCommitCached,
   findCommitsByProjectCached,
   getDocumentByUuidCached,
+  getDocumentLogsApproximatedCountCached,
 } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import {
+  Commit,
+  Cursor,
+  DOCUMENT_LOGS_LIMITED_VIEW_THRESHOLD,
   DocumentLogFilterOptions,
+  DocumentVersion,
   Workspace,
 } from '@latitude-data/core/browser'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
-import { computeDocumentLogsWithMetadata } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
+import {
+  computeDocumentLogLimitedCursor,
+  computeDocumentLogsLimited,
+  computeDocumentLogsWithMetadata,
+} from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
 import { redirect } from 'next/navigation'
 
+import { findSomeDocumentLog } from '@latitude-data/core/services/documentLogs/data-access/findSomeDocumentLog'
+import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseLogFilterParams'
 import { DocumentLogsPage } from './_components'
 import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
-import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseLogFilterParams'
-import { findSomeDocumentLog } from '@latitude-data/core/services/documentLogs/data-access/findSomeDocumentLog'
 
 async function fetchDocumentLogPage({
   workspace,
@@ -61,8 +70,8 @@ export default async function DocumentPage({
     commitUuid,
   })
 
-  const hasDocuments = await findSomeDocumentLog(document).then((r) => !!r)
-  if (!hasDocuments) {
+  const hasLogs = await findSomeDocumentLog(document).then((r) => !!r)
+  if (!hasLogs) {
     const uploadUrl = ROUTES.projects
       .detail({ id: projectId })
       .commits.detail({ uuid: commitUuid })
@@ -74,16 +83,35 @@ export default async function DocumentPage({
   const commit = await findCommitCached({ projectId, uuid: commitUuid })
   const commits = await findCommitsByProjectCached({ projectId })
 
-  const { logUuid, pageSize, page: pageString, ...rest } = await searchParams
+  const {
+    logUuid,
+    pageSize,
+    page: pageString,
+    from: fromString,
+    ...rest
+  } = await searchParams
   const { filterOptions, redirectUrlParams, originalSelectedCommitsIds } =
-    parseLogFiltersParams({
-      params: rest,
-      currentCommit: commit,
-      commits,
+    parseLogFiltersParams({ params: rest, currentCommit: commit, commits })
+
+  const approximatedCount =
+    await getDocumentLogsApproximatedCountCached(documentUuid)
+  if (approximatedCount > DOCUMENT_LOGS_LIMITED_VIEW_THRESHOLD) {
+    return DocumentLogsLimitedPage({
+      workspace: workspace,
+      projectId: projectId,
+      commit: commit,
+      document: document,
+      approximatedCount: approximatedCount,
+      from: fromString ? JSON.parse(fromString.toString()) : null,
+      selectedLogUuid: logUuid?.toString(),
+      filters: filterOptions,
+      redirectUrlParams: redirectUrlParams,
+      originalSelectedCommitsIds: originalSelectedCommitsIds,
     })
+  }
 
   const documentLogUuid = logUuid?.toString()
-  const page = pageString?.toString?.()
+  const page = pageString?.toString()
   const currentLogPage = await fetchDocumentLogPage({
     workspace,
     filterOptions,
@@ -119,7 +147,87 @@ export default async function DocumentPage({
       documentLogs={rows}
       selectedLog={selectedLog}
       originalSelectedCommitsIds={originalSelectedCommitsIds}
-      documengLogFilterOptions={filterOptions}
+      documentLogFilterOptions={filterOptions}
+    />
+  )
+}
+
+async function DocumentLogsLimitedPage({
+  workspace,
+  projectId,
+  commit,
+  document,
+  approximatedCount,
+  from,
+  selectedLogUuid,
+  filters,
+  redirectUrlParams,
+  originalSelectedCommitsIds,
+}: {
+  workspace: Workspace
+  projectId: number
+  commit: Commit
+  document: DocumentVersion
+  approximatedCount: number
+  from: Cursor<string, number> | null
+  selectedLogUuid: string | undefined
+  filters: DocumentLogFilterOptions
+  redirectUrlParams: (string | undefined)[]
+  originalSelectedCommitsIds: number[]
+}) {
+  if (selectedLogUuid) {
+    const route = ROUTES.projects
+      .detail({ id: projectId })
+      .commits.detail({ uuid: commit.uuid })
+      .documents.detail({ uuid: document.documentUuid }).logs.root
+
+    const cursor = await computeDocumentLogLimitedCursor({
+      workspace: workspace,
+      logUuid: selectedLogUuid,
+      filters: filters,
+    })
+    if (!cursor) return redirect(route)
+
+    if (from?.value !== cursor.value || from?.id !== cursor.id + 1) {
+      const target = { value: cursor.value, id: cursor.id + 1 }
+
+      const params = new URLSearchParams()
+      params.set('from', JSON.stringify(target))
+      params.set('logUuid', selectedLogUuid)
+      const filters = redirectUrlParams.filter(Boolean)
+
+      return redirect(`${route}?${params.toString()}&${filters.join('&')}`)
+    }
+  }
+
+  const result = await computeDocumentLogsLimited({
+    document: document,
+    from: from,
+    filters: filters,
+  })
+
+  const selectedLog = result.items.find((r) => r.uuid === selectedLogUuid)
+
+  // TODO: Get aggregations from cache
+  const limitedView = {
+    totalCount: approximatedCount,
+    totalTokens: 0,
+    totalCostInMillicents: 0,
+    averageTokens: 0,
+    averageCostInMillicents: 0,
+    medianCostInMillicents: 0,
+    averageDuration: 0,
+    medianDuration: 0,
+    dailyCount: [],
+  }
+
+  return (
+    <DocumentLogsPage
+      documentLogs={result.items}
+      selectedLog={selectedLog}
+      limitedView={limitedView}
+      originalSelectedCommitsIds={originalSelectedCommitsIds}
+      documentLogFilterOptions={filters}
     />
   )
 }

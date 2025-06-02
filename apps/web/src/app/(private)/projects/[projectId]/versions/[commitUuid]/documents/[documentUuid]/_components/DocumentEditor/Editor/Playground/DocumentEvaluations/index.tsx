@@ -5,11 +5,11 @@ import {
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
+  DocumentLogWithMetadata,
   DocumentVersion,
   EvaluationResultV2,
   EvaluationV2,
 } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import {
   CollapsibleBox,
@@ -25,7 +25,7 @@ import {
   ExpandedContent,
   ExpandedContentHeader,
 } from './BoxContent'
-import { Snapshot, Props as SharedProps } from './shared'
+import { Snapshot } from './shared'
 
 const useEvaluationResultsV2Socket = ({
   evaluations,
@@ -105,20 +105,13 @@ export default function DocumentEvaluations({
   }, [evaluationResultsV2, documentLog])
 
   const [snapshot, setSnapshot] = useState<Snapshot>()
-  const liveEvaluations = useMemo(
-    () => evaluations.filter((evaluation) => evaluation.evaluateLiveLogs),
-    [evaluations],
-  )
-
-  const snapshotDocumentLogId = snapshot?.documentLog.id
   useEffect(() => {
-    if (!documentLog || snapshotDocumentLogId === documentLog.id) return
-
+    if (!documentLog || snapshot?.documentLog.id === documentLog.id) return
     setSnapshot({
-      documentLog,
-      evaluations: liveEvaluations,
+      documentLog: documentLog,
+      evaluations: evaluations.filter((e) => e.evaluateLiveLogs),
     })
-  }, [documentLog, liveEvaluations, snapshotDocumentLogId])
+  }, [documentLog])
 
   const isWaiting = useMemo(
     () =>
@@ -129,31 +122,17 @@ export default function DocumentEvaluations({
     [snapshot, results],
   )
 
-  const props = useMemo<SharedProps>(
-    () => ({
-      results,
-      evaluations,
-      document,
-      commit,
-      project,
-      runCount,
-      isLoading: isEvaluationsV2Loading,
-      isWaiting: isWaiting || isDocumentLogLoading,
-      documentLog,
-    }),
-    [
-      results,
-      evaluations,
-      document,
-      commit,
-      project,
-      runCount,
-      isEvaluationsV2Loading,
-      isWaiting,
-      isDocumentLogLoading,
-      documentLog,
-    ],
-  )
+  const props = {
+    results,
+    evaluations,
+    document,
+    commit,
+    project,
+    runCount,
+    isLoading: isEvaluationsV2Loading,
+    isWaiting: isWaiting || isDocumentLogLoading,
+    documentLog,
+  }
 
   return (
     <ClientOnly>

@@ -2,23 +2,13 @@ import { and, count, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 
 import {
   DocumentLogFilterOptions,
+  DocumentLogsAggregations,
   DocumentVersion,
   ErrorableEntity,
 } from '../../browser'
 import { database } from '../../client'
 import { commits, documentLogs, providerLogs, runErrors } from '../../schema'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
-
-export type DocumentLogsAggregations = {
-  totalCount: number
-  totalTokens: number
-  totalCostInMillicents: number
-  averageTokens: number
-  averageCostInMillicents: number
-  medianCostInMillicents: number
-  averageDuration: number
-  medianDuration: number
-}
 
 export async function computeDocumentLogsAggregations(
   {

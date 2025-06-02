@@ -1,21 +1,22 @@
-import { useCallback, useMemo } from 'react'
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
   DocumentLog,
+  DocumentLogWithMetadataAndError,
   ProviderApiKey,
   ProviderLogDto,
 } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { Message as MessageComponent } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { format } from 'date-fns'
+import { useCallback, useMemo } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { MetadataItem, MetadataItemTooltip } from '$/components/MetadataItem'
 import {
   asPromptLFile,
   PromptLFileParameter,
@@ -29,7 +30,6 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useCurrentCommit } from 'node_modules/@latitude-data/web-ui/src/providers/CommitProvider'
 import { useCurrentProject } from 'node_modules/@latitude-data/web-ui/src/providers/ProjectProvider'
-import { MetadataItem, MetadataItemTooltip } from '$/components/MetadataItem'
 import { FinishReasonItem } from '../../../../../[documentUuid]/_components/FinishReasonItem'
 
 function costNotCalculatedReason({

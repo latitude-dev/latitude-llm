@@ -5,21 +5,25 @@ import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs from '$/stores/providerLogs'
+import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import {
   DocumentLogFilterOptions,
+  DocumentLogLimitedView,
+  DocumentLogsAggregations,
+  DocumentLogWithMetadataAndError,
   EvaluationV2,
   ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import { DocumentLogsAggregations } from '@latitude-data/core/services/documentLogs/computeDocumentLogsAggregations'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
+import { useSearchParams } from 'next/navigation'
 import { useMemo, useRef, useState } from 'react'
 import { LogsOverTime } from '../../../../../overview/_components/Overview/LogsOverTime'
 import { AggregationPanels } from './AggregationPanels'
@@ -29,9 +33,6 @@ import { DocumentLogsTable } from './DocumentLogsTable'
 import { DownloadLogsButton } from './DownloadLogsButton'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
 import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
-import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-import { useSearchParams } from 'next/navigation'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -45,6 +46,9 @@ export function DocumentLogs({
   evaluations,
   annotateEvaluation,
   isAnnotatingEvaluation,
+  limitedView,
+  limitedCursor,
+  setLimitedCursor,
 }: {
   documentLogFilterOptions: DocumentLogFilterOptions
   documentLogs: DocumentLogWithMetadataAndError[]
@@ -59,6 +63,9 @@ export function DocumentLogs({
   evaluations: EvaluationV2[]
   annotateEvaluation: ReturnType<typeof useEvaluationsV2>['annotateEvaluation']
   isAnnotatingEvaluation: boolean
+  limitedView?: DocumentLogLimitedView
+  limitedCursor?: string | null
+  setLimitedCursor?: (cursor: string | null) => void
 }) {
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
@@ -75,14 +82,21 @@ export function DocumentLogs({
     })
 
   const {
-    data: dailyCount,
+    data: dailyCountNormal,
     isLoading: isDailyCountLoading,
     error: dailyCountError,
   } = useDocumentLogsDailyCount({
     documentUuid: document.documentUuid,
     filterOptions: documentLogFilterOptions,
     projectId: project.id,
+    disable: !!limitedView,
   })
+
+  const dailyCount = useMemo(() => {
+    if (limitedView) return limitedView.dailyCount
+    return dailyCountNormal
+  }, [limitedView, dailyCountNormal])
+
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
   const pageSize = searchParams.get('pageSize') ?? '25'
@@ -93,6 +107,7 @@ export function DocumentLogs({
     filterOptions: documentLogFilterOptions,
     page,
     pageSize,
+    disable: !!limitedView,
   })
 
   const documentLogIds = useMemo(
@@ -101,7 +116,9 @@ export function DocumentLogs({
   )
   const selectableState = useSelectableRows({
     rowIds: documentLogIds,
-    totalRowCount: pagination?.count ?? 0,
+    totalRowCount: limitedView
+      ? limitedView.totalCount
+      : (pagination?.count ?? 0),
   })
   const previewLogsState = useSelectedLogs({
     selectableState,
@@ -172,6 +189,9 @@ export function DocumentLogs({
           setSelectedLog={setSelectedLog}
           isLoading={isEvaluationsLoading}
           selectableState={selectableState}
+          limitedView={limitedView}
+          limitedCursor={limitedCursor}
+          setLimitedCursor={setLimitedCursor}
         />
         {selectedLog && (
           <div ref={sidebarWrapperRef}>
@@ -225,6 +245,7 @@ export function DocumentLogs({
                 />
               </div>
               <Tooltip
+                asChild
                 trigger={
                   <Button
                     iconProps={{

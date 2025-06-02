@@ -1,17 +1,10 @@
-import { and, count, eq, getTableColumns, gte, isNull } from 'drizzle-orm'
+import { and, count, eq, getTableColumns, gte, isNull, sql } from 'drizzle-orm'
 
-import { Commit, DocumentLog, ErrorableEntity, LogSources } from '../../browser'
+import { DocumentLog, ErrorableEntity, LogSources } from '../../browser'
 import { commits, documentLogs, projects, runErrors } from '../../schema'
 import Repository from '../repositoryV2'
 import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
-
-export type DocumentLogWithMetadata = DocumentLog & {
-  commit: Commit
-  tokens: number | null
-  duration: number | null
-  costInMillicents: number | null
-}
 
 const tt = getTableColumns(documentLogs)
 
@@ -105,5 +98,35 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
     const results = await this.scope.where(and(this.scopeFilter, ...filters))
 
     return results
+  }
+
+  async approximatedCount({ documentUuid }: { documentUuid: string }) {
+    const result = await this.db.execute(
+      sql`
+EXPLAIN SELECT COUNT(*)
+FROM ${documentLogs}
+WHERE ${documentUuid} = ${documentLogs.documentUuid};
+`,
+    )
+
+    try {
+      const rows = result.rows.reduce((max, row) => {
+        const plan = row['QUERY PLAN'] as string
+        const matches = plan.match(/rows=(\d+)/g)
+
+        let count = 0
+        if (matches) {
+          count = Math.max(
+            ...matches.map((match) => parseInt(match.replace('rows=', ''), 10)),
+          )
+        }
+
+        return Math.max(max, count)
+      }, 0)
+
+      return Result.ok(rows)
+    } catch (error) {
+      return Result.ok(0)
+    }
   }
 }

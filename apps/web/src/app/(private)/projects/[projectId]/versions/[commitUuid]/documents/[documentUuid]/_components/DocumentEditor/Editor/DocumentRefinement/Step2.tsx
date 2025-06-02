@@ -1,5 +1,5 @@
 import ResultBadge from '$/components/evaluations/ResultBadge'
-import { LogicTablePaginationFooterWithoutCount } from '$/components/TablePaginationFooter/TablePaginationFooterWithoutCount'
+import { LimitedTablePaginationFooter } from '$/components/TablePaginationFooter/LimitedTablePaginationFooter'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
@@ -137,7 +137,7 @@ export function Step2({
       <Table
         className='table-auto'
         externalFooter={
-          <LogicTablePaginationFooterWithoutCount
+          <LimitedTablePaginationFooter
             page={page}
             nextPage={nextResults.length > 0}
             onPageChange={setPage}

@@ -250,6 +250,17 @@ export const API_ROUTES = {
                       filterOptions,
                     },
                   }),
+                limited: ({
+                  from,
+                  filters,
+                }: {
+                  from: string | null
+                  filters: DocumentLogFilterOptions
+                }) =>
+                  generateDocumentLogsApiRouteWithParams({
+                    path: `${documentRoot}/logs/limited`,
+                    params: { from, filterOptions: filters },
+                  }),
                 detail: (documentLogUuid: string) => {
                   return {
                     position: ({
