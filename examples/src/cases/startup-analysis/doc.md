@@ -14,11 +14,11 @@ Try out this agent setup in the Latitude Playground.
 ## Objective
 
 We want to create an AI-powered tool that can analyze pre-seed startups based on pitch decks and other documents. The tool will extract key information, conduct research, and generate a structured report in Notion.
-Let's look at an example.
+Let's put an example.
 
 ### Input email
 
-Let's imagine it's 2008 and **Bryan Chesky** sends an email to a fund with a pitch deck for a startup called **Airbnb**. Our tech incubator is highly successful, and we don't want to miss any good candidates. So we create an agentic tool in
+Let's ~~imagine~~ is 2008 and **Bryan Chesky** sends an email to a fund with a pitch deck for a startup called **Airbnb**. Our tech incubator is super successful and we don't want to miss any good candidates. So we create an agentic tool in
 Latitude that can receive emails like this and analyze the startups that are being pitched.
 <Expandable title="Original Bryan's email">
 ![Original Bryan's email](/assets/cases/pitch-mail-bryan-chesky.png)
@@ -32,13 +32,13 @@ The final result is a structured report stored in a Notion database.
 </Expandable>
 
 ## The setup
-This project uses different parts from Latitude. Let's start by listing them:
+This project use different parts from Latitude let's start by listing them:
 
 <Expandable title="Prompt references">
   [Prompt references](/guides/prompt-manager/references) like for example `<prompt path="section_example" />` allow you to reuse prompts in different parts of your project. This is useful to avoid duplication and keep your code DRY.
 </Expandable>
 <Expandable title="Steps">
-  [Steps](/promptl/advanced/chains) allow you to interact with the AI in a step-by-step manner, breaking down complex tasks into manageable parts. In this case, we use steps to handle the analysis of the startup in a structured way.
+  [Steps](/promptl/advanced/chains) allow to interact with the AI in a step-by-step manner, breaking down complex tasks into manageable parts. In this case, we use steps to handle the analysis of the startup in a structured way.
   ```markdown steps
 <step agents={{ ["agents/interpreter"] }}>
   1. Interpretation:
@@ -83,14 +83,14 @@ This project uses different parts from Latitude. Let's start by listing them:
  ```
 </Expandable>
 <Expandable title="Email triggers">
-  Email triggers allow us to receive emails in our Latitude account when they are sent to a specific address.
+  Email triggers allows us to receive emails in our Latitude accoun when they are sent to a specific address.
 [Check the docs](/guides/prompt-manager/triggers#email) to see how to set it up.
 </Expandable>
 <Expandable title="Agents">
-  In Latitude you convert a prompt into an agent by adding the `type: agent` field to the prompt. This allows you to create a multi-agent architecture where each agent is responsible for a specific task in the analysis process. You can learn more about agents in the [agents documentation](/guides/prompt-manager/agents).
+  In latitude you convert a prompt into an agent by adding the `type: agent` field to the prompt. This allows you to create a multi-agent architecture where each agent is responsible for a specific task in the analysis process. You can learn more about agents in the [agents documentation](/guides/prompt-manager/agents).
 </Expandable>
 <Expandable title="Latitude tools">
-  [Latitude tools](/guides/prompt-manager/latitude-tools#defining-available-latitude-tools) are used to search for information on the Internet
+  [Latitude tools](/guides/prompt-manager/latitude-tools#defining-available-latitude-tools) are used to search information in Internet
 </Expandable>
 <Expandable title="MCP calls">
   In this example we use the [Notion MCP integration](/guides/integration/mcp-integrations) to call the Notion API and create a database item with the final report. MCP calls allow you to interact with external APIs in a structured way, making it easy to integrate with services like Notion.
@@ -131,27 +131,29 @@ do a quick overview of how to set it up.
   <Step>You need to create a [Notion workspace](https://www.notion.com/help/intro-to-workspaces)</Step>
 <Step>
   Go to [Notion Integrations](https://www.notion.so/profile/integrations) and
-create a new integration for Latitude. You will need an API key to set up the Notion
+create new integration for Latitude. You will need an API to setup the Notion's
 MCP server on Latitude.
 <Expandable title="Create integration">
 ![Create Notion integration](/assets/cases/latitude-notion-integration.png)
 </Expandable>
 </Step>
 <Step>
-Once you have the integration, we need to do 2 more things:
-1. Copy the **Internal Integration Token** for configuring the [MCP server](/guides/integration/mcp-integrations) on Latitude.
+Once you have the integration we need do do 2 more things.
+1. copy the **Internal Integration Token** for configuring the [MPC server](/guides/integration/mcp-integrations) on Latitude.
 2. Give access to this integration to one of our pages in the workspace (yellow box in the image above).
-<Expandable title="Copy Integration token">
+<Expandable title="Copy Integraion token">
 ![Notion integration token](/assets/cases/latitude-notion-integration-detail.png)
 </Expandable>
 </Step>
 </Steps>
 
 ## The prompts
-Latitude is flexible enough to allow you to structure complex workflows in a way that
-makes sense for you. In this case, we decided to create an `agents` folder with
-all the processing work and a `publish` agent that is responsible for
-formatting and publishing the final report in Notion.
+The tool is an [AI agent](/guides/prompt-manager/agents) divided in sub-agents, each responsible for a specific task in the analysis process. The main agent coordinates the workflow and ensures that all tasks are completed efficiently.
+
+Latitude is flexible enough to allow you to structure workflows quite complex in a way that
+makes sense for you. In this case we decided to create an `agents` folder with
+all the processing work and a `publish` agent that is responsible for the
+formatting and publishing of the final report in Notion.
 <CodeGroup>
 ```markdown main {8-17}
 ---
@@ -189,7 +191,7 @@ tools:
 ```
 </CodeGroup>
 
-Let's break down all the prompts (agents) and their roles.
+Let's do a breakdown of all the prompts (agents) and their roles.
 
 <AccordionGroup>
 <Accordion title="Data extraction">
@@ -214,5 +216,5 @@ Let's break down all the prompts (agents) and their roles.
   - `agents/metrics_hunter`: Finds, validates, and contextualizes traction metrics—users, revenue, growth, engagement.
 </Accordion>
 </AccordionGroup>
-<Note>If you want to try this example live, you can [copy it to
+<Note>If you want to really play with this example in live you can [copy it to
 your Latitude account here](https://app.latitude.so/share/d/1613160f-3871-439f-baaa-c388248a6fe1)</Note>

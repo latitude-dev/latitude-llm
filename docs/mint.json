@@ -219,6 +219,28 @@
       ]
     },
     {
+      "group": "Prompting Techniques",
+      "pages": [
+        "/examples/techniques/few-shot-learning",
+        "/examples/techniques/chain-of-thought",
+        "/examples/techniques/tree-of-thoughts",
+        "/examples/techniques/self-consistency",
+        "/examples/techniques/role-prompting",
+        "/examples/techniques/template-based-prompting",
+        "/examples/techniques/constitutional-ai",
+        "/examples/techniques/meta-prompting",
+        "/examples/techniques/retrieval-augmented-generation",
+        "/examples/techniques/multi-modal-prompting",
+        "/examples/techniques/socratic-questioning",
+        "/examples/techniques/analogical-reasoning",
+        "/examples/techniques/iterative-refinement",
+        "/examples/techniques/constraint-based-prompting",
+        "/examples/techniques/emotional-intelligence-prompting",
+        "/examples/techniques/adversarial-prompting",
+        "/examples/techniques/contextual-memory"
+      ]
+    },
+    {
       "group": "Use cases",
       "pages": [
         "/examples/cases/weather-chatbot",
