@@ -1,8 +1,8 @@
 import { Result } from '../../../../../lib/Result'
 import { ProjectsRepository } from '../../../../../repositories'
-import { LatteToolFn } from '../types'
+import { defineLatteTool } from '../types'
 
-const listProjects: LatteToolFn = async ({ workspace }) => {
+const listProjects = defineLatteTool(async (_, { workspace }) => {
   const projectsScope = new ProjectsRepository(workspace.id)
   const projectsResult = await projectsScope.findAll()
   if (!projectsResult.ok) return projectsResult
@@ -15,6 +15,6 @@ const listProjects: LatteToolFn = async ({ workspace }) => {
       href: `/projects/${project.id}`,
     })),
   )
-}
+})
 
 export default listProjects

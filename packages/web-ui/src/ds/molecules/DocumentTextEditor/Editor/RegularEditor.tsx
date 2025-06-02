@@ -13,6 +13,7 @@ import { EditorWrapper } from './EditorWrapper'
 import { useEditorOptions } from './useEditorOptions'
 import { useMonacoSetup } from './useMonacoSetup'
 import { useAutoClosingTags } from './useAutoClosingTags'
+import { useHighlightedCursor } from './useHighlightedCursor'
 
 function getEditorLine({ model }: { model: editor.ITextModel }): number {
   const lastLine = model.getLineCount()
@@ -59,6 +60,7 @@ export function RegularMonacoEditor({
   errorFixFn,
   autoFocus = false,
   autoCompleteParameters = [],
+  highlightedCursorIndex,
 }: {
   className?: string
   editorRef: MutableRefObject<editor.IStandaloneCodeEditor | null>
@@ -72,6 +74,7 @@ export function RegularMonacoEditor({
   errorFixFn?: (errors: DocumentError[]) => void
   autoFocus?: boolean
   autoCompleteParameters?: string[]
+  highlightedCursorIndex?: number
 }) {
   const { monacoRef, handleEditorWillMount } = useMonacoSetup({ errorFixFn })
   const { registerAutoClosingTags } = useAutoClosingTags()
@@ -133,8 +136,28 @@ export function RegularMonacoEditor({
     monacoRef.current.editor.setModelMarkers(model, '', modelMarkers)
   }, [errorMarkers, isEditorMounted, monacoRef, editorRef])
 
+  useHighlightedCursor({
+    monacoRef,
+    editorRef,
+    isEditorMounted,
+    value,
+    highlightedCursorIndex,
+  })
+
   return (
     <EditorWrapper className={className}>
+      <style>{`
+        .myLineHighlight {
+          background-color: hsla(var(--primary) / 0.15);
+        }
+
+        .myCursorDecoration {
+          width: 6px;
+          background-color: hsla(var(--primary) / 0.85);
+          display: inline-block;
+          height: 1em;
+        }
+      `}</style>
       <Editor
         height='100%'
         width='100%'

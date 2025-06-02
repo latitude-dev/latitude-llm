@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
 import { inferServerActionReturnData } from 'zsa'
+import { useEvents } from '$/lib/events'
 
 const EMPTY_DATA = [] as DocumentVersion[]
 export default function useDocumentVersions(
@@ -329,6 +330,20 @@ export default function useDocumentVersions(
         [data, mutate],
       ),
     })
+
+  useEvents({
+    onDraftUpdatedByLatte: ({ draftUuid, updates }) => {
+      if (commitUuid !== draftUuid) return
+      mutate((prev) => {
+        return [
+          ...(prev ?? []).filter(
+            (d) => !updates.some((u) => u.documentUuid === d.documentUuid),
+          ),
+          ...updates.filter((d) => !d.deletedAt),
+        ]
+      })
+    },
+  })
 
   return useMemo(
     () => ({

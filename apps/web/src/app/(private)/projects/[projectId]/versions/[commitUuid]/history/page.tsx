@@ -1,6 +1,12 @@
 import { findCommitsByProjectCached } from '$/app/(private)/_data-access'
 import DocumentsLayout from '../_components/DocumentsLayout'
 import { ProjectChanges } from './_components/ProjectChanges'
+import buildMetatags from '$/app/_lib/buildMetatags'
+
+export const metadata = buildMetatags({
+  title: 'History',
+  locationDescription: 'Project Version History',
+})
 
 export default async function HistoryPage({
   params,

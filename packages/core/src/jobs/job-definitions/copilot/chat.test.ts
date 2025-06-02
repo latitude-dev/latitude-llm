@@ -1,22 +1,22 @@
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { runCopilotChatJob } from './chat'
+import { runLatteJob } from './chat'
 import * as dataAccess from '../../../data-access'
 import {
   CommitsRepository,
   DocumentLogsRepository,
 } from '../../../repositories'
-import * as chatHelpers from '../../../services/copilot/chat/helpers'
-import * as chatService from '../../../services/copilot/chat'
+import * as chatHelpers from '../../../services/copilot/latte/helpers'
+import * as chatService from '../../../services/copilot/latte'
 import { WebsocketClient } from '../../../websockets/workers'
 
-describe('runCopilotChatJob', () => {
+describe('runLatteJob', () => {
   let mockJob: Job<any>
   const workspace = { id: 1 }
   const project = { id: 2 }
   const commit = { id: 3 }
-  const chatUuid = 'chat-uuid'
+  const threadUuid = 'chat-uuid'
   const messageText = 'Hello, Copilot!'
 
   beforeEach(() => {
@@ -27,7 +27,7 @@ describe('runCopilotChatJob', () => {
         workspaceId: workspace.id,
         projectId: project.id,
         commitId: commit.id,
-        chatUuid,
+        threadUuid,
         message: messageText,
         context: {
           path: '/some/path',
@@ -60,11 +60,11 @@ describe('runCopilotChatJob', () => {
     vi.spyOn(WebsocketClient, 'sendEvent').mockResolvedValue({
       emit: vi.fn(),
     } as any)
-    vi.spyOn(chatService, 'runNewCopilotChat').mockResolvedValue({
+    vi.spyOn(chatService, 'runNewLatte').mockResolvedValue({
       ok: true,
       unwrap: vi.fn(),
     } as any)
-    vi.spyOn(chatService, 'addMessageToExistingCopilotChat').mockResolvedValue({
+    vi.spyOn(chatService, 'addMessageToExistingLatte').mockResolvedValue({
       ok: true,
       unwrap: vi.fn(),
     } as any)
@@ -76,10 +76,10 @@ describe('runCopilotChatJob', () => {
     const copilotErr = { ok: false, error: new Error('copilot fail') }
     ;(chatHelpers.getCopilotDocument as any).mockResolvedValueOnce(copilotErr)
 
-    const result = await runCopilotChatJob(mockJob)
+    const result = await runLatteJob(mockJob)
     expect(result).toBe(copilotErr)
-    expect(chatService.runNewCopilotChat).not.toHaveBeenCalled()
-    expect(chatService.addMessageToExistingCopilotChat).not.toHaveBeenCalled()
+    expect(chatService.runNewLatte).not.toHaveBeenCalled()
+    expect(chatService.addMessageToExistingLatte).not.toHaveBeenCalled()
   })
 
   it('creates a new chat when no document log exists', async () => {
@@ -88,9 +88,9 @@ describe('runCopilotChatJob', () => {
       { ok: false },
     )
 
-    await runCopilotChatJob(mockJob)
+    await runLatteJob(mockJob)
 
-    expect(chatService.runNewCopilotChat).toHaveBeenCalledWith({
+    expect(chatService.runNewLatte).toHaveBeenCalledWith({
       copilotWorkspace: { id: 99 },
       copilotCommit: { id: 98 },
       copilotDocument: { uuid: 'doc-123' },
@@ -98,10 +98,10 @@ describe('runCopilotChatJob', () => {
       context: {
         path: '/some/path',
       },
-      chatUuid,
+      threadUuid,
       message: messageText,
     })
-    expect(chatService.addMessageToExistingCopilotChat).not.toHaveBeenCalled()
+    expect(chatService.addMessageToExistingLatte).not.toHaveBeenCalled()
   })
 
   it('appends a message when the document log already exists', async () => {
@@ -109,19 +109,19 @@ describe('runCopilotChatJob', () => {
       { ok: true },
     )
 
-    await runCopilotChatJob(mockJob)
+    await runLatteJob(mockJob)
 
-    expect(chatService.addMessageToExistingCopilotChat).toHaveBeenCalledWith({
+    expect(chatService.addMessageToExistingLatte).toHaveBeenCalledWith({
       copilotWorkspace: { id: 99 },
       copilotCommit: { id: 98 },
       copilotDocument: { uuid: 'doc-123' },
       clientWorkspace: workspace,
-      chatUuid,
+      threadUuid,
       message: messageText,
       context: {
         path: '/some/path',
       },
     })
-    expect(chatService.runNewCopilotChat).not.toHaveBeenCalled()
+    expect(chatService.runNewLatte).not.toHaveBeenCalled()
   })
 })
