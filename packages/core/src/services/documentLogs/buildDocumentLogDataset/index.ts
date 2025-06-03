@@ -30,7 +30,7 @@ async function retrieveLogs(
   workspace: Workspace,
   documentUuid: string,
   extendedFilterOptions?: ExtendedDocumentLogFilterOptions,
-  limit?: number,
+  rowLimit?: number,
 ): Promise<{
   logs: DocumentLogWithMetadataAndError[]
   providerOutputs: Map<string, ProviderOutput>
@@ -39,7 +39,7 @@ async function retrieveLogs(
   const allLogs: DocumentLogWithMetadataAndError[] = []
   const allProviderOutputs: Map<string, ProviderOutput> = new Map()
   while (true) {
-    if (limit && allLogs.length >= limit) break
+    if (rowLimit && allLogs.length >= rowLimit) break
     const { logs, nextCursor } =
       await computeDocumentLogsWithMetadataWithCursor({
         workspace,
@@ -71,7 +71,7 @@ export async function buildDocumentLogDataset({
   extendedFilterOptions,
   columnFilters,
   hashAlgorithm = nanoidHashAlgorithm,
-  limit,
+  rowLimit,
 }: {
   workspace: Workspace
   documentUuid: string
@@ -79,13 +79,13 @@ export async function buildDocumentLogDataset({
   dataset?: Dataset
   columnFilters?: ColumnFilters
   hashAlgorithm?: HashAlgorithmFn
-  limit?: number
+  rowLimit?: number
 }): PromisedResult<DocumentLogDataset> {
   const { logs, providerOutputs } = await retrieveLogs(
     workspace,
     documentUuid,
     extendedFilterOptions,
-    limit,
+    rowLimit,
   )
   const columns = buildColumns(logs, hashAlgorithm, dataset, columnFilters)
   const rows = buildRows(logs, providerOutputs, columns)

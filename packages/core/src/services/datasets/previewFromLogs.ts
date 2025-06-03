@@ -87,7 +87,7 @@ export const previewDatasetFromLogs = async ({
     extendedFilterOptions,
     columnFilters,
     hashAlgorithm,
-    limit: PREVIEW_LOGS_LIMIT,
+    rowLimit: PREVIEW_LOGS_LIMIT,
   })
   if (documentLogDataset.error) return documentLogDataset
 
