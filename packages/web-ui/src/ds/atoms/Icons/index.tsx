@@ -115,6 +115,7 @@ import {
   WholeWord,
   XIcon,
   Youtube,
+  Filter,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -317,6 +318,7 @@ const Icons = {
   monday: Monday,
   gitCompareArrows: GitCompareArrows,
   aLargeSmall: ALargeSmallIcon,
+  filter: Filter,
 }
 
 export type IconName = keyof typeof Icons

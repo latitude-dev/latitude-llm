@@ -35,7 +35,7 @@ import { useDownloadLogsModal } from './DownloadLogsModal/useDownloadLogsModal'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import { useSearchParams } from 'next/navigation'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { parsePositiveNumber } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
+import { parsePage } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -88,11 +88,10 @@ export function DocumentLogs({
     projectId: project.id,
   })
   const searchParams = useSearchParams()
-  const page = parsePositiveNumber(searchParams.get('page'), 1)
-  const pageSize = parsePositiveNumber(
-    searchParams.get('pageSize'),
-    DEFAULT_PAGINATION_SIZE,
-  )
+  const page = searchParams.get('page')
+  const pageSize =
+    searchParams.get('pageSize') ?? String(DEFAULT_PAGINATION_SIZE)
+
   const { data: pagination } = useDocumentLogsPagination({
     projectId: project.id,
     commitUuid: commit.uuid,

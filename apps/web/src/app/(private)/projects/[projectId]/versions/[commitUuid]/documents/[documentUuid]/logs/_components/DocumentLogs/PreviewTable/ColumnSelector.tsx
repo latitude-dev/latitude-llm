@@ -32,10 +32,13 @@ export const ColumnSelector = ({
       <ButtonTrigger
         buttonVariant={'outline'}
         iconProps={{
-          name: 'settings',
+          name: 'filter',
           color: 'foreground',
+          size: 'small',
         }}
-      />
+      >
+        Columns
+      </ButtonTrigger>
       <Popover.Content
         side='bottom'
         align='end'
@@ -48,7 +51,7 @@ export const ColumnSelector = ({
         <Text.H6 color='foregroundMuted'>
           Customize the columns to be downloaded
         </Text.H6>
-        <div className='flex flex-col mt-2 gap-y-1'>
+        <div className='flex flex-col mt-2'>
           {columns.map((column) => (
             <div
               key={column.name}

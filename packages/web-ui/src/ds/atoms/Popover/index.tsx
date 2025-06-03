@@ -75,7 +75,7 @@ export const ButtonTrigger = ({
   showIcon?: boolean
   buttonVariant?: ButtonProps['variant']
   className?: string
-  iconProps?: Pick<IconProps, 'name' | 'color'>
+  iconProps?: IconProps
   overrideDarkColor?: string
   color?: TextColor
   ref?: Ref<HTMLButtonElement>
