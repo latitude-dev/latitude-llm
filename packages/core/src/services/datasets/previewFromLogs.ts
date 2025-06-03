@@ -74,7 +74,7 @@ export const previewDatasetFromLogs = async ({
 }: {
   workspace: Workspace
   documentUuid: string
-  extendedFilterOptions: ExtendedDocumentLogFilterOptions
+  extendedFilterOptions?: ExtendedDocumentLogFilterOptions
   name?: string
   columnFilters?: ColumnFilters
   hashAlgorithm?: HashAlgorithmFn

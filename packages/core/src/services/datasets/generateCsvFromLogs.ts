@@ -5,12 +5,7 @@
  */
 import { stringify } from 'csv-stringify/sync'
 import { Result } from '../../lib/Result'
-import {
-  DocumentLogFilterOptions,
-  DocumentVersion,
-  ExtendedDocumentLogFilterOptions,
-  Workspace,
-} from '../../browser'
+import { ExtendedDocumentLogFilterOptions, Workspace } from '../../browser'
 import {
   buildDocumentLogDataset,
   ColumnFilters,

@@ -2,7 +2,6 @@ import {
   and,
   eq,
   getTableColumns,
-  inArray,
   isNull,
   sql,
   sum,
@@ -12,7 +11,6 @@ import {
 } from 'drizzle-orm'
 
 import {
-  DocumentLogFilterOptions,
   ErrorableEntity,
   ExtendedDocumentLogFilterOptions,
 } from '../../browser'
@@ -141,12 +139,17 @@ export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<Docu
       : result[result.length - 1]?.createdAt
   }
 
-  async findInDocumentPaginated(
-    documentUuid: string,
-    page: number,
-    size: number,
-    extendedFilterOptions?: ExtendedDocumentLogFilterOptions,
-  ): PromisedResult<DocumentLogWithMetadataAndError[]> {
+  async findInDocumentPaginated({
+    documentUuid,
+    page,
+    size,
+    extendedFilterOptions,
+  }: {
+    documentUuid: string
+    page: number
+    size: number
+    extendedFilterOptions?: ExtendedDocumentLogFilterOptions
+  }): PromisedResult<DocumentLogWithMetadataAndError[]> {
     const offset = calculateOffset(page, size)
     const conditions = this.getConditions(documentUuid, extendedFilterOptions)
     const ordering = this.getOrdering(extendedFilterOptions)
@@ -158,12 +161,17 @@ export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<Docu
     return Result.ok(result)
   }
 
-  async findInDocumentWithCursor(
-    documentUuid: string,
-    limit: number,
-    cursor?: DocumentLogsWithMetadataAndErrorsCursor,
-    extendedFilterOptions?: ExtendedDocumentLogFilterOptions,
-  ): PromisedResult<{
+  async findInDocumentWithCursor({
+    documentUuid,
+    limit,
+    cursor,
+    extendedFilterOptions,
+  }: {
+    documentUuid: string
+    limit: number
+    cursor?: DocumentLogsWithMetadataAndErrorsCursor
+    extendedFilterOptions?: ExtendedDocumentLogFilterOptions
+  }): PromisedResult<{
     logs: DocumentLogWithMetadataAndError[]
     nextCursor?: DocumentLogsWithMetadataAndErrorsCursor
   }> {

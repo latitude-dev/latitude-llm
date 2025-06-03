@@ -51,12 +51,17 @@ function buildStaticColumnsArgs(staticColumnNames?: string[]) {
   }))
 }
 
-export function buildColumns(
-  logs: DocumentLogWithMetadataAndError[],
-  hashAlgorithm: HashAlgorithmFn,
-  dataset?: Dataset,
-  columnFilters?: ColumnFilters,
-): Column[] {
+export function buildColumns({
+  logs,
+  hashAlgorithm,
+  dataset,
+  columnFilters,
+}: {
+  logs: DocumentLogWithMetadataAndError[]
+  hashAlgorithm: HashAlgorithmFn
+  dataset?: Dataset
+  columnFilters?: ColumnFilters
+}): Column[] {
   let datasetColumns = dataset?.columns ?? []
   const parameterColumnArgs = buildParameterColumnsArgs(
     logs,

@@ -28,8 +28,8 @@ export function buildLogsFilterSQLConditions({
 }: ExtendedDocumentLogFilterOptions) {
   const createdAt = safeCreatedAt(unsafeCreatedAt)
   return and(
-    commitIds.length ? inArray(documentLogs.commitId, commitIds) : sql`1 = 0`, // Return none
-    logSources.length ? inArray(documentLogs.source, logSources) : sql`1 = 0`, // Return none
+    commitIds?.length ? inArray(documentLogs.commitId, commitIds) : sql`1 = 0`, // Return none
+    logSources?.length ? inArray(documentLogs.source, logSources) : sql`1 = 0`, // Return none
     createdAt
       ? between(documentLogs.createdAt, createdAt.from, createdAt.to)
       : sql`1 = 1`, // Return all if createdAt is not set

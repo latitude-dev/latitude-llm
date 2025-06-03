@@ -110,7 +110,7 @@ export default async function DocumentPage({
   const rows = await computeDocumentLogsWithMetadataPaginated({
     workspace,
     documentUuid,
-    filterOptions,
+    extendedFilterOptions: filterOptions,
     page: page ? Number(page) : undefined,
     size: pageSize ? Number(pageSize) : undefined,
   })

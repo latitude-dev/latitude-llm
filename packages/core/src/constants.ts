@@ -386,8 +386,8 @@ export type DocumentVersionDto = DocumentVersion & {
 }
 
 export const documentLogFilterOptionsSchema = z.object({
-  commitIds: z.array(z.number()),
-  logSources: z.array(z.nativeEnum(LogSources)),
+  commitIds: z.array(z.number()).optional(),
+  logSources: z.array(z.nativeEnum(LogSources)).optional(),
   createdAt: z
     .object({ from: z.date().optional(), to: z.date().optional() })
     .optional(),

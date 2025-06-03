@@ -1,6 +1,6 @@
 import { sum } from 'lodash-es'
 import { describe, beforeAll, it, expect } from 'vitest'
-import { Providers } from '@latitude-data/constants'
+import { LogSources, Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../tests/factories'
 import { DocumentLog } from '../../browser'
@@ -50,8 +50,12 @@ describe('buildDocumentLogDatasetRows', async () => {
     })
     const result = await generateCsvFromLogs({
       workspace: setup.workspace,
-      document: setup.documents[0]!,
-      documentLogIds: [documentLog.id],
+      documentUuid: setup.documents[0]!.documentUuid,
+      extendedFilterOptions: {
+        commitIds: [setup.commit.id],
+        logSources: Object.values(LogSources),
+        documentLogIds: [documentLog.id],
+      },
     })
 
     const repo = new ProviderLogsRepository(setup.workspace.id)

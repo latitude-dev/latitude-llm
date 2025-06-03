@@ -32,7 +32,7 @@ export const GET = errorHandler(
       const rows = await computeDocumentLogsWithMetadataPaginated({
         workspace,
         documentUuid,
-        filterOptions: queryParams.filterOptions,
+        extendedFilterOptions: queryParams.filterOptions,
         page: Number(queryParams.page),
         size: Number(queryParams.pageSize),
       })

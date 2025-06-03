@@ -3,8 +3,6 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import {
   Dataset,
-  DocumentLogFilterOptions,
-  DocumentVersion,
   ExtendedDocumentLogFilterOptions,
   Workspace,
 } from '../../browser'

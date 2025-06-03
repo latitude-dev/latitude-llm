@@ -5,6 +5,7 @@ import {
   DEFAULT_PAGINATION_SIZE,
   DocumentLogFilterOptions,
   DocumentVersion,
+  ExtendedDocumentLogFilterOptions,
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
@@ -31,7 +32,7 @@ export async function computeDocumentLogsWithMetadataWithCursor({
 }: {
   workspace: Workspace
   documentUuid: string
-  extendedFilterOptions?: DocumentLogFilterOptions
+  extendedFilterOptions?: ExtendedDocumentLogFilterOptions
   cursor?: Date
   limit?: number
 }): Promise<{
@@ -39,35 +40,35 @@ export async function computeDocumentLogsWithMetadataWithCursor({
   nextCursor?: DocumentLogsWithMetadataAndErrorsCursor
 }> {
   const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspace.id)
-  const result = await repo.findInDocumentWithCursor(
+  const result = await repo.findInDocumentWithCursor({
     documentUuid,
     limit,
     cursor,
     extendedFilterOptions,
-  )
+  })
   return result.unwrap()
 }
 
 export async function computeDocumentLogsWithMetadataPaginated({
   workspace,
   documentUuid,
-  filterOptions,
+  extendedFilterOptions,
   page = 1,
   size = DEFAULT_PAGINATION_SIZE,
 }: {
   workspace: Workspace
   documentUuid: string
-  filterOptions?: DocumentLogFilterOptions
+  extendedFilterOptions?: ExtendedDocumentLogFilterOptions
   page?: number
   size?: number
 }): Promise<DocumentLogWithMetadataAndError[]> {
   const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspace.id)
-  const result = await repo.findInDocumentPaginated(
+  const result = await repo.findInDocumentPaginated({
     documentUuid,
     page,
     size,
-    filterOptions,
-  )
+    extendedFilterOptions,
+  })
   return result.unwrap()
 }
 

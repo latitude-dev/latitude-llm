@@ -98,8 +98,9 @@ describe('getDocumentLogsWithMetadata', () => {
 
     it('return all logs from merged commits', async () => {
       const result = await computeDocumentLogsWithMetadataPaginated({
-        document: doc,
-        filterOptions: {
+        workspace,
+        documentUuid: doc.documentUuid,
+        extendedFilterOptions: {
           commitIds: [commit.id, commit2.id],
           logSources: LOG_SOURCES,
           createdAt: undefined,
@@ -189,8 +190,9 @@ describe('getDocumentLogsWithMetadata', () => {
           '2024-12-11T00:00:00 01:00,2024-12-11T23:59:59 01:00',
         )
         const result = await computeDocumentLogsWithMetadataPaginated({
-          document: doc,
-          filterOptions: {
+          workspace,
+          documentUuid: doc.documentUuid,
+          extendedFilterOptions: {
             commitIds: [commit.id, commit2.id, anotherCommit.id],
             logSources: LOG_SOURCES,
             createdAt,
@@ -211,8 +213,9 @@ describe('getDocumentLogsWithMetadata', () => {
       it('filter logs by createdAt only with from', async () => {
         const createdAt = parseSafeCreatedAtRange('2024-12-11T00:00:00 01:00')
         const result = await computeDocumentLogsWithMetadataPaginated({
-          document: doc,
-          filterOptions: {
+          workspace,
+          documentUuid: doc.documentUuid,
+          extendedFilterOptions: {
             commitIds: [commit.id, commit2.id, anotherCommit.id],
             logSources: LOG_SOURCES,
             createdAt,
@@ -233,16 +236,17 @@ describe('getDocumentLogsWithMetadata', () => {
 
     it('paginate logs', async () => {
       const result = await computeDocumentLogsWithMetadataPaginated({
-        document: doc,
-        filterOptions: {
+        workspace,
+        documentUuid: doc.documentUuid,
+        extendedFilterOptions: {
           commitIds: [commit.id, commit2.id],
           logSources: LOG_SOURCES,
           createdAt: undefined,
           customIdentifier: undefined,
           experimentId: undefined,
         },
-        page: '1',
-        pageSize: '1',
+        page: 1,
+        size: 1,
       })
       expect(result.length).toBe(1)
     })
@@ -315,8 +319,9 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     const result = await computeDocumentLogsWithMetadataPaginated({
-      document: doc,
-      filterOptions: {
+      workspace,
+      documentUuid: doc.documentUuid,
+      extendedFilterOptions: {
         commitIds: [commit1.id, commit2.id, draft.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
@@ -380,8 +385,9 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     const result = await computeDocumentLogsWithMetadataPaginated({
-      document: doc,
-      filterOptions: {
+      workspace,
+      documentUuid: doc.documentUuid,
+      extendedFilterOptions: {
         commitIds: [commit1.id, draft1.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
@@ -448,8 +454,9 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     const result = await computeDocumentLogsWithMetadataPaginated({
-      document,
-      filterOptions: {
+      workspace,
+      documentUuid: document.documentUuid,
+      extendedFilterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
@@ -489,8 +496,9 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     const result = await computeDocumentLogsWithMetadataPaginated({
-      document: doc,
-      filterOptions: {
+      workspace,
+      documentUuid: doc.documentUuid,
+      extendedFilterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
@@ -527,8 +535,9 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     const result = await computeDocumentLogsWithMetadataPaginated({
-      document: doc,
-      filterOptions: {
+      workspace,
+      documentUuid: doc.documentUuid,
+      extendedFilterOptions: {
         commitIds: [commit.id],
         logSources: [],
         createdAt: undefined,
@@ -568,8 +577,9 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     const result = await computeDocumentLogsWithMetadataPaginated({
-      document: doc,
-      filterOptions: {
+      workspace,
+      documentUuid: doc.documentUuid,
+      extendedFilterOptions: {
         commitIds: [commit0.id, commit1.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,

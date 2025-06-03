@@ -64,7 +64,7 @@ describe('updateFromLogs', async () => {
     const result = await updateDatasetFromLogs({
       dataset,
       workspace: setup.workspace,
-      documentLogIds: [documentLog.id],
+      documentUuid: documentLog.documentUuid,
       hashAlgorithm: identityHashAlgorithm,
     })
     const updatedDataset = result.value!

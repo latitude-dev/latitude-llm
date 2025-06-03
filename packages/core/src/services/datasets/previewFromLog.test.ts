@@ -39,12 +39,9 @@ describe('previewDatasetFromLog', async () => {
 
       const result = await previewDatasetFromLogs({
         workspace: setup.workspace,
-        data: {
-          name: '',
-          documentLogIds: [documentLog.id],
-          columnFilters: {
-            staticColumnNames: ['id'],
-          },
+        documentUuid: documentLog.documentUuid,
+        columnFilters: {
+          staticColumnNames: ['id'],
         },
         hashAlgorithm: identityHashAlgorithm,
       })
@@ -100,16 +97,9 @@ describe('previewDatasetFromLog', async () => {
 
       const result = await previewDatasetFromLogs({
         workspace: setup.workspace,
-        data: {
-          name: '',
-          documentLogIds: [
-            olderLogWithParameters.id,
-            newerLogWithParameters.id,
-            logWithDifferentParameters.id,
-          ],
-          columnFilters: {
-            staticColumnNames: ['id'],
-          },
+        documentUuid: olderLogWithParameters.documentUuid,
+        columnFilters: {
+          staticColumnNames: ['id'],
         },
         hashAlgorithm: identityHashAlgorithm,
       })
@@ -181,12 +171,10 @@ describe('previewDatasetFromLog', async () => {
 
       const result = await previewDatasetFromLogs({
         workspace: setup.workspace,
-        data: {
-          name: datasetName,
-          documentLogIds: [documentLog.id],
-          columnFilters: {
-            staticColumnNames: ['id'],
-          },
+        documentUuid: documentLog.documentUuid,
+        name: datasetName,
+        columnFilters: {
+          staticColumnNames: ['id'],
         },
         hashAlgorithm: identityHashAlgorithm,
       })

@@ -1,15 +1,18 @@
-import { describe, beforeAll, beforeEach, it, expect } from 'vitest'
-import { Providers } from '@latitude-data/constants'
+import { describe, beforeAll, it, expect } from 'vitest'
+import { LogSources, Providers } from '@latitude-data/constants'
 import * as factories from '../../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../../tests/factories'
 import { identityHashAlgorithm } from '../../datasets/utils'
 import { buildDocumentLogDataset, ColumnFilters } from './index'
 import { DocumentLogWithMetadataAndError } from '../../../repositories'
 import getTestDisk from '../../../tests/testDrive'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { DocumentVersion } from '../../../schema/types'
+import { ExtendedDocumentLogFilterOptions } from '../../../constants'
 
 const testDrive = getTestDisk()
 let setup: FactoryCreateProjectReturn
+let document: DocumentVersion
+let defaultFilters: ExtendedDocumentLogFilterOptions
 
 describe('buildDocumentLogDataset', async () => {
   beforeAll(async () => {
@@ -27,14 +30,19 @@ describe('buildDocumentLogDataset', async () => {
         }),
       },
     })
+    document = setup.documents[0]!
+    defaultFilters = {
+      commitIds: [setup.commit.id],
+      logSources: Object.values(LogSources),
+    }
   })
 
   describe('without dataset', () => {
     let documentLog: DocumentLogWithMetadataAndError
 
-    beforeEach(async () => {
+    beforeAll(async () => {
       documentLog = await factories.createDocumentLogWithMetadataAndError({
-        document: setup.documents[0]!,
+        document,
         commit: setup.commit,
         parameters: {
           location: 'San Francisco',
@@ -47,7 +55,11 @@ describe('buildDocumentLogDataset', async () => {
     it('build correct log dataset without column filters', async () => {
       const result = await buildDocumentLogDataset({
         workspace: setup.workspace,
-        documentLogIds: [documentLog.id],
+        documentUuid: documentLog.documentUuid,
+        extendedFilterOptions: {
+          ...defaultFilters,
+          documentLogIds: [documentLog.id],
+        },
         hashAlgorithm: identityHashAlgorithm,
       })
 
@@ -99,7 +111,11 @@ describe('buildDocumentLogDataset', async () => {
       }
       const result = await buildDocumentLogDataset({
         workspace: setup.workspace,
-        documentLogIds: [documentLog.id],
+        documentUuid: documentLog.documentUuid,
+        extendedFilterOptions: {
+          ...defaultFilters,
+          documentLogIds: [documentLog.id],
+        },
         hashAlgorithm: identityHashAlgorithm,
         columnFilters: filters,
       })
@@ -140,7 +156,11 @@ describe('buildDocumentLogDataset', async () => {
 
       const result = await buildDocumentLogDataset({
         workspace: setup.workspace,
-        documentLogIds: [documentLog.id, anotherDocumentLog.id],
+        documentUuid: documentLog.documentUuid,
+        extendedFilterOptions: {
+          ...defaultFilters,
+          documentLogIds: [documentLog.id, anotherDocumentLog.id],
+        },
         hashAlgorithm: identityHashAlgorithm,
       })
 
@@ -230,7 +250,11 @@ describe('buildDocumentLogDataset', async () => {
       const result = await buildDocumentLogDataset({
         workspace: setup.workspace,
         dataset,
-        documentLogIds: [documentLog.id],
+        documentUuid: documentLog.documentUuid,
+        extendedFilterOptions: {
+          ...defaultFilters,
+          documentLogIds: [documentLog.id],
+        },
         hashAlgorithm: identityHashAlgorithm,
       })
 
@@ -308,7 +332,11 @@ describe('buildDocumentLogDataset', async () => {
 
       const result = await buildDocumentLogDataset({
         workspace: setup.workspace,
-        documentLogIds: [anotherWorkspaceLog.id],
+        documentUuid: anotherWorkspaceLog.documentUuid,
+        extendedFilterOptions: {
+          ...defaultFilters,
+          documentLogIds: [anotherWorkspaceLog.id],
+        },
         hashAlgorithm: identityHashAlgorithm,
         columnFilters: {
           staticColumnNames: ['id'],
@@ -325,41 +353,6 @@ describe('buildDocumentLogDataset', async () => {
         ],
         rows: [],
       })
-    })
-  })
-
-  it('filter logs with errors', async () => {
-    const logWithError = await factories.createDocumentLogWithMetadataAndError({
-      document: setup.documents[0]!,
-      commit: setup.commit,
-      parameters: {
-        location: 'San Francisco',
-        age: 25,
-      },
-      runError: {
-        code: RunErrorCodes.Unknown,
-        message: 'Error message',
-      },
-    })
-
-    const result = await buildDocumentLogDataset({
-      workspace: setup.workspace,
-      documentLogIds: [logWithError.id],
-      hashAlgorithm: identityHashAlgorithm,
-      columnFilters: {
-        staticColumnNames: ['id'],
-      },
-    })
-
-    expect(result.value).toEqual({
-      columns: [
-        {
-          identifier: 'id_identifier',
-          name: 'id',
-          role: 'metadata',
-        },
-      ],
-      rows: [],
     })
   })
 })

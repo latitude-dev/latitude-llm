@@ -88,7 +88,7 @@ export async function buildDocumentLogDataset({
     extendedFilterOptions,
     rowLimit,
   )
-  const columns = buildColumns(logs, hashAlgorithm, dataset, columnFilters)
+  const columns = buildColumns({ logs, hashAlgorithm, dataset, columnFilters })
   const rows = buildRows(logs, providerOutputs, columns)
   return Result.ok({ columns, rows })
 }
