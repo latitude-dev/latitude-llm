@@ -3,8 +3,6 @@ import { FinishReason } from 'ai'
 
 import { ProviderApiKey, ProviderLog, Workspace } from '../../../browser'
 import { ChainStepResponse, LogSources, StreamType } from '../../../constants'
-import { AIProviderCallCompletedData } from '../../../events/events'
-import { publisher } from '../../../events/publisher'
 import { PartialConfig } from '../../ai'
 import { createProviderLog } from '../../providerLogs'
 import { defaultQueue } from '../../../jobs/queues'
@@ -16,26 +14,14 @@ export async function saveOrPublishProviderLogs<
 >({
   workspace,
   data,
-  streamType,
   saveSyncProviderLogs,
   finishReason,
 }: {
   workspace: Workspace
-  streamType: StreamType
   data: ReturnType<typeof buildProviderLogDto>
   saveSyncProviderLogs: S
   finishReason: FinishReason
 }): Promise<P> {
-  publisher.publishLater({
-    type: 'aiProviderCallCompleted',
-    data: {
-      ...data,
-      finishReason,
-      chainCompleted: false,
-      streamType,
-    } as AIProviderCallCompletedData<typeof streamType>,
-  })
-
   const providerLogsData = {
     ...data,
     workspace,
