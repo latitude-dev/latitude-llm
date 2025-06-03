@@ -6,8 +6,10 @@ import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/b
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs from '$/stores/providerLogs'
 import {
+  DEFAULT_PAGINATION_SIZE,
   DocumentLogFilterOptions,
   EvaluationV2,
+  ExtendedDocumentLogFilterOptions,
   ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
@@ -26,9 +28,10 @@ import { AggregationPanels } from './AggregationPanels'
 import { DocumentLogInfo } from './DocumentLogInfo'
 import { DocumentLogAnnotation } from './DocumentLogInfo/Annotation'
 import { DocumentLogsTable } from './DocumentLogsTable'
-import { DownloadLogsButton } from './DownloadLogsButton'
+import { DownloadLogsModal } from './DownloadLogsModal'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
-import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
+import { useSaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal/useSaveLogsAsDatasetModal'
+import { useDownloadLogsModal } from './DownloadLogsModal/useDownloadLogsModal'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import { useSearchParams } from 'next/navigation'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -84,8 +87,10 @@ export function DocumentLogs({
     projectId: project.id,
   })
   const searchParams = useSearchParams()
-  const page = searchParams.get('page') ?? '1'
-  const pageSize = searchParams.get('pageSize') ?? '25'
+  const page = searchParams.get('page')
+  const pageSize =
+    searchParams.get('pageSize') ?? String(DEFAULT_PAGINATION_SIZE)
+
   const { data: pagination } = useDocumentLogsPagination({
     projectId: project.id,
     commitUuid: commit.uuid,
@@ -103,9 +108,28 @@ export function DocumentLogs({
     rowIds: documentLogIds,
     totalRowCount: pagination?.count ?? 0,
   })
-  const previewLogsState = useSelectedLogs({
+  const extendedFilterOptions: ExtendedDocumentLogFilterOptions =
+    useMemo(() => {
+      return {
+        ...documentLogFilterOptions,
+        documentLogIds:
+          selectableState.selectionMode === 'PARTIAL'
+            ? selectableState.selectedRowIds
+            : undefined,
+        excludedDocumentLogIds: Array.from(
+          selectableState.excludedIds,
+        ) as number[],
+        filterErrors: true,
+      }
+    }, [documentLogFilterOptions, selectableState])
+
+  const saveLogsAsDatasetModalState = useSaveLogsAsDatasetModal({
     selectableState,
-    filterOptions: documentLogFilterOptions,
+    extendedFilterOptions,
+  })
+  const downloadLogsModalState = useDownloadLogsModal({
+    selectableState,
+    extendedFilterOptions,
   })
 
   const manualEvaluations = useMemo(
@@ -215,14 +239,18 @@ export function DocumentLogs({
                 <Button
                   fancy
                   disabled={selectableState.selectedCount === 0}
-                  onClick={previewLogsState.onClickShowPreview}
+                  onClick={saveLogsAsDatasetModalState.onClickShowPreview}
                 >
                   Add {selectableState.selectedCount} logs to dataset
                 </Button>
-                <DownloadLogsButton
-                  filterOptions={documentLogFilterOptions}
-                  selectableState={selectableState}
-                />
+                <Button
+                  disabled={selectableState.selectedCount === 0}
+                  fancy
+                  variant='outline'
+                  onClick={downloadLogsModalState.showModal}
+                >
+                  Download {selectableState.selectedCount} logs
+                </Button>
               </div>
               <Tooltip
                 trigger={
@@ -241,7 +269,8 @@ export function DocumentLogs({
             </div>
           </FloatingPanel>
         </div>
-        <SaveLogsAsDatasetModal {...previewLogsState} />
+        <DownloadLogsModal {...downloadLogsModalState} />
+        <SaveLogsAsDatasetModal {...saveLogsAsDatasetModalState} />
       </div>
     </div>
   )

@@ -115,6 +115,7 @@ import {
   WholeWord,
   XIcon,
   Youtube,
+  Filter,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -159,6 +160,7 @@ import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import YepCode from './custom-icons/logos/YepCode'
 import IntercomChat from './custom-icons/logos/IntercomChat'
+import { HTMLAttributes } from 'react'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -316,6 +318,7 @@ const Icons = {
   monday: Monday,
   gitCompareArrows: GitCompareArrows,
   aLargeSmall: ALargeSmallIcon,
+  filter: Filter,
 }
 
 export type IconName = keyof typeof Icons
@@ -330,7 +333,7 @@ export type IconProps = {
   widthClass?: string
   heightClass?: string
   className?: string
-}
+} & HTMLAttributes<SVGElement>
 
 type Size = 'xsmall' | 'small' | 'normal' | 'large' | 'xlarge' | 'xxxlarge'
 
@@ -342,6 +345,7 @@ export function Icon({
   spinSpeed = 'normal',
   size = 'normal',
   className,
+  ...props
 }: IconProps) {
   const IconClass = Icons[name]!
   return (
@@ -361,6 +365,7 @@ export function Icon({
         },
         className,
       )}
+      {...props}
     />
   )
 }

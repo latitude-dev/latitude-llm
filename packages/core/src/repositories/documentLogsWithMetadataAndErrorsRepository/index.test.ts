@@ -1,18 +1,21 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { DocumentLogsWithMetadataAndErrorsRepository } from '.'
 import {
   Commit,
   DocumentLog,
   DocumentVersion,
+  LogSources,
   Project,
   ProviderApiKey,
+  Providers,
   User,
   Workspace,
 } from '../../browser'
 import { mergeCommit } from '../../services/commits'
 import { updateDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'
+import { FactoryCreateProjectReturn } from '../../tests/factories'
 
 describe('getDocumentLogsWithMetadata', () => {
   describe('logs from merged commits', () => {
@@ -173,6 +176,165 @@ describe('getDocumentLogsWithMetadata', () => {
       const log = await repo.findByUuid(log1.uuid).then((r) => r.unwrap())
 
       expect(log).toBeDefined()
+    })
+  })
+
+  describe('findInDocument', () => {
+    let setup: FactoryCreateProjectReturn
+    let document: DocumentVersion
+    let repo: DocumentLogsWithMetadataAndErrorsRepository
+    let logs: DocumentLog[]
+
+    beforeAll(async () => {
+      setup = await factories.createProject({
+        providers: [
+          {
+            name: 'openai',
+            type: Providers.OpenAI,
+          },
+        ],
+        documents: {
+          content: factories.helpers.createPrompt({
+            provider: 'openai',
+            model: 'gpt-4o',
+          }),
+        },
+      })
+      document = setup.documents[0]!
+
+      logs = []
+      for (let i = 0; i < 5; i++) {
+        const documentLog =
+          await factories.createDocumentLogWithMetadataAndError({
+            document,
+            commit: setup.commit,
+            createdAt: new Date(Date.now() - i * 1000),
+          })
+        logs.push(documentLog)
+      }
+
+      repo = new DocumentLogsWithMetadataAndErrorsRepository(setup.workspace.id)
+    })
+
+    describe('paginated', () => {
+      it('returns paginated logs for the first page', async () => {
+        const result = await repo
+          .findInDocumentPaginated({
+            documentUuid: document.documentUuid,
+            page: 1,
+            size: 2,
+          })
+          .then((r) => r.unwrap())
+        expect(result).toStrictEqual([logs[0], logs[1]])
+      })
+
+      it('returns remaining logs for the last page', async () => {
+        const result = await repo
+          .findInDocumentPaginated({
+            documentUuid: document.documentUuid,
+            page: 3,
+            size: 2,
+          })
+          .then((r) => r.unwrap())
+        expect(result).toStrictEqual([logs[4]])
+      })
+
+      it('returns empty array if page is out of range', async () => {
+        const result = await repo
+          .findInDocumentPaginated({
+            documentUuid: document.documentUuid,
+            page: 10,
+            size: 2,
+          })
+          .then((r) => r.unwrap())
+        expect(result.length).toBe(0)
+      })
+
+      it('applies extendedFilterOptions if provided', async () => {
+        const result = await repo
+          .findInDocumentPaginated({
+            documentUuid: document.documentUuid,
+            page: 1,
+            size: 2,
+            extendedFilterOptions: {
+              commitIds: [setup.commit.id],
+              logSources: Object.values(LogSources),
+              excludedDocumentLogIds: [logs[0]!.id, logs[1]!.id],
+            },
+          })
+          .then((r) => r.unwrap())
+        expect(result).toStrictEqual([logs[2], logs[3]])
+      })
+    })
+
+    describe('withCursor', () => {
+      it('returns all logs if limit is large', async () => {
+        const cursor = new Date()
+        const result = await repo
+          .findInDocumentWithCursor({
+            documentUuid: document.documentUuid,
+            limit: 10,
+            cursor,
+          })
+          .then((r) => r.unwrap())
+        expect(result.logs.length).toBe(5)
+        expect(result.nextCursor).toBeUndefined()
+      })
+
+      it('returns logs after the cursor and undefined next cursor', async () => {
+        const cursor = logs[2]!.createdAt
+        const result = await repo
+          .findInDocumentWithCursor({
+            documentUuid: document.documentUuid,
+            limit: 10,
+            cursor,
+          })
+          .then((r) => r.unwrap())
+        expect(result.logs).toStrictEqual([logs[3], logs[4]])
+        expect(result.nextCursor).toBeUndefined()
+      })
+
+      it('returns at most the limit and sets nextCursor if more logs exist', async () => {
+        const result = await repo
+          .findInDocumentWithCursor({
+            documentUuid: document.documentUuid,
+            limit: 2,
+          })
+          .then((r) => r.unwrap())
+        expect(result.logs.length).toStrictEqual(2)
+        expect(result.nextCursor?.getTime()).toBe(logs[1]!.createdAt.getTime())
+      })
+
+      it('returns empty logs if no logs after cursor', async () => {
+        const oldCursor = new Date(0)
+        const result = await repo
+          .findInDocumentWithCursor({
+            documentUuid: document.documentUuid,
+            limit: 10,
+            cursor: oldCursor,
+          })
+          .then((r) => r.unwrap())
+        expect(result.logs.length).toBe(0)
+        expect(result.nextCursor).toBeUndefined()
+      })
+
+      it('applies extendedFilterOptions if provided', async () => {
+        const cursor = new Date()
+        const result = await repo
+          .findInDocumentWithCursor({
+            documentUuid: document.documentUuid,
+            limit: 10,
+            cursor,
+            extendedFilterOptions: {
+              commitIds: [setup.commit.id],
+              logSources: Object.values(LogSources),
+              documentLogIds: [logs[0]!.id],
+            },
+          })
+          .then((r) => r.unwrap())
+        expect(result.logs).toStrictEqual([logs[0]])
+        expect(result.nextCursor).toBeUndefined()
+      })
     })
   })
 })

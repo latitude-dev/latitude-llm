@@ -1,29 +1,42 @@
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
-import { Dataset, Workspace } from '../../browser'
+import Transaction from '../../lib/Transaction'
+import {
+  Dataset,
+  ExtendedDocumentLogFilterOptions,
+  Workspace,
+} from '../../browser'
 import { HashAlgorithmFn } from './utils'
-import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
+import {
+  buildDocumentLogDataset,
+  ColumnFilters,
+} from '../documentLogs/buildDocumentLogDataset'
 import { updateDataset } from './update'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
 
 export const updateDatasetFromLogs = async (
   {
     workspace,
+    documentUuid,
     dataset,
-    documentLogIds,
+    extendedFilterOptions,
+    columnFilters,
     hashAlgorithm,
   }: {
     workspace: Workspace
+    documentUuid: string
     dataset: Dataset
-    documentLogIds: number[]
+    extendedFilterOptions?: ExtendedDocumentLogFilterOptions
+    columnFilters?: ColumnFilters
     hashAlgorithm?: HashAlgorithmFn
   },
   db = database,
 ) => {
-  const builtLogsResult = await buildDocumentLogDatasetRows({
+  const builtLogsResult = await buildDocumentLogDataset({
     workspace,
-    documentLogIds,
+    documentUuid,
+    extendedFilterOptions,
+    columnFilters,
     dataset,
     hashAlgorithm,
   })

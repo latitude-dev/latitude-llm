@@ -398,6 +398,16 @@ export type DocumentLogFilterOptions = z.infer<
   typeof documentLogFilterOptionsSchema
 >
 
+export const extendedDocumentLogFilterOptionsSchema =
+  documentLogFilterOptionsSchema.extend({
+    documentLogIds: z.array(z.number()).optional(),
+    excludedDocumentLogIds: z.array(z.number()).optional(),
+    filterErrors: z.boolean().optional(),
+  })
+export type ExtendedDocumentLogFilterOptions = z.infer<
+  typeof extendedDocumentLogFilterOptionsSchema
+>
+
 export const RELATIVE_DATES = {
   today: 'today',
   yesterday: 'yesterday',

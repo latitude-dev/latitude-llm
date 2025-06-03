@@ -67,10 +67,12 @@ export function parseSafeExperimentId(
 }
 
 export function parseLogFiltersParams({
+  documentUuid,
   params,
   currentCommit,
   commits,
 }: {
+  documentUuid: string
   params: QueryParams
   currentCommit: Commit
   commits: Commit[]
@@ -95,6 +97,7 @@ export function parseLogFiltersParams({
   const experimentId = parseSafeExperimentId(experimentIdParam)
   return {
     filterOptions: {
+      documentUuid,
       commitIds,
       logSources,
       createdAt,
