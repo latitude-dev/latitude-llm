@@ -1,4 +1,0 @@
-message,messageuser,output,id,commit.title,duration,costInMillicents,tokens,createdAt
-same params log,,Hello! I hope you're having a wonderful day. How can I assist you today?,4,"5/9/2025, 7:47:49 PM",1031,1,39,1747835843634
-,test another param,"Hello! I hope you're having a wonderful day. If there's anything specific you'd like to test or discuss, feel free to let me know!",3,"5/9/2025, 7:47:49 PM",1279,2,50,1747610661737
-hello!,,"I don’t have a personal name, but you can call me Assistant! How can I help you today?",2,"5/9/2025, 7:47:49 PM",1773,3,115,1746876332385
