@@ -5,6 +5,30 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { GoToPageInput } from '$/components/TablePaginationFooter/GoToPageInput'
 import Link from 'next/link'
 
+type Props = {
+  pagination?: IPagination
+  countLabel?: (count: number) => string
+  isLoading?: boolean
+}
+function CountLabel({
+  count,
+  isLoading = false,
+  countLabel = (count: number) => `${count} rows`,
+}: {
+  isLoading?: boolean
+  count?: number | typeof Infinity
+  countLabel?: Props['countLabel']
+}) {
+  if (isLoading) return <Skeleton className='w-20 my-2' height='h4' />
+  if (count === undefined || count === Infinity) return <span />
+
+  if (!countLabel) {
+    return <Text.H5M color='foregroundMuted'>{count} rows</Text.H5M>
+  }
+
+  return <Text.H5M color='foregroundMuted'>{countLabel(count)} </Text.H5M>
+}
+
 function NavLink({
   url,
   direction,
@@ -31,30 +55,16 @@ export function LinkableTablePaginationFooter({
   pagination,
   countLabel,
   isLoading = false,
-}: {
-  pagination?: IPagination
-  countLabel?: (count: number) => string
-  isLoading?: boolean
-}) {
+}: Props) {
   if (!isLoading && !pagination) return null
 
   return (
     <div className='w-full flex justify-between items-center'>
-      {isLoading ? (
-        <Skeleton className='w-20 my-2' height='h4' />
-      ) : pagination ? (
-        <>
-          {countLabel ? (
-            <Text.H5M color='foregroundMuted'>
-              {countLabel
-                ? countLabel(pagination.count)
-                : pagination.count}{' '}
-            </Text.H5M>
-          ) : (
-            <Text.H5M color='foregroundMuted'>{pagination.count} rows</Text.H5M>
-          )}
-        </>
-      ) : null}
+      <CountLabel
+        count={pagination?.count}
+        isLoading={isLoading}
+        countLabel={countLabel}
+      />
 
       {isLoading ? (
         <Skeleton className='w-12 my-2' height='h4' />
@@ -72,9 +82,11 @@ export function LinkableTablePaginationFooter({
                 baseUrl={pagination.baseUrl}
               />
             </div>
-            <Text.H5M color='foregroundMuted'>
-              of {pagination.totalPages}
-            </Text.H5M>
+            {pagination.count !== Infinity ? (
+              <Text.H5M color='foregroundMuted'>
+                of {pagination.totalPages}
+              </Text.H5M>
+            ) : null}
           </div>
           <NavLink url={pagination.nextPage?.url} direction='next' />
         </div>

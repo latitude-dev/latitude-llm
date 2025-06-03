@@ -5,7 +5,9 @@ export const captureException = (error: Error) => {
   if (env.SENTRY_WEB_DSN) {
     Sentry.captureException(error)
   } else {
-    console.error(error)
+    if (env.NODE_ENV !== 'test') {
+      console.log(error)
+    }
   }
 }
 

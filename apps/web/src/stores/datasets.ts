@@ -1,7 +1,6 @@
 import type { Dataset } from '@latitude-data/core/browser'
 import { compact } from 'lodash-es'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { createDatasetAction } from '$/actions/datasets/create'
 import { destroyDatasetAction } from '$/actions/datasets/destroy'
 import { updateDatasetColumnAction } from '$/actions/datasets/updateColumn'
 import useFetcher from '$/hooks/useFetcher'
@@ -9,8 +8,17 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { useCallback, useState } from 'react'
 
 const EMPTY_ARRAY: Dataset[] = []
+
+type CreateDatasetResponse = {
+  success: boolean
+  dataset?: Dataset
+  errors?: Record<string, string[]>
+  error?: string
+}
+
 export default function useDatasets(
   {
     onCreateSuccess,
@@ -28,6 +36,11 @@ export default function useDatasets(
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
+  const [isCreating, setIsCreating] = useState(false)
+  const [createError, setCreateError] = useState<{
+    fieldErrors?: Record<string, string[]>
+  } | null>(null)
+
   const fetcher = useFetcher<Dataset[], Dataset[]>(
     enabled ? ROUTES.api.datasets.root : undefined,
     {
@@ -38,6 +51,7 @@ export default function useDatasets(
       }) as Record<string, string>,
     },
   )
+
   const {
     data = EMPTY_ARRAY,
     mutate,
@@ -52,16 +66,54 @@ export default function useDatasets(
       },
     },
   )
-  const {
-    isPending: isCreating,
-    error: createError,
-    executeFormAction: createFormAction,
-  } = useLatitudeAction<typeof createDatasetAction>(createDatasetAction, {
-    onSuccess: ({ data: dataset }) => {
-      mutate([...data, dataset])
-      onCreateSuccess?.(dataset)
+
+  const createDataset = useCallback(
+    async (formData: FormData) => {
+      setIsCreating(true)
+      setCreateError(null)
+
+      try {
+        const response = await fetch('/api/datasets/create', {
+          method: 'POST',
+          body: formData,
+        })
+
+        const result: CreateDatasetResponse = await response.json()
+
+        if (!result.success) {
+          if (result.errors) {
+            setCreateError({ fieldErrors: result.errors })
+          } else {
+            toast({
+              title: 'Error',
+              description: result.error || 'Failed to create dataset',
+              variant: 'destructive',
+            })
+          }
+          return
+        }
+
+        if (result.dataset) {
+          mutate([...data, result.dataset])
+          onCreateSuccess?.(result.dataset)
+          toast({
+            title: 'Success',
+            description: 'Dataset created successfully! 🎉',
+          })
+        }
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description:
+            error instanceof Error ? error.message : 'Failed to create dataset',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsCreating(false)
+      }
     },
-  })
+    [data, mutate, onCreateSuccess, toast],
+  )
 
   const { execute: destroy, isPending: isDestroying } = useLatitudeAction<
     typeof destroyDatasetAction
@@ -91,7 +143,7 @@ export default function useDatasets(
     data,
     mutate,
     isCreating,
-    createFormAction,
+    createDataset,
     createError,
     destroy,
     isDestroying,

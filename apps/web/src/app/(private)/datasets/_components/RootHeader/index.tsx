@@ -39,14 +39,14 @@ export function RootDatasetHeader({
         navigate.replace(ROUTES.datasets.root())
       }
     },
-    [navigate, newDataset.onOpenChange, generateModal.onOpenChange],
+    [navigate, newDataset, generateModal],
   )
   const onOpen = useCallback(
     (modal: 'new' | 'generate') => () => {
       modal === 'new' ? newDataset.onOpen() : generateModal.onOpen()
       navigate.replace(ROUTES.datasets.root({ modal }))
     },
-    [navigate, newDataset.onOpen, generateModal.onOpen],
+    [navigate, newDataset, generateModal],
   )
   return (
     <div className='flex flex-row items-center gap-2'>
