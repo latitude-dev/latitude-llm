@@ -39,7 +39,6 @@ async function retrieveLogs(
   const allLogs: DocumentLogWithMetadataAndError[] = []
   const allProviderOutputs: Map<string, ProviderOutput> = new Map()
   while (true) {
-    // TODO: This dont guarantee the row limit
     if (rowLimit && allLogs.length >= rowLimit) break
     const { logs, nextCursor } =
       await computeDocumentLogsWithMetadataWithCursor({
@@ -53,7 +52,13 @@ async function retrieveLogs(
     providerOutputs.forEach((value, key) => {
       allProviderOutputs.set(key, value)
     })
-    allLogs.push(...logs)
+    if (rowLimit && allLogs.length + logs.length > rowLimit) {
+      const remaining = rowLimit - allLogs.length
+      allLogs.push(...logs.slice(0, remaining))
+      break
+    } else {
+      allLogs.push(...logs)
+    }
     if (!nextCursor) break
     cursor = nextCursor
   }
