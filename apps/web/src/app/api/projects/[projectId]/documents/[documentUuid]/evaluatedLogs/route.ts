@@ -53,9 +53,7 @@ export const GET = errorHandler(
         pageSize: queryParams.pageSize,
       })
       const documentLog = rows[0]
-      if (!documentLog) {
-        return NextResponse.json([], { status: 200 })
-      }
+      if (!documentLog) return NextResponse.json([], { status: 200 })
 
       // NOTE: This provoke N+1 queries because for each log we fetch the provider logs
       // but is not a problem at the moment because we just fetch one by one on

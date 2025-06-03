@@ -4,7 +4,6 @@ import { z } from 'zod'
 
 import { withAdmin } from '../../../procedures'
 import { handleEmailTrigger } from '../../../../../../../packages/core/src/services/documentTriggers/handlers/email'
-import { env } from '@latitude-data/env'
 
 export const manualEmailTriggerAction = withAdmin
   .createServerAction()
@@ -21,13 +20,6 @@ export const manualEmailTriggerAction = withAdmin
     }),
   )
   .handler(async ({ input }) => {
-    if (!env.GATEWAY_HOSTNAME) {
-      throw new Error('GATEWAY_HOSTNAME is not set')
-    }
-    if (!env.GATEWAY_PORT) {
-      throw new Error('GATEWAY_PORT is not set')
-    }
-
     handleEmailTrigger({
       recipient: input.recipient,
       subject: input.subject,

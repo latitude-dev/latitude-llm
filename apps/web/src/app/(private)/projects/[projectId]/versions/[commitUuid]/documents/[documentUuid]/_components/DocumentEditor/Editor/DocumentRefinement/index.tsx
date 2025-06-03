@@ -14,7 +14,7 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useRouter } from 'next/navigation'
 import type { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Step1 } from './Step1'
 import { Step2 } from './Step2'
 import { Step3 } from './Step3'
@@ -129,65 +129,62 @@ export function DocumentRefinement({
     router,
   ])
 
-  const step = useMemo(() => {
-    if (resultUuids.length > 0) {
-      return {
-        number: 3,
-        title: 'Generating prompt suggestion',
-        description:
-          'We are reviewing evaluations with poor results, to identify why the prompt failed, and propose suitable modifications.',
-        content: (
-          <Step3
-            project={project}
-            commit={commit}
-            document={document}
-            refine={refine}
-          />
-        ),
-        footer: (
-          <Button variant='outline' fancy onClick={close}>
-            Close
+  let step
+  if (resultUuids.length > 0) {
+    step = {
+      number: 3,
+      title: 'Generating prompt suggestion',
+      description:
+        'We are reviewing evaluations with poor results, to identify why the prompt failed, and propose suitable modifications.',
+      content: (
+        <Step3
+          project={project}
+          commit={commit}
+          document={document}
+          refine={refine}
+        />
+      ),
+      footer: (
+        <Button variant='outline' fancy onClick={close}>
+          Close
+        </Button>
+      ),
+    }
+  } else if (evaluationUuid) {
+    step = {
+      number: 2,
+      title: 'Select relevant results',
+      description:
+        'Select the evaluation results that you think may be relevant to improve the prompt.',
+      content: (
+        <Step2
+          project={project}
+          commit={commit}
+          document={document}
+          evaluationUuid={evaluationUuid}
+          selectedResultUuids={selectedResultUuids}
+          setSelectedResultUuids={setSelectedResultUuids}
+        />
+      ),
+      footer: (
+        <>
+          <Button variant='outline' fancy onClick={reset}>
+            Go back
           </Button>
-        ),
-      }
+          <Button
+            fancy
+            onClick={() => {
+              setResultUuids(selectedResultUuids)
+            }}
+            disabled={!selectedResultUuids.length}
+          >
+            Select results
+          </Button>
+        </>
+      ),
     }
-
-    if (evaluationUuid) {
-      return {
-        number: 2,
-        title: 'Select relevant results',
-        description:
-          'Select the evaluation results that you think may be relevant to improve the prompt.',
-        content: (
-          <Step2
-            project={project}
-            commit={commit}
-            document={document}
-            evaluationUuid={evaluationUuid}
-            selectedResultUuids={selectedResultUuids}
-            setSelectedResultUuids={setSelectedResultUuids}
-          />
-        ),
-        footer: (
-          <>
-            <Button variant='outline' fancy onClick={reset}>
-              Go back
-            </Button>
-            <Button
-              fancy
-              onClick={() => {
-                setResultUuids(selectedResultUuids)
-              }}
-              disabled={!selectedResultUuids.length}
-            >
-              Select results
-            </Button>
-          </>
-        ),
-      }
-    }
-
-    return {
+  } else {
+    step = {
       number: 1,
       title: 'Select evaluation',
       description:
@@ -218,22 +215,7 @@ export function DocumentRefinement({
         </>
       ),
     }
-  }, [
-    project,
-    commit,
-    document,
-    evaluationUuid,
-    resultUuids,
-    setEvaluationUuid,
-    selectedEvaluation,
-    setSelectedEvaluation,
-    setResultUuids,
-    selectedResultUuids,
-    setSelectedResultUuids,
-    refine,
-    reset,
-    close,
-  ])
+  }
 
   if (!refinementEnabled) return null
   if (document.promptlVersion === 0) return null

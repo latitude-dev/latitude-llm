@@ -16,11 +16,10 @@ import { createXai, XaiProvider } from '@ai-sdk/xai'
 import { createDeepSeek, DeepSeekProvider } from '@ai-sdk/deepseek'
 import { createPerplexity, PerplexityProvider } from '@ai-sdk/perplexity'
 import { type Message, MessageRole } from '@latitude-data/compiler'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { Providers } from '../../constants'
 import { Result, TypedResult } from '../../lib/Result'
-import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 
 import { PartialPromptConfig } from '@latitude-data/constants'
 import type { ModelCost } from './estimateCost'

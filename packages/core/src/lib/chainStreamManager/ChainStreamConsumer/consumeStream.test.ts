@@ -1,10 +1,9 @@
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Tool, LanguageModelUsage, TextStreamPart } from 'ai'
 import { describe, expect, it } from 'vitest'
 
 import { LegacyChainEvent, Providers, StreamType } from '../../../constants'
 import { AIReturn } from '../../../services/ai'
-import { ChainError } from '../ChainErrors'
 import { consumeStream } from './consumeStream'
 
 export class AsyncStreamIteable<T> extends ReadableStream<T> {

@@ -44,14 +44,14 @@ In this example:
 
 ## Setup
 
-Prompt references are not enabled by default. Since PropmtL does not know how your prompts are structured, you must provide a `resolveFn` function to define how PromptL should locate and load referenced prompts.
+Prompt references are not enabled by default. Since PropmtL does not know how your prompts are structured, you must provide a `referenceFn` function to define how PromptL should locate and load referenced prompts.
 
-You can structure your prompts in any way you like, as long as your `resolveFn` can find and load them. Some examples include:
+You can structure your prompts in any way you like, as long as your `referenceFn` can find and load them. Some examples include:
 - Storing prompts in a file system.
 - Using a database to store prompts.
 - Fetching prompts from an API.
 
-### Basic `resolveFn`
+### Basic `referenceFn`
 Create a function that retrieves a prompt based on its path:
 ```javascript
 import fs from 'fs';
@@ -73,20 +73,20 @@ function getPrompt(relativePath, currentPath) {
 }
 ```
 
-### Using the `resolveFn`
-Pass your `resolveFn` to the `render` function:
+### Using the `referenceFn`
+Pass your `referenceFn` to the `render` function:
 ```javascript
 import { render } from 'promptl-ai';
 import getPrompt from './getPrompt'; // Import your custom resolve function
 
 const { messages, config } = await render({
   prompt: mainPrompt, // Your main PromptL prompt as a string
-  resolveFn: getPrompt, // Provide the resolve function
+  referenceFn: getPrompt, // Provide the resolve function
 });
 ```
 
 <Tip>
-  **Tip**: Prompts can be stored in files, a database, or any structured format. Adapt `resolveFn` to fit your storage solution.
+  **Tip**: Prompts can be stored in files, a database, or any structured format. Adapt `referenceFn` to fit your storage solution.
 </Tip>
 
 ---
@@ -155,9 +155,9 @@ If your prompt references aren’t working as expected:
 1. **Check File Paths**:
    - Ensure `path` in the `<prompt>` tag matches the actual file structure.
 2. **Log Resolved Prompts**:
-   - Add a `console.log()` in `resolveFn` to verify the correct prompt is being loaded.
+   - Add a `console.log()` in `referenceFn` to verify the correct prompt is being loaded.
 3. **Handle Missing Prompts**:
-   - Add error handling in `resolveFn` to handle missing or unreadable prompts gracefully:
+   - Add error handling in `referenceFn` to handle missing or unreadable prompts gracefully:
    ```javascript
    function getPrompt(path) {
      try {

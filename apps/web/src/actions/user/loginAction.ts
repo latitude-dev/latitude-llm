@@ -8,7 +8,7 @@ import { z } from 'zod'
 
 import { errorHandlingProcedure } from '../procedures'
 import { env } from '@latitude-data/env'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { setSession } from '$/services/auth/setSession'
 
 export const loginAction = errorHandlingProcedure
@@ -31,7 +31,10 @@ export const loginAction = errorHandlingProcedure
       )
       await setSession({
         sessionData: {
-          user,
+          user: {
+            id: user.id,
+            email: user.email,
+          },
           workspace,
         },
       })

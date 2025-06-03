@@ -13,8 +13,7 @@ import {
 import * as runDoc from '../../../../services/commits/runDocumentAtCommit'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 import type { RunDocumentAtCommitWithAutoToolResponsesFn } from './index'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { ChainError } from '../../../../lib/chainStreamManager/ChainErrors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { NotFoundError } from './../../../../lib/errors'
 import { Result } from './../../../../lib/Result'
 

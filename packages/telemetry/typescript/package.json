@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Latitude Telemetry for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
-  "license": "LGPL-3.0",
+  "license": "MIT",
   "keywords": [
     "AI",
     "Telemetry",
@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/core": "^1.30.1",
     "@opentelemetry/resources": "^1.30.1",
     "@opentelemetry/instrumentation": "^0.57.2",
     "@opentelemetry/sdk-trace-node": "^1.30.1",
@@ -59,7 +60,8 @@
     "@traceloop/instrumentation-openai": "^0.13.0",
     "@traceloop/instrumentation-together": "^0.13.0",
     "@traceloop/instrumentation-vertexai": "^0.13.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
     "@latitude-data/constants": "workspace:*",
@@ -84,7 +86,10 @@
     "langchain": "^0.3.27",
     "llamaindex": "^0.8.37",
     "openai": "^4.102.0",
-    "together-ai": "^0.16.0"
+    "together-ai": "^0.16.0",
+    "promptl-ai": "^0.6.2",
+    "@types/uuid": "^10.0.0",
+    "msw": "^2.3.5"
   },
   "peerDependencies": {
     "typescript": "^5.5.4"

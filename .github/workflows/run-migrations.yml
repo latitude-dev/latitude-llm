@@ -42,7 +42,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 9
 
       - name: Get pnpm store directory
         shell: bash
@@ -58,8 +58,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        working-directory: packages/core
-        run: pnpm install
+        run: pnpm install --filter='./packages/core'
 
       - name: Setup SSH configuration
         working-directory: packages/core

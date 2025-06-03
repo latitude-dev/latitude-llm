@@ -76,7 +76,6 @@ export async function streamAIResponse({
   if (cachedResponse) {
     const providerLog = await saveOrPublishProviderLogs({
       workspace,
-      streamType: cachedResponse.streamType,
       finishReason: cachedResponse.finishReason ?? 'stop',
       data: buildProviderLogDto({
         workspace,
@@ -133,7 +132,6 @@ export async function streamAIResponse({
 
   const providerLog = await saveOrPublishProviderLogs({
     workspace,
-    streamType: aiResult.type,
     finishReason,
     data: buildProviderLogDto({
       workspace,

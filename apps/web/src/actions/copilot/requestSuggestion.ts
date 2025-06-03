@@ -6,7 +6,7 @@ import {
   PROVIDER_MODELS,
 } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { BadRequestError } from '@latitude-data/constants/errors'
 import {
   DocumentVersionsRepository,
   ProviderApiKeysRepository,

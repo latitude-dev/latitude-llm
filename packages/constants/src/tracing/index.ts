@@ -53,6 +53,8 @@ export const ATTR_GEN_AI_TOOL_RESULT_IS_ERROR = 'gen_ai.tool.result.is_error'
 
 export const ATTR_GEN_AI_REQUEST = 'gen_ai.request'
 export const ATTR_GEN_AI_REQUEST_CONFIGURATION = 'gen_ai.request.configuration'
+export const ATTR_GEN_AI_REQUEST_TEMPLATE = 'gen_ai.request.template'
+export const ATTR_GEN_AI_REQUEST_PARAMETERS = 'gen_ai.request.parameters'
 export const ATTR_GEN_AI_REQUEST_MESSAGES = 'gen_ai.request.messages'
 export const ATTR_GEN_AI_RESPONSE = 'gen_ai.response'
 export const ATTR_GEN_AI_RESPONSE_MESSAGES = 'gen_ai.response.messages'

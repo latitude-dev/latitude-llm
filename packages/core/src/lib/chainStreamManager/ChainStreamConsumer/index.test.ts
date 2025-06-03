@@ -1,5 +1,6 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
 import {
+  ChainError,
   LatitudeErrorCodes,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
@@ -14,7 +15,6 @@ import {
   StreamType,
 } from '../../../constants'
 import * as factories from '../../../tests/factories'
-import { ChainError } from '../ChainErrors'
 import { ValidatedChainStep } from '../../../services/chains/ChainValidator'
 
 describe('ChainStreamConsumer', () => {

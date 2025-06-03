@@ -1,7 +1,7 @@
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   Commit,
   Dataset,
@@ -12,7 +12,6 @@ import {
 } from '../../../browser'
 import { EvaluationV2, Providers } from '../../../constants'
 import { Result } from '../../../lib/Result'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import * as evaluationsV2 from '../../../services/evaluationsV2/run'
 import { completeExperiment } from '../../../services/experiments/complete'

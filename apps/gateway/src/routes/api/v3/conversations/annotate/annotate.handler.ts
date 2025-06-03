@@ -12,7 +12,7 @@ import {
   findLastProviderLogFromDocumentLogUuid,
   findProjectFromDocument,
 } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import { serializeEvaluationResultV2 } from './serializeEvaluationResultV2'
 

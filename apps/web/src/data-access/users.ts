@@ -1,10 +1,9 @@
 import { database } from '@latitude-data/core/client'
 import {
-  SessionData,
   unsafelyFindWorkspacesFromUser,
   unsafelyGetUser,
 } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import { PromisedResult } from '@latitude-data/core/lib/Transaction'
 import { users } from '@latitude-data/core/schema'
@@ -13,6 +12,8 @@ import { eq } from 'drizzle-orm'
 import {
   SubscriptionPlan,
   SubscriptionPlans,
+  User,
+  Workspace,
 } from '@latitude-data/core/browser'
 
 function notFoundWithEmail(email: string | undefined | null) {
@@ -23,26 +24,19 @@ function notFoundWithId(id: string | undefined | null) {
   return Result.error(new NotFoundError(`Not found user with ID: ${id}`))
 }
 
+type ReturnType = {
+  user: User
+  workspace: Workspace
+}
+
 export async function getUserFromCredentials({
   email,
 }: {
   email: string
-}): PromisedResult<SessionData, NotFoundError> {
-  // TODO: move to core
+}): PromisedResult<ReturnType, NotFoundError> {
   const user = await database.query.users.findFirst({
-    columns: {
-      id: true,
-      name: true,
-      email: true,
-    },
-    // NOTE: Typescript gets a little bit confused here. Not really a big deal.
-    // Please make sure to keep this comment here when you are done trying and
-    // failing to fix this.
-    //
-    // @ts-ignore
     where: eq(users.email, email),
   })
-
   if (!user) return notFoundWithEmail(email)
 
   const wpResult = await getFirstWorkspace({ userId: user.id })
@@ -62,7 +56,7 @@ export async function getCurrentUserFromDB({
   userId,
 }: {
   userId: string | undefined
-}): PromisedResult<SessionData, Error> {
+}): PromisedResult<ReturnType, Error> {
   try {
     const user = await unsafelyGetUser(userId)
     if (!user) return notFoundWithId(userId)

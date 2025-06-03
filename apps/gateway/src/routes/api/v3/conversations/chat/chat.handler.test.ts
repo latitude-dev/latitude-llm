@@ -1,5 +1,5 @@
 import { MessageRole } from '@latitude-data/compiler'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   LegacyChainEventTypes,
   ChainStepResponse,
@@ -10,9 +10,8 @@ import {
 } from '@latitude-data/core/browser'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import { createProject } from '@latitude-data/core/factories'
-import { LatitudeError } from '@latitude-data/core/lib/errors'
+import { LatitudeError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
-import { ChainError } from '@latitude-data/core/lib/chainStreamManager/ChainErrors/index'
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { testConsumeStream } from 'test/helpers'

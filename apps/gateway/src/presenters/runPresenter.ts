@@ -1,4 +1,4 @@
-import { LatitudeError } from '@latitude-data/core/lib/errors'
+import { LatitudeError } from '@latitude-data/constants/errors'
 import { Result, TypedResult } from '@latitude-data/core/lib/Result'
 import { captureException } from '$/common/sentry'
 import {

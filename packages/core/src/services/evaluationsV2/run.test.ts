@@ -1,5 +1,5 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
   Commit,
@@ -20,7 +20,6 @@ import {
 } from '../../browser'
 import { publisher } from '../../events/publisher'
 import * as helpers from '../../helpers'
-import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
 import serializeProviderLog from '../providerLogs/serialize'

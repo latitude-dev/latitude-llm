@@ -7,7 +7,7 @@ import {
   LatitudeError,
   RateLimitError,
   UnauthorizedError,
-} from '@latitude-data/core/lib/errors'
+} from '@latitude-data/constants/errors'
 import {
   CommitsRepository,
   DocumentVersionsRepository,

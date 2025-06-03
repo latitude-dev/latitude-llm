@@ -4,7 +4,7 @@ import { verifyWebhookSignature } from '@latitude-data/core/services/documentTri
 import { extractEmailSender } from '@latitude-data/core/services/documentTriggers/helpers/extractEmailSender'
 import { EmailWebhookRoute } from './webhook.route'
 import { env } from '@latitude-data/env'
-import { UnauthorizedError } from '@latitude-data/core/lib/errors'
+import { UnauthorizedError } from '@latitude-data/constants/errors'
 import { EmailWebhookBodySchema } from './bodySchema'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi

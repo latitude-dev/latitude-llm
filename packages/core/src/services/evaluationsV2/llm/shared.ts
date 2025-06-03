@@ -4,7 +4,7 @@ import {
   StreamType,
 } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -20,7 +20,6 @@ import {
   Workspace,
 } from '../../../browser'
 import { database, Database } from '../../../client'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { Result } from '../../../lib/Result'
 import { ProviderLogsRepository } from '../../../repositories'
 import { runAgent } from '../../agents/run'
@@ -163,7 +162,7 @@ export async function runPrompt<
   db: Database = database,
 ) {
   const { promptChain, promptConfig, runFunction, runArgs } =
-    await buildLlmEvaluationRunFunction<M>({
+    await buildLlmEvaluationRunFunction({
       workspace,
       providers,
       evaluation,

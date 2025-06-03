@@ -49,7 +49,7 @@ export function EvaluationResultsTableActions<
             onClick={() =>
               setPlaygroundAction({
                 evaluationUuid: evaluation.uuid,
-                resultUuids: selectableState.getSelectedRowIds().map(String),
+                resultUuids: selectableState.selectedRowIds as string[],
               })
             }
             disabled={isDisabled}

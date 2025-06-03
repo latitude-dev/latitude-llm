@@ -8,23 +8,26 @@ import createApp from '$/openApi/createApp'
 import configureOpenAPI from '$/openApi/configureOpenAPI'
 import { configureApiRoutes } from './api'
 import { configureWebhookRoutes } from './webhook'
+import { memoryUsageMiddleware } from '$/middlewares/memoryLogger'
+import { tracerMiddleware } from '$/middlewares/tracer'
 
 const app = createApp()
-
-if (process.env.NODE_ENV !== 'test') {
-  app.use(logger())
-}
 
 app.get('/health', (c) => {
   return c.json({ status: 'ok' })
 })
 
+if (process.env.NODE_ENV !== 'test') {
+  app.use(logger())
+  app.use(memoryUsageMiddleware())
+}
+
+app.use(tracerMiddleware())
+
 configureOpenAPI(app)
-
-app.use(rateLimitMiddleware())
-
 configureWebhookRoutes(app)
 
+app.use(rateLimitMiddleware())
 app.use(authMiddleware())
 
 configureApiRoutes(app)

@@ -5,7 +5,7 @@ import {
   NotFoundError,
   RateLimitError,
   UnauthorizedError,
-} from '@latitude-data/core/lib/errors'
+} from '@latitude-data/constants/errors'
 import { createMiddleware } from 'hono/factory'
 import { ReplyError } from 'ioredis'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
@@ -41,7 +41,7 @@ async function getTokenRateLimit(token: string): Promise<{
 
   const planConfig = SubscriptionPlans[workspace.currentSubscription.plan]
   // NOTE: Temporary
-  const rateLimit = workspace.id === 13605 ? 20 : planConfig.rate_limit
+  const rateLimit = workspace.id === 13605 ? 60 : planConfig.rate_limit
 
   setToTokenCache(token, { workspaceId, rateLimit })
 

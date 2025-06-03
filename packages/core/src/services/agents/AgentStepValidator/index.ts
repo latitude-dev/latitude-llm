@@ -5,12 +5,11 @@ import {
   Message,
   MessageRole,
 } from '@latitude-data/compiler'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
 import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../chains/checkFreeProviderQuota'
 import { CachedApiKeys } from '../../chains/run'
 import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'

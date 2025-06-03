@@ -1,25 +1,25 @@
 // TODO: Right now it takes a lot of work to add a simple new route to this file
 // We should refactor this to make it easier to add new routes
 
+import { RouteResolver } from '$sdk/utils'
+import { LatitudeApiError } from '$sdk/utils/errors'
 import type { Config, Message, ToolCall } from '@latitude-data/compiler'
+import {
+  ChainCallResponseDto,
+  LegacyChainEvent as ChainEvent,
+  ChainEventDto,
+  LegacyChainEventTypes as ChainEventTypes,
+  ChatSyncAPIResponse,
+  ParameterType,
+  Providers,
+  RunSyncAPIResponse,
+  StreamEventTypes,
+} from '@latitude-data/constants'
 import {
   AdapterMessageType,
   ProviderAdapter,
   type Message as PromptlMessage,
 } from 'promptl-ai'
-import { RouteResolver } from '$sdk/utils'
-import { LatitudeApiError } from '$sdk/utils/errors'
-import {
-  ChatSyncAPIResponse,
-  RunSyncAPIResponse,
-  LegacyChainEvent as ChainEvent,
-  LegacyChainEventTypes as ChainEventTypes,
-  ChainEventDto,
-  StreamEventTypes,
-  ChainCallResponseDto,
-  Providers,
-  ParameterType,
-} from '@latitude-data/constants'
 
 export type GetAllDocumentsParams = {
   projectId: number
@@ -140,6 +140,13 @@ export type StreamResponseCallbacks = {
   onError?: (error: LatitudeApiError) => void
 }
 
+export interface TraceInstrumentation {
+  withTraceContext<F extends () => ReturnType<F>>(
+    carrier: Record<string, unknown>,
+    fn: F,
+  ): ReturnType<F>
+}
+
 export enum LogSources {
   API = 'api',
   Playground = 'playground',
@@ -155,7 +162,7 @@ export type ToolCallDetails = {
   pauseExecution: () => void
 }
 
-type RenderToolCallDetails = {
+export type RenderToolCallDetails = {
   toolId: string
   toolName: string
   requestedToolCalls: ToolCall[]
@@ -169,6 +176,13 @@ export type ToolHandler<T extends ToolSpec, K extends keyof T> = (
 ) => Promise<unknown>
 export type ToolCalledFn<Tools extends ToolSpec> = {
   [K in keyof Tools]: ToolHandler<Tools, K>
+}
+
+export interface ToolInstrumentation extends TraceInstrumentation {
+  wrapToolHandler<F extends ToolHandler<any, any>>(
+    fn: F,
+    ...args: Parameters<F>
+  ): Promise<Awaited<ReturnType<F>>>
 }
 
 export type RenderToolHandler<T extends ToolSpec, K extends keyof T> = (
@@ -265,9 +279,11 @@ export type EvalPromptOptions = {
 }
 
 export type Prompt = {
+  versionUuid: string
   uuid: string
   path: string
   content: string
+  contentHash?: string
   config: Config
   parameters: Record<string, { type: ParameterType }>
   provider?: Providers

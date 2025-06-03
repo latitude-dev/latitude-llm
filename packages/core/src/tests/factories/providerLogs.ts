@@ -20,6 +20,7 @@ export type IProviderLogData = {
   responseText?: string
   messages?: Message[]
   toolCalls?: ToolCall[]
+  apiKeyId?: number
 }
 
 export async function createProviderLog(
@@ -47,6 +48,7 @@ export async function createProviderLog(
     source: data.source ?? LogSources.Playground,
     costInMillicents:
       data.costInMillicents ?? faker.number.int({ min: 100, max: 5000 }),
+    apiKeyId: data.apiKeyId,
   }).then((r) => r.unwrap())
 
   return providerLog

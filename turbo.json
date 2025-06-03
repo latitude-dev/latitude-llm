@@ -15,6 +15,7 @@
     "GATEWAY_HOSTNAME",
     "GATEWAY_PORT",
     "GATEWAY_SSL",
+    "GATEWAY_BASE_URL",
     "DRIVE_DISK",
     "FILES_STORAGE_PATH",
     "PUBLIC_FILES_STORAGE_PATH",
@@ -50,15 +51,26 @@
     "DD_TRACING_ENABLED",
     "FILE_STORAGE_ROOT_PATH",
     "EMAIL_TRIGGER_DOMAIN",
-    "ENABLE_ALL_FLAGS"
+    "ENABLE_ALL_FLAGS",
+    "DD_APM_ENABLED"
   ],
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": [
+    "**/.env.*local"
+  ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**"
+      ],
       "env": [
         "SENTRY_DSN",
         "SENTRY_ORG",
@@ -72,10 +84,14 @@
       ]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": [
+        "^lint"
+      ]
     },
     "tc": {
-      "dependsOn": ["^tc"]
+      "dependsOn": [
+        "^tc"
+      ]
     },
     "test": {},
     "dev": {

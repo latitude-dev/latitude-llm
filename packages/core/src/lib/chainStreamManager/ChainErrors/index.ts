@@ -1,46 +1,8 @@
-import { RunErrorCodes, RunErrorDetails } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { ErrorableEntity, RunError } from '../../../browser'
-import { LatitudeErrorDetails, UnprocessableEntityError } from '../../errors'
 import { createRunError } from '../../../services/runErrors/create'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'
-
-export class ChainError<
-  T extends RunErrorCodes,
-> extends UnprocessableEntityError {
-  errorCode: T
-  details: LatitudeErrorDetails
-  runError?: RunError
-
-  constructor({
-    message,
-    code,
-    details,
-    stack,
-  }: {
-    message: string
-    code: T
-    details?: RunErrorDetails<T>
-    stack?: string
-  }) {
-    const detailsWithCode = details
-      ? { ...details, errorCode: code }
-      : { errorCode: code }
-    super(message, detailsWithCode)
-
-    this.errorCode = code
-    this.details = detailsWithCode
-    this.stack = stack
-  }
-
-  get dbError(): RunError | undefined {
-    return this.runError
-  }
-
-  set dbError(error: RunError) {
-    this.runError = error
-  }
-}
 
 export async function createChainRunError({
   error,
@@ -55,9 +17,12 @@ export async function createChainRunError({
 }) {
   if (!persistErrors || !errorableType) return error
 
-  let chainError: ChainError<RunErrorCodes> = error as ChainError<RunErrorCodes>
+  let chainError: ChainError<RunErrorCodes, RunError> = error as ChainError<
+    RunErrorCodes,
+    RunError
+  >
   if (!(error instanceof ChainError)) {
-    chainError = new ChainError<RunErrorCodes.Unknown>({
+    chainError = new ChainError<RunErrorCodes.Unknown, RunError>({
       ...error,
       message: error.message,
       stack: error.stack,

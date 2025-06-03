@@ -66,6 +66,8 @@ if (environment === 'development' || environment === 'test') {
       COPILOT_EVALUATION_GENERATOR_PROMPT_PATH: 'evaluation-v2-generator',
       COPILOT_GENERATE_TOOL_RESPONSES_PATH: 'tool-responses-generator',
       DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
+      READ_DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
+      READ_2_DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
       DRIVE_DISK: 'local',
       FILES_STORAGE_PATH,
       PUBLIC_FILES_STORAGE_PATH,
@@ -120,6 +122,8 @@ export const env = createEnv({
 
     // Postgres
     DATABASE_URL: z.string().url(),
+    READ_DATABASE_URL: z.string().url(),
+    READ_2_DATABASE_URL: z.string().url(),
 
     // Default settings when creating a new workspace
     DEFAULT_PROJECT_ID: z.coerce.number().optional(),
@@ -197,6 +201,7 @@ export const env = createEnv({
     COPILOT_PROJECT_ID: z.coerce.number().optional(),
     COPILOT_REFINE_PROMPT_PATH: z.string().optional(),
     COPILOT_WORKSPACE_API_KEY: z.string().optional(),
+    COPILOT_LATTE_PROMPT_PATH: z.string().optional(),
 
     LOOPS_API_KEY: z.string().optional(),
     CODESANDBOX_API_KEY: z.string().optional(),

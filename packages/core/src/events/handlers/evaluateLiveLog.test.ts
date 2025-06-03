@@ -3,6 +3,7 @@ import { evaluateLiveLogJob } from './evaluateLiveLog'
 import { DocumentLogsRepository } from '../../repositories'
 import { DocumentLogCreatedEvent } from '../events'
 import * as dataAccess from '../../data-access'
+import { NotFoundError } from '@latitude-data/constants/errors'
 
 const findWorkspaceFromDocumentLog = vi.spyOn(
   dataAccess,
@@ -16,8 +17,12 @@ vi.mock('../../repositories', () => ({
 }))
 
 describe('evaluateLiveLogJob', () => {
-  it('should early return if document log is not found', async () => {
-    const mockFind = vi.fn().mockResolvedValue({ value: null })
+  it('should throw NotFoundError if document log is not found', async () => {
+    const mockFind = vi.fn().mockResolvedValue({
+      unwrap: () => {
+        throw new NotFoundError('miau')
+      },
+    })
     // @ts-ignore
     vi.mocked(DocumentLogsRepository).mockImplementation(() => ({
       find: mockFind,
@@ -31,7 +36,7 @@ describe('evaluateLiveLogJob', () => {
       },
     }
 
-    await evaluateLiveLogJob({ data: event })
+    expect(await evaluateLiveLogJob({ data: event })).toThrow()
 
     expect(mockFind).toHaveBeenCalledWith(1)
     expect(mockFind).toHaveBeenCalledTimes(1)

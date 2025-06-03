@@ -97,8 +97,8 @@ export function Step2({
   })
 
   useEffect(() => {
-    setSelectedResultUuids(selectableState.getSelectedRowIds().map(String))
-  }, [selectableState.getSelectedRowIds])
+    setSelectedResultUuids(selectableState.selectedRowIds.map(String))
+  }, [selectableState.selectedRowIds])
 
   const isLoading = isEvaluationsLoading || isResultsLoading || isCommitsLoading
 
@@ -146,12 +146,7 @@ export function Step2({
       >
         <TableHeader className='sticky top-0 z-10'>
           <TableRow>
-            <TableHead>
-              <Checkbox
-                checked={selectableState.headerState}
-                onCheckedChange={selectableState.toggleAll}
-              />
-            </TableHead>
+            <TableHead />
             <TableHead>Time</TableHead>
             <TableHead>Version</TableHead>
             <TableHead>Result</TableHead>

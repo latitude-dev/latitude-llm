@@ -46,14 +46,14 @@ export function useSaveLogsAsDatasetModal({
 
   const onClickShowPreview = useCallback(() => {
     state.onOpen()
-    setSelectedLogsIds(selectableState.getSelectedRowIds())
+    setSelectedLogsIds(selectableState.selectedRowIds)
     setSelectedCount(selectableState.selectedCount)
     fetchPreview()
   }, [
     fetchPreview,
     setSelectedLogsIds,
     state.onOpen,
-    selectableState.getSelectedRowIds,
+    selectableState.selectedRowIds,
   ])
 
   const {

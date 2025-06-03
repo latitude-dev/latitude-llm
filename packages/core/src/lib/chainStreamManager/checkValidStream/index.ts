@@ -1,6 +1,5 @@
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
-import { ChainError } from '../ChainErrors'
 import { Result } from '../../Result'
 
 export function checkValidStream({ type }: { type: 'text' | 'object' }) {

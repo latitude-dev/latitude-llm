@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Workspace } from '../../../browser'
 import { LogSources, Providers } from '../../../constants'
-import { publisher } from '../../../events/publisher'
 import * as createProviderLogService from '../../providerLogs/create'
 import {
   buildProviderLogDto,
@@ -12,7 +11,6 @@ import {
 import { defaultQueue } from '../../../jobs/queues'
 import { generateUUIDIdentifier } from './../../../lib/generateUUID'
 
-const publisherSpy = vi.spyOn(publisher, 'publishLater')
 const createProviderLogSpy = vi.spyOn(
   createProviderLogService,
   'createProviderLog',
@@ -74,26 +72,14 @@ describe('saveOrPublishProviderLogs', () => {
     await saveOrPublishProviderLogs({
       workspace,
       data,
-      streamType: 'text',
       saveSyncProviderLogs: true,
       finishReason: 'stop',
-    })
-
-    expect(publisherSpy).toHaveBeenCalledWith({
-      type: 'aiProviderCallCompleted',
-      data: {
-        ...data,
-        streamType: 'text',
-        finishReason: 'stop',
-        chainCompleted: false,
-      },
     })
   })
 
   it('calls createProviderLog', async () => {
     await saveOrPublishProviderLogs({
       data,
-      streamType: 'text',
       workspace,
       saveSyncProviderLogs: true,
       finishReason: 'stop',
@@ -109,7 +95,6 @@ describe('saveOrPublishProviderLogs', () => {
   it('enqueues providerLog creation', async () => {
     await saveOrPublishProviderLogs({
       data,
-      streamType: 'text',
       saveSyncProviderLogs: false,
       finishReason: 'stop',
       workspace,

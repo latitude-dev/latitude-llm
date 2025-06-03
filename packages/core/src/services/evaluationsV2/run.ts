@@ -1,4 +1,8 @@
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import {
+  ChainError,
+  NotFoundError,
+  RunErrorCodes,
+} from '@latitude-data/constants/errors'
 import {
   buildConversation,
   Commit,
@@ -16,7 +20,6 @@ import {
 } from '../../browser'
 import { database, Database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
@@ -218,6 +221,7 @@ export async function runEvaluationV2<
 
 export function isErrorRetryable(error: Error) {
   return (
-    error instanceof ChainError && error.errorCode === RunErrorCodes.RateLimit
+    error instanceof NotFoundError ||
+    (error instanceof ChainError && error.errorCode === RunErrorCodes.RateLimit)
   )
 }

@@ -1,6 +1,6 @@
 import { LogSources, Workspace } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import { LatitudeApiKeysRepository } from '@latitude-data/core/repositories'
 import { env } from '@latitude-data/env'

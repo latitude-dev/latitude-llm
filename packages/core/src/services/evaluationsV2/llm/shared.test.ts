@@ -1,5 +1,5 @@
 import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   EvaluationType,
@@ -12,7 +12,6 @@ import {
   Providers,
   Workspace,
 } from '../../../browser'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import * as factories from '../../../tests/factories'
 import * as agents from '../../agents/run'

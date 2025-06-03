@@ -7,8 +7,7 @@ import {
 import { CachedApiKeys, stepLimitExceededErrorMessage } from '../../chains/run'
 import { Message } from '@latitude-data/compiler'
 import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import {
   ABSOLUTE_MAX_STEPS,
