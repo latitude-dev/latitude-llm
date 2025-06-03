@@ -14,13 +14,6 @@ const eventsJobMappings = {
 const eventHandlersJobMappings = {
   createClaimInvitationReferralJob: jobs.createClaimInvitationReferralJob,
   createLoopsContact: jobs.createLoopsContact,
-  notifyToClientDocumentLogCreatedJob: jobs.notifyToClientDocumentLogCreatedJob,
-  notifyClientOfDocumentSuggestionCreated:
-    jobs.notifyClientOfDocumentSuggestionCreated,
-  notifyClientOfEvaluationResultV2Created:
-    jobs.notifyClientOfEvaluationResultV2Created,
-  notifyClientOfScaleUpMcpServer: jobs.notifyClientOfScaleUpMcpServer,
-  notifyClientOfMcpServerConnected: jobs.notifyClientOfMcpServerConnected,
   sendInvitationToUserJob: jobs.sendInvitationToUserJob,
   sendMagicLinkJob: jobs.sendMagicLinkJob,
   sendReferralInvitationJob: jobs.sendReferralInvitationJob,
@@ -33,18 +26,25 @@ const eventHandlersJobMappings = {
   touchProviderApiKeyJob: jobs.touchProviderApiKeyJob,
   touchApiKeyJob: jobs.touchApiKeyJob,
   notifyClientOfExportReady: jobs.notifyClientOfExportReady,
+  notifyToClientDocumentLogCreatedJob: jobs.notifyToClientDocumentLogCreatedJob,
+  notifyClientOfDocumentSuggestionCreated:
+    jobs.notifyClientOfDocumentSuggestionCreated,
+  notifyClientOfEvaluationResultV2Created:
+    jobs.notifyClientOfEvaluationResultV2Created,
+  notifyClientOfScaleUpMcpServer: jobs.notifyClientOfScaleUpMcpServer,
+  notifyClientOfMcpServerConnected: jobs.notifyClientOfMcpServerConnected,
 }
 
 export function startEventsWorker() {
   return createWorker(Queues.eventsQueue, eventsJobMappings, {
-    concurrency: 100,
+    concurrency: 25,
     connection: WORKER_CONNECTION_CONFIG,
   })
 }
 
 export function startEventHandlersWorker() {
   return createWorker(Queues.eventHandlersQueue, eventHandlersJobMappings, {
-    concurrency: 100,
+    concurrency: 25,
     connection: WORKER_CONNECTION_CONFIG,
   })
 }
