@@ -75,7 +75,7 @@ export function useDownloadLogsModal({
   const showModal = useCallback(() => {
     state.onOpen()
     fetchPreview()
-  }, [fetchPreview, state.onOpen, selectableState.getSelectedRowIds])
+  }, [fetchPreview, state.onOpen])
 
   const handleImmediateDownload = useCallback(async () => {
     const body = {
@@ -105,14 +105,7 @@ export function useDownloadLogsModal({
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-  }, [
-    selectableState.getSelectedRowIds,
-    latitudeDocument.path,
-    navigate,
-    toast,
-    staticColumns,
-    parameterColumns,
-  ])
+  }, [latitudeDocument.path, navigate, toast, staticColumns, parameterColumns])
 
   const handleDownload = useCallback(async () => {
     setIsDownloading(true)
