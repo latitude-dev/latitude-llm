@@ -60,7 +60,7 @@ async function getDataset(workspace: Workspace, name?: string) {
 }
 
 /**
- * This service is responsible of obtaining a preview of the dataset that would be generated
+ * This service is responsible for obtaining a preview of the dataset that would be generated
  * including the logs provided. The dataset rows are limited to the first 5 and the logs are
  * chosen keeping only the ones with different parameters (limited to PREVIEW_LOGS_LIMIT)
  */
