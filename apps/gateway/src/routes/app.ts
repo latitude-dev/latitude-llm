@@ -13,6 +13,10 @@ import { tracerMiddleware } from '$/middlewares/tracer'
 
 const app = createApp()
 
+app.get('/health', (c) => {
+  return c.json({ status: 'ok' })
+})
+
 if (process.env.NODE_ENV !== 'test') {
   app.use(logger())
   app.use(memoryUsageMiddleware())
@@ -20,12 +24,7 @@ if (process.env.NODE_ENV !== 'test') {
 
 app.use(tracerMiddleware())
 
-app.get('/health', (c) => {
-  return c.json({ status: 'ok' })
-})
-
 configureOpenAPI(app)
-
 configureWebhookRoutes(app)
 
 app.use(rateLimitMiddleware())
