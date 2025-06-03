@@ -20,7 +20,6 @@ import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
 import { updateWebhookLastTriggeredAt } from './webhooks'
 
 export const EventHandlers: IEventsHandlers = {
-  aiProviderCallCompleted: [],
   claimReferralInvitations: [createClaimInvitationReferralJob],
   commitCreated: [],
   commitPublished: [],
