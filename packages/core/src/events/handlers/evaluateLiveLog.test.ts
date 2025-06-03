@@ -20,7 +20,7 @@ describe('evaluateLiveLogJob', () => {
   it('should throw NotFoundError if document log is not found', async () => {
     const mockFind = vi.fn().mockResolvedValue({
       unwrap: () => {
-        throw new NotFoundError('miau')
+        throw new NotFoundError('test')
       },
     })
     // @ts-ignore
@@ -36,7 +36,9 @@ describe('evaluateLiveLogJob', () => {
       },
     }
 
-    expect(await evaluateLiveLogJob({ data: event })).toThrow()
+    await expect(evaluateLiveLogJob({ data: event })).rejects.toThrow(
+      NotFoundError,
+    )
 
     expect(mockFind).toHaveBeenCalledWith(1)
     expect(mockFind).toHaveBeenCalledTimes(1)
