@@ -160,7 +160,7 @@ import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import YepCode from './custom-icons/logos/YepCode'
 import IntercomChat from './custom-icons/logos/IntercomChat'
-import { HTMLAttributes, RefAttributes } from 'react'
+import { HTMLAttributes } from 'react'
 
 const Icons = {
   // hubspot: Hubspot,

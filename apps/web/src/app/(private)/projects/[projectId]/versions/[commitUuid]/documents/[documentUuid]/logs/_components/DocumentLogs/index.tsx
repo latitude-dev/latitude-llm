@@ -115,7 +115,7 @@ export function DocumentLogs({
         ...documentLogFilterOptions,
         documentLogIds:
           selectableState.selectionMode === 'PARTIAL'
-            ? selectableState.getSelectedRowIds()
+            ? selectableState.selectedRowIds
             : undefined,
         excludedDocumentLogIds: Array.from(
           selectableState.excludedIds,

@@ -1,68 +1,58 @@
-import {
-  DocumentLogFilterOptions,
-  LogSources,
-  Providers,
-} from '@latitude-data/core/browser'
-import * as factories from '@latitude-data/core/factories'
-import { defaultQueue } from '@latitude-data/core/queues'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-
 import { createDatasetFromLogsAction } from './createFromLogs'
-
-// Mock dependencies
-const mocks = vi.hoisted(() => {
-  return {
-    getSession: vi.fn(),
-    findOrCreateDataset: vi.fn(),
-    updateDatasetFromLogs: vi.fn(),
-    queueAdd: vi.fn(),
-  }
-})
+import * as factories from '@latitude-data/core/factories'
+import {
+  Providers,
+  LogSources,
+  DocumentLogFilterOptions,
+} from '@latitude-data/core/browser'
+import { defaultQueue } from '@latitude-data/core/queues'
 
 vi.mock('$/services/auth/getSession', () => ({
-  getSession: mocks.getSession,
+  getSession: vi.fn(),
 }))
-
 vi.mock('@latitude-data/core/services/datasets/findOrCreate', () => ({
-  findOrCreateDataset: mocks.findOrCreateDataset,
+  findOrCreateDataset: vi.fn(),
 }))
-
 vi.mock('@latitude-data/core/services/datasets/updateFromLogs', () => ({
-  updateDatasetFromLogs: mocks.updateDatasetFromLogs,
+  updateDatasetFromLogs: vi.fn(),
 }))
-
 vi.mock('@latitude-data/core/queues', () => ({
-  defaultQueue: {
-    add: vi.fn(),
-  },
+  defaultQueue: { add: vi.fn() },
+}))
+vi.mock('@latitude-data/core/events/publisher', () => ({
+  publisher: { publishLater: vi.fn() },
 }))
 
-vi.mock('@latitude-data/core/events/publisher', () => ({
-  publisher: {
-    publishLater: vi.fn(),
-  },
-}))
+const getSession = vi.mocked(
+  (await import('$/services/auth/getSession')).getSession,
+  true,
+)
+const findOrCreateDataset = vi.mocked(
+  (await import('@latitude-data/core/services/datasets/findOrCreate'))
+    .findOrCreateDataset,
+  true,
+)
+const updateDatasetFromLogs = vi.mocked(
+  (await import('@latitude-data/core/services/datasets/updateFromLogs'))
+    .updateDatasetFromLogs,
+  true,
+)
+const queueAdd = vi.mocked(defaultQueue.add, true)
 
 describe('createDatasetFromLogsAction', () => {
   let user: any
   let workspace: any
   let document: any
-  let project: any
-  let commit: any
   let filterOptions: DocumentLogFilterOptions
+  let documentUuid: string
+  let projectId: string | number
+  let commitUuid: string
 
   beforeEach(async () => {
-    // Reset mocks
-    vi.resetAllMocks()
+    vi.clearAllMocks()
 
-    // Create test data
-    const {
-      workspace: ws,
-      user: usr,
-      project: p,
-      commit: c,
-      documents: docs,
-    } = await factories.createProject({
+    const projectData = await factories.createProject({
       providers: [
         {
           type: Providers.OpenAI,
@@ -75,20 +65,20 @@ describe('createDatasetFromLogsAction', () => {
         }),
       },
     })
-    user = usr
-    workspace = ws
-    document = docs[0]
-    project = p
-    commit = c
+    user = projectData.user
+    workspace = projectData.workspace
+    document = projectData.documents[0]
+    documentUuid = document.documentUuid
+    projectId = projectData.project.id
+    commitUuid = projectData.commit.uuid
 
-    // Mock authentication
-    mocks.getSession.mockReturnValue({
-      user,
-      workspace,
-      document,
-    })
+    getSession.mockReturnValue(
+      Promise.resolve({
+        user,
+        session: { workspace, document } as any, // Cast to Session type
+      }),
+    )
 
-    // Default filter options based on the actual schema from constants.ts
     filterOptions = {
       commitIds: [],
       logSources: [LogSources.API],
@@ -97,178 +87,87 @@ describe('createDatasetFromLogsAction', () => {
       experimentId: undefined,
     }
 
-    // Setup successful responses for mocked functions
-    mocks.findOrCreateDataset.mockImplementation(() =>
-      Promise.resolve({
-        unwrap: () => ({ id: 1, name: 'Test Dataset' }),
-      }),
-    )
+    findOrCreateDataset.mockResolvedValue({
+      unwrap: () => ({ id: 1, name: 'Test Dataset' }),
+    } as any)
 
-    mocks.updateDatasetFromLogs.mockImplementation(() =>
-      Promise.resolve({
-        unwrap: () => ({ success: true }),
-      }),
-    )
+    updateDatasetFromLogs.mockResolvedValue({
+      unwrap: () => ({ success: true }),
+    } as any)
   })
 
   describe('unauthorized', () => {
-    it('errors when the user is not authenticated', async () => {
-      // Setup unauthorized session
-      mocks.getSession.mockReturnValue(null)
+    it('returns UnauthorizedError when user is not authenticated', async () => {
+      getSession.mockReturnValue(
+        Promise.resolve({
+          user: null,
+          session: null,
+        }),
+      )
 
-      const [_, error] = await createDatasetFromLogsAction({
-        projectId: project.id,
-        commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
+      const [, error] = await createDatasetFromLogsAction({
         name: 'Test Dataset',
-        selectionMode: 'PARTIAL',
-        selectedDocumentLogIds: [1, 2, 3],
-        excludedDocumentLogIds: [],
-        filterOptions,
+        extendedFilterOptions: filterOptions,
+        count: 3,
+        documentUuid,
+        projectId,
+        commitUuid,
       })
 
-      expect(error!.name).toEqual('UnauthorizedError')
+      expect(error?.name).toBe('UnauthorizedError')
     })
   })
 
   describe('authorized - sync mode', () => {
-    it('processes logs synchronously when in PARTIAL mode with fewer logs than the batch limit', async () => {
-      const selectedDocumentLogIds = [1, 2, 3]
-
+    it('processes logs synchronously when count is below batch size', async () => {
       const [result, error] = await createDatasetFromLogsAction({
-        projectId: project.id,
-        commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
         name: 'Test Dataset',
-        selectionMode: 'PARTIAL',
-        selectedDocumentLogIds,
-        excludedDocumentLogIds: [],
-        filterOptions,
+        extendedFilterOptions: filterOptions,
+        count: 3,
+        documentUuid,
+        projectId,
+        commitUuid,
       })
 
       expect(error).toBeNull()
       expect(result).toEqual({ mode: 'sync', result: { success: true } })
-
-      // Verify findOrCreateDataset was called with correct params
-      expect(mocks.findOrCreateDataset).toHaveBeenCalledWith({
+      expect(findOrCreateDataset).toHaveBeenCalledWith({
         name: 'Test Dataset',
         author: user,
         workspace,
       })
-
-      // Verify updateDatasetFromLogs was called with correct params
-      expect(mocks.updateDatasetFromLogs).toHaveBeenCalledWith({
-        dataset: { id: 1, name: 'Test Dataset' },
+      expect(updateDatasetFromLogs).toHaveBeenCalledWith({
         workspace,
-        documentLogIds: selectedDocumentLogIds,
+        documentUuid: document.documentUuid,
+        dataset: { id: 1, name: 'Test Dataset' },
+        extendedFilterOptions: filterOptions,
       })
-
-      // Verify queue was not used
-      expect(defaultQueue.add).not.toHaveBeenCalled()
+      expect(queueAdd).not.toHaveBeenCalled()
     })
   })
 
   describe('authorized - async mode', () => {
-    it('processes logs asynchronously when in PARTIAL mode with more logs than the batch limit', async () => {
-      // Create an array with more IDs than the batch limit
-      const manyIds = Array.from({ length: 30 }, (_, i) => i + 1)
-
+    it('processes logs asynchronously when count is above batch size', async () => {
       const [result, error] = await createDatasetFromLogsAction({
-        projectId: project.id,
-        commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
         name: 'Test Dataset',
-        selectionMode: 'PARTIAL',
-        selectedDocumentLogIds: manyIds,
-        excludedDocumentLogIds: [],
-        filterOptions,
+        extendedFilterOptions: filterOptions,
+        count: 101,
+        documentUuid,
+        projectId,
+        commitUuid,
       })
 
       expect(error).toBeNull()
       expect(result).toEqual({ mode: 'async' })
-
-      // Verify findOrCreateDataset was not called
-      expect(mocks.findOrCreateDataset).not.toHaveBeenCalled()
-
-      // Verify updateDatasetFromLogs was not called
-      expect(mocks.updateDatasetFromLogs).not.toHaveBeenCalled()
-
-      // Verify queue was used with correct params
-      expect(defaultQueue.add).toHaveBeenCalledWith(
-        'createDatasetFromLogsJob',
-        {
-          name: 'Test Dataset',
-          userId: user.id,
-          workspaceId: workspace.id,
-          documentVersionId: document.id,
-          selectionMode: 'PARTIAL',
-          selectedDocumentLogIds: manyIds,
-          excludedDocumentLogIds: [],
-          filterOptions,
-        },
-      )
-    })
-
-    it('processes logs asynchronously when in ALL mode', async () => {
-      const [result, error] = await createDatasetFromLogsAction({
-        projectId: project.id,
-        commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
+      expect(findOrCreateDataset).not.toHaveBeenCalled()
+      expect(updateDatasetFromLogs).not.toHaveBeenCalled()
+      expect(queueAdd).toHaveBeenCalledWith('createDatasetFromLogsJob', {
         name: 'Test Dataset',
-        selectionMode: 'ALL',
-        selectedDocumentLogIds: [],
-        excludedDocumentLogIds: [],
-        filterOptions,
-      })
-
-      expect(error).toBeNull()
-      expect(result).toEqual({ mode: 'async' })
-
-      // Verify queue was used with correct params
-      expect(defaultQueue.add).toHaveBeenCalledWith(
-        'createDatasetFromLogsJob',
-        {
-          name: 'Test Dataset',
-          userId: user.id,
-          workspaceId: workspace.id,
-          documentVersionId: document.id,
-          selectionMode: 'ALL',
-          selectedDocumentLogIds: [],
-          excludedDocumentLogIds: [],
-          filterOptions,
-        },
-      )
-    })
-
-    it('processes logs asynchronously when in ALL_EXCEPT mode', async () => {
-      const [result, error] = await createDatasetFromLogsAction({
-        projectId: project.id,
-        commitUuid: commit.uuid,
+        author: user,
+        workspace,
         documentUuid: document.documentUuid,
-        name: 'Test Dataset',
-        selectionMode: 'ALL_EXCEPT',
-        selectedDocumentLogIds: [],
-        excludedDocumentLogIds: [1, 2],
-        filterOptions,
+        extendedFilterOptions: filterOptions,
       })
-
-      expect(error).toBeNull()
-      expect(result).toEqual({ mode: 'async' })
-
-      // Verify queue was used with correct params
-      expect(defaultQueue.add).toHaveBeenCalledWith(
-        'createDatasetFromLogsJob',
-        {
-          name: 'Test Dataset',
-          userId: user.id,
-          workspaceId: workspace.id,
-          documentVersionId: document.id,
-          selectionMode: 'ALL_EXCEPT',
-          selectedDocumentLogIds: [],
-          excludedDocumentLogIds: [1, 2],
-          filterOptions,
-        },
-      )
     })
   })
 })
