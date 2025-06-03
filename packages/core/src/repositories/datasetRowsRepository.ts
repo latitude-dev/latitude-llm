@@ -50,16 +50,15 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
 
   findByDatasetPaginated({
     datasetId,
-    page = '1',
-    pageSize = String(DEFAULT_PAGINATION_SIZE),
+    page,
+    pageSize,
   }: {
-    page?: string
-    pageSize?: string
+    page: number
+    pageSize: number
     datasetId: number
   }) {
     const offset = calculateOffset(page, pageSize)
-    const limit = parseInt(pageSize)
-
+    const limit = pageSize
     return this.findByDatasetWithOffsetAndLimit({ datasetId, offset, limit })
   }
 

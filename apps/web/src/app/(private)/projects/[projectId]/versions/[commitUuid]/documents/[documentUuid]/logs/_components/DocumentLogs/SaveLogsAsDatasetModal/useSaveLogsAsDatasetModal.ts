@@ -3,7 +3,10 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { usePreviewLogs } from '$/stores/previewLogs'
-import { Dataset, DocumentLogFilterOptions } from '@latitude-data/core/browser'
+import {
+  Dataset,
+  ExtendedDocumentLogFilterOptions,
+} from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useMemo, useState } from 'react'
 import {
@@ -16,10 +19,10 @@ const DEFAULT_STATIC_COLUMNS = ['output', 'id', 'tokens']
 
 export function useSaveLogsAsDatasetModal({
   selectableState,
-  filterOptions,
+  extendedFilterOptions,
 }: {
   selectableState: SelectableRowsHook
-  filterOptions: DocumentLogFilterOptions
+  extendedFilterOptions: ExtendedDocumentLogFilterOptions
 }) {
   const { toast } = useToast()
   const { project } = useCurrentProject()
@@ -36,8 +39,8 @@ export function useSaveLogsAsDatasetModal({
     fetchPreview,
     isLoading,
   } = usePreviewLogs({
-    dataset: selectedDataset,
-    documentLogIds: selectedLogsIds,
+    documentUuid: document.documentUuid,
+    extendedFilterOptions,
     staticColumnNames: DEFAULT_STATIC_COLUMNS,
   })
 
@@ -101,10 +104,8 @@ export function useSaveLogsAsDatasetModal({
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
         name,
-        selectionMode: selectableState.selectionMode,
-        selectedDocumentLogIds: selectedLogsIds,
-        excludedDocumentLogIds: Array.from(selectableState.excludedIds),
-        filterOptions: filterOptions,
+        extendedFilterOptions,
+        count: selectableState.selectedCount,
       })
     },
     [

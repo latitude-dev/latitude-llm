@@ -1,11 +1,9 @@
 import { Workspace } from '@latitude-data/core/browser'
-import { computeDocumentLogs } from '@latitude-data/core/services/documentLogs/computeDocumentLogs'
-import { computeDocumentLogsWithMetadata } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
+import { computeDocumentLogsWithMetadataPaginated } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
-import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 
 export const GET = errorHandler(
   authHandler(
@@ -22,26 +20,21 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const { projectId, documentUuid } = params
+      const { documentUuid } = params
       const searchParams = req.nextUrl.searchParams
-      const queryParams = parseApiDocumentLogParams({ searchParams })
+      const queryParams = parseApiDocumentLogParams({
+        searchParams,
+      })
       if (queryParams.isEmptyResponse) {
         return NextResponse.json([], { status: 200 })
       }
-      const repo = new DocumentVersionsRepository(workspace.id)
-      const document = await repo
-        .getSomeDocumentByUuid({ projectId: Number(projectId), documentUuid })
-        .then((r) => r.unwrap())
 
-      const buildQueryFn = queryParams.excludeErrors
-        ? computeDocumentLogs
-        : computeDocumentLogsWithMetadata
-
-      const rows = await buildQueryFn({
-        document,
+      const rows = await computeDocumentLogsWithMetadataPaginated({
+        workspace,
+        documentUuid,
         filterOptions: queryParams.filterOptions,
         page: queryParams.page,
-        pageSize: queryParams.pageSize,
+        size: queryParams.size,
       })
 
       return NextResponse.json(rows, { status: 200 })

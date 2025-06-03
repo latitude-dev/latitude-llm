@@ -18,8 +18,8 @@ export default function useDocumentLogsPagination(
     projectId: number
     commitUuid: string
     filterOptions: DocumentLogFilterOptions
-    page: string | null
-    pageSize: string | null
+    page: number
+    pageSize: number
     excludeErrors?: boolean
   },
   opts?: SWRConfiguration,
@@ -30,8 +30,8 @@ export default function useDocumentLogsPagination(
           .detail(projectId)
           .documents.detail(documentUuid)
           .logs.pagination({
-            page: Number(page ?? 1),
-            pageSize: Number(pageSize ?? 10),
+            page,
+            pageSize,
             commitUuid,
             filterOptions,
             excludeErrors,

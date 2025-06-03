@@ -39,7 +39,7 @@ export const ColumnSelector = ({
       <Popover.Content
         side='bottom'
         align='end'
-        size='large'
+        size='medium'
         inPortal={false} // Without this, the popover content cannot be scrolled correctly
         scrollable
         className='gap-y-2'
@@ -51,8 +51,9 @@ export const ColumnSelector = ({
         <div className='flex flex-col mt-2 gap-y-1'>
           {columns.map((column) => (
             <div
+              key={column.name}
               className={cn(
-                'w-full cursor-pointer select-none py-2 flex gap-x-4 items-center transition-opacity pl-3 rounded-md hover:bg-muted',
+                'w-full cursor-pointer select-none py-2 flex gap-x-4 items-center transition-opacity pl-2 rounded-md hover:bg-muted',
                 !isColumnSelected(column) && 'opacity-60',
               )}
               onClick={() => handleSelectColumn(column)}

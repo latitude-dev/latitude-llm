@@ -3,7 +3,7 @@
 import { z } from 'zod'
 
 import { withDocument } from '../procedures'
-import { documentLogFilterOptionsSchema } from '@latitude-data/core/browser'
+import { extendedDocumentLogFilterOptionsSchema } from '@latitude-data/core/browser'
 import { defaultQueue } from '@latitude-data/core/queues'
 import { findOrCreateDataset } from '@latitude-data/core/services/datasets/findOrCreate'
 import { updateDatasetFromLogs } from '@latitude-data/core/services/datasets/updateFromLogs'
@@ -15,17 +15,12 @@ export const createDatasetFromLogsAction = withDocument
   .input(
     z.object({
       name: z.string(),
-      selectionMode: z.enum(['ALL', 'ALL_EXCEPT', 'PARTIAL']),
-      selectedDocumentLogIds: z.array(z.number().or(z.string())),
-      excludedDocumentLogIds: z.array(z.number().or(z.string())),
-      filterOptions: documentLogFilterOptionsSchema,
+      extendedFilterOptions: extendedDocumentLogFilterOptionsSchema,
+      count: z.number(),
     }),
   )
   .handler(async ({ input, ctx }) => {
-    if (
-      input.selectionMode === 'PARTIAL' &&
-      input.selectedDocumentLogIds.length <= MAX_SYNC_LOGS_BATCH_SIZE
-    ) {
+    if (input.count <= MAX_SYNC_LOGS_BATCH_SIZE) {
       const dataset = await findOrCreateDataset({
         name: input.name,
         author: ctx.user,
@@ -33,9 +28,10 @@ export const createDatasetFromLogsAction = withDocument
       }).then((r) => r.unwrap())
 
       const result = await updateDatasetFromLogs({
-        dataset,
         workspace: ctx.workspace,
-        documentLogIds: input.selectedDocumentLogIds as number[],
+        documentUuid: ctx.document.documentUuid,
+        dataset,
+        extendedFilterOptions: input.extendedFilterOptions,
       }).then((r) => r.unwrap())
 
       return {
@@ -46,13 +42,10 @@ export const createDatasetFromLogsAction = withDocument
 
     defaultQueue.add('createDatasetFromLogsJob', {
       name: input.name,
-      userId: ctx.user.id,
-      workspaceId: ctx.workspace.id,
-      documentVersionId: ctx.document.id,
-      selectionMode: input.selectionMode,
-      selectedDocumentLogIds: input.selectedDocumentLogIds,
-      excludedDocumentLogIds: input.excludedDocumentLogIds,
-      filterOptions: input.filterOptions,
+      author: ctx.user,
+      workspace: ctx.workspace,
+      documentUuid: ctx.document.documentUuid,
+      extendedFilterOptions: input.extendedFilterOptions,
     })
 
     return {

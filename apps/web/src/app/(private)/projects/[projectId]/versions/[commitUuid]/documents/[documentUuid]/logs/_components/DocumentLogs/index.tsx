@@ -6,8 +6,10 @@ import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/b
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs from '$/stores/providerLogs'
 import {
+  DEFAULT_PAGINATION_SIZE,
   DocumentLogFilterOptions,
   EvaluationV2,
+  ExtendedDocumentLogFilterOptions,
   ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
@@ -33,6 +35,7 @@ import { useDownloadLogsModal } from './DownloadLogsModal/useDownloadLogsModal'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import { useSearchParams } from 'next/navigation'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { parsePositiveNumber } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -85,8 +88,11 @@ export function DocumentLogs({
     projectId: project.id,
   })
   const searchParams = useSearchParams()
-  const page = searchParams.get('page') ?? '1'
-  const pageSize = searchParams.get('pageSize') ?? '25'
+  const page = parsePositiveNumber(searchParams.get('page'), 1)
+  const pageSize = parsePositiveNumber(
+    searchParams.get('pageSize'),
+    DEFAULT_PAGINATION_SIZE,
+  )
   const { data: pagination } = useDocumentLogsPagination({
     projectId: project.id,
     commitUuid: commit.uuid,
@@ -104,13 +110,25 @@ export function DocumentLogs({
     rowIds: documentLogIds,
     totalRowCount: pagination?.count ?? 0,
   })
+  const extendedFilterOptions: ExtendedDocumentLogFilterOptions =
+    useMemo(() => {
+      return {
+        ...documentLogFilterOptions,
+        documentLogIds: selectableState.getSelectedRowIds(),
+        excludedDocumentLogIds: Array.from(
+          selectableState.excludedIds,
+        ) as number[],
+        filterErrors: true,
+      }
+    }, [documentLogFilterOptions, selectableState])
+
   const saveLogsAsDatasetModalState = useSaveLogsAsDatasetModal({
     selectableState,
-    filterOptions: documentLogFilterOptions,
+    extendedFilterOptions,
   })
   const downloadLogsModalState = useDownloadLogsModal({
     selectableState,
-    filterOptions: documentLogFilterOptions,
+    extendedFilterOptions,
   })
 
   const manualEvaluations = useMemo(

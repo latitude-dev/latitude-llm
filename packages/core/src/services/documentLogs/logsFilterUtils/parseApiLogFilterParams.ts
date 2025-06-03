@@ -5,13 +5,14 @@ import {
   parseSafeExperimentId,
 } from './parseLogFilterParams'
 
-export function parsePage(page: string | null): string {
-  if (!page) return '1'
-
-  const parsed = parseInt(page, 10)
-  if (isNaN(parsed)) return '1'
-
-  return parsed < 1 ? '1' : parsed.toString()
+export function parsePositiveNumber(
+  value: string | null,
+  defaultValue: number,
+): number {
+  if (!value) return defaultValue
+  const parsed = parseInt(value, 10)
+  if (isNaN(parsed)) return defaultValue
+  return parsed < 1 ? defaultValue : parsed
 }
 
 function parseCommitIds(commitIds: string | undefined) {
@@ -50,7 +51,10 @@ export function parseApiDocumentLogParams({
     excludeErrors,
     isEmptyResponse,
     filterOptions,
-    page: parsePage(searchParams.get('page')),
-    pageSize: searchParams.get('pageSize') ?? String(DEFAULT_PAGINATION_SIZE),
+    page: parsePositiveNumber(searchParams.get('page'), 1),
+    size: parsePositiveNumber(
+      searchParams.get('pageSize'),
+      DEFAULT_PAGINATION_SIZE,
+    ),
   }
 }

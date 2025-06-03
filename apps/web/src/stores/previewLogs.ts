@@ -1,9 +1,14 @@
-import useFetcher from '$/hooks/useFetcher'
+import { handleResponse } from '$/hooks/useFetcher'
+import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import { Dataset, parseRowCell } from '@latitude-data/core/browser'
-import { compactObject } from '@latitude-data/core/lib/compactObject'
+import {
+  Dataset,
+  ExtendedDocumentLogFilterOptions,
+  parseRowCell,
+} from '@latitude-data/core/browser'
 import { DatasetRowData } from '@latitude-data/core/schema'
-import useSWR, { SWRConfiguration } from 'swr'
+import { useToast } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Toast/useToast'
+import { useCallback, useState } from 'react'
 
 type InputItem = {
   columns: Dataset['columns']
@@ -40,43 +45,58 @@ const EMPTY_DATA = {
   previewRows: [] as string[][],
 }
 
-export function usePreviewLogs(
-  {
-    dataset,
-    documentLogIds,
-    staticColumnNames,
-    parameterColumnNames,
-  }: {
-    dataset?: Dataset
-    documentLogIds: (string | number)[]
-    staticColumnNames?: string[]
-    parameterColumnNames?: string[]
-  },
-  opts?: SWRConfiguration,
-) {
-  const fetcher = useFetcher(ROUTES.api.datasets.previewLogs.root, {
-    serializer: serializeRows,
-    searchParams: compactObject({
-      name: dataset?.name,
-      documentLogIds,
+export function usePreviewLogs({
+  documentUuid,
+  extendedFilterOptions,
+  staticColumnNames,
+  parameterColumnNames,
+}: {
+  documentUuid: string
+  dataset?: Dataset
+  extendedFilterOptions?: ExtendedDocumentLogFilterOptions
+  staticColumnNames?: string[]
+  parameterColumnNames?: string[]
+}) {
+  const [data, setData] = useState<OutputItem>(EMPTY_DATA)
+  const [isLoading, setIsLoading] = useState(false)
+  const { toast } = useToast()
+  const navigate = useNavigate()
+
+  const fetchPreview = useCallback(
+    async (name?: string) => {
+      try {
+        setIsLoading(true)
+        const body = {
+          documentUuid,
+          name,
+          extendedFilterOptions,
+          staticColumnNames,
+          parameterColumnNames,
+        }
+        const rawResponse = await fetch(ROUTES.api.datasets.previewLogs.root, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        })
+        const response = await handleResponse({
+          response: rawResponse,
+          toast,
+          navigate,
+          serializer: serializeRows,
+        })
+        response && setData(response)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [
+      documentUuid,
+      extendedFilterOptions,
       staticColumnNames,
       parameterColumnNames,
-    }) as Record<string, string>,
-  })
-  const cacheKey = [
-    'previewLogsForDataset',
-    dataset?.id ?? 'no_dataset',
-    documentLogIds,
-    staticColumnNames,
-    parameterColumnNames,
-  ]
-  const {
-    data = EMPTY_DATA,
-    mutate: fetchPreview,
-    isLoading,
-  } = useSWR<OutputItem>(cacheKey, fetcher, {
-    ...opts,
-  })
+      toast,
+      navigate,
+    ],
+  )
 
   return { previewData: data, fetchPreview, isLoading }
 }

@@ -1,11 +1,23 @@
-import { Workspace } from '@latitude-data/core/browser'
+import {
+  extendedDocumentLogFilterOptionsSchema,
+  Workspace,
+} from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { previewDatasetFromLogs } from '@latitude-data/core/services/datasets/previewFromLogs'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
-export const GET = errorHandler(
+export const previewLogsRequestSchema = z.object({
+  documentUuid: z.string(),
+  name: z.string().optional(),
+  extendedFilterOptions: extendedDocumentLogFilterOptionsSchema,
+  staticColumnNames: z.array(z.string()).optional(),
+  parameterColumnNames: z.array(z.string()).optional(),
+})
+
+export const POST = errorHandler(
   authHandler(
     async (
       request: NextRequest,
@@ -15,19 +27,22 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const query = request.nextUrl.searchParams
-      const ids = query.get('documentLogIds')?.split(',').map(Number) ?? []
-      const staticColumnNames = query.get('staticColumnNames')?.split(',')
-      const parameterColumnNames = query.get('parameterColumnNames')?.split(',')
+      const body = await request.json()
+      const {
+        name,
+        documentUuid,
+        extendedFilterOptions,
+        staticColumnNames,
+        parameterColumnNames,
+      } = previewLogsRequestSchema.parse(body)
       const result = await previewDatasetFromLogs({
         workspace,
-        data: {
-          name: query.get('name') ?? undefined,
-          documentLogIds: ids,
-          columnFilters: {
-            staticColumnNames,
-            parameterColumnNames,
-          },
+        documentUuid,
+        name,
+        extendedFilterOptions,
+        columnFilters: {
+          staticColumnNames,
+          parameterColumnNames,
         },
       })
 

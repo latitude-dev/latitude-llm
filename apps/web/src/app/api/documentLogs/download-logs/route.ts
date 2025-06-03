@@ -1,9 +1,20 @@
-import { Workspace } from '@latitude-data/core/browser'
+import {
+  extendedDocumentLogFilterOptionsSchema,
+  Workspace,
+} from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { generateCsvFromLogs } from '@latitude-data/core/services/datasets/generateCsvFromLogs'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+
+export const downloadLogsRequestSchema = z.object({
+  documentUuid: z.string(),
+  extendedFilterOptions: extendedDocumentLogFilterOptionsSchema,
+  staticColumnNames: z.array(z.string()),
+  parameterColumnNames: z.array(z.string()),
+})
 
 export const POST = errorHandler(
   authHandler(
@@ -15,48 +26,36 @@ export const POST = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const formData = await request.formData()
-      const idsRaw = formData.get('ids')
-      const staticColumnNamesRaw = formData.get('staticColumnNames')
-      const parameterColumnNamesRaw = formData.get('parameterColumnNames')
-
-      if (!idsRaw) {
-        throw new BadRequestError('No document log ids provided')
-      }
-
-      const ids: string[] = JSON.parse(idsRaw as string)
-      const staticColumnNames: string[] = JSON.parse(
-        staticColumnNamesRaw as string,
-      )
-      const parameterColumnNames: string[] = JSON.parse(
-        parameterColumnNamesRaw as string,
-      )
-
-      if (!ids?.length) {
-        throw new BadRequestError('No document log ids provided')
-      }
-
-      if (ids.some((id) => isNaN(+id))) {
-        throw new BadRequestError('Invalid document log ids provided')
-      }
-      const documentLogIds = ids.map(Number)
-      const csvFile = await generateCsvFromLogs({
-        workspace,
-        data: {
-          documentLogIds,
+      try {
+        const body = await request.json()
+        const {
+          documentUuid,
+          extendedFilterOptions,
+          staticColumnNames,
+          parameterColumnNames,
+        } = downloadLogsRequestSchema.parse(body)
+        const csvFile = await generateCsvFromLogs({
+          workspace,
+          documentUuid,
+          extendedFilterOptions,
           columnFilters: {
             staticColumnNames,
             parameterColumnNames,
           },
-        },
-      }).then((r) => r.unwrap())
+        }).then((r) => r.unwrap())
 
-      return new NextResponse(csvFile, {
-        headers: {
-          'Content-Type': 'text/csv',
-          'Content-Disposition': 'attachment; filename="data.csv"',
-        },
-      })
+        return new NextResponse(csvFile, {
+          headers: {
+            'Content-Type': 'text/csv',
+            'Content-Disposition': 'attachment; filename="data.csv"',
+          },
+        })
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          throw new BadRequestError(error.message)
+        }
+        throw error
+      }
     },
   ),
 )

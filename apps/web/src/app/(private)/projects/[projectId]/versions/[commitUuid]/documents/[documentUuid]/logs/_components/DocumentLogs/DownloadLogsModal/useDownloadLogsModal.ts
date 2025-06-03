@@ -1,4 +1,4 @@
-import { downloadLogsAsyncAction } from '$/actions/documentLogs/downloadLogs'
+import { downloadLogsAsyncAction } from '$/actions/documentLogs/downloadLogsAsync'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { handleResponse } from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
@@ -7,7 +7,7 @@ import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
 import { usePreviewLogs } from '$/stores/previewLogs'
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
+import { ExtendedDocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import {
   useCurrentCommit,
@@ -30,14 +30,14 @@ const getSelectedColumns = (columns?: Map<string, boolean>) => {
   return [...columns.entries()].filter(([, value]) => value).map(([key]) => key)
 }
 
-const MAX_IMMEDIATE_DOWNLOAD = 25
+const MAX_IMMEDIATE_DOWNLOAD = 1
 
 export function useDownloadLogsModal({
   selectableState,
-  filterOptions,
+  extendedFilterOptions,
 }: {
   selectableState: SelectableRowsHook
-  filterOptions: DocumentLogFilterOptions
+  extendedFilterOptions: ExtendedDocumentLogFilterOptions
 }) {
   const { document: latitudeDocument } = useCurrentDocument()
   const { toast } = useToast()
@@ -45,13 +45,13 @@ export function useDownloadLogsModal({
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const state = useToggleModal()
-  const [selectedLogIds, setSelectedLogIds] = useState<(string | number)[]>([])
   const {
     previewData: data,
     fetchPreview,
     isLoading,
   } = usePreviewLogs({
-    documentLogIds: selectedLogIds,
+    documentUuid: latitudeDocument.documentUuid,
+    extendedFilterOptions,
     staticColumnNames: DEFAULT_STATIC_COLUMNS,
   })
   const [isDownloading, setIsDownloading] = useState(false)
@@ -74,30 +74,19 @@ export function useDownloadLogsModal({
 
   const showModal = useCallback(() => {
     state.onOpen()
-    setSelectedLogIds(selectableState.getSelectedRowIds())
     fetchPreview()
-  }, [
-    fetchPreview,
-    setSelectedLogIds,
-    state.onOpen,
-    selectableState.getSelectedRowIds,
-  ])
+  }, [fetchPreview, state.onOpen, selectableState.getSelectedRowIds])
 
   const handleImmediateDownload = useCallback(async () => {
-    const ids = selectableState.getSelectedRowIds()
-    const selectedStaticColumns = getSelectedColumns(staticColumns)
-    const selectedParameterColumns = getSelectedColumns(parameterColumns)
-    const formData = new FormData()
-    formData.append('ids', JSON.stringify(ids))
-    formData.append('staticColumnNames', JSON.stringify(selectedStaticColumns))
-    formData.append(
-      'parameterColumnNames',
-      JSON.stringify(selectedParameterColumns),
-    )
-
+    const body = {
+      documentUuid: latitudeDocument.documentUuid,
+      extendedFilterOptions,
+      staticColumnNames: getSelectedColumns(staticColumns),
+      parameterColumnNames: getSelectedColumns(parameterColumns),
+    }
     const rawResponse = await fetch(ROUTES.api.documentLogs.downloadLogs.root, {
       method: 'POST',
-      body: formData,
+      body: JSON.stringify(body),
     })
     const response = await handleResponse({
       returnRaw: true,
@@ -137,14 +126,12 @@ export function useDownloadLogsModal({
         await handleImmediateDownload()
       } else {
         await executeAsyncDownload({
-          documentUuid: latitudeDocument.documentUuid,
-          commitUuid: commit.uuid,
           projectId: project.id,
-          filterOptions,
-          selectionMode: selectableState.selectionMode,
-          excludedDocumentLogIds: Array.from(
-            selectableState.excludedIds,
-          ) as number[],
+          commitUuid: commit?.uuid,
+          documentUuid: latitudeDocument.documentUuid,
+          extendedFilterOptions,
+          staticColumnNames: getSelectedColumns(staticColumns),
+          parameterColumnNames: getSelectedColumns(parameterColumns),
         })
       }
     } finally {

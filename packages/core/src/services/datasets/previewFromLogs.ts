@@ -1,5 +1,9 @@
 import { Result } from '../../lib/Result'
-import { Dataset, Workspace } from '../../browser'
+import {
+  Dataset,
+  ExtendedDocumentLogFilterOptions,
+  Workspace,
+} from '../../browser'
 import {
   buildDocumentLogDataset,
   ColumnFilters,
@@ -8,6 +12,8 @@ import {
 import { DatasetRowsRepository, DatasetsRepository } from '../../repositories'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 import { DatasetRowData } from '../../schema'
+
+const PREVIEW_LOGS_LIMIT = 1000
 
 async function getFirstRowsFromDataset({
   dataset,
@@ -19,7 +25,8 @@ async function getFirstRowsFromDataset({
   const repo = new DatasetRowsRepository(dataset.workspaceId)
   const rows = await repo.findByDatasetPaginated({
     datasetId: dataset.id,
-    pageSize: '5',
+    page: 1,
+    pageSize: 5,
   })
   return rows.map((row) => row.rowData)
 }
@@ -55,28 +62,32 @@ async function getDataset(workspace: Workspace, name?: string) {
 /**
  * This service is responsible of obtaining a preview of the dataset that would be generated
  * including the logs provided. The dataset rows are limited to the first 5 and the logs are
- * chosen keeping only the ones with different parameters.
+ * chosen keeping only the ones with different parameters (limited to PREVIEW_LOGS_LIMIT)
  */
 export const previewDatasetFromLogs = async ({
   workspace,
-  data,
+  documentUuid,
+  extendedFilterOptions,
+  name,
+  columnFilters,
   hashAlgorithm = nanoidHashAlgorithm,
 }: {
   workspace: Workspace
-  data: {
-    name?: string
-    documentLogIds: number[]
-    columnFilters?: ColumnFilters
-  }
+  documentUuid: string
+  extendedFilterOptions: ExtendedDocumentLogFilterOptions
+  name?: string
+  columnFilters?: ColumnFilters
   hashAlgorithm?: HashAlgorithmFn
 }) => {
-  const dataset = await getDataset(workspace, data.name)
+  const dataset = await getDataset(workspace, name)
   const documentLogDataset = await buildDocumentLogDataset({
     workspace,
+    documentUuid,
     dataset,
-    documentLogIds: data.documentLogIds,
-    columnFilters: data.columnFilters,
+    extendedFilterOptions,
+    columnFilters,
     hashAlgorithm,
+    limit: PREVIEW_LOGS_LIMIT,
   })
   if (documentLogDataset.error) return documentLogDataset
 

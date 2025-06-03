@@ -5,7 +5,12 @@
  */
 import { stringify } from 'csv-stringify/sync'
 import { Result } from '../../lib/Result'
-import { Workspace } from '../../browser'
+import {
+  DocumentLogFilterOptions,
+  DocumentVersion,
+  ExtendedDocumentLogFilterOptions,
+  Workspace,
+} from '../../browser'
 import {
   buildDocumentLogDataset,
   ColumnFilters,
@@ -39,18 +44,20 @@ function stringifyData({
 
 export const generateCsvFromLogs = async ({
   workspace,
-  data,
+  documentUuid,
+  extendedFilterOptions,
+  columnFilters,
 }: {
   workspace: Workspace
-  data: {
-    documentLogIds: number[]
-    columnFilters?: ColumnFilters
-  }
+  documentUuid: string
+  extendedFilterOptions: ExtendedDocumentLogFilterOptions
+  columnFilters?: ColumnFilters
 }) => {
   const result = await buildDocumentLogDataset({
     workspace,
-    documentLogIds: data.documentLogIds,
-    columnFilters: data.columnFilters,
+    documentUuid,
+    extendedFilterOptions,
+    columnFilters,
     hashAlgorithm: nanoidHashAlgorithm,
   })
 

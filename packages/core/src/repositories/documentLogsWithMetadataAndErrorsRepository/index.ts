@@ -8,9 +8,14 @@ import {
   sum,
   SQL,
   desc,
+  lt,
 } from 'drizzle-orm'
 
-import { ErrorableEntity } from '../../browser'
+import {
+  DocumentLogFilterOptions,
+  ErrorableEntity,
+  ExtendedDocumentLogFilterOptions,
+} from '../../browser'
 import {
   commits,
   documentLogs,
@@ -24,6 +29,10 @@ import { DocumentLogWithMetadataAndError } from '../runErrors/documentLogsReposi
 import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
+import { buildLogsFilterSQLConditions } from '../../services/documentLogs/logsFilterUtils'
+import { calculateOffset } from '../../lib/pagination'
+
+export type DocumentLogsWithMetadataAndErrorsCursor = Date
 
 // TODO: remove
 export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<DocumentLogWithMetadataAndError> {
@@ -98,19 +107,80 @@ export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<Docu
     return Result.ok(result[0]!)
   }
 
-  async findManyWithoutErrors(
-    ids: number[],
-    ordering: SQL<unknown>[] = [desc(documentLogs.createdAt)],
+  private getConditions(
+    documentUuid: string,
+    extendedFilterOptions?: ExtendedDocumentLogFilterOptions,
+  ) {
+    return [
+      eq(documentLogs.documentUuid, documentUuid),
+      extendedFilterOptions
+        ? buildLogsFilterSQLConditions(extendedFilterOptions)
+        : undefined,
+    ].filter(Boolean)
+  }
+
+  private getOrdering(
+    extendedFilterOptions?: ExtendedDocumentLogFilterOptions,
+  ) {
+    return [
+      extendedFilterOptions?.customIdentifier
+        ? desc(
+            sql`similarity(${documentLogs.customIdentifier}, ${extendedFilterOptions.customIdentifier})`,
+          )
+        : undefined,
+      desc(documentLogs.createdAt),
+    ].filter(Boolean) as SQL<unknown>[]
+  }
+
+  private getNextCursor(
+    result: DocumentLogWithMetadataAndError[],
+    limit: number,
+  ) {
+    return result.length < limit
+      ? undefined
+      : result[result.length - 1]?.createdAt
+  }
+
+  async findInDocumentPaginated(
+    documentUuid: string,
+    page: number,
+    size: number,
+    extendedFilterOptions?: ExtendedDocumentLogFilterOptions,
   ): PromisedResult<DocumentLogWithMetadataAndError[]> {
-    const result: DocumentLogWithMetadataAndError[] = await this.scope
-      .where(
-        and(
-          this.scopeFilter,
-          inArray(documentLogs.id, ids),
-          isNull(runErrors.message),
-        ),
-      )
+    const offset = calculateOffset(page, size)
+    const conditions = this.getConditions(documentUuid, extendedFilterOptions)
+    const ordering = this.getOrdering(extendedFilterOptions)
+    const result = await this.scope
+      .where(and(this.scopeFilter, ...conditions))
       .orderBy(...ordering)
+      .limit(size)
+      .offset(offset)
     return Result.ok(result)
+  }
+
+  async findInDocumentWithCursor(
+    documentUuid: string,
+    limit: number,
+    cursor?: DocumentLogsWithMetadataAndErrorsCursor,
+    extendedFilterOptions?: ExtendedDocumentLogFilterOptions,
+  ): PromisedResult<{
+    logs: DocumentLogWithMetadataAndError[]
+    nextCursor?: DocumentLogsWithMetadataAndErrorsCursor
+  }> {
+    const currentCursor = cursor ?? new Date()
+    const conditions = [
+      ...this.getConditions(documentUuid, extendedFilterOptions),
+      lt(documentLogs.createdAt, currentCursor),
+    ]
+    const ordering = this.getOrdering(extendedFilterOptions)
+    const result = await this.scope
+      .where(and(this.scopeFilter, ...conditions))
+      .orderBy(...ordering)
+      .limit(limit)
+    const nextCursor = this.getNextCursor(result, limit)
+    return Result.ok({
+      logs: result,
+      nextCursor,
+    })
   }
 }

@@ -50,7 +50,8 @@ describe('buildDocumentLogDatasetRows', async () => {
     })
     const result = await generateCsvFromLogs({
       workspace: setup.workspace,
-      data: { documentLogIds: [documentLog.id] },
+      document: setup.documents[0]!,
+      documentLogIds: [documentLog.id],
     })
 
     const repo = new ProviderLogsRepository(setup.workspace.id)

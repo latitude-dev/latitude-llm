@@ -19,7 +19,7 @@ import { updateDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'
 import {
   computeDocumentLogsWithMetadataCount,
-  computeDocumentLogsWithMetadata,
+  computeDocumentLogsWithMetadataPaginated,
 } from './computeDocumentLogsWithMetadata'
 import { parseSafeCreatedAtRange } from './logsFilterUtils'
 
@@ -97,7 +97,7 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     it('return all logs from merged commits', async () => {
-      const result = await computeDocumentLogsWithMetadata({
+      const result = await computeDocumentLogsWithMetadataPaginated({
         document: doc,
         filterOptions: {
           commitIds: [commit.id, commit2.id],
@@ -188,7 +188,7 @@ describe('getDocumentLogsWithMetadata', () => {
         const createdAt = parseSafeCreatedAtRange(
           '2024-12-11T00:00:00 01:00,2024-12-11T23:59:59 01:00',
         )
-        const result = await computeDocumentLogsWithMetadata({
+        const result = await computeDocumentLogsWithMetadataPaginated({
           document: doc,
           filterOptions: {
             commitIds: [commit.id, commit2.id, anotherCommit.id],
@@ -210,7 +210,7 @@ describe('getDocumentLogsWithMetadata', () => {
 
       it('filter logs by createdAt only with from', async () => {
         const createdAt = parseSafeCreatedAtRange('2024-12-11T00:00:00 01:00')
-        const result = await computeDocumentLogsWithMetadata({
+        const result = await computeDocumentLogsWithMetadataPaginated({
           document: doc,
           filterOptions: {
             commitIds: [commit.id, commit2.id, anotherCommit.id],
@@ -232,7 +232,7 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     it('paginate logs', async () => {
-      const result = await computeDocumentLogsWithMetadata({
+      const result = await computeDocumentLogsWithMetadataPaginated({
         document: doc,
         filterOptions: {
           commitIds: [commit.id, commit2.id],
@@ -314,7 +314,7 @@ describe('getDocumentLogsWithMetadata', () => {
       commit: draft,
     })
 
-    const result = await computeDocumentLogsWithMetadata({
+    const result = await computeDocumentLogsWithMetadataPaginated({
       document: doc,
       filterOptions: {
         commitIds: [commit1.id, commit2.id, draft.id],
@@ -379,7 +379,7 @@ describe('getDocumentLogsWithMetadata', () => {
       commit: draft2,
     })
 
-    const result = await computeDocumentLogsWithMetadata({
+    const result = await computeDocumentLogsWithMetadataPaginated({
       document: doc,
       filterOptions: {
         commitIds: [commit1.id, draft1.id],
@@ -447,7 +447,7 @@ describe('getDocumentLogsWithMetadata', () => {
       commit,
     })
 
-    const result = await computeDocumentLogsWithMetadata({
+    const result = await computeDocumentLogsWithMetadataPaginated({
       document,
       filterOptions: {
         commitIds: [commit.id],
@@ -488,7 +488,7 @@ describe('getDocumentLogsWithMetadata', () => {
       commit,
     })
 
-    const result = await computeDocumentLogsWithMetadata({
+    const result = await computeDocumentLogsWithMetadataPaginated({
       document: doc,
       filterOptions: {
         commitIds: [commit.id],
@@ -526,7 +526,7 @@ describe('getDocumentLogsWithMetadata', () => {
       commit,
     })
 
-    const result = await computeDocumentLogsWithMetadata({
+    const result = await computeDocumentLogsWithMetadataPaginated({
       document: doc,
       filterOptions: {
         commitIds: [commit.id],
@@ -567,7 +567,7 @@ describe('getDocumentLogsWithMetadata', () => {
       skipProviderLogs: true,
     })
 
-    const result = await computeDocumentLogsWithMetadata({
+    const result = await computeDocumentLogsWithMetadataPaginated({
       document: doc,
       filterOptions: {
         commitIds: [commit0.id, commit1.id],

@@ -102,9 +102,10 @@ export function PreviewTable({
                     verticalBorder
                     key={column.identifier}
                     className={cn(
-                      'select-none transition-all',
                       backgroundCssClasses[column.role],
-                      !isColumnSelected(column) && 'opacity-20',
+                      selectable &&
+                        !isColumnSelected(column) &&
+                        ' transition-allopacity-20',
                     )}
                   >
                     <DatasetHeadText text={column.name} role={column.role} />
@@ -148,9 +149,9 @@ export function PreviewTable({
                     lineClamp={1}
                     column={previewData.columns[index]!}
                     className={cn(
-                      'transition-opacity',
-                      !isColumnSelected(previewData.columns[index]!) &&
-                        'opacity-20',
+                      selectable &&
+                        !isColumnSelected(previewData.columns[index]!) &&
+                        'transition-opacity opacity-20',
                     )}
                   />
                 ))}

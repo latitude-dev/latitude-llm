@@ -10,7 +10,7 @@ import {
   Workspace,
 } from '@latitude-data/core/browser'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
-import { computeDocumentLogsWithMetadata } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
+import { computeDocumentLogsWithMetadataPaginated } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
 import { redirect } from 'next/navigation'
 
@@ -27,7 +27,7 @@ async function fetchDocumentLogPage({
   workspace: Workspace
   filterOptions: DocumentLogFilterOptions
   documentLogUuid: string | undefined
-}) {
+}): Promise<number | undefined> {
   if (!documentLogUuid) return undefined
 
   const result = await fetchDocumentLogWithPosition({
@@ -38,7 +38,7 @@ async function fetchDocumentLogPage({
 
   if (result.error) return undefined
 
-  return result.value.page.toString()
+  return result.value.page
 }
 
 export default async function DocumentPage({
@@ -74,16 +74,24 @@ export default async function DocumentPage({
   const commit = await findCommitCached({ projectId, uuid: commitUuid })
   const commits = await findCommitsByProjectCached({ projectId })
 
-  const { logUuid, pageSize, page: pageString, ...rest } = await searchParams
+  const {
+    logUuid,
+    pageSize: pageSizeString,
+    page: pageString,
+    ...rest
+  } = await searchParams
   const { filterOptions, redirectUrlParams, originalSelectedCommitsIds } =
     parseLogFiltersParams({
+      documentUuid,
       params: rest,
       currentCommit: commit,
       commits,
     })
 
   const documentLogUuid = logUuid?.toString()
-  const page = pageString?.toString?.()
+  const page = pageString ? Number(pageString) : undefined
+  const pageSize = pageSizeString ? Number(pageSizeString) : undefined
+
   const currentLogPage = await fetchDocumentLogPage({
     workspace,
     filterOptions,
@@ -105,11 +113,11 @@ export default async function DocumentPage({
     return redirect(`${route}?${parameters.join('&')}`)
   }
 
-  const rows = await computeDocumentLogsWithMetadata({
-    document,
+  const rows = await computeDocumentLogsWithMetadataPaginated({
+    workspace,
     filterOptions,
     page,
-    pageSize: pageSize as string | undefined,
+    size: pageSize,
   })
 
   const selectedLog = rows.find((r) => r.uuid === documentLogUuid)

@@ -6,7 +6,7 @@ import {
   DatasetRowsRepository,
   DatasetsRepository,
 } from '@latitude-data/core/repositories'
-import { parsePage } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
+import { parsePositiveNumber } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 
 export const GET = errorHandler(
   authHandler(
@@ -31,15 +31,17 @@ export const GET = errorHandler(
       }
 
       const dataset = result.value
-      const page = parsePage(searchParams.get('page'))
-      const pageSize =
-        searchParams.get('pageSize') ?? String(DEFAULT_PAGINATION_SIZE)
+      const page = parsePositiveNumber(searchParams.get('page'), 1)
+      const pageSize = parsePositiveNumber(
+        searchParams.get('pageSize'),
+        DEFAULT_PAGINATION_SIZE,
+      )
 
       const repo = new DatasetRowsRepository(workspace.id)
       const rows = await repo.findByDatasetPaginated({
         datasetId: dataset.id,
         page,
-        pageSize: pageSize as string | undefined,
+        pageSize,
       })
 
       return NextResponse.json(rows, { status: 200 })

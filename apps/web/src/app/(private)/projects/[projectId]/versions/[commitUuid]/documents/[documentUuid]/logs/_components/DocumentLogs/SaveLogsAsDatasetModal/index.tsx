@@ -34,7 +34,7 @@ function ExistingDatasetSelector({
       if (!dataset) return
 
       setSelectedDataset(dataset)
-      fetchPreview()
+      fetchPreview(dataset.name)
     },
     [setSelectedDataset, fetchPreview, datasets],
   )
