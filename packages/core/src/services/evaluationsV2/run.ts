@@ -1,4 +1,8 @@
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import {
+  ChainError,
+  NotFoundError,
+  RunErrorCodes,
+} from '@latitude-data/constants/errors'
 import {
   buildConversation,
   Commit,
@@ -217,6 +221,7 @@ export async function runEvaluationV2<
 
 export function isErrorRetryable(error: Error) {
   return (
-    error instanceof ChainError && error.errorCode === RunErrorCodes.RateLimit
+    error instanceof NotFoundError ||
+    (error instanceof ChainError && error.errorCode === RunErrorCodes.RateLimit)
   )
 }
