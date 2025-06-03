@@ -22,14 +22,14 @@ export const evaluateLiveLogJob = async ({
 }) => {
   const { id, workspaceId } = event.data
   const repo = new DocumentLogsRepository(workspaceId)
-  const documentLog = await repo.find(id).then((r) => r.value)
-  if (!documentLog) return
+  const documentLog = await repo.find(id).then((r) => r.unwrap())
 
   const workspace = await findWorkspaceFromDocumentLog(documentLog)
-  if (!workspace)
+  if (!workspace) {
     throw new NotFoundError(
       `Workspace not found from document log ${documentLog.id}`,
     )
+  }
 
   if (
     NON_LIVE_EVALUABLE_LOG_SOURCES.includes(
@@ -46,7 +46,9 @@ export const evaluateLiveLogJob = async ({
   const providerLog = await findLastProviderLogFromDocumentLogUuid(
     documentLog.uuid,
   )
-  if (!providerLog) return
+  if (!providerLog) {
+    throw new NotFoundError(`Provider log not found for document log ${id}`)
+  }
 
   const evaluationsRepository = new EvaluationsV2Repository(workspace.id)
   let evaluations = await evaluationsRepository
