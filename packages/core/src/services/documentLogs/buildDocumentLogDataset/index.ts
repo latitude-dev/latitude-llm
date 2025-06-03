@@ -61,7 +61,6 @@ async function retrieveLogs(
 
 /**
  * This service is responsible for extracting all data interesting from document logs as a dataset.
- * You can use the filterOptions to limit the logs to process.
  * The final dataset columns can be configured with the `columnFilters` parameter.
  * To improve performance, the logs are retrieved in batches and the dataset is built incrementally.
  */
