@@ -39,6 +39,7 @@ async function retrieveLogs(
   const allLogs: DocumentLogWithMetadataAndError[] = []
   const allProviderOutputs: Map<string, ProviderOutput> = new Map()
   while (true) {
+    // TODO: This dont guarantee the row limit
     if (rowLimit && allLogs.length >= rowLimit) break
     const { logs, nextCursor } =
       await computeDocumentLogsWithMetadataWithCursor({
