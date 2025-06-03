@@ -59,6 +59,7 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
   }) {
     const offset = calculateOffset(page, pageSize)
     const limit = parseInt(pageSize)
+
     return this.findByDatasetWithOffsetAndLimit({ datasetId, offset, limit })
   }
 
