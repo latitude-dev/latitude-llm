@@ -33,8 +33,8 @@ export const GET = errorHandler(
         workspace,
         documentUuid,
         filterOptions: queryParams.filterOptions,
-        page: queryParams.page,
-        size: queryParams.size,
+        page: Number(queryParams.page),
+        size: Number(queryParams.pageSize),
       })
 
       return NextResponse.json(rows, { status: 200 })

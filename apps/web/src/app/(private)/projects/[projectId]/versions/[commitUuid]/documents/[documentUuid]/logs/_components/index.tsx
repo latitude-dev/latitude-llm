@@ -13,10 +13,7 @@ import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
 import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import {
-  DEFAULT_PAGINATION_SIZE,
-  DocumentLogFilterOptions,
-} from '@latitude-data/core/browser'
+import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
@@ -31,7 +28,6 @@ import { useCommits } from '$/stores/commitsStore'
 import { useDebounce } from 'use-debounce'
 import { DocumentLogs } from './DocumentLogs'
 import { DocumentLogFilters } from './Filters'
-import { parsePositiveNumber } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 
 const useDocumentLogSocket = (
   documentUuid: string,
@@ -97,11 +93,8 @@ export function DocumentLogsPage({
   const { document } = useCurrentDocument()
   const { data: commits } = useCommits()
   const searchParams = useSearchParams()
-  const page = parsePositiveNumber(searchParams.get('page'), 1)
-  const pageSize = parsePositiveNumber(
-    searchParams.get('pageSize'),
-    DEFAULT_PAGINATION_SIZE,
-  )
+  const page = searchParams.get('page')
+  const pageSize = searchParams.get('pageSize')
   const [documentLogFilterOptions, setDocumentLogFilterOptions] = useState(
     initialDocumentLogFilterOptions,
   )

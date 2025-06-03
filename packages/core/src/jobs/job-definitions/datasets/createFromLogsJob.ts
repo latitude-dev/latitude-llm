@@ -13,7 +13,7 @@ type CreateDatasetFromLogsJobProps = {
   extendedFilterOptions: ExtendedDocumentLogFilterOptions
 }
 
-// TODO: Add again progress to this job
+// TODO: Add again progress to this job?
 export const createDatasetFromLogsJob = async (
   job: Job<CreateDatasetFromLogsJobProps>,
 ) => {

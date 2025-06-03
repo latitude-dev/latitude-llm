@@ -27,7 +27,7 @@ async function fetchDocumentLogPage({
   workspace: Workspace
   filterOptions: DocumentLogFilterOptions
   documentLogUuid: string | undefined
-}): Promise<number | undefined> {
+}) {
   if (!documentLogUuid) return undefined
 
   const result = await fetchDocumentLogWithPosition({
@@ -38,7 +38,7 @@ async function fetchDocumentLogPage({
 
   if (result.error) return undefined
 
-  return result.value.page
+  return result.value.page.toString()
 }
 
 export default async function DocumentPage({
@@ -74,12 +74,7 @@ export default async function DocumentPage({
   const commit = await findCommitCached({ projectId, uuid: commitUuid })
   const commits = await findCommitsByProjectCached({ projectId })
 
-  const {
-    logUuid,
-    pageSize: pageSizeString,
-    page: pageString,
-    ...rest
-  } = await searchParams
+  const { logUuid, pageSize, page: pageString, ...rest } = await searchParams
   const { filterOptions, redirectUrlParams, originalSelectedCommitsIds } =
     parseLogFiltersParams({
       documentUuid,
@@ -89,8 +84,7 @@ export default async function DocumentPage({
     })
 
   const documentLogUuid = logUuid?.toString()
-  const page = pageString ? Number(pageString) : undefined
-  const pageSize = pageSizeString ? Number(pageSizeString) : undefined
+  const page = pageString?.toString?.()
 
   const currentLogPage = await fetchDocumentLogPage({
     workspace,
@@ -115,9 +109,10 @@ export default async function DocumentPage({
 
   const rows = await computeDocumentLogsWithMetadataPaginated({
     workspace,
+    documentUuid,
     filterOptions,
-    page,
-    size: pageSize,
+    page: page ? Number(page) : undefined,
+    size: pageSize ? Number(pageSize) : undefined,
   })
 
   const selectedLog = rows.find((r) => r.uuid === documentLogUuid)

@@ -25,8 +25,8 @@ export default function useDocumentLogs<T extends MaybeBoolean = boolean>(
     projectId: number
     documentUuid?: string
     filterOptions: DocumentLogFilterOptions
-    page?: number
-    pageSize?: number
+    page: string | null | undefined
+    pageSize: string | null
     onFetched?: (logs: LogResult<T>[]) => void
     excludeErrors?: T
   },
@@ -38,8 +38,8 @@ export default function useDocumentLogs<T extends MaybeBoolean = boolean>(
           .detail(projectId)
           .documents.detail(documentUuid)
           .logs.root({
-            page,
-            pageSize,
+            page: page ? Number(page) : undefined,
+            pageSize: pageSize ? Number(pageSize) : undefined,
             excludeErrors,
             filterOptions,
           })

@@ -41,11 +41,17 @@ export class DatasetsRepository extends Repository<Dataset> {
       )
   }
 
-  findAllPaginated({ page, pageSize }: { page: number; pageSize: number }) {
+  findAllPaginated({
+    page = '1',
+    pageSize = String(DEFAULT_PAGINATION_SIZE),
+  }: {
+    page?: string
+    pageSize?: string
+  }) {
     const offset = calculateOffset(page, pageSize)
     return this.scope
       .where(and(this.scopeFilter, isNull(datasets.deletedAt)))
-      .limit(pageSize)
+      .limit(parseInt(pageSize))
       .offset(offset)
       .orderBy(desc(datasets.createdAt))
   }

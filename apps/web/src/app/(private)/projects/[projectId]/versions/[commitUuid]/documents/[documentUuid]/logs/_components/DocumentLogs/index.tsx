@@ -114,7 +114,10 @@ export function DocumentLogs({
     useMemo(() => {
       return {
         ...documentLogFilterOptions,
-        documentLogIds: selectableState.getSelectedRowIds(),
+        documentLogIds:
+          selectableState.selectionMode === 'PARTIAL'
+            ? selectableState.getSelectedRowIds()
+            : undefined,
         excludedDocumentLogIds: Array.from(
           selectableState.excludedIds,
         ) as number[],

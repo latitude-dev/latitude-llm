@@ -30,7 +30,7 @@ const getSelectedColumns = (columns?: Map<string, boolean>) => {
   return [...columns.entries()].filter(([, value]) => value).map(([key]) => key)
 }
 
-const MAX_IMMEDIATE_DOWNLOAD = 1
+const MAX_IMMEDIATE_DOWNLOAD = 100
 
 export function useDownloadLogsModal({
   selectableState,

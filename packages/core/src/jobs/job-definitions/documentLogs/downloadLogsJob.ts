@@ -9,6 +9,7 @@ import { Readable } from 'stream'
 import { ColumnFilters } from '../../../services/documentLogs/buildDocumentLogDataset'
 import { generateCsvFromLogs } from '../../../services/datasets/generateCsvFromLogs'
 
+// TODO: Add again progress to this job?
 export const downloadLogsJob = async (
   job: Job<{
     user: User
@@ -60,5 +61,7 @@ export const downloadLogsJob = async (
   }).then((r) => r.unwrap())
   await markExportReady({ export: exportRecord }).then((r) => r.unwrap())
 
-  return { totalProcessed: logsCsv.split(/\n/).length - 1 }
+  const lines = logsCsv.split(/\n/).filter(Boolean)
+  const totalProcessed = Math.max(0, lines.length - 1)
+  return { totalProcessed }
 }
