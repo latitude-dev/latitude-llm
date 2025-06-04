@@ -37,14 +37,14 @@ const eventHandlersJobMappings = {
 
 export function startEventsWorker() {
   return createWorker(Queues.eventsQueue, eventsJobMappings, {
-    concurrency: 25,
+    concurrency: 100,
     connection: WORKER_CONNECTION_CONFIG,
   })
 }
 
 export function startEventHandlersWorker() {
   return createWorker(Queues.eventHandlersQueue, eventHandlersJobMappings, {
-    concurrency: 25,
+    concurrency: 100,
     connection: WORKER_CONNECTION_CONFIG,
   })
 }
