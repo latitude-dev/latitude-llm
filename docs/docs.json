@@ -205,6 +205,12 @@
         "tab": "Examples",
         "groups": [
           {
+            "group": "Overview",
+            "pages": [
+              "examples/overview"
+            ]
+          },
+          {
             "group": "SDK examples",
             "pages": [
               "examples/sdk/run-prompt",
