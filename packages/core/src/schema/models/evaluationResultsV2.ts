@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
@@ -87,5 +88,12 @@ export const evaluationResultsV2 = latitudeSchema.table(
     uniqueEvaluatedLogIdEvaluationUuidIdx: uniqueIndex(
       'evaluation_results_v2_unique_evaluated_log_id_evaluation_uuid_idx',
     ).on(table.evaluatedLogId, table.evaluationUuid),
+    createdAtBrinIdx: index('evaluation_results_v2_created_at_brin_idx')
+      .using('brin', sql`${table.createdAt}`)
+      .with({
+        pages_per_range: 32,
+        autosummarize: true,
+      })
+      .concurrently(),
   }),
 )

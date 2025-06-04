@@ -23,10 +23,12 @@ export function buildLogsFilterSQLConditions({
   const createdAt = safeCreatedAt(unsafeCreatedAt)
   return and(
     commitIds.length
-      ? or(inArray(documentLogs.commitId, commitIds))
+      ? // FIXME: This should be AND, its faster and OR is not consistent with other filterings in the app
+        or(inArray(documentLogs.commitId, commitIds))
       : sql`1 = 0`, // Return none
     logSources.length
-      ? or(inArray(documentLogs.source, logSources))
+      ? // FIXME: This should be AND, its faster and OR is not consistent with other filterings in the app
+        or(inArray(documentLogs.source, logSources))
       : sql`1 = 0`, // Return none
     createdAt
       ? and(between(documentLogs.createdAt, createdAt.from, createdAt.to))

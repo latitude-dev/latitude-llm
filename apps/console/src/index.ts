@@ -1,8 +1,12 @@
-import * as loadModules from './replReload'
+import { database, utils } from '@latitude-data/core/client'
 import * as models from '@latitude-data/core/schema'
+import { randomUUID as uuid } from 'node:crypto'
 import repl from 'node:repl'
-import { database, dbUtils } from '@latitude-data/core/client'
+import { inspect as utilInspect } from 'node:util'
 import { setupReplHistory } from './replHistory'
+import * as loadModules from './replReload'
+
+const inspect = (value: any) => console.log(utilInspect(value, { depth: null }))
 
 const hasS3 = process.env.S3_BUCKET
 
@@ -21,15 +25,11 @@ const r = repl.start({
 // History in Repl enabled
 setupReplHistory(r)
 
-r.context.database = {
-  ...dbUtils,
+Object.assign(r.context, {
+  ...utils,
   ...models,
-  db: database,
-}
-
-// Use this to load code
-// Ex: mod = await loadModule('@latitude-data/core/data-migrations')
-r.context.loadModule = loadModules.loadModule
-
-// Reload TS code changed in the modules you're importing
-r.context.reload = loadModules.reloadAllModules
+  database,
+  uuid,
+  inspect,
+  ...loadModules,
+})

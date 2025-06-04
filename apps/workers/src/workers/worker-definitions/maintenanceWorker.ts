@@ -1,5 +1,6 @@
-import { Queues } from '@latitude-data/core/queues/types'
+import { setupLRO } from '@latitude-data/core/client'
 import * as jobs from '@latitude-data/core/jobs/definitions'
+import { Queues } from '@latitude-data/core/queues/types'
 import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
@@ -9,11 +10,13 @@ const jobMappings = {
   requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
   scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,
   updateMcpServerLastUsedJob: jobs.updateMcpServerLastUsedJob,
+  refreshProjectsStatsCacheJob: jobs.refreshProjectsStatsCacheJob,
   refreshProjectStatsCacheJob: jobs.refreshProjectStatsCacheJob,
-  refreshWorkspaceProjectStatsCacheJob:
-    jobs.refreshWorkspaceProjectStatsCacheJob,
+  refreshDocumentsStatsCacheJob: jobs.refreshDocumentsStatsCacheJob,
+  refreshDocumentStatsCacheJob: jobs.refreshDocumentStatsCacheJob,
 }
 
 export function startMaintenanceWorker() {
+  setupLRO() // Setup LRO for the maintenance worker
   return createWorker(Queues.maintenanceQueue, jobMappings)
 }

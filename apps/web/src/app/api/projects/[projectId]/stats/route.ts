@@ -1,8 +1,8 @@
+import { authHandler } from '$/middlewares/authHandler'
+import { errorHandler } from '$/middlewares/errorHandler'
 import { Workspace } from '@latitude-data/core/browser'
 import { ProjectsRepository } from '@latitude-data/core/repositories'
 import { computeProjectStats } from '@latitude-data/core/services/projects/computeProjectStats'
-import { authHandler } from '$/middlewares/authHandler'
-import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -34,7 +34,8 @@ export const GET = errorHandler(
         .then((r) => r.unwrap())
 
       const result = await computeProjectStats({
-        project,
+        workspaceId: project.workspaceId,
+        projectId: project.id,
       }).then((r) => r.unwrap())
 
       return NextResponse.json(result, { status: 200 })

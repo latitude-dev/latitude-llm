@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Commit, DocumentVersion, Project, ProviderApiKey } from '../../browser'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+  ProviderApiKey,
+  Workspace,
+} from '../../browser'
 import * as cacheModule from '../../cache'
 import { EvaluationType, LlmEvaluationMetric, Providers } from '../../constants'
 import * as factories from '../../tests/factories'
@@ -16,7 +22,7 @@ vi.mock('../../cache', () => ({
 
 describe('computeProjectStats', () => {
   let project: Project
-  let workspace: any
+  let workspace: Workspace
   let document: DocumentVersion
   let commit: Commit
   let provider: ProviderApiKey
@@ -49,7 +55,10 @@ describe('computeProjectStats', () => {
   })
 
   it('returns zero stats for empty project', async () => {
-    const result = await computeProjectStats({ project })
+    const result = await computeProjectStats({
+      workspaceId: project.workspaceId,
+      projectId: project.id,
+    })
     expect(result.ok).toBe(true)
 
     const stats = result.unwrap()
@@ -83,7 +92,10 @@ describe('computeProjectStats', () => {
       costInMillicents: 500,
     })
 
-    const result = await computeProjectStats({ project })
+    const result = await computeProjectStats({
+      workspaceId: project.workspaceId,
+      projectId: project.id,
+    })
     expect(result.ok).toBe(true)
 
     const stats = result.unwrap()
@@ -174,7 +186,10 @@ describe('computeProjectStats', () => {
       hasPassed: true,
     })
 
-    const result = await computeProjectStats({ project })
+    const result = await computeProjectStats({
+      workspaceId: project.workspaceId,
+      projectId: project.id,
+    })
     expect(result.ok).toBe(true)
 
     const stats = result.unwrap()
@@ -223,14 +238,19 @@ describe('computeProjectStats', () => {
 
     mockRedis.get.mockResolvedValue(JSON.stringify(cachedStats))
 
-    const result = await computeProjectStats({ project })
+    const result = await computeProjectStats({
+      workspaceId: project.workspaceId,
+      projectId: project.id,
+    })
     expect(result.ok).toBe(true)
 
     const stats = result.unwrap()
     expect(stats).toEqual(cachedStats)
 
     // Verify cache was checked
-    expect(mockRedis.get).toHaveBeenCalledWith(`project_stats:${project.id}`)
+    expect(mockRedis.get).toHaveBeenCalledWith(
+      `project_stats:${workspace.id}:${project.id}`,
+    )
     // Verify no database queries were made (we can't directly verify this, but we can check that set wasn't called)
     expect(mockRedis.set).not.toHaveBeenCalled()
   })
@@ -271,7 +291,11 @@ describe('computeProjectStats', () => {
       costInMillicents: 500,
     })
 
-    const result = await computeProjectStats({ project, forceRefresh: true })
+    const result = await computeProjectStats({
+      workspaceId: project.workspaceId,
+      projectId: project.id,
+      forceRefresh: true,
+    })
     expect(result.ok).toBe(true)
 
     const stats = result.unwrap()
@@ -281,7 +305,7 @@ describe('computeProjectStats', () => {
     expect(stats.totalTokens).toBe(providerLog.tokens)
     expect(stats.totalRuns).toBe(1)
     expect(mockRedis.get).not.toHaveBeenCalledWith(
-      `project_stats:${project.id}`,
+      `project_stats:${workspace.id}:${project.id}`,
     )
   })
 
@@ -306,7 +330,10 @@ describe('computeProjectStats', () => {
       costInMillicents: 500,
     })
 
-    const result = await computeProjectStats({ project })
+    const result = await computeProjectStats({
+      workspaceId: project.workspaceId,
+      projectId: project.id,
+    })
     expect(result.ok).toBe(true)
 
     const stats = result.unwrap()
@@ -333,7 +360,10 @@ describe('computeProjectStats', () => {
       costInMillicents: 500,
     })
 
-    const result = await computeProjectStats({ project })
+    const result = await computeProjectStats({
+      workspaceId: project.workspaceId,
+      projectId: project.id,
+    })
     expect(result.ok).toBe(true)
 
     // Verify cache was not set
@@ -368,7 +398,10 @@ describe('computeProjectStats', () => {
       costInMillicents: 100,
     })
 
-    const result = await computeProjectStats({ project })
+    const result = await computeProjectStats({
+      workspaceId: project.workspaceId,
+      projectId: project.id,
+    })
     expect(result.ok).toBe(true)
 
     const stats = result.unwrap()

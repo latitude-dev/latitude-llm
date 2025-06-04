@@ -12,6 +12,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
+import { sql } from 'drizzle-orm'
 import { LogSources } from '../../constants'
 import { PartialConfig } from '../../services/ai'
 import { latitudeSchema } from '../db-schema'
@@ -69,5 +70,12 @@ export const providerLogs = latitudeSchema.table(
       table.documentLogUuid,
       table.model,
     ),
+    createdAtBrinIdx: index('provider_logs_created_at_brin_idx')
+      .using('brin', sql`${table.createdAt}`)
+      .with({
+        pages_per_range: 32,
+        autosummarize: true,
+      })
+      .concurrently(),
   }),
 )

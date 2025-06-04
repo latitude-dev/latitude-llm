@@ -1,97 +1,72 @@
-import { and, eq, sql } from 'drizzle-orm'
-
-import { database } from '../../client'
+import { eq, sql } from 'drizzle-orm'
+import { database, lro } from '../../client'
+import { LIMITED_VIEW_THRESHOLD } from '../../constants'
 import { Result } from '../../lib/Result'
-import { documentLogs, commits, projects } from '../../schema'
+import { DocumentLogsRepository } from '../../repositories'
+import { commits, documentLogs, projects } from '../../schema'
 import {
   computeProjectStats,
   MIN_LOGS_FOR_CACHING,
 } from './computeProjectStats'
 
-/**
- * Refreshes the project stats cache for a specific project
- * @param projectId The ID of the project to refresh
- * @returns Result indicating success or failure
- */
-export async function refreshProjectStatsCache(projectId: number) {
-  try {
-    const db = database
+async function countByProject(projectId: number, db = database) {
+  return await db
+    .select({ count: sql`count(*)`.mapWith(Number).as('count') })
+    .from(documentLogs)
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
+    .where(eq(commits.projectId, projectId))
+    .then((r) => r[0]?.count ?? 0)
+}
 
-    // Get the project
+export async function refreshProjectStatsCache(
+  projectId: number,
+  db = database,
+) {
+  try {
     const project = await db
       .select()
       .from(projects)
       .where(eq(projects.id, projectId))
       .then((result) => result[0])
-
     if (!project) {
       return Result.error(new Error(`Project ${projectId} not found`))
     }
 
-    // Count the number of document logs for this project
-    let logCount = await db
-      .select({
-        count: sql<number>`count(*)`,
-      })
-      .from(documentLogs)
-      .innerJoin(
-        commits,
-        and(
-          eq(documentLogs.commitId, commits.id),
-          eq(commits.projectId, projectId),
-        ),
-      )
-      .then((result) => result[0]?.count ?? 0)
-    logCount = Number(logCount)
+    const repository = new DocumentLogsRepository(project.workspaceId, db)
+    // Approximate the number of document logs for this project
+    const approximatedCount = await repository.approximatedCountByProject({
+      projectId: project.id,
+    })
+    if (approximatedCount.error) {
+      return Result.error(approximatedCount.error)
+    }
 
-    // Only refresh if we have enough logs
-    if (logCount < MIN_LOGS_FOR_CACHING) {
-      return Result.ok({ skipped: true, reason: 'insufficient_logs', logCount })
+    if (approximatedCount.value < LIMITED_VIEW_THRESHOLD) {
+      // Count the number of document logs for this project
+      const logs = await countByProject(project.id, db)
+      if (logs < MIN_LOGS_FOR_CACHING) {
+        return Result.ok({
+          skipped: true,
+          reason: 'insufficient_logs',
+          logs: logs,
+        })
+      }
+    } else {
+      db = lro.database ?? db
     }
 
     // Compute the stats
-    const stats = await computeProjectStats({ project, forceRefresh: true })
+    const stats = await computeProjectStats(
+      { workspaceId: project.workspaceId, projectId, forceRefresh: true },
+      db,
+    )
     if (stats.error) {
       return Result.error(stats.error)
     }
 
-    return Result.ok({ success: true, logCount })
-  } catch (error) {
-    return Result.error(error as Error)
-  }
-}
+    // Note: cache has been already updated
 
-/**
- * Refreshes the project stats cache for all projects in a workspace
- */
-export async function refreshWorkspaceProjectStatsCache(workspaceId: number) {
-  try {
-    const db = database
-
-    // Get all projects in the workspace
-    const workspaceProjects = await db
-      .select()
-      .from(projects)
-      .where(eq(projects.workspaceId, workspaceId))
-      .then((result) => result)
-
-    // Refresh cache for each project
-    const results = await Promise.all(
-      workspaceProjects.map((project) => refreshProjectStatsCache(project.id)),
-    )
-
-    // Check if any refresh failed
-    const failures = results.filter((result) => result.error)
-
-    if (failures.length > 0) {
-      return Result.error(
-        new Error(
-          `Failed to refresh cache for ${failures.length} projects in workspace ${workspaceId}`,
-        ),
-      )
-    }
-
-    return Result.ok(true)
+    return Result.ok({ success: true, logs: stats.value.totalRuns })
   } catch (error) {
     return Result.error(error as Error)
   }

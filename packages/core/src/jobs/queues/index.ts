@@ -25,6 +25,7 @@ export const defaultQueue = new Queue(Queues.defaultQueue, options)
 export const evaluationsQueue = new Queue(Queues.evaluationsQueue, options)
 export const eventHandlersQueue = new Queue(Queues.eventHandlersQueue, options)
 export const eventsQueue = new Queue(Queues.eventsQueue, options)
+// FIXME: Not used
 export const liveEvaluationsQueue = new Queue(
   Queues.liveEvaluationsQueue,
   options,

@@ -52,8 +52,9 @@ describe('computeDocumentLogsAggregations', () => {
     })
 
     const result = await computeDocumentLogsAggregations({
-      document,
-    })
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+    }).then((r) => r.unwrap())
 
     expect(result.totalCount).toBe(2)
     expect(result.totalTokens).toBeGreaterThan(0)
@@ -78,7 +79,8 @@ describe('computeDocumentLogsAggregations', () => {
     await factories.createDocumentLog({ document, commit: otherCommit })
 
     const result = await computeDocumentLogsAggregations({
-      document,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
@@ -86,7 +88,7 @@ describe('computeDocumentLogsAggregations', () => {
         customIdentifier: undefined,
         experimentId: undefined,
       },
-    })
+    }).then((r) => r.unwrap())
 
     expect(result.totalCount).toBe(1)
   })
@@ -114,7 +116,8 @@ describe('computeDocumentLogsAggregations', () => {
     await factories.createDocumentLog({ document, commit: draft })
 
     const result = await computeDocumentLogsAggregations({
-      document,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
       filterOptions: {
         commitIds: [draft.id],
         logSources: LOG_SOURCES,
@@ -122,7 +125,7 @@ describe('computeDocumentLogsAggregations', () => {
         customIdentifier: '31',
         experimentId: undefined,
       },
-    })
+    }).then((r) => r.unwrap())
 
     expect(result.totalCount).toBe(1)
   })
@@ -143,16 +146,18 @@ describe('computeDocumentLogsAggregations', () => {
     await factories.createDocumentLog({ document, commit })
 
     const result = await computeDocumentLogsAggregations({
-      document,
-    })
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+    }).then((r) => r.unwrap())
 
     expect(result.totalCount).toBe(2)
   })
 
   it('returns zero values when no logs exist', async () => {
     const result = await computeDocumentLogsAggregations({
-      document,
-    })
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+    }).then((r) => r.unwrap())
 
     expect(result).toEqual({
       totalCount: 0,
@@ -174,8 +179,9 @@ describe('computeDocumentLogsAggregations', () => {
     })
 
     const result = await computeDocumentLogsAggregations({
-      document,
-    })
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+    }).then((r) => r.unwrap())
 
     expect(result.totalCount).toBe(1)
     expect(result.totalTokens).toBe(0)

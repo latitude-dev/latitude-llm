@@ -1,10 +1,10 @@
-import { computeDocumentLogsDailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
-import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
-import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/browser'
+import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
+import { computeDocumentLogsDailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
+import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
+import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
   authHandler(
@@ -37,10 +37,11 @@ export const GET = errorHandler(
         .then((r) => r.unwrap())
 
       const result = await computeDocumentLogsDailyCount({
-        document,
+        projectId: Number(projectId),
+        documentUuid: document.documentUuid,
         filterOptions: queryParams.filterOptions,
-        days,
-      })
+        days: days,
+      }).then((r) => r.unwrap())
 
       return NextResponse.json(result, { status: 200 })
     },

@@ -68,4 +68,3 @@ TODO.md
 # Sentry
 .sentryclirc
 .env.sentry-build-plugin
-bin

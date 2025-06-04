@@ -89,7 +89,8 @@ describe('computeDocumentLogsDailyCount', () => {
     ])
 
     const result = await computeDocumentLogsDailyCount({
-      document,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
@@ -98,7 +99,7 @@ describe('computeDocumentLogsDailyCount', () => {
         experimentId: undefined,
       },
       days: 3,
-    })
+    }).then((r) => r.unwrap())
 
     expect(result).toHaveLength(3)
     expect(
@@ -133,7 +134,8 @@ describe('computeDocumentLogsDailyCount', () => {
     ])
 
     const result = await computeDocumentLogsDailyCount({
-      document,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
@@ -141,7 +143,7 @@ describe('computeDocumentLogsDailyCount', () => {
         customIdentifier: undefined,
         experimentId: undefined,
       },
-    })
+    }).then((r) => r.unwrap())
 
     expect(result[0]?.count).toBe(2)
   })
@@ -178,7 +180,8 @@ describe('computeDocumentLogsDailyCount', () => {
     ])
 
     const result = await computeDocumentLogsDailyCount({
-      document,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
       filterOptions: {
         commitIds: [draft.id],
         logSources: LOG_SOURCES,
@@ -186,12 +189,12 @@ describe('computeDocumentLogsDailyCount', () => {
         customIdentifier: '31',
         experimentId: undefined,
       },
-    })
+    }).then((r) => r.unwrap())
 
     expect(result[0]?.count).toBe(2)
   })
 
-  it('excludes logs with errors', async () => {
+  it('includes logs with errors', async () => {
     const { documentLog } = await factories.createDocumentLog({
       document,
       commit,
@@ -207,7 +210,8 @@ describe('computeDocumentLogsDailyCount', () => {
     await factories.createDocumentLog({ document, commit })
 
     const result = await computeDocumentLogsDailyCount({
-      document,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
@@ -215,9 +219,9 @@ describe('computeDocumentLogsDailyCount', () => {
         customIdentifier: undefined,
         experimentId: undefined,
       },
-    })
+    }).then((r) => r.unwrap())
 
-    expect(result[0]?.count).toBe(1)
+    expect(result[0]?.count).toBe(2)
   })
 
   it('respects the days parameter', async () => {
@@ -237,7 +241,8 @@ describe('computeDocumentLogsDailyCount', () => {
     })
 
     const result = await computeDocumentLogsDailyCount({
-      document,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
@@ -246,7 +251,7 @@ describe('computeDocumentLogsDailyCount', () => {
         experimentId: undefined,
       },
       days: 30,
-    })
+    }).then((r) => r.unwrap())
 
     // Should only include today's log
     expect(result).toHaveLength(1)

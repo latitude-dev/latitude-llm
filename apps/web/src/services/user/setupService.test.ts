@@ -1,6 +1,6 @@
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
 import { Providers } from '@latitude-data/core/browser'
-import { database, dbUtils } from '@latitude-data/core/client'
+import { database, utils } from '@latitude-data/core/client'
 import { publisher } from '@latitude-data/core/events/publisher'
 import * as factories from '@latitude-data/core/factories'
 import {
@@ -59,7 +59,7 @@ describe('setupService', () => {
 
     // Check user creation
     const createdUser = await database.query.users.findFirst({
-      where: dbUtils.eq(users.id, user.id),
+      where: utils.eq(users.id, user.id),
     })
     expect(createdUser).toBeDefined()
     expect(createdUser?.email).toBe('test@example.com')
@@ -67,28 +67,28 @@ describe('setupService', () => {
 
     // Check workspace creation
     const createdWorkspace = await database.query.workspaces.findFirst({
-      where: dbUtils.eq(workspaces.id, workspace.id),
+      where: utils.eq(workspaces.id, workspace.id),
     })
     expect(createdWorkspace).toBeDefined()
     expect(createdWorkspace?.name).toBe('Test Company')
 
     // Check membership creation
     const createdMembership = await database.query.memberships.findFirst({
-      where: dbUtils.eq(memberships.userId, user.id),
+      where: utils.eq(memberships.userId, user.id),
     })
     expect(createdMembership).toBeDefined()
     expect(createdMembership?.workspaceId).toBe(workspace.id)
 
     // Check API key creation
     const createdApiKey = await database.query.apiKeys.findFirst({
-      where: dbUtils.eq(apiKeys.workspaceId, workspace.id),
+      where: utils.eq(apiKeys.workspaceId, workspace.id),
     })
     expect(createdApiKey).toBeDefined()
 
     // Check provider API key creation when ENV variables are present
     const createdProviderApiKey =
       await database.query.providerApiKeys.findFirst({
-        where: dbUtils.eq(providerApiKeys.workspaceId, workspace.id),
+        where: utils.eq(providerApiKeys.workspaceId, workspace.id),
       })
     expect(createdProviderApiKey).toBeDefined()
     expect(createdProviderApiKey?.authorId).toBe(user.id)
@@ -96,7 +96,7 @@ describe('setupService', () => {
     // Check if onboarding evaluation was created
     const createdEvaluation = await database.query.evaluationVersions.findFirst(
       {
-        where: dbUtils.eq(evaluations.workspaceId, workspace.id),
+        where: utils.eq(evaluations.workspaceId, workspace.id),
       },
     )
     expect(createdEvaluation).toBeDefined()
@@ -153,7 +153,7 @@ describe('setupService', () => {
 
     // Check if the default project was imported
     const importedProject = await database.query.projects.findFirst({
-      where: dbUtils.eq(projects.workspaceId, workspace.id),
+      where: utils.eq(projects.workspaceId, workspace.id),
     })
     expect(importedProject).toBeDefined()
     expect(importedProject?.name).toBe('Default Project')
@@ -162,15 +162,15 @@ describe('setupService', () => {
     const importedDocuments = await database
       .select()
       .from(documentVersions)
-      .innerJoin(commits, dbUtils.eq(commits.id, documentVersions.commitId))
-      .where(dbUtils.eq(commits.projectId, importedProject!.id))
+      .innerJoin(commits, utils.eq(commits.id, documentVersions.commitId))
+      .where(utils.eq(commits.projectId, importedProject!.id))
     expect(importedDocuments.length).toBe(1)
     expect(importedDocuments[0]!.document_versions.content).toEqual(prompt)
 
     // Check if onboarding evaluation was created
     const createdEvaluation = await database.query.evaluationVersions.findFirst(
       {
-        where: dbUtils.eq(evaluations.workspaceId, workspace.id),
+        where: utils.eq(evaluations.workspaceId, workspace.id),
       },
     )
     expect(createdEvaluation).toBeDefined()
