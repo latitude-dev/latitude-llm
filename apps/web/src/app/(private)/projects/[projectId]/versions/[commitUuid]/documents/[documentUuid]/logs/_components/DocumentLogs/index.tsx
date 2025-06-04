@@ -35,7 +35,6 @@ import { useDownloadLogsModal } from './DownloadLogsModal/useDownloadLogsModal'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import { useSearchParams } from 'next/navigation'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { parsePage } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 
 export function DocumentLogs({
   documentLogFilterOptions,
