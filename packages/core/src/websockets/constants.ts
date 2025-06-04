@@ -8,13 +8,13 @@ import {
   Commit,
   Dataset,
   DatasetRow,
+  DocumentLogWithMetadataAndError,
   DocumentSuggestion,
   EvaluationResultV2,
   EvaluationV2,
   ExperimentDto,
   ProviderLogDto,
 } from '../browser'
-import { type DocumentLogWithMetadataAndError } from '../repositories'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR

@@ -1,9 +1,9 @@
 import {
-  DATASET_COLUMN_ROLES,
   Dataset,
+  DATASET_COLUMN_ROLES,
   DEFAULT_DATASET_LABEL,
+  DocumentLogWithMetadataAndError,
 } from '../../../browser'
-import { DocumentLogWithMetadataAndError } from '../../../repositories'
 import { Column } from '../../../schema'
 import {
   buildColumns as buildColumnsFn,

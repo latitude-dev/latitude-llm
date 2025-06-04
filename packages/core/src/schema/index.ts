@@ -26,6 +26,7 @@ export * from './models/memberships'
 export * from './models/apiKeys'
 export * from './models/claimedRewards'
 export * from './models/oauthAccounts'
+export * from './models/magicLinkTokens'
 
 // Document tables
 export * from './models/projects'
@@ -45,14 +46,11 @@ export * from './models/runErrors'
 export * from './models/providerLogs'
 
 // Evaluations tables
-export * from './models/datasets'
-export * from './models/datasetRows'
-
 export * from './models/evaluationVersions'
 export * from './models/evaluationResultsV2'
 
-export * from './models/magicLinkTokens'
-export * from './models/events'
+export * from './models/datasets'
+export * from './models/datasetRows'
 
 export * from './models/experiments'
 
@@ -69,3 +67,4 @@ export * from './models/workspaceOnboarding'
 
 // Export tables
 export * from './models/exports'
+export * from './models/events'

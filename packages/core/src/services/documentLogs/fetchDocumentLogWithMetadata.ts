@@ -1,13 +1,10 @@
-import { database } from '../../client'
-import {
-  DocumentLogsRepository,
-  DocumentLogWithMetadataAndError,
-} from '../../repositories'
-import { NotFoundError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import { TypedResult } from './../../lib/Result'
-import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 import { DocumentLog } from '@latitude-data/constants'
+import { DocumentLogWithMetadataAndError } from '../../browser'
+import { database } from '../../client'
+import { DocumentLogsRepository } from '../../repositories'
+import { NotFoundError } from './../../lib/errors'
+import { Result, TypedResult } from './../../lib/Result'
+import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 
 function throwNotFound({
   identifier,

@@ -1,7 +1,5 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   EventArgs,
@@ -9,13 +7,21 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { RealtimeToggle } from '$/components/RealtimeToggle'
 import { ROUTES } from '$/services/routes'
+import { useCommits } from '$/stores/commitsStore'
 import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
 import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
+import useDocumentLogsLimited from '$/stores/documentLogsLimited'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import {
+  DocumentLogFilterOptions,
+  DocumentLogLimitedView,
+  DocumentLogWithMetadataAndError,
+} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import {
   useCurrentCommit,
@@ -23,8 +29,7 @@ import {
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-
-import { useCommits } from '$/stores/commitsStore'
+import { useCallback, useMemo, useState } from 'react'
 import { useDebounce } from 'use-debounce'
 import { DocumentLogs } from './DocumentLogs'
 import { DocumentLogFilters } from './Filters'
@@ -81,12 +86,14 @@ export function DocumentLogsPage({
   documentLogs: serverDocumentLogs,
   selectedLog,
   originalSelectedCommitsIds,
-  documengLogFilterOptions: initialDocumentLogFilterOptions,
+  documentLogFilterOptions: initialDocumentLogFilterOptions,
+  limitedView,
 }: {
   documentLogs: DocumentLogWithMetadataAndError[]
   selectedLog?: DocumentLogWithMetadataAndError
   originalSelectedCommitsIds: number[]
-  documengLogFilterOptions: DocumentLogFilterOptions
+  documentLogFilterOptions: DocumentLogFilterOptions
+  limitedView?: DocumentLogLimitedView
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -95,11 +102,12 @@ export function DocumentLogsPage({
   const searchParams = useSearchParams()
   const page = searchParams.get('page')
   const pageSize = searchParams.get('pageSize')
+  const from = searchParams.get('from')
   const [documentLogFilterOptions, setDocumentLogFilterOptions] = useState(
     initialDocumentLogFilterOptions,
   )
   const [debouncedFilterOptions] = useDebounce(documentLogFilterOptions, 500)
-  const { data: documentLogs, mutate } = useDocumentLogs(
+  const { data: documentLogsNormal, mutate: mutateNormal } = useDocumentLogs(
     {
       documentUuid: document.documentUuid,
       projectId: project.id,
@@ -107,18 +115,69 @@ export function DocumentLogsPage({
       page,
       pageSize,
       excludeErrors: false,
+      disable: !!limitedView,
     },
-    {
-      fallbackData: serverDocumentLogs,
-    },
+    { fallbackData: serverDocumentLogs },
   )
 
-  const { data: aggregations, isLoading: isAggregationsLoading } =
+  const [limitedCursor, setLimitedCursor] = useState<string | null>(from)
+  const { data: documentLogsLimited, mutate: mutateLimited } =
+    useDocumentLogsLimited(
+      {
+        documentUuid: document.documentUuid,
+        projectId: project.id,
+        from: limitedCursor,
+        filters: debouncedFilterOptions,
+        disable: !limitedView,
+      },
+      { fallbackData: { items: serverDocumentLogs, next: null } },
+    )
+
+  // Prefetching the next logs
+  useDocumentLogsLimited({
+    documentUuid: document.documentUuid,
+    projectId: project.id,
+    from: documentLogsLimited.next,
+    filters: debouncedFilterOptions,
+    disable: !limitedView,
+  })
+
+  const documentLogs = useMemo(() => {
+    if (limitedView) return documentLogsLimited.items
+    return documentLogsNormal
+  }, [limitedView, documentLogsLimited, documentLogsNormal])
+
+  const mutate = useMemo(() => {
+    if (limitedView) {
+      return ((
+        fn: (
+          data: DocumentLogWithMetadataAndError[] | undefined,
+        ) => DocumentLogWithMetadataAndError[] | undefined,
+        options?: { revalidate?: boolean },
+      ) => {
+        return mutateLimited((current) => {
+          const result = fn(current?.items)
+          return result
+            ? { items: result, next: current?.next ?? null }
+            : current
+        }, options)
+      }) as ReturnType<typeof useDocumentLogs<false>>['mutate']
+    }
+    return mutateNormal
+  }, [limitedView, mutateLimited, mutateNormal])
+
+  const { data: aggregationsNormal, isLoading: isAggregationsLoading } =
     useDocumentLogsAggregations({
       documentUuid: commits ? document.documentUuid : undefined,
       filterOptions: debouncedFilterOptions,
       projectId: project.id,
+      disable: !!limitedView,
     })
+
+  const aggregations = useMemo(() => {
+    if (limitedView) return limitedView
+    return aggregationsNormal
+  }, [limitedView, aggregationsNormal])
 
   const {
     data: evaluationResults,
@@ -147,7 +206,35 @@ export function DocumentLogsPage({
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-2 min-w-0'>
       <TableWithHeader
-        title='Logs'
+        title={
+          limitedView ? (
+            <Tooltip
+              asChild
+              trigger={
+                <span className='flex flex-row items-center gap-2'>
+                  <Text.H4B color='foreground'>Logs</Text.H4B>
+                  <span className='flex flex-row items-center gap-1'>
+                    <Text.H6 color='foreground'>(limited)</Text.H6>
+                    <Icon
+                      name='info'
+                      size='small'
+                      color='foreground'
+                      className='flex-shrink-0'
+                    />
+                  </span>
+                </span>
+              }
+              maxWidth='max-w-[400px]'
+              align='center'
+              side='top'
+            >
+              Statistics are limited, approximated, and cannot be filtered due
+              to the large number of logs.
+            </Tooltip>
+          ) : (
+            'Logs'
+          )
+        }
         actions={
           <>
             <DocumentLogFilters
@@ -186,6 +273,9 @@ export function DocumentLogsPage({
             evaluations={evaluations}
             annotateEvaluation={annotateEvaluation}
             isAnnotatingEvaluation={isAnnotatingEvaluation}
+            limitedView={limitedView}
+            limitedCursor={documentLogsLimited.next}
+            setLimitedCursor={setLimitedCursor}
           />
         }
       />

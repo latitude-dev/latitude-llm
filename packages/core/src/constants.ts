@@ -486,3 +486,5 @@ export type ProviderApiKeyUsage = {
   evaluationUuid?: string
   evaluationName?: string
 }[]
+
+export const DOCUMENT_LOGS_LIMITED_VIEW_THRESHOLD = 1_000_000

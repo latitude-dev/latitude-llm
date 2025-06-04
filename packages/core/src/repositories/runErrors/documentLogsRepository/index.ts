@@ -1,6 +1,9 @@
 import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
 
-import { ErrorableEntity } from '../../../browser'
+import {
+  DocumentLogWithMetadataAndError,
+  ErrorableEntity,
+} from '../../../browser'
 import {
   commits,
   documentLogs,
@@ -8,9 +11,7 @@ import {
   runErrors,
   workspaces,
 } from '../../../schema'
-import { DocumentLogWithMetadata } from '../../documentLogsRepository'
 import Repository from '../../repositoryV2'
-import { RunErrorField } from '../evaluationResultsRepository'
 import { NotFoundError } from './../../../lib/errors'
 import { Result } from './../../../lib/Result'
 
@@ -22,9 +23,7 @@ const tt = {
     details: sql<string>`${runErrors.details}`.as('document_log_error_details'),
   },
 }
-export type DocumentLogWithMetadataAndError = DocumentLogWithMetadata & {
-  error: RunErrorField
-}
+
 export type DocumentLogWithErrorScope =
   typeof DocumentLogsWithErrorsRepository.prototype.scope
 
