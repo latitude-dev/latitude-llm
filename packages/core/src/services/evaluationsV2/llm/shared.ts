@@ -5,7 +5,7 @@ import {
 } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
+import { Adapters, scan } from 'promptl-ai'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
@@ -24,6 +24,7 @@ import { Result } from '../../../lib/Result'
 import { ProviderLogsRepository } from '../../../repositories'
 import { runAgent } from '../../agents/run'
 import { runChain } from '../../chains/run'
+import { createPromptlChain } from '../../../utils/promptlChain/createFromWorker'
 
 export function promptTask({ provider }: { provider: ProviderApiKey }) {
   return `
@@ -98,11 +99,11 @@ export async function buildLlmEvaluationRunFunction<
       ...result.config,
       ...(schema && { schema: zodToJsonSchema(schema, { target: 'openAi' }) }),
     } as LatitudePromptConfig
-    promptChain = new PromptlChain({
+    promptChain = await createPromptlChain({
       prompt: prompt,
       parameters: parameters,
-      adapter: Adapters.default,
       includeSourceMap: true,
+      adapter: Adapters.default,
     })
   } catch (error) {
     if (error instanceof ChainError) return Result.error(error)

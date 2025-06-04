@@ -5,9 +5,7 @@ import {
 } from '@latitude-data/compiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
-  Adapters,
   isPromptLFile,
-  Chain as PromptlChain,
   scan,
   toPromptLFile,
   type PromptLFile,
@@ -21,6 +19,7 @@ import { LatitudeError } from './../../../lib/errors'
 import { PromisedResult } from './../../../lib/Transaction'
 import { Result } from './../../../lib/Result'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { createPromptlChain } from '../../../utils/promptlChain/createFromWorker'
 
 type RunDocumentErrorCodes = RunErrorCodes.ChainCompileError
 
@@ -88,10 +87,9 @@ export class RunDocumentChecker {
         if (processedParameters.error) return processedParameters
 
         return Result.ok({
-          chain: new PromptlChain({
+          chain: await createPromptlChain({
             prompt: metadata.resolvedPrompt,
             parameters: processedParameters.unwrap(),
-            adapter: Adapters.default,
             includeSourceMap: true,
           }),
           config: metadata.config,

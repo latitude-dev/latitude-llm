@@ -8,7 +8,7 @@ import { ExpressAdapter } from '@bull-board/express'
 import {
   captureException,
   captureMessage,
-} from '@latitude-data/core/workers/sentry'
+} from '@latitude-data/core/utils/workers/sentry'
 import { startWorkers, setupSchedules } from './workers'
 import { env } from '@latitude-data/env'
 import * as queues from '@latitude-data/core/queues'

@@ -36,7 +36,7 @@ describe('evaluateLiveLogJob', () => {
       },
     }
 
-    expect(await evaluateLiveLogJob({ data: event })).toThrow()
+    await expect(evaluateLiveLogJob({ data: event })).rejects.toThrow()
 
     expect(mockFind).toHaveBeenCalledWith(1)
     expect(mockFind).toHaveBeenCalledTimes(1)

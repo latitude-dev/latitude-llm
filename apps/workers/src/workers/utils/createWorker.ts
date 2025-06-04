@@ -1,6 +1,6 @@
 import { Worker, WorkerOptions } from 'bullmq'
 import { Queues } from '@latitude-data/core/queues/types'
-import { captureException } from '@latitude-data/core/workers/sentry'
+import { captureException } from '@latitude-data/core/utils/workers/sentry'
 import { WORKER_OPTIONS } from './connectionConfig'
 import { createJobHandler } from './createJobHandler'
 

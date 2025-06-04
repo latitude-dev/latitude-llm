@@ -12,7 +12,7 @@ import {
   runEvaluationV2JobKey,
 } from '../evaluations/runEvaluationV2Job'
 import { updateExperimentStatus } from './shared'
-import { captureException } from '../../../workers/sentry'
+import { captureException } from '../../../utils/workers/sentry'
 
 export type RunDocumentForExperimentJobData = {
   workspaceId: number
