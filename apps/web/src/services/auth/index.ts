@@ -6,6 +6,7 @@ import { Lucia } from 'lucia'
 import { env } from '@latitude-data/env'
 import { Google } from 'arctic'
 
+// @ts-ignore
 const adapter = new DrizzlePostgreSQLAdapter(database, sessions, users)
 
 interface DatabaseUserAttributes {

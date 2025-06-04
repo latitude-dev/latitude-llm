@@ -16,7 +16,7 @@ import {
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import { updateExperimentStatus } from '../experiments/shared'
 import { NotFoundError } from './../../../lib/errors'
-import { captureException } from '../../../workers/sentry'
+import { captureException } from '../../../utils/workers/sentry'
 
 export type RunEvaluationV2JobData = {
   workspaceId: number

@@ -3,6 +3,7 @@ import { defineConfig } from 'tsup'
 export default defineConfig({
   entry: ['src/server.ts'],
   outDir: 'dist',
+  publicDir: 'node_modules/@latitude-data/core/src/public',
   sourcemap: true,
   clean: true,
   dts: false,
