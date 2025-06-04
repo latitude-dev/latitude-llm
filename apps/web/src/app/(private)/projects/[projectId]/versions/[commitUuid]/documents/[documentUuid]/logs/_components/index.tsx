@@ -15,7 +15,7 @@ import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/b
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   DocumentLogFilterOptions,
-  DocumentLogLimitedView,
+  DocumentLogsLimitedView,
   DocumentLogWithMetadataAndError,
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -93,7 +93,7 @@ export function DocumentLogsPage({
   selectedLog?: DocumentLogWithMetadataAndError
   originalSelectedCommitsIds: number[]
   documentLogFilterOptions: DocumentLogFilterOptions
-  limitedView?: DocumentLogLimitedView
+  limitedView?: DocumentLogsLimitedView
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -143,8 +143,8 @@ export function DocumentLogsPage({
   })
 
   const documentLogs = useMemo(() => {
-    if (limitedView) return documentLogsLimited.items
-    return documentLogsNormal
+    if (limitedView) return documentLogsLimited.items ?? []
+    return documentLogsNormal ?? []
   }, [limitedView, documentLogsLimited, documentLogsNormal])
 
   const mutate = useMemo(() => {
@@ -200,7 +200,7 @@ export function DocumentLogsPage({
   const isEvaluationsLoading =
     isEvaluationResultsV2Loading || isEvaluationsV2Loading
 
-  const [realtimeEnabled, setRealtimeEnabled] = useState(true)
+  const [realtimeEnabled, setRealtimeEnabled] = useState(!limitedView)
   useDocumentLogSocket(document.documentUuid, mutate, realtimeEnabled)
 
   return (

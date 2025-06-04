@@ -1,5 +1,4 @@
 import { and, count, eq, isNotNull, isNull, sql } from 'drizzle-orm'
-
 import {
   DocumentLogFilterOptions,
   DocumentLogsAggregations,
@@ -7,6 +6,7 @@ import {
   ErrorableEntity,
 } from '../../browser'
 import { database } from '../../client'
+import { Result } from '../../lib/Result'
 import { commits, documentLogs, providerLogs, runErrors } from '../../schema'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
@@ -19,7 +19,7 @@ export async function computeDocumentLogsAggregations(
     filterOptions?: DocumentLogFilterOptions
   },
   db = database,
-): Promise<DocumentLogsAggregations> {
+) {
   const conditions = [
     isNull(commits.deletedAt),
     eq(documentLogs.documentUuid, document.documentUuid),
@@ -122,7 +122,7 @@ export async function computeDocumentLogsAggregations(
     totalCountPromise,
   ])
 
-  return {
+  const stats: DocumentLogsAggregations = {
     totalCount,
     totalTokens,
     totalCostInMillicents,
@@ -132,4 +132,6 @@ export async function computeDocumentLogsAggregations(
     averageDuration,
     medianDuration,
   }
+
+  return Result.ok(stats)
 }

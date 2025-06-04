@@ -8,7 +8,7 @@ import { KeysetTablePaginationFooter } from '$/components/TablePaginationFooter/
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
 import {
-  DocumentLogLimitedView,
+  DocumentLogsLimitedView,
   DocumentLogWithMetadataAndError,
   EvaluationV2,
   LOG_FILTERS_ENCODED_PARAMS,
@@ -115,7 +115,7 @@ type Props = {
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void
   isLoading: boolean
   selectableState: SelectableRowsHook
-  limitedView?: DocumentLogLimitedView
+  limitedView?: DocumentLogsLimitedView
   limitedCursor?: string | null
   setLimitedCursor?: (cursor: string | null) => void
 }

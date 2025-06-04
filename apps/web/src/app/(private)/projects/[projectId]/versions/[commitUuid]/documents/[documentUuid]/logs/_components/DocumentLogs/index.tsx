@@ -8,7 +8,7 @@ import useProviderLogs from '$/stores/providerLogs'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import {
   DocumentLogFilterOptions,
-  DocumentLogLimitedView,
+  DocumentLogsLimitedView,
   DocumentLogsAggregations,
   DocumentLogWithMetadataAndError,
   EvaluationV2,
@@ -63,7 +63,7 @@ export function DocumentLogs({
   evaluations: EvaluationV2[]
   annotateEvaluation: ReturnType<typeof useEvaluationsV2>['annotateEvaluation']
   isAnnotatingEvaluation: boolean
-  limitedView?: DocumentLogLimitedView
+  limitedView?: DocumentLogsLimitedView
   limitedCursor?: string | null
   setLimitedCursor?: (cursor: string | null) => void
 }) {

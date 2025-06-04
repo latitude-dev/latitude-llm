@@ -348,18 +348,6 @@ export const DEFAULT_PAGINATION_SIZE = 25
 
 export type DateRange = { from?: Date; to?: Date }
 
-export interface ProjectStats {
-  totalTokens: number
-  totalRuns: number
-  totalDocuments: number
-  runsPerModel: Record<string, number>
-  costPerModel: Record<string, number>
-  rollingDocumentLogs: Array<{ date: string; count: number }>
-  totalEvaluations: number
-  totalEvaluationResults: number
-  costPerEvaluation: Record<string, number>
-}
-
 // TODO: Review if it's used
 export type CsvData = {
   headers: string[]
@@ -487,4 +475,13 @@ export type ProviderApiKeyUsage = {
   evaluationName?: string
 }[]
 
-export const DOCUMENT_LOGS_LIMITED_VIEW_THRESHOLD = 1_000_000
+export const LIMITED_VIEW_THRESHOLD = 1_000_000
+export const DOCUMENT_STATS_CACHE_KEY = (
+  workspaceId: number,
+  documentUuid: string,
+) => `document_stats:${workspaceId}:${documentUuid}`
+export const PROJECT_STATS_CACHE_KEY = (
+  workspaceId: number,
+  projectId: number,
+) => `project_stats:${workspaceId}:${projectId}`
+export const STATS_CACHE_TTL = 2 * 24 * 60 * 60 // 2 days
