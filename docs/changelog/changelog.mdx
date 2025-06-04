@@ -3,6 +3,86 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-06-04'>
+
+## Numeric similarity evaluation metric
+
+We've added a new evaluation metric called "Numeric similarity". This metric
+allows you to compare the numeric values of two responses and determine how
+similar they are. The metric is based on the [cosine
+similarity](https://en.wikipedia.org/wiki/Cosine_similarity) between the two
+vectors.
+
+![](/assets/changelog/250604/numeric_similarity.png)
+
+## Realtime log updates toggle
+
+We've added a toggle to enable/disable realtime log updates in the logs
+section. This was a much needed feature for users who were generating thousands
+of logs per minute.
+
+![](/assets/changelog/250604/realtime_log_updates.png)
+
+## Export all logs
+
+Logs selector in the logs section now allows you to select any arbitrary
+combination of logs (previously it was only the logs visible in the current
+page). This feature works with both the Download logs and "Export to dataset"
+features.
+
+Exports that contain many logs will happen in the background and an email will
+be sent to the user when the export is complete.
+
+![](/assets/changelog/250604/export_all_logs.png)
+
+## Documentation sidebar
+
+We've added a new vertical sidebar to the app, that now gives you quick
+in-context access to all the documentation pages. You'll also see little
+documentation buttons spread throughout the app, that will open the
+corresponding documentation page.
+
+![](/assets/changelog/250604/docs_sidebar.png)
+
+_psst.. you might notice a sneak-peak to an upcoming feature we're are working
+on in this screenshot. Stay tuned!_
+
+## Per-subscription rate limits
+
+We've added [per-subscription rate
+limits](https://docs.latitude.so/guides/api/api-access#rate-limiting) to the
+API. Previously, all users had a flat rate limit of 10 requests per second. Now,
+paying customers enjoy rate limits of up to 10000 requests per minute.
+
+## Reworked examples documentation
+
+We've put lots of effort into improving the examples documentation. With many
+examples of common use cases. Please, [give it a
+look](https://docs.latitude.so/examples/overview)!
+
+## Consolidated evaluations API
+
+We've deprecated the trigger and createResult methods in the Evaluations API
+and consolidated them into a single endpoint
+[annotate](https://docs.latitude.so/examples/sdk/annotate-log#annotate-log-hitl)
+endpoint.
+
+## Performance and stability improvements
+
+In the past few weeks we've seen increased usage of the platform, putting a strain in our systems. As a results, we've started a company-wide effort to improve the performance and stability of our platform. We're working on a number of improvements, including:
+
+- Improving the performance of the logs section
+- Improving the performance of the prompt editor
+- Improving the performance of the project overview section
+- Preparing the platform to scale for the future
+
+Some concrete improvements have already been implemented, whereas others that
+require more work are still in progress. We're committed to making the platform
+as fast and reliable as possible, and we expect this initiative to conclude by
+early next month, so stay tuned for more updates!
+
+</Update>
+
 <Update label='2025-05-07'>
 
 ## Experiments
@@ -37,20 +117,25 @@ You might remember from our changelog last month that we added a new evaluation 
 Since we have a lot of evaluation types, here's a refresher of the different types and what they do:
 
 1. Programmatic Rule: Evaluate responses using algorithmic metrics
-  - Exact Match: Checks if the response is exactly the same as the expected output
-  - Regular Expression: Checks if the response matches the regular expression
-  - Schema Validation: Checks if the response follows the schema
-  - Length Count: Checks if the response is of a certain length
-  - Lexical Overlap: Checks if the response contains the expected output
-  - Semantic Similarity: Checks if the response is semantically similar to the expected output
+
+- Exact Match: Checks if the response is exactly the same as the expected output
+- Regular Expression: Checks if the response matches the regular expression
+- Schema Validation: Checks if the response follows the schema
+- Length Count: Checks if the response is of a certain length
+- Lexical Overlap: Checks if the response contains the expected output
+- Semantic Similarity: Checks if the response is semantically similar to the expected output
+
 2. LLM-as-a-Judge: Evaluate responses using an LLM as a judge
-  - Binary: Judges whether the response meets the criteria
-  - Rating: Judges the response by rating it under a criteria
-  - [New] Comparison: Judges the response by comparing the criteria to the expected output
-  - Custom: Judges the response under a criteria using a custom prompt
+
+- Binary: Judges whether the response meets the criteria
+- Rating: Judges the response by rating it under a criteria
+- [New] Comparison: Judges the response by comparing the criteria to the expected output
+- Custom: Judges the response under a criteria using a custom prompt
+
 3. Human-in-the-Loop: Evaluate responses using a human as a judge
-  - Binary: Judges whether the response meets the criteria. The resulting score is "passed" or "failed"
-  - Rating: Judges the response by rating it under a criteria. The resulting score is the rating
+
+- Binary: Judges whether the response meets the criteria. The resulting score is "passed" or "failed"
+- Rating: Judges the response by rating it under a criteria. The resulting score is the rating
 
 ![](/assets/changelog/250507/eval-new.png)
 
@@ -105,10 +190,10 @@ We've revamped our docs in both structure and content.
 We have made several improvements to the quality of life of our users with a slew of small but important fixes:
 
 - In sidebar when creating folder/prompt save it on blur #1044
-- If there’s only one folder in the project, display it open #1051
+- If theres only one folder in the project, display it open #1051
 - When creating a prompt put focus in the editor #1052
 - When open evaluations close parameters. And the other way #1055
-- 🐛 Collapsed/Expanded parameters are broken #1000
+-  Collapsed/Expanded parameters are broken #1000
 - Move to the center prompt Add message/Reset in playground #1056
 - Rename "Publish prompt" to "Share" in playground #1060
 - Move toasts to the left side #1069
@@ -258,7 +343,7 @@ Additionally, we added a new prompt configuration section that allows you to twe
 
 ## Automatic refiner suggestions
 
-We've added a new feature that suggests changes to your prompts based on the results of your evaluations, automatically. Now, whenever you run a prompt—from the playground or the API—that has an evaluation connected, you'll see suggestions appear next to the Refine button in the prompt editor. These suggestions are directly based on the evaluation results, so you can be sure they'll improve your prompt's quality.
+We've added a new feature that suggests changes to your prompts based on the results of your evaluations, automatically. Now, whenever you run a promptfrom the playground or the APIthat has an evaluation connected, you'll see suggestions appear next to the Refine button in the prompt editor. These suggestions are directly based on the evaluation results, so you can be sure they'll improve your prompt's quality.
 
 ![](/assets/changelog/250220/suggestions.png)
 
@@ -279,7 +364,7 @@ We're very happy to introduce the first version of Latitude Agents. An agent is 
 
 The easiest way to think about agents is as a prompt that runs in a loop and has:
 
-- Some instructions—including a goal and some context—just like any other prompt
+- Some instructionsincluding a goal and some contextjust like any other prompt
 - A set of tools that it can use to interact with the world
 - A tool the agent can call to signal that it's finished its work
 
@@ -486,7 +571,7 @@ const response = await openai.chat.completions.create({
 <Update label='2024-11-26'>
 ## PromptL activated in Latitude
 
-We have implemented the new version of our template syntax – PromptL – in
+We have implemented the new version of our template syntax  a0PromptL  a0in
 Latitude. As a reminder, PromptL is a new template syntax that has native
 support for html/xml tags, contextless chain steps, as well as a slew of other
 improvements that make it writing prompts in Latitude the best way to write
@@ -497,7 +582,7 @@ prompts. [docs](https://docs.latitude.so/promptl/getting-started/introduction)
 ## Refine prompt directly from evaluation logs
 
 One of the most powerful features of Latitude is the ability to improve your
-prompts based on results from evaluations – we call it Refiner. We have now made
+prompts based on results from evaluations  a0we call it Refiner. We have now made
 this process easier by directly allowing users to choose evaluation results from
 the evaluations page and trigger the refiner from there.
 
@@ -605,28 +690,28 @@ creation flow every time.
 ## New evaluations playground
 
 We have completely revamped our evaluations to make it super simple to create
-new evaluations from scratch. From now on you’ll only need to worry about typing
-the goal of your evaluation—as well as any additional instructions that might be
+new evaluations from scratch. From now on youll only need to worry about typing
+the goal of your evaluationas well as any additional instructions that might be
 useful.
 
 ![](/assets/changelog/241113/simple-evaluations-1.png)
 
 ## Latitude Cookbook
 
-We’ve started work on Latitude’s Cookbook showcasing common use cases with
-Latitude’s SDK. Here you can find the first examples.
+Weve started work on Latitudes Cookbook showcasing common use cases with
+Latitudes SDK. Here you can find the first examples.
 
 ## Anthropic cache
 
-We have added support for Anthropic’s prompt caching beta feature.
+We have added support for Anthropics prompt caching beta feature.
 
 ## Rust SDK
 
-Our community member @Dominik Spitzli has implemented a Rust port of Latitude’s SDK!
+Our community member @Dominik Spitzli has implemented a Rust port of Latitudes SDK!
 
 ## Latitude Typescript SDK v1 released
 
-We’ve released the first major version of Latitude’s SDK, v1.0.0, currently in
+Weve released the first major version of Latitudes SDK, v1.0.0, currently in
 beta. It adds support for evaluations, pushing logs, JSON API, and more.
 
 ## Other improvements
@@ -644,7 +729,7 @@ beta. It adds support for evaluations, pushing logs, JSON API, and more.
 ## Upload external logs
 
 Users have long asked us to evaluate their prompts without having to run them
-via Latitude’s Gateway. Well, we now support this use case. You can now upload
+via Latitudes Gateway. Well, we now support this use case. You can now upload
 external logs to Latitude for evaluation so that, even if you run your prompts
 outside of Latitude, you can keep tracking their performance. We support
 uploading logs to Latitude both [from the
@@ -655,7 +740,7 @@ API](https://docs.latitude.so/guides/sdk/javascript-typescript-sdk#pushing-a-log
 ## Trigger evaluations from SDK
 
 In cases where AI agents have long running conversations with users users only
-want to evaluate the agent’s performance at particular points in time (i.e when
+want to evaluate the agents performance at particular points in time (i.e when
 the conversation has finished). You can now trigger evaluations from our [SDK /
 HTTP
 API](https://docs.latitude.so/guides/sdk/javascript-typescript-sdk#evaluating-conversations),
@@ -664,7 +749,7 @@ it.
 
 ## JSON API
 
-We’ve released the [v2 version of our Gateway API](https://docs.latitude.so/guides/api/api-access#api-access), which supports non-streaming responses for the `run` and `chat` endpoints. We've also released the v1 major version of our SDK, which introduces support for the new HTTP API version, as well as the features above described.
+Weve released the [v2 version of our Gateway API](https://docs.latitude.so/guides/api/api-access#api-access), which supports non-streaming responses for the `run` and `chat` endpoints. We've also released the v1 major version of our SDK, which introduces support for the new HTTP API version, as well as the features above described.
 
 ## Other improvements
 
