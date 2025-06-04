@@ -5,7 +5,7 @@ import {
 } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { Adapters, scan } from 'promptl-ai'
+import { scan } from 'promptl-ai'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
