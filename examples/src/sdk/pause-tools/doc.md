@@ -7,7 +7,6 @@ description: Learn how to pause the execution of a tool and process the data
 
 When a tool’s calculation is simple, you can simply return its value to the Latitude SDK, as shown in the [prompt with tools](/examples/sdk/run-prompt-with-tools) example.
 However, for more complex calculations, you can pause the execution of the tool, process the data asynchronously, and then respond with the result in the same conversation.
-
 [PROMPTS]
 
 ## Code

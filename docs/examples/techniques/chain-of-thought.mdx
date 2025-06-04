@@ -1,0 +1,503 @@
+---
+title: 'Chain-of-Thought (CoT)'
+description: 'Implement step-by-step reasoning to improve AI performance on complex problems'
+---
+
+## What is Chain-of-Thought?
+
+Chain-of-Thought (CoT) prompting guides AI models to break down complex problems into step-by-step reasoning processes. Instead of jumping directly to an answer, the AI explains its thinking process, leading to more accurate and explainable results.
+
+## Why Use Chain-of-Thought?
+
+- **Improved Accuracy**: Step-by-step reasoning reduces errors on complex problems
+- **Explainable AI**: Users can follow the reasoning process
+- **Better Problem Solving**: Handles multi-step mathematical and logical problems
+- **Debugging**: Easy to identify where reasoning went wrong
+- **Complex Analysis**: Breaks down complicated scenarios into manageable parts
+
+## Basic Implementation
+
+<CodeGroup>
+```markdown Simple CoT
+---
+provider: OpenAI
+model: gpt-4o
+temperature: 0.1
+---
+
+# Mathematical Problem Solving
+
+Solve this step by step, showing your reasoning at each stage.
+
+Problem: {{ math_problem }}
+
+Let me think through this step by step:
+
+Step 1: Identify what we know
+- [List the given information]
+
+Step 2: Identify what we need to find
+- [State the objective clearly]
+
+Step 3: Choose the appropriate method
+- [Explain which approach to use and why]
+
+Step 4: Execute the solution
+- [Show the calculations step by step]
+
+Step 5: Verify the answer
+- [Check if the result makes sense]
+
+Final Answer: [State the final result clearly]
+```
+</CodeGroup>
+
+## Advanced CoT with Latitude Chains
+
+LLM perform better when they can reason through complex problems step by step. In the case of Latitude `<step>` blocks what they do is to call the AI only with the content inside the `<step>` block, so the AI can focus on that specific part of the reasoning process. This allows for more structured and manageable reasoning.
+
+<Note>
+  Doing this way is more expensive than a single prompt, but it allows for more complex reasoning and better results. Is more expensive because it does N calls to the AI, where N is the number of `<step>` blocks. And the amount of context of the steps is accumulated, so the AI can use all the context of the previous steps.
+</Note>
+<CodeGroup>
+```markdown Multi-Step CoT Chain
+---
+provider: OpenAI
+model: gpt-4o
+temperature: 0.2
+---
+
+<step>
+# Step 1: Problem Analysis
+
+Let's analyze this business scenario step by step: {{ business_scenario }}
+
+## Initial Assessment:
+1. **Key Stakeholders**: Who are the main parties involved?
+2. **Core Problem**: What is the fundamental issue?
+3. **Constraints**: What limitations do we need to consider?
+4. **Success Metrics**: How will we measure success?
+
+## Analysis:
+</step>
+
+<step>
+# Step 2: Solution Brainstorming
+
+Based on my analysis: {{ problem_analysis }}
+
+Now let me generate potential solutions:
+
+## Brainstorming Process:
+1. **Traditional Approaches**: What are the conventional solutions?
+2. **Innovative Options**: What creative alternatives exist?
+3. **Resource Requirements**: What would each solution need?
+4. **Risk Assessment**: What are the potential downsides?
+
+## Potential Solutions:
+</step>
+
+<step>
+# Step 3: Solution Evaluation
+
+Given these potential solutions: {{ solution_brainstorming }}
+
+Let me evaluate each option systematically:
+
+## Evaluation Criteria:
+1. **Feasibility** (1-10): How realistic is implementation?
+2. **Impact** (1-10): How effective will this be?
+3. **Cost** (1-10): How resource-efficient is this? (10 = low cost)
+4. **Timeline** (1-10): How quickly can this be implemented? (10 = very fast)
+
+## Solution Rankings:
+</step>
+
+<step>
+# Step 4: Implementation Planning
+
+Based on the evaluation: {{ solution_evaluation }}
+
+The recommended solution is: [Top-ranked solution]
+
+## Implementation Plan:
+1. **Phase 1** (Weeks 1-2): [Initial steps]
+2. **Phase 2** (Weeks 3-4): [Development phase]
+3. **Phase 3** (Weeks 5-6): [Testing and refinement]
+4. **Phase 4** (Weeks 7-8): [Full implementation]
+
+## Risk Mitigation:
+- **Risk 1**: [Potential issue] → **Mitigation**: [How to address]
+- **Risk 2**: [Potential issue] → **Mitigation**: [How to address]
+
+## Success Metrics:
+- **Short-term** (1 month): [Immediate indicators]
+- **Medium-term** (3 months): [Progress markers]
+- **Long-term** (6+ months): [Ultimate success measures]
+</step>
+```
+</CodeGroup>
+
+## CoT for Different Domains
+
+### Scientific Analysis
+
+<CodeGroup>
+```markdown Scientific CoT
+---
+provider: OpenAI
+model: gpt-4o
+temperature: 0.1
+---
+
+# Scientific Method with Chain-of-Thought
+
+Apply the scientific method to analyze: {{ research_question }}
+
+## Step 1: Observation and Question Formation
+- **Observation**: What have we observed?
+- **Research Question**: What specific question are we trying to answer?
+- **Background**: What do we already know about this topic?
+
+## Step 2: Hypothesis Development
+- **Hypothesis**: What do we predict will happen?
+- **Reasoning**: Why do we think this will occur?
+- **Variables**: What factors might influence the outcome?
+
+## Step 3: Experimental Design
+- **Method**: How would we test this hypothesis?
+- **Controls**: What variables need to be controlled?
+- **Measurements**: What data would we collect?
+
+## Step 4: Data Analysis Framework
+- **Expected Results**: What patterns would support our hypothesis?
+- **Alternative Explanations**: What other factors could explain results?
+- **Statistical Considerations**: How would we ensure reliability?
+
+## Step 5: Conclusion and Implications
+- **Interpretation**: What would different results mean?
+- **Limitations**: What are the constraints of this approach?
+- **Next Steps**: How would this lead to further research?
+
+## Analysis:
+[Apply this framework to the given research question]
+```
+</CodeGroup>
+
+### Legal Reasoning
+
+<CodeGroup>
+```markdown Legal CoT
+---
+provider: OpenAI
+model: gpt-4o
+temperature: 0.1
+---
+
+# Legal Analysis with Chain-of-Thought
+
+Analyze this legal scenario step by step: {{ legal_scenario }}
+
+## Step 1: Fact Pattern Analysis
+- **Key Facts**: What are the essential facts?
+- **Parties Involved**: Who are the relevant parties?
+- **Timeline**: What is the sequence of events?
+- **Jurisdiction**: What legal system applies?
+
+## Step 2: Legal Issue Identification
+- **Primary Issues**: What are the main legal questions?
+- **Secondary Issues**: What related questions arise?
+- **Precedent Relevance**: What similar cases might apply?
+
+## Step 3: Rule Identification
+- **Applicable Laws**: What statutes or regulations apply?
+- **Case Law**: What precedents are relevant?
+- **Legal Standards**: What tests or criteria apply?
+
+## Step 4: Application of Law to Facts
+- **Element Analysis**: How do the facts satisfy each legal element?
+- **Counterarguments**: What opposing positions exist?
+- **Distinguishing Cases**: How is this different from precedents?
+
+## Step 5: Conclusion and Reasoning
+- **Legal Conclusion**: What is the most likely outcome?
+- **Strength of Position**: How strong is each side's case?
+- **Risk Assessment**: What are the uncertainties?
+
+## Analysis:
+[Apply this legal reasoning framework]
+```
+</CodeGroup>
+
+## CoT with Self-Correction
+
+<CodeGroup>
+```markdown Self-Correcting CoT
+---
+provider: OpenAI
+model: gpt-4o
+temperature: 0.3
+---
+
+<step>
+# Initial Reasoning Attempt
+
+Problem: {{ complex_problem }}
+
+Let me work through this step by step:
+
+1. **Understanding**: [Break down the problem]
+2. **Approach**: [Choose a method]
+3. **Execution**: [Work through the solution]
+4. **Result**: [State the initial answer]
+
+Initial Solution:
+</step>
+
+<step>
+# Self-Critique and Error Checking
+
+Let me review my initial reasoning: {{ initial_reasoning }}
+
+## Error Checking:
+1. **Logic Verification**: Are my reasoning steps sound?
+2. **Calculation Check**: Are my computations correct?
+3. **Assumption Review**: What assumptions did I make?
+4. **Alternative Approaches**: Could I solve this differently?
+
+## Potential Issues Found:
+- [List any problems identified]
+
+## Confidence Level**: [High/Medium/Low] because [reasoning]
+</step>
+
+<step>
+# Revised Solution (if needed)
+
+Based on my self-critique
+
+If the initial reasoning had issues, let me correct it:
+## Corrections Made:
+1. **Issue**: [Problem identified]
+   **Correction**: [How I fixed it]
+
+## Revised Step-by-Step Solution:
+[Work through the corrected solution]
+
+## Final Answer: [Corrected result]
+
+Otherwise, confirm the original reasoning:
+## Confirmation:
+My initial reasoning appears sound. The original answer stands.
+
+## Final Answer: [Original result confirmed]
+</step>
+```
+</CodeGroup>
+
+## CoT with Multiple Perspectives
+
+<CodeGroup>
+```markdown Multi-Perspective CoT
+---
+provider: OpenAI
+model: gpt-4o
+temperature: 0.4
+type: agent
+agents:
+  - agents/analyst_a
+  - agents/analyst_b
+  - agents/synthesizer
+---
+
+# Multi-Perspective Analysis
+
+Analyze this complex issue: {{ complex_issue }}
+
+Use multiple analytical perspectives and then synthesize the findings.
+
+## Analysis Framework:
+
+### Perspective A: {{ perspective_a_description }}
+- Apply this analytical lens step by step
+- Focus on {{ perspective_a_focus }}
+
+### Perspective B: {{ perspective_b_description }}
+- Apply this different analytical approach
+- Emphasize {{ perspective_b_focus }}
+
+### Synthesis:
+- Compare and contrast the perspectives
+- Identify points of agreement and disagreement
+- Develop a comprehensive understanding
+
+Coordinate the analysis across agents and provide a unified conclusion.
+```
+
+```markdown agents/analyst_a
+---
+provider: OpenAI
+model: gpt-4o
+temperature: 0.2
+type: agent
+---
+
+# Perspective A Analysis: {{ perspective_a_description }}
+
+I'll analyze the issue through this specific lens: {{ complex_issue }}
+
+## Step-by-Step Analysis:
+
+1. **Framework Application**: How does {{ perspective_a_description }} apply here?
+2. **Key Factors**: What elements are most important from this perspective?
+3. **Methodology**: What analytical tools should I use?
+4. **Evidence Gathering**: What information supports this view?
+5. **Reasoning Chain**: How do these factors connect?
+6. **Conclusions**: What does this perspective suggest?
+
+## Detailed Analysis:
+[Work through each step systematically]
+
+## Key Insights from Perspective A:
+- [Primary findings]
+- [Supporting evidence]
+- [Implications]
+```
+</CodeGroup>
+
+## Integration with Latitude Features
+
+### CoT with Dynamic Variables
+
+<CodeGroup>
+```markdown Dynamic CoT
+---
+provider: OpenAI
+model: gpt-4o
+temperature: 0.2
+---
+
+# Adaptive Chain-of-Thought
+
+The reasoning approach adapts based on the problem type: {{ problem_type }}
+
+{{ if problem_type === "mathematical" }}
+  ## Mathematical Problem-Solving Steps:
+  1. **Parse the Problem**: Extract numbers, operations, and relationships
+  2. **Identify the Method**: Choose appropriate mathematical approach
+  3. **Set Up Equations**: Translate word problem to mathematical expressions
+  4. **Solve Step-by-Step**: Show all algebraic manipulations
+  5. **Verify**: Check answer by substitution or alternative method
+{{ endif }}
+
+
+{{ if problem_type === "analytical" }}
+  ## Analytical Reasoning Steps:
+  1. **Decompose**: Break complex issue into component parts
+  2. **Research**: Gather relevant information and context
+  3. **Framework**: Apply appropriate analytical model
+  4. **Synthesize**: Combine insights from different sources
+  5. **Conclude**: Draw evidence-based conclusions
+{{ endif }}
+
+{{ if problem_type === "creative" }}
+  ## Creative Problem-Solving Steps:
+  1. **Understand**: Deeply comprehend the challenge
+  2. **Diverge**: Generate multiple creative options
+  3. **Combine**: Mix and match ideas innovatively
+  4. **Evaluate**: Assess feasibility and impact
+  5. **Refine**: Improve the most promising solutions
+{{ endif }}
+
+## Problem to Solve:
+{{ user_problem }}
+
+## Step-by-Step Solution:
+[Apply the appropriate framework above]
+```
+</CodeGroup>
+
+### CoT with Tool Integration
+
+<CodeGroup>
+```markdown CoT with Tools
+---
+provider: OpenAI
+model: gpt-4o
+temperature: 0.2
+tools:
+  - latitude/search
+  - latitude/extract
+---
+
+# Research-Enhanced Chain-of-Thought
+
+Let me solve this complex question step by step: {{ research_question }}
+
+## Step 1: Information Gathering
+First, I need to research the current facts:
+
+## Step 2: Information Analysis
+Based on the search results, let me analyze:
+- **Key Facts**: [Extract relevant information]
+- **Data Quality**: [Assess reliability of sources]
+- **Gaps**: [Identify missing information]
+
+## Step 3: Additional Research (if needed)
+Extract specific data that is still unclear or missing.
+
+## Step 4: Reasoning Chain
+Now I'll work through the logic:
+1. **Given Information**: [Summarize what we know]
+2. **Logical Connections**: [Show how facts relate]
+3. **Inference Steps**: [Build the argument]
+4. **Supporting Evidence**: [Reference research findings]
+
+## Step 5: Conclusion
+Based on this systematic analysis:
+[Present final answer with full reasoning]
+```
+</CodeGroup>
+
+## Best Practices
+
+<AccordionGroup>
+<Accordion title="Structuring CoT Prompts">
+**Clear Step Labels**: Use numbered steps or clear headers
+**Logical Flow**: Ensure each step builds on the previous
+**Explicit Instructions**: Tell the AI to "think step by step"
+**Verification Steps**: Include self-checking mechanisms
+</Accordion>
+
+<Accordion title="Optimizing Performance">
+**Model Selection**: Use GPT-4 or Claude for complex reasoning
+**Temperature Settings**: Lower temperature (0.1-0.3) for logical problems
+**Token Management**: Balance detail with efficiency
+**Error Handling**: Include correction mechanisms
+</Accordion>
+
+<Accordion title="Domain-Specific Adaptations">
+**Mathematical**: Focus on calculation verification
+**Scientific**: Emphasize hypothesis testing
+**Business**: Include stakeholder perspectives
+**Creative**: Allow for ideation and iteration
+</Accordion>
+</AccordionGroup>
+
+## Common Pitfalls
+
+<Warning>
+**Avoid These Mistakes**:
+- **Skipping Steps**: Don't let the AI jump to conclusions
+- **Unclear Transitions**: Make step connections explicit
+- **No Verification**: Always include checking mechanisms
+- **Over-complexity**: Keep steps manageable and clear
+</Warning>
+
+## Next Techniques
+
+Explore these related prompting techniques:
+- [Tree of Thoughts](/examples/techniques/tree-of-thoughts) - Explore multiple reasoning paths
+- [Self-Consistency](/examples/techniques/self-consistency) - Multiple CoT attempts with voting
+- [Few-shot Learning](/examples/techniques/few-shot-learning) - CoT with examples
+- [Constitutional AI](/examples/techniques/constitutional-ai) - Self-correcting reasoning

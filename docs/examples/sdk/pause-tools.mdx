@@ -7,7 +7,6 @@ description: Learn how to pause the execution of a tool and process the data
 
 When a tool’s calculation is simple, you can simply return its value to the Latitude SDK, as shown in the [prompt with tools](/examples/sdk/run-prompt-with-tools) example.
 However, for more complex calculations, you can pause the execution of the tool, process the data asynchronously, and then respond with the result in the same conversation.
-
 <CodeGroup>
 ```markdown example
 ---
@@ -44,11 +43,9 @@ Plan my trip to {{ destination }} from {{ start_date }} to {{ end_date }}.
 I like {{ preferences.join(', ') }}.
 
 # Example response to user
-
 Great! I’m planning your trip to {{ destination }} with your preferences.
 This may take a few minutes, as I’ll be gathering up-to-date info from multiple sources. I’ll notify you as soon as your custom itinerary is ready!
-
-````
+```
 </CodeGroup>
 
 ## Code
@@ -56,7 +53,7 @@ This may take a few minutes, as I’ll be gathering up-to-date info from multipl
 In this example, you can see how itinerary creation is requested by the AI. The execution is paused, the data is stored (in memory, though you could also store it in your database or Redis), and then the tool execution is resumed with the calculated itinerary.
 
 <CodeGroup>
-```typescript Typescript
+````typescript Typescript
 import { Latitude } from '@latitude-data/sdk'
 import { Message, MessageRole } from 'promptl-ai'
 
@@ -161,8 +158,7 @@ async function run() {
 
 run()
 ````
-
-```python Python
+````python Python
 import asyncio
 import os
 from devtools import pprint
@@ -269,6 +265,5 @@ async def run():
 
 
 asyncio.run(run())
-```
-
+````
 </CodeGroup>
