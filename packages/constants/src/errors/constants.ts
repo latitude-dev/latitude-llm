@@ -1,5 +1,6 @@
 export enum LatitudeErrorCodes {
   UnexpectedError = 'UnexpectedError',
+  OverloadedError = 'OverloadedError',
   RateLimitError = 'RateLimitError',
   UnauthorizedError = 'UnauthorizedError',
   ForbiddenError = 'ForbiddenError',

@@ -5,7 +5,7 @@ import {
 } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { scan } from 'promptl-ai'
+import { Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
@@ -80,7 +80,7 @@ export async function buildLlmEvaluationRunFunction<
   }
 }) {
   let promptConfig: LatitudePromptConfig
-  let promptChain
+  let promptChain: PromptlChain
   try {
     const result = await scan({
       prompt: prompt,
@@ -103,7 +103,7 @@ export async function buildLlmEvaluationRunFunction<
       prompt: prompt,
       parameters: parameters,
       includeSourceMap: true,
-    })
+    }).then((r) => r.unwrap())
   } catch (error) {
     if (error instanceof ChainError) return Result.error(error)
     return Result.error(

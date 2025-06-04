@@ -91,7 +91,7 @@ export class RunDocumentChecker {
             prompt: metadata.resolvedPrompt,
             parameters: processedParameters.unwrap(),
             includeSourceMap: true,
-          }),
+          }).then((r) => r.unwrap()),
           config: metadata.config,
           isChain: metadata.isChain,
         })

@@ -14,6 +14,11 @@ export class LatitudeError extends Error {
   }
 }
 
+export class OverloadedError extends LatitudeError {
+  public statusCode = 429
+  public name = LatitudeErrorCodes.OverloadedError
+}
+
 export class ConflictError extends LatitudeError {
   public statusCode = 409
   public name = LatitudeErrorCodes.ConflictError

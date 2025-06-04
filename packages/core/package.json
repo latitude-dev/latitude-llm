@@ -101,6 +101,7 @@
     "officeparser": "^5.1.1",
     "pdfjs-dist": "^4.9.155",
     "pg": "^8.12.0",
+    "piscina": "^5.0.0",
     "posthog-node": "^4.2.0",
     "promptl-ai": "^0.6.1",
     "react": "^18.3.0",

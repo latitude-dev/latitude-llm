@@ -1,5 +1,4 @@
-import { LatitudeError } from '@latitude-data/constants/errors'
-import { Worker } from 'worker_threads'
+import { LatitudeError, OverloadedError } from '@latitude-data/constants/errors'
 
 import os from 'os'
 import {
@@ -9,60 +8,21 @@ import {
   Adapters,
 } from 'promptl-ai'
 import { env } from '@latitude-data/env'
-import { generateUUIDIdentifier } from '../../lib/generateUUID'
+import Piscina from 'piscina'
+import { Result, TypedResult } from '../../lib/Result'
 
-let workers: Worker[] = []
+let pool: Piscina | undefined
+if (env.NODE_ENV !== 'test') {
+  const url =
+    env.NODE_ENV === 'development'
+      ? `../../public/workers/promptlChain.js`
+      : './workers/promptlChain.js'
 
-fillWorkersPool() // Fill the pool with workers on startup
-
-function fillWorkersPool() {
-  if (env.NODE_ENV === 'test') return
-
-  const numCpus = os.cpus().length
-  for (let i = workers.length; i < numCpus; i++) {
-    const url =
-      env.NODE_ENV === 'development'
-        ? `./node_modules/@latitude-data/core/src/public/workers/promptlChain.js`
-        : './dist/workers/promptlChain.js'
-
-    try {
-      workers.push(new Worker(url))
-    } catch (e) {
-      if (env.NODE_ENV === 'development') {
-        console.error('Failed to create worker', e)
-      }
-    }
-  }
-
-  if (workers.length > 0) {
-    console.log(`Started ${workers.length} workers`)
-  }
-}
-
-function removeWorkerFromPool(worker: Worker) {
-  const index = workers.indexOf(worker)
-  if (index !== -1) {
-    workers.splice(index, 1)
-  }
-}
-
-let currentWorkerIndex = 0
-
-function assignTask(task: {
-  id: string
-  prompt: string
-  parameters: Record<string, unknown> | undefined
-  includeSourceMap: boolean
-  adapterKey?: keyof typeof Adapters
-}) {
-  const worker = workers[currentWorkerIndex]
-  if (!worker) throw new LatitudeError('No workers available')
-
-  worker.postMessage(task)
-
-  currentWorkerIndex = (currentWorkerIndex + 1) % workers.length
-
-  return worker
+  pool = new Piscina({
+    filename: new URL(url, import.meta.url).href,
+    maxThreads: os.cpus().length,
+    maxQueue: 200,
+  })
 }
 
 async function createPromptlChainInWorker({
@@ -75,43 +35,29 @@ async function createPromptlChainInWorker({
   parameters: Record<string, unknown> | undefined
   includeSourceMap: boolean
   adapter?: ProviderAdapter<AdapterMessageType>
-}): Promise<PromptlChain> {
-  return new Promise((resolve, reject) => {
-    const id = generateUUIDIdentifier()
-    try {
-      const worker = assignTask({
-        id,
-        prompt,
-        parameters,
-        includeSourceMap,
-        adapterKey: adapter?.type,
-      })
-
-      worker.on('message', async (task) => {
-        if (id !== task.id) return
-
-        const chain = PromptlChain.deserialize({ serialized: task.result })
-        if (!chain) return reject(new LatitudeError('Invalid chain'))
-
-        resolve(chain)
-      })
-
-      worker.on('error', (err) => {
-        reject(err)
-      })
-
-      worker.on('exit', (code) => {
-        if (code !== 0) {
-          reject(new Error(`Worker stopped with exit code ${code}`))
-
-          removeWorkerFromPool(worker)
-          fillWorkersPool() // Refill the workers pool
-        }
-      })
-    } catch (error) {
-      reject(error)
+}): Promise<TypedResult<PromptlChain, Error>> {
+  try {
+    if (!pool) {
+      return Result.error(new LatitudeError('Worker pool not initialized'))
     }
-  })
+    if (pool.queueSize >= pool.options.maxQueue) {
+      return Result.error(new OverloadedError('Worker queue is full'))
+    }
+
+    const serializedChain = await pool.run({
+      prompt,
+      parameters,
+      includeSourceMap,
+      adapterKey: adapter?.type,
+    })
+
+    const chain = PromptlChain.deserialize({ serialized: serializedChain })
+    if (!chain) return Result.error(new LatitudeError('Invalid chain'))
+
+    return Result.ok(chain)
+  } catch (error) {
+    return Result.error(error as Error)
+  }
 }
 
 export async function createPromptlChain({
@@ -124,22 +70,25 @@ export async function createPromptlChain({
   parameters: Record<string, unknown> | undefined
   includeSourceMap: boolean
   adapter?: ProviderAdapter<AdapterMessageType>
-}): Promise<PromptlChain> {
-  try {
-    return await createPromptlChainInWorker({
-      prompt,
-      parameters,
-      includeSourceMap,
-      adapter,
-    })
-  } catch (error) {
-    console.error(error)
+}): Promise<TypedResult<PromptlChain, Error>> {
+  const result = await createPromptlChainInWorker({
+    prompt,
+    parameters,
+    includeSourceMap,
+    adapter,
+  })
 
-    return new PromptlChain({
-      prompt,
-      parameters,
-      includeSourceMap,
-      adapter,
-    }) as PromptlChain
+  if (result.error && !(result.error instanceof OverloadedError)) {
+    console.error(result.error)
+    return Result.ok(
+      new PromptlChain({
+        prompt,
+        parameters,
+        includeSourceMap,
+        adapter,
+      }) as PromptlChain,
+    )
   }
+
+  return result
 }
