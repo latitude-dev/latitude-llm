@@ -1,23 +1,17 @@
 ---
-title: 'Latitude Examples'
+title: Introduction
 description: 'Explore practical examples, advanced LLM techniques, and real-world use cases to build powerful AI applications with Latitude'
 ---
+
+In this section of Latitude's documentation you will find 3 kind of materials.
+1. **SDK Examples**: These examples demonstrate how to use the Latitude SDK to build AI applications, including running prompts, integrating tools, and managing conversation context.
+2. **Prompting Techniques**: This section covers advanced prompting techniques that can enhance the quality and capabilities of your LLM applications, such as reasoning methods, memory management, and input/output strategies.
+3. **Real-world Cases**: These examples showcase complete solutions for common business and technical challenges, demonstrating how to combine various techniques into production-ready applications.
+
 ## SDK Examples
 
-<Callout type="info">
-  The Latitude SDK provides a powerful way to integrate AI capabilities into your applications. These examples demonstrate how to use the SDK to run prompts, manage tools, and integrate with your existing systems.
-</Callout>
-
-The SDK examples demonstrate how to:
-
-- Run prompts with parameters and streaming
-- Integrate with tools and external APIs
-- Manage conversation context
-- Annotate and analyze model outputs
-- Chain multiple prompts together
-
 <AccordionGroup>
-  <Accordion title="Popular SDK Examples" defaultOpen>
+  <Accordion title="Popular SDK Examples">
     - [Run Prompt](/examples/sdk/run-prompt) - Execute prompts with dynamic parameters
     - [Run with Tools](/examples/sdk/run-prompt-with-tools) - Integrate external tools with your prompts
     - [Render Chain](/examples/sdk/render-chain) - Connect multiple prompts in sequence
@@ -27,36 +21,39 @@ The SDK examples demonstrate how to:
 
 ## Prompting Techniques
 
-<Callout type="tip">
+These the main techniques for advanced prompting that can significantly improve the performance and reliability of your LLM applications. Each technique is designed to address specific challenges in AI interactions, from enhancing reasoning capabilities to managing context and improving output quality.
+
+<Columns cols={2}>
+  <Card title="Few-Shot Prompting" href="/examples/techniques/few-shot-prompting">
+   Learn how to implement few-shot learning with examples to improve AI performance on specific tasks
+  </Card>
+  <Card title="Role Prompting" href="/examples/techniques/role-prompting">
+    Enhance AI performance by assigning specific roles, personas, and expertise areas
+  </Card>
+  <Card title="CoT (Chain of Thought) Prompting" href="/examples/techniques/chain-of-thought">
+    Improve reasoning and problem-solving capabilities with structured thought processes
+  </Card>
+  <Card title="ToT (Tree of Thought) Prompting" href="/examples/techniques/tree-of-thoughts">
+    Enable complex reasoning by breaking down problems into manageable sub-tasks
+  </Card>
+  <Card title="Contextual prompting" href="/examples/techniques/contextual-prompting">
+    Manage conversation context effectively to maintain coherence and relevance
+  </Card>
+  <Card title="Self-Consistency" href="/examples/techniques/self-consistency">
+    Enhance output reliability by generating multiple responses and selecting the best one
+  </Card>
+  <Card title="Step back prompting" href="/examples/techniques/step-back-prompting">
+    Improve output quality by iteratively refining responses through feedback loops
+  </Card>
+  <Card title="ReAct (reason & act)" href="/examples/techniques/re-act-prompting">
+    Combine reasoning and action to enhance decision-making capabilities
+  </Card>
+</Columns>
+
+<Note>
   Advanced prompting techniques can dramatically improve the quality, reliability, and capabilities of your LLM applications. These examples demonstrate proven approaches to enhance your AI systems.
-</Callout>
+</Note>
 
-Our techniques collection includes:
-
-<Tabs>
-  <Tab title="Reasoning Techniques" defaultOpen>
-    - [Chain of Thought](/examples/techniques/chain-of-thought) - Step-by-step reasoning
-    - [Tree of Thoughts](/examples/techniques/tree-of-thoughts) - Exploring multiple reasoning paths
-    - [Self-Consistency](/examples/techniques/self-consistency) - Improve reliability through multiple samples
-    - [Socratic Questioning](/examples/techniques/socratic-questioning) - Probing deeper through questions
-  </Tab>
-  <Tab title="Memory & Context">
-    - [Contextual Memory](/examples/techniques/contextual-memory) - Retaining information across interactions
-    - [RAG](/examples/techniques/retrieval-augmented-generation) - Enhancing responses with external knowledge
-    - [Iterative Refinement](/examples/techniques/iterative-refinement) - Progressive improvement of outputs
-  </Tab>
-  <Tab title="Input Techniques">
-    - [Few-Shot Learning](/examples/techniques/few-shot-learning) - Teaching by examples
-    - [Role Prompting](/examples/techniques/role-prompting) - Persona-based responses
-    - [Multi-Modal Prompting](/examples/techniques/multi-modal-prompting) - Working with images and text
-    - [Constraint-Based Prompting](/examples/techniques/constraint-based-prompting) - Enforcing specific rules
-  </Tab>
-  <Tab title="Output Quality">
-    - [Constitutional AI](/examples/techniques/constitutional-ai) - Setting rules for AI behavior
-    - [Meta-Prompting](/examples/techniques/meta-prompting) - Prompts that generate better prompts
-    - [Emotional Intelligence](/examples/techniques/emotional-intelligence-prompting) - Creating empathetic AI responses
-  </Tab>
-</Tabs>
 
 ## Real-world Cases
 

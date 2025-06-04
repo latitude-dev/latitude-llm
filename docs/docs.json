@@ -228,23 +228,16 @@
           {
             "group": "Prompting Techniques",
             "pages": [
-              "examples/techniques/few-shot-learning",
+              "examples/techniques/few-shot-prompting",
+              "examples/techniques/role-prompting",
               "examples/techniques/chain-of-thought",
               "examples/techniques/tree-of-thoughts",
+              "examples/techniques/contextual-prompting",
               "examples/techniques/self-consistency",
-              "examples/techniques/role-prompting",
-              "examples/techniques/template-based-prompting",
-              "examples/techniques/constitutional-ai",
-              "examples/techniques/meta-prompting",
-              "examples/techniques/retrieval-augmented-generation",
-              "examples/techniques/multi-modal-prompting",
-              "examples/techniques/socratic-questioning",
-              "examples/techniques/analogical-reasoning",
-              "examples/techniques/iterative-refinement",
-              "examples/techniques/constraint-based-prompting",
-              "examples/techniques/emotional-intelligence-prompting",
-              "examples/techniques/adversarial-prompting",
-              "examples/techniques/contextual-memory"
+              "examples/techniques/step-back-prompting",
+              "examples/techniques/re-act-prompting",
+              "examples/techniques/prompt-with-guardrails",
+              "examples/techniques/other-techniques"
             ]
           },
           {
