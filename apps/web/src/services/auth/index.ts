@@ -7,7 +7,7 @@ import { env } from '@latitude-data/env'
 import { Google } from 'arctic'
 
 const adapter = new DrizzlePostgreSQLAdapter(
-  // @ts-ignore - No idea why this is happening
+  // @ts-expect-error - No idea why this is happening
   database,
   sessions,
   users,
