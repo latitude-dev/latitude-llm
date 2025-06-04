@@ -25,8 +25,8 @@ async function getFirstRowsFromDataset({
   const repo = new DatasetRowsRepository(dataset.workspaceId)
   const rows = await repo.findByDatasetPaginated({
     datasetId: dataset.id,
-    page: 1,
-    pageSize: 5,
+    page: '1',
+    pageSize: '5',
   })
   return rows.map((row) => row.rowData)
 }
