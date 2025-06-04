@@ -66,7 +66,7 @@ export function buildMarkdownDoc({
     codeFiles
       .map(
         ({ lang, label, content }) =>
-          `\`\`\`${lang} ${label}\n${content.trim()}\n\`\`\``,
+          `\`\`\`\`${lang} ${label}\n${content.trim()}\n\`\`\`\``,
       )
       .join('\n') +
     '\n</CodeGroup>'

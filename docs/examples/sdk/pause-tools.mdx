@@ -53,7 +53,7 @@ This may take a few minutes, as I’ll be gathering up-to-date info from multipl
 In this example, you can see how itinerary creation is requested by the AI. The execution is paused, the data is stored (in memory, though you could also store it in your database or Redis), and then the tool execution is resumed with the calculated itinerary.
 
 <CodeGroup>
-```typescript Typescript
+````typescript Typescript
 import { Latitude } from '@latitude-data/sdk'
 import { Message, MessageRole } from 'promptl-ai'
 
@@ -157,8 +157,8 @@ async function run() {
 }
 
 run()
-```
-```python Python
+````
+````python Python
 import asyncio
 import os
 from devtools import pprint
@@ -265,5 +265,5 @@ async def run():
 
 
 asyncio.run(run())
-```
+````
 </CodeGroup>

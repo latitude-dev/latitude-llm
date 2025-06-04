@@ -2,6 +2,15 @@ import fs from 'fs'
 import path from 'path'
 import { buildMarkdownDoc } from './buildMarkdown'
 
+type MintlifyTab = {
+  tab: string
+  groups: { group: string; pages: string[] }[]
+}
+type MintylifyDocs = {
+  navigation: {
+    tabs: MintlifyTab[]
+  }
+}
 function getFolderName(pagePath: string) {
   return pagePath.split('/').pop()
 }
@@ -43,25 +52,30 @@ function writeDocs({
     try {
       const markdown = buildMarkdownDoc({ examplePath })
       fs.writeFileSync(outputPath, markdown)
-      navPaths.push(`/examples/${type}/${folderName}`)
+      navPaths.push(`examples/${type}/${folderName}`)
     } catch (err) {
       console.warn(`⚠️ Skipped ${folderName}: ${err}`)
     }
   })
 
   if (!fs.existsSync(mintlify.path)) {
-    console.error('❌ mint.json not found')
+    console.error('❌ docs/docs.json Mintlify config not found')
     process.exit(1)
   }
 
-  const mintJson = JSON.parse(fs.readFileSync(mintlify.path, 'utf8'))
-  const pageGroup = mintJson.navigation.find(
-    (item: { group: string }) => item.group === mintlify.sidebarGroupName,
-  ) as { group: string; pages: string[] }
+  const mintJson = JSON.parse(
+    fs.readFileSync(mintlify.path, 'utf8'),
+  ) as MintylifyDocs
+  const examplesTab = mintJson.navigation.tabs.find(
+    ({ tab }) => tab === 'Examples',
+  )
+  const pageGroup = examplesTab.groups.find(
+    ({ group }) => group === mintlify.sidebarGroupName,
+  )
 
   if (!pageGroup) {
     console.log(
-      `"${mintlify.sidebarGroupName}" section not found in docs/mint.json`,
+      `"${mintlify.sidebarGroupName}" section not found in docs/docs.json`,
     )
   }
 
@@ -84,7 +98,7 @@ function writeDocs({
 function writeAllExampleDocsAndUpdateMintJson() {
   const EXAMPLES_SRC_PATH = path.join(process.cwd(), 'examples', 'src')
   const DOCS_BASE_PATH = path.join(process.cwd(), 'docs')
-  const MINT_JSON_PATH = path.join(DOCS_BASE_PATH, 'mint.json')
+  const MINT_JSON_PATH = path.join(DOCS_BASE_PATH, 'docs.json')
   const DOCS_EXAMPLES_BASE_PATH = path.join(DOCS_BASE_PATH, 'examples')
 
   writeDocs({

@@ -1,0 +1,272 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Latitude Docs",
+  "colors": {
+    "primary": "#0080ff",
+    "light": "#0080ff",
+    "dark": "#0080ff"
+  },
+  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude"
+    ]
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Get started",
+      "href": "https://github.com/latitude-dev/latitude-llm"
+    }
+  },
+  "footer": {
+    "socials": {
+      "twitter": "https://twitter.com/trylatitude",
+      "github": "https://github.com/latitude-dev/latitude-llm",
+      "linkedin": "https://www.linkedin.com/company/trylatitude/"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Latitude",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": [
+              "guides/getting-started/introduction",
+              {
+                "group": "Onboarding Paths",
+                "pages": [
+                  "guides/getting-started/quick-start-pm",
+                  "guides/getting-started/quick-start-dev"
+                ]
+              },
+              "guides/getting-started/core-concepts",
+              {
+                "group": "Providers",
+                "pages": [
+                  "guides/getting-started/providers",
+                  "guides/getting-started/providers/openai",
+                  "guides/getting-started/providers/anthropic",
+                  "guides/getting-started/providers/azure",
+                  "guides/getting-started/providers/google"
+                ]
+              },
+              "guides/getting-started/invite-your-team"
+            ]
+          },
+          {
+            "group": "Prompts",
+            "pages": [
+              "guides/prompt-manager/overview",
+              "guides/prompt-manager/configuration",
+              "guides/prompt-manager/playground",
+              "guides/prompt-manager/version-control",
+              "guides/prompt-manager/triggers",
+              "guides/prompt-manager/json-output",
+              "guides/prompt-manager/tools",
+              "guides/prompt-manager/prompt-best-practices"
+            ]
+          },
+          {
+            "group": "Agents",
+            "pages": [
+              "guides/prompt-manager/agents",
+              "guides/prompt-manager/latitude-tools",
+              "guides/integration/mcp-integrations"
+            ]
+          },
+          {
+            "group": "Evaluations",
+            "pages": [
+              "guides/evaluations/overview",
+              {
+                "group": "Evaluation Types",
+                "pages": [
+                  {
+                    "group": "LLM-as-Judges",
+                    "pages": [
+                      "guides/evaluations/llm-as-judges",
+                      "guides/evaluations/evaluation-templates"
+                    ]
+                  },
+                  "guides/evaluations/programmatic_rules",
+                  "guides/evaluations/humans-in-the-loop"
+                ]
+              },
+              "guides/evaluations/running-evaluations",
+              "guides/evaluations/prompt-suggestions",
+              "guides/evaluations/integrating-evaluations-workflow"
+            ]
+          },
+          {
+            "group": "Datasets",
+            "pages": [
+              "guides/datasets/overview",
+              "guides/datasets/golden-datasets"
+            ]
+          },
+          {
+            "group": "Experiments",
+            "pages": [
+              "guides/experiments/overview"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "guides/integration/publishing-deployment",
+              {
+                "group": "Latitude SDK",
+                "pages": [
+                  "guides/sdk/typescript",
+                  "guides/sdk/python"
+                ]
+              },
+              {
+                "group": "HTTP API",
+                "pages": [
+                  "guides/api/reference",
+                  "guides/api/api-access",
+                  "guides/api/streaming-events",
+                  "guides/api/webhooks"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Self-Hosting",
+            "pages": [
+              "guides/self-hosted/development-setup",
+              "guides/self-hosted/production-setup"
+            ]
+          },
+          {
+            "group": "Support",
+            "pages": [
+              "guides/integration/community-support"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "PromptL",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "promptl/getting-started/introduction"
+            ]
+          },
+          {
+            "group": "Syntax",
+            "pages": [
+              "promptl/syntax/structure",
+              "promptl/syntax/configuration",
+              "promptl/syntax/messages",
+              "promptl/syntax/variables",
+              "promptl/syntax/conditionals",
+              "promptl/syntax/loops"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "promptl/usage/quick-start",
+              {
+                "group": "Adapters",
+                "pages": [
+                  "promptl/usage/adapters/overview",
+                  "promptl/usage/adapters/openai",
+                  "promptl/usage/adapters/anthropic"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "promptl/advanced/chains",
+              "promptl/advanced/snippets"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Examples",
+        "groups": [
+          {
+            "group": "SDK examples",
+            "pages": [
+              "examples/sdk/run-prompt",
+              "examples/sdk/run-prompt-with-tools",
+              "examples/sdk/get-prompt",
+              "examples/sdk/get-or-create-prompt",
+              "examples/sdk/get-all-prompts",
+              "examples/sdk/create-log",
+              "examples/sdk/annotate-log",
+              "examples/sdk/pause-tools",
+              "examples/sdk/rag-retrieval",
+              "examples/sdk/render-chain"
+            ]
+          },
+          {
+            "group": "Prompting Techniques",
+            "pages": [
+              "examples/techniques/few-shot-learning",
+              "examples/techniques/chain-of-thought",
+              "examples/techniques/tree-of-thoughts",
+              "examples/techniques/self-consistency",
+              "examples/techniques/role-prompting",
+              "examples/techniques/template-based-prompting",
+              "examples/techniques/constitutional-ai",
+              "examples/techniques/meta-prompting",
+              "examples/techniques/retrieval-augmented-generation",
+              "examples/techniques/multi-modal-prompting",
+              "examples/techniques/socratic-questioning",
+              "examples/techniques/analogical-reasoning",
+              "examples/techniques/iterative-refinement",
+              "examples/techniques/constraint-based-prompting",
+              "examples/techniques/emotional-intelligence-prompting",
+              "examples/techniques/adversarial-prompting",
+              "examples/techniques/contextual-memory"
+            ]
+          },
+          {
+            "group": "Use cases",
+            "pages": [
+              "examples/cases/weather-chatbot",
+              "examples/cases/joke-generator",
+              "examples/cases/deep-search",
+              "examples/cases/customer-support-email",
+              "examples/cases/stock-market-analysis",
+              "examples/cases/content-moderation-system",
+              "examples/cases/customer-support-quality-assurance",
+              "examples/cases/startup-analysis"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "groups": [
+          {
+            "group": "Changelog",
+            "pages": [
+              "changelog/changelog"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

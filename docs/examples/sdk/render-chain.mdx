@@ -34,7 +34,7 @@ temperature: 0.7
 The key point to understand is that for each `<step>` found in the prompt, the SDK will invoke `onStep`. At that point, you can ask your LLM to provide a response.
 
 <CodeGroup>
-```typescript Typescript
+````typescript Typescript
 import { Latitude, Adapters, Message } from '@latitude-data/sdk'
 import OpenAI from 'openai'
 
@@ -71,8 +71,8 @@ async function run() {
 }
 
 run()
-```
-```python Python
+````
+````python Python
 import asyncio
 import os
 from typing import Any, Dict, List, Sequence, Union
@@ -121,5 +121,5 @@ async def run():
 
 
 asyncio.run(run())
-```
+````
 </CodeGroup>
