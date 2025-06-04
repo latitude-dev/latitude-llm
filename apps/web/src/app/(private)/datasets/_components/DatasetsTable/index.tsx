@@ -80,6 +80,7 @@ export function DatasetsTable({
         pageSize={pageSize}
       />
       <Table
+        wrapperClassName='mb-8'
         externalFooter={
           <LinkableTablePaginationFooter
             pagination={buildPagination({

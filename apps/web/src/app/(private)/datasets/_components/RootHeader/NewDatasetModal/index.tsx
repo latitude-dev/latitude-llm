@@ -1,5 +1,6 @@
-import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FormEvent, useCallback, useRef, useState } from 'react'
 import { DropzoneInput } from '@latitude-data/web-ui/atoms/DropzoneInput'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
@@ -10,27 +11,46 @@ import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'
 import DelimiterSelector from '$/app/(private)/datasets/_components/DelimiterSelector'
 import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
-import { useCallback, useState } from 'react'
-import { Dataset } from '@latitude-data/core/browser'
+  Dataset,
+  MAX_UPLOAD_SIZE_IN_MB,
+  MAX_SIZE,
+} from '@latitude-data/core/browser'
+
+const MAX_SIZE_MESSAGE = `Your dataset must be less than ${MAX_SIZE}MB in size.`
 
 export function NewDatasetModalComponent({
   open,
   onOpenChange,
-  createFormAction,
-  isCreating,
-  createError,
+  onDatasetCreated,
 }: {
-  createFormAction: ReturnType<typeof useDatasets>['createFormAction']
-  createError: ReturnType<typeof useDatasets>['createError']
   open: boolean
-  isCreating: boolean
   onOpenChange: (open: boolean) => void
+  onDatasetCreated: (dataset: Dataset) => void
 }) {
-  const data = { name: '' }
-  const errors = createError?.fieldErrors
+  const { createError, createDataset, isCreating } = useDatasets({
+    onCreateSuccess: onDatasetCreated,
+  })
+  const formRef = useRef<HTMLFormElement>(null)
+  const [clientErrors, setClientErrors] = useState<Record<string, string[]>>({})
+  const errors = { ...createError?.fieldErrors, ...clientErrors }
+  const handleFileSizeError = useCallback(() => {
+    setClientErrors({ dataset_file: [MAX_SIZE_MESSAGE] })
+  }, [])
+
+  const onChange = useCallback(() => {
+    setClientErrors({})
+  }, [])
+
+  const handleSubmit = useCallback(
+    (e: FormEvent) => {
+      e.preventDefault()
+
+      const formData = new FormData(e.currentTarget as HTMLFormElement)
+      createDataset(formData)
+    },
+    [createDataset],
+  )
+
   return (
     <Modal
       dismissible
@@ -53,17 +73,17 @@ export function NewDatasetModalComponent({
       }
     >
       <form
+        ref={formRef}
         className='min-w-0'
         id='createDatasetForm'
-        action={createFormAction}
+        onSubmit={handleSubmit}
       >
         <FormWrapper>
           <Input
             type='text'
-            label='Name'
             name='name'
+            label='Name'
             errors={errors?.name}
-            defaultValue={data?.name}
             placeholder='Amazing dataset'
           />
           <DelimiterSelector
@@ -81,6 +101,9 @@ export function NewDatasetModalComponent({
             errors={errors?.dataset_file}
             placeholder='Upload csv'
             description='The first line of the uploaded .csv will be used as headers'
+            maxFileSize={MAX_UPLOAD_SIZE_IN_MB}
+            onFileSizeError={handleFileSizeError}
+            onChange={onChange}
           />
         </FormWrapper>
       </form>
@@ -95,56 +118,27 @@ export type NewDatasetModalProps = {
 export function NewDatasetModal({ open, onOpenChange }: NewDatasetModalProps) {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const [createdDataset, setCreatedDataset] = useState<Dataset | null>(null)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const { createError, createFormAction, isCreating } = useDatasets({
-    onCreateSuccess: (dataset) => {
-      setCreatedDataset(dataset)
-      setIsProcessing(true)
-    },
-  })
-
-  const createdDatasetId = createdDataset?.id
-  const [firstBatchCreated, setFirstBatchCreated] = useState<boolean>(false)
-  const onMessage = useCallback(
-    (event: EventArgs<'datasetRowsCreated'>) => {
-      if (event.datasetId !== createdDatasetId) return
-
-      if (event.error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error generating datasets',
-          description: event.error.message,
-        })
-        return
-      }
-
-      setFirstBatchCreated(true)
-
-      // Skip next events and go to dataset detail page now that we
-      // know it has rows
-      if (firstBatchCreated) return
+  const onDatasetCreated = useCallback(
+    (dataset: Dataset) => {
+      if (!dataset) return
 
       toast({
         title: 'Success',
         description: 'Dataset uploaded successfully! 🎉',
       })
-
-      const route = ROUTES.datasets.detail(createdDatasetId)
+      const route = ROUTES.datasets.detail(dataset.id)
       navigate.push(`${route}?initialRenderIsProcessing=true`)
     },
-    [createdDatasetId, navigate, firstBatchCreated, setFirstBatchCreated],
+    [navigate, toast],
   )
 
-  useSockets({ event: 'datasetRowsCreated', onMessage })
+  if (!open) return null
 
   return (
     <NewDatasetModalComponent
       open={open}
       onOpenChange={onOpenChange}
-      createFormAction={createFormAction}
-      isCreating={isCreating || isProcessing}
-      createError={createError}
+      onDatasetCreated={onDatasetCreated}
     />
   )
 }

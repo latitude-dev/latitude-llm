@@ -15,11 +15,13 @@ type TableProps = HTMLAttributes<HTMLTableElement> & {
   maxHeight?: number | string
   overflow?: 'overflow-auto' | 'overflow-hidden'
   externalFooter?: ReactNode
+  wrapperClassName?: string
 }
 const Table = forwardRef<HTMLTableElement, TableProps>(
   (
     {
       className,
+      wrapperClassName,
       maxHeight,
       externalFooter,
       overflow = 'overflow-auto',
@@ -34,7 +36,10 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
             ? `${maxHeight}px`
             : 'unset',
       }}
-      className='flex flex-col relative w-full rounded-lg border overflow-hidden'
+      className={cn(
+        'flex flex-col relative w-full rounded-lg border overflow-hidden',
+        wrapperClassName,
+      )}
     >
       <div
         className={cn('relative w-full flex-grow', overflow, {

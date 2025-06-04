@@ -10,12 +10,20 @@ import { type FormFieldProps } from '../FormField'
 import { Icon, IconName } from '../Icons'
 import { Text } from '../Text'
 
+type OnFileSizeErrorArgs = {
+  name: string
+  sizeInMB: string
+  maxSizeInMB: string
+}
+
 type Props = Omit<DropzoneProps, 'children'> &
   Omit<FormFieldProps, 'children'> & {
     defaultFilename?: string
     placeholder: string
     icon?: IconName
     inputSize?: 'small' | 'normal'
+    maxFileSize?: number
+    onFileSizeError?: (_args: OnFileSizeErrorArgs) => void
     onChange?: (files: FileList | null) => void
   }
 
@@ -30,6 +38,8 @@ export function DropzoneInput({
   defaultFilename,
   icon = 'fileUp',
   inputSize = 'normal',
+  maxFileSize,
+  onFileSizeError,
   onChange,
   ...rest
 }: Props) {
@@ -47,10 +57,21 @@ export function DropzoneInput({
     (files: FileList | null) => {
       const file = files?.[0]
       if (!file) return
+
+      if (maxFileSize && file.size > maxFileSize) {
+        if (ref.current) ref.current.value = ''
+        onFileSizeError?.({
+          name: file.name,
+          sizeInMB: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+          maxSizeInMB: `${(maxFileSize / 1024 / 1024).toFixed(2)}MB`,
+        })
+        return
+      }
+
       setFilename(file.name)
       onChange?.(files)
     },
-    [setFilename, onChange],
+    [setFilename, onChange, maxFileSize, onFileSizeError],
   )
 
   const onClearFile = useCallback(() => {

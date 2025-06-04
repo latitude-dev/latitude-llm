@@ -55,7 +55,7 @@ export const Dropzone = forwardRef<HTMLInputElement, DropzoneProps>(
         // Set files in input because then we can submit a real form
         internalRef.current.files = e.dataTransfer.files
       },
-      [onChange],
+      [onChange, accept, multiple],
     )
 
     const handleDragLeave = useCallback(() => {

@@ -291,6 +291,7 @@ export const API_ROUTES = {
   },
   datasets: {
     root: '/api/datasets',
+    create: '/api/datasets/create',
     detail: (id: number) => ({ root: `/api/datasets/${id}` }),
     previewLogs: {
       root: '/api/datasets/preview-logs',

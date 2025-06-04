@@ -1,9 +1,8 @@
-import { debuglog } from 'util'
-
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import { captureException } from '$/helpers/captureException'
 import { NextRequest, NextResponse } from 'next/server'
+import debug from '@latitude-data/core/lib/debug'
 
 export function errorHandler(handler: any) {
   return async (req: NextRequest, res: any) => {
@@ -11,7 +10,7 @@ export function errorHandler(handler: any) {
       return await handler(req, res)
     } catch (error) {
       if (env.NODE_ENV === 'development') {
-        debuglog((error as Error).message)
+        debug((error as Error).message)
       }
 
       if (error instanceof LatitudeError) {
