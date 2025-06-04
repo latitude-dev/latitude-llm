@@ -103,7 +103,6 @@ export async function buildLlmEvaluationRunFunction<
       prompt: prompt,
       parameters: parameters,
       includeSourceMap: true,
-      adapter: Adapters.default,
     })
   } catch (error) {
     if (error instanceof ChainError) return Result.error(error)

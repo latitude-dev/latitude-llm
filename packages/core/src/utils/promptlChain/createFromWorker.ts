@@ -9,6 +9,7 @@ import {
   Adapters,
 } from 'promptl-ai'
 import { env } from '@latitude-data/env'
+import { generateUUIDIdentifier } from '../../lib/generateUUID'
 
 let workers: Worker[] = []
 
@@ -48,6 +49,7 @@ function removeWorkerFromPool(worker: Worker) {
 let currentWorkerIndex = 0
 
 function assignTask(task: {
+  id: string
   prompt: string
   parameters: Record<string, unknown> | undefined
   includeSourceMap: boolean
@@ -75,16 +77,20 @@ async function createPromptlChainInWorker({
   adapter?: ProviderAdapter<AdapterMessageType>
 }): Promise<PromptlChain> {
   return new Promise((resolve, reject) => {
+    const id = generateUUIDIdentifier()
     try {
       const worker = assignTask({
+        id,
         prompt,
         parameters,
         includeSourceMap,
         adapterKey: adapter?.type,
       })
 
-      worker.on('message', async (serializedChain) => {
-        const chain = PromptlChain.deserialize({ serialized: serializedChain })
+      worker.on('message', async (task) => {
+        if (id !== task.id) return
+
+        const chain = PromptlChain.deserialize({ serialized: task.result })
         if (!chain) return reject(new LatitudeError('Invalid chain'))
 
         resolve(chain)
