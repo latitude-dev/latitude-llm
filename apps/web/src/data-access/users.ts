@@ -1,4 +1,4 @@
-import { database, dbUtils } from '@latitude-data/core/client'
+import { database } from '@latitude-data/core/client'
 import {
   unsafelyFindWorkspacesFromUser,
   unsafelyGetUser,
@@ -8,6 +8,7 @@ import { Result } from '@latitude-data/core/lib/Result'
 import { PromisedResult } from '@latitude-data/core/lib/Transaction'
 import { users } from '@latitude-data/core/schema'
 import { getFirstWorkspace } from '$/data-access/workspaces'
+import { eq } from 'drizzle-orm'
 import {
   SubscriptionPlan,
   SubscriptionPlans,
@@ -34,7 +35,7 @@ export async function getUserFromCredentials({
   email: string
 }): PromisedResult<ReturnType, NotFoundError> {
   const user = await database.query.users.findFirst({
-    where: dbUtils.eq(users.email, email),
+    where: eq(users.email, email),
   })
   if (!user) return notFoundWithEmail(email)
 
