@@ -90,15 +90,9 @@
             "pages": [
               "guides/evaluations/overview",
               {
-                "group": "Evaluation Types",
+                "group": "Types",
                 "pages": [
-                  {
-                    "group": "LLM-as-Judges",
-                    "pages": [
-                      "guides/evaluations/llm-as-judges",
-                      "guides/evaluations/evaluation-templates"
-                    ]
-                  },
+                  "guides/evaluations/llm-as-judges",
                   "guides/evaluations/programmatic_rules",
                   "guides/evaluations/humans-in-the-loop"
                 ]
