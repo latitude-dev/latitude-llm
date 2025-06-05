@@ -3,14 +3,17 @@ title: Google
 description: Common questions about Google provider
 ---
 
-## How do I set thinking budget for Google Gemini 2.5 flash?
-The [Google Gemini 2.5 flash](https://ai.google.dev/gemini-api/docs/thinking) model has a configurable thinking budget that allows you to control the amount of time the model spends reasoning about your prompt.
+## How do I set the Google Gemini thinking budget?
 
-```markdown {3-9}
+The latest Google Gemini models have a configurable [thinking budget](https://ai.google.dev/gemini-api/docs/thinking) that allows you to control the amount of time the model spends reasoning to generate a response.
+
+```markdown {4-5}
+---
 provider: name-of-your-google-provider-in-latitude
 model: gemini-2.5-flash
 thinkingConfig:
   thinkingBudget: 2048
+---
 ```
 
 ## How do I set the Google Gemini safety settings?
@@ -19,7 +22,7 @@ The [Google Gemini safety settings](https://ai.google.dev/gemini-api/docs/safety
 
 To do this, add `safetySettings: list-of-safety-settings` to the `google` config in the front matter of your prompt.
 
-```markdown {4-9}
+```markdown {4-8}
 ---
 provider: name-of-your-google-provider-in-latitude
 model: gemini-1.5-flash

@@ -37,3 +37,21 @@ tools:
         search_context_size: low
 ---
 ```
+
+## How do I set the OpenAI thinking budget?
+
+The latest OpenAI models have a configurable [thinking budget](https://platform.openai.com/docs/guides/reasoning?api-mode=responses) that allows you to control the amount of time the model spends reasoning to generate a response.
+
+```markdown {4-5}
+---
+provider: name-of-your-openai-provider-in-latitude
+model: o4-mini
+reasoningSummary: detailed
+reasoningEffort: high
+---
+```
+
+<Note>
+  The **Chat Completions** API does not support reasoning summaries. Switch to
+  the **Responses** API for a better experience.
+</Note>
