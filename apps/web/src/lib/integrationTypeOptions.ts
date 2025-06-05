@@ -348,6 +348,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Airbnb',
     icon: 'airbnb',
   },
+  [HostedIntegrationType.Mintlify]: {
+    label: 'Mintlify',
+    icon: 'mintlify',
+  },
 }
 
 export function integrationOptions(

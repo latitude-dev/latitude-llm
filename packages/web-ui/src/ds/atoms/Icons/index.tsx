@@ -142,6 +142,7 @@ import Hyperbrowser from './custom-icons/logos/Hyperbrowser'
 import Intercom from './custom-icons/logos/Intercom'
 import Jira from './custom-icons/logos/Jira'
 import Linear from './custom-icons/logos/Linear'
+import Mintlify from './custom-icons/logos/Mintlify'
 import Monday from './custom-icons/logos/Monday'
 import Neon from './custom-icons/logos/Neon'
 import Notion from './custom-icons/logos/Notion'
@@ -260,6 +261,7 @@ const Icons = {
   maximize: Maximize2,
   mcp: MCP,
   minimize: Minimize2,
+  mintlify: Mintlify,
   minus: MinusIcon,
   modification: SquareDot,
   monitor: MonitorIcon,

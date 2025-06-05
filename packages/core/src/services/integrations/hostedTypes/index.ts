@@ -79,6 +79,7 @@ import VECTORIZE_MCP_CONFIG from './configs/vectorize'
 import XERO_MCP_CONFIG from './configs/xero'
 import READWISE_MCP_CONFIG from './configs/readwise'
 import AIRBNB_MCP_CONFIG from './configs/airbnb'
+import MINTLIFY_MCP_CONFIG from './configs/mintlify'
 
 export const HOSTED_MCP_CONFIGS: Record<
   HostedIntegrationType,
@@ -164,4 +165,5 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.Xero]: XERO_MCP_CONFIG,
   [HostedIntegrationType.Readwise]: READWISE_MCP_CONFIG,
   [HostedIntegrationType.Airbnb]: AIRBNB_MCP_CONFIG,
+  [HostedIntegrationType.Mintlify]: MINTLIFY_MCP_CONFIG,
 }
