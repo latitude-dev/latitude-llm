@@ -237,6 +237,18 @@
           {
             "group": "Use cases",
             "pages": [
+              {
+                "group": "Building effective agents",
+                "pages": [
+                  "examples/cases/building-effective-agents/overview",
+                  "examples/cases/building-effective-agents/prompt-chaining",
+                  "examples/cases/building-effective-agents/prompt-routing",
+                  "examples/cases/building-effective-agents/prompt-parallelization",
+                  "examples/cases/building-effective-agents/orchestrator-workers",
+                  "examples/cases/building-effective-agents/evaluator-optimizer",
+                  "examples/cases/building-effective-agents/autonomous-agents"
+                ]
+              },
               "examples/cases/weather-chatbot",
               "examples/cases/joke-generator",
               "examples/cases/deep-search",
