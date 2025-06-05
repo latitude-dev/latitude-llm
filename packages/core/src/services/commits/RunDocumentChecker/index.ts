@@ -1,14 +1,15 @@
 import {
   createChain as createLegacyChain,
   readMetadata,
-  type ReferencePromptFn,
 } from '@latitude-data/compiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   isPromptLFile,
-  scan,
   toPromptLFile,
+  scan,
   type PromptLFile,
+  Chain,
+  Adapters,
 } from 'promptl-ai'
 
 import { DocumentVersion, ErrorableEntity } from '../../../browser'
@@ -19,7 +20,7 @@ import { LatitudeError } from './../../../lib/errors'
 import { PromisedResult } from './../../../lib/Transaction'
 import { Result } from './../../../lib/Result'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { createPromptlChain } from '../../../utils/promptlChain/createFromWorker'
+import { parsePrompt } from '../../documents/parse'
 
 type RunDocumentErrorCodes = RunErrorCodes.ChainCompileError
 
@@ -27,26 +28,22 @@ export class RunDocumentChecker {
   private document: DocumentVersion
   private errorableUuid: string
   private prompt: string
-  private referenceFn?: ReferencePromptFn
   private parameters: Record<string, unknown>
 
   constructor({
     document,
     errorableUuid,
     prompt,
-    referenceFn,
     parameters,
   }: {
     document: DocumentVersion
     errorableUuid: string
     prompt: string
-    referenceFn?: ReferencePromptFn
     parameters: Record<string, unknown>
   }) {
     this.document = document
     this.errorableUuid = errorableUuid
     this.prompt = prompt
-    this.referenceFn = referenceFn
     this.parameters = parameters
   }
 
@@ -60,7 +57,6 @@ export class RunDocumentChecker {
         const metadata = await readMetadata({
           prompt: this.prompt,
           fullPath: this.document.path,
-          referenceFn: this.referenceFn,
         })
 
         return Result.ok({
@@ -73,10 +69,11 @@ export class RunDocumentChecker {
           isChain: true,
         })
       } else {
+        const ast = await parsePrompt(this.prompt).then((r) => r.unwrap())
         const metadata = await scan({
+          serialized: ast,
           prompt: this.prompt,
           fullPath: this.document.path,
-          referenceFn: this.referenceFn,
         })
 
         const processedParameters = await this.processParameters({
@@ -87,11 +84,13 @@ export class RunDocumentChecker {
         if (processedParameters.error) return processedParameters
 
         return Result.ok({
-          chain: await createPromptlChain({
+          chain: new Chain({
+            serialized: { ast },
             prompt: metadata.resolvedPrompt,
             parameters: processedParameters.unwrap(),
             includeSourceMap: true,
-          }).then((r) => r.unwrap()),
+            adapter: Adapters.default,
+          }),
           config: metadata.config,
           isChain: metadata.isChain,
         })

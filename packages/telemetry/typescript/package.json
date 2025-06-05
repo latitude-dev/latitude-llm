@@ -87,7 +87,7 @@
     "llamaindex": "^0.8.37",
     "openai": "^4.102.0",
     "together-ai": "^0.16.0",
-    "promptl-ai": "^0.6.2",
+    "promptl-ai": "catalog:",
     "@types/uuid": "^10.0.0",
     "msw": "^2.3.5"
   },

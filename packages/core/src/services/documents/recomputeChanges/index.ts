@@ -93,10 +93,14 @@ async function resolveDocumentChanges({
           contentHash: hashContent(metadata.resolvedPrompt),
         }
       }
+      // FIXME:
+      // @ts-ignore - infinite type instantiation loop
       const metadata = await scan({
         prompt: d.content ?? '',
         fullPath: d.path,
         referenceFn: getDocumentContent,
+        // FIXME:
+        // @ts-ignore
         configSchema,
       })
 

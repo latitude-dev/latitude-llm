@@ -5,7 +5,7 @@ import {
 } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { Chain as PromptlChain, scan } from 'promptl-ai'
+import { Chain, Chain as PromptlChain, scan, Adapters } from 'promptl-ai'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
@@ -24,7 +24,7 @@ import { Result } from '../../../lib/Result'
 import { ProviderLogsRepository } from '../../../repositories'
 import { runAgent } from '../../agents/run'
 import { runChain } from '../../chains/run'
-import { createPromptlChain } from '../../../utils/promptlChain/createFromWorker'
+import { parsePrompt } from '../../documents/parse'
 
 export function promptTask({ provider }: { provider: ProviderApiKey }) {
   return `
@@ -82,8 +82,10 @@ export async function buildLlmEvaluationRunFunction<
   let promptConfig: LatitudePromptConfig
   let promptChain: PromptlChain
   try {
+    const ast = await parsePrompt(prompt).then((r) => r.unwrap())
     const result = await scan({
-      prompt: prompt,
+      prompt,
+      serialized: ast,
       withParameters: LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[],
     })
     if (result.errors.length > 0) {
@@ -99,11 +101,13 @@ export async function buildLlmEvaluationRunFunction<
       ...result.config,
       ...(schema && { schema: zodToJsonSchema(schema, { target: 'openAi' }) }),
     } as LatitudePromptConfig
-    promptChain = await createPromptlChain({
+    promptChain = new Chain({
+      serialized: { ast },
       prompt: prompt,
       parameters: parameters,
       includeSourceMap: true,
-    }).then((r) => r.unwrap())
+      adapter: Adapters.default,
+    })
   } catch (error) {
     if (error instanceof ChainError) return Result.error(error)
     return Result.error(
