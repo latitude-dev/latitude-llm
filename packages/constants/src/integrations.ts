@@ -91,6 +91,7 @@ export enum HostedIntegrationType {
   Xero = 'xero',
   Readwise = 'readwise',
   Airbnb = 'airbnb',
+  Mintlify = 'mintlify',
 
   // Require all auth file :point_down:
   // Gmail = 'google_drive',
