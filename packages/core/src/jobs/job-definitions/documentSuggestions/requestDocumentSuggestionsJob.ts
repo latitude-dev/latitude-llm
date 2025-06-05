@@ -24,8 +24,8 @@ import {
   evaluationVersions,
   projects,
 } from '../../../schema'
-import { generateDocumentSuggestionJobKey } from './generateDocumentSuggestionJob'
 import { documentSuggestionsQueue } from '../../queues'
+import { generateDocumentSuggestionJobKey } from './generateDocumentSuggestionJob'
 
 export type RequestDocumentSuggestionsJobData = {}
 
@@ -181,11 +181,15 @@ export const requestDocumentSuggestionsJob = async (
     )
 
   for (const candidate of candidatesV2) {
-    documentSuggestionsQueue.add('generateDocumentSuggestionJob', candidate, {
-      attempts: 1,
-      deduplication: {
-        id: generateDocumentSuggestionJobKey(candidate),
+    await documentSuggestionsQueue.add(
+      'generateDocumentSuggestionJob',
+      candidate,
+      {
+        attempts: 1,
+        deduplication: {
+          id: generateDocumentSuggestionJobKey(candidate),
+        },
       },
-    })
+    )
   }
 }

@@ -6,13 +6,15 @@ import useSWR, { SWRConfiguration } from 'swr'
 export default function useProjectStats(
   {
     projectId,
+    disable,
   }: {
     projectId: number
+    disable?: boolean
   },
   opts?: SWRConfiguration,
 ) {
   const fetcher = useFetcher<ProjectStats>(
-    ROUTES.api.projects.detail(projectId).stats.root,
+    disable ? undefined : ROUTES.api.projects.detail(projectId).stats.root,
   )
 
   const { data, isLoading, error, mutate } = useSWR(

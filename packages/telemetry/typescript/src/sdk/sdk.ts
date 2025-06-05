@@ -186,10 +186,9 @@ export class LatitudeTelemetry {
     }
 
     this.provider.register()
-    process.on('SIGTERM', async () => {
-      await this.shutdown()
-      process.exit(0)
-    })
+
+    process.on('SIGTERM', async () => this.shutdown)
+    process.on('SIGINT', async () => this.shutdown)
 
     this.telemetry = null as unknown as ManualInstrumentation
     this.instrumentations = []

@@ -3,15 +3,17 @@ import {
   findCommitsByProjectCached,
   getDocumentByUuidCached,
   getDocumentLogsApproximatedCountCached,
+  getDocumentStatsCached,
+  hasDocumentLogsCached,
 } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import {
   Commit,
   Cursor,
-  DOCUMENT_LOGS_LIMITED_VIEW_THRESHOLD,
   DocumentLogFilterOptions,
   DocumentVersion,
+  LIMITED_VIEW_THRESHOLD,
   Workspace,
 } from '@latitude-data/core/browser'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
@@ -23,7 +25,6 @@ import {
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
 import { redirect } from 'next/navigation'
 
-import { findSomeDocumentLog } from '@latitude-data/core/services/documentLogs/data-access/findSomeDocumentLog'
 import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseLogFilterParams'
 import { DocumentLogsPage } from './_components'
 import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
@@ -70,7 +71,7 @@ export default async function DocumentPage({
     commitUuid,
   })
 
-  const hasLogs = await findSomeDocumentLog(document).then((r) => !!r)
+  const hasLogs = await hasDocumentLogsCached(documentUuid)
   if (!hasLogs) {
     const uploadUrl = ROUTES.projects
       .detail({ id: projectId })
@@ -95,7 +96,7 @@ export default async function DocumentPage({
 
   const approximatedCount =
     await getDocumentLogsApproximatedCountCached(documentUuid)
-  if (approximatedCount > DOCUMENT_LOGS_LIMITED_VIEW_THRESHOLD) {
+  if (approximatedCount > LIMITED_VIEW_THRESHOLD) {
     return DocumentLogsLimitedPage({
       workspace: workspace,
       projectId: projectId,
@@ -208,17 +209,19 @@ async function DocumentLogsLimitedPage({
 
   const selectedLog = result.items.find((r) => r.uuid === selectedLogUuid)
 
-  // TODO: Get aggregations from cache
-  const limitedView = {
-    totalCount: approximatedCount,
-    totalTokens: 0,
-    totalCostInMillicents: 0,
-    averageTokens: 0,
-    averageCostInMillicents: 0,
-    medianCostInMillicents: 0,
-    averageDuration: 0,
-    medianDuration: 0,
-    dailyCount: [],
+  let limitedView = await getDocumentStatsCached(document.documentUuid)
+  if (!limitedView) {
+    limitedView = {
+      totalCount: approximatedCount,
+      totalTokens: 0,
+      totalCostInMillicents: 0,
+      averageTokens: 0,
+      averageCostInMillicents: 0,
+      averageDuration: 0,
+      medianCostInMillicents: 0,
+      medianDuration: 0,
+      dailyCount: [],
+    }
   }
 
   return (

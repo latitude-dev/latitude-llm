@@ -1,10 +1,20 @@
-import { and, count, eq, getTableColumns, gte, isNull, sql } from 'drizzle-orm'
+import {
+  and,
+  count,
+  eq,
+  getTableColumns,
+  gte,
+  inArray,
+  isNull,
+  sql,
+} from 'drizzle-orm'
 
 import { DocumentLog, ErrorableEntity, LogSources } from '../../browser'
 import { commits, documentLogs, projects, runErrors } from '../../schema'
 import Repository from '../repositoryV2'
 import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
+import rowsFromQueryPlan from './../../lib/rowsFromQueryPlan'
 
 const tt = getTableColumns(documentLogs)
 
@@ -105,28 +115,60 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
       sql`
 EXPLAIN SELECT COUNT(*)
 FROM ${documentLogs}
-WHERE ${documentUuid} = ${documentLogs.documentUuid};
+WHERE ${documentLogs.documentUuid} = ${documentUuid};
 `,
     )
 
-    try {
-      const rows = result.rows.reduce((max, row) => {
-        const plan = row['QUERY PLAN'] as string
-        const matches = plan.match(/rows=(\d+)/g)
+    const rows = rowsFromQueryPlan(result)
 
-        let count = 0
-        if (matches) {
-          count = Math.max(
-            ...matches.map((match) => parseInt(match.replace('rows=', ''), 10)),
-          )
-        }
+    return Result.ok(rows)
+  }
 
-        return Math.max(max, count)
-      }, 0)
+  async approximatedCountByProject({ projectId }: { projectId: number }) {
+    const commitIds = await this.db
+      .select({ id: commits.id })
+      .from(commits)
+      .where(eq(commits.projectId, projectId))
+      .then((r) => r.map(({ id }) => id))
 
-      return Result.ok(rows)
-    } catch (error) {
-      return Result.ok(0)
-    }
+    const result = await this.db.execute(
+      sql`
+EXPLAIN SELECT COUNT(*)
+FROM ${documentLogs}
+WHERE ${documentLogs.commitId} IN (${sql.join(commitIds, sql`, `)});
+`,
+    )
+
+    const rows = rowsFromQueryPlan(result)
+
+    return Result.ok(rows)
+  }
+
+  async hasLogs({ documentUuid }: { documentUuid: string }) {
+    const result = await this.db
+      .select({ id: documentLogs.id })
+      .from(documentLogs)
+      .where(eq(documentLogs.documentUuid, documentUuid))
+      .limit(1)
+      .then((r) => !!r[0])
+
+    return Result.ok(result)
+  }
+
+  async hasLogsByProject({ projectId }: { projectId: number }) {
+    const commitIds = await this.db
+      .select({ id: commits.id })
+      .from(commits)
+      .where(eq(commits.projectId, projectId))
+      .then((r) => r.map(({ id }) => id))
+
+    const result = await this.db
+      .select({ id: documentLogs.id })
+      .from(documentLogs)
+      .where(inArray(documentLogs.commitId, commitIds))
+      .limit(1)
+      .then((r) => !!r[0])
+
+    return Result.ok(result)
   }
 }

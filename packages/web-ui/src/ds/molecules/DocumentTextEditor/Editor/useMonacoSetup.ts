@@ -49,10 +49,8 @@ export function useMonacoSetup({
     monaco.languages.register({ id: 'document' })
     monaco.languages.setMonarchTokensProvider('document', { tokenizer })
     monaco.languages.setLanguageConfiguration('document', {
-      comments: {
-        blockComment: ['/*', '*/'],
-      },
-      autoClosingPairs: [{ open: '{{', close: '}}' }],
+      comments: { blockComment: ['/*', '*/'] },
+      brackets: [['{{', '}}']],
     })
     applyTheme(monaco)
 

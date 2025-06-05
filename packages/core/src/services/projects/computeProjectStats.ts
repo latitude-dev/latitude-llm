@@ -1,8 +1,13 @@
 import { and, count, desc, eq, inArray, isNull, sql, sum } from 'drizzle-orm'
-
-import { Project } from '../../browser'
+import {
+  EvaluationType,
+  Project,
+  PROJECT_STATS_CACHE_KEY,
+  ProjectStats,
+  STATS_CACHE_TTL,
+} from '../../browser'
+import { cache } from '../../cache'
 import { database } from '../../client'
-import { EvaluationType, ProjectStats } from '../../constants'
 import { Result } from '../../lib/Result'
 import {
   commits,
@@ -12,13 +17,7 @@ import {
   evaluationVersions,
   providerLogs,
 } from '../../schema'
-import { computeTotalRuns } from './computeTotalRuns'
-import { cache } from '../../cache'
 
-// Cache key prefix for project stats
-const PROJECT_STATS_CACHE_PREFIX = 'project_stats:'
-// Cache TTL in seconds (24 hours)
-const CACHE_TTL = 24 * 60 * 60
 // Minimum number of logs required to cache project stats
 export const MIN_LOGS_FOR_CACHING = 5000
 
@@ -39,7 +38,7 @@ export async function computeProjectStats(
   db = database,
 ) {
   const redis = await cache()
-  const cacheKey = `${PROJECT_STATS_CACHE_PREFIX}${project.id}`
+  const cacheKey = PROJECT_STATS_CACHE_KEY(project.workspaceId, project.id)
 
   // Try to get from cache first if not forcing refresh
   if (!forceRefresh) {
@@ -65,10 +64,11 @@ export async function computeProjectStats(
     .then((result) => result.map((r) => r.commitId))
 
   // Get total runs (document logs count)
-  const totalRunsResult = await computeTotalRuns(project, db)
-  if (totalRunsResult.error) return totalRunsResult
-
-  const totalRuns = totalRunsResult.unwrap()
+  const totalRuns = await db
+    .select({ count: count() })
+    .from(documentLogs)
+    .where(inArray(documentLogs.commitId, commitIds))
+    .then((result) => result[0]?.count ?? 0)
 
   // Get total tokens and per-model stats from all provider logs
   const modelStats = await db
@@ -226,7 +226,7 @@ export async function computeProjectStats(
   // Only cache the results if the project has more than MIN_LOGS_FOR_CACHING logs
   if (totalRuns >= MIN_LOGS_FOR_CACHING) {
     try {
-      await redis.set(cacheKey, JSON.stringify(stats), 'EX', CACHE_TTL)
+      await redis.set(cacheKey, JSON.stringify(stats), 'EX', STATS_CACHE_TTL)
     } catch (error) {
       // Continue even if caching fails
     }

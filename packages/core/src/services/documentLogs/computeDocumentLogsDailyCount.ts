@@ -1,11 +1,11 @@
 import { and, count, eq, isNull, sql } from 'drizzle-orm'
-
 import {
   DocumentLogFilterOptions,
   DocumentVersion,
   ErrorableEntity,
 } from '../../browser'
 import { database } from '../../client'
+import { Result } from '../../lib/Result'
 import { commits, documentLogs, runErrors } from '../../schema'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
@@ -25,7 +25,7 @@ export async function computeDocumentLogsDailyCount(
     days?: number
   },
   db = database,
-): Promise<DailyCount[]> {
+) {
   const conditions = [
     sql`${documentLogs.createdAt} >= NOW() - INTERVAL '${sql.raw(
       String(days),
@@ -55,8 +55,10 @@ export async function computeDocumentLogsDailyCount(
     .groupBy(sql`DATE(${documentLogs.createdAt})`)
     .orderBy(sql`DATE(${documentLogs.createdAt})`)
 
-  return result.map((row) => ({
+  const dailyCount: DailyCount[] = result.map((row) => ({
     date: row.date,
     count: Number(row.count),
   }))
+
+  return Result.ok(dailyCount)
 }
