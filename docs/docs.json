@@ -201,22 +201,19 @@
           {
             "group": "Overview",
             "pages": [
-              "examples/overview"
-            ]
-          },
-          {
-            "group": "SDK examples",
-            "pages": [
-              "examples/sdk/run-prompt",
-              "examples/sdk/run-prompt-with-tools",
-              "examples/sdk/get-prompt",
-              "examples/sdk/get-or-create-prompt",
-              "examples/sdk/get-all-prompts",
-              "examples/sdk/create-log",
-              "examples/sdk/annotate-log",
-              "examples/sdk/pause-tools",
-              "examples/sdk/rag-retrieval",
-              "examples/sdk/render-chain"
+              "examples/overview",
+              {
+                "group": "Building effective agents",
+                "pages": [
+                  "examples/cases/building-effective-agents/overview",
+                  "examples/cases/building-effective-agents/prompt-chaining",
+                  "examples/cases/building-effective-agents/prompt-routing",
+                  "examples/cases/building-effective-agents/prompt-parallelization",
+                  "examples/cases/building-effective-agents/orchestrator-workers",
+                  "examples/cases/building-effective-agents/evaluator-optimizer",
+                  "examples/cases/building-effective-agents/autonomous-agents"
+                ]
+              }
             ]
           },
           {
@@ -235,20 +232,23 @@
             ]
           },
           {
+            "group": "SDK examples",
+            "pages": [
+              "examples/sdk/run-prompt",
+              "examples/sdk/run-prompt-with-tools",
+              "examples/sdk/get-prompt",
+              "examples/sdk/get-or-create-prompt",
+              "examples/sdk/get-all-prompts",
+              "examples/sdk/create-log",
+              "examples/sdk/annotate-log",
+              "examples/sdk/pause-tools",
+              "examples/sdk/rag-retrieval",
+              "examples/sdk/render-chain"
+            ]
+          },
+          {
             "group": "Use cases",
             "pages": [
-              {
-                "group": "Building effective agents",
-                "pages": [
-                  "examples/cases/building-effective-agents/overview",
-                  "examples/cases/building-effective-agents/prompt-chaining",
-                  "examples/cases/building-effective-agents/prompt-routing",
-                  "examples/cases/building-effective-agents/prompt-parallelization",
-                  "examples/cases/building-effective-agents/orchestrator-workers",
-                  "examples/cases/building-effective-agents/evaluator-optimizer",
-                  "examples/cases/building-effective-agents/autonomous-agents"
-                ]
-              },
               "examples/cases/weather-chatbot",
               "examples/cases/joke-generator",
               "examples/cases/deep-search",
