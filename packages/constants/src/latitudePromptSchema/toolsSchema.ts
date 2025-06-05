@@ -1,47 +1,7 @@
 import { z } from 'zod'
 import { LatitudeTool } from '../config'
 import { openAIToolsList } from './providers/openai/index'
-
-const JSON_SCHEMA_TYPES: readonly [string, ...string[]] = [
-  'string',
-  'number',
-  'boolean',
-  'object',
-  'integer',
-  'null',
-  'array',
-]
-const jsonSchema: z.ZodType<any> = z.lazy(() =>
-  z.object({
-    type: z.enum(JSON_SCHEMA_TYPES),
-    description: z.string().optional(),
-
-    // object
-    properties: z.record(jsonSchema).optional(),
-    required: z.array(z.string()).optional(),
-    additionalProperties: z.union([z.boolean(), jsonSchema]).optional(),
-
-    // array
-    items: z.union([jsonSchema, z.array(jsonSchema)]).optional(),
-
-    // common
-    enum: z
-      .array(z.union([z.string(), z.number(), z.boolean(), z.null()]))
-      .optional(),
-
-    // string
-    minLength: z.number().optional(),
-    maxLength: z.number().optional(),
-    pattern: z.string().optional(),
-    format: z.string().optional(),
-
-    // number
-    minimum: z.number().optional(),
-    maximum: z.number().optional(),
-
-    $ref: z.string().optional(), // Reference to another schema
-  }),
-)
+import { zodJsonSchema } from './zodJsonSchema'
 
 const toolDefinitionObject = z.record(
   z.object({
@@ -54,7 +14,7 @@ const toolDefinitionObject = z.record(
           required_error: 'Parameters must be an object',
           invalid_type_error: 'Parameters must be an object',
         }),
-        properties: z.record(jsonSchema),
+        properties: z.record(zodJsonSchema),
         required: z.array(z.string()).optional(),
         additionalProperties: z.boolean().optional(),
       })
