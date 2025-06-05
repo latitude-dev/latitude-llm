@@ -45,7 +45,7 @@
   "dependencies": {
     "eventsource-parser": "^2.0.1",
     "node-fetch": "3.3.2",
-    "promptl-ai": "^0.6.2",
+    "promptl-ai": "catalog:",
     "zod": "^3.23.8"
   },
   "devDependencies": {

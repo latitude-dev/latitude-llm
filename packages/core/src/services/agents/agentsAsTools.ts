@@ -24,6 +24,8 @@ export async function getToolDefinitionFromDocument({
   doc: DocumentVersion
   allDocs: DocumentVersion[]
 }): Promise<ToolDefinition> {
+  // FIXME
+  // @ts-ignore - type instantiation infinite loop
   const metadataFn = doc.promptlVersion === 1 ? scan : readMetadata
   const referenceFn = async (target: string, from?: string) => {
     const fullPath = from ? resolveRelativePath(from, target) : target

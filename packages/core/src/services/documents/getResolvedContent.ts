@@ -53,5 +53,6 @@ export async function getResolvedContent({
   })
 
   if (metadataResult.error) return metadataResult
+
   return Result.ok(metadataResult.unwrap().resolvedPrompt)
 }

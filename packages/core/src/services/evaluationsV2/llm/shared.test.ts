@@ -126,10 +126,7 @@ describe('runPrompt', () => {
     ).rejects.toThrowError(
       new ChainError({
         code: RunErrorCodes.ChainCompileError,
-        message: `Unexpected EOF. Expected '}}' but did not find it. (1:17)
-1: {{ invalid_prompt
-
-                    ^`,
+        message: `Unexpected EOF. Expected '}}' but did not find it.`,
       }),
     )
   })
