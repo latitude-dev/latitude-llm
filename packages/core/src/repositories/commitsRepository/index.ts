@@ -208,6 +208,16 @@ export class CommitsRepository extends RepositoryLegacy<
       .orderBy(desc(this.scope.createdAt))
   }
 
+  getDrafts(projectId: number) {
+    return this.db
+      .select()
+      .from(this.scope)
+      .where(
+        and(eq(this.scope.projectId, projectId), isNull(this.scope.mergedAt)),
+      )
+      .orderBy(desc(this.scope.createdAt))
+  }
+
   async filterByProject(projectId: number) {
     const result = await this.db
       .select()

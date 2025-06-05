@@ -13,6 +13,11 @@ import DocumentationModal, {
   DocumentationModalProvider,
 } from './_components/DocumentationModal'
 import DocumentTabs from './_components/DocumentTabs'
+import buildMetatags from '$/app/_lib/buildMetatags'
+
+export const metadata = buildMetatags({
+  locationDescription: 'Prompt Editor and Playground',
+})
 
 export default async function DocumentPage({
   params,

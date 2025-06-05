@@ -2,49 +2,48 @@ import { Job } from 'bullmq'
 
 import { DocumentLogsRepository } from '../../../repositories'
 import {
-  addMessageToExistingCopilotChat,
-  runNewCopilotChat,
-} from '../../../services/copilot/chat'
+  addMessageToExistingLatte,
+  runNewLatte,
+} from '../../../services/copilot/latte'
 import { unsafelyFindWorkspace } from '../../../data-access'
-import { getCopilotDocument } from '../../../services/copilot/chat/helpers'
+import { getCopilotDocument } from '../../../services/copilot/latte/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
-import { LatteContext } from '@latitude-data/constants/latte'
 import { LatitudeError } from '../../../lib/errors'
 
-export type RunCopilotChatJobData = {
+export type RunLatteJobData = {
   workspaceId: number
-  chatUuid: string
+  threadUuid: string
   message: string
-  context: LatteContext
+  context: string
 }
 
 async function emitError({
   workspaceId,
-  chatUuid,
+  threadUuid,
   error,
 }: {
   workspaceId: number
-  chatUuid: string
+  threadUuid: string
   error: LatitudeError
 }) {
   WebsocketClient.sendEvent('latteError', {
     workspaceId,
     data: {
-      chatUuid,
+      threadUuid,
       error: error.message,
     },
   })
 }
 
-export const runCopilotChatJob = async (job: Job<RunCopilotChatJobData>) => {
-  const { workspaceId, chatUuid, message, context } = job.data
+export const runLatteJob = async (job: Job<RunLatteJobData>) => {
+  const { workspaceId, threadUuid, message, context } = job.data
   const workspace = await unsafelyFindWorkspace(workspaceId).then((w) => w!)
 
   const copilotResult = await getCopilotDocument()
   if (!copilotResult.ok) {
     await emitError({
       workspaceId,
-      chatUuid,
+      threadUuid,
       error: copilotResult.error as LatitudeError,
     })
 
@@ -57,17 +56,17 @@ export const runCopilotChatJob = async (job: Job<RunCopilotChatJobData>) => {
   } = copilotResult.unwrap()
 
   const documentLogsScope = new DocumentLogsRepository(copilotWorkspace.id)
-  const documentLogResult = await documentLogsScope.findByUuid(chatUuid)
+  const documentLogResult = await documentLogsScope.findByUuid(threadUuid)
 
   if (!documentLogResult.ok) {
     // Chat still does not exist, we create a new one
-    const runResult = await runNewCopilotChat({
+    const runResult = await runNewLatte({
       copilotWorkspace,
       copilotCommit,
       copilotDocument,
       clientWorkspace: workspace,
 
-      chatUuid,
+      threadUuid,
       message,
       context,
     })
@@ -75,7 +74,7 @@ export const runCopilotChatJob = async (job: Job<RunCopilotChatJobData>) => {
     if (!runResult.ok) {
       await emitError({
         workspaceId,
-        chatUuid,
+        threadUuid,
         error: runResult.error as LatitudeError,
       })
     }
@@ -83,12 +82,12 @@ export const runCopilotChatJob = async (job: Job<RunCopilotChatJobData>) => {
     return runResult
   }
 
-  const runResult = await addMessageToExistingCopilotChat({
+  const runResult = await addMessageToExistingLatte({
     copilotWorkspace,
     copilotCommit,
     copilotDocument,
     clientWorkspace: workspace,
-    chatUuid,
+    threadUuid,
     message,
     context,
   })
@@ -96,7 +95,7 @@ export const runCopilotChatJob = async (job: Job<RunCopilotChatJobData>) => {
   if (!runResult.ok) {
     await emitError({
       workspaceId,
-      chatUuid,
+      threadUuid,
       error: runResult.error as LatitudeError,
     })
   }

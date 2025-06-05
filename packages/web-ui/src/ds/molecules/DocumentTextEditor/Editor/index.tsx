@@ -31,6 +31,7 @@ export function DocumentTextEditor({
   compileErrors,
   autoFocus = false,
   autoCompleteParameters = [],
+  highlightedCursorIndex,
 }: DocumentTextEditorProps) {
   const errors = compileErrors ?? NO_ERRORS
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
@@ -141,6 +142,7 @@ export function DocumentTextEditor({
           errorMarkers={errorMarkers}
           errorFixFn={errorFixFn}
           autoCompleteParameters={autoCompleteParameters}
+          highlightedCursorIndex={highlightedCursorIndex}
         />
       )}
       {diff && (
