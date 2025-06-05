@@ -23,6 +23,7 @@ import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/Featur
 
 export const metadata = buildMetatags({
   title: 'Home',
+  locationDescription: 'The Latitude App',
 })
 
 export default async function PrivateLayout({

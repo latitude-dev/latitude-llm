@@ -4,7 +4,8 @@
 // put in other place.
 
 import type { Message } from '@latitude-data/compiler'
-import {
+import type {
+  DocumentVersion,
   Commit,
   Dataset,
   DatasetRow,
@@ -106,8 +107,12 @@ export type WebServerToClientEvents = {
   evaluationResultV2Created: (args: EvaluationResultV2CreatedArgs) => void
   mcpServerScaleEvent: (args: McpServerScaleEventArgs) => void
   mcpServerConnected: (args: McpServerConnectedArgs) => void
-  latteMessage: (args: { chatUuid: string; message: Message }) => void
-  latteError: (args: { chatUuid: string; error: string }) => void
+  latteMessage: (args: { threadUuid: string; message: Message }) => void
+  latteDraftUpdate: (args: {
+    draftUuid: string
+    updates: DocumentVersion[]
+  }) => void
+  latteError: (args: { threadUuid: string; error: string }) => void
 }
 
 export type WebClientToServerEvents = {
@@ -150,14 +155,18 @@ export type WorkersClientToServerEvents = {
   latteMessage: (args: {
     workspaceId: number
     data: {
-      chatUuid: string
+      threadUuid: string
       message: Message
     }
+  }) => void
+  latteDraftUpdate: (args: {
+    workspaceId: number
+    data: { draftUuid: string; updates: DocumentVersion[] }
   }) => void
   latteError: (args: {
     workspaceId: number
     data: {
-      chatUuid: string
+      threadUuid: string
       error: string
     }
   }) => void

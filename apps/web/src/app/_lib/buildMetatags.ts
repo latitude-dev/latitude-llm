@@ -9,10 +9,12 @@ const DEFAULT_DESCRIPTION =
 export default function buildMetatags({
   title,
   description,
+  locationDescription,
   parent,
 }: {
   title?: string
   description?: string
+  locationDescription?: string
   parent?: ResolvedMetadata
 }): Metadata {
   let parentTitle = parent?.title?.absolute || ''
@@ -21,6 +23,9 @@ export default function buildMetatags({
       ? `${title} - ${parentTitle}`
       : title || parentTitle || DEFAULT_TITLE
   if (!metaTitle.endsWith(' - Latitude')) metaTitle += ' - Latitude'
+
+  let closestLocationDescription =
+    locationDescription || parent?.other?.['location-description']
 
   const metaDescription = description || DEFAULT_DESCRIPTION
 
@@ -43,5 +48,12 @@ export default function buildMetatags({
       title: metaTitle,
       description: metaDescription,
     },
+    ...(closestLocationDescription
+      ? {
+          other: {
+            'location-description': closestLocationDescription,
+          },
+        }
+      : {}),
   }
 }

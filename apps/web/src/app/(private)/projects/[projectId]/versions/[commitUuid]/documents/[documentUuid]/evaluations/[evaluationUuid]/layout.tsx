@@ -1,8 +1,15 @@
 'use server'
 
 import { getEvaluationV2AtCommitByDocumentCached } from '$/app/(private)/_data-access'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { EvaluationV2Provider } from '$/app/providers/EvaluationV2Provider'
 import { ReactNode } from 'react'
+
+export async function generateMetadata() {
+  return buildMetatags({
+    locationDescription: 'Prompt Evaluations Dashboard',
+  })
+}
 
 export default async function EvaluationLayout({
   params,

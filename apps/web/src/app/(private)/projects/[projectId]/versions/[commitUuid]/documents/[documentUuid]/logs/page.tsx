@@ -27,6 +27,11 @@ import { findSomeDocumentLog } from '@latitude-data/core/services/documentLogs/d
 import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseLogFilterParams'
 import { DocumentLogsPage } from './_components'
 import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
+import buildMetatags from '$/app/_lib/buildMetatags'
+
+export const metadata = buildMetatags({
+  locationDescription: 'Document Logs Page',
+})
 
 async function fetchDocumentLogPage({
   workspace,
