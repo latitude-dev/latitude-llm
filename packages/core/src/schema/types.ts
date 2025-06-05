@@ -338,7 +338,7 @@ export type DocumentLogsAggregations = {
 }
 
 export type DocumentLogsLimitedView = DocumentLogsAggregations & {
-  dailyCount: { date: Date; count: number }[]
+  dailyCount: { date: string; count: number }[]
 }
 
 export interface ProjectStats {

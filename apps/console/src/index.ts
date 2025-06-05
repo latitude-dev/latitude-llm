@@ -2,8 +2,11 @@ import { database, utils } from '@latitude-data/core/client'
 import * as models from '@latitude-data/core/schema'
 import { randomUUID as uuid } from 'node:crypto'
 import repl from 'node:repl'
+import { inspect as utilInspect } from 'node:util'
 import { setupReplHistory } from './replHistory'
 import * as loadModules from './replReload'
+
+const inspect = (value: any) => console.log(utilInspect(value, { depth: null }))
 
 const hasS3 = process.env.S3_BUCKET
 
@@ -27,5 +30,6 @@ Object.assign(r.context, {
   ...models,
   database,
   uuid,
+  inspect,
   ...loadModules,
 })

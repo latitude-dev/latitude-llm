@@ -4,7 +4,6 @@ import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { DailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
 import useSWR, { SWRConfiguration } from 'swr'
 
-type DailyCountWithDate = Omit<DailyCount, 'date'> & { date: Date }
 export default function useDocumentLogsDailyCount(
   {
     documentUuid,
@@ -21,7 +20,7 @@ export default function useDocumentLogsDailyCount(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher<DailyCountWithDate[], DailyCount[]>(
+  const fetcher = useFetcher<DailyCount[]>(
     disable
       ? undefined
       : documentUuid
@@ -30,16 +29,9 @@ export default function useDocumentLogsDailyCount(
             .documents.detail(documentUuid)
             .logs.dailyCount({ days, filterOptions })
         : undefined,
-    {
-      serializer: (rows) =>
-        rows.map((row) => ({
-          ...row,
-          date: new Date(row.date),
-        })),
-    },
   )
 
-  const { data, isLoading, error } = useSWR<DailyCountWithDate[]>(
+  const { data, isLoading, error } = useSWR<DailyCount[]>(
     ['documentLogsDailyCount', documentUuid, filterOptions, projectId, days],
     fetcher,
     opts,
