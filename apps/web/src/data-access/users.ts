@@ -1,4 +1,4 @@
-import { database, dbUtils } from '@latitude-data/core/client'
+import { database, utils } from '@latitude-data/core/client'
 import {
   unsafelyFindWorkspacesFromUser,
   unsafelyGetUser,
@@ -34,7 +34,7 @@ export async function getUserFromCredentials({
   email: string
 }): PromisedResult<ReturnType, NotFoundError> {
   const user = await database.query.users.findFirst({
-    where: dbUtils.eq(users.email, email),
+    where: utils.eq(users.email, email),
   })
   if (!user) return notFoundWithEmail(email)
 

@@ -96,6 +96,15 @@ This guide explains how to set up a local instance of Latitude on your machine f
 
 Now you have a local Latitude instance running for development!
 
+## Using the REPL
+
+You can run a JavaScript REPL to interact with the local instance of Latitude.
+From the root of the repository, start the REPL with `pnpm console`. Try:
+
+```javascript
+await database.select().from(users).limit(10)
+```
+
 ## Next Steps
 
 - Learn about deploying to [Production](/guides/self-hosted/production-setup)

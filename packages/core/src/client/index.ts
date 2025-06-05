@@ -1,11 +1,10 @@
 import { env } from '@latitude-data/env'
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres'
-import * as drizzleDbUtils from './utils'
 import pg from 'pg'
 
-import * as schema from '../schema'
 import { PgWithReplicas, withReplicas } from 'drizzle-orm/pg-core'
 import type { Pool as IPool } from 'pg'
+import * as schema from '../schema'
 
 const { Pool } = pg
 
@@ -30,7 +29,7 @@ const read2Pool = new Pool({
   statement_timeout: 30000, // 30 seconds
 })
 
-export const dbUtils = drizzleDbUtils
+export * as utils from './utils'
 
 const primary = drizzle(pool, { schema })
 const read1 = drizzle(read1Pool, { schema })
