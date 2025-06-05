@@ -1,19 +1,29 @@
 ---
-title: 'Few-shot Learning'
+title: 'Few-shot Prompting'
 description: 'Learn how to implement few-shot learning with examples to improve AI performance on specific tasks'
 ---
 
-## What is Few-shot Learning?
+## What is Few-shot Prompting?
 
-Few-shot learning is a prompting technique where you provide the AI with a small number of examples (typically 2-10) to demonstrate the desired pattern, format, or behavior before asking it to perform a similar task. This technique leverages the AI's ability to recognize patterns and generalize from limited examples.
+Few-shot learning is a prompting technique where you provide the AI with one or several small number of examples (typically 1-10) to demonstrate the desired pattern, format, or behavior before asking it to perform a similar task. This technique leverages the AI's ability to recognize patterns and generalize from limited examples.
 
-## Why Use Few-shot Learning?
+## Why Use Few-shot Prompting?
 
 - **Improved Accuracy**: Examples help the AI understand exactly what you want
 - **Consistent Format**: Ensures outputs follow a specific structure
 - **Reduced Ambiguity**: Clear examples eliminate guesswork
 - **Better Context Understanding**: Shows the AI how to handle edge cases
 - **Domain Adaptation**: Helps AI adapt to specific domains or styles
+
+## Zero-shot vs Few-shot
+Zero-shot prompting involves asking the AI to perform a task without any examples, relying solely on its pre-existing knowledge. Few-shot prompting, on the other hand, provides a few examples to guide the AI's response. Few-shot learning is generally more effective for complex tasks where context and specific patterns are crucial.
+
+## One-shot vs Few-shot
+One-shot prompting provides a single example to guide the AI, the idea behind one-shot learning is to show the AI how to perform a task with just one example.
+
+<Note>
+All variants of few-shot prompting (zero-shot, one-shot, and few-shot) can be implemented in Latitude. The choice depends on the complexity of the task and the amount of guidance needed.
+</Note>
 
 ## Basic Implementation in Latitude
 
@@ -33,17 +43,33 @@ into one of these categories: URGENT, SPAM, BUSINESS, PERSONAL.
 
 ## Examples:
 
+<user>
 **Email**: "CONGRATULATIONS! You've won $1,000,000! Click here now!"
+</user>
+<assistant>
 **Category**: SPAM
+</assistant>
 
+<user>
 **Email**: "Hi John, can we reschedule tomorrow's meeting? I have a family emergency."
+</user>
+<assistant>
 **Category**: PERSONAL
+</assistant>
 
+<user>
 **Email**: "SYSTEM ALERT: Server down. Immediate attention required. Revenue impact critical."
+</user>
+<assistant>
 **Category**: URGENT
+</assistant>
 
+<user>
 **Email**: "Please find attached the Q4 financial report for your review."
+</user>
+<assistant>
 **Category**: BUSINESS
+</assistant>
 
 ## Email to Classify:
 {{ email_content }}
@@ -179,6 +205,7 @@ temperature: 0.3
 Generate {{ content_type }} following the appropriate examples below:
 
 {{ if content_type === "social_media" }}
+  <assistant>
   ## Social Media Examples:
 
   **Topic**: "New restaurant opening"
@@ -186,9 +213,11 @@ Generate {{ content_type }} following the appropriate examples below:
 
   **Topic**: "Product launch"
   **Content**: "🚀 Introducing our game-changing productivity app! Streamline your workflow like never before. Download now: [link] #ProductLaunch #Productivity #Innovation"
+  </assistant>
 {{ endif }}
 
 {{ if content_type === "email" }}
+  <assistant>
   ## Email Examples:
 
   **Topic**: "Welcome new customer"
@@ -198,9 +227,11 @@ Generate {{ content_type }} following the appropriate examples below:
   **Topic**: "Product announcement"
   **Subject**: "Introducing [Product] - Transform your [Industry]"
   **Content**: "Hi [Name], We're thrilled to announce [Product], designed specifically for professionals like you who want to [benefit]..."
+  </assistant>
 {{ endif }}
 
 {{ if content_type === "blog" }}
+  <assistant>
   ## Blog Examples:
 
   **Topic**: "Industry trends"
@@ -208,6 +239,7 @@ Generate {{ content_type }} following the appropriate examples below:
 
   **Topic**: "How-to guide"
   **Content**: "# Step-by-Step Guide: How to [Action]\n\nAre you struggling with [problem]? This comprehensive guide will walk you through everything you need to know.\n\n## Prerequisites\n- [Requirement 1]\n- [Requirement 2]"
+  </assistant>
 {{ endif }}
 
 ## Content Request:
@@ -289,7 +321,7 @@ Extract key data points from documents following these examples:
 ```
 </CodeGroup>
 
-## Best Practices for Few-shot Learning
+## Best Practices for Few-shot Prompting
 
 <AccordionGroup>
 <Accordion title="Example Selection">

@@ -5,83 +5,70 @@ description: Use code-based metrics and rules to objectively evaluate prompt out
 
 Programmatic Rule evaluations apply objective, code-based rules and metrics to assess prompt outputs. They are ideal for validating specific requirements, checking against ground truth, and enforcing constraints automatically.
 
-## How it Works
 
-1.  **Target Prompt Run**: Your main prompt generates an output (log).
-2.  **Evaluation Trigger**: The Programmatic Rule evaluation is run on that log.
-3.  **Rule Execution**: Latitude applies the configured rule/metric algorithm to the prompt's output (and potentially input or dataset values).
-4.  **Result Calculation**: The algorithm calculates a score (e.g., length, similarity score) or a classification (e.g., matched/unmatched, valid/invalid).
-5.  **Result Storage**: The result is stored alongside the original log.
-
-## Use Cases
-
-Programmatic rules excel when:
-
-- **Objective Checks**: Evaluating criteria that are clearly defined and measurable (e.g., output length, format adherence).
-- **Ground Truth Comparison**: Checking if the output matches an expected answer provided in a [Dataset](/guides/datasets/overview).
-- **Format Validation**: Ensuring the output conforms to a specific structure (e.g., JSON schema, regular expression).
-- **Constraint Enforcement**: Verifying constraints like maximum length or absence of specific keywords.
-- **Speed & Cost**: Evaluating large volumes of logs quickly and at no additional LLM cost.
-
-## Trade-offs
-
-- **Rigidity**: May fail valid responses that differ slightly from the expected format or ground truth.
-- **Limited Nuance**: Cannot easily evaluate subjective qualities like tone, style, or creativity.
-- **Setup**: Requires defining specific rules or providing datasets with expected outputs.
-
-For subjective criteria, use [LLM-as-Judge](/guides/evaluations/llm-as-judges). For human preferences, use [Manual Evaluations](/guides/evaluations/humans-in-the-loop).
-
-## Available Metrics & Rules
-
-Latitude provides a complete suite of built-in metrics for evaluating prompts programmatically.
-
-### Exact Match
-
-Checks if the response is exactly the same as the expected output. The resulting score is "matched" or "unmatched".
+- **How it works**: Applies code-based rules and metrics to check outputs against objective criteria.
+- **Best for**: Objective checks, ground truth comparisons (using datasets), format validation (JSON, regex), safety checks (keyword detection), length constraints.
+- **Requires**: Defining specific rules (e.g., exact match, contains keyword, JSON schema validation) and potentially providing a [Dataset](/guides/datasets/overview) with expected outputs.
 
 <Note>
-  Exact Match evaluation requires an expected output, so it does not support
-  live evaluation.
+For subjective criteria, use [LLM-as-Judge](/guides/evaluations/llm-as-judges).
+For human preferences, use [HITL (Human In The Loop)](/guides/evaluations/humans-in-the-loop).
 </Note>
 
-### Regular Expression
+## Setup
 
-Checks if the response matches the regular expression. The resulting score is "matched" or "unmatched".
+<Steps>
+  <Step title="Go to evaluations tab">
+    Go to evaluations tab on a prompt in one of your projects.
+  </Step>
+  <Step title="Add evaluation">
+    On the top right corner, click on the "Add evaluation" button.
+  </Step>
+  <Step title="Choose Programatic Rule">
+    Choose "Programatic Rule" tab in the evaluation modal.
+    ![Choose LLM-as-a-judge](/assets/new-programtic-rule-evaluation-modal.png)
+  </Step>
+  <Step title="Choose a metric">
+    ![Choose Programatic Rule metric](/assets/programatic-rule-metric-dropdown.png)
+  </Step>
+</Steps>
 
-### Schema Validation
+## Metrics
 
-Checks if the response follows the schema. The resulting score is "valid" or "invalid". Right now only JSON schemas are supported.
+<ParamField path="Exact Match">
+  Checks if the response is exactly the same as the expected output. The resulting score is "matched" or "unmatched".
+</ParamField>
 
-### Length Count
+<ParamField path="Regular Expression">
+  Checks if the response matches the regular expression. The resulting score is "matched" or "unmatched".
+</ParamField>
 
-Checks if the response is of a certain length. The resulting score is the length of the response. The length can be counted by characters, words or sentences.
+<ParamField path="Schema Validation">
+  Checks if the response follows the schema. The resulting score is "valid" or "invalid". Right now only JSON schemas are supported.
+</ParamField>
 
-### Lexical Overlap
+<ParamField path="Length Count">
+  Checks if the response is of a certain length. The resulting score is the length of the response. The length can be counted by characters, words or sentences.
+</ParamField>
 
-Checks if the response contains the expected output. The resulting score is the percentage of overlap. Overlap can be measured with longest common substring, Levenshtein distance and ROUGE algorithms.
+<ParamField path="Lexical Overlap">
+  Checks if the response contains the expected output. The resulting score is the percentage of overlap. Overlap can be measured with longest common substring, Levenshtein distance and ROUGE algorithms.
+</ParamField>
 
-<Note>
-  Lexical Overlap evaluation requires an expected output, so it does not support
-  live evaluation.
-</Note>
+<ParamField path="Semantic Similarity">
+  Checks if the response is semantically similar to the expected output. The resulting score is the percentage of similarity. Similarity is measured by computing the cosine distance.
+</ParamField>
 
-### Semantic Similarity
+<ParamField path="Numeric Similarity">
+  Checks if the response is numerically similar to the expected output. The resulting score is the percentage of similarity. Similarity is measured by computing the relative difference.
+</ParamField>
 
-Checks if the response is semantically similar to the expected output. The resulting score is the percentage of similarity. Similarity is measured by computing the cosine distance.
 
-<Note>
-  Semantic Similarity evaluation requires an expected output, so it does not
-  support live evaluation.
-</Note>
+## Expected output
 
-### Numeric Similarity
+The expected output, also known as label, refers to the correct or ideal response that the language model should generate for a given prompt. You can create datasets with expected output columns to evaluate prompts with ground truth.
 
-Checks if the response is numerically similar to the expected output. The resulting score is the percentage of similarity. Similarity is measured by computing the relative difference.
-
-<Note>
-  Numeric Similarity evaluation requires an expected output, so it does not
-  support live evaluation.
-</Note>
+<Note>**Exact Match** and **Lexical Overlap**, **Semantic Similarity** and **Numeric Similarity** metrics require expected output.</Note>
 
 ## Using Datasets for Ground Truth
 
@@ -89,28 +76,4 @@ Many programmatic rules (Exact Match, Lexical Overlap, Semantic Similarity) requ
 
 1.  Creating a [Dataset](/guides/datasets/overview) containing input examples and their corresponding desired outputs.
 2.  Configuring the evaluation rule to use the `expected_output` column from that dataset.
-3.  Running the evaluation in [batch mode](/guides/evaluations/running-evaluations#running-evaluations-in-batch-mode) on that dataset.
-
-## Setting Up a Programmatic Rule Evaluation
-
-1.  Navigate to your prompt's "Evaluations" tab.
-2.  Click "New Evaluation".
-3.  Choose "Programmatic Rule" as the type.
-4.  Select the desired **Metric** from the available options (e.g., Exact Match, Regex, Length Count).
-5.  Configure the metric's specific parameters (e.g., provide the regex pattern, select the dataset column for expected output, set length constraints).
-6.  Save the evaluation.
-
-## Viewing Evaluation Results
-
-Results are visible in:
-
-- **Logs View**: Individual log entries show pass/fail status or scores.
-- **Evaluations Tab**: Aggregated results, success rates, score distributions.
-- **Batch Evaluation Results**: Detailed breakdown when run on datasets.
-
-## Next Steps
-
-- Learn about [LLM-as-Judge Evaluations](/guides/evaluations/llm-as-judges)
-- Learn about [HITL (Humans in the Loop) Evaluations](/guides/evaluations/humans-in-the-loop)
-- Understand how to [Run Evaluations](/guides/evaluations/running-evaluations)
-- Prepare data using [Datasets](/guides/datasets/overview)
+3.  Running the evaluation in [an experiment](/guides/evaluations/running-evaluations#running-evaluations-on-datasets-run-experiment) on that dataset.

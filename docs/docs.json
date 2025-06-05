@@ -90,15 +90,9 @@
             "pages": [
               "guides/evaluations/overview",
               {
-                "group": "Evaluation Types",
+                "group": "Types",
                 "pages": [
-                  {
-                    "group": "LLM-as-Judges",
-                    "pages": [
-                      "guides/evaluations/llm-as-judges",
-                      "guides/evaluations/evaluation-templates"
-                    ]
-                  },
+                  "guides/evaluations/llm-as-judges",
                   "guides/evaluations/programmatic_rules",
                   "guides/evaluations/humans-in-the-loop"
                 ]
@@ -228,28 +222,33 @@
           {
             "group": "Prompting Techniques",
             "pages": [
-              "examples/techniques/few-shot-learning",
+              "examples/techniques/few-shot-prompting",
+              "examples/techniques/role-prompting",
               "examples/techniques/chain-of-thought",
               "examples/techniques/tree-of-thoughts",
+              "examples/techniques/contextual-prompting",
               "examples/techniques/self-consistency",
-              "examples/techniques/role-prompting",
-              "examples/techniques/template-based-prompting",
-              "examples/techniques/constitutional-ai",
-              "examples/techniques/meta-prompting",
-              "examples/techniques/retrieval-augmented-generation",
-              "examples/techniques/multi-modal-prompting",
-              "examples/techniques/socratic-questioning",
-              "examples/techniques/analogical-reasoning",
-              "examples/techniques/iterative-refinement",
-              "examples/techniques/constraint-based-prompting",
-              "examples/techniques/emotional-intelligence-prompting",
-              "examples/techniques/adversarial-prompting",
-              "examples/techniques/contextual-memory"
+              "examples/techniques/step-back-prompting",
+              "examples/techniques/re-act-prompting",
+              "examples/techniques/prompt-with-guardrails",
+              "examples/techniques/other-techniques"
             ]
           },
           {
             "group": "Use cases",
             "pages": [
+              {
+                "group": "Building effective agents",
+                "pages": [
+                  "examples/cases/building-effective-agents/overview",
+                  "examples/cases/building-effective-agents/prompt-chaining",
+                  "examples/cases/building-effective-agents/prompt-routing",
+                  "examples/cases/building-effective-agents/prompt-parallelization",
+                  "examples/cases/building-effective-agents/orchestrator-workers",
+                  "examples/cases/building-effective-agents/evaluator-optimizer",
+                  "examples/cases/building-effective-agents/autonomous-agents"
+                ]
+              },
               "examples/cases/weather-chatbot",
               "examples/cases/joke-generator",
               "examples/cases/deep-search",
