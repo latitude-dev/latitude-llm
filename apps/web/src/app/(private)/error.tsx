@@ -15,7 +15,7 @@ export default function Error({
 
   useEffect(() => {
     Sentry.captureException(error, { user: session.currentUser })
-  }, [error])
+  }, [error, session.currentUser])
 
   return (
     <ErrorComponent
