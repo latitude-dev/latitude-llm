@@ -3,6 +3,8 @@ import './common/tracer'
 
 import { serve } from '@hono/node-server'
 import app from '$/routes/app'
+import cluster from 'cluster'
+import os from 'os'
 
 import { captureException, captureMessage } from './common/sentry'
 import { env } from '@latitude-data/env'
@@ -10,43 +12,81 @@ import { env } from '@latitude-data/env'
 const HOSTNAME = env.GATEWAY_BIND_ADDRESS
 const PORT = env.GATEWAY_BIND_PORT
 const SHUTDOWN_TIMEOUT = 600000 // 10 minutes
+const WORKERS = process.env.GATEWAY_WORKERS
+  ? parseInt(process.env.GATEWAY_WORKERS)
+  : os.cpus().length
 
-const server = serve(
-  {
-    fetch: app.fetch,
-    overrideGlobalObjects: undefined,
-    hostname: HOSTNAME,
-    port: Number(PORT),
-    serverOptions: {
-      keepAliveTimeout: process.env.KEEP_ALIVE_TIMEOUT
-        ? Number(process.env.KEEP_ALIVE_TIMEOUT)
-        : 601000,
-    },
-  },
-  () => {
-    console.log(`Listening on http://${HOSTNAME}:${PORT}`)
-  },
-)
+if (cluster.isPrimary) {
+  console.log(`Primary ${process.pid} is running`)
+  console.log(`Starting ${WORKERS} workers...`)
 
-function gracefulShutdown() {
-  server.close(() => {
-    console.log('Received termination signal. Shutting down gracefully...')
+  // Fork workers
+  for (let i = 0; i < WORKERS; i++) {
+    cluster.fork()
+  }
+
+  cluster.on('exit', (worker) => {
+    console.log(`Worker ${worker.process.pid} died. Restarting...`)
+    cluster.fork()
+  })
+
+  process.on('SIGTERM', () => {
+    console.log('Primary received SIGTERM. Shutting down workers...')
+    for (const id in cluster.workers) {
+      cluster.workers[id]?.kill()
+    }
     process.exit(0)
   })
 
-  setTimeout(() => {
-    console.error('Forcing shutdown due to pending connections.')
-    process.exit(1)
-  }, SHUTDOWN_TIMEOUT)
+  process.on('SIGINT', () => {
+    console.log('Primary received SIGINT. Shutting down workers...')
+    for (const id in cluster.workers) {
+      cluster.workers[id]?.kill()
+    }
+    process.exit(0)
+  })
+} else {
+  const server = serve(
+    {
+      fetch: app.fetch,
+      overrideGlobalObjects: undefined,
+      hostname: HOSTNAME,
+      port: Number(PORT),
+      serverOptions: {
+        keepAliveTimeout: process.env.KEEP_ALIVE_TIMEOUT
+          ? Number(process.env.KEEP_ALIVE_TIMEOUT)
+          : 601000,
+      },
+    },
+    () => {
+      console.log(
+        `Worker ${process.pid} listening on http://${HOSTNAME}:${PORT}`,
+      )
+    },
+  )
+
+  function gracefulShutdown() {
+    server.close(() => {
+      console.log(`Worker ${process.pid} shutting down gracefully...`)
+      process.exit(0)
+    })
+
+    setTimeout(() => {
+      console.error(
+        `Worker ${process.pid} forcing shutdown due to pending connections.`,
+      )
+      process.exit(1)
+    }, SHUTDOWN_TIMEOUT)
+  }
+
+  process.on('SIGTERM', gracefulShutdown)
+  process.on('SIGINT', gracefulShutdown)
+
+  process.on('uncaughtException', function (err) {
+    captureException(err)
+  })
+
+  process.on('unhandledRejection', (reason: string) => {
+    captureMessage(reason)
+  })
 }
-
-process.on('SIGTERM', gracefulShutdown)
-process.on('SIGINT', gracefulShutdown)
-
-process.on('uncaughtException', function (err) {
-  captureException(err)
-})
-
-process.on('unhandledRejection', (reason: string) => {
-  captureMessage(reason)
-})
