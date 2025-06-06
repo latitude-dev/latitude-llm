@@ -3,6 +3,7 @@
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { ROUTES } from '$/services/routes'
 import useDatasetRows from '$/stores/datasetRows'
+import useDatasets from '$/stores/datasets'
 import { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -14,10 +15,11 @@ import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useDatasetRowsSocket } from './useDatasetRowsSocket'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { format } from 'date-fns'
+import { CreateColumnModal } from './DataGrid/CreateColumnModal'
 
 export const DeletedDatasetAlert = ({ deletedAt }: { deletedAt: Date }) => {
   return (
@@ -74,10 +76,13 @@ export function DatasetDetailTable({
   count: number
 }) {
   const datasetCellRoleStyles = useDatasetRole()
+  const { mutate: mutateDataset } = useDatasets()
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
   const pageSize = searchParams.get('pageSize') ?? ROWS_PAGE_SIZE
   const selectedRowId = Number(searchParams.get('rowId') ?? 0) || undefined
+  const [isCreateColumnModalOpen, setIsCreateColumnModalOpen] = useState(false)
+  const [isCreatingColumn, setIsCreatingColumn] = useState(false)
   const {
     data: rows,
     mutate,
@@ -107,7 +112,7 @@ export function DatasetDetailTable({
         page: Number(page),
         pageSize: Number(pageSize),
       }),
-    [page, pageSize, dataset.id],
+    [page, pageSize, dataset.id, count],
   )
   const selectedRow = useMemo(
     () => rows.find((row) => row.id === selectedRowId),
@@ -126,55 +131,79 @@ export function DatasetDetailTable({
   const onClick = useCallback(() => {
     createRow({ datasetId: dataset.id })
   }, [createRow, dataset.id])
+
+  const handleColumnCreated = useCallback(() => {
+    mutateDataset()
+    mutate()
+  }, [mutateDataset, mutate])
+
   return (
-    <TableWithHeader
-      takeVertialSpace
-      title={dataset.name}
-      description={
-        dataset.deletedAt ? (
-          <DeletedDatasetAlert deletedAt={dataset.deletedAt} />
-        ) : undefined
-      }
-      actions={
-        <>
-          {isProcessing ? (
-            <div className='flex flex-row items-center space-x-2'>
-              <Icon
-                name='loader'
-                spin
-                spinSpeed='fast'
-                size='large'
-                color='primary'
+    <>
+      <TableWithHeader
+        takeVertialSpace
+        title={dataset.name}
+        description={
+          dataset.deletedAt ? (
+            <DeletedDatasetAlert deletedAt={dataset.deletedAt} />
+          ) : undefined
+        }
+        actions={
+          <>
+            {isProcessing ? (
+              <div className='flex flex-row items-center space-x-2'>
+                <Icon
+                  name='loader'
+                  spin
+                  spinSpeed='fast'
+                  size='large'
+                  color='primary'
+                />
+                <Text.H6 color='foregroundMuted'>
+                  {processedRowsCount} rows processed...
+                </Text.H6>
+              </div>
+            ) : null}
+            <Button
+              variant='outline'
+              fancy
+              onClick={() => setIsCreateColumnModalOpen(true)}
+              disabled={isCreatingColumn}
+            >
+              {isCreatingColumn ? 'Creating...' : 'Create a column'}
+            </Button>
+            <Button
+              variant='outline'
+              fancy
+              onClick={onClick}
+              disabled={isCreating}
+            >
+              {isCreating ? 'Creating...' : 'Create a row'}
+            </Button>
+          </>
+        }
+        table={
+          <>
+            {rows.length > 0 ? (
+              <DataGrid
+                {...props}
+                updateRows={updateRows}
+                deleteRows={deleteRows}
+                isDeleting={isDeleting}
               />
-              <Text.H6 color='foregroundMuted'>
-                {processedRowsCount} rows processed...
-              </Text.H6>
-            </div>
-          ) : null}
-          <Button
-            variant='outline'
-            fancy
-            onClick={onClick}
-            disabled={isCreating}
-          >
-            {isCreating ? 'Creating...' : 'Create a row'}
-          </Button>
-        </>
-      }
-      table={
-        <>
-          {rows.length > 0 ? (
-            <DataGrid
-              {...props}
-              updateRows={updateRows}
-              deleteRows={deleteRows}
-              isDeleting={isDeleting}
-            />
-          ) : (
-            <DatasetBlankSlate onClick={onClick} isCreating={isCreating} />
-          )}
-        </>
-      }
-    />
+            ) : (
+              <DatasetBlankSlate onClick={onClick} isCreating={isCreating} />
+            )}
+          </>
+        }
+      />
+      {isCreateColumnModalOpen && (
+        <CreateColumnModal
+          dataset={dataset}
+          onClose={() => setIsCreateColumnModalOpen(false)}
+          onLoadingChange={setIsCreatingColumn}
+          onSuccess={handleColumnCreated}
+        />
+      )}
+    </>
   )
 }
