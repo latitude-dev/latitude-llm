@@ -1,7 +1,7 @@
-import { database } from '@latitude-data/core/client'
 import { latitudeExports } from '../../schema/models/exports'
 import { and, eq } from 'drizzle-orm'
 import { Export, Workspace } from '../../browser'
+import { database } from '../../client'
 
 export async function findByUuid(
   {
