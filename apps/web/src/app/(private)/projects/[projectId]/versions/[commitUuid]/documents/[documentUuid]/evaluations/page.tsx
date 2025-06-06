@@ -1,5 +1,3 @@
-'use server'
-
 import { listEvaluationsV2AtCommitByDocumentCached } from '$/app/(private)/_data-access'
 import { env } from '@latitude-data/env'
 import { EvaluationsPage as ClientEvaluationsPage } from './_components/EvaluationsPage'
