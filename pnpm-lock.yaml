@@ -167,7 +167,7 @@ importers:
         version: 4.19.3
       vitest:
         specifier: ^3.1.4
-        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.13.13)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.3))(terser@5.40.0)
+        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.13.13)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.3))(terser@5.41.0)
 
   apps/web:
     dependencies:
@@ -439,7 +439,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ^3.1.4
-        version: 3.1.4(@types/debug@4.1.12)(@types/node@20.17.27)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@20.17.27)(typescript@5.8.2))(terser@5.40.0)
+        version: 3.1.4(@types/debug@4.1.12)(@types/node@20.17.27)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@20.17.27)(typescript@5.8.2))(terser@5.41.0)
 
   apps/websockets:
     dependencies:
@@ -584,7 +584,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ^3.1.4
-        version: 3.1.4(@types/debug@4.1.12)(@types/node@20.17.27)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@20.17.27)(typescript@5.8.2))(terser@5.40.0)
+        version: 3.1.4(@types/debug@4.1.12)(@types/node@20.17.27)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@20.17.27)(typescript@5.8.2))(terser@5.41.0)
 
   packages/constants:
     dependencies:
@@ -818,8 +818,8 @@ importers:
         specifier: ^18.1.0
         version: 18.1.0(@types/node@22.13.13)
       uuid:
-        specifier: ^10.0.0
-        version: 10.0.0
+        specifier: ^11.1.0
+        version: 11.1.0
       zod:
         specifier: ^3.23.8
         version: 3.24.2
@@ -892,7 +892,7 @@ importers:
         version: 4.2.19
       vitest:
         specifier: ^3.1.4
-        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.13.13)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.3))(terser@5.40.0)
+        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.13.13)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.3))(terser@5.41.0)
       vue:
         specifier: ^3.4.38
         version: 3.5.13(typescript@5.8.3)
@@ -978,7 +978,7 @@ importers:
         version: 6.2.1(rollup@4.37.0)(typescript@5.8.3)
       vitest:
         specifier: ^3.1.4
-        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.13.13)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.3))(terser@5.40.0)
+        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.13.13)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.3))(terser@5.41.0)
 
   packages/telemetry/typescript:
     dependencies:
@@ -1037,8 +1037,8 @@ importers:
         specifier: ^5.5.4
         version: 5.8.3
       uuid:
-        specifier: ^10.0.0
-        version: 10.0.0
+        specifier: ^11.1.0
+        version: 11.1.0
       zod:
         specifier: ^3.23.8
         version: 3.25.20
@@ -1099,7 +1099,7 @@ importers:
         version: 0.3.27(@langchain/core@0.3.57(openai@4.102.0(ws@8.18.2)(zod@3.25.20)))(axios@1.8.4)(cheerio@1.0.0)(openai@4.102.0(ws@8.18.2)(zod@3.25.20))(ws@8.18.2)
       llamaindex:
         specifier: ^0.8.37
-        version: 0.8.37(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/credential-providers@3.812.0)(@huggingface/transformers@3.5.1)(cohere-ai@7.17.1)(js-tiktoken@1.0.20)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(openai@4.102.0(ws@8.18.2)(zod@3.25.20))(pathe@1.1.2)(pg-query-stream@4.8.1(pg@8.14.1))(pg@8.14.1)(socks@2.8.4)(terser@5.40.0)(tree-sitter@0.22.4)(typescript@5.8.3)(web-tree-sitter@0.24.7)(ws@8.18.2)(zod@3.25.20)
+        version: 0.8.37(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/credential-providers@3.812.0)(@huggingface/transformers@3.5.1)(cohere-ai@7.17.1)(js-tiktoken@1.0.20)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(openai@4.102.0(ws@8.18.2)(zod@3.25.20))(pathe@1.1.2)(pg-query-stream@4.8.1(pg@8.14.1))(pg@8.14.1)(socks@2.8.4)(terser@5.41.0)(tree-sitter@0.22.4)(typescript@5.8.3)(web-tree-sitter@0.24.7)(ws@8.18.2)(zod@3.25.20)
       msw:
         specifier: ^2.3.5
         version: 2.7.3(@types/node@22.15.21)(typescript@5.8.3)
@@ -1120,7 +1120,7 @@ importers:
         version: 0.16.0
       vitest:
         specifier: ^3.1.4
-        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.21)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(terser@5.40.0)
+        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.21)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(terser@5.41.0)
 
   packages/web-ui:
     dependencies:
@@ -1337,7 +1337,7 @@ importers:
         version: 4.19.3
       vitest:
         specifier: ^3.1.4
-        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.14)(typescript@5.8.3))(terser@5.40.0)
+        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.14)(typescript@5.8.3))(terser@5.41.0)
 
   tools/eslint:
     devDependencies:
@@ -12420,6 +12420,7 @@ packages:
     engines: {node: '>=0.6.0', teleport: '>=0.2.0'}
     deprecated: |-
       You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
+
       (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
 
   qs@6.11.2:
@@ -13502,8 +13503,8 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  terser@5.40.0:
-    resolution: {integrity: sha512-cfeKl/jjwSR5ar7d0FGmave9hFGJT8obyo0z+CrQOylLDbk7X81nPU6vq9VORa5jU30SkDnT2FXjLbR8HLP+xA==}
+  terser@5.41.0:
+    resolution: {integrity: sha512-H406eLPXpZbAX14+B8psIuvIr8+3c+2hkuYzpMkoE0ij+NdsVATbA78vb8neA/eqrj7rywa2pIkdmWRsXW6wmw==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -14027,6 +14028,10 @@ packages:
 
   uuid@10.0.0:
     resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
+    hasBin: true
+
+  uuid@11.1.0:
+    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
     hasBin: true
 
   uuid@8.3.2:
@@ -17239,13 +17244,13 @@ snapshots:
 
   '@leichtgewicht/ip-codec@2.0.5': {}
 
-  '@llamaindex/anthropic@0.0.33(@aws-crypto/sha256-js@5.2.0)(@huggingface/transformers@3.5.1)(@types/node@22.15.21)(gpt-tokenizer@2.9.0)(js-tiktoken@1.0.20)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(pathe@1.1.2)(terser@5.40.0)':
+  '@llamaindex/anthropic@0.0.33(@aws-crypto/sha256-js@5.2.0)(@huggingface/transformers@3.5.1)(@types/node@22.15.21)(gpt-tokenizer@2.9.0)(js-tiktoken@1.0.20)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(pathe@1.1.2)(terser@5.41.0)':
     dependencies:
       '@anthropic-ai/sdk': 0.32.1
       '@llamaindex/core': 0.4.23(@aws-crypto/sha256-js@5.2.0)(@huggingface/transformers@3.5.1)(gpt-tokenizer@2.9.0)(js-tiktoken@1.0.20)(pathe@1.1.2)
       '@llamaindex/env': 0.1.27(@aws-crypto/sha256-js@5.2.0)(@huggingface/transformers@3.5.1)(gpt-tokenizer@2.9.0)(js-tiktoken@1.0.20)(pathe@1.1.2)
       remeda: 2.21.8
-      vitest: 2.1.9(@types/node@22.15.21)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(terser@5.40.0)
+      vitest: 2.1.9(@types/node@22.15.21)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(terser@5.41.0)
     transitivePeerDependencies:
       - '@aws-crypto/sha256-js'
       - '@edge-runtime/vm'
@@ -21992,50 +21997,50 @@ snapshots:
       chai: 5.2.0
       tinyrainbow: 2.0.0
 
-  '@vitest/mocker@2.1.9(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(vite@5.4.19(@types/node@22.15.21)(terser@5.40.0))':
+  '@vitest/mocker@2.1.9(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(vite@5.4.19(@types/node@22.15.21)(terser@5.41.0))':
     dependencies:
       '@vitest/spy': 2.1.9
       estree-walker: 3.0.3
       magic-string: 0.30.17
     optionalDependencies:
       msw: 2.7.3(@types/node@22.15.21)(typescript@5.8.3)
-      vite: 5.4.19(@types/node@22.15.21)(terser@5.40.0)
+      vite: 5.4.19(@types/node@22.15.21)(terser@5.41.0)
 
-  '@vitest/mocker@3.1.4(msw@2.7.3(@types/node@20.17.27)(typescript@5.8.2))(vite@5.4.19(@types/node@20.17.27)(terser@5.40.0))':
+  '@vitest/mocker@3.1.4(msw@2.7.3(@types/node@20.17.27)(typescript@5.8.2))(vite@5.4.19(@types/node@20.17.27)(terser@5.41.0))':
     dependencies:
       '@vitest/spy': 3.1.4
       estree-walker: 3.0.3
       magic-string: 0.30.17
     optionalDependencies:
       msw: 2.7.3(@types/node@20.17.27)(typescript@5.8.2)
-      vite: 5.4.19(@types/node@20.17.27)(terser@5.40.0)
+      vite: 5.4.19(@types/node@20.17.27)(terser@5.41.0)
 
-  '@vitest/mocker@3.1.4(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.3))(vite@5.4.19(@types/node@22.13.13)(terser@5.40.0))':
+  '@vitest/mocker@3.1.4(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.3))(vite@5.4.19(@types/node@22.13.13)(terser@5.41.0))':
     dependencies:
       '@vitest/spy': 3.1.4
       estree-walker: 3.0.3
       magic-string: 0.30.17
     optionalDependencies:
       msw: 2.7.3(@types/node@22.13.13)(typescript@5.8.3)
-      vite: 5.4.19(@types/node@22.13.13)(terser@5.40.0)
+      vite: 5.4.19(@types/node@22.13.13)(terser@5.41.0)
 
-  '@vitest/mocker@3.1.4(msw@2.7.3(@types/node@22.13.14)(typescript@5.8.3))(vite@5.4.19(@types/node@22.13.14)(terser@5.40.0))':
+  '@vitest/mocker@3.1.4(msw@2.7.3(@types/node@22.13.14)(typescript@5.8.3))(vite@5.4.19(@types/node@22.13.14)(terser@5.41.0))':
     dependencies:
       '@vitest/spy': 3.1.4
       estree-walker: 3.0.3
       magic-string: 0.30.17
     optionalDependencies:
       msw: 2.7.3(@types/node@22.13.14)(typescript@5.8.3)
-      vite: 5.4.19(@types/node@22.13.14)(terser@5.40.0)
+      vite: 5.4.19(@types/node@22.13.14)(terser@5.41.0)
 
-  '@vitest/mocker@3.1.4(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(vite@5.4.19(@types/node@22.15.21)(terser@5.40.0))':
+  '@vitest/mocker@3.1.4(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(vite@5.4.19(@types/node@22.15.21)(terser@5.41.0))':
     dependencies:
       '@vitest/spy': 3.1.4
       estree-walker: 3.0.3
       magic-string: 0.30.17
     optionalDependencies:
       msw: 2.7.3(@types/node@22.15.21)(typescript@5.8.3)
-      vite: 5.4.19(@types/node@22.15.21)(terser@5.40.0)
+      vite: 5.4.19(@types/node@22.15.21)(terser@5.41.0)
 
   '@vitest/pretty-format@2.1.9':
     dependencies:
@@ -25977,9 +25982,9 @@ snapshots:
 
   lines-and-columns@1.2.4: {}
 
-  llamaindex@0.8.37(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/credential-providers@3.812.0)(@huggingface/transformers@3.5.1)(cohere-ai@7.17.1)(js-tiktoken@1.0.20)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(openai@4.102.0(ws@8.18.2)(zod@3.25.20))(pathe@1.1.2)(pg-query-stream@4.8.1(pg@8.14.1))(pg@8.14.1)(socks@2.8.4)(terser@5.40.0)(tree-sitter@0.22.4)(typescript@5.8.3)(web-tree-sitter@0.24.7)(ws@8.18.2)(zod@3.25.20):
+  llamaindex@0.8.37(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/credential-providers@3.812.0)(@huggingface/transformers@3.5.1)(cohere-ai@7.17.1)(js-tiktoken@1.0.20)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(openai@4.102.0(ws@8.18.2)(zod@3.25.20))(pathe@1.1.2)(pg-query-stream@4.8.1(pg@8.14.1))(pg@8.14.1)(socks@2.8.4)(terser@5.41.0)(tree-sitter@0.22.4)(typescript@5.8.3)(web-tree-sitter@0.24.7)(ws@8.18.2)(zod@3.25.20):
     dependencies:
-      '@llamaindex/anthropic': 0.0.33(@aws-crypto/sha256-js@5.2.0)(@huggingface/transformers@3.5.1)(@types/node@22.15.21)(gpt-tokenizer@2.9.0)(js-tiktoken@1.0.20)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(pathe@1.1.2)(terser@5.40.0)
+      '@llamaindex/anthropic': 0.0.33(@aws-crypto/sha256-js@5.2.0)(@huggingface/transformers@3.5.1)(@types/node@22.15.21)(gpt-tokenizer@2.9.0)(js-tiktoken@1.0.20)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(pathe@1.1.2)(terser@5.41.0)
       '@llamaindex/astra': 0.0.4(@aws-crypto/sha256-js@5.2.0)(@huggingface/transformers@3.5.1)(gpt-tokenizer@2.9.0)(js-tiktoken@1.0.20)(pathe@1.1.2)
       '@llamaindex/azure': 0.0.4(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/credential-providers@3.812.0)(@huggingface/transformers@3.5.1)(gpt-tokenizer@2.9.0)(js-tiktoken@1.0.20)(pathe@1.1.2)(socks@2.8.4)
       '@llamaindex/chroma': 0.0.4(@aws-crypto/sha256-js@5.2.0)(@huggingface/transformers@3.5.1)(cohere-ai@7.17.1)(gpt-tokenizer@2.9.0)(js-tiktoken@1.0.20)(openai@4.102.0(ws@8.18.2)(zod@3.25.20))(pathe@1.1.2)
@@ -29820,7 +29825,7 @@ snapshots:
       jest-worker: 27.5.1
       schema-utils: 4.3.2
       serialize-javascript: 6.0.2
-      terser: 5.40.0
+      terser: 5.41.0
       webpack: 5.98.0(esbuild@0.25.5)
     optionalDependencies:
       esbuild: 0.25.5
@@ -29832,7 +29837,7 @@ snapshots:
       commander: 2.20.3
       source-map-support: 0.5.21
 
-  terser@5.40.0:
+  terser@5.41.0:
     dependencies:
       '@jridgewell/source-map': 0.3.6
       acorn: 8.14.1
@@ -30422,6 +30427,8 @@ snapshots:
 
   uuid@10.0.0: {}
 
+  uuid@11.1.0: {}
+
   uuid@8.3.2: {}
 
   uuid@9.0.1: {}
@@ -30483,13 +30490,13 @@ snapshots:
       d3-time: 3.1.0
       d3-timer: 3.0.1
 
-  vite-node@2.1.9(@types/node@22.15.21)(terser@5.40.0):
+  vite-node@2.1.9(@types/node@22.15.21)(terser@5.41.0):
     dependencies:
       cac: 6.7.14
       debug: 4.4.1
       es-module-lexer: 1.7.0
       pathe: 1.1.2
-      vite: 5.4.19(@types/node@22.15.21)(terser@5.40.0)
+      vite: 5.4.19(@types/node@22.15.21)(terser@5.41.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -30501,13 +30508,13 @@ snapshots:
       - supports-color
       - terser
 
-  vite-node@3.1.4(@types/node@20.17.27)(terser@5.40.0):
+  vite-node@3.1.4(@types/node@20.17.27)(terser@5.41.0):
     dependencies:
       cac: 6.7.14
       debug: 4.4.1
       es-module-lexer: 1.7.0
       pathe: 2.0.3
-      vite: 5.4.19(@types/node@20.17.27)(terser@5.40.0)
+      vite: 5.4.19(@types/node@20.17.27)(terser@5.41.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -30519,13 +30526,13 @@ snapshots:
       - supports-color
       - terser
 
-  vite-node@3.1.4(@types/node@22.13.13)(terser@5.40.0):
+  vite-node@3.1.4(@types/node@22.13.13)(terser@5.41.0):
     dependencies:
       cac: 6.7.14
       debug: 4.4.1
       es-module-lexer: 1.7.0
       pathe: 2.0.3
-      vite: 5.4.19(@types/node@22.13.13)(terser@5.40.0)
+      vite: 5.4.19(@types/node@22.13.13)(terser@5.41.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -30537,13 +30544,13 @@ snapshots:
       - supports-color
       - terser
 
-  vite-node@3.1.4(@types/node@22.13.14)(terser@5.40.0):
+  vite-node@3.1.4(@types/node@22.13.14)(terser@5.41.0):
     dependencies:
       cac: 6.7.14
       debug: 4.4.1
       es-module-lexer: 1.7.0
       pathe: 2.0.3
-      vite: 5.4.19(@types/node@22.13.14)(terser@5.40.0)
+      vite: 5.4.19(@types/node@22.13.14)(terser@5.41.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -30555,13 +30562,13 @@ snapshots:
       - supports-color
       - terser
 
-  vite-node@3.1.4(@types/node@22.15.21)(terser@5.40.0):
+  vite-node@3.1.4(@types/node@22.15.21)(terser@5.41.0):
     dependencies:
       cac: 6.7.14
       debug: 4.4.1
       es-module-lexer: 1.7.0
       pathe: 2.0.3
-      vite: 5.4.19(@types/node@22.15.21)(terser@5.40.0)
+      vite: 5.4.19(@types/node@22.15.21)(terser@5.41.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -30573,7 +30580,7 @@ snapshots:
       - supports-color
       - terser
 
-  vite@5.4.19(@types/node@20.17.27)(terser@5.40.0):
+  vite@5.4.19(@types/node@20.17.27)(terser@5.41.0):
     dependencies:
       esbuild: 0.21.5
       postcss: 8.5.3
@@ -30581,9 +30588,9 @@ snapshots:
     optionalDependencies:
       '@types/node': 20.17.27
       fsevents: 2.3.3
-      terser: 5.40.0
+      terser: 5.41.0
 
-  vite@5.4.19(@types/node@22.13.13)(terser@5.40.0):
+  vite@5.4.19(@types/node@22.13.13)(terser@5.41.0):
     dependencies:
       esbuild: 0.21.5
       postcss: 8.5.3
@@ -30591,9 +30598,9 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.13.13
       fsevents: 2.3.3
-      terser: 5.40.0
+      terser: 5.41.0
 
-  vite@5.4.19(@types/node@22.13.14)(terser@5.40.0):
+  vite@5.4.19(@types/node@22.13.14)(terser@5.41.0):
     dependencies:
       esbuild: 0.21.5
       postcss: 8.5.3
@@ -30601,9 +30608,9 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.13.14
       fsevents: 2.3.3
-      terser: 5.40.0
+      terser: 5.41.0
 
-  vite@5.4.19(@types/node@22.15.21)(terser@5.40.0):
+  vite@5.4.19(@types/node@22.15.21)(terser@5.41.0):
     dependencies:
       esbuild: 0.21.5
       postcss: 8.5.3
@@ -30611,12 +30618,12 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.15.21
       fsevents: 2.3.3
-      terser: 5.40.0
+      terser: 5.41.0
 
-  vitest@2.1.9(@types/node@22.15.21)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(terser@5.40.0):
+  vitest@2.1.9(@types/node@22.15.21)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(terser@5.41.0):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(vite@5.4.19(@types/node@22.15.21)(terser@5.40.0))
+      '@vitest/mocker': 2.1.9(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(vite@5.4.19(@types/node@22.15.21)(terser@5.41.0))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
@@ -30632,8 +30639,8 @@ snapshots:
       tinyexec: 0.3.2
       tinypool: 1.0.2
       tinyrainbow: 1.2.0
-      vite: 5.4.19(@types/node@22.15.21)(terser@5.40.0)
-      vite-node: 2.1.9(@types/node@22.15.21)(terser@5.40.0)
+      vite: 5.4.19(@types/node@22.15.21)(terser@5.41.0)
+      vite-node: 2.1.9(@types/node@22.15.21)(terser@5.41.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.15.21
@@ -30649,10 +30656,10 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@3.1.4(@types/debug@4.1.12)(@types/node@20.17.27)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@20.17.27)(typescript@5.8.2))(terser@5.40.0):
+  vitest@3.1.4(@types/debug@4.1.12)(@types/node@20.17.27)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@20.17.27)(typescript@5.8.2))(terser@5.41.0):
     dependencies:
       '@vitest/expect': 3.1.4
-      '@vitest/mocker': 3.1.4(msw@2.7.3(@types/node@20.17.27)(typescript@5.8.2))(vite@5.4.19(@types/node@20.17.27)(terser@5.40.0))
+      '@vitest/mocker': 3.1.4(msw@2.7.3(@types/node@20.17.27)(typescript@5.8.2))(vite@5.4.19(@types/node@20.17.27)(terser@5.41.0))
       '@vitest/pretty-format': 3.1.4
       '@vitest/runner': 3.1.4
       '@vitest/snapshot': 3.1.4
@@ -30669,8 +30676,8 @@ snapshots:
       tinyglobby: 0.2.14
       tinypool: 1.0.2
       tinyrainbow: 2.0.0
-      vite: 5.4.19(@types/node@20.17.27)(terser@5.40.0)
-      vite-node: 3.1.4(@types/node@20.17.27)(terser@5.40.0)
+      vite: 5.4.19(@types/node@20.17.27)(terser@5.41.0)
+      vite-node: 3.1.4(@types/node@20.17.27)(terser@5.41.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/debug': 4.1.12
@@ -30687,10 +30694,10 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@3.1.4(@types/debug@4.1.12)(@types/node@22.13.13)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.3))(terser@5.40.0):
+  vitest@3.1.4(@types/debug@4.1.12)(@types/node@22.13.13)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.3))(terser@5.41.0):
     dependencies:
       '@vitest/expect': 3.1.4
-      '@vitest/mocker': 3.1.4(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.3))(vite@5.4.19(@types/node@22.13.13)(terser@5.40.0))
+      '@vitest/mocker': 3.1.4(msw@2.7.3(@types/node@22.13.13)(typescript@5.8.3))(vite@5.4.19(@types/node@22.13.13)(terser@5.41.0))
       '@vitest/pretty-format': 3.1.4
       '@vitest/runner': 3.1.4
       '@vitest/snapshot': 3.1.4
@@ -30707,8 +30714,8 @@ snapshots:
       tinyglobby: 0.2.14
       tinypool: 1.0.2
       tinyrainbow: 2.0.0
-      vite: 5.4.19(@types/node@22.13.13)(terser@5.40.0)
-      vite-node: 3.1.4(@types/node@22.13.13)(terser@5.40.0)
+      vite: 5.4.19(@types/node@22.13.13)(terser@5.41.0)
+      vite-node: 3.1.4(@types/node@22.13.13)(terser@5.41.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/debug': 4.1.12
@@ -30725,10 +30732,10 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@3.1.4(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.14)(typescript@5.8.3))(terser@5.40.0):
+  vitest@3.1.4(@types/debug@4.1.12)(@types/node@22.13.14)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.13.14)(typescript@5.8.3))(terser@5.41.0):
     dependencies:
       '@vitest/expect': 3.1.4
-      '@vitest/mocker': 3.1.4(msw@2.7.3(@types/node@22.13.14)(typescript@5.8.3))(vite@5.4.19(@types/node@22.13.14)(terser@5.40.0))
+      '@vitest/mocker': 3.1.4(msw@2.7.3(@types/node@22.13.14)(typescript@5.8.3))(vite@5.4.19(@types/node@22.13.14)(terser@5.41.0))
       '@vitest/pretty-format': 3.1.4
       '@vitest/runner': 3.1.4
       '@vitest/snapshot': 3.1.4
@@ -30745,8 +30752,8 @@ snapshots:
       tinyglobby: 0.2.14
       tinypool: 1.0.2
       tinyrainbow: 2.0.0
-      vite: 5.4.19(@types/node@22.13.14)(terser@5.40.0)
-      vite-node: 3.1.4(@types/node@22.13.14)(terser@5.40.0)
+      vite: 5.4.19(@types/node@22.13.14)(terser@5.41.0)
+      vite-node: 3.1.4(@types/node@22.13.14)(terser@5.41.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/debug': 4.1.12
@@ -30763,10 +30770,10 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@3.1.4(@types/debug@4.1.12)(@types/node@22.15.21)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(terser@5.40.0):
+  vitest@3.1.4(@types/debug@4.1.12)(@types/node@22.15.21)(jsdom@24.1.3(canvas@2.11.2))(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(terser@5.41.0):
     dependencies:
       '@vitest/expect': 3.1.4
-      '@vitest/mocker': 3.1.4(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(vite@5.4.19(@types/node@22.15.21)(terser@5.40.0))
+      '@vitest/mocker': 3.1.4(msw@2.7.3(@types/node@22.15.21)(typescript@5.8.3))(vite@5.4.19(@types/node@22.15.21)(terser@5.41.0))
       '@vitest/pretty-format': 3.1.4
       '@vitest/runner': 3.1.4
       '@vitest/snapshot': 3.1.4
@@ -30783,8 +30790,8 @@ snapshots:
       tinyglobby: 0.2.14
       tinypool: 1.0.2
       tinyrainbow: 2.0.0
-      vite: 5.4.19(@types/node@22.15.21)(terser@5.40.0)
-      vite-node: 3.1.4(@types/node@22.15.21)(terser@5.40.0)
+      vite: 5.4.19(@types/node@22.15.21)(terser@5.41.0)
+      vite-node: 3.1.4(@types/node@22.15.21)(terser@5.41.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/debug': 4.1.12
