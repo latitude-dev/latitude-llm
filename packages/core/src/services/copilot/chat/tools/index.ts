@@ -1,41 +1,32 @@
 import {
   ContentType,
-  Message,
   MessageRole,
   type ToolCall,
   type ToolMessage,
 } from '@latitude-data/compiler'
 import { Workspace } from '../../../../browser'
 import { PromisedResult } from '../../../../lib/Transaction'
-import { Result, TypedResult } from '../../../../lib/Result'
-import { LatteTool } from '@latitude-data/constants/latte'
+import { Result } from '../../../../lib/Result'
 import type { LatteToolFn } from './types'
+import { LatteTool } from '@latitude-data/constants/latte'
 
 import listPrompts from './documents/list'
 import readPrompt from './documents/read'
 import listProjects from './projects/list'
-import listDrafts from './commits/list'
-import editProject from './projects/edit'
 
 const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.listProjects]: listProjects,
-  [LatteTool.listDrafts]: listDrafts,
   [LatteTool.listPrompts]: listPrompts,
   [LatteTool.readPrompt]: readPrompt,
-  [LatteTool.editProject]: editProject,
 } as const
 
 export async function handleToolRequest({
-  tool,
-  threadUuid,
   workspace,
-  messages,
+  tool,
   onFinish,
 }: {
-  tool: ToolCall
-  threadUuid: string
-  messages: Message[]
   workspace: Workspace
+  tool: ToolCall
   onFinish?: (toolMessage: ToolMessage) => Promise<void>
 }): PromisedResult<ToolMessage> {
   const toolName = tool.name as LatteTool
@@ -46,17 +37,10 @@ export async function handleToolRequest({
     )
   }
 
-  let result: TypedResult<unknown, Error>
-  try {
-    result = await latteTool(tool.arguments, {
-      threadUuid,
-      workspace,
-      tool,
-      messages,
-    })
-  } catch (error) {
-    result = Result.error(error as Error)
-  }
+  const result = await latteTool({
+    workspace,
+    parameters: tool.arguments,
+  })
 
   const message: ToolMessage = {
     role: MessageRole.tool,
@@ -65,9 +49,7 @@ export async function handleToolRequest({
         type: ContentType.toolResult,
         toolCallId: tool.id,
         toolName: toolName,
-        result: result.ok
-          ? result.value
-          : `${result.error!.name}: ${result.error!.message}`,
+        result: result.ok ? result.value : result.error,
         isError: !result.ok,
       },
     ],

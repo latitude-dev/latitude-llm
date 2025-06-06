@@ -26,7 +26,6 @@ export type DocumentTextEditorProps = {
     disabledMessage?: string
   }
   autoCompleteParameters?: string[]
-  highlightedCursorIndex?: number
 }
 
 export type DocumentError = {

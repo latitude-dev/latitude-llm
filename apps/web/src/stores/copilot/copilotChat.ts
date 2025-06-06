@@ -1,7 +1,7 @@
-import { addMessageToLatteAction } from '$/actions/latte/addMessage'
-import { createNewLatteAction } from '$/actions/latte/new'
+import { addMessageToCopilotChatAction } from '$/actions/copilot/chat/addMessage'
+import { createNewCopilotChatAction } from '$/actions/copilot/chat/new'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
-import { useServerAction } from 'zsa-react'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ContentType, MessageRole, TextContent } from '@latitude-data/compiler'
 import {
   AGENT_RETURN_TOOL_NAME,
@@ -9,40 +9,58 @@ import {
 } from '@latitude-data/constants'
 import { Message } from '@latitude-data/core/browser'
 import { useCallback, useMemo, useState } from 'react'
-import { LatteInteraction } from './types'
+import { CopilotChatInteraction } from './types'
 import { getDescriptionFromToolCall } from './helpers'
-import { trigger } from '$/lib/events'
-import { useLatteContext } from './context'
-import { LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
+import { useParams, usePathname } from 'next/navigation'
+import { LatteContext } from '@latitude-data/constants/latte'
 
-export function useLatte() {
-  const [threadUuid, setThreadUuid] = useState<string>()
+export function useCopilotChat() {
+  const [chatUuid, setChatUuid] = useState<string>()
   const [isLoading, setIsLoading] = useState(false)
 
-  const [interactions, setInteractions] = useState<LatteInteraction[]>([])
+  const [interactions, setInteractions] = useState<CopilotChatInteraction[]>([])
   const [error, setError] = useState<string>()
 
-  const latteContext = useLatteContext()
+  const pathname = usePathname()
+
+  const { projectId, commitUuid, documentUuid } = useParams<{
+    projectId: string
+    commitUuid: string
+    documentUuid: string
+  }>()
+
+  const context = useMemo<LatteContext>(
+    () => ({
+      path: pathname,
+      projectId: projectId ? Number(projectId) : undefined,
+      commitUuid,
+      documentUuid,
+    }),
+    [pathname, projectId, commitUuid, documentUuid],
+  )
 
   const resetChat = useCallback(() => {
-    setThreadUuid(undefined)
+    setChatUuid(undefined)
     setInteractions([])
     setIsLoading(false)
     setError(undefined)
   }, [])
 
-  const { execute: createNewChat } = useServerAction(createNewLatteAction, {
-    onSuccess: ({ data }) => {
-      setThreadUuid(data.uuid)
+  const { execute: createNewChat } = useLatitudeAction(
+    createNewCopilotChatAction,
+    {
+      onSuccess: ({ data }) => {
+        setChatUuid(data.uuid)
+      },
+      onError: ({ err }) => {
+        setError(err.message)
+        setIsLoading(false)
+      },
     },
-    onError: ({ err }) => {
-      setError(err.message)
-      setIsLoading(false)
-    },
-  })
+  )
 
-  const { execute: addMessageToExistingChat } = useServerAction(
-    addMessageToLatteAction,
+  const { execute: addMessageToExistingChat } = useLatitudeAction(
+    addMessageToCopilotChatAction,
     {
       onError: ({ err }) => {
         setError(err.message)
@@ -54,38 +72,34 @@ export function useLatte() {
   const sendMessage = useCallback(
     ({ message }: { message: string }) => {
       setIsLoading(true)
-      const newInteraction: LatteInteraction = {
+      const newInteraction: CopilotChatInteraction = {
         input: message,
         steps: [],
         output: undefined,
       }
 
-      if (threadUuid) {
+      if (chatUuid) {
         setInteractions((prev) => [...prev, newInteraction])
-        addMessageToExistingChat({
-          threadUuid,
-          message,
-          context: latteContext(),
-        })
+        addMessageToExistingChat({ chatUuid, message, context })
         return
       }
 
       setInteractions([newInteraction])
-      createNewChat({ message, context: latteContext() })
+      createNewChat({ message, context })
     },
-    [threadUuid, addMessageToExistingChat, createNewChat, latteContext],
+    [context, chatUuid, addMessageToExistingChat, createNewChat],
   )
 
   const handleNewMessage = useCallback(
     ({
-      threadUuid: incomingthreadUuid,
+      chatUuid: incomingChatUuid,
       message,
     }: {
-      threadUuid: string
+      chatUuid: string
       message: Message
     }) => {
-      if (!threadUuid) return
-      if (threadUuid !== incomingthreadUuid) return
+      if (!chatUuid) return
+      if (chatUuid !== incomingChatUuid) return
 
       // React strict mode will call this function twice. this fixes that.
       let fuckReactStrictMode = false
@@ -104,15 +118,13 @@ export function useLatte() {
           const finishedToolIds = message.content.map((c) => c.toolCallId)
           if (lastInteraction) {
             lastInteraction.steps = lastInteraction.steps.map((step) => {
-              if (
-                step.type === 'tool' &&
-                !step.finished &&
-                finishedToolIds.includes(step.id)
-              ) {
-                step.finished = true
+              if (typeof step === 'string') return step
+              if (step.finished) return step
+              if (!finishedToolIds.includes(step.id)) return step
+              return {
+                ...step,
+                finished: true,
               }
-
-              return step
             })
           }
         }
@@ -120,22 +132,14 @@ export function useLatte() {
         // Add new steps to the last interaction
         if (message.role === MessageRole.assistant) {
           if (typeof message.content === 'string') {
-            lastInteraction.steps.push({
-              type: 'thought',
-              content: message.content,
-            })
+            lastInteraction.steps.push(message.content)
           } else {
             const textContent = message.content
               .filter((c) => c.type === ContentType.text)
               .map((c) => (c as unknown as TextContent).text!)
 
             if (textContent.length) {
-              lastInteraction.steps.push(
-                ...textContent.map((text) => ({
-                  type: 'thought' as 'thought',
-                  content: text,
-                })),
-              )
+              lastInteraction.steps.push(...textContent)
             }
           }
 
@@ -144,28 +148,12 @@ export function useLatte() {
           )
 
           if (otherToolCalls.length) {
-            const toolSteps = message.toolCalls.map((toolCall) => {
-              if (toolCall.name === LatteTool.editProject) {
-                const params = toolCall.arguments as {
-                  actions: LatteEditAction[]
-                }
-                return params.actions.map((action) => ({
-                  type: 'action' as 'action',
-                  action,
-                }))
-              }
-
-              return {
-                type: 'tool' as 'tool',
-                id: toolCall.id,
-                toolName: toolCall.name,
-                parameters: toolCall.arguments,
-                finished: false,
-                ...getDescriptionFromToolCall(toolCall),
-              }
-            })
-
-            lastInteraction.steps.push(...toolSteps.flat())
+            const actions = message.toolCalls.map((toolCall) => ({
+              id: toolCall.id,
+              finished: false,
+              ...getDescriptionFromToolCall(toolCall),
+            }))
+            lastInteraction.steps.push(...actions)
           }
 
           if (responseToolCalls.length) {
@@ -190,7 +178,7 @@ export function useLatte() {
         setIsLoading(false)
       }
     },
-    [threadUuid],
+    [chatUuid],
   )
 
   useSockets({
@@ -198,27 +186,20 @@ export function useLatte() {
     onMessage: handleNewMessage,
   })
 
-  useSockets({
-    event: 'latteDraftUpdate',
-    onMessage: ({ draftUuid, updates }) => {
-      trigger('DraftUpdatedByLatte', { draftUuid, updates })
-    },
-  })
-
   const handleError = useCallback(
     ({
-      threadUuid: incomingthreadUuid,
+      chatUuid: incomingChatUuid,
       error,
     }: {
-      threadUuid: string
+      chatUuid: string
       error: string
     }) => {
-      if (!threadUuid) return
-      if (threadUuid !== incomingthreadUuid) return
+      if (!chatUuid) return
+      if (chatUuid !== incomingChatUuid) return
       setError(error)
       setIsLoading(false)
     },
-    [threadUuid],
+    [chatUuid],
   )
 
   useSockets({

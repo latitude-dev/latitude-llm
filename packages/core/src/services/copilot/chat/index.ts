@@ -12,8 +12,13 @@ import { PromisedResult } from '../../../lib/Transaction'
 import { runDocumentAtCommit } from '../../commits'
 import { extractAgentToolCalls, LogSources } from '@latitude-data/constants'
 import { Commit, Workspace, DocumentVersion } from '../../../browser'
-import { sendWebsockets } from './helpers'
+import { assertCopilotIsSupported, sendWebsockets } from './helpers'
+import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import { documentsQueue } from '../../../jobs/queues'
+import { RunCopilotChatJobData } from '../../../jobs/job-definitions/copilot/chat'
 import { handleToolRequest } from './tools'
+import { LatteContext } from '@latitude-data/constants/latte'
+import { getContextString } from './context'
 import { WebsocketClient } from '../../../websockets/workers'
 
 async function generateCopilotResponse({
@@ -21,7 +26,7 @@ async function generateCopilotResponse({
   copilotCommit,
   copilotDocument,
   clientWorkspace,
-  threadUuid,
+  chatUuid,
   initialParameters,
   messages,
 }: {
@@ -29,7 +34,7 @@ async function generateCopilotResponse({
   copilotCommit: Commit
   copilotDocument: DocumentVersion
   clientWorkspace: Workspace
-  threadUuid: string
+  chatUuid: string
   initialParameters?: { message: string; context: string } // for the first “new” request
   messages?: Message[] // for subsequent “add” requests
 }): PromisedResult<undefined> {
@@ -41,11 +46,11 @@ async function generateCopilotResponse({
         customIdentifier: String(clientWorkspace.id),
         parameters: initialParameters,
         source: LogSources.API,
-        errorableUuid: threadUuid,
+        errorableUuid: chatUuid,
       })
     : await addMessages({
         workspace: copilotWorkspace,
-        documentLogUuid: threadUuid,
+        documentLogUuid: chatUuid,
         messages: messages!,
         source: LogSources.API,
       })
@@ -54,7 +59,7 @@ async function generateCopilotResponse({
 
   await sendWebsockets({
     workspace: clientWorkspace,
-    threadUuid,
+    chatUuid,
     stream: run.stream,
   })
 
@@ -67,19 +72,17 @@ async function generateCopilotResponse({
     await run.toolCalls,
   )
 
-  let toolResponseMessages: ToolMessage[]
+  let toolMessages: ToolMessage[]
   try {
-    toolResponseMessages = await Promise.all(
+    toolMessages = await Promise.all(
       otherToolCalls.map(async (toolCall) => {
         const r = await handleToolRequest({
-          threadUuid,
-          tool: toolCall,
           workspace: clientWorkspace,
-          messages: await run.messages,
+          tool: toolCall,
           onFinish: async (msg) => {
             WebsocketClient.sendEvent('latteMessage', {
               workspaceId: clientWorkspace.id,
-              data: { threadUuid, message: msg },
+              data: { chatUuid, message: msg },
             })
           },
         })
@@ -98,8 +101,8 @@ async function generateCopilotResponse({
       copilotCommit,
       copilotDocument,
       clientWorkspace,
-      threadUuid,
-      messages: toolResponseMessages,
+      chatUuid,
+      messages: toolMessages,
     })
   }
 
@@ -107,12 +110,12 @@ async function generateCopilotResponse({
   return Result.nil()
 }
 
-export async function runNewLatte({
+export async function runNewCopilotChat({
   copilotWorkspace,
   copilotCommit,
   copilotDocument,
   clientWorkspace,
-  threadUuid,
+  chatUuid,
   message,
   context,
 }: {
@@ -120,26 +123,34 @@ export async function runNewLatte({
   copilotCommit: Commit
   copilotDocument: DocumentVersion
   clientWorkspace: Workspace
-  threadUuid: string
+  chatUuid: string
   message: string
-  context: string
+  context: LatteContext
 }): PromisedResult<undefined> {
+  const contextAsString = await getContextString({
+    workspace: clientWorkspace,
+    context,
+  })
+  if (!contextAsString.ok) {
+    return contextAsString as ErrorResult<LatitudeError>
+  }
+
   return generateCopilotResponse({
     copilotWorkspace,
     copilotCommit,
     copilotDocument,
     clientWorkspace,
-    threadUuid,
-    initialParameters: { message, context },
+    chatUuid,
+    initialParameters: { message, context: contextAsString.unwrap() },
   })
 }
 
-export async function addMessageToExistingLatte({
+export async function addMessageToExistingCopilotChat({
   copilotWorkspace,
   copilotCommit,
   copilotDocument,
   clientWorkspace,
-  threadUuid,
+  chatUuid,
   message,
   context,
 }: {
@@ -147,16 +158,24 @@ export async function addMessageToExistingLatte({
   copilotCommit: Commit
   copilotDocument: DocumentVersion
   clientWorkspace: Workspace
-  threadUuid: string
+  chatUuid: string
   message: string
-  context: string
+  context: LatteContext
 }): PromisedResult<undefined> {
+  const contextAsString = await getContextString({
+    workspace: clientWorkspace,
+    context,
+  })
+  if (!contextAsString.ok) {
+    return contextAsString as ErrorResult<LatitudeError>
+  }
+
   const userMessage: UserMessage = {
     role: MessageRole.user,
     content: [
       {
         type: ContentType.text,
-        text: context,
+        text: contextAsString.unwrap(),
       },
       {
         type: ContentType.text,
@@ -170,7 +189,31 @@ export async function addMessageToExistingLatte({
     copilotCommit,
     copilotDocument,
     clientWorkspace,
-    threadUuid,
+    chatUuid,
     messages: [userMessage],
   })
+}
+
+export async function createCopilotChatJob({
+  workspace,
+  chatUuid,
+  message,
+  context,
+}: {
+  workspace: Workspace
+  chatUuid?: string
+  message: string
+  context: LatteContext
+}): PromisedResult<{ uuid: string }> {
+  const supportResult = assertCopilotIsSupported()
+  if (!supportResult.ok) return supportResult as ErrorResult<LatitudeError>
+
+  const uuid = chatUuid ?? generateUUIDIdentifier()
+  await documentsQueue.add('runCopilotChatJob', {
+    workspaceId: workspace.id,
+    chatUuid: uuid,
+    message,
+    context,
+  } as RunCopilotChatJobData)
+  return Result.ok({ uuid })
 }

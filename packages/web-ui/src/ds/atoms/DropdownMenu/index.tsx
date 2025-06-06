@@ -49,6 +49,7 @@ export const TriggerButton = ({
 export type MenuOption = {
   label: string
   onClick: () => void
+  closeDropdown: () => void
   onElementClick?: (e: MouseEvent) => void
   type?: 'normal' | 'destructive'
   iconProps?: IconProps
@@ -68,7 +69,7 @@ function DropdownItem({
   shortcut,
   disabled,
   checked,
-}: MenuOption & { closeDropdown: () => void }) {
+}: MenuOption) {
   const onSelect = useCallback(() => {
     if (disabled) return
 

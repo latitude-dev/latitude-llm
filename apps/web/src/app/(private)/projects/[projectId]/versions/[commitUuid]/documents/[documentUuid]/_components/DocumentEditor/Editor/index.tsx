@@ -25,9 +25,6 @@ import { PlaygroundTextEditor } from './TextEditor'
 import { UpdateToPromptLButton } from './UpdateToPromptl'
 import { Playground } from './Playground'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { useEvents } from '$/lib/events'
-import { useLatteStreaming } from './useLatteStreaming'
-import { useNavigate } from '$/hooks/useNavigate'
 
 export default function DocumentEditor({
   document: _document,
@@ -46,7 +43,6 @@ export default function DocumentEditor({
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const router = useNavigate()
 
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
@@ -74,38 +70,6 @@ export default function DocumentEditor({
   )
 
   const [value, setValue] = useState(document.content)
-  const { customReadOnlyMessage, highlightedCursorIndex, streamLatteUpdate } =
-    useLatteStreaming({
-      value,
-      setValue,
-    })
-
-  useEvents(
-    {
-      onDraftUpdatedByLatte: ({ draftUuid, updates }) => {
-        if (commit.uuid !== draftUuid) return
-        const updatedDocument = updates.find(
-          (d) => d.documentUuid === document.documentUuid,
-        )
-        if (!updatedDocument) return
-
-        if (updatedDocument.deletedAt) {
-          router.push(
-            ROUTES.projects
-              .detail({ id: project.id })
-              .commits.detail({ uuid: commit.uuid }).overview.root,
-          )
-          return
-        }
-
-        if (updatedDocument.content !== document.content) {
-          streamLatteUpdate(updatedDocument.content)
-        }
-      },
-    },
-    [document.documentUuid, document.commitId, streamLatteUpdate],
-  )
-
   const { toast } = useToast()
   const debouncedSave = useDebouncedCallback(
     async (val: string) => {
@@ -292,14 +256,9 @@ export default function DocumentEditor({
                 value={value}
                 defaultValue={document.content}
                 copilotEnabled={copilotEnabled}
-                readOnlyMessage={
-                  isMerged
-                    ? 'Create a draft to edit documents.'
-                    : customReadOnlyMessage
-                }
+                isMerged={isMerged}
                 isSaved={!isUpdatingContent}
                 onChange={onChange}
-                highlightedCursorIndex={highlightedCursorIndex}
               />
             </div>
           </SplitPane.Pane>

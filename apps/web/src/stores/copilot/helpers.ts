@@ -2,7 +2,7 @@ import type { ToolCall } from '@latitude-data/compiler'
 import { LatteTool } from '@latitude-data/constants/latte'
 
 export function getDescriptionFromToolCall(toolCall: ToolCall): {
-  activeDescription: string
+  description: string
   finishedDescription?: string
 } {
   const name = toolCall.name as LatteTool
@@ -11,25 +11,25 @@ export function getDescriptionFromToolCall(toolCall: ToolCall): {
   switch (name) {
     case LatteTool.listProjects:
       return {
-        activeDescription: `Listing projects`,
+        description: `Listing projects`,
         finishedDescription: `Listed projects`,
       }
 
     case LatteTool.listPrompts:
       return {
-        activeDescription: `Listing prompts`,
+        description: `Listing prompts`,
         finishedDescription: `Listed prompts`,
       }
 
     case LatteTool.readPrompt:
       return {
-        activeDescription: `Reading prompt ${params.path}`,
+        description: `Reading prompt ${params.path}`,
         finishedDescription: `Read prompt ${params.path}`,
       }
 
     default:
       return {
-        activeDescription: name,
+        description: name,
       }
   }
 }

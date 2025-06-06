@@ -9,11 +9,6 @@ import Overview from './_components/Overview'
 import { AddFileButton } from './_components/Overview/AddFileButton'
 import { AddPromptTextarea } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/overview/_components/Overview/AddPromptTextarea'
 import { computeTotalRuns } from '@latitude-data/core/services/projects/computeTotalRuns'
-import buildMetatags from '$/app/_lib/buildMetatags'
-
-export const metadata = buildMetatags({
-  locationDescription: 'Project General Overview',
-})
 
 export default async function OverviewPage({
   params,

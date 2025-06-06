@@ -93,11 +93,11 @@ export async function getCopilotDocument(): PromisedResult<
 
 export async function sendWebsockets({
   workspace,
-  threadUuid,
+  chatUuid,
   stream,
 }: {
   workspace: Workspace
-  threadUuid: string
+  chatUuid: string
   stream: ReadableStream<ChainEvent>
 }) {
   for await (const payload of streamToGenerator(stream)) {
@@ -112,7 +112,7 @@ export async function sendWebsockets({
       WebsocketClient.sendEvent('latteMessage', {
         workspaceId: workspace.id,
         data: {
-          threadUuid,
+          chatUuid,
           message,
         },
       })

@@ -6,7 +6,7 @@ import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 const jobMappings = {
   runDocumentJob: jobs.runDocumentJob,
   runDocumentForExperimentJob: jobs.runDocumentForExperimentJob,
-  runLatteJob: jobs.runLatteJob,
+  runCopilotChatJob: jobs.runCopilotChatJob,
 }
 
 export function startDocumentsWorker() {

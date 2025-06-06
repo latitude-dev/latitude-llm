@@ -1,13 +1,6 @@
 import { listEvaluationsV2AtCommitByDocumentCached } from '$/app/(private)/_data-access'
 import { env } from '@latitude-data/env'
 import { EvaluationsPage as ClientEvaluationsPage } from './_components/EvaluationsPage'
-import buildMetatags from '$/app/_lib/buildMetatags'
-
-export async function generateMetadata() {
-  return buildMetatags({
-    locationDescription: 'Prompt Evaluations List',
-  })
-}
 
 export default async function EvaluationsPage({
   params,

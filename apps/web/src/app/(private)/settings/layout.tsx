@@ -14,7 +14,6 @@ import Webhooks from './_components/Webhooks'
 
 export const metadata = buildMetatags({
   title: 'Settings',
-  locationDescription: 'Settings Page',
 })
 
 export default async function SettingsLayout({

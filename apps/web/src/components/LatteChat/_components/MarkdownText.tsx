@@ -1,45 +1,40 @@
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Markdown } from '@latitude-data/web-ui/atoms/Markdown'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ReactNode } from 'react'
 import Link from 'next/link'
 import React from 'react'
 
-function isCodeBlockInline(children: string, className?: string) {
-  return className === undefined && !children.includes('\n')
+function isCodeBlockInline(children: string) {
+  return !children.includes('\n')
 }
 
-function getLanguageFromCodeBlock(className?: string) {
-  if (!className) return 'plaintext'
-  return className.replace('language-', '')
-}
-
-function linkTarget(href: string): '_blank' | undefined {
-  return href.startsWith('/') ? undefined : '_blank'
-}
-
-function linkIcon(href: string): IconName | undefined {
-  if (href.includes('docs.latitude.so')) return 'bookMarked' // Docs
-  if (!href.startsWith('/')) return 'externalLink' // External link
-
-  // Latitude Document (/projects/:projectId/versions/:versionId/documents/:documentId...)
-  if (href.match(/^\/projects\/[^/]+\/versions\/[^/]+\/documents\/[^/]+\/?$/)) {
-    return 'file'
-  }
+function getLanguageFromCodeBlock(children: string) {
+  const match = children.match(/```(\w+)\n/)
+  return match ? match[1]! : 'plaintext'
 }
 
 function LatteLink({ children, href }: { children: ReactNode; href: string }) {
-  const iconName = linkIcon(href)
+  const isInternalLink = href.startsWith('/')
+  const isDocsLink = !isInternalLink && href.includes('docs.latitude.so')
+  const isExternalLink = !isInternalLink && !isDocsLink
+
+  const openInNewTab = !isInternalLink
 
   return (
     <Link
       href={href}
-      target={linkTarget(href)}
-      className='bg-accent hover:bg-accent/75 rounded-sm px-1 no-underline inline-flex items-center gap-1'
+      target={openInNewTab ? '_blank' : undefined}
+      className='bg-accent hover:bg-accent/75 rounded-sm px-1 no-underline inline-flex items-center gap-2'
     >
-      {iconName && <Icon name={iconName} color='primary' className='w-4 h-4' />}
+      {isDocsLink && (
+        <Icon name='bookMarked' color='primary' className='w-4 h-4' />
+      )}
       <Text.H5B color='primary'>{children}</Text.H5B>
+      {isExternalLink && (
+        <Icon name='externalLink' color='foregroundMuted' className='w-4 h-4' />
+      )}
     </Link>
   )
 }
@@ -70,15 +65,15 @@ export const MarkdownResponse = React.memo(
           a: ({ children, href }) => (
             <LatteLink href={href ?? '#'}>{children}</LatteLink>
           ),
-          code: ({ children, className }) =>
-            isCodeBlockInline(children as string, className) ? (
+          code: ({ children }) =>
+            isCodeBlockInline(children as string) ? (
               <div className='bg-muted rounded-sm px-1 py-0.5 inline-flex flex-wrap'>
                 <Text.H6M color='foregroundMuted'>{children}</Text.H6M>
               </div>
             ) : (
               <CodeBlock
                 className='bg-background'
-                language={getLanguageFromCodeBlock(className)}
+                language={getLanguageFromCodeBlock(children as string)}
                 textWrap
               >
                 {children as string}

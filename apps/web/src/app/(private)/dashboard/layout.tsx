@@ -14,7 +14,6 @@ import { ProjectsTable } from './_components/ProjectsTable'
 
 export const metadata = buildMetatags({
   title: 'Dashboard',
-  locationDescription: 'Projects List',
 })
 
 export default async function DashboardLayout({

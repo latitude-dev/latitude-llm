@@ -4,7 +4,6 @@ import buildMetatags from '$/app/_lib/buildMetatags'
 
 export const metadata = buildMetatags({
   title: 'Datasets',
-  locationDescription: 'Datasets List',
 })
 
 export default async function DatasetsList({

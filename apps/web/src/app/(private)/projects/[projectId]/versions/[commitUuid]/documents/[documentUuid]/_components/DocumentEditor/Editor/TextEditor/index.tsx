@@ -27,9 +27,8 @@ export const PlaygroundTextEditor = memo(
     value,
     defaultValue,
     copilotEnabled,
+    isMerged,
     isSaved,
-    readOnlyMessage,
-    highlightedCursorIndex,
   }: {
     compileErrors: CompileError[] | undefined
     project: IProjectContextType['project']
@@ -41,9 +40,8 @@ export const PlaygroundTextEditor = memo(
     value: string
     defaultValue?: string
     isSaved: boolean
-    readOnlyMessage?: string
+    isMerged: boolean
     onChange: (value: string) => void
-    highlightedCursorIndex?: number
   }) => {
     const { execute: publishEvent } = useLatitudeAction(publishEventAction)
     const {
@@ -99,9 +97,10 @@ export const PlaygroundTextEditor = memo(
           compileErrors={compileErrors}
           onChange={onChange}
           diff={diff}
-          readOnlyMessage={readOnlyMessage}
+          readOnlyMessage={
+            isMerged ? 'Create a draft to edit documents.' : undefined
+          }
           isSaved={isSaved}
-          highlightedCursorIndex={highlightedCursorIndex}
           actionButtons={
             <>
               <DocumentSuggestions

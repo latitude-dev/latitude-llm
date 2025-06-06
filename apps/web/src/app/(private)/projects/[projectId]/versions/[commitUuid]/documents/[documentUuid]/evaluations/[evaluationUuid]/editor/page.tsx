@@ -19,11 +19,6 @@ import { redirect } from 'next/navigation'
 import { EvaluationEditor } from './_components/EvaluationEditor'
 import { LOG_UUID_PARAM } from '$/lib/useEvaluationEditorLink'
 import { DocumentLogsRepository } from '@latitude-data/core/repositories'
-import buildMetatags from '$/app/_lib/buildMetatags'
-
-export const metadata = buildMetatags({
-  locationDescription: 'Prompt Evaluation Editor',
-})
 
 export default async function EvaluationEditorPage({
   params,
