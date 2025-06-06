@@ -2,7 +2,7 @@
 
 import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
-import { createLatteJob } from '@latitude-data/core/services/copilot/index'
+import { createLatteJob } from '@latitude-data/core/services/copilot/latte/createJob'
 
 export const addMessageToLatteAction = authProcedure
   .createServerAction()

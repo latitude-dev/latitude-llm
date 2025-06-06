@@ -12,9 +12,7 @@ import { PromisedResult } from '../../../lib/Transaction'
 import { runDocumentAtCommit } from '../../commits'
 import { extractAgentToolCalls, LogSources } from '@latitude-data/constants'
 import { Commit, Workspace, DocumentVersion } from '../../../browser'
-import { assertCopilotIsSupported, sendWebsockets } from './helpers'
-import { documentsQueue } from '../../../jobs/queues'
-import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
+import { sendWebsockets } from './helpers'
 import { handleToolRequest } from './tools'
 import { WebsocketClient } from '../../../websockets/workers'
 
@@ -175,28 +173,4 @@ export async function addMessageToExistingLatte({
     threadUuid,
     messages: [userMessage],
   })
-}
-
-export async function createLatteJob({
-  workspace,
-  threadUuid,
-  message,
-  context,
-}: {
-  workspace: Workspace
-  threadUuid: string
-  message: string
-  context: string
-}): PromisedResult<undefined> {
-  const supportResult = assertCopilotIsSupported()
-  if (!supportResult.ok) return supportResult as ErrorResult<LatitudeError>
-
-  await documentsQueue.add('runLatteJob', {
-    workspaceId: workspace.id,
-    threadUuid,
-    message,
-    context,
-  } as RunLatteJobData)
-
-  return Result.nil()
 }
