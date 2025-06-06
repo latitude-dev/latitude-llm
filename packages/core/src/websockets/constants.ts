@@ -15,7 +15,7 @@ import {
   ExperimentDto,
   ProviderLogDto,
 } from '../browser'
-import { type DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '../browser'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
