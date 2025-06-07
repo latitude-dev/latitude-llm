@@ -2,7 +2,6 @@ import { createDatasetFromLogsAction } from '$/actions/datasets/createFromLogs'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
-import { usePreviewLogs } from '$/stores/previewLogs'
 import {
   Dataset,
   ExtendedDocumentLogFilterOptions,
@@ -14,6 +13,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { usePreviewTable } from '../PreviewTable/usePreviewTable'
 
 const DEFAULT_STATIC_COLUMNS = ['output', 'id', 'tokens']
 
@@ -29,16 +29,14 @@ export function useSaveLogsAsDatasetModal({
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const state = useToggleModal()
-  const [selectedLogsIds, setSelectedLogsIds] = useState<(string | number)[]>(
-    [],
-  )
-  const [selectedCount, setSelectedCount] = useState(0)
   const [selectedDataset, setSelectedDataset] = useState<Dataset>()
   const {
     previewData: data,
     fetchPreview,
     isLoading,
-  } = usePreviewLogs({
+    isColumnSelected,
+    handleSelectColumn,
+  } = usePreviewTable({
     documentUuid: document.documentUuid,
     extendedFilterOptions,
     staticColumnNames: DEFAULT_STATIC_COLUMNS,
@@ -46,15 +44,8 @@ export function useSaveLogsAsDatasetModal({
 
   const onClickShowPreview = useCallback(() => {
     state.onOpen()
-    setSelectedLogsIds(selectableState.selectedRowIds)
-    setSelectedCount(selectableState.selectedCount)
     fetchPreview()
-  }, [
-    fetchPreview,
-    setSelectedLogsIds,
-    state.onOpen,
-    selectableState.selectedRowIds,
-  ])
+  }, [fetchPreview, state])
 
   const {
     execute: createDatasetFromLogs,
@@ -81,8 +72,6 @@ export function useSaveLogsAsDatasetModal({
       }
 
       setSelectedDataset(undefined)
-      setSelectedLogsIds([])
-      setSelectedCount(0)
       selectableState.clearSelections()
       state.onClose()
     },
@@ -109,14 +98,21 @@ export function useSaveLogsAsDatasetModal({
       })
     },
     [
-      setSelectedDataset,
-      selectedLogsIds,
-      setSelectedLogsIds,
       createDatasetFromLogs,
-      state.onClose,
-      selectableState.clearSelections,
+      extendedFilterOptions,
+      project,
+      commit,
+      document,
+      selectableState,
     ],
   )
+
+  const previewSubtitle = useMemo(
+    () =>
+      `${selectableState.selectedCount} logs will be added to ${data.datasetRows.length > 0 ? 'the dataset' : 'a new dataset'}. This is a preview of representative ones based on its parameters.`,
+    [selectableState, data],
+  )
+
   return useMemo(
     () => ({
       data,
@@ -129,7 +125,9 @@ export function useSaveLogsAsDatasetModal({
       isSaving,
       fetchPreview,
       error,
-      selectedCount,
+      isColumnSelected,
+      handleSelectColumn,
+      previewSubtitle,
     }),
     [
       data,
@@ -142,7 +140,9 @@ export function useSaveLogsAsDatasetModal({
       isSaving,
       fetchPreview,
       error,
-      selectedCount,
+      isColumnSelected,
+      handleSelectColumn,
+      previewSubtitle,
     ],
   )
 }

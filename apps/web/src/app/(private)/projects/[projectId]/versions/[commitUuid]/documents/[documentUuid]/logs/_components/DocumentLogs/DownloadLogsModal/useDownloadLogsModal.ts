@@ -6,14 +6,14 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
-import { usePreviewLogs } from '$/stores/previewLogs'
 import { ExtendedDocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { usePreviewTable } from '../PreviewTable/usePreviewTable'
 
 const DEFAULT_STATIC_COLUMNS = [
   'output',
@@ -24,11 +24,6 @@ const DEFAULT_STATIC_COLUMNS = [
   'tokens',
   'createdAt',
 ]
-
-const getSelectedColumns = (columns?: Map<string, boolean>) => {
-  if (!columns) return []
-  return [...columns.entries()].filter(([, value]) => value).map(([key]) => key)
-}
 
 const MAX_IMMEDIATE_DOWNLOAD = 100
 
@@ -49,15 +44,16 @@ export function useDownloadLogsModal({
     previewData: data,
     fetchPreview,
     isLoading,
-  } = usePreviewLogs({
+    selectedStaticColumnNames,
+    selectedParameterColumnNames,
+    handleSelectColumn,
+    isColumnSelected,
+  } = usePreviewTable({
     documentUuid: latitudeDocument.documentUuid,
     extendedFilterOptions,
     staticColumnNames: DEFAULT_STATIC_COLUMNS,
   })
   const [isDownloading, setIsDownloading] = useState(false)
-  const [staticColumns, setStaticColumns] = useState<Map<string, boolean>>()
-  const [parameterColumns, setParameterColumns] =
-    useState<Map<string, boolean>>()
 
   const { execute: executeAsyncDownload } = useLatitudeAction(
     downloadLogsAsyncAction,
@@ -75,14 +71,14 @@ export function useDownloadLogsModal({
   const showModal = useCallback(() => {
     state.onOpen()
     fetchPreview()
-  }, [fetchPreview, state.onOpen])
+  }, [fetchPreview, state])
 
   const handleImmediateDownload = useCallback(async () => {
     const body = {
       documentUuid: latitudeDocument.documentUuid,
       extendedFilterOptions,
-      staticColumnNames: getSelectedColumns(staticColumns),
-      parameterColumnNames: getSelectedColumns(parameterColumns),
+      staticColumnNames: selectedStaticColumnNames,
+      parameterColumnNames: selectedParameterColumnNames,
     }
     const rawResponse = await fetch(ROUTES.api.documentLogs.downloadLogs.root, {
       method: 'POST',
@@ -105,7 +101,14 @@ export function useDownloadLogsModal({
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-  }, [latitudeDocument.path, navigate, toast, staticColumns, parameterColumns])
+  }, [
+    latitudeDocument,
+    navigate,
+    toast,
+    selectedStaticColumnNames,
+    selectedParameterColumnNames,
+    extendedFilterOptions,
+  ])
 
   const handleDownload = useCallback(async () => {
     setIsDownloading(true)
@@ -123,49 +126,24 @@ export function useDownloadLogsModal({
           commitUuid: commit?.uuid,
           documentUuid: latitudeDocument.documentUuid,
           extendedFilterOptions,
-          staticColumnNames: getSelectedColumns(staticColumns),
-          parameterColumnNames: getSelectedColumns(parameterColumns),
+          staticColumnNames: selectedStaticColumnNames,
+          parameterColumnNames: selectedParameterColumnNames,
         })
       }
     } finally {
       setIsDownloading(false)
     }
-  }, [handleImmediateDownload, executeAsyncDownload, selectableState])
-
-  useEffect(() => {
-    if (!data?.columns) return
-    const [parameterColumns, staticColumns] = data.columns.reduce(
-      ([parameterColumns, staticColumns], column) => {
-        const toMap =
-          column.role === 'parameter' ? parameterColumns : staticColumns
-        toMap.set(column.name, true)
-        return [parameterColumns, staticColumns]
-      },
-      [new Map(), new Map()],
-    )
-    setParameterColumns(parameterColumns)
-    setStaticColumns(staticColumns)
-  }, [data])
-
-  const handleSelectStaticColumn = useCallback(
-    (column: string) => {
-      setStaticColumns((prev) => {
-        if (!prev?.has(column)) return prev
-        return new Map(prev.set(column, !prev.get(column)))
-      })
-    },
-    [setStaticColumns],
-  )
-
-  const handleSelectParameterColumn = useCallback(
-    (column: string) => {
-      setParameterColumns((prev) => {
-        if (!prev?.has(column)) return prev
-        return new Map(prev.set(column, !prev.get(column)))
-      })
-    },
-    [setParameterColumns],
-  )
+  }, [
+    handleImmediateDownload,
+    executeAsyncDownload,
+    selectableState,
+    extendedFilterOptions,
+    commit,
+    latitudeDocument,
+    project,
+    selectedParameterColumnNames,
+    selectedStaticColumnNames,
+  ])
 
   const description = useMemo(() => {
     const selectedCount = selectableState.selectedCount
@@ -185,10 +163,8 @@ export function useDownloadLogsModal({
       isLoadingPreview: isLoading,
       isDownloading,
       fetchPreview,
-      previewStaticColumns: staticColumns,
-      previewParameterColumns: parameterColumns,
-      handleSelectStaticColumn,
-      handleSelectParameterColumn,
+      handleSelectColumn,
+      isColumnSelected,
     }),
     [
       data,
@@ -199,10 +175,8 @@ export function useDownloadLogsModal({
       isLoading,
       isDownloading,
       fetchPreview,
-      staticColumns,
-      parameterColumns,
-      handleSelectStaticColumn,
-      handleSelectParameterColumn,
+      handleSelectColumn,
+      isColumnSelected,
     ],
   )
 }

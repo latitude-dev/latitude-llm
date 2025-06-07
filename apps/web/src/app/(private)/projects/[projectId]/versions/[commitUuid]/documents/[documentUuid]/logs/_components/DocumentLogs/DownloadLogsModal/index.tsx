@@ -12,10 +12,8 @@ export function DownloadLogsModal({
   isDownloading,
   handleDownload,
   isLoadingPreview,
-  previewStaticColumns,
-  previewParameterColumns,
-  handleSelectStaticColumn,
-  handleSelectParameterColumn,
+  isColumnSelected,
+  handleSelectColumn,
 }: Props) {
   return (
     <Modal
@@ -44,10 +42,8 @@ export function DownloadLogsModal({
         previewData={data}
         isLoading={isLoadingPreview}
         subtitle='This is a preview of representative logs based on its parameters.'
-        previewStaticColumns={previewStaticColumns}
-        previewParameterColumns={previewParameterColumns}
-        onSelectStaticColumn={handleSelectStaticColumn}
-        onSelectParameterColumn={handleSelectParameterColumn}
+        onSelectColumn={handleSelectColumn}
+        isColumnSelected={isColumnSelected}
         selectable
       />
     </Modal>

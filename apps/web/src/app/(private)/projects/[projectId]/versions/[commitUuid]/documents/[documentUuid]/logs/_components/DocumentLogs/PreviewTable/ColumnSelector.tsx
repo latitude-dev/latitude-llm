@@ -3,30 +3,16 @@ import { Column } from '@latitude-data/core/schema'
 import { CheckboxAtom } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Checkbox/Primitive'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import { usePreviewTable } from './usePreviewTable'
-
-type Props = {
-  columns: Column[]
-  previewStaticColumns?: Map<string, boolean>
-  previewParameterColumns?: Map<string, boolean>
-  onSelectStaticColumn?: (column: string) => void
-  onSelectParameterColumn?: (column: string) => void
-}
 
 export const ColumnSelector = ({
   columns,
-  previewStaticColumns,
-  previewParameterColumns,
-  onSelectStaticColumn,
-  onSelectParameterColumn,
-}: Props) => {
-  const { isColumnSelected, handleSelectColumn } = usePreviewTable({
-    previewStaticColumns,
-    previewParameterColumns,
-    onSelectStaticColumn,
-    onSelectParameterColumn,
-  })
-
+  isColumnSelected,
+  onSelectColumn,
+}: {
+  columns: Column[]
+  isColumnSelected: (column: Column) => boolean
+  onSelectColumn: (column: Column) => void
+}) => {
   return (
     <Popover.Root>
       <ButtonTrigger
@@ -59,7 +45,7 @@ export const ColumnSelector = ({
                 'w-full cursor-pointer select-none py-2 flex gap-x-4 items-center transition-opacity pl-2 rounded-md hover:bg-muted',
                 !isColumnSelected(column) && 'opacity-60',
               )}
-              onClick={() => handleSelectColumn(column)}
+              onClick={() => onSelectColumn(column)}
             >
               <CheckboxAtom checked={isColumnSelected(column)} />
               <Text.H5>{column.name}</Text.H5>

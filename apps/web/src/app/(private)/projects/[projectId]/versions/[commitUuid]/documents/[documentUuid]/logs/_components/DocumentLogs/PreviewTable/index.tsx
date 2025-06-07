@@ -11,10 +11,9 @@ import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
-import { OutputItem } from '$/stores/previewLogs'
 import { ColumnSelector } from './ColumnSelector'
 import { Column } from '@latitude-data/core/schema'
-import { usePreviewTable } from './usePreviewTable'
+import { OutputItem } from './usePreviewTable'
 
 function PreviewCell({
   cell,
@@ -49,30 +48,20 @@ function PreviewCell({
 
 export function PreviewTable({
   previewData,
-  previewStaticColumns,
-  previewParameterColumns,
-  onSelectStaticColumn,
-  onSelectParameterColumn,
+  onSelectColumn,
+  isColumnSelected,
   selectable = false,
   isLoading,
   subtitle,
 }: {
   previewData: OutputItem
+  onSelectColumn: (column: Column) => void
+  isColumnSelected: (column: Column) => boolean
+  selectable?: boolean
   isLoading: boolean
   subtitle?: string
-  previewStaticColumns?: Map<string, boolean>
-  previewParameterColumns?: Map<string, boolean>
-  selectable?: boolean
-  onSelectStaticColumn?: (column: string) => void
-  onSelectParameterColumn?: (column: string) => void
 }) {
   const { backgroundCssClasses } = useDatasetRole()
-  const { isColumnSelected } = usePreviewTable({
-    previewStaticColumns,
-    previewParameterColumns,
-    onSelectStaticColumn,
-    onSelectParameterColumn,
-  })
   return (
     <div className='flex flex-col gap-y-4'>
       <div className='w-full flex justify-between items-center'>
@@ -83,10 +72,8 @@ export function PreviewTable({
         {selectable && (
           <ColumnSelector
             columns={previewData.columns}
-            previewStaticColumns={previewStaticColumns}
-            previewParameterColumns={previewParameterColumns}
-            onSelectStaticColumn={onSelectStaticColumn}
-            onSelectParameterColumn={onSelectParameterColumn}
+            onSelectColumn={onSelectColumn}
+            isColumnSelected={isColumnSelected}
           />
         )}
       </div>

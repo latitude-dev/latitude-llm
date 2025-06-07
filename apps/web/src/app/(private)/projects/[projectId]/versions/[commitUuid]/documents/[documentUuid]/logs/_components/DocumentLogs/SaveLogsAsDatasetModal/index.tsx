@@ -61,8 +61,10 @@ export function SaveLogsAsDatasetModal({
   setSelectedDataset,
   isLoadingPreview,
   fetchPreview,
-  selectedCount,
   error,
+  handleSelectColumn,
+  isColumnSelected,
+  previewSubtitle,
 }: Props) {
   const [showDatasetSelector, setShowDatasetSelector] = useState(false)
   const onShowDatasetSelector = useCallback(
@@ -155,7 +157,9 @@ export function SaveLogsAsDatasetModal({
         <PreviewTable
           previewData={data}
           isLoading={isLoadingPreview}
-          subtitle={`${selectedCount} logs will be added to ${data.datasetRows.length > 0 ? 'the dataset' : 'a new dataset'}. This is a preview of representative ones based on its parameters.`}
+          isColumnSelected={isColumnSelected}
+          onSelectColumn={handleSelectColumn}
+          subtitle={previewSubtitle}
         />
       </div>
     </Modal>

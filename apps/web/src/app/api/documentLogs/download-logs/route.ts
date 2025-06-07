@@ -26,36 +26,34 @@ export const POST = errorHandler(
         workspace: Workspace
       },
     ) => {
-      try {
-        const body = await request.json()
-        const {
-          documentUuid,
-          extendedFilterOptions,
+      const body = await request.json()
+      const result = downloadLogsRequestSchema.safeParse(body)
+      if (!result.success) {
+        throw new BadRequestError(result.error.message)
+      }
+      const {
+        documentUuid,
+        extendedFilterOptions,
+        staticColumnNames,
+        parameterColumnNames,
+      } = result.data
+
+      const csvFile = await generateCsvFromLogs({
+        workspace,
+        documentUuid,
+        extendedFilterOptions,
+        columnFilters: {
           staticColumnNames,
           parameterColumnNames,
-        } = downloadLogsRequestSchema.parse(body)
-        const csvFile = await generateCsvFromLogs({
-          workspace,
-          documentUuid,
-          extendedFilterOptions,
-          columnFilters: {
-            staticColumnNames,
-            parameterColumnNames,
-          },
-        }).then((r) => r.unwrap())
+        },
+      }).then((r) => r.unwrap())
 
-        return new NextResponse(csvFile, {
-          headers: {
-            'Content-Type': 'text/csv',
-            'Content-Disposition': 'attachment; filename="data.csv"',
-          },
-        })
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          throw new BadRequestError(error.message)
-        }
-        throw error
-      }
+      return new NextResponse(csvFile, {
+        headers: {
+          'Content-Type': 'text/csv',
+          'Content-Disposition': 'attachment; filename="data.csv"',
+        },
+      })
     },
   ),
 )
