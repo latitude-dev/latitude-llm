@@ -72,12 +72,12 @@ export function usePreviewTable({
   const navigate = useNavigate()
 
   const fetchPreview = useCallback(
-    async (name?: string) => {
+    async (datasetName?: string) => {
       try {
         setIsLoading(true)
         const body = {
           documentUuid,
-          name,
+          name: datasetName,
           extendedFilterOptions,
           staticColumnNames,
           parameterColumnNames,
