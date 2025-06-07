@@ -50,6 +50,9 @@ export const ROUTES = {
       root: `${BACKOFFICE_ROOT}/triggers`,
     },
   },
+  noWorkspace: {
+    root: '/no-workspace',
+  },
   settings: {
     root: '/settings',
     webhooks: {
