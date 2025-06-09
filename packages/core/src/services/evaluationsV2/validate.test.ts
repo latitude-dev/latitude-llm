@@ -55,6 +55,13 @@ describe('validateEvaluationV2', () => {
       metric: RuleEvaluationMetric.ExactMatch,
       configuration: {
         reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
         caseInsensitive: false,
       },
     }
@@ -144,6 +151,53 @@ describe('validateEvaluationV2', () => {
     ).rejects.toThrowError(expect.any(ZodError))
   })
 
+  it('fails when actual output validation fails', async () => {
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: {
+          ...settings,
+          configuration: {
+            ...settings.configuration,
+            actualOutput: {
+              ...settings.configuration.actualOutput!,
+              fieldAccessor: 'field',
+            },
+          },
+        },
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Field accessor is not supported for this format'),
+    )
+  })
+
+  it('fails when expected output validation fails', async () => {
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: {
+          ...settings,
+          configuration: {
+            ...settings.configuration,
+            expectedOutput: {
+              ...settings.configuration.expectedOutput!,
+              parsingFormat: 'json',
+              fieldAccessor: Array(100).fill('field').join('.'),
+            },
+          },
+        },
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(new BadRequestError('Field accessor is too complex'))
+  })
+
   it('fails when type and metric validation fails', async () => {
     vi.spyOn(
       RuleEvaluationExactMatchSpecification,
@@ -225,6 +279,7 @@ describe('validateEvaluationV2', () => {
       commit: commit,
       workspace: workspace,
       ...settings,
+      name: 'old name',
       ...options,
     })
 

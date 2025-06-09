@@ -23,6 +23,7 @@ import * as helpers from '../../helpers'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
 import serializeProviderLog from '../providerLogs/serialize'
+import * as outputs from './outputs/extract'
 import { RuleEvaluationExactMatchSpecification } from './rule/exactMatch'
 import { RuleEvaluationRegularExpressionSpecification } from './rule/regularExpression'
 import { runEvaluationV2 } from './run'
@@ -191,6 +192,51 @@ value1,value2,value3
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
+  it('fails when running is not supported for the evaluation', async () => {
+    const otherEvaluation = await factories.createEvaluationV2({
+      document: document,
+      commit: commit,
+      workspace: workspace,
+      name: 'other evaluation',
+      type: EvaluationType.Human,
+      metric: HumanEvaluationMetric.Rating,
+      configuration: {
+        reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
+        criteria: 'criteria',
+        minRating: 1,
+        minRatingDescription: 'min description',
+        maxRating: 5,
+        maxRatingDescription: 'max description',
+        minThreshold: 3,
+      },
+    })
+    mocks.publisher.mockClear()
+
+    await expect(
+      runEvaluationV2({
+        evaluation: otherEvaluation,
+        providerLog: providerLog,
+        experiment: experiment,
+        dataset: dataset,
+        datasetLabel: datasetLabel,
+        datasetRow: datasetRow,
+        commit: commit,
+        workspace: workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Running is not supported for this evaluation'),
+    )
+
+    expect(mocks.publisher).not.toHaveBeenCalled()
+  })
+
   it('fails when evaluating a log that does not end with an assistant message', async () => {
     vi.spyOn(helpers, 'buildConversation').mockReturnValue([
       {
@@ -220,45 +266,7 @@ value1,value2,value3
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
-  it('fails when running is not supported for the evaluation', async () => {
-    const otherEvaluation = await factories.createEvaluationV2({
-      document: document,
-      commit: commit,
-      workspace: workspace,
-      name: 'other evaluation',
-      type: EvaluationType.Human,
-      metric: HumanEvaluationMetric.Rating,
-      configuration: {
-        reverseScale: false,
-        criteria: 'criteria',
-        minRating: 1,
-        minRatingDescription: 'min description',
-        maxRating: 5,
-        maxRatingDescription: 'max description',
-        minThreshold: 3,
-      },
-    })
-    mocks.publisher.mockClear()
-
-    await expect(
-      runEvaluationV2({
-        evaluation: otherEvaluation,
-        providerLog: providerLog,
-        experiment: experiment,
-        dataset: dataset,
-        datasetLabel: datasetLabel,
-        datasetRow: datasetRow,
-        commit: commit,
-        workspace: workspace,
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new BadRequestError('Running is not supported for this evaluation'),
-    )
-
-    expect(mocks.publisher).not.toHaveBeenCalled()
-  })
-
-  it('fails when experiment and row is not part of the dataset', async () => {
+  it('fails when evaluating a row that is from a different dataset', async () => {
     const { dataset: anotherDataset } = await factories.createDataset({
       author: user,
       fileContent: `
@@ -281,44 +289,29 @@ value1,value2,value3
         workspace: workspace,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError('Row is not part of the dataset'),
+      new UnprocessableEntityError(
+        'Cannot evaluate a row that is from a different dataset',
+      ),
     )
 
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
-  it('fails when experiment and labeled column not found in dataset', async () => {
+  it('fails when expected output is required but dataset data is not provided', async () => {
     mocks.publisher.mockClear()
 
     await expect(
       runEvaluationV2({
         evaluation: evaluation,
         providerLog: providerLog,
-        experiment: experiment,
-        dataset: dataset,
-        datasetLabel: 'other',
-        datasetRow: datasetRow,
         commit: commit,
         workspace: workspace,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError(`other column not found in dataset`),
+      new UnprocessableEntityError(
+        `Cannot evaluate a log without a dataset row when expected output is required`,
+      ),
     )
-
-    expect(mocks.publisher).not.toHaveBeenCalled()
-  })
-
-  it('fails when expected output is required but not provided', async () => {
-    mocks.publisher.mockClear()
-
-    await expect(
-      runEvaluationV2({
-        evaluation: evaluation,
-        providerLog: providerLog,
-        commit: commit,
-        workspace: workspace,
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(new BadRequestError(`Expected output is required`))
 
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
@@ -351,6 +344,124 @@ value1,value2,value3
     )
 
     expect(mocks.publisher).not.toHaveBeenCalled()
+  })
+
+  it('succeeds when extract actual output fails', async () => {
+    vi.spyOn(outputs, 'extractActualOutput').mockRejectedValue(
+      new UnprocessableEntityError(
+        "Field 'arguments' is not present in the actual output",
+      ),
+    )
+    mocks.publisher.mockClear()
+
+    const { result } = await runEvaluationV2({
+      evaluation: evaluation,
+      providerLog: providerLog,
+      experiment: experiment,
+      dataset: dataset,
+      datasetLabel: datasetLabel,
+      datasetRow: datasetRow,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+        evaluatedLogId: providerLog.id,
+        score: null,
+        normalizedScore: null,
+        metadata: null,
+        hasPassed: null,
+        error: {
+          message: "Field 'arguments' is not present in the actual output",
+        },
+      }),
+    )
+    expect(mocks.publisher).toHaveBeenCalledTimes(2)
+    expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
+      type: 'evaluationResultV2Created',
+      data: {
+        result: result,
+        evaluation: evaluation,
+        commit: commit,
+        providerLog: providerLog,
+        experiment: experiment,
+        dataset: dataset,
+        datasetRow: datasetRow,
+        workspaceId: workspace.id,
+      },
+    })
+    expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
+      type: 'evaluationV2Ran',
+      data: {
+        workspaceId: workspace.id,
+        evaluation: evaluation,
+        result: result,
+        commit: commit,
+        providerLog: providerLog,
+      },
+    })
+  })
+
+  it('succeeds when extract expected output fails', async () => {
+    vi.spyOn(outputs, 'extractExpectedOutput').mockRejectedValue(
+      new UnprocessableEntityError('Expected output is required'),
+    )
+    mocks.publisher.mockClear()
+
+    const { result } = await runEvaluationV2({
+      evaluation: evaluation,
+      providerLog: providerLog,
+      experiment: experiment,
+      dataset: dataset,
+      datasetLabel: datasetLabel,
+      datasetRow: datasetRow,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+        evaluatedLogId: providerLog.id,
+        score: null,
+        normalizedScore: null,
+        metadata: null,
+        hasPassed: null,
+        error: {
+          message: 'Expected output is required',
+        },
+      }),
+    )
+    expect(mocks.publisher).toHaveBeenCalledTimes(2)
+    expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
+      type: 'evaluationResultV2Created',
+      data: {
+        result: result,
+        evaluation: evaluation,
+        commit: commit,
+        providerLog: providerLog,
+        experiment: experiment,
+        dataset: dataset,
+        datasetRow: datasetRow,
+        workspaceId: workspace.id,
+      },
+    })
+    expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
+      type: 'evaluationV2Ran',
+      data: {
+        workspaceId: workspace.id,
+        evaluation: evaluation,
+        result: result,
+        commit: commit,
+        providerLog: providerLog,
+      },
+    })
   })
 
   it('succeeds when type and metric run fails and error is not retryable', async () => {
@@ -477,6 +588,77 @@ value1,value2,value3
     })
   })
 
+  it('succeeds when outputs configuration is not set', async () => {
+    evaluation.configuration.actualOutput = undefined
+    evaluation.configuration.expectedOutput = undefined
+    vi.spyOn(RuleEvaluationExactMatchSpecification, 'run').mockResolvedValue({
+      score: 0,
+      normalizedScore: 0,
+      metadata: {
+        configuration: evaluation.configuration,
+        actualOutput: 'actualOutput',
+        expectedOutput: 'expectedOutput',
+        datasetLabel: datasetLabel,
+      },
+      hasPassed: true,
+    })
+    mocks.publisher.mockClear()
+
+    const { result } = await runEvaluationV2({
+      evaluation: evaluation,
+      providerLog: providerLog,
+      experiment: experiment,
+      dataset: dataset,
+      datasetLabel: datasetLabel,
+      datasetRow: datasetRow,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+        evaluatedLogId: providerLog.id,
+        score: 0,
+        normalizedScore: 0,
+        metadata: {
+          configuration: evaluation.configuration,
+          actualOutput: 'actualOutput',
+          expectedOutput: 'expectedOutput',
+          datasetLabel: datasetLabel,
+        },
+        hasPassed: true,
+        error: null,
+      }),
+    )
+    expect(mocks.publisher).toHaveBeenCalledTimes(2)
+    expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
+      type: 'evaluationResultV2Created',
+      data: {
+        result: result,
+        evaluation: evaluation,
+        commit: commit,
+        providerLog: providerLog,
+        experiment: experiment,
+        dataset: dataset,
+        datasetRow: datasetRow,
+        workspaceId: workspace.id,
+      },
+    })
+    expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
+      type: 'evaluationV2Ran',
+      data: {
+        workspaceId: workspace.id,
+        evaluation: evaluation,
+        result: result,
+        commit: commit,
+        providerLog: providerLog,
+      },
+    })
+  })
+
   it('succeeds when running an evaluation in live', async () => {
     const liveEvaluation = await factories.createEvaluationV2({
       document: document,
@@ -487,6 +669,13 @@ value1,value2,value3
       metric: RuleEvaluationMetric.RegularExpression,
       configuration: {
         reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
         pattern: 'pattern',
       },
     })

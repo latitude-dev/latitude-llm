@@ -65,6 +65,8 @@ async function validate(
   // carry dangling fields from the original settings object
   return Result.ok({
     reverseScale: configuration.reverseScale,
+    actualOutput: configuration.actualOutput,
+    expectedOutput: configuration.expectedOutput,
     algorithm: configuration.algorithm,
     minSimilarity: configuration.minSimilarity,
     maxSimilarity: configuration.maxSimilarity,

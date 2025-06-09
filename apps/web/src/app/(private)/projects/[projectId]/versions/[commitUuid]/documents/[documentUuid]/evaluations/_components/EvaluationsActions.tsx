@@ -29,6 +29,13 @@ const DEFAULT_EVALUATION_SETTINGS = {
   metric: RuleEvaluationMetric.ExactMatch,
   configuration: {
     reverseScale: false,
+    actualOutput: {
+      messageSelection: 'last' as const,
+      parsingFormat: 'string' as const,
+    },
+    expectedOutput: {
+      parsingFormat: 'string' as const,
+    },
     caseInsensitive: false,
   },
 }

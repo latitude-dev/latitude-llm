@@ -107,6 +107,13 @@ export async function generateEvaluationV2(
     metric: LlmEvaluationMetric.Rating,
     configuration: {
       reverseScale: result.reverseScale,
+      actualOutput: {
+        messageSelection: 'last',
+        parsingFormat: 'string',
+      },
+      expectedOutput: {
+        parsingFormat: 'string',
+      },
       provider: provider.name,
       model: model,
       criteria: result.criteria,

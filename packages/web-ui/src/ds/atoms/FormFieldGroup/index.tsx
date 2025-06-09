@@ -12,19 +12,27 @@ export function FormFieldGroup({
   label,
   description,
   tooltip,
+  float = 'bottom',
+  group = false,
 }: {
   children: ReactNode
-  label?: string
+  label?: string | ReactNode
   description?: string
   tooltip?: string
   layout?: 'horizontal' | 'vertical'
+  float?: 'top' | 'bottom'
+  group?: boolean
 }) {
   const id = useId()
   return (
     <div className='space-y-2 w-full'>
       {label ? (
-        <span className='flex flex-row items-center gap-2'>
-          <Label variant='default' htmlFor={`form-field-group-label-${id}`}>
+        <span className='w-full flex flex-row items-center gap-2'>
+          <Label
+            variant='default'
+            className='w-full'
+            htmlFor={`form-field-group-label-${id}`}
+          >
             {label}
           </Label>
           {tooltip && (
@@ -44,11 +52,15 @@ export function FormFieldGroup({
           )}
         </span>
       ) : null}
+      {!!description && float === 'top' && (
+        <FormDescription>{description}</FormDescription>
+      )}
       <div
         role='group'
         className={cn('flex', {
           'gap-x-2 items-start': layout === 'horizontal',
           'flex-col gap-y-2': layout === 'vertical',
+          '[&_label]:font-light [&_label]:text-secondary-foreground': group,
         })}
         id={`form-field-group-${id}`}
         aria-labelledby={id}
@@ -56,7 +68,9 @@ export function FormFieldGroup({
       >
         {children}
       </div>
-      {description ? <FormDescription>{description}</FormDescription> : null}
+      {!!description && float === 'bottom' && (
+        <FormDescription>{description}</FormDescription>
+      )}
     </div>
   )
 }

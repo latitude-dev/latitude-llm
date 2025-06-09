@@ -53,6 +53,13 @@ describe('runPrompt', () => {
       metric: LlmEvaluationMetric.Binary,
       configuration: {
         reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
         provider: provider.name,
         model: 'gpt-4o',
         criteria: 'criteria',

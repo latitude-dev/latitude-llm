@@ -1,14 +1,36 @@
 import { z } from 'zod'
 
-export const BaseEvaluationConfiguration = z.object({
-  reverseScale: z.boolean(), // If true, lower is better, otherwise, higher is better
+const actualOutputConfiguration = z.object({
+  messageSelection: z.enum(['last', 'all']), // Which assistant messages to select
+  contentFilter: z.enum(['text', 'image', 'file', 'tool_call']).optional(),
+  parsingFormat: z.enum(['string', 'json']),
+  fieldAccessor: z.string().optional(), // Field accessor to get the output from if it's a key-value format
 })
-export const BaseEvaluationResultMetadata = z.object({
+export type ActualOutputConfiguration = z.infer<
+  typeof actualOutputConfiguration
+>
+
+const expectedOutputConfiguration = z.object({
+  parsingFormat: z.enum(['string', 'json']),
+  fieldAccessor: z.string().optional(), // Field accessor to get the output from if it's a key-value format
+})
+export type ExpectedOutputConfiguration = z.infer<
+  typeof expectedOutputConfiguration
+>
+
+export const ACCESSIBLE_OUTPUT_FORMATS = ['json']
+
+export const baseEvaluationConfiguration = z.object({
+  reverseScale: z.boolean(), // If true, lower is better, otherwise, higher is better
+  actualOutput: actualOutputConfiguration.optional(), // Optional for backwards compatibility
+  expectedOutput: expectedOutputConfiguration.optional(), // Optional for backwards compatibility
+})
+export const baseEvaluationResultMetadata = z.object({
   // Configuration snapshot is defined in every metric specification
   actualOutput: z.string(),
   expectedOutput: z.string().optional(),
   datasetLabel: z.string().optional(),
 })
-export const BaseEvaluationResultError = z.object({
+export const baseEvaluationResultError = z.object({
   message: z.string(),
 })

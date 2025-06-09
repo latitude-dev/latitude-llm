@@ -8,6 +8,7 @@ export class Ok<V> {
   }
 
   public unwrap(): V {
+    if (this.value instanceof Ok) return this.value.unwrap()
     return this.value
   }
 
@@ -26,6 +27,7 @@ export class ErrorResult<E extends Error> {
   }
 
   public unwrap(): never {
+    if (this.error instanceof ErrorResult) this.error.unwrap()
     throw this.error
   }
 
@@ -34,7 +36,7 @@ export class ErrorResult<E extends Error> {
   }
 }
 
-export type TypedResult<V, E extends Error> = Ok<V> | ErrorResult<E>
+export type TypedResult<V, E extends Error = Error> = Ok<V> | ErrorResult<E>
 
 export class Result {
   private constructor() {}

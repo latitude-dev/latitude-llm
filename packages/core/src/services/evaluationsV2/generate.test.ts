@@ -66,6 +66,13 @@ describe('generateEvaluationV2', () => {
       metric: LlmEvaluationMetric.Rating,
       configuration: {
         reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
         provider: 'openai',
         model: 'gpt-4o',
         criteria: 'criteria',

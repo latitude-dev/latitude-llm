@@ -14,7 +14,6 @@ import {
   EvaluationType,
   EvaluationV2,
   Experiment,
-  formatMessage,
   ProviderLogDto,
   Workspace,
 } from '../../browser'
@@ -29,7 +28,7 @@ import {
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
 } from '../../repositories'
-import { getColumnData } from '../datasets/utils'
+import { extractActualOutput, extractExpectedOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
 
@@ -101,17 +100,6 @@ export async function runEvaluationV2<
     )
   }
 
-  const conversation = buildConversation(providerLog)
-  if (conversation.at(-1)?.role != 'assistant') {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that does not end with an assistant message',
-      ),
-    )
-  }
-
-  const actualOutput = formatMessage(conversation.at(-1)!)
-
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) {
     return Result.error(new BadRequestError('Invalid evaluation type'))
@@ -128,31 +116,48 @@ export async function runEvaluationV2<
     return Result.error(new BadRequestError('Invalid evaluation metric'))
   }
 
-  let expectedOutput = undefined
-  if (dataset && datasetLabel && datasetRow) {
-    if (datasetRow.datasetId !== dataset.id) {
-      return Result.error(new BadRequestError('Row is not part of the dataset'))
-    }
-
-    if (!dataset.columns.find((c) => c.name === datasetLabel)) {
-      return Result.error(
-        new BadRequestError(`${datasetLabel} column not found in dataset`),
-      )
-    }
-
-    expectedOutput = getColumnData({
-      dataset: dataset,
-      row: datasetRow,
-      column: datasetLabel,
-    })
+  const conversation = buildConversation(providerLog)
+  if (conversation.at(-1)?.role != 'assistant') {
+    return Result.error(
+      new UnprocessableEntityError(
+        'Cannot evaluate a log that does not end with an assistant message',
+      ),
+    )
   }
 
-  if (metricSpecification.requiresExpectedOutput && !expectedOutput) {
-    return Result.error(new BadRequestError('Expected output is required'))
+  if (dataset && datasetLabel && datasetRow) {
+    if (datasetRow.datasetId !== dataset.id) {
+      return Result.error(
+        new UnprocessableEntityError(
+          'Cannot evaluate a row that is from a different dataset',
+        ),
+      )
+    }
+  } else if (metricSpecification.requiresExpectedOutput) {
+    return Result.error(
+      new UnprocessableEntityError(
+        'Cannot evaluate a log without a dataset row when expected output is required',
+      ),
+    )
   }
 
   let value
   try {
+    const actualOutput = await extractActualOutput({
+      providerLog: providerLog,
+      configuration: evaluation.configuration.actualOutput,
+    }).then((r) => r.unwrap())
+
+    let expectedOutput = undefined
+    if (dataset && datasetLabel && datasetRow) {
+      expectedOutput = await extractExpectedOutput({
+        dataset: dataset,
+        row: datasetRow,
+        column: datasetLabel,
+        configuration: evaluation.configuration.expectedOutput,
+      }).then((r) => r.unwrap())
+    }
+
     value = (await typeSpecification.run(
       {
         metric: evaluation.metric,

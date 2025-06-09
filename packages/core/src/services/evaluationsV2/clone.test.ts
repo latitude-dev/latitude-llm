@@ -56,6 +56,13 @@ describe('cloneEvaluationV2', () => {
       description: 'description',
       configuration: {
         reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
         provider: provider.name,
         model: 'gpt-4o',
         criteria: 'criteria',
@@ -123,6 +130,8 @@ describe('cloneEvaluationV2', () => {
         metric: LlmEvaluationMetric.Custom,
         configuration: {
           reverseScale: evaluation.configuration.reverseScale,
+          actualOutput: evaluation.configuration.actualOutput,
+          expectedOutput: evaluation.configuration.expectedOutput,
           provider: evaluation.configuration.provider,
           model: evaluation.configuration.model,
           prompt: expect.stringContaining(

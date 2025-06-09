@@ -1,11 +1,12 @@
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
 import {
+  ActualOutputConfiguration,
   DocumentLogFilterOptions,
   EvaluatedDocumentLog,
 } from '@latitude-data/core/browser'
-import useFetcher from '$/hooks/useFetcher'
-import { ROUTES } from '$/services/routes'
+import { useMemo, useState } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import { useMemo } from 'react'
 
 const EMPTY_ARRAY: [] = []
 export default function useEvaluatedDocumentLogs(
@@ -15,6 +16,7 @@ export default function useEvaluatedDocumentLogs(
     filterOptions,
     page,
     pageSize,
+    configuration,
     onFetched,
   }: {
     projectId: number
@@ -22,11 +24,14 @@ export default function useEvaluatedDocumentLogs(
     filterOptions: DocumentLogFilterOptions
     page: string | null | undefined
     pageSize: string | null
+    configuration?: ActualOutputConfiguration
     onFetched?: (logs: EvaluatedDocumentLog[]) => void
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
-  const fetcher = useFetcher<EvaluatedDocumentLog[], EvaluatedDocumentLog[]>(
+  const [error, setError] = useState<string>()
+
+  const fetcher = useFetcher<EvaluatedDocumentLog[]>(
     documentUuid
       ? ROUTES.api.projects
           .detail(projectId)
@@ -35,8 +40,15 @@ export default function useEvaluatedDocumentLogs(
             page: page ? Number(page) : undefined,
             pageSize: pageSize ? Number(pageSize) : undefined,
             filterOptions,
+            configuration: configuration
+              ? JSON.stringify(configuration)
+              : undefined,
           })
       : undefined,
+    {
+      onSuccess: () => setError(undefined),
+      onFail: (message) => setError(message),
+    },
   )
 
   const {
@@ -51,6 +63,7 @@ export default function useEvaluatedDocumentLogs(
       filterOptions,
       page,
       pageSize,
+      configuration,
     ],
     fetcher,
     {
@@ -61,5 +74,8 @@ export default function useEvaluatedDocumentLogs(
     },
   )
 
-  return useMemo(() => ({ data, mutate, isLoading }), [mutate, data, isLoading])
+  return useMemo(
+    () => ({ data, mutate, isLoading, error }),
+    [mutate, data, isLoading, error],
+  )
 }

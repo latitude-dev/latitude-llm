@@ -1,4 +1,6 @@
 import {
+  ACCESSIBLE_OUTPUT_FORMATS,
+  ActualOutputConfiguration,
   Commit,
   DocumentVersion,
   EvaluationMetric,
@@ -6,6 +8,7 @@ import {
   EvaluationSettings,
   EvaluationType,
   EvaluationV2,
+  ExpectedOutputConfiguration,
   Workspace,
 } from '../../browser'
 import { database, Database } from '../../client'
@@ -43,9 +46,12 @@ export async function validateEvaluationV2<
     )
   }
 
+  settings.name = settings.name.trim()
   if (!settings.name) {
     return Result.error(new BadRequestError('Name is required'))
   }
+
+  settings.description = settings.description.trim()
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[settings.type]
   if (!typeSpecification) {
@@ -57,14 +63,32 @@ export async function validateEvaluationV2<
     return Result.error(new BadRequestError('Invalid metric'))
   }
 
-  const parseResult = typeSpecification.configuration.safeParse(
+  const parsing = typeSpecification.configuration.safeParse(
     settings.configuration,
   )
-  if (parseResult.error) {
-    return Result.error(parseResult.error)
+  if (parsing.error) {
+    return Result.error(parsing.error)
   }
 
-  const typeValidateResult = await typeSpecification.validate(
+  const actualOutputValidation = await validateActualOutput({
+    mode: mode,
+    configuration: settings.configuration.actualOutput,
+  })
+  if (actualOutputValidation.error) {
+    return Result.error(actualOutputValidation.error)
+  }
+  settings.configuration.actualOutput = actualOutputValidation.value
+
+  const expectedOutputValidation = await validateExpectedOutput({
+    mode: mode,
+    configuration: settings.configuration.expectedOutput,
+  })
+  if (expectedOutputValidation.error) {
+    return Result.error(expectedOutputValidation.error)
+  }
+  settings.configuration.expectedOutput = expectedOutputValidation.value
+
+  const typeMetricValidation = await typeSpecification.validate(
     {
       mode: mode,
       metric: settings.metric,
@@ -75,19 +99,25 @@ export async function validateEvaluationV2<
     },
     db,
   )
-  if (typeValidateResult.error) return typeValidateResult
-
-  settings.configuration = typeValidateResult.value
+  if (typeMetricValidation.error) {
+    return Result.error(typeMetricValidation.error)
+  }
+  settings.configuration = {
+    ...typeMetricValidation.value,
+    reverseScale: settings.configuration.reverseScale,
+    actualOutput: settings.configuration.actualOutput,
+    expectedOutput: settings.configuration.expectedOutput,
+  }
 
   const repository = new EvaluationsV2Repository(workspace.id, db)
-  const evaluationsResult = await repository.listAtCommitByDocument({
+  const listing = await repository.listAtCommitByDocument({
     commitUuid: commit.uuid,
     documentUuid: document.documentUuid,
   })
-
-  if (evaluationsResult.error) return Result.error(evaluationsResult.error)
-
-  const evaluations = evaluationsResult.value
+  if (listing.error) {
+    return Result.error(listing.error)
+  }
+  const evaluations = listing.value
 
   if (
     evaluations.find(
@@ -122,5 +152,90 @@ export async function validateEvaluationV2<
       enableSuggestions: options.enableSuggestions,
       autoApplySuggestions: options.autoApplySuggestions,
     },
+  })
+}
+
+const FIELD_ACCESSOR_DEPTH_LIMIT = 10
+
+async function validateActualOutput({
+  configuration,
+}: {
+  mode: 'create' | 'update'
+  configuration?: ActualOutputConfiguration
+}) {
+  if (!configuration) {
+    configuration = {
+      messageSelection: 'last',
+      parsingFormat: 'string',
+    }
+  }
+
+  configuration.fieldAccessor = configuration.fieldAccessor?.trim()
+  if (
+    ACCESSIBLE_OUTPUT_FORMATS.includes(configuration.parsingFormat) &&
+    configuration.fieldAccessor
+  ) {
+    let depth = 0
+    for (let i = 0; i < configuration.fieldAccessor.length; i++) {
+      const c = configuration.fieldAccessor[i]
+      if (c === '.' || c === '[') depth++
+    }
+
+    if (depth > FIELD_ACCESSOR_DEPTH_LIMIT) {
+      return Result.error(new BadRequestError('Field accessor is too complex'))
+    }
+  } else if (configuration.fieldAccessor) {
+    return Result.error(
+      new BadRequestError('Field accessor is not supported for this format'),
+    )
+  }
+
+  // Note: all settings are explicitly returned to ensure we don't
+  // carry dangling fields from the original settings object
+  return Result.ok({
+    messageSelection: configuration.messageSelection,
+    contentFilter: configuration.contentFilter,
+    parsingFormat: configuration.parsingFormat,
+    fieldAccessor: configuration.fieldAccessor,
+  })
+}
+
+async function validateExpectedOutput({
+  configuration,
+}: {
+  mode: 'create' | 'update'
+  configuration?: ExpectedOutputConfiguration
+}) {
+  if (!configuration) {
+    configuration = {
+      parsingFormat: 'string',
+    }
+  }
+
+  configuration.fieldAccessor = configuration.fieldAccessor?.trim()
+  if (
+    ACCESSIBLE_OUTPUT_FORMATS.includes(configuration.parsingFormat) &&
+    configuration.fieldAccessor
+  ) {
+    let depth = 0
+    for (let i = 0; i < configuration.fieldAccessor.length; i++) {
+      const c = configuration.fieldAccessor[i]
+      if (c === '.' || c === '[') depth++
+    }
+
+    if (depth > FIELD_ACCESSOR_DEPTH_LIMIT) {
+      return Result.error(new BadRequestError('Field accessor is too complex'))
+    }
+  } else if (configuration.fieldAccessor) {
+    return Result.error(
+      new BadRequestError('Field accessor is not supported for this format'),
+    )
+  }
+
+  // Note: all settings are explicitly returned to ensure we don't
+  // carry dangling fields from the original settings object
+  return Result.ok({
+    parsingFormat: configuration.parsingFormat,
+    fieldAccessor: configuration.fieldAccessor,
   })
 }

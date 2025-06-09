@@ -1,22 +1,22 @@
 import { z } from 'zod'
 import {
-  BaseEvaluationConfiguration,
-  BaseEvaluationResultError,
-  BaseEvaluationResultMetadata,
+  baseEvaluationConfiguration,
+  baseEvaluationResultError,
+  baseEvaluationResultMetadata,
 } from './shared'
 
-const llmEvaluationConfiguration = BaseEvaluationConfiguration.extend({
+const llmEvaluationConfiguration = baseEvaluationConfiguration.extend({
   provider: z.string(),
   model: z.string(),
 })
-const llmEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({
+const llmEvaluationResultMetadata = baseEvaluationResultMetadata.extend({
   evaluationLogId: z.number(),
   reason: z.string(),
   tokens: z.number(),
   cost: z.number(),
   duration: z.number(),
 })
-const llmEvaluationResultError = BaseEvaluationResultError.extend({
+const llmEvaluationResultError = baseEvaluationResultError.extend({
   runErrorId: z.number().optional(),
 })
 

@@ -52,6 +52,13 @@ export async function createEvaluationV2<
       metric: args.metric ?? RuleEvaluationMetric.ExactMatch,
       configuration: args.configuration ?? {
         reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
         caseInsensitive: false,
       },
     },

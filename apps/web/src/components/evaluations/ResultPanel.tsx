@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
 import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
 import { MetadataInfoTabs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataInfoTabs'
 import { DocumentLogParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/logs/_components/DocumentLogs/DocumentLogInfo/Metadata'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { MetadataItem } from '$/components/MetadataItem'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
@@ -13,6 +13,7 @@ import useDatasetRowCount from '$/stores/datasetRows/count'
 import useDatasetRowPosition from '$/stores/datasetRows/position'
 import useDocumentLog from '$/stores/documentLogWithMetadata'
 import {
+  ACCESSIBLE_OUTPUT_FORMATS,
   Commit,
   Dataset,
   DatasetRow,
@@ -21,6 +22,7 @@ import {
   EvaluationMetric,
   EvaluationResultV2,
   EvaluationType,
+  baseEvaluationConfiguration,
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -37,9 +39,19 @@ import { format } from 'date-fns'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
-import { MetadataItem } from '$/components/MetadataItem'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
+
+const PARSING_FORMAT_LABELS = baseEvaluationConfiguration.shape.actualOutput
+  .unwrap()
+  .shape.parsingFormat.options.reduce(
+    (acc, option) => {
+      acc[option] = option.toUpperCase().split('_').join(' ')
+      return acc
+    },
+    {} as Record<string, string>,
+  )
 
 const DataGrid = dynamic(
   () =>
@@ -175,10 +187,28 @@ function ResultPanelMetadata<
         <>
           <MetadataItem
             label='Actual output'
-            tooltip='Last response from the model conversation'
+            tooltip='Generated output from the model conversation'
             stacked
           >
-            <div className='pt-2'>
+            <div className='flex flex-col gap-2'>
+              {ACCESSIBLE_OUTPUT_FORMATS.includes(
+                result.metadata!.configuration.actualOutput?.parsingFormat ||
+                  'string',
+              ) ? (
+                <Text.H6 color='foregroundMuted' noWrap ellipsis>
+                  Parsed from{' '}
+                  {
+                    PARSING_FORMAT_LABELS[
+                      result.metadata!.configuration.actualOutput!.parsingFormat
+                    ]
+                  }
+                  {!!result.metadata!.configuration.actualOutput
+                    ?.fieldAccessor &&
+                    ` using field '${result.metadata!.configuration.actualOutput!.fieldAccessor}'`}
+                </Text.H6>
+              ) : (
+                <div />
+              )}
               <TextArea
                 value={result.metadata!.actualOutput}
                 minRows={1}
@@ -190,7 +220,7 @@ function ResultPanelMetadata<
           {result.metadata!.expectedOutput && (
             <MetadataItem
               label='Expected output'
-              tooltip='Batch data from the dataset column'
+              tooltip='Labeled output from the dataset column'
               action={
                 dataset && !dataset.deletedAt && evaluatedDatasetRow ? (
                   <Button

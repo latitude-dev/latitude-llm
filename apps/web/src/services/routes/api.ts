@@ -177,8 +177,10 @@ export const API_ROUTES = {
                   page,
                   pageSize,
                   filterOptions,
+                  configuration,
                 }: Partial<PaginationParameters> & {
                   filterOptions: DocumentLogFilterOptions
+                  configuration?: string
                 }) =>
                   generateDocumentLogsApiRouteWithParams({
                     path: `${documentRoot}/evaluatedLogs`,
@@ -186,7 +188,9 @@ export const API_ROUTES = {
                       page,
                       pageSize,
                       filterOptions,
+                      configuration,
                     },
+                    paramsToEncode: ['configuration'],
                   }),
               },
               logs: {
