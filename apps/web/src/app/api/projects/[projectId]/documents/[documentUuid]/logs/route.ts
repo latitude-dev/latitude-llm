@@ -28,11 +28,15 @@ export const GET = errorHandler(
       if (queryParams.isEmptyResponse) {
         return NextResponse.json([], { status: 200 })
       }
+      const extendedFilterOptions = {
+        ...queryParams.filterOptions,
+        filterErrors: queryParams.excludeErrors,
+      }
 
       const rows = await computeDocumentLogsWithMetadataPaginated({
         workspace,
         documentUuid,
-        extendedFilterOptions: queryParams.filterOptions,
+        extendedFilterOptions,
         page: Number(queryParams.page),
         size: Number(queryParams.pageSize),
       })
