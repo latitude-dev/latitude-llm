@@ -6,6 +6,7 @@ import {
 } from '../../../../../repositories'
 import { defineLatteTool } from '../types'
 import { z } from 'zod'
+import { scanDocuments } from '../../helpers'
 
 const readPrompt = defineLatteTool(
   async ({ projectId, versionUuid, path }, { workspace }) => {
@@ -18,15 +19,31 @@ const readPrompt = defineLatteTool(
     const commit = commitResult.unwrap()
 
     const docsScope = new DocumentVersionsRepository(workspace.id)
+    const documentsResult = await docsScope.getDocumentsAtCommit(commit)
+    if (!documentsResult.ok) {
+      return Result.error(documentsResult.error!)
+    }
+    const documents = documentsResult.unwrap()
 
-    const docResult = await docsScope.getDocumentByPath({
-      path,
+    const document = documents.find((doc) => doc.path === path)
+    if (!document) {
+      return Result.error(
+        new LatitudeError(
+          `Document with path "${path}" not found in commit ${commit.uuid}.`,
+        ),
+      )
+    }
+
+    const metadataResult = await scanDocuments({
+      documents,
       commit,
+      workspace,
     })
-    if (!docResult.ok) return docResult as ErrorResult<LatitudeError>
+    if (!metadataResult.ok) return metadataResult as ErrorResult<LatitudeError>
+    const metadatas = metadataResult.unwrap()
+    const metadata = metadatas[document.path]
 
-    const document = docResult.unwrap()
-    return Result.ok(document.content)
+    return Result.ok({ content: document.content, errors: metadata?.errors })
   },
   z.object({
     projectId: z.number(),

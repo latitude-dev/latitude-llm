@@ -17,6 +17,7 @@ import { database } from '../../../../../client'
 import { promptPresenter } from '../presenters'
 import { WebsocketClient } from '../../../../../websockets/workers'
 import { z } from 'zod'
+import { scanDocuments } from '../../helpers'
 
 async function executeEditAction(
   {
@@ -150,12 +151,32 @@ const editProject = defineLatteTool(
         data: { draftUuid, updates: updatedDocuments },
       })
 
+      const newDocuments = await documentsScope
+        .getDocumentsAtCommit(commit)
+        .then((r) => r.unwrap())
+
+      const metadatasResult = await scanDocuments(
+        {
+          documents: newDocuments,
+          commit,
+          workspace,
+        },
+        tx,
+      )
+
+      if (!metadatasResult.ok) {
+        return Result.error(metadatasResult.error!)
+      }
+
+      const metadatas = metadatasResult.unwrap()
+
       return Result.ok(
         updatedDocuments.map((document) =>
           promptPresenter({
             document,
             versionUuid: commit.uuid,
             projectId,
+            metadata: metadatas[document.path],
           }),
         ),
       )
