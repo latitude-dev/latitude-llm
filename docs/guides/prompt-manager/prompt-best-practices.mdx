@@ -50,7 +50,7 @@ Writing effective prompts is key to getting the best results from AI models. Her
 
 ## Latitude-Specific Tips
 
-- **Leverage PromptL**: Use variables (`{{ }}`), conditionals (`<if>`), loops (`<for>`), and snippets (`<prompt path="...">`) for dynamic and reusable prompts. See the [PromptL documentation](/promptl/getting-started/introduction).
+- **Leverage PromptL**: Use variables (`{{ }}`), conditionals (`{{ if … }}`), loops (`{{ for … }}`), and snippets (`<prompt path="...">`) for dynamic and reusable prompts. See the [PromptL documentation](/promptl/getting-started/introduction).
 - **Use Configuration Wisely**: Tune `temperature`, `maxTokens`, etc., in the [configuration block](/guides/prompt-manager/configuration) for desired output style and length.
 - **Utilize Tools**: Don't make the model guess information it can look up. Provide [Tools](/guides/prompt-manager/tools) for accessing external data or functions (e.g., `latitude/search` for web searches).
 - **Employ Agents for Autonomy**: For tasks requiring planning and dynamic tool use, define your prompt as an [Agent](/guides/prompt-manager/agents).
