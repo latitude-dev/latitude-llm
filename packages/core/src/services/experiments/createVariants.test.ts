@@ -1,5 +1,5 @@
 import { vi, beforeEach, describe, expect, it } from 'vitest'
-import { publisher } from '../../events/publisher'
+import { publisher } from '@latitude-data/core/events/publisher'
 import {
   Commit,
   Dataset,

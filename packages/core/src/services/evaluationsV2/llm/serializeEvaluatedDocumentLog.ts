@@ -5,7 +5,7 @@ import {
   buildConversation,
   formatConversation,
   formatMessage,
-} from '../../../browser'
+} from '@latitude-data/core/browser'
 import { serializeAggregatedProviderLog } from '../../documentLogs/serialize'
 import serializeProviderLog from '../../providerLogs/serialize'
 

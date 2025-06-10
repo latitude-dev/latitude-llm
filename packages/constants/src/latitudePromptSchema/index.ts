@@ -4,7 +4,6 @@ import { AgentToolsMap, resolveRelativePath } from '../index'
 import { azureConfig as azureConfigSchema } from './providers/azure'
 import { JSONSchema7 } from 'json-schema'
 import { buildToolsSchema } from './toolsSchema'
-import { zodJsonSchema } from './zodJsonSchema'
 
 export function latitudePromptConfigSchema({
   providerNames,
@@ -22,7 +21,7 @@ export function latitudePromptConfigSchema({
   const tools = buildToolsSchema({ integrationNames })
   const outputSchema = noOutputSchemaConfig
     ? z.never({ message: noOutputSchemaConfig?.message }).optional()
-    : zodJsonSchema.optional()
+    : undefined
 
   const agentsConfigSchema =
     fullPath && agentToolsMap
@@ -70,7 +69,7 @@ export function latitudePromptConfigSchema({
     [MAX_STEPS_CONFIG_NAME]: z.number().min(1).max(150).optional(),
     tools: tools.optional(),
     agents: agentsConfigSchema.optional(),
-    schema: outputSchema,
+    ...(outputSchema ? { schema: outputSchema } : {}),
     azure: azureConfigSchema.optional(),
   })
 }

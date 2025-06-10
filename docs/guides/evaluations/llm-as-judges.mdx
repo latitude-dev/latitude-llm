@@ -3,126 +3,130 @@ title: LLM-as-Judges
 description: Use language models to evaluate the quality, style, and correctness of prompt outputs.
 ---
 
-- **How it works**: Uses another language model (the "judge") to score or critique the output of your target prompt based on specific criteria (e.g., helpfulness, clarity, adherence to instructions).
-- **Best for**: Subjective criteria, complex assessments, evaluating nuanced qualities like creativity or tone.
+LLM-as-Judge evaluations leverage the reasoning capabilities of language models to assess the quality of your target prompt's outputs based on defined criteria. This approach is powerful for evaluating subjective, complex, or nuanced aspects that are hard to capture with simple rules.
 
-## Setup
+## How it Works
 
-<Steps>
-  <Step title="Go to evaluations tab">
-    Go to evaluations tab on a prompt in one of your projects.
-  </Step>
-  <Step title="Add evaluation">
-    On the top right corner, click on the "Add evaluation" button.
-  </Step>
-  <Step title="Choose LLM-as-a-judge">
-    Choose "LLM-as-a-judge" tab in the evaluation modal.
-    ![Choose LLM-as-a-judge](/assets/new-llm-evaluation-modal.png)
-  </Step>
-  <Step title="Choose a metric">
-    ![Choose LLM-as-a-judge metric](/assets/llm-evaluation-metric-dropdown.png)
-  </Step>
-</Steps>
+1.  **Target Prompt Run**: Your main prompt generates an output (log).
+2.  **Evaluation Trigger**: The LLM-as-Judge evaluation is run on that log.
+3.  **Judge Prompt Execution**: Latitude sends the original input, the target prompt's output, and your _evaluation prompt_ (which defines the criteria) to a separate "judge" LLM.
+4.  **Judgment**: The judge LLM analyzes the target output based on the criteria and returns a score, classification, or textual feedback.
+5.  **Result Storage**: The judgment is stored alongside the original log.
 
-## Metrics
+## Use Cases
 
-<ParamField path="Binary">
-  Judges whether the response meets the criteria. The resulting score is "passed" or "failed"
-</ParamField>
+LLM-as-Judge is ideal for:
 
-<ParamField path="Rating">
-  Judges the response by rating it under a criteria. The resulting score is the rating
-</ParamField>
+- **Subjective Qualities**: Evaluating helpfulness, coherence, creativity, tone, safety, faithfulness to instructions.
+- **Complex Criteria**: Assessing responses based on multiple factors or contextual understanding.
+- **Flexible Outputs**: Evaluating scenarios where valid responses can vary significantly.
+- **Natural Language Feedback**: Generating detailed textual feedback on why an output is good or bad.
 
-<ParamField path="Comparison">
-  Judges the response by comparing the criteria to the expected output. The resulting score is the percentage of compared criteria that is met
-</ParamField>
+## Trade-offs
 
-<ParamField path="Custom">
-  Judges the response under a criteria using a custom prompt. The resulting score is the value of criteria that is met
-</ParamField>
+- **Cost**: Each evaluation run consumes tokens from the judge model provider.
+- **Latency**: Can be slower than programmatic rules.
+- **Consistency**: Judge LLM responses might have slight variations between runs.
+- **Potential Bias**: The judge LLM might have its own biases.
 
-## Expected output
+For objective checks (format, keywords), consider [Programmatic Rules](/guides/evaluations/programmatic_rules). For direct human feedback, use [Manual Evaluations](/guides/evaluations/humans-in-the-loop).
 
-The expected output, also known as label, refers to the correct or ideal response that the language model should generate for a given prompt. You can create datasets with expected output columns to evaluate prompts with ground truth.
+## Setting Up an LLM-as-Judge Evaluation
 
-<Note>**Comparison** and **Custom (labeled)** metrics require expected output.</Note>
+1.  Navigate to your prompt's "Evaluations" tab.
+2.  Click "New Evaluation".
+3.  Choose "LLM as Judge" as the type.
+4.  **Configure the Judge**: Select the AI Provider and Model that will act as the judge for this evaluation.
+5.  **Define Criteria**: Choose either an Evaluation Template or create a Custom Evaluation.
 
-## Templates
+## Using Evaluation Templates
 
-We have a list of pre-configured LLM-as-a-judge templates that you can use to quickly set up evaluations. These templates cover common evaluation scenarios and can be customized to fit your specific needs.
+Latitude provides pre-built templates for common evaluation criteria (e.g., Factuality, Conciseness, Toxicity). Using a template automatically populates the evaluation prompt for the judge LLM.
 
-- **Adaptability**
-  Evaluate how well the response adapts to user preferences or context
-- **Bias and Fairness**
-  Assess whether the response is free of bias or unfair generalizations
-- **Coherence and Fluency**
-  Evaluate the clarity and flow of the response
-- **Conciseness**
-  Assess whether the response is brief but informative
-- **Consistency**
-  Check if the response is consistent with prior information or context
-- **Creativity**
-  Evaluate the originality and imagination shown in the response
-- **Domain Expertise**
-  Assess the response for accuracy and knowledge in a specific domain
-- **Engagement or User Experience**
-  Rate how well the response engages the user or enhances the conversation
-- **Error Handling and Recovery**
-  Evaluate how well the response corrects user errors or misunderstandings
-- **Ethical Compliance**
-  Determine if the response follows ethical standards
-- **Explainability**
-  Rate how clearly the response explains the concept or information
-- **Factuality**
-  Evaluates whether the following response is factually accurate
-- **Faithfulness to Instructions**
-  Assess how well the response follows the given instructions
-- **Helpfulness and Informativeness**
-  Rate how helpful and informative the response is
-- **Formality and Style**
-  Evaluate whether the response matches the desired formality or style
-- **Hallucination Detection**
-  Detect if the response introduces unsupported or false information
-- **Harmlessness and Ethical Considerations**
-  Check if the response promotes ethical and non-harmful behavior
-- **Novelty**
-  Assess the originality of the response in its content or style
-- **Humor or Emotional Understanding**
-  Rate whether the response appropriately uses humor or addresses emotional content
-- **Helpfulness and Informativeness**
-  Rate how helpful and informative the response is
-- **Redundancy**
-  Check if the response repeats information unnecessarily
-- **Relevance**
-  Rate how well the response addresses the given context or query
-- **Response Time or Latency**
-  Measure whether the response time is suitable for real-time interaction
-- **Satisfaction**
-  Rate overall satisfaction with the response
-- **Specificity**
-  Evaluate how specific and relevant the response is to the query
-- **Long-Term Consistency (in Multi-turn Dialogues)**
-  Check if the response remains consistent over multiple turns of dialogue
-- **Novelty**
-  Assess the originality of the response in its content or style
-- **Persuasiveness**
-  Rate how convincing the response is
-- **Toxicity and Safety**
-  Check if the response contains harmful or inappropriate content
-- **Uncertainty or Confidence**
-  Evaluate if the response expresses appropriate confidence or acknowledges uncertainty
-- **Redundancy**
-  Check if the response repeats information unnecessarily
-- **Relevance**
-  Rate how well the response addresses the given context or query
-- **Response Time or Latency**
-  Measure whether the response time is suitable for real-time interaction
-- **Satisfaction**
-  Rate overall satisfaction with the response
-- **Specificity**
-  Evaluate how specific and relevant the response is to the query
-- **Toxicity and Safety**
-  Check if the response contains harmful or inappropriate content
-- **Uncertainty or Confidence**
-  Evaluate if the response expresses appropriate confidence or acknowledges uncertainty
+- Select "Use a template" during setup.
+- Browse and choose the template that fits your needs.
+- You can often customize the template prompt further.
+
+[See the full list of available templates](/guides/evaluations/evaluation-templates).
+
+## Creating Custom Evaluations
+
+For unique criteria, create a custom evaluation from scratch.
+
+1.  Select "Custom Evaluation" during setup.
+2.  Choose the desired output type for the judgment:
+    - **Numeric**: For scores within a range.
+    - **Boolean**: For simple pass/fail checks.
+    - **Text**: For categorical labels or free-form feedback.
+3.  **Write the Evaluation Prompt**: This is the crucial step. You need to write a prompt that instructs the _judge LLM_ how to evaluate the _target prompt's output_. Include:
+    - Clear criteria for evaluation.
+    - Placeholders for the target prompt's input (`{{input}}`) and output (`{{output}}`).
+    - Instructions for the desired JSON output format based on the chosen type.
+
+### Custom Evaluation Output Formats
+
+Your evaluation prompt **must** instruct the judge LLM to return JSON in one of these formats:
+
+**1. Numeric Evaluation:**
+
+- **Use Case**: Scoring on a scale (e.g., 0-10).
+- **Setup**: Define min/max values (e.g., 0 and 10).
+- **Judge Prompt Instructions**: Tell the judge to evaluate based on criteria and return a score within the defined range.
+- **Required JSON Output**:
+  ```json
+  {
+    "result": <numeric_score>, // Must be within min/max range
+    "reason": "<explanation_for_the_score>"
+  }
+  ```
+- **Example Prompt Snippet**: "...Evaluate the output on a scale from 0 to 10 based on its helpfulness. Return your score and reasoning in the specified JSON format."
+
+**2. Boolean Evaluation:**
+
+- **Use Case**: Checking if a specific condition is met (true/false).
+- **Setup**: No specific range needed.
+- **Judge Prompt Instructions**: Tell the judge to check for a specific condition.
+- **Required JSON Output**:
+  ```json
+  {
+    "result": <true_or_false>,
+    "reason": "<explanation_for_the_result>"
+  }
+  ```
+- **Example Prompt Snippet**: "...Does the provided output directly answer the user's question? Return true or false and your reasoning in the specified JSON format."
+
+**3. Text Evaluation:**
+
+- **Use Case**: Categorization or detailed qualitative feedback.
+- **Setup**: Define allowed category labels (optional) or allow free text.
+- **Judge Prompt Instructions**: Tell the judge to provide a textual assessment or category.
+- **Required JSON Output**:
+  ```json
+  {
+    "result": "<text_label_or_feedback>",
+    "reason": "<optional_explanation>"
+  }
+  ```
+- **Example Prompt Snippet (Categorization)**: "...Classify the output's tone as 'Formal', 'Informal', or 'Neutral'. Return the label and reasoning in the specified JSON format."
+- **Example Prompt Snippet (Feedback)**: "...Provide detailed feedback on the clarity and coherence of the output. Return your feedback in the specified JSON format."
+
+### Best Practices for Custom Judge Prompts
+
+- **Be Specific**: Clearly define the criteria.
+- **Use Examples (Few-Shot)**: Include examples of good/bad outputs and desired judgments in the prompt.
+- **Explicitly Request JSON**: Remind the judge model to output in the correct JSON format.
+- **Iterate**: Test your evaluation prompt in the playground or on sample logs.
+
+## Viewing Evaluation Results
+
+Once evaluations run (either live or in batch), you can see the results:
+
+- **Logs View**: Each log entry will show the scores/results from applicable evaluations.
+- **Evaluations Tab**: View aggregated results, score distributions, and trends for each evaluation over time.
+- **Prompt Suggestions**: Evaluation results feed into the [Prompt Suggestions](/guides/evaluations/prompt-suggestions) feature.
+
+## Next Steps
+
+- Explore [Programmatic Rule Evaluations](/guides/evaluations/programmatic_rules)
+- Learn about [HITL (Humans In The Loop)](/guides/evaluations/humans-in-the-loop)
+- Understand how to [Run Evaluations](/guides/evaluations/running-evaluations)

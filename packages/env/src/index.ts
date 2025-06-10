@@ -180,7 +180,6 @@ export const env = createEnv({
     SENTRY_PROJECT: z.string().optional(),
 
     // Gateway
-    GATEWAY_WORKERS: z.coerce.number().optional(),
     GATEWAY_BIND_ADDRESS: z.string(),
     GATEWAY_BIND_PORT: z.coerce.number(),
     GATEWAY_HOSTNAME: z.string(),

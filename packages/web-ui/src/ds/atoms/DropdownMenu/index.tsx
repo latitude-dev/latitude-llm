@@ -49,7 +49,6 @@ export const TriggerButton = ({
 export type MenuOption = {
   label: string
   onClick: () => void
-  closeDropdown?: () => void
   onElementClick?: (e: MouseEvent) => void
   type?: 'normal' | 'destructive'
   iconProps?: IconProps
@@ -62,7 +61,6 @@ export type MenuOption = {
 function DropdownItem({
   iconProps,
   onClick,
-  closeDropdown,
   onElementClick,
   type = 'normal',
   label,
@@ -74,8 +72,7 @@ function DropdownItem({
     if (disabled) return
 
     onClick()
-    closeDropdown?.()
-  }, [disabled, onClick, closeDropdown])
+  }, [disabled, onClick])
   return (
     <DropdownMenuItem
       onClick={onElementClick}
@@ -123,9 +120,6 @@ export function DropdownMenu({
 }: Props) {
   const [open, setOpen] = useState(false)
   const isFn = typeof triggerButtonProps === 'function'
-  const closeDropdown = useCallback(() => {
-    setOpen(false)
-  }, [])
   return (
     <DropdownMenuRoot
       onOpenChange={(newOpen: boolean) => {
@@ -160,11 +154,7 @@ export function DropdownMenu({
           {options
             .filter((option) => !option.hidden)
             .map((option, index) => (
-              <DropdownItem
-                key={index}
-                {...option}
-                closeDropdown={closeDropdown}
-              />
+              <DropdownItem key={index} {...option} />
             ))}
         </DropdownMenuContent>
       </DropdownMenuPortal>

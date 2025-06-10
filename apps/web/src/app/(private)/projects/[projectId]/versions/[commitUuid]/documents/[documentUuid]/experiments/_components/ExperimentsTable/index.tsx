@@ -1,3 +1,5 @@
+'use client'
+
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCommitsFromProject } from '$/stores/commitsStore'
 import useDatasets from '$/stores/datasets'

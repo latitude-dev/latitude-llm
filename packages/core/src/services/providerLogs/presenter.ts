@@ -1,7 +1,7 @@
 import { omit } from 'lodash-es'
 
+import { buildProviderLogResponse } from '@latitude-data/core/services/providerLogs/buildResponse'
 import { ProviderLog, ProviderLogDto } from '../../browser'
-import { buildProviderLogResponse } from './buildResponse'
 
 export default function providerLogPresenter(
   providerLog: ProviderLog,

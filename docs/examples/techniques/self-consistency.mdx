@@ -5,65 +5,45 @@ description: 'Learn how to implement self-consistency to improve AI reasoning re
 
 ## What is Self-Consistency?
 
-Self-consistency is a prompting technique that improves the reliability of AI reasoning by generating multiple responses to the same question and then selecting the most consistent answer through majority voting. Unlike traditional Chain-of-Thought prompting that uses greedy decoding for a single reasoning path, self-consistency leverages diverse sampling to explore multiple reasoning perspectives before converging on the most reliable answer.
+Self-consistency is a prompting technique that improves the reliability of AI reasoning by generating multiple responses to the same question and then selecting the most consistent answer through majority voting. This technique is particularly effective for complex reasoning tasks where a single response might be unreliable.
 
 ## Why Use Self-Consistency?
 
-- **Improved Accuracy**: Multiple samples reduce the impact of random errors and greedy decoding limitations
-- **Better Reasoning**: Helps identify the most logical solution path from diverse perspectives
-- **Reduced Hallucinations**: Inconsistent responses are filtered out through majority voting
-- **Confidence Assessment**: Provides pseudo-probability likelihood of answer correctness
-- **Complex Problem Solving**: Particularly effective for math, logic, and multi-step reasoning where single attempts may fail
-- **Robust Decision Making**: Overcomes limitations of single reasoning paths in ambiguous scenarios
+- **Improved Accuracy**: Multiple samples reduce the impact of random errors
+- **Better Reasoning**: Helps identify the most logical solution path
+- **Reduced Hallucinations**: Inconsistent responses are filtered out
+- **Confidence Assessment**: Shows how certain the AI is about its answers
+- **Complex Problem Solving**: Particularly effective for math, logic, and multi-step reasoning
 
 ## Basic Implementation in Latitude
 
-Here's a simple self-consistency example for classification tasks:
+Here's a simple self-consistency example for mathematical reasoning:
 
-```markdown Classification with Self-Consistency
+```markdown Mathematical Reasoning
 ---
 provider: OpenAI
 model: gpt-4o
 temperature: 0.7
 ---
 
-# Content Classification
+# Mathematical Problem Solving
 
-Classify the following content and explain your reasoning step by step.
+Solve the following problem step by step. Show your reasoning clearly.
 
-## Content:
-{{ content_to_classify }}
+## Problem:
+{{ math_problem }}
 
-## Classification Process:
-Let me analyze this step by step:
+## Solution:
+Let me work through this step by step:
 
-1. **Content Analysis:**
-   - What type of content is this?
-   - What are the key indicators?
+1. **Understanding the problem:**
 
-2. **Context Evaluation:**
-   - What contextual clues are present?
-   - How do tone and language affect classification?
+2. **Setting up the equation:**
 
-3. **Risk Assessment:**
-   - What potential impacts should be considered?
-   - Are there any warning signs?
+3. **Solving step by step:**
 
-4. **Final Classification:**
-   Based on my analysis: [CATEGORY]
-
-**Reasoning:** [Detailed explanation of decision]
+4. **Final answer:**
 ```
-
-## How Self-Consistency Works
-
-The self-consistency process follows three key steps:
-
-1. **Diverse Path Generation**: The same prompt is submitted multiple times with higher temperature settings (0.6-0.8) to encourage different reasoning approaches and perspectives
-2. **Answer Extraction**: Each response is analyzed to extract the core answer or classification, regardless of the reasoning path taken
-3. **Majority Voting**: The most frequently occurring answer across all samples is selected as the final result
-
-This approach provides a form of confidence scoring - answers that appear consistently across multiple reasoning paths are more likely to be correct than those that appear only once.
 
 ## Advanced Implementation with Multiple Samples
 
@@ -325,9 +305,9 @@ I am a general analyst specializing in systematic problem-solving and critical t
 <Accordion title="Sample Generation">
 **Optimal Sampling**:
 - Use 3-5 samples for most problems (balance cost vs. accuracy)
-- Increase temperature (0.6-0.8) to encourage diverse reasoning paths and overcome greedy decoding
+- Increase temperature (0.6-0.8) to encourage diverse reasoning paths
 - Ensure each sample approaches the problem independently
-- Vary the prompt slightly to encourage different analytical perspectives
+- Vary the prompt slightly to encourage different perspectives
 
 **Quality Control**:
 - Generate enough samples to identify patterns
@@ -352,12 +332,11 @@ I am a general analyst specializing in systematic problem-solving and critical t
 
 <Accordion title="Problem Selection">
 **Best Use Cases**:
-- Classification tasks with potential ambiguity
 - Mathematical word problems
 - Logical reasoning puzzles
 - Multi-step analytical tasks
-- Questions with clear right/wrong answers where reasoning path matters
-- Security-sensitive decisions requiring high confidence
+- Questions with clear right/wrong answers
+- Problems where reasoning path matters
 
 **Less Suitable Cases**:
 - Creative writing tasks
@@ -374,11 +353,10 @@ I am a general analyst specializing in systematic problem-solving and critical t
 - Balance sample count with accuracy needs
 
 **Cost Management**:
-- Start with fewer samples and increase if needed based on consistency scores
-- Use cheaper models for initial sampling, better models for final analysis
-- Implement confidence thresholds to determine optimal sample count
-- Consider the cost trade-off: higher accuracy vs. increased computational expense
-- Remember that self-consistency has high costs but provides pseudo-probability confidence
+- Start with fewer samples and increase if needed
+- Use cheaper models for initial sampling, better models for analysis
+- Implement confidence thresholds to determine sample count
+- Consider using different models for diversity
 </Accordion>
 </AccordionGroup>
 
@@ -498,17 +476,32 @@ Analyze the uncertainty in our solutions
 
 Self-consistency works well combined with other prompting techniques:
 
-- **Chain-of-Thought + Self-Consistency**: Generate multiple detailed reasoning chains to overcome greedy decoding limitations
-- **Few-Shot + Self-Consistency**: Use examples to guide consistent reasoning patterns across multiple samples
-- **Role-Playing + Self-Consistency**: Have different expert personas solve the same problem independently
-- **Iterative Refinement + Self-Consistency**: Use consensus to improve solution quality through multiple rounds
+- **Chain-of-Thought + Self-Consistency**: Generate multiple detailed reasoning chains
+- **Few-Shot + Self-Consistency**: Use examples to guide consistent reasoning patterns
+- **Role-Playing + Self-Consistency**: Have different expert personas solve the same problem
+- **Iterative Refinement + Self-Consistency**: Use consensus to improve solution quality
 
-The key is to maintain the core principle: generate multiple independent solutions and use agreement as a signal of reliability, while addressing the inherent limitations of single-path reasoning.
+The key is to maintain the core principle: generate multiple independent solutions and use agreement as a signal of reliability.
 
 ## Related Techniques
 
 Explore these complementary prompting techniques to enhance your AI applications:
 
+### Core Reasoning Techniques
 - **[Chain-of-Thought](./chain-of-thought)** - Break down complex problems into step-by-step reasoning
 - **[Tree-of-Thoughts](./tree-of-thoughts)** - Explore multiple reasoning paths systematically
 - **[Few-Shot Learning](./few-shot-learning)** - Use examples to guide AI behavior and improve consistency
+
+### Advanced Reasoning Methods
+- **[Iterative Refinement](./iterative-refinement)** - Progressively improve answers through multiple iterations
+- **[Meta-Prompting](./meta-prompting)** - Use AI to optimize and improve prompts themselves
+- **[Socratic Questioning](./socratic-questioning)** - Guide AI through systematic questioning approaches
+
+### Collaborative Approaches
+- **[Multi-Agent Collaboration](./multi-agent-collaboration)** - Coordinate multiple AI agents for complex tasks
+- **[Role Prompting](./role-prompting)** - Assign specific expert roles to improve specialized reasoning
+- **[Prompt Chaining](./prompt-chaining)** - Connect multiple prompts for complex workflows
+
+### Quality & Reliability
+- **[Constitutional AI](./constitutional-ai)** - Ensure AI responses follow ethical guidelines and principles
+- **[Adversarial Prompting](./adversarial-prompting)** - Test and improve prompt robustness
