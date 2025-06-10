@@ -70,7 +70,7 @@
     "swr": "^2.2.5",
     "use-debounce": "^10.0.1",
     "yaml": "^2.4.5",
-    "zod": "3.23.8",
+    "zod": "catalog:",
     "zod-to-json-schema": "^3.24.5",
     "zsa": "^0.5.1",
     "zsa-react": "^0.2.2",
