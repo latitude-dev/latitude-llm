@@ -36,14 +36,22 @@ export function ChatInteraction({
             })}
           />
           <div className='flex flex-col gap-4 flex-grow max-w-full px-2'>
-            {interaction.steps.length == 0 ? (
-              <InteractionStep />
-            ) : isOpen ? (
+            {isOpen && interaction.steps.length > 0 ? (
               interaction.steps.map((step, i) => (
-                <InteractionStep key={i} step={step} />
+                <InteractionStep
+                  key={i}
+                  step={step}
+                  isLoading={
+                    interaction.output === undefined &&
+                    i === interaction.steps.length - 1
+                  }
+                />
               ))
             ) : (
-              <CollapsedInteractionSteps steps={interaction.steps} />
+              <CollapsedInteractionSteps
+                steps={interaction.steps}
+                isLoading={interaction.output === undefined}
+              />
             )}
           </div>
         </div>

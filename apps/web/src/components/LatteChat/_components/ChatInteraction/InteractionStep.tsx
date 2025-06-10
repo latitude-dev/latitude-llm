@@ -6,9 +6,11 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 export function InteractionStep({
   step,
   singleLine,
+  isLoading = false,
 }: {
   step?: LatteInteractionStep
   singleLine?: boolean
+  isLoading?: boolean
 }) {
   if (!step) {
     return (
@@ -30,6 +32,7 @@ export function InteractionStep({
         noWrap={singleLine}
         ellipsis={singleLine}
         whiteSpace='preWrap'
+        animate={isLoading}
       >
         {step.content}
       </Text.H5>
@@ -37,18 +40,26 @@ export function InteractionStep({
   }
 
   if (step.type === 'action') {
-    return <EditActionStep step={step} singleLine={singleLine} />
+    return (
+      <EditActionStep
+        step={step}
+        singleLine={singleLine}
+        isLoading={isLoading}
+      />
+    )
   }
 
-  return <ToolStep step={step} singleLine={singleLine} />
+  return <ToolStep step={step} singleLine={singleLine} isLoading={isLoading} />
 }
 
 function ToolStep({
   step,
   singleLine,
+  isLoading,
 }: {
   step: Extract<LatteInteractionStep, { type: 'tool' }>
   singleLine?: boolean
+  isLoading?: boolean
 }) {
   return (
     <div className='flex flex-row gap-2 items-start max-w-full'>
@@ -62,6 +73,7 @@ function ToolStep({
         noWrap={singleLine}
         ellipsis={singleLine}
         color='foregroundMuted'
+        animate={isLoading}
       >
         {step.finished
           ? (step.finishedDescription ?? step.activeDescription)
@@ -104,9 +116,11 @@ const editAction = (
 function EditActionStep({
   step,
   singleLine,
+  isLoading,
 }: {
   step: Extract<LatteInteractionStep, { type: 'action' }>
   singleLine?: boolean
+  isLoading?: boolean
 }) {
   const { icon, operationDescription } = editAction(step.action)
 
@@ -117,6 +131,7 @@ function EditActionStep({
         noWrap={singleLine}
         ellipsis={singleLine}
         color='foregroundMuted'
+        animate={isLoading}
       >
         {operationDescription}
       </Text.H5>
