@@ -7,7 +7,7 @@ import type { ProviderApiKey } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useSWR, { SWRConfiguration } from 'swr'
 
-type SerializedProviderApiKey = Omit<
+export type SerializedProviderApiKey = Omit<
   ProviderApiKey,
   'createdAt' | 'updatedAt' | 'lastUsedAt'
 > & {

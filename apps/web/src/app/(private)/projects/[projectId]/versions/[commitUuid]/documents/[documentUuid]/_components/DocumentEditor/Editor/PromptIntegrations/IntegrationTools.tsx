@@ -1,3 +1,4 @@
+import { ReactNode, useCallback, useState } from 'react'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useIntegrationTools from '$/stores/integrationTools'
 import { McpTool } from '@latitude-data/constants'
@@ -13,7 +14,14 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import Link from 'next/link'
-import { useCallback, useState } from 'react'
+
+export function ItemWrapper({ children }: { children: ReactNode }) {
+  return (
+    <div className='flex flex-col gap-2 p-4 border-t border-border'>
+      {children}
+    </div>
+  )
+}
 
 function IntegrationToolItem({
   disabled,
@@ -27,10 +35,7 @@ function IntegrationToolItem({
   onToggle: () => void
 }) {
   return (
-    <div
-      key={tool.name}
-      className='flex flex-col gap-2 p-4 border-t border-border'
-    >
+    <ItemWrapper>
       <div className='flex flex-row items-center gap-2 justify-between'>
         <Text.H6B color='foreground'>{tool.name}</Text.H6B>
         <SwitchToggle
@@ -73,7 +78,7 @@ function IntegrationToolItem({
           )
         })}
       </div>
-    </div>
+    </ItemWrapper>
   )
 }
 
@@ -161,7 +166,14 @@ export function IntegrationToolsList({
         addIntegrationTool(integration.name, toolName)
       }
     },
-    [activeTools, tools, disabled],
+    [
+      activeTools,
+      tools,
+      disabled,
+      addIntegrationTool,
+      removeIntegrationTool,
+      integration.name,
+    ],
   )
 
   const allEnabled = activeTools === true
@@ -240,15 +252,15 @@ export function IntegrationToolsList({
   }
 
   return (
-    <>
-      <div className='flex flex-row gap-2 p-4 items-center justify-between'>
+    <div className='divide-y divide-border'>
+      <ItemWrapper>
         <Text.H6B color='foreground'>Enable all</Text.H6B>
         <SwitchToggle
           checked={allEnabled}
           onClick={toggleAllEnabled}
           disabled={disabled}
         />
-      </div>
+      </ItemWrapper>
       {tools?.map((tool) => {
         const isActive =
           activeTools === true || (activeTools?.includes(tool.name) ?? false)
@@ -263,6 +275,6 @@ export function IntegrationToolsList({
           />
         )
       })}
-    </>
+    </div>
   )
 }

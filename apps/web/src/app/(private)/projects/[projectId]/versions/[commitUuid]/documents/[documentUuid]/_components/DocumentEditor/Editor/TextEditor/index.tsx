@@ -87,7 +87,12 @@ export const PlaygroundTextEditor = memo(
           request: prompt,
         })
       },
-      [executeRequestSuggestionAction],
+      [
+        executeRequestSuggestionAction,
+        commit.uuid,
+        project.id,
+        document.documentUuid,
+      ],
     )
 
     return (

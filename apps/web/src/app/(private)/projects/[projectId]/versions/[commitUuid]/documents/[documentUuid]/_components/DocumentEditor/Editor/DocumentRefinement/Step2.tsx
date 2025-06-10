@@ -98,7 +98,7 @@ export function Step2({
 
   useEffect(() => {
     setSelectedResultUuids(selectableState.selectedRowIds.map(String))
-  }, [selectableState.selectedRowIds])
+  }, [selectableState.selectedRowIds, setSelectedResultUuids])
 
   const isLoading = isEvaluationsLoading || isResultsLoading || isCommitsLoading
 
@@ -185,10 +185,7 @@ export function Step2({
               </TableCell>
               <TableCell>
                 <span className='flex flex-row gap-2 items-center overflow-hidden'>
-                  <Badge
-                    variant={result.commit.version ? 'accent' : 'muted'}
-                    shape='square'
-                  >
+                  <Badge variant={result.commit.version ? 'accent' : 'muted'}>
                     <Text.H6 noWrap>
                       {result.commit.version
                         ? `v${result.commit.version}`

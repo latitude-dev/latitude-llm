@@ -1,5 +1,4 @@
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { useState } from 'react'
 import { GenerationSettings } from './GenerationSettings'
@@ -21,9 +20,14 @@ export function PromptConfiguration({
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
       <Popover.Trigger asChild>
-        <Button variant='outline' onClick={() => setIsOpen(true)}>
-          <Icon name='settings' size='normal' className='my-0.5' />
-        </Button>
+        <Button
+          ellipsis
+          disabled={disabled}
+          childrenOnlyText
+          iconProps={{ name: 'settings', className: 'my-0.5' }}
+          variant='outline'
+          onClick={() => setIsOpen(true)}
+        />
       </Popover.Trigger>
       <Popover.Content
         side='right'

@@ -12,7 +12,7 @@ export function AddFileButton() {
     <BlankSlateButton
       title='Create a prompt from scratch'
       description='Start from a blank canvas: write your prompt, test, evaluate, and deploy it to production effortlessly.'
-      onClick={() => setNodeInput(EntityType.File)}
+      onClick={() => setNodeInput(EntityType.Prompt)}
     />
   )
 }

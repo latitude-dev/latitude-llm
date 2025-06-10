@@ -247,7 +247,6 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                   <div className='flex flex-row gap-2 items-center min-w-0 max-w-xs'>
                     <Badge
                       variant={documentLog.commit.version ? 'accent' : 'muted'}
-                      shape='square'
                     >
                       <Text.H6 noWrap>
                         {documentLog.commit.version

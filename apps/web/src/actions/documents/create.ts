@@ -11,6 +11,7 @@ export const createDocumentVersionAction = withProject
     z.object({
       commitUuid: z.string(),
       path: z.string(),
+      agent: z.boolean().optional().default(false),
       content: z.string().optional(),
     }),
     { type: 'json' },
@@ -27,6 +28,7 @@ export const createDocumentVersionAction = withProject
       commit,
       path: input.path,
       content: input.content,
+      agent: input.agent,
       createDemoEvaluation: true,
     })
 

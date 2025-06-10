@@ -1,7 +1,6 @@
-import type { DependencyList } from 'react'
+import { type DependencyList, useEffect } from 'react'
 import type { SubscriptionEvents, SubscriptionFn, TriggerFn } from './generics'
 import type { Events } from './types'
-import { useEffect } from 'react'
 
 export const on: SubscriptionFn = (eventType, callback) => {
   document.addEventListener(eventType, callback)

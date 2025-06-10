@@ -1,5 +1,5 @@
 'use client'
-import { ChangeEvent, useCallback, useRef } from 'react'
+import { useCallback } from 'react'
 import { create } from 'zustand'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -9,11 +9,14 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 
 export enum EntityType {
-  File = 'file',
+  Prompt = 'prompt',
+  Agent = 'agent',
   Folder = 'folder',
 }
+const FILE_TYPES = [EntityType.Prompt, EntityType.Agent]
 
 interface NodeInputState {
   nodeInput: EntityType | undefined
@@ -34,10 +37,17 @@ export function TreeToolbar() {
     isMerged,
     onMergeCommitClick,
     onCreateFile,
-    onUploadFile,
+    onCreateAgent,
   } = useFileTreeContext()
   const { nodeInput, setNodeInput } = useNodeInput()
-  const isFile = nodeInput === EntityType.File
+  const isFile = nodeInput ? FILE_TYPES.includes(nodeInput) : false
+  const icons: IconName[] = nodeInput
+    ? nodeInput === EntityType.Folder
+      ? ['folderClose']
+      : nodeInput === EntityType.Prompt
+        ? ['file']
+        : ['bot']
+    : []
 
   const onClick = useCallback(
     (entityType: EntityType) => () => {
@@ -50,27 +60,9 @@ export function TreeToolbar() {
     [setNodeInput, isMerged, onMergeCommitClick],
   )
 
-  const fileUploadInputRef = useRef<HTMLInputElement>(null)
-  const onClickFileUploadInput = useCallback(() => {
-    if (isMerged) onMergeCommitClick()
-    else fileUploadInputRef.current?.click()
-  }, [isMerged, onMergeCommitClick])
-  const onFileUploadChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0]
-      if (!file) return
-
-      const filename = file.name.replace(/\.promptl$/, '').replace(/\s+/g, '_')
-      onUploadFile({ path: filename, file })
-
-      event.target.value = ''
-    },
-    [onUploadFile],
-  )
-
   return (
     <>
-      <div className='bg-background sticky top-0 flex flex-row items-center justify-between px-4'>
+      <div className='bg-background sticky top-0 flex flex-row items-center justify-between pl-4 pr-2'>
         <Text.H5M>Files</Text.H5M>
         <div className='flex flex-row space-x-2'>
           <Tooltip
@@ -78,7 +70,7 @@ export function TreeToolbar() {
             trigger={
               <Button
                 variant='ghost'
-                size='none'
+                size='icon'
                 lookDisabled={isMerged}
                 disabled={isLoading}
                 iconProps={{ name: 'folderPlus' }}
@@ -93,11 +85,11 @@ export function TreeToolbar() {
             trigger={
               <Button
                 variant='ghost'
-                size='none'
+                size='icon'
                 lookDisabled={isMerged}
                 disabled={isLoading}
                 iconProps={{ name: 'filePlus' }}
-                onClick={onClick(EntityType.File)}
+                onClick={onClick(EntityType.Prompt)}
               />
             }
           >
@@ -107,24 +99,21 @@ export function TreeToolbar() {
             asChild
             trigger={
               <Button
-                variant='ghost'
-                size='none'
+                variant='shiny'
+                size='icon'
                 lookDisabled={isMerged}
                 disabled={isLoading}
-                iconProps={{ name: 'paperclip' }}
-                onClick={onClickFileUploadInput}
+                iconProps={{
+                  name: 'bot',
+                  color: isMerged ? 'foregroundMuted' : 'primary',
+                  darkColor: isMerged ? 'foregroundMuted' : 'foreground',
+                }}
+                onClick={onClick(EntityType.Agent)}
               />
             }
           >
-            Upload document
+            New AI agent
           </Tooltip>
-          <input
-            ref={fileUploadInputRef}
-            type='file'
-            multiple={false}
-            className='hidden'
-            onChange={onFileUploadChange}
-          />
         </div>
       </div>
       {nodeInput ? (
@@ -134,14 +123,17 @@ export function TreeToolbar() {
           draggble={undefined}
           hasChildren={false}
           isFile={isFile}
+          isAgent={nodeInput === EntityType.Agent}
           name=''
           isEditing={true}
           setIsEditing={() => {}}
-          icons={isFile ? ['file'] : ['chevronRight', 'folderClose']}
+          icons={icons}
           indentation={[{ isLast: true }]}
           onSaveValue={async ({ path }) => {
-            if (isFile) {
+            if (nodeInput === EntityType.Prompt) {
               onCreateFile(path)
+            } else if (nodeInput === EntityType.Agent) {
+              onCreateAgent(path)
             } else {
               addToRootFolder({ path })
             }
