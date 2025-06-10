@@ -56,7 +56,7 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
 
   const metadata =
     // FIXME
-    // @ts-expect-error - scan props are not matching
+    // @ts-ignore - scan props are not matching
     promptlVersion === 0 ? await readMetadata(props) : await scan(props)
 
   const { setConfig: _, errors: errors, ...returnedMetadata } = metadata
