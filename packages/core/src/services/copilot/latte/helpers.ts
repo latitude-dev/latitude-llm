@@ -10,6 +10,8 @@ import { PromisedResult } from '../../../lib/Transaction'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
+  IntegrationsRepository,
+  ProviderApiKeysRepository,
 } from '../../../repositories'
 import {
   ChainEvent,
@@ -18,6 +20,15 @@ import {
 } from '@latitude-data/constants'
 import { streamToGenerator } from '../../../lib/streamToGenerator'
 import { WebsocketClient } from '../../../websockets/workers'
+import {
+  type ConversationMetadata,
+  scan,
+  type Document as RefDocument,
+} from 'promptl-ai'
+import { database } from '../../../client'
+import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
+import path from 'path'
+import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 
 function missingKeyError(key: string): ErrorResult<LatitudeError> {
   return Result.error(
@@ -118,4 +129,87 @@ export async function sendWebsockets({
       })
     }
   }
+}
+
+export async function scanDocuments(
+  {
+    documents,
+    commit,
+    workspace,
+  }: {
+    documents: DocumentVersion[]
+    commit: Commit
+    workspace: Workspace
+  },
+  db = database,
+): PromisedResult<{
+  [path: string]: ConversationMetadata
+}> {
+  const providersScope = new ProviderApiKeysRepository(workspace.id, db)
+  const providersResult = await providersScope.findAll()
+  if (!providersResult.ok) {
+    return Result.error(providersResult.error!)
+  }
+  const providers = providersResult.unwrap()
+
+  const integrationsScope = new IntegrationsRepository(workspace.id, db)
+  const integrationsResult = await integrationsScope.findAll()
+  if (!integrationsResult.ok) {
+    return Result.error(integrationsResult.error!)
+  }
+  const integrations = integrationsResult.unwrap()
+
+  const agentsToolMapResult = await buildAgentsToolsMap({
+    commit,
+    workspace,
+  })
+  if (!agentsToolMapResult.ok) {
+    return Result.error(agentsToolMapResult.error!)
+  }
+  const agentToolsMap = agentsToolMapResult.unwrap()
+
+  const referenceFn = async (
+    refPath: string,
+    from?: string,
+  ): Promise<RefDocument | undefined> => {
+    const fullPath = path
+      .resolve(path.dirname(`/${from ?? ''}`), refPath)
+      .replace(/^\//, '')
+
+    const doc = documents.find((doc) => doc.path === fullPath)
+    if (!doc) return undefined
+
+    return {
+      path: fullPath,
+      content: doc.content,
+    }
+  }
+
+  const metadatas = await Promise.all(
+    documents.map(async (document) => {
+      const configSchema = latitudePromptConfigSchema({
+        providerNames: providers.map((p) => p.name),
+        integrationNames: integrations.map((i) => i.name),
+        fullPath: document.path,
+        agentToolsMap,
+      })
+
+      return scan({
+        prompt: document.content,
+        fullPath: document.path,
+        referenceFn,
+        configSchema,
+      })
+    }),
+  )
+
+  return Result.ok(
+    metadatas.reduce(
+      (acc, metadata, index) => {
+        acc[documents[index]!.path] = metadata
+        return acc
+      },
+      {} as { [path: string]: ConversationMetadata },
+    ),
+  )
 }
