@@ -15,9 +15,9 @@
   "dependencies": {
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
-    "cookie-parser": "^1.4.6",
-    "express": "^4.21.0",
-    "socket.io": "^4.7.5"
+    "cookie-parser": "1.4.6",
+    "express": "4.21.0",
+    "socket.io": "4.7.5"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:^",

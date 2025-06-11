@@ -14,16 +14,16 @@
     "sentry:sourcemaps": "sentry-cli sourcemaps inject --org latitude-l5 --project latitude-workers ./dist && sentry-cli sourcemaps upload --org latitude-l5 --project latitude-workers ./dist"
   },
   "dependencies": {
-    "@bull-board/api": "^6.7.9",
-    "@bull-board/express": "^6.7.9",
+    "@bull-board/api": "6.7.9",
+    "@bull-board/express": "6.7.9",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
-    "@sentry/cli": "^2.37.0",
-    "@sentry/node": "^9.9.0",
+    "@sentry/cli": "2.37.0",
+    "@sentry/node": "9.9.0",
     "@t3-oss/env-core": "*",
-    "bullmq": "^5.41.3",
+    "bullmq": "5.44.4",
     "dd-trace": "catalog:",
-    "express": "^4.21.2"
+    "express": "4.21.2"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:^",

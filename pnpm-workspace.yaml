@@ -5,7 +5,8 @@ packages:
   - 'tools/*'
   - '!examples/**'
 catalog:
-  drizzle-orm: ^0.44.0
-  drizzle-kit: ^0.31.1
-  dd-trace: ^5.43.0
-  promptl-ai: ^0.6.5
+  drizzle-orm: 0.44.0
+  drizzle-kit: 0.31.1
+  dd-trace: 5.43.0
+  promptl-ai: 0.6.5
+  zod: 3.24.2
