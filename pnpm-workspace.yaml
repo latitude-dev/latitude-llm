@@ -8,4 +8,4 @@ catalog:
   drizzle-orm: ^0.44.0
   drizzle-kit: ^0.31.1
   dd-trace: ^5.43.0
-  promptl-ai: 0.6.5
+  promptl-ai: ^0.6.5
