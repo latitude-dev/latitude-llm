@@ -20,7 +20,6 @@ import {
   Workspace,
 } from '../../browser'
 import { Database } from '../../client'
-import { LatitudeError } from '../../lib/errors'
 import { TypedResult } from '../../lib/Result'
 
 export type EvaluationMetricValidateArgs<
@@ -63,6 +62,7 @@ export type EvaluationMetricAnnotateArgs<
   resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
   evaluation: EvaluationV2<T, M>
   actualOutput: string
+  conversation: Message[]
   providerLog: ProviderLogDto
   documentLog: DocumentLog
   document: DocumentVersion
@@ -88,7 +88,7 @@ export type EvaluationMetricBackendSpecification<
   validate: (
     args: EvaluationMetricValidateArgs<T, M>,
     db?: Database,
-  ) => Promise<TypedResult<EvaluationConfiguration<T, M>, LatitudeError>>
+  ) => Promise<TypedResult<EvaluationConfiguration<T, M>>>
   run?: (
     args: EvaluationMetricRunArgs<T, M>,
     db?: Database,
@@ -100,7 +100,7 @@ export type EvaluationMetricBackendSpecification<
   clone?: (
     args: EvaluationMetricCloneArgs<T, M>,
     db?: Database,
-  ) => Promise<TypedResult<EvaluationSettings, LatitudeError>>
+  ) => Promise<TypedResult<EvaluationSettings>>
 }
 
 export type EvaluationBackendSpecification<
@@ -109,7 +109,7 @@ export type EvaluationBackendSpecification<
   validate: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     args: EvaluationMetricValidateArgs<T, M> & { metric: M },
     db?: Database,
-  ) => Promise<TypedResult<EvaluationConfiguration<T, M>, LatitudeError>>
+  ) => Promise<TypedResult<EvaluationConfiguration<T, M>>>
   run?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     args: EvaluationMetricRunArgs<T, M> & { metric: M },
     db?: Database,
@@ -121,7 +121,7 @@ export type EvaluationBackendSpecification<
   clone?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     args: EvaluationMetricCloneArgs<T, M> & { metric: M },
     db?: Database,
-  ) => Promise<TypedResult<EvaluationSettings, LatitudeError>>
+  ) => Promise<TypedResult<EvaluationSettings>>
   metrics: {
     [M in EvaluationMetric<T>]: EvaluationMetricBackendSpecification<T, M>
   }

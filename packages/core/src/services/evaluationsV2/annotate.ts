@@ -7,7 +7,6 @@ import {
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
-  formatMessage,
   ProviderLogDto,
   Workspace,
 } from '../../browser'
@@ -22,6 +21,7 @@ import {
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
 } from '../../repositories'
+import { extractActualOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { updateEvaluationResultV2 } from './results/update'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
@@ -85,17 +85,6 @@ export async function annotateEvaluationV2<
     )
   }
 
-  const conversation = buildConversation(providerLog)
-  if (conversation.at(-1)?.role != 'assistant') {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that does not end with an assistant message',
-      ),
-    )
-  }
-
-  const actualOutput = formatMessage(conversation.at(-1)!)
-
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) {
     return Result.error(new BadRequestError('Invalid evaluation type'))
@@ -112,8 +101,22 @@ export async function annotateEvaluationV2<
     return Result.error(new BadRequestError('Invalid evaluation metric'))
   }
 
+  const conversation = buildConversation(providerLog)
+  if (conversation.at(-1)?.role != 'assistant') {
+    return Result.error(
+      new UnprocessableEntityError(
+        'Cannot evaluate a log that does not end with an assistant message',
+      ),
+    )
+  }
+
   let value
   try {
+    const actualOutput = await extractActualOutput({
+      providerLog: providerLog,
+      configuration: evaluation.configuration.actualOutput,
+    }).then((r) => r.unwrap())
+
     if (resultMetadata) {
       typeSpecification.resultMetadata.partial().parse(resultMetadata)
     }
@@ -126,6 +129,7 @@ export async function annotateEvaluationV2<
         resultMetadata: resultMetadata,
         evaluation: evaluation,
         actualOutput: actualOutput,
+        conversation: conversation,
         providerLog: providerLog,
         documentLog: documentLog,
         document: document,

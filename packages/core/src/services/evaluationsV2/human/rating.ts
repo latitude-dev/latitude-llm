@@ -33,6 +33,12 @@ async function validate(
     )
   }
 
+  configuration.minRatingDescription =
+    configuration.minRatingDescription?.trim()
+
+  configuration.maxRatingDescription =
+    configuration.maxRatingDescription?.trim()
+
   if (
     configuration.minThreshold !== undefined &&
     (configuration.minThreshold < configuration.minRating ||
@@ -73,6 +79,8 @@ async function validate(
   // carry dangling fields from the original settings object
   return Result.ok({
     reverseScale: configuration.reverseScale,
+    actualOutput: configuration.actualOutput,
+    expectedOutput: configuration.expectedOutput,
     criteria: configuration.criteria,
     minRating: configuration.minRating,
     minRatingDescription: configuration.minRatingDescription,

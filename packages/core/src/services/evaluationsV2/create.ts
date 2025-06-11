@@ -38,13 +38,15 @@ export async function createEvaluationV2<
   if (!options) options = {}
   options = compactObject(options)
 
-  const validateResult = await validateEvaluationV2(
+  const validation = await validateEvaluationV2(
     { mode: 'create', settings, options, document, commit, workspace },
     db,
   )
-  if (validateResult.error) return validateResult
-
-  const validate = validateResult.value
+  if (validation.error) {
+    return Result.error(validation.error)
+  }
+  settings = validation.value.settings
+  options = validation.value.options
 
   return await Transaction.call(async (tx) => {
     const result = await tx
@@ -53,8 +55,8 @@ export async function createEvaluationV2<
         workspaceId: workspace.id,
         commitId: commit.id,
         documentUuid: document.documentUuid,
-        ...validate.settings,
-        ...validate.options,
+        ...settings,
+        ...options,
       })
       .returning()
       .then((r) => r[0]!)

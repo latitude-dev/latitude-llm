@@ -41,16 +41,42 @@ Latitude supports three main approaches to evaluation, each suited for different
 - **Triggering**: Evaluations can be run manually on batches of logs/datasets or automatically on incoming logs (live mode). See [Running Evaluations](/guides/evaluations/running-evaluations).
 - **Results**: Evaluation results (scores, labels, feedback) are stored alongside the corresponding logs, providing a rich dataset for analysis and improvement.
 
+## Actual Outputs
+
+The actual output is the generated output from the model conversation. This is the output to perform evaluations against.
+
+### Selecting the Actual Output to evaluate against
+
+By default the actual output is the last assistant message in the conversation, parsed as a simple string. However, some use cases requires more complex parsing, like evaluating tool calling or middle CoT.
+
+1. Go to the evaluation's settings by clicking on the right-side button in the evaluation's dashboard:
+   ![Evaluation settings button](/assets/evaluation-settings-button.png)
+2. Click on **Advanced configuration**.
+3. Configure:
+   - Message selection: The last message or all messages in the conversation.
+   - Content filter: Filter the messages by content type (e.g., text, images, tool calls...).
+   - Parsing format: The format to parse the actual output into (e.g., string, JSON, YAML...).
+   - Field accessor: The field to access in the actual output (e.g., 'answer', 'arguments.recommendations[2]'...).
+     ![Evaluation actual output configuration](/assets/evaluation-settings-outputs.png)
+4. Test the configuration by clicking on the "Test" button:
+   ![Evaluation actual output test](/assets/evaluation-settings-outputs-test.png)
+
+## Expected Outputs
+
+The expected output, also known as label, refers to the correct or ideal response that the language model should generate for a given prompt. You can create [Datasets](/guides/datasets/overview) with [Expected Output Columns](/guides/datasets/overview#marking-an-expected-output-column-as-a-label) to evaluate prompts with ground truth.
+![Evaluation expected output](/assets/evaluation-expected-output.png)
+
 ## Negative Evaluations
 
 Sometimes, you want to measure undesirable traits (e.g., toxicity, hallucination presence), where a _lower_ score is better. Latitude allows you to mark evaluations as "negative".
 
-1. Go to the evaluation's settings by clicking on the right-side button in the evaluation detail:
-![Evaluation settings button](/assets/evaluation-settings-button.png)
-2. Click on **Advandced configuration**
-2. Configure whether a higher or lower score indicates better performance.
-![Evaluation settings button](/assets/evaluation-settings-advance.png)
-- The [Prompt Suggestions](/guides/evaluations/prompt-suggestions) feature will use this setting to optimize correctly.
+1. Go to the evaluation's settings by clicking on the right-side button in the evaluation's dashboard:
+   ![Evaluation settings button](/assets/evaluation-settings-button.png)
+2. Click on **Advanced configuration**.
+3. Select "optimize for a lower score" to indicate high scores are undesirable:
+   ![Evaluation negative setting](/assets/evaluation-settings-negative.png)
+
+> The [Prompt Suggestions](/guides/evaluations/prompt-suggestions) feature will use this setting to optimize correctly.
 
 ## Next Steps
 

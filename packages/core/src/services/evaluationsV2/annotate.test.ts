@@ -21,6 +21,7 @@ import * as factories from '../../tests/factories'
 import serializeProviderLog from '../providerLogs/serialize'
 import { annotateEvaluationV2 } from './annotate'
 import { HumanEvaluationRatingSpecification } from './human/rating'
+import * as outputs from './outputs/extract'
 
 describe('annotateEvaluationV2', () => {
   let mocks: {
@@ -73,6 +74,13 @@ describe('annotateEvaluationV2', () => {
       metric: HumanEvaluationMetric.Rating,
       configuration: {
         reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
         criteria: 'criteria',
         minRating: 1,
         minRatingDescription: 'min description',
@@ -97,7 +105,6 @@ describe('annotateEvaluationV2', () => {
 
   it('fails when evaluating a log that is from a different document', async () => {
     const { commit: draft } = await factories.createDraft({ project, user })
-
     const { documentVersion: differentDocument } =
       await factories.createDocumentVersion({
         commit: draft,
@@ -109,13 +116,11 @@ describe('annotateEvaluationV2', () => {
         user: user,
         workspace: workspace,
       })
-
     const { providerLogs: providerLogs } = await factories.createDocumentLog({
       document: differentDocument,
       commit: draft,
     })
     const differentProviderLog = serializeProviderLog(providerLogs.at(-1)!)
-
     mocks.publisher.mockClear()
 
     await expect(
@@ -138,6 +143,30 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
+  it('fails when annotating is not supported for the evaluation', async () => {
+    const otherEvaluation = await factories.createEvaluationV2({
+      document: document,
+      commit: commit,
+      workspace: workspace,
+      name: 'other evaluation',
+    })
+    mocks.publisher.mockClear()
+
+    await expect(
+      annotateEvaluationV2({
+        resultScore: 1,
+        evaluation: otherEvaluation,
+        providerLog: providerLog,
+        commit: commit,
+        workspace: workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError('Annotating is not supported for this evaluation'),
+    )
+
+    expect(mocks.publisher).not.toHaveBeenCalled()
+  })
+
   it('fails when evaluating a log that does not end with an assistant message', async () => {
     vi.spyOn(helpers, 'buildConversation').mockReturnValue([
       {
@@ -145,6 +174,7 @@ describe('annotateEvaluationV2', () => {
         content: [{ type: ContentType.text, text: 'hi' }],
       },
     ])
+    mocks.publisher.mockClear()
 
     await expect(
       annotateEvaluationV2({
@@ -166,29 +196,61 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
-  it('fails when annotating is not supported for the evaluation', async () => {
-    const otherEvaluation = await factories.createEvaluationV2({
-      document: document,
-      commit: commit,
-      workspace: workspace,
-      name: 'other evaluation',
-    })
-
+  it('succeeds when extract actual output fails', async () => {
+    vi.spyOn(outputs, 'extractActualOutput').mockRejectedValue(
+      new UnprocessableEntityError(
+        "Field 'arguments' is not present in the actual output",
+      ),
+    )
     mocks.publisher.mockClear()
 
-    await expect(
-      annotateEvaluationV2({
-        resultScore: 1,
-        evaluation: otherEvaluation,
-        providerLog: providerLog,
-        commit: commit,
-        workspace: workspace,
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new BadRequestError('Annotating is not supported for this evaluation'),
-    )
+    const { result } = await annotateEvaluationV2({
+      resultScore: 4,
+      resultMetadata: {
+        reason: 'reason',
+      },
+      evaluation: evaluation,
+      providerLog: providerLog,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
 
-    expect(mocks.publisher).not.toHaveBeenCalled()
+    expect(result).toEqual(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+        evaluatedLogId: providerLog.id,
+        score: null,
+        normalizedScore: null,
+        metadata: null,
+        hasPassed: null,
+        error: {
+          message: "Field 'arguments' is not present in the actual output",
+        },
+      }),
+    )
+    expect(mocks.publisher).toHaveBeenCalledTimes(2)
+    expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
+      type: 'evaluationResultV2Created',
+      data: {
+        result: result,
+        evaluation: evaluation,
+        commit: commit,
+        providerLog: providerLog,
+        workspaceId: workspace.id,
+      },
+    })
+    expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
+      type: 'evaluationV2Annotated',
+      data: {
+        workspaceId: workspace.id,
+        evaluation: evaluation,
+        result: result,
+        commit: commit,
+        providerLog: providerLog,
+      },
+    })
   })
 
   it('succeeds when annotated result metadata is invalid', async () => {
@@ -249,11 +311,10 @@ describe('annotateEvaluationV2', () => {
   })
 
   it('succeeds when type and metric annotation fails', async () => {
-    mocks.publisher.mockClear()
-
     vi.spyOn(HumanEvaluationRatingSpecification, 'annotate').mockRejectedValue(
       new Error('metric annotation error'),
     )
+    mocks.publisher.mockClear()
 
     const { result } = await annotateEvaluationV2({
       resultScore: 4,
@@ -305,8 +366,6 @@ describe('annotateEvaluationV2', () => {
   })
 
   it('succeeds when resulting normalized score is out of range', async () => {
-    mocks.publisher.mockClear()
-
     vi.spyOn(HumanEvaluationRatingSpecification, 'annotate').mockResolvedValue({
       score: 4,
       normalizedScore: 999,
@@ -317,6 +376,7 @@ describe('annotateEvaluationV2', () => {
       },
       hasPassed: true,
     })
+    mocks.publisher.mockClear()
 
     const { result } = await annotateEvaluationV2({
       resultScore: 4,
@@ -342,6 +402,62 @@ describe('annotateEvaluationV2', () => {
         error: {
           message: `Normalized metric score must be between 0 and ${EVALUATION_SCORE_SCALE}`,
         },
+      }),
+    )
+    expect(mocks.publisher).toHaveBeenCalledTimes(2)
+    expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
+      type: 'evaluationResultV2Created',
+      data: {
+        result: result,
+        evaluation: evaluation,
+        commit: commit,
+        providerLog: providerLog,
+        workspaceId: workspace.id,
+      },
+    })
+    expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
+      type: 'evaluationV2Annotated',
+      data: {
+        workspaceId: workspace.id,
+        evaluation: evaluation,
+        result: result,
+        commit: commit,
+        providerLog: providerLog,
+      },
+    })
+  })
+
+  it('succeeds when outputs configuration is not set', async () => {
+    evaluation.configuration.actualOutput = undefined
+    evaluation.configuration.expectedOutput = undefined
+    mocks.publisher.mockClear()
+
+    const { result } = await annotateEvaluationV2({
+      resultScore: 4,
+      resultMetadata: {
+        reason: 'reason',
+      },
+      evaluation: evaluation,
+      providerLog: providerLog,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+        evaluatedLogId: providerLog.id,
+        score: 4,
+        normalizedScore: 75,
+        metadata: {
+          reason: 'reason',
+          actualOutput: providerLog.response,
+          configuration: evaluation.configuration,
+        },
+        hasPassed: true,
+        error: null,
       }),
     )
     expect(mocks.publisher).toHaveBeenCalledTimes(2)
@@ -483,7 +599,6 @@ describe('annotateEvaluationV2', () => {
       commit: commit,
       workspace: workspace,
     }).then((r) => r.unwrap())
-
     mocks.publisher.mockClear()
 
     const { result } = await annotateEvaluationV2({

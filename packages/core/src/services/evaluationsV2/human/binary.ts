@@ -26,10 +26,16 @@ async function validate(
   >,
   _: Database = database,
 ) {
+  configuration.passDescription = configuration.passDescription?.trim()
+
+  configuration.failDescription = configuration.failDescription?.trim()
+
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original settings object
   return Result.ok({
     reverseScale: configuration.reverseScale,
+    actualOutput: configuration.actualOutput,
+    expectedOutput: configuration.expectedOutput,
     criteria: configuration.criteria,
     passDescription: configuration.passDescription,
     failDescription: configuration.failDescription,

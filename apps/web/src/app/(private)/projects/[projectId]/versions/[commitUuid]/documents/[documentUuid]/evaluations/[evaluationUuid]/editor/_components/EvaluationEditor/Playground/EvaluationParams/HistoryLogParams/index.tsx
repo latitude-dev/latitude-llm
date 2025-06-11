@@ -6,6 +6,7 @@ import {
   EvaluationV2,
   LlmEvaluationMetricAnyCustom,
 } from '@latitude-data/core/browser'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -89,21 +90,30 @@ export function HistoryLogParams({
           <DocumentLogsNavigation data={data} />
         </div>
       </div>
-      <div
-        className={cn(
-          'w-full p-1 pb-3.5 flex flex-col gap-y-4 custom-scrollbar',
-          {
-            'opacity-50': data.isLoading,
-          },
-        )}
-      >
-        <EditableParameters
-          commit={commit}
-          document={document}
-          evaluation={evaluation}
-          isLoading={isLoading}
-        />
-      </div>
+      {data.error ? (
+        <div className='w-full flex justify-center pr-4'>
+          <Alert
+            variant='destructive'
+            description={data.error || 'Error while fetching logs'}
+          />
+        </div>
+      ) : (
+        <div
+          className={cn(
+            'w-full p-1 pb-3.5 flex flex-col gap-y-4 custom-scrollbar',
+            {
+              'opacity-50': data.isLoading,
+            },
+          )}
+        >
+          <EditableParameters
+            commit={commit}
+            document={document}
+            evaluation={evaluation}
+            isLoading={isLoading}
+          />
+        </div>
+      )}
     </div>
   )
 }

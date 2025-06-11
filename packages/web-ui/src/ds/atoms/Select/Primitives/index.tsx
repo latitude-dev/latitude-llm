@@ -1,5 +1,6 @@
 'use client'
 
+import * as SelectPrimitive from '@radix-ui/react-select'
 import {
   ComponentPropsWithoutRef,
   ElementRef,
@@ -9,7 +10,6 @@ import {
   useMemo,
   useState,
 } from 'react'
-import * as SelectPrimitive from '@radix-ui/react-select'
 
 import { SelectOption, SelectOptionGroup } from '..'
 import { cn } from '../../../../lib/utils'
@@ -84,32 +84,63 @@ const SelectValue = ({
 
 type TriggerProps = ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
   fullWidth?: boolean
+  removable?: boolean
+  onRemove?: () => void
 }
 const SelectTrigger = forwardRef<
   ElementRef<typeof SelectPrimitive.Trigger>,
   TriggerProps
->(({ fullWidth = true, className, children, ...props }, ref) => {
-  return (
-    <SelectPrimitive.Trigger
-      ref={ref}
-      className={cn(
-        'flex w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-[5px] text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-offset-2 focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
-        'min-h-8',
-        'bg-background',
-        className,
-        {
-          'w-full': fullWidth,
-        },
-      )}
-      {...props}
-    >
-      {children}
-      <SelectPrimitive.Icon asChild>
-        <Icon name='chevronsUpDown' className='min-w-0 flex-none opacity-50' />
-      </SelectPrimitive.Icon>
-    </SelectPrimitive.Trigger>
-  )
-})
+>(
+  (
+    {
+      fullWidth = true,
+      removable = false,
+      onRemove,
+      className,
+      children,
+      ...props
+    },
+    ref,
+  ) => {
+    return (
+      <div className='relative'>
+        <SelectPrimitive.Trigger
+          ref={ref}
+          className={cn(
+            'flex w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-[5px] text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-offset-2 focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
+            'min-h-8',
+            'bg-background',
+            className,
+            {
+              'w-full': fullWidth,
+            },
+          )}
+          {...props}
+        >
+          {children}
+          <SelectPrimitive.Icon asChild>
+            {!removable && (
+              <Icon
+                name='chevronsUpDown'
+                className='min-w-0 flex-none opacity-50'
+              />
+            )}
+          </SelectPrimitive.Icon>
+        </SelectPrimitive.Trigger>
+        {removable && (
+          <Icon
+            name='close'
+            className='min-w-0 flex-none opacity-50 cursor-pointer absolute top-1/2 -translate-y-1/2 right-3'
+            onClick={(event) => {
+              event.preventDefault()
+              onRemove?.()
+            }}
+          />
+        )}
+      </div>
+    )
+  },
+)
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
 
 const SelectScrollUpButton = forwardRef<
@@ -256,16 +287,16 @@ const SelectSeparator = forwardRef<
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 
 export {
-  SelectValueWithIcon,
-  SelectRoot,
+  SelectContent,
   SelectGroup,
-  SelectValue,
+  SelectItem,
+  SelectLabel,
+  SelectRoot,
+  SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
   SelectTrigger,
   SelectTriggerPrimitive,
-  SelectContent,
-  SelectLabel,
-  SelectItem,
-  SelectSeparator,
-  SelectScrollUpButton,
-  SelectScrollDownButton,
+  SelectValue,
+  SelectValueWithIcon,
 }

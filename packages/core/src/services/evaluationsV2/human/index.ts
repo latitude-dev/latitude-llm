@@ -44,17 +44,29 @@ async function validate<M extends HumanEvaluationMetric>(
     return Result.error(new BadRequestError('Invalid metric'))
   }
 
-  metricSpecification.configuration.parse(configuration)
+  const parsing = metricSpecification.configuration.safeParse(configuration)
+  if (parsing.error) {
+    return Result.error(parsing.error)
+  }
 
-  configuration = await metricSpecification
-    .validate({ configuration, ...rest }, db)
-    .then((r) => r.unwrap())
+  configuration.criteria = configuration.criteria?.trim()
+
+  const validation = await metricSpecification.validate(
+    { configuration, ...rest },
+    db,
+  )
+  if (validation.error) {
+    return Result.error(validation.error)
+  }
+  configuration = validation.value
 
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original settings object
   return Result.ok({
     ...configuration,
     reverseScale: configuration.reverseScale,
+    actualOutput: configuration.actualOutput,
+    expectedOutput: configuration.expectedOutput,
     criteria: configuration.criteria,
   })
 }

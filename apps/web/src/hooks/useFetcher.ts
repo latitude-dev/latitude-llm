@@ -1,6 +1,6 @@
-import { useCallback } from 'react'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { ROUTES } from '$/services/routes'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { useCallback } from 'react'
 
 import { useNavigate } from './useNavigate'
 
@@ -26,20 +26,27 @@ export async function handleResponse<
   serializer,
   navigate,
   returnRaw = false as Raw,
+  onSuccess,
+  onFail,
 }: {
   response: Response
   returnRaw?: Raw
   toast: ReturnType<typeof useToast>['toast']
   navigate: ReturnType<typeof useNavigate>
   serializer?: (item: I) => R
+  onSuccess?: (data: ConditionalResponse<R, Raw>) => void
+  onFail?: (error: string) => void
 }): Promise<ConditionalResponse<R, Raw>> {
   if (response.ok) {
     if (returnRaw === true) return response as ConditionalResponse<R, Raw>
 
     const json = await response.json()
-    return serializer
+    const data = serializer
       ? (serializer(json) as ConditionalResponse<R, Raw>)
       : (json as ConditionalResponse<R, Raw>)
+    onSuccess?.(data)
+
+    return data
   }
 
   if (response.status === 401 || response.status === 403) {
@@ -51,19 +58,26 @@ export async function handleResponse<
 
     navigate.push(ROUTES.auth.login)
   } else if (response.status >= 500) {
-    toast({
-      title: 'Server error',
-      description: 'Something went wrong on the server',
-      variant: 'destructive',
-    })
+    if (onFail) {
+      onFail('Something went wrong on the server')
+    } else {
+      toast({
+        title: 'Server error',
+        description: 'Something went wrong on the server',
+        variant: 'destructive',
+      })
+    }
   } else if (response.status !== 404) {
     const error = await response.json()
-
-    toast({
-      title: 'Error',
-      description: error.message,
-      variant: 'destructive',
-    })
+    if (onFail) {
+      onFail(error.message)
+    } else {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      })
+    }
   }
 }
 
@@ -77,12 +91,16 @@ export async function executeFetch<
   toast,
   serializer,
   navigate,
+  onSuccess,
+  onFail,
 }: {
   route: string
   searchParams?: ISearchParams
   toast: ReturnType<typeof useToast>['toast']
   navigate: ReturnType<typeof useNavigate>
   serializer?: (item: any) => any
+  onSuccess?: (data: ConditionalResponse<R, Raw>) => void
+  onFail?: (error: string) => void
 }) {
   const response = await fetch(buildRoute(route, searchParams), {
     credentials: 'include',
@@ -92,6 +110,8 @@ export async function executeFetch<
     toast,
     navigate,
     serializer,
+    onSuccess,
+    onFail,
   })
 }
 
@@ -105,10 +125,14 @@ export default function useFetcher<
     fallback = [],
     serializer,
     searchParams,
+    onSuccess,
+    onFail,
   }: {
     fallback?: any
     serializer?: (item: I) => R
     searchParams?: ISearchParams
+    onSuccess?: (data: ConditionalResponse<R, Raw>) => void
+    onFail?: (error: string) => void
   } = { fallback: [] },
 ) {
   const { toast } = useToast()
@@ -123,9 +147,20 @@ export default function useFetcher<
       toast,
       serializer,
       navigate,
+      onSuccess,
+      onFail,
     })
     return response as R
-  }, [route, searchParams, toast, serializer, navigate, fallback])
+  }, [
+    route,
+    searchParams,
+    toast,
+    serializer,
+    onFail,
+    onSuccess,
+    navigate,
+    fallback,
+  ])
 }
 
 function buildRoute(route: string, searchParams?: ISearchParams) {

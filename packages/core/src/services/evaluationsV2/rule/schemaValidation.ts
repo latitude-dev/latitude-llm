@@ -28,6 +28,7 @@ async function validate(
   >,
   _: Database = database,
 ) {
+  configuration.schema = configuration.schema.trim()
   if (!configuration.schema) {
     return Result.error(new BadRequestError('Schema is required'))
   }
@@ -62,6 +63,8 @@ async function validate(
   // carry dangling fields from the original settings object
   return Result.ok({
     reverseScale: configuration.reverseScale,
+    actualOutput: configuration.actualOutput,
+    expectedOutput: configuration.expectedOutput,
     format: configuration.format,
     schema: configuration.schema,
   })

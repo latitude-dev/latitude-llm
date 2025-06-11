@@ -42,6 +42,7 @@ export function useLogHistoryParams({
 
   return useSerializedLogs({
     document,
+    configuration: evaluation.configuration.actualOutput,
     logUuid: selectedDocumentLogUuid ?? logUuid,
     onHistoryFetched,
   })

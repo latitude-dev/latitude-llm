@@ -1,29 +1,32 @@
-import { useCallback, useMemo, useState } from 'react'
 import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
+import useDocumentLogWithPaginationPosition, {
+  LogWithPosition,
+} from '$/stores/documentLogWithPaginationPosition'
+import useEvaluatedDocumentLogs from '$/stores/evaluatedDocumentLogs'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
+import {
+  ActualOutputConfiguration,
+  DocumentVersion,
+  EvaluatedDocumentLog,
+} from '@latitude-data/core/browser'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import useDocumentLogWithPaginationPosition, {
-  LogWithPosition,
-} from '$/stores/documentLogWithPaginationPosition'
-import {
-  DocumentVersion,
-  EvaluatedDocumentLog,
-} from '@latitude-data/core/browser'
-import useEvaluatedDocumentLogs from '$/stores/evaluatedDocumentLogs'
+import { useCallback, useMemo, useState } from 'react'
 
 const ONLY_ONE_PAGE = '1'
 
 export type OnHistoryFetchedFn = (log: EvaluatedDocumentLog) => void
 export function useSerializedLogs({
   document,
+  configuration,
   onHistoryFetched,
   logUuid,
 }: {
   document: DocumentVersion
-  onHistoryFetched: OnHistoryFetchedFn
+  configuration?: ActualOutputConfiguration
+  onHistoryFetched?: OnHistoryFetchedFn
   logUuid?: string
 }) {
   const { project } = useCurrentProject()
@@ -56,17 +59,22 @@ export function useSerializedLogs({
     },
   )
 
-  const { data: logs, isLoading: isLoadingLog } = useEvaluatedDocumentLogs({
+  const {
+    data: logs,
+    isLoading: isLoadingLog,
+    error,
+  } = useEvaluatedDocumentLogs({
     documentUuid: position === undefined ? undefined : document.documentUuid,
     filterOptions,
     projectId: project.id,
     page: position === undefined ? undefined : String(position.position),
     pageSize: ONLY_ONE_PAGE,
+    configuration,
     onFetched: (logs) => {
-      const log = logs[0]
+      const log = logs?.[0]
       if (!log) return
 
-      onHistoryFetched(log)
+      onHistoryFetched?.(log)
     },
   })
 
@@ -103,6 +111,7 @@ export function useSerializedLogs({
       count: pagination?.count ?? 0,
       onNextPage,
       onPrevPage,
+      error,
     }),
     [
       log,
@@ -113,6 +122,7 @@ export function useSerializedLogs({
       onPrevPage,
       isLoadingLog,
       isLoadingPosition,
+      error,
     ],
   )
 }

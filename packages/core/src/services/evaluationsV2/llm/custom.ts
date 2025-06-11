@@ -91,6 +91,8 @@ async function validate(
   // carry dangling fields from the original settings object
   return Result.ok({
     reverseScale: configuration.reverseScale,
+    actualOutput: configuration.actualOutput,
+    expectedOutput: configuration.expectedOutput,
     provider: configuration.provider,
     model: configuration.model,
     prompt: configuration.prompt,

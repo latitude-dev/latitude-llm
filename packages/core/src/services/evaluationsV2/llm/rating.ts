@@ -35,6 +35,7 @@ async function validate(
   >,
   _: Database = database,
 ) {
+  configuration.criteria = configuration.criteria.trim()
   if (!configuration.criteria) {
     return Result.error(new BadRequestError('Criteria is required'))
   }
@@ -45,12 +46,14 @@ async function validate(
     )
   }
 
+  configuration.minRatingDescription = configuration.minRatingDescription.trim()
   if (!configuration.minRatingDescription) {
     return Result.error(
       new BadRequestError('Minimum rating description is required'),
     )
   }
 
+  configuration.maxRatingDescription = configuration.maxRatingDescription.trim()
   if (!configuration.maxRatingDescription) {
     return Result.error(
       new BadRequestError('Maximum rating description is required'),
@@ -97,6 +100,8 @@ async function validate(
   // carry dangling fields from the original settings object
   return Result.ok({
     reverseScale: configuration.reverseScale,
+    actualOutput: configuration.actualOutput,
+    expectedOutput: configuration.expectedOutput,
     provider: configuration.provider,
     model: configuration.model,
     criteria: configuration.criteria,
@@ -260,6 +265,8 @@ async function clone(
     metric: LlmEvaluationMetric.Custom,
     configuration: {
       reverseScale: evaluation.configuration.reverseScale,
+      actualOutput: evaluation.configuration.actualOutput,
+      expectedOutput: evaluation.configuration.expectedOutput,
       provider: evaluation.configuration.provider,
       model: evaluation.configuration.model,
       prompt: `

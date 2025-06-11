@@ -12,11 +12,12 @@ import { cn } from '../../../lib/utils'
 
 type Props = {
   variant?: AlertProps['variant']
-  title?: string
-  description?: string
+  title?: string | ReactNode
+  description?: string | ReactNode
   direction?: 'row' | 'column'
   cta?: ReactNode
   showIcon?: boolean
+  centered?: boolean
 }
 
 const IconColor: Record<string, TextColor> = {
@@ -33,6 +34,7 @@ export function Alert({
   cta,
   showIcon = true,
   variant = 'default',
+  centered = false,
 }: Props) {
   return (
     <AlertRoot variant={variant}>
@@ -47,6 +49,7 @@ export function Alert({
         className={cn('flex items-center gap-4 lg:gap-8 justify-between', {
           'flex-row ': direction === 'row',
           'flex-col': direction === 'column',
+          'justify-center': centered,
         })}
       >
         <div className='flex flex-col gap-2 whitespace-pre-wrap'>

@@ -61,6 +61,7 @@ export type SelectProps<V extends unknown = unknown> = Omit<
   required?: boolean
   onChange?: (value: V) => void
   width?: 'auto' | 'full'
+  removable?: boolean
   searchable?: boolean
 }
 export function Select<V extends unknown = unknown>({
@@ -81,6 +82,7 @@ export function Select<V extends unknown = unknown>({
   loading = false,
   disabled = false,
   required = false,
+  removable = false,
   searchable = false,
 }: SelectProps<V>) {
   const [selectedValue, setSelected] = useState<V | undefined>(
@@ -93,7 +95,7 @@ export function Select<V extends unknown = unknown>({
     setSelected(value ?? defaultValue)
   }, [value, defaultValue])
 
-  const _onChange = (newValue: string) => {
+  const _onChange = (newValue: string | undefined) => {
     setSelected(newValue as V)
     if (onChange) onChange(newValue as V)
     setIsOpen(false) // Close the popover on selection
@@ -130,6 +132,8 @@ export function Select<V extends unknown = unknown>({
                 className={cn({
                   'border-red-500 focus:ring-red-500': errors,
                 })}
+                removable={removable && !!selectedValue}
+                onRemove={() => _onChange(undefined)}
               >
                 <SelectValue
                   selected={selectedValue}
@@ -164,7 +168,6 @@ export function Select<V extends unknown = unknown>({
                               key={option.label}
                               value={option.label} // CommandItem uses value for filtering/search, not the actual select value
                               onSelect={() => {
-                                console.log(option.value)
                                 _onChange(option.value as string)
                                 // Optionally close the popover after selection
                                 // This requires access to the Popover's open state,

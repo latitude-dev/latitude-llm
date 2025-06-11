@@ -1,17 +1,17 @@
 import { z } from 'zod'
 import {
-  BaseEvaluationConfiguration,
-  BaseEvaluationResultError,
-  BaseEvaluationResultMetadata,
+  baseEvaluationConfiguration,
+  baseEvaluationResultError,
+  baseEvaluationResultMetadata,
 } from './shared'
 
-const humanEvaluationConfiguration = BaseEvaluationConfiguration.extend({
+const humanEvaluationConfiguration = baseEvaluationConfiguration.extend({
   criteria: z.string().optional(),
 })
-const humanEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({
+const humanEvaluationResultMetadata = baseEvaluationResultMetadata.extend({
   reason: z.string().optional(),
 })
-const humanEvaluationResultError = BaseEvaluationResultError.extend({})
+const humanEvaluationResultError = baseEvaluationResultError.extend({})
 
 // BINARY
 

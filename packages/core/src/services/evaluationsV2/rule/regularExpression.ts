@@ -30,6 +30,7 @@ async function validate(
   >,
   _: Database = database,
 ) {
+  configuration.pattern = configuration.pattern.trim()
   if (!configuration.pattern) {
     return Result.error(new BadRequestError('Pattern is required'))
   }
@@ -48,6 +49,8 @@ async function validate(
   // carry dangling fields from the original settings object
   return Result.ok({
     reverseScale: configuration.reverseScale,
+    actualOutput: configuration.actualOutput,
+    expectedOutput: configuration.expectedOutput,
     pattern: configuration.pattern,
   })
 }

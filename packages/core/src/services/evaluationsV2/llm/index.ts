@@ -61,32 +61,45 @@ async function validate<M extends LlmEvaluationMetric>(
     return Result.error(new BadRequestError('Invalid metric'))
   }
 
-  metricSpecification.configuration.parse(configuration)
+  const parsing = metricSpecification.configuration.safeParse(configuration)
+  if (parsing.error) {
+    return Result.error(parsing.error)
+  }
 
   if (!metric.startsWith(LlmEvaluationMetric.Custom) || mode !== 'update') {
+    configuration.provider = configuration.provider.trim()
     if (!configuration.provider) {
       return Result.error(new BadRequestError('Provider is required'))
     }
 
-    const providersRepository = new ProviderApiKeysRepository(workspace.id, db)
-    await providersRepository
-      .findByName(configuration.provider)
-      .then((r) => r.unwrap())
+    const repository = new ProviderApiKeysRepository(workspace.id, db)
+    const getting = await repository.findByName(configuration.provider)
+    if (getting.error) {
+      return Result.error(getting.error)
+    }
 
+    configuration.model = configuration.model.trim()
     if (!configuration.model) {
       return Result.error(new BadRequestError('Model is required'))
     }
   }
 
-  configuration = await metricSpecification
-    .validate({ mode, configuration, workspace, ...rest }, db)
-    .then((r) => r.unwrap())
+  const validation = await metricSpecification.validate(
+    { mode, configuration, workspace, ...rest },
+    db,
+  )
+  if (validation.error) {
+    return Result.error(validation.error)
+  }
+  configuration = validation.value
 
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original settings object
   return Result.ok({
     ...configuration,
     reverseScale: configuration.reverseScale,
+    actualOutput: configuration.actualOutput,
+    expectedOutput: configuration.expectedOutput,
     provider: configuration.provider,
     model: configuration.model,
   })

@@ -1,21 +1,24 @@
 import {
+  ActualOutputConfiguration,
   DocumentLog,
   EvaluatedDocumentLog,
   ProviderLog,
   buildConversation,
   formatConversation,
-  formatMessage,
 } from '../../../browser'
 import { serializeAggregatedProviderLog } from '../../documentLogs/serialize'
 import serializeProviderLog from '../../providerLogs/serialize'
+import { extractActualOutput } from '../outputs/extract'
 
-export function serializeEvaluatedDocumentLog({
+export async function serializeEvaluatedDocumentLog({
   documentLog,
   providerLogs,
+  configuration,
 }: {
   documentLog: DocumentLog
   providerLogs: ProviderLog[]
-}): EvaluatedDocumentLog {
+  configuration?: ActualOutputConfiguration
+}): Promise<EvaluatedDocumentLog> {
   const aggregatedProviderLog = serializeAggregatedProviderLog({
     documentLog,
     providerLogs,
@@ -23,9 +26,11 @@ export function serializeEvaluatedDocumentLog({
   const providerLog = serializeProviderLog(
     providerLogs[providerLogs.length - 1]!,
   )
-  const conversationList = buildConversation(providerLog)
-  const conversation = formatConversation(conversationList)
-  const actualOutput = formatMessage(conversationList.at(-1)!)
+  const conversation = formatConversation(buildConversation(providerLog))
+  const actualOutput = await extractActualOutput({
+    providerLog: providerLog,
+    configuration: configuration,
+  }).then((r) => r.unwrap())
   return {
     ...aggregatedProviderLog,
     uuid: documentLog.uuid,

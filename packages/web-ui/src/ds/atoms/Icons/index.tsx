@@ -116,6 +116,7 @@ import {
   XIcon,
   Youtube,
 } from 'lucide-react'
+import { MouseEvent } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { colors, DarkTextColor, type TextColor } from '../../tokens'
@@ -140,6 +141,7 @@ import Ghost from './custom-icons/logos/Ghost'
 import Google from './custom-icons/logos/Google'
 import Hyperbrowser from './custom-icons/logos/Hyperbrowser'
 import Intercom from './custom-icons/logos/Intercom'
+import IntercomChat from './custom-icons/logos/IntercomChat'
 import Jira from './custom-icons/logos/Jira'
 import Linear from './custom-icons/logos/Linear'
 import Mintlify from './custom-icons/logos/Mintlify'
@@ -159,7 +161,6 @@ import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import YepCode from './custom-icons/logos/YepCode'
-import IntercomChat from './custom-icons/logos/IntercomChat'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -332,6 +333,7 @@ export type IconProps = {
   widthClass?: string
   heightClass?: string
   className?: string
+  onClick?: (event: MouseEvent<SVGSVGElement>) => void
 }
 
 type Size = 'xsmall' | 'small' | 'normal' | 'large' | 'xlarge' | 'xxxlarge'
@@ -344,6 +346,7 @@ export function Icon({
   spinSpeed = 'normal',
   size = 'normal',
   className,
+  onClick,
 }: IconProps) {
   const IconClass = Icons[name]!
   return (
@@ -363,6 +366,7 @@ export function Icon({
         },
         className,
       )}
+      onClick={onClick}
     />
   )
 }

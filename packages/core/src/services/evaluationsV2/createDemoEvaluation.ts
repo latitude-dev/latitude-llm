@@ -1,16 +1,16 @@
 import { env } from '@latitude-data/env'
 import {
+  Commit,
+  DocumentVersion,
   EvaluationType,
+  findFirstModelForProvider,
   LlmEvaluationMetric,
   Workspace,
-  type Commit,
-  type DocumentVersion,
-  findFirstModelForProvider,
 } from '../../browser'
-import { createEvaluationV2 } from './create'
 import { database } from '../../client'
-import { findDefaultEvaluationProvider } from '../providerApiKeys/findDefaultProvider'
 import { Result } from '../../lib/Result'
+import { findDefaultEvaluationProvider } from '../providerApiKeys/findDefaultProvider'
+import { createEvaluationV2 } from './create'
 
 export async function createDemoEvaluation(
   {
@@ -33,7 +33,6 @@ export async function createDemoEvaluation(
     provider,
     defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
   })
-
   if (!model) return Result.nil()
 
   return await createEvaluationV2(
@@ -47,6 +46,13 @@ export async function createDemoEvaluation(
         metric: LlmEvaluationMetric.Rating,
         configuration: {
           reverseScale: false,
+          actualOutput: {
+            messageSelection: 'last',
+            parsingFormat: 'string',
+          },
+          expectedOutput: {
+            parsingFormat: 'string',
+          },
           provider: provider.name,
           model: model,
           criteria:

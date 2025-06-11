@@ -35,14 +35,17 @@ async function validate(
   >,
   _: Database = database,
 ) {
+  configuration.criteria = configuration.criteria.trim()
   if (!configuration.criteria) {
     return Result.error(new BadRequestError('Criteria is required'))
   }
 
+  configuration.passDescription = configuration.passDescription.trim()
   if (!configuration.passDescription) {
     return Result.error(new BadRequestError('Pass description is required'))
   }
 
+  configuration.failDescription = configuration.failDescription.trim()
   if (!configuration.failDescription) {
     return Result.error(new BadRequestError('Fail description is required'))
   }
@@ -85,6 +88,8 @@ async function validate(
   // carry dangling fields from the original settings object
   return Result.ok({
     reverseScale: configuration.reverseScale,
+    actualOutput: configuration.actualOutput,
+    expectedOutput: configuration.expectedOutput,
     provider: configuration.provider,
     model: configuration.model,
     criteria: configuration.criteria,
@@ -242,6 +247,8 @@ async function clone(
     metric: LlmEvaluationMetric.CustomLabeled,
     configuration: {
       reverseScale: evaluation.configuration.reverseScale,
+      actualOutput: evaluation.configuration.actualOutput,
+      expectedOutput: evaluation.configuration.expectedOutput,
       provider: evaluation.configuration.provider,
       model: evaluation.configuration.model,
       prompt: `

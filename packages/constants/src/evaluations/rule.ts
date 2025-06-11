@@ -1,13 +1,13 @@
 import { z } from 'zod'
 import {
-  BaseEvaluationConfiguration,
-  BaseEvaluationResultError,
-  BaseEvaluationResultMetadata,
+  baseEvaluationConfiguration,
+  baseEvaluationResultError,
+  baseEvaluationResultMetadata,
 } from './shared'
 
-const ruleEvaluationConfiguration = BaseEvaluationConfiguration.extend({})
-const ruleEvaluationResultMetadata = BaseEvaluationResultMetadata.extend({})
-const ruleEvaluationResultError = BaseEvaluationResultError.extend({})
+const ruleEvaluationConfiguration = baseEvaluationConfiguration.extend({})
+const ruleEvaluationResultMetadata = baseEvaluationResultMetadata.extend({})
+const ruleEvaluationResultError = baseEvaluationResultError.extend({})
 
 // EXACT MATCH
 
