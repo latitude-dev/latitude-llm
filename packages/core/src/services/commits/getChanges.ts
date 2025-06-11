@@ -65,8 +65,26 @@ async function getDraftChanges(
 ): PromisedResult<ChangedDocument[]> {
   const result = await recomputeChanges({ draft, workspace }, db)
   if (result.error) return result
-
   const changes = result.value
+
+  // Include documents with errors on `changes.changedDocuments`
+  for (const documentUuid of Object.keys(changes.errors)) {
+    if (
+      changes.changedDocuments.some((doc) => doc.documentUuid === documentUuid)
+    ) {
+      continue
+    }
+
+    const document = changes.headDocuments.find(
+      (doc) => doc.documentUuid === documentUuid,
+    )
+    if (!document) {
+      continue
+    }
+
+    changes.changedDocuments.push(document)
+  }
+
   return Result.ok(
     changesPresenter({
       currentCommitChanges: changes.changedDocuments,
