@@ -218,7 +218,7 @@ importers:
         version: 2.2.1
       '@t3-oss/env-nextjs':
         specifier: ^0.10.1
-        version: 0.10.1(typescript@5.8.3)(zod@3.23.8)
+        version: 0.10.1(typescript@5.8.3)(zod@3.25.57)
       '@types/diff-match-patch':
         specifier: ^1.0.36
         version: 1.0.36
@@ -227,7 +227,7 @@ importers:
         version: 1.1.3
       ai:
         specifier: ^4.0.36
-        version: 4.3.16(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.23.8)
+        version: 4.3.16(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.25.57)
       arctic:
         specifier: ^3.6.0
         version: 3.7.0
@@ -334,17 +334,17 @@ importers:
         specifier: ^2.4.5
         version: 2.8.0
       zod:
-        specifier: 3.23.8
-        version: 3.23.8
+        specifier: ^3.23.8
+        version: 3.25.57
       zod-to-json-schema:
         specifier: ^3.24.5
-        version: 3.24.5(zod@3.23.8)
+        version: 3.24.5(zod@3.25.57)
       zsa:
         specifier: ^0.5.1
-        version: 0.5.1(zod@3.23.8)
+        version: 0.5.1(zod@3.25.57)
       zsa-react:
         specifier: ^0.2.2
-        version: 0.2.3(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.23.8)
+        version: 0.2.3(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.25.57)
       zustand:
         specifier: ^4.5.6
         version: 4.5.7(@types/react@18.3.0)(immer@9.0.21)(react@19.0.0-rc-5d19e1c8-20240923)
@@ -13207,13 +13207,6 @@ snapshots:
       '@ai-sdk/provider-utils': 2.2.8(zod@3.25.57)
       zod: 3.25.57
 
-  '@ai-sdk/provider-utils@2.2.8(zod@3.23.8)':
-    dependencies:
-      '@ai-sdk/provider': 1.1.3
-      nanoid: 3.3.11
-      secure-json-parse: 2.7.0
-      zod: 3.23.8
-
   '@ai-sdk/provider-utils@2.2.8(zod@3.25.57)':
     dependencies:
       '@ai-sdk/provider': 1.1.3
@@ -13235,16 +13228,6 @@ snapshots:
     optionalDependencies:
       zod: 3.25.57
 
-  '@ai-sdk/react@1.2.12(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.23.8)':
-    dependencies:
-      '@ai-sdk/provider-utils': 2.2.8(zod@3.23.8)
-      '@ai-sdk/ui-utils': 1.2.11(zod@3.23.8)
-      react: 19.0.0-rc-5d19e1c8-20240923
-      swr: 2.3.3(react@19.0.0-rc-5d19e1c8-20240923)
-      throttleit: 2.1.0
-    optionalDependencies:
-      zod: 3.23.8
-
   '@ai-sdk/react@1.2.12(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.25.57)':
     dependencies:
       '@ai-sdk/provider-utils': 2.2.8(zod@3.25.57)
@@ -13254,13 +13237,6 @@ snapshots:
       throttleit: 2.1.0
     optionalDependencies:
       zod: 3.25.57
-
-  '@ai-sdk/ui-utils@1.2.11(zod@3.23.8)':
-    dependencies:
-      '@ai-sdk/provider': 1.1.3
-      '@ai-sdk/provider-utils': 2.2.8(zod@3.23.8)
-      zod: 3.23.8
-      zod-to-json-schema: 3.24.5(zod@3.23.8)
 
   '@ai-sdk/ui-utils@1.2.11(zod@3.25.57)':
     dependencies:
@@ -18480,12 +18456,6 @@ snapshots:
     dependencies:
       defer-to-connect: 2.0.1
 
-  '@t3-oss/env-core@0.10.1(typescript@5.8.3)(zod@3.23.8)':
-    dependencies:
-      zod: 3.23.8
-    optionalDependencies:
-      typescript: 5.8.3
-
   '@t3-oss/env-core@0.10.1(typescript@5.8.3)(zod@3.25.57)':
     dependencies:
       zod: 3.25.57
@@ -18498,10 +18468,10 @@ snapshots:
     optionalDependencies:
       typescript: 5.8.3
 
-  '@t3-oss/env-nextjs@0.10.1(typescript@5.8.3)(zod@3.23.8)':
+  '@t3-oss/env-nextjs@0.10.1(typescript@5.8.3)(zod@3.25.57)':
     dependencies:
-      '@t3-oss/env-core': 0.10.1(typescript@5.8.3)(zod@3.23.8)
-      zod: 3.23.8
+      '@t3-oss/env-core': 0.10.1(typescript@5.8.3)(zod@3.25.57)
+      zod: 3.25.57
     optionalDependencies:
       typescript: 5.8.3
 
@@ -19615,18 +19585,6 @@ snapshots:
       zod: 3.25.57
     optionalDependencies:
       react: 18.3.0
-
-  ai@4.3.16(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.23.8):
-    dependencies:
-      '@ai-sdk/provider': 1.1.3
-      '@ai-sdk/provider-utils': 2.2.8(zod@3.23.8)
-      '@ai-sdk/react': 1.2.12(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.23.8)
-      '@ai-sdk/ui-utils': 1.2.11(zod@3.23.8)
-      '@opentelemetry/api': 1.9.0
-      jsondiffpatch: 0.6.0
-      zod: 3.23.8
-    optionalDependencies:
-      react: 19.0.0-rc-5d19e1c8-20240923
 
   ai@4.3.16(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.25.57):
     dependencies:
@@ -27855,10 +27813,6 @@ snapshots:
 
   yoctocolors@2.1.1: {}
 
-  zod-to-json-schema@3.24.5(zod@3.23.8):
-    dependencies:
-      zod: 3.23.8
-
   zod-to-json-schema@3.24.5(zod@3.25.57):
     dependencies:
       zod: 3.25.57
@@ -27867,15 +27821,15 @@ snapshots:
 
   zod@3.25.57: {}
 
-  zsa-react@0.2.3(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.23.8):
+  zsa-react@0.2.3(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.25.57):
     dependencies:
       react: 19.0.0-rc-5d19e1c8-20240923
-      zod: 3.23.8
-      zsa: 0.5.1(zod@3.23.8)
+      zod: 3.25.57
+      zsa: 0.5.1(zod@3.25.57)
 
-  zsa@0.5.1(zod@3.23.8):
+  zsa@0.5.1(zod@3.25.57):
     dependencies:
-      zod: 3.23.8
+      zod: 3.25.57
 
   zustand@4.5.7(@types/react@18.3.0)(immer@9.0.21)(react@18.3.0):
     dependencies:
