@@ -12,22 +12,42 @@ import { Result } from './../../lib/Result'
 import { commits, documentLogs, projects } from '../../schema'
 import { count, eq, inArray } from 'drizzle-orm'
 import { cache } from '../../cache'
+import Redis from 'ioredis'
 
-export async function computeWorkspaceUsage(
+/**
+ * Handle both old cache format (object) and new cache format (number)
+ **/
+async function getUsageFromCache(
+  cacheClient: Redis,
+  cacheKey: string,
+): Promise<number | null> {
+  const cachedUsage = await cacheClient.get(cacheKey)
+  if (cachedUsage === undefined || cachedUsage === null) return null
+
+  const parsedNumber = parseInt(cachedUsage)
+
+  if (!isNaN(parsedNumber)) return parsedNumber
+
+  // If not a number, try to parse as JSON (old cache format)
+  try {
+    const parsed = JSON.parse(cachedUsage)
+    if (typeof parsed === 'object' && parsed.usage !== undefined) {
+      return parsed.usage
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
+
+async function computeUsageFromDatabase(
   workspace: {
     id: Workspace['id']
     currentSubscriptionCreatedAt: Subscription['createdAt']
-    plan: SubscriptionPlan
   },
   db = database,
-): PromisedResult<WorkspaceUsage, Error> {
-  const cacheClient = await cache()
-  const cacheKey = `workspace-usage-${workspace.id}`
-  const cachedUsage = await cacheClient.get(cacheKey)
-  if (cachedUsage) {
-    return Result.ok(JSON.parse(cachedUsage))
-  }
-
+): Promise<number> {
   const createdAtDate = workspace.currentSubscriptionCreatedAt
   const targetDate = new Date(Date.now())
   const latestRenewalDate = getLatestRenewalDate(createdAtDate, targetDate)
@@ -49,25 +69,44 @@ export async function computeWorkspaceUsage(
     .where(inArray(documentLogs.commitId, commitIds))
     .then((r) => r[0]!.count)
 
+  const evaluationResultsV2Count = await evaluationResultsV2Scope
+    .countSinceDate(latestRenewalDate)
+    .then((r) => r.unwrap())
+
+  return evaluationResultsV2Count + documentLogsCount
+}
+
+export async function computeWorkspaceUsage(
+  workspace: {
+    id: Workspace['id']
+    currentSubscriptionCreatedAt: Subscription['createdAt']
+    plan: SubscriptionPlan
+  },
+  db = database,
+): PromisedResult<WorkspaceUsage, Error> {
+  const cacheClient = await cache()
+  const cacheKey = `workspace-usage-${workspace.id}`
+  let usage = await getUsageFromCache(cacheClient, cacheKey)
+
+  if (usage === null) {
+    usage = await computeUsageFromDatabase(workspace, db)
+    await cacheClient.set(cacheKey, usage.toString(), 'EX', 86400) // cache for 24 hours
+  }
+
   const claimedRewardsScope = new ClaimedRewardsRepository(workspace.id, db)
   const extraRuns = await claimedRewardsScope
     .getExtraRunsOptimistic()
     .then((r) => r.unwrap())
   const currentSubscriptionPlan = SubscriptionPlans[workspace.plan]
-  const evaluationResultsV2Count = await evaluationResultsV2Scope
-    .countSinceDate(latestRenewalDate)
-    .then((r) => r.unwrap())
 
   const membersRepo = new MembershipsRepository(workspace.id, db)
   const members = await membersRepo.findAll().then((r) => r.unwrap())
   const usageResult: WorkspaceUsage = {
-    usage: evaluationResultsV2Count + documentLogsCount,
+    usage,
     max: currentSubscriptionPlan.credits + extraRuns,
     members: members.length,
     maxMembers: currentSubscriptionPlan.users,
   }
-
-  await cacheClient.set(cacheKey, JSON.stringify(usageResult), 'EX', 86400) // cache for 24 hours
 
   return Result.ok(usageResult)
 }
