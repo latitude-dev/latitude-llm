@@ -37,6 +37,10 @@ export default async function PrivateLayout({
   const { workspace, user, subscriptionPlan } = await getCurrentUser()
   if (!user) return redirect(ROUTES.auth.login)
 
+  if (!workspace) {
+    return redirect(ROUTES.noWorkspace.root)
+  }
+
   const completed = await isOnboardingCompleted()
   if (!completed) {
     redirect(ROUTES.onboarding.root)
