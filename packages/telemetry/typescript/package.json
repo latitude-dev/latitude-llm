@@ -60,7 +60,7 @@
     "@traceloop/instrumentation-openai": "^0.13.0",
     "@traceloop/instrumentation-together": "^0.13.0",
     "@traceloop/instrumentation-vertexai": "^0.13.0",
-    "zod": "catalog:",
+    "zod": "^3.23.8",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
