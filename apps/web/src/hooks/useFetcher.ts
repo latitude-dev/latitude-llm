@@ -58,8 +58,9 @@ export async function handleResponse<
 
     navigate.push(ROUTES.auth.login)
   } else if (response.status >= 500) {
-    if (onFail) onFail('Something went wrong on the server')
-    else {
+    if (onFail) {
+      onFail('Something went wrong on the server')
+    } else {
       toast({
         title: 'Server error',
         description: 'Something went wrong on the server',
@@ -68,8 +69,9 @@ export async function handleResponse<
     }
   } else if (response.status !== 404) {
     const error = await response.json()
-    if (onFail) onFail(error.message)
-    else {
+    if (onFail) {
+      onFail(error.message)
+    } else {
       toast({
         title: 'Error',
         description: error.message,

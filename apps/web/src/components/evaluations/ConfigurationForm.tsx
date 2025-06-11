@@ -160,8 +160,8 @@ export function ConfigurationAdvancedForm<
           </span>
         }
         description='How to extract the output, to evaluate against, from the conversation'
+        descriptionPosition='top'
         layout='vertical'
-        float='top'
         group
       >
         <FormFieldGroup
@@ -366,7 +366,7 @@ function ActualOutputTest({
 
   if (logPosition === undefined || totalLogs === undefined) {
     return (
-      <Alert variant='destructive' description={'Error while fetching logs'} />
+      <Alert variant='destructive' description='Error while fetching logs' />
     )
   }
 

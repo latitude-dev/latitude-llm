@@ -11,16 +11,16 @@ export function FormFieldGroup({
   children,
   label,
   description,
+  descriptionPosition = 'bottom',
   tooltip,
-  float = 'bottom',
   group = false,
 }: {
   children: ReactNode
   label?: string | ReactNode
   description?: string
+  descriptionPosition?: 'top' | 'bottom'
   tooltip?: string
   layout?: 'horizontal' | 'vertical'
-  float?: 'top' | 'bottom'
   group?: boolean
 }) {
   const id = useId()
@@ -52,7 +52,7 @@ export function FormFieldGroup({
           )}
         </span>
       ) : null}
-      {!!description && float === 'top' && (
+      {!!description && descriptionPosition === 'top' && (
         <FormDescription>{description}</FormDescription>
       )}
       <div
@@ -68,7 +68,7 @@ export function FormFieldGroup({
       >
         {children}
       </div>
-      {!!description && float === 'bottom' && (
+      {!!description && descriptionPosition === 'bottom' && (
         <FormDescription>{description}</FormDescription>
       )}
     </div>

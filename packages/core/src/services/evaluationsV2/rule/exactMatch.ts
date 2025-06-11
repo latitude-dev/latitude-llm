@@ -60,12 +60,14 @@ async function run(
     throw new BadRequestError('Expected output is required')
   }
 
+  let actualString = metadata.actualOutput
+  let expectedString = metadata.expectedOutput
   if (metadata.configuration.caseInsensitive) {
-    metadata.actualOutput = metadata.actualOutput.toLowerCase()
-    metadata.expectedOutput = metadata.expectedOutput!.toLowerCase()
+    actualString = metadata.actualOutput.toLowerCase()
+    expectedString = metadata.expectedOutput!.toLowerCase()
   }
 
-  const score = metadata.actualOutput === metadata.expectedOutput ? 1 : 0
+  const score = actualString === expectedString ? 1 : 0
 
   let normalizedScore = normalizeScore(score, 0, 1)
   let hasPassed = score === 1
