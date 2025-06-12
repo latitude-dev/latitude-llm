@@ -7,6 +7,7 @@ import { Result } from '../../../../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
+  LatteThreadsRepository,
 } from '../../../../../repositories'
 import { defineLatteTool } from '../types'
 import { LatteEditAction } from '@latitude-data/constants/latte'
@@ -18,6 +19,7 @@ import { promptPresenter } from '../presenters'
 import { WebsocketClient } from '../../../../../websockets/workers'
 import { z } from 'zod'
 import { scanDocuments } from '../../helpers'
+import { createLatteThreadCheckpoints } from '../../threads'
 
 async function executeEditAction(
   {
@@ -107,7 +109,7 @@ async function executeEditAction(
 }
 
 const editProject = defineLatteTool(
-  async ({ projectId, draftUuid, actions }, { workspace }) => {
+  async ({ projectId, draftUuid, actions }, { workspace, threadUuid }) => {
     const commitsScope = new CommitsRepository(workspace.id)
     const commitResult = await commitsScope.getCommitByUuid({
       projectId: projectId,
@@ -129,7 +131,13 @@ const editProject = defineLatteTool(
       .getDocumentsAtCommit(commit)
       .then((r) => r.unwrap())
 
+    const threadsScope = new LatteThreadsRepository(workspace.id)
+    const threadCheckpoints = await threadsScope
+      .findAllCheckpoints(threadUuid)
+      .then((r) => r.unwrap())
+
     return await Transaction.call(async (tx) => {
+      // Update all documents requested
       const results = await Promise.all(
         actions.map((action) =>
           executeEditAction({ workspace, commit, documents, action }, tx),
@@ -151,6 +159,39 @@ const editProject = defineLatteTool(
         data: { draftUuid, updates: updatedDocuments },
       })
 
+      // Create the missing checkpoints (status of the previous documents for documents that were updated and not previously checkpointed)
+      const missingCheckpoints = updatedDocuments
+        .filter(
+          (doc) =>
+            !threadCheckpoints.some(
+              (checkpoint) =>
+                checkpoint.documentUuid === doc.documentUuid &&
+                checkpoint.commitId === commit.id,
+            ),
+        )
+        .reduce(
+          (acc, { documentUuid }) => ({
+            ...acc,
+            [documentUuid]: documents.find(
+              (doc) => doc.documentUuid === documentUuid,
+            ),
+          }),
+          {},
+        )
+
+      const checkpointsResult = await createLatteThreadCheckpoints(
+        {
+          threadUuid,
+          commitId: commit.id,
+          checkpoints: missingCheckpoints,
+        },
+        tx,
+      )
+      if (!checkpointsResult.ok) {
+        return Result.error(checkpointsResult.error!)
+      }
+
+      // Scan the updated project for errors
       const newDocuments = await documentsScope
         .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
@@ -197,7 +238,6 @@ const editProject = defineLatteTool(
         z.object({
           type: z.literal('prompt'),
           operation: z.literal('create'),
-          promptUuid: z.string(),
           path: z.string(),
           content: z.string(),
         }),

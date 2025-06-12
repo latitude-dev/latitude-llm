@@ -18,6 +18,8 @@ import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
 import { handleToolRequest } from './tools'
 import { WebsocketClient } from '../../../websockets/workers'
 
+export * from './threads'
+
 async function generateCopilotResponse({
   copilotWorkspace,
   copilotCommit,

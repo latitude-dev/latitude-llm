@@ -14,6 +14,8 @@ import { getDescriptionFromToolCall } from './helpers'
 import { trigger } from '$/lib/events'
 import { useLatteContext } from './context'
 import { LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
+import { acceptLatteChangesAction } from '$/actions/latte/acceptChanges'
+import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
 
 export function useLatte() {
   const [threadUuid, setThreadUuid] = useState<string>()
@@ -50,6 +52,21 @@ export function useLatte() {
       },
     },
   )
+
+  const { execute: executeAcceptChanges } = useServerAction(
+    acceptLatteChangesAction,
+  )
+  const { execute: executeUndoChanges } = useServerAction(
+    discardLatteChangesActions,
+  )
+  const acceptChanges = useCallback(() => {
+    if (!threadUuid) return
+    executeAcceptChanges({ threadUuid })
+  }, [threadUuid, executeAcceptChanges])
+  const undoChanges = useCallback(() => {
+    if (!threadUuid) return
+    executeUndoChanges({ threadUuid })
+  }, [threadUuid, executeUndoChanges])
 
   const sendMessage = useCallback(
     ({ message }: { message: string }) => {
@@ -233,7 +250,17 @@ export function useLatte() {
       isLoading,
       interactions,
       error,
+      acceptChanges,
+      undoChanges,
     }),
-    [sendMessage, resetChat, isLoading, interactions, error],
+    [
+      sendMessage,
+      resetChat,
+      isLoading,
+      interactions,
+      error,
+      acceptChanges,
+      undoChanges,
+    ],
   )
 }

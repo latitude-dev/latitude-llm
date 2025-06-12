@@ -102,24 +102,8 @@ export function LatteChat({
               </>
             )}
           </div>
-          {inConversation && (
-            <div className='absolute top-0 right-0 p-4'>
-              <Button
-                variant='outline'
-                fancy
-                iconProps={{
-                  name: 'filePlus',
-                }}
-                onClick={() => {
-                  resetChat()
-                }}
-              >
-                New conversation
-              </Button>
-            </div>
-          )}
         </div>
-        <div className='p-4 pt-0 max-w-[600px] w-full'>
+        <div className='p-4 pt-0 max-w-[600px] w-full relative flex flex-col gap-0'>
           <TextArea
             className='bg-transparent w-full px-2 pt-2 pb-14 resize-none text-sm'
             placeholder={inConversation ? 'Ask anything' : placeholder}
@@ -131,6 +115,30 @@ export function LatteChat({
             minRows={2}
             maxRows={5}
           />
+          <div className='absolute bottom-0 right-0 pb-6 pr-6'>
+            <Button
+              variant='default'
+              onClick={onSubmit}
+              disabled={isLoading || !!error || value.trim() === ''}
+              fancy
+            >
+              Send
+            </Button>
+          </div>
+          <div className='absolute bottom-0 left-0 pb-6 pl-6'>
+            <Button
+              variant='outline'
+              onClick={resetChat}
+              disabled={!inConversation}
+              fancy
+              iconProps={{
+                name: 'addCircle',
+                color: 'foregroundMuted',
+              }}
+            >
+              <Text.H5 color='foregroundMuted'>New chat</Text.H5>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

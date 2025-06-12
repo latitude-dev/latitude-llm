@@ -7,7 +7,7 @@ export function LatteMessageList({
   interactions: LatteInteraction[]
 }) {
   return (
-    <div className='flex flex-col gap-8 w-full pt-10 max-w-[600px]'>
+    <div className='flex flex-col gap-8 w-full max-w-[600px]'>
       {interactions.map((interaction, i) => {
         return <ChatInteraction key={i} interaction={interaction} />
       })}
