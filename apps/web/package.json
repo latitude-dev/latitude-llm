@@ -50,7 +50,7 @@
     "lodash-es": "4.17.21",
     "lucia": "3.2.0",
     "monaco-editor": "0.50.0",
-    "nanoid": "5.0.7",
+    "nanoid": "5.0.9",
     "next": "15.3.3",
     "next-themes": "0.3.0",
     "nextjs-toploader": "1.6.12",
