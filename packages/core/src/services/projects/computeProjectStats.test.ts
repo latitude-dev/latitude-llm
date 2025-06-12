@@ -343,7 +343,7 @@ describe('computeProjectStats', () => {
   })
 
   it('does not cache results when project has few logs', async () => {
-    // Create fewer logs than MIN_LOGS_FOR_CACHING
+    // Create fewer logs than STATS_CACHING_THRESHOLD
     const { documentLog } = await factories.createDocumentLog({
       document,
       commit,

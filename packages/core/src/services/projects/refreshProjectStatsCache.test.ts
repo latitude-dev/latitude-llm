@@ -5,10 +5,14 @@ import * as factories from '../../tests/factories'
 import { computeProjectStats } from './computeProjectStats'
 import { refreshProjectStatsCache } from './refreshProjectStatsCache'
 
+vi.mock('../../constants', () => ({
+  LIMITED_VIEW_THRESHOLD: 100,
+  STATS_CACHING_THRESHOLD: 1,
+}))
+
 // Mock the computeProjectStats function
 vi.mock('./computeProjectStats', () => ({
   computeProjectStats: vi.fn(),
-  MIN_LOGS_FOR_CACHING: 1,
 }))
 
 describe('refreshProjectStatsCache', () => {

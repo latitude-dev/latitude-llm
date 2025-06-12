@@ -5,6 +5,7 @@ import {
   DOCUMENT_STATS_CACHE_KEY,
   LIMITED_VIEW_THRESHOLD,
   STATS_CACHE_TTL,
+  STATS_CACHING_THRESHOLD,
 } from '../../constants'
 import { Result } from '../../lib/Result'
 import {
@@ -14,8 +15,6 @@ import {
 import { commits, documentLogs, documentVersions, projects } from '../../schema'
 import { computeDocumentLogsAggregations } from './computeDocumentLogsAggregations'
 import { computeDocumentLogsDailyCount } from './computeDocumentLogsDailyCount'
-
-const MIN_LOGS_FOR_CACHING = 50_000
 
 async function countByDocument(documentUuid: string, db = database) {
   return await db
@@ -64,7 +63,7 @@ export async function refreshDocumentStatsCache(
     if (approximatedCount.value < LIMITED_VIEW_THRESHOLD) {
       // Count the number of document logs for this document
       const logs = await countByDocument(documentUuid, db)
-      if (logs < MIN_LOGS_FOR_CACHING) {
+      if (logs < STATS_CACHING_THRESHOLD) {
         return Result.ok({
           skipped: true,
           reason: 'insufficient_logs',

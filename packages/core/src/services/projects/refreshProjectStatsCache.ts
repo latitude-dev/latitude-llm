@@ -1,13 +1,13 @@
 import { eq, sql } from 'drizzle-orm'
 import { database, lro } from '../../client'
-import { LIMITED_VIEW_THRESHOLD } from '../../constants'
+import {
+  LIMITED_VIEW_THRESHOLD,
+  STATS_CACHING_THRESHOLD,
+} from '../../constants'
 import { Result } from '../../lib/Result'
 import { DocumentLogsRepository } from '../../repositories'
 import { commits, documentLogs, projects } from '../../schema'
-import {
-  computeProjectStats,
-  MIN_LOGS_FOR_CACHING,
-} from './computeProjectStats'
+import { computeProjectStats } from './computeProjectStats'
 
 async function countByProject(projectId: number, db = database) {
   return await db
@@ -44,7 +44,7 @@ export async function refreshProjectStatsCache(
     if (approximatedCount.value < LIMITED_VIEW_THRESHOLD) {
       // Count the number of document logs for this project
       const logs = await countByProject(project.id, db)
-      if (logs < MIN_LOGS_FOR_CACHING) {
+      if (logs < STATS_CACHING_THRESHOLD) {
         return Result.ok({
           skipped: true,
           reason: 'insufficient_logs',

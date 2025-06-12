@@ -4,6 +4,7 @@ import {
   PROJECT_STATS_CACHE_KEY,
   ProjectStats,
   STATS_CACHE_TTL,
+  STATS_CACHING_THRESHOLD,
 } from '../../browser'
 import { cache } from '../../cache'
 import { database } from '../../client'
@@ -17,12 +18,10 @@ import {
   providerLogs,
 } from '../../schema'
 
-// Minimum number of logs required to cache project stats
-export const MIN_LOGS_FOR_CACHING = 5000
-
 /**
  * Computes project statistics with caching support
- * @param project The project to compute stats for
+ * @param projectId The project to compute stats for
+ * @param workspaceId The workspace to compute stats for
  * @param forceRefresh Whether to force a refresh of the cache
  * @returns Project stats
  */
@@ -225,8 +224,8 @@ export async function computeProjectStats(
     costPerEvaluation,
   }
 
-  // Only cache the results if the project has more than MIN_LOGS_FOR_CACHING logs
-  if (totalRuns >= MIN_LOGS_FOR_CACHING) {
+  // Only cache the results if the project has more than STATS_CACHING_THRESHOLD logs
+  if (totalRuns >= STATS_CACHING_THRESHOLD) {
     try {
       await redis.set(cacheKey, JSON.stringify(stats), 'EX', STATS_CACHE_TTL)
     } catch (error) {
