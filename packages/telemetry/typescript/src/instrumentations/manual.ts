@@ -1,4 +1,3 @@
- 
 import { BaseInstrumentation } from '$telemetry/instrumentations/base'
 import {
   ATTR_GEN_AI_COMPLETIONS,

@@ -37,18 +37,17 @@ type CreateEvaluationResultV2Args<
 } & Partial<EvaluationResultValue<T, M>>
 
 // prettier-ignore
- 
+
 export async function createEvaluationResultV2(
   args: Omit<CreateEvaluationResultV2Args, keyof EvaluationResultValue>,
 ): Promise<EvaluationResultV2<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>>
 
 // prettier-ignore
- 
+
 export async function createEvaluationResultV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
   args: CreateEvaluationResultV2Args<T, M>
 ): Promise<EvaluationResultV2<T, M>>
 
- 
 export async function createEvaluationResultV2<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,

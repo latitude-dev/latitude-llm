@@ -24,7 +24,13 @@ export type VercelProviderTool = {
   type: 'provider-defined'
   id: `${string}.${string}`
   args: Record<string, unknown>
-  parameters: z.ZodObject<Record<string, never>, 'strip', z.ZodTypeAny, Record<string, never>, Record<string, never>>
+  parameters: z.ZodObject<
+    Record<string, never>,
+    'strip',
+    z.ZodTypeAny,
+    Record<string, never>,
+    Record<string, never>
+  >
 }
 
 export type VercelTools = Record<string, VercelProviderTool | ToolDefinition>
