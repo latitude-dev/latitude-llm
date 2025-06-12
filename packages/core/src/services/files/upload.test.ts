@@ -29,6 +29,8 @@ describe('uploadFile', () => {
     workspace = w
 
     vi.spyOn(disk, 'putFile').mockResolvedValue(Result.ok(undefined))
+    // @ts-expect-error - v4 can now return an array buffer but by default it
+    // returns a string so we can safely expect this
     vi.spyOn(lib, 'generateUUIDIdentifier').mockReturnValue('fake-uuid')
   })
 
