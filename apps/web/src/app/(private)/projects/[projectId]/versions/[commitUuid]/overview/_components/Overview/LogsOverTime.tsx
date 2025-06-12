@@ -1,9 +1,10 @@
 'use client'
 import { useMemo } from 'react'
 
+import { DailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
+import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { BarChart, ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
-import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 
 const formatDate = (date: number) => {
   return new Date(date).toLocaleDateString('en-US', {
@@ -15,14 +16,23 @@ const formatDate = (date: number) => {
 const ONE_DAY_IN_MS = 86400000
 
 export function LogsOverTime({
-  data,
+  data: rawData,
   isLoading,
   error,
 }: {
-  data?: Array<{ date: Date; count: number }>
+  data?: DailyCount[]
   isLoading: boolean
   error?: Error
 }) {
+  const data = useMemo(
+    () =>
+      rawData?.map((r) => ({
+        ...r,
+        date: new Date(r.date),
+      })),
+    [rawData],
+  )
+
   const parsedData = useMemo(
     () =>
       data?.map((r) => ({

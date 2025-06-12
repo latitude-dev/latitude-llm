@@ -13,8 +13,11 @@ catalogs:
       specifier: 0.31.1
       version: 0.31.1
     drizzle-orm:
-      specifier: 0.44.0
-      version: 0.44.0
+      specifier: 0.44.2
+      version: 0.44.2
+    pg:
+      specifier: 8.16.0
+      version: 8.16.0
     promptl-ai:
       specifier: 0.6.6
       version: 0.6.6
@@ -127,7 +130,7 @@ importers:
         version: 5.43.0
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.44.0(@opentelemetry/api@1.8.0)(@types/pg@8.15.4)(pg@8.14.1)
+        version: 0.44.2(@opentelemetry/api@1.8.0)(@types/pg@8.15.4)(pg@8.16.0)
       hono:
         specifier: 4.6.6
         version: 4.6.6
@@ -251,7 +254,7 @@ importers:
         version: 1.0.5
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.44.0(@opentelemetry/api@1.8.0)(@types/pg@8.15.4)(pg@8.12.0)
+        version: 0.44.2(@opentelemetry/api@1.8.0)(@types/pg@8.15.4)(pg@8.16.0)
       eventsource-parser:
         specifier: 2.0.1
         version: 2.0.1
@@ -301,8 +304,8 @@ importers:
         specifier: 4.9.155
         version: 4.9.155
       pg:
-        specifier: 8.12.0
-        version: 8.12.0
+        specifier: 'catalog:'
+        version: 8.16.0
       posthog-js:
         specifier: 1.161.6
         version: 1.161.6
@@ -731,7 +734,7 @@ importers:
         version: 1.0.5
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.44.0(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(pg@8.12.0)
+        version: 0.44.2(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(pg@8.16.0)
       fastest-levenshtein:
         specifier: 1.0.16
         version: 1.0.16
@@ -784,8 +787,8 @@ importers:
         specifier: 4.9.155
         version: 4.9.155
       pg:
-        specifier: 8.12.0
-        version: 8.12.0
+        specifier: 'catalog:'
+        version: 8.16.0
       piscina:
         specifier: 5.0.0
         version: 5.0.0
@@ -854,7 +857,7 @@ importers:
         specifier: ^1.4.6
         version: 1.4.6
       '@types/pg':
-        specifier: ^8.11.6
+        specifier: 8.15.4
         version: 8.15.4
       '@types/react':
         specifier: 18.3.0
@@ -879,7 +882,7 @@ importers:
         version: 0.2.3(eslint@8.57.1)
       pg-transactional-tests:
         specifier: ^1.0.9
-        version: 1.2.0(pg@8.12.0)
+        version: 1.2.0(pg@8.16.0)
       supertest:
         specifier: ^7.0.0
         version: 7.1.1
@@ -8556,8 +8559,8 @@ packages:
     resolution: {integrity: sha512-PUjYKWtzOzPtdtQlTHQG3qfv4Y0XT8+Eas6UbxCmxTj7qgMf+39dDujf1BP1I+qqZtw9uzwTh8jYtkMuCq+B0Q==}
     hasBin: true
 
-  drizzle-orm@0.44.0:
-    resolution: {integrity: sha512-/8wYepe887Gp1eCVILKitNegclGLPUMdK4oDDyDftKJOeHoCylY+XM++chMJloy9oKTceWOALiQMl2aAuFuPTw==}
+  drizzle-orm@0.44.2:
+    resolution: {integrity: sha512-zGAqBzWWkVSFjZpwPOrmCrgO++1kZ5H/rZ4qTGeGOe18iXGVJWf3WPfHOVwFIbmi8kHjfJstC6rJomzGx8g/dQ==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -11689,8 +11692,8 @@ packages:
     resolution: {integrity: sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==}
     engines: {node: '>=4'}
 
-  pg@8.12.0:
-    resolution: {integrity: sha512-A+LHUSnwnxrnL/tZ+OLfqR1SxLN3c/pgDztZ47Rpbsd4jUytsTtwQo/TLPRzPJMp/1pbhYVhH9cuSZLAajNfjQ==}
+  pg@8.14.1:
+    resolution: {integrity: sha512-0TdbqfjwIun9Fm/r89oB7RFQ0bLgduAhiIqIXOsyKoiC/L54DbuAAzIEN/9Op0f1Po9X7iCPXGoa/Ah+2aI8Xw==}
     engines: {node: '>= 8.0.0'}
     peerDependencies:
       pg-native: '>=3.0.1'
@@ -11698,8 +11701,8 @@ packages:
       pg-native:
         optional: true
 
-  pg@8.14.1:
-    resolution: {integrity: sha512-0TdbqfjwIun9Fm/r89oB7RFQ0bLgduAhiIqIXOsyKoiC/L54DbuAAzIEN/9Op0f1Po9X7iCPXGoa/Ah+2aI8Xw==}
+  pg@8.16.0:
+    resolution: {integrity: sha512-7SKfdvP8CTNXjMUzfcVTaI+TDzBEeaUnVwiVGZQD1Hh33Kpev7liQba9uLd4CfN8r9mCVsD0JIpq03+Unpz+kg==}
     engines: {node: '>= 8.0.0'}
     peerDependencies:
       pg-native: '>=3.0.1'
@@ -21606,7 +21609,7 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.3))(eslint@8.57.1)(typescript@5.8.3)
       '@typescript-eslint/parser': 6.21.0(eslint@8.57.1)(typescript@5.8.3)
       eslint-config-prettier: 9.1.0(eslint@8.57.1)
-      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.31.0)
+      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.31.0)(eslint@8.57.1)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.57.1)
       eslint-plugin-import: 2.31.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.8.3))(eslint@8.57.1)
@@ -23216,23 +23219,17 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.44.0(@opentelemetry/api@1.8.0)(@types/pg@8.15.4)(pg@8.12.0):
+  drizzle-orm@0.44.2(@opentelemetry/api@1.8.0)(@types/pg@8.15.4)(pg@8.16.0):
     optionalDependencies:
       '@opentelemetry/api': 1.8.0
       '@types/pg': 8.15.4
-      pg: 8.12.0
+      pg: 8.16.0
 
-  drizzle-orm@0.44.0(@opentelemetry/api@1.8.0)(@types/pg@8.15.4)(pg@8.14.1):
-    optionalDependencies:
-      '@opentelemetry/api': 1.8.0
-      '@types/pg': 8.15.4
-      pg: 8.14.1
-
-  drizzle-orm@0.44.0(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(pg@8.12.0):
+  drizzle-orm@0.44.2(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(pg@8.16.0):
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
       '@types/pg': 8.15.4
-      pg: 8.12.0
+      pg: 8.16.0
 
   duck@0.1.12:
     dependencies:
@@ -23625,7 +23622,7 @@ snapshots:
       eslint-plugin-turbo: 2.5.4(eslint@8.57.1)(turbo@2.5.4)
       turbo: 2.5.4
 
-  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.31.0):
+  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.31.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.8.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)):
     dependencies:
       eslint-plugin-import: 2.31.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.8.3))(eslint@8.57.1)
 
@@ -27295,13 +27292,13 @@ snapshots:
 
   pg-minify@1.7.0: {}
 
-  pg-pool@3.10.0(pg@8.12.0):
-    dependencies:
-      pg: 8.12.0
-
   pg-pool@3.10.0(pg@8.14.1):
     dependencies:
       pg: 8.14.1
+
+  pg-pool@3.10.0(pg@8.16.0):
+    dependencies:
+      pg: 8.16.0
 
   pg-promise@11.14.0(pg-query-stream@4.8.1(pg@8.14.1)):
     dependencies:
@@ -27320,9 +27317,9 @@ snapshots:
       pg: 8.14.1
       pg-cursor: 2.15.0(pg@8.14.1)
 
-  pg-transactional-tests@1.2.0(pg@8.12.0):
+  pg-transactional-tests@1.2.0(pg@8.16.0):
     dependencies:
-      pg: 8.12.0
+      pg: 8.16.0
 
   pg-types@2.2.0:
     dependencies:
@@ -27332,20 +27329,20 @@ snapshots:
       postgres-date: 1.0.7
       postgres-interval: 1.2.0
 
-  pg@8.12.0:
+  pg@8.14.1:
     dependencies:
       pg-connection-string: 2.9.0
-      pg-pool: 3.10.0(pg@8.12.0)
+      pg-pool: 3.10.0(pg@8.14.1)
       pg-protocol: 1.10.0
       pg-types: 2.2.0
       pgpass: 1.0.5
     optionalDependencies:
       pg-cloudflare: 1.2.5
 
-  pg@8.14.1:
+  pg@8.16.0:
     dependencies:
       pg-connection-string: 2.9.0
-      pg-pool: 3.10.0(pg@8.14.1)
+      pg-pool: 3.10.0(pg@8.16.0)
       pg-protocol: 1.10.0
       pg-types: 2.2.0
       pgpass: 1.0.5

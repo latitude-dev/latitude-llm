@@ -1,14 +1,19 @@
 export {
-  eq,
-  inArray,
-  or,
   and,
-  not,
-  gte,
-  lte,
-  gt,
-  lt,
   asc,
+  count,
   desc,
+  eq,
   getTableColumns,
+  gt,
+  gte,
+  inArray,
+  lt,
+  lte,
+  ne,
+  not,
+  or,
+  sql,
 } from 'drizzle-orm'
+export { v4 as uuid } from 'uuid'
+export { z } from 'zod'

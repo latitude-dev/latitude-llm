@@ -374,7 +374,7 @@ function UseDocumentLogInPlaygroundButton({
   const navigate = useNavigate()
   const employLogAsDocumentParameters = useCallback(() => {
     setSource('history')
-    setHistoryLog(documentLog.uuid)
+    setHistoryLog(documentLog)
     navigate.push(
       ROUTES.projects
         .detail({ id: project.id })
@@ -390,7 +390,7 @@ function UseDocumentLogInPlaygroundButton({
     project.id,
     commit.uuid,
     documentUuid,
-    documentLog.uuid,
+    documentLog,
   ])
   const hasError = 'error' in documentLog && !!documentLog.error.message
 

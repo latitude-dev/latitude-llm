@@ -1,14 +1,14 @@
 import { useCallback, useState } from 'react'
 
-import { DocumentVersion } from '@latitude-data/core/browser'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogs from '$/stores/documentLogs'
 import useDocumentLogWithPaginationPosition, {
   LogWithPosition,
 } from '$/stores/documentLogWithPaginationPosition'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
+import { DocumentVersion, LogSources } from '@latitude-data/core/browser'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
 
 const ONLY_ONE_PAGE = '1'
 
@@ -21,13 +21,17 @@ export function useLogHistoryParams({
 }) {
   const { project } = useCurrentProject()
   const {
-    history: { setHistoryLog, logUuid, mapDocParametersToInputs },
+    history: { setHistoryLog, logUuid, force, mapDocParametersToInputs },
   } = useDocumentParameters({
     document,
     commitVersionUuid,
   })
 
-  const filterOptions = useDefaultLogFilterOptions()
+  const filterOptions = {
+    ...useDefaultLogFilterOptions(),
+    // Note: Speeding up history logs as a best-effort basis
+    ...(!force && { logSources: [LogSources.Playground] }),
+  }
   const { data: pagination, isLoading: isLoadingCounter } =
     useDocumentLogsPagination({
       projectId: project.id,
@@ -64,11 +68,11 @@ export function useLogHistoryParams({
     pageSize: ONLY_ONE_PAGE,
     excludeErrors: true,
     onFetched: (logs) => {
-      const log = logs[0]
+      const log = logs?.[0]
       if (!log) return
 
       mapDocParametersToInputs({ parameters: log.parameters })
-      setHistoryLog(log.uuid)
+      setHistoryLog(log)
     },
   })
 

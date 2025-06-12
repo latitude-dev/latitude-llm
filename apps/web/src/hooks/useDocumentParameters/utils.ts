@@ -26,7 +26,7 @@ export const EMPTY_INPUTS: PlaygroundInputs<'manual'> = {
     ...EMPTY_LINKED_DATASET,
   },
   datasetV2: {},
-  history: { logUuid: undefined, inputs: {} },
+  history: { logUuid: undefined, force: false, inputs: {} },
 }
 
 export function getDocState(oldState: InputsByDocument | null, key: string) {

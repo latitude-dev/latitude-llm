@@ -321,6 +321,8 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       })
       .then((r) => r.unwrap())
 
+    const now = new Date()
+
     const stats = {
       totalResults: sql`count(*)`.mapWith(Number).as('total_results'),
       averageScore: sql`avg(${evaluationResultsV2.score})`
@@ -385,12 +387,12 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         if (
           (!dailyStats.at(-1)?.date || !isToday(dailyStats.at(-1)!.date)) &&
           (!params.filters?.createdAt?.from ||
-            isBefore(params.filters.createdAt.from, new Date())) &&
+            isBefore(params.filters.createdAt.from, now)) &&
           (!params.filters?.createdAt?.to ||
-            isAfter(params.filters.createdAt.to, new Date()))
+            isAfter(params.filters.createdAt.to, now))
         ) {
           dailyStats.push({
-            date: startOfDay(new Date()),
+            date: startOfDay(now),
             totalResults: 0,
             averageScore: runningScore / runningResults,
             totalTokens: 0,

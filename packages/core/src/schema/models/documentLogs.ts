@@ -7,13 +7,13 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
+import { LogSources } from '@latitude-data/constants'
 import { sql } from 'drizzle-orm'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
-import { logSourcesEnum } from './providerLogs'
-import { LogSources } from '@latitude-data/constants'
 import { experiments } from './experiments'
+import { logSourcesEnum } from './providerLogs'
 
 export const documentLogs = latitudeSchema.table(
   'document_logs',
@@ -59,8 +59,18 @@ export const documentLogs = latitudeSchema.table(
       table.commitId,
       table.createdAt,
     ),
+    sourceCreatedAtIdx: index('document_logs_source_created_at_idx')
+      .on(table.source, table.createdAt)
+      .concurrently(),
     experimentIdIdx: index('document_logs_experiment_id_idx').on(
       table.experimentId,
     ),
+    createdAtBrinIdx: index('document_logs_created_at_brin_idx')
+      .using('brin', sql`${table.createdAt}`)
+      .with({
+        pages_per_range: 32,
+        autosummarize: true,
+      })
+      .concurrently(),
   }),
 )

@@ -27,10 +27,7 @@ export function StatsPanels({
         <Text.H5>Logs</Text.H5>
         <div className='grid grid-cols-3 gap-4'>
           <LogsOverTime
-            data={stats?.rollingDocumentLogs?.map((r) => ({
-              date: new Date(r.date),
-              count: r.count,
-            }))}
+            data={stats?.rollingDocumentLogs}
             isLoading={isLoading}
           />
           <div className='grid grid-cols-1 gap-4'>

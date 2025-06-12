@@ -1,37 +1,43 @@
-import { and, count, eq, isNotNull, isNull, sql } from 'drizzle-orm'
-
+import { and, count, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import {
   DocumentLogFilterOptions,
   DocumentLogsAggregations,
-  DocumentVersion,
   ErrorableEntity,
 } from '../../browser'
 import { database } from '../../client'
+import { Result } from '../../lib/Result'
 import { commits, documentLogs, providerLogs, runErrors } from '../../schema'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export async function computeDocumentLogsAggregations(
   {
-    document,
+    projectId,
+    documentUuid,
     filterOptions,
   }: {
-    document: DocumentVersion
+    projectId: number
+    documentUuid: string
     filterOptions?: DocumentLogFilterOptions
   },
   db = database,
-): Promise<DocumentLogsAggregations> {
+) {
+  const commitIds = await db
+    .select({ id: commits.id })
+    .from(commits)
+    .where(and(isNull(commits.deletedAt), eq(commits.projectId, projectId)))
+    .then((r) => r.map((r) => r.id))
+
   const conditions = [
-    isNull(commits.deletedAt),
-    eq(documentLogs.documentUuid, document.documentUuid),
+    inArray(documentLogs.commitId, commitIds),
+    eq(documentLogs.documentUuid, documentUuid),
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
 
   const totalCountPromise = db
     .select({
-      totalCount: count(documentLogs.id),
+      totalCount: count(),
     })
     .from(documentLogs)
-    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .where(and(...conditions))
     .then((r) => r[0] ?? { totalCount: 0 })
 
@@ -51,12 +57,10 @@ export async function computeDocumentLogsAggregations(
         eq(runErrors.errorableUuid, documentLogs.uuid),
       ),
     )
-    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .where(and(...conditions, isNull(runErrors.id)))
     .then(
       (r) =>
         r[0] ?? {
-          totalCount: 0,
           averageDuration: 0,
           medianDuration: 0,
         },
@@ -85,13 +89,12 @@ export async function computeDocumentLogsAggregations(
       documentLogs,
       eq(documentLogs.uuid, providerLogs.documentLogUuid),
     )
-    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .where(
       and(
         isNotNull(providerLogs.tokens),
         isNotNull(providerLogs.costInMillicents),
-        isNull(commits.deletedAt),
-        eq(documentLogs.documentUuid, document.documentUuid),
+        inArray(documentLogs.commitId, commitIds),
+        eq(documentLogs.documentUuid, documentUuid),
         filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
       ),
     )
@@ -122,7 +125,7 @@ export async function computeDocumentLogsAggregations(
     totalCountPromise,
   ])
 
-  return {
+  return Result.ok<DocumentLogsAggregations>({
     totalCount,
     totalTokens,
     totalCostInMillicents,
@@ -131,5 +134,5 @@ export async function computeDocumentLogsAggregations(
     medianCostInMillicents,
     averageDuration,
     medianDuration,
-  }
+  })
 }

@@ -1,15 +1,15 @@
 import { maintenanceQueue } from '@latitude-data/core/queues'
-import { startMaintenanceWorker } from './worker-definitions/maintenanceWorker'
-import {
-  startEventsWorker,
-  startEventHandlersWorker,
-} from './worker-definitions/eventsWorker'
-import { startEvaluationsWorker } from './worker-definitions/evaluationsWorker'
-import { startWebhooksWorker } from './worker-definitions/webhooksWorker'
-import { startDocumentsWorker } from './worker-definitions/documentsWorker'
 import { startDefaultWorker } from './worker-definitions/defaultWorker'
-import { startLiveEvaluationsWorker } from './worker-definitions/liveEvaluationsWorker'
 import { startDocumentSuggestionsWorker } from './worker-definitions/documentSuggestionsWorker'
+import { startDocumentsWorker } from './worker-definitions/documentsWorker'
+import { startEvaluationsWorker } from './worker-definitions/evaluationsWorker'
+import {
+  startEventHandlersWorker,
+  startEventsWorker,
+} from './worker-definitions/eventsWorker'
+import { startLiveEvaluationsWorker } from './worker-definitions/liveEvaluationsWorker'
+import { startMaintenanceWorker } from './worker-definitions/maintenanceWorker'
+import { startWebhooksWorker } from './worker-definitions/webhooksWorker'
 
 export async function startWorkers() {
   const defaultWorker = startDefaultWorker()
@@ -41,45 +41,42 @@ export async function setupSchedules() {
   // Every day at 8 AM
   await maintenanceQueue.upsertJobScheduler(
     'requestDocumentSuggestionsJob',
-    {
-      pattern: '0 0 8 * * *',
-    },
+    { pattern: '0 0 8 * * *' },
     { opts: { attempts: 1 } },
   )
 
   // Every 10 minutes
   await maintenanceQueue.upsertJobScheduler(
     'autoScaleJob',
-    {
-      pattern: '*/10 * * * *',
-    },
+    { pattern: '*/10 * * * *' },
     { opts: { attempts: 1 } },
   )
 
   // Every day at 2 AM
   await maintenanceQueue.upsertJobScheduler(
     'cleanDocumentSuggestionsJob',
-    {
-      pattern: '0 0 2 * * *',
-    },
+    { pattern: '0 0 2 * * *' },
     { opts: { attempts: 1 } },
   )
 
   // Every minute
   await maintenanceQueue.upsertJobScheduler(
     'checkScheduledDocumentTriggersJob',
-    {
-      pattern: '* * * * *',
-    },
+    { pattern: '* * * * *' },
     { opts: { attempts: 1 } },
   )
 
-  // Every day at 3 AM - Refresh project stats cache
+  // Every day at 3 AM
   await maintenanceQueue.upsertJobScheduler(
-    'refreshProjectStatsCacheJob',
-    {
-      pattern: '0 0 3 * * *',
-    },
+    'refreshProjectsStatsCacheJob',
+    { pattern: '0 0 3 * * *' },
+    { opts: { attempts: 1 } },
+  )
+
+  // Every day at 4 AM
+  await maintenanceQueue.upsertJobScheduler(
+    'refreshDocumentsStatsCacheJob',
+    { pattern: '0 0 4 * * *' },
     { opts: { attempts: 1 } },
   )
 }

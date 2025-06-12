@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
+import { useDatasetUtils } from '$/hooks/useDocumentParameters/datasetUtils'
 import {
   DocumentLog,
   DocumentVersion,
   INPUT_SOURCE,
   Inputs,
   InputSource,
+  LogSources,
   PlaygroundInput,
 } from '@latitude-data/core/browser'
-import type { ConversationMetadata } from 'promptl-ai'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import type { ConversationMetadata } from 'promptl-ai'
+import { detectParamChanges } from './detectParameterChanges'
 import { useMetadataParameters } from './metadataParametersStore'
 import {
   type InputsByDocument,
@@ -24,8 +27,6 @@ import {
   recalculateAllInputs,
   updateInputsState,
 } from './utils'
-import { useDatasetUtils } from '$/hooks/useDocumentParameters/datasetUtils'
-import { detectParamChanges } from './detectParameterChanges'
 
 function convertToParams(inputs: Inputs<InputSource>) {
   return Object.fromEntries(
@@ -161,7 +162,7 @@ export function useDocumentParameters({
   }, [inputs.datasetV2, dsId, setManualInputs])
 
   const setHistoryLog = useCallback(
-    (logUuid: string) => {
+    ({ uuid, source }: { uuid: string; source?: LogSources | null }) => {
       setValue((old) => {
         const { state, doc } = getDocState(old, key)
         return {
@@ -170,7 +171,8 @@ export function useDocumentParameters({
             ...doc,
             history: {
               ...doc.history,
-              logUuid,
+              logUuid: uuid,
+              force: source !== LogSources.Playground,
             },
           },
         }
@@ -298,6 +300,7 @@ export function useDocumentParameters({
     history: {
       logUuid: inputs['history'].logUuid,
       inputs: inputs['history'].inputs,
+      force: inputs['history'].force,
       setInput: setHistoryInput,
       setInputs: setHistoryInputs,
       setHistoryLog,

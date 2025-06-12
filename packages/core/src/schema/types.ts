@@ -337,6 +337,20 @@ export type DocumentLogsAggregations = {
   medianDuration: number
 }
 
-export type DocumentLogLimitedView = DocumentLogsAggregations & {
-  dailyCount: { date: Date; count: number }[]
+export type DocumentLogsLimitedView = DocumentLogsAggregations & {
+  dailyCount: { date: string; count: number }[]
 }
+
+export interface ProjectStats {
+  totalTokens: number
+  totalRuns: number
+  totalDocuments: number
+  runsPerModel: Record<string, number>
+  costPerModel: Record<string, number>
+  rollingDocumentLogs: Array<{ date: string; count: number }>
+  totalEvaluations: number
+  totalEvaluationResults: number
+  costPerEvaluation: Record<string, number>
+}
+
+export type ProjectLimitedView = ProjectStats

@@ -71,5 +71,6 @@ export type PlaygroundInputs<S extends InputSource> = {
   history: {
     logUuid: string | undefined
     inputs: Record<string, HistoryInput>
+    force: boolean | undefined
   }
 }

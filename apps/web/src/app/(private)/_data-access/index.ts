@@ -2,12 +2,17 @@ import { cache } from 'react'
 
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import {
+  DOCUMENT_STATS_CACHE_KEY,
+  DocumentLogsLimitedView,
   EvaluationMetric,
   EvaluationType,
   EvaluationV2,
+  PROJECT_STATS_CACHE_KEY,
+  ProjectLimitedView,
   Workspace,
   type Commit,
 } from '@latitude-data/core/browser'
+import { cache as redis } from '@latitude-data/core/cache'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
 import {
@@ -213,12 +218,54 @@ export const getEvaluationByIdCached = cache(async (id: number) => {
   return evaluation
 })
 
+export const getDocumentStatsCached = cache(async (documentUuid: string) => {
+  const { workspace } = await getCurrentUser()
+  const cache = await redis()
+  const key = DOCUMENT_STATS_CACHE_KEY(workspace.id, documentUuid)
+  const stats = await cache.get(key)
+  return (stats ? JSON.parse(stats) : null) as DocumentLogsLimitedView | null
+})
+
+export const getProjectStatsCached = cache(async (projectId: number) => {
+  const { workspace } = await getCurrentUser()
+  const cache = await redis()
+  const key = PROJECT_STATS_CACHE_KEY(workspace.id, projectId)
+  const stats = await cache.get(key)
+  return (stats ? JSON.parse(stats) : null) as ProjectLimitedView | null
+})
+
 export const getDocumentLogsApproximatedCountCached = cache(
   async (documentUuid: string) => {
     const { workspace } = await getCurrentUser()
     const repository = new DocumentLogsRepository(workspace.id)
     return await repository
       .approximatedCount({ documentUuid })
+      .then((r) => r.unwrap())
+  },
+)
+
+export const getDocumentLogsApproximatedCountByProjectCached = cache(
+  async (projectId: number) => {
+    const { workspace } = await getCurrentUser()
+    const repository = new DocumentLogsRepository(workspace.id)
+    return await repository
+      .approximatedCountByProject({ projectId })
+      .then((r) => r.unwrap())
+  },
+)
+
+export const hasDocumentLogsCached = cache(async (documentUuid: string) => {
+  const { workspace } = await getCurrentUser()
+  const repository = new DocumentLogsRepository(workspace.id)
+  return await repository.hasLogs({ documentUuid }).then((r) => r.unwrap())
+})
+
+export const hasDocumentLogsByProjectCached = cache(
+  async (projectId: number) => {
+    const { workspace } = await getCurrentUser()
+    const repository = new DocumentLogsRepository(workspace.id)
+    return await repository
+      .hasLogsByProject({ projectId })
       .then((r) => r.unwrap())
   },
 )

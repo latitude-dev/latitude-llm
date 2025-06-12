@@ -264,6 +264,8 @@ export const env = createEnv({
 
     ENABLE_ALL_FLAGS: z.coerce.boolean().optional().default(false),
     IMPORT_DEFAULT_PROJECT: z.coerce.boolean().optional().default(false),
+
+    LIMITED_VIEW_PROJECT_IDS: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,

@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useState } from 'react'
 
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion, LogSources } from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import {
   AppLocalStorage,
@@ -50,7 +50,12 @@ export const Playground = memo(
     useEffect(() => {
       setForcedSize(collapsed ? DOCUMENT_PLAYGROUND_COLLAPSED_SIZE : undefined)
     }, [collapsed])
-    const { parameters, source, setSource } = useDocumentParameters({
+    const {
+      parameters,
+      source,
+      setSource,
+      history: { setHistoryLog },
+    } = useDocumentParameters({
       commitVersionUuid: commit.uuid,
       document,
     })
@@ -72,8 +77,9 @@ export const Playground = memo(
         if (!documentLogUuid || error) return
         setRunCount((prev) => prev + 1)
         setDocumentLogUuid(documentLogUuid)
+        setHistoryLog({ uuid: documentLogUuid, source: LogSources.Playground })
       },
-      [setRunCount, setDocumentLogUuid],
+      [setRunCount, setDocumentLogUuid, setHistoryLog],
     )
     const clearChat = useCallback(() => setMode('preview'), [setMode])
     const runPrompt = useCallback(() => setMode('chat'), [setMode])
