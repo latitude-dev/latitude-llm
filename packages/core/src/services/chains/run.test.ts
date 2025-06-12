@@ -4,7 +4,6 @@ import {
   Chain as LegacyChain,
   MessageRole,
 } from '@latitude-data/compiler'
-import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Workspace } from '../../browser'
@@ -28,9 +27,16 @@ import { Result } from './../../lib/Result'
 import { TypedResult } from './../../lib/Result'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
+const mocks = vi.hoisted(() => ({
+  v4: vi.fn(),
+}))
+
 // Mock other dependencies
 vi.mock('@latitude-data/compiler')
-vi.mock('uuid')
+vi.mock('uuid', async (importOriginal) => ({
+  ...(await importOriginal()),
+  v4: mocks.v4,
+}))
 
 describe('runChain', () => {
   const mockChain: Partial<LegacyChain> = {
@@ -65,7 +71,7 @@ describe('runChain', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks()
-    vi.mocked(uuid).mockReturnValue(mockUUID)
+    mocks.v4.mockReturnValue(mockUUID)
 
     const {
       workspace: w,
