@@ -110,7 +110,7 @@
     "safe-regex": "2.1.1",
     "socket.io-client": "4.7.5",
     "stripe": "18.1.0",
-    "uuid": "10.0.0",
+    "uuid": "11.1.0",
     "zod": "catalog:",
     "zod-to-json-schema": "3.24.5"
   },

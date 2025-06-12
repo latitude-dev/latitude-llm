@@ -61,7 +61,7 @@
     "@traceloop/instrumentation-together": "0.13.0",
     "@traceloop/instrumentation-vertexai": "0.13.0",
     "zod": "catalog:",
-    "uuid": "10.0.0"
+    "uuid": "11.1.0"
   },
   "devDependencies": {
     "@latitude-data/constants": "workspace:*",
