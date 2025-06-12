@@ -94,7 +94,7 @@
     "lodash-es": "4.17.21",
     "loops": "3.3.0",
     "mustache": "4.2.0",
-    "nanoid": "5.0.8",
+    "nanoid": "5.0.9",
     "nodemailer": "6.9.14",
     "nodemailer-html-to-text": "3.2.0",
     "nodemailer-mailgun-transport": "2.1.5",
