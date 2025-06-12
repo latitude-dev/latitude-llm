@@ -77,7 +77,7 @@ export function mockStreamResponse({
         stream = new ReadableStream({
           start(controller) {
             CHUNKS.forEach((chunk, index) => {
-              // @ts-expect-error
+              // @ts-expect-error - The stream is not yet a valid async iterator
               const { event, data } = parseSSE(chunk)
               controller.enqueue(
                 encoder.encode(`event: ${event}\ndata: ${data}\n\n`),

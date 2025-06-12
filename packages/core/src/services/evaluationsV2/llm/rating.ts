@@ -165,7 +165,7 @@ async function run(
   }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Rating>,
   db: Database = database,
 ) {
-  let metadata = {
+  const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput,
     evaluationLogId: -1,

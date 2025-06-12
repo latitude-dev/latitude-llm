@@ -65,7 +65,7 @@ describe('ProviderProcessor', () => {
     const result = await processResponse({
       documentLogUuid: data.documentLogUuid!,
       aiResult: {
-        type: 'text' as 'text',
+        type: 'text' as const,
         toolCalls: new Promise((resolve) => resolve([])),
         reasoning: new Promise<string | undefined>((resolve) =>
           resolve(undefined),

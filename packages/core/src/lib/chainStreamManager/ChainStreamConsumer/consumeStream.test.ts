@@ -46,7 +46,7 @@ function buildFakeChain({
     },
   })
   const result = {
-    type: 'text' as 'text',
+    type: 'text' as const,
     toolCalls: [] as any,
     text: new Promise<string>(() => 'text'),
     reasoning: new Promise<string | undefined>((resolve) => resolve(undefined)),

@@ -162,7 +162,7 @@ export async function defaultDocumentContent(
   })
   if (model) metadata += `\nmodel: ${model}`
 
-  let content = ''
+  const content = ''
 
   return {
     metadata: metadata ? `---\n${metadata}\n---\n\n` : '',

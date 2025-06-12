@@ -33,7 +33,7 @@ let workspace: Workspace
 let promptSource: PromptSource
 function buildMockAIresponse(chunks: TextStreamPart<TOOLS>[]) {
   return Result.ok({
-    type: 'text' as 'text',
+    type: 'text' as const,
     text: new Promise((resolve) => resolve('MY TEXT')),
     usage: new Promise((resolve) =>
       resolve({

@@ -21,7 +21,7 @@ import {
 } from './helpers/chat'
 import { RUN_TEXT_RESPONSE } from '$sdk/test/run-sync-response'
 
-let FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
+const FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
 let sdk: Latitude
 
 const server = setupServer()
@@ -122,7 +122,7 @@ describe('/chat', () => {
         )
 
         chunks.forEach((chunk, index) => {
-          // @ts-expect-error
+          // @ts-expect-error -- The stream is not yet a valid async iterator
           const { event, data } = parseSSE(chunk)
           expect(onMessageMock).toHaveBeenNthCalledWith(index + 1, {
             event,

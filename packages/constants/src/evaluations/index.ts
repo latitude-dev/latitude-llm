@@ -87,7 +87,7 @@ export type EvaluationResultError<
 export const EvaluationResultErrorSchema = z.custom<EvaluationResultError>()
 
 // prettier-ignore
-type ZodSchema<T = any> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny, T, T>
+type ZodSchema<T = unknown> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny, T, T>
 
 export type EvaluationMetricSpecification<
   T extends EvaluationType = EvaluationType,

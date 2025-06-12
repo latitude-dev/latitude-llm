@@ -136,7 +136,7 @@ async function run(
   // Note: expectedOutput is optional for this metric as this function
   // is reused for both, custom and custom labeled, llm metrics
 
-  let metadata = {
+  const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput,
     datasetLabel: datasetLabel,

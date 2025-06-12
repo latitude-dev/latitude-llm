@@ -103,7 +103,7 @@ async function annotate(
   >,
   _: Database = database,
 ) {
-  let metadata = {
+  const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput,
     reason: resultMetadata?.reason,

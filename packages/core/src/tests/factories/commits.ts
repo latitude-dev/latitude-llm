@@ -36,7 +36,7 @@ export async function createCommit({
 }
 
 export async function createDraft({ project, user }: ICreateDraft) {
-  let projectModel = hasOwnProperty<number, object, string>(project, 'id')
+  const projectModel = hasOwnProperty<number, object, string>(project, 'id')
     ? (project as unknown as Project)
     : (await createProject(project)).project
 

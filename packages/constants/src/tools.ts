@@ -30,7 +30,7 @@ type BuildMessageParams<T extends StreamType> = T extends 'object'
 function parseToolResponseResult(result: string) {
   try {
     return JSON.parse(result)
-  } catch (error) {
+  } catch (_error) {
     return { result }
   }
 }
@@ -46,7 +46,7 @@ export function objectToString(
     if (!object) return ''
 
     return JSON.stringify(object, null, 2)
-  } catch (error) {
+  } catch (_error) {
     return message
   }
 }

@@ -143,7 +143,7 @@ export class Compile {
     if (!node) return undefined
     if (node.type !== 'MustacheTag') return undefined
 
-    let sourceRef: PromptlSourceRef = {
+    const sourceRef: PromptlSourceRef = {
       start: this.accumulatedText.text.length,
       end: this.accumulatedText.text.length + text.length,
     }
@@ -406,16 +406,17 @@ export class Compile {
     { code, message }: { code: string; message: string },
     node: LogicalExpression,
   ): never {
-    const source = (node.loc?.source ?? this.rawText)!.split('\n')
+    const source = (node.loc?.source ?? this.rawText).split('\n')
     const start =
       source
-        .slice(0, node.loc?.start.line! - 1)
+        .slice(0, (node.loc?.start.line ?? 1) - 1)
         .reduce((acc, line) => acc + line.length + 1, 0) +
-      node.loc?.start.column!
+      (node.loc?.start.column ?? 0)
     const end =
       source
-        .slice(0, node.loc?.end.line! - 1)
-        .reduce((acc, line) => acc + line.length + 1, 0) + node.loc?.end.column!
+        .slice(0, (node.loc?.end.line ?? 1) - 1)
+        .reduce((acc, line) => acc + line.length + 1, 0) +
+      (node.loc?.end.column ?? 0)
 
     error(message, {
       name: 'CompileError',

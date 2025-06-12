@@ -24,7 +24,7 @@ export type VercelProviderTool = {
   type: 'provider-defined'
   id: `${string}.${string}`
   args: Record<string, unknown>
-  parameters: z.ZodObject<{}, 'strip', z.ZodTypeAny, {}, {}>
+  parameters: z.ZodObject<Record<string, never>, 'strip', z.ZodTypeAny, Record<string, never>, Record<string, never>>
 }
 
 export type VercelTools = Record<string, VercelProviderTool | ToolDefinition>
@@ -76,7 +76,7 @@ export type ChainStepTextResponse = BaseResponse & {
 
 export type ChainStepObjectResponse = BaseResponse & {
   streamType: 'object'
-  object: any
+  object: unknown
 }
 
 export type ChainStepResponse<T extends StreamType> = T extends 'text'
@@ -118,7 +118,7 @@ export type LegacyLatitudeChainCompleteEventData = {
   type: LegacyChainEventTypes.Complete
   config: LatitudePromptConfig
   messages?: Message[]
-  object?: any
+  object?: unknown
   response: ChainStepResponse<StreamType>
   finishReason: FinishReason
   documentLogUuid?: string

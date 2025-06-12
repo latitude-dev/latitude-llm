@@ -38,8 +38,8 @@ import {
   mockStreamResponse,
 } from './helpers/run'
 
-let latitudeApiKey = 'fake-api-key'
-let projectId = 123
+const latitudeApiKey = 'fake-api-key'
+const projectId = 123
 
 const server = setupServer()
 const mockedTools = mockToolsServers()

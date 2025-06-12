@@ -112,7 +112,7 @@ const safeChain = async ({
 }) => {
   try {
     if (promptlVersion === 0) {
-      let prevText = getTextFromMessages(newMessages)
+      const prevText = getTextFromMessages(newMessages)
       const { completed, conversation } = await (chain as LegacyChain).step(
         prevText,
       )

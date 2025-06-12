@@ -112,7 +112,7 @@ async function assignToProperty({
   const object = (await resolveLogicNode({
     node: node.object,
     ...props,
-  })) as { [key: string]: any }
+  })) as Record<string, unknown>
 
   const property = (
     node.computed

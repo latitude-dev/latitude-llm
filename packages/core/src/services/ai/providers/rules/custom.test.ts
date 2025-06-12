@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { applyCustomRules } from './custom'
 import { AppliedRules, ProviderRules } from './types'
 
-let config = {} as AppliedRules['config']
+const config = {} as AppliedRules['config']
 describe('applyCustomRules', () => {
   it('not warns when no rules are violated', () => {
     const messages = [

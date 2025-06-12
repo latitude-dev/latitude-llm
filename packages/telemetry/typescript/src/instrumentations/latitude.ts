@@ -269,4 +269,27 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
 
     return result
   }
+
+  async extractLatitudeAIAttributes(span: otel.Span) {
+    try {
+      const scope = otel.context.active()
+      const ctx = propagation.extract(scope, {
+        'latitude-ai.attributes': span.attributes,
+      })
+
+      if (ctx) {
+        context.with(ctx, () => {
+          span.recordException(
+            new Error(
+              `Failed to extract Latitude AI attributes from ${scope.name} span "${span.name}"`,
+            ),
+          )
+        })
+      }
+    } catch (_error) {
+      // ignore
+    } finally {
+      span.end()
+    }
+  }
 }

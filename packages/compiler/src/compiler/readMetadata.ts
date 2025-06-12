@@ -656,7 +656,7 @@ export class ReadMetadata {
       return
     }
 
-    //@ts-ignore - Linter knows this should be unreachable. That's what this error is for.
+    // @ts-expect-error - Linter knows this should be unreachable. That's what this error is for.
     this.baseNodeError(errors.unsupportedBaseNodeType(node.type), node)
   }
 
@@ -665,6 +665,22 @@ export class ReadMetadata {
     node: BaseNode,
     customPos?: { start: number; end: number },
   ): void {
+    if (!node.loc) {
+      // Cannot report error without location
+      return
+    }
+    const source = (node.loc.source ?? this.rawText).split('\n')
+    const _start =
+      source
+        .slice(0, node.loc.start.line - 1)
+        .reduce((acc: number, line: string) => acc + line.length + 1, 0) +
+      node.loc.start.column
+    const _end =
+      source
+        .slice(0, node.loc.end.line - 1)
+        .reduce((acc: number, line: string) => acc + line.length + 1, 0) +
+      node.loc.end.column
+
     try {
       error(message, {
         name: 'CompileError',
@@ -673,8 +689,8 @@ export class ReadMetadata {
         start: customPos?.start || node.start || 0,
         end: customPos?.end || node.end || undefined,
       })
-    } catch (error) {
-      this.errors.push(error as CompileError)
+    } catch (err) {
+      this.errors.push(err as CompileError)
     }
   }
 
@@ -682,27 +698,32 @@ export class ReadMetadata {
     { code, message }: { code: string; message: string },
     node: LogicalExpression,
   ): void {
-    const source = (node.loc?.source ?? this.rawText)!.split('\n')
-    const start =
+    if (!node.loc) {
+      return
+    }
+
+    const source = (node.loc.source ?? this.rawText).split('\n')
+    const _start =
       source
-        .slice(0, node.loc?.start.line! - 1)
-        .reduce((acc, line) => acc + line.length + 1, 0) +
-      node.loc?.start.column!
-    const end =
+        .slice(0, node.loc.start.line - 1)
+        .reduce((acc: number, line: string) => acc + line.length + 1, 0) +
+      node.loc.start.column
+    const _end =
       source
-        .slice(0, node.loc?.end.line! - 1)
-        .reduce((acc, line) => acc + line.length + 1, 0) + node.loc?.end.column!
+        .slice(0, node.loc.end.line - 1)
+        .reduce((acc: number, line: string) => acc + line.length + 1, 0) +
+      node.loc.end.column
 
     try {
       error(message, {
         name: 'CompileError',
         code,
         source: this.rawText || '',
-        start,
-        end,
+        start: _start,
+        end: _end,
       })
-    } catch (error) {
-      this.errors.push(error as CompileError)
+    } catch (err) {
+      this.errors.push(err as CompileError)
     }
   }
 }

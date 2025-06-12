@@ -183,8 +183,8 @@ export namespace Otlp {
   })
   export type ResourceSpan = z.infer<typeof resourceSpanSchema>
 
-  const serviceRequestSchema = z.object({
+  const _serviceRequestSchema = z.object({
     resourceSpans: z.array(resourceSpanSchema),
   })
-  export type ServiceRequest = z.infer<typeof serviceRequestSchema>
+  export type ServiceRequest = z.infer<typeof _serviceRequestSchema>
 }

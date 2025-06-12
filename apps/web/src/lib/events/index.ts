@@ -44,7 +44,5 @@ export const useEvents = (
         off(eventMapping.eventType, eventMapping.callback)
       })
     }
-    // TODO: Remove events dependency
-    /* eslint-disable react-hooks/exhaustive-deps */
   }, [events, ...deps])
 }

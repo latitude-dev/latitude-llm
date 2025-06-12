@@ -19,7 +19,7 @@ export async function resolve({
   raiseError,
   ...props
 }: ResolveNodeProps<ObjectExpression>) {
-  const resolvedObject: { [key: string]: any } = {}
+  const resolvedObject: { [key: string]: unknown } = {}
   for (const prop of node.properties) {
     if (prop.type === 'SpreadElement') {
       const spreadObject = await resolveLogicNode({
