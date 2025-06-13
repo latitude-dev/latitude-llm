@@ -6,7 +6,7 @@ import {
   createEvaluationV2,
   helpers,
 } from '@latitude-data/core/factories'
-import { MessageRole, ContentType, Message } from '@latitude-data/compiler'
+import { MessageRole, ContentType, Message } from '@latitude-data/constants'
 import {
   LogSources,
   Providers,

@@ -1,5 +1,5 @@
+import { ToolCall } from '.'
 import { AGENT_RETURN_TOOL_NAME } from './config'
-import { ToolCall } from '@latitude-data/compiler'
 
 export function resolveRelativePath(refPath: string, from?: string): string {
   if (refPath.startsWith('/')) {

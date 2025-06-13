@@ -2,7 +2,7 @@
 import { ContentCard, ContentCardContainer } from '../ContentCard'
 import { CodeBlock } from '../../../../atoms/CodeBlock'
 import { AgentToolsMap } from '@latitude-data/constants'
-import { ToolContent } from '@latitude-data/compiler'
+import { ToolContent } from '@latitude-data/constants'
 import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 
 export function SubAgentToolCallContent({

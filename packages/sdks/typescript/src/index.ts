@@ -3,7 +3,7 @@ import {
   type Message,
   type MessageRole,
   type ToolCall,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import {
   AGENT_RETURN_TOOL_NAME,
   Providers,

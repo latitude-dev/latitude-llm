@@ -3,7 +3,7 @@
 
 import { RouteResolver } from '$sdk/utils'
 import { LatitudeApiError } from '$sdk/utils/errors'
-import type { Config, Message, ToolCall } from '@latitude-data/compiler'
+import type { Config, Message, ToolCall } from '@latitude-data/constants'
 import {
   ChainCallResponseDto,
   LegacyChainEvent as ChainEvent,

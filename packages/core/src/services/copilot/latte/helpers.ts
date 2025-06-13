@@ -198,7 +198,6 @@ export async function scanDocuments(
         prompt: document.content,
         fullPath: document.path,
         referenceFn,
-        // @ts-expect-error – TODO: fix "Type instantiation is excessively deep and possibly infinite"
         configSchema,
       })
     }),

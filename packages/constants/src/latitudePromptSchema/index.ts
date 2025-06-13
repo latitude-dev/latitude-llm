@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_STEPS_CONFIG_NAME, ParameterType } from '../config'
+import { ParameterType } from '../config'
 import { AgentToolsMap, resolveRelativePath } from '../index'
 import { azureConfig as azureConfigSchema } from './providers/azure'
 import { JSONSchema7 } from 'json-schema'
@@ -67,7 +67,7 @@ export function latitudePromptConfigSchema({
         }),
       )
       .optional(),
-    [MAX_STEPS_CONFIG_NAME]: z.number().min(1).max(150).optional(),
+    maxSteps: z.number().min(1).max(150).optional(),
     tools: tools.optional(),
     agents: agentsConfigSchema.optional(),
     schema: outputSchema,

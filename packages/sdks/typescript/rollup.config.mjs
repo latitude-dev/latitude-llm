@@ -17,7 +17,6 @@ const aliasEntries = {
   ],
 }
 const EXTERNALS = [
-  '@latitude-data/compiler',
   'eventsource-parser/stream',
   'node-fetch',
   'promptl-ai',

@@ -8,7 +8,7 @@ import {
   ToolInstrumentation,
   ToolSpec,
 } from '$sdk/utils/types'
-import { Message, ToolCall } from '@latitude-data/compiler'
+import { Message, ToolCall } from '@latitude-data/constants'
 import {
   buildResponseMessage,
   ChainCallResponseDto,

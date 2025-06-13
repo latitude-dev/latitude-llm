@@ -1,5 +1,5 @@
 import { z } from '@hono/zod-openapi'
-import { ConversationMetadata as CompilerConversationMetadata } from '@latitude-data/compiler'
+import { ConversationMetadata as CompilerConversationMetadata } from '@latitude-data/constants'
 import { ParameterType } from '@latitude-data/constants'
 import {
   Commit,

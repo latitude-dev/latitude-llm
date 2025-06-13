@@ -1,10 +1,6 @@
-import {
-  Conversation,
-  Chain as LegacyChain,
-  Message,
-} from '@latitude-data/compiler'
+import { Conversation, Message } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { Chain as PromptlChain } from 'promptl-ai'
+import { Chain, Chain as PromptlChain } from 'promptl-ai'
 
 import { ProviderApiKey, Workspace } from '../../browser'
 import {
@@ -20,21 +16,20 @@ import { ConfigOverrides } from './ChainValidator'
 import { runStep } from './runStep'
 import { ChainStreamManager } from '../../lib/chainStreamManager'
 import { LanguageModelUsage } from 'ai'
-import { MAX_STEPS_CONFIG_NAME } from '@latitude-data/constants'
 import { TypedResult } from './../../lib/Result'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
-export type SomeChain = LegacyChain | PromptlChain
+export type SomeChain = PromptlChain
 
 export const stepLimitExceededErrorMessage = (maxSteps: number) =>
-  `Limit of ${maxSteps} steps exceeded. Configure the '${MAX_STEPS_CONFIG_NAME}' setting in your prompt configuration to allow for more steps.`
+  `Limit of ${maxSteps} steps exceeded. Configure the 'maxSteps' setting in your prompt configuration to allow for more steps.`
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
   ChainError<RunErrorCodes>
 >
-type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
+type CommonArgs<T extends boolean = true, C extends SomeChain = Chain> = {
   workspace: Workspace
   providersMap: CachedApiKeys
   source: LogSources
@@ -118,7 +113,7 @@ export function runChain<T extends boolean, C extends SomeChain>({
         injectAgentFinishTool: isChain === false,
       })
 
-      resolveConversation(conversation)
+      resolveConversation(conversation as Conversation)
     } catch (err) {
       const error = err as ChainError<RunErrorCodes>
 

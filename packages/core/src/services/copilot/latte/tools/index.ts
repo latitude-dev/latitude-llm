@@ -4,7 +4,7 @@ import {
   MessageRole,
   type ToolCall,
   type ToolMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { Workspace } from '../../../../browser'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { Result, TypedResult } from '../../../../lib/Result'

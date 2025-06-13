@@ -1,4 +1,4 @@
-import type { Message, ToolCall } from '@latitude-data/compiler'
+import type { Message, ToolCall } from '@latitude-data/constants'
 import { FinishReason, LanguageModelUsage } from 'ai'
 
 import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'

@@ -3,7 +3,7 @@ import {
   ContentType as CompilerContentType,
   MessageRole as CompilerMessageRole,
   ToolRequestContent as CompilerToolRequestContent,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { ToolCallResponse as ToolResponse } from '@latitude-data/constants'
 import {
   Message as PromptlMessage,

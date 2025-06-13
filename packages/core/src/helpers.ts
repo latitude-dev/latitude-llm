@@ -1,4 +1,4 @@
-import type { Message, ToolCall } from '@latitude-data/compiler'
+import type { Message, ToolCall } from '@latitude-data/constants'
 import {
   AGENT_RETURN_TOOL_NAME,
   buildResponseMessage,

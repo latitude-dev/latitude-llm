@@ -7,7 +7,7 @@ import { MessageSkeleton } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import {
   Conversation,
   Message as ConversationMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { ExpandMessages } from '../ExpandMessages'
 import { useToolContentMap } from 'node_modules/@latitude-data/web-ui/src/lib/hooks/useToolContentMap'
 import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'

@@ -4,7 +4,7 @@ import {
   MessageRole,
   ToolMessage,
   UserMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { addMessages } from '../../documentLogs/addMessages'
 import { ErrorResult, Result } from '../../../lib/Result'
 import { LatitudeError } from '../../../lib/errors'

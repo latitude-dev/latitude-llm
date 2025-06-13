@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
-
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {

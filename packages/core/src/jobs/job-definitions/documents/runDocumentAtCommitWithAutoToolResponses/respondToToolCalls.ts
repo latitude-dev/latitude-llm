@@ -1,4 +1,4 @@
-import { Message, ToolCall } from '@latitude-data/compiler'
+import { Message, ToolCall } from '@latitude-data/constants'
 import {
   Commit,
   Workspace,

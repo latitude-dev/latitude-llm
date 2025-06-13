@@ -60,7 +60,6 @@ export function useExperimentFormPayload({
   const { metadata, runReadMetadata } = useMetadata()
   useEffect(() => {
     runReadMetadata({
-      promptlVersion: document.promptlVersion,
       prompt: document.content,
       document,
     })

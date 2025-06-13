@@ -16,21 +16,21 @@ import { format } from 'date-fns'
 import { useCallback, useMemo } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { MetadataItem, MetadataItemTooltip } from '$/components/MetadataItem'
 import {
   asPromptLFile,
   PromptLFileParameter,
 } from '$/components/PromptLFileParameter'
+import { getCostPer1M } from '@latitude-data/core/services/ai/estimateCost/index'
+import { Message } from '@latitude-data/constants'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import { Message } from '@latitude-data/compiler'
-import { getCostPer1M } from '@latitude-data/core/services/ai/estimateCost/index'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useCurrentCommit } from 'node_modules/@latitude-data/web-ui/src/providers/CommitProvider'
 import { useCurrentProject } from 'node_modules/@latitude-data/web-ui/src/providers/ProjectProvider'
-import { FinishReasonItem } from '../../../../../[documentUuid]/_components/FinishReasonItem'
+import { MetadataItem, MetadataItemTooltip } from '$/components/MetadataItem'
+import { FinishReasonItem } from '../../../../_components/FinishReasonItem'
 
 function costNotCalculatedReason({
   provider,

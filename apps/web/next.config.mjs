@@ -12,7 +12,6 @@ const nextConfig = {
   output: 'standalone',
   transpilePackages: INTERNAL_PACKAGES,
   serverExternalPackages: [
-    '@latitude-data/compiler',
     '@latitude-data/sdk',
     '@napi-rs/canvas',
     '@sentry/nextjs',

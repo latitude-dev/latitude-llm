@@ -104,3 +104,112 @@ export type Message =
   | UserMessage
   | AssistantMessage
   | ToolMessage
+
+export type Config = Record<string, unknown>
+
+export type Conversation = {
+  config: Config
+  messages: Message[]
+}
+
+export type ConversationMetadata = {
+  resolvedPrompt: string
+  config: Config
+  errors: CompileError[]
+  parameters: Set<string> // Variables used in the prompt that have not been defined in runtime
+  setConfig: (config: Config) => string
+  includedPromptPaths: Set<string>
+}
+
+class CompileError extends Error {
+  code?: string
+  start?: Position
+  end?: Position
+  pos?: number
+  frame?: string
+  fragment?: Fragment
+
+  toString() {
+    if (!this.start) return this.message
+    return `${this.message} (${this.start.line}:${this.start.column})\n${this.frame}`
+  }
+}
+
+export interface Position {
+  line: number
+  column: number
+}
+
+export type Fragment = BaseNode & {
+  type: 'Fragment'
+  children: TemplateNode[]
+}
+
+export type BaseNode = {
+  start: number | null
+  end: number | null
+  type: string
+  children?: TemplateNode[]
+  [propName: string]: any
+}
+
+export type TemplateNode =
+  | Fragment
+  | Config
+  | Text
+  | ElementTag
+  | MustacheTag
+  | Comment
+  | IfBlock
+  | EachBlock
+
+export type Attribute = BaseNode & {
+  type: 'Attribute'
+  name: string
+  value: TemplateNode[] | true
+}
+type IElementTag<T extends string> = BaseNode & {
+  type: 'ElementTag'
+  name: T
+  attributes: Attribute[]
+  children: TemplateNode[]
+}
+export type ContentTag = IElementTag<ContentType>
+export type MessageTag = IElementTag<MessageRole> | IElementTag<string>
+export type ReferenceTag = IElementTag<string>
+export type ChainStepTag = IElementTag<string>
+export type ToolCallTag = IElementTag<string>
+export type ElementTag =
+  | ContentTag
+  | MessageTag
+  | ReferenceTag
+  | IElementTag<string>
+
+export type EachBlock = BaseNode & {
+  type: 'EachBlock'
+  expression: unknown
+  context: unknown
+  index: unknown
+  key: unknown
+  else: ElseBlock | null
+}
+
+export type MustacheTag = BaseNode & {
+  type: 'MustacheTag'
+  expression: unknown
+}
+
+export type Comment = BaseNode & {
+  type: 'Comment'
+  data: string
+}
+
+export type ElseBlock = BaseNode & {
+  type: 'ElseBlock'
+}
+
+export type IfBlock = BaseNode & {
+  type: 'IfBlock'
+  expression: unknown
+  else: ElseBlock | null
+}

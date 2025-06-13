@@ -1,6 +1,6 @@
 'use client'
 import { MouseEvent, lazy, useState, useCallback, useMemo } from 'react'
-import { ToolMessage, Message, ToolCall } from '@latitude-data/compiler'
+import { ToolMessage, Message, ToolCall } from '@latitude-data/constants'
 import { Badge } from '../../../../atoms/Badge'
 import { Icon } from '../../../../atoms/Icons'
 import { Text } from '../../../../atoms/Text'

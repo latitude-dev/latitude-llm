@@ -1,4 +1,4 @@
-import type { ContentType, Message } from '@latitude-data/compiler'
+import type { ContentType, Message } from '@latitude-data/constants'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
   ActualOutputConfiguration,

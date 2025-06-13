@@ -6,7 +6,7 @@ import {
   Message,
   MessageRole,
   ToolMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import {
   AGENT_RETURN_TOOL_NAME,
   FAKE_AGENT_START_TOOL_NAME,

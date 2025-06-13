@@ -4,7 +4,7 @@ import {
   Conversation,
   Message,
   MessageRole,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'

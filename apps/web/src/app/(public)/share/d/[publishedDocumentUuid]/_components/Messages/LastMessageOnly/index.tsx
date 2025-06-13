@@ -2,7 +2,7 @@ import { LastMessage } from '../../SharedDocument/RunPrompt/usePrompt'
 import {
   ContentType,
   Message as ConversationMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { ExpandMessages } from '../ExpandMessages'
 import {
   ErrorMessage,

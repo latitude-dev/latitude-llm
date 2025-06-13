@@ -1,9 +1,8 @@
 import {
   ContentType,
   Conversation,
-  Chain as LegacyChain,
   MessageRole,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Workspace } from '../../browser'
@@ -32,14 +31,10 @@ const mocks = vi.hoisted(() => ({
 }))
 
 // Mock other dependencies
-vi.mock('@latitude-data/compiler')
-vi.mock('uuid', async (importOriginal) => ({
-  ...(await importOriginal()),
-  v4: mocks.v4,
-}))
+vi.mock('uuid')
 
 describe('runChain', () => {
-  const mockChain: Partial<LegacyChain> = {
+  const mockChain = {
     step: vi.fn(),
     rawText: 'Test raw text',
   }
@@ -95,22 +90,21 @@ describe('runChain', () => {
     vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
-      conversation: {
-        messages: [
-          {
-            role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'Test message' }],
-          },
-        ],
-        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      },
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'Test message' }],
+        },
+      ],
+      config: { provider: 'openai', model: 'gpt-3.5-turbo' },
     })
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -175,22 +169,24 @@ describe('runChain', () => {
 
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
-      conversation: {
-        messages: [
-          {
-            role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'Test message' }],
-          },
-        ],
-        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      },
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'Test message' }],
+        },
+      ],
+      config: { provider: 'openai', model: 'gpt-3.5-turbo' },
     })
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
-      globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
+      globalConfig: {
+        model: 'gpt-3.5-turbo',
+        provider: 'openai',
+      },
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -231,43 +227,40 @@ describe('runChain', () => {
     vi.mocked(mockChain.step!)
       .mockResolvedValueOnce({
         completed: false,
-        conversation: {
-          messages: [
-            {
-              role: MessageRole.user,
-              content: [{ type: ContentType.text, text: 'Step 1' }],
-            },
-          ],
-          config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-        },
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [{ type: ContentType.text, text: 'Step 1' }],
+          },
+        ],
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
       })
       .mockResolvedValueOnce({
         completed: true,
-        conversation: {
-          messages: [
-            {
-              role: MessageRole.user,
-              content: [{ type: ContentType.text, text: 'Step 1' }],
-            },
-            {
-              role: MessageRole.assistant,
-              content: 'AI response 1',
-              toolCalls: [],
-            },
-            {
-              role: MessageRole.user,
-              content: [{ type: ContentType.text, text: 'Step 2' }],
-            },
-          ],
-          config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-        },
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [{ type: ContentType.text, text: 'Step 1' }],
+          },
+          {
+            role: MessageRole.assistant,
+            content: 'AI response 1',
+            toolCalls: [],
+          },
+          {
+            role: MessageRole.user,
+            content: [{ type: ContentType.text, text: 'Step 2' }],
+          },
+        ],
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
       })
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -293,26 +286,25 @@ describe('runChain', () => {
 
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
-      conversation: {
-        messages: [
-          {
-            role: MessageRole.system,
-            content: [{ type: ContentType.text, text: 'System instruction' }],
-          },
-          {
-            role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'User message' }],
-          },
-        ],
-        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      },
+      messages: [
+        {
+          role: MessageRole.system,
+          content: [{ type: ContentType.text, text: 'System instruction' }],
+        },
+        {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'User message' }],
+        },
+      ],
+      config: { provider: 'openai', model: 'gpt-3.5-turbo' },
     })
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -384,22 +376,21 @@ describe('runChain', () => {
 
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
-      conversation: {
-        messages: [
-          {
-            role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'Test message' }],
-          },
-        ],
-        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      },
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'Test message' }],
+        },
+      ],
+      config: { provider: 'openai', model: 'gpt-3.5-turbo' },
     })
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -481,22 +472,21 @@ describe('runChain', () => {
 
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
-      conversation: {
-        messages: [
-          {
-            role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'Test message' }],
-          },
-        ],
-        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      },
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'Test message' }],
+        },
+      ],
+      config: { provider: 'openai', model: 'gpt-3.5-turbo' },
     })
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -540,22 +530,21 @@ describe('runChain', () => {
 
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
-      conversation: {
-        messages: [
-          {
-            role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'Test message' }],
-          },
-        ],
-        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      },
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'Test message' }],
+        },
+      ],
+      config: { provider: 'openai', model: 'gpt-3.5-turbo' },
     })
 
     const run = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -586,15 +575,13 @@ describe('runChain', () => {
   it.skip('handles error response', async () => {
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
-      conversation: {
-        messages: [
-          {
-            role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'user message' }],
-          },
-        ],
-        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      },
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'user message' }],
+        },
+      ],
+      config: { provider: 'openai', model: 'gpt-3.5-turbo' },
     })
     vi.spyOn(aiModule, 'ai').mockResolvedValue(
       Result.ok({
@@ -621,9 +608,10 @@ describe('runChain', () => {
 
     const result = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -650,15 +638,13 @@ describe('runChain', () => {
   it('handles tool calls response', async () => {
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
-      conversation: {
-        messages: [
-          {
-            role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'user message' }],
-          },
-        ],
-        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      },
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'user message' }],
+        },
+      ],
+      config: { provider: 'openai', model: 'gpt-3.5-turbo' },
     })
     vi.spyOn(aiModule, 'ai').mockResolvedValue(
       Result.ok({
@@ -685,9 +671,10 @@ describe('runChain', () => {
 
     const result = runChain({
       workspace,
-      chain: mockChain as LegacyChain,
+      // @ts-ignore - mockChain is not a Chain
+      chain: mockChain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -816,9 +803,10 @@ describe('runChain', () => {
       })
       const run = runChain({
         workspace,
-        chain: mockChain as LegacyChain,
+        // @ts-ignore - mockChain is not a Chain
+        chain: mockChain,
         globalConfig: {} as LatitudePromptConfig,
-        promptlVersion: 0,
+        promptlVersion: 1,
         providersMap,
         source: LogSources.API,
         errorableType: ErrorableEntity.DocumentLog,
@@ -873,9 +861,10 @@ describe('runChain', () => {
 
         const run = runChain({
           workspace,
-          chain: mockChain as LegacyChain,
+          // @ts-ignore - mockChain is not a Chain
+          chain: mockChain,
           globalConfig: {} as LatitudePromptConfig,
-          promptlVersion: 0,
+          promptlVersion: 1,
           providersMap,
           source: LogSources.API,
           errorableType: ErrorableEntity.DocumentLog,
@@ -935,9 +924,10 @@ describe('runChain', () => {
 
         const run = runChain({
           workspace,
-          chain: mockChain as LegacyChain,
+          // @ts-ignore - mockChain is not a Chain
+          chain: mockChain,
           globalConfig: {} as LatitudePromptConfig,
-          promptlVersion: 0,
+          promptlVersion: 1,
           providersMap,
           source: LogSources.API,
           errorableType: ErrorableEntity.DocumentLog,

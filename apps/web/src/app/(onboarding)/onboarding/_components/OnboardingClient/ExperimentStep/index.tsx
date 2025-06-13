@@ -5,7 +5,7 @@ import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient'
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants'
 import { ParameterTable } from './ParameterTable'
 import { ExperimentVariants } from './ExperimentVariants'
 import {

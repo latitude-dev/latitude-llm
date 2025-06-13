@@ -3,7 +3,7 @@ import {
   Message as ConversationMessage,
   MessageRole,
   ContentType,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import {
   PublishedDocument,
   StreamEventTypes,

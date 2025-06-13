@@ -1,6 +1,5 @@
-import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { ContentType, MessageRole } from '@latitude-data/constants'
 import {
   ChainError,
   LatitudeError,
@@ -27,6 +26,7 @@ import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChainEventTypes } from '@latitude-data/constants'
+import { parseSSEvent } from '$/common/parseSSEEvent'
 
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),

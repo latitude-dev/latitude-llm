@@ -15,7 +15,7 @@ import { getResolvedContent } from '../documents'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import { RunDocumentChecker } from './RunDocumentChecker'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
-import { Result } from './../../lib/Result'
+import { ErrorResult, Result } from './../../lib/Result'
 import { createDocumentLog } from '../documentLogs/create'
 import { isErrorRetryable } from '../evaluationsV2/run'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
@@ -121,7 +121,7 @@ export async function runDocumentAtCommit({
       experiment,
     })
 
-    return checkerResult
+    return checkerResult as ErrorResult<any>
   }
 
   const runArgs = {
@@ -129,9 +129,9 @@ export async function runDocumentAtCommit({
     generateUUID: () => errorableUuid,
     errorableType,
     workspace,
-    chain: checkerResult.value.chain,
-    isChain: checkerResult.value.isChain,
-    globalConfig: checkerResult.value.config as LatitudePromptConfig,
+    chain: checkerResult.value!.chain,
+    isChain: checkerResult.value!.isChain,
+    globalConfig: checkerResult.value!.config as LatitudePromptConfig,
     promptlVersion: document.promptlVersion,
     providersMap,
     source,

@@ -3,7 +3,7 @@ import type {
   Message,
   SystemMessage,
   TextContent,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { FilePart, ToolCallPart } from 'ai'
 
 import { Providers } from '../models'

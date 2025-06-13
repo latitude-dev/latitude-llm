@@ -1,6 +1,6 @@
 import { Readable } from 'stream'
 
-import type { Message, ToolCall } from '@latitude-data/compiler'
+import type { Message, ToolCall } from '@latitude-data/constants'
 import {
   ApiErrorCodes,
   LatitudeApiError,

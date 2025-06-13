@@ -1,4 +1,4 @@
-import { MessageContent, MessageRole } from '@latitude-data/compiler'
+import { MessageContent, MessageRole } from '@latitude-data/constants'
 import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 
 export const ROLE_VARIANS = ['user', 'system', 'assistant']

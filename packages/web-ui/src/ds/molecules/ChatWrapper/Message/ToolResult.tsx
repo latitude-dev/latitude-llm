@@ -1,4 +1,4 @@
-import { ToolContent } from '@latitude-data/compiler'
+import { ToolContent } from '@latitude-data/constants'
 import { CodeBlock } from '../../../atoms/CodeBlock'
 import { Button } from '../../../atoms/Button'
 import { Icon } from '../../../atoms/Icons'

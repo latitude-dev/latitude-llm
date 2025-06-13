@@ -2,7 +2,7 @@ import {
   ContentType,
   Message as ConversationMessage,
   MessageRole,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { Message } from '@latitude-data/web-ui/molecules/ChatWrapper'
 
 export function StreamMessage({

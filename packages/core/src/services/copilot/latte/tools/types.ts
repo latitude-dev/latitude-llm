@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { Workspace } from '../../../../browser'
 import { PromisedResult } from '../../../../lib/Transaction'
-import { Message, ToolCall } from '@latitude-data/compiler'
+import { Message, ToolCall } from '@latitude-data/constants'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../lib/Result'
 

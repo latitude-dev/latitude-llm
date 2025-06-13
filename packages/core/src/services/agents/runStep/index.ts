@@ -1,19 +1,19 @@
-import { AssistantMessage, Config, Conversation } from '@latitude-data/compiler'
+import {
+  AssistantMessage,
+  Config,
+  Conversation,
+} from '@latitude-data/constants'
 import {
   buildMessagesFromResponse,
   LogSources,
   Workspace,
 } from '../../../browser'
 import { CachedApiKeys, stepLimitExceededErrorMessage } from '../../chains/run'
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants'
 import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
-import {
-  ABSOLUTE_MAX_STEPS,
-  DEFAULT_MAX_STEPS,
-  MAX_STEPS_CONFIG_NAME,
-} from '@latitude-data/constants'
+import { ABSOLUTE_MAX_STEPS, DEFAULT_MAX_STEPS } from '@latitude-data/constants'
 import { Result } from './../../../lib/Result'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
@@ -25,7 +25,7 @@ function assertValidStepCount({
   step: ValidatedAgentStep
 }) {
   const maxSteps = Math.min(
-    (step.conversation.config[MAX_STEPS_CONFIG_NAME] as number | undefined) ??
+    (step.conversation.config.maxSteps as number | undefined) ??
       DEFAULT_MAX_STEPS,
     ABSOLUTE_MAX_STEPS,
   )

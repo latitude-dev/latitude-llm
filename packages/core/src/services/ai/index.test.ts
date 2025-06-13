@@ -1,4 +1,8 @@
-import { ContentType, type Message, MessageRole } from '@latitude-data/compiler'
+import {
+  ContentType,
+  type Message,
+  MessageRole,
+} from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError } from 'ai'
 import { describe, expect, it, vi } from 'vitest'

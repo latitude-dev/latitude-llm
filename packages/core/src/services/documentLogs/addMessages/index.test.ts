@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { ContentType, MessageRole } from '@latitude-data/constants'
 import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 

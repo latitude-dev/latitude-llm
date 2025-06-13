@@ -15,10 +15,9 @@
     "sentry:sourcemaps": "sentry-cli sourcemaps inject --org latitude-l5 --project latitude-gateway ./dist && sentry-cli sourcemaps upload --org latitude-l5 --project latitude-gateway ./dist"
   },
   "dependencies": {
-    "@hono/node-server": "1.13.2",
-    "@hono/swagger-ui": "0.4.1",
-    "@hono/zod-openapi": "0.16.4",
-    "@latitude-data/compiler": "workspace:^",
+    "@hono/node-server": "^1.13.2",
+    "@hono/swagger-ui": "^0.4.1",
+    "@hono/zod-openapi": "^0.16.4",
     "@latitude-data/constants": "workspace:^",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",

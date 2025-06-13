@@ -11,11 +11,11 @@ import {
   GoogleVertexAnthropicProvider,
 } from '@ai-sdk/google-vertex/anthropic/edge'
 import { createMistral, MistralProvider } from '@ai-sdk/mistral'
-import { createOpenAI, type OpenAIProvider } from '@ai-sdk/openai'
+import { createOpenAI, OpenAIProvider } from '@ai-sdk/openai'
 import { createXai, XaiProvider } from '@ai-sdk/xai'
 import { createDeepSeek, DeepSeekProvider } from '@ai-sdk/deepseek'
 import { createPerplexity, PerplexityProvider } from '@ai-sdk/perplexity'
-import { type Message, MessageRole } from '@latitude-data/compiler'
+import { type Message, MessageRole } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { Providers } from '../../constants'

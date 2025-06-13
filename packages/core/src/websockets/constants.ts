@@ -3,7 +3,7 @@
 // All this can be seen in the browser. If you want something private
 // put in other place.
 
-import type { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants'
 import type {
   DocumentVersion,
   Commit,

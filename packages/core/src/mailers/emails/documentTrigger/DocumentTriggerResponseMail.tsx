@@ -7,7 +7,7 @@ import {
   type AssistantMessage,
   type MessageContent,
   type ToolCall,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 import PlainLayout from '../_components/PlainLayout'
 import { LatitudeError } from './../../../lib/errors'

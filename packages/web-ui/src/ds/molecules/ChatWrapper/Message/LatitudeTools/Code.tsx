@@ -1,7 +1,7 @@
 import { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
 import { ContentCard } from '../ContentCard'
 import { CodeBlock } from '../../../../atoms/CodeBlock'
-import { ToolContent } from '@latitude-data/compiler'
+import { ToolContent } from '@latitude-data/constants'
 import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 import { useMemo } from 'react'
 

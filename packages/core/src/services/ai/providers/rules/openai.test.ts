@@ -1,4 +1,4 @@
-import { type Message, MessageRole } from '@latitude-data/compiler'
+import { type Message, MessageRole } from '@latitude-data/constants'
 import { describe, expect, it } from 'vitest'
 
 import { Providers } from '../models'
