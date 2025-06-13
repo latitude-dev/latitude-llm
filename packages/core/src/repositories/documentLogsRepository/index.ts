@@ -130,6 +130,7 @@ WHERE ${documentLogs.documentUuid} = ${documentUuid};
       .from(commits)
       .where(eq(commits.projectId, projectId))
       .then((r) => r.map(({ id }) => id))
+    if (!commitIds.length) return Result.ok(0)
 
     const result = await this.db.execute(
       sql`
@@ -161,6 +162,7 @@ WHERE ${documentLogs.commitId} IN (${sql.join(commitIds, sql`, `)});
       .from(commits)
       .where(eq(commits.projectId, projectId))
       .then((r) => r.map(({ id }) => id))
+    if (!commitIds.length) return Result.ok(false)
 
     const result = await this.db
       .select({ id: documentLogs.id })

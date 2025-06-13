@@ -22,6 +22,9 @@ export const refreshDocumentsStatsCacheJob = async (
       and(isNull(commits.deletedAt), inArray(commits.projectId, projectIds)),
     )
     .then((r) => r.map(({ id }) => id))
+  if (!commitIds.length) {
+    return { success: true, documents: 0 }
+  }
 
   const candidates = await database
     .selectDistinct({ uuid: documentVersions.documentUuid })

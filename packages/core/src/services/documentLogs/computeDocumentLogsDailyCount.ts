@@ -32,6 +32,9 @@ export async function computeDocumentLogsDailyCount(
     .from(commits)
     .where(and(isNull(commits.deletedAt), eq(commits.projectId, projectId)))
     .then((r) => r.map((r) => r.id))
+  if (!commitIds.length) {
+    return Result.ok<DailyCount[]>([])
+  }
 
   const conditions = [
     gte(documentLogs.createdAt, subDays(now, days)),

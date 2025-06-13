@@ -26,6 +26,18 @@ export async function computeDocumentLogsAggregations(
     .from(commits)
     .where(and(isNull(commits.deletedAt), eq(commits.projectId, projectId)))
     .then((r) => r.map((r) => r.id))
+  if (!commitIds.length) {
+    return Result.ok<DocumentLogsAggregations>({
+      totalCount: 0,
+      totalTokens: 0,
+      totalCostInMillicents: 0,
+      averageTokens: 0,
+      averageCostInMillicents: 0,
+      medianCostInMillicents: 0,
+      averageDuration: 0,
+      medianDuration: 0,
+    })
+  }
 
   const conditions = [
     inArray(documentLogs.commitId, commitIds),

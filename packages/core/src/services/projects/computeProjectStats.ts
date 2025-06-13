@@ -64,6 +64,20 @@ export async function computeProjectStats(
     .where(and(eq(commits.projectId, projectId), isNull(commits.deletedAt)))
     .then((result) => result.map((r) => r.commitId))
 
+  if (!commitIds.length || !activeCommitIds.length) {
+    return Result.ok<ProjectStats>({
+      totalTokens: 0,
+      totalRuns: 0,
+      totalDocuments: 0,
+      runsPerModel: {},
+      costPerModel: {},
+      rollingDocumentLogs: [],
+      totalEvaluations: 0,
+      totalEvaluationResults: 0,
+      costPerEvaluation: {},
+    })
+  }
+
   // Get total runs (document logs count)
   const totalRuns = await db
     .select({ count: count() })
@@ -233,5 +247,5 @@ export async function computeProjectStats(
     }
   }
 
-  return Result.ok(stats)
+  return Result.ok<ProjectStats>(stats)
 }
