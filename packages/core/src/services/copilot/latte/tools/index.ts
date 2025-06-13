@@ -16,6 +16,8 @@ import readPrompt from './documents/read'
 import listProjects from './projects/list'
 import listDrafts from './commits/list'
 import editProject from './projects/edit'
+import listProviders from './settings/listProviders'
+import listIntegrations from './settings/listIntegrations'
 
 const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.listProjects]: listProjects,
@@ -23,6 +25,8 @@ const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.listPrompts]: listPrompts,
   [LatteTool.readPrompt]: readPrompt,
   [LatteTool.editProject]: editProject,
+  [LatteTool.listProviders]: listProviders,
+  [LatteTool.listIntegrations]: listIntegrations,
 } as const
 
 export async function handleToolRequest({

@@ -7,4 +7,7 @@ export enum LatteTool {
   listPrompts = 'list_prompts',
   readPrompt = 'read_prompt',
   editProject = 'edit_project',
+
+  listProviders = 'list_providers',
+  listIntegrations = 'list_integrations',
 }
