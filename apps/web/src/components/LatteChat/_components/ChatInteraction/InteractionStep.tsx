@@ -64,8 +64,8 @@ function ToolStep({
   return (
     <div className='flex flex-row gap-2 items-start max-w-full'>
       <Icon
-        name={step.finished ? 'check' : 'loader'}
-        spin={!step.finished}
+        name={step.customIcon ?? (step.finished ? 'check' : 'loader')}
+        spin={!step.customIcon && !step.finished}
         color='foregroundMuted'
         className='min-w-4 mt-0.5'
       />

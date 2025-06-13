@@ -9,7 +9,7 @@ import {
 } from '@latitude-data/constants'
 import { Message } from '@latitude-data/core/browser'
 import { useCallback, useMemo, useState } from 'react'
-import { LatteInteraction } from './types'
+import { LatteInteraction, LatteToolStep } from './types'
 import { getDescriptionFromToolCall } from './helpers'
 import { trigger } from '$/lib/events'
 import { useLatteContext } from './context'
@@ -179,7 +179,7 @@ export function useLatte() {
                 parameters: toolCall.arguments,
                 finished: false,
                 ...getDescriptionFromToolCall(toolCall),
-              }
+              } as LatteToolStep
             })
 
             lastInteraction.steps.push(...toolSteps.flat())
