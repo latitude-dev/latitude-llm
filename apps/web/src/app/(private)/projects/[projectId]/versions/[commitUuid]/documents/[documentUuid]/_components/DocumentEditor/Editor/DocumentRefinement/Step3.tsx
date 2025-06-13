@@ -18,7 +18,7 @@ export function Step3({
 }) {
   useEffect(() => {
     refine()
-  }, [])
+  }, [refine])
 
   return (
     <div className='rounded-lg w-full py-40 flex flex-col gap-4 items-center justify-center bg-gradient-to-b from-secondary to-transparent px-4'>

@@ -180,6 +180,7 @@ export function useSelectedLogs({
       selectedLogsIds,
       setSelectedLogsIds,
       createDatasetFromLogs,
+      previewModalState,
       previewModalState.onClose,
       selectableState.clearSelections,
     ],

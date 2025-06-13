@@ -43,7 +43,7 @@ function ConfigurationSimpleForm({
   // TODO: Remove this default when more formats are implemented
   useEffect(() => {
     setConfiguration({ ...configuration, format: 'json' })
-  }, [])
+  }, [configuration, setConfiguration])
 
   return (
     <>

@@ -111,7 +111,7 @@ export default function DocumentEvaluations({
       documentLog: documentLog,
       evaluations: evaluations.filter((e) => e.evaluateLiveLogs),
     })
-  }, [documentLog])
+  }, [documentLog, evaluations, snapshot?.documentLog.id])
 
   const isWaiting = useMemo(
     () =>

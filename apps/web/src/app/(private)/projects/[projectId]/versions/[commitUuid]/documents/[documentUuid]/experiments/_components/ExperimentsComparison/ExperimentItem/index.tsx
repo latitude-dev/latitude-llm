@@ -83,13 +83,7 @@ export function ExperimentItem({
       commitUuid: commit.uuid,
       documentUuid: document.documentUuid,
     })
-  }, [
-    experiment?.uuid,
-    execute,
-    project.id,
-    commit.uuid,
-    document.documentUuid,
-  ])
+  }, [experiment, execute, project.id, commit.uuid, document.documentUuid])
 
   if (!experiment) {
     return (

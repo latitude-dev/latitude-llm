@@ -88,6 +88,7 @@ export function SaveLogsAsDatasetModal({
       }
     },
     [
+      previewModalState,
       previewModalState.onOpenChange,
       setSelectedDataset,
       setShowDatasetSelector,

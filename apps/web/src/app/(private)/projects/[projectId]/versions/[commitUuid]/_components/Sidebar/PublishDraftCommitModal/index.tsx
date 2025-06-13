@@ -57,7 +57,10 @@ export default function PublishDraftCommitModal({
       onClose(null)
     },
   })
-  const commit = useMemo(() => data.find((c) => c.id === commitId), [commitId])
+  const commit = useMemo(
+    () => data.find((c) => c.id === commitId),
+    [commitId, data],
+  )
   const { project } = useCurrentProject()
   const router = useRouter()
   const {
@@ -115,7 +118,7 @@ export default function PublishDraftCommitModal({
     }
 
     load()
-  }, [commitId, project.id])
+  }, [commitId, project.id, getChanges, toast, onClose])
   const anyChanges = changes.length > 0
   const hasErrors = !anyChanges || groups.errors.length > 0
 

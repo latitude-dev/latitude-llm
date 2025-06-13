@@ -80,7 +80,6 @@ export function DatasetDetailTable({
   const selectedRowId = Number(searchParams.get('rowId') ?? 0) || undefined
   const {
     data: rows,
-    mutate,
     updateRows,
     deleteRows,
     createRow,

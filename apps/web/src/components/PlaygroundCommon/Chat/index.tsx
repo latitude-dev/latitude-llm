@@ -106,7 +106,7 @@ export default function Chat({
       runOnce.current = true
       playground.start()
     }
-  }, [playground.start])
+  }, [playground])
 
   return (
     <div className='flex flex-col flex-1 h-full overflow-hidden'>

@@ -67,7 +67,7 @@ export function useProcessLogFilters({
       filterOptions.commitIds.sort().join(',') ===
       originalSelectedCommitsIds.sort().join(',')
     )
-  }, [filterOptions.commitIds])
+  }, [filterOptions.commitIds, originalSelectedCommitsIds])
 
   const isLogSourcesDefault = useMemo(() => {
     return (
@@ -75,20 +75,23 @@ export function useProcessLogFilters({
     )
   }, [filterOptions.logSources])
 
-  const onSelectCommits = useCallback((selectedCommitsIds: number[]) => {
-    onFiltersChanged((currentFilters) => ({
-      ...currentFilters,
-      commitIds: selectedCommitsIds,
-    }))
-    if (
-      selectedCommitsIds.sort().join(',') ===
-      originalSelectedCommitsIds.sort().join(',')
-    ) {
-      setSearchParams('versions', undefined)
-    } else {
-      setSearchParams('versions', selectedCommitsIds.map(String))
-    }
-  }, [])
+  const onSelectCommits = useCallback(
+    (selectedCommitsIds: number[]) => {
+      onFiltersChanged((currentFilters) => ({
+        ...currentFilters,
+        commitIds: selectedCommitsIds,
+      }))
+      if (
+        selectedCommitsIds.sort().join(',') ===
+        originalSelectedCommitsIds.sort().join(',')
+      ) {
+        setSearchParams('versions', undefined)
+      } else {
+        setSearchParams('versions', selectedCommitsIds.map(String))
+      }
+    },
+    [onFiltersChanged, originalSelectedCommitsIds, setSearchParams],
+  )
 
   const onCreatedAtChange = useCallback(
     (value: DocumentLogFilterOptions['createdAt']) => {
@@ -109,35 +112,43 @@ export function useProcessLogFilters({
         setSearchParams(key, formattedValue)
       }
     },
-    [],
+    [onFiltersChanged, setSearchParams],
   )
 
-  const onSelectLogSources = useCallback((selectedLogSources: LogSources[]) => {
-    onFiltersChanged((currentFilters) => ({
-      ...currentFilters,
-      logSources: selectedLogSources,
-    }))
-    if (selectedLogSources.sort().join(',') === LOG_SOURCES.sort().join(',')) {
-      setSearchParams('origins', undefined)
-    } else {
-      setSearchParams('origins', selectedLogSources)
-    }
-  }, [])
+  const onSelectLogSources = useCallback(
+    (selectedLogSources: LogSources[]) => {
+      onFiltersChanged((currentFilters) => ({
+        ...currentFilters,
+        logSources: selectedLogSources,
+      }))
+      if (
+        selectedLogSources.sort().join(',') === LOG_SOURCES.sort().join(',')
+      ) {
+        setSearchParams('origins', undefined)
+      } else {
+        setSearchParams('origins', selectedLogSources)
+      }
+    },
+    [onFiltersChanged, setSearchParams],
+  )
 
-  const onCustomIdentifierChange = useCallback((value: string) => {
-    value = value?.trim()
+  const onCustomIdentifierChange = useCallback(
+    (value: string) => {
+      value = value?.trim()
 
-    onFiltersChanged((currentFilters) => ({
-      ...currentFilters,
-      customIdentifier: value,
-    }))
+      onFiltersChanged((currentFilters) => ({
+        ...currentFilters,
+        customIdentifier: value,
+      }))
 
-    if (!value) {
-      setSearchParams('customIdentifier', undefined)
-    } else {
-      setSearchParams('customIdentifier', value)
-    }
-  }, [])
+      if (!value) {
+        setSearchParams('customIdentifier', undefined)
+      } else {
+        setSearchParams('customIdentifier', value)
+      }
+    },
+    [onFiltersChanged, setSearchParams],
+  )
 
   const onExperimentIdChange = useCallback(
     (selectedExperimentId: number | undefined) => {
@@ -152,7 +163,7 @@ export function useProcessLogFilters({
         setSearchParams('experimentId', String(selectedExperimentId))
       }
     },
-    [],
+    [onFiltersChanged, setSearchParams],
   )
 
   return {

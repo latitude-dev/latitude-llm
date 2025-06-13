@@ -2,7 +2,6 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
-import useDatasetRows from '$/stores/datasetRows'
 import { serializeRows } from '$/stores/datasetRows/rowSerializationHelpers'
 import { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'

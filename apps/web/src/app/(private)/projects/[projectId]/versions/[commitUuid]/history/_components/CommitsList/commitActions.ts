@@ -81,7 +81,14 @@ export function useCommitActions({ commit }: { commit: Commit }) {
       targetDraftUuid: currentCommit.mergedAt ? undefined : currentCommit.uuid,
       commitUuid: commit.uuid,
     })
-  }, [commit])
+  }, [
+    commit,
+    currentCommit.mergedAt,
+    currentCommit.uuid,
+    executeGetChangesToRevert,
+    executeRevertChanges,
+    open,
+  ])
 
   const getChangesToReset = useCallback(() => {
     open({
@@ -101,7 +108,14 @@ export function useCommitActions({ commit }: { commit: Commit }) {
       targetDraftUuid: currentCommit.mergedAt ? undefined : currentCommit.uuid,
       commitUuid: commit.uuid,
     })
-  }, [commit])
+  }, [
+    commit,
+    currentCommit.mergedAt,
+    currentCommit.uuid,
+    executeGetChangesToReset,
+    executeResetChanges,
+    open,
+  ])
 
   return {
     getChangesToRevert,

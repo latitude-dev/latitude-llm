@@ -19,7 +19,7 @@ export default function DraftCommitModal({
   open: boolean
   setOpen: (open: boolean) => void
 }) {
-  const defaultPromptTitle = useMemo(() => new Date().toLocaleString(), [open])
+  const defaultPromptTitle = useMemo(() => new Date().toLocaleString(), [])
   const { createDraft, isCreating } = useCommits({
     commitStatus: CommitStatus.Draft,
     onSuccessCreate: (draft) => {

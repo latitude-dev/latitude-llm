@@ -6,10 +6,6 @@ import {
   InputSource,
   LinkedDatasetRow,
 } from '@latitude-data/core/browser'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
 import useDatasetsV2 from '$/stores/datasets'
 import { useDatasetRowsForParameters } from './useDatasetRowsForParameters'
 import { useDatasetRowPosition } from './useRowPosition'
@@ -43,8 +39,6 @@ export function useSelectDataset({
   const [selectedDataset, setSelectedDataset] = useState<Dataset | undefined>()
   const { position, getPosition, setPosition, isLoadingPosition } =
     useDatasetRowPosition()
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
   const { datasetV2: localDatasetData } = useDocumentParameters({
     document,
     commitVersionUuid,
@@ -87,13 +81,7 @@ export function useSelectDataset({
       })
       setSelectedDataset(ds)
     },
-    [
-      datasets,
-      project.id,
-      document.documentUuid,
-      commit.uuid,
-      localDatasetData.assignedDatasets,
-    ],
+    [datasets, document, localDatasetData.assignedDatasets, getPosition],
   )
 
   const rowsData = useDatasetRowsForParameters({

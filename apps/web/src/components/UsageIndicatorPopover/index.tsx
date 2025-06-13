@@ -156,7 +156,7 @@ export function UsageIndicatorPopover({
   )
   const runsText = useMemo(
     () => (workspaceUsage ? runsDescription({ ratio, max }) : undefined),
-    [workspaceUsage],
+    [workspaceUsage, ratio, max],
   )
   const isFree = [SubscriptionPlan.HobbyV1, SubscriptionPlan.HobbyV2].includes(
     subscription.plan,

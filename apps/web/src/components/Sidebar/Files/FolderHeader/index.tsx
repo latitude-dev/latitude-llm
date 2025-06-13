@@ -54,7 +54,7 @@ export default function FolderHeader({
         },
       })
     },
-    [updateFolderAndAddOther, togglePath],
+    [updateFolderAndAddOther, togglePath, node],
   )
 
   const onAddNode = useCallback(
@@ -88,7 +88,7 @@ export default function FolderHeader({
         updateFolder({ id: node.id, path })
       }
     },
-    [node.id, updateFolder, isMerged, onMergeCommitClick],
+    [node, updateFolder, isMerged, onMergeCommitClick, onRenameFile],
   )
 
   const fileUploadInputRef = useRef<HTMLInputElement>(null)
@@ -181,6 +181,9 @@ export default function FolderHeader({
       node.isPersisted,
       openPaths,
       togglePath,
+      setIsEditing,
+      onAddNode,
+      node,
     ],
   )
 

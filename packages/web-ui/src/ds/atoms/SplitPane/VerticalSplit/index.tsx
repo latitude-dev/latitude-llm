@@ -48,7 +48,13 @@ export function VerticalSplit({
 
     const percentage = initialPercentage / 100
     setPaneHeight(Math.max(initialHeightFromRef * percentage, minHeight))
-  }, [initialHeight, initialHeightFromRef, initialPercentage, minHeight, paneHeight])
+  }, [
+    initialHeight,
+    initialHeightFromRef,
+    initialPercentage,
+    minHeight,
+    paneHeight,
+  ])
 
   useEffect(() => {
     if (!autoResize) return

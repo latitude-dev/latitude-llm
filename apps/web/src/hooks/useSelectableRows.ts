@@ -39,21 +39,6 @@ export function useSelectableRows<T extends string | number>({
     }
   }, [selectionState.mode])
 
-  const isSelected = <I extends T = T>(id: I | undefined) => {
-    if (id === undefined) return false
-
-    switch (selectionState.mode) {
-      case 'ALL':
-        return !selectionState.excludedIds.has(id)
-      case 'NONE':
-        return false
-      case 'PARTIAL':
-        return selectionState.selectedIds.has(id)
-      case 'ALL_EXCEPT':
-        return !selectionState.excludedIds.has(id)
-    }
-  }
-
   const toggleRow = useCallback(
     <I extends T = T>(id: I | undefined, checked: CheckedState) => {
       if (id === undefined) return
@@ -138,7 +123,7 @@ export function useSelectableRows<T extends string | number>({
       case 'ALL_EXCEPT':
         return rowIds.filter((id) => !selectionState.excludedIds.has(id))
     }
-  }, [selectionState, rowIds.join('')])
+  }, [selectionState, rowIds, selectionState.selectedIds])
 
   const selectedCount = useMemo(() => {
     switch (selectionState.mode) {
@@ -153,8 +138,23 @@ export function useSelectableRows<T extends string | number>({
     }
   }, [selectionState, totalRowCount])
 
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    const isSelected = <I extends T = T>(id: I | undefined) => {
+      if (id === undefined) return false
+
+      switch (selectionState.mode) {
+        case 'ALL':
+          return !selectionState.excludedIds.has(id)
+        case 'NONE':
+          return false
+        case 'PARTIAL':
+          return selectionState.selectedIds.has(id)
+        case 'ALL_EXCEPT':
+          return !selectionState.excludedIds.has(id)
+      }
+    }
+
+    return {
       selectedCount,
       selectionMode: selectionState.mode,
       excludedIds: selectionState.excludedIds,
@@ -164,19 +164,17 @@ export function useSelectableRows<T extends string | number>({
       clearSelections,
       isSelected,
       headerState,
-    }),
-    [
-      selectedCount,
-      selectionState.mode,
-      selectionState.excludedIds,
-      selectedRowIds,
-      toggleRow,
-      toggleAll,
-      clearSelections,
-      isSelected,
-      headerState,
-    ],
-  )
+    }
+  }, [
+    selectedCount,
+    selectionState.mode,
+    selectionState.excludedIds,
+    selectedRowIds,
+    toggleRow,
+    toggleAll,
+    clearSelections,
+    headerState,
+  ])
 }
 
 export type SelectableRowsHook = ReturnType<typeof useSelectableRows>

@@ -102,7 +102,7 @@ export function ConfigurationAdvancedForm<
         fieldAccessor: undefined,
       },
     })
-  }, [formatIsAccessible])
+  }, [formatIsAccessible, configuration, setConfiguration])
 
   const [testConfiguration] = useDebounce(configuration.actualOutput, 333)
   const [showTest, setShowTest] = useState(false)

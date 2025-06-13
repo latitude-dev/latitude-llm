@@ -15,13 +15,11 @@ const DocumentContext = createContext<DocumentVersionContext>(
 const DocumentVersionProvider = ({
   children,
   document: fallbackDocument,
-  documentUuid,
   projectId,
   commitUuid,
 }: {
   children: ReactNode
   document: DocumentVersion
-  documentUuid: string
   projectId: number
   commitUuid: string
 }) => {
@@ -34,7 +32,7 @@ const DocumentVersionProvider = ({
     return (
       documents?.find((d) => d.id === fallbackDocument.id) ?? fallbackDocument
     )
-  }, [documents, documentUuid, fallbackDocument])
+  }, [documents, fallbackDocument])
 
   return (
     <DocumentContext.Provider

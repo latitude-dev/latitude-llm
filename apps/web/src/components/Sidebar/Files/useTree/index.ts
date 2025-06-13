@@ -220,5 +220,5 @@ export function useTree({
       generateNodeId,
     })
     return tree
-  }, [documents, liveDocuments])
+  }, [documents, liveDocuments, generateNodeId])
 }
