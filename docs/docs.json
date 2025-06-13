@@ -129,7 +129,6 @@
               {
                 "group": "HTTP API",
                 "pages": [
-                  "guides/api/reference",
                   "guides/api/api-access",
                   "guides/api/streaming-events",
                   "guides/api/webhooks"
