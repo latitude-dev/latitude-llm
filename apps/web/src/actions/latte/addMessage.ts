@@ -3,6 +3,7 @@
 import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
 import { createLatteJob } from '@latitude-data/core/services/copilot/index'
+import { LatteThreadsRepository } from '@latitude-data/core/repositories'
 
 export const addMessageToLatteAction = authProcedure
   .createServerAction()
@@ -14,17 +15,22 @@ export const addMessageToLatteAction = authProcedure
     }),
   )
   .handler(async ({ ctx, input }) => {
-    const { workspace } = ctx
+    const { workspace, user } = ctx
     const { message, threadUuid, context } = input
+
+    const threadScope = new LatteThreadsRepository(workspace.id)
+    const thread = await threadScope
+      .findByUuid({ threadUuid, userId: user.id })
+      .then((r) => r.unwrap())
 
     const runResult = await createLatteJob({
       workspace,
-      threadUuid,
+      threadUuid: thread.uuid,
       message,
       context,
     })
 
     runResult.unwrap()
 
-    return { uuid: threadUuid }
+    return { uuid: thread.uuid }
   })

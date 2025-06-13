@@ -68,3 +68,7 @@ export * from './models/workspaceOnboarding'
 // Export tables
 export * from './models/exports'
 export * from './models/events'
+
+// Latte
+export * from './models/latteThreads'
+export * from './models/latteThreadCheckpoints'

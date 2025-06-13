@@ -48,6 +48,8 @@ import { sessions } from './models/sessions'
 import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
+import { latteThreads } from './models/latteThreads'
+import { latteThreadCheckpoints } from './models/latteThreadCheckpoints'
 
 export type {
   DocumentLog,
@@ -118,6 +120,10 @@ export type EvaluationConfigurationNumerical = Omit<
 export type EvaluationConfigurationText = Omit<
   InferSelectModel<typeof evaluationConfigurationText>,
   'createdAt' | 'updatedAt'
+>
+export type LatteThread = InferSelectModel<typeof latteThreads>
+export type LatteThreadCheckpoint = InferSelectModel<
+  typeof latteThreadCheckpoints
 >
 
 export type Cursor<V = string, I = string> = { value: V; id: I }

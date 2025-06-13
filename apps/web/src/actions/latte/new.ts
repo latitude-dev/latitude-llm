@@ -2,8 +2,10 @@
 
 import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
-import { createLatteJob } from '@latitude-data/core/services/copilot/index'
-import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
+import {
+  createLatteJob,
+  createLatteThread,
+} from '@latitude-data/core/services/copilot/index'
 
 export const createNewLatteAction = authProcedure
   .createServerAction()
@@ -14,13 +16,16 @@ export const createNewLatteAction = authProcedure
     }),
   )
   .handler(async ({ ctx, input }) => {
-    const { workspace } = ctx
+    const { workspace, user } = ctx
     const { message, context } = input
 
-    const threadUuid = generateUUIDIdentifier()
+    const thread = await createLatteThread({
+      user,
+      workspace,
+    }).then((r) => r.unwrap())
 
     const runResult = await createLatteJob({
-      threadUuid,
+      threadUuid: thread.uuid,
       workspace,
       message,
       context,
@@ -28,5 +33,5 @@ export const createNewLatteAction = authProcedure
 
     runResult.unwrap()
 
-    return { uuid: threadUuid }
+    return { uuid: thread.uuid }
   })
