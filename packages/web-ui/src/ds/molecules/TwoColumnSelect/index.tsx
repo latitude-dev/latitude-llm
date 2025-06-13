@@ -152,7 +152,7 @@ export function TwoColumnSelect<V extends unknown = unknown>({
 
   return (
     <div className='flex flex-row w-full max-h-full overflow-hidden relative'>
-      <div className='flex flex-col w-full border-r border-border '>
+      <div className='flex flex-col w-[55%] border-r border-border '>
         <Command unstyled autoFocus>
           <CommandList autoFocus maxHeight='auto'>
             <div className='flex flex-col gap-y-1 mb-1 pl-1 pr-1 pt-1'>

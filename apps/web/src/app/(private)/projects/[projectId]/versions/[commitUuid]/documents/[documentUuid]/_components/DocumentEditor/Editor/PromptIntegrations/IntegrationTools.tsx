@@ -36,8 +36,10 @@ function IntegrationToolItem({
 }) {
   return (
     <ItemWrapper>
-      <div className='flex flex-row items-center gap-2 justify-between'>
-        <Text.H6B color='foreground'>{tool.name}</Text.H6B>
+      <div className='flex flex-row items-center gap-2 justify-between min-w-0'>
+        <Text.H6B ellipsis noWrap color='foreground'>
+          {tool.name}
+        </Text.H6B>
         <SwitchToggle
           checked={isActive}
           onClick={onToggle}
@@ -152,9 +154,10 @@ export function IntegrationToolsList({
   })
 
   const toggleTool = useCallback(
-    (toolName: string) => {
+    (toolName: string) => () => {
       if (disabled) return
       if (!tools) return
+
       const isActive = activeTools === true || activeTools?.includes(toolName)
       if (isActive) {
         removeIntegrationTool(
@@ -271,7 +274,7 @@ export function IntegrationToolsList({
             disabled={disabled}
             tool={tool}
             isActive={isActive}
-            onToggle={() => toggleTool(tool.name)}
+            onToggle={toggleTool(tool.name)}
           />
         )
       })}
