@@ -1,17 +1,22 @@
-import {
-  readMetadata,
-  CompileError as CompilerCompileError,
-} from '@latitude-data/compiler'
 import { AgentToolsMap, resolveRelativePath } from '@latitude-data/constants'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 import type { DocumentVersion } from '@latitude-data/core/browser'
 
-import { CompileError as PromptlCompileError, scan } from 'promptl-ai'
+import {
+  CompileError as PromptlCompileError,
+  ReferencePromptFn,
+  scan,
+} from 'promptl-ai'
+import { z } from 'zod'
 
-type CompileError = PromptlCompileError | CompilerCompileError
+type CompileError = PromptlCompileError
 
-export type ReadMetadataWorkerProps = Parameters<typeof readMetadata>[0] & {
-  promptlVersion: number
+export type ReadMetadataWorkerProps = {
+  prompt: string
+  fullPath?: string
+  referenceFn?: ReferencePromptFn
+  withParameters?: string[]
+  configSchema?: z.ZodType
   document?: DocumentVersion
   documents?: DocumentVersion[]
   providerNames?: string[]
@@ -25,7 +30,6 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
     document,
     documents,
     prompt,
-    promptlVersion,
     providerNames,
     agentToolsMap,
     integrationNames,
@@ -54,10 +58,7 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
     configSchema,
   }
 
-  const metadata =
-    // FIXME
-    // @ts-ignore - scan props are not matching
-    promptlVersion === 0 ? await readMetadata(props) : await scan(props)
+  const metadata = await scan(props)
 
   const { setConfig: _, errors: errors, ...returnedMetadata } = metadata
 

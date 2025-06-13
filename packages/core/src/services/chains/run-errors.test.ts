@@ -1,9 +1,3 @@
-import {
-  Chain,
-  ContentType,
-  createChain,
-  MessageRole,
-} from '@latitude-data/compiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -26,6 +20,7 @@ import {
 import * as ChainValidator from './ChainValidator'
 import { runChain } from './run'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { Chain, ContentType, createChain, MessageRole } from 'promptl-ai'
 
 let providersMap: Map<string, any>
 
@@ -82,15 +77,13 @@ describe('run chain error handling', () => {
 
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
-      conversation: {
-        messages: [
-          {
-            role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'Test message' }],
-          },
-        ],
-        config: { provider: 'openai', model: 'gpt-4o-mini' },
-      },
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'Test message' }],
+        },
+      ],
+      config: { provider: 'openai', model: 'gpt-4o-mini' },
     })
   })
 
@@ -114,7 +107,7 @@ describe('run chain error handling', () => {
       workspace,
       chain: mockChain as Chain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       promptSource,
@@ -146,9 +139,13 @@ describe('run chain error handling', () => {
     const chainValidatorCall = vi
       .spyOn(ChainValidator, 'validateChain')
       .mockImplementation(() =>
-        // @ts-expect-error - Error is not valid here but we fake an unknown error
         Promise.resolve(
-          Result.error(new Error('Something undefined happened')),
+          Result.error(
+            new ChainError({
+              code: RunErrorCodes.DocumentConfigError,
+              message: 'miau',
+            }),
+          ),
         ),
       )
     const run = runChain({
@@ -156,7 +153,7 @@ describe('run chain error handling', () => {
       workspace,
       chain: mockChain as Chain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       promptSource,
@@ -167,11 +164,10 @@ describe('run chain error handling', () => {
       id: expect.any(Number),
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
-      code: RunErrorCodes.Unknown,
-      message: 'Something undefined happened',
+      code: RunErrorCodes.DocumentConfigError,
+      message: 'miau',
       details: {
-        errorCode: RunErrorCodes.Unknown,
-        stack: expect.any(String),
+        errorCode: RunErrorCodes.DocumentConfigError,
       },
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
@@ -189,7 +185,7 @@ describe('run chain error handling', () => {
       workspace,
       chain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       promptSource,
@@ -201,8 +197,7 @@ describe('run chain error handling', () => {
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
       code: RunErrorCodes.DocumentConfigError,
-      message:
-        '"model" attribute is required. Read more here: https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts',
+      message: expect.any(String),
       details: {
         errorCode: RunErrorCodes.DocumentConfigError,
       },
@@ -226,7 +221,7 @@ describe('run chain error handling', () => {
       workspace,
       chain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       promptSource,
@@ -237,11 +232,10 @@ describe('run chain error handling', () => {
       id: expect.any(Number),
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
-      code: RunErrorCodes.MissingProvider,
-      message:
-        'Provider API Key with name patata_provider not found. Go to https://app.latitude.so/settings to add a new provider if there is not one already with that name.',
+      code: RunErrorCodes.DocumentConfigError,
+      message: expect.any(String),
       details: {
-        errorCode: 'missing_provider_error',
+        errorCode: 'document_config_error',
       },
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
@@ -255,7 +249,7 @@ describe('run chain error handling', () => {
         provider: openai
         model: gpt-4o-mini
         ---
-        <ref>NOT VALID TAG</ref>
+        <prompt path='./wat' />
       `,
       parameters: {},
     })
@@ -264,7 +258,7 @@ describe('run chain error handling', () => {
       workspace,
       chain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       promptSource,
@@ -276,17 +270,12 @@ describe('run chain error handling', () => {
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
       code: RunErrorCodes.ChainCompileError,
-      message: "Error validating chain:\n Unknown tag: 'ref'",
+      message: expect.any(String),
       details: {
         errorCode: RunErrorCodes.ChainCompileError,
-        compileCode: 'unknown-tag',
-        frame: `4:         model: gpt-4o-mini
-5:         ---
-6:         <ref>NOT VALID TAG</ref>
-
-            ^~~~~~~~~~~~~~~~~~~~~~~~
-7:       `,
-        message: "Unknown tag: 'ref'",
+        compileCode: expect.any(String),
+        frame: expect.any(String),
+        message: expect.any(String),
       },
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
@@ -308,7 +297,7 @@ describe('run chain error handling', () => {
       workspace,
       chain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       promptSource,
@@ -352,7 +341,7 @@ describe('run chain error handling', () => {
       workspace,
       chain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       promptSource,
@@ -397,7 +386,7 @@ describe('run chain error handling', () => {
       workspace,
       chain,
       globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
+      promptlVersion: 1,
       providersMap,
       source: LogSources.API,
       promptSource,

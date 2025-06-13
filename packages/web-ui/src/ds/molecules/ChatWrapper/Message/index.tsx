@@ -11,7 +11,7 @@ import {
   PromptlSourceRef,
   TextContent,
   ToolContent,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 
 import { AgentToolsMap } from '@latitude-data/constants'
 import { roleVariant } from '..'
@@ -255,7 +255,7 @@ const Content = ({
           color={color}
           size={size}
           reasoning={value.reasoning}
-          isReasoning={value.isReasoning}
+          isReasoning={value.isReasoning as boolean}
           message={value.text}
           parameters={parameters}
           collapseParameters={collapseParameters}
@@ -381,7 +381,7 @@ const ContentText = memo(
 
     return (
       <div className='flex flex-col gap-4'>
-        <Reasoning reasoning={reasoning} isReasoning={isReasoning} />
+        <Reasoning reasoning={reasoning as string} isReasoning={isReasoning} />
         <div className='flex flex-col gap-y-1'>{messagesList}</div>
       </div>
     )

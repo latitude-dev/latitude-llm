@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  Conversation,
-  Message as ConversationMessage,
-  Chain as LegacyChain,
-} from '@latitude-data/compiler'
+import { Message } from '@latitude-data/core/browser'
+import { Conversation } from '@latitude-data/constants'
 import {
   Adapters,
   ConversationMetadata,
@@ -24,7 +21,7 @@ export function usePreviewConversation({
   const [error, setError] = useState<Error | undefined>(undefined)
   const [completed, setCompleted] = useState(true)
   const [conversation, setConversation] = useState<Conversation>()
-  const [fixedMessages, setFixedMessages] = useState<ConversationMessage[]>()
+  const [fixedMessages, setFixedMessages] = useState<Message[]>()
   const [warningRule, setWarningRule] = useState<AppliedRules | undefined>()
   const { data: providers } = useProviderApiKeys()
   const provider = useMemo(() => {
@@ -42,21 +39,14 @@ export function usePreviewConversation({
     if (!parameters) return
     if (metadata.errors.length > 0) return
 
-    const usePromptl = promptlVersion !== 0
-    let chain
+    let chain: PromptlChain
     try {
-      chain = usePromptl
-        ? new PromptlChain({
-            prompt: metadata.resolvedPrompt,
-            parameters,
-            adapter: Adapters.default,
-            includeSourceMap: true,
-          })
-        : new LegacyChain({
-            prompt: metadata.resolvedPrompt,
-            parameters,
-            includeSourceMap: true,
-          })
+      chain = new PromptlChain({
+        prompt: metadata.resolvedPrompt,
+        parameters,
+        adapter: Adapters.default,
+        includeSourceMap: true,
+      })
     } catch (e) {
       setError(e as Error)
       return
@@ -65,10 +55,7 @@ export function usePreviewConversation({
     chain
       .step()
       .then(({ completed, ...rest }) => {
-        const conversation =
-          promptlVersion === 0
-            ? (rest as { conversation: Conversation }).conversation
-            : (rest as unknown as Conversation)
+        const conversation = rest as unknown as Conversation
         setError(undefined)
         setConversation(conversation)
         setCompleted(completed)

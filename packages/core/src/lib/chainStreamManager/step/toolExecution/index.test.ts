@@ -9,7 +9,7 @@ import {
 import { Result } from '../../../Result'
 import { faker } from '@faker-js/faker'
 import { resolveToolsFromConfig } from '../../resolveTools'
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { ContentType, MessageRole } from '@latitude-data/constants'
 import * as runDocumentAtCommitMod from '../../../../services/commits/runDocumentAtCommit'
 import * as callIntegrationToolMod from '../../../../services/integrations/McpClient/callTool'
 import * as executeLatitudeToolCallMod from '../../../../services/latitudeTools'

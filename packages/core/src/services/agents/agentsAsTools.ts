@@ -6,7 +6,6 @@ import {
 import { DocumentVersionsRepository } from '../../repositories'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { scan } from 'promptl-ai'
-import { readMetadata } from '@latitude-data/compiler'
 import { JSONSchema7 } from 'json-schema'
 import { getAgentToolName } from './helpers'
 import { database } from '../../client'
@@ -24,9 +23,6 @@ export async function getToolDefinitionFromDocument({
   doc: DocumentVersion
   allDocs: DocumentVersion[]
 }): Promise<ToolDefinition> {
-  // FIXME
-  // @ts-ignore - type instantiation infinite loop
-  const metadataFn = doc.promptlVersion === 1 ? scan : readMetadata
   const referenceFn = async (target: string, from?: string) => {
     const fullPath = from ? resolveRelativePath(from, target) : target
     const refDoc = allDocs.find((doc) => doc.path === fullPath)
@@ -38,7 +34,7 @@ export async function getToolDefinitionFromDocument({
       : undefined
   }
 
-  const metadata = await metadataFn({
+  const metadata = await scan({
     prompt: doc.content,
     fullPath: doc.path,
     referenceFn,

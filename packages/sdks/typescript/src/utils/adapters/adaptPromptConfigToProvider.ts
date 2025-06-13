@@ -1,8 +1,9 @@
-import { getOpenAIResponseTools } from '$sdk/utils/adapters/openai/getFunctionTools'
 import { ToolInputMap } from '$sdk/utils/adapters/types'
-import type { Config } from '@latitude-data/compiler'
+import { getOpenAIResponseTools } from '$sdk/utils/adapters/openai/getFunctionTools'
 import { Adapters, ProviderAdapter } from 'promptl-ai'
 import { getAIProviderTools } from './getProviderTools'
+
+import type { Config } from '@latitude-data/constants'
 
 const ADAPTERS_WITH_SNAKE_CASE = [
   Adapters.openai.type,

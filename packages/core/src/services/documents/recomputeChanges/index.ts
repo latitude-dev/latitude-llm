@@ -1,13 +1,8 @@
 import { omit } from 'lodash-es'
 import path from 'path'
 
-import {
-  readMetadata,
-  Document as RefDocument,
-  type CompileError,
-} from '@latitude-data/compiler'
 import { and, eq, inArray, not } from 'drizzle-orm'
-import { scan } from 'promptl-ai'
+import { Document, scan } from 'promptl-ai'
 
 import { AgentToolsMap } from '@latitude-data/constants'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
@@ -29,7 +24,6 @@ import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
 import { inheritDocumentRelations } from '../inheritRelations'
 import { getHeadDocumentsAndDraftDocumentsForCommit } from './getHeadDocumentsAndDraftDocuments'
 import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
-import { hashContent } from './../../../lib/hashContent'
 import { Result } from './../../../lib/Result'
 import { TypedResult } from './../../../lib/Result'
 import Transaction from './../../../lib/Transaction'
@@ -48,14 +42,14 @@ async function resolveDocumentChanges({
   agentToolsMap: AgentToolsMap
 }): Promise<{
   documents: DocumentVersion[]
-  errors: Record<string, CompileError[]>
+  errors: Record<string, Error[]>
 }> {
-  const errors: Record<string, CompileError[]> = {}
+  const errors: Record<string, Error[]> = {}
 
   const getDocumentContent = async (
     refPath: string,
     from?: string,
-  ): Promise<RefDocument | undefined> => {
+  ): Promise<Document | undefined> => {
     const fullPath = path
       .resolve(path.dirname(`/${from ?? ''}`), refPath)
       .replace(/^\//, '')
@@ -77,21 +71,9 @@ async function resolveDocumentChanges({
       })
 
       if (d.promptlVersion === 0) {
-        const metadata = await readMetadata({
-          prompt: d.content ?? '',
-          fullPath: d.path,
-          referenceFn: getDocumentContent,
-          configSchema,
-        })
-        if (!d.deletedAt && metadata.errors.length > 0) {
-          errors[d.documentUuid] = metadata.errors
-        }
-
-        return {
-          ...d,
-          resolvedContent: metadata.resolvedPrompt,
-          contentHash: hashContent(metadata.resolvedPrompt),
-        }
+        throw new Error(
+          'Old document syntax is no longer supported. Please update your documents to PromptL.',
+        )
       }
       // FIXME:
       // @ts-ignore - infinite type instantiation loop
@@ -105,7 +87,7 @@ async function resolveDocumentChanges({
       })
 
       if (!d.deletedAt && metadata.errors.length > 0) {
-        errors[d.documentUuid] = metadata.errors as CompileError[]
+        errors[d.documentUuid] = metadata.errors as Error[]
       }
 
       return {
@@ -231,7 +213,7 @@ async function replaceCommitChanges(
 export type RecomputedChanges = {
   changedDocuments: DocumentVersion[]
   headDocuments: DocumentVersion[]
-  errors: { [documentUuid: string]: CompileError[] }
+  errors: { [documentUuid: string]: Error[] }
 }
 
 export async function recomputeChanges(

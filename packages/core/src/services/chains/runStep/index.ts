@@ -1,5 +1,5 @@
 import { Chain as PromptlChain } from 'promptl-ai'
-import { AssistantMessage, type Message } from '@latitude-data/compiler'
+import { AssistantMessage, type Message } from '@latitude-data/constants'
 import { LogSources } from '../../../constants'
 import {
   ConfigOverrides,
@@ -15,7 +15,6 @@ import {
   ABSOLUTE_MAX_STEPS,
   ChainStepResponse,
   DEFAULT_MAX_STEPS,
-  MAX_STEPS_CONFIG_NAME,
   StreamType,
 } from '@latitude-data/constants'
 import { Result } from './../../../lib/Result'
@@ -31,7 +30,7 @@ function assertValidStepCount({
   step: ValidatedChainStep
 }) {
   const maxSteps = Math.min(
-    (step.conversation.config[MAX_STEPS_CONFIG_NAME] as number | undefined) ??
+    (step.conversation.config.maxSteps as number | undefined) ??
       DEFAULT_MAX_STEPS,
     ABSOLUTE_MAX_STEPS,
   )

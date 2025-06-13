@@ -1,7 +1,7 @@
 import { hash } from 'crypto'
 import { omit } from 'lodash-es'
 
-import { Config, Conversation } from '@latitude-data/compiler'
+import { Config, Conversation } from '@latitude-data/constants'
 
 import { ChainStepResponse, StreamType, type Workspace } from '../../browser'
 import { cache } from '../../cache'

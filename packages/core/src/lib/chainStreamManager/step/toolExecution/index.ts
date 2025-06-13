@@ -1,4 +1,4 @@
-import { ToolCall, ToolMessage } from '@latitude-data/compiler'
+import { ToolCall, ToolMessage } from '@latitude-data/constants'
 import { PromptSource } from '../../../../constants'
 import { buildToolMessage } from '../../../../services/latitudeTools/helpers'
 import { Result } from '../../../Result'

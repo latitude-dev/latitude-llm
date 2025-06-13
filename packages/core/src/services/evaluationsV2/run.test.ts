@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { ContentType, MessageRole } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {

@@ -2,10 +2,13 @@ import { addMessageToLatteAction } from '$/actions/latte/addMessage'
 import { createNewLatteAction } from '$/actions/latte/new'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useServerAction } from 'zsa-react'
-import { ContentType, MessageRole, TextContent } from '@latitude-data/compiler'
 import {
   AGENT_RETURN_TOOL_NAME,
+  ContentType,
   extractAgentToolCalls,
+  MessageRole,
+  TextContent,
+  ToolCall,
 } from '@latitude-data/constants'
 import { Message } from '@latitude-data/core/browser'
 import { useCallback, useMemo, useState } from 'react'
@@ -140,30 +143,32 @@ export function useLatte() {
           }
 
           const [responseToolCalls, otherToolCalls] = extractAgentToolCalls(
-            message.toolCalls,
+            message.toolCalls as ToolCall[],
           )
 
           if (otherToolCalls.length) {
-            const toolSteps = message.toolCalls.map((toolCall) => {
-              if (toolCall.name === LatteTool.editProject) {
-                const params = toolCall.arguments as {
-                  actions: LatteEditAction[]
+            const toolSteps = (message.toolCalls as ToolCall[]).map(
+              (toolCall) => {
+                if (toolCall.name === LatteTool.editProject) {
+                  const params = toolCall.arguments as {
+                    actions: LatteEditAction[]
+                  }
+                  return params.actions.map((action) => ({
+                    type: 'action' as 'action',
+                    action,
+                  }))
                 }
-                return params.actions.map((action) => ({
-                  type: 'action' as 'action',
-                  action,
-                }))
-              }
 
-              return {
-                type: 'tool' as 'tool',
-                id: toolCall.id,
-                toolName: toolCall.name,
-                parameters: toolCall.arguments,
-                finished: false,
-                ...getDescriptionFromToolCall(toolCall),
-              }
-            })
+                return {
+                  type: 'tool' as 'tool',
+                  id: toolCall.id,
+                  toolName: toolCall.name,
+                  parameters: toolCall.arguments,
+                  finished: false,
+                  ...getDescriptionFromToolCall(toolCall),
+                }
+              },
+            )
 
             lastInteraction.steps.push(...toolSteps.flat())
           }

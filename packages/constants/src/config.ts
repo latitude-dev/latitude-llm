@@ -21,6 +21,5 @@ export enum LatitudeToolInternalName {
   WebExtract = 'lat_tool_web_extract',
 }
 
-export const MAX_STEPS_CONFIG_NAME = 'maxSteps'
 export const DEFAULT_MAX_STEPS = 20
 export const ABSOLUTE_MAX_STEPS = 150

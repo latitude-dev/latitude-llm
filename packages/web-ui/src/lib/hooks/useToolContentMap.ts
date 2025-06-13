@@ -4,7 +4,7 @@ import {
   Message,
   MessageRole,
   ToolContent,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { useMemo } from 'react'
 
 export function useToolContentMap(

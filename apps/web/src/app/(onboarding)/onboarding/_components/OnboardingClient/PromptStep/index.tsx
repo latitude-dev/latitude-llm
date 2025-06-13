@@ -8,7 +8,7 @@ import { OnboardingStep } from '../index'
 import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants'
 
 export function OnboardingPromptStep({
   document,

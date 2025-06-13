@@ -3,7 +3,7 @@ import {
   ContentType,
   MessageRole,
   ToolMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { LatitudeToolCall } from '../../constants'
 import { LATITUDE_TOOLS } from './tools'
 import {

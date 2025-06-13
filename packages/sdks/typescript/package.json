@@ -50,7 +50,6 @@
   },
   "devDependencies": {
     "@latitude-data/constants": "workspace:*",
-    "@latitude-data/compiler": "workspace:^",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:^",
     "@rollup/plugin-alias": "^5.1.0",

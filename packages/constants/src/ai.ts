@@ -1,5 +1,5 @@
-import { Message, ToolCall } from '@latitude-data/compiler'
-import { Tool, FinishReason, LanguageModelUsage, TextStreamPart } from 'ai'
+import { Message, ToolCall } from './events/compiler'
+import { FinishReason, LanguageModelUsage, TextStreamPart, Tool } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 

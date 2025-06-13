@@ -1,4 +1,4 @@
-import { MessageRole } from '@latitude-data/compiler'
+import { MessageRole } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   LegacyChainEventTypes,
@@ -12,11 +12,11 @@ import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-ac
 import { createProject } from '@latitude-data/core/factories'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
-import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChainEventTypes } from '@latitude-data/constants'
+import { parseSSEvent } from '$/common/parseSSEEvent'
 
 const mocks = vi.hoisted(() => ({
   addMessages: vi.fn(),

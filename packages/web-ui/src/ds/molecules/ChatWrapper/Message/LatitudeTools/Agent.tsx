@@ -1,4 +1,4 @@
-import { ToolRequestContent } from '@latitude-data/compiler'
+import { ToolRequestContent } from '@latitude-data/constants'
 import { CardTextContent, ContentCard } from '../ContentCard'
 import { CodeBlock } from '../../../../atoms/CodeBlock'
 import { useMemo } from 'react'

@@ -11,7 +11,7 @@ import {
   Message,
   MessageRole,
   ToolCall,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 function getAssistantMessageToolCallIds(message?: Message): unknown[] {

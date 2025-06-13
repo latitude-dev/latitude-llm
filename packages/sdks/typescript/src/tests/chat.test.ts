@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { ContentType, MessageRole } from '@latitude-data/constants'
 import { Latitude, LogSources } from '$sdk/index'
 import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
 import { parseSSE } from '$sdk/utils/parseSSE'

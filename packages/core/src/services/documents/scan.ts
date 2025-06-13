@@ -1,7 +1,6 @@
 import path from 'path'
 
-import { readMetadata, Document as RefDocument } from '@latitude-data/compiler'
-import { type ConversationMetadata, scan } from 'promptl-ai'
+import { type ConversationMetadata, Document, scan } from 'promptl-ai'
 
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { DocumentVersionsRepository } from '../../repositories'
@@ -21,7 +20,7 @@ export async function getDocumentMetadata({
   const referenceFn = async (
     refPath: string,
     from?: string,
-  ): Promise<RefDocument | undefined> => {
+  ): Promise<Document | undefined> => {
     const fullPath = path
       .resolve(path.dirname(`/${from ?? ''}`), refPath)
       .replace(/^\//, '')
@@ -35,18 +34,16 @@ export async function getDocumentMetadata({
     }
   }
 
-  const metadata =
-    document.promptlVersion === 0
-      ? ((await readMetadata({
-          prompt: document.content,
-          fullPath: document.path,
-          referenceFn,
-        })) as ConversationMetadata)
-      : await scan({
-          prompt: document.content,
-          fullPath: document.path,
-          referenceFn,
-        })
+  if (document.promptlVersion === 0) {
+    throw new Error('Chains with promptl version 0 are not supported anymore')
+  }
+
+  const metadata = await scan({
+    prompt: document.content,
+    fullPath: document.path,
+    referenceFn,
+  })
+
   return metadata
 }
 

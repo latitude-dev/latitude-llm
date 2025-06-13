@@ -1,4 +1,4 @@
-import { Conversation } from '@latitude-data/compiler'
+import { Conversation } from '@latitude-data/constants'
 import { FinishReason } from 'ai'
 
 import { ProviderApiKey, ProviderLog, Workspace } from '../../../browser'

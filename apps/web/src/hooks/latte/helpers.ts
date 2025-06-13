@@ -1,4 +1,4 @@
-import type { ToolCall } from '@latitude-data/compiler'
+import { ToolCall } from '@latitude-data/constants'
 import { LatteTool } from '@latitude-data/constants/latte'
 
 export function getDescriptionFromToolCall(toolCall: ToolCall): {

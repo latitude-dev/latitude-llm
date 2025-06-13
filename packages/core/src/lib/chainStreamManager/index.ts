@@ -4,8 +4,8 @@ import {
   Message,
   ToolCall,
   ToolMessage,
-} from '@latitude-data/compiler'
-import { StreamEventTypes } from '@latitude-data/constants'
+  StreamEventTypes,
+} from '@latitude-data/constants'
 import {
   ChainEvent,
   ChainEventTypes,
@@ -21,12 +21,12 @@ import { FinishReason, LanguageModelUsage } from 'ai'
 import { RunErrorCodes, ChainError } from '@latitude-data/constants/errors'
 import { IntegrationDto, ProviderApiKey, Workspace } from '../../browser'
 import { resolveToolsFromConfig } from './resolveTools'
-import { omit } from 'lodash-es'
 import { ToolSource } from './resolveTools/types'
 import { getBuiltInToolCallResponses } from './step/toolExecution'
 import { JSONSchema7 } from 'json-schema'
 import { createMcpClientManager } from '../../services/integrations/McpClient/McpClientManager'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { omit } from 'lodash-es'
 
 const createPromiseWithResolver = <T>(): readonly [
   Promise<T>,

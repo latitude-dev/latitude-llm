@@ -1,4 +1,4 @@
-import type { ConversationMetadata as LegacyMetadata } from '@latitude-data/compiler'
+import type { ConversationMetadata as LegacyMetadata } from '@latitude-data/constants'
 import type { ConversationMetadata as PromptlMetadata } from 'promptl-ai'
 import { Commit, DocumentVersion, Project } from '../../../../browser'
 

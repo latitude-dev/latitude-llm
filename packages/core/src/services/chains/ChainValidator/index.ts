@@ -1,26 +1,17 @@
-import {
-  CompileError,
-  Conversation,
-  Chain as LegacyChain,
-  Message,
-} from '@latitude-data/compiler'
+import { Conversation, Message } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
-import { z } from 'zod'
 
 import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
 import { Result } from './../../../lib/Result'
 import { TypedResult } from './../../../lib/Result'
-import {
-  azureConfig,
-  LatitudePromptConfig,
-} from '@latitude-data/constants/latitudePromptSchema'
+import { LatitudePromptConfig, latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 import { CompileError as PromptlCompileError } from 'promptl-ai'
 
-type SomeChain = LegacyChain | PromptlChain
+type SomeChain = PromptlChain
 
 export type ValidatedChainStep = {
   provider: ProviderApiKey
@@ -79,28 +70,6 @@ export const getOutputType = ({
   return configSchema.type === 'array' ? 'array' : 'object'
 }
 
-/*
- * Legacy compiler wants a string as response for the next step
- * But new Promptl can handle an array of messages
- */
-function getTextFromMessages(
-  prevContent: Message[] | string | undefined,
-): string | undefined {
-  if (!prevContent) return undefined
-  if (typeof prevContent === 'string') return prevContent
-
-  try {
-    return prevContent
-      .flatMap((message) => {
-        if (typeof message.content === 'string') return message.content
-        return JSON.stringify(message.content)
-      })
-      .join('\n')
-  } catch {
-    return ''
-  }
-}
-
 const safeChain = async ({
   promptlVersion,
   chain,
@@ -112,11 +81,7 @@ const safeChain = async ({
 }) => {
   try {
     if (promptlVersion === 0) {
-      let prevText = getTextFromMessages(newMessages)
-      const { completed, conversation } = await (chain as LegacyChain).step(
-        prevText,
-      )
-      return Result.ok({ chainCompleted: completed, conversation })
+      throw new Error('Chains with promptl version 0 are not supported anymore')
     }
 
     const { completed, messages, config } = await (chain as PromptlChain).step(
@@ -125,21 +90,19 @@ const safeChain = async ({
 
     return Result.ok({
       chainCompleted: completed,
-      conversation: { messages, config },
+      conversation: { messages: messages as unknown as Message[], config },
     })
   } catch (e) {
     const error = e as PromptlCompileError
     const isPromptlCompileError = error instanceof PromptlCompileError
-    const isOldCompileError = error instanceof CompileError
-    const isCompileError = isPromptlCompileError || isOldCompileError
     return Result.error(
       new ChainError({
         message: `Error validating chain:\n ${error.message}`,
         code: RunErrorCodes.ChainCompileError,
         details: {
-          compileCode: error.code ?? 'unknown_compile_error',
+          compileCode: 'unknown_compile_error',
           message: error.message,
-          ...(isCompileError
+          ...(isPromptlCompileError
             ? {
                 compileCode: error.code,
                 frame: error.frame,
@@ -164,29 +127,19 @@ const findProvider = (name: string, providersMap: CachedApiKeys) => {
   )
 }
 
-// TODO: Use latitudePromptSchema. This is duplicated
-// This is a lie
-const validateConfig = (
-  config: Record<string, unknown>,
-): TypedResult<
+const validateConfig = ({
+  providerNames,
+  config,
+}: {
+  providerNames: string[]
+  config: Record<string, unknown>
+}): TypedResult<
   LatitudePromptConfig,
   ChainError<RunErrorCodes.DocumentConfigError>
 > => {
-  const doc =
-    'https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts'
-  const schema = z
-    .object({
-      model: z.string({
-        message: `"model" attribute is required. Read more here: ${doc}`,
-      }),
-      provider: z.string({
-        message: `"provider" attribute is required. Read more here: ${doc}`,
-      }),
-      azure: azureConfig.optional(),
-    })
-    .catchall(z.unknown())
-
-  const parseResult = schema.safeParse(config)
+  const parseResult = latitudePromptConfigSchema({ providerNames }).safeParse(
+    config,
+  )
 
   if (!parseResult.success) {
     const validationError = parseResult.error.errors[0]
@@ -201,7 +154,7 @@ const validateConfig = (
     )
   }
 
-  return Result.ok(parseResult.data)
+  return Result.ok(parseResult.data as LatitudePromptConfig)
 }
 
 export const validateChain = async ({
@@ -219,7 +172,10 @@ export const validateChain = async ({
   if (chainResult.error) return chainResult
 
   const { chainCompleted, conversation } = chainResult.value
-  const configResult = validateConfig(conversation.config)
+  const configResult = validateConfig({
+    config: conversation.config,
+    providerNames: Array.from(providersMap.keys()),
+  })
   if (configResult.error) return configResult
 
   const config = configResult.unwrap()

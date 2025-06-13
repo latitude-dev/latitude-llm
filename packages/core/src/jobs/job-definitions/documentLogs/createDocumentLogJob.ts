@@ -1,4 +1,4 @@
-import type { Message } from '@latitude-data/compiler'
+import type { Message } from '@latitude-data/constants'
 import { Job } from 'bullmq'
 
 import { Commit } from '../../../browser'

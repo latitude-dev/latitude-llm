@@ -1,7 +1,3 @@
-import {
-  createChain as createLegacyChain,
-  readMetadata,
-} from '@latitude-data/compiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   isPromptLFile,
@@ -54,20 +50,9 @@ export class RunDocumentChecker {
   private async createChain() {
     try {
       if (this.document.promptlVersion === 0) {
-        const metadata = await readMetadata({
-          prompt: this.prompt,
-          fullPath: this.document.path,
-        })
-
-        return Result.ok({
-          chain: createLegacyChain({
-            prompt: metadata.resolvedPrompt,
-            parameters: this.parameters,
-            includeSourceMap: true,
-          }),
-          config: metadata.config,
-          isChain: true,
-        })
+        return Result.error(
+          new Error('Chains with promptl version 0 are not supported anymore'),
+        )
       } else {
         const ast = await parsePrompt(this.prompt).then((r) => r.unwrap())
         const metadata = await scan({

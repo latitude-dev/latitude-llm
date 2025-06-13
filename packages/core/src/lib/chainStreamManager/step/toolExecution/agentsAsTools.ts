@@ -5,7 +5,7 @@ import { ToolResponsesArgs } from './types'
 import { DocumentVersionsRepository } from '../../../../repositories'
 import { runDocumentAtCommit } from '../../../../services/commits/runDocumentAtCommit'
 import { AGENT_RETURN_TOOL_NAME, LogSources } from '@latitude-data/constants'
-import { ToolCall } from '@latitude-data/compiler'
+import { ToolCall } from '@latitude-data/constants'
 import { ToolSource } from '../../resolveTools/types'
 
 export function getAgentsAsToolCallsResults({

@@ -1,4 +1,4 @@
-import { ToolRequestContent, ToolContent } from '@latitude-data/compiler'
+import { ToolRequestContent, ToolContent } from '@latitude-data/constants'
 import { CodeBlock } from '../../../atoms/CodeBlock'
 import { ContentCard } from './ContentCard'
 import { ToolCallContent as PromptlToolCall } from 'promptl-ai'

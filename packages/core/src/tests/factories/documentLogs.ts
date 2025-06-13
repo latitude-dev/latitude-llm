@@ -1,4 +1,3 @@
-import { ContentType, createChain } from '@latitude-data/compiler'
 import { eq } from 'drizzle-orm'
 import { v4 as uuid } from 'uuid'
 
@@ -17,7 +16,8 @@ import { createDocumentLog as ogCreateDocumentLog } from '../../services/documen
 import { getResolvedContent } from '../../services/documents'
 import { createProviderLog } from '../../services/providerLogs'
 import { helpers } from './helpers'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { ContentType, createChain } from 'promptl-ai'
+import { PartialPromptConfig } from '@latitude-data/constants'
 
 export type IDocumentLogData = {
   document: DocumentVersion
@@ -54,17 +54,17 @@ async function generateProviderLogs({
   const providerScope = new ProviderApiKeysRepository(workspace.id)
 
   while (true) {
-    const { completed, conversation } = await chain.step(mockedResponse)
+    const { completed, config, messages } = await chain.step(mockedResponse)
 
-    const config = conversation.config as LatitudePromptConfig
     const provider = await providerScope
-      .findByName(config.provider!)
+      .findByName(config.provider! as string)
       .then((r) => r.unwrap())
 
     mockedResponse = helpers.randomSentence()
-    const promptTokens = conversation.messages.reduce((acc, message) => {
+    const promptTokens = messages.reduce((acc, message) => {
       let content = message.content
       if (Array.isArray(content)) {
+        // @ts-expect-error - not important
         content = content
           .map((c) => (c.type === ContentType.text ? c.text : ''))
           .join('')
@@ -79,9 +79,10 @@ async function generateProviderLogs({
       documentLogUuid,
       providerId: provider.id,
       providerType: provider.provider,
-      model: config.model!,
-      config: config,
-      messages: conversation.messages,
+      model: config.model! as string,
+      config: config as PartialPromptConfig,
+      // @ts-expect-error - TODO: fix type incompats
+      messages,
       responseText: mockedResponse,
       toolCalls: [],
       usage: {

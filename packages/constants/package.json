@@ -26,7 +26,6 @@
     "@types/json-schema": "^7.0.15"
   },
   "dependencies": {
-    "@latitude-data/compiler": "workspace:^",
     "ai": "^4.2.9",
     "json-schema": "^0.4.0",
     "promptl-ai": "catalog:",
