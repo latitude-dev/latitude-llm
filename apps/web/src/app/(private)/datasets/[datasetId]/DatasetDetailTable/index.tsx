@@ -107,7 +107,7 @@ export function DatasetDetailTable({
         page: Number(page),
         pageSize: Number(pageSize),
       }),
-    [page, pageSize, dataset.id],
+    [page, pageSize, dataset.id, count],
   )
   const selectedRow = useMemo(
     () => rows.find((row) => row.id === selectedRowId),

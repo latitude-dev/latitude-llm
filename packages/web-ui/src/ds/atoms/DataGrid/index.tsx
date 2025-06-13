@@ -46,7 +46,7 @@ const RenderCheckbox = ({
   const onChangeHandler = useCallback((checkedState: CheckedState) => {
     const checked = checkedState === 'indeterminate' ? true : checkedState
     onChange(checked, lastShiftKeyRef.current)
-  }, [])
+  }, [onChange])
 
   return (
     <label

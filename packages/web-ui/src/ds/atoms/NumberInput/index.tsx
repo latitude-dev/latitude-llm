@@ -49,7 +49,7 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
     useEffect(() => {
       if (value === undefined) onChange?.(undefined)
       else onChange?.(Math.min(Math.max(value, min), max))
-    }, [value, min, max])
+    }, [value, min, max, onChange])
 
     const internalRef = useRef<HTMLInputElement>(null)
     useImperativeHandle(ref, () => internalRef.current!)

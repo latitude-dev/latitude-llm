@@ -44,7 +44,7 @@ function useCachedRows({
         currentPage.current += 1
       }
     },
-    [cache, dataset, startingPage, pageSize],
+    [cache, dataset, pageSize],
   )
 }
 
@@ -89,7 +89,7 @@ export function useDatasetRowsSocket({
       })
       setRowsInCache(event.rows)
     },
-    [dataset, mutate, toast, setIsProcessing, setRowsInCache, setProcessedRows],
+    [dataset, toast, setIsProcessing, setRowsInCache, setProcessedRows],
   )
 
   useSockets({ event: 'datasetRowsCreated', onMessage })

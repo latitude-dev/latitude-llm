@@ -66,7 +66,7 @@ export function HorizontalSplit({
       setPaneWidth(newPaneWidth)
     }
     oldWidthRef.current = initialWidthFromRef
-  }, [initialWidthFromRef, paneWidth, minWidth])
+  }, [initialWidthFromRef, paneWidth, minWidth, autoResize])
 
   return (
     <div
