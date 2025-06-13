@@ -121,7 +121,7 @@ export default function useDatasetRows(
 
       update({ datasetId: dataset.id, rows: serverRows })
     },
-    [update],
+    [update, dataset],
   )
 
   const { execute: deleteRows, isPending: isDeleting } = useLatitudeAction(

@@ -1,9 +1,5 @@
 import { useCallback } from 'react'
-import {
-  DocumentVersion,
-  InputSource,
-  LinkedDatasetRow,
-} from '@latitude-data/core/browser'
+import { DocumentVersion, LinkedDatasetRow } from '@latitude-data/core/browser'
 import {
   getDocState,
   InputsByDocument,
@@ -13,7 +9,6 @@ import { useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
 
 export function useDatasetUtils({
   key,
-  source,
   projectId,
   commitUuid,
   document,
@@ -24,7 +19,6 @@ export function useDatasetUtils({
   projectId: number
   commitUuid: string
   key: string
-  source: InputSource
   allInputs: ReturnType<typeof useLocalStorage<InputsByDocument>>['value']
   setValue: ReturnType<typeof useLocalStorage<InputsByDocument>>['setValue']
 }) {
@@ -74,7 +68,7 @@ export function useDatasetUtils({
         }
       })
     },
-    [allInputs, key, source, setValue],
+    [key, setValue],
   )
 
   const setDataset = useCallback(
@@ -143,8 +137,10 @@ export function useDatasetUtils({
       projectId,
       commitUuid,
       document.documentUuid,
-      allInputs,
+      document.datasetV2Id,
       key,
+      setDatasetMappedInputs,
+      allInputs,
     ],
   )
 

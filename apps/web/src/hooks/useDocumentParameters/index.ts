@@ -71,7 +71,6 @@ export function useDocumentParameters({
   })
   const { setDataset, isAssigning } = useDatasetUtils({
     key,
-    source,
     projectId,
     commitUuid,
     document,

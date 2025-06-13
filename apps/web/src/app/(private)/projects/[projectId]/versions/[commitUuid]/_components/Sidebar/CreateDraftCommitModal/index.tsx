@@ -19,6 +19,7 @@ export default function DraftCommitModal({
   open: boolean
   setOpen: (open: boolean) => void
 }) {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const defaultPromptTitle = useMemo(() => new Date().toLocaleString(), [open])
   const { createDraft, isCreating } = useCommits({
     commitStatus: CommitStatus.Draft,

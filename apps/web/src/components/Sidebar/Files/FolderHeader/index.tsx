@@ -33,7 +33,7 @@ export default function FolderHeader({
     onDeleteFolder,
     onRenameFile,
   } = useFileTreeContext()
-  const { openPaths, togglePath } = useOpenPaths((state) => ({
+  const { togglePath } = useOpenPaths((state) => ({
     togglePath: state.togglePath,
     openPaths: state.openPaths,
   }))
@@ -70,7 +70,15 @@ export default function FolderHeader({
         }
         addFolder({ parentPath: node.path, parentId: node.id, isFile })
       },
-    [node.path, togglePath, open, isMerged, onMergeCommitClick, addFolder],
+    [
+      node.path,
+      node.id,
+      togglePath,
+      open,
+      isMerged,
+      onMergeCommitClick,
+      addFolder,
+    ],
   )
 
   const onSaveValue = useCallback(
@@ -88,7 +96,7 @@ export default function FolderHeader({
         updateFolder({ id: node.id, path })
       }
     },
-    [node.id, updateFolder, isMerged, onMergeCommitClick],
+    [node, updateFolder, isMerged, onMergeCommitClick, onRenameFile],
   )
 
   const fileUploadInputRef = useRef<HTMLInputElement>(null)
@@ -170,17 +178,15 @@ export default function FolderHeader({
       },
     ],
     [
+      node,
       isLoading,
       isMerged,
       onMergeCommitClick,
-      addFolder,
       onClickFileUploadInput,
       onDeleteFolder,
       deleteTmpFolder,
-      node.path,
-      node.isPersisted,
-      openPaths,
-      togglePath,
+      setIsEditing,
+      onAddNode,
     ],
   )
 

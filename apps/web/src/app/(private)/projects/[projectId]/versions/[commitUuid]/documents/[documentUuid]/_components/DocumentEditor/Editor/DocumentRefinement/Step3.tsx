@@ -16,8 +16,10 @@ export function Step3({
   document: DocumentVersion
   refine: () => Promise<void>
 }) {
+  // FIXME: Do not run side effects on useEffect, move to event handler.
   useEffect(() => {
     refine()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

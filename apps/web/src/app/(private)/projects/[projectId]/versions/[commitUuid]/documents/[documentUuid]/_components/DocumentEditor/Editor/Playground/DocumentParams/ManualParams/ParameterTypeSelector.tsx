@@ -63,7 +63,7 @@ export function ParameterTypeSelector({
       ParameterTypes.includes(input.metadata.type || '')
         ? input.metadata.type
         : ParameterType.Text,
-    [parameter, inputs],
+    [input.metadata.type],
   )!
 
   return (

@@ -32,7 +32,7 @@ function useJoinWorkspace({ connection }: { connection: IWebsocketConfig }) {
         userId: currentUser.id,
       })
     },
-    [connection.socket, connection.connected],
+    [connection.socket, currentUser.id],
   )
 }
 

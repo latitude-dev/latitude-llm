@@ -39,21 +39,6 @@ export function useSelectableRows<T extends string | number>({
     }
   }, [selectionState.mode])
 
-  const isSelected = <I extends T = T>(id: I | undefined) => {
-    if (id === undefined) return false
-
-    switch (selectionState.mode) {
-      case 'ALL':
-        return !selectionState.excludedIds.has(id)
-      case 'NONE':
-        return false
-      case 'PARTIAL':
-        return selectionState.selectedIds.has(id)
-      case 'ALL_EXCEPT':
-        return !selectionState.excludedIds.has(id)
-    }
-  }
-
   const toggleRow = useCallback(
     <I extends T = T>(id: I | undefined, checked: CheckedState) => {
       if (id === undefined) return
@@ -138,6 +123,10 @@ export function useSelectableRows<T extends string | number>({
       case 'ALL_EXCEPT':
         return rowIds.filter((id) => !selectionState.excludedIds.has(id))
     }
+    // This is legitimate case since rowIds is an array we need to force a deep
+    // equality check to compute the memo only when the array's content has
+    // changed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectionState, rowIds.join('')])
 
   const selectedCount = useMemo(() => {
@@ -151,10 +140,30 @@ export function useSelectableRows<T extends string | number>({
       case 'ALL_EXCEPT':
         return totalRowCount - selectionState.excludedIds.size
     }
-  }, [selectionState, totalRowCount])
+  }, [
+    selectionState.mode,
+    selectionState.excludedIds,
+    selectionState.selectedIds,
+    totalRowCount,
+  ])
 
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    const isSelected = <I extends T = T>(id: I | undefined) => {
+      if (id === undefined) return false
+
+      switch (selectionState.mode) {
+        case 'ALL':
+          return !selectionState.excludedIds.has(id)
+        case 'NONE':
+          return false
+        case 'PARTIAL':
+          return selectionState.selectedIds.has(id)
+        case 'ALL_EXCEPT':
+          return !selectionState.excludedIds.has(id)
+      }
+    }
+
+    return {
       selectedCount,
       selectionMode: selectionState.mode,
       excludedIds: selectionState.excludedIds,
@@ -164,19 +173,18 @@ export function useSelectableRows<T extends string | number>({
       clearSelections,
       isSelected,
       headerState,
-    }),
-    [
-      selectedCount,
-      selectionState.mode,
-      selectionState.excludedIds,
-      selectedRowIds,
-      toggleRow,
-      toggleAll,
-      clearSelections,
-      isSelected,
-      headerState,
-    ],
-  )
+    }
+  }, [
+    selectedCount,
+    selectionState.mode,
+    selectionState.excludedIds,
+    selectionState.selectedIds,
+    selectedRowIds,
+    toggleRow,
+    toggleAll,
+    clearSelections,
+    headerState,
+  ])
 }
 
 export type SelectableRowsHook = ReturnType<typeof useSelectableRows>

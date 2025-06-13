@@ -43,10 +43,13 @@ const RenderCheckbox = ({
   const onClickLabel = useCallback((e: MouseEvent) => {
     lastShiftKeyRef.current = e.shiftKey
   }, [])
-  const onChangeHandler = useCallback((checkedState: CheckedState) => {
-    const checked = checkedState === 'indeterminate' ? true : checkedState
-    onChange(checked, lastShiftKeyRef.current)
-  }, [])
+  const onChangeHandler = useCallback(
+    (checkedState: CheckedState) => {
+      const checked = checkedState === 'indeterminate' ? true : checkedState
+      onChange(checked, lastShiftKeyRef.current)
+    },
+    [onChange],
+  )
 
   return (
     <label

@@ -56,12 +56,16 @@ export function Step1({
     totalRowCount: evaluations.length,
   })
 
+  // FIXME: Do not use useEffect to set state.
   useEffect(() => {
     if (selectableState.selectedRowIds.length) {
       setSelectedEvaluation(
         evaluations.find((e) => e.uuid === selectableState.selectedRowIds[0]),
       )
-    } else setSelectedEvaluation(undefined)
+    } else {
+      setSelectedEvaluation(undefined)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectableState.selectedRowIds])
 
   if (isLoading) {

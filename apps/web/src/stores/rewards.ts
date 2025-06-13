@@ -85,7 +85,7 @@ export default function useRewards(opts?: SWRConfiguration) {
         },
       )
     },
-    [claimRewardAction],
+    [executeClaimRewardAction, toast, updateRewards, increaseMaxUsage],
   )
 
   return { data, isLoading, error: swrError, claimReward }

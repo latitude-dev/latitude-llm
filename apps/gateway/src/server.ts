@@ -12,7 +12,11 @@ import { env } from '@latitude-data/env'
 const HOSTNAME = env.GATEWAY_BIND_ADDRESS
 const PORT = env.GATEWAY_BIND_PORT
 const SHUTDOWN_TIMEOUT = 600000 // 10 minutes
-const WORKERS = env.GATEWAY_WORKERS ? env.GATEWAY_WORKERS : os.cpus().length
+const WORKERS = env.GATEWAY_WORKERS
+  ? env.GATEWAY_WORKERS
+  : env.NODE_ENV === 'production'
+    ? os.cpus().length
+    : 1
 
 if (cluster.isPrimary) {
   console.log(`Primary ${process.pid} is running`)

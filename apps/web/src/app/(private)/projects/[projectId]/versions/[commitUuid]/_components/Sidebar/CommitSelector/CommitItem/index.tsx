@@ -81,7 +81,7 @@ export function CommitItem({
       documentRoute[selectedSegment as 'editor' | 'logs']?.root ??
       documentRoute.editor.root
     )
-  }, [project.id, commit?.uuid, isHead, currentDocument, selectedSegment])
+  }, [project.id, commit, isHead, currentDocument, selectedSegment])
 
   if (!commit || !commitPath) return null
 

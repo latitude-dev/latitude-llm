@@ -67,7 +67,7 @@ function Editor({
     if (editor && isMountedRef.current) {
       updateHeight(editor)
     }
-  }, [value])
+  }, [value, updateHeight])
 
   useEffect(() => {
     onHeightChange(height)

@@ -43,63 +43,66 @@ export function useMonacoSetup({
     applyTheme(monacoRef.current)
   }, [applyTheme])
 
-  const handleEditorWillMount = useCallback((monaco: Monaco) => {
-    if (monacoRef.current) return
+  const handleEditorWillMount = useCallback(
+    (monaco: Monaco) => {
+      if (monacoRef.current) return
 
-    monaco.languages.register({ id: 'document' })
-    monaco.languages.setMonarchTokensProvider('document', { tokenizer })
-    monaco.languages.setLanguageConfiguration('document', {
-      comments: { blockComment: ['/*', '*/'] },
-      brackets: [['{{', '}}']],
-    })
-    applyTheme(monaco)
+      monaco.languages.register({ id: 'document' })
+      monaco.languages.setMonarchTokensProvider('document', { tokenizer })
+      monaco.languages.setLanguageConfiguration('document', {
+        comments: { blockComment: ['/*', '*/'] },
+        brackets: [['{{', '}}']],
+      })
+      applyTheme(monaco)
 
-    monaco.editor.addCommand({
-      id: 'fixErrors',
-      run: (_, ...errors: DocumentError[]) => errorFixFn?.(errors),
-    })
+      monaco.editor.addCommand({
+        id: 'fixErrors',
+        run: (_, ...errors: DocumentError[]) => errorFixFn?.(errors),
+      })
 
-    if (errorFixFn) {
-      const codeActionProvider: languages.CodeActionProvider = {
-        provideCodeActions: (_, __, context, ___) => {
-          const actions = [
-            {
-              title: 'Fix with copilot',
-              diagnostics: context.markers,
-              kind: 'quickfix',
-              isPreferred: true,
-              edit: {
-                edits: [],
-              },
-              command: {
-                id: 'fixErrors',
+      if (errorFixFn) {
+        const codeActionProvider: languages.CodeActionProvider = {
+          provideCodeActions: (_, __, context, ___) => {
+            const actions = [
+              {
                 title: 'Fix with copilot',
-                arguments: context.markers.map((marker) => ({
-                  message: marker.message,
-                  startLineNumber: marker.startLineNumber,
-                  startColumn: marker.startColumn,
-                })),
+                diagnostics: context.markers,
+                kind: 'quickfix',
+                isPreferred: true,
+                edit: {
+                  edits: [],
+                },
+                command: {
+                  id: 'fixErrors',
+                  title: 'Fix with copilot',
+                  arguments: context.markers.map((marker) => ({
+                    message: marker.message,
+                    startLineNumber: marker.startLineNumber,
+                    startColumn: marker.startColumn,
+                  })),
+                },
               },
-            },
-          ]
+            ]
 
-          return {
-            actions,
-            dispose: () => {},
-          }
-        },
+            return {
+              actions,
+              dispose: () => {},
+            }
+          },
+        }
+
+        const disposable = monaco.languages.registerCodeActionProvider(
+          'document',
+          codeActionProvider,
+        )
+
+        return () => {
+          disposable.dispose()
+        }
       }
-
-      const disposable = monaco.languages.registerCodeActionProvider(
-        'document',
-        codeActionProvider,
-      )
-
-      return () => {
-        disposable.dispose()
-      }
-    }
-  }, [])
+    },
+    [applyTheme, errorFixFn],
+  )
 
   return { monacoRef, handleEditorWillMount }
 }

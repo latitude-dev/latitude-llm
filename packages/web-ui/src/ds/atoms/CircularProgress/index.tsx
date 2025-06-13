@@ -26,12 +26,18 @@ export function CircularProgress({
 }: CircularProgressProps) {
   const [value, setValue] = useState(animateOnMount ? 0 : valueProp)
 
+  // FIXME: Do not use useEffect to set state, instead add a dealy to the value
+  // prop wherever it is set
   useEffect(() => {
     if (animateOnMount) setValue(valueProp)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animateOnMount])
 
+  // FIXME: Do not use useEffect to set state, instead add a dealy to the value
+  // prop wherever it is set
   useEffect(() => {
     setValue(valueProp)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valueProp])
 
   const radius = (size - strokeWidth) / 2

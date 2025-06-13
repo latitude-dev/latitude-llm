@@ -94,6 +94,7 @@ export function RewardMenuBase({
     claimedRewardData,
     config.buttonConfig?.allowMultiple,
     reference,
+    isClaimed,
   ])
 
   return (

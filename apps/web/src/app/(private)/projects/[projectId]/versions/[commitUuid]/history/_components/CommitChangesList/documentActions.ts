@@ -94,7 +94,15 @@ export function useDocumentActions({
       documentUuid: change.documentUuid,
       documentCommitUuid: commit.uuid,
     })
-  }, [commit, change])
+  }, [
+    commit,
+    change,
+    currentCommit.mergedAt,
+    currentCommit.uuid,
+    executeGetChangesToRevert,
+    executeRevertChanges,
+    open,
+  ])
 
   const getChangesToReset = useCallback(() => {
     open({
@@ -116,7 +124,15 @@ export function useDocumentActions({
       documentUuid: change.documentUuid,
       documentCommitUuid: commit.uuid,
     })
-  }, [commit, change])
+  }, [
+    commit,
+    change,
+    currentCommit.mergedAt,
+    currentCommit.uuid,
+    executeGetChangesToReset,
+    executeResetChanges,
+    open,
+  ])
 
   return {
     getChangesToRevert,

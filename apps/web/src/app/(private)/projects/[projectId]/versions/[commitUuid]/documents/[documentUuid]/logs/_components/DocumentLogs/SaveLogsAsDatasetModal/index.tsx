@@ -87,11 +87,7 @@ export function SaveLogsAsDatasetModal({
         setShowDatasetSelector(false)
       }
     },
-    [
-      previewModalState.onOpenChange,
-      setSelectedDataset,
-      setShowDatasetSelector,
-    ],
+    [previewModalState, setSelectedDataset, setShowDatasetSelector],
   )
   const onSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {

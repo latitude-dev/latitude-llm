@@ -25,7 +25,7 @@ export function RewardMenu({
 
   const config = useMemo(() => {
     return REWARD_CONFIGS[type]
-  }, [type, claimedRewardData])
+  }, [type])
 
   if (!config) return null
 

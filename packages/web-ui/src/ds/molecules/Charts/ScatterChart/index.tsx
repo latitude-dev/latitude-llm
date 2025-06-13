@@ -77,7 +77,7 @@ export function ScatterChart({ config }: { config: ScatterChartConfig }) {
 
       return <Text.H5B>{dataPayload.label}</Text.H5B>
     },
-    [config.tooltipLabel],
+    [config],
   )
 
   const tooltipFormatter = useCallback(
@@ -104,7 +104,7 @@ export function ScatterChart({ config }: { config: ScatterChartConfig }) {
         </div>
       )
     },
-    [config.xAxis.label, config.yAxis.label],
+    [config],
   )
 
   return (
