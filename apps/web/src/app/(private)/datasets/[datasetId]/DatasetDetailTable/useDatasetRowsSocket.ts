@@ -51,13 +51,11 @@ function useCachedRows({
 export function useDatasetRowsSocket({
   initialRenderIsProcessing,
   dataset,
-  mutate,
   pageSize,
   currentPage,
 }: {
   initialRenderIsProcessing: boolean
   dataset: Dataset
-  mutate: ReturnType<typeof useDatasetRows>['mutate']
   currentPage: number
   pageSize: string
 }) {

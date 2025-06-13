@@ -36,7 +36,7 @@ export function useDatasetRole() {
       label: labelCssClass,
     }
     return colorsCssClassByRole
-  }, [])
+  }, [getStyleForRole])
 
   return { getStyleForRole, backgroundCssClasses }
 }

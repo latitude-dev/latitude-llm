@@ -6,15 +6,16 @@ export function useHover() {
   const [hovered, setHovered] = useState(false)
 
   useEffect(() => {
+    const element = ref.current
     const onMouseEnter = () => setHovered(true)
     const onMouseLeave = () => setHovered(false)
 
-    ref.current?.addEventListener('mouseenter', onMouseEnter)
-    ref.current?.addEventListener('mouseleave', onMouseLeave)
+    element?.addEventListener('mouseenter', onMouseEnter)
+    element?.addEventListener('mouseleave', onMouseLeave)
 
     return () => {
-      ref.current?.removeEventListener('mouseenter', onMouseEnter)
-      ref.current?.removeEventListener('mouseleave', onMouseLeave)
+      element?.removeEventListener('mouseenter', onMouseEnter)
+      element?.removeEventListener('mouseleave', onMouseLeave)
     }
   }, [])
 

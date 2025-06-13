@@ -99,7 +99,7 @@ export function useMonacoSetup({
         disposable.dispose()
       }
     }
-  }, [])
+  }, [applyTheme, errorFixFn])
 
   return { monacoRef, handleEditorWillMount }
 }

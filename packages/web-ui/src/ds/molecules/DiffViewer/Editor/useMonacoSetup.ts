@@ -47,7 +47,7 @@ export function useMonacoSetup() {
       },
     })
     applyTheme(monaco)
-  }, [])
+  }, [applyTheme])
 
   return { monacoRef, handleEditorWillMount }
 }

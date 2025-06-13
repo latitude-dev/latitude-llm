@@ -62,7 +62,7 @@ export default function useFiles() {
 
       return uploadedFile
     },
-    [executeUploadFile],
+    [executeUploadFile, toast],
   )
 
   const convertFile = useCallback(
@@ -81,7 +81,7 @@ export default function useFiles() {
 
       return content
     },
-    [executeConvertFile],
+    [executeConvertFile, toast],
   )
 
   return {

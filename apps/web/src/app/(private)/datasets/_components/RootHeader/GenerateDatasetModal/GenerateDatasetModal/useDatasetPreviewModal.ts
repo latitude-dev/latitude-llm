@@ -62,7 +62,7 @@ export function useDatasetPreviewModal({
       })
       if (!data) return
     },
-    [preview.runPreviewAction],
+    [preview],
   )
 
   const handleRegeneratePreview = useCallback(async () => {
@@ -75,7 +75,7 @@ export function useDatasetPreviewModal({
       parameters: formData.get('parameters') as string,
       description: formData.get('description') as string,
     })
-  }, [preview.runPreviewAction])
+  }, [preview])
 
   // Auto run preview if default parameters are provided
   useEffect(() => {
@@ -85,7 +85,7 @@ export function useDatasetPreviewModal({
         description: defaultName,
       })
     }
-  }, [defaultName, defaultParameters, preview.runPreviewAction])
+  }, [defaultName, defaultParameters, preview])
 
   return {
     defaultParameters,

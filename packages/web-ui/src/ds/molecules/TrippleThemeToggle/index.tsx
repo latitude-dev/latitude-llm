@@ -31,7 +31,7 @@ export function TripleThemeToggle({
         setTheme(() => t)
       }, 200) // Css transition duration
     },
-    [setTheme],
+    [setTheme, setLocalTheme],
   )
   return (
     <ClientOnly>

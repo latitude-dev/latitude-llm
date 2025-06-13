@@ -95,7 +95,6 @@ export function DatasetDetailTable({
   const { isProcessing, processedRowsCount } = useDatasetRowsSocket({
     initialRenderIsProcessing,
     dataset,
-    mutate,
     currentPage: Number(page),
     pageSize,
   })

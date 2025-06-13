@@ -53,7 +53,14 @@ export function useEyeBehaviour({
 
     nextBlink()
     nextDirection()
-  }, [])
+  }, [
+    blinkDuration,
+    maxTimeBetweenBlinks,
+    minTimeBetweenBlinks,
+    timeChangingDirection,
+    maxTimeToChangeDirection,
+    minTimeToChangeDirection,
+  ])
 
   return { isBlinking, eyeDirection }
 }
