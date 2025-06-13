@@ -43,7 +43,7 @@ export default function VersionOverviewChart<
             : 'hsl(var(--muted-foreground))',
       })) || []
     )
-  }, [stats])
+  }, [stats, commit.id, configuration])
 
   const minY = useMemo(() => {
     const min = data.reduce((min, point) => Math.min(min, point.y), Infinity)
@@ -89,10 +89,7 @@ export default function VersionOverviewChart<
             tooltipLabel: (point: (typeof data)[number]) => {
               return (
                 <div className='flex flex-row gap-2 items-center w-full'>
-                  <Badge
-                    variant={point.version.mergedAt ? 'accent' : 'muted'}
-                    shape='square'
-                  >
+                  <Badge variant={point.version.mergedAt ? 'accent' : 'muted'}>
                     <Text.H6 noWrap>
                       {point.version.mergedAt
                         ? `v${point.version.version}`

@@ -148,7 +148,6 @@ import Mintlify from './custom-icons/logos/Mintlify'
 import Monday from './custom-icons/logos/Monday'
 import Neon from './custom-icons/logos/Neon'
 import Notion from './custom-icons/logos/Notion'
-import Perplexity from './custom-icons/logos/Perplexity'
 import Postgres from './custom-icons/logos/Postgres'
 import Readwise from './custom-icons/logos/Readwise'
 import Reddit from './custom-icons/logos/Reddit'
@@ -161,6 +160,17 @@ import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import YepCode from './custom-icons/logos/YepCode'
+import OpenAI from './custom-icons/llmProviders/openai'
+import Anthropic from './custom-icons/llmProviders/anthropic'
+import Groq from './custom-icons/llmProviders/groq'
+import Mistral from './custom-icons/llmProviders/mistral'
+import Azure from './custom-icons/llmProviders/azure'
+import GoogleGemini from './custom-icons/llmProviders/googleGemini'
+import GoogleVertex from './custom-icons/llmProviders/googleVertex'
+import XAI from './custom-icons/llmProviders/xai'
+import AmazonBedrock from './custom-icons/llmProviders/amazoBedrock'
+import DeepSeek from './custom-icons/llmProviders/deepSeek'
+import Perplexity from './custom-icons/llmProviders/perplexity'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -274,7 +284,6 @@ const Icons = {
   paperclip: Paperclip,
   pause: Pause,
   pencil: Pencil,
-  perplexity: Perplexity,
   pin: Pin,
   pinOff: PinOff,
   play: Play,
@@ -319,6 +328,17 @@ const Icons = {
   monday: Monday,
   gitCompareArrows: GitCompareArrows,
   aLargeSmall: ALargeSmallIcon,
+  openai: OpenAI,
+  anthropic: Anthropic,
+  groq: Groq,
+  mistral: Mistral,
+  azure: Azure,
+  googleGemini: GoogleGemini,
+  googleVertex: GoogleVertex,
+  xai: XAI,
+  amazonBedrock: AmazonBedrock,
+  deepSeek: DeepSeek,
+  perplexity: Perplexity,
 }
 
 export type IconName = keyof typeof Icons

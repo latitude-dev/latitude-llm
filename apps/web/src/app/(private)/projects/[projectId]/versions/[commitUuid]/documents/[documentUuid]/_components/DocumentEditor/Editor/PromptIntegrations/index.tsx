@@ -1,14 +1,10 @@
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { ButtonWithBadge } from '@latitude-data/web-ui/molecules/ButtonWithBadge'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { useState } from 'react'
 import { useActiveIntegrations } from './utils'
 import useIntegrations from '$/stores/integrations'
-import {
-  IntegrationsList,
-  IntegrationsListPlaceholder,
-} from './IntegrationsList'
+import { IntegrationsList } from './IntegrationsList'
 
 export function PromptIntegrations({
   config,
@@ -35,41 +31,41 @@ export function PromptIntegrations({
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
       <Popover.Trigger asChild>
         <ButtonWithBadge
+          ellipsis
+          disabled={disabled}
+          childrenOnlyText
+          badgeAnchor='center'
           variant='outline'
           onClick={() => setIsOpen(true)}
+          iconProps={{ name: 'blocks', className: 'my-0.5' }}
           badge={
             Object.keys(activeIntegrations).length > 0 && (
-              <Badge variant='accent'>
+              <Badge centered variant='default' shape='rounded' size='small'>
                 {Object.keys(activeIntegrations).length}
               </Badge>
             )
           }
         >
-          <Icon name='blocks' size='normal' className='my-0.5' />
+          Tools
         </ButtonWithBadge>
       </Popover.Trigger>
       <Popover.Content
-        side='right'
-        align='start'
-        sideOffset={8}
-        alignOffset={-16}
+        side='bottom'
+        align='end'
         maxHeight='normal'
         style={{ width: 600, maxWidth: 600, padding: 0 }}
         onOpenAutoFocus={(event) => {
           event.preventDefault() // fixes https://github.com/radix-ui/primitives/issues/2248
         }}
       >
-        {isLoading ? (
-          <IntegrationsListPlaceholder />
-        ) : (
-          <IntegrationsList
-            disabled={disabled}
-            integrations={integrations ?? []}
-            activeIntegrations={activeIntegrations}
-            addIntegrationTool={addIntegrationTool}
-            removeIntegrationTool={removeIntegrationTool}
-          />
-        )}
+        <IntegrationsList
+          disabled={disabled}
+          isLoading={isLoading}
+          integrations={integrations ?? []}
+          activeIntegrations={activeIntegrations}
+          addIntegrationTool={addIntegrationTool}
+          removeIntegrationTool={removeIntegrationTool}
+        />
       </Popover.Content>
     </Popover.Root>
   )

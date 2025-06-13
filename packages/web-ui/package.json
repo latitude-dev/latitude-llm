@@ -81,6 +81,7 @@
     "./molecules/LoadingText": "./src/ds/molecules/LoadingText/index.tsx",
     "./molecules/ListingHeader": "./src/ds/molecules/ListingHeader/index.tsx",
     "./molecules/MultiSelect": "./src/ds/molecules/MultiSelect/index.tsx",
+    "./molecules/TwoColumnSelect": "./src/ds/molecules/TwoColumnSelect/index.tsx",
     "./molecules/NumeredList": "./src/ds/molecules/NumeredList/index.tsx",
     "./molecules/RangeBadge": "./src/ds/molecules/RangeBadge/index.tsx",
     "./molecules/SelectableCard": "./src/ds/molecules/SelectableCard/index.tsx",

@@ -224,7 +224,7 @@ export function FilesTree({
   sidebarLinkContext: SidebarLinkContext
   isLoading: boolean
   isMerged: boolean
-  createFile: (args: { path: string }) => Promise<void>
+  createFile: (args: { path: string; agent: boolean }) => Promise<void>
   uploadFile: (args: { path: string; file: File }) => Promise<void>
   renamePaths: (args: { oldPath: string; newPath: string }) => Promise<void>
   destroyFile: (documentUuid: string) => Promise<void>
@@ -300,7 +300,10 @@ export function FilesTree({
         currentUuid={currentUuid}
         renamePaths={renamePaths}
         onCreateFile={(path) => {
-          createFile({ path })
+          createFile({ path, agent: false })
+        }}
+        onCreateAgent={(path) => {
+          createFile({ path, agent: true })
         }}
         onUploadFile={({ path, file }) => {
           uploadFile({ path, file })

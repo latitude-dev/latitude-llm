@@ -25,6 +25,7 @@ type IFilesContext = {
   isLoading: boolean
   isMerged: boolean
   onCreateFile: (path: string) => void
+  onCreateAgent: (path: string) => void
   onUploadFile: (args: { path: string; file: File }) => void
   onRenameFile: (args: { node: Node; path: string }) => void
   onDeleteFile: (args: { node: Node; documentUuid: string }) => void
@@ -43,6 +44,7 @@ const FileTreeProvider = ({
   children,
   currentUuid,
   onCreateFile,
+  onCreateAgent,
   onUploadFile,
   onRenameFile,
   renamePaths,
@@ -96,6 +98,7 @@ const FileTreeProvider = ({
           onMergeCommitClick,
           currentUuid,
           onCreateFile,
+          onCreateAgent,
           onUploadFile,
           onRenameFile,
           onDeleteFile,

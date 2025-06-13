@@ -68,3 +68,7 @@ TODO.md
 # Sentry
 .sentryclirc
 .env.sentry-build-plugin
+
+# Do not remove are used internally
+bin/start-services.sh
+bin/connect.sh

@@ -140,6 +140,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     containerClassName?: string
     innerClassName?: string
     indicator?: DotIndicatorProps
+    childrenOnlyText?: boolean
   }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -155,6 +156,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     asChild = false,
     isLoading,
     children,
+    childrenOnlyText = false,
     disabled,
     lookDisabled,
     ellipsis,
@@ -229,8 +231,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             ) : null}
             {children ? (
               <div
-                className={cn('flex flex-row items-center w-full', {
-                  'flex-grow flex-shrink truncate': ellipsis,
+                className={cn({
+                  'flex flex-row items-center w-full': !childrenOnlyText,
+                  'flex-grow flex-shrink truncate':
+                    !childrenOnlyText && ellipsis,
+                  truncate: childrenOnlyText && ellipsis,
                   'justify-center': fullWidth || !iconProps,
                 })}
               >

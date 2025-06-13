@@ -2,9 +2,11 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import * as React from 'react'
 
 import { cn } from '../../../lib/utils'
+import { Icon, IconProps } from '../Icons'
+import { font } from '../../tokens'
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-md border text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+  'inline-flex items-center rounded-md border font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
   {
     variants: {
       variant: {
@@ -33,27 +35,73 @@ const badgeVariants = cva(
         outline: 'text-foreground',
       },
       shape: {
-        default: 'max-h-5 py-2 px-1.5',
-        square: 'max-h-5 py-2 px-1.5',
+        default: 'max-h-5 ',
+        rounded: 'rounded-full',
+      },
+      size: {
+        normal: 'text-xs py-2 px-1.5 max-h-5',
+        small: `${font.size.h7} max-h-4 min-w-4 px-1`,
       },
     },
     defaultVariants: {
       variant: 'default',
       shape: 'default',
+      size: 'normal',
     },
   },
 )
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
+    VariantProps<typeof badgeVariants> {
+  ellipsis?: boolean
+  noWrap?: boolean
+  centered?: boolean
+  iconProps?: Omit<IconProps, 'size'> & {
+    placement: 'start' | 'end'
+  }
+}
 
-function Badge({ className, variant, shape, ...props }: BadgeProps) {
+function Badge({
+  className,
+  variant,
+  shape,
+  size,
+  ellipsis = false,
+  noWrap = false,
+  centered = false,
+  children,
+  iconProps,
+  ...props
+}: BadgeProps) {
   return (
     <div
-      className={cn(badgeVariants({ variant, shape }), className)}
+      className={cn(
+        'min-w-0',
+        badgeVariants({ variant, shape, size }),
+        className,
+        {
+          'flex-row max-h-none gap-x-1 py-px': !!iconProps,
+          'justify-center': centered,
+        },
+      )}
       {...props}
-    />
+    >
+      {iconProps && iconProps.placement === 'start' ? (
+        <Icon {...iconProps} size='xsmall' />
+      ) : null}
+      <span
+        className={cn({
+          truncate: ellipsis,
+          'whitespace-nowrap': noWrap,
+        })}
+      >
+        {children}
+      </span>
+      {iconProps && iconProps.placement === 'end' ? (
+        <Icon {...iconProps} size='xsmall' />
+      ) : null}
+    </div>
   )
 }
 

@@ -33,6 +33,7 @@ export type NodeHeaderWrapperProps = {
   draggble: DraggableProps | undefined
   hasChildren?: boolean
   isFile?: boolean
+  isAgent?: boolean
   selected?: boolean
   childrenSelected?: boolean
   isEditing: boolean
@@ -54,6 +55,7 @@ function NodeHeaderWrapper({
   open,
   hasChildren = false,
   isFile = false,
+  isAgent = false,
   isEditing,
   setIsEditing,
   onSaveValue,
@@ -166,9 +168,11 @@ function NodeHeaderWrapper({
                   placeholder={
                     onSaveValueAndTab
                       ? 'Tab to create another folder'
-                      : isFile
-                        ? 'File name'
-                        : 'Folder name'
+                      : isAgent
+                        ? 'Agent name'
+                        : isFile
+                          ? 'File name'
+                          : 'Folder name'
                   }
                   name='filename'
                   data-1p-ignore

@@ -222,7 +222,6 @@ export function ExperimentsTable({
                   <div className='flex flex-row gap-2 items-center min-w-0 max-w-xs'>
                     <Badge
                       variant={experimentCommit?.version ? 'accent' : 'muted'}
-                      shape='square'
                     >
                       <Text.H6 noWrap>
                         {experimentCommit?.version

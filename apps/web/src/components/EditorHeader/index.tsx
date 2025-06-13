@@ -1,31 +1,15 @@
-import {
-  memo,
-  ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { memo, ReactNode, useEffect, useState } from 'react'
 
-import { envClient } from '$/envClient'
-import useModelOptions from '$/hooks/useModelOptions'
 import { updatePromptMetadata } from '$/lib/promptMetadata'
 import { ROUTES } from '$/services/routes'
-import useProviderApiKeys from '$/stores/providerApiKeys'
-import {
-  DocumentVersion,
-  findFirstModelForProvider,
-  ProviderApiKey,
-} from '@latitude-data/core/browser'
+import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
 import type { ConversationMetadata } from 'promptl-ai'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
-import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -33,8 +17,10 @@ import Link from 'next/link'
 import { PromptConfiguration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptConfiguration'
 import { PromptIntegrations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptIntegrations'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { ProviderModelSelector } from '$/components/EditorHeader/ProviderModelSelector'
+import { trigger } from '$/lib/events'
+import { envClient } from '$/envClient'
 
-type PromptMetadata = { provider?: string; model?: string }
 export type IProviderByName = Record<string, ProviderApiKey>
 
 export const EditorHeader = memo(
@@ -67,10 +53,8 @@ export const EditorHeader = memo(
     canUseSubagents?: boolean
     documentVersion?: DocumentVersion
   }) => {
-    const { data: providerApiKeys, isLoading } = useProviderApiKeys({
-      fallbackData: providers,
-    })
-
+    const metadataConfig = metadata?.config
+    const isAgent = metadataConfig?.type === 'agent' || false
     const { value: showLineNumbers, setValue: setShowLineNumbers } =
       useLocalStorage({
         key: AppLocalStorage.editorLineNumbers,
@@ -94,84 +78,7 @@ export const EditorHeader = memo(
         defaultValue: true,
       })
 
-    const [provider, setProvider] = useState<string | undefined>()
-    const [model, setModel] = useState<string | undefined | null>()
-
-    const promptMetadata = useMemo<PromptMetadata | undefined>(() => {
-      if (!metadata?.config) return undefined
-      return {
-        provider: metadata.config.provider as PromptMetadata['provider'],
-        model: metadata.config.model as PromptMetadata['model'],
-      }
-    }, [metadata?.config])
-
-    const providersByName = useMemo(() => {
-      return providerApiKeys.reduce((acc, data) => {
-        acc[data.name] = data
-        return acc
-      }, {} as IProviderByName)
-    }, [providerApiKeys])
-
-    const providerOptions = useMemo(() => {
-      return providerApiKeys.map((apiKey) => ({
-        label: apiKey.name,
-        value: apiKey.name,
-      }))
-    }, [providerApiKeys])
-    const modelOptions = useModelOptions({
-      provider: provider ? providersByName[provider]?.provider : undefined,
-      name: provider ? providersByName[provider]?.name : undefined,
-    })
-
-    // onPromptMetadataChange
-    useEffect(() => {
-      if (!promptMetadata) return
-
-      if (promptMetadata.provider !== provider) {
-        setProvider(promptMetadata.provider)
-      }
-
-      if (!promptMetadata.model || promptMetadata.model !== model) {
-        setModel(promptMetadata.model ?? null)
-      }
-    }, [promptMetadata, model, provider])
-
-    const onSelectProvider = useCallback(
-      (selectedProvider: string) => {
-        if (!selectedProvider) return
-        if (selectedProvider === provider) return
-
-        const firstModel = findFirstModelForProvider({
-          provider: providersByName[selectedProvider],
-          defaultProviderName: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
-        })
-
-        setProvider(selectedProvider)
-        setModel(firstModel)
-
-        const updatedPrompt = updatePromptMetadata(prompt, {
-          provider: selectedProvider,
-          model: firstModel,
-        })
-        onChangePrompt(updatedPrompt)
-      },
-      [provider, providersByName, prompt, onChangePrompt],
-    )
-
-    const onSelectModel = useCallback(
-      (selectedModel: string) => {
-        if (!selectedModel) return
-        if (selectedModel === model) return
-
-        setModel(selectedModel)
-
-        const updatedPrompt = updatePromptMetadata(prompt, {
-          model: selectedModel,
-        })
-        onChangePrompt(updatedPrompt)
-      },
-      [model, prompt, onChangePrompt],
-    )
+    const [isLatitudeProvider, setIsLatitudeProvider] = useState<boolean>()
 
     const newProviderLink = (
       <Link
@@ -188,9 +95,21 @@ export const EditorHeader = memo(
       <>We highly recommend switching to your own provider. {newProviderLink}</>
     )
 
-    const isLatitudeProvider =
-      provider === envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME
+    // INFO: React to metadata changes and send event to provider model picker
+    useEffect(() => {
+      if (metadataConfig === undefined) return
 
+      const provider = metadataConfig.provider as string
+      setIsLatitudeProvider(
+        provider === envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
+      )
+
+      trigger('ProviderOrModelChanged', {
+        promptLoaded: true,
+        providerName: provider,
+        model: metadataConfig.model as string,
+      })
+    }, [metadataConfig])
     return (
       <div className='flex flex-col gap-y-3'>
         <div
@@ -200,7 +119,20 @@ export const EditorHeader = memo(
           })}
         >
           <div className='flex flex-row items-center gap-2 min-w-0'>
-            {typeof title === 'string' ? <Text.H4M>{title}</Text.H4M> : title}
+            {typeof title === 'string' ? (
+              <div className='flex flex-row items-center gap-x-2'>
+                {isAgent ? (
+                  <Tooltip
+                    trigger={<Icon name='bot' color='foregroundMuted' />}
+                  >
+                    This is an agent
+                  </Tooltip>
+                ) : null}
+                <Text.H4M>{title}</Text.H4M>
+              </div>
+            ) : (
+              title
+            )}
             {leftActions}
           </div>
           <div className='flex flex-row items-start gap-2'>
@@ -242,43 +174,33 @@ export const EditorHeader = memo(
             />
           </div>
         </div>
-        <div className='flex flex-row items-end gap-2'>
+        <div className='min-w-0 flex flex-row justify-between gap-2'>
           <ProviderModelSelector
-            providerOptions={providerOptions}
-            selectedProvider={provider}
-            onProviderChange={onSelectProvider}
-            modelOptions={modelOptions}
-            selectedModel={model}
-            onModelChange={onSelectModel}
-            providerDisabled={
-              disabledMetadataSelectors ||
-              isLoading ||
-              !providerOptions.length ||
-              !metadata
-            }
-            modelDisabled={
-              disabledMetadataSelectors ||
-              isLoading ||
-              !modelOptions.length ||
-              !provider ||
-              !metadata
-            }
+            prompt={prompt}
+            onChangePrompt={onChangePrompt}
+            providers={providers}
+            disabledMetadataSelectors={disabledMetadataSelectors}
           />
-          <PromptConfiguration
-            disabled={disabledMetadataSelectors}
-            canUseSubagents={canUseSubagents}
-            config={metadata?.config ?? {}}
-            setConfig={(config: Record<string, unknown>) => {
-              onChangePrompt(updatePromptMetadata(prompt, config))
-            }}
-          />
-          <PromptIntegrations
-            disabled={disabledMetadataSelectors}
-            config={metadata?.config ?? {}}
-            setConfig={(config: Record<string, unknown>) => {
-              onChangePrompt(updatePromptMetadata(prompt, config))
-            }}
-          />
+          <div className='relative flex flex-row justify-end gap-2 min-w-0'>
+            {/* Badge counter needs to be on top of other buttons. For that the z-index */}
+            <div className='z-10'>
+              <PromptIntegrations
+                disabled={disabledMetadataSelectors}
+                config={metadataConfig ?? {}}
+                setConfig={(config: Record<string, unknown>) => {
+                  onChangePrompt(updatePromptMetadata(prompt, config))
+                }}
+              />
+            </div>
+            <PromptConfiguration
+              disabled={disabledMetadataSelectors}
+              canUseSubagents={canUseSubagents}
+              config={metadataConfig ?? {}}
+              setConfig={(config: Record<string, unknown>) => {
+                onChangePrompt(updatePromptMetadata(prompt, config))
+              }}
+            />
+          </div>
         </div>
         {isLatitudeProvider && (
           <div>
@@ -326,56 +248,3 @@ export const EditorHeader = memo(
     )
   },
 )
-
-export function ProviderModelSelector({
-  providerOptions,
-  selectedProvider,
-  onProviderChange,
-  modelOptions,
-  selectedModel,
-  onModelChange,
-  providerDisabled = false,
-  modelDisabled = false,
-}: {
-  providerOptions: { label: string; value: string }[]
-  selectedProvider: string | undefined
-  onProviderChange: (value: string) => void
-  modelOptions: { label: string; value: string }[]
-  selectedModel: string | undefined | null
-  onModelChange: (value: string) => void
-  providerDisabled?: boolean
-  modelDisabled?: boolean
-}) {
-  const isModelOption = useMemo(
-    () => modelOptions.some((opt) => opt.value === selectedModel),
-    [modelOptions, selectedModel],
-  )
-
-  return (
-    <FormFieldGroup>
-      <Select
-        name='provider'
-        label='Provider'
-        placeholder='Select a provider'
-        options={providerOptions}
-        value={selectedProvider}
-        disabled={providerDisabled}
-        onChange={onProviderChange}
-      />
-      <Select
-        name='model'
-        label='Model'
-        info='Select a model from the list. If you do not find the one you need, write manually a custom one in the prompt configuration.'
-        placeholder={
-          isModelOption || selectedModel === null
-            ? 'Select a model'
-            : 'Custom model'
-        }
-        options={modelOptions}
-        value={selectedModel ?? undefined}
-        disabled={modelDisabled}
-        onChange={onModelChange}
-      />
-    </FormFieldGroup>
-  )
-}

@@ -85,13 +85,22 @@ export default function useDocumentVersions(
     useServerAction(destroyFolderAction)
 
   const createFile = useCallback(
-    async ({ path, content }: { path: string; content?: string }) => {
+    async ({
+      path,
+      agent,
+      content,
+    }: {
+      path: string
+      agent?: boolean
+      content?: string
+    }) => {
       if (!projectId) return
 
       const [document, error] = await executeCreateDocument({
         projectId,
         commitUuid,
         path,
+        agent,
         content,
       })
 

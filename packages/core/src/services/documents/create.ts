@@ -57,6 +57,7 @@ export async function createNewDocument(
     user,
     commit,
     path,
+    agent,
     content,
     promptlVersion = 1,
     createDemoEvaluation: demoEvaluation = false,
@@ -65,6 +66,7 @@ export async function createNewDocument(
     user?: User
     commit: Commit
     path: string
+    agent?: boolean
     content?: string
     promptlVersion?: number
     createDemoEvaluation?: boolean
@@ -96,7 +98,10 @@ export async function createNewDocument(
       )
     }
 
-    const defaultContent = await defaultDocumentContent({ workspace }, tx)
+    const defaultContent = await defaultDocumentContent(
+      { workspace, agent },
+      tx,
+    )
     const docContent = await applyContent({ content, defaultContent })
     const documentType = await getDocumentType({
       content: docContent,
@@ -144,8 +149,10 @@ export async function createNewDocument(
 export async function defaultDocumentContent(
   {
     workspace,
+    agent = false,
   }: {
     workspace: Workspace
+    agent?: boolean
   },
   db = database,
 ) {
@@ -161,6 +168,7 @@ export async function defaultDocumentContent(
     defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
   })
   if (model) metadata += `\nmodel: ${model}`
+  if (agent) metadata += `\ntype: agent`
 
   let content = ''
 

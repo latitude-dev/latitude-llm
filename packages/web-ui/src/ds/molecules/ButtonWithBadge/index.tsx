@@ -17,7 +17,7 @@ export function ButtonWithBadge({
       <Button {...buttonProps} />
       <div
         className={cn(
-          'absolute top-0 -translate-y-1/2 right-0',
+          'absolute top-0 -translate-y-1/2 right-px',
           {
             'translate-x-1/2': badgeAnchor === 'center',
           },

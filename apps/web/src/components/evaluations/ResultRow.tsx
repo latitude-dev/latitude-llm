@@ -51,7 +51,7 @@ export function ResultRowCells<
       </TableCell>
       <TableCell>
         <span className='flex flex-row gap-2 items-center'>
-          <Badge variant={commit.version ? 'accent' : 'muted'} shape='square'>
+          <Badge variant={commit.version ? 'accent' : 'muted'}>
             <Text.H6 noWrap>
               {commit.version ? `v${commit.version}` : 'Draft'}
             </Text.H6>

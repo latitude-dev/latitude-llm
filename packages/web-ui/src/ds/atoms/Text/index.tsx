@@ -53,6 +53,7 @@ export type Common = {
   monospace?: boolean
   centered?: boolean
   animate?: boolean
+  isItalic?: boolean
 }
 
 export type TextProps = {
@@ -91,6 +92,7 @@ const TextAtom = memo(
       underline = false,
       lineThrough = false,
       asChild = false,
+      isItalic = false,
       monospace = false,
       centered = false,
       animate = false,
@@ -127,6 +129,7 @@ const TextAtom = memo(
             capitalize: capitalize,
             uppercase: uppercase,
             truncate: ellipsis,
+            italic: isItalic,
             'select-none': !userSelect,
             'whitespace-nowrap': noWrap,
             underline: underline,
