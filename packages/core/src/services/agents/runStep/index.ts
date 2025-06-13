@@ -1,4 +1,9 @@
-import { AssistantMessage, Config, Conversation } from '@latitude-data/compiler'
+import {
+  AssistantMessage,
+  Config,
+  Conversation,
+  MessageRole,
+} from '@latitude-data/compiler'
 import {
   buildMessagesFromResponse,
   LogSources,
@@ -11,11 +16,38 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import {
   ABSOLUTE_MAX_STEPS,
+  AGENT_RETURN_TOOL_NAME,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
 } from '@latitude-data/constants'
 import { Result } from './../../../lib/Result'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+
+function inferStepsFromConversation(messages: Message[]): number {
+  // Returns the count of assistant messages since the last AGENT_RESPONST tool request
+  const lastAgentResponseInverseIndex = messages
+    .slice()
+    .reverse()
+    .findIndex(
+      (message) =>
+        message.role === MessageRole.assistant &&
+        message.toolCalls?.some(
+          (toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME,
+        ),
+    )
+
+  const messagesSinceLastAgentResponse =
+    lastAgentResponseInverseIndex === -1
+      ? messages
+      : messages.slice(messages.length - lastAgentResponseInverseIndex)
+
+  const assistantMessagesSinceLastAgentResponse =
+    messagesSinceLastAgentResponse.filter(
+      (message) => message.role === MessageRole.assistant,
+    )
+
+  return assistantMessagesSinceLastAgentResponse.length
+}
 
 function assertValidStepCount({
   stepCount,
@@ -29,15 +61,27 @@ function assertValidStepCount({
       DEFAULT_MAX_STEPS,
     ABSOLUTE_MAX_STEPS,
   )
-  const exceededMaxSteps = stepCount >= maxSteps
-  if (!exceededMaxSteps) return Result.nil()
 
-  return Result.error(
-    new ChainError({
-      message: stepLimitExceededErrorMessage(maxSteps),
-      code: RunErrorCodes.MaxStepCountExceededError,
-    }),
-  )
+  if (stepCount >= maxSteps) {
+    return Result.error(
+      new ChainError({
+        message: stepLimitExceededErrorMessage(maxSteps),
+        code: RunErrorCodes.MaxStepCountExceededError,
+      }),
+    )
+  }
+
+  const inferredSteps = inferStepsFromConversation(step.conversation.messages)
+  if (inferredSteps >= maxSteps) {
+    return Result.error(
+      new ChainError({
+        message: stepLimitExceededErrorMessage(maxSteps),
+        code: RunErrorCodes.MaxStepCountExceededError,
+      }),
+    )
+  }
+
+  return Result.nil()
 }
 
 export async function runAgentStep({
