@@ -100,7 +100,15 @@ export function DownloadLogsButton({
       setIsDownloading(false)
       setIsModalOpen(false)
     }
-  }, [handleImmediateDownload, executeAsyncDownload, selectableState])
+  }, [
+    handleImmediateDownload,
+    executeAsyncDownload,
+    selectableState,
+    latitudeDocument.documentUuid,
+    commit.uuid,
+    project.id,
+    filterOptions,
+  ])
 
   const getModalContent = () => {
     const selectedCount = selectableState.selectedCount

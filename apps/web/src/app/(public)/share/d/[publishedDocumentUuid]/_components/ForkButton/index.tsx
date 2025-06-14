@@ -40,14 +40,15 @@ export function ForkButton({
       },
     },
   )
+  const sharedUuid = shared.uuid!
   const onForkClick = useCallback(() => {
     if (!currentUser) {
       onOpen()
       return
     }
 
-    fork({ publishedDocumentUuid: shared.uuid! })
-  }, [currentUser, fork, shared.uuid!])
+    fork({ publishedDocumentUuid: sharedUuid })
+  }, [currentUser, fork, sharedUuid, onOpen])
   const onClickSignup = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault()
     event.stopPropagation()

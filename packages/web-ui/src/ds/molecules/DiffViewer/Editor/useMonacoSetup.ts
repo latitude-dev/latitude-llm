@@ -36,18 +36,21 @@ export function useMonacoSetup() {
     applyTheme(monacoRef.current)
   }, [applyTheme])
 
-  const handleEditorWillMount = useCallback((monaco: Monaco) => {
-    if (monacoRef.current) return
+  const handleEditorWillMount = useCallback(
+    (monaco: Monaco) => {
+      if (monacoRef.current) return
 
-    monaco.languages.register({ id: 'document' })
-    monaco.languages.setMonarchTokensProvider('document', { tokenizer })
-    monaco.languages.setLanguageConfiguration('document', {
-      comments: {
-        blockComment: ['/*', '*/'],
-      },
-    })
-    applyTheme(monaco)
-  }, [])
+      monaco.languages.register({ id: 'document' })
+      monaco.languages.setMonarchTokensProvider('document', { tokenizer })
+      monaco.languages.setLanguageConfiguration('document', {
+        comments: {
+          blockComment: ['/*', '*/'],
+        },
+      })
+      applyTheme(monaco)
+    },
+    [applyTheme],
+  )
 
   return { monacoRef, handleEditorWillMount }
 }

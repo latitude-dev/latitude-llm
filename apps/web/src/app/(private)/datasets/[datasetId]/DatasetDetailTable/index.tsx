@@ -80,7 +80,6 @@ export function DatasetDetailTable({
   const selectedRowId = Number(searchParams.get('rowId') ?? 0) || undefined
   const {
     data: rows,
-    mutate,
     updateRows,
     deleteRows,
     createRow,
@@ -95,7 +94,6 @@ export function DatasetDetailTable({
   const { isProcessing, processedRowsCount } = useDatasetRowsSocket({
     initialRenderIsProcessing,
     dataset,
-    mutate,
     currentPage: Number(page),
     pageSize,
   })
@@ -107,7 +105,7 @@ export function DatasetDetailTable({
         page: Number(page),
         pageSize: Number(pageSize),
       }),
-    [page, pageSize, dataset.id],
+    [page, pageSize, dataset.id, count],
   )
   const selectedRow = useMemo(
     () => rows.find((row) => row.id === selectedRowId),

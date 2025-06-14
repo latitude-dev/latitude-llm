@@ -82,7 +82,7 @@ export function DocumentSuggestions({
       isOpen: true,
       timeout: setTimeout(() => setNotifier({ isOpen: false }), 5000),
     })
-  }, [setNotifier])
+  }, [setNotifier, notifier])
   useEffect(() => {
     if (isOpen) setNotifier({ isOpen: false })
   }, [isOpen])

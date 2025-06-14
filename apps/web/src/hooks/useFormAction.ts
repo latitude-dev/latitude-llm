@@ -47,7 +47,7 @@ export function useFormAction<
         setData(payload!)
       }
     },
-    [exec, setError, setData],
+    [exec, setError, setData, onError, onSuccess],
   )
 
   const action = useCallback(
@@ -59,7 +59,7 @@ export function useFormAction<
         _action(json)
       })
     },
-    [exec],
+    [_action],
   )
 
   return { data, error, action }

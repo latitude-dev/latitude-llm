@@ -33,7 +33,7 @@ export default function useWorkspaceUsage(opts?: SWRConfiguration) {
         revalidate: false,
       },
     )
-  }, [])
+  }, [mutate])
 
   useSockets({ event: 'evaluationResultV2Created', onMessage })
   useSockets({ event: 'documentLogCreated', onMessage })
@@ -54,7 +54,7 @@ export default function useWorkspaceUsage(opts?: SWRConfiguration) {
         revalidate: false,
       },
     )
-  }, [users.length, isLoading, data?.members])
+  }, [users.length, isLoading, data?.members, mutate])
 
   return { data, mutate, isLoading, error: swrError }
 }

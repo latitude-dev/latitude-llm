@@ -13,22 +13,27 @@ function setRef<T>(ref: OptionalRef<T>, value: T) {
 export function useCombinedRefs<T>(...refs: OptionalRef<T>[]) {
   const previousRefs = useRef<OptionalRef<T>[]>([])
 
-  return useCallback((value: T | null) => {
-    let index = 0
-    for (; index < refs.length; index++) {
-      const ref = refs[index]
-      const prev = previousRefs.current[index]
+  return useCallback(
+    (value: T | null) => {
+      let index = 0
+      for (; index < refs.length; index++) {
+        const ref = refs[index]
+        const prev = previousRefs.current[index]
 
-      if (prev != ref) setRef(prev, null)
+        if (prev != ref) setRef(prev, null)
 
-      setRef(ref, value)
-    }
+        setRef(ref, value)
+      }
 
-    for (; index < previousRefs.current.length; index++) {
-      const prev = previousRefs.current[index]
-      setRef(prev, null)
-    }
+      for (; index < previousRefs.current.length; index++) {
+        const prev = previousRefs.current[index]
+        setRef(prev, null)
+      }
 
-    previousRefs.current = refs
-  }, refs)
+      previousRefs.current = refs
+    },
+    // This is a legitimate use case where we need to depend on the dynamic refs array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    refs,
+  )
 }

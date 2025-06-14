@@ -80,7 +80,7 @@ ${
 `.trim(),
       }),
     )
-  }, [mode, configuration.provider, configuration.model, settings.metric])
+  }, [mode, configuration, setConfiguration, settings.metric])
 
   return (
     <>

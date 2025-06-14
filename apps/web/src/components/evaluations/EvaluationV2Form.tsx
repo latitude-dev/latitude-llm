@@ -106,7 +106,12 @@ export default function EvaluationV2Form<
       ...settings,
       metric: EVALUATION_METRIC_OPTIONS(settings.type)[0]!.value as M,
     })
-  }, [metricSpecification?.ConfigurationSimpleForm])
+  }, [
+    metricSpecification?.ConfigurationSimpleForm,
+    mode,
+    settings,
+    setSettings,
+  ])
 
   useEffect(() => {
     if (mode === 'update') return
@@ -115,7 +120,7 @@ export default function EvaluationV2Form<
       ...options,
       evaluateLiveLogs: !!metricSpecification.supportsLiveEvaluation,
     })
-  }, [metricSpecification?.supportsLiveEvaluation])
+  }, [metricSpecification?.supportsLiveEvaluation, mode, options, setOptions])
 
   const commitMerged = mode === 'update' && !!commit.mergedAt
 

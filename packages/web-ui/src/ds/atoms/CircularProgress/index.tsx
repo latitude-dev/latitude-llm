@@ -28,7 +28,7 @@ export function CircularProgress({
 
   useEffect(() => {
     if (animateOnMount) setValue(valueProp)
-  }, [])
+  }, [animateOnMount, valueProp])
 
   useEffect(() => {
     setValue(valueProp)

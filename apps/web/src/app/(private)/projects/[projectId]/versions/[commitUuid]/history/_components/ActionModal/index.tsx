@@ -122,7 +122,7 @@ export function HistoryActionModal() {
     } else {
       setOnConfirm(undefined)
     }
-  }, [isOpen])
+  }, [isOpen, setOnConfirm])
 
   const confirmChanges = useCallback(async () => {
     if (isConfirming || !!error || !onConfirm) return

@@ -44,7 +44,7 @@ export default function useCurrentWorkspace() {
       mutate(workspace)
       return workspace
     },
-    [mutate, data],
+    [mutate, data, toast, updateWorkspace],
   )
 
   const { execute: setDefaultProvider } = useServerAction(
@@ -75,7 +75,7 @@ export default function useCurrentWorkspace() {
       mutate(workspace)
       return workspace
     },
-    [mutate, data],
+    [mutate, data, setDefaultProvider, toast],
   )
 
   return { data, updateName, updateDefaultProvider, ...rest }

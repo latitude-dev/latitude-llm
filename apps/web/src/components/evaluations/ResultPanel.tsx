@@ -348,7 +348,7 @@ export function ResultPanel<
   useEffect(() => {
     if (!ref.current) return
     setTargetRef(ref.current)
-  }, [ref.current])
+  }, [])
 
   const scrollableArea = usePanelDomRef({ selfRef: targetRef })
   useStickyNested({

@@ -33,7 +33,7 @@ export default function DailyOverviewChart<
         y: Number(configuration.scale(point.averageScore).toFixed(2)),
       })) || []
     )
-  }, [stats])
+  }, [stats, configuration])
 
   const minY = useMemo(() => {
     const min = data.reduce((min, point) => Math.min(min, point.y), Infinity)

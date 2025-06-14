@@ -75,7 +75,7 @@ export function DatePickerRange({
         onChangeProp?.(range)
       }
     },
-    [buildPreset, onChangeProp, onCloseChange, closeOnPresetSelect],
+    [buildPreset, onChangeProp, onCloseChange, closeOnPresetSelect, range],
   )
 
   const clearAndClose = useCallback(() => {

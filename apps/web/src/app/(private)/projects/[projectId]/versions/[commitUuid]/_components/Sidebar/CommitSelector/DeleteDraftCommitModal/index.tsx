@@ -23,7 +23,10 @@ export default function DeleteDraftCommitModal({
     },
   })
 
-  const commit = useMemo(() => data.find((c) => c.id === commitId), [commitId])
+  const commit = useMemo(
+    () => data.find((c) => c.id === commitId),
+    [commitId, data],
+  )
 
   const { project } = useCurrentProject()
   const router = useRouter()

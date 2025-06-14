@@ -62,7 +62,7 @@ export function Step1({
         evaluations.find((e) => e.uuid === selectableState.selectedRowIds[0]),
       )
     } else setSelectedEvaluation(undefined)
-  }, [selectableState.selectedRowIds])
+  }, [selectableState.selectedRowIds, evaluations, setSelectedEvaluation])
 
   if (isLoading) {
     return (

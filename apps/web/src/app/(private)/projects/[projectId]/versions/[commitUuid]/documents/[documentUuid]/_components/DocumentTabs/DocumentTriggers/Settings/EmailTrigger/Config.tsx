@@ -227,6 +227,7 @@ export function EmailTriggerConfig({
     parameters,
     emailAvailability,
     name,
+    onChangeConfig,
   ])
 
   return (

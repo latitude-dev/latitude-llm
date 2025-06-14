@@ -114,7 +114,7 @@ export function useDatasetRowsForParameters({
   dataset: Dataset | null | undefined
 }) {
   const emptyInputs = useMetadataParameters().emptyInputs?.datasetV2
-  const dataset = useMemo(() => originalDataset, [originalDataset?.id])
+  const dataset = useMemo(() => originalDataset, [originalDataset])
   const rowCellOptions = useMemo<SelectOption<string>[]>(
     () =>
       dataset?.columns.map((c) => ({ value: c.identifier, label: c.name })) ??
@@ -164,8 +164,9 @@ export function useDatasetRowsForParameters({
       ds.setDataset,
       ds.assignedDatasets,
       document.linkedDatasetAndRow,
-      dataset?.id,
+      dataset,
       metadataParameters,
+      ds,
     ],
   )
 
@@ -188,7 +189,7 @@ export function useDatasetRowsForParameters({
 
       setPosition(position)
     },
-    [isLoadingRow],
+    [isLoadingRow, setPosition],
   )
 
   const onNextPage = useCallback(
@@ -221,13 +222,13 @@ export function useDatasetRowsForParameters({
         },
       })
     },
-    [ds.setDataset, ds.inputs, ds.mappedInputs, dataset?.id, datasetRow],
+    [ds.setDataset, ds.inputs, ds.mappedInputs, dataset, datasetRow, ds],
   )
 
   useEffect(() => {
     // React to fresh fetched rows
     onRowsFetched(datasetRows ?? [])
-  }, [datasetRows])
+  }, [datasetRows, onRowsFetched])
 
   return {
     isLoading: isLoadingDatasetRowsCount || isLoadingRow,

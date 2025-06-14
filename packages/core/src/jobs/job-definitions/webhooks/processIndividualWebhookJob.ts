@@ -100,7 +100,7 @@ async function fetchProjectIdFromEvent(event: LatitudeEvent) {
   switch (event.type) {
     case 'commitPublished':
       return event.data.commit.projectId
-    case 'documentLogCreated':
+    case 'documentLogCreated': {
       const { id, workspaceId } = event.data
       const repo = new DocumentLogsRepository(workspaceId)
       const log = await repo.find(id).then((r) => r.unwrap())
@@ -108,6 +108,7 @@ async function fetchProjectIdFromEvent(event: LatitudeEvent) {
       return await findCommitById({ id: log.commitId })
         .then((r) => r.unwrap())
         .then((c) => c.projectId)
+    }
     default:
       return
   }

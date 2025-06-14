@@ -43,7 +43,7 @@ function ConfigurationSimpleForm({
   // TODO: Remove this default when more algorithms are implemented
   useEffect(() => {
     setConfiguration({ ...configuration, algorithm: 'relative_difference' })
-  }, [])
+  }, [configuration, setConfiguration])
 
   return (
     <>
