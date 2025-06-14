@@ -1,10 +1,10 @@
-import { sql } from 'drizzle-orm'
+import { isNotNull, sql } from 'drizzle-orm'
 import { bigint, index, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 import {
   DocumentType,
   SegmentType,
   SpanSource,
-  SpanStatusCode,
+  SpanStatus,
 } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
@@ -16,55 +16,64 @@ import { workspaces } from './workspaces'
 export const segments = latitudeSchema.table(
   'segments',
   {
-    id: varchar('id', { length: 16 }).notNull().primaryKey(),
+    id: varchar('id', { length: 32 }).notNull().primaryKey(),
+    traceId: varchar('trace_id', { length: 32 }).notNull(),
+    parentId: varchar('parent_id', { length: 32 }),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
     apiKeyId: bigint('api_key_id', { mode: 'number' })
       .notNull()
       .references(() => apiKeys.id, { onDelete: 'restrict' }),
-    traceId: varchar('trace_id', { length: 32 }).notNull(),
-    parentId: varchar('parent_id', { length: 16 }),
-    externalId: varchar('external_id', { length: 128 }),
+    externalId: varchar('external_id', { length: 32 }),
     name: varchar('name', { length: 128 }).notNull(),
-    source: varchar('source', { length: 128 }).notNull().$type<SpanSource>(),
-    type: varchar('type', { length: 128 }).notNull().$type<SegmentType>(),
-    statusCode: varchar('status_code', { length: 128 })
-      .notNull()
-      .$type<SpanStatusCode>(),
-    statusMessage: varchar('status_message', { length: 1024 }),
+    source: varchar('source', { length: 32 }).notNull().$type<SpanSource>(),
+    type: varchar('type', { length: 32 }).notNull().$type<SegmentType>(),
+    status: varchar('status', { length: 32 }).notNull().$type<SpanStatus>(),
+    message: varchar('message', { length: 256 }),
     // Denormalized fields for filtering and aggregation
-    documentRunUuid: uuid('document_run_uuid').unique(),
-    commitUuid: uuid('commit_uuid').references(() => commits.uuid, {
-      onDelete: 'restrict',
-    }),
-    documentUuid: uuid('document_uuid'),
-    documentHash: varchar('document_hash', { length: 64 }),
-    documentType: varchar('document_type', {
-      length: 128,
-    }).$type<DocumentType>(),
+    commitUuid: uuid('commit_uuid')
+      .references(() => commits.uuid, { onDelete: 'restrict' })
+      .notNull(),
+    documentUuid: uuid('document_uuid').notNull(),
+    documentHash: varchar('document_hash', { length: 64 }).notNull(),
+    documentType: varchar('document_type', { length: 32 })
+      .notNull()
+      .$type<DocumentType>(),
     experimentUuid: uuid('experiment_uuid').references(() => experiments.uuid, {
       onDelete: 'set null',
     }),
-    provider: varchar('provider', { length: 128 }),
-    model: varchar('model', { length: 128 }),
-    tokens: bigint('tokens', { mode: 'number' }),
-    cost: bigint('cost', { mode: 'number' }),
+    provider: varchar('provider', { length: 128 }).notNull(),
+    model: varchar('model', { length: 128 }).notNull(),
+    tokens: bigint('tokens', { mode: 'number' }).notNull(),
+    cost: bigint('cost', { mode: 'number' }).notNull(),
     duration: bigint('duration', { mode: 'number' }).notNull(),
     startedAt: timestamp('started_at').notNull(),
+    endedAt: timestamp('ended_at'),
     ...timestamps(),
   },
   (table) => ({
+    traceIdIdx: index('segments_trace_id_idx').on(table.traceId),
+    traceIdIdIdx: index('segments_trace_id_id_idx').on(table.traceId, table.id),
+    parentIdIdx: index('segments_parent_id_idx').on(table.parentId),
     workspaceIdIdx: index('segments_workspace_id_idx').on(table.workspaceId),
     apiKeyIdIdx: index('segments_api_key_id_idx').on(table.apiKeyId),
-    traceIdIdx: index('segments_trace_id_idx').on(table.traceId),
-    parentIdIdx: index('segments_parent_id_idx').on(table.parentId),
+    externalIdIdx: index('segments_external_id_idx').on(table.externalId),
     externalIdTrgmIdx: index('segments_external_id_trgm_idx').using(
       'gin',
       sql`${table.externalId} gin_trgm_ops`,
     ),
-    documentRunUuidIdx: index('segments_document_run_uuid_idx').on(
-      table.documentRunUuid,
+    sourceStartedAtIdx: index('segments_source_started_at_idx').on(
+      table.source,
+      table.startedAt,
+    ),
+    typeStartedAtIdx: index('segments_type_started_at_idx').on(
+      table.type,
+      table.startedAt,
+    ),
+    statusStartedAtIdx: index('segments_status_started_at_idx').on(
+      table.status,
+      table.startedAt,
     ),
     commitUuidIdx: index('segments_commit_uuid_idx').on(table.commitUuid),
     documentUuidIdx: index('segments_document_uuid_idx').on(table.documentUuid),
@@ -75,6 +84,11 @@ export const segments = latitudeSchema.table(
     providerIdx: index('segments_provider_idx').on(table.provider),
     modelIdx: index('segments_model_idx').on(table.model),
     startedAtIdx: index('segments_started_at_idx').on(table.startedAt),
-    updatedAtIdx: index('segments_updated_at_idx').on(table.updatedAt),
+    startedAtBrinIdx: index('segments_started_at_brin_idx')
+      .using('brin', sql`${table.startedAt}`)
+      .with({ pages_per_range: 32, autosummarize: true }),
+    endedAtPartialIdx: index('segments_ended_at_partial_idx')
+      .on(table.endedAt)
+      .where(isNotNull(table.endedAt)),
   }),
 )

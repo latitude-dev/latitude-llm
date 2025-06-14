@@ -244,7 +244,7 @@ export const EVALUATION_SCORE_SCALE = 100
 
 export const DEFAULT_DATASET_LABEL = 'output'
 
-export const NON_LIVE_EVALUABLE_LOG_SOURCES = [
-  SpanSource.Evaluation,
-  SpanSource.Experiment,
-]
+export const LIVE_EVALUABLE_LOG_SOURCES = Object.values(SpanSource).filter(
+  (source) =>
+    source !== SpanSource.Evaluation && source !== SpanSource.Experiment,
+) as SpanSource[]

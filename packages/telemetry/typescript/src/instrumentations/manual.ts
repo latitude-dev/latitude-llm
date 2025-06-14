@@ -130,7 +130,7 @@ export type SegmentOptions = StartSpanOptions & {
 }
 
 export type DocumentSegmentOptions = SegmentOptions & {
-  versionUuid?: string
+  versionUuid?: string // Alias for commitUuid
   documentUuid: string
   experimentUuid?: string
 }
@@ -795,7 +795,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }
 
     const parentId = parentBaggage[ATTR_LATITUDE_SEGMENT_ID]?.value
-    const segmentId = this.generator.generateSpanId()
+    const segmentId = this.generator.generateTraceId()
 
     segments.push({
       id: segmentId,

@@ -1,11 +1,11 @@
 import { Message } from 'promptl-ai'
 import { DocumentType } from '../index'
 import { LatitudePromptConfig } from '../latitudePromptSchema'
-import { SpanSource, SpanStatusCode } from './span'
+import { SpanSource, SpanStatus } from './span'
 
 export enum SegmentType {
-  Document = 'document',
-  Evaluation = 'evaluation', // LLM evaluations generate spans but don't use documents underneath (yet)
+  Conversation = 'conversation',
+  Interaction = 'interaction',
   Step = 'step',
 }
 
@@ -16,99 +16,69 @@ type BaseSegmentMetadata<T extends SegmentType = SegmentType> = {
 }
 
 type StepSegmentMetadata = BaseSegmentMetadata<SegmentType.Step> & {
-  configuration: LatitudePromptConfig // Configuration of the current latitude document or first completion span that created this segment
-  input: Message[] // Input messages of the first completion span that created this segment
-  output: Message[] // Output messages of the last completion span that created this segment
+  configuration: LatitudePromptConfig // From the first completion span
+  input: Message[] // From the first completion span
+  output: Message[] // From the last completion span
 }
 
-type DocumentSegmentMetadata = BaseSegmentMetadata<SegmentType.Document> &
-  Omit<StepSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Step>> & {
-    prompt: string // Prompt (template) of the first completion span that created this segment
-    parameters: Record<string, unknown> // Parameters of the first completion span that created this segment
-  }
+type InteractionSegmentMetadata = BaseSegmentMetadata<SegmentType.Interaction> &
+  Omit<StepSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Step>>
 
-type EvaluationSegmentMetadata = BaseSegmentMetadata<SegmentType.Evaluation> &
-  Omit<DocumentSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Document>>
+type ConversationSegmentMetadata =
+  BaseSegmentMetadata<SegmentType.Conversation> &
+    Omit<StepSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Step>> & {
+      prompt: string // From the first completion span
+      parameters: Record<string, unknown> // From the first completion span
+    }
 
 // prettier-ignore
 export type SegmentMetadata<T extends SegmentType = SegmentType> =
-  T extends SegmentType.Document ? DocumentSegmentMetadata :
-  T extends SegmentType.Evaluation ? EvaluationSegmentMetadata :
+  T extends SegmentType.Conversation ? ConversationSegmentMetadata :
+  T extends SegmentType.Interaction ? InteractionSegmentMetadata :
   T extends SegmentType.Step ? StepSegmentMetadata :
   never;
 
-type BaseSegment<T extends SegmentType = SegmentType> = {
+export type Segment<T extends SegmentType = SegmentType> = {
   id: string
-  workspaceId: number
-  apiKeyId: number
   traceId: string
   parentId?: string // Parent segment identifier
-  externalId?: string // Custom user identifier of the first span that created this segment
+  workspaceId: number
+  apiKeyId: number
+  externalId?: string // Custom user identifier from the first span
   name: string
-  source: SpanSource // Source of the first span that created this segment
+  source: SpanSource // From the first span
   type: T
-  statusCode: SpanStatusCode // Status code of the last span in the segment (errored spans have priority)
-  statusMessage?: string // Status message of the last span in the segment (errored spans have priority)
-  duration: number // Elapsed time between the first and last span in the segment
+  status: SpanStatus // From the last span (errored spans have priority)
+  message?: string // From the last span (errored spans have priority)
+  commitUuid: string // From the first span
+  documentUuid: string // From the first span. When running an llm evaluation this is the evaluation uuid and source is Evaluation
+  documentHash: string // From the first completion span or current document
+  documentType: DocumentType // From the first completion span or current document
+  experimentUuid?: string // From the first span
+  provider: string // From the first completion span or current document
+  model: string // From the first completion span or current document
+  tokens: number // Aggregated tokens from all completion spans
+  cost: number // Aggregated cost from all completion spans
+  duration: number // Elapsed time between the first and last span
   startedAt: Date
+  endedAt?: Date // From the last span when the segment is closed
   createdAt: Date
   updatedAt: Date
 }
-
-export type BaseSegmentBaggage<T extends SegmentType = SegmentType> = {
-  id: string
-  parentId?: string
-  name?: string
-  type: T
-}
-
-type StepSegment = BaseSegment<SegmentType.Step> & {
-  provider: string // Provider of the current latitude document or first completion span that created this segment
-  model: string // Model of the current latitude document or first completion span that created this segment
-  tokens: number // Aggregated tokens of all completion spans in the segment
-  cost: number // Aggregated cost of all completion spans in the segment
-}
-
-type DocumentSegment = BaseSegment<SegmentType.Document> &
-  Omit<StepSegment, keyof BaseSegment<SegmentType.Step>> & {
-    documentRunUuid: string
-    commitUuid: string
-    documentUuid: string // When running an LLM evaluation this is the evaluation uuid
-    documentHash: string // Prompt (template) hash of the first completion span that created this segment
-    documentType: DocumentType // Prompt (template) type of the first completion span that created this segment
-    experimentUuid?: string
-  }
-
-export type DocumentSegmentBaggage =
-  BaseSegmentBaggage<SegmentType.Document> & {
-    documentRunUuid: string
-    versionUuid: string // Alias for commitUuid
-    documentUuid: string
-    experimentUuid?: string
-  }
-
-type EvaluationSegment = BaseSegment<SegmentType.Evaluation> &
-  Omit<DocumentSegment, keyof BaseSegment<SegmentType.Document>>
-
-export type EvaluationSegmentBaggage =
-  BaseSegmentBaggage<SegmentType.Evaluation> &
-    Omit<DocumentSegmentBaggage, keyof BaseSegmentBaggage<SegmentType.Document>>
-
-// prettier-ignore
-export type Segment<T extends SegmentType = SegmentType> =
-  T extends SegmentType.Document ? DocumentSegment :
-  T extends SegmentType.Evaluation ? EvaluationSegment :
-  T extends SegmentType.Step ? StepSegment :
-  never;
-
-// prettier-ignore
-export type SegmentBaggage<T extends SegmentType = SegmentType> =
-  T extends SegmentType.Document ? DocumentSegmentBaggage :
-  T extends SegmentType.Evaluation ? EvaluationSegmentBaggage :
-  T extends SegmentType.Step ? BaseSegmentBaggage<T> :
-  never;
 
 export type SegmentWithDetails<T extends SegmentType = SegmentType> =
   Segment<T> & {
     metadata: SegmentMetadata<T>
   }
+
+export type SegmentBaggage<T extends SegmentType = SegmentType> = Pick<
+  Segment<T>,
+  | 'id'
+  | 'traceId'
+  | 'parentId'
+  | 'name'
+  | 'type'
+  | 'commitUuid'
+  | 'documentUuid'
+  | 'experimentUuid'
+>
