@@ -128,7 +128,7 @@ export type EndHttpSpanOptions = EndSpanOptions & {
   }
 }
 
-export type SegmentOptions = StartSpanOptions & {
+export type SegmentOptions = Omit<StartSpanOptions, 'name'> & {
   baggage?: Record<string, unknown>
 }
 
@@ -779,7 +779,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
   }
 
   private segment<F extends () => ReturnType<F>>(
-    name: string,
     type: SegmentType,
     fn: F,
     options?: SegmentOptions,
@@ -804,7 +803,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     segments.push({
       id: segmentId,
-      name: name,
       type: type,
       ...(parent && {
         parentId: parent.id,
@@ -877,7 +875,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
   conversation<F extends () => ReturnType<F>>(
     {
-      name,
       baggage,
       versionUuid,
       documentUuid,
@@ -893,25 +890,14 @@ export class ManualInstrumentation implements BaseInstrumentation {
       ...(baggage || {}),
     }
 
-    return this.segment(name || 'Conversation', SegmentType.Conversation, fn, {
-      baggage,
-      ...rest,
-    })
+    return this.segment(SegmentType.Conversation, fn, { baggage, ...rest })
   }
 
-  interaction<F extends () => ReturnType<F>>(
-    { name, ...rest }: SegmentOptions,
-    fn: F,
-  ) {
-    return this.segment(name || 'Interaction', SegmentType.Interaction, fn, {
-      ...rest,
-    })
+  interaction<F extends () => ReturnType<F>>(options: SegmentOptions, fn: F) {
+    return this.segment(SegmentType.Interaction, fn, options)
   }
 
-  step<F extends () => ReturnType<F>>(
-    { name, ...rest }: SegmentOptions,
-    fn: F,
-  ) {
-    return this.segment(name || 'Step', SegmentType.Step, fn, { ...rest })
+  step<F extends () => ReturnType<F>>(options: SegmentOptions, fn: F) {
+    return this.segment(SegmentType.Step, fn, options)
   }
 }

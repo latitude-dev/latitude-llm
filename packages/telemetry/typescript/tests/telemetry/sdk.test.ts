@@ -50,11 +50,13 @@ describe('telemetry', () => {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
+        template: '<user>Hello, assistant!</user>',
+        parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
       ok({
         output: [{ role: 'assistant', content: 'Hello, user!' }],
-        tokens: { input: 20, output: 10 },
+        tokens: { prompt: 20, cached: 0, reasoning: 0, completion: 10 },
         finishReason: 'stop',
       })
 
@@ -98,11 +100,13 @@ describe('telemetry', () => {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
+        template: '<user>Hello, assistant!</user>',
+        parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
       ok({
         output: [{ role: 'assistant', content: 'Hello, user!' }],
-        tokens: { input: 20, output: 10 },
+        tokens: { prompt: 20, cached: 0, reasoning: 0, completion: 10 },
         finishReason: 'stop',
       })
 
@@ -250,11 +254,13 @@ describe('telemetry', () => {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
+        template: '<user>Hello, assistant!</user>',
+        parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
       ok({
         output: [{ role: 'assistant', content: 'Hello, user!' }],
-        tokens: { input: 20, output: 10 },
+        tokens: { prompt: 20, cached: 0, reasoning: 0, completion: 10 },
         finishReason: 'stop',
       })
 

@@ -46,7 +46,7 @@ export type Segment<T extends SegmentType = SegmentType> = {
   workspaceId: number
   apiKeyId: number
   externalId?: string // Custom user identifier from the first span
-  name: string
+  name: string // Enriched when ingested
   source: SpanSource // From the first span
   type: T
   status: SpanStatus // From the last span (errored spans have priority)
@@ -76,7 +76,6 @@ export const segmentBaggageSchema = z.object({
   id: z.string(),
   // Note: traceId is potentially unknown when the root segment is created
   parentId: z.string().optional(),
-  name: z.string(),
   type: z.nativeEnum(SegmentType),
   commitUuid: z.string(),
   documentUuid: z.string(),

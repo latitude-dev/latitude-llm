@@ -1,7 +1,7 @@
 import { env } from '$telemetry/env'
 import {
   BaseInstrumentation,
-  DocumentSegmentOptions,
+  ConversationSegmentOptions,
   LatitudeInstrumentation,
   LatitudeInstrumentationOptions,
   ManualInstrumentation,
@@ -413,11 +413,15 @@ export class LatitudeTelemetry {
     return this.telemetry.http(ctx, options)
   }
 
-  document<F extends () => ReturnType<F>>(
-    options: DocumentSegmentOptions,
+  conversation<F extends () => ReturnType<F>>(
+    options: ConversationSegmentOptions,
     fn: F,
   ) {
-    return this.telemetry.document(options, fn)
+    return this.telemetry.conversation(options, fn)
+  }
+
+  interaction<F extends () => ReturnType<F>>(options: SegmentOptions, fn: F) {
+    return this.telemetry.interaction(options, fn)
   }
 
   step<F extends () => ReturnType<F>>(options: SegmentOptions, fn: F) {
