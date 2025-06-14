@@ -1,5 +1,5 @@
 import { LatitudeTelemetry, RedactSpanProcessor } from '$telemetry/index'
-import { context } from '@opentelemetry/api'
+import { context, trace } from '@opentelemetry/api'
 import { setupServer } from 'msw/node'
 import {
   afterAll,
@@ -44,19 +44,31 @@ describe('redact', () => {
       })
 
       const processor = new RedactSpanProcessor({
-        attributes: ['gen_ai.system', /^gen_ai\.usage\..*/],
+        attributes: [/^auth\..*/, 'gen_ai.system', /^gen_ai\.usage\..*/],
       })
 
       const sdk = new LatitudeTelemetry('fake-api-key', {
         processors: [processor],
       })
 
-      const [_, ok] = sdk.completion(context.active(), {
+      const [ctx, ok] = sdk.completion(context.active(), {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
+      const span = trace.getSpan(ctx)!
+      span.addEvent('event', { ['auth.token']: 'token' })
+      span.addLinks([
+        {
+          context: span.spanContext(),
+          attributes: { ['auth.token']: 'token' },
+        },
+        {
+          context: span.spanContext(),
+          attributes: { ['auth.key']: 'key' },
+        },
+      ])
       ok({
         output: [{ role: 'assistant', content: 'Hello, user!' }],
         tokens: { input: 20, output: 10 },
@@ -97,6 +109,34 @@ describe('redact', () => {
                           stringValue: '******',
                         },
                       },
+                    ]),
+                    events: expect.arrayContaining([
+                      expect.objectContaining({
+                        attributes: expect.arrayContaining([
+                          {
+                            key: 'auth.token',
+                            value: { stringValue: '******' },
+                          },
+                        ]),
+                      }),
+                    ]),
+                    links: expect.arrayContaining([
+                      expect.objectContaining({
+                        attributes: expect.arrayContaining([
+                          {
+                            key: 'auth.token',
+                            value: { stringValue: '******' },
+                          },
+                        ]),
+                      }),
+                      expect.objectContaining({
+                        attributes: expect.arrayContaining([
+                          {
+                            key: 'auth.key',
+                            value: { stringValue: '******' },
+                          },
+                        ]),
+                      }),
                     ]),
                   }),
                 ],

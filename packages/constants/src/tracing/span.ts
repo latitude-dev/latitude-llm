@@ -82,12 +82,12 @@ type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   // Fields below are optional if the span had an error
   output?: Record<string, unknown>[]
   tokens?: {
-    input: number
+    prompt: number
     cached: number
     reasoning: number
-    output: number
+    completion: number
   }
-  cost?: number
+  cost?: number // Enriched when ingested
   finishReason?: string
 }
 

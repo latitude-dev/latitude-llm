@@ -60,8 +60,7 @@
     "@traceloop/instrumentation-openai": "0.13.0",
     "@traceloop/instrumentation-together": "0.13.0",
     "@traceloop/instrumentation-vertexai": "0.13.0",
-    "zod": "catalog:",
-    "uuid": "11.1.0"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@latitude-data/constants": "workspace:*",
@@ -88,7 +87,6 @@
     "openai": "^4.102.0",
     "together-ai": "^0.16.0",
     "promptl-ai": "catalog:",
-    "@types/uuid": "^10.0.0",
     "msw": "^2.3.5"
   },
   "peerDependencies": {

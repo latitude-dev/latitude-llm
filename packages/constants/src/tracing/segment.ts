@@ -1,4 +1,5 @@
 import { Message } from 'promptl-ai'
+import { z } from 'zod'
 import { DocumentType } from '../index'
 import { LatitudePromptConfig } from '../latitudePromptSchema'
 import { SpanSource, SpanStatus } from './span'
@@ -71,14 +72,14 @@ export type SegmentWithDetails<T extends SegmentType = SegmentType> =
     metadata: SegmentMetadata<T>
   }
 
-export type SegmentBaggage<T extends SegmentType = SegmentType> = Pick<
-  Segment<T>,
-  | 'id'
-  | 'traceId'
-  | 'parentId'
-  | 'name'
-  | 'type'
-  | 'commitUuid'
-  | 'documentUuid'
-  | 'experimentUuid'
->
+export const segmentBaggageSchema = z.object({
+  id: z.string(),
+  traceId: z.string(),
+  parentId: z.string().optional(),
+  name: z.string(),
+  type: z.nativeEnum(SegmentType),
+  commitUuid: z.string(),
+  documentUuid: z.string(),
+  experimentUuid: z.string().optional(),
+})
+export type SegmentBaggage = z.infer<typeof segmentBaggageSchema>
