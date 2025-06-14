@@ -74,7 +74,7 @@ export type SegmentWithDetails<T extends SegmentType = SegmentType> =
 
 export const segmentBaggageSchema = z.object({
   id: z.string(),
-  traceId: z.string(),
+  // Note: traceId is potentially unknown when the root segment is created
   parentId: z.string().optional(),
   name: z.string(),
   type: z.nativeEnum(SegmentType),
