@@ -46,16 +46,11 @@ describe('manual', () => {
 
       const sdk = new LatitudeTelemetry('fake-api-key')
 
-      await sdk.document(
-        {
-          documentUuid: 'fake-document-uuid',
-        },
+      await sdk.conversation(
+        { documentUuid: 'fake-document-uuid' },
         async () => {
-          await sdk.step(
-            {
-              name: 'Step 1',
-            },
-            async () => {
+          await sdk.interaction({}, async () => {
+            await sdk.step({}, async () => {
               const [ctx, endCompletion] = sdk.completion(context.active(), {
                 provider: 'openai',
                 model: 'gpt-4o',
@@ -140,8 +135,10 @@ You are a helpful assistant.
                     ],
                     usage: {
                       prompt_tokens: 20,
+                      cached_tokens: 5,
+                      reasoning_tokens: 5,
                       completion_tokens: 10,
-                      total_tokens: 30,
+                      total_tokens: 40,
                     },
                   },
                 },
@@ -170,7 +167,12 @@ You are a helpful assistant.
                     ],
                   },
                 ],
-                tokens: { input: 20, output: 10 },
+                tokens: {
+                  prompt: 20,
+                  cached: 5,
+                  reasoning: 5,
+                  completion: 10,
+                },
                 finishReason: 'tool_calls',
               })
 
@@ -190,18 +192,15 @@ You are a helpful assistant.
                   isError: false,
                 },
               })
-            },
-          )
+            })
 
-          await sdk.step(
-            {
-              name: 'Step 2',
-            },
-            async () => {
+            await sdk.step({}, async () => {
               const [_, __, endCompletion] = sdk.completion(context.active(), {
                 provider: 'openai',
                 model: 'gpt-4o',
                 configuration: { temperature: 0.5, max_tokens: 100 },
+                template: '<user>Nice, thank you!</user>',
+                parameters: {},
                 input: [
                   {
                     role: 'user',
@@ -211,8 +210,28 @@ You are a helpful assistant.
               })
 
               endCompletion(new Error('Error in completion'))
-            },
-          )
+            })
+          })
+
+          await sdk.interaction({}, async () => {
+            await sdk.step({}, async () => {
+              const [_, __, endCompletion] = sdk.completion(context.active(), {
+                provider: 'openai',
+                model: 'gpt-4o',
+                configuration: { temperature: 0.5, max_tokens: 100 },
+                template: '<user>Wait, it did not work!</user>',
+                parameters: {},
+                input: [
+                  {
+                    role: 'user',
+                    content: 'Wait, it did not work!',
+                  },
+                ],
+              })
+
+              endCompletion(new Error('Error in completion'))
+            })
+          })
         },
       )
 

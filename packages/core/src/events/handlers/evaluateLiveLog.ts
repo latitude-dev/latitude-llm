@@ -1,5 +1,4 @@
-import { NON_LIVE_EVALUABLE_LOG_SOURCES } from '@latitude-data/constants'
-import { LogSources } from '../../browser'
+import { LIVE_EVALUABLE_LOG_SOURCES, LogSources } from '../../browser'
 import {
   findLastProviderLogFromDocumentLogUuid,
   findWorkspaceFromDocumentLog,
@@ -32,9 +31,7 @@ export const evaluateLiveLogJob = async ({
   }
 
   if (
-    NON_LIVE_EVALUABLE_LOG_SOURCES.includes(
-      documentLog.source ?? LogSources.API,
-    )
+    !LIVE_EVALUABLE_LOG_SOURCES.includes(documentLog.source ?? LogSources.API)
   ) {
     return
   }

@@ -102,7 +102,7 @@ export const MANUAL_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","type":"document","documentRunUuid":"%ANY%","versionUuid":"live","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 1","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"live","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -128,7 +128,7 @@ export const MANUAL_SPANS = {
                   key: 'http.response.body',
                   value: {
                     stringValue:
-                      '{"id":"chatcmpl-abcdef123456","object":"chat.completion","model":"gpt-4o","choices":[{"index":0,"message":{"role":"assistant","content":"Hello, user, I will help you today with the brain tool!","function_call":{"name":"brain","arguments":"{\\"query\\": \\"What is the weather in Barcelona?\\"}"}},"finish_reason":"function_call"}],"usage":{"prompt_tokens":20,"completion_tokens":10,"total_tokens":30}}',
+                      '{"id":"chatcmpl-abcdef123456","object":"chat.completion","model":"gpt-4o","choices":[{"index":0,"message":{"role":"assistant","content":"Hello, user, I will help you today with the brain tool!","function_call":{"name":"brain","arguments":"{\\"query\\": \\"What is the weather in Barcelona?\\"}"}},"finish_reason":"function_call"}],"usage":{"prompt_tokens":20,"cached_tokens":5,"reasoning_tokens":5,"completion_tokens":10,"total_tokens":40}}',
                   },
                 },
               ]),
@@ -254,7 +254,7 @@ export const MANUAL_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","type":"document","documentRunUuid":"%ANY%","versionUuid":"live","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 1","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"live","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -306,13 +306,37 @@ export const MANUAL_SPANS = {
                 {
                   key: 'gen_ai.usage.input_tokens',
                   value: {
+                    intValue: 25,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.prompt_tokens',
+                  value: {
                     intValue: 20,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.cached_tokens',
+                  value: {
+                    intValue: 5,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.reasoning_tokens',
+                  value: {
+                    intValue: 5,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.completion_tokens',
+                  value: {
+                    intValue: 10,
                   },
                 },
                 {
                   key: 'gen_ai.usage.output_tokens',
                   value: {
-                    intValue: 10,
+                    intValue: 15,
                   },
                 },
                 {
@@ -405,7 +429,7 @@ export const MANUAL_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","type":"document","documentRunUuid":"%ANY%","versionUuid":"live","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 1","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"live","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -474,7 +498,7 @@ export const MANUAL_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","type":"document","documentRunUuid":"%ANY%","versionUuid":"live","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 1","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"live","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -581,7 +605,7 @@ export const MANUAL_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","type":"document","documentRunUuid":"%ANY%","versionUuid":"live","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 2","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"live","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -665,7 +689,7 @@ export const MANUAL_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","type":"document","documentRunUuid":"%ANY%","versionUuid":"live","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 2","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"live","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -688,7 +712,8 @@ export const MANUAL_SPANS = {
             {
               traceId: expect.any(String),
               spanId: expect.any(String),
-              name: 'document',
+              parentSpanId: expect.any(String),
+              name: 'interaction',
               kind: 3,
               startTimeUnixNano: expect.any(String),
               endTimeUnixNano: expect.any(String),
@@ -721,7 +746,311 @@ export const MANUAL_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","type":"document","documentRunUuid":"%ANY%","versionUuid":"live","documentUuid":"fake-document-uuid"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"live","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"}]',
+                    ),
+                  },
+                },
+                {
+                  key: 'latitude.segment.parent_id',
+                  value: {
+                    stringValue: expect.any(String),
+                  },
+                },
+              ]),
+              droppedAttributesCount: expect.any(Number),
+              events: [],
+              droppedEventsCount: expect.any(Number),
+              status: {
+                code: 1,
+              },
+              links: [],
+              droppedLinksCount: expect.any(Number),
+            },
+            {
+              traceId: expect.any(String),
+              spanId: expect.any(String),
+              parentSpanId: expect.any(String),
+              name: 'openai / gpt-4o',
+              kind: 3,
+              startTimeUnixNano: expect.any(String),
+              endTimeUnixNano: expect.any(String),
+              attributes: expect.arrayContaining([
+                {
+                  key: 'latitude.source',
+                  value: {
+                    stringValue: 'api',
+                  },
+                },
+                {
+                  key: 'latitude.type',
+                  value: {
+                    stringValue: 'completion',
+                  },
+                },
+                {
+                  key: 'gen_ai.operation.name',
+                  value: {
+                    stringValue: 'completion',
+                  },
+                },
+                {
+                  key: 'gen_ai.system',
+                  value: {
+                    stringValue: 'openai',
+                  },
+                },
+                {
+                  key: 'gen_ai.request.configuration',
+                  value: {
+                    stringValue:
+                      '{"temperature":0.5,"max_tokens":100,"model":"gpt-4o"}',
+                  },
+                },
+                {
+                  key: 'gen_ai.request.temperature',
+                  value: {
+                    doubleValue: 0.5,
+                  },
+                },
+                {
+                  key: 'gen_ai.request.max_tokens',
+                  value: {
+                    intValue: 100,
+                  },
+                },
+                {
+                  key: 'gen_ai.request.model',
+                  value: {
+                    stringValue: 'gpt-4o',
+                  },
+                },
+                {
+                  key: 'gen_ai.request.messages',
+                  value: {
+                    stringValue:
+                      '[{"role":"user","content":"Wait, it did not work!"}]',
+                  },
+                },
+                {
+                  key: 'gen_ai.prompt.0.role',
+                  value: {
+                    stringValue: 'user',
+                  },
+                },
+                {
+                  key: 'gen_ai.prompt.0.content',
+                  value: {
+                    stringValue: 'Wait, it did not work!',
+                  },
+                },
+                {
+                  key: 'latitude.segment.id',
+                  value: {
+                    stringValue: expect.any(String),
+                  },
+                },
+                {
+                  key: 'latitude.segments',
+                  value: {
+                    stringValue: expectMasked(
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"live","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
+                    ),
+                  },
+                },
+                {
+                  key: 'latitude.segment.parent_id',
+                  value: {
+                    stringValue: expect.any(String),
+                  },
+                },
+              ]),
+              droppedAttributesCount: expect.any(Number),
+              events: [
+                {
+                  attributes: expect.arrayContaining([
+                    {
+                      key: 'exception.type',
+                      value: {
+                        stringValue: 'Error',
+                      },
+                    },
+                    {
+                      key: 'exception.message',
+                      value: {
+                        stringValue: 'Error in completion',
+                      },
+                    },
+                    {
+                      key: 'exception.stacktrace',
+                      value: {
+                        stringValue: expect.any(String),
+                      },
+                    },
+                  ]),
+                  name: 'exception',
+                  timeUnixNano: expect.any(String),
+                  droppedAttributesCount: expect.any(Number),
+                },
+              ],
+              droppedEventsCount: expect.any(Number),
+              status: {
+                code: 2,
+                message: 'Error in completion',
+              },
+              links: [],
+              droppedLinksCount: expect.any(Number),
+            },
+            {
+              traceId: expect.any(String),
+              spanId: expect.any(String),
+              parentSpanId: expect.any(String),
+              name: 'step',
+              kind: 3,
+              startTimeUnixNano: expect.any(String),
+              endTimeUnixNano: expect.any(String),
+              attributes: expect.arrayContaining([
+                {
+                  key: 'latitude.source',
+                  value: {
+                    stringValue: 'api',
+                  },
+                },
+                {
+                  key: 'latitude.type',
+                  value: {
+                    stringValue: 'unknown',
+                  },
+                },
+                {
+                  key: 'gen_ai.operation.name',
+                  value: {
+                    stringValue: 'unknown',
+                  },
+                },
+                {
+                  key: 'latitude.segment.id',
+                  value: {
+                    stringValue: expect.any(String),
+                  },
+                },
+                {
+                  key: 'latitude.segments',
+                  value: {
+                    stringValue: expectMasked(
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"live","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
+                    ),
+                  },
+                },
+                {
+                  key: 'latitude.segment.parent_id',
+                  value: {
+                    stringValue: expect.any(String),
+                  },
+                },
+              ]),
+              droppedAttributesCount: expect.any(Number),
+              events: [],
+              droppedEventsCount: expect.any(Number),
+              status: {
+                code: 1,
+              },
+              links: [],
+              droppedLinksCount: expect.any(Number),
+            },
+            {
+              traceId: expect.any(String),
+              spanId: expect.any(String),
+              parentSpanId: expect.any(String),
+              name: 'interaction',
+              kind: 3,
+              startTimeUnixNano: expect.any(String),
+              endTimeUnixNano: expect.any(String),
+              attributes: expect.arrayContaining([
+                {
+                  key: 'latitude.source',
+                  value: {
+                    stringValue: 'api',
+                  },
+                },
+                {
+                  key: 'latitude.type',
+                  value: {
+                    stringValue: 'unknown',
+                  },
+                },
+                {
+                  key: 'gen_ai.operation.name',
+                  value: {
+                    stringValue: 'unknown',
+                  },
+                },
+                {
+                  key: 'latitude.segment.id',
+                  value: {
+                    stringValue: expect.any(String),
+                  },
+                },
+                {
+                  key: 'latitude.segments',
+                  value: {
+                    stringValue: expectMasked(
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"live","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"}]',
+                    ),
+                  },
+                },
+                {
+                  key: 'latitude.segment.parent_id',
+                  value: {
+                    stringValue: expect.any(String),
+                  },
+                },
+              ]),
+              droppedAttributesCount: expect.any(Number),
+              events: [],
+              droppedEventsCount: expect.any(Number),
+              status: {
+                code: 1,
+              },
+              links: [],
+              droppedLinksCount: expect.any(Number),
+            },
+            {
+              traceId: expect.any(String),
+              spanId: expect.any(String),
+              name: 'conversation',
+              kind: 3,
+              startTimeUnixNano: expect.any(String),
+              endTimeUnixNano: expect.any(String),
+              attributes: expect.arrayContaining([
+                {
+                  key: 'latitude.source',
+                  value: {
+                    stringValue: 'api',
+                  },
+                },
+                {
+                  key: 'latitude.type',
+                  value: {
+                    stringValue: 'unknown',
+                  },
+                },
+                {
+                  key: 'gen_ai.operation.name',
+                  value: {
+                    stringValue: 'unknown',
+                  },
+                },
+                {
+                  key: 'latitude.segment.id',
+                  value: {
+                    stringValue: expect.any(String),
+                  },
+                },
+                {
+                  key: 'latitude.segments',
+                  value: {
+                    stringValue: expectMasked(
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"live","documentUuid":"fake-document-uuid"}}]',
                     ),
                   },
                 },

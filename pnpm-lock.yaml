@@ -1032,9 +1032,6 @@ importers:
       typescript:
         specifier: ^5.5.4
         version: 5.8.3
-      uuid:
-        specifier: 11.1.0
-        version: 11.1.0
       zod:
         specifier: 'catalog:'
         version: 3.24.2
@@ -1081,9 +1078,6 @@ importers:
       '@types/node':
         specifier: ^22.15.21
         version: 22.15.31
-      '@types/uuid':
-        specifier: ^10.0.0
-        version: 10.0.0
       ai:
         specifier: ^4.3.16
         version: 4.3.16(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.24.2)
