@@ -59,6 +59,11 @@ export const ATTR_GEN_AI_REQUEST_MESSAGES = 'gen_ai.request.messages'
 export const ATTR_GEN_AI_RESPONSE = 'gen_ai.response'
 export const ATTR_GEN_AI_RESPONSE_MESSAGES = 'gen_ai.response.messages'
 
+export const ATTR_GEN_AI_USAGE_PROMPT_TOKENS = 'gen_ai.usage.prompt_tokens'
+export const ATTR_GEN_AI_USAGE_CACHED_TOKENS = 'gen_ai.usage.cached_tokens'
+export const ATTR_GEN_AI_USAGE_REASONING_TOKENS = 'gen_ai.usage.reasoning_tokens' // prettier-ignore
+export const ATTR_GEN_AI_USAGE_COMPLETION_TOKENS = 'gen_ai.usage.completion_tokens' // prettier-ignore
+
 export const ATTR_GEN_AI_PROMPTS = 'gen_ai.prompt' // gen_ai.prompt.{index}.{role/content/...}
 export const ATTR_GEN_AI_COMPLETIONS = 'gen_ai.completion' // gen_ai.completion.{index}.{role/content/...}
 export const ATTR_GEN_AI_MESSAGE_ROLE = 'role'
@@ -101,7 +106,7 @@ export const LLM_REQUEST_TYPE_VALUE_RERANK = 'rerank'
 /* Note: Schemas for span ingestion following OpenTelemetry service request specification */
 
 export namespace Otlp {
-  const attributeValueSchema = z.object({
+  export const attributeValueSchema = z.object({
     stringValue: z.string().optional(),
     intValue: z.number().optional(),
     boolValue: z.boolean().optional(),
@@ -119,33 +124,33 @@ export namespace Otlp {
   })
   export type AttributeValue = z.infer<typeof attributeValueSchema>
 
-  const attributeSchema = z.object({
+  export const attributeSchema = z.object({
     key: z.string(),
     value: attributeValueSchema,
   })
   export type Attribute = z.infer<typeof attributeSchema>
 
-  const eventSchema = z.object({
+  export const eventSchema = z.object({
     name: z.string(),
     timeUnixNano: z.string(),
     attributes: z.array(attributeSchema).optional(),
   })
   export type Event = z.infer<typeof eventSchema>
 
-  const linkSchema = z.object({
+  export const linkSchema = z.object({
     traceId: z.string(),
     spanId: z.string(),
     attributes: z.array(attributeSchema).optional(),
   })
   export type Link = z.infer<typeof linkSchema>
 
-  const statusSchema = z.object({
+  export const statusSchema = z.object({
     code: z.number(),
     message: z.string().optional(),
   })
   export type Status = z.infer<typeof statusSchema>
 
-  const spanSchema = z.object({
+  export const spanSchema = z.object({
     traceId: z.string(),
     spanId: z.string(),
     parentSpanId: z.string().optional(),
@@ -160,30 +165,30 @@ export namespace Otlp {
   })
   export type Span = z.infer<typeof spanSchema>
 
-  const scopeSchema = z.object({
+  export const scopeSchema = z.object({
     name: z.string(),
     version: z.string().optional(),
   })
   export type Scope = z.infer<typeof scopeSchema>
 
-  const scopeSpanSchema = z.object({
+  export const scopeSpanSchema = z.object({
     scope: scopeSchema,
     spans: z.array(spanSchema),
   })
   export type ScopeSpan = z.infer<typeof scopeSpanSchema>
 
-  const resourceSchema = z.object({
+  export const resourceSchema = z.object({
     attributes: z.array(attributeSchema),
   })
   export type Resource = z.infer<typeof resourceSchema>
 
-  const resourceSpanSchema = z.object({
+  export const resourceSpanSchema = z.object({
     resource: resourceSchema,
     scopeSpans: z.array(scopeSpanSchema),
   })
   export type ResourceSpan = z.infer<typeof resourceSpanSchema>
 
-  const serviceRequestSchema = z.object({
+  export const serviceRequestSchema = z.object({
     resourceSpans: z.array(resourceSpanSchema),
   })
   export type ServiceRequest = z.infer<typeof serviceRequestSchema>

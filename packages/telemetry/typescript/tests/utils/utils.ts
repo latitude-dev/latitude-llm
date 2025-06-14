@@ -86,7 +86,7 @@ export function expectMasked(value: string) {
   return expect.stringMatching(regex)
 }
 
-export function expectSegments(segments: SegmentBaggage<any>[]) {
+export function expectSegments(segments: SegmentBaggage[]) {
   const value = JSON.stringify(
     segments.map((segment) => ({
       ...segment,

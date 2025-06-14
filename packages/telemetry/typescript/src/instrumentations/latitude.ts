@@ -6,6 +6,7 @@ import {
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS,
   SpanSource,
+  TraceContext,
 } from '@latitude-data/constants'
 import type * as latitude from '@latitude-data/sdk'
 import * as otel from '@opentelemetry/api'
@@ -65,11 +66,10 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   }
 
   withTraceContext<F extends () => ReturnType<F>>(
-    carrier: Record<string, unknown>,
+    ctx: TraceContext,
     fn: F,
   ): ReturnType<F> {
-    const ctx = propagation.extract(context.active(), carrier)
-    return context.with(ctx, fn)
+    return context.with(propagation.extract(context.active(), ctx), fn)
   }
 
   async wrapToolHandler<
@@ -123,15 +123,16 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   ): Promise<Awaited<ReturnType<F>>> {
     const { prompt } = args[0]
 
-    return await this.telemetry.document(
+    return await this.telemetry.conversation(
       {
-        name: prompt.path.split('/').at(-1),
         versionUuid: prompt.versionUuid,
         documentUuid: prompt.uuid,
       },
-      async () => {
-        return (fn as any)(...args) as ReturnType<F>
-      },
+      async () =>
+        // Note: we cannot know the follow up interactions
+        this.telemetry.interaction({}, async () => {
+          return (fn as any)(...args) as ReturnType<F>
+        }),
     )
   }
 
@@ -141,15 +142,16 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   ): Promise<Awaited<ReturnType<F>>> {
     const { prompt } = args[0]
 
-    return await this.telemetry.document(
+    return await this.telemetry.conversation(
       {
-        name: prompt.path.split('/').at(-1),
         versionUuid: prompt.versionUuid,
         documentUuid: prompt.uuid,
       },
-      async () => {
-        return (fn as any)(...args) as ReturnType<F>
-      },
+      async () =>
+        // Note: we cannot know the follow up interactions
+        this.telemetry.interaction({}, async () => {
+          return (fn as any)(...args) as ReturnType<F>
+        }),
     )
   }
 
@@ -157,29 +159,22 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     fn: F,
     ...args: Parameters<F>
   ): Promise<Awaited<ReturnType<F>>> {
-    const { step, prompt, parameters } = args[0]
+    const { prompt, parameters } = args[0]
 
-    let jsonParameters = undefined
-    if (parameters) {
-      try {
-        jsonParameters = JSON.stringify(parameters)
-      } catch (error) {
-        jsonParameters = '{}'
-      }
+    let jsonParameters = ''
+    try {
+      jsonParameters = JSON.stringify(parameters)
+    } catch (error) {
+      jsonParameters = '{}'
     }
 
     return await this.telemetry.step(
       {
-        name: `Step ${step}`,
         // Note: cascading down some attributes in case the
         // provider instrumentations don't set them
         attributes: {
-          ...(prompt && {
-            [ATTR_GEN_AI_REQUEST_TEMPLATE]: prompt,
-          }),
-          ...(jsonParameters && {
-            [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
-          }),
+          [ATTR_GEN_AI_REQUEST_TEMPLATE]: prompt,
+          [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
         },
       },
       async () => {
@@ -204,8 +199,8 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
       provider: provider,
       model: model,
       configuration: config,
-      ...(prompt && { template: prompt }),
-      ...(parameters && { parameters }),
+      template: prompt,
+      parameters: parameters,
       input: messages as Record<string, unknown>[],
     })
 
@@ -220,12 +215,18 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
       throw error
     }
 
-    const inputTokens = this.countTokens(messages)
-    const outputTokens = this.countTokens(result.messages)
+    // Note: enhance, this is just an estimation
+    const promptTokens = this.countTokens(messages)
+    const completionTokens = this.countTokens(result.messages)
 
     ok({
       output: result.messages as Record<string, unknown>[],
-      tokens: { input: inputTokens, output: outputTokens },
+      tokens: {
+        prompt: promptTokens,
+        cached: 0,
+        reasoning: 0,
+        completion: completionTokens,
+      },
       finishReason:
         result.toolRequests.length > 0
           ? GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS

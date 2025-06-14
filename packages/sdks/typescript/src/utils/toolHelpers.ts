@@ -171,10 +171,9 @@ async function buildToolResponseMessages<Tools extends ToolSpec>({
   }
 
   try {
-    if (instrumentation) {
-      return await instrumentation.withTraceContext(
-        traceContext || {},
-        async () => runHandlers(runArgs),
+    if (instrumentation && traceContext) {
+      return await instrumentation.withTraceContext(traceContext, async () =>
+        runHandlers(runArgs),
       )
     }
 

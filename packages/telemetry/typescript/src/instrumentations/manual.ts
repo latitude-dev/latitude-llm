@@ -21,6 +21,10 @@ import {
   ATTR_GEN_AI_TOOL_CALL_ARGUMENTS,
   ATTR_GEN_AI_TOOL_RESULT_IS_ERROR,
   ATTR_GEN_AI_TOOL_RESULT_VALUE,
+  ATTR_GEN_AI_USAGE_CACHED_TOKENS,
+  ATTR_GEN_AI_USAGE_COMPLETION_TOKENS,
+  ATTR_GEN_AI_USAGE_PROMPT_TOKENS,
+  ATTR_GEN_AI_USAGE_REASONING_TOKENS,
   ATTR_HTTP_REQUEST_BODY,
   ATTR_HTTP_REQUEST_HEADERS,
   ATTR_HTTP_REQUEST_URL,
@@ -32,8 +36,6 @@ import {
   ATTR_LATITUDE_SEGMENTS,
   ATTR_LATITUDE_SOURCE,
   ATTR_LATITUDE_TYPE,
-  BaseSegmentBaggage,
-  DocumentSegmentBaggage,
   GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
   HEAD_COMMIT,
   SegmentBaggage,
@@ -59,7 +61,6 @@ import {
   ATTR_GEN_AI_USAGE_INPUT_TOKENS,
   ATTR_GEN_AI_USAGE_OUTPUT_TOKENS,
 } from '@opentelemetry/semantic-conventions/incubating'
-import { v4 as uuid } from 'uuid'
 
 export type StartSpanOptions = {
   name?: string
@@ -94,16 +95,18 @@ export type StartCompletionSpanOptions = StartSpanOptions & {
   provider: string
   model: string
   configuration: Record<string, unknown>
-  template?: string
-  parameters?: Record<string, unknown>
+  template: string
+  parameters: Record<string, unknown>
   input: Record<string, unknown>[]
 }
 
 export type EndCompletionSpanOptions = EndSpanOptions & {
   output: Record<string, unknown>[]
   tokens: {
-    input: number
-    output: number
+    prompt: number
+    cached: number
+    reasoning: number
+    completion: number
   }
   finishReason: string
 }
@@ -125,12 +128,12 @@ export type EndHttpSpanOptions = EndSpanOptions & {
   }
 }
 
-export type SegmentOptions = StartSpanOptions & {
+export type SegmentOptions = Omit<StartSpanOptions, 'name'> & {
   baggage?: Record<string, unknown>
 }
 
-export type DocumentSegmentOptions = SegmentOptions & {
-  versionUuid?: string
+export type ConversationSegmentOptions = SegmentOptions & {
+  versionUuid?: string // Alias for commitUuid
   documentUuid: string
   experimentUuid?: string
 }
@@ -538,13 +541,11 @@ export class ManualInstrumentation implements BaseInstrumentation {
       configuration,
     )
 
-    let jsonParameters = undefined
-    if (start.parameters) {
-      try {
-        jsonParameters = JSON.stringify(start.parameters)
-      } catch (error) {
-        jsonParameters = '{}'
-      }
+    let jsonParameters = ''
+    try {
+      jsonParameters = JSON.stringify(start.parameters)
+    } catch (error) {
+      jsonParameters = '{}'
     }
 
     let jsonInput = ''
@@ -565,12 +566,8 @@ export class ManualInstrumentation implements BaseInstrumentation {
           [ATTR_GEN_AI_SYSTEM]: start.provider,
           [ATTR_GEN_AI_REQUEST_CONFIGURATION]: jsonConfiguration,
           ...attrConfiguration,
-          ...(start.template && {
-            [ATTR_GEN_AI_REQUEST_TEMPLATE]: start.template,
-          }),
-          ...(jsonParameters && {
-            [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
-          }),
+          [ATTR_GEN_AI_REQUEST_TEMPLATE]: start.template,
+          [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
           [ATTR_GEN_AI_REQUEST_MESSAGES]: jsonInput,
           ...attrInput,
           ...(start.attributes || {}),
@@ -591,12 +588,19 @@ export class ManualInstrumentation implements BaseInstrumentation {
         }
         const attrOutput = this.attribifyMessages('output', end.output)
 
+        const inputTokens = end.tokens.prompt + end.tokens.cached
+        const outputTokens = end.tokens.reasoning + end.tokens.completion
+
         ok({
           attributes: {
             [ATTR_GEN_AI_RESPONSE_MESSAGES]: jsonOutput,
             ...attrOutput,
-            [ATTR_GEN_AI_USAGE_INPUT_TOKENS]: end.tokens.input,
-            [ATTR_GEN_AI_USAGE_OUTPUT_TOKENS]: end.tokens.output,
+            [ATTR_GEN_AI_USAGE_INPUT_TOKENS]: inputTokens,
+            [ATTR_GEN_AI_USAGE_PROMPT_TOKENS]: end.tokens.prompt,
+            [ATTR_GEN_AI_USAGE_CACHED_TOKENS]: end.tokens.cached,
+            [ATTR_GEN_AI_USAGE_REASONING_TOKENS]: end.tokens.reasoning,
+            [ATTR_GEN_AI_USAGE_COMPLETION_TOKENS]: end.tokens.completion,
+            [ATTR_GEN_AI_USAGE_OUTPUT_TOKENS]: outputTokens,
             [ATTR_GEN_AI_RESPONSE_MODEL]: start.model,
             [ATTR_GEN_AI_RESPONSE_FINISH_REASONS]: [end.finishReason],
             ...(end.attributes || {}),
@@ -776,10 +780,12 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
   private segment<F extends () => ReturnType<F>>(
     type: SegmentType,
-    { name, externalId, attributes, baggage }: SegmentOptions,
     fn: F,
+    options?: SegmentOptions,
   ) {
     if (!this.enabled) return fn()
+
+    const segmentId = this.generator.generateTraceId()
 
     const parentBaggage = Object.fromEntries(
       propagation.getActiveBaggage()?.getAllEntries() || [],
@@ -793,16 +799,13 @@ export class ManualInstrumentation implements BaseInstrumentation {
         segments = []
       }
     }
-
-    const parentId = parentBaggage[ATTR_LATITUDE_SEGMENT_ID]?.value
-    const segmentId = this.generator.generateSpanId()
+    const parent = segments.at(-1)
 
     segments.push({
       id: segmentId,
-      ...(parentId && { parentId }),
-      ...(name && { name }),
+      ...(parent?.id && { parentId: parent.id }),
       type: type,
-      ...(baggage || {}),
+      ...(options?.baggage || {}),
     } as SegmentBaggage)
 
     let jsonSegments = ''
@@ -813,7 +816,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }
 
     const baggAttributes = Object.fromEntries(
-      Object.entries(attributes || {}).map(([key, value]) => [
+      Object.entries(options?.attributes || {}).map(([key, value]) => [
         key,
         { value: String(value) },
       ]),
@@ -823,13 +826,15 @@ export class ManualInstrumentation implements BaseInstrumentation {
       // Cascade parent baggage
       ...parentBaggage,
       // Note: this is not baggage, just a way to pass attributes down more easily
-      ...(externalId && { [ATTR_LATITUDE_EXTERNAL_ID]: { value: externalId } }),
+      ...(options?.externalId && {
+        [ATTR_LATITUDE_EXTERNAL_ID]: { value: options.externalId },
+      }),
       [ATTR_LATITUDE_SOURCE]: { value: this.source },
       ...baggAttributes,
       // Current segment baggage
       [ATTR_LATITUDE_SEGMENT_ID]: { value: segmentId },
-      ...(parentId && {
-        [ATTR_LATITUDE_SEGMENT_PARENT_ID]: { value: parentId },
+      ...(parent?.id && {
+        [ATTR_LATITUDE_SEGMENT_PARENT_ID]: { value: parent.id },
       }),
       [ATTR_LATITUDE_SEGMENTS]: { value: jsonSegments },
     })
@@ -860,28 +865,33 @@ export class ManualInstrumentation implements BaseInstrumentation {
     )
   }
 
-  document<F extends () => ReturnType<F>>(
+  conversation<F extends () => ReturnType<F>>(
     {
       baggage,
       versionUuid,
       documentUuid,
       experimentUuid,
       ...rest
-    }: DocumentSegmentOptions,
+    }: ConversationSegmentOptions,
     fn: F,
   ) {
     baggage = {
-      documentRunUuid: uuid(),
-      versionUuid: versionUuid || HEAD_COMMIT,
-      documentUuid: documentUuid,
-      ...(experimentUuid && { experimentUuid }),
+      data: {
+        commitUuid: versionUuid || HEAD_COMMIT,
+        documentUuid: documentUuid,
+        ...(experimentUuid && { experimentUuid }),
+      } satisfies SegmentBaggage<SegmentType.Conversation>['data'],
       ...(baggage || {}),
-    } as Omit<DocumentSegmentBaggage, keyof BaseSegmentBaggage>
+    }
 
-    return this.segment(SegmentType.Document, { baggage, ...rest }, fn)
+    return this.segment(SegmentType.Conversation, fn, { baggage, ...rest })
+  }
+
+  interaction<F extends () => ReturnType<F>>(options: SegmentOptions, fn: F) {
+    return this.segment(SegmentType.Interaction, fn, options)
   }
 
   step<F extends () => ReturnType<F>>(options: SegmentOptions, fn: F) {
-    return this.segment(SegmentType.Step, options, fn)
+    return this.segment(SegmentType.Step, fn, options)
   }
 }

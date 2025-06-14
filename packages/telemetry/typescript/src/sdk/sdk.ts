@@ -1,7 +1,7 @@
 import { env } from '$telemetry/env'
 import {
   BaseInstrumentation,
-  DocumentSegmentOptions,
+  ConversationSegmentOptions,
   LatitudeInstrumentation,
   LatitudeInstrumentationOptions,
   ManualInstrumentation,
@@ -11,6 +11,7 @@ import {
   StartSpanOptions,
   StartToolSpanOptions,
 } from '$telemetry/instrumentations'
+import { DEFAULT_REDACT_SPAN_PROCESSOR } from '$telemetry/sdk/redact'
 import {
   InstrumentationScope,
   SCOPE_LATITUDE,
@@ -87,6 +88,16 @@ class ScopedTracerProvider implements otel.TracerProvider {
   }
 }
 
+export const DEFAULT_SPAN_EXPORTER = (apiKey: string) =>
+  new OTLPTraceExporter({
+    url: TRACES_URL,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    timeoutMillis: 30 * 1000,
+  })
+
 // Note: Only exporting typescript instrumentations
 export enum Instrumentation {
   Latitude = InstrumentationScope.Latitude,
@@ -141,14 +152,7 @@ export class LatitudeTelemetry {
     this.options = options || {}
 
     if (!this.options.exporter) {
-      this.options.exporter = new OTLPTraceExporter({
-        url: TRACES_URL,
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        timeoutMillis: 30 * 1000,
-      })
+      this.options.exporter = DEFAULT_SPAN_EXPORTER(apiKey)
     }
 
     propagation.setGlobalPropagator(
@@ -173,6 +177,8 @@ export class LatitudeTelemetry {
       this.options.processors.forEach((processor) => {
         this.provider.addSpanProcessor(processor)
       })
+    } else {
+      this.provider.addSpanProcessor(DEFAULT_REDACT_SPAN_PROCESSOR())
     }
 
     if (this.options.disableBatch) {
@@ -407,11 +413,15 @@ export class LatitudeTelemetry {
     return this.telemetry.http(ctx, options)
   }
 
-  document<F extends () => ReturnType<F>>(
-    options: DocumentSegmentOptions,
+  conversation<F extends () => ReturnType<F>>(
+    options: ConversationSegmentOptions,
     fn: F,
   ) {
-    return this.telemetry.document(options, fn)
+    return this.telemetry.conversation(options, fn)
+  }
+
+  interaction<F extends () => ReturnType<F>>(options: SegmentOptions, fn: F) {
+    return this.telemetry.interaction(options, fn)
   }
 
   step<F extends () => ReturnType<F>>(options: SegmentOptions, fn: F) {

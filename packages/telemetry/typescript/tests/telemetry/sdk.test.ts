@@ -50,11 +50,13 @@ describe('telemetry', () => {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
+        template: '<user>Hello, assistant!</user>',
+        parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
       ok({
         output: [{ role: 'assistant', content: 'Hello, user!' }],
-        tokens: { input: 20, output: 10 },
+        tokens: { prompt: 20, cached: 0, reasoning: 0, completion: 10 },
         finishReason: 'stop',
       })
 
@@ -98,11 +100,13 @@ describe('telemetry', () => {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
+        template: '<user>Hello, assistant!</user>',
+        parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
       ok({
         output: [{ role: 'assistant', content: 'Hello, user!' }],
-        tokens: { input: 20, output: 10 },
+        tokens: { prompt: 20, cached: 0, reasoning: 0, completion: 10 },
         finishReason: 'stop',
       })
 
@@ -118,6 +122,115 @@ describe('telemetry', () => {
       expect(endpointMock).toHaveBeenCalledWith('/api/v3/otlp/v1/traces')
       expect(bodyMock).toHaveBeenCalledWith({
         resourceSpans: expect.any(Array),
+      })
+    }),
+  )
+
+  it(
+    'succeeds when using default span processor',
+    gatewayMock.boundary(async () => {
+      const { headersMock, methodMock, endpointMock, bodyMock } = mockRequest({
+        server: gatewayMock,
+        method: 'post',
+        endpoint: '/api/v3/otlp/v1/traces',
+      })
+
+      const sdk = new LatitudeTelemetry('fake-api-key')
+
+      const [_, ok] = sdk.http(context.active(), {
+        request: {
+          method: 'POST',
+          url: 'https://api.openai.com/v1/responses',
+          headers: {
+            Authorization: 'Bearer sk-9132kn132k13bn123',
+            'Content-Type': 'application/json',
+            Cookie: 'cookie',
+          },
+          body: {
+            prompt: 'prompt',
+          },
+        },
+      })
+      ok({
+        response: {
+          status: 200,
+          headers: {
+            'X-Refresh-Token': 'token',
+            'Set-Cookie': 'cookie',
+          },
+          body: {
+            completion: 'completion',
+          },
+        },
+      })
+
+      await sdk.shutdown()
+
+      expect(headersMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authorization: 'Bearer fake-api-key',
+          'content-type': 'application/json',
+        }),
+      )
+      expect(methodMock).toHaveBeenCalledWith('POST')
+      expect(endpointMock).toHaveBeenCalledWith('/api/v3/otlp/v1/traces')
+      expect(bodyMock).toHaveBeenCalledWith({
+        resourceSpans: [
+          expect.objectContaining({
+            scopeSpans: [
+              expect.objectContaining({
+                spans: [
+                  expect.objectContaining({
+                    attributes: expect.arrayContaining([
+                      {
+                        key: 'http.request.header.authorization',
+                        value: {
+                          stringValue: '******',
+                        },
+                      },
+                      {
+                        key: 'http.request.header.content-type',
+                        value: {
+                          stringValue: 'application/json',
+                        },
+                      },
+                      {
+                        key: 'http.request.header.cookie',
+                        value: {
+                          stringValue: '******',
+                        },
+                      },
+                      {
+                        key: 'http.request.body',
+                        value: {
+                          stringValue: '{"prompt":"prompt"}',
+                        },
+                      },
+                      {
+                        key: 'http.response.header.x-refresh-token',
+                        value: {
+                          stringValue: '******',
+                        },
+                      },
+                      {
+                        key: 'http.response.header.set-cookie',
+                        value: {
+                          stringValue: '******',
+                        },
+                      },
+                      {
+                        key: 'http.response.body',
+                        value: {
+                          stringValue: '{"completion":"completion"}',
+                        },
+                      },
+                    ]),
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
       })
     }),
   )
@@ -141,11 +254,13 @@ describe('telemetry', () => {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
+        template: '<user>Hello, assistant!</user>',
+        parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
       ok({
         output: [{ role: 'assistant', content: 'Hello, user!' }],
-        tokens: { input: 20, output: 10 },
+        tokens: { prompt: 20, cached: 0, reasoning: 0, completion: 10 },
         finishReason: 'stop',
       })
 

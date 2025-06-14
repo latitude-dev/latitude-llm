@@ -191,7 +191,7 @@ describe('chain', async () => {
     })
   })
 
-  it('fails when an assistant message is not provided in followup steps', async () => {
+  it('fails when an assistant message is not provided in follow up steps', async () => {
     const prompt = removeCommonIndent(`
       Before step
       <${CHAIN_STEP_TAG} />

@@ -23,6 +23,14 @@ export class RedactSpanProcessor implements SpanProcessor {
 
   onEnd(span: ReadableSpan): void {
     Object.assign(span.attributes, this.redactAttributes(span.attributes))
+    for (const event of span.events) {
+      if (!event.attributes) continue
+      Object.assign(event.attributes, this.redactAttributes(event.attributes))
+    }
+    for (const link of span.links) {
+      if (!link.attributes) continue
+      Object.assign(link.attributes, this.redactAttributes(link.attributes))
+    }
   }
 
   forceFlush(): Promise<void> {
@@ -56,3 +64,31 @@ export class RedactSpanProcessor implements SpanProcessor {
     return redacted
   }
 }
+
+export const DEFAULT_REDACT_SPAN_PROCESSOR = () =>
+  new RedactSpanProcessor({
+    attributes: [
+      /^.*auth.*$/i,
+      /^.*authorization.*$/i,
+      /^(?!gen_ai\.).*token.*$/i,
+      /^.*secret.*$/i,
+      /^.*key.*$/i,
+      /^.*password.*$/i,
+      /^.*cookie.*$/i,
+      /^.*session.*$/i,
+      /^.*credential.*$/i,
+      /^.*signature.*$/i,
+      /^.*oauth.*$/i,
+      /^.*saml.*$/i,
+      /^.*openid.*$/i,
+      /^.*refresh.*$/i,
+      /^.*jwt.*$/i,
+      /^.*otp.*$/i,
+      /^.*mfa.*$/i,
+      /^.*csrf.*$/i,
+      /^.*xsrf.*$/i,
+      /^.*refresh.*$/i,
+      /^.*x[-_]forwarded[-_]for.*$/i,
+      /^.*x[-_]real[-_]ip.*$/i,
+    ],
+  })

@@ -1,10 +1,11 @@
 import { Instrumentation, Latitude, ToolHandler } from '$sdk/index'
+import { TraceContext } from '@latitude-data/constants'
 import { vi } from 'vitest'
 
 export class MockInstrumentation implements Instrumentation {
   withTraceContext = vi.fn(
     <F extends () => ReturnType<F>>(
-      _carrier: Record<string, unknown>,
+      _ctx: TraceContext,
       fn: F,
     ): ReturnType<F> => {
       return fn()

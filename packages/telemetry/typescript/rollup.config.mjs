@@ -55,8 +55,6 @@ const EXTERNALS = [
   'together-ai',
   'promptl-ai',
   'zod',
-  'uuid',
-  '@types/uuid',
 ]
 
 const config = [

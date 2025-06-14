@@ -14,6 +14,7 @@ import {
   Providers,
   RunSyncAPIResponse,
   StreamEventTypes,
+  TraceContext,
 } from '@latitude-data/constants'
 import {
   AdapterMessageType,
@@ -142,7 +143,7 @@ export type StreamResponseCallbacks = {
 
 export interface TraceInstrumentation {
   withTraceContext<F extends () => ReturnType<F>>(
-    carrier: Record<string, unknown>,
+    ctx: TraceContext,
     fn: F,
   ): ReturnType<F>
 }
