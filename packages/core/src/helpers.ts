@@ -62,7 +62,7 @@ export function buildAllMessagesFromResponse<T extends StreamType>({
 }
 
 export function buildConversation(providerLog: ProviderLogDto) {
-  let messages: Message[] = [...providerLog.messages]
+  const messages: Message[] = [...providerLog.messages]
 
   const message = buildResponseMessage({
     type: 'text',

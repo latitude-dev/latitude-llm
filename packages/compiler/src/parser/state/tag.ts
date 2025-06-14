@@ -112,7 +112,7 @@ function readAttribute(
   let end = parser.index
   parser.allowWhitespace()
 
-  let value: any[] | true = true
+  let value: TemplateNode[] | true = true
   if (parser.eat('=')) {
     parser.allowWhitespace()
     value = readAttributeValue(parser)
@@ -130,7 +130,7 @@ function readAttribute(
   }
 }
 
-function readAttributeValue(parser: Parser) {
+function readAttributeValue(parser: Parser): TemplateNode[] {
   const quoteMark = parser.eat("'") ? "'" : parser.eat('"') ? '"' : null
   if (quoteMark && parser.eat(quoteMark)) {
     return [

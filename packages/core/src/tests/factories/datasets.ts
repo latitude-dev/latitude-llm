@@ -45,7 +45,7 @@ type Props = Partial<ICreateDatasetV2>
 
 export async function createDataset(datasetData: Props) {
   const disk = datasetData.disk ?? defaultTestDisk
-  let workspaceData = datasetData.workspace ?? {}
+  const workspaceData = datasetData.workspace ?? {}
   let user: User
   let workspace: Workspace
 

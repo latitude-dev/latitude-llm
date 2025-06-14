@@ -39,7 +39,7 @@ export async function getCsvAndBuildColumns({
     )
   }
 
-  let columns: Column[] = []
+  const columns: Column[] = []
   const newColumns = Array.from(uniqueHeaders.keys()).map((columnName) => ({
     name: columnName,
   }))

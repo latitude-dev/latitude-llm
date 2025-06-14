@@ -115,7 +115,7 @@ export async function* csvBatchGenerator({
 
   const parser = stream.pipe(csvParse(opts))
 
-  let batch: CsvBatch = []
+  const batch: CsvBatch = []
   for await (const r of parser) {
     const record = r as CSVRow
 

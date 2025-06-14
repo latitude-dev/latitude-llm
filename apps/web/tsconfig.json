@@ -20,7 +20,9 @@
     "./src/**/*.tsx",
     "next-env.d.ts",
     "next.config.js",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "components/**/*.ts",
+    "components/**/*.tsx"
   ],
   "exclude": ["node_modules", "./src/workers"]
 }

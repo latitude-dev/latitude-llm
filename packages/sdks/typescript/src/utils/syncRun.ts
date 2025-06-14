@@ -15,6 +15,7 @@ import {
   ApiErrorJsonResponse,
   LatitudeErrorCodes,
 } from '@latitude-data/constants/errors'
+import { Latitude } from '..'
 
 export async function syncRun<Tools extends ToolSpec>(
   path: string,

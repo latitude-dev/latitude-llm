@@ -7,7 +7,7 @@ import { applyProviderRules } from '.'
 
 const providerType = Providers.Google
 
-let config = {} as AppliedRules['config']
+const config = {} as AppliedRules['config']
 let messages: Message[]
 describe('applyGoogleRules', () => {
   describe('with system messages not at the beggining', () => {

@@ -19,7 +19,7 @@ export async function resolve(props: ResolveNodeProps<SimpleCallExpression>) {
   const method = (await resolveLogicNode({
     ...props,
     node: node.callee,
-  })) as Function
+  })) as (...args: any[]) => any
 
   if (typeof method !== 'function') {
     raiseError(errors.notAFunction(typeof method), node)
@@ -49,7 +49,7 @@ async function runMethod({
   node,
   raiseError,
 }: ResolveNodeProps<SimpleCallExpression> & {
-  method: Function
+  method: (...args: any[]) => any
   args: unknown[]
 }) {
   try {

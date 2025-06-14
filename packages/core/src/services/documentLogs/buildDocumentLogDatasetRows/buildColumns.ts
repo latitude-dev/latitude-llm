@@ -39,7 +39,7 @@ export function buildColumns({
   hashAlgorithm: HashAlgorithmFn
   logs: DocumentLogWithMetadataAndError[]
 }) {
-  let datasetColumns = dataset?.columns ?? []
+  const datasetColumns = dataset?.columns ?? []
   const logParameterNames = getUniqueParameterNamesFromLogs(logs)
   const fixedColumns = [
     { name: DEFAULT_DATASET_LABEL, role: DATASET_COLUMN_ROLES.label },

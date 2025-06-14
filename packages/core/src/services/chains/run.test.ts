@@ -767,8 +767,8 @@ describe('runChain', () => {
   })
 
   describe('with cached response', () => {
-    let config = { provider: 'openai', model: 'gpt-3.5-turbo' }
-    let conversation = {
+    const config = { provider: 'openai', model: 'gpt-3.5-turbo' }
+    const conversation = {
       messages: [
         {
           role: MessageRole.user,

@@ -9,7 +9,7 @@ import { generateUUIDIdentifier } from './../../lib/generateUUID'
 let workspace: Workspace
 let provider: ProviderApiKey
 let providerProps: CreateProviderLogProps
-let apiKeyId: number | undefined = undefined
+const apiKeyId: number | undefined = undefined
 let documentLogUuid: string | undefined
 
 const publisherSpy = vi.spyOn(

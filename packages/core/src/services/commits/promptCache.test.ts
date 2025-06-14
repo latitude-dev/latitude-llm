@@ -21,7 +21,7 @@ describe('promptCache', async () => {
   const config = { temperature: 0 }
   const conversation = { messages: [], config }
   const response = {
-    streamType: 'text' as 'text',
+    streamType: 'text' as const,
     text: 'cached response',
     reasoning: undefined,
     usage: {

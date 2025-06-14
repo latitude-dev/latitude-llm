@@ -17,7 +17,7 @@ import { removeCommonIndent } from './utils'
 
 async function getCompiledText(
   prompt: string,
-  parameters: Record<string, any> = {},
+  parameters: Record<string, unknown> = {},
 ) {
   const result = await render({
     prompt: removeCommonIndent(prompt),
@@ -450,7 +450,7 @@ describe('each loops', async () => {
 
   it('does not do anything when the iterable object is not iterable and there is no else block', async () => {
     const prompt = `${CUSTOM_TAG_START}#each 5 as element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}/each${CUSTOM_TAG_END}`
-    expect(render({ prompt, parameters: {} })).resolves
+    void render({ prompt, parameters: {} })
   })
 
   it('gives access to the index of the element', async () => {
@@ -476,7 +476,7 @@ describe('each loops', async () => {
 
 describe('operators', async () => {
   it('correctly evaluates binary expressions', async () => {
-    const expressions: [string, any][] = [
+    const expressions: [string, unknown][] = [
       ['2 == 2', true],
       ['2 == 3', false],
       ["2 == 'cat'", false],
@@ -564,7 +564,7 @@ describe('operators', async () => {
   })
 
   it('correctly evaluates assignment expressions', async () => {
-    const expressions: [string, any, any][] = [
+    const expressions: [string, unknown, unknown][] = [
       ['foo += 2', 3, 5],
       ['foo -= 2', 3, 1],
       ['foo *= 2', 3, 6],
@@ -586,7 +586,7 @@ describe('operators', async () => {
   })
 
   it('can evaluate complex expressions respecting operator precedence', async () => {
-    const expressions: [string, any][] = [
+    const expressions: [string, unknown][] = [
       ['2 + 3 * 4', 14],
       ['2 * 3 + 4', 10],
       ['2 * (3 + 4)', 14],
@@ -599,6 +599,10 @@ describe('operators', async () => {
       ['2 + 3 * 4 !== 14', false],
       ['2 + 3 * 4 == 14', true],
       ['2 + 3 * 4 != 14', false],
+      ['2 + 3 * 4 > 14', false],
+      ['2 + 3 * 4 < 14', false],
+      ['2 + 3 * 4 >= 14', true],
+      ['2 + 3 * 4 <= 14', true],
       ["'a' + 'b' in {ab: 1, bc: 2}", true],
       ["'a' + 'b' in {bc: 1, cd: 2}", false],
       ["'a' + 'b' in {ab: 1, bc: 2} && 'a' + 'b' in {bc: 1, cd: 2}", false],
@@ -609,6 +613,14 @@ describe('operators', async () => {
       const result = await getCompiledText(prompt)
       expect(result).toBe(`${expression} = ${expected}`)
     }
+  })
+
+  it('correctly evaluates member access in expressions', async () => {
+    const prompt = `${CUSTOM_TAG_START}foo.bar + foo.baz${CUSTOM_TAG_END}`
+    const result = await getCompiledText(prompt, {
+      foo: { bar: 1, baz: 2 },
+    })
+    expect(result).toBe('3')
   })
 })
 

@@ -65,7 +65,7 @@ export type ICreateProject = {
 }
 export async function createProject(projectData: Partial<ICreateProject> = {}) {
   const skipMerge = projectData.skipMerge ?? false
-  let workspaceData = projectData.workspace ?? {}
+  const workspaceData = projectData.workspace ?? {}
   let user: User
   let workspace: Workspace
 

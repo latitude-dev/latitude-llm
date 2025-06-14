@@ -33,7 +33,7 @@ let repository: CommitsRepository
 
 describe('Commits by project', () => {
   beforeEach(async () => {
-    let {
+    const {
       workspace,
       project: firstProject,
       user,

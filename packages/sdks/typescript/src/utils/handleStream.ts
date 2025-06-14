@@ -18,6 +18,7 @@ import {
   LatitudeEventData,
   extractAgentToolCalls,
 } from '@latitude-data/constants'
+import { Latitude } from '..'
 
 function parseJSON(line: string) {
   try {

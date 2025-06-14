@@ -109,10 +109,8 @@ export async function compile(props: CompileNodeContext<ElementTag>) {
     return
   }
 
-  //@ts-ignore - Linter knows there *should* not be another type of tag.
   baseNodeError(errors.unknownTag(node.name), node)
 
-  //@ts-ignore - ditto
   for await (const childNode of node.children ?? []) {
     await resolveBaseNode({
       node: childNode,

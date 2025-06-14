@@ -12,7 +12,7 @@ export type BaseNode = {
   end: number | null
   type: string
   children?: TemplateNode[]
-  [propName: string]: any
+  [propName: string]: unknown
 }
 
 export type Fragment = BaseNode & {

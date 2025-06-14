@@ -8,7 +8,7 @@ import { applyProviderRules } from './index'
 
 const providerType = Providers.GoogleVertex
 
-let config = {} as PartialConfig
+const config = {} as PartialConfig
 let messages: Message[]
 describe('applyGoogleVertexRules', () => {
   describe('with system messages not at the beggining', () => {

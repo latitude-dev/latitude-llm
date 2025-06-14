@@ -76,7 +76,7 @@ export function buildColumns({
   hashAlgorithm: HashAlgorithmFn
 }) {
   const builder = buildColumn(hashAlgorithm)
-  let columns = [...prevColumns]
+  const columns = [...prevColumns]
   const newColumnNames = new Set(prevColumns.map((col) => col.name))
 
   newColumns.forEach((col) => {

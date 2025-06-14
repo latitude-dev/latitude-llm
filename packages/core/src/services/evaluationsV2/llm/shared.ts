@@ -130,7 +130,7 @@ export async function buildLlmEvaluationRunFunction<
       : undefined,
     source: LogSources.Evaluation,
     promptlVersion: 1,
-    persistErrors: false as false, // Note: required so TypeScript doesn't infer true
+    persistErrors: false as const, // Note: required so TypeScript doesn't infer true
     promptSource: { ...evaluation, version: 'v2' as const },
     providersMap: providers,
     workspace: workspace,

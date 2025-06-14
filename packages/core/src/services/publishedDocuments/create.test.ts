@@ -87,7 +87,7 @@ describe('findOrCreate', () => {
 
   it('fails if document is not in a live commit', async () => {
     const { commit: draft } = await factories.createDraft({ project, user })
-    let { documentVersion: drafDoc } = await factories.createDocumentVersion({
+    const { documentVersion: drafDoc } = await factories.createDocumentVersion({
       workspace,
       user,
       commit: draft,

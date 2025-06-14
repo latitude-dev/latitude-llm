@@ -316,7 +316,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     for (let i = 0; i < toolCalls.length; i++) {
       for (const key in toolCalls[i]!) {
         const field = this.toCamelCase(key)
-        let value = toolCalls[i]![key]
+        const value = toolCalls[i]![key]
         if (value === null || value === undefined) continue
 
         switch (field) {
@@ -431,7 +431,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     for (let i = 0; i < messages.length; i++) {
       for (const key in messages[i]!) {
         const field = this.toCamelCase(key)
-        let value = messages[i]![key]
+        const value = messages[i]![key]
         if (value === null || value === undefined) continue
 
         switch (field) {
