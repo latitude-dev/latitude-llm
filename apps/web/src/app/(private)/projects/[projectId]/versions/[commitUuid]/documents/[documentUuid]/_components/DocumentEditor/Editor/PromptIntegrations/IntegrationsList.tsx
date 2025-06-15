@@ -4,7 +4,7 @@ import {
   TwoColumnSelect,
   TwoColumnSelectOption,
 } from '@latitude-data/web-ui/molecules/TwoColumnSelect'
-import { ActiveIntegrations } from './utils'
+import { ActiveIntegrations } from './useActiveIntegrations'
 import { ROUTES } from '$/services/routes'
 import { IntegrationToolsList } from './IntegrationTools'
 import { integrationOptions } from '$/lib/integrationTypeOptions'

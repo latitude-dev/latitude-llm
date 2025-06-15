@@ -20,6 +20,7 @@ import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { ProviderModelSelector } from '$/components/EditorHeader/ProviderModelSelector'
 import { trigger } from '$/lib/events'
 import { envClient } from '$/envClient'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 export type IProviderByName = Record<string, ProviderApiKey>
 
@@ -104,10 +105,9 @@ export const EditorHeader = memo(
         provider === envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
       )
 
-      trigger('ProviderOrModelChanged', {
+      trigger('PromptMetadataChanged', {
         promptLoaded: true,
-        providerName: provider,
-        model: metadataConfig.model as string,
+        config: metadataConfig as LatitudePromptConfig,
       })
     }, [metadataConfig])
     return (
@@ -186,10 +186,8 @@ export const EditorHeader = memo(
             <div className='z-10'>
               <PromptIntegrations
                 disabled={disabledMetadataSelectors}
-                config={metadataConfig ?? {}}
-                setConfig={(config: Record<string, unknown>) => {
-                  onChangePrompt(updatePromptMetadata(prompt, config))
-                }}
+                prompt={prompt}
+                onChangePrompt={onChangePrompt}
               />
             </div>
             <PromptConfiguration

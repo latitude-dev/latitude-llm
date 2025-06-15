@@ -1,7 +1,8 @@
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+
 export interface DocumentEvents {
-  ProviderOrModelChanged: {
+  PromptMetadataChanged: {
     promptLoaded: boolean
-    providerName?: string
-    model?: string
+    config: LatitudePromptConfig
   }
 }

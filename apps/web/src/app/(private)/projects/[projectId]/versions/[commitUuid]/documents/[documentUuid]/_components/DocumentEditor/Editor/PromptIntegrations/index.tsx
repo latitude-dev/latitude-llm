@@ -2,42 +2,50 @@ import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { ButtonWithBadge } from '@latitude-data/web-ui/molecules/ButtonWithBadge'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { useState } from 'react'
-import { useActiveIntegrations } from './utils'
+import { useActiveIntegrations } from './useActiveIntegrations'
 import useIntegrations from '$/stores/integrations'
 import { IntegrationsList } from './IntegrationsList'
 
 export function PromptIntegrations({
-  config,
-  setConfig,
+  prompt,
+  onChangePrompt,
   disabled,
 }: {
-  config: Record<string, unknown>
-  setConfig: (config: Record<string, unknown>) => void
+  prompt: string
+  onChangePrompt: (prompt: string) => void
   disabled?: boolean
 }) {
+  const [isOpen, setIsOpen] = useState(false)
   const { data: integrations, isLoading } = useIntegrations({
     includeLatitudeTools: true,
   })
-
-  const [isOpen, setIsOpen] = useState(false)
-  const { activeIntegrations, addIntegrationTool, removeIntegrationTool } =
-    useActiveIntegrations({
-      config,
-      setConfig,
-      integrations: integrations ?? [],
-    })
+  const {
+    isInitialized,
+    activeIntegrations,
+    addIntegrationTool,
+    removeIntegrationTool,
+  } = useActiveIntegrations({
+    prompt,
+    onChangePrompt,
+    integrations,
+    isLoading,
+  })
 
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
       <Popover.Trigger asChild>
         <ButtonWithBadge
           ellipsis
-          disabled={disabled}
+          disabled={disabled || !isInitialized}
           childrenOnlyText
           badgeAnchor='center'
           variant='outline'
           onClick={() => setIsOpen(true)}
-          iconProps={{ name: 'blocks', className: 'my-0.5' }}
+          iconProps={{
+            name: !isInitialized ? 'loader' : 'blocks',
+            spin: !isInitialized,
+            className: 'my-0.5',
+          }}
           badge={
             Object.keys(activeIntegrations).length > 0 && (
               <Badge centered variant='default' shape='rounded' size='small'>
@@ -60,7 +68,7 @@ export function PromptIntegrations({
       >
         <IntegrationsList
           disabled={disabled}
-          isLoading={isLoading}
+          isLoading={!isInitialized}
           integrations={integrations ?? []}
           activeIntegrations={activeIntegrations}
           addIntegrationTool={addIntegrationTool}
