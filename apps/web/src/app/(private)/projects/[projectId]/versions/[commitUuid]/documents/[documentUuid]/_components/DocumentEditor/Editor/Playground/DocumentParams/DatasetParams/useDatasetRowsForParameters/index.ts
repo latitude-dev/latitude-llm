@@ -159,12 +159,15 @@ export function useDatasetRowsForParameters({
         },
       })
     },
+    // FIXME: Fixing this dependency array declaration causes an infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       emptyInputs,
+      ds.setDataset,
+      ds.assignedDatasets,
       document.linkedDatasetAndRow,
-      dataset,
+      dataset?.id,
       metadataParameters,
-      ds,
     ],
   )
 
@@ -187,7 +190,9 @@ export function useDatasetRowsForParameters({
 
       setPosition(position)
     },
-    [isLoadingRow, setPosition],
+    // FIXME: Fixing this dependency array declaration causes an infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isLoadingRow],
   )
 
   const onNextPage = useCallback(
@@ -220,13 +225,17 @@ export function useDatasetRowsForParameters({
         },
       })
     },
-    [dataset, datasetRow, ds],
+    // FIXME: Fixing this dependency array declaration causes an infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ds.setDataset, ds.inputs, ds.mappedInputs, dataset?.id, datasetRow],
   )
 
   useEffect(() => {
     // React to fresh fetched rows
     onRowsFetched(datasetRows ?? [])
-  }, [datasetRows, onRowsFetched])
+    // FIXME: Fixing this dependency array declaration causes an infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datasetRows])
 
   return {
     isLoading: isLoadingDatasetRowsCount || isLoadingRow,
