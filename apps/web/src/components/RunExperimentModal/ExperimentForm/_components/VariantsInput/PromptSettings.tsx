@@ -1,5 +1,7 @@
 import useModelOptions from '$/hooks/useModelOptions'
 import useProviderApiKeys from '$/stores/providerApiKeys'
+import { Providers } from '@latitude-data/constants'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Slider } from '@latitude-data/web-ui/atoms/Slider'
@@ -60,16 +62,28 @@ export function VariantPromptSettings({
         loading={isLoadingProviders}
         required
       />
-      <Select
-        value={model}
-        name='model'
-        label='Model'
-        placeholder='Select a model'
-        options={modelOptions}
-        onChange={(value) => setModel(value as string)}
-        loading={isLoadingProviders}
-        required
-      />
+      {selectedProvider?.provider === Providers.Custom ? (
+        <Input
+          value={model}
+          name='model'
+          label='Model'
+          placeholder='Enter a model name'
+          onChange={(e) => setModel(e.target.value)}
+          required
+          disabled={isLoadingProviders}
+        />
+      ) : (
+        <Select
+          value={model}
+          name='model'
+          label='Model'
+          placeholder='Select a model'
+          options={modelOptions}
+          onChange={(value) => setModel(value as string)}
+          loading={isLoadingProviders}
+          required
+        />
+      )}
       <div className='flex flex-col gap-2'>
         <Text.H5M>Temperature</Text.H5M>
         <div className='flex flex-row items-center gap-2'>
