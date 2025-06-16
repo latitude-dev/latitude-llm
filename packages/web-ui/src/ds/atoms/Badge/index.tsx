@@ -60,6 +60,7 @@ export interface BadgeProps
   iconProps?: Omit<IconProps, 'size'> & {
     placement: 'start' | 'end'
   }
+  disabled?: boolean
 }
 
 function Badge({
@@ -70,6 +71,7 @@ function Badge({
   ellipsis = false,
   noWrap = false,
   centered = false,
+  disabled = false,
   children,
   iconProps,
   ...props
@@ -81,6 +83,7 @@ function Badge({
         badgeVariants({ variant, shape, size }),
         className,
         {
+          'opacity-50': disabled,
           'flex-row max-h-none gap-x-1 py-px': !!iconProps,
           'justify-center': centered,
         },

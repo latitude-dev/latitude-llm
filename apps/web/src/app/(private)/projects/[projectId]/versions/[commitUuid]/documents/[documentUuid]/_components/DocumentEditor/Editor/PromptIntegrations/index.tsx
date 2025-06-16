@@ -31,12 +31,13 @@ export function PromptIntegrations({
     isLoading,
   })
 
+  const isDisabled = disabled || !isInitialized
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
       <Popover.Trigger asChild>
         <ButtonWithBadge
           ellipsis
-          disabled={disabled || !isInitialized}
+          disabled={isDisabled}
           childrenOnlyText
           badgeAnchor='center'
           variant='outline'
@@ -48,7 +49,13 @@ export function PromptIntegrations({
           }}
           badge={
             Object.keys(activeIntegrations).length > 0 && (
-              <Badge centered variant='default' shape='rounded' size='small'>
+              <Badge
+                centered
+                disabled={isDisabled}
+                variant={isDisabled ? 'muted' : 'default'}
+                shape='rounded'
+                size='small'
+              >
                 {Object.keys(activeIntegrations).length}
               </Badge>
             )
