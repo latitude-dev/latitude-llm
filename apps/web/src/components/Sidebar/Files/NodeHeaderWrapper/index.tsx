@@ -149,7 +149,7 @@ function NodeHeaderWrapper({
             indentation={indentation}
             hasChildren={open && hasChildren}
           />
-          <div className='flex flex-row items-center gap-x-1 mr-1'>
+          <div className='flex flex-row items-center gap-x-1 mr-2'>
             {icons.map((icon, index) => (
               <Icon key={index} name={icon} color={color} />
             ))}
