@@ -1,6 +1,6 @@
 import { ParameterType } from '@latitude-data/constants'
 import { Inputs, InputSource } from '@latitude-data/core/browser'
-import type { ConversationMetadata } from 'promptl-ai'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 
 const ParameterTypes = Object.values(ParameterType) as string[]
 
@@ -11,7 +11,7 @@ export function recalculateInputs<S extends InputSource>({
 }: {
   inputs: Inputs<S>
   fallbackInputs?: Inputs<S>
-  metadata: ConversationMetadata
+  metadata: ResolvedMetadata
 }): Inputs<S> {
   const config = (prompt.config.parameters || {}) as Record<
     string,

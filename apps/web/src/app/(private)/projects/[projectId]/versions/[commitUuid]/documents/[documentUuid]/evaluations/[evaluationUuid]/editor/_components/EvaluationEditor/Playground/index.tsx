@@ -18,7 +18,7 @@ import {
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
-import type { ConversationMetadata } from 'promptl-ai'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { useEvaluationParameters } from '../hooks/useEvaluationParamaters'
 import EvaluationParams from './EvaluationParams'
@@ -35,7 +35,7 @@ export const Playground = memo(
     commit: Commit
     document: DocumentVersion
     evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
-    metadata: ConversationMetadata
+    metadata: ResolvedMetadata
     selectedDocumentLogUuid?: string
   }) => {
     const { project } = useCurrentProject()

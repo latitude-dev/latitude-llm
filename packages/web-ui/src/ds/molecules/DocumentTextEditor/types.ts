@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import type { CompileError } from 'promptl-ai'
+import type { AstError } from '@latitude-data/constants/simpleBlocks'
 
 export type DiffOptions = {
   newValue: string
@@ -13,7 +13,7 @@ export type DocumentTextEditorProps = {
   value: string
   defaultValue?: string
   path?: string
-  compileErrors?: CompileError[]
+  compileErrors?: AstError[]
   onChange?: (value: string) => void
   autoFocus?: boolean
   readOnlyMessage?: string

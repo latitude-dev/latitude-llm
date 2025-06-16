@@ -1,4 +1,4 @@
-import type { ConversationMetadata } from 'promptl-ai'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import { describe, expect, it } from 'vitest'
 
 import { recalculateInputs } from './index'
@@ -26,7 +26,7 @@ describe('recalculateInputs', () => {
             },
           },
         },
-      } as unknown as ConversationMetadata,
+      } as unknown as ResolvedMetadata,
     })
 
     expect(newInputs).toEqual({
@@ -54,7 +54,7 @@ describe('recalculateInputs', () => {
             },
           },
         },
-      } as unknown as ConversationMetadata,
+      } as unknown as ResolvedMetadata,
     })
 
     expect(newInputs).toEqual({
@@ -85,7 +85,7 @@ describe('recalculateInputs', () => {
       metadata: {
         parameters: new Set(['param1']),
         config: {},
-      } as unknown as ConversationMetadata,
+      } as unknown as ResolvedMetadata,
     })
 
     expect(newInputs).toEqual({
@@ -116,7 +116,7 @@ describe('recalculateInputs', () => {
             },
           },
         },
-      } as unknown as ConversationMetadata,
+      } as unknown as ResolvedMetadata,
     })
 
     expect(newInputs).toEqual({
@@ -150,7 +150,7 @@ describe('recalculateInputs', () => {
             },
           },
         },
-      } as unknown as ConversationMetadata,
+      } as unknown as ResolvedMetadata,
     })
 
     expect(newInputs).toEqual({
@@ -183,7 +183,7 @@ describe('recalculateInputs', () => {
             },
           },
         },
-      } as unknown as ConversationMetadata,
+      } as unknown as ResolvedMetadata,
     })
 
     expect(newInputs).toEqual({
@@ -210,7 +210,7 @@ describe('recalculateInputs', () => {
       metadata: {
         parameters: new Set(['param1']),
         config: {},
-      } as unknown as ConversationMetadata,
+      } as unknown as ResolvedMetadata,
     })
 
     expect(newInputs).toEqual({
@@ -242,7 +242,7 @@ describe('recalculateInputs', () => {
             },
           },
         },
-      } as unknown as ConversationMetadata,
+      } as unknown as ResolvedMetadata,
     })
 
     expect(newInputs).toEqual({

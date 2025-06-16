@@ -1,10 +1,10 @@
 import { create } from 'zustand'
 
-import type { ConversationMetadata } from 'promptl-ai'
 import {
   EvaluatedDocumentLog,
   LLM_EVALUATION_PROMPT_PARAMETERS,
 } from '@latitude-data/core/browser'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 
 export type LogInput = {
   value: string
@@ -158,7 +158,7 @@ type EvaluatedLogInputsState = {
   metadataParameters: string[]
   expectedOutput: LogInput
   mapLogParametersToInputs: (log: EvaluatedDocumentLog) => void
-  onMetadataChange: (metadata: ConversationMetadata | undefined) => void
+  onMetadataChange: (metadata: ResolvedMetadata | undefined) => void
   setInputs: (inputs: Record<string, string>) => void
 }
 
@@ -193,7 +193,7 @@ export const useEvaluatedLogInputs = create<EvaluatedLogInputsState>(
       const inputs = serializeInputs(parameters, metadataParameters)
       set({ parameters, filteredParameters, inputs, logsInitiallyLoaded: true })
     },
-    onMetadataChange: (metadata: ConversationMetadata | undefined) => {
+    onMetadataChange: (metadata: ResolvedMetadata | undefined) => {
       if (!metadata) return
 
       const metadataParameters = Array.from(metadata.parameters)

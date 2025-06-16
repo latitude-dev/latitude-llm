@@ -2,6 +2,7 @@ import { env } from '@latitude-data/env'
 
 export const FEATURE_FLAGS = {
   latte: 'latte',
+  blocksEditor: 'blocksEditor',
 } as const
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS
@@ -14,6 +15,7 @@ export const FEATURE_FLAGS_CONDITIONS: Record<
   FeatureFlagCondition
 > = {
   latte: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [1] },
+  blocksEditor: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [] },
 }
 
 export type ResolvedFeatureFlags = Record<FeatureFlag, { enabled: boolean }>

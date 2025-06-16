@@ -10,7 +10,7 @@ import {
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
 import type { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
-import { CompileError } from 'promptl-ai'
+import type { AstError } from '@latitude-data/constants/simpleBlocks'
 import { memo, Suspense, useCallback } from 'react'
 import { DocumentRefinement } from '../DocumentRefinement'
 import { DocumentSuggestions } from '../DocumentSuggestions'
@@ -31,7 +31,7 @@ export const PlaygroundTextEditor = memo(
     readOnlyMessage,
     highlightedCursorIndex,
   }: {
-    compileErrors: CompileError[] | undefined
+    compileErrors: AstError[] | undefined
     project: IProjectContextType['project']
     commit: ICommitContextType['commit']
     document: DocumentVersion

@@ -69,6 +69,7 @@ export function EvaluationEditor({
     ({ promptValue }: { promptValue: string }) => {
       return {
         prompt: promptValue,
+        editorType: 'code' as const,
         promptlVersion: 1,
         providerNames,
         integrationNames,

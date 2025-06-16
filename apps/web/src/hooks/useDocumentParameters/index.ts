@@ -15,7 +15,6 @@ import {
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
-import type { ConversationMetadata } from 'promptl-ai'
 import { detectParamChanges } from './detectParameterChanges'
 import { useMetadataParameters } from './metadataParametersStore'
 import {
@@ -27,6 +26,7 @@ import {
   recalculateAllInputs,
   updateInputsState,
 } from './utils'
+import { type ResolvedMetadata } from '$/workers/readMetadata'
 
 function convertToParams(inputs: Inputs<InputSource>) {
   return Object.fromEntries(
@@ -47,7 +47,7 @@ export function useDocumentParameters({
 }: {
   document: DocumentVersion
   commitVersionUuid: string
-  metadata?: ConversationMetadata | undefined
+  metadata?: ResolvedMetadata | undefined
 }) {
   const { metadataParameters, setParameters, emptyInputs } =
     useMetadataParameters()
@@ -205,7 +205,7 @@ export function useDocumentParameters({
   )
 
   const onMetadataChange = useCallback(
-    (metadata: ConversationMetadata) => {
+    (metadata: ResolvedMetadata) => {
       setValue((oldState) => {
         const prevInputs = useMetadataParameters.getState().prevInputs
         return recalculateAllInputs({
@@ -231,7 +231,7 @@ export function useDocumentParameters({
     },
     [key, setValue, dsId],
   )
-  const lastMetadataRef = useRef<ConversationMetadata | null>(null)
+  const lastMetadataRef = useRef<ResolvedMetadata | null>(null)
 
   const snapshotCurrentDoc = useCallback(() => {
     setValue((oldState) => {

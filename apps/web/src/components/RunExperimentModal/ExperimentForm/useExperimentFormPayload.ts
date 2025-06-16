@@ -61,6 +61,7 @@ export function useExperimentFormPayload({
   useEffect(() => {
     runReadMetadata({
       promptlVersion: document.promptlVersion,
+      editorType: 'code',
       prompt: document.content,
       document,
     })

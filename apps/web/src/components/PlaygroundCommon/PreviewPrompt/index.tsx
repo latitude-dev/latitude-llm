@@ -6,7 +6,7 @@ import {
   LATITUDE_DOCS_URL,
   ProviderRules,
 } from '@latitude-data/core/browser'
-import { ConversationMetadata } from 'promptl-ai'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -61,7 +61,7 @@ export default function PreviewPrompt({
   setExpandParameters,
   actions,
 }: {
-  metadata: ConversationMetadata | undefined
+  metadata: ResolvedMetadata | undefined
   parameters: Record<string, unknown> | undefined
   runPrompt: () => void
   actions?: ReactNode

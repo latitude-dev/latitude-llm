@@ -5,3 +5,4 @@ build
 **/tests/fixtures
 examples/src/**
 docs/examples/**
+ONLY_FOR_COPILOT

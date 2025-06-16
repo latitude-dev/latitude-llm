@@ -18,16 +18,19 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
-import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
+import { type DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import { PlaygroundTextEditor } from './TextEditor'
+import { useEvents } from '$/lib/events'
+import { useNavigate } from '$/hooks/useNavigate'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { UpdateToPromptLButton } from './UpdateToPromptl'
 import { Playground } from './Playground'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { useEvents } from '$/lib/events'
 import { useLatteStreaming } from './useLatteStreaming'
-import { useNavigate } from '$/hooks/useNavigate'
+import { PlaygroundTextEditor } from './TextEditor'
+import { PlaygroundBlocksEditor } from './BlocksEditor'
 
 export default function DocumentEditor({
   document: _document,
@@ -44,6 +47,11 @@ export default function DocumentEditor({
   copilotEnabled: boolean
   initialDiff?: string
 }) {
+  const { enabled: blocksEditorEnabled } = useFeatureFlag({
+    featureFlag: 'blocksEditor',
+  })
+  const [showBlocksEditor, setBlockEditorVisible] = useState(false)
+
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const router = useNavigate()
@@ -127,6 +135,7 @@ export default function DocumentEditor({
       } else {
         runReadMetadata({
           prompt: val,
+          editorType: showBlocksEditor ? 'visual' : 'code',
           documents,
           document,
           fullPath: document.path,
@@ -155,6 +164,7 @@ export default function DocumentEditor({
   useEffect(() => {
     runReadMetadata({
       prompt: value,
+      editorType: showBlocksEditor ? 'visual' : 'code',
       documents,
       document,
       fullPath: document.path,
@@ -169,6 +179,7 @@ export default function DocumentEditor({
     providers,
     integrations,
     document,
+    showBlocksEditor,
     documents,
     runReadMetadata,
     value,
@@ -215,6 +226,10 @@ export default function DocumentEditor({
   const isMerged = commit.mergedAt !== null
 
   const name = document.path.split('/').pop() ?? document.path
+  const readOnlyMessage = isMerged
+    ? 'Create a draft to edit documents.'
+    : customReadOnlyMessage
+
   return (
     <>
       <SplitPane
@@ -282,25 +297,44 @@ export default function DocumentEditor({
                 freeRunsCount={freeRunsCount}
                 showCopilotSetting={copilotEnabled}
               />
-              <PlaygroundTextEditor
-                compileErrors={metadata?.errors}
-                project={project}
-                document={document}
-                commit={commit}
-                setDiff={setDiff}
-                diff={diff}
-                value={value}
-                defaultValue={document.content}
-                copilotEnabled={copilotEnabled}
-                readOnlyMessage={
-                  isMerged
-                    ? 'Create a draft to edit documents.'
-                    : customReadOnlyMessage
-                }
-                isSaved={!isUpdatingContent}
-                onChange={onChange}
-                highlightedCursorIndex={highlightedCursorIndex}
-              />
+              {blocksEditorEnabled ? (
+                <div className='flex flex-row justify-end'>
+                  <SwitchInput
+                    fullWidth={false}
+                    label='Enable Simple editor'
+                    defaultChecked={showBlocksEditor}
+                    checked={showBlocksEditor}
+                    onCheckedChange={setBlockEditorVisible}
+                  />
+                </div>
+              ) : null}
+              {showBlocksEditor ? (
+                <PlaygroundBlocksEditor
+                  readOnlyMessage={readOnlyMessage}
+                  isSaved={!isUpdatingContent}
+                  defaultValue={document.content}
+                  value={value}
+                  blocks={metadata?.blocks}
+                  onChange={onChange}
+                  compileErrors={metadata?.errors}
+                />
+              ) : (
+                <PlaygroundTextEditor
+                  compileErrors={metadata?.errors}
+                  project={project}
+                  document={document}
+                  commit={commit}
+                  setDiff={setDiff}
+                  diff={diff}
+                  value={value}
+                  defaultValue={document.content}
+                  copilotEnabled={copilotEnabled}
+                  readOnlyMessage={readOnlyMessage}
+                  isSaved={!isUpdatingContent}
+                  onChange={onChange}
+                  highlightedCursorIndex={highlightedCursorIndex}
+                />
+              )}
             </div>
           </SplitPane.Pane>
         }

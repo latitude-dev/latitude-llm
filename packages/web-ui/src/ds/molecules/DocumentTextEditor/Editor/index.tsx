@@ -3,7 +3,7 @@ import { CheckCircle2, LoaderCircle } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { MarkerSeverity, type editor } from 'monaco-editor'
-import { CompileError } from 'promptl-ai'
+import { AstError } from '@latitude-data/constants/simpleBlocks'
 
 import {
   AppLocalStorage,
@@ -18,7 +18,7 @@ import { CopilotSection } from './CopilotSection'
 import { MonacoDiffEditor } from './DiffEditor'
 import { RegularMonacoEditor } from './RegularEditor'
 
-const NO_ERRORS: CompileError[] = []
+const NO_ERRORS: AstError[] = []
 export function DocumentTextEditor({
   value,
   path,
@@ -53,7 +53,7 @@ export function DocumentTextEditor({
 
   const errorMarkers = useMemo<DocumentError[]>(
     () =>
-      errors.map((error: CompileError) => {
+      errors.map((error) => {
         return {
           startLineNumber: error.start?.line ?? 0,
           startColumn: error.start?.column ?? 0,

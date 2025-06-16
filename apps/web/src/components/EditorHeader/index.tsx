@@ -3,7 +3,7 @@ import { memo, ReactNode, useEffect, useState } from 'react'
 import { updatePromptMetadata } from '$/lib/promptMetadata'
 import { ROUTES } from '$/services/routes'
 import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
-import type { ConversationMetadata } from 'promptl-ai'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
   AppLocalStorage,
   useLocalStorage,
@@ -42,7 +42,7 @@ export const EditorHeader = memo(
   }: {
     title: string | ReactNode
     titleVerticalAlign?: 'top' | 'center'
-    metadata: ConversationMetadata | undefined
+    metadata: ResolvedMetadata | undefined
     prompt: string
     onChangePrompt: (prompt: string) => void
     rightActions?: ReactNode

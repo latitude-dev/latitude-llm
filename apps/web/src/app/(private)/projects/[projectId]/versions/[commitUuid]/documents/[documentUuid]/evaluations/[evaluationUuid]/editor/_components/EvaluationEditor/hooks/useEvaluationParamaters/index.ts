@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react'
-import type { ConversationMetadata } from 'promptl-ai'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
   DocumentVersion,
   EvaluationType,
@@ -24,7 +24,7 @@ export function useEvaluationParameters({
   commitVersionUuid: string
   document: DocumentVersion
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
-  metadata?: ConversationMetadata | undefined
+  metadata?: ResolvedMetadata | undefined
 }) {
   const state = useEvaluatedLogInputs()
   const { value: allInputs, setValue } =
