@@ -43,7 +43,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@ai-sdk/amazon-bedrock": "2.2.4",
+    "@ai-sdk/amazon-bedrock": "2.2.10",
     "@ai-sdk/anthropic": "1.1.0",
     "@ai-sdk/azure": "1.1.0",
     "@ai-sdk/deepseek": "0.2.5",
