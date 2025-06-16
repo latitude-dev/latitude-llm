@@ -20,7 +20,7 @@ export const addMessageToLatteAction = authProcedure
 
     const threadScope = new LatteThreadsRepository(workspace.id)
     const thread = await threadScope
-      .findByUuid({ threadUuid, userId: user.id })
+      .findByUuidAndUser({ threadUuid, userId: user.id })
       .then((r) => r.unwrap())
 
     const runResult = await createLatteJob({

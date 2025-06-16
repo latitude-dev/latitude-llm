@@ -20,6 +20,7 @@ import { WebsocketClient } from '../../../../../websockets/workers'
 import { z } from 'zod'
 import { scanDocuments } from '../../helpers'
 import { createLatteThreadCheckpoints } from '../../threads'
+import { updateLatteChanges } from '../../threads/updateChanges'
 
 async function executeEditAction(
   {
@@ -179,17 +180,28 @@ const editProject = defineLatteTool(
           {},
         )
 
-      const checkpointsResult = await createLatteThreadCheckpoints(
+      if (Object.keys(missingCheckpoints).length) {
+        const newCheckpointsResult = await createLatteThreadCheckpoints(
+          {
+            threadUuid,
+            commitId: commit.id,
+            checkpoints: missingCheckpoints,
+          },
+          tx,
+        )
+        if (!newCheckpointsResult.ok) {
+          return Result.error(newCheckpointsResult.error!)
+        }
+      }
+
+      // Notify the client about the new checkpoints
+      await updateLatteChanges(
         {
+          workspaceId: workspace.id,
           threadUuid,
-          commitId: commit.id,
-          checkpoints: missingCheckpoints,
         },
         tx,
       )
-      if (!checkpointsResult.ok) {
-        return Result.error(checkpointsResult.error!)
-      }
 
       // Scan the updated project for errors
       const newDocuments = await documentsScope

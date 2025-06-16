@@ -9,6 +9,8 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import type { BotEmotion } from '@latitude-data/web-ui/molecules/DynamicBot'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
+import { cn } from '@latitude-data/web-ui/utils'
+import { ChangeList } from './_components/Changes'
 
 const INPUT_PLACEHOLDERS = [
   'Create a prompt that categorizes tickets based on their content.',
@@ -27,7 +29,16 @@ export function LatteChat({
   setEmotion: (emotion: BotEmotion) => void
   reactWithEmotion: (emotion: BotEmotion, time?: number) => void
 }) {
-  const { sendMessage, isLoading, resetChat, interactions, error } = useLatte()
+  const {
+    sendMessage,
+    isLoading,
+    resetChat,
+    interactions,
+    error,
+    changes,
+    acceptChanges,
+    undoChanges,
+  } = useLatte()
 
   const inConversation = interactions.length > 0
   const placeholder = useTypeWriterValue(
@@ -104,16 +115,25 @@ export function LatteChat({
           </div>
         </div>
         <div className='p-4 pt-0 max-w-[600px] w-full relative flex flex-col gap-0'>
+          <ChangeList
+            changes={changes}
+            undoChanges={undoChanges}
+            acceptChanges={acceptChanges}
+            disabled={isLoading}
+          />
           <TextArea
-            className='bg-transparent w-full px-2 pt-2 pb-14 resize-none text-sm'
+            className={cn(
+              'bg-transparent w-full px-2 pt-2 pb-14 resize-none text-sm',
+              { 'rounded-t-none border-t-0': changes.length > 0 },
+            )}
             placeholder={inConversation ? 'Ask anything' : placeholder}
-            autoGrow
+            autoGrow={value !== ''}
             disabled={isLoading || !!error}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
             minRows={2}
-            maxRows={5}
+            maxRows={value === '' ? 2 : 5} // fixes auto-grow with dynamic placeholder
           />
           <div className='absolute bottom-0 right-0 pb-6 pr-6'>
             <Button

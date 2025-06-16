@@ -15,7 +15,6 @@ export const CollapsedInteractionSteps = ({
 
   useEffect(() => {
     setCurrentLine(steps.length) // +1 for the initial thinking step
-    console.log('current line =', steps.length)
   }, [steps.length])
 
   return (

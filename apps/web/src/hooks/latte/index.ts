@@ -13,7 +13,11 @@ import { LatteInteraction, LatteToolStep } from './types'
 import { getDescriptionFromToolCall } from './helpers'
 import { trigger } from '$/lib/events'
 import { useLatteContext } from './context'
-import { LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
+import {
+  LatteEditAction,
+  LatteThreadChanges,
+  LatteTool,
+} from '@latitude-data/constants/latte'
 import { acceptLatteChangesAction } from '$/actions/latte/acceptChanges'
 import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
 
@@ -23,6 +27,7 @@ export function useLatte() {
 
   const [interactions, setInteractions] = useState<LatteInteraction[]>([])
   const [error, setError] = useState<string>()
+  const [changes, setChanges] = useState<LatteThreadChanges[]>([])
 
   const latteContext = useLatteContext()
 
@@ -31,6 +36,7 @@ export function useLatte() {
     setInteractions([])
     setIsLoading(false)
     setError(undefined)
+    setChanges([])
   }, [])
 
   const { execute: createNewChat } = useServerAction(createNewLatteAction, {
@@ -222,6 +228,18 @@ export function useLatte() {
     },
   })
 
+  useSockets({
+    event: 'latteChanges',
+    onMessage: ({ threadUuid: incomingThreadUuid, changes }) => {
+      console.log('Latte changes received:', {
+        threadUuid: incomingThreadUuid,
+        changes,
+      })
+      if (!threadUuid || threadUuid !== incomingThreadUuid) return
+      setChanges(changes)
+    },
+  })
+
   const handleError = useCallback(
     ({
       threadUuid: incomingthreadUuid,
@@ -250,6 +268,7 @@ export function useLatte() {
       isLoading,
       interactions,
       error,
+      changes,
       acceptChanges,
       undoChanges,
     }),
@@ -259,6 +278,7 @@ export function useLatte() {
       isLoading,
       interactions,
       error,
+      changes,
       acceptChanges,
       undoChanges,
     ],

@@ -1,5 +1,5 @@
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
-import { DocumentVersion, LatteThreadCheckpoint } from '../../../../browser'
+import { LatteThreadCheckpoint } from '../../../../browser'
 import { database } from '../../../../client'
 import { Result } from '../../../../lib/Result'
 import { PromisedResult } from '../../../../lib/Transaction'
@@ -10,6 +10,10 @@ import {
 } from '../../../../repositories'
 import { getChangesToRevertDocuments } from '../../../commits/computeRevertChanges'
 import { updateDocument } from '../../../documents'
+import {
+  getDocumentsFromCheckpoint,
+  groupCheckpointsByCommitId,
+} from './helpers'
 
 export async function undoLatteThreadChanges(
   {
@@ -26,19 +30,7 @@ export async function undoLatteThreadChanges(
     .findAllCheckpoints(threadUuid)
     .then((r) => r.unwrap())
 
-  // Group checkpoints by commitId
-  const checkpointsByCommitId = checkpoints.reduce(
-    (acc, checkpoint) => {
-      const commitId = checkpoint.commitId
-      if (!acc[commitId]) {
-        acc[commitId] = []
-      }
-      acc[commitId].push(checkpoint)
-      return acc
-    },
-    {} as Record<number, LatteThreadCheckpoint[]>,
-  )
-
+  const checkpointsByCommitId = groupCheckpointsByCommitId(checkpoints)
   const results = await Promise.all(
     Object.entries(checkpointsByCommitId).map(
       async ([commitId, checkpoints]) => {
@@ -61,32 +53,6 @@ export async function undoLatteThreadChanges(
   }
 
   return Result.nil()
-}
-
-function getCheckpointedState({
-  currentState,
-  checkpoints,
-}: {
-  currentState: DocumentVersion[]
-  checkpoints: LatteThreadCheckpoint[]
-}): DocumentVersion[] {
-  checkpoints.forEach(({ data: documentData, documentUuid }) => {
-    if (!documentData) {
-      // document did not exist in the checkpoint, so we remove it
-      currentState = currentState.filter(
-        (doc) => doc.documentUuid !== documentUuid,
-      )
-      return
-    }
-
-    // document existed in the checkpoint, so we return it to that state
-    currentState = currentState.map((doc) => {
-      if (doc.documentUuid !== documentUuid) return doc
-      return documentData as DocumentVersion
-    })
-  })
-
-  return currentState
 }
 
 export async function undoChangesToDraft(
@@ -119,8 +85,8 @@ export async function undoChangesToDraft(
     .getDocumentsAtCommit(commit)
     .then((r) => r.unwrap())
 
-  const checkpointedState = getCheckpointedState({
-    currentState: currentDraftState,
+  const checkpointedState = getDocumentsFromCheckpoint({
+    documents: currentDraftState,
     checkpoints,
   })
 

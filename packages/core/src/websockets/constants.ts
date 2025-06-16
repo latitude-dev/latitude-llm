@@ -16,6 +16,7 @@ import type {
   ExperimentDto,
   ProviderLogDto,
 } from '../browser'
+import { LatteThreadChanges } from '@latitude-data/constants/latte'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
@@ -112,6 +113,10 @@ export type WebServerToClientEvents = {
     draftUuid: string
     updates: DocumentVersion[]
   }) => void
+  latteChanges: (args: {
+    threadUuid: string
+    changes: LatteThreadChanges[]
+  }) => void
   latteError: (args: { threadUuid: string; error: string }) => void
 }
 
@@ -162,6 +167,10 @@ export type WorkersClientToServerEvents = {
   latteDraftUpdate: (args: {
     workspaceId: number
     data: { draftUuid: string; updates: DocumentVersion[] }
+  }) => void
+  latteChanges: (args: {
+    workspaceId: number
+    data: { threadUuid: string; changes: LatteThreadChanges[] }
   }) => void
   latteError: (args: {
     workspaceId: number

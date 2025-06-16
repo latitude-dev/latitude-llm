@@ -30,6 +30,7 @@ export {
   HEAD_COMMIT,
   LegacyChainEventTypes,
   LogSources,
+  ModifiedDocumentType,
   StreamEventTypes,
   type LegacyChainEvent,
 } from '@latitude-data/constants'
@@ -57,13 +58,6 @@ export {
 } from './services/ai/providers/models'
 
 export type Message = CompilerMessage
-
-export enum ModifiedDocumentType {
-  Created = 'created',
-  Updated = 'updated',
-  UpdatedPath = 'updated_path',
-  Deleted = 'deleted',
-}
 
 export const HELP_CENTER = {
   commitVersions: `${LATITUDE_DOCS_URL}/not-found`,

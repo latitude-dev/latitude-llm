@@ -24,7 +24,7 @@ const byErrors =
     return bErrors - aErrors
   }
 
-function changesPresenter({
+export function changesPresenter({
   currentCommitChanges,
   previousCommitDocuments,
   errors,

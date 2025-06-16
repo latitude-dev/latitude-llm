@@ -28,7 +28,7 @@ export function DocumentChange({
   changeType: ModifiedDocumentType
   oldPath?: string
   isSelected: boolean
-  onClick: () => void
+  onClick?: () => void
   options?: MenuOption[]
   isDimmed?: boolean
 }) {
@@ -84,7 +84,7 @@ export function DocumentChange({
         {options && (isHovered || isMenuOpen) && (
           <DropdownMenu
             onOpenChange={(open: boolean) => {
-              onClick()
+              onClick?.()
               setIsMenuOpen(open)
             }}
             triggerButtonProps={{

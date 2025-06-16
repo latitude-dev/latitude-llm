@@ -8,7 +8,6 @@ import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
 import { MODIFICATION_ICONS } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { useHover } from '@latitude-data/web-ui/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -16,6 +15,7 @@ import { useNodeValidator } from './useNodeValidator'
 import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
 import { IndentationBar } from '$/components/Sidebar/Files/IndentationBar'
 import { colors } from '@latitude-data/web-ui/tokens'
+import { ModifiedDocumentType } from '@latitude-data/constants'
 
 export type IndentType = { isLast: boolean }
 

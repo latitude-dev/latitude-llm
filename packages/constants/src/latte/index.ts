@@ -1,3 +1,5 @@
+import { ChangedDocument } from '..'
+
 export * from './actions'
 
 export enum LatteTool {
@@ -10,4 +12,10 @@ export enum LatteTool {
 
   listProviders = 'list_providers',
   listIntegrations = 'list_integrations',
+}
+
+export type LatteThreadChanges = {
+  projectId: number
+  commitUuid: string
+  changes: ChangedDocument[]
 }
