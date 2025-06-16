@@ -2,7 +2,6 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
-import useDatasetRows from '$/stores/datasetRows'
 import { serializeRows } from '$/stores/datasetRows/rowSerializationHelpers'
 import { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
@@ -44,20 +43,18 @@ function useCachedRows({
         currentPage.current += 1
       }
     },
-    [cache, dataset, startingPage, pageSize],
+    [cache, dataset, pageSize],
   )
 }
 
 export function useDatasetRowsSocket({
   initialRenderIsProcessing,
   dataset,
-  mutate,
   pageSize,
   currentPage,
 }: {
   initialRenderIsProcessing: boolean
   dataset: Dataset
-  mutate: ReturnType<typeof useDatasetRows>['mutate']
   currentPage: number
   pageSize: string
 }) {
@@ -89,7 +86,7 @@ export function useDatasetRowsSocket({
       })
       setRowsInCache(event.rows)
     },
-    [dataset, mutate, toast, setIsProcessing, setRowsInCache, setProcessedRows],
+    [dataset, toast, setIsProcessing, setRowsInCache, setProcessedRows],
   )
 
   useSockets({ event: 'datasetRowsCreated', onMessage })

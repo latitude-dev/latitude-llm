@@ -26,7 +26,7 @@ function CommitItem({
   const userName = useMemo(
     () =>
       users?.find((user) => user.id === commit.userId)?.name ?? 'Unknown user',
-    [users],
+    [users, commit.userId],
   )
   const { getChangesToRevert, getChangesToReset } = useCommitActions({
     commit,

@@ -93,6 +93,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
       [setConversation],
     )
 
+  const sharedUuid = shared.uuid!
   const runPrompt = useCallback(
     async (parameters: Record<string, string>) => {
       isLoadingPrompt.current = true
@@ -107,7 +108,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
       try {
         const { response: actionResponse, output } =
           await runSharedPromptAction({
-            publishedDocumentUuid: shared.uuid!,
+            publishedDocumentUuid: sharedUuid,
             parameters,
           })
 
@@ -190,7 +191,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
         setResponseStream(undefined)
       }
     },
-    [runSharedPromptAction, setMessages, shared.uuid],
+    [setMessages, sharedUuid],
   )
 
   const resetPrompt = useCallback(() => {

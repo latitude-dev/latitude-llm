@@ -61,7 +61,7 @@ export function BarChart({ config }: { config: BarChartConfig }) {
 
       return <Text.H5B>{dataPayload.label}</Text.H5B>
     },
-    [config.tooltipLabel],
+    [config],
   )
 
   const tooltipFormatter = useCallback(
@@ -88,7 +88,7 @@ export function BarChart({ config }: { config: BarChartConfig }) {
         </div>
       )
     },
-    [config.xAxis.label, config.yAxis.label],
+    [config],
   )
 
   return (

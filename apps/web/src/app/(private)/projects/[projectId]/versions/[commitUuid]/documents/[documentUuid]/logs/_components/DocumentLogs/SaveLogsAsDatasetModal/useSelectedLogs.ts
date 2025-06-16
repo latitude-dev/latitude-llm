@@ -116,9 +116,9 @@ export function useSelectedLogs({
     setSelectedCount(selectableState.selectedCount)
     fetchPreview()
   }, [
+    previewModalState,
     fetchPreview,
     setSelectedLogsIds,
-    previewModalState.onOpen,
     selectableState.selectedRowIds,
     selectableState.selectedCount,
   ])
@@ -176,12 +176,14 @@ export function useSelectedLogs({
       })
     },
     [
-      setSelectedDataset,
-      selectedLogsIds,
-      setSelectedLogsIds,
+      commit.uuid,
       createDatasetFromLogs,
-      previewModalState.onClose,
-      selectableState.clearSelections,
+      document.documentUuid,
+      filterOptions,
+      project.id,
+      selectableState.excludedIds,
+      selectableState.selectionMode,
+      selectedLogsIds,
     ],
   )
   return useMemo(

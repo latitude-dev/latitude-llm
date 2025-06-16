@@ -40,9 +40,10 @@ function ConfigurationSimpleForm({
   EvaluationType.Rule,
   RuleEvaluationMetric.SemanticSimilarity
 >) {
-  // TODO: Remove this default when more algorithms are implemented
+  // TODO: Do not set state in useEffects. Move this to an event handler.
   useEffect(() => {
     setConfiguration({ ...configuration, algorithm: 'cosine_distance' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

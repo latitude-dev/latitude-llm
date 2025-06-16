@@ -31,7 +31,7 @@ export default function usePendingRewardClaims(opts?: SWRConfiguration) {
       if (!data) return EMPTY_ARRAY
 
       return data
-    }, []),
+    }, [toast]),
     opts,
   )
 

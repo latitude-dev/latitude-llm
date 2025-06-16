@@ -68,6 +68,8 @@ const EVALUATION_METRIC_OPTIONS = <
   })
 }
 
+// FIXME: Settings is a global object passed around which causes terrible
+// performance issues.
 export default function EvaluationV2Form<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
@@ -102,19 +104,25 @@ export default function EvaluationV2Form<
   useEffect(() => {
     if (mode === 'update') return
     if (metricSpecification) return
+    // FIXME: use proper callback setState so that you don't depend on options
+    // in the useEffect hook
     setSettings({
       ...settings,
       metric: EVALUATION_METRIC_OPTIONS(settings.type)[0]!.value as M,
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metricSpecification?.ConfigurationSimpleForm])
 
   useEffect(() => {
     if (mode === 'update') return
     if (!metricSpecification) return
+    // FIXME: use proper callback setState so that you don't depend on options
+    // in the useEffect hook
     setOptions({
       ...options,
       evaluateLiveLogs: !!metricSpecification.supportsLiveEvaluation,
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metricSpecification?.supportsLiveEvaluation])
 
   const commitMerged = mode === 'update' && !!commit.mergedAt

@@ -22,9 +22,9 @@ export default function DailyOverviewChart<
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   const metricSpecification = typeSpecification.metrics[evaluation.metric]
-
   const configuration = metricSpecification.chartConfiguration({ evaluation })
 
+  // FIXME: Is configuration getting instantiated on every render?
   const data = useMemo(() => {
     return (
       stats?.dailyOverview.map((point) => ({
@@ -33,6 +33,7 @@ export default function DailyOverviewChart<
         y: Number(configuration.scale(point.averageScore).toFixed(2)),
       })) || []
     )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stats])
 
   const minY = useMemo(() => {

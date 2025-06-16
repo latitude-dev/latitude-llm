@@ -11,7 +11,7 @@ export async function processWebhookPayload(
 ): Promise<TypedResult<WebhookPayload, Error>> {
   try {
     switch (event.type) {
-      case 'documentLogCreated':
+      case 'documentLogCreated': {
         const { id, workspaceId } = event.data
         const repo = new DocumentLogsRepository(workspaceId)
         const log = await repo.find(id).then((r) => r.unwrap())
@@ -36,6 +36,7 @@ export async function processWebhookPayload(
               : undefined,
           },
         })
+      }
       default:
         return Result.ok({
           eventType: event.type,

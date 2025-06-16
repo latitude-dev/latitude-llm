@@ -95,6 +95,8 @@ export function ConfigurationAdvancedForm<
   useEffect(() => {
     if (formatIsAccessible) return
     if (!configuration.actualOutput) return
+    // FIXME: use proper callback setState so that you don't depend on options
+    // in the useEffect hook
     setConfiguration({
       ...configuration,
       actualOutput: {
@@ -102,6 +104,7 @@ export function ConfigurationAdvancedForm<
         fieldAccessor: undefined,
       },
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formatIsAccessible])
 
   const [testConfiguration] = useDebounce(configuration.actualOutput, 333)

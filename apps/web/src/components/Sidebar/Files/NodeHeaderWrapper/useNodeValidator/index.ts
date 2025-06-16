@@ -88,7 +88,7 @@ export function useNodeValidator({
         setIsEditing(false)
       }
     },
-    [saveValue, leaveWithoutSave, inputRef, setIsEditing],
+    [saveValue, leaveWithoutSave, inputRef, setIsEditing, saveAndAddOther],
   )
 
   return {

@@ -29,7 +29,7 @@ function CommitCheckbox({
         ? selectedCommitsIds.filter((id) => id !== commit.id)
         : [...selectedCommitsIds, commit.id],
     )
-  }, [selectedCommitsIds, commit, isSelected])
+  }, [selectedCommitsIds, commit, isSelected, onSelectCommits])
 
   return (
     <Checkbox

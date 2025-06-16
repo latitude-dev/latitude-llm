@@ -65,7 +65,7 @@ export function AreaChart({
 
       return <Text.H5B>{dataPayload.label}</Text.H5B>
     },
-    [config.tooltipLabel],
+    [config],
   )
 
   const tooltipFormatter = useCallback(
@@ -92,7 +92,7 @@ export function AreaChart({
         </div>
       )
     },
-    [config.xAxis.label, config.yAxis.label],
+    [config],
   )
 
   return (

@@ -40,9 +40,10 @@ function ConfigurationSimpleForm({
   EvaluationType.Rule,
   RuleEvaluationMetric.SchemaValidation
 >) {
-  // TODO: Remove this default when more formats are implemented
+  // TODO: Do not set state in useEffects. Move this to an event handler.
   useEffect(() => {
     setConfiguration({ ...configuration, format: 'json' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

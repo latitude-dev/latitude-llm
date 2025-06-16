@@ -37,6 +37,7 @@ function ConfigurationSimpleForm({
   errors,
   disabled,
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
+  // FIXME: Do not use useEffect to set local state. Move this to an event handler.
   useEffect(() => {
     if (mode !== 'create') return
     if (!configuration.provider || !configuration.model) return
@@ -80,6 +81,7 @@ ${
 `.trim(),
       }),
     )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, configuration.provider, configuration.model, settings.metric])
 
   return (

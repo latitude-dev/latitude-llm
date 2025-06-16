@@ -57,7 +57,10 @@ export default function PublishDraftCommitModal({
       onClose(null)
     },
   })
-  const commit = useMemo(() => data.find((c) => c.id === commitId), [commitId])
+  const commit = useMemo(
+    () => data.find((c) => c.id === commitId),
+    [commitId, data],
+  )
   const { project } = useCurrentProject()
   const router = useRouter()
   const {
@@ -81,6 +84,7 @@ export default function PublishDraftCommitModal({
     }
   }, [commit])
 
+  // FIXME: Do not use useEffect to set state.
   useEffect(() => {
     async function load() {
       if (!commitId) return
@@ -115,6 +119,7 @@ export default function PublishDraftCommitModal({
     }
 
     load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commitId, project.id])
   const anyChanges = changes.length > 0
   const hasErrors = !anyChanges || groups.errors.length > 0

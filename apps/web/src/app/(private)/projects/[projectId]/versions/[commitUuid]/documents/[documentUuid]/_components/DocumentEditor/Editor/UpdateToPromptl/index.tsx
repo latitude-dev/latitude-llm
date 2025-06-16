@@ -92,6 +92,9 @@ export function UpgradeToPromptlModal({
       document.documentUuid,
       commit.uuid,
       commit.mergedAt,
+      createDraftWithPromptlUpgrade,
+      mutate,
+      router,
     ],
   )
 

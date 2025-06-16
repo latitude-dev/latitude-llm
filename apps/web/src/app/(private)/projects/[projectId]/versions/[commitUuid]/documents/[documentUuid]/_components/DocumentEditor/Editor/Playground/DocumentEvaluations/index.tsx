@@ -19,13 +19,12 @@ import {
   ICommitContextType,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import {
   CollapsedContentHeader,
   ExpandedContent,
   ExpandedContentHeader,
 } from './BoxContent'
-import { Snapshot } from './shared'
 
 const useEvaluationResultsV2Socket = ({
   evaluations,
@@ -104,14 +103,14 @@ export default function DocumentEvaluations({
     )
   }, [evaluationResultsV2, documentLog])
 
-  const [snapshot, setSnapshot] = useState<Snapshot>()
-  useEffect(() => {
-    if (!documentLog || snapshot?.documentLog.id === documentLog.id) return
-    setSnapshot({
-      documentLog: documentLog,
+  const snapshot = useMemo(() => {
+    if (!documentLog) return
+
+    return {
+      documentLog,
       evaluations: evaluations.filter((e) => e.evaluateLiveLogs),
-    })
-  }, [documentLog])
+    }
+  }, [documentLog, evaluations])
 
   const isWaiting = useMemo(
     () =>

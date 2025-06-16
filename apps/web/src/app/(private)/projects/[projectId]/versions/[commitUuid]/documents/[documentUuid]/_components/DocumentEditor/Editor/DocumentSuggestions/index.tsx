@@ -78,10 +78,13 @@ export function DocumentSuggestions({
   const [notifier, setNotifier] = useState<Notifier>({ isOpen: false })
   const notify = useCallback(() => {
     if (notifier.timeout) clearTimeout(notifier.timeout)
+
     setNotifier({
       isOpen: true,
       timeout: setTimeout(() => setNotifier({ isOpen: false }), 5000),
     })
+    // FIXME: Adding notifier as a dependency would trigger an infinite loop, fix this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setNotifier])
   useEffect(() => {
     if (isOpen) setNotifier({ isOpen: false })

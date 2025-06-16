@@ -40,9 +40,10 @@ function ConfigurationSimpleForm({
   EvaluationType.Rule,
   RuleEvaluationMetric.NumericSimilarity
 >) {
-  // TODO: Remove this default when more algorithms are implemented
+  // TODO: Do not set state in useEffects. Move this to an event handler.
   useEffect(() => {
     setConfiguration({ ...configuration, algorithm: 'relative_difference' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

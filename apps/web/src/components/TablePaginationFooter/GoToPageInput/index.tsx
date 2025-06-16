@@ -20,29 +20,32 @@ export function GoToPageInput({
   onPageChange?: (page: number) => void
 }) {
   const router = useNavigate()
-  const onSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const onSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
 
-    const targetPage = Number(new FormData(event.currentTarget).get('page'))
-    const urlParams = new URLSearchParams(window.location.search)
+      const targetPage = Number(new FormData(event.currentTarget).get('page'))
+      const urlParams = new URLSearchParams(window.location.search)
 
-    // Replace or add the page parameter
-    urlParams.set('page', targetPage.toString())
+      // Replace or add the page parameter
+      urlParams.set('page', targetPage.toString())
 
-    if (baseUrl) {
-      router.push(
-        buildPaginatedUrl({
-          baseUrl,
-          page: targetPage,
-          pageSize,
-          queryParams: urlParams.toString(),
-          encodeQueryParams: false,
-        }),
-      )
-    }
+      if (baseUrl) {
+        router.push(
+          buildPaginatedUrl({
+            baseUrl,
+            page: targetPage,
+            pageSize,
+            queryParams: urlParams.toString(),
+            encodeQueryParams: false,
+          }),
+        )
+      }
 
-    onPageChange?.(targetPage)
-  }, [])
+      onPageChange?.(targetPage)
+    },
+    [baseUrl, onPageChange, pageSize, router],
+  )
   return (
     <form onSubmit={onSubmit}>
       <Input

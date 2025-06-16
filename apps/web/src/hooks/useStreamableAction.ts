@@ -70,7 +70,7 @@ export function useStreamableAction<T extends (...args: any[]) => any>(
         setLoading(false)
       }
     },
-    [action, onEvent],
+    [action, onEvent, error],
   )
 
   return { runAction, responseStream, done, error, isLoading }

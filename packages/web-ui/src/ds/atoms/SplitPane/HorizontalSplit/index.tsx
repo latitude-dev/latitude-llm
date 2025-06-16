@@ -50,13 +50,9 @@ export function HorizontalSplit({
 
     const percentage = initialPercentage / 100
     setPaneWidth(Math.max(initialWidthFromRef * percentage, minWidth))
-  }, [
-    initialWidth,
-    initialWidthFromRef,
-    initialPercentage,
-    paneWidth,
-    minWidth,
-  ])
+    // FIXME: Do not use useEffect to set local state paneWidth.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialWidth, initialWidthFromRef, initialPercentage, minWidth])
 
   useEffect(() => {
     if (!autoResize) return
@@ -66,7 +62,7 @@ export function HorizontalSplit({
       setPaneWidth(newPaneWidth)
     }
     oldWidthRef.current = initialWidthFromRef
-  }, [initialWidthFromRef, paneWidth, minWidth])
+  }, [initialWidthFromRef, paneWidth, minWidth, autoResize])
 
   return (
     <div

@@ -59,7 +59,7 @@ export default function NewIntegration() {
     (open: boolean) => !open && navigate.push(ROUTES.settings.root),
     [navigate],
   )
-  const { data: integrations, create, isCreating } = useIntegrations()
+  const { create, isCreating } = useIntegrations()
   const onSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault()
@@ -87,7 +87,7 @@ export default function NewIntegration() {
         })
       }
     },
-    [create],
+    [create, onOpenChange, toast],
   )
 
   const [integrationType, setIntegrationType] = useState<
@@ -103,7 +103,7 @@ export default function NewIntegration() {
       errors.push('Name cannot contain slashes')
     }
     return errors.length ? errors : undefined
-  }, [integrationName, integrations])
+  }, [integrationName])
 
   return (
     <Modal

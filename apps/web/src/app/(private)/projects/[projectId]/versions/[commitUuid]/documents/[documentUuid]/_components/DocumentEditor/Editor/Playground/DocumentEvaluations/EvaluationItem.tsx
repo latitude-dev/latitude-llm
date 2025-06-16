@@ -105,16 +105,7 @@ export default function EvaluationItem({
       evaluationUuid: evaluation.uuid,
       documentLogUuid,
     })
-  }, [
-    project,
-    commit,
-    document,
-    result,
-    evaluation,
-    isWaiting,
-    documentLog,
-    goToEvaluationsV2Editor,
-  ])
+  }, [goToEvaluationsV2Editor, evaluation.uuid, documentLog?.uuid])
 
   return (
     <div

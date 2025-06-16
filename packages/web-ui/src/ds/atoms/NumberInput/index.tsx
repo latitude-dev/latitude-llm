@@ -49,6 +49,9 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
     useEffect(() => {
       if (value === undefined) onChange?.(undefined)
       else onChange?.(Math.min(Math.max(value, min), max))
+      // FIXME: We are not memoizing this function prop which results in many
+      // executions of this side effect. Fix this.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value, min, max])
 
     const internalRef = useRef<HTMLInputElement>(null)

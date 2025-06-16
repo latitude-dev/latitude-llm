@@ -100,12 +100,13 @@ export default function Chat({
     [playground.messages, playground.chainLength],
   )
 
-  // Start chat on first render
+  // FIXME: Do not run side effects on useEffect. Move to event handler.
   useEffect(() => {
     if (!runOnce.current) {
       runOnce.current = true
       playground.start()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playground.start])
 
   return (

@@ -45,7 +45,6 @@ export default async function DocumentPage({
     return (
       <DocumentVersionProvider
         document={document}
-        documentUuid={documentUuid}
         projectId={projectId}
         commitUuid={commitUuid}
       >

@@ -150,7 +150,7 @@ export default function CommitSelector({
             ? BadgeType.Merged
             : BadgeType.Draft,
     }
-  }, [currentCommit.id, headCommit?.id, currentCommit.mergedAt])
+  }, [currentCommit, headCommit])
 
   const [publishCommit, setPublishCommit] = useState<number | null>(null)
   const [deleteCommit, setDeleteCommit] = useState<number | null>(null)
