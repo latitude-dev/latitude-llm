@@ -1,3 +1,4 @@
+import type { DocumentVersion, SimplifiedDocumentVersion } from './models'
 import { AGENT_RETURN_TOOL_NAME } from './config'
 import { ToolCall } from '@latitude-data/compiler'
 
@@ -73,4 +74,15 @@ export function extractAgentToolCalls(
     },
     [[], []] as [ToolCall[], ToolCall[]],
   )
+}
+
+export function simplifyDocument(
+  document: DocumentVersion,
+): SimplifiedDocumentVersion {
+  return {
+    documentUuid: document.documentUuid,
+    path: document.path,
+    content: document.content,
+    isDeleted: document.deletedAt !== null,
+  }
 }

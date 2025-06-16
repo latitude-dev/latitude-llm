@@ -69,15 +69,22 @@ export type ProviderLog = {
 
 export type DocumentVersion = {
   id: number
+  createdAt: Date
+  updatedAt: Date
+  deletedAt: Date | null
   documentUuid: string
+  commitId: number
   path: string
   content: string
   resolvedContent: string | null
-  contentHash: string
-  promptlVersion: number
-  commitId: number
+  contentHash: string | null
   datasetId: number | null
-  deletedAt: Date | null
-  createdAt: Date
-  updatedAt: Date
+  datasetV2Id: number | null
+}
+
+export type SimplifiedDocumentVersion = {
+  documentUuid: string
+  path: string
+  content: string
+  isDeleted: boolean
 }

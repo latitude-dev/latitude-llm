@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { CommitStatus } from '@latitude-data/core/browser'
-import { ChangedDocument } from '@latitude-data/core/repositories'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -16,6 +15,7 @@ import { useRouter } from 'next/navigation'
 import { useServerAction } from 'zsa-react'
 import { ChangesList, GroupedChanges } from './ChangesList'
 import { ChangeDiff } from './ChangeDiff'
+import { ChangedDocument } from '@latitude-data/constants'
 
 function confirmDescription({
   isLoading,

@@ -1,9 +1,4 @@
-import {
-  Commit,
-  HEAD_COMMIT,
-  ModifiedDocumentType,
-} from '@latitude-data/core/browser'
-import { ChangedDocument } from '@latitude-data/core/repositories'
+import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentChangeSkeleton } from '@latitude-data/web-ui/molecules/DocumentChange'
@@ -19,6 +14,7 @@ import { ROUTES } from '$/services/routes'
 import { useDocumentActions } from './documentActions'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useMemo } from 'react'
+import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
 
 function useCanRevert({
   commit,

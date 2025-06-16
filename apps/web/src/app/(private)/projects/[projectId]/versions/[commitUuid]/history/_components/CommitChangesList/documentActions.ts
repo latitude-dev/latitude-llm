@@ -1,5 +1,4 @@
 import { Commit } from '@latitude-data/core/browser'
-import { ChangedDocument } from '@latitude-data/core/repositories'
 import { useCurrentCommit } from '@latitude-data/web-ui/browser'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
@@ -10,6 +9,7 @@ import { revertDocumentChangesAction } from '$/actions/history/revertDocumentVer
 import { useCallback } from 'react'
 import { getChangesToResetDocumentAction } from '$/actions/history/resetDocumentVersion/getChangesToResetDocumentAction'
 import { resetDocumentVersionAction } from '$/actions/history/resetDocumentVersion/resetDocumentVersionAction'
+import { ChangedDocument } from '@latitude-data/constants'
 
 export function useDocumentActions({
   commit,

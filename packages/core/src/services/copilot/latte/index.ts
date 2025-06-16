@@ -18,7 +18,10 @@ import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
 import { handleToolRequest } from './tools'
 import { WebsocketClient } from '../../../websockets/workers'
 
-export * from './threads'
+export * from './threads/createThread'
+export * from './threads/checkpoints/createCheckpoint'
+export * from './threads/checkpoints/undoChanges'
+export * from './threads/checkpoints/clearCheckpoints'
 
 async function generateCopilotResponse({
   copilotWorkspace,
@@ -71,25 +74,27 @@ async function generateCopilotResponse({
     await run.toolCalls,
   )
 
-  let toolResponseMessages: ToolMessage[]
+  let toolResponseMessages: ToolMessage[] = []
   try {
-    toolResponseMessages = await Promise.all(
-      otherToolCalls.map(async (toolCall) => {
-        const r = await handleToolRequest({
-          threadUuid,
-          tool: toolCall,
-          workspace: clientWorkspace,
-          messages: await run.messages,
-          onFinish: async (msg) => {
-            WebsocketClient.sendEvent('latteMessage', {
-              workspaceId: clientWorkspace.id,
-              data: { threadUuid, message: msg },
-            })
-          },
-        })
-        return r.unwrap()
-      }),
-    )
+    if (otherToolCalls.length) {
+      toolResponseMessages = await Promise.all(
+        otherToolCalls.map(async (toolCall) => {
+          const r = await handleToolRequest({
+            threadUuid,
+            tool: toolCall,
+            workspace: clientWorkspace,
+            messages: await run.messages,
+            onFinish: async (msg) => {
+              WebsocketClient.sendEvent('latteMessage', {
+                workspaceId: clientWorkspace.id,
+                data: { threadUuid, message: msg },
+              })
+            },
+          })
+          return r.unwrap()
+        }),
+      )
+    }
   } catch (error) {
     return Result.error(error as LatitudeError)
   }

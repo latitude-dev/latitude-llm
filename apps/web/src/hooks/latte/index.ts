@@ -13,7 +13,11 @@ import { LatteInteraction, LatteToolStep } from './types'
 import { getDescriptionFromToolCall } from './helpers'
 import { trigger } from '$/lib/events'
 import { useLatteContext } from './context'
-import { LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
+import {
+  LatteChange,
+  LatteEditAction,
+  LatteTool,
+} from '@latitude-data/constants/latte'
 import { acceptLatteChangesAction } from '$/actions/latte/acceptChanges'
 import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
 
@@ -23,6 +27,7 @@ export function useLatte() {
 
   const [interactions, setInteractions] = useState<LatteInteraction[]>([])
   const [error, setError] = useState<string>()
+  const [changes, setChanges] = useState<LatteChange[]>([])
 
   const latteContext = useLatteContext()
 
@@ -31,6 +36,7 @@ export function useLatte() {
     setInteractions([])
     setIsLoading(false)
     setError(undefined)
+    setChanges([])
   }, [])
 
   const { execute: createNewChat } = useServerAction(createNewLatteAction, {
@@ -55,16 +61,47 @@ export function useLatte() {
 
   const { execute: executeAcceptChanges } = useServerAction(
     acceptLatteChangesAction,
+    {
+      onSuccess: () => {
+        setChanges([])
+        setIsLoading(false)
+      },
+      onError: ({ err }) => {
+        setError(err.message)
+        setIsLoading(false)
+      },
+    },
   )
   const { execute: executeUndoChanges } = useServerAction(
     discardLatteChangesActions,
+    {
+      onSuccess: () => {
+        // Undo changes in the UI
+        trigger('LatteChanges', {
+          changes: changes.map((c) => ({
+            ...c,
+            previous: c.current,
+            current: c.previous ?? { ...c.current, isDeleted: true },
+          })),
+        })
+        // Clear changes state
+        setChanges([])
+        setIsLoading(false)
+      },
+      onError: ({ err }) => {
+        setError(err.message)
+        setIsLoading(false)
+      },
+    },
   )
   const acceptChanges = useCallback(() => {
     if (!threadUuid) return
+    setIsLoading(true)
     executeAcceptChanges({ threadUuid })
   }, [threadUuid, executeAcceptChanges])
   const undoChanges = useCallback(() => {
     if (!threadUuid) return
+    setIsLoading(true)
     executeUndoChanges({ threadUuid })
   }, [threadUuid, executeUndoChanges])
 
@@ -94,13 +131,16 @@ export function useLatte() {
   )
 
   const handleNewMessage = useCallback(
-    ({
-      threadUuid: incomingthreadUuid,
-      message,
-    }: {
-      threadUuid: string
-      message: Message
-    }) => {
+    (msg: { threadUuid: string; message: Message }) => {
+      const currentTimeAsString = new Date().toString()
+      if (!msg) {
+        console.warn(
+          'Received empty latteMessage message from server',
+          currentTimeAsString,
+        )
+        return
+      }
+      const { threadUuid: incomingthreadUuid, message } = msg
       if (!threadUuid) return
       if (threadUuid !== incomingthreadUuid) return
 
@@ -216,9 +256,49 @@ export function useLatte() {
   })
 
   useSockets({
-    event: 'latteDraftUpdate',
-    onMessage: ({ draftUuid, updates }) => {
-      trigger('DraftUpdatedByLatte', { draftUuid, updates })
+    event: 'latteChanges',
+    onMessage: (msg: { threadUuid: string; changes: LatteChange[] }) => {
+      if (!msg) {
+        console.warn('Received empty latteChanges message from server')
+        return
+      }
+      const { threadUuid: incomingThreadUuid, changes: newChanges } = msg
+
+      trigger('LatteChanges', { changes: newChanges })
+      if (!threadUuid || threadUuid !== incomingThreadUuid) return
+
+      // Update the changes state: Update existing changes, add new ones, and remove equal changes
+      setChanges((prevChanges) => {
+        const updatedChanges = [...prevChanges]
+
+        newChanges.forEach((newChange) => {
+          const index = updatedChanges.findIndex(
+            (change) =>
+              change.draftUuid === newChange.draftUuid &&
+              change.current.documentUuid === newChange.current.documentUuid,
+          )
+
+          if (index === -1) {
+            // Add new change
+            updatedChanges.push(newChange)
+            return
+          }
+
+          // Change already exists
+          const existingChange = updatedChanges[index]!
+
+          if (existingChange.previous === newChange.current) {
+            // Change returned the prompt to the previous state, remove from changes
+            updatedChanges.splice(index, 1)
+            return
+          }
+
+          // Update existing change
+          updatedChanges[index]!.current = newChange.current
+        })
+
+        return updatedChanges
+      })
     },
   })
 
@@ -250,6 +330,7 @@ export function useLatte() {
       isLoading,
       interactions,
       error,
+      changes,
       acceptChanges,
       undoChanges,
     }),
@@ -259,6 +340,7 @@ export function useLatte() {
       isLoading,
       interactions,
       error,
+      changes,
       acceptChanges,
       undoChanges,
     ],

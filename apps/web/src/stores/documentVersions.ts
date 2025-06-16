@@ -341,15 +341,29 @@ export default function useDocumentVersions(
     })
 
   useEvents({
-    onDraftUpdatedByLatte: ({ draftUuid, updates }) => {
-      if (commitUuid !== draftUuid) return
+    onLatteChanges: ({ changes }) => {
+      const commitChanges = changes.filter((c) => c.draftUuid === commitUuid)
+      if (commitChanges.length === 0) return
+
       mutate((prev) => {
-        return [
-          ...(prev ?? []).filter(
-            (d) => !updates.some((u) => u.documentUuid === d.documentUuid),
-          ),
-          ...updates.filter((d) => !d.deletedAt),
-        ]
+        if (!prev) return prev
+
+        changes.forEach((change) => {
+          if (change.previous) {
+            const index = prev.findIndex(
+              (d) => d.documentUuid === change.previous!.documentUuid,
+            )
+            if (index === -1) return
+
+            if (change.current.deletedAt) {
+              prev.splice(index, 1)
+            }
+
+            prev[index] = change.current as DocumentVersion
+          } else {
+            prev.push(change.current as DocumentVersion)
+          }
+        })
       })
     },
   })

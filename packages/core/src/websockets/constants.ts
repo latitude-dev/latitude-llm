@@ -5,7 +5,6 @@
 
 import type { Message } from '@latitude-data/compiler'
 import type {
-  DocumentVersion,
   Commit,
   Dataset,
   DatasetRow,
@@ -16,6 +15,7 @@ import type {
   ExperimentDto,
   ProviderLogDto,
 } from '../browser'
+import { LatteChange } from '@latitude-data/constants/latte'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
@@ -108,10 +108,7 @@ export type WebServerToClientEvents = {
   mcpServerScaleEvent: (args: McpServerScaleEventArgs) => void
   mcpServerConnected: (args: McpServerConnectedArgs) => void
   latteMessage: (args: { threadUuid: string; message: Message }) => void
-  latteDraftUpdate: (args: {
-    draftUuid: string
-    updates: DocumentVersion[]
-  }) => void
+  latteChanges: (args: { threadUuid: string; changes: LatteChange[] }) => void
   latteError: (args: { threadUuid: string; error: string }) => void
 }
 
@@ -159,9 +156,9 @@ export type WorkersClientToServerEvents = {
       message: Message
     }
   }) => void
-  latteDraftUpdate: (args: {
+  latteChanges: (args: {
     workspaceId: number
-    data: { draftUuid: string; updates: DocumentVersion[] }
+    data: { threadUuid: string; changes: LatteChange[] }
   }) => void
   latteError: (args: {
     workspaceId: number

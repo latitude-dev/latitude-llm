@@ -16,7 +16,7 @@ export const discardLatteChangesActions = authProcedure
     const { threadUuid } = input
 
     await undoLatteThreadChanges({
-      workspaceId: workspace.id,
+      workspace,
       threadUuid,
     }).then((r) => r.unwrap())
 

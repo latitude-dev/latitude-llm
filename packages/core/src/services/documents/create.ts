@@ -61,6 +61,7 @@ export async function createNewDocument(
     content,
     promptlVersion = 1,
     createDemoEvaluation: demoEvaluation = false,
+    includeDefaultContent = true,
   }: {
     workspace: Workspace
     user?: User
@@ -70,6 +71,7 @@ export async function createNewDocument(
     content?: string
     promptlVersion?: number
     createDemoEvaluation?: boolean
+    includeDefaultContent?: boolean
   },
   db = database,
 ): Promise<TypedResult<DocumentVersion, Error>> {
@@ -98,11 +100,15 @@ export async function createNewDocument(
       )
     }
 
-    const defaultContent = await defaultDocumentContent(
-      { workspace, agent },
-      tx,
-    )
-    const docContent = await applyContent({ content, defaultContent })
+    let docContent = content ?? ''
+    if (includeDefaultContent) {
+      const defaultContent = await defaultDocumentContent(
+        { workspace, agent },
+        tx,
+      )
+      docContent = await applyContent({ content, defaultContent })
+    }
+
     const documentType = await getDocumentType({
       content: docContent,
       promptlVersion,
