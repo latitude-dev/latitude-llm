@@ -182,7 +182,7 @@ export default function Chat({
         <ChatTextArea
           canChat={canChat}
           clearChat={clearChat}
-          placeholder='Enter followup message...'
+          placeholder='Enter follow up message...'
           onSubmit={playground.submitUserMessage}
           toolRequests={playground.unresponedToolCalls}
           addMessages={playground.addMessages}

@@ -5,7 +5,7 @@ import { documentSuggestionsQueue } from '../../jobs/queues'
 import { EvaluationResultV2CreatedEvent } from '../events'
 import { NotFoundError } from './../../lib/errors'
 
-const LIVE_SUGGESTION_SOURCES = [LogSources.Playground, LogSources.Evaluation]
+const LIVE_SUGGESTION_SOURCES = [LogSources.Playground, LogSources.Experiment]
 
 // TODO(evalsv2): add tests for evals v2
 export const requestDocumentSuggestionJobV2 = async ({

@@ -9,18 +9,18 @@ export enum SpanKind {
 export enum SpanSource {
   API = 'api',
   Playground = 'playground',
-  Evaluation = 'evaluation',
+  Evaluation = 'evaluation', // Note: spans generated from prompts of llm evaluations
   Experiment = 'experiment',
   User = 'user',
   SharedPrompt = 'shared_prompt',
-  AgentAsTool = 'agent_as_tool', // TODO(tracing): deprecated, use SegmentType.Agent instead
+  AgentAsTool = 'agent_as_tool', // TODO(tracing): deprecated, use SegmentType.Conversation with DocumentType.Agent instead
   EmailTrigger = 'email_trigger',
   ScheduledTrigger = 'scheduled_trigger',
 }
 
 // Note: loosely based on OpenTelemetry GenAI semantic conventions
 export enum SpanType {
-  Tool = 'tool', // Note: asynchronous tools such as agents are document segments
+  Tool = 'tool', // Note: asynchronous tools such as agents are conversation segments
   Completion = 'completion',
   Embedding = 'embedding',
   Retrieval = 'retrieval',
@@ -29,7 +29,7 @@ export enum SpanType {
   Unknown = 'unknown', // Other spans we don't care about. They are also used as wrappers so spans belong to the same trace.
 }
 
-export enum SpanStatusCode {
+export enum SpanStatus {
   Unset = 'unset',
   Ok = 'ok',
   Error = 'error',
@@ -50,7 +50,7 @@ export type SpanLink = {
   attributes?: Record<string, SpanAttribute>
 }
 
-export type BaseSpanMetadata<T extends SpanType = SpanType> = {
+type BaseSpanMetadata<T extends SpanType = SpanType> = {
   traceId: string
   spanId: string
   type: T
@@ -59,7 +59,7 @@ export type BaseSpanMetadata<T extends SpanType = SpanType> = {
   links: SpanLink[]
 }
 
-export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
+type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
   name: string
   call: {
     id: string
@@ -72,24 +72,26 @@ export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
   }
 }
 
-export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
+type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   provider: string
   model: string
   configuration: Record<string, unknown>
-  template?: string
-  parameters?: Record<string, unknown>
+  template: string
+  parameters: Record<string, unknown>
   input: Record<string, unknown>[]
   // Fields below are optional if the span had an error
   output?: Record<string, unknown>[]
   tokens?: {
-    input: number
-    output: number
+    prompt: number
+    cached: number
+    reasoning: number
+    completion: number
   }
-  cost?: number
+  cost?: number // Enriched when ingested
   finishReason?: string
 }
 
-export type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> & {
+type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> & {
   request: {
     method: string
     url: string
@@ -117,18 +119,18 @@ export type SpanMetadata<T extends SpanType = SpanType> =
 
 export type Span<T extends SpanType = SpanType> = {
   id: string
-  workspaceId: number
-  apiKeyId: number
   traceId: string
   segmentId?: string
   parentId?: string // Parent span identifier
+  workspaceId: number
+  apiKeyId: number
   externalId?: string // Custom user identifier
   name: string
   kind: SpanKind
   source: SpanSource
   type: T
-  statusCode: SpanStatusCode
-  statusMessage?: string
+  status: SpanStatus
+  message?: string
   duration: number
   startedAt: Date
   endedAt: Date
@@ -137,5 +139,5 @@ export type Span<T extends SpanType = SpanType> = {
 }
 
 export type SpanWithDetails<T extends SpanType = SpanType> = Span<T> & {
-  metadata: SpanMetadata<T>
+  metadata?: SpanMetadata<T> // Metadata is optional if it could not be uploaded
 }

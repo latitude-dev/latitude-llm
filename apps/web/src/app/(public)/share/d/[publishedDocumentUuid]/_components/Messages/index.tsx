@@ -112,7 +112,7 @@ export function Messages({
             canChat
             clearChat={onReset}
             onSubmit={onChat}
-            placeholder='Enter followup message...'
+            placeholder='Enter follow up message...'
           />
         ) : (
           <Button fancy variant='default' onClick={onReset}>

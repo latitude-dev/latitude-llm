@@ -435,8 +435,8 @@ class Latitude {
   }: {
     provider: string
     config: Config
-    prompt?: string
-    parameters?: Record<string, unknown>
+    prompt: string
+    parameters: Record<string, unknown>
     messages: M[]
     adapter: ProviderAdapter<M>
   } & Pick<RenderChainOptions<M>, 'onStep'>) {
@@ -490,8 +490,8 @@ class Latitude {
     step: number
     provider: string
     config: Config
-    prompt?: string
-    parameters?: Record<string, unknown>
+    prompt: string
+    parameters: Record<string, unknown>
     messages: M[]
     adapter: ProviderAdapter<M>
   } & Pick<RenderChainOptions<M>, 'onStep' | 'tools'>) {
@@ -550,10 +550,8 @@ class Latitude {
         provider:
           (step.config.provider as string) || prompt.provider || 'unknown',
         config,
-        ...(index === 1 && {
-          prompt: prompt.content,
-          parameters,
-        }),
+        prompt: prompt.content,
+        parameters,
         messages: step.messages,
         onStep,
         tools,
@@ -608,10 +606,8 @@ class Latitude {
         provider:
           (step.config.provider as string) || prompt.provider || 'unknown',
         config,
-        ...(index === 1 && {
-          prompt: prompt.content,
-          parameters,
-        }),
+        prompt: prompt.content,
+        parameters,
         messages: step.messages,
         onStep,
         tools,
@@ -643,10 +639,8 @@ class Latitude {
         provider:
           (step.config.provider as string) || prompt.provider || 'unknown',
         config,
-        ...(index === 1 && {
-          prompt: prompt.content,
-          parameters,
-        }),
+        prompt: prompt.content,
+        parameters,
         messages,
         onStep,
         tools,

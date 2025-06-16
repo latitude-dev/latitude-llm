@@ -158,7 +158,7 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","name":"fake-document-path","type":"document","documentRunUuid":"%ANY%","versionUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 1","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -191,6 +191,30 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'gen_ai.usage.input_tokens',
                   value: {
                     intValue: 19,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.prompt_tokens',
+                  value: {
+                    intValue: 19,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.cached_tokens',
+                  value: {
+                    intValue: 0,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.reasoning_tokens',
+                  value: {
+                    intValue: 0,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.completion_tokens',
+                  value: {
+                    intValue: 8,
                   },
                 },
                 {
@@ -264,22 +288,8 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","name":"fake-document-path","type":"document","documentRunUuid":"%ANY%","versionUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 1","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
-                  },
-                },
-                {
-                  key: 'gen_ai.request.template',
-                  value: {
-                    stringValue:
-                      '---\nprovider: openai\nmodel: gpt-4o\ntype: agent\ntemperature: 0.5\nmaxTokens: 1000\ntools:\n  - get_weather:\n      description: Get the weather for a given location\n      parameters:\n        location:\n          type: string\n          description: The location to get the weather for\n---   \n\n<step>\n    Think step by step about the user question:\n    <user> {{ question }} </user>\n</step>\n\n<step>\n  Think harder.\n</step>\n\n<step>\n  Now think freely, remember, you are an agent.\n</step>',
-                  },
-                },
-                {
-                  key: 'gen_ai.request.parameters',
-                  value: {
-                    stringValue:
-                      '{"question":"What is the weather in Barcelona?"}',
                   },
                 },
                 {
@@ -435,7 +445,7 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","name":"fake-document-path","type":"document","documentRunUuid":"%ANY%","versionUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 2","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -469,6 +479,30 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'gen_ai.usage.input_tokens',
                   value: {
                     intValue: 30,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.prompt_tokens',
+                  value: {
+                    intValue: 30,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.cached_tokens',
+                  value: {
+                    intValue: 0,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.reasoning_tokens',
+                  value: {
+                    intValue: 0,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.completion_tokens',
+                  value: {
+                    intValue: 16,
                   },
                 },
                 {
@@ -542,7 +576,7 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","name":"fake-document-path","type":"document","documentRunUuid":"%ANY%","versionUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 2","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -725,7 +759,7 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","name":"fake-document-path","type":"document","documentRunUuid":"%ANY%","versionUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 3","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -777,6 +811,30 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'gen_ai.usage.input_tokens',
                   value: {
                     intValue: 57,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.prompt_tokens',
+                  value: {
+                    intValue: 57,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.cached_tokens',
+                  value: {
+                    intValue: 0,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.reasoning_tokens',
+                  value: {
+                    intValue: 0,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.completion_tokens',
+                  value: {
+                    intValue: 19,
                   },
                 },
                 {
@@ -874,7 +932,7 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","name":"fake-document-path","type":"document","documentRunUuid":"%ANY%","versionUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 3","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -943,7 +1001,7 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","name":"fake-document-path","type":"document","documentRunUuid":"%ANY%","versionUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 3","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -1182,7 +1240,7 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","name":"fake-document-path","type":"document","documentRunUuid":"%ANY%","versionUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 4","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -1228,6 +1286,30 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'gen_ai.usage.input_tokens',
                   value: {
                     intValue: 84,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.prompt_tokens',
+                  value: {
+                    intValue: 84,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.cached_tokens',
+                  value: {
+                    intValue: 0,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.reasoning_tokens',
+                  value: {
+                    intValue: 0,
+                  },
+                },
+                {
+                  key: 'gen_ai.usage.completion_tokens',
+                  value: {
+                    intValue: 0,
                   },
                 },
                 {
@@ -1326,7 +1408,7 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","name":"fake-document-path","type":"document","documentRunUuid":"%ANY%","versionUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 4","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -1395,7 +1477,7 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","name":"fake-document-path","type":"document","documentRunUuid":"%ANY%","versionUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"},{"id":"%ANY%","parentId":"%ANY%","name":"Step 4","type":"step"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"},{"id":"%ANY%","parentId":"%ANY%","type":"step"}]',
                     ),
                   },
                 },
@@ -1418,7 +1500,8 @@ export const LATITUDE_RENDERING_SPANS = {
             {
               traceId: expect.any(String),
               spanId: expect.any(String),
-              name: 'document',
+              parentSpanId: expect.any(String),
+              name: 'interaction',
               kind: 3,
               startTimeUnixNano: expect.any(String),
               endTimeUnixNano: expect.any(String),
@@ -1451,7 +1534,63 @@ export const LATITUDE_RENDERING_SPANS = {
                   key: 'latitude.segments',
                   value: {
                     stringValue: expectMasked(
-                      '[{"id":"%ANY%","name":"fake-document-path","type":"document","documentRunUuid":"%ANY%","versionUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}]',
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}},{"id":"%ANY%","parentId":"%ANY%","type":"interaction"}]',
+                    ),
+                  },
+                },
+                {
+                  key: 'latitude.segment.parent_id',
+                  value: {
+                    stringValue: expect.any(String),
+                  },
+                },
+              ]),
+              droppedAttributesCount: expect.any(Number),
+              events: [],
+              droppedEventsCount: expect.any(Number),
+              status: {
+                code: 1,
+              },
+              links: [],
+              droppedLinksCount: expect.any(Number),
+            },
+            {
+              traceId: expect.any(String),
+              spanId: expect.any(String),
+              name: 'conversation',
+              kind: 3,
+              startTimeUnixNano: expect.any(String),
+              endTimeUnixNano: expect.any(String),
+              attributes: expect.arrayContaining([
+                {
+                  key: 'latitude.source',
+                  value: {
+                    stringValue: 'api',
+                  },
+                },
+                {
+                  key: 'latitude.type',
+                  value: {
+                    stringValue: 'unknown',
+                  },
+                },
+                {
+                  key: 'gen_ai.operation.name',
+                  value: {
+                    stringValue: 'unknown',
+                  },
+                },
+                {
+                  key: 'latitude.segment.id',
+                  value: {
+                    stringValue: expect.any(String),
+                  },
+                },
+                {
+                  key: 'latitude.segments',
+                  value: {
+                    stringValue: expectMasked(
+                      '[{"id":"%ANY%","type":"conversation","data":{"commitUuid":"fake-version-uuid","documentUuid":"fake-document-uuid"}}]',
                     ),
                   },
                 },
