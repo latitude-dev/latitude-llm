@@ -88,6 +88,23 @@ class AnnotateEvaluationRequestBody(Model):
     metadata: Optional[Metadata] = None
 
 
+class GetAllProjectsRequestParams(Model):
+    pass
+
+
+class CreateProjectRequestParams(Model):
+    pass
+
+
+class CreateProjectRequestBody(Model):
+    name: str
+
+
+class GetCommitRequestParams(Model):
+    project_id: int
+    commit_uuid: str
+
+
 RequestParams = Union[
     GetPromptRequestParams,
     GetAllPromptRequestParams,
@@ -96,6 +113,9 @@ RequestParams = Union[
     ChatPromptRequestParams,
     CreateLogRequestParams,
     AnnotateEvaluationRequestParams,
+    GetAllProjectsRequestParams,
+    CreateProjectRequestParams,
+    GetCommitRequestParams,
 ]
 
 
@@ -105,6 +125,7 @@ RequestBody = Union[
     ChatPromptRequestBody,
     CreateLogRequestBody,
     AnnotateEvaluationRequestBody,
+    CreateProjectRequestBody,
 ]
 
 
@@ -116,3 +137,6 @@ class RequestHandler(StrEnum):
     ChatPrompt = "CHAT_PROMPT"
     CreateLog = "CREATE_LOG"
     AnnotateEvaluation = "ANNOTATE_EVALUATION"
+    GetAllProjects = "GET_ALL_PROJECTS"
+    CreateProject = "CREATE_PROJECT"
+    GetCommit = "GET_COMMIT"

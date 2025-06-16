@@ -59,7 +59,7 @@ export async function updateDocument(
     promptlVersion?: number
     deletedAt?: Date | null
   },
-  trx = database,
+  db = database,
 ): Promise<TypedResult<DocumentVersion, Error>> {
   return await Transaction.call(async (tx) => {
     const updatedDocData = Object.fromEntries(
@@ -147,5 +147,5 @@ export async function updateDocument(
     ).then((r) => r.unwrap())
 
     return Result.ok(updatedDocs[0]!)
-  }, trx)
+  }, db)
 }

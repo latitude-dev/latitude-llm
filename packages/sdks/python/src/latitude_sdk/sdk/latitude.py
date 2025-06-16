@@ -6,7 +6,9 @@ from latitude_sdk.client import Client, ClientOptions, RouterOptions
 from latitude_sdk.env import env
 from latitude_sdk.sdk.evaluations import Evaluations
 from latitude_sdk.sdk.logs import Logs
+from latitude_sdk.sdk.projects import Projects
 from latitude_sdk.sdk.prompts import Prompts
+from latitude_sdk.sdk.versions import Versions
 from latitude_sdk.sdk.types import GatewayOptions, LogSources, SdkOptions
 from latitude_sdk.util import Model
 
@@ -52,6 +54,8 @@ class Latitude:
     prompts: Prompts
     logs: Logs
     evaluations: Evaluations
+    projects: Projects
+    versions: Versions
 
     def __init__(self, api_key: str, options: Optional[LatitudeOptions] = None):
         options = LatitudeOptions(**{**dict(DEFAULT_LATITUDE_OPTIONS), **dict(options or {})})
@@ -79,3 +83,5 @@ class Latitude:
         self.prompts = Prompts(self._client, self.promptl, self._options)
         self.logs = Logs(self._client, self._options)
         self.evaluations = Evaluations(self._client, self._options)
+        self.projects = Projects(self._client, self._options)
+        self.versions = Versions(self._client, self._options)

@@ -59,6 +59,31 @@ export async function makeRequest<H extends HandlerType>({
       options,
       retries: retries + 1,
     })
+  } else if (!response.ok) {
+    let error = ''
+    try {
+      error = await response.text()
+
+      const { message } = JSON.parse(error) as {
+        errorCode: string
+        message: string
+        dbErrorRef: string
+      }
+
+      throw new Error(
+        `Request to ${url} failed with status ${response.status}: ${message}`,
+      )
+    } catch (e) {
+      if (error) {
+        throw new Error(
+          `Request to ${url} failed with status ${response.status}: ${error}`,
+        )
+      } else {
+        throw new Error(
+          `Request to ${url} failed with status ${response.status}`,
+        )
+      }
+    }
   }
 
   return response

@@ -31,6 +31,7 @@ import {
   GetPromptOptions,
   HandlerType,
   LogSources,
+  Project,
   Prompt,
   RenderChainOptions,
   RenderPromptOptions,
@@ -44,6 +45,7 @@ import {
   ToolInstrumentation,
   ToolSpec,
   TraceInstrumentation,
+  Version,
 } from '$sdk/utils/types'
 import {
   AdapterMessageType,
@@ -110,9 +112,31 @@ class Latitude {
     ) => Promise<DocumentLog>
   }
 
+  public projects: {
+    getAll: () => Promise<Project[]>
+    create: (name: string) => Promise<{
+      project: Project
+      version: Version
+    }>
+  }
+
+  public commits: {
+    push: (
+      projectId: number,
+      baseCommitUuid: string,
+      changes: Array<{
+        path: string
+        content: string
+        status: 'added' | 'modified' | 'deleted' | 'unchanged'
+        contentHash?: string
+      }>,
+    ) => Promise<{ commitUuid: string }>
+  }
+
   public prompts: {
     get: (path: string, args?: GetPromptOptions) => Promise<Prompt>
     getAll: (args?: GetPromptOptions) => Promise<Prompt[]>
+    create: (path: string, args?: GetOrCreatePromptOptions) => Promise<Prompt>
     getOrCreate: (
       path: string,
       args?: GetOrCreatePromptOptions,
@@ -135,6 +159,11 @@ class Latitude {
     renderAgent: <M extends AdapterMessageType = PromptlMessage>(
       args: RenderChainOptions<M>,
     ) => Promise<{ config: Config; messages: M[]; result: unknown }>
+  }
+
+  public versions: {
+    get: (projectId: number, commitUuid: string) => Promise<Version>
+    create: (name: string, opts?: { projectId?: number }) => Promise<Version>
   }
 
   constructor(
@@ -179,17 +208,37 @@ class Latitude {
       create: this.createLog.bind(this),
     }
 
+    // Initialize projects namespace
+    this.projects = {
+      getAll: this.getAllProjects.bind(this),
+      create: this.createProject.bind(this),
+    }
+
+    // Initialize commits namespace
+    this.commits = {
+      push: this.pushCommit.bind(this),
+    }
+
     // Initialize prompts namespace
     this.prompts = {
       get: this.getPrompt.bind(this),
       getAll: this.getAllPrompts.bind(this),
       getOrCreate: this.getOrCreatePrompt.bind(this),
+      create: this.createPrompt.bind(this),
       run: this.runPrompt.bind(this),
       chat: this.chat.bind(this),
       render: this.renderPrompt.bind(this),
       renderChain: this.renderChain.bind(this),
       renderAgent: this.renderAgent.bind(this),
     }
+
+    // Initialize versions namespace
+    this.versions = {
+      get: this.getVersion.bind(this),
+      create: this.createVersion.bind(this),
+    }
+
+    // Initialize __internal namespace
   }
 
   static instrument(instrumentation: Instrumentation) {
@@ -297,6 +346,26 @@ class Latitude {
     }
 
     return (await response.json()) as Prompt[]
+  }
+
+  private async createPrompt(
+    path: string,
+    { projectId, versionUuid, prompt }: GetOrCreatePromptOptions = {},
+  ) {
+    projectId = projectId ?? this.options.projectId
+    if (!projectId) throw new Error('Project ID is required')
+
+    versionUuid = versionUuid ?? this.options.versionUuid
+
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.CreateDocument,
+      params: { projectId: Number(projectId), versionUuid },
+      body: { path, prompt },
+      options: this.options,
+    })
+
+    return (await response.json()) as Prompt
   }
 
   private async getOrCreatePrompt(
@@ -740,6 +809,44 @@ class Latitude {
     }
   }
 
+  private async getAllProjects() {
+    const response = await makeRequest({
+      method: 'GET',
+      handler: HandlerType.GetAllProjects,
+      params: {},
+      options: this.options,
+    })
+
+    if (!response.ok) {
+      const error = (await response.json()) as ApiErrorJsonResponse
+
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
+      })
+    }
+
+    return (await response.json()) as Project[]
+  }
+
+  private async createProject(name: string) {
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.CreateProject,
+      params: {},
+      body: { name },
+      options: this.options,
+    })
+
+    return (await response.json()) as {
+      project: Project
+      version: Version
+    }
+  }
+
   private async annotate(
     uuid: string,
     score: number,
@@ -778,6 +885,82 @@ class Latitude {
 
     return (await response.json()) as PublicManualEvaluationResultV2
   }
+
+  private async createVersion(
+    name: string,
+    { projectId }: { projectId?: number } = {},
+  ): Promise<Version> {
+    projectId = projectId ?? this.options.projectId
+    if (!projectId) {
+      throw new Error('Project ID is required')
+    }
+
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.CreateVersion,
+      params: {
+        projectId,
+      },
+      body: { name },
+      options: this.options,
+    })
+
+    return (await response.json()) as Version
+  }
+
+  private async getVersion(
+    projectId: number,
+    versionUuid: string,
+  ): Promise<Version> {
+    const response = await makeRequest<HandlerType.GetVersion>({
+      handler: HandlerType.GetVersion,
+      params: { projectId, versionUuid },
+      method: 'GET',
+      options: this.options,
+    })
+
+    return (await response.json()) as Version
+  }
+
+  private async pushCommit(
+    projectId: number,
+    baseCommitUuid: string,
+    changes: Array<{
+      path: string
+      content: string
+      status: 'added' | 'modified' | 'deleted' | 'unchanged'
+      contentHash?: string
+    }>,
+  ): Promise<{ commitUuid: string }> {
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.PushCommit,
+      params: { projectId, commitUuid: baseCommitUuid },
+      body: { changes },
+      options: this.options,
+    })
+
+    if (!response.ok) {
+      const error = (await response.json()) as ApiErrorJsonResponse
+
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
+      })
+    }
+
+    const result = (await response.json()) as {
+      commitUuid: string
+      documentsProcessed: number
+    }
+
+    return {
+      commitUuid: result.commitUuid,
+    }
+  }
 }
 
 export { Latitude, LatitudeApiError, LogSources }
@@ -790,6 +973,7 @@ export type {
   Message,
   MessageRole,
   Options,
+  Project,
   Prompt,
   RenderToolCallDetails,
   StreamChainResponse,

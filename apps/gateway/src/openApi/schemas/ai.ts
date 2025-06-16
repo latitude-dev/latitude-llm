@@ -3,7 +3,7 @@ import {
   LegacyChainEventTypes,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { messageSchema } from '@latitude-data/core/browser'
+import { messageSchema, Project } from '@latitude-data/core/browser'
 
 export const languageModelUsageSchema = z.object({
   completionTokens: z.number().optional(),
@@ -98,4 +98,14 @@ export const runSyncAPIResponseSchema = z.object({
   uuid: z.string(),
   conversation: z.array(messageSchema),
   response: chainCallResponseDtoSchema,
+})
+
+export const ProjectSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  workspaceId: z.number(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  lastEditedAt: z.string().datetime().optional(),
+  deletedAt: z.string().datetime().nullable().optional(),
 })
