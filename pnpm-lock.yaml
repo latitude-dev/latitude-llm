@@ -304,8 +304,8 @@ importers:
         specifier: 'catalog:'
         version: 8.16.0
       posthog-js:
-        specifier: 1.161.6
-        version: 1.161.6
+        specifier: 1.252.1
+        version: 1.252.1
       promptl-ai:
         specifier: 'catalog:'
         version: 0.6.6(ws@8.18.2)
@@ -8152,6 +8152,9 @@ packages:
   cookiejar@2.1.4:
     resolution: {integrity: sha512-LDx6oHrK+PhzLKJU9j5S7/Y3jM/mUHvD/DeI1WQmJn652iPC5Y4TBzC9l+5OMOXlyTTA+SmVUPm0HQUwpD5Jqw==}
 
+  core-js@3.43.0:
+    resolution: {integrity: sha512-N6wEbTTZSYOY2rYAn85CuvWWkCK6QweMn7/4Nr3w+gDBeBhk/x4EJeY6FPo4QzDoJZxVTv8U7CMvgWk6pOHHqA==}
+
   core-util-is@1.0.3:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
 
@@ -11850,8 +11853,16 @@ packages:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
 
-  posthog-js@1.161.6:
-    resolution: {integrity: sha512-UO0z/YTuan55Kl5Yg9Xs5x1PKUkm2zGKUNPioznb4GLRcxFnLBkWoeKQXNro2YZsYJvK+MY8jlF3cdGa8BZ8/Q==}
+  posthog-js@1.252.1:
+    resolution: {integrity: sha512-EkUCULWJqonMAvzE6CRX9MQupKG18X+r81+hYp3CBRcvbZG5gkbwR39t6p1347wBZJEsC1cKrjRnklc4w7XAUw==}
+    peerDependencies:
+      '@rrweb/types': 2.0.0-alpha.17
+      rrweb-snapshot: 2.0.0-alpha.17
+    peerDependenciesMeta:
+      '@rrweb/types':
+        optional: true
+      rrweb-snapshot:
+        optional: true
 
   posthog-node@4.2.0:
     resolution: {integrity: sha512-hgyCYMyzMvuF3qWMw6JvS8gT55v7Mtp5wKWcnDrw+nu39D0Tk9BXD7I0LOBp0lGlHEPaXCEVYUtviNKrhMALGA==}
@@ -11860,8 +11871,8 @@ packages:
   pprof-format@2.1.0:
     resolution: {integrity: sha512-0+G5bHH0RNr8E5hoZo/zJYsL92MhkZjwrHp3O2IxmY8RJL9ooKeuZ8Tm0ZNBw5sGZ9TiM71sthTjWoR2Vf5/xw==}
 
-  preact@10.26.8:
-    resolution: {integrity: sha512-1nMfdFjucm5hKvq0IClqZwK4FJkGXhRrQstOQ3P4vp8HxKrJEMFcY6RdBRVTdfQS/UlnX6gfbPuTvaqx/bDoeQ==}
+  preact@10.26.9:
+    resolution: {integrity: sha512-SSjF9vcnF27mJK1XyFMNJzFd5u3pQiATFqoaDy03XuN00u4ziveVVEGt5RKJrDR8MHE/wJo9Nnad56RLzS2RMA==}
 
   prebuild-install@7.1.3:
     resolution: {integrity: sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==}
@@ -22805,6 +22816,8 @@ snapshots:
 
   cookiejar@2.1.4: {}
 
+  core-js@3.43.0: {}
+
   core-util-is@1.0.3: {}
 
   cors@2.8.5:
@@ -27465,10 +27478,11 @@ snapshots:
     dependencies:
       xtend: 4.0.2
 
-  posthog-js@1.161.6:
+  posthog-js@1.252.1:
     dependencies:
+      core-js: 3.43.0
       fflate: 0.4.8
-      preact: 10.26.8
+      preact: 10.26.9
       web-vitals: 4.2.4
 
   posthog-node@4.2.0:
@@ -27480,7 +27494,7 @@ snapshots:
 
   pprof-format@2.1.0: {}
 
-  preact@10.26.8: {}
+  preact@10.26.9: {}
 
   prebuild-install@7.1.3:
     dependencies:
