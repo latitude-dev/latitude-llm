@@ -6,7 +6,7 @@ import {
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core'
-import { SpanKind, SpanSource, SpanStatus, SpanType } from '../../constants'
+import { SpanKind, SpanStatus, SpanType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { apiKeys } from './apiKeys'
@@ -25,10 +25,8 @@ export const spans = latitudeSchema.table(
     apiKeyId: bigint('api_key_id', { mode: 'number' })
       .notNull()
       .references(() => apiKeys.id, { onDelete: 'restrict' }),
-    externalId: varchar('external_id', { length: 32 }),
     name: varchar('name', { length: 128 }).notNull(),
     kind: varchar('kind', { length: 32 }).notNull().$type<SpanKind>(),
-    source: varchar('source', { length: 32 }).notNull().$type<SpanSource>(),
     type: varchar('type', { length: 32 }).notNull().$type<SpanType>(),
     status: varchar('status', { length: 32 }).notNull().$type<SpanStatus>(),
     message: varchar('message', { length: 256 }),
@@ -50,15 +48,6 @@ export const spans = latitudeSchema.table(
     parentIdIdx: index('spans_parent_id_idx').on(table.parentId),
     workspaceIdIdx: index('spans_workspace_id_idx').on(table.workspaceId),
     apiKeyIdIdx: index('spans_api_key_id_idx').on(table.apiKeyId),
-    externalIdIdx: index('spans_external_id_idx').on(table.externalId),
-    kindStartedAtIdx: index('spans_kind_started_at_idx').on(
-      table.kind,
-      table.startedAt,
-    ),
-    sourceStartedAtIdx: index('spans_source_started_at_idx').on(
-      table.source,
-      table.startedAt,
-    ),
     typeStartedAtIdx: index('spans_type_started_at_idx').on(
       table.type,
       table.startedAt,

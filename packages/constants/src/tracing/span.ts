@@ -6,18 +6,6 @@ export enum SpanKind {
   Consumer = 'consumer',
 }
 
-export enum SpanSource {
-  API = 'api',
-  Playground = 'playground',
-  Evaluation = 'evaluation', // Note: spans generated from prompts of llm evaluations
-  Experiment = 'experiment',
-  User = 'user',
-  SharedPrompt = 'shared_prompt',
-  AgentAsTool = 'agent_as_tool', // TODO(tracing): deprecated, use SegmentType.Conversation with DocumentType.Agent instead
-  EmailTrigger = 'email_trigger',
-  ScheduledTrigger = 'scheduled_trigger',
-}
-
 // Note: loosely based on OpenTelemetry GenAI semantic conventions
 export enum SpanType {
   Tool = 'tool', // Note: asynchronous tools such as agents are conversation segments
@@ -26,8 +14,11 @@ export enum SpanType {
   Retrieval = 'retrieval',
   Reranking = 'reranking',
   Http = 'http', // Note: raw HTTP requests and responses
-  Unknown = 'unknown', // Other spans we don't care about. They are also used as wrappers so spans belong to the same trace.
+  Segment = 'segment', // (Partial) Wrappers so spans belong to the same trace
+  Unknown = 'unknown', // Other spans we don't care about
 }
+
+export const HIDDEN_SPAN_TYPES = [SpanType.Segment, SpanType.Unknown]
 
 export enum SpanStatus {
   Unset = 'unset',
@@ -114,6 +105,7 @@ export type SpanMetadata<T extends SpanType = SpanType> =
   T extends SpanType.Retrieval ? BaseSpanMetadata<T> :
   T extends SpanType.Reranking ? BaseSpanMetadata<T> :
   T extends SpanType.Http ? HttpSpanMetadata :
+  T extends SpanType.Segment ? BaseSpanMetadata<T> :
   T extends SpanType.Unknown ? BaseSpanMetadata<T> :
   never;
 
@@ -124,10 +116,8 @@ export type Span<T extends SpanType = SpanType> = {
   parentId?: string // Parent span identifier
   workspaceId: number
   apiKeyId: number
-  externalId?: string // Custom user identifier
   name: string
   kind: SpanKind
-  source: SpanSource
   type: T
   status: SpanStatus
   message?: string

@@ -1,15 +1,15 @@
+import { ToolCall } from '@latitude-data/compiler'
 import { AGENT_RETURN_TOOL_NAME, LogSources } from '@latitude-data/constants'
-import { runDocumentAtCommit as runDocumentAtCommitFn } from '../../../../services/commits/runDocumentAtCommit'
 import {
   Commit,
-  Workspace,
   DocumentVersion,
   Experiment,
+  Workspace,
 } from '../../../../browser'
-import { ToolCall } from '@latitude-data/compiler'
-import { respondToToolCalls } from './respondToToolCalls'
-import { AutogenerateToolResponseCopilotData } from './getCopilotData'
+import { runDocumentAtCommit } from '../../../../services/commits/runDocumentAtCommit'
 import { Result } from './../../../../lib/Result'
+import { AutogenerateToolResponseCopilotData } from './getCopilotData'
+import { respondToToolCalls } from './respondToToolCalls'
 
 type Props<T extends boolean> = T extends true
   ? {
@@ -55,7 +55,7 @@ export async function runDocumentUntilItStops<T extends boolean>(
   recursiveFn: typeof runDocumentUntilItStops,
 ) {
   const runResult = !hasToolCalls
-    ? await runDocumentAtCommitFn(data)
+    ? await runDocumentAtCommit(data)
     : await respondToToolCalls(data)
 
   if (runResult.error) return Result.error(runResult.error)

@@ -2,23 +2,24 @@ import { isNotNull, sql } from 'drizzle-orm'
 import { bigint, index, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 import {
   DocumentType,
+  SegmentSource,
   SegmentType,
-  SpanSource,
   SpanStatus,
 } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { apiKeys } from './apiKeys'
 import { commits } from './commits'
+import { documentLogs } from './documentLogs'
 import { experiments } from './experiments'
 import { workspaces } from './workspaces'
 
 export const segments = latitudeSchema.table(
   'segments',
   {
-    id: varchar('id', { length: 32 }).notNull().primaryKey(),
+    id: uuid('id').notNull().primaryKey(),
     traceId: varchar('trace_id', { length: 32 }).notNull(),
-    parentId: varchar('parent_id', { length: 32 }),
+    parentId: uuid('parent_id'),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -27,11 +28,15 @@ export const segments = latitudeSchema.table(
       .references(() => apiKeys.id, { onDelete: 'restrict' }),
     externalId: varchar('external_id', { length: 32 }),
     name: varchar('name', { length: 128 }).notNull(),
-    source: varchar('source', { length: 32 }).notNull().$type<SpanSource>(),
+    source: varchar('source', { length: 32 }).notNull().$type<SegmentSource>(),
     type: varchar('type', { length: 32 }).notNull().$type<SegmentType>(),
     status: varchar('status', { length: 32 }).notNull().$type<SpanStatus>(),
     message: varchar('message', { length: 256 }),
     // Denormalized fields for filtering and aggregation
+    // TODO(tracing): temporal related log, remove when observability is ready
+    logUuid: uuid('log_uuid').references(() => documentLogs.uuid, {
+      onDelete: 'set null',
+    }),
     commitUuid: uuid('commit_uuid')
       .references(() => commits.uuid, { onDelete: 'restrict' })
       .notNull(),
@@ -75,6 +80,8 @@ export const segments = latitudeSchema.table(
       table.status,
       table.startedAt,
     ),
+    // TODO(tracing): temporal related log, remove when observability is ready
+    logUuidIdx: index('segments_log_uuid_idx').on(table.logUuid),
     commitUuidIdx: index('segments_commit_uuid_idx').on(table.commitUuid),
     documentUuidIdx: index('segments_document_uuid_idx').on(table.documentUuid),
     documentHashIdx: index('segments_document_hash_idx').on(table.documentHash),

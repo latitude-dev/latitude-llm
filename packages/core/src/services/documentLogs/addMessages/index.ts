@@ -1,5 +1,6 @@
 import { type Message } from '@latitude-data/compiler'
 
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { LogSources, Workspace } from '../../../browser'
 import {
   CommitsRepository,
@@ -7,13 +8,12 @@ import {
   DocumentVersionsRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
-import { findPausedChain } from './findPausedChain'
-import { resumePausedPrompt } from './resumePausedPrompt'
-import { addChatMessage } from './addChatMessage'
-import { resumeAgent } from './resumeAgent'
+import { getCachedChain } from '../../chains/chainCache'
 import { scanDocumentContent } from '../../documents'
 import { Result } from './../../../lib/Result'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { addChatMessage } from './addChatMessage'
+import { resumeAgent } from './resumeAgent'
+import { resumePausedPrompt } from './resumePausedPrompt'
 
 async function retrieveData({
   workspace,
@@ -81,7 +81,7 @@ export async function addMessages({
   if (dataResult.error) return dataResult
   const { commit, document, providerLog, globalConfig } = dataResult.unwrap()
 
-  const chainCacheData = await findPausedChain({ workspace, documentLogUuid })
+  const chainCacheData = await getCachedChain({ workspace, documentLogUuid })
 
   if (chainCacheData) {
     return resumePausedPrompt({
@@ -89,7 +89,7 @@ export async function addMessages({
       commit,
       document,
       globalConfig,
-      pausedChain: chainCacheData.pausedChain,
+      pausedChain: chainCacheData.chain,
       previousResponse: chainCacheData.previousResponse,
       responseMessages: messages,
       documentLogUuid,

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { SpanSource } from '../tracing'
+import { SegmentSource } from '../tracing'
 import {
   HumanEvaluationConfiguration,
   HumanEvaluationMetric,
@@ -244,7 +244,7 @@ export const EVALUATION_SCORE_SCALE = 100
 
 export const DEFAULT_DATASET_LABEL = 'output'
 
-export const LIVE_EVALUABLE_LOG_SOURCES = Object.values(SpanSource).filter(
+export const LIVE_EVALUABLE_LOG_SOURCES = Object.values(SegmentSource).filter(
   (source) =>
-    source !== SpanSource.Evaluation && source !== SpanSource.Experiment,
-) as SpanSource[]
+    source !== SegmentSource.Evaluation && source !== SegmentSource.Experiment,
+) as SegmentSource[]

@@ -48,6 +48,7 @@
     "@opentelemetry/resources": "1.30.1",
     "@opentelemetry/instrumentation": "0.57.2",
     "@opentelemetry/sdk-trace-node": "1.30.1",
+    "@opentelemetry/context-async-hooks": "1.30.1",
     "@opentelemetry/exporter-trace-otlp-http": "0.57.2",
     "@opentelemetry/baggage-span-processor": "0.3.1",
     "@opentelemetry/semantic-conventions": "1.34.0",
@@ -60,7 +61,8 @@
     "@traceloop/instrumentation-openai": "0.13.0",
     "@traceloop/instrumentation-together": "0.13.0",
     "@traceloop/instrumentation-vertexai": "0.13.0",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "uuid": "11.1.0"
   },
   "devDependencies": {
     "@latitude-data/constants": "workspace:*",
@@ -87,6 +89,7 @@
     "openai": "^4.102.0",
     "together-ai": "^0.16.0",
     "promptl-ai": "catalog:",
+    "@types/uuid": "^10.0.0",
     "msw": "^2.3.5"
   },
   "peerDependencies": {

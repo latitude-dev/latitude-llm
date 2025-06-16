@@ -1,5 +1,5 @@
 // TODO(tracing): deprecated
-export { SpanSource as LogSources } from './tracing'
+export { SegmentSource as LogSources } from './tracing'
 
 export const HEAD_COMMIT = 'live'
 
@@ -57,15 +57,15 @@ export type ExperimentScores = {
   [evaluationUuid: string]: ExperimentEvaluationScore
 }
 
-export * from './models'
 export * from './ai'
-export * from './tools'
-export * from './events'
 export * from './config'
-export * from './helpers'
-export * from './mcp'
 export * from './evaluations'
+export * from './events'
+export * from './helpers'
 export * from './integrations'
+export * from './mcp'
+export * from './models'
+export * from './tools'
 export * from './tracing'
 export * from './history'
 
