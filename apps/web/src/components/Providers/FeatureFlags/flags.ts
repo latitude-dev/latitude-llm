@@ -1,8 +1,6 @@
 import { env } from '@latitude-data/env'
 
 export const FEATURE_FLAGS = {
-  evaluationsV2: 'evaluationsV2',
-  experiments: 'experiments',
   latte: 'latte',
 } as const
 
@@ -15,8 +13,6 @@ export const FEATURE_FLAGS_CONDITIONS: Record<
   FeatureFlag,
   FeatureFlagCondition
 > = {
-  evaluationsV2: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : 'all' },
-  experiments: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : 'all' },
   latte: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [1] },
 }
 
