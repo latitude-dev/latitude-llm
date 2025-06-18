@@ -1,18 +1,23 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  ChangeEvent,
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { NodeViewWrapper, NodeViewProps } from '@tiptap/react'
-import { cn } from '../../../../lib/utils'
+import { cn } from '../../../../../lib/utils'
 
-export interface TextBlockComponentProps extends NodeViewProps {
-  // Additional props can be added here
-}
+export interface TextBlockComponentProps extends NodeViewProps { }
 
-export const TextBlockComponent: React.FC<TextBlockComponentProps> = ({
+export function TextBlockComponent({
   node,
   updateAttributes,
   editor,
   getPos,
   selected,
-}) => {
+}: TextBlockComponentProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [content, setContent] = useState(node.attrs.content || '')
   const [isFocused, setIsFocused] = useState(false)
@@ -37,20 +42,23 @@ export const TextBlockComponent: React.FC<TextBlockComponentProps> = ({
     adjustTextareaHeight()
   }, [content, adjustTextareaHeight])
 
-  const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value
-    setContent(newContent)
-    
-    // Update the node attributes
-    updateAttributes({
-      content: newContent,
-    })
+  const handleContentChange = useCallback(
+    (e: ChangeEvent<HTMLTextAreaElement>) => {
+      const newContent = e.target.value
+      setContent(newContent)
 
-    // Update the editor content using the command
-    if (node.attrs.id) {
-      editor.commands.updateTextBlockContent(node.attrs.id, newContent)
-    }
-  }, [updateAttributes, editor, node.attrs.id])
+      // Update the node attributes
+      updateAttributes({
+        content: newContent,
+      })
+
+      // Update the editor content using the command
+      if (node.attrs.id) {
+        editor.commands.updateTextBlockContent(node.attrs.id, newContent)
+      }
+    },
+    [updateAttributes, editor, node.attrs.id],
+  )
 
   const handleFocus = useCallback(() => {
     setIsFocused(true)
@@ -60,30 +68,33 @@ export const TextBlockComponent: React.FC<TextBlockComponentProps> = ({
     setIsFocused(false)
   }, [])
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // Handle special key behaviors
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      // Cmd/Ctrl + Enter: Create new block
-      e.preventDefault()
-      const pos = getPos()
-      if (typeof pos === 'number') {
-        editor.commands.insertContentAt(pos + node.nodeSize, {
-          type: 'textBlock',
-          attrs: {
-            id: `text_${Date.now()}`,
-            content: '',
-          },
-        })
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      // Handle special key behaviors
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        // Cmd/Ctrl + Enter: Create new block
+        e.preventDefault()
+        const pos = getPos()
+        if (typeof pos === 'number') {
+          editor.commands.insertContentAt(pos + node.nodeSize, {
+            type: 'textBlock',
+            attrs: {
+              id: `text_${Date.now()}`,
+              content: '',
+            },
+          })
+        }
+      } else if (e.key === 'Backspace' && content === '' && !e.shiftKey) {
+        // Delete empty block
+        e.preventDefault()
+        const pos = getPos()
+        if (typeof pos === 'number') {
+          editor.commands.deleteRange({ from: pos, to: pos + node.nodeSize })
+        }
       }
-    } else if (e.key === 'Backspace' && content === '' && !e.shiftKey) {
-      // Delete empty block
-      e.preventDefault()
-      const pos = getPos()
-      if (typeof pos === 'number') {
-        editor.commands.deleteRange({ from: pos, to: pos + node.nodeSize })
-      }
-    }
-  }, [content, editor, getPos, node.nodeSize])
+    },
+    [content, editor, getPos, node.nodeSize],
+  )
 
   return (
     <NodeViewWrapper
@@ -94,11 +105,11 @@ export const TextBlockComponent: React.FC<TextBlockComponentProps> = ({
           'border-blue-500 ring-2 ring-blue-500/20': selected || isFocused,
           'border-red-500 ring-2 ring-red-500/20': hasErrors,
           'hover:border-gray-300': !selected && !isFocused && !hasErrors,
-        }
+        },
       )}
-      data-type="text-block"
+      data-type='text-block'
     >
-      <div className="relative">
+      <div className='relative'>
         <textarea
           ref={textareaRef}
           value={content}
@@ -109,27 +120,27 @@ export const TextBlockComponent: React.FC<TextBlockComponentProps> = ({
           className={cn(
             'w-full resize-none border-0 bg-transparent p-0 text-sm',
             'placeholder-gray-400 focus:outline-none focus:ring-0',
-            'min-h-[24px]'
+            'min-h-[24px]',
           )}
-          placeholder="Enter text..."
+          placeholder='Enter text...'
           rows={1}
         />
-        
+
         {/* Error indicator */}
         {hasErrors && (
-          <div className="absolute -top-1 -right-1">
-            <div className="h-2 w-2 rounded-full bg-red-500" />
+          <div className='absolute -top-1 -right-1'>
+            <div className='h-2 w-2 rounded-full bg-red-500' />
           </div>
         )}
       </div>
 
       {/* Error messages */}
       {hasErrors && (
-        <div className="mt-2 space-y-1">
+        <div className='mt-2 space-y-1'>
           {errors.map((error: any, index: number) => (
             <div
               key={index}
-              className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded"
+              className='text-xs text-red-600 bg-red-50 px-2 py-1 rounded'
             >
               {error.message}
             </div>
@@ -139,7 +150,7 @@ export const TextBlockComponent: React.FC<TextBlockComponentProps> = ({
 
       {/* Block info */}
       {(selected || isFocused) && (
-        <div className="absolute -top-6 left-0 text-xs text-gray-500 bg-white px-1 rounded">
+        <div className='absolute -top-6 left-0 text-xs text-gray-500 bg-white px-1 rounded'>
           Text Block {node.attrs.id && `(${node.attrs.id})`}
         </div>
       )}

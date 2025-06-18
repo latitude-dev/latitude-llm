@@ -1,6 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
-import { TextBlockComponent } from './TextBlockComponent'
+import { TextBlockComponent } from './TextComponent'
 
 export interface TextBlockOptions {
   HTMLAttributes: Record<string, any>
@@ -40,8 +40,8 @@ export const TextBlockExtension = Node.create<TextBlockOptions>({
     return {
       id: {
         default: null,
-        parseHTML: element => element.getAttribute('data-id'),
-        renderHTML: attributes => {
+        parseHTML: (element) => element.getAttribute('data-id'),
+        renderHTML: (attributes) => {
           if (!attributes.id) {
             return {}
           }
@@ -52,18 +52,18 @@ export const TextBlockExtension = Node.create<TextBlockOptions>({
       },
       content: {
         default: '',
-        parseHTML: element => element.textContent,
-        renderHTML: attributes => ({
+        parseHTML: (element) => element.textContent,
+        renderHTML: (attributes) => ({
           'data-content': attributes.content,
         }),
       },
       errors: {
         default: null,
-        parseHTML: element => {
+        parseHTML: (element) => {
           const errors = element.getAttribute('data-errors')
           return errors ? JSON.parse(errors) : null
         },
-        renderHTML: attributes => {
+        renderHTML: (attributes) => {
           if (!attributes.errors) {
             return {}
           }
@@ -105,47 +105,49 @@ export const TextBlockExtension = Node.create<TextBlockOptions>({
     return {
       setTextBlock:
         (content: string) =>
-        ({ commands }) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs: {
-              id: `text_${Date.now()}`,
-              content,
-            },
-            content: content ? [
-              {
-                type: 'text',
-                text: content,
+          ({ commands }) => {
+            return commands.insertContent({
+              type: this.name,
+              attrs: {
+                id: `text_${Date.now()}`,
+                content,
               },
-            ] : [],
-          })
-        },
+              content: content
+                ? [
+                  {
+                    type: 'text',
+                    text: content,
+                  },
+                ]
+                : [],
+            })
+          },
       updateTextBlockContent:
         (id: string, content: string) =>
-        ({ tr, state }) => {
-          let updated = false
-          state.doc.descendants((node, pos) => {
-            if (node.type.name === this.name && node.attrs.id === id) {
-              tr.setNodeMarkup(pos, undefined, {
-                ...node.attrs,
-                content,
-              })
-              
-              // Update the actual text content
-              const start = pos + 1
-              const end = pos + node.nodeSize - 1
-              if (start < end) {
-                tr.delete(start, end)
+          ({ tr, state }) => {
+            let updated = false
+            state.doc.descendants((node, pos) => {
+              if (node.type.name === this.name && node.attrs.id === id) {
+                tr.setNodeMarkup(pos, undefined, {
+                  ...node.attrs,
+                  content,
+                })
+
+                // Update the actual text content
+                const start = pos + 1
+                const end = pos + node.nodeSize - 1
+                if (start < end) {
+                  tr.delete(start, end)
+                }
+                if (content) {
+                  tr.insert(start, state.schema.text(content))
+                }
+                updated = true
+                return false
               }
-              if (content) {
-                tr.insert(start, state.schema.text(content))
-              }
-              updated = true
-              return false
-            }
-          })
-          return updated
-        },
+            })
+            return updated
+          },
     }
   },
 })
