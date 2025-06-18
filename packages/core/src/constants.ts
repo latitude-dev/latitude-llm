@@ -42,7 +42,7 @@ export const LATITUDE_EMAIL = 'hello@latitude.so'
 export const LATITUDE_SLACK_URL =
   'https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw'
 export const LATITUDE_HELP_URL = LATITUDE_SLACK_URL
-export const DEFAULT_PROVIDER_MAX_FREE_RUNS = 1000
+export const DEFAULT_PROVIDER_MAX_FREE_RUNS = 100
 
 export enum CommitStatus {
   All = 'all',
