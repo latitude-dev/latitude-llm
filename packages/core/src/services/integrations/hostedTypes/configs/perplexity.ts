@@ -1,12 +1,11 @@
 import { HostedIntegrationConfig } from '../types'
-import { uvxCommand } from '../utils'
+import { npxCommand } from '../utils'
 
 export default {
   description:
-    'Integration for interacting with the Perplexity API, enabling chat completions with citations.',
-  command: uvxCommand({
-    name: 'mcp-server-perplexity',
-    repository: 'https://github.com/jsonallen/perplexity-mcp.git',
+    'An MCP server implementation that integrates the Sonar API to provide Claude with unparalleled real-time, web-wide research.',
+  command: npxCommand({
+    package: 'server-perplexity-ask',
   }),
   env: {
     PERPLEXITY_API_KEY: {
@@ -16,5 +15,6 @@ export default {
       required: true,
     },
   },
-  envSource: 'https://www.perplexity.ai/settings/api',
+  envSource:
+    'https://github.com/ppl-ai/modelcontextprotocol/tree/main?tab=readme-ov-file#step-2-get-a-sonar-api-key',
 } as HostedIntegrationConfig
