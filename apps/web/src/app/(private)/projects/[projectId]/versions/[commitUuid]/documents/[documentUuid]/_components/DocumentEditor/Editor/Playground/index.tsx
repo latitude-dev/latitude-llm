@@ -13,8 +13,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
-import type { ConversationMetadata } from 'promptl-ai'
-
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import Chat from '$/components/PlaygroundCommon/Chat'
 import {
   DOCUMENT_PLAYGROUND_COLLAPSED_SIZE,
@@ -37,7 +36,7 @@ export const Playground = memo(
     document: DocumentVersion
     prompt: string
     setPrompt: (prompt: string) => void
-    metadata: ConversationMetadata
+    metadata: ResolvedMetadata
   }) => {
     const [mode, setMode] = useState<'preview' | 'chat'>('preview')
     const { commit } = useCurrentCommit()

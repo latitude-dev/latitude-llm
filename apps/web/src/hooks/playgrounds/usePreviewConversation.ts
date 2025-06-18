@@ -4,11 +4,8 @@ import {
   Message as ConversationMessage,
   Chain as LegacyChain,
 } from '@latitude-data/compiler'
-import {
-  Adapters,
-  ConversationMetadata,
-  Chain as PromptlChain,
-} from 'promptl-ai'
+import { Adapters, Chain as PromptlChain } from 'promptl-ai'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import { AppliedRules, applyProviderRules } from '@latitude-data/core/browser'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
@@ -18,7 +15,7 @@ export function usePreviewConversation({
   metadata,
 }: {
   promptlVersion: number
-  metadata: ConversationMetadata | undefined
+  metadata: ResolvedMetadata | undefined
   parameters: Record<string, unknown> | undefined
 }) {
   const [error, setError] = useState<Error | undefined>(undefined)

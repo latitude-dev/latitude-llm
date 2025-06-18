@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import type { ConversationMetadata } from 'promptl-ai'
 import { useDebouncedCallback } from 'use-debounce'
-import type { ReadMetadataWorkerProps } from '../workers/readMetadata'
+import type {
+  ReadMetadataWorkerProps,
+  ResolvedMetadata,
+} from '../workers/readMetadata'
 
 let workerPath: string | null = null
 
@@ -22,7 +24,7 @@ async function getWorkerUrl(): Promise<string | null> {
 
 export function useMetadata() {
   const workerRef = useRef<Worker | null>(null)
-  const [metadata, setMetadata] = useState<ConversationMetadata>()
+  const [metadata, setMetadata] = useState<ResolvedMetadata>()
 
   useEffect(() => {
     if (typeof window === 'undefined') return

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { Commit, Project } from '@latitude-data/core/browser'
-import { ConversationMetadata } from 'promptl-ai'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 
 import { RunExperimentModal } from '$/components/RunExperimentModal'
@@ -19,7 +19,7 @@ export default function Preview({
   expandParameters,
   setExpandParameters,
 }: {
-  metadata: ConversationMetadata | undefined
+  metadata: ResolvedMetadata | undefined
   parameters: Record<string, unknown> | undefined
   runPrompt: () => void
 } & ActionsState) {

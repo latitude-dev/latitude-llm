@@ -1,5 +1,5 @@
 import { uniq } from 'lodash-es'
-import { ConversationMetadata } from 'promptl-ai'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
   INPUT_SOURCE,
   LinkedDataset,
@@ -124,7 +124,7 @@ export function recalculateAllInputs({
 }: {
   key: string
   oldState: InputsByDocument
-  metadata: ConversationMetadata
+  metadata: ResolvedMetadata
   config: {
     manual?: {
       fallbackInputs?: Inputs<'manual'>

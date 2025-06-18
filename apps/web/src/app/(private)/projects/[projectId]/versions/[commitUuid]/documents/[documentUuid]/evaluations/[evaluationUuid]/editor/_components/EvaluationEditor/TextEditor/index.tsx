@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { CompileError } from 'promptl-ai'
+import type { AstError } from '@latitude-data/constants/simpleBlocks'
 import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import { LLM_EVALUATION_PROMPT_PARAMETERS } from '@latitude-data/constants'
@@ -33,7 +33,7 @@ export function TextEditor({
   isMerged,
   onChange,
 }: {
-  compileErrors: CompileError[] | undefined
+  compileErrors: AstError[] | undefined
   value: string
   defaultValue?: string
   isSaved: boolean

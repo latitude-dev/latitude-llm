@@ -60,6 +60,7 @@ type Props = ToogleProps &
     name?: string
     checked?: boolean
     defaultChecked?: boolean
+    fullWidth?: boolean
   }
 function SwitchInput({
   className,
@@ -69,6 +70,7 @@ function SwitchInput({
   name,
   checked,
   defaultChecked,
+  fullWidth = true,
   ...rest
 }: Props) {
   const error = errors?.[0]
@@ -86,7 +88,9 @@ function SwitchInput({
 
   return (
     <div
-      className={cn('flex flex-col gap-y-2 w-full', className)}
+      className={cn('flex flex-col gap-y-2', className, {
+        'w-full': fullWidth,
+      })}
       aria-describedby={
         !error
           ? `${formDescriptionId}`

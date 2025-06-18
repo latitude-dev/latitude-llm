@@ -21,7 +21,7 @@ export function ErrorComponent({
           'text-destructive': type === 'red',
         })}
       >
-        <Icon name='logoMonochrome' size='xxxlarge' />
+        <Icon name='logoMonochrome' size='xxxlarge' className='opacity-25' />
         <Text.H5 align='center' color='foregroundMuted'>
           {message}
         </Text.H5>
