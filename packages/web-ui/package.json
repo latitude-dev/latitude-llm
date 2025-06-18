@@ -73,6 +73,7 @@
     "./molecules/CollapsibleBox": "./src/ds/molecules/CollapsibleBox/index.tsx",
     "./molecules/DocumentChange": "./src/ds/molecules/DocumentChange/index.tsx",
     "./molecules/DocumentTextEditor": "./src/ds/molecules/DocumentTextEditor/index.tsx",
+    "./molecules/BlocksEditor": "./src/ds/molecules/BlocksEditor/index.tsx",
     "./molecules/EditableText": "./src/ds/molecules/EditableText/index.tsx",
     "./molecules/ErrorComponent": "./src/ds/molecules/ErrorComponent/index.tsx",
     "./molecules/FakeProgress": "./src/ds/molecules/FakeProgress/index.tsx",

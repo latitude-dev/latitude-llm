@@ -1,52 +1,28 @@
-import React from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+'use client'
 
-import {
-  AnyBlock,
-  simpleBlocksToText,
-} from '@latitude-data/constants/simpleBlocks'
+import React, { lazy } from 'react'
 
-import { TextBlockExtension } from './extensions/Text/extension'
+import { TextEditorPlaceholder } from '../TextEditorPlaceholder'
+import { BlocksEditorProps } from './types'
+import { ClientOnly } from '../../atoms/ClientOnly'
 
-export interface BlocksEditorProps {
-  blocks: AnyBlock[]
-  onUpdate: (content: string) => void
-  placeholder: string
-  editable?: boolean
-}
-
-export function BlocksEditor({
-  onUpdate,
-  placeholder,
-  editable = true,
-}: BlocksEditorProps) {
-  const editor = useEditor({
-    extensions: [TextBlockExtension],
-    content: {
-      type: 'doc',
-      content: [
-        {
-          type: 'textBlock',
-          attrs: {
-            id: `text_${Date.now()}`,
-            content: 'Hola',
-          },
-          content: [],
-        },
-      ],
-    },
-    editable,
-    onUpdate: ({ editor }) => {
-      const json = editor.getJSON()
-      onUpdate(simpleBlocksToText(json as unknown as AnyBlock[]))
-    },
-    editorProps: {
-      attributes: {
-        class: `prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none`,
-        'data-placeholder': placeholder,
+const LazyBlocksEditor = lazy(() =>
+  import('./Editor/index').then(
+    (module) =>
+      ({
+        default: module.BlocksEditor,
+      }) as {
+        default: React.ComponentType<BlocksEditorProps>
       },
-    },
-  })
+  ),
+)
 
-  return <EditorContent editor={editor} />
+function EditorWrapper(props: BlocksEditorProps) {
+  return (
+    <ClientOnly>
+      <LazyBlocksEditor {...props} />
+    </ClientOnly>
+  )
 }
+
+export { EditorWrapper as BlocksEditor, TextEditorPlaceholder }

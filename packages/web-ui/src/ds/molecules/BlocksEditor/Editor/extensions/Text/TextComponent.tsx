@@ -7,7 +7,7 @@ import {
   useState,
 } from 'react'
 import { NodeViewWrapper, NodeViewProps } from '@tiptap/react'
-import { cn } from '../../../../../lib/utils'
+import { cn } from '../../../../../../lib/utils'
 
 export interface TextBlockComponentProps extends NodeViewProps { }
 

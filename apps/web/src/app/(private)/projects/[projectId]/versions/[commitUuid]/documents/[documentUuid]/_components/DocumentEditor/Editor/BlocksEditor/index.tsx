@@ -2,7 +2,7 @@ import { memo, Suspense } from 'react'
 import { AstError } from '@latitude-data/constants/simpleBlocks'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import { AnyBlock } from '@latitude-data/constants/simpleBlocks'
-import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { BlocksEditor } from '@latitude-data/web-ui/molecules/BlocksEditor'
 
 export const PlaygroundBlocksEditor = memo(
   ({
@@ -21,8 +21,11 @@ export const PlaygroundBlocksEditor = memo(
 
     return (
       <Suspense fallback={<TextEditorPlaceholder />}>
-        Blocks Editor
-        <CodeBlock language='json'>{JSON.stringify(blocks, null, 2)}</CodeBlock>
+        <BlocksEditor
+          blocks={blocks}
+          onUpdate={() => { }}
+          placeholder='Write your prompt'
+        />
       </Suspense>
     )
   },
