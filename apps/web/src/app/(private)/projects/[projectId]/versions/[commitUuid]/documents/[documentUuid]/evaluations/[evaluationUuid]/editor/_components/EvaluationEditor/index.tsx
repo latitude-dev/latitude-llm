@@ -74,6 +74,7 @@ export function EvaluationEditor({
         providerNames,
         integrationNames,
         withParameters: ALLOWED_PARAMETERS,
+        requireConfiguration: true,
         noOutputSchemaConfig: {
           message:
             'The evaluation output schema is system-managed and cannot be modified manually.',

@@ -141,7 +141,7 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
     fullPath: document?.path,
     referenceFn: props.referenceFn,
     withParamters: props.withParameters,
-    requireConfig: true,
+    requireConfig: props.requireConfig,
     configSchema: props.configSchema as any,
   }
   const metadata = await scan(scanParams)
