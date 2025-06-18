@@ -23,7 +23,7 @@ export const PlaygroundBlocksEditor = memo(
       <Suspense fallback={<TextEditorPlaceholder />}>
         <BlocksEditor
           blocks={blocks}
-          onUpdate={() => { }}
+          onUpdate={() => {}}
           placeholder='Write your prompt'
         />
       </Suspense>
