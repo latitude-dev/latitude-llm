@@ -42,6 +42,7 @@ module.exports = {
   rules: {
     'no-unused-vars': 'off',
     'no-case-declarations': 'warn',
+    'react-hooks/exhaustive-deps': 'error',
     '@typescript-eslint/no-unused-vars': [
       'error',
       {
