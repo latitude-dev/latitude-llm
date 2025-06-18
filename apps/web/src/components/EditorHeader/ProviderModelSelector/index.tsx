@@ -175,10 +175,7 @@ export function ProviderModelSelector({
   useEvents({
     onPromptMetadataChanged: ({ promptLoaded, config }) => {
       if (!promptLoaded) return
-
-      if (!isInitialized) {
-        setInitialized(true)
-      }
+      if (!isInitialized) setInitialized(true)
 
       const { provider: providerName, model: m } = config || {}
       const selectedProvider = providerApiKeys.find(
@@ -186,7 +183,13 @@ export function ProviderModelSelector({
       )
 
       setProvider(selectedProvider)
-      setModel(m)
+
+      if (typeof m === 'string') {
+        setModel(m)
+      } else {
+        setModel(null)
+      }
+
       setModelOptions(
         buildModelOptions({
           provider: selectedProvider,
