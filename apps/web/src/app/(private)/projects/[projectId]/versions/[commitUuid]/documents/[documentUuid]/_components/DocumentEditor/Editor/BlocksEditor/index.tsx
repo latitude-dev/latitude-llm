@@ -10,7 +10,6 @@ import {
 export const PlaygroundBlocksEditor = memo(
   ({
     value: _prompt,
-    blocks = [],
   }: {
     compileErrors: AstError[] | undefined
     blocks: AnyBlock[] | undefined
@@ -20,17 +19,26 @@ export const PlaygroundBlocksEditor = memo(
     readOnlyMessage?: string
     onChange: (value: string) => void
   }) => {
-    // if (!blocks.length) return null
-
     const [localBlocks, setLocalBlocks] = useState<JSONContent[]>([
       {
         type: 'paragraph',
         content: [
           {
             type: 'text',
-            text: 'Hola',
+            text: 'Say hi to {{ name }}',
           },
         ],
+      },
+      {
+        type: 'prompt-reference',
+        attrs: {
+          id: 'prompt-block-1',
+          path: 'latitude-extract',
+          attributes: {
+            location: '{{thing}}',
+          },
+          // errors: [{ message: 'Path is required' }],
+        },
       },
     ])
 

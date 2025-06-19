@@ -12,8 +12,16 @@ import {
   simpleBlocksToText,
 } from '@latitude-data/constants/simpleBlocks'
 
-import { BlocksEditorProps } from '../types'
+import { BlocksEditorProps, JSONContent } from '../types'
 import { PromptReference } from './extensions/PromptReference'
+
+function ensureTrailingParagraph(content: JSONContent[] = []): JSONContent[] {
+  const last = content[content.length - 1]
+  if (!last || last.type !== 'paragraph') {
+    return [...content, { type: 'paragraph', content: [] }]
+  }
+  return content
+}
 
 export function BlocksEditor({
   onUpdate,
@@ -37,7 +45,7 @@ export function BlocksEditor({
     ],
     content: {
       type: 'doc',
-      content,
+      content: ensureTrailingParagraph(content),
     },
     editable,
     onUpdate: ({ editor }) => {
@@ -48,6 +56,7 @@ export function BlocksEditor({
       attributes: {
         class: cn(
           'font-mono text-sm leading-tight whitespace-pre outline-none',
+          'space-y-1',
           '[&_.is-empty-node]:before:content-[attr(data-placeholder)]',
           '[&_.is-empty-node]:before:text-muted-foreground',
           '[&_.is-empty-node]:pointer-events-none',

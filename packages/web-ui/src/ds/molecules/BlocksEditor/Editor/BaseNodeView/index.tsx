@@ -18,25 +18,23 @@ export type TypedNodeViewProps<Attr> = Omit<NodeViewProps, 'node'> & {
   }
 }
 
-
 export function BaseNodeView({
   children,
   errors = [],
+  as,
+  className,
 }: {
   children: ReactNode
   errors?: Error[]
+  className?: string
+  as?: string
 }) {
   return (
-    <NodeViewWrapper
-      className={cn('rounded border p-1', {
-        'border-foreground': !errors.length,
-        'border-red-100': errors.length > 0,
-      })}
-    >
+    <NodeViewWrapper as={as} className={className}>
       {children}
 
       {errors?.length > 0 ? (
-        <div className='mt-2 text-red-500 text-sm'>
+        <div className='text-red-500 text-sm'>
           {errors.map((err: Error, i: number) => (
             <div key={i}>{err.message}</div>
           ))}
@@ -47,7 +45,7 @@ export function BaseNodeView({
 }
 
 export function withNodeViewProps<A>(
-  Component: (props: TypedNodeViewProps<A>) => JSX.Element
+  Component: (props: TypedNodeViewProps<A>) => JSX.Element,
 ) {
   return function Wrapped(props: NodeViewProps) {
     return <Component {...(props as any)} />

@@ -1,27 +1,33 @@
-import { Select } from '../../../../../atoms/Select'
+import { useCallback } from 'react'
+import { cn } from '../../../../../../lib/utils'
 import {
   BaseNodeView,
   TypedNodeViewProps,
   withNodeViewProps,
 } from '../../BaseNodeView'
+import { Icon } from '../../../../../atoms/Icons'
+import { Text } from '../../../../../atoms/Text'
 
-export type Attr = { path: string }
+export type Attr = { path: string; attributes?: Record<string, string> }
 type Props = TypedNodeViewProps<Attr>
 
 function PromptSelectorNodeView({ node, updateAttributes }: Props) {
+  const _onChangeAttribute = useCallback(
+    ({ name, value }: { name: string; value: string }) => {
+      updateAttributes({
+        attributes: { ...node.attrs.attributes, [name]: value },
+      })
+    },
+    [updateAttributes, node.attrs.attributes],
+  )
+
   return (
-    <BaseNodeView errors={node.attrs.errors}>
-      Id: {node.attrs.id}
-      Path: {node.attrs.path}
-      <Select
-        name='prompt-reference'
-        options={[
-          { label: 'Prompt A', value: 'prompt-a' },
-          { label: 'Prompt B', value: 'prompt-b' },
-        ]}
-        label='Select Prompt'
-        onChange={(value) => updateAttributes({ path: value })}
-      />
+    <BaseNodeView
+      errors={node.attrs.errors}
+      className='flex flex-row items-center gap-1 rounded p-1 cursor-pointer hover:bg-muted'
+    >
+      <Icon name='file' />
+      <Text.H5>{node.attrs.path}</Text.H5>
     </BaseNodeView>
   )
 }
