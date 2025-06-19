@@ -13,6 +13,7 @@ import {
 } from '@latitude-data/constants/simpleBlocks'
 
 import { BlocksEditorProps } from '../types'
+import { PromptReference } from './extensions/PromptReference'
 
 export function BlocksEditor({
   onUpdate,
@@ -29,9 +30,10 @@ export function BlocksEditor({
       Paragraph,
       Placeholder.configure({
         placeholder,
+        emptyEditorClass: 'is-editor-empty',
         emptyNodeClass: 'is-empty-node',
-        showOnlyWhenEditable: true,
       }),
+      PromptReference
     ],
     content: {
       type: 'doc',
