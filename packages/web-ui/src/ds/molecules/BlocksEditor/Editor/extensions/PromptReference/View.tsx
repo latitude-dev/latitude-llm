@@ -1,5 +1,3 @@
-import { useCallback } from 'react'
-import { cn } from '../../../../../../lib/utils'
 import {
   BaseNodeView,
   TypedNodeViewProps,
@@ -11,15 +9,16 @@ import { Text } from '../../../../../atoms/Text'
 export type Attr = { path: string; attributes?: Record<string, string> }
 type Props = TypedNodeViewProps<Attr>
 
-function PromptSelectorNodeView({ node, updateAttributes }: Props) {
-  const _onChangeAttribute = useCallback(
-    ({ name, value }: { name: string; value: string }) => {
-      updateAttributes({
-        attributes: { ...node.attrs.attributes, [name]: value },
-      })
-    },
-    [updateAttributes, node.attrs.attributes],
-  )
+function View({ node, updateAttributes: _ua }: Props) {
+  // TODO: Implement the logic to handle changes in attributes
+  // const _onChangeAttribute = useCallback(
+  //   ({ name, value }: { name: string; value: string }) => {
+  //     updateAttributes({
+  //       attributes: { ...node.attrs.attributes, [name]: value },
+  //     })
+  //   },
+  //   [updateAttributes, node.attrs.attributes],
+  // )
 
   return (
     <BaseNodeView
@@ -32,4 +31,4 @@ function PromptSelectorNodeView({ node, updateAttributes }: Props) {
   )
 }
 
-export default withNodeViewProps(PromptSelectorNodeView)
+export default withNodeViewProps(View)

@@ -14,6 +14,7 @@ import {
 
 import { BlocksEditorProps, JSONContent } from '../types'
 import { PromptReference } from './extensions/PromptReference'
+import { StepReference } from './extensions/StepReference'
 
 function ensureTrailingParagraph(content: JSONContent[] = []): JSONContent[] {
   const last = content[content.length - 1]
@@ -33,15 +34,24 @@ export function BlocksEditor({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      Document,
+      Document.configure({ content: 'block+' }),
       Text,
       Paragraph,
       Placeholder.configure({
-        placeholder,
+        includeChildren: true,
+        showOnlyCurrent: true,
+        placeholder: ({ node }) => {
+          console.log('Placeholder for node:', node.type.name)
+          if (node.type.name === 'step') {
+            return 'Describe this step...'
+          }
+          return placeholder || 'Write something...'
+        },
         emptyEditorClass: 'is-editor-empty',
         emptyNodeClass: 'is-empty-node',
       }),
-      PromptReference
+      PromptReference,
+      StepReference,
     ],
     content: {
       type: 'doc',

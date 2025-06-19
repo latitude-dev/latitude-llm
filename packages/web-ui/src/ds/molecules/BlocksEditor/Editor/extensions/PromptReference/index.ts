@@ -1,6 +1,6 @@
 import { Node } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
-import PromptSelectorNodeView, { type Attr } from './View'
+import View, { type Attr } from './View'
 
 export const PROMPT_REF_ID = 'prompt-reference'
 export const PromptReference = Node.create<Attr>({
@@ -22,6 +22,6 @@ export const PromptReference = Node.create<Attr>({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(PromptSelectorNodeView)
+    return ReactNodeViewRenderer(View)
   },
 })

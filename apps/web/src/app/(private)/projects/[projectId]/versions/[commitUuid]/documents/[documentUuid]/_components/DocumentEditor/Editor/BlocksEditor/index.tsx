@@ -40,6 +40,27 @@ export const PlaygroundBlocksEditor = memo(
           // errors: [{ message: 'Path is required' }],
         },
       },
+      {
+        type: 'step',
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              {
+                type: 'text',
+                text: "I'm inside a step",
+              },
+            ],
+          },
+          {
+            type: 'prompt-reference',
+            attrs: {
+              id: 'prompt-block-2',
+              path: 'weather-prompt',
+            },
+          },
+        ],
+      },
     ])
 
     console.log('LOCAL_BLOCKS', localBlocks)
