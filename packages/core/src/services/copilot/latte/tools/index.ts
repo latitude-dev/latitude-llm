@@ -18,6 +18,7 @@ import listDrafts from './commits/list'
 import editProject from './projects/edit'
 import listProviders from './settings/listProviders'
 import listIntegrations from './settings/listIntegrations'
+import listIntegrationTools from './settings/listIntegrationTools'
 
 export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.listProjects]: listProjects,
@@ -27,6 +28,7 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.editProject]: editProject,
   [LatteTool.listProviders]: listProviders,
   [LatteTool.listIntegrations]: listIntegrations,
+  [LatteTool.listIntegrationTools]: listIntegrationTools,
 } as const
 
 export async function handleToolRequest({

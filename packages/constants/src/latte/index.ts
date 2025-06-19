@@ -10,4 +10,5 @@ export enum LatteTool {
 
   listProviders = 'list_providers',
   listIntegrations = 'list_integrations',
+  listIntegrationTools = 'list_integration_tools',
 }

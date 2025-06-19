@@ -15,6 +15,12 @@ export function getDescriptionFromToolCall(
         finishedDescription: `Listed projects`,
       }
 
+    case LatteTool.listDrafts:
+      return {
+        activeDescription: `Listing drafts in your project`,
+        finishedDescription: `Listed drafts in your project`,
+      }
+
     case LatteTool.listPrompts:
       return {
         activeDescription: `Listing prompts`,
@@ -25,6 +31,24 @@ export function getDescriptionFromToolCall(
       return {
         activeDescription: `Reading prompt ${params.path}`,
         finishedDescription: `Read prompt ${params.path}`,
+      }
+
+    case LatteTool.listProviders:
+      return {
+        activeDescription: `Listing providers`,
+        finishedDescription: `Listed providers`,
+      }
+
+    case LatteTool.listIntegrations:
+      return {
+        activeDescription: `Listing integrations`,
+        finishedDescription: `Listed integrations`,
+      }
+
+    case LatteTool.listIntegrationTools:
+      return {
+        activeDescription: `Reading tools from integration '${params.name}'`,
+        finishedDescription: `Read tools from integration '${params.name}'`,
       }
 
     case 'lat_agent_ask_documentation' as LatteTool: // Documentation subagent
