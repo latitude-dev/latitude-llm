@@ -144,6 +144,8 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@tiptap/core": "3.0.0-beta.8",
     "@tiptap/extension-document": "3.0.0-beta.8",
+    "@tiptap/extension-paragraph": "3.0.0-beta.8",
+    "@tiptap/extension-placeholder": "3.0.0-beta.8",
     "@tiptap/extension-text": "3.0.0-beta.8",
     "@tiptap/pm": "3.0.0-beta.8",
     "@tiptap/react": "3.0.0-beta.8",

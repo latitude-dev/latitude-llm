@@ -3,7 +3,7 @@
 import React, { lazy } from 'react'
 
 import { TextEditorPlaceholder } from '../TextEditorPlaceholder'
-import { BlocksEditorProps } from './types'
+import { BlocksEditorProps, JSONContent } from './types'
 import { ClientOnly } from '../../atoms/ClientOnly'
 
 const LazyBlocksEditor = lazy(() =>
@@ -25,4 +25,4 @@ function EditorWrapper(props: BlocksEditorProps) {
   )
 }
 
-export { EditorWrapper as BlocksEditor, TextEditorPlaceholder }
+export { EditorWrapper as BlocksEditor, TextEditorPlaceholder, type JSONContent }
