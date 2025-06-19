@@ -1,10 +1,8 @@
 import { useCallback, useState } from 'react'
-import DiffMatchPatch from 'diff-match-patch'
-
-const dmp = new DiffMatchPatch()
+import { customDiff, CustomDiffType } from '$/helpers/latte/customDiff'
 
 const MAX_ANIMATION_TIME = 5000
-const STEP_DURATION = 5
+const STEP_DURATION = 4
 
 export function useLatteStreaming({
   value,
@@ -22,22 +20,21 @@ export function useLatteStreaming({
         'Latte is updating the document. Please wait for it to finish.',
       )
 
-      const diffs = dmp.diff_main(value, newValue)
-      dmp.diff_cleanupEfficiency(diffs)
+      const diffs = customDiff(value, newValue)
 
-      const totalCharacterChanges = diffs.reduce((acc, [op, text]) => {
-        if (op === DiffMatchPatch.DIFF_EQUAL) return acc
-        return acc + text.length
-      }, 0)
-
+      const totalCharacterChanges = diffs.reduce(
+        (acc, diff) => acc + diff.length,
+        0,
+      )
       const chunkSize = Math.ceil(
         totalCharacterChanges / (MAX_ANIMATION_TIME / STEP_DURATION),
       )
 
-      let cursor = 0
-      let currentValue = value
-      let diffIndex = 0
-      let charIndex = 0
+      let cursor = 0 // Current position in the prompt
+      let currentValue = value // Currently displayed value
+
+      let diffIndex = 0 // Current index in the diffs array
+      let charIndex = 0 // Current character index in the current diff
 
       const updateStep = () => {
         if (diffIndex >= diffs.length) {
@@ -47,31 +44,40 @@ export function useLatteStreaming({
           return
         }
 
-        const [op, text] = diffs[diffIndex]!
+        const diff = diffs[diffIndex]!
 
-        if (op === DiffMatchPatch.DIFF_EQUAL) {
-          cursor += text.length
+        if (diff.type === CustomDiffType.EQUAL) {
+          // Skip equal parts
+          cursor += diff.length
           diffIndex++
           charIndex = 0
           return updateStep()
         }
 
-        const stepChunkLength = Math.min(text.length - charIndex, chunkSize)
+        const stepChunkLength = Math.min(diff.length - charIndex, chunkSize)
 
-        if (op === DiffMatchPatch.DIFF_DELETE) {
+        if (diff.type === CustomDiffType.DELETE) {
           currentValue =
             currentValue.slice(0, cursor) +
             currentValue.slice(cursor + stepChunkLength)
-        } else if (op === DiffMatchPatch.DIFF_INSERT) {
+        } else if (diff.type === CustomDiffType.INSERT) {
           currentValue =
             currentValue.slice(0, cursor) +
-            text.slice(charIndex, charIndex + stepChunkLength) +
+            diff.text.slice(charIndex, charIndex + stepChunkLength) +
             currentValue.slice(cursor)
+
+          cursor += stepChunkLength
+        } else if (diff.type === CustomDiffType.REPLACE) {
+          currentValue =
+            currentValue.slice(0, cursor) +
+            diff.text.slice(charIndex, charIndex + stepChunkLength) +
+            currentValue.slice(cursor + stepChunkLength)
+
           cursor += stepChunkLength
         }
 
         charIndex += stepChunkLength
-        if (charIndex >= text.length) {
+        if (charIndex >= diff.length) {
           diffIndex++
           charIndex = 0
         }
