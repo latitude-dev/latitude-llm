@@ -11,11 +11,10 @@ export const CollapsedInteractionSteps = ({
   steps: LatteInteractionStep[]
   isLoading?: boolean
 }) => {
-  const [currentLine, setCurrentLine] = useState(0)
+  const [currentLine, setCurrentLine] = useState(steps.length)
 
   useEffect(() => {
     setCurrentLine(steps.length) // +1 for the initial thinking step
-    console.log('current line =', steps.length)
   }, [steps.length])
 
   return (

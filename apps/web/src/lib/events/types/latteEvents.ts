@@ -1,5 +1,5 @@
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { LatteChange } from '@latitude-data/constants/latte'
 
 export interface LatteEvents {
-  DraftUpdatedByLatte: { draftUuid: string; updates: DocumentVersion[] }
+  LatteChanges: { changes: LatteChange[] }
 }

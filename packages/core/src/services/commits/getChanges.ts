@@ -8,12 +8,12 @@ import { database } from '../../client'
 import type { CompileError } from 'promptl-ai'
 import { recomputeChanges } from '../documents'
 import {
-  ChangedDocument,
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
 import { PromisedResult } from './../../lib/Transaction'
 import { Result } from './../../lib/Result'
+import { ChangedDocument } from '@latitude-data/constants'
 
 type DocumentErrors = { [documentUuid: string]: CompileError[] }
 
@@ -24,7 +24,7 @@ const byErrors =
     return bErrors - aErrors
   }
 
-function changesPresenter({
+export function changesPresenter({
   currentCommitChanges,
   previousCommitDocuments,
   errors,

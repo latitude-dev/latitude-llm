@@ -1,8 +1,8 @@
-import { DocumentVersion, LatteThreadCheckpoint } from '../../../../browser'
-import { database } from '../../../../client'
-import { Result } from '../../../../lib/Result'
-import Transaction, { PromisedResult } from '../../../../lib/Transaction'
-import { latteThreadCheckpoints } from '../../../../schema'
+import { DocumentVersion, LatteThreadCheckpoint } from '../../../../../browser'
+import { database } from '../../../../../client'
+import { Result } from '../../../../../lib/Result'
+import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
+import { latteThreadCheckpoints } from '../../../../../schema'
 
 export function createLatteThreadCheckpoints(
   {

@@ -90,11 +90,12 @@ export default function DocumentEditor({
 
   useEvents(
     {
-      onDraftUpdatedByLatte: ({ draftUuid, updates }) => {
-        if (commit.uuid !== draftUuid) return
-        const updatedDocument = updates.find(
-          (d) => d.documentUuid === document.documentUuid,
-        )
+      onLatteChanges: ({ changes }) => {
+        const updatedDocument = changes.find(
+          (change) =>
+            change.draftUuid === commit.uuid &&
+            change.current.documentUuid === document.documentUuid,
+        )?.current
         if (!updatedDocument) return
 
         if (updatedDocument.deletedAt) {
@@ -185,13 +186,15 @@ export default function DocumentEditor({
     value,
   ])
 
+  const isMerged = commit.mergedAt !== null
+
   const onChange = useCallback(
     async (newValue: string) => {
+      if (isMerged || customReadOnlyMessage) return
       setValue(newValue)
-
       debouncedSave(newValue)
     },
-    [debouncedSave, setValue],
+    [debouncedSave, setValue, isMerged, customReadOnlyMessage],
   )
 
   const [diff, setDiff] = useState<DiffOptions | undefined>(
@@ -222,8 +225,6 @@ export default function DocumentEditor({
         }
       : undefined,
   )
-
-  const isMerged = commit.mergedAt !== null
 
   const name = document.path.split('/').pop() ?? document.path
   const readOnlyMessage = isMerged

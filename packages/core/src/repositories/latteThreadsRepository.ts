@@ -24,6 +24,22 @@ export class LatteThreadsRepository extends Repository<LatteThread> {
 
   async findByUuid({
     threadUuid,
+  }: {
+    threadUuid: string
+  }): PromisedResult<LatteThread, LatitudeError> {
+    const result = await this.db
+      .select()
+      .from(latteThreads)
+      .where(and(this.scopeFilter, eq(latteThreads.uuid, threadUuid)))
+
+    if (!result.length) {
+      return Result.error(new NotFoundError('Latte thread not found'))
+    }
+    return Result.ok(result[0]! as LatteThread)
+  }
+
+  async findByUuidAndUser({
+    threadUuid,
     userId,
   }: {
     threadUuid: string

@@ -1,3 +1,5 @@
+import { DocumentVersion } from '../models'
+
 interface ILatteDraftAction {
   type: 'prompt'
   operation: 'create' | 'update' | 'delete'
@@ -25,3 +27,10 @@ export type LatteEditAction =
   | LatteCreatePromptAction
   | LatteUpdatePromptAction
   | LatteDeletePromptAction
+
+export type LatteChange = {
+  projectId: number
+  draftUuid: string
+  previous: DocumentVersion | null
+  current: DocumentVersion
+}

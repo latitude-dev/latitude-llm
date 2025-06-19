@@ -19,7 +19,7 @@ import editProject from './projects/edit'
 import listProviders from './settings/listProviders'
 import listIntegrations from './settings/listIntegrations'
 
-const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
+export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.listProjects]: listProjects,
   [LatteTool.listDrafts]: listDrafts,
   [LatteTool.listPrompts]: listPrompts,

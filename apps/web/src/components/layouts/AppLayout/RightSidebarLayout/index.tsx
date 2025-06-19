@@ -27,12 +27,6 @@ export default function RightSidebarLayout({
 
   const items = useMemo<RightSidebarItem[]>(
     () => [
-      {
-        value: 'docs',
-        label: 'Documentation',
-        icon: 'bookMarked',
-        content: <DocumentationContent isOpen={selected === 'docs'} />,
-      },
       ...(latteEnabled
         ? [
             {
@@ -65,6 +59,12 @@ export default function RightSidebarLayout({
             } as RightSidebarItem,
           ]
         : []),
+      {
+        value: 'docs',
+        label: 'Documentation',
+        icon: 'bookMarked',
+        content: <DocumentationContent isOpen={selected === 'docs'} />,
+      },
     ],
     [latteEnabled, emotion, setEmotion, reactWithEmotion, selected],
   )

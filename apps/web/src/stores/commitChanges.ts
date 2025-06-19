@@ -1,8 +1,8 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
-import { ChangedDocument } from '@latitude-data/core/repositories'
 import { Commit } from '@latitude-data/core/browser'
+import { ChangedDocument } from '@latitude-data/constants'
 
 export function useCommitsChanges(
   commit?: Commit,

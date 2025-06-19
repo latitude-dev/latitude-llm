@@ -11,11 +11,7 @@ import {
 } from 'drizzle-orm'
 
 import { Commit, Project } from '../../browser'
-import {
-  CommitStatus,
-  HEAD_COMMIT,
-  ModifiedDocumentType,
-} from '../../constants'
+import { CommitStatus, HEAD_COMMIT } from '../../constants'
 import RepositoryLegacy from '../repository'
 import { buildCommitsScope, columnSelection } from './utils/buildCommitsScope'
 import { getHeadCommitForProject } from './utils/getHeadCommit'
@@ -24,12 +20,6 @@ import { InferedReturnType } from './../../lib/commonTypes'
 import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
 
-export type ChangedDocument = {
-  documentUuid: string
-  path: string
-  errors: number
-  changeType: ModifiedDocumentType
-}
 function filterByStatusQuery({
   scope,
   status,
