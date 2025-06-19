@@ -1,12 +1,14 @@
 import React from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
+import Document from '@tiptap/extension-document'
+import Text from '@tiptap/extension-text'
 
 import {
   AnyBlock,
   simpleBlocksToText,
 } from '@latitude-data/constants/simpleBlocks'
 
-import { TextBlockExtension } from './extensions/Text/extension'
+import TextBlockExtension from './extensions/Text/extension'
 import { BlocksEditorProps } from '../types'
 
 export function BlocksEditor({
@@ -16,7 +18,14 @@ export function BlocksEditor({
 }: BlocksEditorProps) {
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [TextBlockExtension],
+    extensions: [
+      // Essential Tiptap extensions
+      Document,  // Required: top-level document node
+      Text,      // Required: handles text content within blocks
+
+      // Our custom block extensions
+      TextBlockExtension,
+    ],
     content: {
       type: 'doc',
       content: [

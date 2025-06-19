@@ -151,3 +151,5 @@ export const TextBlockExtension = Node.create<TextBlockOptions>({
     }
   },
 })
+
+export default TextBlockExtension
