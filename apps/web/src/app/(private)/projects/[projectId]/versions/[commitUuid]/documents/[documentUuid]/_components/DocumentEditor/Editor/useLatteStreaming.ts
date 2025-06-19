@@ -30,7 +30,7 @@ export function useLatteStreaming({
         return acc + text.length
       }, 0)
 
-      const chunkSize = Math.floor(
+      const chunkSize = Math.ceil(
         totalCharacterChanges / (MAX_ANIMATION_TIME / STEP_DURATION),
       )
 
