@@ -13,7 +13,7 @@ function View({ node }: Props) {
   const { as, isolated } = node.attrs
 
   return (
-    <BaseNodeView className='relative rounded-sm border boder-border mb-2'>
+    <BaseNodeView className='relative rounded-sm border border-border mb-2'>
       <div className='flex justify-end'>
         <div className='px-1 py-0.5 bg-muted border-l border-b border-border rounded-bl-sm'>
           <Text.H6>step</Text.H6>

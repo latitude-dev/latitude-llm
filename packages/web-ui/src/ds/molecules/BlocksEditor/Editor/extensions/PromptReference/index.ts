@@ -5,7 +5,8 @@ import View, { type Attr } from './View'
 export const PROMPT_REF_ID = 'prompt-reference'
 export const PromptReference = Node.create<Attr>({
   name: PROMPT_REF_ID,
-  group: 'block',
+  group: 'inline',
+  inline: true,
   atom: true,
 
   addAttributes() {
@@ -18,7 +19,7 @@ export const PromptReference = Node.create<Attr>({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['div', { ...HTMLAttributes, 'data-type': PROMPT_REF_ID }]
+    return ['span', { ...HTMLAttributes, 'data-type': PROMPT_REF_ID }]
   },
 
   addNodeView() {

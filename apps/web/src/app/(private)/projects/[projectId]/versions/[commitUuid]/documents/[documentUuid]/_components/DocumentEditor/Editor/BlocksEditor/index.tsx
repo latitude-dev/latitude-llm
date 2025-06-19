@@ -30,15 +30,20 @@ export const PlaygroundBlocksEditor = memo(
         ],
       },
       {
-        type: 'prompt-reference',
-        attrs: {
-          id: 'prompt-block-1',
-          path: 'latitude-extract',
-          attributes: {
-            location: '{{thing}}',
+        type: 'paragraph',
+        content: [
+          {
+            type: 'prompt-reference',
+            attrs: {
+              id: 'prompt-block-1',
+              path: 'latitude-extract',
+              attributes: {
+                location: '{{thing}}',
+              },
+              // errors: [{ message: 'Path is required' }],
+            },
           },
-          // errors: [{ message: 'Path is required' }],
-        },
+        ],
       },
       {
         type: 'step',
@@ -53,11 +58,16 @@ export const PlaygroundBlocksEditor = memo(
             ],
           },
           {
-            type: 'prompt-reference',
-            attrs: {
-              id: 'prompt-block-2',
-              path: 'weather-prompt',
-            },
+            type: 'paragraph',
+            content: [
+              {
+                type: 'prompt-reference',
+                attrs: {
+                  id: 'prompt-block-2',
+                  path: 'weather-prompt',
+                },
+              },
+            ],
           },
         ],
       },

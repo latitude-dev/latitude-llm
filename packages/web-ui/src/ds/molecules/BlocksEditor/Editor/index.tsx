@@ -15,6 +15,7 @@ import {
 import { BlocksEditorProps, JSONContent } from '../types'
 import { PromptReference } from './extensions/PromptReference'
 import { StepReference } from './extensions/StepReference'
+import { ActiveLinePlugin } from './plugins/ActiveLine'
 
 function ensureTrailingParagraph(content: JSONContent[] = []): JSONContent[] {
   const last = content[content.length - 1]
@@ -34,22 +35,21 @@ export function BlocksEditor({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
+      // Root Document is mandatory
       Document.configure({ content: 'block+' }),
+
+      // Builtin extensions
       Text,
       Paragraph,
       Placeholder.configure({
+        placeholder,
         includeChildren: true,
         showOnlyCurrent: true,
-        placeholder: ({ node }) => {
-          console.log('Placeholder for node:', node.type.name)
-          if (node.type.name === 'step') {
-            return 'Describe this step...'
-          }
-          return placeholder || 'Write something...'
-        },
         emptyEditorClass: 'is-editor-empty',
         emptyNodeClass: 'is-empty-node',
       }),
+
+      // Latitude extensions
       PromptReference,
       StepReference,
     ],

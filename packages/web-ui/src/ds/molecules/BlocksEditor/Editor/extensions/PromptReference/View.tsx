@@ -22,8 +22,9 @@ function View({ node, updateAttributes: _ua }: Props) {
 
   return (
     <BaseNodeView
+      as='span'
       errors={node.attrs.errors}
-      className='flex flex-row items-center gap-1 rounded p-1 cursor-pointer hover:bg-muted'
+      className='align-middle inline-flex flex-row items-center gap-1 rounded p-1 cursor-pointer bg-muted/50 hover:bg-muted'
     >
       <Icon name='file' />
       <Text.H5>{node.attrs.path}</Text.H5>
