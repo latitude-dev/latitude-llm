@@ -16,9 +16,18 @@ const conversationTag = {
   },
 }
 
+const projectsTag = {
+  name: 'Projects',
+  description: 'Project operations',
+  externalDocs: {
+    description: 'Handle projects in Latitude',
+    url: 'https://docs.latitude.so',
+  },
+}
+
 const v1Deprecated = {
   name: 'V1_DEPRECATED',
   description: 'V1 of the API is deprecated. Please use V2',
 }
 
-export const tags = [documentTag, conversationTag, v1Deprecated]
+export const tags = [documentTag, conversationTag, projectsTag, v1Deprecated]

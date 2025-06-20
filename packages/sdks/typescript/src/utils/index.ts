@@ -6,6 +6,7 @@ import {
   GetOrCreateDocumentUrlParams,
   HandlerType,
   LogUrlParams,
+  PushCommitUrlParams,
   RunDocumentUrlParams,
   UrlParams,
 } from '$sdk/utils/types'
@@ -52,6 +53,9 @@ export class RouteResolver {
         return this.documents(params as GetOrCreateDocumentUrlParams)
           .getOrCreate
       }
+      case HandlerType.CreateDocument: {
+        return this.project(params as GetOrCreateDocumentUrlParams).documents
+      }
       case HandlerType.RunDocument:
         return this.documents(params as RunDocumentUrlParams).run
       case HandlerType.Chat:
@@ -65,8 +69,22 @@ export class RouteResolver {
           (params as ChatUrlParams).conversationUuid,
           (params as AnnotateUrlParams).evaluationUuid,
         )
+      case HandlerType.GetAllProjects:
+        return this.projects().root
+      case HandlerType.CreateProject:
+        return this.projects().root
+      case HandlerType.GetVersion:
+        return this.versionsUrl(
+          params as { projectId: number; versionUuid?: string },
+        )
+      case HandlerType.CreateVersion:
+        return this.project(params as { projectId: number }).versions.root
+      case HandlerType.PushCommit:
+        return this.project({
+          projectId: (params as PushCommitUrlParams).projectId,
+        }).versions.version((params as PushCommitUrlParams).commitUuid).push
       default:
-        throw new Error(`Unknown handler: ${handler satisfies never}`)
+        throw new Error(`Unknown handler: ${handler}`)
     }
   }
 
@@ -80,7 +98,7 @@ export class RouteResolver {
   }
 
   private documents(params: { projectId: number; versionUuid?: string }) {
-    const base = `${this.commitsUrl(params)}/documents`
+    const base = `${this.versionsUrl(params)}/documents`
     return {
       root: base,
       document: (path: string) => `${base}/${path}`,
@@ -90,21 +108,40 @@ export class RouteResolver {
     }
   }
 
-  private commitsUrl({
+  private versionsUrl({
     projectId,
-    versionUuid,
+    // TODO: Think how to share HEAD_COMMIT constant from core
+    // I don't want to require all core just for this
+    versionUuid = 'live',
   }: {
     projectId: number
     versionUuid?: string
   }) {
-    // TODO: Think how to share HEAD_COMMIT constant from core
-    // I don't want to require all core just for this
-    const commit = versionUuid ?? 'live'
-    return `${this.projectsUrl({ projectId })}/versions/${commit}`
+    return `${this.project({ projectId }).versions.root}/${versionUuid}`
   }
 
-  private projectsUrl({ projectId }: { projectId: number }) {
-    return `${this.baseUrl}/projects/${projectId}`
+  private projects() {
+    const base = `${this.baseUrl}/projects`
+    return {
+      root: base,
+    }
+  }
+
+  private project({ projectId }: { projectId: number }) {
+    return {
+      root: `${this.baseUrl}/projects/${projectId}`,
+      documents: `${this.baseUrl}/projects/${projectId}/documents`,
+      versions: {
+        root: `${this.baseUrl}/projects/${projectId}/versions`,
+        version: (versionUuid: string) => ({
+          root: `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}`,
+          documents: {
+            diff: `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}/documents/diff`,
+          },
+          push: `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}/push`,
+        }),
+      },
+    }
   }
 
   private get baseUrl() {

@@ -74,18 +74,22 @@ export class CommitsRepository extends RepositoryLegacy<
       return Result.ok(headCommit)
     }
 
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.uuid, uuid))
-      .limit(1)
-    const commit = result[0]
-    if (!commit)
-      return Result.error(
-        new NotFoundError(`Commit with uuid ${uuid} not found`),
-      )
+    try {
+      const result = await this.db
+        .select()
+        .from(this.scope)
+        .where(eq(this.scope.uuid, uuid))
+        .limit(1)
+      const commit = result[0]
+      if (!commit)
+        return Result.error(
+          new NotFoundError(`Commit with uuid ${uuid} not found`),
+        )
 
-    return Result.ok(commit)
+      return Result.ok(commit)
+    } catch (error) {
+      return Result.error(error as Error)
+    }
   }
 
   async getCommitById(id: number) {

@@ -52,10 +52,22 @@ export const API_ROUTES = {
     },
   },
   v3: {
+    projects: {
+      getAll: `${V3_PATH}/${PROJECTS}`,
+      create: `${V3_PATH}/${PROJECTS}`,
+      createCommit: `${V3_PATH}/${PROJECTS}/:projectId/versions`,
+      getCommit: `${V3_PATH}/${PROJECTS}/:projectId/versions/:commitUuid`,
+      diffDocuments: `${V3_PATH}/${PROJECTS}/:projectId/versions/:commitUuid/documents/diff`,
+      pushCommit: `${V3_PATH}/${PROJECTS}/:projectId/versions/:commitUuid/push`,
+      documents: {
+        create: `${V3_PATH}/${PROJECTS}/:projectId/versions/:commitUuid/documents`,
+      }
+    },
     documents: {
       getAll: V3_DOCUMENTS,
       get: `${V3_DOCUMENTS}/:documentPath{.+}`,
       getOrCreate: `${V3_DOCUMENTS}/get-or-create`,
+      create: `${V3_DOCUMENTS}/create`,
       run: `${V3_DOCUMENTS}/run`,
       logs: `${V3_DOCUMENTS}/logs`,
     },

@@ -25,6 +25,7 @@ const EXTERNALS = [
   'zod',
 ]
 const config = [
+  // SDK Library
   {
     input: 'src/index.ts',
     output: {

@@ -5,6 +5,7 @@ from latitude_sdk.client.payloads import (
     ChatPromptRequestParams,
     CreateLogRequestParams,
     GetAllPromptRequestParams,
+    GetCommitRequestParams,
     GetOrCreatePromptRequestParams,
     GetPromptRequestParams,
     RequestHandler,
@@ -90,6 +91,21 @@ class Router:
 
             return "POST", self.conversations().annotate(params.conversation_uuid, params.evaluation_uuid)
 
+        elif handler == RequestHandler.GetAllProjects:
+            assert isinstance(params, GetAllProjectsRequestParams)
+
+            return "GET", self.projects().all_projects
+
+        elif handler == RequestHandler.CreateProject:
+            assert isinstance(params, CreateProjectRequestParams)
+
+            return "POST", self.projects().all_projects
+
+        elif handler == RequestHandler.GetCommit:
+            assert isinstance(params, GetCommitRequestParams)
+
+            return "GET", self.projects().commit(params.project_id, params.commit_uuid)
+
         raise TypeError(f"Unknown handler: {handler}")
 
     class Conversations(Model):
@@ -126,6 +142,16 @@ class Router:
         version_uuid = version_uuid if version_uuid else HEAD_COMMIT
 
         return f"{self.projects_url(project_id)}/versions/{version_uuid}"
+
+    class Projects(Model):
+        all_projects: str
+        commit: Callable[[int, str], str]
+
+    def projects(self) -> Projects:
+        return self.Projects(
+            all_projects=f"{self.options.gateway.base_url}/projects",
+            commit=lambda project_id, commit_uuid: f"{self.options.gateway.base_url}/projects/{project_id}/commits/{commit_uuid}",
+        )
 
     def projects_url(self, project_id: int) -> str:
         return f"{self.options.gateway.base_url}/projects/{project_id}"
