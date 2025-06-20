@@ -47,7 +47,7 @@ export const createHandler: AppRouteHandler<typeof createRoute> = async (
       database,
     ).then((r) => r.unwrap())
 
-    return c.json(result, 201)
+    return c.json({ project: result.project, version: result.commit }, 201)
   } catch (error) {
     console.error('Unexpected error:', error)
     return c.json({ error: 'Unexpected error', details: String(error) }, 500)

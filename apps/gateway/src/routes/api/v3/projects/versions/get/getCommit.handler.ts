@@ -9,7 +9,7 @@ export const getVersionHandler: AppRouteHandler<
   typeof getVersionRoute
 > = async (c: Context) => {
   const workspace = c.get('workspace')
-  const { versionUuid } = c.req.param()
+  const { projectId, versionUuid } = c.req.param()
   if (!versionUuid) {
     throw new BadRequestError('Commit uuid is required')
   }
@@ -17,6 +17,7 @@ export const getVersionHandler: AppRouteHandler<
   const commitsRepository = new CommitsRepository(workspace.id)
   const commit = await commitsRepository
     .getCommitByUuid({
+      projectId: Number(projectId),
       uuid: versionUuid,
     })
     .then((r) => r.unwrap())
