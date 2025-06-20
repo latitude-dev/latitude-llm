@@ -21,7 +21,7 @@ function View({ node }: Props) {
           <Text.H6>step</Text.H6>
         </div>
       </div>
-      <NodeViewContent className='space-y-2 px-2 pb-1' />
+      <NodeViewContent className='base-node-view px-2 pb-1' />
     </BaseNodeView>
   )
 }

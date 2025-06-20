@@ -69,6 +69,12 @@
 
   /* Blocks editor highlight for promptl */
   .latitude-blocks-editor {
+    .base-node-view {
+      & > div {
+        @apply space-y-2;
+      }
+    }
+
     .language-promptl {
       .hljs-punctuation,
       .hljs-tag {
