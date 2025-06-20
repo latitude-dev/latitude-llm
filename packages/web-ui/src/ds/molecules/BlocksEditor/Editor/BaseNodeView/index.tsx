@@ -2,7 +2,6 @@ import { ReactNode, JSX } from 'react'
 import { NodeViewProps } from '@tiptap/react'
 import { AnyBlock } from '@latitude-data/constants/simpleBlocks'
 import { NodeViewWrapper } from '@tiptap/react'
-import { cn } from '../../../../../lib/utils'
 
 type Error<T extends AnyBlock['errors'] = AnyBlock['errors']> =
   T extends Array<infer U> ? U : never

@@ -66,6 +66,63 @@
   .sidebar-icon-mask {
     clip-path: polygon(0 0, 100% 0, 100% 48%, 48% 48%, 48% 100%, 0 100%);
   }
+
+  /* .text-muted-all * { */
+  /* FIXME: This is a hack. Remove when we have better styles */
+  /* @apply text-muted-foreground; */
+  /* } */
+
+  /* Braces: {{, }} and punctuation like == */
+  .latitude-blocks-editor .language-promptl .hljs-punctuation,
+  .latitude-blocks-editor .language-promptl .hljs-tag {
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Keywords like if, for, endif */
+  .latitude-blocks-editor .language-promptl .hljs-keyword {
+    color: hsl(var(--accent-foreground));
+    font-weight: 500;
+  }
+
+  /* Variables like location, item */
+  .latitude-blocks-editor .language-promptl .hljs-variable {
+    color: hsl(var(--accent-foreground));
+  }
+
+  /* Strings like 'Barcelona' */
+  .latitude-blocks-editor .language-promptl .hljs-string {
+    color: hsl(var(--destructive-muted-foreground));
+  }
+
+  /* Comments like {# This is a comment #} */
+  .latitude-blocks-editor .language-promptl .hljs-comment {
+    color: hsl(var(--muted-foreground));
+    font-style: italic;
+  }
+
+  /* Optional fallback styles */
+  .latitude-blocks-editor .language-promptl .hljs-number,
+  .latitude-blocks-editor .language-promptl .hljs-symbol,
+  .latitude-blocks-editor .language-promptl .hljs-operator,
+  .latitude-blocks-editor .language-promptl .hljs-delimiter,
+  .latitude-blocks-editor .language-promptl .hljs-bracket {
+    color: hsl(var(--accent-foreground));
+  }
+
+  .latitude-blocks-editor .language-promptl .hljs-strong {
+    color: hsl(var(--foreground));
+    font-weight: bold;
+  }
+
+  .latitude-blocks-editor .language-promptl .hljs-emphasis {
+    color: hsl(var(--foreground));
+    font-style: italic;
+  }
+
+  .latitude-blocks-editor .language-promptl .hljs-link {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+  }
 }
 
 @layer base {

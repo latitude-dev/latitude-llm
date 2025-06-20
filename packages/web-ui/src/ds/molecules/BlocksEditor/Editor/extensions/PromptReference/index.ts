@@ -2,7 +2,7 @@ import { Node } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import View, { type Attr } from './View'
 
-export const PROMPT_REF_ID = 'prompt-reference'
+export const PROMPT_REF_ID = 'prompt'
 export const PromptReference = Node.create<Attr>({
   name: PROMPT_REF_ID,
   group: 'inline',

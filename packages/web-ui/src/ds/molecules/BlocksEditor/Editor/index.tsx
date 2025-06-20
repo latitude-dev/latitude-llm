@@ -4,18 +4,15 @@ import Document from '@tiptap/extension-document'
 import Text from '@tiptap/extension-text'
 import Paragraph from '@tiptap/extension-paragraph'
 import Placeholder from '@tiptap/extension-placeholder'
+import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 
 import { cn } from '../../../../lib/utils'
-
-import {
-  AnyBlock,
-  simpleBlocksToText,
-} from '@latitude-data/constants/simpleBlocks'
 
 import { BlocksEditorProps, JSONContent } from '../types'
 import { PromptReference } from './extensions/PromptReference'
 import { StepReference } from './extensions/StepReference'
-import { ActiveLinePlugin } from './plugins/ActiveLine'
+import { MessageReference } from './extensions/MessageReference'
+import { initLowLight } from '../syntax/promptlSyntax'
 
 function ensureTrailingParagraph(content: JSONContent[] = []): JSONContent[] {
   const last = content[content.length - 1]
@@ -24,6 +21,7 @@ function ensureTrailingParagraph(content: JSONContent[] = []): JSONContent[] {
   }
   return content
 }
+const lowlight = initLowLight()
 
 export function BlocksEditor({
   onUpdate,
@@ -41,6 +39,11 @@ export function BlocksEditor({
       // Builtin extensions
       Text,
       Paragraph,
+      CodeBlockLowlight.configure({
+        lowlight,
+        defaultLanguage: 'promptl',
+        HTMLAttributes: { class: 'bg-backgroundCode border border-border rounded-sm p-2' },
+      }),
       Placeholder.configure({
         placeholder,
         includeChildren: true,
@@ -52,6 +55,7 @@ export function BlocksEditor({
       // Latitude extensions
       PromptReference,
       StepReference,
+      MessageReference,
     ],
     content: {
       type: 'doc',
@@ -65,8 +69,8 @@ export function BlocksEditor({
     editorProps: {
       attributes: {
         class: cn(
+          'latitude-blocks-editor space-y-1',
           'font-mono text-sm leading-tight whitespace-pre outline-none',
-          'space-y-1',
           '[&_.is-empty-node]:before:content-[attr(data-placeholder)]',
           '[&_.is-empty-node]:before:text-muted-foreground',
           '[&_.is-empty-node]:pointer-events-none',
@@ -81,8 +85,9 @@ export function BlocksEditor({
     <div
       ref={ref}
       className={cn(
-        'relative h-full rounded-lg border border-border bg-backgroundCode',
-        'overflow-hidden flex flex-col py-4 px-3',
+        'relative h-full',
+        'overflow-hidden flex flex-col',
+        'text-muted-all',
       )}
     >
       <EditorContent editor={editor} />

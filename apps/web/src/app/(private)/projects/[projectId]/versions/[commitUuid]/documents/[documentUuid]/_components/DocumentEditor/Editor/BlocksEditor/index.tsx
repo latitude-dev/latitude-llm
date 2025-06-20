@@ -33,7 +33,7 @@ export const PlaygroundBlocksEditor = memo(
         type: 'paragraph',
         content: [
           {
-            type: 'prompt-reference',
+            type: 'prompt',
             attrs: {
               id: 'prompt-block-1',
               path: 'latitude-extract',
@@ -61,13 +61,66 @@ export const PlaygroundBlocksEditor = memo(
             type: 'paragraph',
             content: [
               {
-                type: 'prompt-reference',
+                type: 'prompt',
                 attrs: {
                   id: 'prompt-block-2',
                   path: 'weather-prompt',
                 },
               },
             ],
+          },
+          {
+            type: 'message',
+            attrs: {
+              role: 'user',
+            },
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'What is the weather like in {{ location }}?',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        type: 'message',
+        attrs: {
+          role: 'assistant',
+        },
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              {
+                type: 'text',
+                text: 'Hello! How can I assist you today?',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        type: 'codeBlock',
+        attrs: {
+          language: 'promptl',
+        },
+        content: [
+          {
+            type: 'text',
+            text: `{{if location == 'Barcelona'}}
+  <step>
+    <assistant>
+      /* This is a comment */
+      Is a sunny place with nice weather and good food. {{location}}
+    </assistant>
+  </step>
+{{ endif }}`,
           },
         ],
       },

@@ -2,8 +2,8 @@ import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import View, { type Attr } from './View'
 
-export const StepReference = Node.create<Attr>({
-  name: 'step',
+export const MessageReference = Node.create<Attr>({
+  name: 'message',
   group: 'block',
   content: 'block+',
   inline: false,
@@ -13,22 +13,23 @@ export const StepReference = Node.create<Attr>({
   addAttributes() {
     return {
       id: { default: () => crypto.randomUUID() },
-      errors: { default: [] },
-      as: { default: null },
-      isolated: { default: false },
+      role: { default: 'system' },
     }
   },
 
   parseHTML() {
-    return [{ tag: 'div[data-type="step"]' }]
+    return [{ tag: 'div[data-type="message"]' }]
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'step' }), 0]
+    return [
+      'div',
+      mergeAttributes(HTMLAttributes, { 'data-type': 'message' }),
+      0,
+    ]
   },
 
   addNodeView() {
     return ReactNodeViewRenderer(View)
   },
 })
-
