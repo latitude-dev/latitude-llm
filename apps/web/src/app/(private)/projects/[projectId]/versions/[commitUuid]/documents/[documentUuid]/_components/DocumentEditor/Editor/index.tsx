@@ -82,11 +82,15 @@ export default function DocumentEditor({
   )
 
   const [value, setValue] = useState(document.content)
-  const { customReadOnlyMessage, highlightedCursorIndex, streamLatteUpdate } =
-    useLatteStreaming({
-      value,
-      setValue,
-    })
+  const {
+    customReadOnlyMessage,
+    highlightedCursorIndex,
+    streamLatteUpdate,
+    isStreamingRef,
+  } = useLatteStreaming({
+    value,
+    setValue,
+  })
 
   useEvents(
     {
@@ -194,11 +198,12 @@ export default function DocumentEditor({
 
   const onChange = useCallback(
     async (newValue: string) => {
-      if (isMerged || customReadOnlyMessage) return
+      if (isStreamingRef.current) return // Prevent updating the actual document while streaming
+      if (isMerged) return
       setValue(newValue)
       debouncedSave(newValue)
     },
-    [debouncedSave, setValue, isMerged, customReadOnlyMessage],
+    [debouncedSave, setValue, isMerged, isStreamingRef],
   )
 
   const [diff, setDiff] = useState<DiffOptions | undefined>(

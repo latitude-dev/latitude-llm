@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { customDiff, CustomDiffType } from '$/helpers/latte/customDiff'
 
 const MAX_ANIMATION_TIME = 5000
@@ -11,11 +11,13 @@ export function useLatteStreaming({
   value: string
   setValue: (value: string) => void
 }) {
+  const isStreamingRef = useRef<boolean>(false)
   const [customReadOnlyMessage, setCustomReadOnlyMessage] = useState<string>()
   const [highlightedCursorIndex, setHighlightedCursorIndex] = useState<number>()
 
   const streamLatteUpdate = useCallback(
     (newValue: string) => {
+      isStreamingRef.current = true
       setCustomReadOnlyMessage(
         'Latte is updating the document. Please wait for it to finish.',
       )
@@ -38,9 +40,11 @@ export function useLatteStreaming({
 
       const updateStep = () => {
         if (diffIndex >= diffs.length) {
+          // Finished processing all diffs
           setValue(newValue)
           setCustomReadOnlyMessage(undefined)
           setHighlightedCursorIndex(undefined)
+          isStreamingRef.current = false
           return
         }
 
@@ -96,6 +100,7 @@ export function useLatteStreaming({
   return {
     customReadOnlyMessage,
     highlightedCursorIndex,
+    isStreamingRef,
     streamLatteUpdate,
   }
 }
