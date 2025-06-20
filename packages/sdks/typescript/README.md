@@ -10,6 +10,8 @@ Go to the [documentation](https://docs.latitude.so/guides/sdk/typescript) to lea
 
 ## Usage
 
+### SDK Usage
+
 ```typescript
 import { Latitude, LatitudeOptions, RunPromptOptions } from '@latitude-data/sdk'
 
@@ -26,8 +28,6 @@ await sdk.prompts.run('joke-teller', {
   stream: true,
 })
 ```
-
-Find more [examples](https://github.com/latitude-dev/latitude-llm/tree/main/examples/sdks/typescript).
 
 ## Development
 
