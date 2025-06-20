@@ -26,10 +26,6 @@ export const acceptLatteChangesAction = authProcedure
       accepted: true,
     })
 
-    if (!evaluationResult.ok) {
-      return { evaluationUuid: undefined }
-    }
-
     const { result } = evaluationResult.unwrap()
 
     return {
