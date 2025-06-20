@@ -17,7 +17,6 @@ import { type AssistantMessage } from '@latitude-data/compiler'
 import { uploadFile } from '../../../../services/files'
 import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
 import { BadRequestError } from './../../../../lib/errors'
-import { LatitudeError } from './../../../../lib/errors'
 import { PromisedResult } from './../../../../lib/Transaction'
 import { Result } from './../../../../lib/Result'
 
@@ -42,7 +41,7 @@ async function getNewTriggerResponse(
     attachments?: PromptLFile[]
   },
   db = database,
-): PromisedResult<AssistantMessage, LatitudeError> {
+): PromisedResult<AssistantMessage, Error> {
   const commitsScope = new CommitsRepository(trigger.workspaceId, db)
   const headCommitResult = await commitsScope.getHeadCommit(trigger.projectId)
   if (headCommitResult.error) return headCommitResult.error
@@ -122,7 +121,7 @@ export async function findReferencedLog(
     parentMessageIds?: string[]
   },
   db = database,
-): PromisedResult<DocumentLog | undefined, LatitudeError> {
+): PromisedResult<DocumentLog | undefined, Error> {
   const conversationIdentifier = parentMessageIds?.[0]
   if (!conversationIdentifier) return Result.nil()
 
@@ -146,7 +145,7 @@ export async function uploadAttachments({
 }: {
   workspace: Workspace
   attachments: File[]
-}): PromisedResult<PromptLFile[], LatitudeError> {
+}): PromisedResult<PromptLFile[], Error> {
   const results = await Promise.all(
     attachments.map(async (file) => {
       return await uploadFile({ file, workspace })
@@ -155,7 +154,7 @@ export async function uploadAttachments({
 
   const errors = results.filter((result) => result.error)
   if (errors.length) {
-    return Result.error(errors[0]!.error! as LatitudeError)
+    return Result.error(errors[0]!.error!)
   }
 
   return Result.ok(results.map((result) => result.unwrap()))
@@ -182,7 +181,7 @@ export async function getEmailResponse(
     attachments?: PromptLFile[]
   },
   db = database,
-): PromisedResult<AssistantMessage, LatitudeError> {
+): PromisedResult<AssistantMessage, Error> {
   const workspace = (await unsafelyFindWorkspace(
     trigger.workspaceId,
     db,

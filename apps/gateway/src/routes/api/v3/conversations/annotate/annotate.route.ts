@@ -10,7 +10,7 @@ export const annotateParamsSchema = z.object({
 
 export const annotateRoute = createRoute({
   operationId: 'annotate',
-  tags: ['Conversations'],
+  tags: ['Evaluations'],
   description: 'Annotate a conversation with an existing evaluation',
   method: http.Methods.POST,
   path: ROUTES.api.v3.conversations.annotate,

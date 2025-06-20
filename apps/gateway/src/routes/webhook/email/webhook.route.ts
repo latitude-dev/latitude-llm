@@ -8,7 +8,7 @@ import { webhookRateLimitMiddleware } from '$/middlewares/webhookRateLimit'
 export const emailWebhookRoute = createRoute({
   method: http.Methods.POST,
   path: ROUTES.webhook.email,
-  tags: ['Documents'],
+  tags: ['Webhooks'],
   request: {
     body: {
       content: {

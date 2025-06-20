@@ -80,7 +80,7 @@ describe('POST /chat', () => {
   describe('unauthorized', () => {
     it('fails', async () => {
       const res = await app.request(
-        `/api/v2/conversations/${step.documentLogUuid}/chat`,
+        `/api/v3/conversations/${step.documentLogUuid}/chat`,
         {
           method: 'POST',
           body: JSON.stringify({
@@ -112,7 +112,7 @@ describe('POST /chat', () => {
       ).unwrap()
 
       token = apikey.token
-      route = `/api/v2/conversations/${step.documentLogUuid}/chat`
+      route = `/api/v3/conversations/${step.documentLogUuid}/chat`
       body = {
         stream: true,
         messages: [
@@ -177,17 +177,10 @@ describe('POST /chat', () => {
       expect(res.body).toBeInstanceOf(ReadableStream)
       expect(done).toBe(true)
       expect(event).toEqual({
-        id: 0,
+        id: 1,
         event: StreamEventTypes.Latitude,
         data: {
-          type: LegacyChainEventTypes.Complete,
-          uuid: step.documentLogUuid,
-          response: {
-            streamType: step.streamType,
-            text: step.text,
-            usage: step.usage,
-            toolCalls: step.toolCalls,
-          },
+          type: ChainEventTypes.ChainCompleted,
           messages: step.providerLog?.messages,
         },
       })
@@ -234,6 +227,7 @@ describe('POST /chat', () => {
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
         source: LogSources.API,
+        abortSignal: expect.anything(),
       })
     })
 
@@ -281,6 +275,7 @@ describe('POST /chat', () => {
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
         source: LogSources.Playground,
+        abortSignal: expect.anything(),
       })
     })
 
@@ -329,8 +324,13 @@ describe('POST /chat', () => {
         data: {
           type: LegacyChainEventTypes.Error,
           error: {
+            details: {
+              errorCode: RunErrorCodes.AIRunError,
+            },
+            errorCode: RunErrorCodes.AIRunError,
+            headers: {},
             name: 'UnprocessableEntityError',
-            message: 'API call error',
+            statusCode: 422,
           },
         },
       })
@@ -351,7 +351,7 @@ describe('POST /chat', () => {
       ).unwrap()
 
       token = apikey.token
-      route = `/api/v2/conversations/${step.documentLogUuid}/chat`
+      route = `/api/v3/conversations/${step.documentLogUuid}/chat`
       body = {
         stream: false,
         messages: [
@@ -395,6 +395,7 @@ describe('POST /chat', () => {
       expect(await res.json()).toEqual({
         uuid: step.documentLogUuid,
         conversation: step.providerLog?.messages,
+        toolRequests: [],
         response: {
           streamType: step.streamType,
           text: step.text,
@@ -429,6 +430,7 @@ describe('POST /chat', () => {
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
         source: LogSources.API,
+        abortSignal: expect.anything(),
       })
     })
 
@@ -460,6 +462,7 @@ describe('POST /chat', () => {
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
         source: LogSources.Playground,
+        abortSignal: expect.anything(),
       })
     })
 

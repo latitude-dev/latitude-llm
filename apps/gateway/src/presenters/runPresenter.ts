@@ -44,7 +44,7 @@ export function v2RunPresenter(
 
 export function runPresenter({
   response,
-  toolCalls,
+  toolCalls = [],
 }: {
   response: DocumentResponse
   toolCalls: ToolCall[]
