@@ -6,7 +6,7 @@ import {
 } from '$sdk/utils/types'
 import nodeFetch, { Response } from 'node-fetch'
 
-const MAX_RETRIES = 2
+const MAX_RETRIES = 3
 
 function getAuthHeader(apiKey: string) {
   return {
@@ -35,6 +35,7 @@ export async function makeRequest<H extends HandlerType>({
 }): Promise<Response> {
   const { routeResolver, apiKey, source, retryMs } = options
   const url = routeResolver.resolve({ handler, params })
+
   const response = await nodeFetch(url, {
     method,
     headers: getAuthHeader(apiKey),
@@ -59,7 +60,30 @@ export async function makeRequest<H extends HandlerType>({
       options,
       retries: retries + 1,
     })
-  }
+  } else {
+    let error = ''
+    try {
+      error = await response.text()
 
-  return response
+      const { message } = JSON.parse(error) as {
+        errorCode: string
+        message: string
+        dbErrorRef: string
+      }
+
+      throw new Error(
+        `Request to ${url} failed with status ${response.status}: ${message}`,
+      )
+    } catch (e) {
+      if (error) {
+        throw new Error(
+          `Request to ${url} failed with status ${response.status}: ${error}`,
+        )
+      } else {
+        throw new Error(
+          `Request to ${url} failed with status ${response.status}`,
+        )
+      }
+    }
+  }
 }

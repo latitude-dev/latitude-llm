@@ -287,6 +287,30 @@ class SdkOptions(Model):
     tools: Optional[dict[str, OnToolCall]] = None
 
 
+class Project(Model):
+    id: int
+    name: str
+    workspace_id: int = Field(alias=str("workspaceId"))
+    created_at: datetime = Field(alias=str("createdAt"))
+    updated_at: datetime = Field(alias=str("updatedAt"))
+    last_edited_at: Optional[datetime] = Field(default=None, alias=str("lastEditedAt"))
+    deleted_at: Optional[datetime] = Field(default=None, alias=str("deletedAt"))
+
+
+class Commit(Model):
+    id: int
+    uuid: str
+    project_id: int = Field(alias=str("projectId"))
+    message: str
+    author_name: Optional[str] = Field(default=None, alias=str("authorName"))
+    author_email: Optional[str] = Field(default=None, alias=str("authorEmail"))
+    author_id: Optional[int] = Field(default=None, alias=str("authorId"))
+    created_at: datetime = Field(alias=str("createdAt"))
+    updated_at: datetime = Field(alias=str("updatedAt"))
+    status: str
+    parent_commit_uuid: Optional[str] = Field(default=None, alias=str("parentCommitUuid"))
+
+
 class GatewayOptions(Model):
     host: str
     port: int
