@@ -2,6 +2,8 @@ import { ReactNode, JSX } from 'react'
 import { NodeViewProps } from '@tiptap/react'
 import { AnyBlock } from '@latitude-data/constants/simpleBlocks'
 import { NodeViewWrapper } from '@tiptap/react'
+import { Icon } from '../../../../atoms/Icons'
+import { cn } from '../../../../../lib/utils'
 
 type Error<T extends AnyBlock['errors'] = AnyBlock['errors']> =
   T extends Array<infer U> ? U : never
@@ -22,16 +24,25 @@ export function BaseNodeView({
   errors = [],
   as,
   className,
+  draggable = true,
 }: {
   children: ReactNode
   errors?: Error[]
   className?: string
   as?: string
+  draggable?: boolean
 }) {
   return (
-    <NodeViewWrapper as={as} className={className}>
+    <NodeViewWrapper as={as} className={cn('relative group/row', className)}>
+      {draggable ? (
+        <div className='absolute -left-6 top-0.5 bottom-0 w-6 flex transition opacity-0 group-hover/row:opacity-100'>
+          <Icon name='gridVertical' color='foregroundMuted' />
+        </div>
+      ) : null}
+
       {children}
 
+      {/* FIXME: Style errors in a nice way */}
       {errors?.length > 0 ? (
         <div className='text-red-500 text-sm'>
           {errors.map((err: Error, i: number) => (

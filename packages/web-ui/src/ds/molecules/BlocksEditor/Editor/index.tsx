@@ -5,6 +5,7 @@ import Text from '@tiptap/extension-text'
 import Paragraph from '@tiptap/extension-paragraph'
 import Placeholder from '@tiptap/extension-placeholder'
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
+import DragHandle from '@tiptap/extension-drag-handle-react'
 
 import { cn } from '../../../../lib/utils'
 
@@ -13,6 +14,7 @@ import { PromptReference } from './extensions/PromptReference'
 import { StepReference } from './extensions/StepReference'
 import { MessageReference } from './extensions/MessageReference'
 import { initLowLight } from '../syntax/promptlSyntax'
+import { Icon } from '../../../atoms/Icons'
 
 function ensureTrailingParagraph(content: JSONContent[] = []): JSONContent[] {
   const last = content[content.length - 1]
@@ -35,14 +37,14 @@ export function BlocksEditor({
     extensions: [
       // Root Document is mandatory
       Document.configure({ content: 'block+' }),
-
-      // Builtin extensions
-      Text,
       Paragraph,
+      Text,
       CodeBlockLowlight.configure({
         lowlight,
         defaultLanguage: 'promptl',
-        HTMLAttributes: { class: 'bg-backgroundCode border border-border rounded-sm p-2' },
+        HTMLAttributes: {
+          class: 'bg-backgroundCode border border-border rounded-sm p-2',
+        },
       }),
       Placeholder.configure({
         placeholder,
@@ -69,7 +71,7 @@ export function BlocksEditor({
     editorProps: {
       attributes: {
         class: cn(
-          'py-4 latitude-blocks-editor space-y-3',
+          'pl-4 py-4 latitude-blocks-editor space-y-3',
           '[&_p]:text-muted-foreground',
           'font-mono text-sm leading-tight whitespace-pre outline-none',
           '[&_.is-empty-node]:before:content-[attr(data-placeholder)]',
@@ -83,14 +85,12 @@ export function BlocksEditor({
   })
 
   return (
-    <div
-      ref={ref}
-      className={cn(
-        'relative h-full',
-        'overflow-hidden flex flex-col',
-        'text-muted-all',
-      )}
-    >
+    <div ref={ref} className='relative h-full flex flex-col'>
+      {editor ? (
+        <DragHandle editor={editor}>
+          <Icon name='gridVertical' color='foregroundMuted' />
+        </DragHandle>
+      ) : null}
       <EditorContent editor={editor} />
     </div>
   )
