@@ -51,18 +51,23 @@ const LRO_POOL_CONFIG: PoolConfig = {
   statement_timeout: 300000, // 5 minutes - Increase x5 the statement timeout
 }
 
-export const lro = {
-  pools: [],
-  replicas: [],
-  database: undefined,
-} as {
-  pools: IPool[]
-  replicas: Replica[]
-  database: Database | undefined
+let _lro:
+  | {
+      pools: IPool[]
+      replicas: Replica[]
+      database: Database
+    }
+  | undefined
+
+export function lro() {
+  if (_lro?.database) return _lro.database
+  throw new Error('LRO database not initialized')
 }
 
 export function setupLRO() {
-  lro.pools = [
+  if (_lro) return
+
+  const pools = [
     new Pool({
       ...LRO_POOL_CONFIG,
       connectionString: env.READ_DATABASE_URL,
@@ -72,8 +77,8 @@ export function setupLRO() {
       connectionString: env.READ_2_DATABASE_URL,
     }),
   ]
+  const replicas = pools.map((pool) => drizzle(pool, { schema }))
+  const database = withReplicas(primary, replicas as [Replica, ...Replica[]])
 
-  lro.replicas = lro.pools.map((pool) => drizzle(pool, { schema }))
-
-  lro.database = withReplicas(primary, lro.replicas as [Replica, ...Replica[]])
+  _lro = { pools, replicas, database }
 }

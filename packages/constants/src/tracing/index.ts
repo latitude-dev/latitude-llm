@@ -38,8 +38,6 @@ export enum InstrumentationScope {
 
 const ATTR_LATITUDE = 'latitude'
 
-export const ATTR_LATITUDE_EXTERNAL_ID = `${ATTR_LATITUDE}.external.id`
-export const ATTR_LATITUDE_SOURCE = `${ATTR_LATITUDE}.source`
 export const ATTR_LATITUDE_TYPE = `${ATTR_LATITUDE}.type`
 
 export const ATTR_LATITUDE_SEGMENT_ID = `${ATTR_LATITUDE}.segment.id`

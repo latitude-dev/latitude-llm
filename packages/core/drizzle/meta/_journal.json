@@ -1268,6 +1268,20 @@
       "when": 1749902317777,
       "tag": "0181_huge_wonder_man",
       "breakpoints": true
+    },
+    {
+      "idx": 182,
+      "version": "7",
+      "when": 1750148936031,
+      "tag": "0182_abnormal_northstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 183,
+      "version": "7",
+      "when": 1750149202650,
+      "tag": "0183_vengeful_outlaw_kid",
+      "breakpoints": true
     }
   ]
 }

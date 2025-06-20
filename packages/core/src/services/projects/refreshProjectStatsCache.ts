@@ -52,7 +52,7 @@ export async function refreshProjectStatsCache(
         })
       }
     } else {
-      db = lro.database ?? db
+      db = lro()
     }
 
     // Compute the stats

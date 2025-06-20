@@ -27,6 +27,7 @@ const EXTERNALS = [
   '@opentelemetry/resources',
   '@opentelemetry/instrumentation',
   '@opentelemetry/sdk-trace-node',
+  '@opentelemetry/context-async-hooks',
   '@opentelemetry/exporter-trace-otlp-http',
   '@opentelemetry/baggage-span-processor',
   '@opentelemetry/semantic-conventions',
@@ -55,6 +56,7 @@ const EXTERNALS = [
   'together-ai',
   'promptl-ai',
   'zod',
+  'uuid',
 ]
 
 const config = [

@@ -51,7 +51,7 @@ describe('redact', () => {
         processors: [processor],
       })
 
-      const [ctx, ok] = sdk.completion(context.active(), {
+      const completion = sdk.completion(context.active(), {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
@@ -59,7 +59,7 @@ describe('redact', () => {
         parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
-      const span = trace.getSpan(ctx)!
+      const span = trace.getSpan(completion.context)!
       span.addEvent('event', { ['auth.token']: 'token' })
       span.addLinks([
         {
@@ -71,7 +71,7 @@ describe('redact', () => {
           attributes: { ['auth.key']: 'key' },
         },
       ])
-      ok({
+      completion.end({
         output: [{ role: 'assistant', content: 'Hello, user!' }],
         tokens: { prompt: 20, cached: 0, reasoning: 0, completion: 10 },
         finishReason: 'stop',

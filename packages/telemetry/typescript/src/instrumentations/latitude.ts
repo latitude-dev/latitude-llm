@@ -5,12 +5,12 @@ import {
   ATTR_GEN_AI_REQUEST_TEMPLATE,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS,
-  SpanSource,
+  SegmentSource,
   TraceContext,
 } from '@latitude-data/constants'
 import type * as latitude from '@latitude-data/sdk'
 import * as otel from '@opentelemetry/api'
-import { context, propagation } from '@opentelemetry/api'
+import { context } from '@opentelemetry/api'
 import type * as promptl from 'promptl-ai'
 
 export type LatitudeInstrumentationOptions = {
@@ -23,7 +23,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   private readonly telemetry: ManualInstrumentation
 
   constructor(
-    source: SpanSource,
+    source: SegmentSource,
     tracer: otel.Tracer,
     options: LatitudeInstrumentationOptions,
   ) {
@@ -69,7 +69,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     ctx: TraceContext,
     fn: F,
   ): ReturnType<F> {
-    return context.with(propagation.extract(context.active(), ctx), fn)
+    return context.with(this.telemetry.resume(ctx), fn)
   }
 
   async wrapToolHandler<
@@ -78,7 +78,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     const toolArguments = args[0]
     const { toolId, toolName } = args[1]
 
-    const [ctx, ok, err] = this.telemetry.tool(context.active(), {
+    const $tool = this.telemetry.tool(context.active(), {
       name: toolName,
       call: {
         id: toolId,
@@ -89,16 +89,16 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     let result
     try {
       result = await context.with(
-        ctx,
+        $tool.context,
         async () => await ((fn as any)(...args) as ReturnType<F>),
       )
     } catch (error) {
       if ((error as Error).name === 'ToolExecutionPausedError') {
-        err(error as Error)
+        $tool.fail(error as Error)
         throw error
       }
 
-      ok({
+      $tool.end({
         result: {
           value: (error as Error).message,
           isError: true,
@@ -107,7 +107,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
       throw error
     }
 
-    ok({
+    $tool.end({
       result: {
         value: result,
         isError: false,
@@ -123,17 +123,25 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   ): Promise<Awaited<ReturnType<F>>> {
     const { prompt } = args[0]
 
-    return await this.telemetry.conversation(
-      {
-        versionUuid: prompt.versionUuid,
-        documentUuid: prompt.uuid,
-      },
-      async () =>
-        // Note: we cannot know the follow up interactions
-        this.telemetry.interaction({}, async () => {
-          return (fn as any)(...args) as ReturnType<F>
-        }),
-    )
+    const $prompt = this.telemetry.prompt(context.active(), {
+      versionUuid: prompt.versionUuid,
+      promptUuid: prompt.uuid,
+    })
+
+    let result
+    try {
+      result = await context.with(
+        $prompt.context,
+        async () => await ((fn as any)(...args) as ReturnType<F>),
+      )
+    } catch (error) {
+      $prompt.fail(error as Error)
+      throw error
+    }
+
+    $prompt.end()
+
+    return result
   }
 
   async wrapRenderAgent<F extends latitude.Latitude['renderAgent']>(
@@ -142,17 +150,25 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   ): Promise<Awaited<ReturnType<F>>> {
     const { prompt } = args[0]
 
-    return await this.telemetry.conversation(
-      {
-        versionUuid: prompt.versionUuid,
-        documentUuid: prompt.uuid,
-      },
-      async () =>
-        // Note: we cannot know the follow up interactions
-        this.telemetry.interaction({}, async () => {
-          return (fn as any)(...args) as ReturnType<F>
-        }),
-    )
+    const $prompt = this.telemetry.prompt(context.active(), {
+      versionUuid: prompt.versionUuid,
+      promptUuid: prompt.uuid,
+    })
+
+    let result
+    try {
+      result = await context.with(
+        $prompt.context,
+        async () => await ((fn as any)(...args) as ReturnType<F>),
+      )
+    } catch (error) {
+      $prompt.fail(error as Error)
+      throw error
+    }
+
+    $prompt.end()
+
+    return result
   }
 
   async wrapRenderStep<F extends latitude.Latitude['renderStep']>(
@@ -168,19 +184,29 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
       jsonParameters = '{}'
     }
 
-    return await this.telemetry.step(
-      {
-        // Note: cascading down some attributes in case the
-        // provider instrumentations don't set them
-        attributes: {
-          [ATTR_GEN_AI_REQUEST_TEMPLATE]: prompt,
-          [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
-        },
+    const $step = this.telemetry.step(context.active(), {
+      // Note: cascading down some attributes in case the
+      // provider instrumentations don't set them
+      attributes: {
+        [ATTR_GEN_AI_REQUEST_TEMPLATE]: prompt,
+        [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
       },
-      async () => {
-        return (fn as any)(...args) as ReturnType<F>
-      },
-    )
+    })
+
+    let result
+    try {
+      result = await context.with(
+        $step.context,
+        async () => await ((fn as any)(...args) as ReturnType<F>),
+      )
+    } catch (error) {
+      $step.fail(error as Error)
+      throw error
+    }
+
+    $step.end()
+
+    return result
   }
 
   async wrapRenderCompletion<F extends latitude.Latitude['renderCompletion']>(
@@ -194,7 +220,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     const { provider, config, prompt, parameters, messages } = args[0]
     const model = (config.model as string) || 'unknown'
 
-    const [ctx, ok, err] = this.telemetry.completion(context.active(), {
+    const $completion = this.telemetry.completion(context.active(), {
       name: `${provider} / ${model}`,
       provider: provider,
       model: model,
@@ -207,11 +233,11 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     let result
     try {
       result = await context.with(
-        ctx,
+        $completion.context,
         async () => await ((fn as any)(...args) as ReturnType<F>),
       )
     } catch (error) {
-      err(error as Error)
+      $completion.fail(error as Error)
       throw error
     }
 
@@ -219,7 +245,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     const promptTokens = this.countTokens(messages)
     const completionTokens = this.countTokens(result.messages)
 
-    ok({
+    $completion.end({
       output: result.messages as Record<string, unknown>[],
       tokens: {
         prompt: promptTokens,
@@ -242,7 +268,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   ): Promise<Awaited<ReturnType<F>>> {
     const { toolRequest } = args[0]
 
-    const [ctx, ok, err] = this.telemetry.tool(context.active(), {
+    const $tool = this.telemetry.tool(context.active(), {
       name: toolRequest.toolName,
       call: {
         id: toolRequest.toolCallId,
@@ -253,15 +279,15 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     let result
     try {
       result = await context.with(
-        ctx,
+        $tool.context,
         async () => await ((fn as any)(...args) as ReturnType<F>),
       )
     } catch (error) {
-      err(error as Error)
+      $tool.fail(error as Error)
       throw error
     }
 
-    ok({
+    $tool.end({
       result: {
         value: result,
         isError: false, // Note: currently unknown

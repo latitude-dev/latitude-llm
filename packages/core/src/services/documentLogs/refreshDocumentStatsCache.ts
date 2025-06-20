@@ -71,7 +71,7 @@ export async function refreshDocumentStatsCache(
         })
       }
     } else {
-      db = lro.database ?? db
+      db = lro()
     }
 
     const [aggregations, dailyCount] = await Promise.all([

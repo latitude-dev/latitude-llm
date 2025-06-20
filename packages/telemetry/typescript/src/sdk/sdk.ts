@@ -1,10 +1,10 @@
 import { env } from '$telemetry/env'
 import {
   BaseInstrumentation,
-  ConversationSegmentOptions,
   LatitudeInstrumentation,
   LatitudeInstrumentationOptions,
   ManualInstrumentation,
+  PromptSegmentOptions,
   SegmentOptions,
   StartCompletionSpanOptions,
   StartHttpSpanOptions,
@@ -15,14 +15,16 @@ import { DEFAULT_REDACT_SPAN_PROCESSOR } from '$telemetry/sdk/redact'
 import {
   InstrumentationScope,
   SCOPE_LATITUDE,
-  SpanSource,
+  SegmentSource,
+  TraceContext,
 } from '@latitude-data/constants'
 import * as otel from '@opentelemetry/api'
-import { propagation } from '@opentelemetry/api'
+import { context, propagation } from '@opentelemetry/api'
 import {
   ALLOW_ALL_BAGGAGE_KEYS,
   BaggageSpanProcessor,
 } from '@opentelemetry/baggage-span-processor'
+import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks'
 import {
   CompositePropagator,
   W3CBaggagePropagator,
@@ -71,6 +73,9 @@ import type * as togetherai from 'together-ai'
 const TRACES_URL = `${env.GATEWAY_BASE_URL}/api/v3/otlp/v1/traces`
 const SERVICE_NAME = process.env.npm_package_name || 'unknown'
 const SCOPE_VERSION = process.env.npm_package_version || 'unknown'
+
+export type TelemetryContext = otel.Context
+export const BACKGROUND = () => otel.ROOT_CONTEXT
 
 class ScopedTracerProvider implements otel.TracerProvider {
   private readonly scope: string
@@ -155,6 +160,10 @@ export class LatitudeTelemetry {
       this.options.exporter = DEFAULT_SPAN_EXPORTER(apiKey)
     }
 
+    context.setGlobalContextManager(
+      new AsyncLocalStorageContextManager().enable(),
+    )
+
     propagation.setGlobalPropagator(
       new CompositePropagator({
         propagators: [
@@ -230,14 +239,14 @@ export class LatitudeTelemetry {
     this.instrumentations = []
 
     const tracer = this.tracer(InstrumentationScope.Manual as any)
-    this.telemetry = new ManualInstrumentation(SpanSource.API, tracer)
+    this.telemetry = new ManualInstrumentation(SegmentSource.API, tracer)
     this.instrumentations.push(this.telemetry)
 
     const latitude = this.options.instrumentations?.latitude
     if (latitude) {
       const tracer = this.tracer(Instrumentation.Latitude)
       const instrumentation = new LatitudeInstrumentation(
-        SpanSource.API,
+        SegmentSource.API,
         tracer,
         typeof latitude === 'object' ? latitude : { module: latitude },
       )
@@ -389,6 +398,26 @@ export class LatitudeTelemetry {
     })
   }
 
+  baggage(ctx: otel.Context | TraceContext) {
+    return this.telemetry.baggage(ctx)
+  }
+
+  pause(ctx: otel.Context) {
+    return this.telemetry.pause(ctx)
+  }
+
+  resume(ctx: TraceContext) {
+    return this.telemetry.resume(ctx)
+  }
+
+  restored(ctx: otel.Context) {
+    return this.telemetry.restored(ctx)
+  }
+
+  restore(ctx: otel.Context) {
+    return this.telemetry.restore(ctx)
+  }
+
   tool(ctx: otel.Context, options: StartToolSpanOptions) {
     return this.telemetry.tool(ctx, options)
   }
@@ -413,18 +442,25 @@ export class LatitudeTelemetry {
     return this.telemetry.http(ctx, options)
   }
 
-  conversation<F extends () => ReturnType<F>>(
-    options: ConversationSegmentOptions,
-    fn: F,
-  ) {
-    return this.telemetry.conversation(options, fn)
+  prompt(ctx: otel.Context, options: PromptSegmentOptions) {
+    return this.telemetry.prompt(ctx, options)
   }
 
-  interaction<F extends () => ReturnType<F>>(options: SegmentOptions, fn: F) {
-    return this.telemetry.interaction(options, fn)
-  }
-
-  step<F extends () => ReturnType<F>>(options: SegmentOptions, fn: F) {
-    return this.telemetry.step(options, fn)
+  step(ctx: otel.Context, options?: SegmentOptions) {
+    return this.telemetry.step(ctx, options)
   }
 }
+
+export type {
+  EndCompletionSpanOptions,
+  EndHttpSpanOptions,
+  EndSpanOptions,
+  EndToolSpanOptions,
+  ErrorOptions,
+  PromptSegmentOptions,
+  SegmentOptions,
+  StartCompletionSpanOptions,
+  StartHttpSpanOptions,
+  StartSpanOptions,
+  StartToolSpanOptions,
+} from '$telemetry/instrumentations'

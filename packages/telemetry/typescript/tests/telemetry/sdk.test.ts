@@ -46,7 +46,7 @@ describe('telemetry', () => {
 
       const sdk = new LatitudeTelemetry('fake-api-key')
 
-      const [_, ok] = sdk.completion(context.active(), {
+      const completion = sdk.completion(context.active(), {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
@@ -54,7 +54,7 @@ describe('telemetry', () => {
         parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
-      ok({
+      completion.end({
         output: [{ role: 'assistant', content: 'Hello, user!' }],
         tokens: { prompt: 20, cached: 0, reasoning: 0, completion: 10 },
         finishReason: 'stop',
@@ -96,7 +96,7 @@ describe('telemetry', () => {
         }),
       })
 
-      const [_, ok] = sdk.completion(context.active(), {
+      const completion = sdk.completion(context.active(), {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
@@ -104,7 +104,7 @@ describe('telemetry', () => {
         parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
-      ok({
+      completion.end({
         output: [{ role: 'assistant', content: 'Hello, user!' }],
         tokens: { prompt: 20, cached: 0, reasoning: 0, completion: 10 },
         finishReason: 'stop',
@@ -137,7 +137,7 @@ describe('telemetry', () => {
 
       const sdk = new LatitudeTelemetry('fake-api-key')
 
-      const [_, ok] = sdk.http(context.active(), {
+      const http = sdk.http(context.active(), {
         request: {
           method: 'POST',
           url: 'https://api.openai.com/v1/responses',
@@ -151,7 +151,7 @@ describe('telemetry', () => {
           },
         },
       })
-      ok({
+      http.end({
         response: {
           status: 200,
           headers: {
@@ -250,7 +250,7 @@ describe('telemetry', () => {
         processors: [processorMock],
       })
 
-      const [_, ok] = sdk.completion(context.active(), {
+      const completion = sdk.completion(context.active(), {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
@@ -258,7 +258,7 @@ describe('telemetry', () => {
         parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
-      ok({
+      completion.end({
         output: [{ role: 'assistant', content: 'Hello, user!' }],
         tokens: { prompt: 20, cached: 0, reasoning: 0, completion: 10 },
         finishReason: 'stop',
