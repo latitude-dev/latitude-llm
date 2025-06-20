@@ -46,22 +46,23 @@ export async function handleToolRequest({
 }): PromisedResult<ToolMessage> {
   const toolName = tool.name as LatteTool
   const latteTool = LATTE_TOOLS[toolName]
+  let result: TypedResult<unknown, Error>
+
   if (!latteTool) {
-    return Result.error(
+    result = Result.error(
       new Error(`Tool '${toolName}' is not supported in this environment.`),
     )
-  }
-
-  let result: TypedResult<unknown, Error>
-  try {
-    result = await latteTool(tool.arguments, {
-      threadUuid,
-      workspace,
-      tool,
-      messages,
-    })
-  } catch (error) {
-    result = Result.error(error as Error)
+  } else {
+    try {
+      result = await latteTool(tool.arguments, {
+        threadUuid,
+        workspace,
+        tool,
+        messages,
+      })
+    } catch (error) {
+      result = Result.error(error as Error)
+    }
   }
 
   const message: ToolMessage = {

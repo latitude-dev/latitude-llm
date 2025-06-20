@@ -20,6 +20,7 @@ import {
 } from '@latitude-data/constants/latte'
 import { acceptLatteChangesAction } from '$/actions/latte/acceptChanges'
 import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
+import { addFeedbackToLatteChangeAction } from '$/actions/latte/addFeedbackToLatteChange'
 
 export function useLatte() {
   const [threadUuid, setThreadUuid] = useState<string>()
@@ -29,6 +30,9 @@ export function useLatte() {
   const [error, setError] = useState<string>()
   const [changes, setChanges] = useState<LatteChange[]>([])
 
+  const [latteActionsFeedbackUuid, setLatteActionsFeedbackUuid] =
+    useState<string>()
+
   const latteContext = useLatteContext()
 
   const resetChat = useCallback(() => {
@@ -37,6 +41,7 @@ export function useLatte() {
     setIsLoading(false)
     setError(undefined)
     setChanges([])
+    setLatteActionsFeedbackUuid(undefined)
   }, [])
 
   const { execute: createNewChat } = useServerAction(createNewLatteAction, {
@@ -62,9 +67,10 @@ export function useLatte() {
   const { execute: executeAcceptChanges } = useServerAction(
     acceptLatteChangesAction,
     {
-      onSuccess: () => {
+      onSuccess: ({ data: { evaluationUuid } }) => {
         setChanges([])
         setIsLoading(false)
+        setLatteActionsFeedbackUuid(evaluationUuid)
       },
       onError: ({ err }) => {
         setError(err.message)
@@ -75,7 +81,7 @@ export function useLatte() {
   const { execute: executeUndoChanges } = useServerAction(
     discardLatteChangesActions,
     {
-      onSuccess: () => {
+      onSuccess: ({ data: { evaluationUuid } }) => {
         // Undo changes in the UI
         trigger('LatteChanges', {
           changes: changes.map((c) => ({
@@ -86,6 +92,19 @@ export function useLatte() {
         })
         // Clear changes state
         setChanges([])
+        setIsLoading(false)
+        setLatteActionsFeedbackUuid(evaluationUuid)
+      },
+      onError: ({ err }) => {
+        setError(err.message)
+        setIsLoading(false)
+      },
+    },
+  )
+  const { execute: executeAddFeedbackToLatteChange } = useServerAction(
+    addFeedbackToLatteChangeAction,
+    {
+      onSuccess: () => {
         setIsLoading(false)
       },
       onError: ({ err }) => {
@@ -104,9 +123,22 @@ export function useLatte() {
     setIsLoading(true)
     executeUndoChanges({ threadUuid })
   }, [threadUuid, executeUndoChanges])
+  const addFeedbackToLatteChange = useCallback(
+    (feedback: string) => {
+      setLatteActionsFeedbackUuid(undefined)
+      if (!latteActionsFeedbackUuid) return
+      if (feedback.trim() === '') return
+      setIsLoading(true)
+      executeAddFeedbackToLatteChange({
+        content: feedback,
+        evaluationResultUuid: latteActionsFeedbackUuid,
+      })
+    },
+    [latteActionsFeedbackUuid, executeAddFeedbackToLatteChange],
+  )
 
   const sendMessage = useCallback(
-    ({ message }: { message: string }) => {
+    (message: string) => {
       setIsLoading(true)
       const newInteraction: LatteInteraction = {
         input: message,
@@ -264,8 +296,10 @@ export function useLatte() {
       }
       const { threadUuid: incomingThreadUuid, changes: newChanges } = msg
 
-      trigger('LatteChanges', { changes: newChanges })
+      trigger('LatteChanges', { changes: newChanges, simulateStreaming: true })
       if (!threadUuid || threadUuid !== incomingThreadUuid) return
+
+      setLatteActionsFeedbackUuid(undefined)
 
       // Update the changes state: Update existing changes, add new ones, and remove equal changes
       setChanges((prevChanges) => {
@@ -333,6 +367,8 @@ export function useLatte() {
       changes,
       acceptChanges,
       undoChanges,
+      feedbackRequested: !!latteActionsFeedbackUuid,
+      addFeedbackToLatteChange,
     }),
     [
       sendMessage,
@@ -343,6 +379,8 @@ export function useLatte() {
       changes,
       acceptChanges,
       undoChanges,
+      latteActionsFeedbackUuid,
+      addFeedbackToLatteChange,
     ],
   )
 }
