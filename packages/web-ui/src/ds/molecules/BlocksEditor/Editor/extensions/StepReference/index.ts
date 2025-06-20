@@ -9,6 +9,7 @@ export const StepReference = Node.create<Attr>({
   inline: false,
   atom: false,
   isolating: true,
+  draggable: true,
 
   addAttributes() {
     return {

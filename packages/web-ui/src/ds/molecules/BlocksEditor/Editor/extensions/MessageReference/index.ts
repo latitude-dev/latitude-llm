@@ -9,6 +9,7 @@ export const MessageReference = Node.create<Attr>({
   inline: false,
   atom: false,
   isolating: true,
+  draggable: true,
 
   addAttributes() {
     return {

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import Document from '@tiptap/extension-document'
 import Text from '@tiptap/extension-text'
@@ -6,6 +6,8 @@ import Paragraph from '@tiptap/extension-paragraph'
 import Placeholder from '@tiptap/extension-placeholder'
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import DragHandle from '@tiptap/extension-drag-handle-react'
+import { Dropcursor } from '@tiptap/extension-dropcursor'
+
 
 import { cn } from '../../../../lib/utils'
 
@@ -15,6 +17,7 @@ import { StepReference } from './extensions/StepReference'
 import { MessageReference } from './extensions/MessageReference'
 import { initLowLight } from '../syntax/promptlSyntax'
 import { Icon } from '../../../atoms/Icons'
+import { recalculateColors } from '../../../../lib/monacoEditor/language'
 
 function ensureTrailingParagraph(content: JSONContent[] = []): JSONContent[] {
   const last = content[content.length - 1]
@@ -31,7 +34,9 @@ export function BlocksEditor({
   editable = true,
   content,
 }: BlocksEditorProps) {
+  const [colors] = useState(recalculateColors())
   const ref = useRef<HTMLDivElement>(null)
+  console.log("PRIMARY", colors.primary)
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -45,6 +50,11 @@ export function BlocksEditor({
         HTMLAttributes: {
           class: 'bg-backgroundCode border border-border rounded-sm p-2',
         },
+      }),
+      Dropcursor.configure({
+        width: 2,
+        color: colors.primary,
+        // class: 'bg-accent border text-accent border-accent rounded-md',
       }),
       Placeholder.configure({
         placeholder,
@@ -71,7 +81,7 @@ export function BlocksEditor({
     editorProps: {
       attributes: {
         class: cn(
-          'pl-4 py-4 latitude-blocks-editor space-y-3',
+          'py-4 latitude-blocks-editor space-y-3',
           '[&_p]:text-muted-foreground',
           'font-mono text-sm leading-tight whitespace-pre outline-none',
           '[&_.is-empty-node]:before:content-[attr(data-placeholder)]',
