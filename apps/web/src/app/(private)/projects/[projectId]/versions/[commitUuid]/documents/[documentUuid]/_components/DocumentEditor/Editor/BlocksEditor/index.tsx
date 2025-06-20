@@ -21,11 +21,28 @@ export const PlaygroundBlocksEditor = memo(
   }) => {
     const [localBlocks, setLocalBlocks] = useState<JSONContent[]>([
       {
+        type: 'message',
+        attrs: {
+          role: 'system',
+        },
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              {
+                type: 'text',
+                text: 'This is my initial system message',
+              },
+            ],
+          },
+        ],
+      },
+      {
         type: 'paragraph',
         content: [
           {
             type: 'text',
-            text: 'Say hi to {{ name }}',
+            text: 'Hi, I am {{ name }}, and I am also a system message',
           },
         ],
       },
