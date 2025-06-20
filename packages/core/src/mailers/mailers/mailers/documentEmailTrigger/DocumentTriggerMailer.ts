@@ -6,13 +6,12 @@ import { TypedResult } from '../../../../lib/Result'
 import Mailer from '../../Mailer'
 import type { AssistantMessage } from '@latitude-data/compiler'
 import DocumentTriggerResponseMail from '../../../emails/documentTrigger/DocumentTriggerResponseMail'
-import { LatitudeError } from '@latitude-data/constants/errors'
 
 export class DocumentTriggerMailer extends Mailer {
-  result: TypedResult<AssistantMessage, LatitudeError>
+  result: TypedResult<AssistantMessage, Error>
 
   constructor(
-    result: TypedResult<AssistantMessage, LatitudeError>,
+    result: TypedResult<AssistantMessage, Error>,
     options: Mail.Options,
   ) {
     super(options)

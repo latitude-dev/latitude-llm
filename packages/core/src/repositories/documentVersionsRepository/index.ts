@@ -262,7 +262,6 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
    */
   async getDocumentsAtCommit(commit?: Commit) {
     const result = await this.getAllDocumentsAtCommit({ commit })
-
     if (result.error) return result
 
     if (this.opts.includeDeleted) return result
@@ -298,7 +297,9 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     const documents = await this.getDocumentsAtCommit(commit).then((r) =>
       r.unwrap(),
     )
-    const document = documents.find((d) => d.documentUuid === documentUuid)
+    const document = documents.find(
+      (d: DocumentVersion) => d.documentUuid === documentUuid,
+    )
     if (!document) return Result.error(new NotFoundError('Document not found'))
 
     return Result.ok(document)

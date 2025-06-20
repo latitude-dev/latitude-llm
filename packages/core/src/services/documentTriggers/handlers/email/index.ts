@@ -20,7 +20,7 @@ import { Result } from './../../../../lib/Result'
 async function getTriggerName(
   trigger: DocumentTrigger,
   db = database,
-): PromisedResult<string, LatitudeError> {
+): PromisedResult<string, Error> {
   const configName = (
     trigger.configuration as EmailTriggerConfiguration
   ).name?.trim()

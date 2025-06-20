@@ -99,3 +99,13 @@ export const runSyncAPIResponseSchema = z.object({
   conversation: z.array(messageSchema),
   response: chainCallResponseDtoSchema,
 })
+
+export const ProjectSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  workspaceId: z.number(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  lastEditedAt: z.string().datetime().optional(),
+  deletedAt: z.string().datetime().nullable().optional(),
+})

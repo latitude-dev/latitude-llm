@@ -76,3 +76,6 @@ bin/connect.sh
 # This is to put there things like promptl source code so we can tell AI how it works.
 # Usually AI editors only pick files from inside the git project.
 ONLY_FOR_COPILOT/
+
+AGENTS.md
+.claude

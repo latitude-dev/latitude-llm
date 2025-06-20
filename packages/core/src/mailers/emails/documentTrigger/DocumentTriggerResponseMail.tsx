@@ -10,7 +10,6 @@ import {
 } from '@latitude-data/compiler'
 import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 import PlainLayout from '../_components/PlainLayout'
-import { LatitudeError } from './../../../lib/errors'
 import { TypedResult } from './../../../lib/Result'
 
 function getAgentResponse(
@@ -36,7 +35,7 @@ function getAgentResponse(
 export default function DocumentTriggerResponseMail({
   result,
 }: {
-  result: TypedResult<AssistantMessage, LatitudeError>
+  result: TypedResult<AssistantMessage, Error>
 }) {
   if (result.error) {
     return (

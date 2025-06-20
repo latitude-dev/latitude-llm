@@ -27,7 +27,7 @@ class TestCase(unittest.TestCase):
             timeout=0.5,
         )
         self.api_key = "fake-api-key"
-        self.base_url = "https://fake-host.com/api/v2"
+        self.base_url = "https://fake-host.com/api/v3"
 
         self.gateway_mock = respx.MockRouter(
             assert_all_called=False,
