@@ -26,6 +26,7 @@ export async function streamChat<Tools extends ToolSpec>(
     tools,
     options,
     instrumentation,
+    trace,
   }: ChatOptionsWithSDKOptions<Tools> & {
     instrumentation?: ToolInstrumentation
   },
@@ -36,7 +37,7 @@ export async function streamChat<Tools extends ToolSpec>(
       handler: HandlerType.Chat,
       params: { conversationUuid: uuid },
       options: options,
-      body: { messages, stream: true },
+      body: { messages, stream: true, trace },
     })
 
     if (!response.ok) {
@@ -70,7 +71,7 @@ export async function streamChat<Tools extends ToolSpec>(
         chatFn: streamChat,
         tools,
         options,
-        // TODO(tracing): get trace context from the response
+        trace: finalResponse.trace,
         instrumentation,
       })
     }

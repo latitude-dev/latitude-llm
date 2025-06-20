@@ -1,28 +1,29 @@
-import { type PromptLFile } from 'promptl-ai'
+import { type AssistantMessage } from '@latitude-data/compiler'
 import {
   DocumentLog,
   DocumentTriggerParameters,
   LogSources,
 } from '@latitude-data/constants'
+import { type PromptLFile } from 'promptl-ai'
+import { DocumentTrigger, Workspace } from '../../../../browser'
+import { database } from '../../../../client'
+import { unsafelyFindWorkspace } from '../../../../data-access'
 import {
   CommitsRepository,
   DocumentLogsRepository,
   DocumentVersionsRepository,
 } from '../../../../repositories'
-import { database } from '../../../../client'
 import { runDocumentAtCommit } from '../../../../services/commits'
-import { unsafelyFindWorkspace } from '../../../../data-access'
-import { DocumentTrigger, Workspace } from '../../../../browser'
-import { type AssistantMessage } from '@latitude-data/compiler'
-import { uploadFile } from '../../../../services/files'
 import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
-import { BadRequestError } from './../../../../lib/errors'
-import { LatitudeError } from './../../../../lib/errors'
-import { PromisedResult } from './../../../../lib/Transaction'
+import { uploadFile } from '../../../../services/files'
+import { TelemetryContext } from '../../../../telemetry'
+import { BadRequestError, LatitudeError } from './../../../../lib/errors'
 import { Result } from './../../../../lib/Result'
+import { PromisedResult } from './../../../../lib/Transaction'
 
 async function getNewTriggerResponse(
   {
+    context,
     workspace,
     trigger,
     messageId,
@@ -32,6 +33,7 @@ async function getNewTriggerResponse(
     body,
     attachments,
   }: {
+    context: TelemetryContext
     workspace: Workspace
     trigger: DocumentTrigger
     messageId?: string
@@ -92,6 +94,7 @@ async function getNewTriggerResponse(
   )
 
   const runResult = await runDocumentAtCommit({
+    context,
     workspace,
     document,
     commit: headCommit,
@@ -163,6 +166,7 @@ export async function uploadAttachments({
 
 export async function getEmailResponse(
   {
+    context,
     trigger,
     messageId,
     senderEmail,
@@ -171,6 +175,7 @@ export async function getEmailResponse(
     body,
     attachments,
   }: {
+    context: TelemetryContext
     documentUuid: string
     trigger: DocumentTrigger
     messageId?: string
@@ -194,6 +199,7 @@ export async function getEmailResponse(
   // but instead it is triggering a "follow up" response.
 
   return await getNewTriggerResponse({
+    context,
     workspace,
     trigger,
     messageId,

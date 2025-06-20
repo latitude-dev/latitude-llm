@@ -3,9 +3,9 @@ import {
   ChainStepResponse,
   StreamType,
 } from '@latitude-data/constants'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { Chain, Chain as PromptlChain, scan, Adapters } from 'promptl-ai'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { Adapters, Chain, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
@@ -22,6 +22,7 @@ import {
 import { database, Database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { ProviderLogsRepository } from '../../../repositories'
+import { BACKGROUND } from '../../../telemetry'
 import { runAgent } from '../../agents/run'
 import { runChain } from '../../chains/run'
 import { parsePrompt } from '../../documents/parse'
@@ -120,6 +121,7 @@ export async function buildLlmEvaluationRunFunction<
 
   const runArgs = {
     ...inputRunArgs,
+    context: BACKGROUND(),
     chain: promptChain,
     globalConfig: promptConfig,
     configOverrides: schema
@@ -130,7 +132,7 @@ export async function buildLlmEvaluationRunFunction<
       : undefined,
     source: LogSources.Evaluation,
     promptlVersion: 1,
-    persistErrors: false as false, // Note: required so TypeScript doesn't infer true
+    persistErrors: false as const, // Note: required so TypeScript doesn't infer true
     promptSource: { ...evaluation, version: 'v2' as const },
     providersMap: providers,
     workspace: workspace,

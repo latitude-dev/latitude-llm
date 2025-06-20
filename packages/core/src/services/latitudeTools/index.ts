@@ -1,14 +1,15 @@
 import { LatitudeTool } from '@latitude-data/constants'
-import { LATITUDE_TOOLS } from './tools'
-import { BadRequestError } from './../../lib/errors'
-import { LatitudeError } from './../../lib/errors'
-import { PromisedResult } from './../../lib/Transaction'
+import { TelemetryContext } from '../../telemetry'
+import { BadRequestError, LatitudeError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
+import { PromisedResult } from './../../lib/Transaction'
+import { LATITUDE_TOOLS } from './tools'
 
 export async function executeLatitudeToolCall({
   latitudeTool,
   args,
 }: {
+  context: TelemetryContext
   latitudeTool: LatitudeTool
   args: Record<string, unknown>
 }): PromisedResult<unknown, LatitudeError> {

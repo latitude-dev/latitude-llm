@@ -93,7 +93,7 @@ export async function syncRun<Tools extends ToolSpec>(
       chatFn: syncChat,
       tools,
       options,
-      // TODO(tracing): get trace context from the response
+      trace: finalResponse.trace,
       instrumentation,
     })
   }

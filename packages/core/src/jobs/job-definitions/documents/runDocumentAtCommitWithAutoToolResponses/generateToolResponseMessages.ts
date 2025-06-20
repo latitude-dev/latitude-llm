@@ -1,20 +1,21 @@
-import { scan } from 'promptl-ai'
 import { ToolCall, readMetadata } from '@latitude-data/compiler'
+import {
+  ToolCallResponse,
+  buildResponseMessage,
+} from '@latitude-data/constants'
+import { scan } from 'promptl-ai'
 import {
   Commit,
   DocumentVersion,
   LogSources,
   Workspace,
 } from '../../../../browser'
-import { AutogenerateToolResponseCopilotData } from './getCopilotData'
-import { runDocumentAtCommit } from '../../../../services/commits/runDocumentAtCommit'
-import {
-  buildResponseMessage,
-  ToolCallResponse,
-} from '@latitude-data/constants'
 import { ToolSchema } from '../../../../services/ai'
+import { runDocumentAtCommit } from '../../../../services/commits/runDocumentAtCommit'
+import { TelemetryContext, telemetry } from '../../../../telemetry'
 import { Result } from './../../../../lib/Result'
 import { UnprocessableEntityError } from './../../../../lib/errors'
+import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 
 async function buildToolSpecifications({
   document,
@@ -79,6 +80,7 @@ type AutogenerateToolResponseObject = {
 }
 
 export async function generateToolResponseMessages({
+  context,
   workspace,
   commit,
   document,
@@ -87,6 +89,7 @@ export async function generateToolResponseMessages({
   copilot,
   source,
 }: {
+  context: TelemetryContext
   workspace: Workspace
   commit: Commit
   document: DocumentVersion
@@ -95,6 +98,20 @@ export async function generateToolResponseMessages({
   source: LogSources
   copilot: AutogenerateToolResponseCopilotData
 }) {
+  if (toolCalls.length < 1) return Result.ok([])
+
+  const $tools = toolCalls.map((toolCall) => ({
+    id: toolCall.id,
+    generated: false,
+    ...telemetry().tool(context, {
+      name: toolCall.name,
+      call: {
+        id: toolCall.id,
+        arguments: toolCall.arguments,
+      },
+    }),
+  }))
+
   const customIdentifier = buildIdentifier({
     workspace,
     commit,
@@ -106,12 +123,16 @@ export async function generateToolResponseMessages({
     toolCalls,
     customPrompt,
   })
-  if (toolSpecificationsResult.error) return toolSpecificationsResult
+  if (toolSpecificationsResult.error) {
+    $tools.forEach((tool) => tool.fail(toolSpecificationsResult.error))
+    return toolSpecificationsResult
+  }
 
   // Auto-generate tool response messages
   // We pass the tool specifications of the tool calls returned by the AI
   // With that we ask AI to generate mock tool responses.
   const result = await runDocumentAtCommit({
+    context: $tools[0]!.context,
     workspace: copilot.workspace,
     commit: copilot.commit,
     document: copilot.document,
@@ -123,33 +144,51 @@ export async function generateToolResponseMessages({
     source,
   })
 
-  if (result.error) return result
+  if (result.error) {
+    $tools.forEach((tool) => tool.fail(result.error))
+    return result
+  }
   const responseResult = result.unwrap()
 
   const responseError = await responseResult.error
   if (responseError) {
+    $tools.forEach((tool) => tool.fail(responseError))
     return Result.error(responseError)
   }
 
   const response = (await responseResult.lastResponse)!
   if (response.streamType === 'text') {
-    return Result.error(
-      new Error(
-        'Invalid response. AI responed with text while generating a mock tool response',
-      ),
+    const error = new Error(
+      'Invalid response. AI returned text while generating a mock tool response',
     )
+    $tools.forEach((tool) => tool.fail(error))
+    return Result.error(error)
   }
 
   const object = response.object as AutogenerateToolResponseObject
   const toolCallResponses = object.tool_responses
   const messages = toolCallResponses
-    .map((toolCallResponse) =>
-      buildResponseMessage({
+    .map((toolCallResponse) => {
+      const $tool = $tools.find(({ id }) => id === toolCallResponse.id)
+      if ($tool) {
+        $tool.end({
+          result: {
+            value: toolCallResponse.result ?? toolCallResponse.text,
+            isError: !!toolCallResponse.isError,
+          },
+        })
+        $tool.generated = true
+      }
+      return buildResponseMessage({
         type: 'text',
         data: { text: undefined, toolCallResponses: [toolCallResponse] },
-      }),
-    )
+      })
+    })
     .filter((message) => message !== undefined)
+
+  $tools
+    .filter((tool) => !tool.generated)
+    .forEach((tool) => tool.fail(new Error('Tool response generation failed')))
 
   return Result.ok(messages)
 }

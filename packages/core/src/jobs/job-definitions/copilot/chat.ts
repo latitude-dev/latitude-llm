@@ -1,14 +1,15 @@
 import { Job } from 'bullmq'
 
+import { unsafelyFindWorkspace } from '../../../data-access'
+import { LatitudeError } from '../../../lib/errors'
 import { DocumentLogsRepository } from '../../../repositories'
 import {
   addMessageToExistingLatte,
   runNewLatte,
 } from '../../../services/copilot/latte'
-import { unsafelyFindWorkspace } from '../../../data-access'
 import { getCopilotDocument } from '../../../services/copilot/latte/helpers'
+import { BACKGROUND } from '../../../telemetry'
 import { WebsocketClient } from '../../../websockets/workers'
-import { LatitudeError } from '../../../lib/errors'
 
 export type RunLatteJobData = {
   workspaceId: number
@@ -61,11 +62,11 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
   if (!documentLogResult.ok) {
     // Chat still does not exist, we create a new one
     const runResult = await runNewLatte({
+      telcontext: BACKGROUND(),
       copilotWorkspace,
       copilotCommit,
       copilotDocument,
       clientWorkspace: workspace,
-
       threadUuid,
       message,
       context,
@@ -83,6 +84,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
   }
 
   const runResult = await addMessageToExistingLatte({
+    telcontext: BACKGROUND(),
     copilotWorkspace,
     copilotCommit,
     copilotDocument,

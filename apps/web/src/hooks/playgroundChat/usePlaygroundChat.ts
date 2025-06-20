@@ -12,7 +12,7 @@ import {
   LatitudeChainCompletedEventData,
   LatitudeEventData,
 } from '@latitude-data/constants'
-import { StreamEventTypes } from '@latitude-data/core/browser'
+import { StreamEventTypes, TraceContext } from '@latitude-data/core/browser'
 import { LanguageModelUsage } from 'ai'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useMemo, useRef, useState } from 'react'
@@ -33,9 +33,11 @@ export type RunPromptFn = () => Promise<ReadableStream<ParsedEvent>>
 export type AddMessagesFn = ({
   documentLogUuid,
   messages,
+  trace,
 }: {
   documentLogUuid: string
   messages: Message[]
+  trace?: TraceContext
 }) => Promise<ReadableStream<ParsedEvent>>
 
 export function usePlaygroundChat({
@@ -49,6 +51,7 @@ export function usePlaygroundChat({
 }) {
   const isChat = useRef(false)
   const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
+  const [trace, setTrace] = useState<TraceContext | undefined>()
   const [error, setError] = useState<Error | undefined>()
   const [streamingResponse, setStreamingResponse] = useState<
     string | undefined
@@ -158,6 +161,7 @@ export function usePlaygroundChat({
             }
           }
           if (data.type === ChainEventTypes.ToolsRequested) {
+            setTrace(data.trace)
             setUnresponedToolCalls(
               data.tools.filter((t) => t.name !== AGENT_RETURN_TOOL_NAME),
             )
@@ -223,6 +227,7 @@ export function usePlaygroundChat({
         const stream = await addMessagesFn({
           documentLogUuid,
           messages: newMessages,
+          trace: trace
         })
 
         await handleStream(stream)
@@ -231,7 +236,7 @@ export function usePlaygroundChat({
         setError(error as Error)
       }
     },
-    [addMessagesFn, documentLogUuid, handleStream, addMessages],
+    [addMessagesFn, documentLogUuid, trace, handleStream, addMessages],
   )
 
   const start = useCallback(async () => {

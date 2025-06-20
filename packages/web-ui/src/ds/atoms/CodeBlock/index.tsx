@@ -16,10 +16,12 @@ interface CodeBlockProps {
   action?: ReactNode
   className?: string
   textWrap?: boolean
+  bgColor?: string
 }
 
-export function useCodeBlockBackgroundColor() {
+export function useCodeBlockBackgroundColor(override?: string) {
   const { resolvedTheme } = useTheme()
+  if (override) return override
   if (resolvedTheme === CurrentTheme.Light) return 'bg-backgroundCode'
   return 'bg-[#282c34]'
 }
@@ -32,9 +34,10 @@ const Content = memo(
     action,
     className,
     textWrap,
+    bgColor: overrideBgColor,
   }: CodeBlockProps) => {
     const { resolvedTheme } = useTheme()
-    const bgColor = useCodeBlockBackgroundColor()
+    const bgColor = useCodeBlockBackgroundColor(overrideBgColor)
     return (
       <div className={cn('w-full relative max-w-full', bgColor)}>
         {copy || action ? (

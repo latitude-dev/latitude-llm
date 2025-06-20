@@ -1,7 +1,7 @@
 import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import { Message as ConversationMessage } from '@latitude-data/compiler'
 import { ROUTES } from '$/services/routes'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion, TraceContext } from '@latitude-data/core/browser'
 import { useCallback, useMemo } from 'react'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
 
@@ -51,9 +51,11 @@ export function useRunPlaygroundPrompt({
     async ({
       documentLogUuid,
       messages,
+      trace,
     }: {
       documentLogUuid: string
       messages: ConversationMessage[]
+      trace?: TraceContext
     }) => {
       const response = await fetch(
         ROUTES.api.documents.logs.detail(documentLogUuid).chat,
@@ -63,9 +65,7 @@ export function useRunPlaygroundPrompt({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            messages,
-          }),
+          body: JSON.stringify({ messages, trace }),
         },
       )
 

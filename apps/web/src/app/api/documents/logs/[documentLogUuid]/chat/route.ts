@@ -1,13 +1,14 @@
+import { LogSources, traceContextSchema } from '@latitude-data/core/browser'
+import { BACKGROUND, telemetry } from '@latitude-data/core/telemetry'
 import { type Message } from '@latitude-data/sdk'
-import { LogSources } from '@latitude-data/core/browser'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { publisher } from '@latitude-data/core/events/publisher'
-import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
+import { publisher } from '@latitude-data/core/events/publisher'
 
 const inputSchema = z.object({
   messages: z.array(
@@ -16,6 +17,7 @@ const inputSchema = z.object({
       content: z.any(),
     }),
   ),
+  trace: traceContextSchema.optional(),
 })
 
 export const POST = errorHandler(
@@ -35,15 +37,40 @@ export const POST = errorHandler(
       const body = await req.json()
 
       try {
-        const { messages } = inputSchema.parse(body)
+        const { messages: response, trace } = inputSchema.parse(body)
         const documentLogUuid = params.documentLogUuid
+        const messages = response as Message[]
+        const context = trace ? telemetry().resume(trace) : BACKGROUND()
+
+        // TODO(tracing): fix this fake tool span not being in the same trace?
+        for (const message of messages) {
+          if (message.role !== 'tool') continue
+          for (const content of message.content) {
+            if (content.type !== 'tool-result') continue
+            console.log(trace)
+            telemetry()
+              .tool(context, {
+                name: content.toolName,
+                call: {
+                  id: content.toolCallId,
+                  arguments: {},
+                },
+              })
+              .end({
+                result: {
+                  value: content.result,
+                  isError: !!content.isError,
+                },
+              })
+          }
+        }
 
         // Publish chat message event
         publisher.publishLater({
           type: 'chatMessageRequested',
           data: {
             documentLogUuid,
-            messages: messages as Message[],
+            messages,
             workspaceId: (await getCurrentUserOrError()).workspace.id,
             userEmail: (await getCurrentUserOrError()).user.email,
           },
@@ -98,6 +125,7 @@ export const POST = errorHandler(
             writer.close()
           },
           signal: req.signal,
+          trace: trace,
         })
 
         return new NextResponse(readable, {

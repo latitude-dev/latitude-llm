@@ -5,28 +5,30 @@ import {
   ToolCall,
   ToolMessage,
 } from '@latitude-data/compiler'
-import { StreamEventTypes } from '@latitude-data/constants'
 import {
   ChainEvent,
   ChainEventTypes,
-  OmittedLatitudeEventData,
   ChainStepResponse,
   LogSources,
+  OmittedLatitudeEventData,
+  StreamEventTypes,
   StreamType,
+  TraceContext,
 } from '@latitude-data/constants'
-import { streamAIResponse } from './step/streamAIResponse'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { FinishReason, LanguageModelUsage } from 'ai'
+import { JSONSchema7 } from 'json-schema'
+import { omit } from 'lodash-es'
+import { IntegrationDto, ProviderApiKey, Workspace } from '../../browser'
 import type { PromptSource } from '../../constants'
 import { buildMessagesFromResponse } from '../../helpers'
-import { FinishReason, LanguageModelUsage } from 'ai'
-import { RunErrorCodes, ChainError } from '@latitude-data/constants/errors'
-import { IntegrationDto, ProviderApiKey, Workspace } from '../../browser'
-import { resolveToolsFromConfig } from './resolveTools'
-import { omit } from 'lodash-es'
-import { ToolSource } from './resolveTools/types'
-import { getBuiltInToolCallResponses } from './step/toolExecution'
-import { JSONSchema7 } from 'json-schema'
 import { createMcpClientManager } from '../../services/integrations/McpClient/McpClientManager'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { TelemetryContext } from '../../telemetry'
+import { resolveToolsFromConfig } from './resolveTools'
+import { ToolSource } from './resolveTools/types'
+import { streamAIResponse } from './step/streamAIResponse'
+import { getBuiltInToolCallResponses } from './step/toolExecution'
 
 const createPromiseWithResolver = <T>(): readonly [
   Promise<T>,
@@ -97,7 +99,10 @@ export class ChainStreamManager {
    * @returns The stream, and a promise that resolves to the messages when the chain is done
    */
   start(
-    cb?: () => Promise<void>,
+    cb?: () => Promise<{
+      conversation: Conversation
+      trace: TraceContext
+    }>,
     abortSignal?: AbortSignal,
   ): {
     stream: ReadableStream<ChainEvent>
@@ -144,7 +149,7 @@ export class ChainStreamManager {
         }
 
         cb?.()
-          .then(() => !this.finished && this.done())
+          .then(({ trace }) => !this.finished && this.done(trace))
           .catch((error) => this.error(error))
       },
     })
@@ -164,6 +169,7 @@ export class ChainStreamManager {
    * Sends both StepStarted and StepCompleted events.
    */
   async getProviderResponse({
+    context,
     provider,
     conversation,
     source,
@@ -173,6 +179,7 @@ export class ChainStreamManager {
     injectAgentFinishTool,
     abortSignal,
   }: {
+    context: TelemetryContext
     provider: ProviderApiKey
     conversation: Conversation
     source: LogSources
@@ -216,6 +223,7 @@ export class ChainStreamManager {
     })
 
     const { response, tokenUsage } = await streamAIResponse({
+      context,
       controller: this.controller,
       workspace: this.workspace,
       provider,
@@ -272,9 +280,11 @@ export class ChainStreamManager {
    * Sends both ToolsStarted and ToolCompleted events.
    */
   async handleBuiltInToolCalls({
+    context,
     config,
     message,
   }: {
+    context: TelemetryContext
     config: LatitudePromptConfig
     message: AssistantMessage
   }): Promise<ToolMessage[]> {
@@ -299,6 +309,7 @@ export class ChainStreamManager {
     })
 
     const toolResponses = getBuiltInToolCallResponses({
+      context,
       workspace: this.workspace,
       promptSource: this.promptSource,
       resolvedTools,
@@ -341,13 +352,14 @@ export class ChainStreamManager {
   /**
    * Ends the chain stream successfully
    */
-  done() {
+  done(trace: TraceContext) {
     if (this.finished) throw new Error('Chain already finished')
     if (this.inStep) this.completeStep()
     this.sendEvent({
       type: ChainEventTypes.ChainCompleted,
       finishReason: this.finishReason ?? 'stop',
       tokenUsage: this.tokenUsage,
+      trace,
     })
     this.endStream()
   }
@@ -355,11 +367,12 @@ export class ChainStreamManager {
   /**
    * Ends the chain stream to request tools from the user
    */
-  requestTools(tools: ToolCall[]) {
+  requestTools(tools: ToolCall[], trace: TraceContext) {
     if (this.finished) throw new Error('Chain already finished')
     this.sendEvent({
       type: ChainEventTypes.ToolsRequested,
       tools,
+      trace,
     })
     this.resolveToolCalls?.(tools)
     this.endStream()

@@ -1,14 +1,15 @@
-import { Result } from '../../../Result'
-import { BadRequestError, NotFoundError } from '../../../errors'
-import { PromisedResult } from '../../../Transaction'
-import { ToolResponsesArgs } from './types'
+import { ToolCall } from '@latitude-data/compiler'
+import { AGENT_RETURN_TOOL_NAME, LogSources } from '@latitude-data/constants'
 import { DocumentVersionsRepository } from '../../../../repositories'
 import { runDocumentAtCommit } from '../../../../services/commits/runDocumentAtCommit'
-import { AGENT_RETURN_TOOL_NAME, LogSources } from '@latitude-data/constants'
-import { ToolCall } from '@latitude-data/compiler'
+import { BadRequestError, NotFoundError } from '../../../errors'
+import { Result } from '../../../Result'
+import { PromisedResult } from '../../../Transaction'
 import { ToolSource } from '../../resolveTools/types'
+import { ToolResponsesArgs } from './types'
 
 export function getAgentsAsToolCallsResults({
+  contexts,
   workspace,
   promptSource,
   toolCalls,
@@ -25,7 +26,7 @@ export function getAgentsAsToolCallsResults({
     promptSource.commit,
   )
 
-  return toolCalls.map(async (toolCall) => {
+  return toolCalls.map(async (toolCall, idx) => {
     const allDocsResult = await promisedAllDocsResult
     if (allDocsResult.error) return allDocsResult
     const allDocs = allDocsResult.unwrap()
@@ -42,6 +43,7 @@ export function getAgentsAsToolCallsResults({
     }
 
     const result = await runDocumentAtCommit({
+      context: contexts[idx]!,
       workspace,
       document,
       commit: promptSource.commit,
@@ -70,14 +72,16 @@ export function getAgentsAsToolCallsResults({
     )
 
     if (otherToolCalls.length) {
-      throw new BadRequestError(
-        `Agent tried to run client tools: '${otherToolCalls.map((tc) => tc.name).join("', '")}'`,
+      return Result.error(
+        new BadRequestError(
+          `Agent tried to run client tools: '${otherToolCalls.map((tc) => tc.name).join("', '")}'`,
+        ),
       )
     }
 
     const agentToolCall = agentToolCalls[0]
     if (!agentToolCall) {
-      throw new BadRequestError(`Agent did not return a result`)
+      return Result.error(new BadRequestError(`Agent did not return a result`))
     }
 
     return Result.ok(agentToolCall.arguments)

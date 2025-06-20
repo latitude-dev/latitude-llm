@@ -1,12 +1,13 @@
 import { ToolContent } from '@latitude-data/compiler'
-import { CodeBlock } from '../../../atoms/CodeBlock'
-import { Button } from '../../../atoms/Button'
-import { Icon } from '../../../atoms/Icons'
-import { Text } from '../../../atoms/Text'
-import { CardTextContent, ContentCard } from './ContentCard'
 import { ReactNode, useMemo, useState } from 'react'
 import { cn } from '../../../../lib/utils'
+import { Alert } from '../../../atoms/Alert'
+import { Button } from '../../../atoms/Button'
+import { CodeBlock } from '../../../atoms/CodeBlock'
+import { Icon } from '../../../atoms/Icons'
+import { Text } from '../../../atoms/Text'
 import { TextColor } from '../../../tokens'
+import { CardTextContent, ContentCard } from './ContentCard'
 
 // If the JSON is too long we don't parse it with CodeBlock component in order to avoid performance issues
 const MAX_LENGTH_JSON_PREVIEW = 10000
@@ -54,19 +55,18 @@ export function ToolResultContent({
     () => getResult(toolResponse.result),
     [toolResponse.result],
   )
-  const fgColor = toolResponse.isError ? 'destructiveMutedForeground' : color
 
   const toggleCollapse = () => setIsCollapsed(!isCollapsed)
 
   const renderContent = () => {
     if (isString) {
       return (
-        <div
-          className={cn('flex flex-col gap-2 overflow-x-auto', {
-            'bg-destructive-muted': toolResponse.isError,
-          })}
-        >
-          <Text.H5 color={fgColor}>{result as string}</Text.H5>
+        <div className='flex flex-col gap-2 overflow-x-auto'>
+          {toolResponse.isError ? (
+            <Alert variant='destructive' description={result as string} />
+          ) : (
+            <Text.H5 color={color}>{result as string}</Text.H5>
+          )}
         </div>
       )
     }
@@ -75,6 +75,7 @@ export function ToolResultContent({
     return (
       <CodeBlock
         language={strResult.length > MAX_LENGTH_JSON_PREVIEW ? '' : 'json'}
+        bgColor={toolResponse.isError ? 'bg-destructive-muted' : undefined}
       >
         {JSON.stringify(toolResponse.result, null, 2)}
       </CodeBlock>

@@ -6,7 +6,10 @@ import {
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Chain as PromptlChain } from 'promptl-ai'
 
-import { ProviderApiKey, Workspace } from '../../browser'
+import { MAX_STEPS_CONFIG_NAME } from '@latitude-data/constants'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { LanguageModelUsage } from 'ai'
+import { ProviderApiKey, TraceContext, Workspace } from '../../browser'
 import {
   ChainStepResponse,
   ErrorableEntity,
@@ -14,15 +17,13 @@ import {
   PromptSource,
   StreamType,
 } from '../../constants'
-import { generateUUIDIdentifier } from '../../lib/generateUUID'
+import { ChainStreamManager } from '../../lib/chainStreamManager'
 import { createChainRunError } from '../../lib/chainStreamManager/ChainErrors'
+import { generateUUIDIdentifier } from '../../lib/generateUUID'
+import { TelemetryContext } from '../../telemetry'
+import { TypedResult } from './../../lib/Result'
 import { ConfigOverrides } from './ChainValidator'
 import { runStep } from './runStep'
-import { ChainStreamManager } from '../../lib/chainStreamManager'
-import { LanguageModelUsage } from 'ai'
-import { MAX_STEPS_CONFIG_NAME } from '@latitude-data/constants'
-import { TypedResult } from './../../lib/Result'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
 export type SomeChain = LegacyChain | PromptlChain
@@ -35,6 +36,8 @@ export type ChainResponse<T extends StreamType> = TypedResult<
   ChainError<RunErrorCodes>
 >
 type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
+  context: TelemetryContext
+
   workspace: Workspace
   providersMap: CachedApiKeys
   source: LogSources
@@ -64,6 +67,8 @@ export type RunChainArgs<
   : CommonArgs<T, C> & { errorableType?: undefined }
 
 export function runChain<T extends boolean, C extends SomeChain>({
+  context,
+
   workspace,
   providersMap,
   source,
@@ -87,6 +92,11 @@ export function runChain<T extends boolean, C extends SomeChain>({
   const errorableUuid = generateUUID()
   const chainStartTime = Date.now()
 
+  let resolveTrace: (trace: TraceContext) => void
+  const trace = new Promise<TraceContext>((resolve) => {
+    resolveTrace = resolve
+  })
+
   // Conversation is returned for the Agent to use
   let resolveConversation: (conversation: Conversation) => void
   const conversation = new Promise<Conversation>((resolve) => {
@@ -102,7 +112,8 @@ export function runChain<T extends boolean, C extends SomeChain>({
   })
   const streamResult = chainStreamManager.start(async () => {
     try {
-      const conversation = await runStep({
+      const result = await runStep({
+        context,
         chainStreamManager,
         workspace,
         source,
@@ -118,7 +129,10 @@ export function runChain<T extends boolean, C extends SomeChain>({
         injectAgentFinishTool: isChain === false,
       })
 
-      resolveConversation(conversation)
+      resolveConversation(result.conversation)
+      resolveTrace(result.trace)
+
+      return result
     } catch (err) {
       const error = err as ChainError<RunErrorCodes>
 
@@ -137,5 +151,6 @@ export function runChain<T extends boolean, C extends SomeChain>({
     errorableUuid,
     duration: streamResult.messages.then(() => Date.now() - chainStartTime),
     conversation,
+    trace,
   }
 }

@@ -5,6 +5,8 @@ import { Experiment } from '../../../browser'
 import { NotFoundError } from '../../../lib/errors'
 import { ExperimentsRepository } from '../../../repositories'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'
+import { BACKGROUND } from '../../../telemetry'
+import { captureException } from '../../../utils/workers/sentry'
 import { evaluationsQueue } from '../../queues'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
 import {
@@ -12,7 +14,6 @@ import {
   runEvaluationV2JobKey,
 } from '../evaluations/runEvaluationV2Job'
 import { updateExperimentStatus } from './shared'
-import { captureException } from '../../../utils/workers/sentry'
 
 export type RunDocumentForExperimentJobData = {
   workspaceId: number
@@ -44,6 +45,7 @@ export const runDocumentForExperimentJob = async (
 
   try {
     const result = await runDocumentAtCommitWithAutoToolResponses({
+      context: BACKGROUND(),
       workspaceId,
       projectId,
       commitUuid,

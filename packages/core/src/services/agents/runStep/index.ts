@@ -2,29 +2,31 @@ import {
   AssistantMessage,
   Config,
   Conversation,
+  Message,
   MessageRole,
 } from '@latitude-data/compiler'
-import {
-  buildMessagesFromResponse,
-  LogSources,
-  Workspace,
-} from '../../../browser'
-import { CachedApiKeys, stepLimitExceededErrorMessage } from '../../chains/run'
-import { Message } from '@latitude-data/compiler'
-import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import {
   ABSOLUTE_MAX_STEPS,
   AGENT_RETURN_TOOL_NAME,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
 } from '@latitude-data/constants'
-import { Result } from './../../../lib/Result'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import {
+  buildMessagesFromResponse,
+  LogSources,
+  TraceContext,
+  Workspace,
+} from '../../../browser'
+import { ChainStreamManager } from '../../../lib/chainStreamManager'
+import { telemetry, TelemetryContext } from '../../../telemetry'
+import { CachedApiKeys, stepLimitExceededErrorMessage } from '../../chains/run'
+import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
+import { Result } from './../../../lib/Result'
 
 function inferStepsFromConversation(messages: Message[]): number {
-  // Returns the count of assistant messages since the last AGENT_RESPONST tool request
+  // Returns the count of assistant messages since the last agent response
   const lastAgentResponseInverseIndex = messages
     .slice()
     .reverse()
@@ -84,18 +86,8 @@ function assertValidStepCount({
   return Result.nil()
 }
 
-export async function runAgentStep({
-  chainStreamManager,
-  workspace,
-  source,
-  conversation,
-  providersMap,
-  errorableUuid,
-  globalConfig,
-  newMessages = undefined,
-  stepCount,
-  abortSignal,
-}: {
+export type StepProps = {
+  context: TelemetryContext
   chainStreamManager: ChainStreamManager
   workspace: Workspace
   source: LogSources
@@ -107,11 +99,27 @@ export async function runAgentStep({
   previousConfig: Config
   stepCount: number
   abortSignal?: AbortSignal
-}) {
+}
+
+export async function runAgentStep({
+  context,
+  workspace,
+  chainStreamManager,
+  globalConfig,
+  newMessages = undefined,
+  conversation,
+  providersMap,
+  ...rest
+}: StepProps): Promise<{
+  conversation: Conversation
+  trace: TraceContext
+}> {
   if (newMessages?.length) {
     const lastResponseMessage = newMessages[0]! as AssistantMessage
     const latitudeToolResponses =
+      // Built-in tools are executed after client tools
       await chainStreamManager.handleBuiltInToolCalls({
+        context: context, // Note: context from previous (maybe paused) step
         message: lastResponseMessage,
         config: globalConfig,
       })
@@ -122,6 +130,12 @@ export async function runAgentStep({
     ]
   }
 
+  // Note: incoming context could be from a paused or previous
+  // step, so we need to restore the original context
+  if (!telemetry().restored(context)) {
+    context = telemetry().restore(context)
+  }
+
   const step = await validateAgentStep({
     workspace,
     conversation,
@@ -130,18 +144,58 @@ export async function runAgentStep({
   }).then((r) => r.unwrap())
 
   if (step.chainCompleted) {
-    chainStreamManager.done()
-    return
+    const trace = telemetry().pause(context)
+
+    chainStreamManager.done(trace)
+    return { conversation: step.conversation, trace }
   }
 
-  const validStepCount = assertValidStepCount({ stepCount, step })
-  if (validStepCount.error) {
-    chainStreamManager.error(validStepCount.error)
-    return
+  const $step = telemetry().step(context)
+
+  try {
+    const result = executeAgentStep({
+      context: $step.context,
+      workspace,
+      chainStreamManager,
+      globalConfig,
+      newMessages,
+      conversation,
+      providersMap,
+      step,
+      ...rest,
+    })
+
+    result.then(() => $step.end()).catch((error) => $step.fail(error))
+
+    return result
+  } catch (error) {
+    $step.fail(error as Error)
+    throw error
   }
+}
+
+async function executeAgentStep({
+  context,
+  chainStreamManager,
+  workspace,
+  source,
+  providersMap,
+  errorableUuid,
+  globalConfig,
+  stepCount,
+  abortSignal,
+  step,
+}: StepProps & {
+  step: ValidatedAgentStep
+}): Promise<{
+  conversation: Conversation
+  trace: TraceContext
+}> {
+  assertValidStepCount({ stepCount, step }).unwrap()
 
   const { response, clientToolCalls } =
     await chainStreamManager.getProviderResponse({
+      context,
       source,
       conversation: step.conversation,
       provider: step.provider,
@@ -152,13 +206,22 @@ export async function runAgentStep({
       abortSignal,
     })
 
-  // Stop the chain if there are tool calls
+  // Pause the agent if response has client tool calls
+  // Chain is not cached because there is no chain anymore
   if (clientToolCalls.length) {
-    chainStreamManager.requestTools(clientToolCalls)
-    return
+    const trace = telemetry().pause(context)
+
+    chainStreamManager.requestTools(clientToolCalls, trace)
+    return { conversation: step.conversation, trace }
   }
 
+  // TODO(tracing): THE STEP SHOULD END HERE!!!!!!!!!
+
+  // Note: pseudo pause the step so the recursion treats equally paused or previous steps
+  context = telemetry().resume(telemetry().pause(context))
+
   return runAgentStep({
+    context,
     chainStreamManager,
     workspace,
     source,

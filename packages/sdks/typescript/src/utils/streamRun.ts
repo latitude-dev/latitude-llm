@@ -96,7 +96,7 @@ export async function streamRun<Tools extends ToolSpec>(
         chatFn: streamChat,
         tools,
         options,
-        // TODO(tracing): get trace context from the response
+        trace: finalResponse.trace,
         instrumentation,
       })
     }

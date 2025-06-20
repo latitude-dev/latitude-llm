@@ -1,18 +1,19 @@
-import { Job } from 'bullmq'
 import { EMAIL_TRIGGER_DOMAIN } from '@latitude-data/constants'
+import { Job } from 'bullmq'
 import { PromptLFile } from 'promptl-ai'
-import { unsafelyFindWorkspace } from '../../../../data-access'
 import { DocumentTrigger, HEAD_COMMIT, Workspace } from '../../../../browser'
+import { unsafelyFindWorkspace } from '../../../../data-access'
+import { DocumentTriggerMailer } from '../../../../mailers'
 import {
   DocumentTriggersRepository,
   DocumentVersionsRepository,
 } from '../../../../repositories'
-import { getEmailResponse } from './getResponse'
 import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
-import { DocumentTriggerMailer } from '../../../../mailers'
+import { BACKGROUND } from '../../../../telemetry'
 import { LatitudeError } from './../../../../lib/errors'
-import { PromisedResult } from './../../../../lib/Transaction'
 import { Result } from './../../../../lib/Result'
+import { PromisedResult } from './../../../../lib/Transaction'
+import { getEmailResponse } from './getResponse'
 
 export type RunEmailTriggerJobData = {
   workspaceId: number
@@ -73,6 +74,7 @@ export const runEmailTriggerJob = async (job: Job<RunEmailTriggerJobData>) => {
   const name = nameResult.unwrap()
 
   const responseResult = await getEmailResponse({
+    context: BACKGROUND(),
     documentUuid: trigger.documentUuid,
     trigger,
     messageId,

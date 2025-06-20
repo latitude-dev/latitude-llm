@@ -1,8 +1,9 @@
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { LogSources, Workspace } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
-import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import { LatitudeApiKeysRepository } from '@latitude-data/core/repositories'
+import { Instrumentation, telemetry } from '@latitude-data/core/telemetry'
 import { env } from '@latitude-data/env'
 import { Latitude } from '@latitude-data/sdk'
 
@@ -43,6 +44,17 @@ export async function createSdk({
     port: env.GATEWAY_PORT,
     ssl: env.GATEWAY_SSL,
   }
+
+  // TODO(tracing): not needed, remove this
+  telemetry({
+    instrumentations: {
+      [Instrumentation.Latitude]: {
+        module: Latitude,
+        completions: false,
+      },
+    },
+  })
+
   return Result.ok(
     new Latitude(
       apiKey,

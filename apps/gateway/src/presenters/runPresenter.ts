@@ -6,6 +6,7 @@ import {
   ChainStepTextResponse,
   RunSyncAPIResponse,
   extractAgentToolCalls,
+  TraceContext,
 } from '@latitude-data/constants'
 import { ToolCall } from '@latitude-data/compiler'
 
@@ -45,9 +46,11 @@ export function v2RunPresenter(
 export function runPresenter({
   response,
   toolCalls,
+  trace,
 }: {
   response: DocumentResponse
   toolCalls: ToolCall[]
+  trace: TraceContext
 }): TypedResult<RunSyncAPIResponse, LatitudeError> {
   const conversation = response.providerLog?.messages
   const uuid = response.documentLogUuid
@@ -79,5 +82,6 @@ export function runPresenter({
       object: type === 'object' ? response.object : undefined,
       toolCalls: type === 'text' ? response.toolCalls : [],
     },
+    trace,
   })
 }

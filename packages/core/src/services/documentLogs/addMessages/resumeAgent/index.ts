@@ -1,5 +1,3 @@
-import { LogSources, Workspace, ProviderLog } from '../../../../browser'
-import { buildProvidersMap } from '../../../providerApiKeys/buildMap'
 import {
   AssistantMessage,
   Config,
@@ -9,11 +7,19 @@ import {
   MessageRole,
   ToolRequestContent,
 } from '@latitude-data/compiler'
-import { PromptSource } from '../../../../constants'
-import { runAgentStep } from '../../../agents/runStep'
-import { ChainStreamManager } from '../../../../lib/chainStreamManager'
-import { Result } from './../../../../lib/Result'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import {
+  LogSources,
+  ProviderLog,
+  TraceContext,
+  Workspace,
+} from '../../../../browser'
+import { PromptSource } from '../../../../constants'
+import { ChainStreamManager } from '../../../../lib/chainStreamManager'
+import { TelemetryContext } from '../../../../telemetry'
+import { runAgentStep } from '../../../agents/runStep'
+import { buildProvidersMap } from '../../../providerApiKeys/buildMap'
+import { Result } from './../../../../lib/Result'
 
 function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
   const toolContents: ToolRequestContent[] = providerLog.toolCalls.map(
@@ -43,6 +49,7 @@ function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
  * completed, and starts an autonomous workflow from that point.
  */
 export async function resumeAgent({
+  context,
   workspace,
   providerLog,
   globalConfig,
@@ -51,6 +58,7 @@ export async function resumeAgent({
   promptSource,
   abortSignal,
 }: {
+  context: TelemetryContext
   workspace: Workspace
   providerLog: ProviderLog
   globalConfig: LatitudePromptConfig
@@ -68,16 +76,22 @@ export async function resumeAgent({
     ...userProvidedMessags,
   ]
 
+  let resolveTrace: (trace: TraceContext) => void
+  const trace = new Promise<TraceContext>((resolve) => {
+    resolveTrace = resolve
+  })
+
   const chainStreamManager = new ChainStreamManager({
     workspace,
     errorableUuid: providerLog.documentLogUuid!,
     messages: [...providerLog.messages, ...newMessages],
     promptSource,
-    // TODO: Missing previous TokenUsage
+    // TODO: Missing previous TokenUsage because last raw response is not cached
   })
 
   const streamResult = chainStreamManager.start(async () => {
-    await runAgentStep({
+    const result = await runAgentStep({
+      context,
       chainStreamManager,
       workspace,
       source,
@@ -93,7 +107,11 @@ export async function resumeAgent({
       previousConfig: providerLog.config as Config,
       abortSignal,
     })
+
+    resolveTrace(result.trace)
+
+    return result
   }, abortSignal)
 
-  return Result.ok(streamResult)
+  return Result.ok({ ...streamResult, trace })
 }

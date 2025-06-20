@@ -1,25 +1,26 @@
+import { Message } from '@latitude-data/compiler'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { Chain as PromptlChain } from 'promptl-ai'
 import {
   Commit,
-  ErrorableEntity,
   DocumentVersion,
+  ErrorableEntity,
   LogSources,
   Workspace,
   buildMessagesFromResponse,
 } from '../../../../browser'
-import { runChain } from '../../../chains/run'
-import { buildProvidersMap } from '../../../providerApiKeys/buildMap'
-import { Message } from '@latitude-data/compiler'
-import { Chain as PromptlChain } from 'promptl-ai'
-import { getResolvedContent } from '../../../documents'
-import { deleteCachedChain } from '../../../chains/chainCache'
 import {
   ChainStepResponse,
   DocumentType,
   StreamType,
 } from '../../../../constants'
+import { TelemetryContext } from '../../../../telemetry'
 import { runAgent } from '../../../agents/run'
+import { deleteCachedChain } from '../../../chains/chainCache'
+import { runChain } from '../../../chains/run'
+import { getResolvedContent } from '../../../documents'
+import { buildProvidersMap } from '../../../providerApiKeys/buildMap'
 import { Result } from './../../../../lib/Result'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 /**
  * Resuming a prompt
@@ -34,6 +35,7 @@ import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSch
  * retrieved and the chain is run from the paused step.
  */
 export async function resumePausedPrompt({
+  context,
   workspace,
   document,
   commit,
@@ -45,6 +47,7 @@ export async function resumePausedPrompt({
   source,
   abortSignal,
 }: {
+  context: TelemetryContext
   workspace: Workspace
   commit: Commit
   document: DocumentVersion
@@ -75,6 +78,7 @@ export async function resumePausedPrompt({
     document.documentType === DocumentType.Agent ? runAgent : runChain
 
   const runResult = runFn({
+    context,
     generateUUID: () => errorableUuid,
     errorableType,
     workspace,
@@ -87,7 +91,7 @@ export async function resumePausedPrompt({
       document,
       commit,
     },
-    messages: previousResponse.providerLog!.messages, // TODO: Store this in the cache instead
+    messages: previousResponse.providerLog!.messages,
     newMessages: [
       ...buildMessagesFromResponse({ response: previousResponse }),
       ...responseMessages,

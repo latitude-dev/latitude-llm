@@ -8,6 +8,7 @@ import {
   DocumentVersionsRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
+import { TelemetryContext } from '../../../telemetry'
 import { getCachedChain } from '../../chains/chainCache'
 import { scanDocumentContent } from '../../documents'
 import { Result } from './../../../lib/Result'
@@ -58,12 +59,14 @@ async function retrieveData({
 }
 
 export async function addMessages({
+  context,
   workspace,
   documentLogUuid,
   messages,
   source,
   abortSignal,
 }: {
+  context: TelemetryContext
   workspace: Workspace
   documentLogUuid: string | undefined
   messages: Message[]
@@ -83,8 +86,10 @@ export async function addMessages({
 
   const chainCacheData = await getCachedChain({ workspace, documentLogUuid })
 
+  // Resume from client tools in running chain (agent can have a chain inside)
   if (chainCacheData) {
     return resumePausedPrompt({
+      context,
       workspace,
       commit,
       document,
@@ -98,8 +103,12 @@ export async function addMessages({
     })
   }
 
+  /* Chain already finished running */
+
+  // Follow up messages or resume from client tools
   if (document.documentType === 'agent') {
     return resumeAgent({
+      context,
       workspace,
       providerLog,
       globalConfig,
@@ -113,7 +122,9 @@ export async function addMessages({
     })
   }
 
+  // Follow up messages
   return addChatMessage({
+    context,
     abortSignal,
     workspace,
     providerLog,
