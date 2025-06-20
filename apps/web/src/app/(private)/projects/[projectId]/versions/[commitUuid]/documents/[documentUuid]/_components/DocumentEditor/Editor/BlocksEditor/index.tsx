@@ -84,6 +84,20 @@ export const PlaygroundBlocksEditor = memo(
                   },
                 ],
               },
+              {
+                type: 'codeBlock',
+                attrs: {
+                  language: 'promptl',
+                },
+                content: [
+                  {
+                    type: 'text',
+                    text: `{{for cities in ['Barcelona', 'Madrid']}}
+  {{city}} is a city in Spain.
+{{ endof }}`,
+                  },
+                ],
+              },
             ],
           },
         ],

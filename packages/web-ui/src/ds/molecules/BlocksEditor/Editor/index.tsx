@@ -69,10 +69,11 @@ export function BlocksEditor({
     editorProps: {
       attributes: {
         class: cn(
-          'latitude-blocks-editor space-y-1',
+          'latitude-blocks-editor space-y-2',
+          '[&_p]:text-muted-foreground',
           'font-mono text-sm leading-tight whitespace-pre outline-none',
           '[&_.is-empty-node]:before:content-[attr(data-placeholder)]',
-          '[&_.is-empty-node]:before:text-muted-foreground',
+          '[&_.is-empty-node]:before:text-muted-foreground/60',
           '[&_.is-empty-node]:pointer-events-none',
           '[&_.is-empty-node]:before:absolute',
         ),
