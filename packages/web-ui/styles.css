@@ -66,6 +66,55 @@
   .sidebar-icon-mask {
     clip-path: polygon(0 0, 100% 0, 100% 48%, 48% 48%, 48% 100%, 0 100%);
   }
+
+  /* Blocks editor highlight for promptl */
+  .latitude-blocks-editor {
+    .base-node-view {
+      & > div {
+        @apply space-y-2;
+      }
+    }
+
+    .language-promptl {
+      .hljs-punctuation,
+      .hljs-tag {
+        color: hsl(var(--muted-foreground));
+      }
+      .hljs-keyword {
+        color: hsl(var(--accent-foreground));
+        font-weight: 500;
+      }
+      .hljs-variable {
+        color: hsl(var(--accent-foreground));
+      }
+      .hljs-string {
+        color: hsl(var(--destructive-muted-foreground));
+      }
+      .hljs-comment {
+        color: hsl(var(--muted-foreground));
+        font-style: italic;
+      }
+      .hljs-number,
+      .hljs-symbol,
+      .hljs-operator,
+      .hljs-delimiter,
+      .hljs-bracket {
+        color: hsl(var(--accent-foreground));
+      }
+      .hljs-strong {
+        color: hsl(var(--foreground));
+        font-weight: bold;
+      }
+      .hljs-emphasis {
+        color: hsl(var(--foreground));
+        font-style: italic;
+      }
+      .hljs-link {
+        color: hsl(var(--primary));
+        text-decoration: underline;
+      }
+    }
+  }
 }
 
 @layer base {

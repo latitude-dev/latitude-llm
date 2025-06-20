@@ -1,3 +1,3 @@
-export type { AnyBlock, AstError } from './types'
+export type { AnyBlock, AstError, MessageBlockType } from './types'
 export * from './astToSimpleBlocks'
 export * from './simpleBlocksToText'

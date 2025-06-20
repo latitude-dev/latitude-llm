@@ -158,12 +158,13 @@ function colorFromProperty(property: string): string {
   return hslToHex(h!, s!, l!)
 }
 
-const recalculateColors = () => ({
+export const recalculateColors = () => ({
   primary: colorFromProperty('--primary'),
   primaryForeground: colorFromProperty('--primary-foreground'),
   secondary: colorFromProperty('--secondary'),
   secondaryForeground: colorFromProperty('--secondary-foreground'),
   foreground: colorFromProperty('--foreground'),
+  accent: colorFromProperty('--accent'),
   accentForeground: colorFromProperty('--accent-foreground'),
   destructive: colorFromProperty('--destructive'),
   destructiveMutedForeground: colorFromProperty(
