@@ -90,7 +90,7 @@ export default function DocumentEditor({
 
   useEvents(
     {
-      onLatteChanges: ({ changes }) => {
+      onLatteChanges: ({ changes, simulateStreaming }) => {
         const updatedDocument = changes.find(
           (change) =>
             change.draftUuid === commit.uuid &&
@@ -108,7 +108,11 @@ export default function DocumentEditor({
         }
 
         if (updatedDocument.content !== document.content) {
-          streamLatteUpdate(updatedDocument.content)
+          if (simulateStreaming) {
+            streamLatteUpdate(updatedDocument.content)
+          } else {
+            setValue(updatedDocument.content)
+          }
         }
       },
     },

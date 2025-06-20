@@ -3,6 +3,7 @@
 import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
 import { clearLatteThreadCheckpoints } from '@latitude-data/core/services/copilot/index'
+import { evaluateLatteThreadChanges } from '@latitude-data/core/services/copilot/latte/threads/evaluateChanges'
 
 export const acceptLatteChangesAction = authProcedure
   .createServerAction()
@@ -19,5 +20,19 @@ export const acceptLatteChangesAction = authProcedure
       threadUuid,
       workspaceId: workspace.id,
     }).then((r) => r.unwrap())
-    return
+
+    const evaluationResult = await evaluateLatteThreadChanges({
+      threadUuid,
+      accepted: true,
+    })
+
+    if (!evaluationResult.ok) {
+      return { evaluationUuid: undefined }
+    }
+
+    const { result } = evaluationResult.unwrap()
+
+    return {
+      evaluationUuid: result.uuid,
+    }
   })
