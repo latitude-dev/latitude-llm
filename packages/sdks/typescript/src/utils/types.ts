@@ -1,6 +1,11 @@
 // TODO: Right now it takes a lot of work to add a simple new route to this file
 // We should refactor this to make it easier to add new routes
 
+export type HandlerConfig<U, B> = {
+  UrlParams: U
+  BodyParams: B
+}
+
 import { RouteResolver } from '$sdk/utils'
 import { LatitudeApiError } from '$sdk/utils/errors'
 import type { Config, Message, ToolCall } from '@latitude-data/compiler'
@@ -35,30 +40,13 @@ export type GetOrCreateDocumentUrlParams = {
   versionUuid?: string
 }
 
-type GetOrCreateDocumentBodyParams = {
-  path: string
-  prompt?: string
-}
-
 export type RunDocumentUrlParams = {
   projectId: number
   versionUuid?: string
 }
 
-type RunDocumentBodyParams = {
-  path: string
-  parameters?: Record<string, unknown>
-  customIdentifier?: string
-  stream?: boolean
-}
-
 export type ChatUrlParams = {
   conversationUuid: string
-}
-
-type ChatBodyParams = {
-  messages: Message[]
-  stream?: boolean
 }
 
 export type AnnotateUrlParams = {
@@ -66,19 +54,10 @@ export type AnnotateUrlParams = {
   evaluationUuid: string
 }
 
-export enum HandlerType {
-  GetDocument = 'get-document',
-  GetAllDocuments = 'get-all-documents',
-  GetOrCreateDocument = 'get-or-create-document',
-  CreateDocument = 'create-document',
-  RunDocument = 'run-document',
-  Chat = 'chat',
-  Annotate = 'annotate',
-  GetAllProjects = 'get-all-projects',
-  CreateProject = 'create-project',
-  GetVersion = 'get-version',
-  CreateVersion = 'create-version',
-  PushVersion = 'push-version',
+export type AnnotateBodyParams = {
+  score: number
+  metadata?: { reason: string }
+  versionUuid?: string
 }
 
 // Project related types
@@ -126,6 +105,10 @@ export type CreateVersionUrlParams = {
   projectId: number
 }
 
+export type CreateVersionBodyParams = {
+  name: string
+}
+
 export type GetversionUrlParams = {
   projectId: number
   versionUuid: string
@@ -145,61 +128,53 @@ export type PushVersionBodyParams = {
   }>
 }
 
-export type UrlParams<T extends HandlerType> = T extends HandlerType.GetDocument
-  ? GetDocumentUrlParams
-  : T extends HandlerType.GetOrCreateDocument
-    ? GetOrCreateDocumentUrlParams
-    : T extends HandlerType.RunDocument
-      ? RunDocumentUrlParams
-      : T extends HandlerType.Chat
-        ? ChatUrlParams
-        : T extends HandlerType.Annotate
-          ? {
-              conversationUuid: string
-              evaluationUuid: string
-            }
-          : T extends HandlerType.GetAllDocuments
-            ? GetAllDocumentsParams
-            : T extends HandlerType.GetVersion
-              ? { projectId: number; versionUuid: string }
-              : T extends HandlerType.CreateDocument
-                ? GetOrCreateDocumentUrlParams
-                : T extends HandlerType.PushVersion
-                  ? PushVersionUrlParams
-                  : T extends HandlerType.CreateVersion
-                    ? { projectId: number }
-                    : T extends HandlerType.GetAllProjects
-                      ? {}
-                      : T extends HandlerType.CreateProject
-                        ? {}
-                        : never
+export enum HandlerType {
+  Annotate = 'annotate',
+  Chat = 'chat',
+  CreateDocument = 'create-document',
+  CreateProject = 'create-project',
+  CreateVersion = 'create-version',
+  GetAllDocuments = 'get-all-documents',
+  GetAllProjects = 'get-all-projects',
+  GetDocument = 'get-document',
+  GetOrCreateDocument = 'get-or-create-document',
+  GetVersion = 'get-version',
+  PushVersion = 'push-version',
+  RunDocument = 'run-document',
+}
 
-export type BodyParams<T extends HandlerType> =
-  T extends HandlerType.GetOrCreateDocument
-    ? GetOrCreateDocumentBodyParams
-    : T extends HandlerType.RunDocument
-      ? RunDocumentBodyParams
-      : T extends HandlerType.Chat
-        ? ChatBodyParams
-        : T extends HandlerType.Annotate
-          ? {
-              score: number
-              metadata?: {
-                reason: string
-              }
-              versionUuid?: string
-            }
-          : T extends HandlerType.GetAllProjects
-            ? {}
-            : T extends HandlerType.CreateProject
-              ? CreateProjectBodyParams
-              : T extends HandlerType.CreateDocument
-                ? GetOrCreateDocumentBodyParams
-                : T extends HandlerType.PushVersion
-                  ? PushVersionBodyParams
-                  : T extends HandlerType.CreateVersion
-                    ? { name: string }
-                    : never
+export type HandlerConfigs = {
+  [HandlerType.Annotate]: HandlerConfig<AnnotateUrlParams, AnnotateBodyParams>
+  [HandlerType.Chat]: HandlerConfig<ChatUrlParams, ChatBodyParams>
+  [HandlerType.CreateDocument]: HandlerConfig<
+    GetOrCreateDocumentUrlParams,
+    GetOrCreateDocumentBodyParams
+  >
+  [HandlerType.CreateProject]: HandlerConfig<never, CreateProjectBodyParams>
+  [HandlerType.CreateVersion]: HandlerConfig<
+    CreateVersionUrlParams,
+    CreateVersionBodyParams
+  >
+  [HandlerType.GetAllDocuments]: HandlerConfig<GetAllDocumentsParams, never>
+  [HandlerType.GetAllProjects]: HandlerConfig<never, never>
+  [HandlerType.GetDocument]: HandlerConfig<GetDocumentUrlParams, never>
+  [HandlerType.GetOrCreateDocument]: HandlerConfig<
+    GetOrCreateDocumentUrlParams,
+    GetOrCreateDocumentBodyParams
+  >
+  [HandlerType.GetVersion]: HandlerConfig<GetversionUrlParams, never>
+  [HandlerType.PushVersion]: HandlerConfig<
+    PushVersionUrlParams,
+    PushVersionBodyParams
+  >
+  [HandlerType.RunDocument]: HandlerConfig<
+    RunDocumentUrlParams,
+    RunDocumentBodyParams
+  >
+}
+
+export type UrlParams<H extends HandlerType> = HandlerConfigs[H]['UrlParams']
+export type BodyParams<H extends HandlerType> = HandlerConfigs[H]['BodyParams']
 
 export type StreamChainResponse = {
   uuid: string
@@ -367,4 +342,21 @@ export type Prompt = {
   config: Config
   parameters: Record<string, { type: ParameterType }>
   provider?: Providers
+}
+
+type GetOrCreateDocumentBodyParams = {
+  path: string
+  prompt?: string
+}
+
+type RunDocumentBodyParams = {
+  path: string
+  parameters?: Record<string, unknown>
+  customIdentifier?: string
+  stream?: boolean
+}
+
+type ChatBodyParams = {
+  messages: Message[]
+  stream?: boolean
 }

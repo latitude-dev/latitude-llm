@@ -29,7 +29,7 @@ export async function makeRequest<H extends HandlerType>({
   method: 'POST' | 'GET' | 'PUT' | 'DELETE'
   body?: BodyParams<H>
   handler: H
-  params: UrlParams<H>
+  params?: UrlParams<H>
   retries?: number
   options: SDKOptions
 }): Promise<Response> {
