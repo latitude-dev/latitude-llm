@@ -9,17 +9,12 @@ import {
   Providers,
   PublicManualEvaluationResultV2,
   type ChainEventDto,
-  type DocumentLog,
   type ToolCallResponse,
 } from '@latitude-data/constants'
 
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
-import {
-  ApiErrorCodes,
-  ApiErrorJsonResponse,
-  LatitudeApiError,
-} from '$sdk/utils/errors'
+import { ApiErrorJsonResponse, LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
 import { streamChat } from '$sdk/utils/streamChat'
 import { streamRun } from '$sdk/utils/streamRun'
@@ -31,6 +26,7 @@ import {
   GetPromptOptions,
   HandlerType,
   LogSources,
+  Project,
   Prompt,
   RenderChainOptions,
   RenderPromptOptions,
@@ -44,6 +40,7 @@ import {
   ToolInstrumentation,
   ToolSpec,
   TraceInstrumentation,
+  Version,
 } from '$sdk/utils/types'
 import {
   AdapterMessageType,
@@ -98,21 +95,18 @@ class Latitude {
     ) => Promise<PublicManualEvaluationResultV2>
   }
 
-  public logs: {
-    create: (
-      path: string,
-      messages: Message[],
-      options?: {
-        projectId?: number
-        versionUuid?: string
-        response?: string
-      },
-    ) => Promise<DocumentLog>
+  public projects: {
+    getAll: () => Promise<Project[]>
+    create: (name: string) => Promise<{
+      project: Project
+      version: Version
+    }>
   }
 
   public prompts: {
     get: (path: string, args?: GetPromptOptions) => Promise<Prompt>
     getAll: (args?: GetPromptOptions) => Promise<Prompt[]>
+    create: (path: string, args?: GetOrCreatePromptOptions) => Promise<Prompt>
     getOrCreate: (
       path: string,
       args?: GetOrCreatePromptOptions,
@@ -135,6 +129,21 @@ class Latitude {
     renderAgent: <M extends AdapterMessageType = PromptlMessage>(
       args: RenderChainOptions<M>,
     ) => Promise<{ config: Config; messages: M[]; result: unknown }>
+  }
+
+  public versions: {
+    get: (projectId: number, commitUuid: string) => Promise<Version>
+    create: (name: string, opts?: { projectId?: number }) => Promise<Version>
+    push: (
+      projectId: number,
+      baseCommitUuid: string,
+      changes: Array<{
+        path: string
+        content: string
+        status: 'added' | 'modified' | 'deleted' | 'unchanged'
+        contentHash?: string
+      }>,
+    ) => Promise<{ commitUuid: string }>
   }
 
   constructor(
@@ -174,9 +183,10 @@ class Latitude {
       annotate: this.annotate.bind(this),
     }
 
-    // Initialize logs namespace
-    this.logs = {
-      create: this.createLog.bind(this),
+    // Initialize projects namespace
+    this.projects = {
+      getAll: this.getAllProjects.bind(this),
+      create: this.createProject.bind(this),
     }
 
     // Initialize prompts namespace
@@ -184,12 +194,22 @@ class Latitude {
       get: this.getPrompt.bind(this),
       getAll: this.getAllPrompts.bind(this),
       getOrCreate: this.getOrCreatePrompt.bind(this),
+      create: this.createPrompt.bind(this),
       run: this.runPrompt.bind(this),
       chat: this.chat.bind(this),
       render: this.renderPrompt.bind(this),
       renderChain: this.renderChain.bind(this),
       renderAgent: this.renderAgent.bind(this),
     }
+
+    // Initialize versions namespace
+    this.versions = {
+      get: this.getVersion.bind(this),
+      create: this.createVersion.bind(this),
+      push: this.pushVersion.bind(this),
+    }
+
+    // Initialize __internal namespace
   }
 
   static instrument(instrumentation: Instrumentation) {
@@ -299,14 +319,33 @@ class Latitude {
     return (await response.json()) as Prompt[]
   }
 
+  private async createPrompt(
+    path: string,
+    { projectId, versionUuid, prompt }: GetOrCreatePromptOptions = {},
+  ) {
+    projectId = projectId ?? this.options.projectId
+    if (!projectId) throw new Error('Project ID is required')
+
+    versionUuid = versionUuid ?? this.options.versionUuid
+
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.CreateDocument,
+      params: { projectId: Number(projectId), versionUuid },
+      body: { path, prompt },
+      options: this.options,
+    })
+
+    return (await response.json()) as Prompt
+  }
+
   private async getOrCreatePrompt(
     path: string,
     { projectId, versionUuid, prompt }: GetOrCreatePromptOptions = {},
   ) {
     projectId = projectId ?? this.options.projectId
-    if (!projectId) {
-      throw new Error('Project ID is required')
-    }
+    if (!projectId) throw new Error('Project ID is required')
+
     versionUuid = versionUuid ?? this.options.versionUuid
 
     const response = await makeRequest({
@@ -346,45 +385,6 @@ class Latitude {
 
     if (args.stream) return streamRun(path, options)
     return syncRun(path, options)
-  }
-
-  private async createLog(
-    path: string,
-    messages: Message[],
-    {
-      response,
-      projectId,
-      versionUuid,
-    }: {
-      projectId?: number
-      versionUuid?: string
-      response?: string
-    } = {},
-  ) {
-    projectId = projectId ?? this.options.projectId
-    if (!projectId) {
-      throw new Error('Project ID is required')
-    }
-    versionUuid = versionUuid ?? this.options.versionUuid
-
-    const httpResponse = await makeRequest({
-      method: 'POST',
-      handler: HandlerType.Log,
-      params: { projectId, versionUuid },
-      body: { path, messages, response },
-      options: this.options,
-    })
-
-    if (!httpResponse.ok) {
-      throw new LatitudeApiError({
-        status: httpResponse.status,
-        message: httpResponse.statusText,
-        serverResponse: await httpResponse.text(),
-        errorCode: ApiErrorCodes.HTTPException,
-      })
-    }
-
-    return (await httpResponse.json()) as DocumentLog
   }
 
   private async chat<Tools extends ToolSpec>(
@@ -528,7 +528,6 @@ class Latitude {
     parameters,
     adapter: _adapter,
     onStep,
-    logResponses,
     tools,
   }: RenderChainOptions<M>) {
     const adapter = _adapter ?? getPromptlAdapterFromProvider(prompt.provider)
@@ -563,14 +562,6 @@ class Latitude {
       index++
     }
 
-    if (logResponses) {
-      await this.logs.create(
-        prompt.path,
-        // Inexistent types incompatibilities between legacy messages and promptl messages
-        step.messages as unknown as Message[],
-      )
-    }
-
     return {
       config: adaptPromptConfigToProvider(step.config, adapter),
       messages: step.messages,
@@ -582,7 +573,6 @@ class Latitude {
     parameters,
     adapter: _adapter,
     onStep,
-    logResponses,
     tools,
   }: RenderChainOptions<M>) {
     const adapter = _adapter ?? getPromptlAdapterFromProvider(prompt.provider)
@@ -652,14 +642,6 @@ class Latitude {
       index++
     }
 
-    if (logResponses) {
-      await this.logs.create(
-        prompt.path,
-        // Inexistent types incompatibilities between legacy messages and promptl messages
-        messages as unknown as Message[],
-      )
-    }
-
     return {
       config: adaptPromptConfigToProvider(step.config, adapter),
       messages,
@@ -703,11 +685,10 @@ class Latitude {
       toolRequests.map(async (toolRequest) => {
         const tool = tools?.[toolRequest.toolName]
 
-        if (!tool) {
+        if (!tool)
           throw new Error(
             `Handler for tool '${toolRequest.toolName}' not found`,
           )
-        }
 
         const toolResult = await this.renderTool({
           tool,
@@ -740,6 +721,32 @@ class Latitude {
     }
   }
 
+  private async getAllProjects() {
+    const response = await makeRequest({
+      method: 'GET',
+      handler: HandlerType.GetAllProjects,
+      params: {},
+      options: this.options,
+    })
+
+    return (await response.json()) as Project[]
+  }
+
+  private async createProject(name: string) {
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.CreateProject,
+      params: {},
+      body: { name },
+      options: this.options,
+    })
+
+    return (await response.json()) as {
+      project: Project
+      version: Version
+    }
+  }
+
   private async annotate(
     uuid: string,
     score: number,
@@ -766,17 +773,80 @@ class Latitude {
     })
 
     if (!response.ok) {
-      const json = (await response.json()) as ApiErrorJsonResponse
+      const error = (await response.json()) as ApiErrorJsonResponse
+
       throw new LatitudeApiError({
         status: response.status,
-        serverResponse: JSON.stringify(json),
-        message: json.message,
-        errorCode: json.errorCode,
-        dbErrorRef: json.dbErrorRef,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
       })
     }
 
     return (await response.json()) as PublicManualEvaluationResultV2
+  }
+
+  private async createVersion(
+    name: string,
+    { projectId }: { projectId?: number } = {},
+  ): Promise<Version> {
+    projectId = projectId ?? this.options.projectId
+    if (!projectId) throw new Error('Project ID is required')
+
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.CreateVersion,
+      params: {
+        projectId,
+      },
+      body: { name },
+      options: this.options,
+    })
+
+    return (await response.json()) as Version
+  }
+
+  private async getVersion(
+    projectId: number,
+    versionUuid: string,
+  ): Promise<Version> {
+    const response = await makeRequest<HandlerType.GetVersion>({
+      handler: HandlerType.GetVersion,
+      params: { projectId, versionUuid },
+      method: 'GET',
+      options: this.options,
+    })
+
+    return (await response.json()) as Version
+  }
+
+  private async pushVersion(
+    projectId: number,
+    baseCommitUuid: string,
+    changes: Array<{
+      path: string
+      content: string
+      status: 'added' | 'modified' | 'deleted' | 'unchanged'
+      contentHash?: string
+    }>,
+  ): Promise<{ commitUuid: string }> {
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.PushVersion,
+      params: { projectId, commitUuid: baseCommitUuid },
+      body: { changes },
+      options: this.options,
+    })
+
+    const result = (await response.json()) as {
+      commitUuid: string
+      documentsProcessed: number
+    }
+
+    return {
+      commitUuid: result.commitUuid,
+    }
   }
 }
 
@@ -790,6 +860,7 @@ export type {
   Message,
   MessageRole,
   Options,
+  Project,
   Prompt,
   RenderToolCallDetails,
   StreamChainResponse,

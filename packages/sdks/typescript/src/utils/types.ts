@@ -66,22 +66,83 @@ export type AnnotateUrlParams = {
   evaluationUuid: string
 }
 
-export type LogUrlParams = RunDocumentUrlParams
-
-type LogBodyParams = {
-  path: string
-  messages: Message[]
-  response?: string
-}
-
 export enum HandlerType {
   GetDocument = 'get-document',
   GetAllDocuments = 'get-all-documents',
   GetOrCreateDocument = 'get-or-create-document',
+  CreateDocument = 'create-document',
   RunDocument = 'run-document',
   Chat = 'chat',
-  Log = 'log',
   Annotate = 'annotate',
+  GetAllProjects = 'get-all-projects',
+  CreateProject = 'create-project',
+  GetVersion = 'get-version',
+  CreateVersion = 'create-version',
+  PushVersion = 'push-version',
+}
+
+// Project related types
+export type Project = {
+  id: number
+  name: string
+  workspaceId: number
+  createdAt: string
+  updatedAt: string
+  lastEditedAt?: string
+  deletedAt: string | null
+}
+
+export type Commit = {
+  id: number
+  uuid: string
+  title: string
+  description: string
+  projectId: number
+  version: number
+  userId: string
+  mergedAt: string
+  deletedAt: string | null
+}
+
+export type Version = {
+  id: number
+  uuid: string
+  projectId: number
+  message: string
+  authorName: string | null
+  authorEmail: string | null
+  authorId: number | null
+  createdAt: string
+  updatedAt: string
+  status: string
+  parentCommitUuid: string | null
+}
+
+export type CreateProjectBodyParams = {
+  name: string
+}
+
+export type CreateVersionUrlParams = {
+  projectId: number
+}
+
+export type GetversionUrlParams = {
+  projectId: number
+  versionUuid: string
+}
+
+export type PushVersionUrlParams = {
+  projectId: number
+  commitUuid: string
+}
+
+export type PushVersionBodyParams = {
+  changes: Array<{
+    path: string
+    content: string
+    status: 'added' | 'modified' | 'deleted' | 'unchanged'
+    contentHash?: string
+  }>
 }
 
 export type UrlParams<T extends HandlerType> = T extends HandlerType.GetDocument
@@ -92,16 +153,26 @@ export type UrlParams<T extends HandlerType> = T extends HandlerType.GetDocument
       ? RunDocumentUrlParams
       : T extends HandlerType.Chat
         ? ChatUrlParams
-        : T extends HandlerType.Log
-          ? LogUrlParams
-          : T extends HandlerType.Annotate
-            ? {
-                conversationUuid: string
-                evaluationUuid: string
-              }
-            : T extends HandlerType.GetAllDocuments
-              ? GetAllDocumentsParams
-              : never
+        : T extends HandlerType.Annotate
+          ? {
+              conversationUuid: string
+              evaluationUuid: string
+            }
+          : T extends HandlerType.GetAllDocuments
+            ? GetAllDocumentsParams
+            : T extends HandlerType.GetVersion
+              ? { projectId: number; versionUuid: string }
+              : T extends HandlerType.CreateDocument
+                ? GetOrCreateDocumentUrlParams
+                : T extends HandlerType.PushVersion
+                  ? PushVersionUrlParams
+                  : T extends HandlerType.CreateVersion
+                    ? { projectId: number }
+                    : T extends HandlerType.GetAllProjects
+                      ? {}
+                      : T extends HandlerType.CreateProject
+                        ? {}
+                        : never
 
 export type BodyParams<T extends HandlerType> =
   T extends HandlerType.GetOrCreateDocument
@@ -110,17 +181,25 @@ export type BodyParams<T extends HandlerType> =
       ? RunDocumentBodyParams
       : T extends HandlerType.Chat
         ? ChatBodyParams
-        : T extends HandlerType.Log
-          ? LogBodyParams
-          : T extends HandlerType.Annotate
-            ? {
-                score: number
-                metadata?: {
-                  reason: string
-                }
-                versionUuid?: string
+        : T extends HandlerType.Annotate
+          ? {
+              score: number
+              metadata?: {
+                reason: string
               }
-            : never
+              versionUuid?: string
+            }
+          : T extends HandlerType.GetAllProjects
+            ? {}
+            : T extends HandlerType.CreateProject
+              ? CreateProjectBodyParams
+              : T extends HandlerType.CreateDocument
+                ? GetOrCreateDocumentBodyParams
+                : T extends HandlerType.PushVersion
+                  ? PushVersionBodyParams
+                  : T extends HandlerType.CreateVersion
+                    ? { name: string }
+                    : never
 
 export type StreamChainResponse = {
   uuid: string

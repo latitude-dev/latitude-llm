@@ -1,15 +1,10 @@
 {
   "name": "@latitude-data/sdk",
-  "version": "4.1.6",
+  "version": "4.1.7",
   "description": "Latitude SDK for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
-  "keywords": [
-    "AI",
-    "Prompt engineering",
-    "sdk",
-    "typescript"
-  ],
+  "keywords": ["AI", "Prompt engineering", "sdk", "typescript"],
   "repository": {
     "type": "git",
     "url": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/typescript"
@@ -24,9 +19,7 @@
     "lint": "eslint src"
   },
   "type": "module",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
