@@ -1,11 +1,13 @@
 import {
-  ChatUrlParams,
   AnnotateUrlParams,
+  ChatUrlParams,
+  CreateVersionUrlParams,
   GetAllDocumentsParams,
   GetDocumentUrlParams,
   GetOrCreateDocumentUrlParams,
+  GetversionUrlParams,
   HandlerType,
-  LogUrlParams,
+  PushVersionUrlParams,
   RunDocumentUrlParams,
   UrlParams,
 } from '$sdk/utils/types'
@@ -38,35 +40,69 @@ export class RouteResolver {
     this.apiVersion = apiVersion
   }
 
+  // TODO: FIXME: This can be done without asserting types
   resolve<T extends HandlerType>({ handler, params }: ResolveParams<T>) {
     switch (handler) {
       case HandlerType.GetDocument: {
-        const getParams = params as GetDocumentUrlParams
-        return this.documents(getParams).document(getParams.path)
+        const p = params as GetDocumentUrlParams
+        return this.projects
+          .project(p.projectId)
+          .versions.version(p.versionUuid ?? 'live')
+          .documents.document(p.path)
       }
       case HandlerType.GetAllDocuments: {
-        const getParams = params as GetAllDocumentsParams
-        return this.documents(getParams).root
+        const p = params as GetAllDocumentsParams
+        return this.projects
+          .project(p.projectId)
+          .versions.version(p.versionUuid ?? 'live').documents.root
       }
       case HandlerType.GetOrCreateDocument: {
-        return this.documents(params as GetOrCreateDocumentUrlParams)
-          .getOrCreate
+        const p = params as GetOrCreateDocumentUrlParams
+        return this.projects
+          .project(p.projectId)
+          .versions.version(p.versionUuid ?? 'live').documents.getOrCreate
       }
-      case HandlerType.RunDocument:
-        return this.documents(params as RunDocumentUrlParams).run
-      case HandlerType.Chat:
-        return this.conversations().chat(
-          (params as ChatUrlParams).conversationUuid,
-        )
-      case HandlerType.Log:
-        return this.documents(params as LogUrlParams).log
-      case HandlerType.Annotate:
+      case HandlerType.CreateDocument: {
+        const p = params as GetOrCreateDocumentUrlParams
+        return this.projects
+          .project(p.projectId)
+          .versions.version(p.versionUuid ?? 'live').documents.root
+      }
+      case HandlerType.RunDocument: {
+        const p = params as RunDocumentUrlParams
+        return this.projects
+          .project(p.projectId)
+          .versions.version(p.versionUuid ?? 'live').documents.run
+      }
+      case HandlerType.Chat: {
+        const p = params as ChatUrlParams
+        return this.conversations().chat(p.conversationUuid)
+      }
+      case HandlerType.Annotate: {
+        const p = params as AnnotateUrlParams
         return this.conversations().annotate(
-          (params as ChatUrlParams).conversationUuid,
-          (params as AnnotateUrlParams).evaluationUuid,
+          p.conversationUuid,
+          p.evaluationUuid,
         )
+      }
+      case HandlerType.GetAllProjects:
+        return this.projects.root
+      case HandlerType.CreateProject:
+        return this.projects.root
+      case HandlerType.CreateVersion:
+        return this.projects.project(
+          (params as CreateVersionUrlParams).projectId,
+        ).versions.root
+      case HandlerType.GetVersion:
+        return this.projects
+          .project((params as GetversionUrlParams).projectId)
+          .versions.version((params as GetversionUrlParams).versionUuid).root
+      case HandlerType.PushVersion:
+        return this.projects
+          .project((params as PushVersionUrlParams).projectId)
+          .versions.version((params as PushVersionUrlParams).commitUuid).push
       default:
-        throw new Error(`Unknown handler: ${handler satisfies never}`)
+        throw new Error(`Unknown handler: ${handler}`)
     }
   }
 
@@ -79,32 +115,29 @@ export class RouteResolver {
     }
   }
 
-  private documents(params: { projectId: number; versionUuid?: string }) {
-    const base = `${this.commitsUrl(params)}/documents`
+  private get projects() {
+    const base = `${this.baseUrl}/projects`
     return {
       root: base,
-      document: (path: string) => `${base}/${path}`,
-      getOrCreate: `${base}/get-or-create`,
-      run: `${base}/run`,
-      log: `${base}/logs`,
+      project: (projectId: number) => ({
+        root: `${this.baseUrl}/projects/${projectId}`,
+        documents: `${this.baseUrl}/projects/${projectId}/documents`,
+        versions: {
+          root: `${this.baseUrl}/projects/${projectId}/versions`,
+          version: (versionUuid: string) => ({
+            root: `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}`,
+            push: `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}/push`,
+            documents: {
+              root: `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}/documents`,
+              document: (path: string) =>
+                `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}/documents/${path}`,
+              getOrCreate: `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}/documents/get-or-create`,
+              run: `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}/documents/run`,
+            },
+          }),
+        },
+      }),
     }
-  }
-
-  private commitsUrl({
-    projectId,
-    versionUuid,
-  }: {
-    projectId: number
-    versionUuid?: string
-  }) {
-    // TODO: Think how to share HEAD_COMMIT constant from core
-    // I don't want to require all core just for this
-    const commit = versionUuid ?? 'live'
-    return `${this.projectsUrl({ projectId })}/versions/${commit}`
-  }
-
-  private projectsUrl({ projectId }: { projectId: number }) {
-    return `${this.baseUrl}/projects/${projectId}`
   }
 
   private get baseUrl() {

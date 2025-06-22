@@ -35,6 +35,7 @@ export async function makeRequest<H extends HandlerType>({
 }): Promise<Response> {
   const { routeResolver, apiKey, source, retryMs } = options
   const url = routeResolver.resolve({ handler, params })
+
   const response = await nodeFetch(url, {
     method,
     headers: getAuthHeader(apiKey),
