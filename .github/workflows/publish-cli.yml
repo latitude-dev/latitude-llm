@@ -56,11 +56,11 @@ jobs:
 
       - name: Install dependencies
         if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm install --filter=@latitude-data/cli...
+        run: pnpm install --filter=@latitude-data/cli... --filter=@latitude-data/sdk...
 
       - name: Build package (with workspace dependencies)
         if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm exec turbo run build --filter=@latitude-data/cli...
+        run: pnpm exec turbo run build --filter=@latitude-data/cli... --filter=@latitude-data/sdk...
 
       - name: Run linter
         if: steps.check_version.outputs.should_publish == 'true'
