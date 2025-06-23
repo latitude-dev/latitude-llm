@@ -76,7 +76,7 @@ export class InitCommand extends BaseCommand {
       // No API key found, prompt for one
       const { apiKey } = await inquirer.prompt([
         {
-          type: 'input',
+          type: 'password',
           name: 'apiKey',
           message: 'Enter your Latitude API key:',
           validate: (input) =>

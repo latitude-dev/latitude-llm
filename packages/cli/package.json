@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/cli",
-  "version": "0.0.1-beta.4",
+  "version": "0.0.1-beta.5",
   "description": "Latitude CLI for managing projects and prompts",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
