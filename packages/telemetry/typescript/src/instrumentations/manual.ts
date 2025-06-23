@@ -35,8 +35,8 @@ import {
   ATTR_LATITUDE_SEGMENTS,
   ATTR_LATITUDE_TYPE,
   GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
+  GENAI_SPANS,
   HEAD_COMMIT,
-  HIDDEN_SPAN_TYPES,
   SegmentBaggage,
   SegmentSource,
   SegmentType,
@@ -95,8 +95,6 @@ export type StartCompletionSpanOptions = StartSpanOptions & {
   provider: string
   model: string
   configuration: Record<string, unknown>
-  template: string
-  parameters: Record<string, unknown>
   input: Record<string, unknown>[]
 }
 
@@ -130,7 +128,7 @@ export type EndHttpSpanOptions = EndSpanOptions & {
 
 export type SegmentOptions = {
   attributes?: otel.Attributes
-  baggage?: Record<string, unknown>
+  baggage?: Record<string, otel.BaggageEntry>
   _internal?: {
     id?: string
     source?: SegmentSource
@@ -143,6 +141,8 @@ export type PromptSegmentOptions = SegmentOptions & {
   promptUuid: string // Alias for documentUuid
   experimentUuid?: string
   externalId?: string
+  template: string
+  parameters?: Record<string, unknown>
 }
 
 export class ManualInstrumentation implements BaseInstrumentation {
@@ -202,36 +202,60 @@ export class ManualInstrumentation implements BaseInstrumentation {
     return { segment, segments } as TraceBaggage
   }
 
-  pause(ctx: otel.Context) {
-    const baggage = Object.fromEntries(
+  private setBaggage(
+    ctx: otel.Context,
+    baggage: TraceBaggage | undefined,
+    extra?: Record<string, otel.BaggageEntry>,
+  ) {
+    let parent = Object.fromEntries(
       propagation.getBaggage(ctx)?.getAllEntries() || [],
     )
 
-    let segments: SegmentBaggage[] = []
-    if (ATTR_LATITUDE_SEGMENTS in baggage) {
-      try {
-        segments = JSON.parse(baggage[ATTR_LATITUDE_SEGMENTS].value)
-      } catch (error) {
-        segments = []
-      }
-    }
-    if (segments.at(-1)) {
-      segments.at(-1)!.paused = true
+    parent = Object.fromEntries(
+      Object.entries(parent).filter(
+        ([attribute]) =>
+          attribute !== ATTR_LATITUDE_SEGMENT_ID &&
+          attribute !== ATTR_LATITUDE_SEGMENT_PARENT_ID &&
+          attribute !== ATTR_LATITUDE_SEGMENTS,
+      ),
+    )
 
-      try {
-        const payload = propagation.createBaggage({
-          ...baggage,
-          [ATTR_LATITUDE_SEGMENTS]: { value: JSON.stringify(segments) },
-        })
-        ctx = propagation.setBaggage(ctx, payload)
-      } catch (error) {
-        // Fail silently
-      }
+    if (!baggage) {
+      const payload = propagation.createBaggage({ ...parent, ...(extra || {}) })
+      return propagation.setBaggage(ctx, payload)
     }
 
-    let carrier = {}
+    let jsonSegments = ''
+    try {
+      jsonSegments = JSON.stringify(baggage.segments)
+    } catch (error) {
+      jsonSegments = '[]'
+    }
+
+    const payload = propagation.createBaggage({
+      ...parent,
+      [ATTR_LATITUDE_SEGMENT_ID]: { value: baggage.segment.id },
+      ...(baggage.segment.parentId && {
+        [ATTR_LATITUDE_SEGMENT_PARENT_ID]: { value: baggage.segment.parentId },
+      }),
+      [ATTR_LATITUDE_SEGMENTS]: { value: jsonSegments },
+      ...(extra || {}),
+    })
+
+    return propagation.setBaggage(ctx, payload)
+  }
+
+  pause(ctx: otel.Context) {
+    const baggage = this.baggage(ctx)
+    if (baggage) {
+      baggage.segments.at(-1)!.paused = true
+    }
+
+    ctx = this.setBaggage(ctx, baggage)
+    let carrier = {} as TraceContext
     propagation.inject(ctx, carrier)
-    return carrier as TraceContext
+
+    return carrier
   }
 
   resume(ctx: TraceContext) {
@@ -244,54 +268,28 @@ export class ManualInstrumentation implements BaseInstrumentation {
   }
 
   restore(ctx: otel.Context) {
-    let baggage = Object.fromEntries(
-      propagation.getBaggage(ctx)?.getAllEntries() || [],
-    )
+    let baggage = this.baggage(ctx)
+    if (!baggage) return ctx
 
-    let segments: SegmentBaggage[] = []
-    if (ATTR_LATITUDE_SEGMENTS in baggage) {
-      try {
-        segments = JSON.parse(baggage[ATTR_LATITUDE_SEGMENTS].value)
-      } catch (error) {
-        segments = []
-      }
+    const segments = baggage.segments
+    while (segments.at(-1)?.paused) segments.pop()
+
+    const segment = segments.at(-1)
+    if (!segment) return otel.ROOT_CONTEXT
+
+    baggage = {
+      segment: { id: segment.id, parentId: segment.parentId },
+      segments: segments,
     }
 
-    let filtered: SegmentBaggage[] = []
-    for (const segment of segments) {
-      if (segment.paused) break
-      filtered.push(segment)
-    }
-    const segment = filtered.at(-1)
+    ctx = this.setBaggage(ctx, baggage)
+    let carrier = {} as TraceContext
+    propagation.inject(ctx, carrier)
 
-    baggage = Object.fromEntries(
-      Object.entries(baggage).filter(
-        ([attribute]) =>
-          attribute === ATTR_LATITUDE_SEGMENT_ID ||
-          attribute === ATTR_LATITUDE_SEGMENT_PARENT_ID ||
-          attribute === ATTR_LATITUDE_SEGMENTS,
-      ),
-    )
+    carrier.traceparent = segment.traceparent
+    carrier.tracestate = segment.tracestate
 
-    try {
-      const payload = propagation.createBaggage({
-        ...baggage,
-        ...(segment && {
-          [ATTR_LATITUDE_SEGMENT_ID]: { value: segment.id },
-          ...(segment?.parentId && {
-            [ATTR_LATITUDE_SEGMENT_PARENT_ID]: { value: segment.parentId },
-          }),
-        }),
-        ...(filtered.length > 0 && {
-          [ATTR_LATITUDE_SEGMENTS]: { value: JSON.stringify(filtered) },
-        }),
-      })
-      ctx = propagation.setBaggage(ctx, payload)
-    } catch (error) {
-      // Fail silently
-    }
-
-    return ctx
+    return this.resume(carrier)
   }
 
   private capitalize(str: string) {
@@ -356,7 +354,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     const start = options || {}
 
     let operation = undefined
-    if (!HIDDEN_SPAN_TYPES.includes(type)) {
+    if (GENAI_SPANS.includes(type)) {
       operation = type
     }
 
@@ -671,13 +669,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
       configuration,
     )
 
-    let jsonParameters = ''
-    try {
-      jsonParameters = JSON.stringify(start.parameters)
-    } catch (error) {
-      jsonParameters = '{}'
-    }
-
     let jsonInput = ''
     try {
       jsonInput = JSON.stringify(start.input)
@@ -695,8 +686,6 @@ export class ManualInstrumentation implements BaseInstrumentation {
           [ATTR_GEN_AI_SYSTEM]: start.provider,
           [ATTR_GEN_AI_REQUEST_CONFIGURATION]: jsonConfiguration,
           ...attrConfiguration,
-          [ATTR_GEN_AI_REQUEST_TEMPLATE]: start.template,
-          [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
           [ATTR_GEN_AI_REQUEST_MESSAGES]: jsonInput,
           ...attrInput,
           ...(start.attributes || {}),
@@ -863,62 +852,49 @@ export class ManualInstrumentation implements BaseInstrumentation {
   ) {
     options = options || {}
 
-    const segmentId = options._internal?.id || uuid()
-
-    const baggage = Object.fromEntries(
-      propagation.getBaggage(ctx)?.getAllEntries() || [],
-    )
-
-    let segments: SegmentBaggage[] = []
-    if (ATTR_LATITUDE_SEGMENTS in baggage) {
-      try {
-        segments = JSON.parse(baggage[ATTR_LATITUDE_SEGMENTS].value)
-      } catch (error) {
-        segments = []
-      }
-    }
-    const parent = segments.at(-1)
+    let baggage = this.baggage(ctx)
+    const parent = baggage?.segments.at(-1)
+    const segments = baggage?.segments || []
 
     segments.push({
-      id: segmentId,
-      ...(parent?.id && { parentId: parent.id }),
-      source: options._internal?.source || parent?.source || this.source,
-      type: type,
-      data: data,
-    } as SegmentBaggage<T>)
+      ...({
+        id: options._internal?.id || uuid(),
+        ...(parent?.id && { parentId: parent.id }),
+        source: options._internal?.source || parent?.source || this.source,
+        type: type,
+        data: data,
+      } as SegmentBaggage<T>),
+      traceparent: 'undefined',
+      tracestate: undefined,
+    })
+    const segment = segments.at(-1)!
 
-    let jsonSegments = ''
-    try {
-      jsonSegments = JSON.stringify(segments)
-    } catch (error) {
-      jsonSegments = '[]'
+    baggage = {
+      segment: { id: segment.id, parentId: segment.parentId },
+      segments: segments,
     }
 
-    const baggAttributes = Object.fromEntries(
-      Object.entries(options.attributes || {}).map(([key, value]) => [
-        key,
-        { value: String(value) },
-      ]),
-    )
+    ctx = this.setBaggage(ctx, baggage, options.baggage)
 
-    const payload = propagation.createBaggage({
-      // Parent baggage
-      ...baggage,
-      // Note: this is not baggage, just a way to pass attributes down more easily
-      ...baggAttributes,
-      // Segment baggage
-      [ATTR_LATITUDE_SEGMENT_ID]: { value: segmentId },
-      ...(parent?.id && {
-        [ATTR_LATITUDE_SEGMENT_PARENT_ID]: { value: parent.id },
-      }),
-      [ATTR_LATITUDE_SEGMENTS]: { value: jsonSegments },
-      // Extra baggage
-      ...(options.baggage || {}),
+    // Dummy wrapper to force the same trace and carry on some segment attributes
+    const span = this.span(ctx, type, SpanType.Segment, {
+      attributes: options.attributes,
     })
 
-    // Dummy wrapper to force the same trace
-    const newCtx = propagation.setBaggage(ctx, payload)
-    return this.span(newCtx, type, SpanType.Segment)
+    let carrier = {} as TraceContext
+    propagation.inject(span.context, carrier)
+
+    baggage.segments.at(-1)!.traceparent = carrier.traceparent
+    baggage.segments.at(-1)!.tracestate = carrier.tracestate
+
+    // Fix current segment span segments attribute now that we know the trace
+    trace
+      .getSpan(span.context)!
+      .setAttribute(ATTR_LATITUDE_SEGMENTS, JSON.stringify(baggage.segments))
+
+    ctx = this.setBaggage(span.context, baggage, options.baggage)
+
+    return { context: ctx, end: span.end, fail: span.fail }
   }
 
   prompt(
@@ -929,10 +905,12 @@ export class ManualInstrumentation implements BaseInstrumentation {
       promptUuid,
       experimentUuid,
       externalId,
+      template,
+      parameters,
       ...rest
     }: PromptSegmentOptions,
   ) {
-    const data = {
+    const baggage = {
       ...(logUuid && { logUuid }), // TODO(tracing): temporal related log, remove when observability is ready
       commitUuid: versionUuid || HEAD_COMMIT,
       documentUuid: promptUuid,
@@ -940,7 +918,23 @@ export class ManualInstrumentation implements BaseInstrumentation {
       ...(externalId && { externalId }),
     }
 
-    return this.segment(ctx, SegmentType.Document, data, { ...rest })
+    let jsonParameters = ''
+    try {
+      jsonParameters = JSON.stringify(parameters || {})
+    } catch (error) {
+      jsonParameters = '{}'
+    }
+
+    const attributes = {
+      [ATTR_GEN_AI_REQUEST_TEMPLATE]: template,
+      [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
+      ...(rest.attributes || {}),
+    }
+
+    return this.segment(ctx, SegmentType.Document, baggage, {
+      ...rest,
+      attributes,
+    })
   }
 
   step(ctx: otel.Context, options?: SegmentOptions) {

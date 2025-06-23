@@ -1,9 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
-import { mockToolRequestsCopilot } from '../../../../tests/helpers'
-import * as factories from '../../../../tests/factories'
 import { LogSources, Providers } from '@latitude-data/constants'
-import * as runDocUntilStops from './runDocumentUntilItStops'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   Commit,
   DocumentVersion,
@@ -11,12 +9,16 @@ import {
   Workspace,
 } from '../../../../browser'
 import * as runDoc from '../../../../services/commits/runDocumentAtCommit'
-import { AutogenerateToolResponseCopilotData } from './getCopilotData'
-import type { RunDocumentAtCommitWithAutoToolResponsesFn } from './index'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { TelemetryContext } from '../../../../telemetry'
+import * as factories from '../../../../tests/factories'
+import { mockToolRequestsCopilot } from '../../../../tests/helpers'
 import { NotFoundError } from './../../../../lib/errors'
 import { Result } from './../../../../lib/Result'
+import { AutogenerateToolResponseCopilotData } from './getCopilotData'
+import type { RunDocumentAtCommitWithAutoToolResponsesFn } from './index'
+import * as runDocUntilStops from './runDocumentUntilItStops'
 
+let context: TelemetryContext
 let workspace: Workspace
 let project: Project
 let commit: Commit
@@ -26,6 +28,8 @@ let runDocumentAtCommitWithAutoToolResponses: RunDocumentAtCommitWithAutoToolRes
 
 describe('runDocumentAtCommitWithAutoToolResponses', () => {
   beforeAll(async () => {
+    context = await factories.createTelemetryContext()
+
     copilot = await mockToolRequestsCopilot()
     const setup = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'Latitude' }],
@@ -49,6 +53,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       error: Promise.resolve(undefined),
       response: Promise.resolve({ providerLog: { uuid: 'log1' } }),
       toolCalls: Promise.resolve([]),
+      trace: factories.createTelemetryTrace({}),
     }
     vi.spyOn(runDoc, 'runDocumentAtCommit')
     const mockRunUntilItStops = vi.spyOn(
@@ -61,6 +66,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
     )
 
     await runDocumentAtCommitWithAutoToolResponses({
+      context: context,
       workspaceId: workspace.id,
       projectId: project.id,
       commitUuid: commit.uuid,
@@ -72,6 +78,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
 
     expect(runDoc.runDocumentAtCommit).toHaveBeenCalledWith(
       expect.objectContaining({
+        context: expect.anything(),
         workspace,
         commit,
         parameters: { param1: 'value1' },
@@ -84,6 +91,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
         hasToolCalls: false,
         autoRespondToolCalls: true,
         data: {
+          context: expect.anything(),
           workspace,
           commit,
           document,
@@ -99,6 +107,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
   it('returns error when data not found', async () => {
     const randomFakeCommituuid = '19b1b3b1-1b3b-1b3b-1b3b-1b3b1b3b1b3b'
     const result = await runDocumentAtCommitWithAutoToolResponses({
+      context: context,
       workspaceId: workspace.id,
       projectId: project.id,
       commitUuid: randomFakeCommituuid,
@@ -130,6 +139,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       mod.runDocumentAtCommitWithAutoToolResponses
 
     const result = await runDocumentAtCommitWithAutoToolResponses({
+      context: context,
       workspaceId: workspace.id,
       projectId: project.id,
       commitUuid: commit.uuid,
@@ -157,6 +167,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       }),
       toolCalls: Promise.resolve(fakeTools),
       errorableUuid: 'log1',
+      trace: factories.createTelemetryTrace({}),
     }
 
     vi.spyOn(runDoc, 'runDocumentAtCommit')
@@ -171,6 +182,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       mod.runDocumentAtCommitWithAutoToolResponses
 
     await runDocumentAtCommitWithAutoToolResponses({
+      context: context,
       workspaceId: workspace.id,
       projectId: project.id,
       commitUuid: commit.uuid,
@@ -182,6 +194,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
 
     expect(runDoc.runDocumentAtCommit).toHaveBeenCalledWith(
       expect.objectContaining({
+        context: expect.anything(),
         workspace,
         commit,
         parameters: { param1: 'value1' },
@@ -195,6 +208,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
         hasToolCalls: false,
         autoRespondToolCalls: true,
         data: {
+          context: expect.anything(),
           workspace,
           commit,
           document,
@@ -212,6 +226,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
         hasToolCalls: true,
         autoRespondToolCalls: true,
         data: {
+          context: expect.anything(),
           workspace,
           commit,
           document,
@@ -241,6 +256,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       }),
       toolCalls: Promise.resolve(fakeTools),
       errorableUuid: 'log1',
+      trace: factories.createTelemetryTrace({}),
     }
 
     vi.spyOn(runDoc, 'runDocumentAtCommit')
@@ -255,6 +271,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       mod.runDocumentAtCommitWithAutoToolResponses
 
     const result = await runDocumentAtCommitWithAutoToolResponses({
+      context: context,
       workspaceId: workspace.id,
       projectId: project.id,
       commitUuid: commit.uuid,
@@ -266,6 +283,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
 
     expect(runDoc.runDocumentAtCommit).toHaveBeenCalledWith(
       expect.objectContaining({
+        context: expect.anything(),
         workspace,
         commit,
         parameters: { param1: 'value1' },
@@ -280,6 +298,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
         hasToolCalls: false,
         autoRespondToolCalls: false,
         data: {
+          context: expect.anything(),
           workspace,
           commit,
           document,
@@ -290,10 +309,12 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       },
       runDocUntilStops.runDocumentUntilItStops,
     )
-    expect(result.value).toEqual({
-      errorableUuid: 'log1',
-      response: Promise.resolve({}),
-      toolCalls: Promise.resolve(fakeTools),
-    })
+    expect(result.value).toEqual(
+      expect.objectContaining({
+        errorableUuid: 'log1',
+        response: Promise.resolve({}),
+        toolCalls: Promise.resolve(fakeTools),
+      }),
+    )
   })
 })

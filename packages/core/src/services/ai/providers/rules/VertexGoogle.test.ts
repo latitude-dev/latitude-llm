@@ -3,12 +3,12 @@ import { beforeAll, describe, expect, it } from 'vitest'
 
 import { PartialConfig } from '../../helpers'
 import { Providers } from '../models'
-import { ProviderRules } from './types'
 import { applyProviderRules } from './index'
+import { ProviderRules } from './types'
 
 const providerType = Providers.GoogleVertex
 
-let config = {} as PartialConfig
+const config = {} as PartialConfig
 let messages: Message[]
 describe('applyGoogleVertexRules', () => {
   describe('with system messages not at the beggining', () => {

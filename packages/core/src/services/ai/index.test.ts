@@ -2,8 +2,8 @@ import { ContentType, type Message, MessageRole } from '@latitude-data/compiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError } from 'ai'
 import { describe, expect, it, vi } from 'vitest'
-
 import { ProviderApiKey, Providers } from '../../browser'
+import * as factories from '../../tests/factories'
 import { ai } from './index'
 
 const PROVIDER_PAYLOAD: ProviderApiKey = {
@@ -24,6 +24,8 @@ const PROVIDER_PAYLOAD: ProviderApiKey = {
 
 describe('ai function', () => {
   it('should throw an error if rules are violated', async () => {
+    const context = await factories.createTelemetryContext()
+
     // @ts-expect-error
     const provider: ProviderApiKey = {
       name: 'openai',
@@ -52,7 +54,7 @@ describe('ai function', () => {
     ]
 
     await expect(
-      ai({ provider, config, messages }).then((r) => r.unwrap()),
+      ai({ context, provider, config, messages }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new ChainError({
         code: RunErrorCodes.AIRunError,
@@ -64,6 +66,8 @@ There are rule violations:
   })
 
   it('should throw an error if Google provider is used without a user message', async () => {
+    const context = await factories.createTelemetryContext()
+
     // @ts-expect-error
     const provider: ProviderApiKey = {
       name: 'google',
@@ -85,7 +89,7 @@ There are rule violations:
     ]
 
     await expect(
-      ai({ provider, config, messages }).then((r) => r.unwrap()),
+      ai({ context, provider, config, messages }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new ChainError({
         code: RunErrorCodes.AIProviderConfigError,
@@ -95,6 +99,8 @@ There are rule violations:
   })
 
   it('throw a ChainError when AI fails with APICallError', async () => {
+    const context = await factories.createTelemetryContext()
+
     const streamTextModk = vi.fn()
     streamTextModk.mockImplementation(() => {
       throw new APICallError({
@@ -109,6 +115,7 @@ There are rule violations:
 
     await expect(
       ai({
+        context: context,
         provider: PROVIDER_PAYLOAD,
         config: { model: 'gpt-4o', provider: PROVIDER_PAYLOAD.name },
         messages: [],
@@ -125,6 +132,8 @@ There are rule violations:
   })
 
   it('throw a ChainError when AI fails with generic Error', async () => {
+    const context = await factories.createTelemetryContext()
+
     const streamTextModk = vi.fn()
     streamTextModk.mockImplementation(() => {
       throw new Error('Some error')
@@ -132,6 +141,7 @@ There are rule violations:
 
     await expect(
       ai({
+        context: context,
         provider: PROVIDER_PAYLOAD,
         config: { model: 'gpt-4o', provider: PROVIDER_PAYLOAD.name },
         messages: [],

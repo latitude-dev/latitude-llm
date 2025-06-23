@@ -1,15 +1,14 @@
-import { User, Workspace } from '../../browser'
-import { Column } from '../../schema/models/datasets'
-import { database } from '../../client'
-import { datasets } from '../../schema'
 import pg from 'pg'
-const { DatabaseError } = pg
+import { User, Workspace } from '../../browser'
+import { database } from '../../client'
 import { syncReadCsv } from '../../lib/readCsv'
-import { buildColumns, HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
-import { BadRequestError } from './../../lib/errors'
-import { databaseErrorCodes } from './../../lib/errors'
+import { datasets } from '../../schema'
+import { Column } from '../../schema/models/datasets'
+import { BadRequestError, databaseErrorCodes } from './../../lib/errors'
 import { Result } from './../../lib/Result'
 import Transaction from './../../lib/Transaction'
+import { buildColumns, HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
+const { DatabaseError } = pg
 
 export async function getCsvAndBuildColumns({
   file,
@@ -39,7 +38,7 @@ export async function getCsvAndBuildColumns({
     )
   }
 
-  let columns: Column[] = []
+  const columns: Column[] = []
   const newColumns = Array.from(uniqueHeaders.keys()).map((columnName) => ({
     name: columnName,
   }))

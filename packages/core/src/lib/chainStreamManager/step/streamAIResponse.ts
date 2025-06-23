@@ -1,48 +1,31 @@
-import { JSONSchema7 } from 'json-schema'
 import { Conversation } from '@latitude-data/compiler'
-import { LogSources, ProviderApiKey, Workspace } from '../../../browser'
+import { VercelConfig } from '@latitude-data/constants'
+import { LanguageModelUsage } from 'ai'
+import { JSONSchema7 } from 'json-schema'
+import {
+  buildMessagesFromResponse,
+  LogSources,
+  ProviderApiKey,
+  Workspace,
+} from '../../../browser'
+import { ChainStepResponse, StreamType } from '../../../constants'
+import { ai } from '../../../services/ai'
+import { processResponse } from '../../../services/chains/ProviderProcessor'
 import {
   buildProviderLogDto,
   saveOrPublishProviderLogs,
 } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
-import { checkValidStream } from '../checkValidStream'
-import { processResponse } from '../../../services/chains/ProviderProcessor'
 import {
   getCachedResponse,
   setCachedResponse,
 } from '../../../services/commits/promptCache'
-import { ai } from '../../../services/ai'
-import { ChainStepResponse, StreamType } from '../../../constants'
+import { telemetry, TelemetryContext } from '../../../telemetry'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
-import { LanguageModelUsage } from 'ai'
+import { checkValidStream } from '../checkValidStream'
 import { performAgentMessagesOptimization } from './agentOptimization'
-import { VercelConfig } from '@latitude-data/constants'
 
-export type ExecuteStepArgs = {
-  controller: ReadableStreamDefaultController
-  workspace: Workspace
-  provider: ProviderApiKey
-  conversation: Conversation
-  source: LogSources
-  documentLogUuid: string
-  schema?: JSONSchema7
-  output?: 'object' | 'array' | 'no-schema'
-  injectFakeAgentStartTool?: boolean
-  injectAgentFinishTool?: boolean
-}
-
-export async function streamAIResponse({
-  controller,
-  workspace,
-  provider,
-  conversation,
-  source,
-  documentLogUuid,
-  schema,
-  output,
-  injectFakeAgentStartTool,
-  abortSignal,
-}: {
+type StreamProps = {
+  context: TelemetryContext
   controller: ReadableStreamDefaultController
   workspace: Workspace
   provider: ProviderApiKey
@@ -53,7 +36,74 @@ export async function streamAIResponse({
   output?: 'object' | 'array' | 'no-schema'
   injectFakeAgentStartTool?: boolean
   abortSignal?: AbortSignal
-}): Promise<{
+}
+
+export async function streamAIResponse({
+  context,
+  provider,
+  conversation,
+  injectFakeAgentStartTool,
+  ...rest
+}: StreamProps): Promise<{
+  response: ChainStepResponse<StreamType>
+  tokenUsage: LanguageModelUsage
+}> {
+  const optimizedAgentMessages = performAgentMessagesOptimization({
+    messages: conversation.messages,
+    injectFakeAgentStartTool,
+  }).unwrap()
+  conversation.messages = optimizedAgentMessages
+
+  const $completion = telemetry.completion(context, {
+    provider: provider.name,
+    model: conversation.config.model as string,
+    configuration: conversation.config,
+    input: conversation.messages,
+  })
+
+  try {
+    const result = executeAIResponse({
+      context: $completion.context,
+      provider,
+      conversation,
+      injectFakeAgentStartTool,
+      ...rest,
+    })
+
+    result
+      .then(({ response }) => {
+        $completion.end({
+          output: buildMessagesFromResponse({ response }),
+          tokens: {
+            prompt: response.usage.promptTokens,
+            cached: 0, // Note: not given by Vercel AI SDK yet
+            reasoning: 0, // Note: not given by Vercel AI SDK yet
+            completion: response.usage.completionTokens,
+          },
+          finishReason: response.finishReason ?? 'unknown',
+        })
+      })
+      .catch((error) => $completion.fail(error))
+
+    return result
+  } catch (error) {
+    $completion.fail(error as Error)
+    throw error
+  }
+}
+
+export async function executeAIResponse({
+  context,
+  controller,
+  workspace,
+  provider,
+  conversation,
+  source,
+  documentLogUuid,
+  schema,
+  output,
+  abortSignal,
+}: StreamProps): Promise<{
   response: ChainStepResponse<StreamType>
   tokenUsage: LanguageModelUsage
 }> {
@@ -62,16 +112,12 @@ export async function streamAIResponse({
   }
 
   const startTime = Date.now()
+
   const cachedResponse = await getCachedResponse({
     workspace,
     config: conversation.config,
     conversation,
   })
-
-  const optimizedAgentMessages = performAgentMessagesOptimization({
-    messages: conversation.messages,
-    injectFakeAgentStartTool,
-  }).unwrap()
 
   if (cachedResponse) {
     const providerLog = await saveOrPublishProviderLogs({
@@ -106,7 +152,8 @@ export async function streamAIResponse({
   }
 
   const aiResult = await ai({
-    messages: optimizedAgentMessages,
+    context,
+    messages: conversation.messages,
     config: conversation.config as VercelConfig,
     provider,
     schema,

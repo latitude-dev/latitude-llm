@@ -18,7 +18,15 @@ export enum SpanType {
   Unknown = 'unknown', // Other spans we don't care about
 }
 
-export const HIDDEN_SPAN_TYPES = [SpanType.Segment, SpanType.Unknown]
+export const GENAI_SPANS = [
+  SpanType.Tool,
+  SpanType.Completion,
+  SpanType.Embedding,
+  SpanType.Retrieval,
+  SpanType.Reranking,
+]
+
+export const HIDDEN_SPANS = [SpanType.Http, SpanType.Segment, SpanType.Unknown]
 
 export enum SpanStatus {
   Unset = 'unset',
@@ -67,8 +75,6 @@ type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   provider: string
   model: string
   configuration: Record<string, unknown>
-  template: string
-  parameters: Record<string, unknown>
   input: Record<string, unknown>[]
   // Fields below are optional if the span had an error
   output?: Record<string, unknown>[]

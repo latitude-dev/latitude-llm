@@ -12,7 +12,7 @@ import {
   LatitudeChainCompletedEventData,
   LatitudeEventData,
 } from '@latitude-data/constants'
-import { StreamEventTypes } from '@latitude-data/core/browser'
+import { StreamEventTypes, TraceContext } from '@latitude-data/core/browser'
 import { LanguageModelUsage } from 'ai'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useMemo, useRef, useState } from 'react'
@@ -33,9 +33,13 @@ export type RunPromptFn = () => Promise<ReadableStream<ParsedEvent>>
 export type AddMessagesFn = ({
   documentLogUuid,
   messages,
+  toolCalls,
+  trace,
 }: {
   documentLogUuid: string
   messages: Message[]
+  toolCalls?: ToolCall[]
+  trace?: TraceContext
 }) => Promise<ReadableStream<ParsedEvent>>
 
 export function usePlaygroundChat({
@@ -49,6 +53,7 @@ export function usePlaygroundChat({
 }) {
   const isChat = useRef(false)
   const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
+  const [trace, setTrace] = useState<TraceContext | undefined>()
   const [error, setError] = useState<Error | undefined>()
   const [streamingResponse, setStreamingResponse] = useState<
     string | undefined
@@ -158,6 +163,7 @@ export function usePlaygroundChat({
             }
           }
           if (data.type === ChainEventTypes.ToolsRequested) {
+            setTrace(data.trace)
             setUnresponedToolCalls(
               data.tools.filter((t) => t.name !== AGENT_RETURN_TOOL_NAME),
             )
@@ -192,6 +198,7 @@ export function usePlaygroundChat({
       }
 
       const newMessages = buildMessage({ input })
+      let respondedToolCalls: ToolCall[] = []
 
       if (typeof input === 'string') {
         // Only in Chat mode we add optimistically the message
@@ -206,6 +213,9 @@ export function usePlaygroundChat({
           )
           return [...acc, ...toolResponseContents.map((c) => c.toolCallId)]
         }, [] as string[])
+        respondedToolCalls = unresponedToolCalls.filter((toolCall) => {
+          return respondedToolCallIds.includes(toolCall.id)
+        })
         setUnresponedToolCalls((prev) =>
           prev.filter((unrespondedToolCall) => {
             return !respondedToolCallIds.includes(unrespondedToolCall.id)
@@ -223,6 +233,8 @@ export function usePlaygroundChat({
         const stream = await addMessagesFn({
           documentLogUuid,
           messages: newMessages,
+          toolCalls: respondedToolCalls,
+          trace: trace,
         })
 
         await handleStream(stream)
@@ -231,7 +243,14 @@ export function usePlaygroundChat({
         setError(error as Error)
       }
     },
-    [addMessagesFn, documentLogUuid, handleStream, addMessages],
+    [
+      addMessagesFn,
+      documentLogUuid,
+      trace,
+      unresponedToolCalls,
+      handleStream,
+      addMessages,
+    ],
   )
 
   const start = useCallback(async () => {

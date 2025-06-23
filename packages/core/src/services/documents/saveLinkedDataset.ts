@@ -8,8 +8,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { documentVersions } from '../../schema'
-import { Result } from './../../lib/Result'
-import { TypedResult } from './../../lib/Result'
+import { Result, TypedResult } from './../../lib/Result'
 import Transaction from './../../lib/Transaction'
 
 function getLinkedData({
@@ -75,10 +74,9 @@ export async function saveLinkedDataset(
       },
     }
 
-    let insertData: Partial<typeof documentVersions.$inferInsert>
-    insertData = {
+    const insertData = {
       linkedDatasetAndRow: newLinkedData as LinkedColumn,
-    }
+    } as Partial<typeof documentVersions.$inferInsert>
 
     const result = await tx
       .update(documentVersions)

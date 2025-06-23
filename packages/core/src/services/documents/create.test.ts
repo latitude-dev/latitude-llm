@@ -12,9 +12,9 @@ import {
   DocumentVersionsRepository,
   WorkspacesRepository,
 } from '../../repositories'
+import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits/merge'
 import { createNewDocument } from './create'
-import * as factories from '../../tests/factories'
 
 let user: User
 let workspace: Workspace
@@ -30,7 +30,7 @@ describe('createNewDocument', () => {
     } = await factories.createProject({
       providers: [],
     })
-    let { commit: cmt } = await factories.createDraft({
+    const { commit: cmt } = await factories.createDraft({
       project: prj,
       user: usr,
     })
@@ -174,20 +174,24 @@ model: ${provider.defaultModel}
   })
 
   it('creates a new document with default default provider when no metadata', async () => {
-    let { project, user, workspace } = await factories.createProject({
+    const {
+      project,
+      user,
+      workspace: wsp,
+    } = await factories.createProject({
       providers: [],
     })
     const { commit } = await factories.createDraft({ project, user })
     const provider = await factories.createProviderApiKey({
-      workspace,
+      workspace: wsp,
       type: Providers.Anthropic,
       name: 'Default Provider',
       defaultModel: 'claude-3-5-sonnet-latest',
       user,
     })
-    await factories.setProviderAsDefault(workspace, provider)
+    await factories.setProviderAsDefault(wsp, provider)
     const workspacesScope = new WorkspacesRepository(user.id)
-    workspace = await workspacesScope.find(workspace.id).then((r) => r.unwrap())
+    workspace = await workspacesScope.find(wsp.id).then((r) => r.unwrap())
 
     const documentResult = await createNewDocument({
       workspace,

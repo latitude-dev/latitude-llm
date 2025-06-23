@@ -5,25 +5,27 @@ import {
   ToolMessage,
   UserMessage,
 } from '@latitude-data/compiler'
-import { addMessages } from '../../documentLogs/addMessages'
-import { ErrorResult, Result } from '../../../lib/Result'
-import { LatitudeError } from '../../../lib/errors'
-import { PromisedResult } from '../../../lib/Transaction'
-import { runDocumentAtCommit } from '../../commits/runDocumentAtCommit'
 import { extractAgentToolCalls, LogSources } from '@latitude-data/constants'
-import { Commit, Workspace, DocumentVersion } from '../../../browser'
-import { assertCopilotIsSupported, sendWebsockets } from './helpers'
-import { documentsQueue } from '../../../jobs/queues'
+import { Commit, DocumentVersion, Workspace } from '../../../browser'
 import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
-import { handleToolRequest } from './tools'
+import { documentsQueue } from '../../../jobs/queues'
+import { LatitudeError } from '../../../lib/errors'
+import { ErrorResult, Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
+import { BACKGROUND, telemetry, TelemetryContext } from '../../../telemetry'
 import { WebsocketClient } from '../../../websockets/workers'
+import { runDocumentAtCommit } from '../../commits/runDocumentAtCommit'
+import { addMessages } from '../../documentLogs/addMessages'
+import { assertCopilotIsSupported, sendWebsockets } from './helpers'
+import { handleToolRequest } from './tools'
 
-export * from './threads/createThread'
+export * from './threads/checkpoints/clearCheckpoints'
 export * from './threads/checkpoints/createCheckpoint'
 export * from './threads/checkpoints/undoChanges'
-export * from './threads/checkpoints/clearCheckpoints'
+export * from './threads/createThread'
 
 async function generateCopilotResponse({
+  context,
   copilotWorkspace,
   copilotCommit,
   copilotDocument,
@@ -32,6 +34,7 @@ async function generateCopilotResponse({
   initialParameters,
   messages,
 }: {
+  context: TelemetryContext
   copilotWorkspace: Workspace
   copilotCommit: Commit
   copilotDocument: DocumentVersion
@@ -42,6 +45,7 @@ async function generateCopilotResponse({
 }): PromisedResult<undefined> {
   const runResult = initialParameters
     ? await runDocumentAtCommit({
+        context: context,
         workspace: copilotWorkspace,
         commit: copilotCommit,
         document: copilotDocument,
@@ -51,6 +55,7 @@ async function generateCopilotResponse({
         errorableUuid: threadUuid,
       })
     : await addMessages({
+        context: context,
         workspace: copilotWorkspace,
         documentLogUuid: threadUuid,
         messages: messages!,
@@ -74,12 +79,16 @@ async function generateCopilotResponse({
     await run.toolCalls,
   )
 
+  // Note: resume trace to continue it syncronously
+  context = telemetry.resume(await run.trace)
+
   let toolResponseMessages: ToolMessage[] = []
   try {
     if (otherToolCalls.length) {
       toolResponseMessages = await Promise.all(
         otherToolCalls.map(async (toolCall) => {
           const r = await handleToolRequest({
+            context,
             threadUuid,
             tool: toolCall,
             workspace: clientWorkspace,
@@ -103,6 +112,7 @@ async function generateCopilotResponse({
     // Agent did not return a response. We add the tool responses and keep iterating
     await run.lastResponse // Await for the response to be fully processed
     return generateCopilotResponse({
+      context,
       copilotWorkspace,
       copilotCommit,
       copilotDocument,
@@ -134,6 +144,7 @@ export async function runNewLatte({
   context: string
 }): PromisedResult<undefined> {
   return generateCopilotResponse({
+    context: BACKGROUND(),
     copilotWorkspace,
     copilotCommit,
     copilotDocument,
@@ -175,6 +186,7 @@ export async function addMessageToExistingLatte({
   }
 
   return generateCopilotResponse({
+    context: BACKGROUND(),
     copilotWorkspace,
     copilotCommit,
     copilotDocument,

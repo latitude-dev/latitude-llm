@@ -3,7 +3,7 @@ import { Prompt } from '$sdk/utils/types'
 import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 import { Adapters } from 'promptl-ai'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { MockInstrumentation } from './helpers/mockTools/instrumentation'
+import { MockInstrumentation } from './helpers/instrumentation'
 
 const SIMPLE_PROMPT: Partial<Prompt> = {
   path: 'path/to/prompt',

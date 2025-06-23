@@ -1,14 +1,14 @@
 import { Job } from 'bullmq'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LogSources, Providers } from '../../../browser'
 import { Result } from '../../../lib/Result'
-import * as runDocumentAtCommitWithAutoToolResponses from './runDocumentAtCommitWithAutoToolResponses'
 import * as factories from '../../../tests/factories'
 import { mockToolRequestsCopilot } from '../../../tests/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
 import * as utils from '../../utils/progressTracker'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import * as runDocumentAtCommitWithAutoToolResponses from './runDocumentAtCommitWithAutoToolResponses'
 
 const incrementErrorsMock = vi.hoisted(() => vi.fn())
 
@@ -75,6 +75,7 @@ describe('runDocumentJob', () => {
       lastResponse: Promise.resolve({ providerLog: { uuid: 'log1' } }),
       toolCalls: Promise.resolve([]),
       messages: Promise.resolve([]),
+      trace: factories.createTelemetryTrace({}),
     }
     vi.mocked(
       runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,
@@ -88,6 +89,7 @@ describe('runDocumentJob', () => {
     expect(
       runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,
     ).toHaveBeenCalledWith({
+      context: expect.anything(),
       workspaceId: workspace.id,
       projectId: project.id,
       documentUuid: document.documentUuid,

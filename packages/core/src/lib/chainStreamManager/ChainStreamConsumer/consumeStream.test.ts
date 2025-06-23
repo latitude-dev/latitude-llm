@@ -1,5 +1,5 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { Tool, LanguageModelUsage, TextStreamPart } from 'ai'
+import { LanguageModelUsage, TextStreamPart, Tool } from 'ai'
 import { describe, expect, it } from 'vitest'
 
 import { LegacyChainEvent, Providers, StreamType } from '../../../constants'
@@ -46,7 +46,7 @@ function buildFakeChain({
     },
   })
   const result = {
-    type: 'text' as 'text',
+    type: 'text' as const,
     toolCalls: [] as any,
     text: new Promise<string>(() => 'text'),
     reasoning: new Promise<string | undefined>((resolve) => resolve(undefined)),

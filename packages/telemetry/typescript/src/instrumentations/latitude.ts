@@ -1,8 +1,6 @@
 import { BaseInstrumentation } from '$telemetry/instrumentations/base'
 import { ManualInstrumentation } from '$telemetry/instrumentations/manual'
 import {
-  ATTR_GEN_AI_REQUEST_PARAMETERS,
-  ATTR_GEN_AI_REQUEST_TEMPLATE,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS,
   SegmentSource,
@@ -121,11 +119,13 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     fn: F,
     ...args: Parameters<F>
   ): Promise<Awaited<ReturnType<F>>> {
-    const { prompt } = args[0]
+    const { prompt, parameters } = args[0]
 
     const $prompt = this.telemetry.prompt(context.active(), {
       versionUuid: prompt.versionUuid,
       promptUuid: prompt.uuid,
+      template: prompt.content,
+      parameters: parameters,
     })
 
     let result
@@ -148,11 +148,13 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     fn: F,
     ...args: Parameters<F>
   ): Promise<Awaited<ReturnType<F>>> {
-    const { prompt } = args[0]
+    const { prompt, parameters } = args[0]
 
     const $prompt = this.telemetry.prompt(context.active(), {
       versionUuid: prompt.versionUuid,
       promptUuid: prompt.uuid,
+      template: prompt.content,
+      parameters: parameters,
     })
 
     let result
@@ -175,23 +177,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     fn: F,
     ...args: Parameters<F>
   ): Promise<Awaited<ReturnType<F>>> {
-    const { prompt, parameters } = args[0]
-
-    let jsonParameters = ''
-    try {
-      jsonParameters = JSON.stringify(parameters)
-    } catch (error) {
-      jsonParameters = '{}'
-    }
-
-    const $step = this.telemetry.step(context.active(), {
-      // Note: cascading down some attributes in case the
-      // provider instrumentations don't set them
-      attributes: {
-        [ATTR_GEN_AI_REQUEST_TEMPLATE]: prompt,
-        [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
-      },
-    })
+    const $step = this.telemetry.step(context.active())
 
     let result
     try {
@@ -217,7 +203,7 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
       return await ((fn as any)(...args) as ReturnType<F>)
     }
 
-    const { provider, config, prompt, parameters, messages } = args[0]
+    const { provider, config, messages } = args[0]
     const model = (config.model as string) || 'unknown'
 
     const $completion = this.telemetry.completion(context.active(), {
@@ -225,8 +211,6 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
       provider: provider,
       model: model,
       configuration: config,
-      template: prompt,
-      parameters: parameters,
       input: messages as Record<string, unknown>[],
     })
 

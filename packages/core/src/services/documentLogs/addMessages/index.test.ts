@@ -17,13 +17,18 @@ import {
 import { database } from '../../../client'
 import { ProviderLogsRepository } from '../../../repositories'
 import { providerLogs } from '../../../schema'
-import { createDocumentLog, createProject } from '../../../tests/factories'
+import {
+  createDocumentLog,
+  createProject,
+  createTelemetryContext,
+} from '../../../tests/factories'
 import { testConsumeStream } from '../../../tests/helpers'
 import * as aiModule from '../../ai'
 import { addMessages } from './index'
 import { ChainEventTypes } from '@latitude-data/constants'
 import { Result } from './../../../lib/Result'
 import { TypedResult } from './../../../lib/Result'
+import { TelemetryContext } from '../../../telemetry'
 
 const dummyDoc1Content = `
 ---
@@ -35,6 +40,7 @@ This is a test document
 <response />
 `
 
+let context: TelemetryContext
 let document: DocumentVersion
 let commit: Commit
 let workspace: Workspace
@@ -84,6 +90,8 @@ describe('addMessages', () => {
   beforeEach(async () => {
     vi.resetAllMocks()
 
+    context = await createTelemetryContext()
+
     const {
       workspace: wsp,
       user: usr,
@@ -131,6 +139,7 @@ describe('addMessages', () => {
 
   it('fails if provider log is not found', async () => {
     const result = await addMessages({
+      context,
       workspace,
       documentLogUuid: uuid(),
       messages: [],
@@ -153,6 +162,7 @@ describe('addMessages', () => {
       .then((p) => p[0]!)
 
     const { stream } = await addMessages({
+      context,
       workspace,
       documentLogUuid: providerLog.documentLogUuid!,
       messages: [
@@ -217,6 +227,7 @@ describe('addMessages', () => {
       .then((p) => p[0]!)
 
     const { stream } = await addMessages({
+      context,
       workspace,
       documentLogUuid: providerLog.documentLogUuid!,
       messages: [
@@ -287,6 +298,7 @@ describe('addMessages', () => {
       .then((p) => p[0]!)
 
     const { stream } = await addMessages({
+      context,
       workspace,
       documentLogUuid: providerLog.documentLogUuid!,
       messages: [
@@ -359,6 +371,7 @@ describe('addMessages', () => {
       .then((p) => p[0]!)
 
     const { stream } = await addMessages({
+      context,
       workspace,
       documentLogUuid: providerLog.documentLogUuid!,
       messages: [
@@ -418,6 +431,7 @@ describe('addMessages', () => {
 
   it('returns chain stream', async () => {
     const { stream } = await addMessages({
+      context,
       workspace,
       documentLogUuid: providerLog.documentLogUuid!,
       messages: [
@@ -493,6 +507,7 @@ describe('addMessages', () => {
   it('returns chain response', async () => {
     const result = (
       await addMessages({
+        context,
         workspace,
         documentLogUuid: providerLog.documentLogUuid!,
         messages: [
@@ -553,6 +568,7 @@ describe('addMessages', () => {
     )
 
     const result = await addMessages({
+      context,
       workspace,
       documentLogUuid: providerLog.documentLogUuid!,
       messages: [
@@ -630,6 +646,7 @@ describe('addMessages', () => {
     )
 
     const result = await addMessages({
+      context,
       workspace,
       documentLogUuid: providerLog.documentLogUuid!,
       messages: [

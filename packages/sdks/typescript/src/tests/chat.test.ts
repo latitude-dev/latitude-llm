@@ -1,7 +1,7 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { Latitude, LogSources } from '$sdk/index'
 import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
 import { parseSSE } from '$sdk/utils/parseSSE'
+import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { setupServer } from 'msw/node'
 import {
   afterAll,
@@ -13,13 +13,13 @@ import {
   vi,
 } from 'vitest'
 
+import { RUN_TEXT_RESPONSE } from '$sdk/test/run-sync-response'
 import {
   mock502Response,
   mockNonStreamResponse,
   mockRequest,
   mockStreamResponse,
 } from './helpers/chat'
-import { RUN_TEXT_RESPONSE } from '$sdk/test/run-sync-response'
 
 let FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
 let sdk: Latitude
@@ -61,7 +61,13 @@ describe('/chat', () => {
               ],
             },
           ],
-          { stream: true },
+          {
+            stream: true,
+            trace: {
+              traceparent:
+                '00-12345678901234567890123456789012-1234567890123456-01',
+            },
+          },
         )
 
         expect(mockAuthHeader).toHaveBeenCalledWith('Bearer fake-api-key')
@@ -83,6 +89,10 @@ describe('/chat', () => {
               },
             ],
             stream: true,
+            trace: {
+              traceparent:
+                '00-12345678901234567890123456789012-1234567890123456-01',
+            },
           },
         })
       }),
@@ -280,7 +290,13 @@ describe('/chat', () => {
               ],
             },
           ],
-          { stream: false },
+          {
+            stream: false,
+            trace: {
+              traceparent:
+                '00-12345678901234567890123456789012-1234567890123456-01',
+            },
+          },
         )
 
         expect(mockAuthHeader).toHaveBeenCalledWith('Bearer fake-api-key')
@@ -302,6 +318,10 @@ describe('/chat', () => {
               },
             ],
             stream: false,
+            trace: {
+              traceparent:
+                '00-12345678901234567890123456789012-1234567890123456-01',
+            },
           },
         })
       }),

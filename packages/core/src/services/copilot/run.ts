@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { LogSources } from '../../browser'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
+import { BACKGROUND } from '../../telemetry'
 import { runDocumentAtCommit } from '../commits/runDocumentAtCommit'
 import { Copilot } from './shared'
 
@@ -15,6 +16,7 @@ export async function runCopilot<S extends z.ZodSchema = z.ZodAny>({
   schema?: S
 }) {
   const result = await runDocumentAtCommit({
+    context: BACKGROUND(),
     workspace: copilot.workspace,
     commit: copilot.commit,
     document: copilot.document,

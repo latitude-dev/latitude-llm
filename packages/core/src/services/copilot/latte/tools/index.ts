@@ -5,20 +5,21 @@ import {
   type ToolCall,
   type ToolMessage,
 } from '@latitude-data/compiler'
-import { Workspace } from '../../../../browser'
-import { PromisedResult } from '../../../../lib/Transaction'
-import { Result, TypedResult } from '../../../../lib/Result'
 import { LatteTool } from '@latitude-data/constants/latte'
+import { Workspace } from '../../../../browser'
+import { Result, TypedResult } from '../../../../lib/Result'
+import { PromisedResult } from '../../../../lib/Transaction'
+import { telemetry, TelemetryContext } from '../../../../telemetry'
 import type { LatteToolFn } from './types'
 
+import listDrafts from './commits/list'
 import listPrompts from './documents/list'
 import readPrompt from './documents/read'
-import listProjects from './projects/list'
-import listDrafts from './commits/list'
 import editProject from './projects/edit'
-import listProviders from './settings/listProviders'
+import listProjects from './projects/list'
 import listIntegrations from './settings/listIntegrations'
 import listIntegrationTools from './settings/listIntegrationTools'
+import listProviders from './settings/listProviders'
 
 export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.listProjects]: listProjects,
@@ -32,18 +33,28 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
 } as const
 
 export async function handleToolRequest({
+  context,
   tool,
   threadUuid,
   workspace,
   messages,
   onFinish,
 }: {
+  context: TelemetryContext
   tool: ToolCall
   threadUuid: string
   messages: Message[]
   workspace: Workspace
   onFinish?: (toolMessage: ToolMessage) => Promise<void>
 }): PromisedResult<ToolMessage> {
+  const $tool = telemetry.tool(context, {
+    name: tool.name,
+    call: {
+      id: tool.id,
+      arguments: tool.arguments,
+    },
+  })
+
   const toolName = tool.name as LatteTool
   const latteTool = LATTE_TOOLS[toolName]
   let result: TypedResult<unknown, Error>
@@ -55,6 +66,7 @@ export async function handleToolRequest({
   } else {
     try {
       result = await latteTool(tool.arguments, {
+        context: $tool.context,
         threadUuid,
         workspace,
         tool,
@@ -79,6 +91,13 @@ export async function handleToolRequest({
       },
     ],
   }
+
+  $tool.end({
+    result: {
+      value: result.value ?? result.error,
+      isError: !result.ok,
+    },
+  })
 
   await onFinish?.(message)
   return Result.ok(message)

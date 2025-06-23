@@ -1,9 +1,13 @@
 function generateEnv() {
   const isProd = process.env.NODE_ENV === 'production'
+  const defaultHostname = isProd ? 'gateway.latitude.so' : 'localhost'
+  const defaultPort = !isProd ? 8787 : undefined
+  const defaultSsl = isProd ? true : false
+
   return {
-    GATEWAY_HOSTNAME: isProd ? 'gateway.latitude.so' : 'localhost',
-    GATEWAY_PORT: !isProd ? 8787 : undefined,
-    GATEWAY_SSL: isProd ? true : false,
+    GATEWAY_HOSTNAME: process.env.GATEWAY_HOSTNAME ?? defaultHostname,
+    GATEWAY_PORT: Number(process.env.GATEWAY_PORT ?? defaultPort),
+    GATEWAY_SSL: Boolean(process.env.GATEWAY_SSL ?? defaultSsl),
   }
 }
 

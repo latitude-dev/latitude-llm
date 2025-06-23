@@ -1,21 +1,23 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import {
   Commit,
-  Workspace,
   DocumentVersion,
   LogSources,
+  Workspace,
 } from '../../../../browser'
-import { getCachedChain } from '../../../../services/chains/chainCache'
-import { generateToolResponseMessages } from './generateToolResponseMessages'
-import { AutogenerateToolResponseCopilotData } from './getCopilotData'
-import { resumePausedPrompt } from '../../../../services/documentLogs/addMessages/resumePausedPrompt'
 import { DocumentVersionsRepository } from '../../../../repositories'
+import { getCachedChain } from '../../../../services/chains/chainCache'
+import { resumePausedPrompt } from '../../../../services/documentLogs/addMessages/resumePausedPrompt'
 import { getDocumentMetadata } from '../../../../services/documents'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { TelemetryContext } from '../../../../telemetry'
 import { Result } from './../../../../lib/Result'
 import { UnprocessableEntityError } from './../../../../lib/errors'
+import { generateToolResponseMessages } from './generateToolResponseMessages'
+import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 
 export async function respondToToolCalls({
+  context,
   workspace,
   commit,
   document,
@@ -25,6 +27,7 @@ export async function respondToToolCalls({
   copilot,
   toolCalls,
 }: {
+  context: TelemetryContext
   workspace: Workspace
   commit: Commit
   document: DocumentVersion
@@ -50,6 +53,7 @@ export async function respondToToolCalls({
   }
 
   const responseMessagesResult = await generateToolResponseMessages({
+    context,
     workspace,
     commit,
     document,
@@ -76,6 +80,7 @@ export async function respondToToolCalls({
   })
 
   return resumePausedPrompt({
+    context,
     workspace,
     commit,
     document,

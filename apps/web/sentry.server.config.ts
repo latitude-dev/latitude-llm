@@ -9,8 +9,6 @@ Sentry.init({
   dsn: env.SENTRY_WEB_DSN,
   enabled: !!env.SENTRY_WEB_DSN,
 
-  integrations: [],
-
   // Define how likely Replay events are sampled.
   // This sets the sample rate to be 10%. You may want this to be 100% while
   // in development and sample at a lower rate in production
@@ -21,4 +19,9 @@ Sentry.init({
 
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
   debug: false,
+
+  skipOpenTelemetrySetup: true,
+  tracesSampleRate: 0,
+  defaultIntegrations: false,
+  integrations: [],
 })

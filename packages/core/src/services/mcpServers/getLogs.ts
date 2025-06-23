@@ -1,8 +1,8 @@
+import * as k8s from '@kubernetes/client-node'
+import { Writable } from 'stream'
 import { McpServer } from '../../browser'
 import { Result, TypedResult } from '../../lib/Result'
 import { getK8sClient } from '../k8s/k8sClient'
-import * as k8s from '@kubernetes/client-node'
-import { Writable } from 'stream'
 
 /**
  * LogOptions interface for configuring log retrieval
@@ -71,7 +71,7 @@ export async function getLogs(
     const pod = podsResponse.items[0]
     if (!pod) return Result.ok('')
 
-    const podName = pod.metadata?.name!
+    const podName = pod.metadata!.name!
 
     // Get the container name (usually the first container)
     const containerName = pod.spec?.containers[0]?.name

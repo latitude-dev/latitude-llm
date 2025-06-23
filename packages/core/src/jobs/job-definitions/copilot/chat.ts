@@ -1,14 +1,14 @@
 import { Job } from 'bullmq'
 
+import { unsafelyFindWorkspace } from '../../../data-access'
+import { LatitudeError } from '../../../lib/errors'
 import { DocumentLogsRepository } from '../../../repositories'
 import {
   addMessageToExistingLatte,
   runNewLatte,
 } from '../../../services/copilot/latte'
-import { unsafelyFindWorkspace } from '../../../data-access'
 import { getCopilotDocument } from '../../../services/copilot/latte/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
-import { LatitudeError } from '../../../lib/errors'
 
 export type RunLatteJobData = {
   workspaceId: number
@@ -65,7 +65,6 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
       copilotCommit,
       copilotDocument,
       clientWorkspace: workspace,
-
       threadUuid,
       message,
       context,

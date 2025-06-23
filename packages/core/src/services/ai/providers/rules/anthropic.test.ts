@@ -1,13 +1,13 @@
 import { type Message, MessageRole } from '@latitude-data/compiler'
 import { beforeAll, describe, expect, it } from 'vitest'
 
+import { applyProviderRules } from '.'
 import { Providers } from '../models'
 import { AppliedRules, ProviderRules } from './types'
-import { applyProviderRules } from '.'
 
 const providerType = Providers.Anthropic
 
-let config = {} as AppliedRules['config']
+const config = {} as AppliedRules['config']
 let messages: Message[]
 describe('applyAnthropicRules', () => {
   describe('with system messages not at the beggining', () => {

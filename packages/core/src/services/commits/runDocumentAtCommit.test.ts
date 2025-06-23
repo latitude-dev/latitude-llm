@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ChainEventTypes } from '@latitude-data/constants'
+import { APICallError, RetryError } from 'ai'
 import { LogSources, Providers, StreamEventTypes } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { ProviderLogsRepository } from '../../repositories'
@@ -7,15 +9,13 @@ import {
   createDocumentVersion,
   createDraft,
   createProject,
+  createTelemetryContext,
   helpers,
 } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
-import { runDocumentAtCommit } from './index'
-import { ChainEventTypes } from '@latitude-data/constants'
-import { Ok } from './../../lib/Result'
-import { Result } from './../../lib/Result'
+import { Ok, Result } from './../../lib/Result'
 import { UnprocessableEntityError } from './../../lib/errors'
-import { APICallError, RetryError } from 'ai'
+import { runDocumentAtCommit } from './index'
 
 const mocks = {
   publish: vi.fn(),
@@ -57,6 +57,8 @@ model: gpt-4o
 `
 
 async function buildData({ doc1Content }: { doc1Content: string }) {
+  const context = await createTelemetryContext()
+
   const { workspace, project, documents, commit, user, providers } =
     await createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
@@ -66,6 +68,7 @@ async function buildData({ doc1Content }: { doc1Content: string }) {
     })
 
   return {
+    context,
     workspace,
     document: documents[0]!,
     commit,
@@ -96,9 +99,10 @@ describe('runDocumentAtCommit', () => {
 
   describe('with an existing provider key', () => {
     it('fails if document is not found in commit', async () => {
-      const { workspace, project, user, commit, provider } = await buildData({
-        doc1Content: dummyDoc1Content,
-      })
+      const { context, workspace, project, user, commit, provider } =
+        await buildData({
+          doc1Content: dummyDoc1Content,
+        })
 
       const { commit: draft } = await createDraft({
         project,
@@ -113,6 +117,7 @@ describe('runDocumentAtCommit', () => {
           content: helpers.createPrompt({ provider }),
         })
       const result = await runDocumentAtCommit({
+        context,
         workspace,
         document: documentNotInCommit,
         commit,
@@ -126,11 +131,12 @@ describe('runDocumentAtCommit', () => {
     })
 
     it('returns document resolvedContent', async () => {
-      const { workspace, document, commit } = await buildData({
+      const { context, workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,
       })
       const { lastResponse, duration, resolvedContent } =
         await runDocumentAtCommit({
+          context,
           workspace,
           document,
           commit,
@@ -156,11 +162,13 @@ model: gpt-4o
     })
 
     it('pass params to AI', async () => {
-      const { workspace, document, commit, provider } = await buildData({
-        doc1Content: dummyDoc1Content,
-      })
+      const { context, workspace, document, commit, provider } =
+        await buildData({
+          doc1Content: dummyDoc1Content,
+        })
 
       const { lastResponse } = await runDocumentAtCommit({
+        context,
         workspace,
         document,
         commit,
@@ -191,10 +199,11 @@ model: gpt-4o
     })
 
     it('send documentLogUuid when chain is completed', async () => {
-      const { workspace, document, commit } = await buildData({
+      const { context, workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,
       })
       const { lastResponse, duration, stream } = await runDocumentAtCommit({
+        context,
         workspace,
         document,
         commit,
@@ -252,11 +261,12 @@ model: gpt-4o
     })
 
     it('calls publisher with correct data', async () => {
-      const { workspace, document, commit } = await buildData({
+      const { context, workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,
       })
       const parameters = { testParam: 'testValue' }
       const { lastResponse, duration } = await runDocumentAtCommit({
+        context,
         workspace,
         document,
         commit,
@@ -272,10 +282,11 @@ model: gpt-4o
     })
 
     it('creates a document log', async () => {
-      const { workspace, document, commit } = await buildData({
+      const { context, workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,
       })
       const { lastResponse } = await runDocumentAtCommit({
+        context,
         workspace,
         document,
         commit,
@@ -289,11 +300,12 @@ model: gpt-4o
     })
 
     it('creates a document log with custom identifier', async () => {
-      const { workspace, document, commit } = await buildData({
+      const { context, workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,
       })
       const parameters = { testParam: 'testValue' }
       const { lastResponse } = await runDocumentAtCommit({
+        context,
         workspace,
         document,
         commit,
@@ -350,11 +362,12 @@ model: gpt-4o
         }),
       )
 
-      const { workspace, document, commit } = await buildData({
+      const { context, workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,
       })
       const parameters = { testParam: 'testValue' }
       const { lastResponse } = await runDocumentAtCommit({
+        context,
         workspace,
         document,
         commit,

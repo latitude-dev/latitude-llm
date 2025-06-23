@@ -46,7 +46,7 @@ export async function createDocumentVersion(
     path: data.path,
   })
 
-  let doc = result.unwrap()
+  const doc = result.unwrap()
 
   if (data.content) {
     result = await updateDocument({

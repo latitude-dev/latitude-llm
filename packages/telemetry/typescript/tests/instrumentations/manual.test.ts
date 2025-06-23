@@ -119,21 +119,6 @@ describe('manual', () => {
           provider: 'openai',
           model: 'gpt-4o',
           configuration: { temperature: 0.5, max_tokens: 100 },
-          template: `
----
-provider: openai
-model: gpt-4o
-temperature: 0.5
-max_tokens: 100
-tools: ['brain']
----
-
-You are a helpful assistant.
-<user>{{question}}</user>
-`.trim(),
-          parameters: {
-            question: 'What is the weather in Barcelona?',
-          },
           input: [
             {
               role: 'system',
@@ -182,8 +167,6 @@ You are a helpful assistant.
           provider: 'openai',
           model: 'gpt-4o',
           configuration: { temperature: 0.5, max_tokens: 100 },
-          template: '<user>Nice, thank you!</user>',
-          parameters: {},
           input: [
             {
               role: 'user',
@@ -199,8 +182,6 @@ You are a helpful assistant.
           provider: 'openai',
           model: 'gpt-4o',
           configuration: { temperature: 0.5, max_tokens: 100 },
-          template: '<user>Wait, it did not work!</user>',
-          parameters: {},
           input: [
             {
               role: 'user',
@@ -216,8 +197,6 @@ You are a helpful assistant.
           provider: 'openai',
           model: 'gpt-4o',
           configuration: { temperature: 0.5, max_tokens: 100 },
-          template: '<user>Still not working!</user>',
-          parameters: {},
           input: [
             {
               role: 'user',
@@ -300,6 +279,21 @@ You are a helpful assistant.
       const _runPrompt1 = (ctx: TelemetryContext) => {
         const prompt = sdk.prompt(ctx, {
           promptUuid: 'fake-document-uuid',
+          template: `
+---
+provider: openai
+model: gpt-4o
+temperature: 0.5
+max_tokens: 100
+tools: ['brain']
+---
+
+You are a helpful assistant.
+<user>{{question}}</user>
+          `.trim(),
+          parameters: {
+            question: 'What is the weather in Barcelona?',
+          },
         })
         _executeStep1(prompt.context)
         _executeStep2(prompt.context)

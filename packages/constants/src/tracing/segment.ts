@@ -36,8 +36,8 @@ type StepSegmentMetadata = BaseSegmentMetadata<SegmentType.Step> & {
 
 type DocumentSegmentMetadata = BaseSegmentMetadata<SegmentType.Document> &
   Omit<StepSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Step>> & {
-    prompt: string // From the first completion span
-    parameters: Record<string, unknown> // From the first completion span
+    prompt: string // From the first segment span
+    parameters: Record<string, unknown> // From the first segment span
   }
 
 // prettier-ignore
@@ -80,12 +80,10 @@ export type SegmentWithDetails<T extends SegmentType = SegmentType> =
     metadata?: SegmentMetadata<T> // Metadata is optional if the segment has not ended, had an early error or it could not be uploaded
   }
 
-// TODO(tracing): should this have the trace context per segment?
 const baseSegmentBaggageSchema = z.object({
   id: z.string(),
   parentId: z.string().optional(),
   source: z.nativeEnum(SegmentSource),
-  paused: z.boolean().optional(),
 })
 export const segmentBaggageSchema = z.discriminatedUnion('type', [
   baseSegmentBaggageSchema.extend({

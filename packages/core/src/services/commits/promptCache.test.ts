@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as cacheModule from '../../cache'
+import { LogSources } from '../../constants'
 import { createProject } from '../../tests/factories'
 import { getCachedResponse, setCachedResponse } from './promptCache'
-import { LogSources } from '../../constants'
 
 describe('promptCache', async () => {
   const mockCache = {
@@ -21,7 +21,7 @@ describe('promptCache', async () => {
   const config = { temperature: 0 }
   const conversation = { messages: [], config }
   const response = {
-    streamType: 'text' as 'text',
+    streamType: 'text' as const,
     text: 'cached response',
     reasoning: undefined,
     usage: {

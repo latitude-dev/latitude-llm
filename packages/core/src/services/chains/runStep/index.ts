@@ -1,25 +1,31 @@
-import { Chain as PromptlChain } from 'promptl-ai'
-import { AssistantMessage, type Message } from '@latitude-data/compiler'
-import { LogSources } from '../../../constants'
 import {
-  ConfigOverrides,
-  validateChain,
-  ValidatedChainStep,
-} from '../ChainValidator'
-import { CachedApiKeys, SomeChain, stepLimitExceededErrorMessage } from '../run'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { buildMessagesFromResponse, Workspace } from '../../../browser'
-import { cacheChain } from '../chainCache'
-import { ChainStreamManager } from '../../../lib/chainStreamManager'
+  AssistantMessage,
+  type Conversation,
+  type Message,
+} from '@latitude-data/compiler'
 import {
   ABSOLUTE_MAX_STEPS,
   ChainStepResponse,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
   StreamType,
+  TraceContext,
 } from '@latitude-data/constants'
-import { Result } from './../../../lib/Result'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { Chain as PromptlChain } from 'promptl-ai'
+import { buildMessagesFromResponse, Workspace } from '../../../browser'
+import { LogSources } from '../../../constants'
+import { ChainStreamManager } from '../../../lib/chainStreamManager'
+import { telemetry, TelemetryContext } from '../../../telemetry'
+import { cacheChain } from '../chainCache'
+import {
+  ConfigOverrides,
+  validateChain,
+  ValidatedChainStep,
+} from '../ChainValidator'
+import { CachedApiKeys, SomeChain, stepLimitExceededErrorMessage } from '../run'
+import { Result } from './../../../lib/Result'
 
 function assertValidStepCount({
   stepCount,
@@ -49,6 +55,7 @@ function assertValidStepCount({
 }
 
 export type StepProps = {
+  context: TelemetryContext
   chainStreamManager: ChainStreamManager
   workspace: Workspace
   source: LogSources
@@ -67,6 +74,7 @@ export type StepProps = {
 }
 
 export async function runStep({
+  context,
   chainStreamManager,
   workspace,
   source,
@@ -84,11 +92,18 @@ export async function runStep({
   abortSignal,
   previousResponse,
   injectAgentFinishTool = false,
-}: StepProps) {
+}: StepProps): Promise<{
+  conversation: Conversation
+  trace: TraceContext
+}> {
+  let trace = telemetry.pause(context)
+
   if (newMessages?.length) {
     const lastResponseMessage = newMessages[0]! as AssistantMessage
     const latitudeToolResponses =
+      // Built-in tools are executed after client tools
       await chainStreamManager.handleBuiltInToolCalls({
+        context: context, // Note: context from previous (maybe paused) step
         message: lastResponseMessage,
         config: previousConfig,
       })
@@ -97,6 +112,13 @@ export async function runStep({
       ...latitudeToolResponses,
       ...newMessages.slice(1),
     ]
+  }
+
+  // Note: incoming context could be from a paused or previous
+  // step, so we need to restore the original context
+  if (!telemetry.restored(context)) {
+    context = telemetry.restore(context)
+    trace = telemetry.pause(context)
   }
 
   const step = await validateChain({
@@ -116,22 +138,23 @@ export async function runStep({
     step.chainCompleted &&
     !!previousResponse // If no previous response has been generated, make an additional step
   ) {
-    chainStreamManager.done()
-    return step.conversation
+    chainStreamManager.done(trace)
+    return { conversation: step.conversation, trace }
   }
 
-  const validStepCount = assertValidStepCount({ stepCount, chain, step })
+  const $step = telemetry.step(context)
+  context = $step.context
+  trace = telemetry.pause(context)
 
-  if (validStepCount.error) {
-    chainStreamManager.error(validStepCount.error)
-    return step.conversation
-  }
+  let result
+  try {
+    assertValidStepCount({ stepCount, chain, step }).unwrap()
 
-  const isAgent = step.conversation.config.type === 'agent'
-  const enableAgentOptimization =
-    !step.conversation.config.disableAgentOptimization
-  const { response, clientToolCalls } =
-    await chainStreamManager.getProviderResponse({
+    const isAgent = step.conversation.config.type === 'agent'
+    const enableAgentOptimization =
+      !step.conversation.config.disableAgentOptimization
+    result = await chainStreamManager.getProviderResponse({
+      context,
       source,
       conversation: step.conversation,
       provider: step.provider,
@@ -143,29 +166,38 @@ export async function runStep({
       injectAgentFinishTool: isAgent && injectAgentFinishTool,
     })
 
-  const isPromptl = chain instanceof PromptlChain
-  const hasTools = isPromptl && clientToolCalls.length > 0
+    $step.end()
+  } catch (error) {
+    $step.fail(error as Error)
+    throw error
+  }
 
-  // If response has tools, we must cache and stop the chain
+  const isPromptl = chain instanceof PromptlChain
+  const hasTools = isPromptl && result.clientToolCalls.length > 0
+
+  // Pause the chain if response has client tool calls
+  // Chain is cached because there is a running chain
   if (hasTools) {
     await cacheChain({
       workspace,
       chain,
       documentLogUuid: errorableUuid,
-      previousResponse: response,
+      previousResponse: result.response,
     })
 
-    chainStreamManager.requestTools(clientToolCalls)
-    return step.conversation
+    chainStreamManager.requestTools(result.clientToolCalls, trace)
+    return { conversation: step.conversation, trace }
   }
 
   // With Legacy Compiler, we already knew whether the step was the last one BEFORE it was executed
+  // FIXME: this shouldn't be inside the current step context, but it's going to be deprecated soon
   if (step.chainCompleted) {
-    chainStreamManager.done()
-    return step.conversation
+    chainStreamManager.done(trace)
+    return { conversation: step.conversation, trace }
   }
 
   return runStep({
+    context: telemetry.resume(trace), // Note: pseudo resume the step so the recursion treats equally paused or previous steps
     chainStreamManager,
     workspace,
     source,
@@ -174,11 +206,11 @@ export async function runStep({
     providersMap,
     errorableUuid,
     stepCount: stepCount + 1,
-    newMessages: buildMessagesFromResponse({ response }),
+    newMessages: buildMessagesFromResponse({ response: result.response }),
     previousConfig: step.conversation.config as LatitudePromptConfig,
     configOverrides,
     removeSchema,
     abortSignal,
-    previousResponse: response,
+    previousResponse: result.response,
   })
 }

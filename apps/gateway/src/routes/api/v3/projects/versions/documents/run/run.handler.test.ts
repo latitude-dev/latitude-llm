@@ -1,14 +1,15 @@
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { ChainEventTypes } from '@latitude-data/constants'
 import {
   ChainError,
   LatitudeError,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
 import {
-  LegacyChainEventTypes,
   Commit,
+  LegacyChainEventTypes,
   LogSources,
   Project,
   ProviderLog,
@@ -20,13 +21,13 @@ import {
   createDocumentVersion,
   createDraft,
   createProject,
+  createTelemetryTrace,
   helpers,
 } from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ChainEventTypes } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),
@@ -155,12 +156,15 @@ describe('POST /run', () => {
         resolve({ text: 'Hello', usage: {} })
       })
 
+      const trace = createTelemetryTrace({})
+
       mocks.runDocumentAtCommit.mockReturnValue(
         new Promise((resolve) => {
           resolve(
             Result.ok({
               stream,
               response,
+              trace,
             }),
           )
         }),
@@ -180,6 +184,7 @@ describe('POST /run', () => {
       await testConsumeStream(res.body as ReadableStream)
 
       expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith({
+        context: expect.anything(),
         workspace,
         document: expect.anything(),
         commit,
@@ -213,12 +218,15 @@ describe('POST /run', () => {
         },
       })
 
+      const trace = createTelemetryTrace({})
+
       mocks.runDocumentAtCommit.mockReturnValue(
         new Promise((resolve) => {
           resolve(
             Result.ok({
               stream,
               lastResponse: Promise.resolve({ text: 'Hello', usage: {} }),
+              trace,
             }),
           )
         }),
@@ -327,12 +335,15 @@ describe('POST /run', () => {
 
       const lastResponse = Promise.resolve({})
 
+      const trace = createTelemetryTrace({})
+
       mocks.runDocumentAtCommit.mockReturnValue(
         new Promise((resolve) => {
           resolve(
             Result.ok({
               stream,
               lastResponse,
+              trace,
             }),
           )
         }),
@@ -415,12 +426,15 @@ describe('POST /run', () => {
         resolve({ text: 'Hello', usage: {} })
       })
 
+      const trace = createTelemetryTrace({})
+
       mocks.runDocumentAtCommit.mockReturnValue(
         new Promise((resolve) => {
           resolve(
             Result.ok({
               stream,
               lastResponse,
+              trace,
             }),
           )
         }),
@@ -437,6 +451,7 @@ describe('POST /run', () => {
       })
 
       expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith({
+        context: expect.anything(),
         workspace,
         document: expect.anything(),
         commit,
@@ -487,12 +502,15 @@ describe('POST /run', () => {
         } as unknown as ProviderLog,
       })
 
+      const trace = createTelemetryTrace({})
+
       mocks.runDocumentAtCommit.mockReturnValue(
         new Promise((resolve) => {
           resolve(
             Result.ok({
               stream,
               lastResponse,
+              trace,
             }),
           )
         }),
@@ -522,6 +540,7 @@ describe('POST /run', () => {
           object: { something: { else: 'here' } },
           toolCalls: [],
         },
+        trace: await trace,
       })
     })
 
@@ -534,12 +553,15 @@ describe('POST /run', () => {
         }),
       )
 
+      const trace = createTelemetryTrace({})
+
       mocks.runDocumentAtCommit.mockReturnValue(
         Promise.resolve(
           Result.ok({
             stream: new ReadableStream(),
             lastResponse,
             error,
+            trace,
           }),
         ),
       )
@@ -578,11 +600,14 @@ describe('POST /run', () => {
         } as unknown as ProviderLog,
       })
 
+      const trace = createTelemetryTrace({})
+
       mocks.runDocumentAtCommit.mockReturnValue(
         Promise.resolve(
           Result.ok({
             stream: new ReadableStream(),
             lastResponse,
+            trace,
           }),
         ),
       )
@@ -614,11 +639,14 @@ describe('POST /run', () => {
         documentLogUuid: 'fake-document-log-uuid',
       })
 
+      const trace = createTelemetryTrace({})
+
       mocks.runDocumentAtCommit.mockReturnValue(
         Promise.resolve(
           Result.ok({
             stream: new ReadableStream(),
             lastResponse,
+            trace,
           }),
         ),
       )

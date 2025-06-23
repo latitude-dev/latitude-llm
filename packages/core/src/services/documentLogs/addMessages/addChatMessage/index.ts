@@ -1,24 +1,25 @@
 import type { Message } from '@latitude-data/compiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import {
   buildConversation,
   ChainStepResponse,
   LogSources,
-  StreamType,
-  Workspace,
-  ProviderLog,
   PromptSource,
+  ProviderLog,
+  StreamType,
+  TraceContext,
+  Workspace,
 } from '../../../../browser'
 import { unsafelyFindProviderApiKey } from '../../../../data-access'
+import { ChainStreamManager } from '../../../../lib/chainStreamManager'
+import { telemetry, TelemetryContext } from '../../../../telemetry'
+import { getInputSchema, getOutputType } from '../../../chains/ChainValidator'
 import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
 import serializeProviderLog from '../../../providerLogs/serialize'
-import { ChainStreamManager } from '../../../../lib/chainStreamManager'
-import { getInputSchema, getOutputType } from '../../../chains/ChainValidator'
 import { NotFoundError } from './../../../../lib/errors'
-import { Result } from './../../../../lib/Result'
-import { TypedResult } from './../../../../lib/Result'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { Result, TypedResult } from './../../../../lib/Result'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
@@ -31,6 +32,7 @@ export type ChainResponse<T extends StreamType> = TypedResult<
  * a single response.
  */
 export async function addChatMessage({
+  context,
   workspace,
   providerLog,
   source,
@@ -39,6 +41,7 @@ export async function addChatMessage({
   promptSource,
   abortSignal,
 }: {
+  context: TelemetryContext
   workspace: Workspace
   providerLog: ProviderLog
   messages: Message[]
@@ -70,6 +73,11 @@ export async function addChatMessage({
     messages: [...previousMessages, ...newMessages],
   }
 
+  let resolveTrace: (trace: TraceContext) => void
+  const trace = new Promise<TraceContext>((resolve) => {
+    resolveTrace = resolve
+  })
+
   const chainStreamManager = new ChainStreamManager({
     workspace,
     errorableUuid: providerLog.documentLogUuid!,
@@ -85,6 +93,7 @@ export async function addChatMessage({
     }).then((r) => r.unwrap())
 
     const { clientToolCalls } = await chainStreamManager.getProviderResponse({
+      context,
       provider,
       source,
       conversation,
@@ -93,10 +102,17 @@ export async function addChatMessage({
       schema: getInputSchema({ config: conversation.config }),
     })
 
+    const trace = telemetry.pause(context)
+    resolveTrace(trace)
+
+    // Pause the follow up if response has client tool calls
+    // Chain is not cached because there is no chain anymore
     if (clientToolCalls.length) {
-      return chainStreamManager.requestTools(clientToolCalls)
+      chainStreamManager.requestTools(clientToolCalls, trace)
     }
+
+    return { conversation, trace }
   })
 
-  return Result.ok(streamResult)
+  return Result.ok({ ...streamResult, trace })
 }

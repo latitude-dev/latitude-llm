@@ -8,6 +8,7 @@ import {
 } from '../../../browser'
 import { Result, TypedResult } from '../../../lib/Result'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import { BACKGROUND } from '../../../telemetry'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { buildLlmEvaluationRunFunction } from './shared'
 
@@ -70,6 +71,7 @@ export async function buildStreamEvaluationRun({
 }): Promise<TypedResult<{ streamHandler: StreamHandler }, Error>> {
   const resultUuid = generateUUIDIdentifier()
   const result = await buildLlmEvaluationRunFunction({
+    resultUuid,
     workspace,
     providers: await buildProvidersMap({ workspaceId: workspace.id }),
     evaluation,
@@ -83,13 +85,12 @@ export async function buildStreamEvaluationRun({
         .max(evaluation.configuration.maxScore),
       reason: z.string(),
     }),
-    runArgs: { generateUUID: () => resultUuid },
   })
 
   if (result.error) return result
 
   const { runFunction, runArgs } = result.value
-  const { stream } = runFunction(runArgs)
+  const { stream } = runFunction({ context: BACKGROUND(), ...runArgs })
   const streamHandler = buildStreamHandler(stream)
 
   return Result.ok({ streamHandler })

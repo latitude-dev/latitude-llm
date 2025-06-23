@@ -1,22 +1,28 @@
+import { parseSSEvent } from '$/common/parseSSEEvent'
+import app from '$/routes/app'
 import { MessageRole } from '@latitude-data/compiler'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { ChainEventTypes } from '@latitude-data/constants'
 import {
-  LegacyChainEventTypes,
+  ChainError,
+  LatitudeError,
+  RunErrorCodes,
+} from '@latitude-data/constants/errors'
+import {
   ChainStepResponse,
+  LegacyChainEventTypes,
   LogSources,
   ProviderLog,
   StreamEventTypes,
   Workspace,
 } from '@latitude-data/core/browser'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
-import { createProject } from '@latitude-data/core/factories'
-import { LatitudeError } from '@latitude-data/constants/errors'
+import {
+  createProject,
+  createTelemetryTrace,
+} from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
-import { parseSSEvent } from '$/common/parseSSEEvent'
-import app from '$/routes/app'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ChainEventTypes } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => ({
   addMessages: vi.fn(),
@@ -134,6 +140,8 @@ describe('POST /chat', () => {
     })
 
     it('stream succeeds', async () => {
+      const trace = createTelemetryTrace({})
+
       mocks.addMessages.mockReturnValue(
         new Promise((resolve) => {
           resolve(
@@ -158,6 +166,7 @@ describe('POST /chat', () => {
                 },
               }),
               response: new Promise((resolve) => resolve(Result.ok({}))),
+              trace,
             }),
           )
         }),
@@ -187,6 +196,8 @@ describe('POST /chat', () => {
     })
 
     it('calls chat provider', async () => {
+      const trace = createTelemetryTrace({})
+
       mocks.addMessages.mockReturnValue(
         new Promise((resolve) => {
           resolve(
@@ -211,6 +222,7 @@ describe('POST /chat', () => {
                 },
               }),
               response: new Promise((resolve) => resolve(Result.ok({}))),
+              trace,
             }),
           )
         }),
@@ -223,6 +235,7 @@ describe('POST /chat', () => {
       })
 
       expect(mocks.addMessages).toHaveBeenCalledWith({
+        context: expect.anything(),
         workspace,
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
@@ -232,6 +245,8 @@ describe('POST /chat', () => {
     })
 
     it('uses source from __internal', async () => {
+      const trace = createTelemetryTrace({})
+
       mocks.addMessages.mockReturnValue(
         new Promise((resolve) => {
           resolve(
@@ -256,6 +271,7 @@ describe('POST /chat', () => {
                 },
               }),
               response: new Promise((resolve) => resolve(Result.ok({}))),
+              trace,
             }),
           )
         }),
@@ -271,6 +287,7 @@ describe('POST /chat', () => {
       })
 
       expect(mocks.addMessages).toHaveBeenCalledWith({
+        context: expect.anything(),
         workspace,
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
@@ -280,6 +297,8 @@ describe('POST /chat', () => {
     })
 
     it('returns error when addMessages has an error', async () => {
+      const trace = createTelemetryTrace({})
+
       mocks.addMessages.mockReturnValue(
         new Promise((resolve) => {
           resolve(
@@ -300,6 +319,7 @@ describe('POST /chat', () => {
                 },
               }),
               response: new Promise((resolve) => resolve(Result.ok({}))),
+              trace,
             }),
           )
         }),
@@ -373,12 +393,15 @@ describe('POST /chat', () => {
     })
 
     it('returns response', async () => {
+      const trace = createTelemetryTrace({})
+
       mocks.addMessages.mockReturnValue(
         new Promise((resolve) => {
           resolve(
             Result.ok({
               stream: new ReadableStream({}),
               lastResponse: Promise.resolve(step),
+              trace,
             }),
           )
         }),
@@ -402,10 +425,13 @@ describe('POST /chat', () => {
           usage: step.usage,
           toolCalls: step.toolCalls,
         },
+        trace: await trace,
       })
     })
 
     it('calls chat provider', async () => {
+      const trace = createTelemetryTrace({})
+
       mocks.addMessages.mockReturnValue(
         new Promise((resolve) => {
           resolve(
@@ -414,6 +440,7 @@ describe('POST /chat', () => {
               response: new Promise((resolve) => {
                 resolve(Result.ok(step))
               }),
+              trace,
             }),
           )
         }),
@@ -426,6 +453,7 @@ describe('POST /chat', () => {
       })
 
       expect(mocks.addMessages).toHaveBeenCalledWith({
+        context: expect.anything(),
         workspace,
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
@@ -435,6 +463,8 @@ describe('POST /chat', () => {
     })
 
     it('uses source from __internal', async () => {
+      const trace = createTelemetryTrace({})
+
       mocks.addMessages.mockReturnValue(
         new Promise((resolve) => {
           resolve(
@@ -443,6 +473,7 @@ describe('POST /chat', () => {
               response: new Promise((resolve) => {
                 resolve(Result.ok(step))
               }),
+              trace,
             }),
           )
         }),
@@ -458,6 +489,7 @@ describe('POST /chat', () => {
       })
 
       expect(mocks.addMessages).toHaveBeenCalledWith({
+        context: expect.anything(),
         workspace,
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
@@ -467,6 +499,8 @@ describe('POST /chat', () => {
     })
 
     it('returns error when addMessages has an error', async () => {
+      const trace = createTelemetryTrace({})
+
       mocks.addMessages.mockReturnValue(
         new Promise((resolve) => {
           resolve(
@@ -479,6 +513,7 @@ describe('POST /chat', () => {
                 }),
               ),
               lastResponse: Promise.resolve(undefined),
+              trace,
             }),
           )
         }),
@@ -504,6 +539,8 @@ describe('POST /chat', () => {
     })
 
     it('returns error when no documentLogUuid in documentRunPresenter', async () => {
+      const trace = createTelemetryTrace({})
+
       mocks.addMessages.mockReturnValue(
         new Promise((resolve) => {
           resolve(
@@ -513,6 +550,7 @@ describe('POST /chat', () => {
                 ...step,
                 documentLogUuid: undefined,
               }),
+              trace,
             }),
           )
         }),
@@ -538,6 +576,8 @@ describe('POST /chat', () => {
     })
 
     it('returns error when no providerLog in documentRunPresenter', async () => {
+      const trace = createTelemetryTrace({})
+
       mocks.addMessages.mockReturnValue(
         new Promise((resolve) => {
           resolve(
@@ -547,6 +587,7 @@ describe('POST /chat', () => {
                 ...step,
                 providerLog: undefined,
               }),
+              trace,
             }),
           )
         }),

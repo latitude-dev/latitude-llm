@@ -1,17 +1,21 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { mockToolRequestsCopilot } from '../../../../tests/helpers'
-import { Commit, DocumentVersion, Workspace } from '../../../../browser'
-import { AutogenerateToolResponseCopilotData } from './getCopilotData'
-import * as factories from '../../../../tests/factories'
 import { LogSources, Providers } from '@latitude-data/constants'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { Commit, DocumentVersion, Workspace } from '../../../../browser'
 import * as chainCache from '../../../../services/chains/chainCache'
 import * as runDoc from '../../../../services/commits/runDocumentAtCommit'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { LatitudeError } from './../../../../lib/errors'
+import { TelemetryContext } from '../../../../telemetry'
+import * as factories from '../../../../tests/factories'
+import { mockToolRequestsCopilot } from '../../../../tests/helpers'
+import {
+  LatitudeError,
+  UnprocessableEntityError,
+} from './../../../../lib/errors'
 import { Result } from './../../../../lib/Result'
-import { UnprocessableEntityError } from './../../../../lib/errors'
+import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 
+let context: TelemetryContext
 let workspace: Workspace
 let commit: Commit
 let document: DocumentVersion
@@ -33,6 +37,8 @@ const FAKE_TOOL_CALLS = [
 // NOTE: Order of the tests here matters. Be aware and sorry
 describe('respondToToolCalls', () => {
   beforeAll(async () => {
+    context = await factories.createTelemetryContext()
+
     copilot = await mockToolRequestsCopilot()
     const setup = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'Latitude' }],
@@ -113,6 +119,7 @@ describe('respondToToolCalls', () => {
         },
       }),
       errorableUuid: 'log1',
+      trace: factories.createTelemetryTrace({}),
     }
     vi.spyOn(chainCache, 'getCachedChain').mockResolvedValue({
       // @ts-expect-error - Avoid creating real things, no need
@@ -137,6 +144,7 @@ describe('respondToToolCalls', () => {
     const mod = await import('./respondToToolCalls')
     const respondToToolCalls = mod.respondToToolCalls
     await respondToToolCalls({
+      context,
       workspace,
       commit,
       document,
@@ -152,6 +160,7 @@ describe('respondToToolCalls', () => {
     })
 
     expect(runDoc.runDocumentAtCommit).toHaveBeenCalledWith({
+      context: expect.anything(),
       workspace: copilot.workspace,
       commit: copilot.commit,
       document: copilot.document,
@@ -193,6 +202,7 @@ describe('respondToToolCalls', () => {
     })
 
     expect(resumePausedPromptMock).toHaveBeenCalledWith({
+      context: expect.anything(),
       workspace,
       commit,
       document,
@@ -235,6 +245,7 @@ describe('respondToToolCalls', () => {
     const mod = await import('./respondToToolCalls')
     const respondToToolCalls = mod.respondToToolCalls
     const result = await respondToToolCalls({
+      context,
       workspace,
       commit,
       document,
@@ -267,6 +278,7 @@ describe('respondToToolCalls', () => {
     const mod = await import('./respondToToolCalls')
     const respondToToolCalls = mod.respondToToolCalls
     const result = await respondToToolCalls({
+      context,
       workspace,
       commit,
       document,
@@ -290,6 +302,7 @@ describe('respondToToolCalls', () => {
       ),
       lastResponse: Promise.resolve(undefined),
       errorableUuid: 'log1',
+      trace: factories.createTelemetryTrace({}),
     }
     vi.spyOn(chainCache, 'getCachedChain').mockResolvedValue({
       // @ts-expect-error - Avoid creating real things, no need
@@ -306,6 +319,7 @@ describe('respondToToolCalls', () => {
     const mod = await import('./respondToToolCalls')
     const respondToToolCalls = mod.respondToToolCalls
     const result = await respondToToolCalls({
+      context,
       workspace,
       commit,
       document,

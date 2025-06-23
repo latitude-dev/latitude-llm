@@ -4,8 +4,10 @@ import { PromisedResult } from '../../../../lib/Transaction'
 import { Message, ToolCall } from '@latitude-data/compiler'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../lib/Result'
+import { TelemetryContext } from '../../../../telemetry'
 
 type LatteToolContext = {
+  context: TelemetryContext
   workspace: Workspace
   threadUuid: string
   messages: Message[]

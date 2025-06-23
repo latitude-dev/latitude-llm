@@ -17,8 +17,7 @@ export default function getTestDisk() {
       }),
     )
 
-    const testDisk = new DiskWrapper('private', disk)
-    return testDisk
+    testDisk = new DiskWrapper('private', disk)
   }
 
   return testDisk

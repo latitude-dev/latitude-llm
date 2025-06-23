@@ -1,34 +1,36 @@
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { type AnthropicProvider, createAnthropic } from '@ai-sdk/anthropic'
 import { createAzure } from '@ai-sdk/azure'
+import { createDeepSeek, DeepSeekProvider } from '@ai-sdk/deepseek'
 import {
   createGoogleGenerativeAI,
   GoogleGenerativeAIProvider,
 } from '@ai-sdk/google'
-import { createVertex, GoogleVertexProvider } from '@ai-sdk/google-vertex/edge'
 import {
   createVertexAnthropic,
   GoogleVertexAnthropicProvider,
 } from '@ai-sdk/google-vertex/anthropic/edge'
+import { createVertex, GoogleVertexProvider } from '@ai-sdk/google-vertex/edge'
 import { createMistral, MistralProvider } from '@ai-sdk/mistral'
 import { createOpenAI, type OpenAIProvider } from '@ai-sdk/openai'
-import { createXai, XaiProvider } from '@ai-sdk/xai'
-import { createDeepSeek, DeepSeekProvider } from '@ai-sdk/deepseek'
 import { createPerplexity, PerplexityProvider } from '@ai-sdk/perplexity'
+import { createXai, XaiProvider } from '@ai-sdk/xai'
 import { type Message, MessageRole } from '@latitude-data/compiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { TelemetryContext } from '../../telemetry'
 
 import { Providers } from '../../constants'
 import { Result, TypedResult } from '../../lib/Result'
 
 import { PartialPromptConfig } from '@latitude-data/constants'
-import type { ModelCost } from './estimateCost'
 import { ProviderApiKey } from '../../browser'
-import { vertexConfigurationSchema } from './providers/helpers/vertex'
+import type { ModelCost } from './estimateCost'
+import { instrumentedFetch } from './fetch'
 import {
   AmazonBedrockConfiguration,
   amazonBedrockConfigurationSchema,
 } from './providers/helpers/amazonBedrock'
+import { vertexConfigurationSchema } from './providers/helpers/vertex'
 
 export { type PartialPromptConfig as PartialConfig } from '@latitude-data/constants'
 
@@ -48,6 +50,7 @@ function isFirstMessageOfUserType(messages: Message[]) {
 }
 
 function createAmazonBedrockProvider(
+  context: TelemetryContext,
   config: AmazonBedrockConfiguration,
   name: string,
 ) {
@@ -64,6 +67,7 @@ function createAmazonBedrockProvider(
 
   return Result.ok(
     createAmazonBedrock({
+      fetch: instrumentedFetch({ context }),
       region: config.region,
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
@@ -111,12 +115,14 @@ export type LlmProvider =
   | PerplexityProvider
 
 export function createProvider({
+  context,
   provider,
   messages,
   apiKey,
   url,
   config,
 }: {
+  context: TelemetryContext
   provider: ProviderApiKey
   messages: Message[]
   apiKey: string
@@ -128,6 +134,7 @@ export function createProvider({
     case Providers.OpenAI:
       return Result.ok(
         createOpenAI({
+          fetch: instrumentedFetch({ context }),
           apiKey,
           // Needed for OpenAI to return token usage
           compatibility: 'strict',
@@ -136,6 +143,7 @@ export function createProvider({
     case Providers.Groq:
       return Result.ok(
         createOpenAI({
+          fetch: instrumentedFetch({ context }),
           apiKey,
           compatibility: 'compatible',
           baseURL: GROQ_API_URL,
@@ -144,18 +152,21 @@ export function createProvider({
     case Providers.Anthropic:
       return Result.ok(
         createAnthropic({
+          fetch: instrumentedFetch({ context }),
           apiKey,
         }),
       )
     case Providers.Mistral:
       return Result.ok(
         createMistral({
+          fetch: instrumentedFetch({ context }),
           apiKey,
         }),
       )
     case Providers.Azure:
       return Result.ok(
         createAzure({
+          fetch: instrumentedFetch({ context }),
           apiKey,
           ...(config?.azure ?? {}),
         }),
@@ -166,6 +177,7 @@ export function createProvider({
 
       return Result.ok(
         createGoogleGenerativeAI({
+          fetch: instrumentedFetch({ context }),
           apiKey,
         }),
       )
@@ -175,8 +187,15 @@ export function createProvider({
         name: provider.name,
         maybeConfig: provider.configuration,
       })
+      if (result.error) return result
+      const config = result.value
 
-      return result.error ? result : Result.ok(createVertex(result.value))
+      return Result.ok(
+        createVertex({
+          fetch: instrumentedFetch({ context }),
+          ...config,
+        }),
+      )
     }
 
     case Providers.AnthropicVertex: {
@@ -184,39 +203,49 @@ export function createProvider({
         name: provider.name,
         maybeConfig: provider.configuration,
       })
+      if (result.error) return result
+      const config = result.value
 
-      return result.error
-        ? result
-        : Result.ok(createVertexAnthropic(result.value))
+      return Result.ok(
+        createVertexAnthropic({
+          fetch: instrumentedFetch({ context }),
+          ...config,
+        }),
+      )
     }
     case Providers.XAI:
       return Result.ok(
         createXai({
-          apiKey: apiKey!,
+          fetch: instrumentedFetch({ context }),
+          apiKey,
         }),
       )
     case Providers.DeepSeek:
       return Result.ok(
         createDeepSeek({
-          apiKey: apiKey!,
+          fetch: instrumentedFetch({ context }),
+          apiKey,
         }),
       )
     case Providers.Perplexity:
       return Result.ok(
         createPerplexity({
-          apiKey: apiKey!,
+          fetch: instrumentedFetch({ context }),
+          apiKey,
         }),
       )
     case Providers.Custom:
       return Result.ok(
         createOpenAI({
-          apiKey: apiKey,
+          fetch: instrumentedFetch({ context }),
+          apiKey,
           compatibility: 'compatible',
           baseURL: url,
         }),
       )
     case Providers.AmazonBedrock:
       return createAmazonBedrockProvider(
+        context,
         provider.configuration as AmazonBedrockConfiguration,
         provider.name,
       )

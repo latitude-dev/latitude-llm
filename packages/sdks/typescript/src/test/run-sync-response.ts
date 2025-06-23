@@ -8,4 +8,7 @@ export const RUN_TEXT_RESPONSE = {
     usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
     toolCalls: [],
   },
+  trace: {
+    traceparent: '00-12345678901234567890123456789012-1234567890123456-01',
+  },
 }

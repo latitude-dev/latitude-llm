@@ -6,16 +6,21 @@ import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { addMessages } from '@latitude-data/core/services/documentLogs/addMessages/index'
+import { BACKGROUND, telemetry } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 
 // @ts-expect-error: streamSSE has type issues
 export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const { conversationUuid } = c.req.valid('param')
-  const { messages, stream: useSSE, __internal } = c.req.valid('json')
+  const { messages, stream: useSSE, trace, __internal } = c.req.valid('json')
   const workspace = c.get('workspace')
+
+  let context = BACKGROUND()
+  if (trace) context = telemetry.resume(trace)
 
   const result = (
     await addMessages({
+      context,
       workspace,
       documentLogUuid: conversationUuid,
       // @ts-expect-error: messages types are different
@@ -64,9 +69,11 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const error = await result.error
   if (error) throw error
 
-  const response = (await result.lastResponse)!
-  const toolCalls = await result.toolCalls
+  const body = runPresenter({
+    response: (await result.lastResponse)!,
+    toolCalls: await result.toolCalls,
+    trace: await result.trace,
+  }).unwrap()
 
-  const body = runPresenter({ response, toolCalls }).unwrap()
   return c.json(body, 200)
 }

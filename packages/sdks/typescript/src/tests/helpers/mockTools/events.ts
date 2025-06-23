@@ -1,8 +1,8 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
 import {
-  StreamEventTypes,
   ChainEvent,
   ChainEventTypes,
+  StreamEventTypes,
 } from '@latitude-data/constants'
 
 export const TOOLS_DOCUMENT_UUID = '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b'
@@ -477,6 +477,10 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             },
           },
         ],
+        trace: {
+          traceparent:
+            '00-12345678901234567890123456789012-1234567890123456-01',
+        },
       },
     },
   ],
@@ -1491,6 +1495,10 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             },
           },
         ],
+        trace: {
+          traceparent:
+            '00-12345678901234567890123456789012-1234567890123456-01',
+        },
       },
     },
   ],
@@ -2988,6 +2996,10 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             toolCalls: [],
           },
         ],
+        trace: {
+          traceparent:
+            '00-12345678901234567890123456789012-1234567890123456-01',
+        },
       },
     },
   ],

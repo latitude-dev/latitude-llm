@@ -1,17 +1,18 @@
+import {
+  getData,
+  legacyChainEventPresenter,
+  publishDocumentRunRequestedEvent,
+} from '$/common/documents/getData'
+import { captureException } from '$/common/sentry'
+import { AppRouteHandler } from '$/openApi/types'
+import { RunRoute } from '$/routes/api/v1/run/run.route'
 import { LogSources } from '@latitude-data/core/browser'
+import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
-import { captureException } from '$/common/sentry'
+import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
-import {
-  legacyChainEventPresenter,
-  getData,
-  publishDocumentRunRequestedEvent,
-} from '$/common/documents/getData'
-import { AppRouteHandler } from '$/openApi/types'
-import { RunRoute } from '$/routes/api/v1/run/run.route'
-import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
@@ -41,6 +42,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
       }
 
       const { stream: newStream } = await runDocumentAtCommit({
+        context: BACKGROUND(),
         workspace,
         document,
         commit,

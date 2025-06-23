@@ -1,15 +1,19 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import * as factories from '../../tests/factories'
-import { Workspace, User, Providers } from '../../browser'
-import { createProvider as createProviderGlobal } from './helpers'
-import { Result } from '../../lib/Result'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Providers, User, Workspace } from '../../browser'
+import { Result } from '../../lib/Result'
+import { TelemetryContext } from '../../telemetry'
+import * as factories from '../../tests/factories'
+import { createProvider as createProviderGlobal } from './helpers'
 
+let context: TelemetryContext
 let workspace: Workspace
 let user: User
 
 describe('createProvider', () => {
   beforeEach(async () => {
+    context = await factories.createTelemetryContext()
+
     const { userData, workspace: w } = await factories.createWorkspace()
 
     user = userData
@@ -26,6 +30,7 @@ describe('createProvider', () => {
     })
 
     const result = createProviderGlobal({
+      context,
       provider,
       messages: [],
       apiKey: provider.token,
@@ -69,6 +74,7 @@ describe('createProvider', () => {
     const mod = await import('./helpers')
     const createProvider = mod.createProvider
     const result = createProvider({
+      context,
       provider,
       messages: [],
       apiKey: provider.token,
@@ -77,6 +83,7 @@ describe('createProvider', () => {
     })
 
     expect(createVertexMock).toHaveBeenCalledWith({
+      fetch: expect.any(Function),
       project: 'my-project',
       location: 'us-central1',
       googleCredentials: {
@@ -114,6 +121,7 @@ describe('createProvider', () => {
     const mod = await import('./helpers')
     const createProvider = mod.createProvider
     const result = createProvider({
+      context,
       provider,
       messages: [],
       apiKey: provider.token,
@@ -122,6 +130,7 @@ describe('createProvider', () => {
     })
 
     expect(createVertexMock).toHaveBeenCalledWith({
+      fetch: expect.any(Function),
       project: 'my-project',
       location: 'us-central1',
       googleCredentials: {

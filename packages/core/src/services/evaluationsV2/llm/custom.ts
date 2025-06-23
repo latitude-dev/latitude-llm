@@ -129,6 +129,7 @@ async function run(
     conversation,
     documentLog,
     providers,
+    commit,
     workspace,
   }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Custom>,
   db: Database = database,
@@ -136,7 +137,7 @@ async function run(
   // Note: expectedOutput is optional for this metric as this function
   // is reused for both, custom and custom labeled, llm metrics
 
-  let metadata = {
+  const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput,
     datasetLabel: datasetLabel,
@@ -181,6 +182,7 @@ async function run(
     resultUuid: resultUuid,
     evaluation: evaluation,
     providers: providers!,
+    commit: commit,
     workspace: workspace,
   })
 

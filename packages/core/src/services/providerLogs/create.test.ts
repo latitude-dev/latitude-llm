@@ -1,15 +1,15 @@
-import * as factories from '../../tests/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import * as factories from '../../tests/factories'
 
 import { ProviderApiKey, Workspace } from '../../browser'
 import { LogSources, Providers } from '../../constants'
-import { createProviderLog, type CreateProviderLogProps } from './create'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
+import { createProviderLog, type CreateProviderLogProps } from './create'
 
 let workspace: Workspace
 let provider: ProviderApiKey
 let providerProps: CreateProviderLogProps
-let apiKeyId: number | undefined = undefined
+const apiKeyId: number | undefined = undefined
 let documentLogUuid: string | undefined
 
 const publisherSpy = vi.spyOn(

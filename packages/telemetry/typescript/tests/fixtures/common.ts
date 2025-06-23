@@ -2,6 +2,7 @@ import {
   AGENT_RETURN_TOOL_NAME,
   ParameterType,
   Providers,
+  TraceContext,
 } from '@latitude-data/constants'
 import { Prompt, RenderToolCallDetails } from '@latitude-data/sdk'
 
@@ -111,3 +112,209 @@ export const TOOL = async (
     confidence: 0.95,
   }
 }
+
+export const RUN_RESPONSE = (trace: TraceContext) => ({
+  uuid: 'fake-conversation-uuid-1',
+  conversation: [
+    {
+      role: 'user',
+      content: 'What is the weather in Barcelona?',
+    },
+    {
+      role: 'assistant',
+      content: [
+        {
+          type: 'text',
+          text: 'I need to know the weather in Barcelona. I will use the get_weather tool.',
+        },
+      ],
+      tool_calls: [
+        {
+          id: 'fake-tool-call-id-1',
+          type: 'function',
+          function: {
+            name: 'get_weather',
+            arguments: '{"location": "Barcelona"}',
+          },
+        },
+      ],
+    },
+  ],
+  toolRequests: [
+    {
+      id: 'fake-tool-call-id-1',
+      name: 'get_weather',
+      arguments: {
+        location: 'Barcelona',
+      },
+    },
+  ],
+  response:
+    'I need to know the weather in Barcelona. I will use the get_weather tool.',
+  trace: trace,
+})
+
+export const CHAT_RESPONSES = [
+  (trace: TraceContext) => ({
+    uuid: 'fake-conversation-uuid-2',
+    conversation: [
+      {
+        role: 'user',
+        content: 'What is the weather in Barcelona?',
+      },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'I need to know the weather in Barcelona. I will use the get_weather tool.',
+          },
+        ],
+        tool_calls: [
+          {
+            id: 'fake-tool-call-id-1',
+            type: 'function',
+            function: {
+              name: 'get_weather',
+              arguments: '{"location": "Barcelona"}',
+            },
+          },
+        ],
+      },
+      {
+        role: 'tool',
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: 'fake-tool-call-id-1',
+            toolName: 'get_weather',
+            result: {
+              weather: 'SUNNY',
+              confidence: 0.95,
+            },
+            isError: false,
+          },
+        ],
+      },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'I will do it again for Madrid.',
+          },
+        ],
+        tool_calls: [
+          {
+            id: 'fake-tool-call-id-2',
+            type: 'function',
+            function: {
+              name: 'get_weather',
+              arguments: '{"location": "Madrid"}',
+            },
+          },
+        ],
+      },
+    ],
+    toolRequests: [
+      {
+        id: 'fake-tool-call-id-2',
+        name: 'get_weather',
+        arguments: {
+          location: 'Madrid',
+        },
+      },
+    ],
+    response: 'I will do it again for Madrid.',
+    trace: trace,
+  }),
+  (trace: TraceContext) => ({
+    uuid: 'fake-conversation-uuid-3',
+    conversation: [
+      {
+        role: 'user',
+        content: 'What is the weather in Barcelona?',
+      },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'I need to know the weather in Barcelona. I will use the get_weather tool.',
+          },
+        ],
+        tool_calls: [
+          {
+            id: 'fake-tool-call-id-1',
+            type: 'function',
+            function: {
+              name: 'get_weather',
+              arguments: '{"location": "Barcelona"}',
+            },
+          },
+        ],
+      },
+      {
+        role: 'tool',
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: 'fake-tool-call-id-1',
+            toolName: 'get_weather',
+            result: {
+              weather: 'SUNNY',
+              confidence: 0.95,
+            },
+            isError: false,
+          },
+        ],
+      },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'I will do it again for Madrid.',
+          },
+        ],
+        tool_calls: [
+          {
+            id: 'fake-tool-call-id-2',
+            type: 'function',
+            function: {
+              name: 'get_weather',
+              arguments: '{"location": "Madrid"}',
+            },
+          },
+        ],
+      },
+      {
+        role: 'tool',
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: 'fake-tool-call-id-2',
+            toolName: 'get_weather',
+            result: {
+              weather: 'SUNNY',
+              confidence: 0.95,
+            },
+            isError: false,
+          },
+        ],
+      },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'Done!',
+          },
+        ],
+      },
+    ],
+    toolRequests: [],
+    response: 'Done!',
+    trace: trace,
+  }),
+]

@@ -22,6 +22,7 @@ export async function syncChat<Tools extends ToolSpec>(
     tools,
     options,
     instrumentation,
+    trace,
   }: ChatOptionsWithSDKOptions<Tools> & {
     instrumentation?: ToolInstrumentation
   },
@@ -32,7 +33,7 @@ export async function syncChat<Tools extends ToolSpec>(
       handler: HandlerType.Chat,
       params: { conversationUuid: uuid },
       options: options,
-      body: { messages, stream: false },
+      body: { messages, stream: false, trace },
     })
 
     if (!response.ok) {
@@ -61,7 +62,7 @@ export async function syncChat<Tools extends ToolSpec>(
         chatFn: syncChat,
         tools,
         options,
-        // TODO(tracing): get trace context from the response
+        trace: finalResponse.trace,
         instrumentation,
       })
     }

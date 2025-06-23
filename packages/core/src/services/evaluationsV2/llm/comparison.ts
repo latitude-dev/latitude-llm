@@ -155,6 +155,7 @@ async function run(
     conversation,
     documentLog,
     providers,
+    commit,
     workspace,
   }: EvaluationMetricRunArgs<
     EvaluationType.Llm,
@@ -162,7 +163,7 @@ async function run(
   >,
   db: Database = database,
 ) {
-  let metadata = {
+  const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput,
     expectedOutput: expectedOutput,
@@ -200,6 +201,7 @@ async function run(
     resultUuid: resultUuid,
     evaluation: evaluation,
     providers: providers!,
+    commit: commit,
     workspace: workspace,
   })
 

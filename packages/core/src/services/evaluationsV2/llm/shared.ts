@@ -3,12 +3,13 @@ import {
   ChainStepResponse,
   StreamType,
 } from '@latitude-data/constants'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { Chain, Chain as PromptlChain, scan, Adapters } from 'promptl-ai'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { Adapters, Chain, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
+  Commit,
   DocumentType,
   EvaluationType,
   EvaluationV2,
@@ -22,6 +23,7 @@ import {
 import { database, Database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { ProviderLogsRepository } from '../../../repositories'
+import { BACKGROUND, telemetry } from '../../../telemetry'
 import { runAgent } from '../../agents/run'
 import { runChain } from '../../chains/run'
 import { parsePrompt } from '../../documents/parse'
@@ -61,23 +63,21 @@ ${provider.provider === Providers.Anthropic ? '</user>' : ''}
 export async function buildLlmEvaluationRunFunction<
   M extends LlmEvaluationMetric,
 >({
+  resultUuid,
   workspace,
   providers,
   evaluation,
   prompt,
   parameters,
   schema,
-  runArgs: inputRunArgs = {},
 }: {
+  resultUuid: string
   workspace: Workspace
   providers: Map<string, ProviderApiKey>
   evaluation: EvaluationV2<EvaluationType.Llm, M>
   prompt: string
   parameters?: Record<string, unknown>
   schema: z.ZodSchema
-  runArgs?: {
-    generateUUID?: () => string
-  }
 }) {
   let promptConfig: LatitudePromptConfig
   let promptChain: PromptlChain
@@ -119,7 +119,7 @@ export async function buildLlmEvaluationRunFunction<
   }
 
   const runArgs = {
-    ...inputRunArgs,
+    generateUUID: () => resultUuid,
     chain: promptChain,
     globalConfig: promptConfig,
     configOverrides: schema
@@ -130,7 +130,7 @@ export async function buildLlmEvaluationRunFunction<
       : undefined,
     source: LogSources.Evaluation,
     promptlVersion: 1,
-    persistErrors: false as false, // Note: required so TypeScript doesn't infer true
+    persistErrors: false as const, // Note: required so TypeScript doesn't infer true
     promptSource: { ...evaluation, version: 'v2' as const },
     providersMap: providers,
     workspace: workspace,
@@ -153,6 +153,7 @@ export async function runPrompt<
     resultUuid,
     evaluation,
     providers,
+    commit,
     workspace,
   }: {
     prompt: string
@@ -161,35 +162,46 @@ export async function runPrompt<
     resultUuid: string
     evaluation: EvaluationV2<EvaluationType.Llm, M>
     providers: Map<string, ProviderApiKey>
+    commit: Commit
     workspace: Workspace
   },
   db: Database = database,
 ) {
   const { promptChain, promptConfig, runFunction, runArgs } =
     await buildLlmEvaluationRunFunction({
+      resultUuid,
       workspace,
       providers,
       evaluation,
       prompt,
       parameters,
       schema,
-      runArgs: {
-        generateUUID: () => resultUuid, // Note: this makes documentLogUuid = resultUuid
-      },
     }).then((r) => r.unwrap())
+
+  const $prompt = telemetry.prompt(BACKGROUND(), {
+    logUuid: resultUuid,
+    versionUuid: commit.uuid,
+    promptUuid: evaluation.uuid,
+    template: prompt,
+    parameters: parameters,
+    _internal: { source: runArgs.source },
+  })
 
   let response
   try {
-    const result = runFunction(runArgs)
+    const result = runFunction({ context: $prompt.context, ...runArgs })
     const error = await result.error
     if (error) throw error
 
     response = await result.lastResponse
+
+    $prompt.end()
   } catch (error) {
+    $prompt.fail(error as Error)
+
     if (error instanceof ChainError) throw error
 
     const e = error as Error
-
     throw new ChainError({
       code: RunErrorCodes.Unknown,
       message: e.message,
