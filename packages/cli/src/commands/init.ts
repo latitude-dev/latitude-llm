@@ -23,8 +23,8 @@ export class InitCommand extends BaseCommand {
 
       this.setProjectPath(options)
 
-      await this.setClient()
       await this.getOrPromptForApiKey()
+      await this.setClient()
 
       // Check if we're in an npm project
       this.isNpmProject = await this.projectManager.verifyNpmProject(
