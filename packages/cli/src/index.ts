@@ -5,14 +5,12 @@ import { readFileSync } from 'fs'
 
 // Create the program
 const program = new Command()
-const file = readFileSync('./package.json')
-const j = JSON.parse(file.toString())
 
 // Set basic information
 program
   .name('latitude')
   .description('Latitude CLI for managing projects and prompts')
-  .version(j.version)
+  .version(getVersion())
 
 // Register all commands
 init(program)
@@ -28,4 +26,9 @@ program.parse(process.argv)
 // If no arguments are provided, show help
 if (process.argv.length <= 2) {
   program.help()
+}
+
+function getVersion() {
+  const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'))
+  return packageJson.version
 }
