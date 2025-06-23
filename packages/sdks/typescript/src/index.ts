@@ -101,6 +101,7 @@ class Latitude {
       project: Project
       version: Version
     }>
+    get: (projectId: number) => Promise<Project>
   }
 
   public prompts: {
@@ -187,6 +188,7 @@ class Latitude {
     this.projects = {
       getAll: this.getAllProjects.bind(this),
       create: this.createProject.bind(this),
+      get: this.getProjectById.bind(this),
     }
 
     // Initialize prompts namespace
@@ -719,6 +721,28 @@ class Latitude {
     return {
       messages: toolResponseMessages,
     }
+  }
+
+  private async getProjectById(projectId: number) {
+    const response = await makeRequest({
+      method: 'GET',
+      handler: HandlerType.GetProjectById, // This will be a new HandlerType
+      params: { projectId },
+      options: this.options,
+    })
+
+    if (!response.ok) {
+      const error = (await response.json()) as ApiErrorJsonResponse
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
+      })
+    }
+
+    return (await response.json()) as Project
   }
 
   private async getAllProjects() {

@@ -15,6 +15,8 @@ import {
   mockGetAllProjectsResponse,
   mockCreateProjectRequest,
   mockCreateProjectResponse,
+  mockGetProjectByIdRequest,
+  mockGetProjectByIdResponse,
   mockProjectsError,
 } from './helpers/projects'
 
@@ -69,6 +71,55 @@ describe('projects', () => {
         })
         try {
           await sdk.projects.getAll()
+        } catch (error) {
+          // @ts-expect-error - mock error
+          expect(error.message).toEqual(
+            'Unexpected API Error: 500 Something went wrong',
+          )
+        }
+      }),
+    )
+  })
+
+  describe('getById', () => {
+    it(
+      'sends auth header',
+      server.boundary(async () => {
+        const { mockAuthHeader } = mockGetProjectByIdRequest({
+          server,
+          apiVersion: 'v3',
+          projectId: 1,
+        })
+        await sdk.projects.getById(1)
+        expect(mockAuthHeader).toHaveBeenCalledWith('Bearer fake-api-key')
+      }),
+    )
+
+    it(
+      'handles response correctly',
+      server.boundary(async () => {
+        const { mockResponse, mockFn } = mockGetProjectByIdResponse({
+          server,
+          apiVersion: 'v3',
+          projectId: 1,
+        })
+        const response = await sdk.projects.getById(1)
+        expect(response).toEqual(mockResponse)
+        expect(mockFn).toHaveBeenCalledTimes(1)
+      }),
+    )
+
+    it(
+      'handles errors correctly',
+      server.boundary(async () => {
+        mockProjectsError({
+          server,
+          apiVersion: 'v3',
+          method: 'GET',
+          path: '/projects/1', // Ensure this matches the expected path
+        })
+        try {
+          await sdk.projects.getById(1)
         } catch (error) {
           // @ts-expect-error - mock error
           expect(error.message).toEqual(

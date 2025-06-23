@@ -164,3 +164,58 @@ export function mockProjectsError({
     }),
   )
 }
+
+export function mockGetProjectByIdRequest({
+  server,
+  apiVersion,
+  projectId,
+}: {
+  server: Server
+  apiVersion: SdkApiVersion
+  projectId: number
+}) {
+  const mockAuthHeader = vi.fn()
+  const mockUrl = vi.fn()
+  server.use(
+    http.get(
+      `http://localhost:8787/api/${apiVersion}/projects/${projectId}`,
+      (info) => {
+        mockAuthHeader(info.request.headers.get('Authorization'))
+        mockUrl(info.request.url)
+        return HttpResponse.json({}) // Return empty object for request mock
+      },
+    ),
+  )
+  return { mockAuthHeader, mockUrl }
+}
+
+export function mockGetProjectByIdResponse({
+  server,
+  apiVersion,
+  projectId,
+}: {
+  server: Server
+  apiVersion: SdkApiVersion
+  projectId: number
+}) {
+  const mockResponse = {
+    id: projectId,
+    name: `Test Project ${projectId}`,
+    workspaceId: 1,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+    deletedAt: null,
+  }
+  const mockFn = vi.fn()
+  server.use(
+    http.get(
+      `http://localhost:8787/api/${apiVersion}/projects/${projectId}`,
+      () => {
+        mockFn('called!')
+        return HttpResponse.json(mockResponse)
+      },
+    ),
+  )
+
+  return { mockResponse, mockFn }
+}
