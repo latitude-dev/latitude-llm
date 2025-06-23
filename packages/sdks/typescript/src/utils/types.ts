@@ -128,6 +128,12 @@ export type PushVersionBodyParams = {
   }>
 }
 
+export type LogBodyParams = {
+  path: string
+  messages: Message[]
+  response?: string
+}
+
 export enum HandlerType {
   Annotate = 'annotate',
   Chat = 'chat',
@@ -141,6 +147,7 @@ export enum HandlerType {
   GetVersion = 'get-version',
   PushVersion = 'push-version',
   RunDocument = 'run-document',
+  Log = 'log',
 }
 
 export type HandlerConfigs = {
@@ -171,6 +178,7 @@ export type HandlerConfigs = {
     RunDocumentUrlParams,
     RunDocumentBodyParams
   >
+  [HandlerType.Log]: HandlerConfig<RunDocumentUrlParams, LogBodyParams>
 }
 
 export type UrlParams<H extends HandlerType> = HandlerConfigs[H]['UrlParams']

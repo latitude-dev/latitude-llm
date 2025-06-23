@@ -6,6 +6,7 @@ import {
 } from '@latitude-data/compiler'
 import {
   AGENT_RETURN_TOOL_NAME,
+  DocumentLog,
   Providers,
   PublicManualEvaluationResultV2,
   type ChainEventDto,
@@ -14,7 +15,11 @@ import {
 
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
-import { ApiErrorJsonResponse, LatitudeApiError } from '$sdk/utils/errors'
+import {
+  ApiErrorCodes,
+  ApiErrorJsonResponse,
+  LatitudeApiError,
+} from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
 import { streamChat } from '$sdk/utils/streamChat'
 import { streamRun } from '$sdk/utils/streamRun'
@@ -101,6 +106,18 @@ class Latitude {
       project: Project
       version: Version
     }>
+  }
+
+  public logs: {
+    create: (
+      path: string,
+      messages: Message[],
+      options?: {
+        projectId?: number
+        versionUuid?: string
+        response?: string
+      },
+    ) => Promise<DocumentLog>
   }
 
   public prompts: {
@@ -207,6 +224,10 @@ class Latitude {
       get: this.getVersion.bind(this),
       create: this.createVersion.bind(this),
       push: this.pushVersion.bind(this),
+    }
+
+    this.logs = {
+      create: this.createLog.bind(this),
     }
 
     // Initialize __internal namespace
@@ -423,6 +444,45 @@ class Latitude {
       config: adaptPromptConfigToProvider(config, adapter),
       messages,
     }
+  }
+
+  private async createLog(
+    path: string,
+    messages: Message[],
+    {
+      response,
+      projectId,
+      versionUuid,
+    }: {
+      projectId?: number
+      versionUuid?: string
+      response?: string
+    } = {},
+  ) {
+    projectId = projectId ?? this.options.projectId
+    if (!projectId) {
+      throw new Error('Project ID is required')
+    }
+    versionUuid = versionUuid ?? this.options.versionUuid
+
+    const httpResponse = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.Log,
+      params: { projectId, versionUuid },
+      body: { path, messages, response },
+      options: this.options,
+    })
+
+    if (!httpResponse.ok) {
+      throw new LatitudeApiError({
+        status: httpResponse.status,
+        message: httpResponse.statusText,
+        serverResponse: await httpResponse.text(),
+        errorCode: ApiErrorCodes.HTTPException,
+      })
+    }
+
+    return (await httpResponse.json()) as DocumentLog
   }
 
   protected async renderCompletion<
