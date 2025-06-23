@@ -69,6 +69,13 @@ export function integrationPresenter(integration: IntegrationDto) {
     }
   }
 
+  if (integration.type === IntegrationType.Pipedream) {
+    return {
+      name: integration.name,
+      type: integration.configuration.appName,
+    }
+  }
+
   if (integration.type === IntegrationType.Latitude) {
     return {
       name: integration.name,

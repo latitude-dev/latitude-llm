@@ -66,6 +66,17 @@
   .sidebar-icon-mask {
     clip-path: polygon(0 0, 100% 0, 100% 48%, 48% 48%, 48% 100%, 0 100%);
   }
+
+  iframe[src*='pipedream.com'] {
+    /* fixes: shadcn modals traps pointer events */
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999999 !important;
+    pointer-events: auto !important;
+  }
 }
 
 @layer base {

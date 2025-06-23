@@ -1,69 +1,52 @@
 'use client'
-import { McpTool } from '@latitude-data/constants'
+import { IntegrationType } from '@latitude-data/constants'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { buildConfigFieldName } from '../../buildIntegrationPayload'
-import { useState } from 'react'
+import { forwardRef, useImperativeHandle, useState } from 'react'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { pingCustomMcpAction } from '$/actions/integrations/pingCustomMcpServer'
+import { IntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
-export function ExternalIntegrationConfiguration() {
-  const [url, setUrl] = useState('')
-  const [toolList, setToolList] = useState<McpTool[]>()
-  const [error, setError] = useState<Error>()
-  const { execute, isPending } = useLatitudeAction(pingCustomMcpAction, {
-    onSuccess: ({ data }: { data: McpTool[] }) => {
-      setError(undefined)
-      setToolList(data)
-    },
-    onError: (data) => {
-      setToolList(undefined)
-      setError(data.err)
-    },
-  })
+export const ExternalIntegrationConfiguration = forwardRef<
+  {
+    validate: () => Promise<IntegrationConfiguration>
+  },
+  {}
+>((_, ref) => {
+  const { execute, isPending } = useLatitudeAction(pingCustomMcpAction)
+  const [url, setUrl] = useState<string>('')
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      validate: async () => {
+        if (!url) throw new Error('URL is required')
+        const [_, error] = await execute({ url })
+
+        if (error) throw error
+        return { type: IntegrationType.ExternalMCP, configuration: { url } }
+      },
+    }),
+    [url, execute],
+  )
 
   return (
-    <div className='flex flex-col gap-2'>
-      <div className='flex flex-row gap-2 items-center'>
-        <Input
-          required
-          type='text'
-          name={buildConfigFieldName({
-            fieldNamespace: 'url',
-          })}
-          label='URL'
-          description='URL to your Custom MCP Server.'
-          info='The URL to your Custom MCP Server.'
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-        />
-        <Button
-          variant='outline'
-          onClick={() => execute({ url })}
-          disabled={isPending || !url.length}
-          iconProps={isPending ? { name: 'loader', spin: true } : undefined}
-        >
-          <Text.H5 noWrap>
-            {isPending ? 'Testing...' : 'Test Connection'}
-          </Text.H5>
-        </Button>
-      </div>
-      {error && (
-        <Alert
-          variant='destructive'
-          title={error.name}
-          description={error.message}
-        />
-      )}
-      {toolList && (
-        <Alert
-          variant='default'
-          title='Connection successful'
-          description={`${toolList.length} tools available`}
-        />
+    <div className='flex flex-col gap-4'>
+      <Input
+        required
+        name='url'
+        label='URL'
+        description='URL to your Custom MCP Server.'
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+      />
+      {isPending && (
+        <div className='flex items-center gap-2'>
+          <Icon name='loader' spin color='foregroundMuted' />
+          <Text.H5 color='foregroundMuted'>Testing connection...</Text.H5>
+        </div>
       )}
     </div>
   )
-}
+})

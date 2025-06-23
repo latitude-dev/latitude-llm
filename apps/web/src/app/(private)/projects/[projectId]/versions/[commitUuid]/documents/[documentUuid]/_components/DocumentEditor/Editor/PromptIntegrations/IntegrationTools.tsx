@@ -1,7 +1,6 @@
 import { ReactNode, useCallback, useState } from 'react'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
-import useIntegrationTools from '$/stores/integrationTools'
-import { McpTool } from '@latitude-data/constants'
+import useIntegrationTools, { McpToolDto } from '$/stores/integrationTools'
 import { IntegrationDto } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
@@ -30,7 +29,7 @@ function IntegrationToolItem({
   onToggle,
 }: {
   disabled?: boolean
-  tool: McpTool
+  tool: McpToolDto
   isActive: boolean
   onToggle: () => void
 }) {
@@ -38,7 +37,7 @@ function IntegrationToolItem({
     <ItemWrapper>
       <div className='flex flex-row items-center gap-2 justify-between min-w-0'>
         <Text.H6B ellipsis noWrap color='foreground'>
-          {tool.name}
+          {tool.displayName ?? tool.name}
         </Text.H6B>
         <SwitchToggle
           checked={isActive}

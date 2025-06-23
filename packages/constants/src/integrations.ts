@@ -2,6 +2,7 @@ export enum IntegrationType {
   Latitude = 'latitude', // For internal use only
   ExternalMCP = 'custom_mcp',
   HostedMCP = 'mcp_server',
+  Pipedream = 'pipedream',
 }
 
 export enum HostedIntegrationType {

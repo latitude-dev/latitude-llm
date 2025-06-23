@@ -1,0 +1,1 @@
+ALTER TYPE "latitude"."integration_types" ADD VALUE 'pipedream';
