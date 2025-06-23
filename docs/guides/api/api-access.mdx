@@ -7,9 +7,9 @@ For detailed endpoint specifications, request/response schemas, and the ability 
 
 We recommend checking the SDK docs section in case you're looking for a specific language or framework.
 
-## Latitude HTTP API Documentation
+## Latitude HTTP API v3 Documentation
 
-This guide explains how to use the Latitude HTTP API to interact with the Prompt Manager and run AI-powered conversations.
+This guide explains how to use the Latitude HTTP API v3 to interact with the Prompt Manager and run AI-powered conversations.
 
 ### Authentication
 
@@ -21,7 +21,7 @@ Authorization: Bearer YOUR_API_KEY
 
 ### Base URL
 
-The base URL for API requests depends on your environment:
+The base URL for all API v3 requests is:
 
 `https://gateway.latitude.so/api/v3`
 
@@ -71,13 +71,13 @@ These headers are sent with every request to help you monitor and adjust your re
 
 Retrieve a specific prompt by its path.
 
-**Endpoint:** `GET /projects/{projectId}/versions/{versionUuid}/documents/{path}`
+**Endpoint:** `GET /projects/{projectId}/versions/{versionUuid}/documents/{documentPath}`
 
 **Path Parameters:**
 
 - `projectId`: Your project ID (required)
-- `versionUuid`: Version UUID (required, optional for SDK's defaults to 'live')
-- `path`: Path to the document (required)
+- `versionUuid`: Version UUID (required, defaults to 'live' in SDKs)
+- `documentPath`: Path to the document, e.g., `myfolder/myprompt.txt` (required)
 
 **Response:**
 
@@ -94,38 +94,41 @@ The response contains the existing document details along with its configuration
   "resolvedContent": "Document content without comments",
   "contentHash": "content-hash",
   "commitId": "commit-id",
-  "deletedAt": "deleted-at",
-  "createdAt": "created-at",
-  "updatedAt": "updated-at",
-  "mergedAt": "merged-at",
+  "deletedAt": null, // or timestamp if deleted
+  "createdAt": "created-at-timestamp",
+  "updatedAt": "updated-at-timestamp",
+  "mergedAt": "merged-at-timestamp", // or null
   "projectId": "project-id",
   "config": {
     "provider": "Provider name",
     "model": "Model name"
+    // ... other config properties
   }
 }
 ```
 
 #### 2. Get or Create a Document
 
+Retrieves an existing document or creates a new one if it doesn't exist.
+
 **Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/documents/get-or-create`
 
 **Path Parameters:**
 
 - `projectId`: Your project ID (required)
-- `versionUuid`: Version UUID (required, optional for SDK's defaults to 'live')
+- `versionUuid`: Version UUID (required, defaults to 'live' in SDKs)
 
 **Request Body:**
 
 ```json
 {
   "path": "path/to/document",
-  "prompt": "Your prompt here"
+  "prompt": "Your prompt content here" // Optional, defaults to empty
 }
 ```
 
 - `path`: Path to the document (required)
-- `prompt`: Prompt to use for the document (optional, defaults to empty)
+- `prompt`: Initial prompt content if creating a new document (optional)
 
 **Response:**
 
@@ -142,14 +145,15 @@ The response contains the created (or existing) document details along with its 
   "resolvedContent": "Document content without comments",
   "contentHash": "content-hash",
   "commitId": "commit-id",
-  "deletedAt": "deleted-at",
-  "createdAt": "created-at",
-  "updatedAt": "updated-at",
-  "mergedAt": "merged-at",
+  "deletedAt": null, // or timestamp if deleted
+  "createdAt": "created-at-timestamp",
+  "updatedAt": "updated-at-timestamp",
+  "mergedAt": "merged-at-timestamp", // or null
   "projectId": "project-id",
   "config": {
     "provider": "Provider name",
     "model": "Model name"
+    // ... other config properties
   }
 }
 ```
@@ -163,22 +167,39 @@ Run a specific document (prompt) with optional parameters.
 **Path Parameters:**
 
 - `projectId`: Your project ID (required)
-- `versionUuid`: Version UUID (required, optional for SDK's defaults to 'live')
+- `versionUuid`: Version UUID (required, defaults to 'live' in SDKs)
 
 **Request Body:**
 
 ```json
 {
-  "path": "path/to/document",
-  "parameters": {
+  "path": "path/to/document", // Required
+  "parameters": { // Optional
     "key1": "value1",
     "key2": "value2"
   },
-  "stream": false
+  "stream": false, // Optional, defaults to false
+  "messages": [ // Optional, for continuing a conversation or providing initial messages
+    {
+      "role": "user", // or "system", "assistant"
+      "content": [
+        {
+          "type": "text",
+          "text": "Hello AI"
+        }
+        // ... other message parts like images
+      ]
+    }
+  ],
+  "conversationUuid": "existing-conversation-uuid" // Optional, to continue an existing conversation
 }
 ```
 
+- `path`: Path to the document to run (required).
+- `parameters`: Key-value pairs for prompt parameterization (optional).
 - `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the last event is returned.
+- `messages`: An array of messages to provide context or continue a conversation. Follows the [PromptL message format](/promptl/syntax/messages) (optional).
+- `conversationUuid`: UUID of an existing conversation to continue (optional).
 
 **Response:**
 
@@ -188,23 +209,28 @@ Run a specific document (prompt) with optional parameters.
 
 ```json
 {
-  "uuid": string,
-  "conversation": Message[],
+  "uuid": "conversation-uuid", // UUID of the conversation
+  "conversation": [ // Array of Message objects representing the full conversation
+    // Message objects follow PromptL structure
+  ],
   "response": {
-    "streamType": "text" | "object",
-    "usage": {
-      "promptTokens": number,
-      "completionTokens": number,
-      "totalTokens": number
+    "streamType": "text" | "object", // Type of the final response
+    "usage": { // Token usage information
+      "promptTokens": 10,
+      "completionTokens": 20,
+      "totalTokens": 30
     },
-    "text": string,
-    "object": object | undefined,
-    "toolCalls": ToolCall[]
+    "text": "Final text response from AI", // if streamType is "text"
+    "object": {}, // if streamType is "object"
+    "toolCalls": [ // Array of tool calls made during the execution
+      // ToolCall objects
+    ]
+  }
 }
 ```
 
 <Note>
-  Message follows the [PromptL format](/promptl/getting-started/introduction).
+  Message objects in `conversation` and `messages` (request) follow the [PromptL format](/promptl/syntax/messages).
 </Note>
 
 <Note>
@@ -212,151 +238,477 @@ ToolCall has the following format:
 
 ```typescript
 type ToolCall = {
-  id: string
-  name: string
-  arguments: Record<string, unknown>
-}
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+};
 ```
-
 </Note>
 
 #### 4. Chat
 
-The previously described `POST /projects/{projectId}/versions/{versionUuid}/documents/run` endpoint can also be used to continue a conversation. Notice all events contain a `uuid` field that represents that conversation with the AI. You can use this uuid to continue the conversation.
+Continue an existing conversation or start a new one with a series of messages.
 
 **Endpoint:** `POST /conversations/{conversationUuid}/chat`
 
 **Path Parameters:**
 
-- `conversationUuid`: UUID of the conversation
+- `conversationUuid`: UUID of the conversation (required). If you want to start a new chat and get a `conversationUuid`, you can use the "Run a Document" endpoint first without a `conversationUuid`.
 
 **Request Body:**
-
-- Messages follow the [PromptL format](/promptl/getting-started/introduction). If you're using a different method to run your prompts, you'll need to format your messages accordingly.
 
 ```json
 {
   "messages": [
     {
-      "role": "user" | "system" | "assistant",
+      "role": "user", // or "system", "assistant"
+      "content": [
         {
           "type": "text",
-          "content": string
+          "text": "Next message in the conversation."
         }
+        // ... other message parts
+      ]
     }
   ],
-  "stream": true
+  "stream": false // Optional, defaults to false
 }
 ```
 
-- `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the last event is returned. Check out the [Streaming Events](/guides/api/streaming-events) guide for more information about the specific events you can expect.
+- `messages`: An array of messages to append to the conversation (required). Messages follow the [PromptL format](/promptl/syntax/messages).
+- `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the last event is returned.
 
 <Note>
-  Message follows the [PromptL format](/promptl/getting-started/introduction).
+  Message objects follow the [PromptL format](/promptl/syntax/messages).
 </Note>
 
 **Response:**
-The response is a stream of Server-Sent Events (SSE) or a single JSON response containing the final event, similar to the "Run a Document" endpoint.
+The response structure is identical to the "Run a Document" endpoint (SSE stream or a single JSON object with the final event).
 
 Check out the [Streaming Events](/guides/api/streaming-events) guide for more information about the specific events you can expect.
 
-**Error Handling**
+#### 5. Annotate a Log (Create Evaluation Result)
 
-The API uses standard HTTP status codes. In case of an error, the response body will contain an error message:
-
-```json
-{
-  "error": {
-    "message": "Error description"
-  }
-}
-```
-
-#### 5. Annotate a Log
-
-Add an annotation (evaluation score) to a log.
+Add an annotation, typically an evaluation score, to a log associated with a conversation. This is also referred to as creating an evaluation result.
 
 **Endpoint:** `POST /conversations/{conversationUuid}/evaluations/{evaluationUuid}/annotate`
 
 **Path Parameters:**
 
-- `conversationUuid`: UUID of the conversation to annotate
-- `evaluationUuid`: UUID of the evaluation to use
+- `conversationUuid`: UUID of the conversation to annotate (required).
+- `evaluationUuid`: UUID of the evaluation definition to use for this annotation (required).
 
 **Request Body:**
 
 ```json
 {
-  "score": 2,
-  "versionUuid": "version-uuid", // optional
-  "metadata": {
+  "score": 2, // The raw score
+  "versionUuid": "version-uuid", // Optional: UUID of the specific prompt version being evaluated
+  "metadata": { // Optional: Any additional metadata
     "reason": "The output is not relevant to the prompt"
-  }
+  },
+  "target": "Optional target string for certain evaluation types"
 }
 ```
+- `score`: The raw score value (numeric, boolean, or text depending on the evaluation type). (Required)
+- `versionUuid`: The UUID of the prompt version this annotation pertains to. (Optional)
+- `metadata`: An object for any additional information. (Optional)
+- `target`: The expected or target output, used by some evaluation types (e.g., for string matching). (Optional)
+
 
 **Response:**
 
 ```json
 {
-  "uuid": "annotation-uuid",
+  "uuid": "annotation-result-uuid",
   "score": 2,
-  "normalizedScore": 0.5,
+  "normalizedScore": 0.5, // Score normalized to a 0-1 range, if applicable
   "metadata": {
     "reason": "The output is not relevant to the prompt"
   },
-  "hasPassed": false,
-  "error": "optional-error-message",
+  "hasPassed": false, // Boolean indicating if the evaluation passed (based on evaluation's pass/fail criteria)
+  "error": null, // Optional error message if annotation failed
   "versionUuid": "version-uuid"
 }
 ```
 
 #### 6. Create Log Entry
 
-Create a log entry for a document.
+Manually create a log entry for a document interaction. This is useful for logging interactions that happened outside of the direct "Run a Document" flow.
 
 **Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/documents/logs`
 
 **Path Parameters:**
 
-- `projectId`: Your project ID (required)
-- `versionUuid`: Version UUID (required, optional for SDK's defaults to 'live')
+- `projectId`: Your project ID (required).
+- `versionUuid`: Version UUID (required, defaults to 'live' in SDKs).
 
 **Request Body:**
 
-- Messages follow the [PromptL format](/promptl/getting-started/introduction). If you're using a different method to run your prompts, you'll need to format your messages accordingly.
+Messages and response should represent the interaction you want to log.
 
 ```json
 {
-  "path": "path/to/document",
-  "messages": [
+  "path": "path/to/document", // Required: Path of the document associated with this log
+  "messages": [ // Required: Array of messages in PromptL format
     {
-      "role": "user" | "system" | "assistant",
-        {
-          "type": "text",
-          "content": string
-        }
+      "role": "user",
+      "content": [ { "type": "text", "text": "User input" } ]
+    },
+    {
+      "role": "assistant",
+      "content": [ { "type": "text", "text": "AI response" } ]
     }
   ],
-  "response": string
+  "response": "Full AI response content as a string", // Optional: A string representation of the AI's final response
+  "conversationUuid": "optional-conversation-uuid", // Optional
+  "customIdentifier": "optional-custom-id", // Optional
+  "duration": 1500, // Optional: Duration of the interaction in milliseconds
+  "usage": { // Optional: Token usage
+      "promptTokens": 10,
+      "completionTokens": 20,
+      "totalTokens": 30
+  },
+  "metadata": { // Optional: Any other metadata
+    "key": "value"
+  }
 }
 ```
+
+- `path`: Path to the document (required).
+- `messages`: Array of messages representing the conversation history. Follows [PromptL format](/promptl/syntax/messages) (required).
+- `response`: A string representation of the final AI response (optional).
+- `conversationUuid`: Link this log to an existing conversation (optional).
+- `customIdentifier`: A custom ID you can use to reference this log (optional).
+- `duration`: Duration of the call in milliseconds (optional).
+- `usage`: Token usage statistics (optional).
+- `metadata`: Any additional metadata to store with the log (optional).
+
 
 **Response:**
 
 ```json
 {
-  "id": "document-id",
-  "uuid": "log-uuid",
+  "id": "log-entry-id", // Database ID of the log
+  "uuid": "log-uuid", // Public UUID of the log
   "documentUuid": "document-uuid",
-  "commitId": "commit-id",
-  "resolvedContent": "Document content without comments",
+  "commitId": "commit-id", // Commit ID of the document version used
+  "resolvedContent": "Document content without comments at the time of logging",
   "contentHash": "content-hash",
-  "parameters": {},
-  "customIdentifier": "custom-identifier",
-  "duration": "duration",
-  "source": "source",
-  "createdAt": "created-at",
-  "updatedAt": "updated-at"
+  "parameters": {}, // Parameters used, if any
+  "customIdentifier": "optional-custom-id",
+  "duration": 1500,
+  "source": "api", // Source of the log, e.g., "api", "sdk"
+  "createdAt": "created-at-timestamp",
+  "updatedAt": "updated-at-timestamp",
+  "conversationUuid": "optional-conversation-uuid"
 }
 ```
+
+**Error Handling**
+
+The API uses standard HTTP status codes. In case of an error, the response body will typically contain an error message in the following format:
+
+```json
+{
+  "error": {
+    "message": "Error description",
+    "code": "ERROR_CODE_IF_APPLICABLE"
+    // ... other error details if present
+  }
+}
+```
+
+### Project Endpoints
+
+#### 7. Get All Projects
+
+Retrieves a list of all active projects within the authenticated workspace.
+
+**Endpoint:** `GET /projects`
+
+**Response:**
+
+An array of project objects.
+
+**Response Body Example:**
+
+```json
+[
+  {
+    "id": 1,
+    "uuid": "project-uuid-1",
+    "name": "My First Project",
+    "description": null,
+    "slug": "my-first-project",
+    "color": null,
+    "createdAt": "2023-01-01T12:00:00.000Z",
+    "updatedAt": "2023-01-01T12:00:00.000Z",
+    "workspaceId": "workspace-uuid-123",
+    "creatorId": 101
+  }
+]
+```
+Each project object in the array will follow the `ProjectSchema` (details may vary slightly based on exact schema definition but generally include id, uuid, name, etc.).
+
+#### 8. Create a Project
+
+Creates a new project within the authenticated workspace.
+
+**Endpoint:** `POST /projects`
+
+**Request Body:**
+
+```json
+{
+  "name": "New Awesome Project"
+}
+```
+- `name`: The name for the new project (required, string, min 1 character).
+
+**Response:**
+
+The newly created project object.
+
+**Response Body Example:**
+
+```json
+{
+  "id": 2,
+  "uuid": "project-uuid-2",
+  "name": "New Awesome Project",
+  "description": null,
+  "slug": "new-awesome-project",
+  "color": null,
+  "createdAt": "2023-01-02T14:30:00.000Z",
+  "updatedAt": "2023-01-02T14:30:00.000Z",
+  "workspaceId": "workspace-uuid-123",
+  "creatorId": 101
+}
+```
+
+#### 9. Push Document Changes to a Version (Commit)
+
+Pushes a set of document changes (creations, modifications, deletions) to a specific version (commit) of a project.
+
+**Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/push`
+
+**Path Parameters:**
+
+- `projectId`: The ID of the project (required).
+- `versionUuid`: The UUID of the version (commit) to push changes to (required).
+
+**Request Body:**
+
+```json
+{
+  "changes": [
+    {
+      "path": "/my-prompt.txt",
+      "content": "New updated content for the prompt.",
+      "status": "modified", // "added", "modified", "deleted", or "unchanged"
+      "contentHash": "optional-sha256-hash-of-the-new-content" // Optional
+    },
+    {
+      "path": "/new-prompt.txt",
+      "content": "This is a brand new prompt.",
+      "status": "added"
+    },
+    {
+      "path": "/old-prompt.txt",
+      "content": "", // Content can be empty for deletions
+      "status": "deleted"
+    }
+  ]
+}
+```
+- `changes`: An array of change objects (required).
+    - `path`: Document path (string, required).
+    - `content`: Document content (string, required for `added`/`modified`, can be empty for `deleted`).
+    - `status`: The status of the change (`added`, `modified`, `deleted`, `unchanged`) (string, required).
+    - `contentHash`: Optional SHA256 hash of the content for validation.
+
+**Response:**
+
+Confirms the push operation.
+
+**Response Body Example:**
+
+```json
+{
+  "versionUuid": "version-uuid-here", // UUID of the version after push
+  "documentsProcessed": 3 // Number of documents processed
+}
+```
+
+### Version Endpoints
+
+#### 10. Get a Project Version (Commit)
+
+Retrieves details for a specific version (commit) of a project.
+
+**Endpoint:** `GET /projects/{projectId}/versions/{versionUuid}`
+
+**Path Parameters:**
+
+- `projectId`: The ID of the project (required).
+- `versionUuid`: The UUID of the version (commit) (required).
+
+**Response:**
+
+The version (commit) object.
+
+**Response Body Example:**
+(Based on `VersionSchema` / `CommitSchema` from route files)
+```json
+{
+  "id": 123,
+  "uuid": "version-uuid-abc",
+  "projectId": 1,
+  "message": "Initial commit",
+  "authorName": "Jules Verne",
+  "authorEmail": "jules@example.com",
+  "authorId": 101,
+  "createdAt": "2023-01-01T10:00:00.000Z",
+  "updatedAt": "2023-01-01T10:00:00.000Z",
+  "status": "committed", // Example status
+  "parentCommitUuid": null
+}
+```
+
+#### 11. Create a Project Version (Commit)
+
+Creates a new version (commit) for a project. Typically, versions are based on the current state of documents or changes from a parent version.
+
+**Endpoint:** `POST /projects/{projectId}/versions`
+
+**Path Parameters:**
+
+- `projectId`: The ID of the project (required).
+
+**Request Body:**
+
+```json
+{
+  "name": "My New Version Title" // This corresponds to the commit message or title
+}
+```
+- `name`: A name or message for the version (commit) (string, required).
+
+**Response:**
+
+The newly created version (commit) object.
+
+**Response Body Example:**
+(Based on `CommitSchema` from route files)
+```json
+{
+  "id": 124,
+  "uuid": "new-version-uuid-xyz",
+  "projectId": 1,
+  "message": "My New Version Title",
+  "authorName": "Jules Verne",
+  "authorEmail": "jules@example.com",
+  "authorId": 101,
+  "createdAt": "2023-01-03T11:00:00.000Z",
+  "updatedAt": "2023-01-03T11:00:00.000Z",
+  "status": "committed", // Example status
+  "parentCommitUuid": "version-uuid-abc" // Example parent
+}
+```
+
+### Document Endpoints (within a Version)
+
+The following endpoints operate on documents within a specific project version.
+
+#### 12. Get All Documents in a Version
+
+Retrieves a list of all documents (prompts) within a specific version of a project.
+
+**Endpoint:** `GET /projects/{projectId}/versions/{versionUuid}/documents`
+
+**Path Parameters:**
+
+- `projectId`: Your project ID (required).
+- `versionUuid`: Version UUID (required, defaults to 'live' in SDKs).
+
+**Response:**
+
+An array of document objects.
+
+**Response Body Example:**
+(Based on `documentPresenterSchema`)
+```json
+[
+  {
+    "id": "doc-id-1",
+    "documentUuid": "doc-uuid-1",
+    "path": "folder/prompt1.txt",
+    "content": "Content of prompt 1",
+    "resolvedContent": "Content of prompt 1 without comments",
+    "contentHash": "hash1",
+    "commitId": "commit-id-of-this-version",
+    "deletedAt": null,
+    "createdAt": "2023-01-01T00:00:00.000Z",
+    "updatedAt": "2023-01-01T00:00:00.000Z",
+    "mergedAt": null,
+    "projectId": "project-id-1",
+    "config": { "provider": "openai", "model": "gpt-4" }
+  },
+  {
+    "id": "doc-id-2",
+    "documentUuid": "doc-uuid-2",
+    "path": "prompt2.txt",
+    // ... other fields
+  }
+]
+```
+
+#### 13. Create a Document in a Version
+
+Creates a new document (prompt) within a specific version of a project.
+
+**Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/documents`
+
+**Path Parameters:**
+
+- `projectId`: Your project ID (required).
+- `versionUuid`: Version UUID (required, defaults to 'live' in SDKs, or specify a particular version).
+
+**Request Body:**
+
+```json
+{
+  "path": "newfolder/my_new_prompt.txt",
+  "prompt": "This is the initial content of my new prompt." // Optional, defaults to empty
+}
+```
+- `path`: The full path for the new document (string, required).
+- `prompt`: The initial content for the prompt (string, optional).
+
+**Response:**
+
+The newly created document object.
+
+**Response Body Example:**
+(Based on `documentPresenterSchema`)
+```json
+{
+  "id": "new-doc-id",
+  "documentUuid": "new-doc-uuid",
+  "path": "newfolder/my_new_prompt.txt",
+  "content": "This is the initial content of my new prompt.",
+  "resolvedContent": "This is the initial content of my new prompt.",
+  "contentHash": "new-hash",
+  "commitId": "commit-id-of-this-version",
+  "deletedAt": null,
+  "createdAt": "2023-01-04T00:00:00.000Z",
+  "updatedAt": "2023-01-04T00:00:00.000Z",
+  "mergedAt": null,
+  "projectId": "project-id-1",
+  "config": { "provider": "default", "model": "default" } // Example config
+}
+```
+<Note>
+  The "Get a Document", "Get or Create a Document", "Run a Document", "Chat", "Annotate a Log", and "Create Log Entry" endpoints documented earlier also operate within the context of projects and versions, and their paths reflect this (e.g., `/projects/{projectId}/versions/{versionUuid}/documents/...`).
+</Note>
