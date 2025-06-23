@@ -4,6 +4,8 @@ import { createDocumentRoute } from './create/create.route'
 import { getHandler, getRouteV3 } from './get'
 import { getAllHandler, getAllRoute } from './getAll'
 import { getOrCreateHandler, getOrCreateRouteV3 } from './getOrCreate'
+import { createLogHandler } from './logs/create.handler'
+import { createLogRouteV3 } from './logs/create.route'
 import { runHandler, runRoute } from './run'
 
 export const documentsRouter = createRouter()
@@ -12,3 +14,4 @@ export const documentsRouter = createRouter()
   .openapi(createDocumentRoute, createDocumentHandler)
   .openapi(getOrCreateRouteV3, getOrCreateHandler)
   .openapi(runRoute, runHandler)
+  .openapi(createLogRouteV3, createLogHandler)
