@@ -725,7 +725,6 @@ class Latitude {
     const response = await makeRequest({
       method: 'GET',
       handler: HandlerType.GetAllProjects,
-      params: {},
       options: this.options,
     })
 
@@ -736,7 +735,6 @@ class Latitude {
     const response = await makeRequest({
       method: 'POST',
       handler: HandlerType.CreateProject,
-      params: {},
       body: { name },
       options: this.options,
     })
