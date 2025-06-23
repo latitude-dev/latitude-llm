@@ -80,7 +80,7 @@
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@next/eslint-plugin-next": "^14.2.4",
-    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-commonjs": "^28.0.6",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@rollup/plugin-terser": "^0.4.4",
