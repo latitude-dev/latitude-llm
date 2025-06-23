@@ -12,7 +12,7 @@ export class ConfigManager {
    */
   async setApiKey(apiKey: string): Promise<void> {
     try {
-      const keytar = await import('keytar')
+      const { default: keytar } = await import('keytar')
       await keytar.setPassword(this.keychainService, 'apiKey', apiKey)
     } catch (error) {
       throw new Error(
@@ -32,7 +32,7 @@ export class ConfigManager {
     if (envApiKey) return envApiKey
 
     try {
-      const keytar = await import('keytar')
+      const { default: keytar } = await import('keytar')
       const apiKey = (await keytar.getPassword(
         this.keychainService,
         'apiKey',
@@ -56,7 +56,7 @@ export class ConfigManager {
    */
   async clear(): Promise<void> {
     try {
-      const keytar = await import('keytar')
+      const { default: keytar } = await import('keytar')
       await keytar.deletePassword(this.keychainService, 'apiKey')
     } catch (_) {
       // do nothing, if it fails it's not a problem probably just means there's
