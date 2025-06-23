@@ -109,6 +109,7 @@ jobs:
       - name: Node.js Test
         env:
           NODE_ENV: test
+          LATITUDE_API_KEY: fake-test-key # NOTE: Used by packages/cli
         run: pnpm test
 
       - name: Python Test

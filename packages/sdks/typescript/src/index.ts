@@ -739,6 +739,17 @@ class Latitude {
       options: this.options,
     })
 
+    if (!response.ok) {
+      const error = (await response.json()) as ApiErrorJsonResponse
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
+      })
+    }
+
     return (await response.json()) as {
       project: Project
       version: Version
@@ -816,6 +827,18 @@ class Latitude {
       options: this.options,
     })
 
+    if (!response.ok) {
+      const error = (await response.json()) as ApiErrorJsonResponse
+
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
+      })
+    }
+
     return (await response.json()) as Version
   }
 
@@ -836,6 +859,17 @@ class Latitude {
       body: { changes },
       options: this.options,
     })
+    if (!response.ok) {
+      const error = (await response.json()) as ApiErrorJsonResponse
+
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
+      })
+    }
 
     const result = (await response.json()) as {
       commitUuid: string

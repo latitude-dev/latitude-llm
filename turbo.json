@@ -53,7 +53,11 @@
     "FILE_STORAGE_ROOT_PATH",
     "EMAIL_TRIGGER_DOMAIN",
     "ENABLE_ALL_FLAGS",
-    "DD_APM_ENABLED"
+    "DD_APM_ENABLED",
+    "TMPDIR",
+    "TEMP",
+    "GIT_PAGER",
+    "PAGER"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],

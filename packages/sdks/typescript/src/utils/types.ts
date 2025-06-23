@@ -84,17 +84,17 @@ export type Commit = {
 }
 
 export type Version = {
-  id: number
-  uuid: string
-  projectId: number
-  message: string
-  authorName: string | null
-  authorEmail: string | null
-  authorId: number | null
   createdAt: string
   updatedAt: string
-  status: string
-  parentCommitUuid: string | null
+  id: number
+  uuid: string
+  title: string
+  description: string | null
+  projectId: number
+  version: number | null
+  userId: string
+  mergedAt: string | null
+  deletedAt: string | null
 }
 
 export type CreateProjectBodyParams = {
