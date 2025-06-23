@@ -23,6 +23,7 @@ import type {
 } from './browser'
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
+import { App, V1Component } from '@pipedream/sdk/browser'
 
 export {
   DocumentType,
@@ -487,3 +488,7 @@ export const PROJECT_STATS_CACHE_KEY = (
   projectId: number,
 ) => `project_stats:${workspaceId}:${projectId}`
 export const STATS_CACHE_TTL = 2 * 24 * 60 * 60 // 2 days
+
+export type AppDto = App & {
+  components: V1Component[]
+}

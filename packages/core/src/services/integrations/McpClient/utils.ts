@@ -1,13 +1,18 @@
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { LatitudeError } from '../../../lib/errors'
 import { Result } from './../../../lib/Result'
 import { TypedResult } from './../../../lib/Result'
 
 // Types
+export type McpClientTransport =
+  | SSEClientTransport
+  | StreamableHTTPClientTransport
+
 export interface McpClientConnection {
   client: McpClient
-  transport: SSEClientTransport
+  transport: McpClientTransport
 }
 
 export interface RetryConfig {
@@ -41,6 +46,7 @@ export const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxTimeout: 30000, // 30 seconds
   initialDelay: 1000, // 1 second
 }
+export const PIPEDREAM_MCP_URL = 'https://remote.mcp.pipedream.net'
 
 // Helper Functions
 export const sleep = (ms: number): Promise<void> =>

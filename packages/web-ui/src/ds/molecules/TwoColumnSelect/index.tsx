@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useState } from 'react'
+import { JSX, ReactNode, useCallback, useState } from 'react'
 import { Skeleton } from '../../atoms/Skeleton'
 import { cn } from '../../../lib/utils'
 import { Icon, IconName } from '../../atoms/Icons'
@@ -40,7 +40,7 @@ export type TwoColumnSelectOption<V extends unknown = unknown> = {
   value: V
   name: string
   label: string
-  icon: IconName
+  icon: IconName | JSX.Element
   isActive?: boolean
 }
 
@@ -84,7 +84,11 @@ function OptionItem<V extends unknown = unknown>({
         </Text.H5B>
       </div>
       <div className='flex flex-row items-center gap-2 min-w-0'>
-        <Icon className='flex-none' name={icon} color='foregroundMuted' />
+        {typeof icon === 'string' ? (
+          <Icon className='flex-none' name={icon} color='foregroundMuted' />
+        ) : (
+          icon
+        )}
         <Text.H6 ellipsis noWrap color='foregroundMuted'>
           {label}
         </Text.H6>

@@ -87,7 +87,11 @@ const IntegrationsTable = () => {
               </TableCell>
               <TableCell>
                 <div className='flex gap-2 items-center'>
-                  <Icon name={values.icon} color='foregroundMuted' />
+                  {typeof values.icon === 'string' ? (
+                    <Icon name={values.icon} color='foregroundMuted' />
+                  ) : (
+                    values.icon
+                  )}
                   <Text.H5 color='foregroundMuted'>{values.label}</Text.H5>
                 </div>
               </TableCell>

@@ -267,6 +267,12 @@ export const env = createEnv({
     IMPORT_DEFAULT_PROJECT: z.coerce.boolean().optional().default(false),
 
     LIMITED_VIEW_PROJECT_IDS: z.string().optional(),
+
+    // Pipedream
+    PIPEDREAM_ENVIRONMENT: z.enum(['development', 'production']).optional(),
+    PIPEDREAM_CLIENT_ID: z.string().optional(),
+    PIPEDREAM_CLIENT_SECRET: z.string().optional(),
+    PIPEDREAM_PROJECT_ID: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,
