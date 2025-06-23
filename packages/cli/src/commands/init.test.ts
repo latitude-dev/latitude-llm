@@ -137,7 +137,7 @@ describe('InitCommand', () => {
 
       expect(mockInquirer.prompt).toHaveBeenCalledWith([
         expect.objectContaining({
-          type: 'input',
+          type: 'password',
           name: 'apiKey',
           message: 'Enter your Latitude API key:',
         }),
