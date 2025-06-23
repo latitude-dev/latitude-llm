@@ -20,27 +20,7 @@ const EXTERNALS = [
 ]
 
 const config = [
-  // CLI Tool
-  {
-    input: 'src/index.ts',
-    output: {
-      file: 'dist/index.cjs', // Use .cjs extension for CommonJS modules
-      format: 'cjs', // Using CommonJS for Node.js compatibility
-      sourcemap: true,
-      banner: '#!/usr/bin/env node',
-    },
-    plugins: [
-      json(),
-      typescript({
-        exclude: ['**/__tests__', '**/*.test.ts'],
-      }),
-      replace({
-        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-        preventAssignment: true,
-      }),
-    ],
-    external: EXTERNALS,
-  },
+  // CLI Tool - ESM only
   {
     input: 'src/index.ts',
     output: {
