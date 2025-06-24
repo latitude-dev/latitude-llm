@@ -34,11 +34,15 @@ import { InsertEmptyLinePlugin } from './plugins/InsertEmptyLinePlugin'
 import { VariableTransformPlugin } from './plugins/VariableTransformPlugin'
 import { VariableNode } from './nodes/VariableNode'
 import { VariableMenuPlugin } from './plugins/VariablesMenuPlugin'
+import { ReferencesPlugin } from './plugins/ReferencesPlugin'
+import { ReferenceNode } from './nodes/ReferenceNode'
+import { font } from '../../../tokens'
+import { BlocksEditorProvider } from './Provider'
 
 const theme = {
   ltr: 'ltr',
   rtl: 'rtl',
-  paragraph: 'block-paragraph text-sm leading-relaxed',
+  paragraph: cn('block-paragraph align-middle', font.size.h5),
   text: {
     bold: 'font-bold',
     italic: 'italic',
@@ -68,7 +72,8 @@ function OnChangeHandler({
           onChange(textContent)
         }
 
-        // FIXME: Move to a separate function to handle blocks conversion
+        // Move to a separate function to handle blocks conversion
+        // This can be tested
         if (onBlocksChange) {
           const root = $getRoot()
           const blocks: AnyBlock[] = []
@@ -177,6 +182,10 @@ export function BlocksEditor({
   onChange,
   onBlocksChange,
   className,
+  prompts,
+  onRequestPromptMetadata,
+  onToggleDevEditor,
+  Link,
   readOnly = false,
   autoFocus = false,
 }: BlocksEditorProps) {
@@ -196,68 +205,75 @@ export function BlocksEditor({
       console.error('Editor error:', error)
     },
     editable: !readOnly,
-    nodes: [MessageBlockNode, StepBlockNode, VariableNode],
+    nodes: [MessageBlockNode, StepBlockNode, VariableNode, ReferenceNode],
   }
 
   return (
-    <div
-      className={cn(
-        'relative border border-gray-200 rounded-lg bg-white',
-        'focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500',
-        className,
-      )}
-    >
-      <LexicalComposer initialConfig={initialConfig}>
-        <div className='relative' ref={onRef}>
-          <RichTextPlugin
-            contentEditable={
-              <ContentEditable
-                className={cn(
-                  'min-h-[300px] py-4 [&_>*]:px-4 outline-none resize-none text-sm leading-relaxed',
-                  'focus:outline-none',
-                  VERTICAL_SPACE_CLASS,
-                  {
-                    'cursor-default': readOnly,
-                  },
-                )}
-                aria-placeholder={placeholder}
-                placeholder={
-                  <div className='absolute top-4 left-4 text-gray-400 pointer-events-none select-none'>
-                    {placeholder}
-                  </div>
-                }
-              />
-            }
-            ErrorBoundary={LexicalErrorBoundary}
-          />
+    <BlocksEditorProvider Link={Link} prompts={prompts}>
+      <div
+        className={cn(
+          'relative border border-gray-200 rounded-lg bg-white',
+          'focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500',
+          className,
+        )}
+      >
+        <LexicalComposer initialConfig={initialConfig}>
+          <div className='relative' ref={onRef}>
+            <RichTextPlugin
+              contentEditable={
+                <ContentEditable
+                  className={cn(
+                    'min-h-[300px] py-4 [&_>*]:px-4 outline-none resize-none text-sm leading-relaxed',
+                    'focus:outline-none',
+                    VERTICAL_SPACE_CLASS,
+                    {
+                      'cursor-default': readOnly,
+                    },
+                  )}
+                  aria-placeholder={placeholder}
+                  placeholder={
+                    <div className='absolute top-4 left-4 text-gray-400 pointer-events-none select-none'>
+                      {placeholder}
+                    </div>
+                  }
+                />
+              }
+              ErrorBoundary={LexicalErrorBoundary}
+            />
 
-          {/* Core Plugins */}
-          <HistoryPlugin />
-          <BlocksPlugin />
-          <EnterKeyPlugin />
-          <InsertEmptyLinePlugin />
-          <StepNameEditPlugin />
-          <TypeaheadMenuPlugin />
-          <VariableMenuPlugin />
-          <InitializeBlocksPlugin initialBlocks={initialValue} />
-          <HierarchyValidationPlugin />
-          <VariableTransformPlugin />
+            {/* Core Plugins */}
+            <HistoryPlugin />
+            <BlocksPlugin />
+            <EnterKeyPlugin />
+            <InsertEmptyLinePlugin />
+            <StepNameEditPlugin />
+            <TypeaheadMenuPlugin />
+            <VariableMenuPlugin />
+            <ReferencesPlugin
+              prompts={prompts}
+              onRequestPromptMetadata={onRequestPromptMetadata}
+              onToggleDevEditor={onToggleDevEditor}
+            />
+            <InitializeBlocksPlugin initialBlocks={initialValue} />
+            <HierarchyValidationPlugin />
+            <VariableTransformPlugin />
 
-          {/* Drag and Drop Plugin */}
-          {!readOnly && floatingAnchorElem && (
-            <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
-          )}
+            {/* Drag and Drop Plugin */}
+            {!readOnly && floatingAnchorElem && (
+              <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
+            )}
 
-          {/* Auto focus */}
-          {autoFocus && <AutoFocusPlugin />}
+            {/* Auto focus */}
+            {autoFocus && <AutoFocusPlugin />}
 
-          {/* Change handler */}
-          <OnChangeHandler
-            onChange={onChange}
-            onBlocksChange={onBlocksChange}
-          />
-        </div>
-      </LexicalComposer>
-    </div>
+            {/* Change handler */}
+            <OnChangeHandler
+              onChange={onChange}
+              onBlocksChange={onBlocksChange}
+            />
+          </div>
+        </LexicalComposer>
+      </div>
+    </BlocksEditorProvider>
   )
 }

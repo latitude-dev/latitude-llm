@@ -1,7 +1,20 @@
-import { memo, Suspense } from 'react'
+import { memo, Suspense, useCallback } from 'react'
+import Link from 'next/link'
 import { AstError, AnyBlock } from '@latitude-data/constants/simpleBlocks'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
-import { BlocksEditor } from '@latitude-data/web-ui/molecules/BlocksEditor'
+import {
+  BlocksEditor,
+  IncludedPrompt,
+} from '@latitude-data/web-ui/molecules/BlocksEditor'
+import {
+  ICommitContextType,
+  IProjectContextType,
+} from '@latitude-data/web-ui/providers'
+import { type DocumentVersion } from '@latitude-data/core/browser'
+import { useIncludabledPrompts } from './useIncludabledPrompts'
+import { scan } from 'promptl-ai'
+import useDocumentVersions from '$/stores/documentVersions'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 // Example blocks to demonstrate the editor
 const exampleBlocks: AnyBlock[] = [
@@ -62,16 +75,34 @@ const exampleBlocks: AnyBlock[] = [
 
 export const PlaygroundBlocksEditor = memo(
   ({
+    project,
+    commit,
+    document,
+    onToggleBlocksEditor,
     value: _prompt,
   }: {
+    project: IProjectContextType['project']
+    commit: ICommitContextType['commit']
+    document: DocumentVersion
     compileErrors: AstError[] | undefined
     blocks: AnyBlock[] | undefined
     value: string
     defaultValue?: string
     isSaved: boolean
     readOnlyMessage?: string
+    onToggleBlocksEditor: ReactStateDispatch<boolean>
     onChange: (value: string) => void
   }) => {
+    const { data: documents } = useDocumentVersions({
+      commitUuid: commit?.uuid,
+      projectId: project?.id,
+    })
+    const prompts = useIncludabledPrompts({
+      project,
+      commit,
+      document,
+      documents,
+    })
     // const blocksToRender = blocks.length > 0 ? blocks : exampleBlocks
 
     const handleBlocksChange = (_updatedBlocks: AnyBlock[]) => {
@@ -79,29 +110,29 @@ export const PlaygroundBlocksEditor = memo(
       // For now, we'll just stringify the blocks
       // onChange(JSON.stringify(updatedBlocks, null, 2))
     }
-
+    const onRequestPromptMetadata = useCallback(
+      async ({ id }: IncludedPrompt) => {
+        const prompt = documents.find((doc) => doc.id === id)
+        return await scan({ prompt: prompt!.content })
+      },
+      [documents],
+    )
+    const onToogleDevEditor = useCallback(() => {
+      onToggleBlocksEditor(false)
+    }, [onToggleBlocksEditor])
     return (
       <Suspense fallback={<TextEditorPlaceholder />}>
-        <div className='space-y-4'>
-          <div className='text-sm text-gray-600'>
-            Blocks Editor Demo - {exampleBlocks.length} blocks loaded
-          </div>
-          <BlocksEditor
-            autoFocus
-            readOnly={false}
-            initialValue={exampleBlocks}
-            onBlocksChange={handleBlocksChange}
-            placeholder='Write your prompt, type "/" to insert messages or steps, "@" for include other prompts, "{{" for variables, Try typing "{{my_variable}}"'
-          />
-          <details className='text-xs'>
-            <summary className='cursor-pointer text-gray-500'>
-              Show raw blocks data
-            </summary>
-            <pre className='bg-gray-100 p-2 rounded mt-2 overflow-auto max-h-40'>
-              {JSON.stringify(exampleBlocks, null, 2)}
-            </pre>
-          </details>
-        </div>
+        <BlocksEditor
+          autoFocus
+          readOnly={false}
+          prompts={prompts}
+          initialValue={exampleBlocks}
+          Link={Link}
+          onRequestPromptMetadata={onRequestPromptMetadata}
+          onToggleDevEditor={onToogleDevEditor}
+          onBlocksChange={handleBlocksChange}
+          placeholder='Write your prompt, type "/" to insert messages or steps, "@" for include other prompts, "{{" for variables, Try typing "{{my_variable}}"'
+        />
       </Suspense>
     )
   },
