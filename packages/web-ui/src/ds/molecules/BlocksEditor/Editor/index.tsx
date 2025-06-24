@@ -7,6 +7,8 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import DragHandle from '@tiptap/extension-drag-handle-react'
 import { Dropcursor } from '@tiptap/extension-dropcursor'
+import GlobalDragHandle from 'tiptap-extension-global-drag-handle'
+import AutoJoiner from 'tiptap-extension-auto-joiner' // optional
 
 import { cn } from '../../../../lib/utils'
 
@@ -60,6 +62,8 @@ export function BlocksEditor({
         emptyEditorClass: 'is-editor-empty',
         emptyNodeClass: 'is-empty-node',
       }),
+      GlobalDragHandle,
+      AutoJoiner,
 
       // Latitude extensions
       PromptReference,

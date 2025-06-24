@@ -2,7 +2,6 @@ import { ReactNode, JSX } from 'react'
 import { NodeViewProps } from '@tiptap/react'
 import { AnyBlock } from '@latitude-data/constants/simpleBlocks'
 import { NodeViewWrapper } from '@tiptap/react'
-import { Icon } from '../../../../atoms/Icons'
 import { cn } from '../../../../../lib/utils'
 
 type Error<T extends AnyBlock['errors'] = AnyBlock['errors']> =
@@ -40,7 +39,6 @@ export function BaseNodeView({
 
   return (
     <NodeViewWrapper
-      draggable={draggable}
       as={as}
       className={cn('relative group/row', className)}
     >
