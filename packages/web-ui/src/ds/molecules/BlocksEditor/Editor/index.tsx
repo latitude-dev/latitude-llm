@@ -8,7 +8,6 @@ import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import DragHandle from '@tiptap/extension-drag-handle-react'
 import { Dropcursor } from '@tiptap/extension-dropcursor'
 
-
 import { cn } from '../../../../lib/utils'
 
 import { BlocksEditorProps, JSONContent } from '../types'
@@ -36,7 +35,6 @@ export function BlocksEditor({
 }: BlocksEditorProps) {
   const [colors] = useState(recalculateColors())
   const ref = useRef<HTMLDivElement>(null)
-  console.log("PRIMARY", colors.primary)
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -51,11 +49,7 @@ export function BlocksEditor({
           class: 'bg-backgroundCode border border-border rounded-sm p-2',
         },
       }),
-      Dropcursor.configure({
-        width: 2,
-        color: colors.primary,
-        // class: 'bg-accent border text-accent border-accent rounded-md',
-      }),
+      Dropcursor.configure({ width: 2, color: colors.primary }),
       Placeholder.configure({
         placeholder,
         includeChildren: true,
@@ -98,6 +92,7 @@ export function BlocksEditor({
     <div ref={ref} className='relative h-full flex flex-col'>
       {editor ? (
         <DragHandle editor={editor}>
+          <span className='absolute inset-y-[-8px] inset-x-[-8px] bg-red-400/65' />
           <Icon name='gridVertical' color='foregroundMuted' />
         </DragHandle>
       ) : null}
