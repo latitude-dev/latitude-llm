@@ -15,7 +15,7 @@ export const FEATURE_FLAGS_CONDITIONS: Record<
   FeatureFlagCondition
 > = {
   latte: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [1] },
-  blocksEditor: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [] },
+  blocksEditor: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [10240] },
 }
 
 export type ResolvedFeatureFlags = Record<FeatureFlag, { enabled: boolean }>
