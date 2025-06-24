@@ -37,6 +37,9 @@ export function BlocksEditor({
   const ref = useRef<HTMLDivElement>(null)
   const editor = useEditor({
     immediatelyRender: false,
+    onDrop: (event) => {
+      console.log('Drop event:', event)
+    },
     extensions: [
       // Root Document is mandatory
       Document.configure({ content: 'block+' }),

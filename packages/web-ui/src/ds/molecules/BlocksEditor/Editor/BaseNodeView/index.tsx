@@ -32,14 +32,18 @@ export function BaseNodeView({
   as?: string
   draggable?: boolean
 }) {
-      // {draggable ? (
-      //   <div className='absolute -left-6 top-0.5 bottom-0 w-6 flex transition opacity-0 group-hover/row:opacity-100'>
-      //     <Icon name='gridVertical' color='foregroundMuted' />
-      //   </div>
-      // ) : null}
+  // {draggable ? (
+  //   <div className='absolute -left-6 top-0.5 bottom-0 w-6 flex transition opacity-0 group-hover/row:opacity-100'>
+  //     <Icon name='gridVertical' color='foregroundMuted' />
+  //   </div>
+  // ) : null}
 
   return (
-    <NodeViewWrapper as={as} className={cn('relative group/row', className)}>
+    <NodeViewWrapper
+      draggable={draggable}
+      as={as}
+      className={cn('relative group/row', className)}
+    >
       {children}
 
       {/* FIXME: Style errors in a nice way */}

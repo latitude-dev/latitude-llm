@@ -69,6 +69,14 @@
 
   /* Blocks editor highlight for promptl */
   .latitude-blocks-editor {
+    .editor-block > div > .custom-drag-handle {
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .editor-block:hover > div > .custom-drag-handle {
+      opacity: 1;
+    }
+
     .base-node-view {
       & > div {
         @apply space-y-2;
