@@ -1,9 +1,8 @@
 import {
-  ContentType,
   Message as ConversationMessage,
   MessageRole,
-} from '@latitude-data/compiler'
-import { Message } from '@latitude-data/web-ui/molecules/ChatWrapper'
+} from '@latitude-data/constants/legacyCompiler'
+import { Message } from '$/components/ChatWrapper'
 
 export function StreamMessage({
   responseStream,
@@ -24,7 +23,7 @@ export function StreamMessage({
         role={MessageRole.assistant}
         content={[
           {
-            type: ContentType.text,
+            type: 'text',
             reasoning: reasoningStream,
             isReasoning: true,
             text: responseStream,
@@ -40,7 +39,7 @@ export function StreamMessage({
       role={MessageRole.assistant}
       content={[
         {
-          type: ContentType.text,
+          type: 'text',
           reasoning: reasoningStream,
           isReasoning: true,
           text: responseStream,

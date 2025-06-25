@@ -61,7 +61,6 @@
     "@codesandbox/sdk": "0.6.2",
     "@kubernetes/client-node": "1.0.0",
     "@latitude-data/telemetry": "workspace:*",
-    "@latitude-data/compiler": "workspace:^",
     "@latitude-data/constants": "workspace:*",
     "@latitude-data/env": "workspace:*",
     "@latitude-data/eslint-config": "workspace:*",

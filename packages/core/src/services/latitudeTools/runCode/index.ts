@@ -10,6 +10,8 @@ import { LatitudeError } from './../../../lib/errors'
 import { BadRequestError } from './../../../lib/errors'
 import { PromisedResult } from './../../../lib/Transaction'
 import { Result } from './../../../lib/Result'
+import { BACKGROUND, TelemetryContext } from '@latitude-data/telemetry'
+import { telemetry } from '../../../telemetry'
 
 function assertContainsPrintStatement({ code, language }: CodeToolArgs) {
   const printStatementResult = (() => {
@@ -63,7 +65,7 @@ export default {
   name: LatitudeTool.RunCode,
   internalName: LatitudeToolInternalName.RunCode,
   method: runCode,
-  definition: {
+  definition: (context: TelemetryContext = BACKGROUND()) => ({
     description:
       'Runs a custom script, and returns the output text.\n' +
       'This code will be executed in a sandboxed environment, so it cannot have access to other or previous runs.\n' +
@@ -96,5 +98,23 @@ export default {
       required: ['language', 'code'],
       additionalProperties: false,
     },
-  },
+    execute: async (args: CodeToolArgs, toolCall) => {
+      const $span = telemetry.tool(context, {
+        name: LatitudeTool.RunCode,
+        call: {
+          id: toolCall.toolCallId,
+          arguments: args,
+        },
+      })
+
+      const result = await runCode(args)
+      if (result.error) {
+        $span?.fail(result.error)
+        return result.unwrap()
+      }
+
+      $span?.end({ result: { value: result.unwrap(), isError: false } })
+      return result.unwrap()
+    },
+  }),
 } as LatitudeToolDefinition

@@ -1,6 +1,5 @@
 import { memo, ReactNode, useEffect, useState } from 'react'
 
-import { updatePromptMetadata } from '$/lib/promptMetadata'
 import { ROUTES } from '$/services/routes'
 import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
 import { ResolvedMetadata } from '$/workers/readMetadata'
@@ -21,6 +20,7 @@ import { ProviderModelSelector } from '$/components/EditorHeader/ProviderModelSe
 import { trigger } from '$/lib/events'
 import { envClient } from '$/envClient'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 
 export type IProviderByName = Record<string, ProviderApiKey>
 

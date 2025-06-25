@@ -1,6 +1,4 @@
-import { RunErrorCodes } from '@latitude-data/constants/errors'
-
-import { isChainError } from './chainStreamManager/ChainStreamConsumer'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 /**
  * We only throw an error if is not a known run error.
@@ -10,7 +8,8 @@ import { isChainError } from './chainStreamManager/ChainStreamConsumer'
  */
 export function getUnknownError(error: Error | unknown | undefined) {
   const isAllGood =
-    !error || (isChainError(error) && error.errorCode !== RunErrorCodes.Unknown)
+    !error ||
+    (error instanceof ChainError && error.errorCode !== RunErrorCodes.Unknown)
 
   if (isAllGood) return null
 

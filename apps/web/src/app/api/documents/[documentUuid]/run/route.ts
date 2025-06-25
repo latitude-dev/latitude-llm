@@ -139,6 +139,7 @@ export const POST = errorHandler(
             },
             onError: async (error) => {
               captureException(error)
+
               await writeErrorToStream(error)
             },
             onFinished: async () => {

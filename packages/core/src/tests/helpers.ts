@@ -1,9 +1,9 @@
 import { Providers } from '@latitude-data/constants'
 import { vi } from 'vitest'
-import { DEFAULT_COPILOT_GENERATE_TOOL_RESPONSES_PATH } from '../jobs/job-definitions/documents/runDocumentAtCommitWithAutoToolResponses/getCopilotData'
 import { Result } from '../lib/Result'
 import { mergeCommit } from '../services/commits'
 import * as factories from './factories'
+import { env } from '@latitude-data/env'
 
 export async function testConsumeStream(stream: ReadableStream) {
   const reader = stream.getReader()
@@ -13,7 +13,6 @@ export async function testConsumeStream(stream: ReadableStream) {
   while (!done) {
     const { done: _done, value } = await reader.read()
     done = _done
-
     if (value) {
       events.push(value)
     }
@@ -38,7 +37,7 @@ export async function mockToolRequestsCopilot() {
     workspace,
     user: copilot.user,
     commit,
-    path: DEFAULT_COPILOT_GENERATE_TOOL_RESPONSES_PATH,
+    path: env.COPILOT_GENERATE_TOOL_RESPONSES_PATH,
     content: `
       ---
       provider: ${provider.name}

@@ -18,12 +18,9 @@ import Transaction from './../../lib/Transaction'
 
 export async function getDocumentType({
   content,
-  promptlVersion,
 }: {
   content: string
-  promptlVersion: number
 }): Promise<DocumentType> {
-  if (promptlVersion === 0) return DocumentType.Prompt
   if (!content || !content.trim().length) return DocumentType.Prompt
 
   try {
@@ -101,7 +98,6 @@ export async function updateDocument(
     const oldVersion = omit(document, ['id', 'commitId', 'updatedAt'])
     const documentType = await getDocumentType({
       content: content || oldVersion.content,
-      promptlVersion: promptlVersion || oldVersion.promptlVersion,
     })
 
     const newVersion = {

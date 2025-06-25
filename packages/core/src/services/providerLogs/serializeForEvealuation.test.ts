@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { describe, expect, it } from 'vitest'
 
 import { ProviderLog, ProviderLogDto } from '../../browser'
@@ -11,7 +11,7 @@ describe('serialize', () => {
       messages: [
         {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Hello' }],
+          content: [{ type: 'text', text: 'Hello' }],
         },
         { role: MessageRole.assistant, content: 'Hi there', toolCalls: [] },
       ],
@@ -25,7 +25,7 @@ describe('serialize', () => {
       all: [
         {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Hello' }],
+          content: [{ type: 'text', text: 'Hello' }],
         },
         { role: MessageRole.assistant, content: 'Hi there', toolCalls: [] },
         {
@@ -36,7 +36,7 @@ describe('serialize', () => {
       ],
       first: {
         role: MessageRole.user,
-        content: [{ type: ContentType.text, text: 'Hello' }],
+        content: [{ type: 'text', text: 'Hello' }],
       },
       last: {
         role: MessageRole.assistant,
@@ -47,16 +47,16 @@ describe('serialize', () => {
         all: [
           {
             role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'Hello' }],
+            content: [{ type: 'text', text: 'Hello' }],
           },
         ],
         first: {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Hello' }],
+          content: [{ type: 'text', text: 'Hello' }],
         },
         last: {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Hello' }],
+          content: [{ type: 'text', text: 'Hello' }],
         },
       },
       system: {
@@ -93,15 +93,11 @@ describe('serialize', () => {
       messages: [
         {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: 'You are an AI assistant' },
-          ],
+          content: [{ type: 'text', text: 'You are an AI assistant' }],
         },
         {
           role: MessageRole.user,
-          content: [
-            { type: ContentType.text, text: "What's the weather like?" },
-          ],
+          content: [{ type: 'text', text: "What's the weather like?" }],
         },
       ],
       responseText: 'The weather is sunny today.',
@@ -114,15 +110,11 @@ describe('serialize', () => {
       all: [
         {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: 'You are an AI assistant' },
-          ],
+          content: [{ type: 'text', text: 'You are an AI assistant' }],
         },
         {
           role: MessageRole.user,
-          content: [
-            { type: ContentType.text, text: "What's the weather like?" },
-          ],
+          content: [{ type: 'text', text: "What's the weather like?" }],
         },
         {
           role: MessageRole.assistant,
@@ -132,7 +124,7 @@ describe('serialize', () => {
       ],
       first: {
         role: MessageRole.system,
-        content: [{ type: ContentType.text, text: 'You are an AI assistant' }],
+        content: [{ type: 'text', text: 'You are an AI assistant' }],
       },
       last: {
         role: MessageRole.assistant,
@@ -143,44 +135,32 @@ describe('serialize', () => {
         all: [
           {
             role: MessageRole.user,
-            content: [
-              { type: ContentType.text, text: "What's the weather like?" },
-            ],
+            content: [{ type: 'text', text: "What's the weather like?" }],
           },
         ],
         first: {
           role: MessageRole.user,
-          content: [
-            { type: ContentType.text, text: "What's the weather like?" },
-          ],
+          content: [{ type: 'text', text: "What's the weather like?" }],
         },
         last: {
           role: MessageRole.user,
-          content: [
-            { type: ContentType.text, text: "What's the weather like?" },
-          ],
+          content: [{ type: 'text', text: "What's the weather like?" }],
         },
       },
       system: {
         all: [
           {
             role: MessageRole.system,
-            content: [
-              { type: ContentType.text, text: 'You are an AI assistant' },
-            ],
+            content: [{ type: 'text', text: 'You are an AI assistant' }],
           },
         ],
         first: {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: 'You are an AI assistant' },
-          ],
+          content: [{ type: 'text', text: 'You are an AI assistant' }],
         },
         last: {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: 'You are an AI assistant' },
-          ],
+          content: [{ type: 'text', text: 'You are an AI assistant' }],
         },
       },
       assistant: {
@@ -213,7 +193,7 @@ describe('serialize', () => {
       messages: [
         {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Give me a JSON object' }],
+          content: [{ type: 'text', text: 'Give me a JSON object' }],
         },
       ],
       responseObject: obj,
@@ -226,7 +206,7 @@ describe('serialize', () => {
       all: [
         {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Give me a JSON object' }],
+          content: [{ type: 'text', text: 'Give me a JSON object' }],
         },
         {
           role: MessageRole.assistant,
@@ -236,7 +216,7 @@ describe('serialize', () => {
       ],
       first: {
         role: MessageRole.user,
-        content: [{ type: ContentType.text, text: 'Give me a JSON object' }],
+        content: [{ type: 'text', text: 'Give me a JSON object' }],
       },
       last: {
         role: MessageRole.assistant,
@@ -247,18 +227,16 @@ describe('serialize', () => {
         all: [
           {
             role: MessageRole.user,
-            content: [
-              { type: ContentType.text, text: 'Give me a JSON object' },
-            ],
+            content: [{ type: 'text', text: 'Give me a JSON object' }],
           },
         ],
         first: {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Give me a JSON object' }],
+          content: [{ type: 'text', text: 'Give me a JSON object' }],
         },
         last: {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Give me a JSON object' }],
+          content: [{ type: 'text', text: 'Give me a JSON object' }],
         },
       },
       system: {
@@ -334,7 +312,7 @@ describe('serialize', () => {
           role: MessageRole.user,
           content: [
             {
-              type: ContentType.text,
+              type: 'text',
               text: 'Hello',
               _promptlSourceMap: [{ start: 0, end: 4, identifier: 'text' }],
             },
@@ -352,7 +330,7 @@ describe('serialize', () => {
       all: [
         {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Hello' }],
+          content: [{ type: 'text', text: 'Hello' }],
         },
         { role: MessageRole.assistant, content: 'Hi there', toolCalls: [] },
         {
@@ -363,7 +341,7 @@ describe('serialize', () => {
       ],
       first: {
         role: MessageRole.user,
-        content: [{ type: ContentType.text, text: 'Hello' }],
+        content: [{ type: 'text', text: 'Hello' }],
       },
       last: {
         role: MessageRole.assistant,
@@ -374,16 +352,16 @@ describe('serialize', () => {
         all: [
           {
             role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'Hello' }],
+            content: [{ type: 'text', text: 'Hello' }],
           },
         ],
         first: {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Hello' }],
+          content: [{ type: 'text', text: 'Hello' }],
         },
         last: {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Hello' }],
+          content: [{ type: 'text', text: 'Hello' }],
         },
       },
       system: {
@@ -423,15 +401,13 @@ describe('formatContext', () => {
         {
           role: MessageRole.system,
           content: [
-            { type: ContentType.text, text: 'You are an AI assistant' },
-            { type: ContentType.text, text: 'Answer succinctly yet complete' },
+            { type: 'text', text: 'You are an AI assistant' },
+            { type: 'text', text: 'Answer succinctly yet complete' },
           ],
         },
         {
           role: MessageRole.user,
-          content: [
-            { type: ContentType.text, text: "What's the weather like?" },
-          ],
+          content: [{ type: 'text', text: "What's the weather like?" }],
         },
         {
           role: MessageRole.assistant,
@@ -459,9 +435,9 @@ describe('formatContext', () => {
         {
           role: MessageRole.user,
           content: [
-            { type: ContentType.text, text: 'What can you see in this image?' },
+            { type: 'text', text: 'What can you see in this image?' },
             {
-              type: ContentType.image,
+              type: 'image',
               image: 'https://example.com/image.jpg',
             },
           ],
@@ -491,9 +467,9 @@ describe('formatContext', () => {
         {
           role: MessageRole.user,
           content: [
-            { type: ContentType.text, text: 'Summarize this file' },
+            { type: 'text', text: 'Summarize this file' },
             {
-              type: ContentType.file,
+              type: 'file',
               file: 'https://example.com/file.pdf',
               mimeType: 'application/pdf',
             },
@@ -535,7 +511,7 @@ describe('formatContext', () => {
       messages: [
         {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Tell me a joke' }],
+          content: [{ type: 'text', text: 'Tell me a joke' }],
         },
         {
           role: MessageRole.assistant,
@@ -544,7 +520,7 @@ describe('formatContext', () => {
         },
         {
           role: MessageRole.user,
-          content: [{ type: ContentType.text, text: "I don't know, why?" }],
+          content: [{ type: 'text', text: "I don't know, why?" }],
         },
       ],
       response: 'To get to the other side!',

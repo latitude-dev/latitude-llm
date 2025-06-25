@@ -3,13 +3,10 @@ import { Readable } from 'stream'
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { handleStream } from '$sdk/utils/handleStream'
 import { makeRequest } from '$sdk/utils/request'
-import { streamChat } from '$sdk/utils/streamChat'
-import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
 import {
   HandlerType,
   RunPromptOptions,
   SDKOptions,
-  ToolInstrumentation,
   ToolSpec,
 } from '$sdk/utils/types'
 import {
@@ -17,6 +14,7 @@ import {
   ApiErrorJsonResponse,
   LatitudeErrorCodes,
 } from '@latitude-data/constants/errors'
+import { ProviderData } from '@latitude-data/constants/ai'
 
 export async function streamRun<Tools extends ToolSpec>(
   path: string,
@@ -31,10 +29,8 @@ export async function streamRun<Tools extends ToolSpec>(
     onFinished,
     onError,
     options,
-    instrumentation,
   }: RunPromptOptions<Tools> & {
     options: SDKOptions
-    instrumentation?: ToolInstrumentation
   },
 ) {
   projectId = projectId ?? options.projectId
@@ -63,6 +59,7 @@ export async function streamRun<Tools extends ToolSpec>(
         path,
         parameters,
         customIdentifier,
+        tools: waitForTools(tools),
       },
     })
 
@@ -83,23 +80,11 @@ export async function streamRun<Tools extends ToolSpec>(
       body: response.body! as Readable,
       onEvent,
       onError,
-    })
-
-    if (hasTools(tools) && finalResponse.toolRequests.length) {
-      return handleToolRequests<Tools, false>({
-        originalResponse: finalResponse,
-        messages: finalResponse.conversation,
-        toolRequests: finalResponse.toolRequests,
-        onEvent,
-        onFinished,
-        onError,
-        chatFn: streamChat,
+      onToolCall: handleToolCallFactory({
         tools,
         options,
-        trace: finalResponse.trace,
-        instrumentation,
-      })
-    }
+      }),
+    })
 
     onFinished?.(finalResponse)
     return finalResponse
@@ -119,4 +104,57 @@ export async function streamRun<Tools extends ToolSpec>(
     onError?.(error)
     return
   }
+}
+
+export function handleToolCallFactory<T extends ToolSpec>({
+  tools,
+  options,
+}: {
+  tools?: RunPromptOptions<T>['tools']
+  options: SDKOptions
+}) {
+  return async (data: ProviderData) => {
+    if (data.type !== 'tool-call') return
+
+    const tool = tools?.[data.toolName]
+    if (!tool) return
+
+    const result = await tool(data.args, {
+      id: data.toolCallId,
+      name: data.toolName,
+      arguments: data.args,
+    })
+
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.ToolResults,
+      body: {
+        toolCallId: data.toolCallId,
+        result,
+      },
+      options,
+    })
+
+    if (!response.ok) {
+      const json = (await response.json()) as ApiErrorJsonResponse
+      const message = `Failed to execute tool ${data.toolName}. 
+Latitude API returned the following error: 
+
+${json.message}`
+
+      const error = new LatitudeApiError({
+        status: response.status,
+        serverResponse: response.statusText,
+        message,
+        errorCode: json.errorCode,
+        dbErrorRef: json.dbErrorRef,
+      })
+
+      throw error
+    }
+  }
+}
+
+export function waitForTools(tools?: Record<string, unknown>) {
+  return Object.keys(tools ?? {})
 }

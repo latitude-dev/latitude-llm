@@ -1,4 +1,7 @@
-import type { ContentType, Message, MessageRole } from '@latitude-data/compiler'
+import type {
+  Message,
+  MessageRole,
+} from '@latitude-data/constants/legacyCompiler'
 
 import { AppliedRules, ProviderRules } from '../types'
 
@@ -46,7 +49,7 @@ export function enforceAllSystemMessagesFirst(
         role: 'user' as MessageRole,
         content: Array.isArray(m.content)
           ? m.content
-          : [{ type: 'text' as ContentType, text: m.content }],
+          : [{ type: 'text', text: m.content }],
       } as Message
     }),
   }

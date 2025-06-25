@@ -5,10 +5,9 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import { OnboardingStep } from '../index'
-import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
-import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
+import { MessageList } from '$/components/ChatWrapper'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants/legacyCompiler'
 
 export function OnboardingPromptStep({
   document,
@@ -16,18 +15,12 @@ export function OnboardingPromptStep({
   activeStream,
   currentStep,
   messages,
-  streamingResponse,
-  streamingReasoning,
-  chainLength,
 }: {
   start: () => Promise<void>
   activeStream: boolean
   document: DocumentVersion
   currentStep: OnboardingStep
   messages: Message[]
-  streamingResponse: string | undefined
-  streamingReasoning: string | undefined
-  chainLength: number
 }) {
   const promptStep = currentStep === OnboardingStep.ShowPrompt
   const showPrompt = promptStep && !activeStream
@@ -90,12 +83,6 @@ export function OnboardingPromptStep({
         )}
       >
         <MessageList messages={messages} />
-        <StreamMessage
-          responseStream={streamingResponse}
-          reasoningStream={streamingReasoning}
-          messages={messages}
-          chainLength={chainLength}
-        />
       </div>
     </>
   )

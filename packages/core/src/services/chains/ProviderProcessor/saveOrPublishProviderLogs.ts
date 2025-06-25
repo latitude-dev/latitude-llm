@@ -1,45 +1,28 @@
-import { Conversation } from '@latitude-data/compiler'
+import { Conversation } from '@latitude-data/constants/legacyCompiler'
 import { FinishReason } from 'ai'
 
-import { ProviderApiKey, ProviderLog, Workspace } from '../../../browser'
+import { ProviderApiKey, Workspace } from '../../../browser'
 import { ChainStepResponse, LogSources, StreamType } from '../../../constants'
 import { PartialConfig } from '../../ai'
 import { createProviderLog } from '../../providerLogs'
-import { defaultQueue } from '../../../jobs/queues'
 import { generateUUIDIdentifier } from './../../../lib/generateUUID'
 
-export async function saveOrPublishProviderLogs<
-  S extends boolean,
-  P = S extends true ? ProviderLog : void,
->({
+export async function saveProviderLog({
   workspace,
   data,
-  saveSyncProviderLogs,
   finishReason,
 }: {
   workspace: Workspace
   data: ReturnType<typeof buildProviderLogDto>
-  saveSyncProviderLogs: S
   finishReason: FinishReason
-}): Promise<P> {
+}) {
   const providerLogsData = {
     ...data,
     workspace,
     finishReason,
   }
 
-  if (saveSyncProviderLogs) {
-    const providerLog = await createProviderLog(providerLogsData).then((r) =>
-      r.unwrap(),
-    )
-    return providerLog as P
-  }
-
-  defaultQueue.add('createProviderLogJob', {
-    ...providerLogsData,
-    generatedAt: data.generatedAt.toISOString(),
-  })
-  return undefined as P
+  return await createProviderLog(providerLogsData)
 }
 
 export function buildProviderLogDto({

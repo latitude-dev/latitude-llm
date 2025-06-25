@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { z } from 'zod'
 import {
@@ -171,7 +171,7 @@ describe('annotateEvaluationV2', () => {
     vi.spyOn(helpers, 'buildConversation').mockReturnValue([
       {
         role: MessageRole.user,
-        content: [{ type: ContentType.text, text: 'hi' }],
+        content: [{ type: 'text', text: 'hi' }],
       },
     ])
     mocks.publisher.mockClear()

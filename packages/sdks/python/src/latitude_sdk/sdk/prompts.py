@@ -162,7 +162,6 @@ class Prompts:
         uuid = None
         conversation: List[Message] = []
         response = None
-        agent_response = None
         tool_requests: List[ToolCall] = []
 
         async for stream_event in stream:
@@ -210,15 +209,10 @@ class Prompts:
                 response="Stream ended without a chain-complete event. Missing uuid or response.",
             )
 
-        agent_requests, tool_requests = await self._extract_agent_tool_requests(tool_requests)
-        if len(agent_requests) > 0:
-            agent_response = agent_requests[0].arguments
-
         return FinishedResult(
             uuid=uuid,
             conversation=conversation,
             response=response,
-            agent_response=agent_response,
             tool_requests=tool_requests,
         )
 

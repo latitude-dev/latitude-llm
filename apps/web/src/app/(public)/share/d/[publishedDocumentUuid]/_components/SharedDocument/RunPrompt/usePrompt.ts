@@ -1,10 +1,8 @@
 import { Dispatch, useCallback, useRef, useState } from 'react'
-
 import {
-  ContentType,
   Conversation,
   Message as ConversationMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import {
   PublishedDocument,
   StreamEventTypes,
@@ -46,14 +44,12 @@ function getDeltas({
     if (typeof content === 'string') return splitInWords(content)
 
     return content.flatMap((c) => {
-      if (c.type === ContentType.image) return []
-      if (c.type === ContentType.file) return []
-      if (c.type === ContentType.toolCall)
-        return splitInWords(JSON.stringify(c))
-      if (c.type === ContentType.toolResult)
-        return splitInWords(JSON.stringify(c))
+      if (c.type === 'image') return []
+      if (c.type === 'file') return []
+      if (c.type === 'tool-call') return splitInWords(JSON.stringify(c))
+      if (c.type === 'tool-result') return splitInWords(JSON.stringify(c))
 
-      return splitInWords(c.text!)
+      return splitInWords(c.text! as string)
     })
   } catch (error) {
     return []

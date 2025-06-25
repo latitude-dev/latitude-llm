@@ -21,7 +21,6 @@ export async function processResponse({
   documentLogUuid?: string
 }): Promise<ChainStepResponse<StreamType>> {
   const isObject = aiResult.type === 'object'
-
   const text = await aiResult.text
 
   return {

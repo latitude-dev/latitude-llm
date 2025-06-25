@@ -1,4 +1,3 @@
-import type { ConversationMetadata as LegacyMetadata } from '@latitude-data/compiler'
 import type { ConversationMetadata as PromptlMetadata } from 'promptl-ai'
 import {
   Commit,
@@ -34,7 +33,7 @@ export function promptPresenter({
   document: DocumentVersion
   projectId: number
   versionUuid: string
-  metadata?: LegacyMetadata | PromptlMetadata
+  metadata?: PromptlMetadata
 }) {
   if (document.deletedAt) {
     return {

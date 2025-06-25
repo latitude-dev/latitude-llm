@@ -8,9 +8,10 @@ import {
 } from '../../../browser'
 import { Result, TypedResult } from '../../../lib/Result'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
-import { BACKGROUND } from '../../../telemetry'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { buildLlmEvaluationRunFunction } from './shared'
+import { scan } from 'promptl-ai'
+import { runChain } from '../../chains/run'
 
 const buildStreamHandler =
   (stream: ReadableStream<ChainEvent>) =>
@@ -70,6 +71,17 @@ export async function buildStreamEvaluationRun({
   parameters: Record<string, any>
 }): Promise<TypedResult<{ streamHandler: StreamHandler }, Error>> {
   const resultUuid = generateUUIDIdentifier()
+  const { config } = await scan({
+    prompt: evaluation.configuration.prompt,
+  })
+  config.schema = z.object({
+    score: z
+      .number()
+      .int()
+      .min(evaluation.configuration.minScore)
+      .max(evaluation.configuration.maxScore),
+    reason: z.string(),
+  })
   const result = await buildLlmEvaluationRunFunction({
     resultUuid,
     workspace,
@@ -89,11 +101,8 @@ export async function buildStreamEvaluationRun({
 
   if (result.error) return result
 
-  const { runFunction, runArgs } = result.value
-  const { stream } = runFunction({
-    context: BACKGROUND({ workspaceId: workspace.id }),
-    ...runArgs,
-  })
+  const { runArgs } = result.unwrap()
+  const { stream } = runChain(runArgs)
   const streamHandler = buildStreamHandler(stream)
 
   return Result.ok({ streamHandler })

@@ -10,6 +10,7 @@ import { BadRequestError } from './../../../lib/errors'
 import { LatitudeError } from './../../../lib/errors'
 import { PromisedResult } from './../../../lib/Transaction'
 import { Result } from './../../../lib/Result'
+import { telemetry, TelemetryContext } from '../../../telemetry'
 
 async function webSearch({
   query,
@@ -40,7 +41,7 @@ export default {
   name: LatitudeTool.WebSearch,
   internalName: LatitudeToolInternalName.WebSearch,
   method: webSearch,
-  definition: {
+  definition: (context: TelemetryContext) => ({
     description:
       'Search the web for information.\n' +
       'Given a query, this tool will search the web for information and return the results.\n' +
@@ -71,5 +72,23 @@ export default {
       required: ['query'],
       additionalProperties: false,
     },
-  },
+    execute: async (args: SearchToolArgs, toolCall) => {
+      const $span = telemetry.tool(context, {
+        name: LatitudeTool.WebSearch,
+        call: {
+          id: toolCall.toolCallId,
+          arguments: args,
+        },
+      })
+
+      const result = await webSearch(args)
+      if (result.error) {
+        $span?.fail(result.error)
+        return result.unwrap()
+      }
+
+      $span?.end({ result: { value: result.unwrap(), isError: false } })
+      return result.unwrap()
+    },
+  }),
 } as LatitudeToolDefinition

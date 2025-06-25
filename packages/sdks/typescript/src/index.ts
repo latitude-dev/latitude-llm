@@ -1,14 +1,13 @@
 import {
-  type ContentType,
   type Message,
   type MessageRole,
   type ToolCall,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import {
-  AGENT_RETURN_TOOL_NAME,
   DocumentLog,
   Providers,
   PublicManualEvaluationResultV2,
+  ToolRequest,
   type ChainEventDto,
   type ToolCallResponse,
 } from '@latitude-data/constants'
@@ -40,7 +39,6 @@ import {
   RunPromptOptions,
   SDKOptions,
   StreamChainResponse,
-  ToolCallDetails,
   ToolHandler,
   ToolInstrumentation,
   ToolSpec,
@@ -51,7 +49,7 @@ import {
   AdapterMessageType,
   Chain,
   Config,
-  ContentType as PromptlContentType,
+  ContentType,
   MessageRole as PromptlMessageRole,
   ProviderAdapter,
   render,
@@ -61,7 +59,6 @@ import {
 
 import { adaptPromptConfigToProvider } from './utils/adapters/adaptPromptConfigToProvider'
 import { getPromptlAdapterFromProvider } from './utils/adapters/getAdapterFromProvider'
-import { injectAgentFinishTool } from './utils/agents'
 
 const WAIT_IN_MS_BEFORE_RETRY = 1000
 const DEFAULT_GATEWAY = {
@@ -143,9 +140,6 @@ class Latitude {
     renderChain: <M extends AdapterMessageType = PromptlMessage>(
       args: RenderChainOptions<M>,
     ) => Promise<{ config: Config; messages: M[] }>
-    renderAgent: <M extends AdapterMessageType = PromptlMessage>(
-      args: RenderChainOptions<M>,
-    ) => Promise<{ config: Config; messages: M[]; result: unknown }>
   }
 
   public versions: {
@@ -216,7 +210,6 @@ class Latitude {
       chat: this.chat.bind(this),
       render: this.renderPrompt.bind(this),
       renderChain: this.renderChain.bind(this),
-      renderAgent: this.renderAgent.bind(this),
     }
 
     // Initialize versions namespace
@@ -247,12 +240,6 @@ class Latitude {
       if (!Latitude.instrumentation) return _renderChain(...args)
       return Latitude.instrumentation.wrapRenderChain(_renderChain, ...args)
     }) as typeof _renderChain
-
-    const _renderAgent = this.renderAgent.bind(this)
-    this.renderAgent = ((...args: Parameters<typeof _renderAgent>) => {
-      if (!Latitude.instrumentation) return _renderAgent(...args)
-      return Latitude.instrumentation.wrapRenderAgent(_renderAgent, ...args)
-    }) as typeof _renderAgent
 
     const _renderStep = this.renderStep.bind(this)
     this.renderStep = ((...args: Parameters<typeof _renderStep>) => {
@@ -510,7 +497,8 @@ class Latitude {
                 role: PromptlMessageRole.assistant,
                 content: [
                   {
-                    type: PromptlContentType.text,
+                    // @ts-expect-error - TODO(compiler): fix types
+                    type: 'text',
                     text: response,
                   },
                 ],
@@ -528,7 +516,7 @@ class Latitude {
     }).messages[0]!
 
     const toolRequests = promptlMessage.content.filter(
-      (c) => c.type === PromptlContentType.toolCall,
+      (c) => c.type === 'tool-call',
     )
 
     return {
@@ -544,7 +532,6 @@ class Latitude {
     prompt,
     parameters,
     onStep,
-    tools,
     adapter,
   }: {
     step: number
@@ -554,7 +541,7 @@ class Latitude {
     parameters: Record<string, unknown>
     messages: M[]
     adapter: ProviderAdapter<M>
-  } & Pick<RenderChainOptions<M>, 'onStep' | 'tools'>) {
+  } & Pick<RenderChainOptions<M>, 'onStep'>) {
     const completion = await this.renderCompletion({
       provider,
       config,
@@ -565,21 +552,9 @@ class Latitude {
       onStep,
     })
 
-    if (!completion.toolRequests.length) {
-      return {
-        messages: completion.messages,
-      }
-    }
-
-    const requests = await this.handleToolRequests({
-      messages,
-      toolRequests: completion.toolRequests,
-      tools,
-      adapter,
-    })
-
     return {
-      messages: [...completion.messages, ...requests.messages],
+      messages: completion.messages,
+      toolRequests: completion.toolRequests,
     }
   }
 
@@ -588,7 +563,7 @@ class Latitude {
     parameters,
     adapter: _adapter,
     onStep,
-    tools,
+    tools = {},
   }: RenderChainOptions<M>) {
     const adapter = _adapter ?? getPromptlAdapterFromProvider(prompt.provider)
     const chain = new Chain({
@@ -613,14 +588,22 @@ class Latitude {
         parameters,
         messages: step.messages,
         onStep,
-        tools,
         adapter,
       })
       lastResponse = result.messages
 
+      if (result.toolRequests.length > 0) {
+        lastResponse = lastResponse.concat(
+          await this.handleToolRequests(result.toolRequests, tools),
+        )
+      }
+
       step = await chain.step(lastResponse)
       index++
     }
+
+    // TODO(compiler): Resubmit messages if maxSteps is > 1 or type: agent
+    // (see: https://github.com/vercel/ai/blob/main/packages/ai/src/ui/should-resubmit-messages.ts#L3)
 
     return {
       config: adaptPromptConfigToProvider(step.config, adapter),
@@ -628,157 +611,17 @@ class Latitude {
     }
   }
 
-  protected async renderAgent<M extends AdapterMessageType = PromptlMessage>({
-    prompt,
-    parameters,
-    adapter: _adapter,
-    onStep,
-    tools,
-  }: RenderChainOptions<M>) {
-    const adapter = _adapter ?? getPromptlAdapterFromProvider(prompt.provider)
-    const chain = new Chain({
-      prompt: prompt.content,
-      parameters,
-      adapter,
-    })
-
-    let lastResponse: M[]
-    let step = await chain.step(undefined)
-    let index = 1
-
-    let agentResponse = undefined
-
-    while (!step.completed) {
-      const config = adaptPromptConfigToProvider(step.config, adapter)
-
-      const result = await this.renderStep({
-        step: index,
-        provider:
-          (step.config.provider as string) || prompt.provider || 'unknown',
-        config,
-        prompt: prompt.content,
-        parameters,
-        messages: step.messages,
-        onStep,
-        tools,
-        adapter,
-      })
-
-      lastResponse = result.messages
-      step = await chain.step(lastResponse)
-      index++
-    }
-
-    const messages = step.messages
-    const config = adaptPromptConfigToProvider(
-      injectAgentFinishTool(step.config),
-      adapter,
-    )
-
-    tools = {
-      ...(tools ?? {}),
-      [AGENT_RETURN_TOOL_NAME]: async (toolArguments) => {
-        agentResponse = toolArguments
-        return {}
-      },
-    }
-
-    while (agentResponse === undefined) {
-      const result = await this.renderStep({
-        step: index,
-        provider:
-          (step.config.provider as string) || prompt.provider || 'unknown',
-        config,
-        prompt: prompt.content,
-        parameters,
-        messages,
-        onStep,
-        tools,
-        adapter,
-      })
-      lastResponse = result.messages
-
-      messages.push(...lastResponse)
-      index++
-    }
-
-    return {
-      config: adaptPromptConfigToProvider(step.config, adapter),
-      messages,
-      result: agentResponse,
-    }
-  }
-
-  protected async renderTool<M extends AdapterMessageType = PromptlMessage>({
+  protected async renderTool({
     tool,
     toolRequest,
-    toolRequests,
-    messages,
   }: {
     tool: RenderToolCalledFn<ToolSpec>[string]
     toolRequest: ToolCallContent
-    toolRequests: ToolCallContent[]
-    messages: M[]
   }) {
     return await tool(toolRequest.toolArguments, {
-      toolId: toolRequest.toolCallId,
-      toolName: toolRequest.toolName,
-      requestedToolCalls: toolRequests as unknown as ToolCall[],
-      messages: messages as unknown as Message[],
+      id: toolRequest.toolCallId,
+      name: toolRequest.toolName,
     })
-  }
-
-  private async handleToolRequests<
-    M extends AdapterMessageType = PromptlMessage,
-  >({
-    messages,
-    toolRequests,
-    tools,
-    adapter,
-  }: {
-    messages: M[]
-    toolRequests: ToolCallContent[]
-    tools?: RenderToolCalledFn<ToolSpec>
-    adapter: ProviderAdapter<M>
-  }) {
-    const toolResponseMessages = await Promise.all(
-      toolRequests.map(async (toolRequest) => {
-        const tool = tools?.[toolRequest.toolName]
-
-        if (!tool)
-          throw new Error(
-            `Handler for tool '${toolRequest.toolName}' not found`,
-          )
-
-        const toolResult = await this.renderTool({
-          tool,
-          toolRequest,
-          toolRequests,
-          messages,
-        })
-
-        return adapter.fromPromptl({
-          messages: [
-            {
-              role: PromptlMessageRole.tool,
-              content: [
-                {
-                  type: PromptlContentType.text,
-                  text: JSON.stringify(toolResult),
-                },
-              ],
-              toolId: toolRequest.toolCallId,
-              toolName: toolRequest.toolName,
-            },
-          ],
-          config: {},
-        }).messages[0]!
-      }),
-    )
-
-    return {
-      messages: toolResponseMessages,
-    }
   }
 
   private async getAllProjects() {
@@ -940,6 +783,24 @@ class Latitude {
       commitUuid: result.commitUuid,
     }
   }
+
+  private async handleToolRequests<
+    M extends AdapterMessageType = PromptlMessage,
+  >(
+    toolRequests: ToolRequest[],
+    tools: RenderToolCalledFn<ToolSpec>,
+  ): Promise<M[]> {
+    return Promise.all(
+      toolRequests
+        .filter((t) => t.toolName in tools)
+        .map((t) =>
+          this.renderTool({
+            tool: tools[t.toolName]!,
+            toolRequest: t,
+          }),
+        ),
+    ) as Promise<M[]>
+  }
 }
 
 export { Latitude, LatitudeApiError, LogSources }
@@ -956,7 +817,7 @@ export type {
   Prompt,
   RenderToolCallDetails,
   StreamChainResponse,
-  ToolCallDetails,
+  ToolCall,
   ToolCallResponse,
   ToolHandler,
   ToolSpec,
@@ -966,10 +827,6 @@ export interface Instrumentation
   extends TraceInstrumentation,
     ToolInstrumentation {
   wrapRenderChain<F extends Latitude['renderChain']>(
-    fn: F,
-    ...args: Parameters<F>
-  ): Promise<Awaited<ReturnType<F>>>
-  wrapRenderAgent<F extends Latitude['renderAgent']>(
     fn: F,
     ...args: Parameters<F>
   ): Promise<Awaited<ReturnType<F>>>

@@ -1,5 +1,4 @@
 import {
-  AGENT_RETURN_TOOL_NAME,
   ParameterType,
   Providers,
   TraceContext,
@@ -89,17 +88,13 @@ export const COMPLETIONS: Record<string, unknown>[] = [
   },
   {
     role: 'assistant',
-    content: null,
-    tool_calls: [
+    content: [
       {
-        id: 'fake-tool-call-id-2',
-        type: 'function',
-        function: {
-          name: AGENT_RETURN_TOOL_NAME,
-          arguments: '{"response": "The weather in Barcelona is sunny."}',
-        },
+        type: 'text',
+        text: 'The weather in Barcelona is sunny.',
       },
     ],
+    tool_calls: [],
   },
 ]
 
