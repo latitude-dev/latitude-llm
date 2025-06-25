@@ -1,10 +1,9 @@
 import {
   AssistantMessage,
-  ContentType,
   Conversation,
   Message,
   MessageRole,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
@@ -106,7 +105,7 @@ function isChainCompleted(newMessages?: Message[]) {
 
     return message.content.filter(
       (content) =>
-        content.type === ContentType.toolResult &&
+        content.type === 'tool-result' &&
         returnToolCallIds.includes(content.toolCallId),
     ).length
   }, 0)

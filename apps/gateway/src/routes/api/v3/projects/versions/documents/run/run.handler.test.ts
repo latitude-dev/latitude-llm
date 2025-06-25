@@ -1,6 +1,6 @@
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainError,
   LatitudeError,
@@ -310,7 +310,7 @@ describe('POST /run', () => {
                   ],
                   content: [
                     {
-                      type: ContentType.toolCall,
+                      type: 'tool-call',
                       toolCallId: 'fake-tool-call-id',
                       toolName: 'get_the_weather',
                       args: { location: 'Barcelona, Spain' },

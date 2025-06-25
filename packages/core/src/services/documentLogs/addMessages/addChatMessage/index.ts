@@ -1,4 +1,4 @@
-import type { Message } from '@latitude-data/compiler'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
@@ -11,14 +11,14 @@ import {
   PromptSource,
 } from '../../../../browser'
 import { unsafelyFindProviderApiKey } from '../../../../data-access'
-import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
 import serializeProviderLog from '../../../providerLogs/serialize'
-import { ChainStreamManager } from '../../../../lib/chainStreamManager'
-import { getInputSchema, getOutputType } from '../../../chains/ChainValidator'
 import { NotFoundError } from './../../../../lib/errors'
 import { Result } from './../../../../lib/Result'
 import { TypedResult } from './../../../../lib/Result'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { VercelConfig } from '@latitude-data/constants'
+import { DefaultStreamManager } from '../../../../lib/streamManager/defaultStreamManager'
+import { getInputSchema, getOutputType } from '../../../chains/ChainValidator'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
@@ -70,33 +70,22 @@ export async function addChatMessage({
     messages: [...previousMessages, ...newMessages],
   }
 
-  const chainStreamManager = new ChainStreamManager({
-    workspace,
-    errorableUuid: providerLog.documentLogUuid!,
+  const streamManager = new DefaultStreamManager({
+    uuid: providerLog.documentLogUuid!,
+    config: conversation.config as VercelConfig,
+    provider,
+    output: getOutputType(conversation)!,
+    schema: getInputSchema(conversation)!,
     messages: conversation.messages,
     promptSource,
+    source,
+    workspace,
+    abortSignal,
   })
 
-  const streamResult = chainStreamManager.start(async () => {
-    await checkFreeProviderQuota({
-      workspace,
-      provider,
-      model: globalConfig.model,
-    }).then((r) => r.unwrap())
+  const { start, ...streamResult } = streamManager.prepare()
 
-    const { clientToolCalls } = await chainStreamManager.getProviderResponse({
-      provider,
-      source,
-      conversation,
-      abortSignal,
-      output: getOutputType({ config: conversation.config }),
-      schema: getInputSchema({ config: conversation.config }),
-    })
-
-    if (clientToolCalls.length) {
-      return chainStreamManager.requestTools(clientToolCalls)
-    }
-  })
+  start()
 
   return Result.ok(streamResult)
 }

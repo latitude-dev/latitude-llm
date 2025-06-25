@@ -1,10 +1,9 @@
 import {
-  ContentType,
   Message,
   MessageRole,
   ToolMessage,
   UserMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import { addMessages } from '../../documentLogs/addMessages'
 import { ErrorResult, Result } from '../../../lib/Result'
 import { LatitudeError } from '../../../lib/errors'
@@ -101,7 +100,7 @@ async function generateCopilotResponse({
 
   if (agentToolCalls.length === 0) {
     // Agent did not return a response. We add the tool responses and keep iterating
-    await run.lastResponse // Await for the response to be fully processed
+    await run.response // Await for the response to be fully processed
     return generateCopilotResponse({
       copilotWorkspace,
       copilotCommit,
@@ -164,11 +163,11 @@ export async function addMessageToExistingLatte({
     role: MessageRole.user,
     content: [
       {
-        type: ContentType.text,
+        type: 'text',
         text: context,
       },
       {
-        type: ContentType.text,
+        type: 'text',
         text: message,
       },
     ],

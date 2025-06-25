@@ -19,7 +19,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   MessageList,
   MessageListSkeleton,
-} from '@latitude-data/web-ui/molecules/ChatWrapper'
+} from '$/components/ChatWrapper'
 import { SelectableSwitch } from '@latitude-data/web-ui/molecules/SelectableSwitch'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import {

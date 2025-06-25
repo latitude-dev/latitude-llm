@@ -1,4 +1,4 @@
-import type { Message } from '@latitude-data/compiler'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 
 import { Providers } from '../../models'
 import { toCamelCaseDeep } from '../../../../../lib/camelCaseRecursive'

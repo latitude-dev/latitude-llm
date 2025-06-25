@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { Latitude, LogSources } from '$sdk/index'
 import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
 import { parseSSE } from '$sdk/utils/parseSSE'
@@ -55,7 +55,7 @@ describe('/chat', () => {
               role: MessageRole.user,
               content: [
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: 'fake-user-content',
                 },
               ],
@@ -76,7 +76,7 @@ describe('/chat', () => {
                 role: MessageRole.user,
                 content: [
                   {
-                    type: ContentType.text,
+                    type: 'text',
                     text: 'fake-user-content',
                   },
                 ],
@@ -107,7 +107,7 @@ describe('/chat', () => {
               role: MessageRole.user,
               content: [
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: 'fake-user-content',
                 },
               ],
@@ -150,7 +150,7 @@ describe('/chat', () => {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'fake-user-content',
               },
             ],
@@ -190,7 +190,7 @@ describe('/chat', () => {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'fake-user-content',
               },
             ],
@@ -230,7 +230,7 @@ describe('/chat', () => {
               role: MessageRole.user,
               content: [
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: 'fake-user-content',
                 },
               ],
@@ -274,7 +274,7 @@ describe('/chat', () => {
               role: MessageRole.user,
               content: [
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: 'fake-user-content',
                 },
               ],
@@ -295,7 +295,7 @@ describe('/chat', () => {
                 role: MessageRole.user,
                 content: [
                   {
-                    type: ContentType.text,
+                    type: 'text',
                     text: 'fake-user-content',
                   },
                 ],
@@ -325,7 +325,7 @@ describe('/chat', () => {
               role: MessageRole.user,
               content: [
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: 'fake-user-content',
                 },
               ],
@@ -359,7 +359,7 @@ describe('/chat', () => {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'fake-user-content',
               },
             ],
@@ -399,7 +399,7 @@ describe('/chat', () => {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'fake-user-content',
               },
             ],
@@ -439,7 +439,7 @@ describe('/chat', () => {
               role: MessageRole.user,
               content: [
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: 'fake-user-content',
                 },
               ],

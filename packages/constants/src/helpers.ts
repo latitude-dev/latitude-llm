@@ -1,6 +1,6 @@
 import type { DocumentVersion, SimplifiedDocumentVersion } from './models'
 import { AGENT_RETURN_TOOL_NAME } from './config'
-import { ToolCall } from '@latitude-data/compiler'
+import { ToolCall } from '@latitude-data/constants/legacyCompiler'
 
 export function resolveRelativePath(refPath: string, from?: string): string {
   if (refPath.startsWith('/')) {

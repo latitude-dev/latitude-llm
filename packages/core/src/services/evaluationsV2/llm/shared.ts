@@ -22,7 +22,6 @@ import {
 import { database, Database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { ProviderLogsRepository } from '../../../repositories'
-import { runAgent } from '../../agents/run'
 import { runChain } from '../../chains/run'
 import { parsePrompt } from '../../documents/parse'
 
@@ -136,10 +135,12 @@ export async function buildLlmEvaluationRunFunction<
     workspace: workspace,
   }
 
-  const isAgent = promptConfig.type === DocumentType.Agent
-  const runFunction = isAgent ? runAgent : runChain
-
-  return Result.ok({ promptChain, promptConfig, runFunction, runArgs })
+  return Result.ok({
+    promptChain,
+    promptConfig,
+    runFunction: runChain,
+    runArgs,
+  })
 }
 
 export async function runPrompt<
@@ -184,7 +185,7 @@ export async function runPrompt<
     const error = await result.error
     if (error) throw error
 
-    response = await result.lastResponse
+    response = await result.response
   } catch (error) {
     if (error instanceof ChainError) throw error
 

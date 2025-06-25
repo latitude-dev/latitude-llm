@@ -10,13 +10,51 @@ import { type editor } from 'monaco-editor'
 import MonacoReactEditor, { Monaco } from '@monaco-editor/react'
 
 import { useCellPosition } from './useCellPosition'
-import { useUpdateEditorHeight } from '../../../molecules/ChatWrapper/ChatTextArea/ToolCallForm/Editor'
 import { DEFAULT_ROW_HEIGHT } from '..'
 import { EditorCellProps } from '..'
+
+export function useUpdateEditorHeight({
+  initialHeight,
+  maxHeight = 200,
+  limitToInitialHeight = false,
+}: {
+  initialHeight: number
+  maxHeight?: number
+  limitToInitialHeight?: boolean
+}) {
+  const [heightState, setHeight] = useState(initialHeight)
+  const updateHeight = useCallback(
+    (editor: editor.IStandaloneCodeEditor) => {
+      const el = editor.getDomNode()
+      if (!el) return
+
+      requestAnimationFrame(() => {
+        let height = editor.getContentHeight()
+
+        // Max height
+        if (height >= maxHeight) {
+          height = maxHeight
+        }
+
+        if (limitToInitialHeight) {
+          height = height < initialHeight ? initialHeight : height
+        }
+
+        setHeight(height)
+        el.style.height = height + 'px'
+
+        editor.layout()
+      })
+    },
+    [initialHeight, limitToInitialHeight, maxHeight],
+  )
+  return { height: heightState, updateHeight }
+}
 
 type Props = EditorCellProps & {
   onHeightChange: (height: number) => void
 }
+
 function Editor({
   value: initialValue,
   valueType,

@@ -86,5 +86,8 @@ export default {
       required: ['url'],
       additionalProperties: false,
     },
+    execute: async (args: ExtractToolArgs) => {
+      return webExtract(args as ExtractToolArgs).then((r) => r.unwrap())
+    },
   },
 } as LatitudeToolDefinition

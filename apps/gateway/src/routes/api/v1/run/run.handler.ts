@@ -11,7 +11,7 @@ import {
 } from '$/common/documents/getData'
 import { AppRouteHandler } from '$/openApi/types'
 import { RunRoute } from '$/routes/api/v1/run/run.route'
-import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
+import { convertToLegacyChainStream } from '@latitude-data/core/lib/streamManager/index'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 export const runHandler: AppRouteHandler<RunRoute> = async (c) => {

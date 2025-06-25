@@ -15,7 +15,10 @@ import { createOpenAI, type OpenAIProvider } from '@ai-sdk/openai'
 import { createXai, XaiProvider } from '@ai-sdk/xai'
 import { createDeepSeek, DeepSeekProvider } from '@ai-sdk/deepseek'
 import { createPerplexity, PerplexityProvider } from '@ai-sdk/perplexity'
-import { type Message, MessageRole } from '@latitude-data/compiler'
+import {
+  type Message,
+  MessageRole,
+} from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { Providers } from '../../constants'

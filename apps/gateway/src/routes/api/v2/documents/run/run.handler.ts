@@ -12,7 +12,7 @@ import {
   publishDocumentRunRequestedEvent,
 } from '$/common/documents/getData'
 import { v2RunPresenter } from '$/presenters/runPresenter'
-import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
+import { convertToLegacyChainStream } from '@latitude-data/core/lib/streamManager/index'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735

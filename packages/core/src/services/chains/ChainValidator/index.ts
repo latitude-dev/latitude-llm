@@ -1,9 +1,4 @@
-import {
-  CompileError,
-  Conversation,
-  Chain as LegacyChain,
-  Message,
-} from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
@@ -19,12 +14,12 @@ import {
   LatitudePromptConfig,
 } from '@latitude-data/constants/latitudePromptSchema'
 import { CompileError as PromptlCompileError } from 'promptl-ai'
-
-type SomeChain = LegacyChain | PromptlChain
+import { Output } from '../../../lib/streamManager/step/streamAIResponse'
 
 export type ValidatedChainStep = {
   provider: ProviderApiKey
-  conversation: Conversation
+  config: LatitudePromptConfig
+  messages: Message[]
   chainCompleted: boolean
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema'
@@ -36,8 +31,7 @@ export type ConfigOverrides = JSONOverride | { output: 'no-schema' }
 type ValidatorContext = {
   workspace: Workspace
   providersMap: CachedApiKeys
-  promptlVersion: number
-  chain: SomeChain
+  chain: PromptlChain
   newMessages: Message[] | undefined
   configOverrides?: ConfigOverrides
   removeSchema?: boolean
@@ -46,13 +40,10 @@ type ValidatorContext = {
 export const getInputSchema = ({
   config,
   configOverrides,
-  ignoreSchema = false,
 }: {
   config: LatitudePromptConfig
   configOverrides?: ConfigOverrides
-  ignoreSchema?: boolean
 }): JSONSchema7 | undefined => {
-  if (ignoreSchema) return undefined
   const overrideSchema =
     configOverrides && 'schema' in configOverrides
       ? configOverrides.schema
@@ -63,62 +54,26 @@ export const getInputSchema = ({
 export const getOutputType = ({
   config,
   configOverrides,
-  ignoreSchema = false,
 }: {
   config: LatitudePromptConfig
   configOverrides?: ConfigOverrides
-  ignoreSchema?: boolean
-}): 'object' | 'array' | 'no-schema' | undefined => {
-  if (ignoreSchema) return undefined
+}): Output | undefined => {
   if (configOverrides?.output) return configOverrides.output
 
   const configSchema = config.schema
-
   if (!configSchema) return 'no-schema'
 
   return configSchema.type === 'array' ? 'array' : 'object'
 }
 
-/*
- * Legacy compiler wants a string as response for the next step
- * But new Promptl can handle an array of messages
- */
-function getTextFromMessages(
-  prevContent: Message[] | string | undefined,
-): string | undefined {
-  if (!prevContent) return undefined
-  if (typeof prevContent === 'string') return prevContent
-
-  try {
-    return prevContent
-      .flatMap((message) => {
-        if (typeof message.content === 'string') return message.content
-        return JSON.stringify(message.content)
-      })
-      .join('\n')
-  } catch {
-    return ''
-  }
-}
-
 const safeChain = async ({
-  promptlVersion,
   chain,
   newMessages,
 }: {
-  promptlVersion: number
-  chain: SomeChain
+  chain: PromptlChain
   newMessages: Message[] | undefined
 }) => {
   try {
-    if (promptlVersion === 0) {
-      let prevText = getTextFromMessages(newMessages)
-      const { completed, conversation } = await (chain as LegacyChain).step(
-        prevText,
-      )
-      return Result.ok({ chainCompleted: completed, conversation })
-    }
-
     const { completed, messages, config } = await (chain as PromptlChain).step(
       newMessages as PromptlMessage[] | undefined,
     )
@@ -129,9 +84,7 @@ const safeChain = async ({
     })
   } catch (e) {
     const error = e as PromptlCompileError
-    const isPromptlCompileError = error instanceof PromptlCompileError
-    const isOldCompileError = error instanceof CompileError
-    const isCompileError = isPromptlCompileError || isOldCompileError
+    const isCompileError = error instanceof PromptlCompileError
     return Result.error(
       new ChainError({
         message: `Error validating chain:\n ${error.message}`,
@@ -164,10 +117,8 @@ const findProvider = (name: string, providersMap: CachedApiKeys) => {
   )
 }
 
-// TODO: Use latitudePromptSchema. This is duplicated
-// This is a lie
 const validateConfig = (
-  config: Record<string, unknown>,
+  config: LatitudePromptConfig,
 ): TypedResult<
   LatitudePromptConfig,
   ChainError<RunErrorCodes.DocumentConfigError>
@@ -204,10 +155,9 @@ const validateConfig = (
   return Result.ok(parseResult.data)
 }
 
-export const validateChain = async ({
+export const renderChain = async ({
   workspace,
   providersMap,
-  promptlVersion,
   chain,
   newMessages,
   configOverrides,
@@ -215,11 +165,13 @@ export const validateChain = async ({
 }: ValidatorContext): Promise<
   TypedResult<ValidatedChainStep, ChainError<RunErrorCodes>>
 > => {
-  const chainResult = await safeChain({ promptlVersion, chain, newMessages })
+  const chainResult = await safeChain({ chain, newMessages })
   if (chainResult.error) return chainResult
 
   const { chainCompleted, conversation } = chainResult.value
-  const configResult = validateConfig(conversation.config)
+  const configResult = validateConfig(
+    conversation.config as LatitudePromptConfig,
+  )
   if (configResult.error) return configResult
 
   const config = configResult.unwrap()
@@ -236,7 +188,8 @@ export const validateChain = async ({
 
   const rule = applyProviderRules({
     providerType: provider.provider,
-    messages: conversation.messages as Message[],
+    // TODO(compiler): fix types
+    messages: conversation.messages as unknown as Message[],
     config,
   })
 
@@ -245,22 +198,18 @@ export const validateChain = async ({
     : getOutputType({
         config,
         configOverrides,
-        ignoreSchema: promptlVersion === 0 && !chainCompleted,
       })
   const schema = removeSchema
     ? undefined
     : getInputSchema({
         config,
         configOverrides,
-        ignoreSchema: promptlVersion === 0 && !chainCompleted,
       })
 
   return Result.ok({
     provider,
-    conversation: {
-      config: rule.config,
-      messages: rule?.messages ?? conversation.messages,
-    },
+    config: rule.config as LatitudePromptConfig,
+    messages: rule?.messages ?? conversation.messages,
     chainCompleted,
     output,
     schema,

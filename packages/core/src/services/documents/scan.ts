@@ -1,6 +1,5 @@
 import path from 'path'
 
-import { readMetadata, Document as RefDocument } from '@latitude-data/compiler'
 import { type ConversationMetadata, scan } from 'promptl-ai'
 
 import { Commit, DocumentVersion, Workspace } from '../../browser'
@@ -21,7 +20,8 @@ export async function getDocumentMetadata({
   const referenceFn = async (
     refPath: string,
     from?: string,
-  ): Promise<RefDocument | undefined> => {
+    // TODO(compiler): fix any type (should be Document)
+  ): Promise<any | undefined> => {
     const fullPath = path
       .resolve(path.dirname(`/${from ?? ''}`), refPath)
       .replace(/^\//, '')
@@ -35,19 +35,11 @@ export async function getDocumentMetadata({
     }
   }
 
-  const metadata =
-    document.promptlVersion === 0
-      ? ((await readMetadata({
-          prompt: document.content,
-          fullPath: document.path,
-          referenceFn,
-        })) as ConversationMetadata)
-      : await scan({
-          prompt: document.content,
-          fullPath: document.path,
-          referenceFn,
-        })
-  return metadata
+  return await scan({
+    prompt: document.content,
+    fullPath: document.path,
+    referenceFn,
+  })
 }
 
 /**

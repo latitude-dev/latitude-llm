@@ -71,5 +71,15 @@ export default {
       required: ['query'],
       additionalProperties: false,
     },
+    execute: async (args: SearchToolArgs) => {
+      console.log('args', args)
+
+      const result = await webSearch(args)
+
+      console.log(result)
+      if (result.error) return result.error.message
+
+      return result.value
+    },
   },
 } as LatitudeToolDefinition

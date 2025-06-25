@@ -1,10 +1,9 @@
 import {
   AssistantMessage,
-  ContentType,
   Message,
   MessageRole,
   ToolMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import {
   AGENT_RETURN_TOOL_NAME,
   FAKE_AGENT_START_TOOL_NAME,
@@ -36,7 +35,7 @@ export function injectFakeStartAutonomousWorkflowMessages(
         role: MessageRole.assistant,
         content: [
           {
-            type: ContentType.toolCall,
+            type: 'tool-call',
             toolCallId: toolId,
             toolName,
             args: {},
@@ -54,7 +53,7 @@ export function injectFakeStartAutonomousWorkflowMessages(
         role: MessageRole.tool,
         content: [
           {
-            type: ContentType.toolResult,
+            type: 'tool-result',
             toolCallId: toolId,
             toolName,
             result: FAKE_AGENT_START_TOOL_CONTENT,
@@ -119,7 +118,7 @@ export function injectAgentFinishToolResponsesAfterEachRequest(
         .flatMap((msg) => msg.content)
         .filter(
           (content) =>
-            content.type === ContentType.toolResult &&
+            content.type === 'tool-result' &&
             content.toolCallId === AGENT_RETURN_TOOL_NAME,
         )
         .map((content) => content.toolCallId)
@@ -134,7 +133,7 @@ export function injectAgentFinishToolResponsesAfterEachRequest(
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId,
                 toolName: AGENT_RETURN_TOOL_NAME,
                 result: {},

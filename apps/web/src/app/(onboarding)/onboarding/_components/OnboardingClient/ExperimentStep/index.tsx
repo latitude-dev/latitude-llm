@@ -1,11 +1,10 @@
 import { useCallback, useMemo, useState } from 'react'
-import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { MessageList } from '$/components/ChatWrapper'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient'
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants/legacyCompiler'
 import { ParameterTable } from './ParameterTable'
 import { ExperimentVariants } from './ExperimentVariants'
 import {
@@ -41,9 +40,6 @@ export function ExperimentStep({
   document,
   messages,
   currentStep,
-  chainLength,
-  streamingResponse,
-  streamingReasoning,
   onCompleteOnboarding,
 }: {
   document: DocumentVersion
@@ -51,10 +47,7 @@ export function ExperimentStep({
   commit: Commit
   dataset: Dataset
   messages: Message[]
-  chainLength: number
   currentStep: OnboardingStep
-  streamingResponse: string | undefined
-  streamingReasoning: string | undefined
   onCompleteOnboarding: ({
     experimentUuids,
   }: {
@@ -139,14 +132,6 @@ export function ExperimentStep({
       <div className='relative max-h-40 pointer-events-none overflow-hidden opacity-35 [mask-image:linear-gradient(to_top,transparent,black_50%,black)]'>
         <div className='flex flex-col gap-3 pt-4'>
           <MessageList messages={messages} />
-          {streamingResponse && (
-            <StreamMessage
-              responseStream={streamingResponse}
-              reasoningStream={streamingReasoning}
-              messages={messages}
-              chainLength={chainLength}
-            />
-          )}
         </div>
       </div>
 

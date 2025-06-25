@@ -96,5 +96,8 @@ export default {
       required: ['language', 'code'],
       additionalProperties: false,
     },
+    execute: async (args: CodeToolArgs) => {
+      return runCode(args).then((r) => r.unwrap())
+    },
   },
 } as LatitudeToolDefinition

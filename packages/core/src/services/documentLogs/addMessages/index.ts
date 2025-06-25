@@ -1,4 +1,4 @@
-import { type Message } from '@latitude-data/compiler'
+import { type Message } from '@latitude-data/constants/legacyCompiler'
 
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { LogSources, Workspace } from '../../../browser'
@@ -8,12 +8,9 @@ import {
   DocumentVersionsRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
-import { getCachedChain } from '../../chains/chainCache'
 import { scanDocumentContent } from '../../documents'
 import { Result } from './../../../lib/Result'
 import { addChatMessage } from './addChatMessage'
-import { resumeAgent } from './resumeAgent'
-import { resumePausedPrompt } from './resumePausedPrompt'
 
 async function retrieveData({
   workspace,
@@ -80,38 +77,6 @@ export async function addMessages({
   })
   if (dataResult.error) return dataResult
   const { commit, document, providerLog, globalConfig } = dataResult.unwrap()
-
-  const chainCacheData = await getCachedChain({ workspace, documentLogUuid })
-
-  if (chainCacheData) {
-    return resumePausedPrompt({
-      workspace,
-      commit,
-      document,
-      globalConfig,
-      pausedChain: chainCacheData.chain,
-      previousResponse: chainCacheData.previousResponse,
-      responseMessages: messages,
-      documentLogUuid,
-      source,
-      abortSignal,
-    })
-  }
-
-  if (document.documentType === 'agent') {
-    return resumeAgent({
-      workspace,
-      providerLog,
-      globalConfig,
-      messages,
-      source,
-      promptSource: {
-        document,
-        commit,
-      },
-      abortSignal,
-    })
-  }
 
   return addChatMessage({
     abortSignal,

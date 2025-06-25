@@ -1,14 +1,12 @@
 import {
   Message as CompilerMessage,
-  ContentType as CompilerContentType,
   MessageRole as CompilerMessageRole,
   ToolRequestContent as CompilerToolRequestContent,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import { ToolCallResponse as ToolResponse } from '@latitude-data/constants'
 import {
   Message as PromptlMessage,
   ToolCallContent as ToolRequest,
-  ContentType as PromptlContentType,
   MessageRole as PromptlMessageRole,
 } from 'promptl-ai'
 
@@ -21,11 +19,13 @@ type ToolResponsePart = Pick<ToolResponse, 'id'>
 export type ToolPart = ToolRequest | ToolResponsePart
 
 function extractCompilerToolContents(messages: CompilerMessage[]): ToolPart[] {
+  // TODO(compiler)
+  // @ts-expect-error - compiler messages are not typed
   return messages.flatMap<ToolPart>((message) => {
     if (message.role === CompilerMessageRole.tool) {
       return message.content
         .filter((content) => {
-          return content.type === CompilerContentType.toolResult
+          return content.type === 'tool-result'
         })
         .map((content) => ({
           id: content.toolCallId,
@@ -40,11 +40,11 @@ function extractCompilerToolContents(messages: CompilerMessage[]): ToolPart[] {
       : [message.content]
 
     const toolRequestContents = content.filter((content) => {
-      return content.type === CompilerContentType.toolCall
+      return content.type === 'tool-call'
     }) as CompilerToolRequestContent[]
 
     return toolRequestContents.map((content) => ({
-      type: PromptlContentType.toolCall,
+      type: 'tool-call',
       toolCallId: content.toolCallId,
       toolName: content.toolName,
       // FIXME: Kill old compiler please
@@ -69,7 +69,7 @@ function extractPromptlToolContents(messages: PromptlMessage[]): ToolPart[] {
       ? message.content
       : [message.content]
     return content.filter((content) => {
-      return content.type === PromptlContentType.toolCall
+      return content.type === 'tool-call'
     })
   })
 }

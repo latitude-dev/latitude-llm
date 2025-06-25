@@ -1,7 +1,6 @@
 import {
   ChainStepResponse,
   Commit,
-  DocumentType,
   ErrorableEntity,
   Experiment,
   LogSources,
@@ -9,7 +8,6 @@ import {
   type DocumentVersion,
   type Workspace,
 } from '../../browser'
-import { runAgent } from '../agents/run'
 import { runChain } from '../chains/run'
 import { getResolvedContent } from '../documents'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
@@ -68,10 +66,11 @@ export async function runDocumentAtCommit({
   commit,
   customIdentifier,
   source,
-  abortSignal,
   customPrompt,
   experiment,
   errorableUuid,
+  abortSignal,
+  mockClientToolResults = false,
 }: {
   workspace: Workspace
   commit: Commit
@@ -79,10 +78,11 @@ export async function runDocumentAtCommit({
   parameters: Record<string, unknown>
   customIdentifier?: string
   source: LogSources
-  abortSignal?: AbortSignal
   customPrompt?: string
   experiment?: Experiment
   errorableUuid?: string
+  abortSignal?: AbortSignal
+  mockClientToolResults?: boolean
 }) {
   const errorableType = ErrorableEntity.DocumentLog
   errorableUuid = errorableUuid ?? generateUUIDIdentifier()
@@ -107,7 +107,6 @@ export async function runDocumentAtCommit({
     parameters,
   })
   const checkerResult = await checker.call()
-
   if (checkerResult.error) {
     await createDocumentRunResult({
       workspace,
@@ -124,33 +123,30 @@ export async function runDocumentAtCommit({
     return checkerResult
   }
 
-  const runArgs = {
+  const runResult = runChain({
     abortSignal,
-    generateUUID: () => errorableUuid,
     errorableType,
-    workspace,
-    chain: checkerResult.value.chain,
-    isChain: checkerResult.value.isChain,
-    globalConfig: checkerResult.value.config as LatitudePromptConfig,
-    promptlVersion: document.promptlVersion,
     providersMap,
     source,
+    workspace,
+    chain: checkerResult.value.chain,
+    globalConfig: checkerResult.value.config as LatitudePromptConfig,
+    promptlVersion: document.promptlVersion,
+    uuid: errorableUuid,
+    mockClientToolResults,
     promptSource: {
       document,
       commit,
     },
-  }
-
-  const runFn =
-    document.documentType === DocumentType.Agent ? runAgent : runChain
-  const runResult = runFn(runArgs)
+  })
 
   return Result.ok({
     ...runResult,
     resolvedContent: result.value,
     errorableUuid,
-    lastResponse: runResult.lastResponse.then(async (response) => {
+    lastResponse: runResult.response.then(async (response) => {
       const error = await runResult.error
+      console.log('error: ', error)
       if (error && isErrorRetryable(error)) return response
 
       await createDocumentRunResult({

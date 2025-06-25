@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   StreamEventTypes,
   ChainEvent,
@@ -23,9 +23,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
       messages: [
         {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: "What's bigger 9.9 or 9.11?" },
-          ],
+          content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
       ],
     },
@@ -38,9 +36,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
       messages: [
         {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: "What's bigger 9.9 or 9.11?" },
-          ],
+          content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
       ],
       config: {
@@ -127,15 +123,11 @@ const CHUNK_EVENTS: ChainEvent[] = [
       messages: [
         {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: "What's bigger 9.9 or 9.11?" },
-          ],
+          content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
           role: MessageRole.assistant,
-          content: [
-            { type: ContentType.text, text: '9.9 is bigger than 9.11' },
-          ],
+          content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
       ],
@@ -166,15 +158,11 @@ const CHUNK_EVENTS: ChainEvent[] = [
       messages: [
         {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: "What's bigger 9.9 or 9.11?" },
-          ],
+          content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
           role: MessageRole.assistant,
-          content: [
-            { type: ContentType.text, text: '9.9 is bigger than 9.11' },
-          ],
+          content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
       ],
@@ -188,20 +176,16 @@ const CHUNK_EVENTS: ChainEvent[] = [
       messages: [
         {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: "What's bigger 9.9 or 9.11?" },
-          ],
+          content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
           role: MessageRole.assistant,
-          content: [
-            { type: ContentType.text, text: '9.9 is bigger than 9.11' },
-          ],
+          content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
         {
           role: MessageRole.system,
-          content: [{ type: ContentType.text, text: 'Expand your answer' }],
+          content: [{ type: 'text', text: 'Expand your answer' }],
         },
       ],
     },
@@ -214,20 +198,16 @@ const CHUNK_EVENTS: ChainEvent[] = [
       messages: [
         {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: "What's bigger 9.9 or 9.11?" },
-          ],
+          content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
           role: MessageRole.assistant,
-          content: [
-            { type: ContentType.text, text: '9.9 is bigger than 9.11' },
-          ],
+          content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
         {
           role: MessageRole.system,
-          content: [{ type: ContentType.text, text: 'Expand your answer' }],
+          content: [{ type: 'text', text: 'Expand your answer' }],
         },
       ],
       config: {
@@ -244,26 +224,22 @@ const CHUNK_EVENTS: ChainEvent[] = [
       messages: [
         {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: "What's bigger 9.9 or 9.11?" },
-          ],
+          content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
           role: MessageRole.assistant,
-          content: [
-            { type: ContentType.text, text: '9.9 is bigger than 9.11' },
-          ],
+          content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
         {
           role: MessageRole.system,
-          content: [{ type: ContentType.text, text: 'Expand your answer' }],
+          content: [{ type: 'text', text: 'Expand your answer' }],
         },
         {
           role: MessageRole.assistant,
           content: [
             {
-              type: ContentType.text,
+              type: 'text',
               text: "Sure, let's break it down step by step to understand why 9.9 is greater than 9.11",
             },
           ],
@@ -297,26 +273,22 @@ const CHUNK_EVENTS: ChainEvent[] = [
       messages: [
         {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: "What's bigger 9.9 or 9.11?" },
-          ],
+          content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
           role: MessageRole.assistant,
-          content: [
-            { type: ContentType.text, text: '9.9 is bigger than 9.11' },
-          ],
+          content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
         {
           role: MessageRole.system,
-          content: [{ type: ContentType.text, text: 'Expand your answer' }],
+          content: [{ type: 'text', text: 'Expand your answer' }],
         },
         {
           role: MessageRole.assistant,
           content: [
             {
-              type: ContentType.text,
+              type: 'text',
               text: "Sure, let's break it down step by step to understand why 9.9 is greater than 9.11",
             },
           ],
@@ -333,26 +305,22 @@ const CHUNK_EVENTS: ChainEvent[] = [
       messages: [
         {
           role: MessageRole.system,
-          content: [
-            { type: ContentType.text, text: "What's bigger 9.9 or 9.11?" },
-          ],
+          content: [{ type: 'text', text: "What's bigger 9.9 or 9.11?" }],
         },
         {
           role: MessageRole.assistant,
-          content: [
-            { type: ContentType.text, text: '9.9 is bigger than 9.11' },
-          ],
+          content: [{ type: 'text', text: '9.9 is bigger than 9.11' }],
           toolCalls: [],
         },
         {
           role: MessageRole.system,
-          content: [{ type: ContentType.text, text: 'Expand your answer' }],
+          content: [{ type: 'text', text: 'Expand your answer' }],
         },
         {
           role: MessageRole.assistant,
           content: [
             {
-              type: ContentType.text,
+              type: 'text',
               text: "Sure, let's break it down step by step to understand why 9.9 is greater than 9.11",
             },
           ],

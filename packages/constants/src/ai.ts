@@ -1,5 +1,5 @@
-import { Message, ToolCall } from '@latitude-data/compiler'
-import { Tool, FinishReason, LanguageModelUsage, TextStreamPart } from 'ai'
+import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import { FinishReason, LanguageModelUsage, TextStreamPart } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
@@ -48,7 +48,7 @@ export type VercelConfig = {
 
 export type PartialPromptConfig = Omit<LatitudePromptConfig, 'provider'>
 
-export type ProviderData = TextStreamPart<Record<string, Tool>>
+export type ProviderData = TextStreamPart<any>
 
 export type ChainEventDto = ProviderData | LatitudeEventData
 

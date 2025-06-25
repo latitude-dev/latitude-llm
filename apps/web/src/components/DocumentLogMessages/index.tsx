@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
 
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants/legacyCompiler'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { MessageList } from '$/components/ChatWrapper'
 
 export function DocumentLogMessages({
   documentLogParameters,

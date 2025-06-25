@@ -5,7 +5,7 @@ import {
   ToolRequestContent,
   ToolContent,
   ToolMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import { ToolCallContent as ToolRequest } from 'promptl-ai'
 import { StreamType, ToolCallResponse } from './index'
 

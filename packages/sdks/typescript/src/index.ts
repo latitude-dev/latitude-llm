@@ -1,9 +1,8 @@
 import {
-  type ContentType,
   type Message,
   type MessageRole,
   type ToolCall,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import {
   AGENT_RETURN_TOOL_NAME,
   DocumentLog,
@@ -51,7 +50,7 @@ import {
   AdapterMessageType,
   Chain,
   Config,
-  ContentType as PromptlContentType,
+  ContentType,
   MessageRole as PromptlMessageRole,
   ProviderAdapter,
   render,
@@ -509,8 +508,10 @@ class Latitude {
               {
                 role: PromptlMessageRole.assistant,
                 content: [
+                  // @ts-expect-error - Remove this cast
                   {
-                    type: PromptlContentType.text,
+                    // TODO(components): Remove this cast
+                    type: 'text' as unknown as ContentType,
                     text: response,
                   },
                 ],
@@ -528,7 +529,7 @@ class Latitude {
     }).messages[0]!
 
     const toolRequests = promptlMessage.content.filter(
-      (c) => c.type === PromptlContentType.toolCall,
+      (c) => c.type === 'tool-call',
     )
 
     return {
@@ -762,8 +763,10 @@ class Latitude {
             {
               role: PromptlMessageRole.tool,
               content: [
+                // TODO(compiler)
+                // @ts-expect-error - Remove this cast
                 {
-                  type: PromptlContentType.text,
+                  type: 'text' as unknown as ContentType,
                   text: JSON.stringify(toolResult),
                 },
               ],

@@ -3,9 +3,9 @@ import {
   getDataForInitialRequest,
   GetDataParams,
 } from './getDataForInitialRequest'
-import { runDocumentUntilItStops } from './runDocumentUntilItStops'
 import { getCopilotDataForGenerateToolResponses } from './getCopilotData'
 import { Experiment } from '../../../../browser'
+import { runDocumentAtCommit } from '../../../../services/commits'
 
 /**
  * This function handle the processing of a document even when
@@ -19,7 +19,6 @@ export async function runDocumentAtCommitWithAutoToolResponses({
   parameters,
   customPrompt,
   source,
-  autoRespondToolCalls,
   experiment,
   ...dataParams
 }: GetDataParams & {
@@ -27,7 +26,6 @@ export async function runDocumentAtCommitWithAutoToolResponses({
   customPrompt?: string
   experiment?: Experiment
   source: LogSources
-  autoRespondToolCalls: boolean
 }) {
   const copilotResult = await getCopilotDataForGenerateToolResponses()
   if (copilotResult.error) return copilotResult
@@ -37,26 +35,17 @@ export async function runDocumentAtCommitWithAutoToolResponses({
 
   const { workspace, document, commit } = dataResult.value
 
-  return await runDocumentUntilItStops(
-    {
-      hasToolCalls: false,
-      autoRespondToolCalls,
-      data: {
-        workspace,
-        commit,
-        document,
-        customPrompt,
-        parameters,
-        source,
-        experiment,
-        copilot: copilotResult.value,
-      },
-    },
-    // This is a recursive function, it call itself. To properly test
-    // that the mocked version is called we need to pass the function
-    // by reference.
-    runDocumentUntilItStops,
-  )
+  // TODO(compiler): review
+  return runDocumentAtCommit({
+    workspace,
+    document,
+    parameters,
+    commit,
+    source,
+    customPrompt,
+    experiment,
+    mockClientToolResults: true,
+  })
 }
 
 export type RunDocumentAtCommitWithAutoToolResponsesFn =

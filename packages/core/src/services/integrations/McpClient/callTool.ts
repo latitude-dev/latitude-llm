@@ -1,10 +1,10 @@
 import { IntegrationDto } from '../../../browser'
-import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import { touchIntegration } from '../touch'
-import { createMcpClientManager } from './McpClientManager'
+import { McpClientManager } from './McpClientManager'
 import { LatitudeError } from './../../../lib/errors'
 import { PromisedResult } from './../../../lib/Transaction'
 import { Result } from './../../../lib/Result'
+import { StreamManager } from '../../../lib/streamManager'
 
 type ResultContent =
   | { type: 'text'; text: string }
@@ -31,14 +31,14 @@ export async function callIntegrationTool({
   integration,
   toolName,
   args,
-  chainStreamManager,
+  streamManager,
   mcpClientManager,
 }: {
   integration: IntegrationDto
   toolName: string
   args: Record<string, unknown>
-  chainStreamManager?: ChainStreamManager
-  mcpClientManager?: ReturnType<typeof createMcpClientManager>
+  streamManager?: StreamManager
+  mcpClientManager?: McpClientManager
 }): PromisedResult<unknown, LatitudeError> {
   if (!mcpClientManager) {
     return Result.error(new LatitudeError('MCP Client Manager not provided'))
@@ -46,7 +46,7 @@ export async function callIntegrationTool({
 
   const clientResult = await mcpClientManager.getClient(
     integration,
-    chainStreamManager,
+    streamManager,
   )
   if (clientResult.error) {
     return clientResult

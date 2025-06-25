@@ -1,4 +1,6 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+// @ts-nocheck
+// TODO(compiler): FIXME
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import * as factories from '../../../tests/factories'
 import { LanguageModelUsage, TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -53,7 +55,7 @@ describe('ProviderProcessor', () => {
       messages: [
         {
           role: MessageRole.user,
-          content: [{ text: 'Hello', type: ContentType.text }],
+          content: [{ text: 'Hello', type: 'text' }],
         },
       ],
       toolCalls: [],

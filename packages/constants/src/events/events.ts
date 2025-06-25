@@ -1,4 +1,8 @@
-import { Config, Message, ToolCall } from '@latitude-data/compiler'
+import {
+  Config,
+  Message,
+  ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
 import {
   ChainStepResponse,
   ProviderData,
@@ -14,6 +18,7 @@ export enum ChainEventTypes {
   ProviderStarted = 'provider-started',
   ProviderCompleted = 'provider-completed',
   ToolsStarted = 'tools-started',
+  ToolResult = 'tool-result',
   ToolCompleted = 'tool-completed',
   StepCompleted = 'step-completed',
   ChainCompleted = 'chain-completed',

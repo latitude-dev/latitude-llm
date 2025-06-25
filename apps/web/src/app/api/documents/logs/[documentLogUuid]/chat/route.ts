@@ -83,6 +83,7 @@ export const POST = errorHandler(
             )
           },
           onError: async (error) => {
+            console.log('WAT', error)
             await writer.write(
               encoder.encode(
                 `event: error\ndata: ${JSON.stringify({

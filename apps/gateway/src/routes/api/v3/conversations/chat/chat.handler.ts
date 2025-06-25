@@ -2,6 +2,7 @@ import { captureException } from '$/common/sentry'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
 import { ChatRoute } from '$/routes/api/v3/conversations/chat/chat.route'
+import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
@@ -18,12 +19,13 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
     await addMessages({
       workspace,
       documentLogUuid: conversationUuid,
-      // @ts-expect-error: messages types are different
-      messages,
+      messages: messages as LegacyMessage[],
       source: __internal?.source ?? LogSources.API,
       abortSignal: c.req.raw.signal,
     })
   ).unwrap()
+
+  console.log(result)
 
   if (useSSE) {
     return streamSSE(
@@ -64,7 +66,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const error = await result.error
   if (error) throw error
 
-  const response = (await result.lastResponse)!
+  const response = (await result.response)!
   const toolCalls = await result.toolCalls
 
   const body = runPresenter({ response, toolCalls }).unwrap()

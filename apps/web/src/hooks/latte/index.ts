@@ -2,7 +2,10 @@ import { addMessageToLatteAction } from '$/actions/latte/addMessage'
 import { createNewLatteAction } from '$/actions/latte/new'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useServerAction } from 'zsa-react'
-import { ContentType, MessageRole, TextContent } from '@latitude-data/compiler'
+import {
+  MessageRole,
+  TextContent,
+} from '@latitude-data/constants/legacyCompiler'
 import {
   AGENT_RETURN_TOOL_NAME,
   extractAgentToolCalls,
@@ -215,7 +218,7 @@ export function useLatte() {
             })
           } else {
             const textContent = message.content
-              .filter((c) => c.type === ContentType.text)
+              .filter((c) => c.type === 'text')
               .map((c) => (c as unknown as TextContent).text!)
 
             if (textContent.length) {
@@ -272,8 +275,7 @@ export function useLatte() {
         Array.isArray(message.content) &&
         message.content.some(
           (c) =>
-            c.type === ContentType.toolCall &&
-            c.toolName === AGENT_RETURN_TOOL_NAME,
+            c.type === 'tool-call' && c.toolName === AGENT_RETURN_TOOL_NAME,
         )
       ) {
         setIsLoading(false)

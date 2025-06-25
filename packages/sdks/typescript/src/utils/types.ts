@@ -8,7 +8,11 @@ export type HandlerConfig<U, B> = {
 
 import { RouteResolver } from '$sdk/utils'
 import { LatitudeApiError } from '$sdk/utils/errors'
-import type { Config, Message, ToolCall } from '@latitude-data/compiler'
+import type {
+  Config,
+  Message,
+  ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
 import {
   ChainCallResponseDto,
   LegacyChainEvent as ChainEvent,

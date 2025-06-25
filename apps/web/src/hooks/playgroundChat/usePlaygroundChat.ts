@@ -1,16 +1,15 @@
 import {
-  ContentType,
   Message,
+  MessageContent,
   MessageRole,
   ToolCall,
   ToolMessage,
-} from '@latitude-data/compiler'
+  ToolRequestContent,
+} from '@latitude-data/constants/legacyCompiler'
 import {
   AGENT_RETURN_TOOL_NAME,
   ChainEvent,
   ChainEventTypes,
-  LatitudeChainCompletedEventData,
-  LatitudeEventData,
 } from '@latitude-data/constants'
 import { StreamEventTypes } from '@latitude-data/core/browser'
 import { LanguageModelUsage } from 'ai'
@@ -22,7 +21,7 @@ function buildMessage({ input }: { input: string | ToolMessage[] }) {
     return [
       {
         role: MessageRole.user,
-        content: [{ type: ContentType.text, text: input }],
+        content: [{ type: 'text', text: input }],
       } as Message,
     ]
   }
@@ -50,22 +49,14 @@ export function usePlaygroundChat({
   const isChat = useRef(false)
   const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
   const [error, setError] = useState<Error | undefined>()
-  const [streamingResponse, setStreamingResponse] = useState<
-    string | undefined
-  >()
-  const [streamingReasoning, setStreamingReasoning] = useState<
-    string | undefined
-  >()
   const [isLoading, setIsLoading] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [unresponedToolCalls, setUnresponedToolCalls] = useState<ToolCall[]>([])
-  const [chainLength, setChainLength] = useState(Infinity)
   const [usage, setUsage] = useState<LanguageModelUsage>({
     promptTokens: 0,
     completionTokens: 0,
     totalTokens: 0,
   })
-  const [time, setTime] = useState<number | undefined>()
   const [runningLatitudeTools, setRunningLatitudeTools] = useState<number>(0)
   const [wakingUpIntegration, setWakingUpIntegration] = useState<string>()
 
@@ -76,6 +67,217 @@ export function usePlaygroundChat({
     [setMessages],
   )
 
+  const handleIntegrationEvent = useCallback(
+    (data: ChainEvent['data']) => {
+      if (data.type === ChainEventTypes.IntegrationWakingUp) {
+        setWakingUpIntegration(data.integrationName)
+      } else {
+        setWakingUpIntegration(undefined)
+      }
+    },
+    [setWakingUpIntegration],
+  )
+
+  const handleProviderEvent = useCallback(
+    (parsedEvent: ParsedEvent, data: ChainEvent['data']) => {
+      if (parsedEvent.event !== StreamEventTypes.Provider) return
+
+      setMessages((messages) => {
+        console.log('messages before: ', messages)
+        return messages
+      })
+
+      console.log('provider event: ', data)
+
+      if (data.type === 'step-start') {
+        addMessages([
+          {
+            role: MessageRole.assistant,
+            toolCalls: [],
+            content: [],
+          },
+        ])
+      } else if (data.type === 'text-delta') {
+        setMessages((messages) => {
+          const lastMessage = messages.at(-1)
+
+          // If the last message is not of assistant role, add a new assistant message
+          if (!lastMessage || lastMessage.role !== MessageRole.assistant) {
+            return [
+              ...messages,
+              {
+                role: MessageRole.assistant,
+                content: [{ type: 'text', text: data.textDelta }],
+                toolCalls: [],
+              },
+            ]
+          }
+
+          // Last message is of assistant role
+          const lastContent = (lastMessage.content as MessageContent[])?.at(-1)
+
+          // If the last content part is of text type, update it with appended text
+          if (lastContent && lastContent.type === 'text') {
+            const updatedContent = [
+              ...(lastMessage.content as MessageContent[]).slice(0, -1),
+              { ...lastContent, text: lastContent.text + data.textDelta },
+            ]
+
+            return [
+              ...messages.slice(0, -1),
+              {
+                ...lastMessage,
+                content: updatedContent,
+              },
+            ]
+          }
+
+          // If the last content part is not of text type, add a new text content part
+          return [
+            ...messages.slice(0, -1),
+            {
+              ...lastMessage,
+              content: [
+                ...((lastMessage.content as MessageContent[]) || []),
+                { type: 'text', text: data.textDelta },
+              ],
+            },
+          ]
+        })
+      } else if (data.type === 'tool-call') {
+        if (!data.toolName.startsWith('lat_')) {
+          setUnresponedToolCalls((prev) => [
+            ...prev,
+            {
+              id: data.toolCallId,
+              name: data.toolName,
+              arguments: data.args,
+            },
+          ])
+        } else {
+          setRunningLatitudeTools((prev) => prev + 1)
+        }
+
+        setMessages((messages) => {
+          const lastMessage = messages.at(-1)
+
+          // If the last message is not of assistant role, add a new assistant message
+          if (!lastMessage || lastMessage.role !== MessageRole.assistant) {
+            return [
+              ...messages,
+              {
+                role: MessageRole.assistant,
+                content: [data],
+                toolCalls: [
+                  {
+                    id: data.toolCallId,
+                    name: data.toolName,
+                    arguments: data.args,
+                  },
+                ],
+              },
+            ]
+          }
+
+          // Last message is of assistant role, update the toolCalls array and content
+          return [
+            ...messages.slice(0, -1),
+            {
+              ...lastMessage,
+              content: [
+                ...((lastMessage.content as MessageContent[]) || []),
+                data,
+              ],
+              toolCalls: [
+                ...(lastMessage.toolCalls || []),
+                {
+                  id: data.toolCallId,
+                  name: data.toolName,
+                  arguments: data.args,
+                },
+              ],
+            },
+          ]
+        })
+      } else if (data.type === 'tool-result') {
+        setMessages((messages) => {
+          const lastMessage = messages.at(-1)!
+          if (lastMessage.role === MessageRole.assistant) {
+            return [
+              ...messages.slice(0, -1),
+              {
+                ...lastMessage,
+                content: [
+                  ...((lastMessage.content as
+                    | MessageContent[]
+                    | ToolRequestContent[]) ?? []),
+                  data,
+                ],
+              },
+            ]
+          } else {
+            // Should not be possible
+            throw new Error('Expected assistant message')
+          }
+        })
+        setRunningLatitudeTools((prev) => prev - 1)
+      } else if (data.type === 'reasoning') {
+        // TODO(compiler): review this
+      }
+
+      setMessages((messages) => {
+        console.log('messages after: ', messages)
+        return messages
+      })
+    },
+    [addMessages, setRunningLatitudeTools],
+  )
+
+  const handleLatitudeEvent = useCallback(
+    (data: ChainEvent['data']) => {
+      if (data.type === ChainEventTypes.ProviderCompleted) {
+        setUsage(data.tokenUsage)
+      }
+
+      if (data.type === ChainEventTypes.ToolsStarted) {
+        setRunningLatitudeTools(data.tools.length)
+      }
+
+      if (data.type === ChainEventTypes.StepCompleted) {
+        setRunningLatitudeTools(0)
+      }
+
+      if (data.type === ChainEventTypes.ToolsRequested) {
+        setUnresponedToolCalls(
+          data.tools.filter((t) => t.name !== AGENT_RETURN_TOOL_NAME),
+        )
+      }
+
+      if (data.type === ChainEventTypes.ChainError) {
+        throw data.error
+      }
+    },
+    [setUsage, setRunningLatitudeTools, setUnresponedToolCalls],
+  )
+
+  const parseEvent = useCallback((value: ParsedEvent) => {
+    const parsedEvent = value as ParsedEvent
+    if (parsedEvent.type !== 'event') return { parsedEvent, data: undefined }
+
+    const data = JSON.parse(parsedEvent.data) as ChainEvent['data']
+
+    return { parsedEvent, data }
+  }, [])
+
+  const setDocumentLogUuidd = useCallback(
+    (data: ChainEvent['data']) => {
+      if ('uuid' in data) {
+        setDocumentLogUuid(data.uuid)
+      }
+    },
+    [setDocumentLogUuid],
+  )
+
   const handleStream = useCallback(
     async (
       stream: ReadableStream<ParsedEvent>,
@@ -83,9 +285,7 @@ export function usePlaygroundChat({
     ) => {
       setIsLoading(true)
       setError(undefined)
-      const start = performance.now()
-      let accumulatedTextDelta = ''
-      let accumulatedReasoningDelta = ''
+
       let documentLogUuid: string | undefined
 
       const reader = stream.getReader()
@@ -96,88 +296,31 @@ export function usePlaygroundChat({
           if (done) break
           if (!value) continue
 
-          const parsedEvent = value as ParsedEvent
-          if (parsedEvent.type !== 'event') continue
+          const { parsedEvent, data } = parseEvent(value)
+          if (!data) continue
 
-          const data = JSON.parse(parsedEvent.data) as ChainEvent['data']
-          const { uuid } = data as LatitudeChainCompletedEventData
-
-          if (uuid) {
-            documentLogUuid = uuid
-            setDocumentLogUuid(uuid)
-          }
-
-          if (data.type === ChainEventTypes.IntegrationWakingUp) {
-            setWakingUpIntegration(data.integrationName)
-          } else {
-            setWakingUpIntegration(undefined)
-          }
-
-          // Delta text from the provider
-          if (parsedEvent.event === StreamEventTypes.Provider) {
-            if (data.type === 'text-delta') {
-              accumulatedTextDelta += data.textDelta
-              setStreamingResponse(accumulatedTextDelta)
-            }
-            if (data.type === 'reasoning') {
-              accumulatedReasoningDelta += data.textDelta
-              setStreamingReasoning(accumulatedReasoningDelta)
-            }
-            continue
-          }
-
-          if ((data as LatitudeEventData).messages) {
-            setMessages((data as LatitudeEventData).messages)
-          }
-
-          if (data.type === ChainEventTypes.StepStarted) {
-            accumulatedTextDelta = ''
-            accumulatedReasoningDelta = ''
-          }
-          if (data.type === ChainEventTypes.ProviderCompleted) {
-            accumulatedTextDelta = ''
-            accumulatedReasoningDelta = ''
-            setStreamingResponse(undefined)
-            setStreamingReasoning(undefined)
-            setUsage(data.tokenUsage)
-          }
-
-          if (data.type === ChainEventTypes.ToolsStarted) {
-            setRunningLatitudeTools(data.tools.length)
-          }
-          if (data.type === ChainEventTypes.ToolCompleted) {
-            setRunningLatitudeTools((prev) => prev - 1)
-          }
-          if (data.type === ChainEventTypes.StepCompleted) {
-            setRunningLatitudeTools(0) // fallback
-          }
-          if (data.type === ChainEventTypes.ChainCompleted) {
-            if (!isChat.current) {
-              setChainLength(data.messages.length)
-              setTime((prev) => (prev ?? 0) + (performance.now() - start))
-            }
-          }
-          if (data.type === ChainEventTypes.ToolsRequested) {
-            setUnresponedToolCalls(
-              data.tools.filter((t) => t.name !== AGENT_RETURN_TOOL_NAME),
-            )
-          }
-
-          if (data.type === ChainEventTypes.ChainError) {
-            throw data.error
-          }
+          setDocumentLogUuidd(data)
+          handleIntegrationEvent(data)
+          handleProviderEvent(parsedEvent, data)
+          handleLatitudeEvent(data)
         }
       } catch (error) {
-        onPromptRan?.(documentLogUuid, error as Error)
         setError(error as Error)
+      } finally {
+        setIsLoading(false)
+        onPromptRan?.(documentLogUuid, error)
       }
-
-      setStreamingResponse(undefined)
-      setStreamingReasoning(undefined)
-      setIsLoading(false)
-      onPromptRan?.(documentLogUuid)
     },
-    [],
+    [
+      error,
+      setDocumentLogUuidd,
+      handleIntegrationEvent,
+      handleLatitudeEvent,
+      handleProviderEvent,
+      parseEvent,
+      setError,
+      setIsLoading,
+    ],
   )
 
   const submitUserMessage = useCallback(
@@ -202,7 +345,7 @@ export function usePlaygroundChat({
         const respondedToolCallIds = newMessages.reduce((acc, message) => {
           if (message.role !== MessageRole.tool) return acc
           const toolResponseContents = message.content.filter(
-            (c) => c.type === ContentType.toolResult,
+            (c) => c.type === 'tool-result',
           )
           return [...acc, ...toolResponseContents.map((c) => c.toolCallId)]
         }, [] as string[])
@@ -211,10 +354,6 @@ export function usePlaygroundChat({
             return !respondedToolCallIds.includes(unrespondedToolCall.id)
           }),
         )
-      }
-
-      if (!isChat.current) {
-        setChainLength((prev) => prev + newMessages.length)
       }
 
       try {
@@ -251,36 +390,26 @@ export function usePlaygroundChat({
       start,
       submitUserMessage,
       addMessages: addMessagesFn ? addMessages : undefined,
-      setError,
       error,
-      streamingReasoning,
-      streamingResponse,
       messages,
       wakingUpIntegration,
       runningLatitudeTools,
-      chainLength,
       usage,
-      time,
       unresponedToolCalls,
       isLoading,
     }),
     [
+      addMessages,
+      addMessagesFn,
+      error,
+      isLoading,
+      messages,
+      runningLatitudeTools,
       start,
       submitUserMessage,
-      addMessagesFn,
-      addMessages,
-      setError,
-      error,
-      streamingReasoning,
-      streamingResponse,
-      messages,
-      wakingUpIntegration,
-      runningLatitudeTools,
-      chainLength,
-      usage,
-      time,
       unresponedToolCalls,
-      isLoading,
+      usage,
+      wakingUpIntegration,
     ],
   )
 }
