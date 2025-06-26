@@ -24,7 +24,8 @@ const PROVIDER_PAYLOAD: ProviderApiKey = {
 
 describe('ai function', () => {
   it('should throw an error if rules are violated', async () => {
-    const context = await factories.createTelemetryContext()
+    const { workspace } = await factories.createWorkspace()
+    const context = await factories.createTelemetryContext({ workspace })
 
     // @ts-expect-error
     const provider: ProviderApiKey = {
@@ -66,7 +67,8 @@ There are rule violations:
   })
 
   it('should throw an error if Google provider is used without a user message', async () => {
-    const context = await factories.createTelemetryContext()
+    const { workspace } = await factories.createWorkspace()
+    const context = await factories.createTelemetryContext({ workspace })
 
     // @ts-expect-error
     const provider: ProviderApiKey = {
@@ -99,7 +101,8 @@ There are rule violations:
   })
 
   it('throw a ChainError when AI fails with APICallError', async () => {
-    const context = await factories.createTelemetryContext()
+    const { workspace } = await factories.createWorkspace()
+    const context = await factories.createTelemetryContext({ workspace })
 
     const streamTextModk = vi.fn()
     streamTextModk.mockImplementation(() => {
@@ -132,7 +135,8 @@ There are rule violations:
   })
 
   it('throw a ChainError when AI fails with generic Error', async () => {
-    const context = await factories.createTelemetryContext()
+    const { workspace } = await factories.createWorkspace()
+    const context = await factories.createTelemetryContext({ workspace })
 
     const streamTextModk = vi.fn()
     streamTextModk.mockImplementation(() => {

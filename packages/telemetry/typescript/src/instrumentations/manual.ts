@@ -26,20 +26,21 @@ import {
   ATTR_GEN_AI_USAGE_PROMPT_TOKENS,
   ATTR_GEN_AI_USAGE_REASONING_TOKENS,
   ATTR_HTTP_REQUEST_BODY,
-  ATTR_HTTP_REQUEST_HEADERS,
+  ATTR_HTTP_REQUEST_HEADER,
   ATTR_HTTP_REQUEST_URL,
   ATTR_HTTP_RESPONSE_BODY,
-  ATTR_HTTP_RESPONSE_HEADERS,
+  ATTR_HTTP_RESPONSE_HEADER,
   ATTR_LATITUDE_SEGMENT_ID,
   ATTR_LATITUDE_SEGMENT_PARENT_ID,
   ATTR_LATITUDE_SEGMENTS,
   ATTR_LATITUDE_TYPE,
   GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
-  GENAI_SPANS,
   HEAD_COMMIT,
+  SEGMENT_SPECIFICATIONS,
   SegmentBaggage,
   SegmentSource,
   SegmentType,
+  SPAN_SPECIFICATIONS,
   SpanType,
   TraceBaggage,
   TraceContext,
@@ -354,7 +355,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     const start = options || {}
 
     let operation = undefined
-    if (GENAI_SPANS.includes(type)) {
+    if (SPAN_SPECIFICATIONS[type].isGenAI) {
       operation = type
     }
 
@@ -732,7 +733,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
   embedding(ctx: otel.Context, options?: StartSpanOptions) {
     return this.span(
       ctx,
-      options?.name || 'Embedding',
+      options?.name || SPAN_SPECIFICATIONS[SpanType.Embedding].name,
       SpanType.Embedding,
       options,
     )
@@ -741,7 +742,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
   retrieval(ctx: otel.Context, options?: StartSpanOptions) {
     return this.span(
       ctx,
-      options?.name || 'Retrieval',
+      options?.name || SPAN_SPECIFICATIONS[SpanType.Retrieval].name,
       SpanType.Retrieval,
       options,
     )
@@ -750,7 +751,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
   reranking(ctx: otel.Context, options?: StartSpanOptions) {
     return this.span(
       ctx,
-      options?.name || 'Reranking',
+      options?.name || SPAN_SPECIFICATIONS[SpanType.Reranking].name,
       SpanType.Reranking,
       options,
     )
@@ -762,8 +763,8 @@ export class ManualInstrumentation implements BaseInstrumentation {
   ) {
     const prefix =
       direction === 'request'
-        ? ATTR_HTTP_REQUEST_HEADERS
-        : ATTR_HTTP_RESPONSE_HEADERS
+        ? ATTR_HTTP_REQUEST_HEADER
+        : ATTR_HTTP_RESPONSE_HEADER
 
     const attributes: otel.Attributes = {}
     for (const key in headers) {
@@ -782,6 +783,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     const method = start.request.method.toUpperCase()
 
+    // Note: do not serialize headers as a single attribute because fields won't be redacted
     const attrHeaders = this.attribifyHeaders('request', start.request.headers)
 
     let finalBody = ''
@@ -815,6 +817,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       end: (options: EndHttpSpanOptions) => {
         const end = options
 
+        // Note: do not serialize headers as a single attribute because fields won't be redacted
         const attrHeaders = this.attribifyHeaders(
           'response',
           end.response.headers,
@@ -877,9 +880,12 @@ export class ManualInstrumentation implements BaseInstrumentation {
     ctx = this.setBaggage(ctx, baggage, options.baggage)
 
     // Dummy wrapper to force the same trace and carry on some segment attributes
-    const span = this.span(ctx, type, SpanType.Segment, {
-      attributes: options.attributes,
-    })
+    const span = this.span(
+      ctx,
+      SEGMENT_SPECIFICATIONS[type].name,
+      SpanType.Segment,
+      { attributes: options.attributes },
+    )
 
     let carrier = {} as TraceContext
     propagation.inject(span.context, carrier)

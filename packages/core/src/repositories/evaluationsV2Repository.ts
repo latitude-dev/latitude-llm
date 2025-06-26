@@ -1,3 +1,4 @@
+import { differenceInMilliseconds } from 'date-fns'
 import {
   and,
   desc,
@@ -132,8 +133,8 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
       ),
     )
     evaluations = evaluations.filter((e) => !e.deletedAt)
-    evaluations = evaluations.sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    evaluations = evaluations.sort((a, b) =>
+      differenceInMilliseconds(b.createdAt, a.createdAt),
     )
 
     return Result.ok<EvaluationV2[]>(evaluations)

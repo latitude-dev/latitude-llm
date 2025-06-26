@@ -12,12 +12,12 @@ let user: User
 
 describe('createProvider', () => {
   beforeEach(async () => {
-    context = await factories.createTelemetryContext()
-
     const { userData, workspace: w } = await factories.createWorkspace()
 
     user = userData
     workspace = w
+    context = await factories.createTelemetryContext({ workspace })
+
     vi.resetModules()
   })
 

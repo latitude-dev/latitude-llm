@@ -2,6 +2,7 @@ import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 
+import { ChainEventTypes } from '@latitude-data/constants'
 import { eq } from 'drizzle-orm'
 import {
   Commit,
@@ -17,6 +18,7 @@ import {
 import { database } from '../../../client'
 import { ProviderLogsRepository } from '../../../repositories'
 import { providerLogs } from '../../../schema'
+import { TelemetryContext } from '../../../telemetry'
 import {
   createDocumentLog,
   createProject,
@@ -24,11 +26,8 @@ import {
 } from '../../../tests/factories'
 import { testConsumeStream } from '../../../tests/helpers'
 import * as aiModule from '../../ai'
+import { Result, TypedResult } from './../../../lib/Result'
 import { addMessages } from './index'
-import { ChainEventTypes } from '@latitude-data/constants'
-import { Result } from './../../../lib/Result'
-import { TypedResult } from './../../../lib/Result'
-import { TelemetryContext } from '../../../telemetry'
 
 const dummyDoc1Content = `
 ---
@@ -90,8 +89,6 @@ describe('addMessages', () => {
   beforeEach(async () => {
     vi.resetAllMocks()
 
-    context = await createTelemetryContext()
-
     const {
       workspace: wsp,
       user: usr,
@@ -106,6 +103,7 @@ describe('addMessages', () => {
     commit = cmt
     workspace = wsp
     providerLog = pl
+    context = await createTelemetryContext({ workspace })
 
     mocks = {
       ai: vi.spyOn(aiModule, 'ai').mockResolvedValue(

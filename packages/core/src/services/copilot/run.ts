@@ -16,7 +16,7 @@ export async function runCopilot<S extends z.ZodSchema = z.ZodAny>({
   schema?: S
 }) {
   const result = await runDocumentAtCommit({
-    context: BACKGROUND(),
+    context: BACKGROUND({ workspaceId: copilot.workspace.id }),
     workspace: copilot.workspace,
     commit: copilot.commit,
     document: copilot.document,

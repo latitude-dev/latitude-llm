@@ -90,7 +90,10 @@ export async function buildStreamEvaluationRun({
   if (result.error) return result
 
   const { runFunction, runArgs } = result.value
-  const { stream } = runFunction({ context: BACKGROUND(), ...runArgs })
+  const { stream } = runFunction({
+    context: BACKGROUND({ workspaceId: workspace.id }),
+    ...runArgs,
+  })
   const streamHandler = buildStreamHandler(stream)
 
   return Result.ok({ streamHandler })

@@ -41,7 +41,7 @@ describe('telemetry', () => {
       const { headersMock, methodMock, endpointMock, bodyMock } = mockRequest({
         server: gatewayMock,
         method: 'post',
-        endpoint: '/api/v3/otlp/v1/traces',
+        endpoint: '/api/v3/traces',
       })
 
       const sdk = new LatitudeTelemetry('fake-api-key')
@@ -67,7 +67,7 @@ describe('telemetry', () => {
         }),
       )
       expect(methodMock).toHaveBeenCalledWith('POST')
-      expect(endpointMock).toHaveBeenCalledWith('/api/v3/otlp/v1/traces')
+      expect(endpointMock).toHaveBeenCalledWith('/api/v3/traces')
       expect(bodyMock).toHaveBeenCalledWith({
         resourceSpans: expect.any(Array),
       })
@@ -80,13 +80,13 @@ describe('telemetry', () => {
       const { headersMock, methodMock, endpointMock, bodyMock } = mockRequest({
         server: gatewayMock,
         method: 'post',
-        endpoint: '/api/v3/otlp/v1/traces',
+        endpoint: '/api/v3/traces',
         baseUrl: 'https://custom-host.com',
       })
 
       const sdk = new LatitudeTelemetry('fake-api-key', {
         exporter: new OTLPTraceExporter({
-          url: 'https://custom-host.com/api/v3/otlp/v1/traces',
+          url: 'https://custom-host.com/api/v3/traces',
           headers: {
             Authorization: `Bearer fake-api-key`,
             'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ describe('telemetry', () => {
         }),
       )
       expect(methodMock).toHaveBeenCalledWith('POST')
-      expect(endpointMock).toHaveBeenCalledWith('/api/v3/otlp/v1/traces')
+      expect(endpointMock).toHaveBeenCalledWith('/api/v3/traces')
       expect(bodyMock).toHaveBeenCalledWith({
         resourceSpans: expect.any(Array),
       })
@@ -128,7 +128,7 @@ describe('telemetry', () => {
       const { headersMock, methodMock, endpointMock, bodyMock } = mockRequest({
         server: gatewayMock,
         method: 'post',
-        endpoint: '/api/v3/otlp/v1/traces',
+        endpoint: '/api/v3/traces',
       })
 
       const sdk = new LatitudeTelemetry('fake-api-key')
@@ -169,7 +169,7 @@ describe('telemetry', () => {
         }),
       )
       expect(methodMock).toHaveBeenCalledWith('POST')
-      expect(endpointMock).toHaveBeenCalledWith('/api/v3/otlp/v1/traces')
+      expect(endpointMock).toHaveBeenCalledWith('/api/v3/traces')
       expect(bodyMock).toHaveBeenCalledWith({
         resourceSpans: [
           expect.objectContaining({
@@ -237,7 +237,7 @@ describe('telemetry', () => {
       const { headersMock, methodMock, endpointMock, bodyMock } = mockRequest({
         server: gatewayMock,
         method: 'post',
-        endpoint: '/api/v3/otlp/v1/traces',
+        endpoint: '/api/v3/traces',
       })
 
       const processorMock = new MockSpanProcessor()
@@ -267,7 +267,7 @@ describe('telemetry', () => {
         }),
       )
       expect(methodMock).toHaveBeenCalledWith('POST')
-      expect(endpointMock).toHaveBeenCalledWith('/api/v3/otlp/v1/traces')
+      expect(endpointMock).toHaveBeenCalledWith('/api/v3/traces')
       expect(bodyMock).toHaveBeenCalledWith({
         resourceSpans: expect.any(Array),
       })

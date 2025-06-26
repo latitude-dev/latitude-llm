@@ -66,4 +66,7 @@ export const EventHandlers: IEventsHandlers = {
   scaleMcpServer: [notifyClientOfScaleUpMcpServer],
   mcpServerConnected: [notifyClientOfMcpServerConnected],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],
+  spanCreated: [],
+  segmentCreated: [],
+  segmentUpdated: [],
 }

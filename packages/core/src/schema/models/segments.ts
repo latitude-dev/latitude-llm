@@ -1,5 +1,12 @@
-import { isNotNull, sql } from 'drizzle-orm'
-import { bigint, index, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import {
+  bigint,
+  index,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core'
 import {
   DocumentType,
   SegmentSource,
@@ -54,12 +61,15 @@ export const segments = latitudeSchema.table(
     cost: bigint('cost', { mode: 'number' }).notNull(),
     duration: bigint('duration', { mode: 'number' }).notNull(),
     startedAt: timestamp('started_at').notNull(),
-    endedAt: timestamp('ended_at'),
+    endedAt: timestamp('ended_at').notNull(),
     ...timestamps(),
   },
   (table) => ({
     traceIdIdx: index('segments_trace_id_idx').on(table.traceId),
-    traceIdIdIdx: index('segments_trace_id_id_idx').on(table.traceId, table.id),
+    traceIdIdIdx: uniqueIndex('segments_trace_id_id_idx').on(
+      table.traceId,
+      table.id,
+    ),
     parentIdIdx: index('segments_parent_id_idx').on(table.parentId),
     workspaceIdIdx: index('segments_workspace_id_idx').on(table.workspaceId),
     apiKeyIdIdx: index('segments_api_key_id_idx').on(table.apiKeyId),
@@ -94,8 +104,5 @@ export const segments = latitudeSchema.table(
     startedAtBrinIdx: index('segments_started_at_brin_idx')
       .using('brin', sql`${table.startedAt}`)
       .with({ pages_per_range: 32, autosummarize: true }),
-    endedAtPartialIdx: index('segments_ended_at_partial_idx')
-      .on(table.endedAt)
-      .where(isNotNull(table.endedAt)),
   }),
 )

@@ -1,14 +1,12 @@
 import slugify from '@sindresorhus/slugify'
 import path from 'path'
-import { diskFactory, DiskWrapper } from '../../lib/disk'
+import { PromptLFile, toPromptLFile } from 'promptl-ai'
 import { Workspace } from '../../browser'
 import { MAX_UPLOAD_SIZE_IN_MB } from '../../constants'
-import { PromptLFile, toPromptLFile } from 'promptl-ai'
-import { BadRequestError } from './../../lib/errors'
+import { diskFactory, DiskWrapper } from '../../lib/disk'
+import { BadRequestError, UnprocessableEntityError } from './../../lib/errors'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
-import { Result } from './../../lib/Result'
-import { TypedResult } from './../../lib/Result'
-import { UnprocessableEntityError } from './../../lib/errors'
+import { Result, TypedResult } from './../../lib/Result'
 
 function generateKey({
   filename,
@@ -62,7 +60,7 @@ export async function uploadFile(
     return Result.ok(toPromptLFile({ file, url }))
   } catch (error) {
     return Result.error(
-      new UnprocessableEntityError(`Failed to upload ${extension} file`, {}),
+      new UnprocessableEntityError(`Failed to upload ${extension} file`),
     )
   }
 }

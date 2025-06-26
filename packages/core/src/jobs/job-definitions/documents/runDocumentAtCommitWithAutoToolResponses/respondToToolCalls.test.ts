@@ -37,8 +37,6 @@ const FAKE_TOOL_CALLS = [
 // NOTE: Order of the tests here matters. Be aware and sorry
 describe('respondToToolCalls', () => {
   beforeAll(async () => {
-    context = await factories.createTelemetryContext()
-
     copilot = await mockToolRequestsCopilot()
     const setup = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'Latitude' }],
@@ -91,6 +89,7 @@ describe('respondToToolCalls', () => {
     workspace = setup.workspace
     document = setup.documents[0]!
     commit = setup.commit
+    context = await factories.createTelemetryContext({ workspace })
   })
 
   beforeEach(() => {

@@ -1,21 +1,21 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import * as factories from '../../../../tests/factories'
-import { Commit, Providers, User, Workspace } from '../../../../browser'
+import { faker } from '@faker-js/faker'
+import { ContentType, MessageRole } from '@latitude-data/compiler'
 import {
   AGENT_RETURN_TOOL_NAME,
   LatitudeTool,
   ToolDefinition,
 } from '@latitude-data/constants'
-import { Result } from '../../../Result'
-import { faker } from '@faker-js/faker'
-import { resolveToolsFromConfig } from '../../resolveTools'
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Commit, Providers, User, Workspace } from '../../../../browser'
 import * as runDocumentAtCommitMod from '../../../../services/commits/runDocumentAtCommit'
 import * as callIntegrationToolMod from '../../../../services/integrations/McpClient/callTool'
 import * as executeLatitudeToolCallMod from '../../../../services/latitudeTools'
-import { ResolvedTools, ToolSource } from '../../resolveTools/types'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { TelemetryContext } from '../../../../telemetry'
+import * as factories from '../../../../tests/factories'
+import { Result } from '../../../Result'
+import { resolveToolsFromConfig } from '../../resolveTools'
+import { ResolvedTools, ToolSource } from '../../resolveTools/types'
 
 const agentAsToolResponse = { response: 'Agent response' }
 const integrationToolResponse = { executed: 'integrationTool' }
@@ -92,8 +92,6 @@ describe('getBuiltInToolCallResponses', () => {
     vi.resetAllMocks()
     vi.restoreAllMocks()
 
-    context = await factories.createTelemetryContext()
-
     vi.spyOn(runDocumentAtCommitMod, 'runDocumentAtCommit').mockResolvedValue(
       //@ts-ignore Ignore the returned type
       Result.ok({
@@ -144,6 +142,7 @@ describe('getBuiltInToolCallResponses', () => {
     user = _user
     workspace = _workspace
     commit = _commit
+    context = await factories.createTelemetryContext({ workspace })
   })
 
   it('Does not return any response when there are no tool calls', async () => {

@@ -3,6 +3,8 @@ import Redis from 'ioredis'
 
 import { buildRedisConnection } from '../redis'
 
+export type Cache = Redis
+
 let connection: Redis
 
 export const cache = async () => {

@@ -1,22 +1,56 @@
 import {
   DEFAULT_REDACT_SPAN_PROCESSOR,
   LatitudeTelemetry,
+  BACKGROUND as ROOT,
 } from '@latitude-data/telemetry'
-import { ExportResult, ExportResultCode } from '@opentelemetry/core'
+import { propagation, SpanAttributes } from '@opentelemetry/api'
+import {
+  ExportResult,
+  ExportResultCode,
+  hrTimeToNanoseconds,
+} from '@opentelemetry/core'
+import { Resource } from '@opentelemetry/resources'
 import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-node'
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
+import { z } from 'zod'
+import { ATTR_LATITUDE_INTERNAL, Otlp } from '../browser'
+import { tracingQueue } from '../jobs/queues'
 
 export type * from '@latitude-data/telemetry'
-export { BACKGROUND, Instrumentation } from '@latitude-data/telemetry'
+
+export const internalBaggageSchema = z.object({
+  workspaceId: z.number(),
+  apiKeyId: z.number().optional(),
+})
+export type InternalBaggage = z.infer<typeof internalBaggageSchema>
+
+export const BACKGROUND = (baggage: InternalBaggage) =>
+  propagation.setBaggage(
+    ROOT(),
+    propagation.createBaggage({
+      [ATTR_LATITUDE_INTERNAL]: { value: JSON.stringify(baggage) },
+    }),
+  )
 
 class InternalExporter implements SpanExporter {
-  constructor() {}
+  private resource: Resource
+
+  constructor() {
+    this.resource = new Resource({
+      [ATTR_SERVICE_NAME]: process.env.npm_package_name || 'unknown',
+    })
+  }
 
   export(
-    _spans: ReadableSpan[],
+    spans: ReadableSpan[],
     callback: (result: ExportResult) => void,
   ): void {
-    // TODO(tracing): enqueue spans directly
-    callback({ code: ExportResultCode.SUCCESS })
+    tracingQueue
+      .add('ingestSpansJob', { spans: this.convert(spans) })
+      .then(() => callback({ code: ExportResultCode.SUCCESS }))
+      .catch((error: Error) =>
+        callback({ code: ExportResultCode.FAILED, error }),
+      )
   }
 
   shutdown(): Promise<void> {
@@ -25,6 +59,81 @@ class InternalExporter implements SpanExporter {
 
   forceFlush(): Promise<void> {
     return Promise.resolve()
+  }
+
+  private convertValue(value: unknown): Otlp.AttributeValue | undefined {
+    if (value == null || value == undefined) return undefined
+    if (typeof value === 'string') return { stringValue: value }
+    if (typeof value === 'boolean') return { boolValue: value }
+    if (typeof value === 'number') return { intValue: value }
+    if (!Array.isArray(value)) return undefined
+    const values = value.map(this.convertValue).filter((v) => v != undefined)
+    return { arrayValue: { values } }
+  }
+
+  private convertAttributes(attributes: SpanAttributes): Otlp.Attribute[] {
+    const serialized = []
+
+    for (const [key, v] of Object.entries(attributes)) {
+      const value = this.convertValue(v)
+      if (value != undefined) serialized.push({ key, value })
+    }
+
+    return serialized
+  }
+
+  private groupScopes(spans: ReadableSpan[]): Record<string, ReadableSpan[]> {
+    const scopes: Record<string, ReadableSpan[]> = {}
+
+    for (const span of spans) {
+      let scope = span.instrumentationLibrary.name
+      if (span.instrumentationLibrary.version) {
+        scope += `@${span.instrumentationLibrary.version}`
+      }
+      if (!scopes[scope]) scopes[scope] = [span]
+      else scopes[scope]!.push(span)
+    }
+
+    return scopes
+  }
+
+  private convert(spans: ReadableSpan[]): Otlp.ResourceSpan[] {
+    return [
+      {
+        resource: {
+          attributes: this.convertAttributes(this.resource.attributes),
+        },
+        scopeSpans: Object.entries(this.groupScopes(spans)).map(
+          ([scope, spans]) => ({
+            scope: {
+              name: scope.split('@')[0]!,
+              version: scope.split('@')[1],
+            },
+            spans: spans.map((span) => ({
+              traceId: span.spanContext().traceId,
+              spanId: span.spanContext().spanId,
+              parentSpanId: span.parentSpanId,
+              name: span.name,
+              kind: span.kind,
+              startTimeUnixNano: hrTimeToNanoseconds(span.startTime).toString(),
+              endTimeUnixNano: hrTimeToNanoseconds(span.endTime).toString(),
+              status: span.status,
+              events: span.events.map((event) => ({
+                name: event.name,
+                timeUnixNano: hrTimeToNanoseconds(event.time).toString(),
+                attributes: this.convertAttributes(event.attributes || {}),
+              })),
+              links: span.links.map((link) => ({
+                traceId: link.context.traceId,
+                spanId: link.context.spanId,
+                attributes: this.convertAttributes(link.attributes || {}),
+              })),
+              attributes: this.convertAttributes(span.attributes || {}),
+            })),
+          }),
+        ),
+      },
+    ]
   }
 }
 

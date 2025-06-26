@@ -144,7 +144,7 @@ export async function runNewLatte({
   context: string
 }): PromisedResult<undefined> {
   return generateCopilotResponse({
-    context: BACKGROUND(),
+    context: BACKGROUND({ workspaceId: copilotWorkspace.id }),
     copilotWorkspace,
     copilotCommit,
     copilotDocument,
@@ -186,7 +186,7 @@ export async function addMessageToExistingLatte({
   }
 
   return generateCopilotResponse({
-    context: BACKGROUND(),
+    context: BACKGROUND({ workspaceId: copilotWorkspace.id }),
     copilotWorkspace,
     copilotCommit,
     copilotDocument,

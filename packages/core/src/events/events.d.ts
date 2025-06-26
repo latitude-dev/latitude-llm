@@ -21,6 +21,8 @@ import type {
   ProviderLog,
   ProviderLogDto,
   Providers,
+  Segment,
+  Span,
   User,
   Workspace,
 } from '../browser'
@@ -67,6 +69,9 @@ export type Events =
   | 'scaleMcpServer'
   | 'webhookDeliveryCreated'
   | 'exportReady'
+  | 'spanCreated'
+  | 'segmentCreated'
+  | 'segmentUpdated'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -479,6 +484,33 @@ export type ExportReadyEvent = LatitudeEventGeneric<
   }
 >
 
+export type SpanCreatedEvent = LatitudeEventGeneric<
+  'spanCreated',
+  {
+    workspaceId: number
+    apiKeyId: number
+    span: Span
+  }
+>
+
+export type SegmentCreatedEvent = LatitudeEventGeneric<
+  'segmentCreated',
+  {
+    workspaceId: number
+    apiKeyId: number
+    segment: Segment
+  }
+>
+
+export type SegmentUpdatedEvent = LatitudeEventGeneric<
+  'segmentUpdated',
+  {
+    workspaceId: number
+    apiKeyId: number
+    segment: Segment
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -520,6 +552,9 @@ export type LatitudeEvent =
   | McpServerConnectedEvent
   | WebhookDeliveryCreatedEvent
   | ExportReadyEvent
+  | SpanCreatedEvent
+  | SegmentCreatedEvent
+  | SegmentUpdatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -562,4 +597,7 @@ export interface IEventsHandlers {
   mcpServerConnected: EventHandler<McpServerConnectedEvent>[]
   webhookDeliveryCreated: EventHandler<WebhookDeliveryCreatedEvent>[]
   exportReady: EventHandler<ExportReadyEvent>[]
+  spanCreated: EventHandler<SpanCreatedEvent>[]
+  segmentCreated: EventHandler<SegmentCreatedEvent>[]
+  segmentUpdated: EventHandler<SegmentUpdatedEvent>[]
 }

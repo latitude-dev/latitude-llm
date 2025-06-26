@@ -92,7 +92,7 @@ async function getNewTriggerResponse(
   )
 
   const runResult = await runDocumentAtCommit({
-    context: BACKGROUND(),
+    context: BACKGROUND({ workspaceId: workspace.id }),
     workspace,
     document,
     commit: headCommit,
