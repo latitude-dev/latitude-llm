@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { $getRoot, EditorState, $isParagraphNode } from 'lexical'
 
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
@@ -22,7 +22,6 @@ import { EnterKeyPlugin } from './plugins/EnterKeyPlugin'
 import { DraggableBlockPlugin } from './plugins/DraggableBlockPlugin'
 import { StepNameEditPlugin } from './plugins/StepNameEditPlugin'
 import { TypeaheadMenuPlugin } from './plugins/TypeaheadMenuPlugin'
-import { BlocksToolbar } from './components/BlocksToolbar'
 import { AnyBlock } from '@latitude-data/constants/simpleBlocks'
 import { MessageBlockNode } from './nodes/MessageBlock'
 import { StepBlockNode } from './nodes/StepBlock'
@@ -32,6 +31,9 @@ import {
   VERTICAL_SPACE_CLASS,
 } from './nodes/utils'
 import { InsertEmptyLinePlugin } from './plugins/InsertEmptyLinePlugin'
+import { VariableTransformPlugin } from './plugins/VariableTransformPlugin'
+import { VariableNode } from './nodes/VariableNode'
+import { VariableMenuPlugin } from './plugins/VariablesMenuPlugin'
 
 const theme = {
   ltr: 'ltr',
@@ -66,8 +68,7 @@ function OnChangeHandler({
           onChange(textContent)
         }
 
-        // Move to a separate function to handle blocks conversion
-        // This can be tested
+        // FIXME: Move to a separate function to handle blocks conversion
         if (onBlocksChange) {
           const root = $getRoot()
           const blocks: AnyBlock[] = []
@@ -195,7 +196,7 @@ export function BlocksEditor({
       console.error('Editor error:', error)
     },
     editable: !readOnly,
-    nodes: [MessageBlockNode, StepBlockNode],
+    nodes: [MessageBlockNode, StepBlockNode, VariableNode],
   }
 
   return (
@@ -207,9 +208,6 @@ export function BlocksEditor({
       )}
     >
       <LexicalComposer initialConfig={initialConfig}>
-        {/* Toolbar */}
-        {!readOnly && <BlocksToolbar />}
-
         <div className='relative' ref={onRef}>
           <RichTextPlugin
             contentEditable={
@@ -240,8 +238,10 @@ export function BlocksEditor({
           <InsertEmptyLinePlugin />
           <StepNameEditPlugin />
           <TypeaheadMenuPlugin />
+          <VariableMenuPlugin />
           <InitializeBlocksPlugin initialBlocks={initialValue} />
           <HierarchyValidationPlugin />
+          <VariableTransformPlugin />
 
           {/* Drag and Drop Plugin */}
           {!readOnly && floatingAnchorElem && (
