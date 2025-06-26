@@ -3,10 +3,11 @@ import { randomUUID } from 'crypto'
 import { Job } from 'bullmq'
 
 import { LogSources } from '@latitude-data/constants'
+import { isErrorRetryable } from '../../../services/evaluationsV2/run'
+import { BACKGROUND } from '../../../telemetry'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { runDocumentAtCommitWithAutoToolResponses } from './runDocumentAtCommitWithAutoToolResponses'
-import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 
 export type RunDocumentJobData = {
   workspaceId: number
@@ -55,6 +56,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
 
   try {
     await runDocumentAtCommitWithAutoToolResponses({
+      context: BACKGROUND(),
       workspaceId,
       projectId,
       documentUuid,

@@ -2,6 +2,7 @@ import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  Commit,
   EvaluationType,
   EvaluationV2,
   LLM_EVALUATION_PROMPT_PARAMETERS,
@@ -21,6 +22,7 @@ import { runPrompt } from './shared'
 
 describe('runPrompt', () => {
   let workspace: Workspace
+  let commit: Commit
   let provider: ProviderApiKey
   let evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Binary>
   let resultUuid: string
@@ -35,7 +37,7 @@ describe('runPrompt', () => {
     const {
       workspace: w,
       documents,
-      commit,
+      commit: c,
       providers,
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
@@ -43,6 +45,7 @@ describe('runPrompt', () => {
     })
 
     workspace = w
+    commit = c
     provider = providers[0]!
 
     evaluation = await factories.createEvaluationV2({
@@ -128,6 +131,7 @@ describe('runPrompt', () => {
         resultUuid: 'resultUuid',
         evaluation: evaluation,
         providers: new Map([[provider.name, provider]]),
+        commit: commit,
         workspace: workspace,
       }),
     ).rejects.toThrowError(
@@ -162,6 +166,7 @@ describe('runPrompt', () => {
         resultUuid: 'resultUuid',
         evaluation: evaluation,
         providers: new Map([[provider.name, provider]]),
+        commit: commit,
         workspace: workspace,
       }),
     ).rejects.toThrowError(
@@ -202,6 +207,7 @@ describe('runPrompt', () => {
         resultUuid: 'resultUuid',
         evaluation: evaluation,
         providers: new Map([[provider.name, provider]]),
+        commit: commit,
         workspace: workspace,
       }),
     ).rejects.toThrowError(
@@ -255,6 +261,7 @@ describe('runPrompt', () => {
         resultUuid: 'resultUuid',
         evaluation: evaluation,
         providers: new Map([[provider.name, provider]]),
+        commit: commit,
         workspace: workspace,
       }),
     ).rejects.toThrowError(
@@ -295,6 +302,7 @@ describe('runPrompt', () => {
         resultUuid: 'resultUuid',
         evaluation: evaluation,
         providers: new Map([[provider.name, provider]]),
+        commit: commit,
         workspace: workspace,
       }),
     ).rejects.toThrowError(
@@ -323,6 +331,7 @@ describe('runPrompt', () => {
       resultUuid: 'resultUuid',
       evaluation: evaluation,
       providers: new Map([[provider.name, provider]]),
+      commit: commit,
       workspace: workspace,
     })
 
@@ -387,6 +396,7 @@ describe('runPrompt', () => {
       resultUuid: 'resultUuid',
       evaluation: evaluation,
       providers: new Map([[provider.name, provider]]),
+      commit: commit,
       workspace: workspace,
     })
 

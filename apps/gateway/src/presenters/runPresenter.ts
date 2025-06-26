@@ -1,17 +1,19 @@
-import { LatitudeError } from '@latitude-data/constants/errors'
-import { Result, TypedResult } from '@latitude-data/core/lib/Result'
 import { captureException } from '$/common/sentry'
+import { ToolCall } from '@latitude-data/compiler'
 import {
   ChainStepObjectResponse,
   ChainStepTextResponse,
-  RunSyncAPIResponse,
   extractAgentToolCalls,
+  RunSyncAPIResponse,
+  TraceContext,
 } from '@latitude-data/constants'
-import { ToolCall } from '@latitude-data/compiler'
+import { LatitudeError } from '@latitude-data/constants/errors'
+import { Result, TypedResult } from '@latitude-data/core/lib/Result'
 
 type DocumentResponse = ChainStepObjectResponse | ChainStepTextResponse
 export function v2RunPresenter(
   response: DocumentResponse,
+  trace: TraceContext,
 ): TypedResult<Omit<RunSyncAPIResponse, 'toolRequests'>, LatitudeError> {
   const conversation = response.providerLog?.messages
   const uuid = response.documentLogUuid
@@ -39,15 +41,18 @@ export function v2RunPresenter(
       object: type === 'object' ? response.object : undefined,
       toolCalls: type === 'text' ? response.toolCalls : [],
     },
+    trace,
   })
 }
 
 export function runPresenter({
   response,
   toolCalls = [],
+  trace,
 }: {
   response: DocumentResponse
   toolCalls: ToolCall[]
+  trace: TraceContext
 }): TypedResult<RunSyncAPIResponse, LatitudeError> {
   const conversation = response.providerLog?.messages
   const uuid = response.documentLogUuid
@@ -79,5 +84,6 @@ export function runPresenter({
       object: type === 'object' ? response.object : undefined,
       toolCalls: type === 'text' ? response.toolCalls : [],
     },
+    trace,
   })
 }

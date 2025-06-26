@@ -1,9 +1,9 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
 import {
-  StreamEventTypes,
   ChainEvent,
   ChainEventTypes,
   LatitudeProviderCompletedEventData,
+  StreamEventTypes,
 } from '@latitude-data/constants'
 
 const CHUNK_EVENTS: ChainEvent[] = [
@@ -365,6 +365,9 @@ const CHUNK_EVENTS: ChainEvent[] = [
         totalTokens: 466,
       },
       finishReason: 'stop',
+      trace: {
+        traceparent: '00-12345678901234567890123456789012-1234567890123456-01',
+      },
     },
   },
 ]
@@ -384,4 +387,7 @@ export const FINAL_RESPONSE = {
   conversation: lastResponse.messages,
   toolRequests: [],
   response: lastResponse.response,
+  trace: {
+    traceparent: '00-12345678901234567890123456789012-1234567890123456-01',
+  },
 }

@@ -7,6 +7,7 @@ import { ProviderLog } from './models'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
 import { ParameterType } from './config'
 import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
+import { TraceContext } from './tracing/trace'
 
 export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
 
@@ -141,6 +142,7 @@ export type RunSyncAPIResponse = {
   toolRequests: ToolCall[]
   response: ChainCallResponseDto
   agentResponse?: { response: string } | Record<string, unknown>
+  trace: TraceContext
 }
 
 export type ChatSyncAPIResponse = RunSyncAPIResponse

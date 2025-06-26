@@ -80,7 +80,7 @@ async function run(
   >,
   _: Database = database,
 ) {
-  let metadata = {
+  const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput,
   }

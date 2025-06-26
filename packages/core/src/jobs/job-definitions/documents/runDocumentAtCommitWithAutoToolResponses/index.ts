@@ -1,11 +1,12 @@
 import { LogSources } from '@latitude-data/constants'
+import { Experiment } from '../../../../browser'
+import { TelemetryContext } from '../../../../telemetry'
+import { getCopilotDataForGenerateToolResponses } from './getCopilotData'
 import {
   getDataForInitialRequest,
   GetDataParams,
 } from './getDataForInitialRequest'
 import { runDocumentUntilItStops } from './runDocumentUntilItStops'
-import { getCopilotDataForGenerateToolResponses } from './getCopilotData'
-import { Experiment } from '../../../../browser'
 
 /**
  * This function handle the processing of a document even when
@@ -16,6 +17,7 @@ import { Experiment } from '../../../../browser'
  * use for users' requests from the API gateway.
  */
 export async function runDocumentAtCommitWithAutoToolResponses({
+  context,
   parameters,
   customPrompt,
   source,
@@ -23,6 +25,7 @@ export async function runDocumentAtCommitWithAutoToolResponses({
   experiment,
   ...dataParams
 }: GetDataParams & {
+  context: TelemetryContext
   parameters: Record<string, unknown>
   customPrompt?: string
   experiment?: Experiment
@@ -42,6 +45,7 @@ export async function runDocumentAtCommitWithAutoToolResponses({
       hasToolCalls: false,
       autoRespondToolCalls,
       data: {
+        context,
         workspace,
         commit,
         document,

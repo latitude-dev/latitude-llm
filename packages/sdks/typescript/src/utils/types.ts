@@ -222,6 +222,7 @@ export type ToolCallDetails = {
   requestedToolCalls: ToolCall[]
   conversationUuid: string
   messages: Message[]
+  trace: TraceContext
   pauseExecution: () => void
 }
 
@@ -315,6 +316,7 @@ export type ChatOptions<Tools extends ToolSpec> = StreamResponseCallbacks & {
   stream?: boolean
   tools?: ToolCalledFn<Tools>
   signal?: AbortSignal
+  trace?: TraceContext
 }
 
 export type SDKOptions = {
@@ -367,4 +369,5 @@ type RunDocumentBodyParams = {
 type ChatBodyParams = {
   messages: Message[]
   stream?: boolean
+  trace?: TraceContext
 }

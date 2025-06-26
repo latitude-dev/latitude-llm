@@ -1,13 +1,16 @@
-import { ErrorableEntity } from '../../constants'
-import { generateUUIDIdentifier } from '../../lib/generateUUID'
-import { runChain, SomeChain, RunChainArgs } from '../chains/run'
-import { runAgentStep } from './runStep'
-import { deleteCachedChain } from '../chains/chainCache'
-import { ChainStreamManager } from '../../lib/chainStreamManager'
+import { Conversation } from '@latitude-data/compiler'
 import { ChainEventTypes } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { TraceContext } from '../../browser'
+import { ErrorableEntity } from '../../constants'
+import { ChainStreamManager } from '../../lib/chainStreamManager'
+import { generateUUIDIdentifier } from '../../lib/generateUUID'
+import { deleteCachedChain } from '../chains/chainCache'
+import { runChain, RunChainArgs, SomeChain } from '../chains/run'
+import { runAgentStep } from './runStep'
 
 export function runAgent<T extends boolean, C extends SomeChain>({
+  context,
   workspace,
   providersMap,
   source,
@@ -28,6 +31,17 @@ export function runAgent<T extends boolean, C extends SomeChain>({
   const errorableUuid = generateUUID()
   const chainStartTime = Date.now()
 
+  let resolveTrace: (trace: TraceContext) => void
+  const trace = new Promise<TraceContext>((resolve) => {
+    resolveTrace = resolve
+  })
+
+  // Conversation is returned for the Agent to use
+  let resolveConversation: (conversation: Conversation) => void
+  const conversation = new Promise<Conversation>((resolve) => {
+    resolveConversation = resolve
+  })
+
   const chainStreamManager = new ChainStreamManager({
     workspace,
     errorableUuid,
@@ -40,6 +54,7 @@ export function runAgent<T extends boolean, C extends SomeChain>({
 
   const streamResult = chainStreamManager.start(async () => {
     const chainResult = runChain({
+      context,
       workspace,
       providersMap,
       source,
@@ -77,14 +92,17 @@ export function runAgent<T extends boolean, C extends SomeChain>({
           details: streamError.details,
         })
       }
+
       if (value.data.type === ChainEventTypes.ChainCompleted) {
         // Ignore the ChainCompleted event
         continue
       }
+
       if (value.data.type === ChainEventTypes.ToolsRequested) {
         // Stop the stream and request tools from the user
-        chainStreamManager.requestTools(value.data.tools)
-        return
+        chainStreamManager.requestTools(value.data.tools, value.data.trace)
+        const conversation = await chainResult.conversation
+        return { conversation, trace: value.data.trace }
       }
 
       if (value.data.type === ChainEventTypes.ProviderCompleted) {
@@ -106,7 +124,8 @@ export function runAgent<T extends boolean, C extends SomeChain>({
     }
 
     await deleteCachedChain({ workspace, documentLogUuid: errorableUuid })
-    await runAgentStep({
+    const result = await runAgentStep({
+      context,
       chainStreamManager,
       workspace,
       source,
@@ -118,6 +137,11 @@ export function runAgent<T extends boolean, C extends SomeChain>({
       newMessages,
       previousConfig: conversation.config,
     })
+
+    resolveConversation(result.conversation)
+    resolveTrace(result.trace)
+
+    return result
   }, abortSignal)
 
   return {
@@ -125,5 +149,7 @@ export function runAgent<T extends boolean, C extends SomeChain>({
     resolvedContent: chain.rawText,
     errorableUuid,
     duration: streamResult.messages.then(() => Date.now() - chainStartTime),
+    conversation,
+    trace,
   }
 }

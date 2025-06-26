@@ -10,7 +10,7 @@ import { flattenDocumentStructure, ICreateProject } from './projects'
 import { createWorkspace } from './workspaces'
 
 export async function createProject(projectData: Partial<ICreateProject> = {}) {
-  let workspaceData = projectData.workspace ?? {}
+  const workspaceData = projectData.workspace ?? {}
   let user: User
   let workspace: Workspace
 
@@ -31,7 +31,8 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     workspace,
     user,
   })
-  let { project, commit } = result.unwrap()
+  const { project, commit: c } = result.unwrap()
+  let commit = c
 
   const documents: DocumentVersion[] = []
 

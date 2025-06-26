@@ -33,7 +33,6 @@ export async function updateMcpServerResources(
     const k8sObjectApi = k8s.KubernetesObjectApi.makeApiClient(kc)
 
     let manifest = mcpServer.k8sManifest
-    let secretManifest: string | undefined
 
     // Decrypt environment variables
     let environmentVariables = {}
@@ -60,7 +59,7 @@ export async function updateMcpServerResources(
     })
 
     manifest = generatedManifests.manifest
-    secretManifest = generatedManifests.secretManifest
+    const secretManifest = generatedManifests.secretManifest
 
     // Update the manifest in the database
     Transaction.call(async (tx) => {

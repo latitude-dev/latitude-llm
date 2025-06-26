@@ -1,18 +1,19 @@
-import { streamSSE } from 'hono/streaming'
-import { AppRouteHandler } from '$/openApi/types'
-import { RunRoute } from '$/routes/api/v2/documents/run/run.route'
-import { LogSources } from '@latitude-data/core/browser'
-import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
-import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
-import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
-import { captureException } from '$/common/sentry'
 import {
-  legacyChainEventPresenter,
   getData,
+  legacyChainEventPresenter,
   publishDocumentRunRequestedEvent,
 } from '$/common/documents/getData'
+import { captureException } from '$/common/sentry'
+import { AppRouteHandler } from '$/openApi/types'
 import { v2RunPresenter } from '$/presenters/runPresenter'
+import { RunRoute } from '$/routes/api/v2/documents/run/run.route'
+import { LogSources } from '@latitude-data/core/browser'
 import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
+import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
+import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
+import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
+import { BACKGROUND } from '@latitude-data/core/telemetry'
+import { streamSSE } from 'hono/streaming'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735
@@ -48,7 +49,9 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     stream: newStream,
     lastResponse,
     error,
+    trace,
   } = await runDocumentAtCommit({
+    context: BACKGROUND(),
     workspace,
     document,
     commit,
@@ -90,6 +93,8 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   if (awaitedError) throw awaitedError
 
   const response = await lastResponse
-  const body = v2RunPresenter(response!).unwrap()
+  const awaitedTrace = await trace
+
+  const body = v2RunPresenter(response!, awaitedTrace).unwrap()
   return c.json(body)
 }

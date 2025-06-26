@@ -19,7 +19,7 @@ import {
   TraceContext,
 } from '@latitude-data/constants'
 import * as otel from '@opentelemetry/api'
-import { context, propagation } from '@opentelemetry/api'
+import { context, propagation, TextMapPropagator } from '@opentelemetry/api'
 import {
   ALLOW_ALL_BAGGAGE_KEYS,
   BaggageSpanProcessor,
@@ -145,6 +145,7 @@ export type TelemetryOptions = {
   disableBatch?: boolean
   exporter?: SpanExporter
   processors?: SpanProcessor[]
+  propagators?: TextMapPropagator[]
 }
 
 export class LatitudeTelemetry {
@@ -167,6 +168,7 @@ export class LatitudeTelemetry {
     propagation.setGlobalPropagator(
       new CompositePropagator({
         propagators: [
+          ...(this.options.propagators || []),
           new W3CTraceContextPropagator(),
           new W3CBaggagePropagator(),
         ],

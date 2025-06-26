@@ -13,7 +13,10 @@ export type TraceContext = z.infer<typeof traceContextSchema>
 
 export type TraceBaggage = {
   segment: Pick<SegmentBaggage, 'id' | 'parentId'> // Note: helper for third-party observability services
-  segments: SegmentBaggage[]
+  segments: (SegmentBaggage &
+    Pick<TraceContext, 'traceparent' | 'tracestate'> & {
+      paused?: boolean
+    })[]
 }
 
 export type AssembledSpan<T extends SpanType = SpanType> = Span<T> & {

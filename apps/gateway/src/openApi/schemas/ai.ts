@@ -2,6 +2,7 @@ import { z } from '@hono/zod-openapi'
 import {
   LegacyChainEventTypes,
   StreamEventTypes,
+  traceContextSchema,
 } from '@latitude-data/constants'
 import { messageSchema } from '@latitude-data/core/browser'
 
@@ -98,6 +99,7 @@ export const runSyncAPIResponseSchema = z.object({
   uuid: z.string(),
   conversation: z.array(messageSchema),
   response: chainCallResponseDtoSchema,
+  trace: traceContextSchema,
 })
 
 export const ProjectSchema = z.object({

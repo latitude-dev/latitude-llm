@@ -26,14 +26,16 @@ import {
 import * as ChainValidator from './ChainValidator'
 import { runChain } from './run'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { TelemetryContext } from '../../telemetry'
 
+let context: TelemetryContext
 let providersMap: Map<string, any>
-
 let workspace: Workspace
 let promptSource: PromptSource
+
 function buildMockAIresponse(chunks: TextStreamPart<TOOLS>[]) {
   return Result.ok({
-    type: 'text' as 'text',
+    type: 'text' as const,
     text: new Promise((resolve) => resolve('MY TEXT')),
     usage: new Promise((resolve) =>
       resolve({
@@ -61,6 +63,8 @@ describe('run chain error handling', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks()
+
+    context = await factories.createTelemetryContext()
 
     const {
       workspace: w,
@@ -110,6 +114,7 @@ describe('run chain error handling', () => {
         ),
       )
     const run = runChain({
+      context: context,
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain: mockChain as Chain,
@@ -152,6 +157,7 @@ describe('run chain error handling', () => {
         ),
       )
     const run = runChain({
+      context: context,
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain: mockChain as Chain,
@@ -185,6 +191,7 @@ describe('run chain error handling', () => {
       parameters: {},
     })
     const run = runChain({
+      context: context,
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
@@ -222,6 +229,7 @@ describe('run chain error handling', () => {
       parameters: {},
     })
     const run = runChain({
+      context: context,
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
@@ -260,6 +268,7 @@ describe('run chain error handling', () => {
       parameters: {},
     })
     const run = runChain({
+      context: context,
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
@@ -304,6 +313,7 @@ describe('run chain error handling', () => {
       parameters: {},
     })
     const run = runChain({
+      context: context,
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
@@ -348,6 +358,7 @@ describe('run chain error handling', () => {
       parameters: {},
     })
     const run = runChain({
+      context: context,
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
@@ -393,6 +404,7 @@ describe('run chain error handling', () => {
       parameters: {},
     })
     const run = runChain({
+      context: context,
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,

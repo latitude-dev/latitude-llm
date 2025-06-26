@@ -1,14 +1,14 @@
 import { faker } from '@faker-js/faker'
 
 import { User, Workspace } from '../../browser'
-import { DiskWrapper } from '../../lib/disk'
-import { createDatasetFromFile as createDatasetFromFileFn } from '../../services/datasets/createFromFile'
-import { createWorkspace, ICreateWorkspace } from './workspaces'
-import { createTestCsvFile } from '../../services/datasetRows/testHelper'
 import { DatasetV2CreatedEvent } from '../../events/events'
+import { DiskWrapper } from '../../lib/disk'
 import { createRowsFromUploadedDataset } from '../../services/datasetRows/createRowsFromUploadedDataset'
+import { createTestCsvFile } from '../../services/datasetRows/testHelper'
+import { createDatasetFromFile as createDatasetFromFileFn } from '../../services/datasets/createFromFile'
 import { HashAlgorithmFn } from '../../services/datasets/utils'
 import getTestDisk from '../testDrive'
+import { createWorkspace, ICreateWorkspace } from './workspaces'
 
 const defaultTestDisk = getTestDisk()
 
@@ -45,7 +45,7 @@ type Props = Partial<ICreateDatasetV2>
 
 export async function createDataset(datasetData: Props) {
   const disk = datasetData.disk ?? defaultTestDisk
-  let workspaceData = datasetData.workspace ?? {}
+  const workspaceData = datasetData.workspace ?? {}
   let user: User
   let workspace: Workspace
 

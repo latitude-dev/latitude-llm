@@ -1,3 +1,4 @@
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import {
   ChainStepResponse,
   Commit,
@@ -9,16 +10,16 @@ import {
   type DocumentVersion,
   type Workspace,
 } from '../../browser'
+import { telemetry, TelemetryContext } from '../../telemetry'
 import { runAgent } from '../agents/run'
 import { runChain } from '../chains/run'
+import { createDocumentLog } from '../documentLogs/create'
 import { getResolvedContent } from '../documents'
+import { isErrorRetryable } from '../evaluationsV2/run'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
-import { RunDocumentChecker } from './RunDocumentChecker'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { Result } from './../../lib/Result'
-import { createDocumentLog } from '../documentLogs/create'
-import { isErrorRetryable } from '../evaluationsV2/run'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { RunDocumentChecker } from './RunDocumentChecker'
 
 async function createDocumentRunResult({
   document,
@@ -62,6 +63,7 @@ async function createDocumentRunResult({
 }
 
 export async function runDocumentAtCommit({
+  context,
   workspace,
   document,
   parameters,
@@ -73,6 +75,7 @@ export async function runDocumentAtCommit({
   experiment,
   errorableUuid,
 }: {
+  context: TelemetryContext
   workspace: Workspace
   commit: Commit
   document: DocumentVersion
@@ -100,6 +103,18 @@ export async function runDocumentAtCommit({
   // in getResolvedContent it will not appear in Latitude
   if (result.error) return result
 
+  // Note: run document retries always produce new traces
+  const $prompt = telemetry.prompt(context, {
+    logUuid: errorableUuid,
+    versionUuid: commit.uuid,
+    promptUuid: document.documentUuid,
+    experimentUuid: experiment?.uuid,
+    externalId: customIdentifier,
+    template: result.value,
+    parameters: parameters,
+    _internal: { source },
+  })
+
   const checker = new RunDocumentChecker({
     document,
     errorableUuid,
@@ -120,11 +135,12 @@ export async function runDocumentAtCommit({
       publishEvent: false,
       experiment,
     })
-
+    $prompt.fail(checkerResult.error)
     return checkerResult
   }
 
   const runArgs = {
+    context: $prompt.context,
     abortSignal,
     generateUUID: () => errorableUuid,
     errorableType,
@@ -149,25 +165,34 @@ export async function runDocumentAtCommit({
     ...runResult,
     resolvedContent: result.value,
     errorableUuid,
-    lastResponse: runResult.lastResponse.then(async (response) => {
-      const error = await runResult.error
-      if (error && isErrorRetryable(error)) return response
+    lastResponse: runResult.lastResponse
+      .then(async (response) => {
+        const error = await runResult.error
+        if (error) {
+          $prompt.fail(error)
+          if (isErrorRetryable(error)) return response
+        } else {
+          $prompt.end()
+        }
 
-      await createDocumentRunResult({
-        workspace,
-        document,
-        commit,
-        errorableUuid,
-        parameters,
-        resolvedContent: result.value,
-        customIdentifier,
-        source,
-        duration: await runResult.duration,
-        publishEvent: true,
-        experiment,
+        await createDocumentRunResult({
+          workspace,
+          document,
+          commit,
+          errorableUuid,
+          parameters,
+          resolvedContent: result.value,
+          customIdentifier,
+          source,
+          duration: await runResult.duration,
+          publishEvent: true,
+          experiment,
+        })
+
+        return response
       })
-
-      return response
-    }),
+      .catch((error) => {
+        $prompt.fail(error)
+      }),
   })
 }

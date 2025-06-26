@@ -1,15 +1,16 @@
-import { ToolSource } from '../../resolveTools/types'
-import { Result } from '../../../Result'
-import { NotFoundError } from '../../../errors'
-import { PromisedResult } from '../../../Transaction'
-import { ToolResponsesArgs } from './types'
-import { callIntegrationTool } from '../../../../services/integrations/McpClient/callTool'
-import { IntegrationsRepository } from '../../../../repositories'
-import { IntegrationDto } from '../../../../browser'
-import { createMcpClientManager } from '../../../../services/integrations/McpClient/McpClientManager'
 import { ChainStreamManager } from '../..'
+import { IntegrationDto } from '../../../../browser'
+import { IntegrationsRepository } from '../../../../repositories'
+import { callIntegrationTool } from '../../../../services/integrations/McpClient/callTool'
+import { createMcpClientManager } from '../../../../services/integrations/McpClient/McpClientManager'
+import { NotFoundError } from '../../../errors'
+import { Result } from '../../../Result'
+import { PromisedResult } from '../../../Transaction'
+import { ToolSource } from '../../resolveTools/types'
+import { ToolResponsesArgs } from './types'
 
 export function getIntegrationToolCallResults({
+  contexts,
   workspace,
   toolCalls,
   resolvedTools,
@@ -37,7 +38,7 @@ export function getIntegrationToolCallResults({
     ]),
   )
 
-  return toolCalls.map(async (toolCall) => {
+  return toolCalls.map(async (toolCall, idx) => {
     const toolSourceData = resolvedTools[toolCall.name]?.sourceData
     if (toolSourceData?.source !== ToolSource.Integration) {
       return Result.error(new NotFoundError(`Unknown tool`))
@@ -49,6 +50,7 @@ export function getIntegrationToolCallResults({
     const integration = integrationResult.unwrap()
 
     return callIntegrationTool({
+      context: contexts[idx]!,
       integration,
       toolName: toolSourceData.toolName,
       args: toolCall.arguments,

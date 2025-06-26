@@ -4,21 +4,21 @@ import {
   MessageRole,
   ToolMessage,
 } from '@latitude-data/compiler'
-import { LatitudeToolCall } from '../../constants'
-import { LATITUDE_TOOLS } from './tools'
 import {
   LatitudeTool,
   LatitudeToolInternalName,
   ToolDefinition,
 } from '@latitude-data/constants'
+import { LatitudeToolCall } from '../../constants'
 import { TypedResult } from './../../lib/Result'
+import { LATITUDE_TOOLS } from './tools'
 
 export const getLatitudeToolName = (
   internalName: LatitudeToolInternalName,
 ): LatitudeTool => {
   const toolKey = Object.entries(LatitudeToolInternalName).find(
     ([_, val]) => val === internalName,
-  )?.[0]!
+  )![0]!
   return LatitudeTool[toolKey as keyof typeof LatitudeTool]
 }
 
@@ -27,7 +27,7 @@ export const getLatitudeToolInternalName = (
 ): LatitudeToolInternalName => {
   const toolKey = Object.entries(LatitudeTool).find(
     ([_, val]) => val === tool,
-  )?.[0]!
+  )![0]!
   return LatitudeToolInternalName[
     toolKey as keyof typeof LatitudeToolInternalName
   ]

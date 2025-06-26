@@ -1,7 +1,7 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
-import * as factories from '../../../tests/factories'
 import { LanguageModelUsage, TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it } from 'vitest'
+import * as factories from '../../../tests/factories'
 
 import { processResponse } from '.'
 import { LogSources, Providers } from '../../../constants'
@@ -9,8 +9,8 @@ import {
   AsyncStreamIteable,
   TOOLS,
 } from '../../../lib/chainStreamManager/ChainStreamConsumer/consumeStream.test'
-import { buildProviderLogDto } from './saveOrPublishProviderLogs'
 import { generateUUIDIdentifier } from './../../../lib/generateUUID'
+import { buildProviderLogDto } from './saveOrPublishProviderLogs'
 
 let data: ReturnType<typeof buildProviderLogDto>
 
@@ -65,7 +65,7 @@ describe('ProviderProcessor', () => {
     const result = await processResponse({
       documentLogUuid: data.documentLogUuid!,
       aiResult: {
-        type: 'text' as 'text',
+        type: 'text' as const,
         toolCalls: new Promise((resolve) => resolve([])),
         reasoning: new Promise<string | undefined>((resolve) =>
           resolve(undefined),

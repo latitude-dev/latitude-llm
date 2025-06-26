@@ -50,6 +50,7 @@ async function runHandler<T extends ToolSpec, K extends keyof T>({
   conversationUuid,
   messages,
   requestedToolCalls,
+  trace,
   instrumentation,
 }: {
   handler: ToolHandler<T, K>
@@ -57,6 +58,7 @@ async function runHandler<T extends ToolSpec, K extends keyof T>({
   requestedToolCalls: ToolCall[]
   conversationUuid: string
   messages: Message[]
+  trace: TraceContext
   instrumentation?: ToolInstrumentation
 }) {
   const toolName = toolRequest.name.toString()
@@ -70,6 +72,7 @@ async function runHandler<T extends ToolSpec, K extends keyof T>({
       conversationUuid,
       messages,
       requestedToolCalls,
+      trace,
     },
   ] as const
 
@@ -100,12 +103,14 @@ async function runHandlers<Tools extends ToolSpec>({
   toolRequests,
   conversationUuid,
   messages,
+  trace,
   instrumentation,
 }: {
   tools: ToolCalledFn<Tools>
   toolRequests: ToolCall[]
   conversationUuid: string
   messages: Message[]
+  trace: TraceContext
   instrumentation?: ToolInstrumentation
 }) {
   return await Promise.all(
@@ -117,6 +122,7 @@ async function runHandlers<Tools extends ToolSpec>({
         conversationUuid,
         messages,
         requestedToolCalls: toolRequests,
+        trace,
         instrumentation,
       })
     }),
@@ -128,14 +134,14 @@ async function buildToolResponseMessages<Tools extends ToolSpec>({
   toolRequests,
   conversationUuid,
   messages,
-  traceContext,
+  trace,
   instrumentation,
 }: {
   tools: ToolCalledFn<Tools>
   toolRequests: ToolCall[]
   conversationUuid: string
   messages: Message[]
-  traceContext?: TraceContext
+  trace: TraceContext
   instrumentation?: ToolInstrumentation
 }) {
   const toolNames = Object.keys(tools)
@@ -167,12 +173,13 @@ async function buildToolResponseMessages<Tools extends ToolSpec>({
     toolRequests,
     conversationUuid,
     messages,
+    trace,
     instrumentation,
   }
 
   try {
-    if (instrumentation && traceContext) {
-      return await instrumentation.withTraceContext(traceContext, async () =>
+    if (instrumentation && trace) {
+      return await instrumentation.withTraceContext(trace, async () =>
         runHandlers(runArgs),
       )
     }
@@ -193,6 +200,7 @@ type OriginalResponse = {
   toolRequests: ToolCall[]
   response: ChainCallResponseDto
   agentResponse?: { response: string } | Record<string, unknown>
+  trace: TraceContext
 }
 
 export function hasToolRequests<Tools extends ToolSpec>({
@@ -215,14 +223,14 @@ export async function handleToolRequests<
   chatFn,
   originalResponse,
   toolRequests,
-  traceContext,
+  trace,
   instrumentation,
   ...options
 }: ChatOptionsWithSDKOptions<Tools> & {
   originalResponse: OriginalResponse
   toolRequests: ToolCall[]
   chatFn: T extends false ? typeof syncChat : typeof streamChat
-  traceContext?: TraceContext
+  trace: TraceContext
   instrumentation?: ToolInstrumentation
 }): Promise<ChatSyncAPIResponse | undefined> {
   const toolHandlers = options.tools!
@@ -231,7 +239,7 @@ export async function handleToolRequests<
     toolRequests,
     conversationUuid: originalResponse.uuid,
     messages: originalResponse.conversation,
-    traceContext,
+    trace,
     instrumentation,
   })
 
@@ -243,7 +251,7 @@ export async function handleToolRequests<
   return await chatFn(originalResponse.uuid, {
     ...options,
     messages: toolResponseMessages,
-    // Note: do not pass the trace context recursively
+    trace,
     instrumentation,
   })
 }

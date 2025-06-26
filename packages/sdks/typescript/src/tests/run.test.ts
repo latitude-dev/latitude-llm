@@ -30,7 +30,7 @@ import {
   AGENT_RETURN_TOOL_NAME,
   ChainEventTypes,
 } from '@latitude-data/constants'
-import { MockInstrumentation } from './helpers/mockTools/instrumentation'
+import { MockInstrumentation } from './helpers/instrumentation'
 import {
   mock502Response,
   mockNonStreamResponse,
@@ -322,6 +322,10 @@ data: ${JSON.stringify({
                   ],
                 },
               ],
+              trace: {
+                traceparent:
+                  '00-12345678901234567890123456789012-1234567890123456-01',
+              },
             },
           })
           expect(mockChatBody).toHaveBeenNthCalledWith(2, {
@@ -366,6 +370,10 @@ data: ${JSON.stringify({
                   ],
                 },
               ],
+              trace: {
+                traceparent:
+                  '00-12345678901234567890123456789012-1234567890123456-01',
+              },
             },
           })
         }),
@@ -493,6 +501,10 @@ data: ${JSON.stringify({
                 name: 'get_coordinates',
               },
             ],
+            trace: {
+              traceparent:
+                '00-12345678901234567890123456789012-1234567890123456-01',
+            },
           })
         }),
       )
@@ -546,6 +558,10 @@ data: ${JSON.stringify({
             },
             toolRequests: [],
             uuid: '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b',
+            trace: {
+              traceparent:
+                '00-12345678901234567890123456789012-1234567890123456-01',
+            },
           })
         }),
       )
@@ -631,6 +647,7 @@ data: ${JSON.stringify({
           })
 
           expect(mockRunBody).toHaveBeenCalledTimes(1)
+          expect(mockChatBody).toHaveBeenCalledTimes(2)
           expect(mockChatBody).toHaveBeenNthCalledWith(1, {
             body: {
               stream: true,
@@ -682,6 +699,10 @@ data: ${JSON.stringify({
                   ],
                 },
               ],
+              trace: {
+                traceparent:
+                  '00-12345678901234567890123456789012-1234567890123456-01',
+              },
             },
           })
           expect(mockChatBody).toHaveBeenNthCalledWith(2, {
@@ -726,8 +747,29 @@ data: ${JSON.stringify({
                   ],
                 },
               ],
+              trace: {
+                traceparent:
+                  '00-12345678901234567890123456789012-1234567890123456-01',
+              },
             },
           })
+          expect(instrumentation.withTraceContext).toHaveBeenCalledTimes(2)
+          expect(instrumentation.withTraceContext).toHaveBeenNthCalledWith(
+            1,
+            {
+              traceparent:
+                '00-12345678901234567890123456789012-1234567890123456-01',
+            },
+            expect.any(Function),
+          )
+          expect(instrumentation.withTraceContext).toHaveBeenNthCalledWith(
+            2,
+            {
+              traceparent:
+                '00-12345678901234567890123456789012-1234567890123456-01',
+            },
+            expect.any(Function),
+          )
           expect(instrumentation.wrapToolHandler).toHaveBeenCalledTimes(6)
         }),
       )
@@ -802,6 +844,10 @@ data: ${JSON.stringify({
                 },
               ],
               response: {},
+              trace: {
+                traceparent:
+                  '00-12345678901234567890123456789012-1234567890123456-01',
+              },
             })}
         `,
           ]
@@ -1168,6 +1214,10 @@ data: ${JSON.stringify({
                   ],
                 },
               ],
+              trace: {
+                traceparent:
+                  '00-12345678901234567890123456789012-1234567890123456-01',
+              },
             },
           })
           expect(mockChatBody).toHaveBeenNthCalledWith(2, {
@@ -1212,6 +1262,10 @@ data: ${JSON.stringify({
                   ],
                 },
               ],
+              trace: {
+                traceparent:
+                  '00-12345678901234567890123456789012-1234567890123456-01',
+              },
             },
           })
         }),
@@ -1234,6 +1288,7 @@ data: ${JSON.stringify({
 
           expect(onFinished).toHaveBeenCalledTimes(1)
           expect(mockRunBody).toHaveBeenCalledTimes(1)
+          expect(mockChatBody).toHaveBeenCalledTimes(2)
           expect(mockChatBody).toHaveBeenNthCalledWith(1, {
             body: {
               stream: false,
@@ -1285,6 +1340,10 @@ data: ${JSON.stringify({
                   ],
                 },
               ],
+              trace: {
+                traceparent:
+                  '00-12345678901234567890123456789012-1234567890123456-01',
+              },
             },
           })
           expect(mockChatBody).toHaveBeenNthCalledWith(2, {
@@ -1329,8 +1388,29 @@ data: ${JSON.stringify({
                   ],
                 },
               ],
+              trace: {
+                traceparent:
+                  '00-12345678901234567890123456789012-1234567890123456-01',
+              },
             },
           })
+          expect(instrumentation.withTraceContext).toHaveBeenCalledTimes(2)
+          expect(instrumentation.withTraceContext).toHaveBeenNthCalledWith(
+            1,
+            {
+              traceparent:
+                '00-12345678901234567890123456789012-1234567890123456-01',
+            },
+            expect.any(Function),
+          )
+          expect(instrumentation.withTraceContext).toHaveBeenNthCalledWith(
+            2,
+            {
+              traceparent:
+                '00-12345678901234567890123456789012-1234567890123456-01',
+            },
+            expect.any(Function),
+          )
           expect(instrumentation.wrapToolHandler).toHaveBeenCalledTimes(6)
         }),
       )

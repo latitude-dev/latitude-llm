@@ -4,8 +4,8 @@ import { parse as csvParse, Info } from 'csv-parse'
 import { CsvError, parse, type Options as CsvOptions } from 'csv-parse/sync'
 import { castCell } from './castCells'
 
-import { Result } from '../Result'
 import { Readable } from 'node:stream'
+import { Result } from '../Result'
 
 function getData(file: File | string) {
   if (typeof file === 'string') {
@@ -115,7 +115,7 @@ export async function* csvBatchGenerator({
 
   const parser = stream.pipe(csvParse(opts))
 
-  let batch: CsvBatch = []
+  const batch: CsvBatch = []
   for await (const r of parser) {
     const record = r as CSVRow
 

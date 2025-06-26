@@ -1,5 +1,5 @@
-import * as Sentry from '@sentry/node'
 import { env } from '@latitude-data/env'
+import * as Sentry from '@sentry/node'
 
 let sentry: Sentry.NodeClient | undefined
 
@@ -11,8 +11,10 @@ export const initSentry = () => {
       dsn: env.SENTRY_WORKERS_DSN,
       enabled: !!env.SENTRY_WORKERS_DSN,
       environment: env.NODE_ENV,
-      integrations: [],
+      skipOpenTelemetrySetup: true,
+      tracesSampleRate: 0,
       defaultIntegrations: false,
+      integrations: [],
     })
 
     return sentry

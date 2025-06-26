@@ -1,13 +1,23 @@
+import { type ToolCall, type ToolContent } from '@latitude-data/compiler'
+import {
+  LogSources,
+  toolCallSchema,
+  traceContextSchema,
+} from '@latitude-data/core/browser'
+import {
+  BACKGROUND,
+  telemetry,
+  TelemetryContext,
+} from '@latitude-data/core/telemetry'
 import { type Message } from '@latitude-data/sdk'
-import { LogSources } from '@latitude-data/core/browser'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { publisher } from '@latitude-data/core/events/publisher'
-import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
+import { publisher } from '@latitude-data/core/events/publisher'
 
 const inputSchema = z.object({
   messages: z.array(
@@ -16,6 +26,8 @@ const inputSchema = z.object({
       content: z.any(),
     }),
   ),
+  toolCalls: z.array(toolCallSchema),
+  trace: traceContextSchema.optional(),
 })
 
 export const POST = errorHandler(
@@ -35,15 +47,20 @@ export const POST = errorHandler(
       const body = await req.json()
 
       try {
-        const { messages } = inputSchema.parse(body)
+        const { messages: response, toolCalls, trace } = inputSchema.parse(body)
         const documentLogUuid = params.documentLogUuid
+        const messages = response as Message[]
+        const context = trace ? telemetry.resume(trace) : BACKGROUND()
+
+        // Note: faking playground tool spans so they show in the trace
+        await fakeToolSpans(context, messages, toolCalls)
 
         // Publish chat message event
         publisher.publishLater({
           type: 'chatMessageRequested',
           data: {
             documentLogUuid,
-            messages: messages as Message[],
+            messages,
             workspaceId: (await getCurrentUserOrError()).workspace.id,
             userEmail: (await getCurrentUserOrError()).user.email,
           },
@@ -98,6 +115,7 @@ export const POST = errorHandler(
             writer.close()
           },
           signal: req.signal,
+          trace: trace,
         })
 
         return new NextResponse(readable, {
@@ -120,3 +138,40 @@ export const POST = errorHandler(
     },
   ),
 )
+
+async function fakeToolSpans(
+  context: TelemetryContext,
+  messages: Message[],
+  toolCalls: ToolCall[],
+) {
+  const toolResults = messages.reduce((acc, message) => {
+    if (message.role !== 'tool') return acc
+    for (const content of message.content) {
+      if (content.type !== 'tool-result') continue
+      acc.push(content)
+    }
+    return acc
+  }, [] as ToolContent[])
+
+  for (const call of toolCalls) {
+    const $tool = telemetry.tool(context, {
+      name: call.name,
+      call: {
+        id: call.id,
+        arguments: call.arguments,
+      },
+    })
+
+    const result = toolResults.find((r) => r.toolCallId === call.id)
+    if (result) {
+      $tool.end({
+        result: {
+          value: result.result,
+          isError: !!result.isError,
+        },
+      })
+    } else {
+      $tool.fail(new Error('Tool call not answered'))
+    }
+  }
+}

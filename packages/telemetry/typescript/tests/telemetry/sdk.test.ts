@@ -50,8 +50,6 @@ describe('telemetry', () => {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
-        template: '<user>Hello, assistant!</user>',
-        parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
       completion.end({
@@ -100,8 +98,6 @@ describe('telemetry', () => {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
-        template: '<user>Hello, assistant!</user>',
-        parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
       completion.end({
@@ -254,8 +250,6 @@ describe('telemetry', () => {
         provider: 'openai',
         model: 'gpt-4o',
         configuration: { model: 'gpt-4o' },
-        template: '<user>Hello, assistant!</user>',
-        parameters: {},
         input: [{ role: 'user', content: 'Hello, assistant!' }],
       })
       completion.end({

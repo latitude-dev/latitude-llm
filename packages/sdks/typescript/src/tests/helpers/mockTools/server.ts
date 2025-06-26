@@ -1,17 +1,17 @@
-import { type Message } from '@latitude-data/compiler'
-import { setupServer } from 'msw/node'
 import { parseSSE } from '$sdk/utils/parseSSE'
-import { http, HttpResponse } from 'msw'
-import { vi } from 'vitest'
-import { TOOL_EVENTS, TOOL_EVENTS_OBJECT, TOOLS_DOCUMENT_UUID } from './events'
 import { ToolCallDetails, ToolCalledFn } from '$sdk/utils/types'
+import { type Message } from '@latitude-data/compiler'
 import {
   ChainEventDto,
-  StreamEventTypes,
   ChainEventTypes,
-  LatitudeProviderCompletedEventData,
   LatitudeEventData,
+  LatitudeProviderCompletedEventData,
+  StreamEventTypes,
 } from '@latitude-data/constants'
+import { http, HttpResponse } from 'msw'
+import { setupServer } from 'msw/node'
+import { vi } from 'vitest'
+import { TOOL_EVENTS, TOOL_EVENTS_OBJECT, TOOLS_DOCUMENT_UUID } from './events'
 
 const encoder = new TextEncoder()
 
@@ -60,6 +60,9 @@ function findCompleteChainEvent(events: StreamEvent[]) {
     toolRequests:
       lastEvent.type === ChainEventTypes.ToolsRequested ? lastEvent.tools : [],
     response: lastResponse,
+    trace: {
+      traceparent: '00-12345678901234567890123456789012-1234567890123456-01',
+    },
   }
 }
 

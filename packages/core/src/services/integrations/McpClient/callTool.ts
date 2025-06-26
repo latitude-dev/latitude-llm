@@ -5,6 +5,7 @@ import { createMcpClientManager } from './McpClientManager'
 import { LatitudeError } from './../../../lib/errors'
 import { PromisedResult } from './../../../lib/Transaction'
 import { Result } from './../../../lib/Result'
+import { TelemetryContext } from '../../../telemetry'
 
 type ResultContent =
   | { type: 'text'; text: string }
@@ -34,6 +35,7 @@ export async function callIntegrationTool({
   chainStreamManager,
   mcpClientManager,
 }: {
+  context: TelemetryContext
   integration: IntegrationDto
   toolName: string
   args: Record<string, unknown>

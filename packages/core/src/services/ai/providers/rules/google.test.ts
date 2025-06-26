@@ -1,13 +1,13 @@
 import type { Message } from '@latitude-data/compiler'
 import { beforeAll, describe, expect, it } from 'vitest'
 
+import { applyProviderRules } from '.'
 import { Providers } from '../models'
 import { AppliedRules, ProviderRules } from './types'
-import { applyProviderRules } from '.'
 
 const providerType = Providers.Google
 
-let config = {} as AppliedRules['config']
+const config = {} as AppliedRules['config']
 let messages: Message[]
 describe('applyGoogleRules', () => {
   describe('with system messages not at the beggining', () => {

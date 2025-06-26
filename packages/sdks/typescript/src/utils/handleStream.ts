@@ -1,6 +1,5 @@
 import { Readable } from 'stream'
 
-import type { Message, ToolCall } from '@latitude-data/compiler'
 import {
   ApiErrorCodes,
   LatitudeApiError,
@@ -8,16 +7,18 @@ import {
 } from '$sdk/utils/errors'
 import { nodeFetchResponseToReadableStream } from '$sdk/utils/nodeFetchResponseToReadableStream'
 import { StreamResponseCallbacks } from '$sdk/utils/types'
-import { ParsedEvent, ReconnectInterval } from 'eventsource-parser'
-import { EventSourceParserStream } from 'eventsource-parser/stream'
+import type { Message, ToolCall } from '@latitude-data/compiler'
 import {
   ChainCallResponseDto,
+  ChainEventTypes,
+  extractAgentToolCalls,
+  LatitudeEventData,
   ProviderData,
   StreamEventTypes,
-  ChainEventTypes,
-  LatitudeEventData,
-  extractAgentToolCalls,
+  TraceContext,
 } from '@latitude-data/constants'
+import { ParsedEvent, ReconnectInterval } from 'eventsource-parser'
+import { EventSourceParserStream } from 'eventsource-parser/stream'
 
 function parseJSON(line: string) {
   try {
@@ -38,6 +39,7 @@ export async function handleStream({
   let uuid: string | undefined
   let chainResponse: ChainCallResponseDto | undefined
   let toolsRequested: ToolCall[] = []
+  let trace: TraceContext | undefined
 
   const parser = new EventSourceParserStream()
   const stream = nodeFetchResponseToReadableStream(body, onError)
@@ -87,6 +89,11 @@ export async function handleStream({
 
           if (data.type === ChainEventTypes.ToolsRequested) {
             toolsRequested = data.tools
+            trace = data.trace
+          }
+
+          if (data.type === ChainEventTypes.ChainCompleted) {
+            trace = data.trace
           }
         }
       }
@@ -94,6 +101,10 @@ export async function handleStream({
 
     if (!uuid || !chainResponse) {
       throw new Error('Stream ended without returning a provider response.')
+    }
+
+    if (!trace) {
+      throw new Error('Stream ended without returning a trace context.')
     }
 
     const [agentTools, otherTools] = extractAgentToolCalls(toolsRequested)
@@ -104,6 +115,7 @@ export async function handleStream({
       response: chainResponse,
       toolRequests: otherTools,
       agentResponse: agentTools[0]?.arguments,
+      trace,
     }
 
     return finalResponse

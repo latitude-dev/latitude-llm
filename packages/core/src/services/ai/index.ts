@@ -5,7 +5,6 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   CoreMessage,
   jsonSchema,
-  LanguageModel,
   ObjectStreamPart,
   streamText as originalStreamText,
   Output,
@@ -16,16 +15,16 @@ import {
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 
+import { VercelConfig } from '@latitude-data/constants'
 import { ProviderApiKey, StreamType } from '../../browser'
+import { TelemetryContext } from '../../telemetry'
+import { Result, TypedResult } from './../../lib/Result'
 import { buildTools } from './buildTools'
+import { getLanguageModel } from './getLanguageModel'
 import { handleAICallAPIError } from './handleError'
 import { createProvider } from './helpers'
 import { Providers } from './providers/models'
 import { applyAllRules } from './providers/rules'
-import { VercelConfig } from '@latitude-data/constants'
-import { Result } from './../../lib/Result'
-import { TypedResult } from './../../lib/Result'
-import { getLanguageModel } from './getLanguageModel'
 
 const DEFAULT_AI_SDK_PROVIDER = {
   streamText: originalStreamText,
@@ -65,22 +64,22 @@ export type ToolSchema<
 }
 
 export async function ai({
+  context,
   provider,
   prompt,
   messages: originalMessages,
   config: originalConfig,
   schema,
   output,
-  customLanguageModel,
   aiSdkProvider,
   abortSignal,
 }: {
+  context: TelemetryContext
   provider: ProviderApiKey
   config: VercelConfig
   messages: Message[]
   prompt?: string
   schema?: JSONSchema7
-  customLanguageModel?: LanguageModel
   output?: ObjectOutput
   aiSdkProvider?: Partial<AISDKProvider>
   abortSignal?: AbortSignal
@@ -122,6 +121,7 @@ export async function ai({
     const model = config.model
     const tools = config.tools
     const providerAdapterResult = createProvider({
+      context,
       messages,
       provider: provider,
       apiKey,
@@ -136,7 +136,6 @@ export async function ai({
       provider,
       config,
       model,
-      customLanguageModel,
     })
 
     const toolsResult = buildTools(tools)
@@ -153,9 +152,7 @@ export async function ai({
       tools: toolsResult.value,
       abortSignal,
       providerOptions: config.providerOptions,
-      experimental_telemetry: {
-        isEnabled: true,
-      },
+      experimental_telemetry: { isEnabled: false }, // Note: avoid conflicts with our own telemetry
       experimental_transform: smoothStream(),
       experimental_output: useSchema
         ? Output.object({ schema: jsonSchema(schema) })
@@ -180,10 +177,10 @@ export async function ai({
 export { estimateCost, getCostPer1M } from './estimateCost'
 export type { PartialConfig } from './helpers'
 export {
-  vertexConfigurationSchema,
-  type VertexConfiguration,
-} from './providers/helpers/vertex'
-export {
   amazonBedrockConfigurationSchema,
   type AmazonBedrockConfiguration,
 } from './providers/helpers/amazonBedrock'
+export {
+  vertexConfigurationSchema,
+  type VertexConfiguration,
+} from './providers/helpers/vertex'

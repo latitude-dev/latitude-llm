@@ -6,6 +6,9 @@ if (env.SENTRY_GATEWAY_DSN) {
     dsn: env.SENTRY_GATEWAY_DSN,
     enabled: !!env.SENTRY_GATEWAY_DSN,
     environment: env.NODE_ENV,
+    skipOpenTelemetrySetup: true,
+    tracesSampleRate: 0,
+    defaultIntegrations: false,
     integrations: [],
   })
 }

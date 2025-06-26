@@ -1,15 +1,15 @@
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { runLatteJob } from './chat'
 import * as dataAccess from '../../../data-access'
 import {
   CommitsRepository,
   DocumentLogsRepository,
 } from '../../../repositories'
-import * as chatHelpers from '../../../services/copilot/latte/helpers'
 import * as chatService from '../../../services/copilot/latte'
+import * as chatHelpers from '../../../services/copilot/latte/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
+import { runLatteJob } from './chat'
 
 describe('runLatteJob', () => {
   let mockJob: Job<any>

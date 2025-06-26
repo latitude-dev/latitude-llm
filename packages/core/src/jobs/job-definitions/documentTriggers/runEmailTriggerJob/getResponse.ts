@@ -1,24 +1,25 @@
-import { type PromptLFile } from 'promptl-ai'
+import { type AssistantMessage } from '@latitude-data/compiler'
 import {
   DocumentLog,
   DocumentTriggerParameters,
   LogSources,
 } from '@latitude-data/constants'
+import { type PromptLFile } from 'promptl-ai'
+import { DocumentTrigger, Workspace } from '../../../../browser'
+import { database } from '../../../../client'
+import { unsafelyFindWorkspace } from '../../../../data-access'
 import {
   CommitsRepository,
   DocumentLogsRepository,
   DocumentVersionsRepository,
 } from '../../../../repositories'
-import { database } from '../../../../client'
 import { runDocumentAtCommit } from '../../../../services/commits'
-import { unsafelyFindWorkspace } from '../../../../data-access'
-import { DocumentTrigger, Workspace } from '../../../../browser'
-import { type AssistantMessage } from '@latitude-data/compiler'
-import { uploadFile } from '../../../../services/files'
 import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
+import { uploadFile } from '../../../../services/files'
+import { BACKGROUND } from '../../../../telemetry'
 import { BadRequestError } from './../../../../lib/errors'
-import { PromisedResult } from './../../../../lib/Transaction'
 import { Result } from './../../../../lib/Result'
+import { PromisedResult } from './../../../../lib/Transaction'
 
 async function getNewTriggerResponse(
   {
@@ -91,6 +92,7 @@ async function getNewTriggerResponse(
   )
 
   const runResult = await runDocumentAtCommit({
+    context: BACKGROUND(),
     workspace,
     document,
     commit: headCommit,

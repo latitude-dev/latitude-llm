@@ -1,20 +1,22 @@
 import { ToolCall, ToolMessage } from '@latitude-data/compiler'
-import { PromptSource } from '../../../../constants'
-import { buildToolMessage } from '../../../../services/latitudeTools/helpers'
-import { Result } from '../../../Result'
-import { NotFoundError } from '../../../errors'
+import { ChainStreamManager } from '../..'
 import { Workspace } from '../../../../browser'
+import { PromptSource } from '../../../../constants'
+import { createMcpClientManager } from '../../../../services/integrations/McpClient/McpClientManager'
+import { buildToolMessage } from '../../../../services/latitudeTools/helpers'
+import { telemetry, TelemetryContext } from '../../../../telemetry'
+import { Result } from '../../../Result'
 import { PromisedResult } from '../../../Transaction'
-import { ToolResponsesArgs } from './types'
-import { getLatitudeCallResults } from './latitudeTools'
+import { NotFoundError } from '../../../errors'
+import { ResolvedTools, ToolSource } from '../../resolveTools/types'
+import { getAgentReturnToolCallsResults } from './agentReturn'
 import { getAgentsAsToolCallsResults } from './agentsAsTools'
 import { getIntegrationToolCallResults } from './integrationTools'
-import { getAgentReturnToolCallsResults } from './agentReturn'
-import { ResolvedTools, ToolSource } from '../../resolveTools/types'
-import { createMcpClientManager } from '../../../../services/integrations/McpClient/McpClientManager'
-import { ChainStreamManager } from '../..'
+import { getLatitudeCallResults } from './latitudeTools'
+import { ToolResponsesArgs } from './types'
 
 export function getBuiltInToolCallResponses({
+  context,
   workspace,
   promptSource,
   resolvedTools,
@@ -23,6 +25,7 @@ export function getBuiltInToolCallResponses({
   chainStreamManager,
   mcpClientManager,
 }: {
+  context: TelemetryContext
   workspace: Workspace
   promptSource: PromptSource
   resolvedTools: ResolvedTools
@@ -78,7 +81,22 @@ export function getBuiltInToolCallResponses({
     toolCalls: ToolCall[],
   ) => {
     if (!toolCalls.length) return []
+
+    const $tools: ReturnType<typeof telemetry.tool>[] = []
+    for (const toolCall of toolCalls) {
+      $tools.push(
+        telemetry.tool(context, {
+          name: toolCall.name,
+          call: {
+            id: toolCall.id,
+            arguments: toolCall.arguments,
+          },
+        }),
+      )
+    }
+
     const results = callback({
+      contexts: $tools.map(($tool) => $tool.context),
       workspace,
       promptSource,
       resolvedTools,
@@ -86,12 +104,23 @@ export function getBuiltInToolCallResponses({
       chainStreamManager,
       mcpClientManager,
     })
+
     return results.map(async (promisedResult, idx) => {
+      const result = await promisedResult
+
       const message = buildToolMessage({
         toolName: toolCalls[idx]!.name,
         toolId: toolCalls[idx]!.id,
-        result: await promisedResult,
+        result: result,
       })
+
+      $tools[idx]!.end({
+        result: {
+          value: result.value ?? result.error?.message,
+          isError: !result.ok,
+        },
+      })
+
       onFinish(message)
       return message
     })

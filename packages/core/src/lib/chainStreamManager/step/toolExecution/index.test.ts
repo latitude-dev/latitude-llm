@@ -15,11 +15,13 @@ import * as callIntegrationToolMod from '../../../../services/integrations/McpCl
 import * as executeLatitudeToolCallMod from '../../../../services/latitudeTools'
 import { ResolvedTools, ToolSource } from '../../resolveTools/types'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { TelemetryContext } from '../../../../telemetry'
 
 const agentAsToolResponse = { response: 'Agent response' }
 const integrationToolResponse = { executed: 'integrationTool' }
 const latitudeToolResponse = { executed: 'Latitude Tool' }
 
+let context: TelemetryContext
 let user: User
 let workspace: Workspace
 let commit: Commit
@@ -90,6 +92,8 @@ describe('getBuiltInToolCallResponses', () => {
     vi.resetAllMocks()
     vi.restoreAllMocks()
 
+    context = await factories.createTelemetryContext()
+
     vi.spyOn(runDocumentAtCommitMod, 'runDocumentAtCommit').mockResolvedValue(
       //@ts-ignore Ignore the returned type
       Result.ok({
@@ -145,6 +149,7 @@ describe('getBuiltInToolCallResponses', () => {
   it('Does not return any response when there are no tool calls', async () => {
     const { document } = await setupDocument()
     const responseMessagePromises = getBuiltInToolCallResponses({
+      context,
       workspace,
       promptSource: { document, commit },
       toolCalls: [],
@@ -204,6 +209,7 @@ describe('getBuiltInToolCallResponses', () => {
     }).then((r) => r.unwrap())
 
     const responseMessagePromisesWithNewSchema = getBuiltInToolCallResponses({
+      context,
       workspace,
       promptSource: { document: newSchemaDoc, commit },
       toolCalls,
@@ -215,6 +221,7 @@ describe('getBuiltInToolCallResponses', () => {
     )
 
     const responseMessagePromisesWithOldSchema = getBuiltInToolCallResponses({
+      context,
       workspace,
       promptSource: { document: oldSchemaDoc, commit },
       toolCalls,
@@ -273,6 +280,7 @@ describe('getBuiltInToolCallResponses', () => {
     }).then((r) => r.unwrap())
 
     const responseMessagePromises = getBuiltInToolCallResponses({
+      context,
       workspace,
       promptSource: { document, commit },
       toolCalls,
@@ -318,6 +326,7 @@ describe('getBuiltInToolCallResponses', () => {
     ]
 
     const responseMessagePromisesWithNewSchema = getBuiltInToolCallResponses({
+      context,
       workspace,
       promptSource: { document: newSchemaDoc, commit },
       toolCalls,
@@ -381,6 +390,7 @@ describe('getBuiltInToolCallResponses', () => {
       },
     ]
     const responseMessagePromises = getBuiltInToolCallResponses({
+      context,
       workspace,
       promptSource: { document, commit },
       toolCalls,
@@ -424,6 +434,7 @@ describe('getBuiltInToolCallResponses', () => {
     ]
 
     const responseMessagePromises = getBuiltInToolCallResponses({
+      context,
       workspace,
       promptSource: { document, commit },
       toolCalls,

@@ -6,6 +6,9 @@ import {
 } from '@latitude-data/compiler'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ChainEventTypes, objectToString } from '@latitude-data/constants'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { TelemetryContext } from '@latitude-data/telemetry'
 import { Workspace } from '../../browser'
 import {
   ErrorableEntity,
@@ -18,14 +21,10 @@ import * as factories from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import * as aiModule from '../ai'
 import { setCachedResponse } from '../commits/promptCache'
+import { Result, TypedResult } from './../../lib/Result'
 import * as chainValidatorModule from './ChainValidator'
 import * as saveOrPublishProviderLogsModule from './ProviderProcessor/saveOrPublishProviderLogs'
 import { runChain } from './run'
-import { objectToString } from '@latitude-data/constants'
-import { ChainEventTypes } from '@latitude-data/constants'
-import { Result } from './../../lib/Result'
-import { TypedResult } from './../../lib/Result'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 const mocks = vi.hoisted(() => ({
   v4: vi.fn(),
@@ -66,12 +65,15 @@ describe('runChain', () => {
     })
   }
 
+  let context: TelemetryContext
   let workspace: Workspace
   let promptSource: PromptSource
 
   beforeEach(async () => {
     vi.resetAllMocks()
     mocks.v4.mockReturnValue(mockUUID)
+
+    context = await factories.createTelemetryContext()
 
     const {
       workspace: w,
@@ -107,6 +109,7 @@ describe('runChain', () => {
     })
 
     const run = runChain({
+      context,
       workspace,
       chain: mockChain as LegacyChain,
       globalConfig: {} as LatitudePromptConfig,
@@ -187,6 +190,7 @@ describe('runChain', () => {
     })
 
     const run = runChain({
+      context,
       workspace,
       chain: mockChain as LegacyChain,
       globalConfig: {} as LatitudePromptConfig,
@@ -264,6 +268,7 @@ describe('runChain', () => {
       })
 
     const run = runChain({
+      context,
       workspace,
       chain: mockChain as LegacyChain,
       globalConfig: {} as LatitudePromptConfig,
@@ -309,6 +314,7 @@ describe('runChain', () => {
     })
 
     const run = runChain({
+      context,
       workspace,
       chain: mockChain as LegacyChain,
       globalConfig: {} as LatitudePromptConfig,
@@ -396,6 +402,7 @@ describe('runChain', () => {
     })
 
     const run = runChain({
+      context,
       workspace,
       chain: mockChain as LegacyChain,
       globalConfig: {} as LatitudePromptConfig,
@@ -420,18 +427,20 @@ describe('runChain', () => {
       }),
     )
 
-    expect(aiModule.ai).toHaveBeenCalledWith({
-      messages: [
-        {
-          role: MessageRole.user,
-          content: [{ type: ContentType.text, text: 'Test message' }],
-        },
-      ],
-      config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      provider: providersMap.get('openai'),
-      schema: mockSchema,
-      output: 'object',
-    })
+    expect(aiModule.ai).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [{ type: ContentType.text, text: 'Test message' }],
+          },
+        ],
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
+        provider: providersMap.get('openai'),
+        schema: mockSchema,
+        output: 'object',
+      }),
+    )
   })
 
   it('runs a chain with array schema and output', async () => {
@@ -493,6 +502,7 @@ describe('runChain', () => {
     })
 
     const run = runChain({
+      context,
       workspace,
       chain: mockChain as LegacyChain,
       globalConfig: {} as LatitudePromptConfig,
@@ -552,6 +562,7 @@ describe('runChain', () => {
     })
 
     const run = runChain({
+      context,
       workspace,
       chain: mockChain as LegacyChain,
       globalConfig: {} as LatitudePromptConfig,
@@ -620,6 +631,7 @@ describe('runChain', () => {
     )
 
     const result = runChain({
+      context,
       workspace,
       chain: mockChain as LegacyChain,
       globalConfig: {} as LatitudePromptConfig,
@@ -684,6 +696,7 @@ describe('runChain', () => {
     )
 
     const result = runChain({
+      context,
       workspace,
       chain: mockChain as LegacyChain,
       globalConfig: {} as LatitudePromptConfig,
@@ -767,8 +780,8 @@ describe('runChain', () => {
   })
 
   describe('with cached response', () => {
-    let config = { provider: 'openai', model: 'gpt-3.5-turbo' }
-    let conversation = {
+    const config = { provider: 'openai', model: 'gpt-3.5-turbo' }
+    const conversation = {
       messages: [
         {
           role: MessageRole.user,
@@ -815,6 +828,7 @@ describe('runChain', () => {
         },
       })
       const run = runChain({
+        context,
         workspace,
         chain: mockChain as LegacyChain,
         globalConfig: {} as LatitudePromptConfig,
@@ -872,6 +886,7 @@ describe('runChain', () => {
           .mockResolvedValue(mockAiResponse as any)
 
         const run = runChain({
+          context,
           workspace,
           chain: mockChain as LegacyChain,
           globalConfig: {} as LatitudePromptConfig,
@@ -934,6 +949,7 @@ describe('runChain', () => {
           .mockResolvedValue(mockAiResponse as any)
 
         const run = runChain({
+          context,
           workspace,
           chain: mockChain as LegacyChain,
           globalConfig: {} as LatitudePromptConfig,

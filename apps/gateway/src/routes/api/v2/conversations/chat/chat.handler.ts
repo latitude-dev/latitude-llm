@@ -20,6 +20,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
     stream: newStream,
     lastResponse,
     error,
+    trace,
   } = (
     await addMessages({
       workspace,
@@ -63,7 +64,8 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   if (awaitedError) throw awaitedError
 
   const awaitedResponse = await lastResponse
+  const awaitedTrace = await trace
 
-  const body = v2RunPresenter(awaitedResponse!).unwrap()
+  const body = v2RunPresenter(awaitedResponse!, awaitedTrace).unwrap()
   return c.json(body, 200)
 }

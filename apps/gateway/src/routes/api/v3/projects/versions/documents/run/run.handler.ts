@@ -1,15 +1,16 @@
-import { streamSSE } from 'hono/streaming'
-import { AppRouteHandler } from '$/openApi/types'
-import { LogSources } from '@latitude-data/core/browser'
-import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
-import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
-import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
-import { captureException } from '$/common/sentry'
 import {
   getData,
   publishDocumentRunRequestedEvent,
 } from '$/common/documents/getData'
+import { captureException } from '$/common/sentry'
+import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
+import { LogSources } from '@latitude-data/core/browser'
+import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
+import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
+import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
+import { BACKGROUND } from '@latitude-data/core/telemetry'
+import { streamSSE } from 'hono/streaming'
 import { RunRoute } from './run.route'
 
 // https://github.com/honojs/middleware/issues/735
@@ -43,6 +44,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   }
 
   const result = await runDocumentAtCommit({
+    context: BACKGROUND(),
     workspace,
     document,
     commit,
@@ -87,9 +89,11 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   const error = await result.error
   if (error) throw error
 
-  const response = (await result.lastResponse)!
-  const toolCalls = await result.toolCalls
+  const body = runPresenter({
+    response: (await result.lastResponse)!,
+    toolCalls: await result.toolCalls,
+    trace: await result.trace,
+  }).unwrap()
 
-  const body = runPresenter({ response, toolCalls }).unwrap()
   return c.json(body)
 }

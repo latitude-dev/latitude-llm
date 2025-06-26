@@ -7,6 +7,7 @@ import {
   Workspace,
 } from '../../../../browser'
 import { runDocumentAtCommit } from '../../../../services/commits/runDocumentAtCommit'
+import { telemetry, TelemetryContext } from '../../../../telemetry'
 import { Result } from './../../../../lib/Result'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 import { respondToToolCalls } from './respondToToolCalls'
@@ -16,6 +17,7 @@ type Props<T extends boolean> = T extends true
       hasToolCalls: true
       autoRespondToolCalls: boolean
       data: {
+        context: TelemetryContext
         workspace: Workspace
         commit: Commit
         document: DocumentVersion
@@ -31,6 +33,7 @@ type Props<T extends boolean> = T extends true
       hasToolCalls: false
       autoRespondToolCalls: boolean
       data: {
+        context: TelemetryContext
         workspace: Workspace
         commit: Commit
         document: DocumentVersion
@@ -70,6 +73,10 @@ export async function runDocumentUntilItStops<T extends boolean>(
   const clientToolCalls = toolCalls.filter(
     (toolCall) => toolCall.name !== AGENT_RETURN_TOOL_NAME,
   )
+  const trace = await result.trace
+
+  // Note: resume trace to continue it syncronously
+  const context = telemetry.resume(trace)
 
   if (clientToolCalls.length) {
     return recursiveFn(
@@ -78,6 +85,7 @@ export async function runDocumentUntilItStops<T extends boolean>(
         autoRespondToolCalls,
         data: {
           ...data,
+          context: context,
           documentLogUuid: result.errorableUuid,
           toolCalls: clientToolCalls,
         },
