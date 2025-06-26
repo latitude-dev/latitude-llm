@@ -42,13 +42,13 @@ export function EnterKeyPlugin(): null {
               break
             }
             const parent = currentNode.getParent()
+
             if (!parent) break
+
             currentNode = parent
           }
 
-          if (!blockNode) {
-            return
-          }
+          if (!blockNode) return
 
           // Check if we're at the end of the block and on an empty paragraph
           const children = blockNode.getChildren()

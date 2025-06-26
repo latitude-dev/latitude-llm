@@ -91,7 +91,7 @@ export const PlaygroundBlocksEditor = memo(
             readOnly={false}
             initialValue={exampleBlocks}
             onBlocksChange={handleBlocksChange}
-            placeholder='Edit your blocks here...'
+            placeholder='Write your prompt, type "/" to insert messages or steps, "@" for include other prompts, "{{" for variables, Try typing "{{my_variable}}"'
           />
           <details className='text-xs'>
             <summary className='cursor-pointer text-gray-500'>
