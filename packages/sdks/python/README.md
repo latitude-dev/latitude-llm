@@ -27,7 +27,7 @@ await sdk.prompts.run("joke-teller", RunPromptOptions(
 ))
 ```
 
-Find more [examples](https://github.com/latitude-dev/latitude-llm/tree/main/examples/sdks/python).
+Find more [examples](https://docs.latitude.so/examples/sdk).
 
 ## Development
 
@@ -41,7 +41,9 @@ Requires uv `0.5.10` or higher.
 - Build package: `uv build`
 - Publish package: `uv publish`
 
-## Run only one test
+### Running only a specific test
+
+Mark the test with an `only` marker:
 
 ```python
 import pytest
@@ -51,13 +53,13 @@ async def my_test(self):
     # ... your code
 ```
 
-And then run the tests with the marker `only`:
+...and then run the tests with the marker `only`:
 
 ```sh
 uv run scripts/test.py -m only
 ```
 
-Other way is all in line:
+Another way is to specify the test in line:
 
 ```python
 uv run scripts/test.py <test_path>::<test_case>::<test_name>
@@ -65,4 +67,4 @@ uv run scripts/test.py <test_path>::<test_case>::<test_name>
 
 ## License
 
-The SDK is licensed under the [LGPL-3.0 License](https://opensource.org/licenses/LGPL-3.0) - read the [LICENSE](/LICENSE) file for details.
+The SDK is licensed under the [MIT License](https://opensource.org/licenses/MIT) - read the [LICENSE](/LICENSE) file for details.

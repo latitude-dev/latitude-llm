@@ -22,6 +22,7 @@
     "@latitude-data/constants": "workspace:*",
     "@latitude-data/core": "workspace:*",
     "@latitude-data/env": "workspace:^",
+    "@latitude-data/telemetry": "workspace:*",
     "@latitude-data/sdk": "workspace:^",
     "@latitude-data/socket.io-react-hook": "2.4.5",
     "@latitude-data/web-ui": "workspace:*",

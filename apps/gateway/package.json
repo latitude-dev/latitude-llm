@@ -22,6 +22,7 @@
     "@latitude-data/constants": "workspace:^",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
+    "@latitude-data/telemetry": "workspace:*",
     "@latitude-data/sdk": "workspace:^",
     "@sentry/cli": "2.37.0",
     "@sentry/node": "9.9.0",
