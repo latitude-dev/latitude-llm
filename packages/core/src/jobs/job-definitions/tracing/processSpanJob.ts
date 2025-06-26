@@ -1,0 +1,40 @@
+import { Job } from 'bullmq'
+import { Otlp } from '../../../browser'
+import { unsafelyFindWorkspace } from '../../../data-access'
+import { UnprocessableEntityError } from '../../../lib/errors'
+import { ApiKeysRepository } from '../../../repositories'
+import { processSpan } from '../../../services/tracing/spans/process'
+
+export type ProcessSpanJobData = {
+  span: Otlp.Span
+  scope: Otlp.Scope
+  apiKeyId: number
+  workspaceId: number
+}
+
+export function processSpanJobKey({ span }: ProcessSpanJobData) {
+  return `processSpanJob-${span.traceId}-${span.spanId}`
+}
+
+export const processSpanJob = async (job: Job<ProcessSpanJobData>) => {
+  const { span, scope, apiKeyId, workspaceId } = job.data
+
+  const workspace = await unsafelyFindWorkspace(workspaceId)
+  if (!workspace) return
+
+  const repository = new ApiKeysRepository(workspace.id)
+  const finding = await repository.find(apiKeyId)
+  if (finding.error) return
+  const apiKey = finding.value
+
+  const result = await processSpan({
+    span: span,
+    scope: scope,
+    apiKey: apiKey,
+    workspace: workspace,
+  })
+
+  if (result.error && !(result.error instanceof UnprocessableEntityError)) {
+    throw result.error
+  }
+}
