@@ -18,15 +18,66 @@ export enum SpanType {
   Unknown = 'unknown', // Other spans we don't care about
 }
 
-export const GENAI_SPANS = [
-  SpanType.Tool,
-  SpanType.Completion,
-  SpanType.Embedding,
-  SpanType.Retrieval,
-  SpanType.Reranking,
-]
+export type SpanSpecification<T extends SpanType = SpanType> = {
+  name: string
+  description: string
+  isGenAI: boolean
+  isHidden: boolean
+  _type?: T // TODO(tracing): required for type inference, remove this when something in the specification uses the type
+}
 
-export const HIDDEN_SPANS = [SpanType.Http, SpanType.Segment, SpanType.Unknown]
+export const SPAN_SPECIFICATIONS = {
+  [SpanType.Tool]: {
+    name: 'Tool',
+    description: 'A tool call',
+    isGenAI: true,
+    isHidden: false,
+  },
+  [SpanType.Completion]: {
+    name: 'Completion',
+    description: 'A completion call',
+    isGenAI: true,
+    isHidden: false,
+  },
+  [SpanType.Embedding]: {
+    name: 'Embedding',
+    description: 'An embedding call',
+    isGenAI: true,
+    isHidden: false,
+  },
+  [SpanType.Retrieval]: {
+    name: 'Retrieval',
+    description: 'A retrieval call',
+    isGenAI: true,
+    isHidden: false,
+  },
+  [SpanType.Reranking]: {
+    name: 'Reranking',
+    description: 'A reranking call',
+    isGenAI: true,
+    isHidden: false,
+  },
+  [SpanType.Http]: {
+    name: 'HTTP',
+    description: 'An HTTP request',
+    isGenAI: false,
+    isHidden: true,
+  },
+  [SpanType.Segment]: {
+    name: 'Segment',
+    description: 'A (partial) segment of a trace',
+    isGenAI: false,
+    isHidden: true,
+  },
+  [SpanType.Unknown]: {
+    name: 'Unknown',
+    description: 'An unknown span',
+    isGenAI: false,
+    isHidden: true,
+  },
+} as const satisfies {
+  [T in SpanType]: SpanSpecification<T>
+}
 
 export enum SpanStatus {
   Unset = 'unset',

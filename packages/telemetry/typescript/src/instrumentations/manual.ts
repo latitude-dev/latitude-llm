@@ -35,11 +35,11 @@ import {
   ATTR_LATITUDE_SEGMENTS,
   ATTR_LATITUDE_TYPE,
   GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
-  GENAI_SPANS,
   HEAD_COMMIT,
   SegmentBaggage,
   SegmentSource,
   SegmentType,
+  SPAN_SPECIFICATIONS,
   SpanType,
   TraceBaggage,
   TraceContext,
@@ -354,7 +354,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     const start = options || {}
 
     let operation = undefined
-    if (GENAI_SPANS.includes(type)) {
+    if (SPAN_SPECIFICATIONS[type].isGenAI) {
       operation = type
     }
 

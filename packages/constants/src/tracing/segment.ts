@@ -21,6 +21,25 @@ export enum SegmentType {
   Step = 'step',
 }
 
+export type SegmentSpecification<T extends SegmentType = SegmentType> = {
+  name: string
+  description: string
+  _type?: T // TODO(tracing): required for type inference, remove this when something in the specification uses the type
+}
+
+export const SEGMENT_SPECIFICATIONS = {
+  [SegmentType.Document]: {
+    name: 'Prompt',
+    description: 'A prompt',
+  },
+  [SegmentType.Step]: {
+    name: 'Step',
+    description: 'A step in a prompt',
+  },
+} as const satisfies {
+  [T in SegmentType]: SegmentSpecification<T>
+}
+
 type BaseSegmentMetadata<T extends SegmentType = SegmentType> = {
   traceId: string
   segmentId: string
