@@ -49,5 +49,8 @@ export const API_ROUTES = {
       annotate:
         '/api/v3/conversations/:conversationUuid/evaluations/:evaluationUuid/annotate',
     },
+    traces: {
+      ingest: '/api/v3/traces',
+    },
   },
 }

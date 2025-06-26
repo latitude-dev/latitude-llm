@@ -15,7 +15,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const { messages, stream: useSSE, trace, __internal } = c.req.valid('json')
   const workspace = c.get('workspace')
 
-  let context = BACKGROUND()
+  let context = BACKGROUND({ workspaceId: workspace.id })
   if (trace) context = telemetry.resume(trace)
 
   const result = (

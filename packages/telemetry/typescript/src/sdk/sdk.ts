@@ -70,7 +70,7 @@ import type * as llamaindex from 'llamaindex'
 import type * as openai from 'openai'
 import type * as togetherai from 'together-ai'
 
-const TRACES_URL = `${env.GATEWAY_BASE_URL}/api/v3/otlp/v1/traces`
+const TRACES_URL = `${env.GATEWAY_BASE_URL}/api/v3/traces`
 const SERVICE_NAME = process.env.npm_package_name || 'unknown'
 const SCOPE_VERSION = process.env.npm_package_version || 'unknown'
 

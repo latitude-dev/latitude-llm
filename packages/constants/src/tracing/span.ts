@@ -35,7 +35,7 @@ export enum SpanStatus {
 }
 
 // Note: get span attribute keys from @opentelemetry/semantic-conventions/incubating
-export type SpanAttribute = string | number | boolean
+export type SpanAttribute = string | number | boolean | SpanAttribute[]
 
 export type SpanEvent = {
   name: string

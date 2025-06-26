@@ -8,4 +8,5 @@ export enum Queues {
   webhooksQueue = 'webhooks',
   documentsQueue = 'documentsQueue',
   documentSuggestionsQueue = 'documentSuggestionsQueue',
+  tracingQueue = 'tracing',
 }
