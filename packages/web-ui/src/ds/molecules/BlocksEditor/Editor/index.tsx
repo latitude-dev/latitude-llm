@@ -21,6 +21,7 @@ import {
 import { EnterKeyPlugin } from './plugins/EnterKeyPlugin'
 import { DraggableBlockPlugin } from './plugins/DraggableBlockPlugin'
 import { StepNameEditPlugin } from './plugins/StepNameEditPlugin'
+import { TypeaheadMenuPlugin } from './plugins/TypeaheadMenuPlugin'
 import { BlocksToolbar } from './components/BlocksToolbar'
 import { AnyBlock } from '@latitude-data/constants/simpleBlocks'
 import { MessageBlockNode } from './nodes/MessageBlock'
@@ -238,6 +239,7 @@ export function BlocksEditor({
           <EnterKeyPlugin />
           <InsertEmptyLinePlugin />
           <StepNameEditPlugin />
+          <TypeaheadMenuPlugin />
           <InitializeBlocksPlugin initialBlocks={initialValue} />
           <HierarchyValidationPlugin />
 
