@@ -1,7 +1,10 @@
-import { memo, Suspense } from 'react'
+import { memo, Suspense, useCallback } from 'react'
 import { AstError, AnyBlock } from '@latitude-data/constants/simpleBlocks'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
-import { BlocksEditor } from '@latitude-data/web-ui/molecules/BlocksEditor'
+import {
+  BlocksEditor,
+  IncludedPrompt,
+} from '@latitude-data/web-ui/molecules/BlocksEditor'
 import {
   ICommitContextType,
   IProjectContextType,
@@ -69,10 +72,10 @@ const exampleBlocks: AnyBlock[] = [
   },
 ]
 
-function ReferenceLink({ url, path }: { url: string; path: string }) {
+function ReferenceLink({ prompt }: { prompt: IncludedPrompt }) {
   return (
     <Link
-      href={url}
+      href={prompt.url}
       className='gap-x-1 inline-flex items-baseline min-w-0 max-w-[400px]'
     >
       <Icon
@@ -81,7 +84,7 @@ function ReferenceLink({ url, path }: { url: string; path: string }) {
         className='relative flex-none align-baseline top-[3px]'
       />
       <Text.H5M ellipsis noWrap color='primary'>
-        {path}
+        {prompt.path}
       </Text.H5M>
     </Link>
   )
@@ -113,6 +116,12 @@ export const PlaygroundBlocksEditor = memo(
       // For now, we'll just stringify the blocks
       // onChange(JSON.stringify(updatedBlocks, null, 2))
     }
+    const onRequestPromptMetadata = useCallback(
+      async (_prompt: IncludedPrompt) => {
+        // TODO: use `scan` from promptl
+      },
+      [project.id, commit.uuid],
+    )
 
     return (
       <Suspense fallback={<TextEditorPlaceholder />}>
