@@ -2,6 +2,12 @@ import { memo, Suspense } from 'react'
 import { AstError, AnyBlock } from '@latitude-data/constants/simpleBlocks'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import { BlocksEditor } from '@latitude-data/web-ui/molecules/BlocksEditor'
+import {
+  ICommitContextType,
+  IProjectContextType,
+} from '@latitude-data/web-ui/providers'
+import { type DocumentVersion } from '@latitude-data/core/browser'
+import { useIncludabledPrompts } from './useIncludabledPrompts'
 
 // Example blocks to demonstrate the editor
 const exampleBlocks: AnyBlock[] = [
@@ -62,8 +68,14 @@ const exampleBlocks: AnyBlock[] = [
 
 export const PlaygroundBlocksEditor = memo(
   ({
+    project,
+    commit,
+    document,
     value: _prompt,
   }: {
+    project: IProjectContextType['project']
+    commit: ICommitContextType['commit']
+    document: DocumentVersion
     compileErrors: AstError[] | undefined
     blocks: AnyBlock[] | undefined
     value: string
@@ -72,6 +84,7 @@ export const PlaygroundBlocksEditor = memo(
     readOnlyMessage?: string
     onChange: (value: string) => void
   }) => {
+    const prompts = useIncludabledPrompts({ project, commit, document })
     // const blocksToRender = blocks.length > 0 ? blocks : exampleBlocks
 
     const handleBlocksChange = (_updatedBlocks: AnyBlock[]) => {
@@ -89,6 +102,7 @@ export const PlaygroundBlocksEditor = memo(
           <BlocksEditor
             autoFocus
             readOnly={false}
+            prompts={prompts}
             initialValue={exampleBlocks}
             onBlocksChange={handleBlocksChange}
             placeholder='Write your prompt, type "/" to insert messages or steps, "@" for include other prompts, "{{" for variables, Try typing "{{my_variable}}"'
