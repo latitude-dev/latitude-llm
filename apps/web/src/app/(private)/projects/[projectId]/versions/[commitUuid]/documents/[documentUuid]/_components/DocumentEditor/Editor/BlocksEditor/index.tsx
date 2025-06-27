@@ -8,6 +8,9 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { type DocumentVersion } from '@latitude-data/core/browser'
 import { useIncludabledPrompts } from './useIncludabledPrompts'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import Link from 'next/link'
 
 // Example blocks to demonstrate the editor
 const exampleBlocks: AnyBlock[] = [
@@ -66,6 +69,24 @@ const exampleBlocks: AnyBlock[] = [
   },
 ]
 
+function ReferenceLink({ url, path }: { url: string; path: string }) {
+  return (
+    <Link
+      href={url}
+      className='gap-x-1 inline-flex items-baseline min-w-0 max-w-[400px]'
+    >
+      <Icon
+        name='file'
+        color='primary'
+        className='relative flex-none align-baseline top-[3px]'
+      />
+      <Text.H5M ellipsis noWrap color='primary'>
+        {path}
+      </Text.H5M>
+    </Link>
+  )
+}
+
 export const PlaygroundBlocksEditor = memo(
   ({
     project,
@@ -104,6 +125,7 @@ export const PlaygroundBlocksEditor = memo(
             readOnly={false}
             prompts={prompts}
             initialValue={exampleBlocks}
+            ReferenceLink={ReferenceLink}
             onBlocksChange={handleBlocksChange}
             placeholder='Write your prompt, type "/" to insert messages or steps, "@" for include other prompts, "{{" for variables, Try typing "{{my_variable}}"'
           />
