@@ -144,11 +144,25 @@ export namespace Otlp {
   })
   export type Link = z.infer<typeof linkSchema>
 
+  export enum StatusCode {
+    Unset = 0,
+    Ok = 1,
+    Error = 2,
+  }
+
   export const statusSchema = z.object({
     code: z.number(),
     message: z.string().optional(),
   })
   export type Status = z.infer<typeof statusSchema>
+
+  export enum SpanKind {
+    Internal = 0,
+    Server = 1,
+    Client = 2,
+    Producer = 3,
+    Consumer = 4,
+  }
 
   export const spanSchema = z.object({
     traceId: z.string(),

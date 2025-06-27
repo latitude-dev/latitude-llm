@@ -4,6 +4,7 @@ import { unsafelyFindWorkspace } from '../../../data-access'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { ApiKeysRepository } from '../../../repositories'
 import { processSpan } from '../../../services/tracing/spans/process'
+import { captureException } from '../../../utils/workers/sentry'
 
 export type ProcessSpanJobData = {
   span: Otlp.Span
@@ -34,7 +35,9 @@ export const processSpanJob = async (job: Job<ProcessSpanJobData>) => {
     workspace: workspace,
   })
 
-  if (result.error && !(result.error instanceof UnprocessableEntityError)) {
-    throw result.error
+  if (result.error) {
+    if (result.error instanceof UnprocessableEntityError) {
+      captureException(result.error)
+    } else throw result.error
   }
 }

@@ -1,4 +1,10 @@
 import {
+  ATTR_OTEL_SCOPE_NAME,
+  ATTR_OTEL_SCOPE_VERSION,
+  ATTR_OTEL_STATUS_CODE,
+  ATTR_OTEL_STATUS_DESCRIPTION,
+} from '@opentelemetry/semantic-conventions'
+import {
   ApiKey,
   ATTR_LATITUDE_INTERNAL,
   Otlp,
@@ -13,7 +19,12 @@ import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { ApiKeysRepository } from '../../../repositories'
 import { internalBaggageSchema } from '../../../telemetry'
-import { convertAttributes, extractSpanType } from './process'
+import { captureException } from '../../../utils/workers/sentry'
+import {
+  convertSpanAttributes,
+  convertSpanStatus,
+  extractSpanType,
+} from './process'
 
 export async function ingestSpans(
   {
@@ -33,7 +44,7 @@ export async function ingestSpans(
   for (const { resource, scopeSpans } of spans) {
     for (const { scope, spans } of scopeSpans) {
       for (const span of spans) {
-        const attributes = convertAttributes(span.attributes || [])
+        const attributes = convertSpanAttributes(span.attributes || [])
 
         const type = extractSpanType(attributes)
         if (type === SpanType.Unknown) continue
@@ -41,10 +52,18 @@ export async function ingestSpans(
         let internal
         if (!workspaceId) {
           const baggage = attributes[ATTR_LATITUDE_INTERNAL]
-          if (!baggage) continue
+          if (!baggage) {
+            captureException(
+              new UnprocessableEntityError('Internal baggage is required'),
+            )
+            continue
+          }
 
           const parsing = internalBaggageSchema.safeParse(baggage)
-          if (parsing.error) continue
+          if (parsing.error) {
+            captureException(parsing.error)
+            continue
+          }
 
           internal = parsing.data
         }
@@ -55,7 +74,10 @@ export async function ingestSpans(
             { workspaceId: workspaceId ?? internal?.workspaceId },
             db,
           )
-          if (getting.error) continue
+          if (getting.error) {
+            captureException(getting.error)
+            continue
+          }
 
           workspace = getting.value
           workspaces[workspace.id] = workspace
@@ -67,16 +89,16 @@ export async function ingestSpans(
             { apiKeyId: apiKeyId ?? internal?.apiKeyId, workspace },
             db,
           )
-          if (getting.error) continue
+          if (getting.error) {
+            captureException(getting.error)
+            continue
+          }
 
           apiKey = getting.value
           apiKeys[apiKey.id] = apiKey
         }
 
-        span.attributes = [
-          ...(resource.attributes || []),
-          ...(span.attributes || []),
-        ]
+        span.attributes = enrichAttributes({ resource, scope, span })
         span.attributes = span.attributes.filter(
           ({ key }) => key !== ATTR_LATITUDE_INTERNAL,
         )
@@ -150,4 +172,44 @@ async function getApiKey(
   }
 
   return Result.ok(apiKey)
+}
+
+function enrichAttributes({
+  resource,
+  scope,
+  span,
+}: {
+  resource: Otlp.Resource
+  scope: Otlp.Scope
+  span: Otlp.Span
+}) {
+  const attributes: Otlp.Attribute[] = []
+
+  attributes.push(...(resource.attributes || []))
+  attributes.push(...(span.attributes || []))
+  attributes.push({
+    key: ATTR_OTEL_SCOPE_NAME,
+    value: { stringValue: scope.name },
+  })
+  if (scope.version) {
+    attributes.push({
+      key: ATTR_OTEL_SCOPE_VERSION,
+      value: { stringValue: scope.version },
+    })
+  }
+  if (span.status && span.status?.code !== Otlp.StatusCode.Unset) {
+    const status = convertSpanStatus(span.status)
+    attributes.push({
+      key: ATTR_OTEL_STATUS_CODE,
+      value: { stringValue: status.toUpperCase() },
+    })
+  }
+  if (span.status?.message) {
+    attributes.push({
+      key: ATTR_OTEL_STATUS_DESCRIPTION,
+      value: { stringValue: span.status.message },
+    })
+  }
+
+  return attributes
 }
