@@ -3,27 +3,28 @@ import {
   HostedIntegrationType,
   IntegrationType,
 } from '@latitude-data/constants'
-import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { ExternalIntegrationConfiguration } from './External'
-import { HostedIntegrationConfiguration } from './Hosted'
+import { PipedreamIntegrationConfigurationSchema } from './Pipedream'
+import { IntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
 
 export function IntegrationConfigurationForm({
   integrationType,
+  create,
 }: {
-  integrationType: IntegrationType | HostedIntegrationType
+  integrationType: IntegrationType | HostedIntegrationType | string
+  create: (_: {
+    type: IntegrationType
+    configuration: IntegrationConfiguration
+  }) => void
 }) {
+  if (integrationType === IntegrationType.ExternalMCP) {
+    return <ExternalIntegrationConfiguration create={create} />
+  }
+
   return (
-    <FormFieldGroup layout='vertical'>
-      {integrationType === IntegrationType.ExternalMCP && (
-        <ExternalIntegrationConfiguration />
-      )}
-      {Object.values(HostedIntegrationType).includes(
-        integrationType as HostedIntegrationType,
-      ) && (
-        <HostedIntegrationConfiguration
-          type={integrationType as HostedIntegrationType}
-        />
-      )}
-    </FormFieldGroup>
+    <PipedreamIntegrationConfigurationSchema
+      type={integrationType}
+      create={create}
+    />
   )
 }

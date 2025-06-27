@@ -38,6 +38,25 @@ function SelectValueWithIcon({
   )
 }
 
+function SelectValueWithDescription({
+  description,
+  children,
+}: {
+  description?: string
+  children: ReactNode
+}) {
+  return (
+    <div className='w-full flex flex-col items-start gap-x-2 min-w-0 truncate'>
+      {typeof description === 'string' ? (
+        <span>{description}</span>
+      ) : (
+        description
+      )}
+      {children}
+    </div>
+  )
+}
+
 function findSelected(options: SelectOption[], selected: unknown) {
   // Performing a non-strict comparison to avoid problems with different
   // types between the options values and the selected value
@@ -248,11 +267,12 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName
 
 type SelectItemProps = ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & {
   icon?: ReactNode | IconName
+  description?: string
 }
 const SelectItem = forwardRef<
   ElementRef<typeof SelectPrimitive.Item>,
   SelectItemProps
->(({ className, icon, children, ...props }, ref) => (
+>(({ className, icon, children, description, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
@@ -268,7 +288,9 @@ const SelectItem = forwardRef<
     </span>
 
     <SelectValueWithIcon icon={icon}>
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      <SelectValueWithDescription description={description}>
+        <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      </SelectValueWithDescription>
     </SelectValueWithIcon>
   </SelectPrimitive.Item>
 ))

@@ -19,6 +19,7 @@ import { ExternalMcpIntegrationConfiguration } from '../../services/integrations
 export const integrationTypesEnum = latitudeSchema.enum('integration_types', [
   IntegrationType.ExternalMCP,
   IntegrationType.HostedMCP,
+  IntegrationType.Pipedream,
 ])
 
 // Even though there are two integration types they both share the same

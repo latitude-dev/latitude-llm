@@ -98,6 +98,7 @@
     "./molecules/TrippleThemeToggle": "./src/ds/molecules/TrippleThemeToggle/index.tsx",
     "./molecules/ClickToCopy": "./src/ds/molecules/ClickToCopy/index.tsx",
     "./molecules/DynamicBot": "./src/ds/molecules/DynamicBot/index.tsx",
+    "./molecules/PaginatedSelect": "./src/ds/molecules/PaginatedSelect/index.tsx",
     "./organisms/ClickToCopyUuid": "./src/ds/organisms/ClickToCopyUuid/index.tsx",
     "./tokens": "./src/ds/tokens/index.ts",
     "./providers": "./src/providers/index.ts",
@@ -162,7 +163,7 @@
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "use-debounce": "^10.0.4",
+    "use-debounce": "^10.0.5",
     "zod": "catalog:",
     "zustand": "^4.5.6"
   },
