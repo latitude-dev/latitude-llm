@@ -34,11 +34,14 @@ import { InsertEmptyLinePlugin } from './plugins/InsertEmptyLinePlugin'
 import { VariableTransformPlugin } from './plugins/VariableTransformPlugin'
 import { VariableNode } from './nodes/VariableNode'
 import { VariableMenuPlugin } from './plugins/VariablesMenuPlugin'
+import { ReferencesPlugin } from './plugins/ReferencesPlugin'
+import { ReferenceNode } from './nodes/ReferenceNode'
+import { font } from '../../../tokens'
 
 const theme = {
   ltr: 'ltr',
   rtl: 'rtl',
-  paragraph: 'block-paragraph text-sm leading-relaxed',
+  paragraph: cn('block-paragraph align-middle', font.size.h5),
   text: {
     bold: 'font-bold',
     italic: 'italic',
@@ -177,6 +180,8 @@ export function BlocksEditor({
   onChange,
   onBlocksChange,
   className,
+  prompts,
+  ReferenceLink,
   readOnly = false,
   autoFocus = false,
 }: BlocksEditorProps) {
@@ -196,7 +201,7 @@ export function BlocksEditor({
       console.error('Editor error:', error)
     },
     editable: !readOnly,
-    nodes: [MessageBlockNode, StepBlockNode, VariableNode],
+    nodes: [MessageBlockNode, StepBlockNode, VariableNode, ReferenceNode],
   }
 
   return (
@@ -239,6 +244,7 @@ export function BlocksEditor({
           <StepNameEditPlugin />
           <TypeaheadMenuPlugin />
           <VariableMenuPlugin />
+          <ReferencesPlugin prompts={prompts} ReferenceLink={ReferenceLink} />
           <InitializeBlocksPlugin initialBlocks={initialValue} />
           <HierarchyValidationPlugin />
           <VariableTransformPlugin />

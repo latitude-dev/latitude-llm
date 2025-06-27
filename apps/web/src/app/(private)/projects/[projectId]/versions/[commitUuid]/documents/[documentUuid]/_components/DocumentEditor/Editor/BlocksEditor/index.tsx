@@ -1,7 +1,19 @@
-import { memo, Suspense } from 'react'
+import { memo, Suspense, useCallback } from 'react'
 import { AstError, AnyBlock } from '@latitude-data/constants/simpleBlocks'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
-import { BlocksEditor } from '@latitude-data/web-ui/molecules/BlocksEditor'
+import {
+  BlocksEditor,
+  IncludedPrompt,
+} from '@latitude-data/web-ui/molecules/BlocksEditor'
+import {
+  ICommitContextType,
+  IProjectContextType,
+} from '@latitude-data/web-ui/providers'
+import { type DocumentVersion } from '@latitude-data/core/browser'
+import { useIncludabledPrompts } from './useIncludabledPrompts'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import Link from 'next/link'
 
 // Example blocks to demonstrate the editor
 const exampleBlocks: AnyBlock[] = [
@@ -60,10 +72,34 @@ const exampleBlocks: AnyBlock[] = [
   },
 ]
 
+function ReferenceLink({ prompt }: { prompt: IncludedPrompt }) {
+  return (
+    <Link
+      href={prompt.url}
+      className='gap-x-1 inline-flex items-baseline min-w-0 max-w-[400px]'
+    >
+      <Icon
+        name='file'
+        color='primary'
+        className='relative flex-none align-baseline top-[3px]'
+      />
+      <Text.H5M ellipsis noWrap color='primary'>
+        {prompt.path}
+      </Text.H5M>
+    </Link>
+  )
+}
+
 export const PlaygroundBlocksEditor = memo(
   ({
+    project,
+    commit,
+    document,
     value: _prompt,
   }: {
+    project: IProjectContextType['project']
+    commit: ICommitContextType['commit']
+    document: DocumentVersion
     compileErrors: AstError[] | undefined
     blocks: AnyBlock[] | undefined
     value: string
@@ -72,6 +108,7 @@ export const PlaygroundBlocksEditor = memo(
     readOnlyMessage?: string
     onChange: (value: string) => void
   }) => {
+    const prompts = useIncludabledPrompts({ project, commit, document })
     // const blocksToRender = blocks.length > 0 ? blocks : exampleBlocks
 
     const handleBlocksChange = (_updatedBlocks: AnyBlock[]) => {
@@ -79,6 +116,12 @@ export const PlaygroundBlocksEditor = memo(
       // For now, we'll just stringify the blocks
       // onChange(JSON.stringify(updatedBlocks, null, 2))
     }
+    const onRequestPromptMetadata = useCallback(
+      async (_prompt: IncludedPrompt) => {
+        // TODO: use `scan` from promptl
+      },
+      [project.id, commit.uuid],
+    )
 
     return (
       <Suspense fallback={<TextEditorPlaceholder />}>
@@ -89,7 +132,9 @@ export const PlaygroundBlocksEditor = memo(
           <BlocksEditor
             autoFocus
             readOnly={false}
+            prompts={prompts}
             initialValue={exampleBlocks}
+            ReferenceLink={ReferenceLink}
             onBlocksChange={handleBlocksChange}
             placeholder='Write your prompt, type "/" to insert messages or steps, "@" for include other prompts, "{{" for variables, Try typing "{{my_variable}}"'
           />
