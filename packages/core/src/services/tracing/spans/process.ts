@@ -20,6 +20,7 @@ import {
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { publisher } from '../../../events/publisher'
+import { tracingQueue } from '../../../jobs/queues'
 import { diskFactory, DiskWrapper } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
@@ -149,7 +150,15 @@ export async function processSpan(
       },
     })
 
-    // TODO(tracing): enqueue segment processors
+    const segment = segments.pop()
+    if (segment) {
+      await tracingQueue.add('processSegmentJob', {
+        segment: segment,
+        next: segments,
+        apiKeyId: apiKey.id,
+        workspaceId: workspace.id,
+      })
+    }
 
     return Result.ok({ span })
   }, db)

@@ -8,6 +8,10 @@ import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import React from 'react'
 
 export type TimelineItemProps<T extends SegmentType = SegmentType> = {
+  segment: Segment<T>
+}
+
+export type DetailsPanelProps<T extends SegmentType = SegmentType> = {
   segment: SegmentWithDetails<T>
 }
 
@@ -15,6 +19,7 @@ export type SegmentFrontendSpecification<T extends SegmentType = SegmentType> =
   SegmentSpecification<T> & {
     icon: IconName
     TimelineItem: (props: TimelineItemProps<T>) => React.ReactNode
+    DetailsPanel: (props: DetailsPanelProps<T>) => React.ReactNode
   }
 
 export const SEGMENT_SPECIFICATIONS: {

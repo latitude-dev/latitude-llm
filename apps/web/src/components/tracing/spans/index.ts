@@ -8,6 +8,10 @@ import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import React from 'react'
 
 export type TimelineItemProps<T extends SpanType = SpanType> = {
+  span: Span<T>
+}
+
+export type DetailsPanelProps<T extends SpanType = SpanType> = {
   span: SpanWithDetails<T>
 }
 
@@ -15,6 +19,7 @@ export type SpanFrontendSpecification<T extends SpanType = SpanType> =
   SpanSpecification<T> & {
     icon: IconName
     TimelineItem: (props: TimelineItemProps<T>) => React.ReactNode
+    DetailsPanel: (props: DetailsPanelProps<T>) => React.ReactNode
   }
 
 export const SPAN_SPECIFICATIONS: {
