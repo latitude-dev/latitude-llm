@@ -171,20 +171,21 @@ export const MultiSelect = React.forwardRef<
                           <Badge
                             variant='muted'
                             key={value}
+                            iconProps={
+                              option?.icon
+                                ? { name: option.icon, placement: 'start' }
+                                : undefined
+                            }
                             onClick={(event) => {
                               event.stopPropagation()
                               toggleOption(value)
                             }}
                           >
-                            {option?.icon && (
-                              <Icon
-                                name={option.icon}
-                                className='min-w-5 pr-2'
-                              />
-                            )}
-                            <Text.H6>{option?.label}</Text.H6>
-                            <div className='cursor-pointer'>
-                              <Icon name='close' size='small' />
+                            <div className='flex flex-row items-center gap-x-1'>
+                              <Text.H6>{option?.label}</Text.H6>
+                              <div className='cursor-pointer'>
+                                <Icon name='close' size='small' />
+                              </div>
                             </div>
                           </Badge>
                         )
