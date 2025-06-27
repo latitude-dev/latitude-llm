@@ -40,30 +40,37 @@ export const SEGMENT_SPECIFICATIONS = {
   [T in SegmentType]: SegmentSpecification<T>
 }
 
-type BaseSegmentMetadata<T extends SegmentType = SegmentType> = {
+export type BaseSegmentMetadata<T extends SegmentType = SegmentType> = {
   traceId: string
   segmentId: string
   type: T
 }
 
-type StepSegmentMetadata = BaseSegmentMetadata<SegmentType.Step> & {
+export type StepSegmentMetadata = BaseSegmentMetadata<SegmentType.Step> & {
   configuration: LatitudePromptConfig // From the first completion span
   input: Message[] // From the first completion span
   // Fields below are optional if the spans had an error
   output?: Message[] // From the last completion span
 }
 
-type DocumentSegmentMetadata = BaseSegmentMetadata<SegmentType.Document> &
-  Omit<StepSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Step>> & {
-    prompt: string // From the first segment span
-    parameters: Record<string, unknown> // From the first segment span
-  }
+export type DocumentSegmentMetadata =
+  BaseSegmentMetadata<SegmentType.Document> &
+    Omit<StepSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Step>> & {
+      prompt: string // From the first segment span
+      parameters: Record<string, unknown> // From the first segment span
+    }
 
 // prettier-ignore
 export type SegmentMetadata<T extends SegmentType = SegmentType> =
   T extends SegmentType.Document ? DocumentSegmentMetadata :
   T extends SegmentType.Step ? StepSegmentMetadata :
   never;
+
+export const SEGMENT_METADATA_STORAGE_KEY = (
+  workspaceId: number,
+  traceId: string,
+  segmentId: string,
+) => encodeURI(`workspaces/${workspaceId}/traces/${traceId}/${segmentId}`)
 
 export type Segment<T extends SegmentType = SegmentType> = {
   id: string

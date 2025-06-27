@@ -13,12 +13,7 @@ export type IngestSpansJobData = {
 export const ingestSpansJob = async (job: Job<IngestSpansJobData>) => {
   const { spans, apiKeyId, workspaceId } = job.data
 
-  const result = await ingestSpans({
-    spans: spans,
-    apiKeyId: apiKeyId,
-    workspaceId: workspaceId,
-  })
-
+  const result = await ingestSpans({ spans, apiKeyId, workspaceId })
   if (result.error) {
     if (result.error instanceof UnprocessableEntityError) {
       captureException(result.error)

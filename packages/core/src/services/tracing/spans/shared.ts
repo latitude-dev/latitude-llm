@@ -1,6 +1,8 @@
 import {
   ApiKey,
+  BaseSpanMetadata,
   Otlp,
+  SpanAttribute,
   SpanMetadata,
   SpanSpecification,
   SpanType,
@@ -10,7 +12,7 @@ import { Database } from '../../../client'
 import { TypedResult } from '../../../lib/Result'
 
 export type SpanProcessArgs<T extends SpanType = SpanType> = {
-  span: Otlp.Span
+  attributes: Record<string, SpanAttribute>
   scope: Otlp.Scope
   apiKey: ApiKey
   workspace: Workspace
@@ -22,5 +24,5 @@ export type SpanBackendSpecification<T extends SpanType = SpanType> =
     process: (
       args: SpanProcessArgs<T>,
       db?: Database,
-    ) => Promise<TypedResult<SpanMetadata<T>>>
+    ) => Promise<TypedResult<Omit<SpanMetadata<T>, keyof BaseSpanMetadata<T>>>>
   }

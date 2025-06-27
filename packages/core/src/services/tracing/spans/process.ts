@@ -1,0 +1,336 @@
+import { z } from 'zod'
+import {
+  ApiKey,
+  ATTR_LATITUDE_SEGMENTS,
+  ATTR_LATITUDE_TYPE,
+  BaseSpanMetadata,
+  Otlp,
+  SegmentBaggage,
+  segmentBaggageSchema,
+  Span,
+  SPAN_METADATA_STORAGE_KEY,
+  SpanAttribute,
+  SpanEvent,
+  SpanKind,
+  SpanLink,
+  SpanMetadata,
+  SpanStatus,
+  SpanType,
+  Workspace,
+} from '../../../browser'
+import { database, Database } from '../../../client'
+import { publisher } from '../../../events/publisher'
+import { diskFactory, DiskWrapper } from '../../../lib/disk'
+import { UnprocessableEntityError } from '../../../lib/errors'
+import { Result, TypedResult } from '../../../lib/Result'
+import Transaction from '../../../lib/Transaction'
+import { spans } from '../../../schema'
+import { SPAN_SPECIFICATIONS } from './specifications'
+
+export async function processSpan(
+  {
+    span,
+    scope,
+    apiKey,
+    workspace,
+  }: {
+    span: Otlp.Span
+    scope: Otlp.Scope
+    apiKey: ApiKey
+    workspace: Workspace
+  },
+  db: Database = database,
+  disk: DiskWrapper = diskFactory('private'),
+) {
+  const convertingsa = convertSpanAttributes(span.attributes || [])
+  if (convertingsa.error) return Result.error(convertingsa.error)
+  const attributes = convertingsa.value
+
+  const extractingsb = extractSegmentsBaggage(attributes)
+  if (extractingsb.error) return Result.error(extractingsb.error)
+  const segments = extractingsb.value
+
+  const id = span.spanId
+
+  const traceId = span.traceId
+
+  const segmentId = segments.at(-1)?.id
+
+  const parentId = span.parentSpanId
+
+  const name = span.name.slice(0, 128)
+
+  const convertingsk = convertSpanKind(span.kind)
+  if (convertingsk.error) return Result.error(convertingsk.error)
+  const kind = convertingsk.value
+
+  const convertingst = extractSpanType(attributes)
+  if (convertingst.error) return Result.error(convertingst.error)
+  const type = convertingst.value
+
+  const convertingss = convertSpanStatus(span.status || { code: 0 })
+  if (convertingss.error) return Result.error(convertingss.error)
+  const status = convertingss.value
+
+  const message = span.status?.message?.slice(0, 256)
+
+  const convertingat = convertSpanTimestamp(span.startTimeUnixNano)
+  if (convertingat.error) return Result.error(convertingat.error)
+  const startedAt = convertingat.value
+
+  const convertinget = convertSpanTimestamp(span.endTimeUnixNano)
+  if (convertinget.error) return Result.error(convertinget.error)
+  const endedAt = convertinget.value
+
+  const duration = endedAt.getTime() - startedAt.getTime()
+
+  const specification = SPAN_SPECIFICATIONS[type]
+  if (!specification) {
+    return Result.error(new UnprocessableEntityError('Invalid span type'))
+  }
+
+  const convertingse = convertSpanEvents(span.events || [])
+  if (convertingse.error) return Result.error(convertingse.error)
+  const events = convertingse.value
+
+  const convertingsl = convertSpanLinks(span.links || [])
+  if (convertingsl.error) return Result.error(convertingsl.error)
+  const links = convertingsl.value
+
+  let metadata = {
+    ...({
+      traceId: traceId,
+      spanId: id,
+      type: type,
+      attributes: attributes,
+      events: events,
+      links: links,
+    } satisfies BaseSpanMetadata),
+  } as SpanMetadata
+
+  const processing = await specification.process(
+    { attributes, scope, apiKey, workspace },
+    db,
+  )
+  if (processing.error) return Result.error(processing.error)
+  metadata = { ...metadata, ...processing.value }
+
+  const saving = await saveMetadata({ metadata, workspace }, disk)
+  if (saving.error) return Result.error(saving.error)
+
+  return await Transaction.call(async (tx) => {
+    const span = (await tx
+      .insert(spans)
+      .values({
+        id: id,
+        traceId: traceId,
+        segmentId: segmentId,
+        parentId: parentId,
+        workspaceId: workspace.id,
+        apiKeyId: apiKey.id,
+        name: name,
+        kind: kind,
+        type: type,
+        status: status,
+        message: message,
+        duration: duration,
+        startedAt: startedAt,
+        endedAt: endedAt,
+      })
+      .returning()
+      .then((r) => r[0]!)) as Span
+
+    await publisher.publishLater({
+      type: 'spanCreated',
+      data: {
+        span: span,
+        apiKeyId: apiKey.id,
+        workspaceId: workspace.id,
+      },
+    })
+
+    // TODO(tracing): enqueue segment processors
+
+    return Result.ok({ span })
+  }, db)
+}
+
+function convertSpanAttribute(
+  attribute: Otlp.AttributeValue,
+): TypedResult<SpanAttribute> {
+  if (attribute.stringValue != undefined) {
+    return Result.ok(attribute.stringValue)
+  }
+
+  if (attribute.intValue != undefined) {
+    return Result.ok(attribute.intValue)
+  }
+
+  if (attribute.boolValue != undefined) {
+    return Result.ok(attribute.boolValue)
+  }
+
+  if (attribute.arrayValue != undefined) {
+    const values = attribute.arrayValue.values.map(convertSpanAttribute)
+    if (values.some((v) => v.error)) return Result.error(values[0]!.error!)
+
+    return Result.ok(values.map((v) => v.value!))
+  }
+
+  return Result.error(new UnprocessableEntityError('Invalid attribute value'))
+}
+
+export function convertSpanAttributes(
+  attributes: Otlp.Attribute[],
+): TypedResult<Record<string, SpanAttribute>> {
+  const result: Record<string, SpanAttribute> = {}
+
+  for (const attribute of attributes) {
+    const converting = convertSpanAttribute(attribute.value)
+    if (converting.error) return Result.error(converting.error)
+    result[attribute.key] = converting.value
+  }
+
+  return Result.ok(result)
+}
+
+export function extractSegmentsBaggage(
+  attributes: Record<string, SpanAttribute>,
+): TypedResult<SegmentBaggage[]> {
+  const attribute = String(attributes[ATTR_LATITUDE_SEGMENTS] || '')
+  if (!attribute) return Result.ok([])
+
+  try {
+    const payload = JSON.parse(attribute)
+    const baggage = z.array(segmentBaggageSchema).parse(payload)
+
+    return Result.ok(baggage)
+  } catch (error) {
+    return Result.error(
+      new UnprocessableEntityError('Invalid segments baggage'),
+    )
+  }
+}
+
+export function extractSpanType(
+  attributes: Record<string, SpanAttribute>,
+): TypedResult<SpanType> {
+  const type = String(attributes[ATTR_LATITUDE_TYPE] || '')
+
+  switch (type) {
+    case SpanType.Tool:
+      return Result.ok(SpanType.Tool)
+    case SpanType.Completion:
+      return Result.ok(SpanType.Completion)
+    case SpanType.Embedding:
+      return Result.ok(SpanType.Embedding)
+    case SpanType.Retrieval:
+      return Result.ok(SpanType.Retrieval)
+    case SpanType.Reranking:
+      return Result.ok(SpanType.Reranking)
+    case SpanType.Http:
+      return Result.ok(SpanType.Http)
+    case SpanType.Segment:
+      return Result.ok(SpanType.Segment)
+    case SpanType.Unknown:
+      return Result.ok(SpanType.Unknown)
+    default:
+      return Result.ok(SpanType.Unknown)
+  }
+}
+
+export function convertSpanStatus(
+  status: Otlp.Status,
+): TypedResult<SpanStatus> {
+  switch (status.code) {
+    case Otlp.StatusCode.Ok:
+      return Result.ok(SpanStatus.Ok)
+    case Otlp.StatusCode.Error:
+      return Result.ok(SpanStatus.Error)
+    default:
+      return Result.ok(SpanStatus.Unset)
+  }
+}
+
+export function convertSpanKind(kind: number): TypedResult<SpanKind> {
+  switch (kind) {
+    case Otlp.SpanKind.Internal:
+      return Result.ok(SpanKind.Internal)
+    case Otlp.SpanKind.Server:
+      return Result.ok(SpanKind.Server)
+    case Otlp.SpanKind.Client:
+      return Result.ok(SpanKind.Client)
+    case Otlp.SpanKind.Producer:
+      return Result.ok(SpanKind.Producer)
+    case Otlp.SpanKind.Consumer:
+      return Result.ok(SpanKind.Consumer)
+    default:
+      return Result.error(new UnprocessableEntityError('Invalid span kind'))
+  }
+}
+
+export function convertSpanTimestamp(timestamp: string): TypedResult<Date> {
+  const nanoseconds = BigInt(timestamp)
+  const milliseconds = Number(nanoseconds / 1_000_000n)
+  return Result.ok(new Date(milliseconds))
+}
+
+export function convertSpanEvents(
+  events: Otlp.Event[],
+): TypedResult<SpanEvent[]> {
+  const result: SpanEvent[] = []
+
+  for (const event of events) {
+    const convertinget = convertSpanTimestamp(event.timeUnixNano)
+    if (convertinget.error) return Result.error(convertinget.error)
+    const timestamp = convertinget.value
+
+    const convertingea = convertSpanAttributes(event.attributes || [])
+    if (convertingea.error) return Result.error(convertingea.error)
+    const attributes = convertingea.value
+
+    result.push({ name: event.name, timestamp, attributes })
+  }
+
+  return Result.ok(result)
+}
+
+export function convertSpanLinks(links: Otlp.Link[]): TypedResult<SpanLink[]> {
+  const result: SpanLink[] = []
+
+  for (const link of links) {
+    const converting = convertSpanAttributes(link.attributes || [])
+    if (converting.error) return Result.error(converting.error)
+    const attributes = converting.value
+
+    result.push({ traceId: link.traceId, spanId: link.spanId, attributes })
+  }
+
+  return Result.ok(result)
+}
+
+async function saveMetadata(
+  {
+    metadata,
+    workspace,
+  }: {
+    metadata: SpanMetadata
+    workspace: Workspace
+  },
+  disk: DiskWrapper,
+): Promise<TypedResult> {
+  const key = SPAN_METADATA_STORAGE_KEY(
+    workspace.id,
+    metadata.traceId,
+    metadata.spanId,
+  )
+
+  try {
+    const payload = JSON.stringify(metadata)
+    await disk.put(key, payload).then((r) => r.unwrap())
+  } catch (error) {
+    return Result.error(error as Error)
+  }
+
+  return Result.nil()
+}

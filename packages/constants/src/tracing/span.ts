@@ -91,16 +91,16 @@ export type SpanAttribute = string | number | boolean | SpanAttribute[]
 export type SpanEvent = {
   name: string
   timestamp: Date
-  attributes?: Record<string, SpanAttribute>
+  attributes: Record<string, SpanAttribute>
 }
 
 export type SpanLink = {
   traceId: string
   spanId: string
-  attributes?: Record<string, SpanAttribute>
+  attributes: Record<string, SpanAttribute>
 }
 
-type BaseSpanMetadata<T extends SpanType = SpanType> = {
+export type BaseSpanMetadata<T extends SpanType = SpanType> = {
   traceId: string
   spanId: string
   type: T
@@ -109,7 +109,7 @@ type BaseSpanMetadata<T extends SpanType = SpanType> = {
   links: SpanLink[]
 }
 
-type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
+export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
   name: string
   call: {
     id: string
@@ -122,7 +122,7 @@ type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
   }
 }
 
-type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
+export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   provider: string
   model: string
   configuration: Record<string, unknown>
@@ -139,7 +139,7 @@ type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   finishReason?: string
 }
 
-type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> & {
+export type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> & {
   request: {
     method: string
     url: string
@@ -165,6 +165,12 @@ export type SpanMetadata<T extends SpanType = SpanType> =
   T extends SpanType.Segment ? BaseSpanMetadata<T> :
   T extends SpanType.Unknown ? BaseSpanMetadata<T> :
   never;
+
+export const SPAN_METADATA_STORAGE_KEY = (
+  workspaceId: number,
+  traceId: string,
+  spanId: string,
+) => encodeURI(`workspaces/${workspaceId}/traces/${traceId}/${spanId}`)
 
 export type Span<T extends SpanType = SpanType> = {
   id: string
