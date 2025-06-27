@@ -2,6 +2,7 @@ import type { ApiKey } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createApiKeyAction } from '$/actions/apiKeys/create'
 import { destroyApiKeyAction } from '$/actions/apiKeys/destroy'
+import { updateApiKeyAction } from '$/actions/apiKeys/update'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
@@ -33,10 +34,21 @@ export default function useApiKeys(opts?: SWRConfiguration) {
     },
   })
 
+  const { execute: update } = useLatitudeAction(updateApiKeyAction, {
+    onSuccess: async ({ data: apiKey }) => {
+      toast({
+        title: 'Success',
+        description: `API key "${apiKey.name}" updated successfully`,
+      })
+      mutate(data.map((item) => (item.id === apiKey.id ? apiKey : item)))
+    },
+  })
+
   return {
     data,
     create,
     destroy,
+    update,
     mutate,
     ...rest,
   }
