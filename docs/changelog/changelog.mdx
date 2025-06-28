@@ -3,6 +3,56 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-06-23'>
+
+## Refactor: Improve Request Parameter Typing in Typescript SDK
+
+- Centralized URL and body parameter type definitions using a new `HandlerConfig` and `HandlerConfigs` mapping. This refactor improves type inference in the `makeRequest` function and simplifies the addition of new routes.
+
+## New Gateway Endpoints
+
+- Implemented new endpoints to create a new commit, document, and project, retrieve a commit by ID, get all projects, and push changes to a commit. Deprecated endpoints have been removed.
+
+## SDK Methods for New Gateway Endpoints
+
+- Added methods to create projects, create versions, get all projects, retrieve versions, and push versions.
+
+## Latte: Add Change Feedback
+
+- Introduced a change feedback feature to Latte, enhancing user interaction and feedback mechanisms.
+
+## Telemetry SDK Changes
+
+- Updated the Telemetry SDK with changes related to issue #1273, improving telemetry capabilities.
+
+## Smarter Diff for Latte Streaming
+
+- Introduced a new "customDiff" method that merges "Delete" and "Insert" actions into a single "Replace" action for smarter diff calculation in Latte streaming.
+
+## Playground Simple Block Editor
+
+- Enhanced the playground experience with a simpler mode for building agents, allowing users to introduce prompts as plain text.
+
+## Fix Lag in Tools (Integrations) Toggle
+
+- Resolved lag issues when toggling tools in the integrations section, improving user experience.
+
+## Latte: Threads
+
+- Created the model schema for Latte Threads and Latte Thread Checkpoints, including logic for undoing changes.
+
+## Editor Adjustments
+
+- Made adjustments to improve vertical space and visibility for agents in the editor setup.
+
+## Minor Updates
+
+- **AWS SDK Update:** Bumped `@aws-sdk/client-bedrock-runtime` to version 3.830.0, including new features and changes.
+- **Rollup Plugin Update:** Bumped `@rollup/plugin-commonjs` to version 28.0.6, including bug fixes.
+- **PostHog JS Update:** Bumped `posthog-js` to version 1.252.1, including new features and bug fixes.
+
+</Update>
+
 <Update label='2025-06-04'>
 
 ## Numeric similarity evaluation metric
