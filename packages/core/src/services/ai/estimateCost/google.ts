@@ -8,12 +8,38 @@ export const GOOGLE_MODELS = createModelSpec({
   defaultModel: 'gemini-1.5-flash',
   models: {
     // --- Gemini 2.5 Preview Models ---
+    'gemini-2.5-pro': {
+      // Note: Pricing includes thinking tokens
+      cost: [
+        { input: 1.25, output: 10.0 },
+        { input: 2.5, output: 15.0, tokensRangeStart: 200_000 },
+      ],
+    },
+    'gemini-2.5-pro-preview-05-06': {
+      // Note: Pricing includes thinking tokens
+      cost: [
+        { input: 1.25, output: 10.0 },
+        { input: 2.5, output: 15.0, tokensRangeStart: 200_000 },
+      ],
+    },
     'gemini-2.5-pro-preview-03-25': {
       // Note: Pricing includes thinking tokens
       cost: [
         { input: 1.25, output: 10.0 },
         { input: 2.5, output: 15.0, tokensRangeStart: 200_000 },
       ],
+    },
+    'gemini-2.5-flash-lite-preview-06-17': {
+      // Note: Using non-thinking output cost
+      cost: { input: 0.1, output: 0.4 }, // Input assumes text/image/video cost
+    },
+    'gemini-2.5-flash': {
+      // Note: Using non-thinking output cost
+      cost: { input: 0.3, output: 2.5 }, // Input assumes text/image/video cost
+    },
+    'gemini-2.5-flash-preview-05-20': {
+      // Note: Using non-thinking output cost
+      cost: { input: 0.15, output: 0.6 }, // Input assumes text/image/video cost
     },
     'gemini-2.5-flash-preview-04-17': {
       // Note: Using non-thinking output cost
@@ -59,8 +85,18 @@ export const GOOGLE_MODELS = createModelSpec({
   },
   modelName: (model: string) => {
     // Exact matches first for specific/preview models
+    if (model === 'gemini-2.5-pro')
+      return 'gemini-2.5-pro'
+    if (model === 'gemini-2.5-pro-preview-05-06')
+      return 'gemini-2.5-pro-preview-05-06'
     if (model === 'gemini-2.5-pro-preview-03-25')
       return 'gemini-2.5-pro-preview-03-25'
+    if (model === 'gemini-2.5-flash-lite-preview-06-17')
+      return 'gemini-2.5-flash-lite-preview-06-17'
+    if (model === 'gemini-2.5-flash')
+      return 'gemini-2.5-flash'
+    if (model === 'gemini-2.5-flash-preview-05-20')
+      return 'gemini-2.5-flash-preview-05-20'
     if (model === 'gemini-2.5-flash-preview-04-17')
       return 'gemini-2.5-flash-preview-04-17'
     if (model === 'gemini-2.5-pro-exp-03-25') return 'gemini-2.5-pro-exp-03-25'
