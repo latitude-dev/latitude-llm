@@ -87,6 +87,10 @@ export class RouteResolver {
       }
       case HandlerType.GetAllProjects:
         return this.projects.root
+      case HandlerType.GetProjectById: {
+        const p = params as { projectId: number }
+        return this.projects.project(p.projectId).root
+      }
       case HandlerType.CreateProject:
         return this.projects.root
       case HandlerType.CreateVersion:

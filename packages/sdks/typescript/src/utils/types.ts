@@ -142,6 +142,7 @@ export enum HandlerType {
   CreateVersion = 'create-version',
   GetAllDocuments = 'get-all-documents',
   GetAllProjects = 'get-all-projects',
+  GetProjectById = 'get-project-by-id',
   GetDocument = 'get-document',
   GetOrCreateDocument = 'get-or-create-document',
   GetVersion = 'get-version',
@@ -164,6 +165,7 @@ export type HandlerConfigs = {
   >
   [HandlerType.GetAllDocuments]: HandlerConfig<GetAllDocumentsParams, never>
   [HandlerType.GetAllProjects]: HandlerConfig<never, never>
+  [HandlerType.GetProjectById]: HandlerConfig<{ projectId: number }, never>
   [HandlerType.GetDocument]: HandlerConfig<GetDocumentUrlParams, never>
   [HandlerType.GetOrCreateDocument]: HandlerConfig<
     GetOrCreateDocumentUrlParams,
