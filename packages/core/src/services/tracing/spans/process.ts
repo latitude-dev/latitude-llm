@@ -1,9 +1,36 @@
+import {
+  ATTR_ERROR_TYPE,
+  ATTR_EXCEPTION_MESSAGE,
+  ATTR_EXCEPTION_TYPE,
+  ATTR_HTTP_REQUEST_METHOD,
+} from '@opentelemetry/semantic-conventions'
+import {
+  ATTR_GEN_AI_OPERATION_NAME,
+  ATTR_GEN_AI_TOOL_CALL_ID,
+  ATTR_GEN_AI_USAGE_COMPLETION_TOKENS,
+  ATTR_GEN_AI_USAGE_OUTPUT_TOKENS,
+  GEN_AI_OPERATION_NAME_VALUE_CHAT,
+  GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS,
+  GEN_AI_OPERATION_NAME_VALUE_EXECUTE_TOOL,
+  GEN_AI_OPERATION_NAME_VALUE_GENERATE_CONTENT,
+  GEN_AI_OPERATION_NAME_VALUE_TEXT_COMPLETION,
+} from '@opentelemetry/semantic-conventions/incubating'
 import { z } from 'zod'
 import {
   ApiKey,
   ATTR_LATITUDE_SEGMENTS,
   ATTR_LATITUDE_TYPE,
+  ATTR_LLM_REQUEST_TYPE,
   BaseSpanMetadata,
+  GEN_AI_OPERATION_NAME_VALUE_COMPLETION,
+  GEN_AI_OPERATION_NAME_VALUE_EMBEDDING,
+  GEN_AI_OPERATION_NAME_VALUE_RERANKING,
+  GEN_AI_OPERATION_NAME_VALUE_RETRIEVAL,
+  GEN_AI_OPERATION_NAME_VALUE_TOOL,
+  LLM_REQUEST_TYPE_VALUE_CHAT,
+  LLM_REQUEST_TYPE_VALUE_COMPLETION,
+  LLM_REQUEST_TYPE_VALUE_EMBEDDING,
+  LLM_REQUEST_TYPE_VALUE_RERANK,
   Otlp,
   SegmentBaggage,
   segmentBaggageSchema,
@@ -26,6 +53,7 @@ import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import { spans } from '../../../schema'
+import { convertTimestamp } from './shared'
 import { SPAN_SPECIFICATIONS } from './specifications'
 
 export async function processSpan(
@@ -71,9 +99,9 @@ export async function processSpan(
 
   const convertingss = convertSpanStatus(span.status || { code: 0 })
   if (convertingss.error) return Result.error(convertingss.error)
-  const status = convertingss.value
+  let status = convertingss.value
 
-  const message = span.status?.message?.slice(0, 256)
+  let message = span.status?.message?.slice(0, 256)
 
   const convertingat = convertSpanTimestamp(span.startTimeUnixNano)
   if (convertingat.error) return Result.error(convertingat.error)
@@ -98,6 +126,13 @@ export async function processSpan(
   if (convertingsl.error) return Result.error(convertingsl.error)
   const links = convertingsl.value
 
+  const extractingse = extractSpanError(attributes, events)
+  if (extractingse.error) return Result.error(extractingse.error)
+  if (extractingse.value != undefined) {
+    status = SpanStatus.Error
+    message = extractingse.value || undefined
+  }
+
   let metadata = {
     ...({
       traceId: traceId,
@@ -110,7 +145,7 @@ export async function processSpan(
   } as SpanMetadata
 
   const processing = await specification.process(
-    { attributes, scope, apiKey, workspace },
+    { attributes, status, scope, apiKey, workspace },
     db,
   )
   if (processing.error) return Result.error(processing.error)
@@ -203,7 +238,7 @@ export function convertSpanAttributes(
   return Result.ok(result)
 }
 
-export function extractSegmentsBaggage(
+function extractSegmentsBaggage(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<SegmentBaggage[]> {
   const attribute = String(attributes[ATTR_LATITUDE_SEGMENTS] || '')
@@ -243,9 +278,55 @@ export function extractSpanType(
       return Result.ok(SpanType.Segment)
     case SpanType.Unknown:
       return Result.ok(SpanType.Unknown)
-    default:
-      return Result.ok(SpanType.Unknown)
   }
+
+  const operation = String(attributes[ATTR_GEN_AI_OPERATION_NAME] || '')
+  switch (operation) {
+    case GEN_AI_OPERATION_NAME_VALUE_TOOL:
+    case GEN_AI_OPERATION_NAME_VALUE_EXECUTE_TOOL:
+      return Result.ok(SpanType.Tool)
+    case GEN_AI_OPERATION_NAME_VALUE_COMPLETION:
+    case GEN_AI_OPERATION_NAME_VALUE_CHAT:
+    case GEN_AI_OPERATION_NAME_VALUE_TEXT_COMPLETION:
+    case GEN_AI_OPERATION_NAME_VALUE_GENERATE_CONTENT:
+      return Result.ok(SpanType.Completion)
+    case GEN_AI_OPERATION_NAME_VALUE_EMBEDDING:
+    case GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS:
+      return Result.ok(SpanType.Embedding)
+    case GEN_AI_OPERATION_NAME_VALUE_RETRIEVAL:
+      return Result.ok(SpanType.Retrieval)
+    case GEN_AI_OPERATION_NAME_VALUE_RERANKING:
+      return Result.ok(SpanType.Reranking)
+  }
+
+  const request = String(attributes[ATTR_LLM_REQUEST_TYPE] || '')
+  switch (request) {
+    case LLM_REQUEST_TYPE_VALUE_COMPLETION:
+    case LLM_REQUEST_TYPE_VALUE_CHAT:
+      return Result.ok(SpanType.Completion)
+    case LLM_REQUEST_TYPE_VALUE_EMBEDDING:
+      return Result.ok(SpanType.Embedding)
+    case LLM_REQUEST_TYPE_VALUE_RERANK:
+      return Result.ok(SpanType.Reranking)
+  }
+
+  if (ATTR_GEN_AI_TOOL_CALL_ID in attributes) {
+    return Result.ok(SpanType.Tool)
+  }
+
+  if (ATTR_GEN_AI_USAGE_COMPLETION_TOKENS in attributes) {
+    return Result.ok(SpanType.Completion)
+  }
+
+  if (ATTR_GEN_AI_USAGE_OUTPUT_TOKENS in attributes) {
+    return Result.ok(SpanType.Completion)
+  }
+
+  if (ATTR_HTTP_REQUEST_METHOD in attributes) {
+    return Result.ok(SpanType.Http)
+  }
+
+  return Result.ok(SpanType.Unknown)
 }
 
 export function convertSpanStatus(
@@ -261,7 +342,34 @@ export function convertSpanStatus(
   }
 }
 
-export function convertSpanKind(kind: number): TypedResult<SpanKind> {
+function extractSpanError(
+  attributes: Record<string, SpanAttribute>,
+  events: SpanEvent[],
+): TypedResult<string | null | undefined> {
+  let error = String(attributes[ATTR_EXCEPTION_TYPE] || '')
+  let message = String(attributes[ATTR_EXCEPTION_MESSAGE] || '')
+  if (error || message) return Result.ok(message || error || null)
+
+  error = String(attributes[ATTR_ERROR_TYPE] || '')
+  if (error) return Result.ok(error || null)
+
+  for (const { name, attributes } of events) {
+    error = String(attributes[ATTR_EXCEPTION_TYPE] || '')
+    message = String(attributes[ATTR_EXCEPTION_MESSAGE] || '')
+    if (error || message) return Result.ok(message || error || null)
+
+    error = String(attributes[ATTR_ERROR_TYPE] || '')
+    if (error) return Result.ok(error || null)
+
+    if (name === 'exception' || name === 'error') {
+      return Result.ok('Unknown error')
+    }
+  }
+
+  return Result.nil()
+}
+
+function convertSpanKind(kind: number): TypedResult<SpanKind> {
   switch (kind) {
     case Otlp.SpanKind.Internal:
       return Result.ok(SpanKind.Internal)
@@ -278,15 +386,12 @@ export function convertSpanKind(kind: number): TypedResult<SpanKind> {
   }
 }
 
-export function convertSpanTimestamp(timestamp: string): TypedResult<Date> {
-  const nanoseconds = BigInt(timestamp)
-  const milliseconds = Number(nanoseconds / 1_000_000n)
-  return Result.ok(new Date(milliseconds))
+function convertSpanTimestamp(timestamp: string): TypedResult<Date> {
+  const date = convertTimestamp(timestamp)
+  return Result.ok(date)
 }
 
-export function convertSpanEvents(
-  events: Otlp.Event[],
-): TypedResult<SpanEvent[]> {
+function convertSpanEvents(events: Otlp.Event[]): TypedResult<SpanEvent[]> {
   const result: SpanEvent[] = []
 
   for (const event of events) {
@@ -304,7 +409,7 @@ export function convertSpanEvents(
   return Result.ok(result)
 }
 
-export function convertSpanLinks(links: Otlp.Link[]): TypedResult<SpanLink[]> {
+function convertSpanLinks(links: Otlp.Link[]): TypedResult<SpanLink[]> {
   const result: SpanLink[] = []
 
   for (const link of links) {

@@ -1,10 +1,12 @@
 import { Span, SpanType } from '../../../browser'
 import { SpanBackendSpecification } from './shared'
+import { ToolSpanSpecification } from './tool'
 
+// prettier-ignore
 export const SPAN_SPECIFICATIONS: {
   [T in SpanType]: SpanBackendSpecification<T>
 } = {
-  [SpanType.Tool]: undefined as any, // TODO(tracing): implement
+  [SpanType.Tool]: ToolSpanSpecification,
   [SpanType.Completion]: undefined as any, // TODO(tracing): implement
   [SpanType.Embedding]: undefined as any, // TODO(tracing): implement
   [SpanType.Retrieval]: undefined as any, // TODO(tracing): implement

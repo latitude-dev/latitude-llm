@@ -22,6 +22,7 @@ export type SpanFrontendSpecification<T extends SpanType = SpanType> =
     DetailsPanel: (props: DetailsPanelProps<T>) => React.ReactNode
   }
 
+// prettier-ignore
 export const SPAN_SPECIFICATIONS: {
   [T in SpanType]: SpanFrontendSpecification<T>
 } = {

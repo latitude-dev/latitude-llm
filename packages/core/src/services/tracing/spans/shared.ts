@@ -5,6 +5,7 @@ import {
   SpanAttribute,
   SpanMetadata,
   SpanSpecification,
+  SpanStatus,
   SpanType,
   Workspace,
 } from '../../../browser'
@@ -13,6 +14,7 @@ import { TypedResult } from '../../../lib/Result'
 
 export type SpanProcessArgs<T extends SpanType = SpanType> = {
   attributes: Record<string, SpanAttribute>
+  status: SpanStatus
   scope: Otlp.Scope
   apiKey: ApiKey
   workspace: Workspace
@@ -26,3 +28,9 @@ export type SpanBackendSpecification<T extends SpanType = SpanType> =
       db?: Database,
     ) => Promise<TypedResult<Omit<SpanMetadata<T>, keyof BaseSpanMetadata<T>>>>
   }
+
+export function convertTimestamp(timestamp: string): Date {
+  const nanoseconds = BigInt(timestamp)
+  const milliseconds = Number(nanoseconds / 1_000_000n)
+  return new Date(milliseconds)
+}

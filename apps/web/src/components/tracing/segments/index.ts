@@ -22,6 +22,7 @@ export type SegmentFrontendSpecification<T extends SegmentType = SegmentType> =
     DetailsPanel: (props: DetailsPanelProps<T>) => React.ReactNode
   }
 
+// prettier-ignore
 export const SEGMENT_SPECIFICATIONS: {
   [T in SegmentType]: SegmentFrontendSpecification<T>
 } = {

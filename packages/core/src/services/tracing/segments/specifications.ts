@@ -1,6 +1,7 @@
 import { Segment, SegmentType } from '../../../browser'
 import { SegmentBackendSpecification } from './shared'
 
+// prettier-ignore
 export const SEGMENT_SPECIFICATIONS: {
   [T in SegmentType]: SegmentBackendSpecification<T>
 } = {

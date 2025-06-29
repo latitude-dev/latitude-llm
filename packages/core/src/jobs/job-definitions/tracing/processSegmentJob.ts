@@ -13,6 +13,8 @@ export type ProcessSegmentJobData = {
   workspaceId: number
 }
 
+// Note: no deduplication in order to reprocess segments from different children
+
 export const processSegmentJob = async (job: Job<ProcessSegmentJobData>) => {
   const { segment, next, apiKeyId, workspaceId } = job.data
 
