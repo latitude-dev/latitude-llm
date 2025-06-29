@@ -1,7 +1,6 @@
 import { Message } from 'promptl-ai'
 import { z } from 'zod'
 import { DocumentType } from '../index'
-import { LatitudePromptConfig } from '../latitudePromptSchema'
 import { SpanStatus } from './span'
 
 export enum SegmentSource {
@@ -47,7 +46,7 @@ export type BaseSegmentMetadata<T extends SegmentType = SegmentType> = {
 }
 
 export type StepSegmentMetadata = BaseSegmentMetadata<SegmentType.Step> & {
-  configuration: LatitudePromptConfig // From the first completion span
+  configuration: Record<string, unknown> // From the first completion span
   input: Message[] // From the first completion span
   // Fields below are optional if the spans had an error
   output?: Message[] // From the last completion span

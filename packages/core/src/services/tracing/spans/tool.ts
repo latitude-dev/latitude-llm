@@ -10,6 +10,7 @@ import {
   SpanAttribute,
   SpanStatus,
   SpanType,
+  ToolSpanMetadata,
 } from '../../../browser'
 import { database, Database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
@@ -71,7 +72,7 @@ async function process(
 
 function extractToolName(
   attributes: Record<string, SpanAttribute>,
-): TypedResult<string> {
+): TypedResult<ToolSpanMetadata['name']> {
   const name = String(attributes[ATTR_GEN_AI_TOOL_NAME] || '')
   if (name) return Result.ok(name)
 
@@ -80,7 +81,7 @@ function extractToolName(
 
 function extractToolCallId(
   attributes: Record<string, SpanAttribute>,
-): TypedResult<string> {
+): TypedResult<ToolSpanMetadata['call']['id']> {
   const id = String(attributes[ATTR_GEN_AI_TOOL_CALL_ID] || '')
   if (id) return Result.ok(id)
 
@@ -89,7 +90,7 @@ function extractToolCallId(
 
 function extractToolCallArguments(
   attributes: Record<string, SpanAttribute>,
-): TypedResult<Record<string, unknown>> {
+): TypedResult<ToolSpanMetadata['call']['arguments']> {
   const attribute = String(attributes[ATTR_GEN_AI_TOOL_CALL_ARGUMENTS] || '')
   if (attribute) {
     try {
@@ -106,7 +107,7 @@ function extractToolCallArguments(
 
 function extractToolResultValue(
   attributes: Record<string, SpanAttribute>,
-): TypedResult<unknown> {
+): TypedResult<Required<ToolSpanMetadata>['result']['value']> {
   const attribute = String(attributes[ATTR_GEN_AI_TOOL_RESULT_VALUE] || '')
   if (attribute) {
     try {
@@ -121,7 +122,7 @@ function extractToolResultValue(
 
 function extractToolResultIsError(
   attributes: Record<string, SpanAttribute>,
-): TypedResult<boolean> {
+): TypedResult<Required<ToolSpanMetadata>['result']['isError']> {
   const isError = Boolean(attributes[ATTR_GEN_AI_TOOL_RESULT_IS_ERROR] || false)
 
   return Result.ok(isError)

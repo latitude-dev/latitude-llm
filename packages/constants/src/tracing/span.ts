@@ -1,3 +1,5 @@
+import { Message } from 'promptl-ai'
+
 export enum SpanKind {
   Internal = 'internal',
   Server = 'server',
@@ -126,9 +128,9 @@ export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   provider: string
   model: string
   configuration: Record<string, unknown>
-  input: Record<string, unknown>[]
+  input: Message[]
   // Fields below are optional if the span had an error
-  output?: Record<string, unknown>[]
+  output?: Message[]
   tokens?: {
     prompt: number
     cached: number
