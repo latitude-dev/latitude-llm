@@ -64,9 +64,16 @@ async function process(
   if (extractingct.error) return Result.error(extractingct.error)
   const completionTokens = extractingct.value
 
-  const extractingcs = extractCost(attributes)
-  if (extractingcs.error) return Result.error(extractingcs.error)
-  const cost = extractingcs.value
+  const tokens = {
+    prompt: promptTokens,
+    cached: cachedTokens,
+    reasoning: reasoningTokens,
+    completion: completionTokens,
+  }
+
+  const enrichingcs = enrichCost(provider, model, tokens)
+  if (enrichingcs.error) return Result.error(enrichingcs.error)
+  const cost = enrichingcs.value
 
   const extractingfr = extractFinishReason(attributes)
   if (extractingfr.error) return Result.error(extractingfr.error)
@@ -78,12 +85,7 @@ async function process(
     configuration: configuration,
     input: input,
     output: output,
-    tokens: {
-      prompt: promptTokens,
-      cached: cachedTokens,
-      reasoning: reasoningTokens,
-      completion: completionTokens,
-    },
+    tokens: tokens,
     cost: cost,
     finishReason: finishReason,
   })
@@ -143,8 +145,10 @@ function extractCompletionTokens(
   return Result.nil()
 }
 
-function extractCost(
-  attributes: Record<string, SpanAttribute>,
+function enrichCost(
+  provider: CompletionSpanMetadata['provider'],
+  model: CompletionSpanMetadata['model'],
+  tokens: Required<CompletionSpanMetadata>['tokens'],
 ): TypedResult<Required<CompletionSpanMetadata>['cost']> {
   return Result.nil()
 }

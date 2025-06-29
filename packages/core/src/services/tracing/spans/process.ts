@@ -52,6 +52,7 @@ import { diskFactory, DiskWrapper } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
+import { SpansRepository } from '../../../repositories'
 import { spans } from '../../../schema'
 import { convertTimestamp } from './shared'
 import { SPAN_SPECIFICATIONS } from './specifications'
@@ -71,6 +72,14 @@ export async function processSpan(
   db: Database = database,
   disk: DiskWrapper = diskFactory('private'),
 ) {
+  const repository = new SpansRepository(workspace.id)
+  const finding = await repository.get({
+    spanId: span.spanId,
+    traceId: span.traceId,
+  })
+  if (finding.error) return Result.error(finding.error)
+  if (finding.value) return Result.ok({ span: finding.value })
+
   const convertingsa = convertSpanAttributes(span.attributes || [])
   if (convertingsa.error) return Result.error(convertingsa.error)
   const attributes = convertingsa.value

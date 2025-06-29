@@ -83,9 +83,11 @@ export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_ERROR = 'error'
 
 export const ATTR_HTTP_REQUEST_URL = 'http.request.url'
 export const ATTR_HTTP_REQUEST_BODY = 'http.request.body'
-export const ATTR_HTTP_REQUEST_HEADERS = 'http.request.header'
+export const ATTR_HTTP_REQUEST_HEADER = 'http.request.header'
+export const ATTR_HTTP_REQUEST_HEADERS = 'http.request.headers'
 export const ATTR_HTTP_RESPONSE_BODY = 'http.response.body'
-export const ATTR_HTTP_RESPONSE_HEADERS = 'http.response.header'
+export const ATTR_HTTP_RESPONSE_HEADER = 'http.response.header'
+export const ATTR_HTTP_RESPONSE_HEADERS = 'http.response.headers'
 
 /* Note: non-standard OpenTelemetry semantic conventions used in other systems */
 
