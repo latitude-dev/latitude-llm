@@ -45,7 +45,7 @@ describe('manual', () => {
       const { bodyMock } = mockRequest({
         server: gatewayMock,
         method: 'post',
-        endpoint: '/api/v3/otlp/v1/traces',
+        endpoint: '/api/v3/traces',
       })
 
       const sdk = new LatitudeTelemetry('fake-api-key')

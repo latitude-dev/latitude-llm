@@ -38,6 +38,8 @@ export enum InstrumentationScope {
 
 const ATTR_LATITUDE = 'latitude'
 
+export const ATTR_LATITUDE_INTERNAL = `${ATTR_LATITUDE}.internal`
+
 export const ATTR_LATITUDE_TYPE = `${ATTR_LATITUDE}.type`
 
 export const ATTR_LATITUDE_SEGMENT_ID = `${ATTR_LATITUDE}.segment.id`
@@ -50,6 +52,7 @@ export const ATTR_GEN_AI_TOOL_RESULT_VALUE = 'gen_ai.tool.result.value'
 export const ATTR_GEN_AI_TOOL_RESULT_IS_ERROR = 'gen_ai.tool.result.is_error'
 
 export const ATTR_GEN_AI_REQUEST = 'gen_ai.request'
+export const ATTR_GEN_AI_REQUEST_MODEL = 'gen_ai.request.model'
 export const ATTR_GEN_AI_REQUEST_CONFIGURATION = 'gen_ai.request.configuration'
 export const ATTR_GEN_AI_REQUEST_TEMPLATE = 'gen_ai.request.template'
 export const ATTR_GEN_AI_REQUEST_PARAMETERS = 'gen_ai.request.parameters'
@@ -81,18 +84,29 @@ export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_ERROR = 'error'
 
 export const ATTR_HTTP_REQUEST_URL = 'http.request.url'
 export const ATTR_HTTP_REQUEST_BODY = 'http.request.body'
-export const ATTR_HTTP_REQUEST_HEADERS = 'http.request.header'
+export const ATTR_HTTP_REQUEST_HEADER = 'http.request.header'
+export const ATTR_HTTP_REQUEST_HEADERS = 'http.request.headers'
 export const ATTR_HTTP_RESPONSE_BODY = 'http.response.body'
-export const ATTR_HTTP_RESPONSE_HEADERS = 'http.response.header'
+export const ATTR_HTTP_RESPONSE_HEADER = 'http.response.header'
+export const ATTR_HTTP_RESPONSE_HEADERS = 'http.response.headers'
 
 /* Note: non-standard OpenTelemetry semantic conventions used in other systems */
 
-// https://github.com/Arize-ai/phoenix/blob/main/src/phoenix/trace/schemas.py
+// https://github.com/Arize-ai/openinference/blob/main/python/openinference-semantic-conventions/src/openinference/semconv/trace/__init__.py
 export const GEN_AI_OPERATION_NAME_VALUE_TOOL = 'tool'
 export const GEN_AI_OPERATION_NAME_VALUE_COMPLETION = 'completion'
 export const GEN_AI_OPERATION_NAME_VALUE_EMBEDDING = 'embedding'
 export const GEN_AI_OPERATION_NAME_VALUE_RETRIEVAL = 'retrieval'
 export const GEN_AI_OPERATION_NAME_VALUE_RERANKING = 'reranking'
+
+export const ATTR_TOOL_NAME = 'tool.name'
+export const ATTR_TOOL_CALL_ID = 'tool_call.id'
+export const ATTR_TOOL_CALL_FUNCTION_ARGUMENTS = 'tool_call.function.arguments'
+export const ATTR_TOOL_CALL_FUNCTION_RESULT = 'tool_call.function.result'
+
+export const ATTR_LLM_PROVIDER = 'llm.provider'
+export const ATTR_LLM_SYSTEM = 'llm.system'
+export const ATTR_LLM_MODEL_NAME = 'llm.model_name'
 
 // https://github.com/traceloop/openllmetry/blob/main/packages/opentelemetry-semantic-conventions-ai/opentelemetry/semconv_ai/__init__.py
 export const ATTR_LLM_REQUEST_TYPE = 'llm.request.type'
@@ -100,6 +114,23 @@ export const LLM_REQUEST_TYPE_VALUE_COMPLETION = 'completion'
 export const LLM_REQUEST_TYPE_VALUE_CHAT = 'chat'
 export const LLM_REQUEST_TYPE_VALUE_EMBEDDING = 'embedding'
 export const LLM_REQUEST_TYPE_VALUE_RERANK = 'rerank'
+
+// https://ai-sdk.dev/docs/ai-sdk-core/telemetry#span-details
+export const ATTR_AI_OPERATION_ID = 'ai.operationId'
+export const AI_OPERATION_ID_VALUE_TOOL = 'ai.toolCall'
+export const AI_OPERATION_ID_VALUE_GENERATE_TEXT = 'ai.generateText'
+export const AI_OPERATION_ID_VALUE_STREAM_TEXT = 'ai.streamText'
+export const AI_OPERATION_ID_VALUE_GENERATE_OBJECT = 'ai.generateObject'
+export const AI_OPERATION_ID_VALUE_STREAM_OBJECT = 'ai.streamObject'
+
+export const ATTR_AI_TOOL_CALL_NAME = 'ai.toolCall.name'
+export const ATTR_AI_TOOL_CALL_ID = 'ai.toolCall.id'
+export const ATTR_AI_TOOL_CALL_ARGS = 'ai.toolCall.args'
+export const ATTR_AI_TOOL_CALL_RESULT = 'ai.toolCall.result'
+
+export const ATTR_AI_MODEL_PROVIDER = 'ai.model.provider'
+export const ATTR_AI_MODEL_ID = 'ai.model.id'
+export const ATTR_AI_RESPONSE_MODEL = 'ai.response.model'
 
 /* Note: Schemas for span ingestion following OpenTelemetry service request specification */
 
@@ -142,11 +173,25 @@ export namespace Otlp {
   })
   export type Link = z.infer<typeof linkSchema>
 
+  export enum StatusCode {
+    Unset = 0,
+    Ok = 1,
+    Error = 2,
+  }
+
   export const statusSchema = z.object({
     code: z.number(),
     message: z.string().optional(),
   })
   export type Status = z.infer<typeof statusSchema>
+
+  export enum SpanKind {
+    Internal = 0,
+    Server = 1,
+    Client = 2,
+    Producer = 3,
+    Consumer = 4,
+  }
 
   export const spanSchema = z.object({
     traceId: z.string(),

@@ -4,6 +4,7 @@ import {
   ATTR_LATITUDE_SEGMENTS,
   TraceBaggage,
   TraceContext,
+  Workspace,
 } from '../../browser'
 import { BACKGROUND, TelemetryContext } from '../../telemetry'
 
@@ -21,8 +22,12 @@ const TRACEBAGGAGE = (baggage: TraceBaggage) => {
   return params.toString().replaceAll('&', ',')
 }
 
-export async function createTelemetryContext(): Promise<TelemetryContext> {
-  return BACKGROUND()
+export async function createTelemetryContext({
+  workspace,
+}: {
+  workspace: Workspace
+}): Promise<TelemetryContext> {
+  return BACKGROUND({ workspaceId: workspace.id })
 }
 
 export async function createTelemetryTrace({

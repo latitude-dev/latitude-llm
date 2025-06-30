@@ -1,7 +1,6 @@
 import { Message } from 'promptl-ai'
 import { z } from 'zod'
 import { DocumentType } from '../index'
-import { LatitudePromptConfig } from '../latitudePromptSchema'
 import { SpanStatus } from './span'
 
 export enum SegmentSource {
@@ -21,30 +20,56 @@ export enum SegmentType {
   Step = 'step',
 }
 
-type BaseSegmentMetadata<T extends SegmentType = SegmentType> = {
+export type SegmentSpecification<T extends SegmentType = SegmentType> = {
+  name: string
+  description: string
+  _type?: T // TODO(tracing): required for type inference, remove this when something in the specification uses the type
+}
+
+export const SEGMENT_SPECIFICATIONS = {
+  [SegmentType.Document]: {
+    name: 'Prompt',
+    description: 'A prompt',
+  },
+  [SegmentType.Step]: {
+    name: 'Step',
+    description: 'A step in a prompt',
+  },
+} as const satisfies {
+  [T in SegmentType]: SegmentSpecification<T>
+}
+
+export type BaseSegmentMetadata<T extends SegmentType = SegmentType> = {
   traceId: string
   segmentId: string
   type: T
 }
 
-type StepSegmentMetadata = BaseSegmentMetadata<SegmentType.Step> & {
-  configuration: LatitudePromptConfig // From the first completion span
+export type StepSegmentMetadata = BaseSegmentMetadata<SegmentType.Step> & {
+  configuration: Record<string, unknown> // From the first completion span
   input: Message[] // From the first completion span
   // Fields below are optional if the spans had an error
   output?: Message[] // From the last completion span
 }
 
-type DocumentSegmentMetadata = BaseSegmentMetadata<SegmentType.Document> &
-  Omit<StepSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Step>> & {
-    prompt: string // From the first segment span
-    parameters: Record<string, unknown> // From the first segment span
-  }
+export type DocumentSegmentMetadata =
+  BaseSegmentMetadata<SegmentType.Document> &
+    Omit<StepSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Step>> & {
+      prompt: string // From the first segment span
+      parameters: Record<string, unknown> // From the first segment span
+    }
 
 // prettier-ignore
 export type SegmentMetadata<T extends SegmentType = SegmentType> =
   T extends SegmentType.Document ? DocumentSegmentMetadata :
   T extends SegmentType.Step ? StepSegmentMetadata :
   never;
+
+export const SEGMENT_METADATA_STORAGE_KEY = (
+  workspaceId: number,
+  traceId: string,
+  segmentId: string,
+) => encodeURI(`workspaces/${workspaceId}/traces/${traceId}/${segmentId}`)
 
 export type Segment<T extends SegmentType = SegmentType> = {
   id: string

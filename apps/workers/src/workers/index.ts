@@ -9,6 +9,7 @@ import {
 } from './worker-definitions/eventsWorker'
 import { startLiveEvaluationsWorker } from './worker-definitions/liveEvaluationsWorker'
 import { startMaintenanceWorker } from './worker-definitions/maintenanceWorker'
+import { startTracingWorker } from './worker-definitions/tracingWorker'
 import { startWebhooksWorker } from './worker-definitions/webhooksWorker'
 
 export async function startWorkers() {
@@ -21,6 +22,7 @@ export async function startWorkers() {
   const webhooksWorker = startWebhooksWorker()
   const documentsWorker = startDocumentsWorker()
   const documentSuggestionsWorker = startDocumentSuggestionsWorker()
+  const tracingWorker = startTracingWorker()
 
   const workers = [
     defaultWorker,
@@ -32,6 +34,7 @@ export async function startWorkers() {
     webhooksWorker,
     documentsWorker,
     documentSuggestionsWorker,
+    tracingWorker,
   ]
 
   return Promise.all(workers)

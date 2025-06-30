@@ -25,6 +25,7 @@ import {
   baseEvaluationConfiguration,
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -179,10 +180,12 @@ function ResultPanelMetadata<
       {result.error ? (
         <MetadataItem
           label='Error'
-          value={result.error.message}
           color='destructiveMutedForeground'
+          contentClassName='pt-2'
           stacked
-        />
+        >
+          <Alert variant='destructive' description={result.error.message} />
+        </MetadataItem>
       ) : (
         <>
           <MetadataItem

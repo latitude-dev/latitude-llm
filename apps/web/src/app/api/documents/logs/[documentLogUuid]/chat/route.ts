@@ -3,6 +3,8 @@ import {
   LogSources,
   toolCallSchema,
   traceContextSchema,
+  User,
+  Workspace,
 } from '@latitude-data/core/browser'
 import {
   BACKGROUND,
@@ -16,7 +18,6 @@ import { z } from 'zod'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { publisher } from '@latitude-data/core/events/publisher'
 
 const inputSchema = z.object({
@@ -36,12 +37,14 @@ export const POST = errorHandler(
       req: NextRequest,
       {
         params,
+        workspace,
+        user,
       }: {
         params: {
           documentLogUuid: string
         }
-        workspace: any
-        user: any
+        workspace: Workspace
+        user: User
       },
     ) => {
       const body = await req.json()
@@ -50,7 +53,9 @@ export const POST = errorHandler(
         const { messages: response, toolCalls, trace } = inputSchema.parse(body)
         const documentLogUuid = params.documentLogUuid
         const messages = response as Message[]
-        const context = trace ? telemetry.resume(trace) : BACKGROUND()
+        const context = trace
+          ? telemetry.resume(trace)
+          : BACKGROUND({ workspaceId: workspace.id })
 
         // Note: faking playground tool spans so they show in the trace
         await fakeToolSpans(context, messages, toolCalls)
@@ -61,14 +66,14 @@ export const POST = errorHandler(
           data: {
             documentLogUuid,
             messages,
-            workspaceId: (await getCurrentUserOrError()).workspace.id,
-            userEmail: (await getCurrentUserOrError()).user.email,
+            workspaceId: workspace.id,
+            userEmail: user.email,
           },
         })
 
         // Create SDK
         const sdkResult = await createSdk({
-          workspace: (await getCurrentUserOrError()).workspace,
+          workspace: workspace,
           __internal: { source: LogSources.Playground },
         })
 

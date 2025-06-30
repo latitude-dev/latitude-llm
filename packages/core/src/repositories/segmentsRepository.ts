@@ -1,4 +1,4 @@
-import { desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, sql } from 'drizzle-orm'
 import { Segment } from '../browser'
 import { Result } from '../lib/Result'
 import { segments } from '../schema'
@@ -18,6 +18,23 @@ export class SegmentsRepository extends Repository<Segment> {
       .where(this.scopeFilter)
       .orderBy(desc(segments.startedAt), desc(segments.id))
       .$dynamic()
+  }
+
+  async get({ segmentId, traceId }: { segmentId: string; traceId: string }) {
+    const result = await this.scope
+      .where(
+        and(
+          this.scopeFilter,
+          eq(segments.traceId, traceId),
+          eq(segments.id, segmentId),
+        ),
+      )
+      .limit(1)
+      .then((r) => r[0])
+
+    if (!result) return Result.nil()
+
+    return Result.ok<Segment>(result as Segment)
   }
 
   async listByPath({ segmentId }: { segmentId: string }) {
@@ -44,6 +61,6 @@ export class SegmentsRepository extends Repository<Segment> {
       )
       .then((r) => r.rows)
 
-    return Result.ok<Segment[]>(result as any)
+    return Result.ok<Segment[]>(result as unknown as Segment[])
   }
 }

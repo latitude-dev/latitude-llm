@@ -1,4 +1,4 @@
-import { eq, getTableColumns } from 'drizzle-orm'
+import { asc, eq, getTableColumns, isNull } from 'drizzle-orm'
 
 import { ApiKey } from '../browser'
 import { NotFoundError } from '../lib/errors'
@@ -28,5 +28,16 @@ export class ApiKeysRepository extends RepositoryLegacy<typeof tt, ApiKey> {
     }
 
     return Result.ok(result[0]!)
+  }
+
+  async selectFirst() {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(isNull(this.scope.deletedAt))
+      .orderBy(asc(this.scope.createdAt))
+      .limit(1)
+
+    return Result.ok(result[0])
   }
 }

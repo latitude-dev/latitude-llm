@@ -1,3 +1,5 @@
+import { Message } from 'promptl-ai'
+
 export enum SpanKind {
   Internal = 'internal',
   Server = 'server',
@@ -18,15 +20,66 @@ export enum SpanType {
   Unknown = 'unknown', // Other spans we don't care about
 }
 
-export const GENAI_SPANS = [
-  SpanType.Tool,
-  SpanType.Completion,
-  SpanType.Embedding,
-  SpanType.Retrieval,
-  SpanType.Reranking,
-]
+export type SpanSpecification<T extends SpanType = SpanType> = {
+  name: string
+  description: string
+  isGenAI: boolean
+  isHidden: boolean
+  _type?: T // TODO(tracing): required for type inference, remove this when something in the specification uses the type
+}
 
-export const HIDDEN_SPANS = [SpanType.Http, SpanType.Segment, SpanType.Unknown]
+export const SPAN_SPECIFICATIONS = {
+  [SpanType.Tool]: {
+    name: 'Tool',
+    description: 'A tool call',
+    isGenAI: true,
+    isHidden: false,
+  },
+  [SpanType.Completion]: {
+    name: 'Completion',
+    description: 'A completion call',
+    isGenAI: true,
+    isHidden: false,
+  },
+  [SpanType.Embedding]: {
+    name: 'Embedding',
+    description: 'An embedding call',
+    isGenAI: true,
+    isHidden: false,
+  },
+  [SpanType.Retrieval]: {
+    name: 'Retrieval',
+    description: 'A retrieval call',
+    isGenAI: true,
+    isHidden: false,
+  },
+  [SpanType.Reranking]: {
+    name: 'Reranking',
+    description: 'A reranking call',
+    isGenAI: true,
+    isHidden: false,
+  },
+  [SpanType.Http]: {
+    name: 'HTTP',
+    description: 'An HTTP request',
+    isGenAI: false,
+    isHidden: true,
+  },
+  [SpanType.Segment]: {
+    name: 'Segment',
+    description: 'A (partial) segment of a trace',
+    isGenAI: false,
+    isHidden: true,
+  },
+  [SpanType.Unknown]: {
+    name: 'Unknown',
+    description: 'An unknown span',
+    isGenAI: false,
+    isHidden: true,
+  },
+} as const satisfies {
+  [T in SpanType]: SpanSpecification<T>
+}
 
 export enum SpanStatus {
   Unset = 'unset',
@@ -35,21 +88,21 @@ export enum SpanStatus {
 }
 
 // Note: get span attribute keys from @opentelemetry/semantic-conventions/incubating
-export type SpanAttribute = string | number | boolean
+export type SpanAttribute = string | number | boolean | SpanAttribute[]
 
 export type SpanEvent = {
   name: string
   timestamp: Date
-  attributes?: Record<string, SpanAttribute>
+  attributes: Record<string, SpanAttribute>
 }
 
 export type SpanLink = {
   traceId: string
   spanId: string
-  attributes?: Record<string, SpanAttribute>
+  attributes: Record<string, SpanAttribute>
 }
 
-type BaseSpanMetadata<T extends SpanType = SpanType> = {
+export type BaseSpanMetadata<T extends SpanType = SpanType> = {
   traceId: string
   spanId: string
   type: T
@@ -58,7 +111,7 @@ type BaseSpanMetadata<T extends SpanType = SpanType> = {
   links: SpanLink[]
 }
 
-type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
+export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
   name: string
   call: {
     id: string
@@ -71,13 +124,13 @@ type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
   }
 }
 
-type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
+export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   provider: string
   model: string
   configuration: Record<string, unknown>
-  input: Record<string, unknown>[]
+  input: Message[]
   // Fields below are optional if the span had an error
-  output?: Record<string, unknown>[]
+  output?: Message[]
   tokens?: {
     prompt: number
     cached: number
@@ -88,7 +141,7 @@ type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   finishReason?: string
 }
 
-type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> & {
+export type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> & {
   request: {
     method: string
     url: string
@@ -114,6 +167,12 @@ export type SpanMetadata<T extends SpanType = SpanType> =
   T extends SpanType.Segment ? BaseSpanMetadata<T> :
   T extends SpanType.Unknown ? BaseSpanMetadata<T> :
   never;
+
+export const SPAN_METADATA_STORAGE_KEY = (
+  workspaceId: number,
+  traceId: string,
+  spanId: string,
+) => encodeURI(`workspaces/${workspaceId}/traces/${traceId}/${spanId}`)
 
 export type Span<T extends SpanType = SpanType> = {
   id: string

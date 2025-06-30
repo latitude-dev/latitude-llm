@@ -26,20 +26,22 @@ import {
   ATTR_GEN_AI_USAGE_PROMPT_TOKENS,
   ATTR_GEN_AI_USAGE_REASONING_TOKENS,
   ATTR_HTTP_REQUEST_BODY,
+  ATTR_HTTP_REQUEST_HEADER,
   ATTR_HTTP_REQUEST_HEADERS,
   ATTR_HTTP_REQUEST_URL,
   ATTR_HTTP_RESPONSE_BODY,
+  ATTR_HTTP_RESPONSE_HEADER,
   ATTR_HTTP_RESPONSE_HEADERS,
   ATTR_LATITUDE_SEGMENT_ID,
   ATTR_LATITUDE_SEGMENT_PARENT_ID,
   ATTR_LATITUDE_SEGMENTS,
   ATTR_LATITUDE_TYPE,
   GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
-  GENAI_SPANS,
   HEAD_COMMIT,
   SegmentBaggage,
   SegmentSource,
   SegmentType,
+  SPAN_SPECIFICATIONS,
   SpanType,
   TraceBaggage,
   TraceContext,
@@ -354,7 +356,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     const start = options || {}
 
     let operation = undefined
-    if (GENAI_SPANS.includes(type)) {
+    if (SPAN_SPECIFICATIONS[type].isGenAI) {
       operation = type
     }
 
@@ -762,8 +764,8 @@ export class ManualInstrumentation implements BaseInstrumentation {
   ) {
     const prefix =
       direction === 'request'
-        ? ATTR_HTTP_REQUEST_HEADERS
-        : ATTR_HTTP_RESPONSE_HEADERS
+        ? ATTR_HTTP_REQUEST_HEADER
+        : ATTR_HTTP_RESPONSE_HEADER
 
     const attributes: otel.Attributes = {}
     for (const key in headers) {
@@ -782,6 +784,12 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     const method = start.request.method.toUpperCase()
 
+    let jsonHeaders = ''
+    try {
+      jsonHeaders = JSON.stringify(start.request.headers)
+    } catch (error) {
+      jsonHeaders = '{}'
+    }
     const attrHeaders = this.attribifyHeaders('request', start.request.headers)
 
     let finalBody = ''
@@ -803,6 +811,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         attributes: {
           [ATTR_HTTP_REQUEST_METHOD]: method,
           [ATTR_HTTP_REQUEST_URL]: start.request.url,
+          [ATTR_HTTP_REQUEST_HEADERS]: jsonHeaders,
           ...attrHeaders,
           [ATTR_HTTP_REQUEST_BODY]: finalBody,
           ...(start.attributes || {}),
@@ -815,6 +824,12 @@ export class ManualInstrumentation implements BaseInstrumentation {
       end: (options: EndHttpSpanOptions) => {
         const end = options
 
+        let jsonHeaders = ''
+        try {
+          jsonHeaders = JSON.stringify(end.response.headers)
+        } catch (error) {
+          jsonHeaders = '{}'
+        }
         const attrHeaders = this.attribifyHeaders(
           'response',
           end.response.headers,
@@ -834,6 +849,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         span.end({
           attributes: {
             [ATTR_HTTP_RESPONSE_STATUS_CODE]: end.response.status,
+            [ATTR_HTTP_RESPONSE_HEADERS]: jsonHeaders,
             ...attrHeaders,
             [ATTR_HTTP_RESPONSE_BODY]: finalBody,
             ...(end.attributes || {}),

@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/telemetry",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Latitude Telemetry for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",

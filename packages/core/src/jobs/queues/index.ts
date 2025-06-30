@@ -1,5 +1,5 @@
-import { JobsOptions, Queue } from 'bullmq'
 import { env } from '@latitude-data/env'
+import { JobsOptions, Queue } from 'bullmq'
 import { Queues } from './types'
 
 const DEFAULT_JOB_OPTIONS: JobsOptions = {
@@ -37,3 +37,4 @@ export const documentSuggestionsQueue = new Queue(
   Queues.documentSuggestionsQueue,
   options,
 )
+export const tracingQueue = new Queue(Queues.tracingQueue, options)
