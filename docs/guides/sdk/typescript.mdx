@@ -33,10 +33,10 @@ You can also provide additional options during initialization:
 const latitude = new Latitude(process.env.LATITUDE_API_KEY, {
   projectId: 123, // Your Latitude project ID
   versionUuid: 'version-uuid', // Optional version UUID
-})
+}) // Keep your API key secure and avoid committing it directly into your codebase.
 ```
 
-> Keep your API key secure and avoid committing it directly into your codebase.
+> Both `projectId` and `versionUuid` options can be overridden on a per-method basis when needed.
 
 ## Examples
 
@@ -47,8 +47,8 @@ Check out our [Examples](/examples) section for more examples of how to use the 
 The Latitude SDK is organized into several namespaces:
 
 - `prompts`: Methods for managing and running prompts
-- `logs`: Methods for creating and managing logs
-- `evaluations`: Methods for triggering evaluations and creating results
+- `logs`: Methods for pushing logs to Latitude
+- `evaluations`: Methods for pushing evaluation results to Latitude
 
 ## Prompt Management
 
