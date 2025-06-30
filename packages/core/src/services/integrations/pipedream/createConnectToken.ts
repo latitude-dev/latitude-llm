@@ -17,6 +17,7 @@ export async function createConnectToken({
 }> {
   const { PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET, PIPEDREAM_PROJECT_ID } =
     env
+
   if (
     !PIPEDREAM_CLIENT_ID ||
     !PIPEDREAM_CLIENT_SECRET ||
