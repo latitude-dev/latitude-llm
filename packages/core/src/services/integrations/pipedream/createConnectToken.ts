@@ -15,8 +15,12 @@ export async function createConnectToken({
   expiresAt: string
   externalUserId: string
 }> {
-  const { PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET, PIPEDREAM_PROJECT_ID } =
-    env
+  const {
+    PIPEDREAM_ENVIRONMENT,
+    PIPEDREAM_CLIENT_ID,
+    PIPEDREAM_CLIENT_SECRET,
+    PIPEDREAM_PROJECT_ID,
+  } = env
 
   if (
     !PIPEDREAM_CLIENT_ID ||
@@ -31,7 +35,7 @@ export async function createConnectToken({
   }
 
   const pipedream = createBackendClient({
-    environment: 'development',
+    environment: PIPEDREAM_ENVIRONMENT,
     credentials: {
       clientId: PIPEDREAM_CLIENT_ID,
       clientSecret: PIPEDREAM_CLIENT_SECRET,
