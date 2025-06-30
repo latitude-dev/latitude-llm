@@ -153,8 +153,8 @@ importers:
         specifier: 9.9.0
         version: 9.9.0
       '@t3-oss/env-core':
-        specifier: 0.10.1
-        version: 0.10.1(typescript@5.8.3)(zod@3.24.2)
+        specifier: 0.13.8
+        version: 0.13.8(typescript@5.8.3)(zod@3.24.2)
       dd-trace:
         specifier: 'catalog:'
         version: 5.43.0
@@ -538,7 +538,7 @@ importers:
         version: 9.9.0
       '@t3-oss/env-core':
         specifier: '*'
-        version: 0.11.1(typescript@5.8.3)(zod@3.25.61)
+        version: 0.13.8(typescript@5.8.3)(zod@3.25.61)
       bullmq:
         specifier: 5.44.4
         version: 5.44.4
@@ -830,8 +830,8 @@ importers:
         specifier: 2.2.1
         version: 2.2.1
       '@t3-oss/env-core':
-        specifier: 0.11.1
-        version: 0.11.1(typescript@5.8.3)(zod@3.24.2)
+        specifier: 0.13.8
+        version: 0.13.8(typescript@5.8.3)(zod@3.24.2)
       '@tavily/core':
         specifier: 0.3.1
         version: 0.3.1
@@ -1035,8 +1035,8 @@ importers:
   packages/env:
     dependencies:
       '@t3-oss/env-core':
-        specifier: ^0.11.1
-        version: 0.11.1(typescript@5.8.3)(zod@3.24.2)
+        specifier: ^0.13.8
+        version: 0.13.8(typescript@5.8.3)(zod@3.24.2)
       dotenv:
         specifier: ^16.4.5
         version: 16.5.0
@@ -6519,13 +6519,21 @@ packages:
       typescript:
         optional: true
 
-  '@t3-oss/env-core@0.11.1':
-    resolution: {integrity: sha512-MaxOwEoG1ntCFoKJsS7nqwgcxLW1SJw238AJwfJeaz3P/8GtkxXZsPPolsz1AdYvUTbe3XvqZ/VCdfjt+3zmKw==}
+  '@t3-oss/env-core@0.13.8':
+    resolution: {integrity: sha512-L1inmpzLQyYu4+Q1DyrXsGJYCXbtXjC4cICw1uAKv0ppYPQv656lhZPU91Qd1VS6SO/bou1/q5ufVzBGbNsUpw==}
     peerDependencies:
+      arktype: ^2.1.0
       typescript: '>=5.0.0'
-      zod: ^3.0.0
+      valibot: ^1.0.0-beta.7 || ^1.0.0
+      zod: ^3.24.0 || ^4.0.0-beta.0
     peerDependenciesMeta:
+      arktype:
+        optional: true
       typescript:
+        optional: true
+      valibot:
+        optional: true
+      zod:
         optional: true
 
   '@t3-oss/env-nextjs@0.10.1':
@@ -21314,17 +21322,15 @@ snapshots:
     optionalDependencies:
       typescript: 5.8.3
 
-  '@t3-oss/env-core@0.11.1(typescript@5.8.3)(zod@3.24.2)':
-    dependencies:
+  '@t3-oss/env-core@0.13.8(typescript@5.8.3)(zod@3.24.2)':
+    optionalDependencies:
+      typescript: 5.8.3
       zod: 3.24.2
-    optionalDependencies:
-      typescript: 5.8.3
 
-  '@t3-oss/env-core@0.11.1(typescript@5.8.3)(zod@3.25.61)':
-    dependencies:
-      zod: 3.25.61
+  '@t3-oss/env-core@0.13.8(typescript@5.8.3)(zod@3.25.61)':
     optionalDependencies:
       typescript: 5.8.3
+      zod: 3.25.61
 
   '@t3-oss/env-nextjs@0.10.1(typescript@5.8.3)(zod@3.24.2)':
     dependencies:

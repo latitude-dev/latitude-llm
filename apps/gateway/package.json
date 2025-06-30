@@ -26,7 +26,7 @@
     "@latitude-data/sdk": "workspace:^",
     "@sentry/cli": "2.37.0",
     "@sentry/node": "9.9.0",
-    "@t3-oss/env-core": "0.10.1",
+    "@t3-oss/env-core": "0.13.8",
     "drizzle-orm": "catalog:",
     "hono": "4.6.6",
     "ioredis": "5.6.0",

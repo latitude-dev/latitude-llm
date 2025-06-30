@@ -18,7 +18,7 @@
     "@latitude-data/typescript-config": "workspace:*"
   },
   "dependencies": {
-    "@t3-oss/env-core": "^0.11.1",
+    "@t3-oss/env-core": "^0.13.8",
     "dotenv": "^16.4.5",
     "zod": "catalog:"
   }
