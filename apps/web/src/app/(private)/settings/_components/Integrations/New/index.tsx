@@ -1,56 +1,25 @@
 'use client'
-import { FormEvent, ReactNode, useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, FormEvent } from 'react'
 
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useIntegrations from '$/stores/integrations'
-import { IntegrationConfigurationForm } from '$/app/(private)/settings/_components/Integrations/New/_components/Configuration'
-import {
-  HostedIntegrationType,
-  IntegrationType,
-} from '@latitude-data/constants'
-import { buildIntegrationPayload } from './buildIntegrationPayload'
-import {
-  HOSTED_INTEGRATION_TYPE_OPTIONS,
-  INTEGRATION_TYPE_VALUES,
-} from '$/lib/integrationTypeOptions'
-import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { IntegrationType } from '@latitude-data/constants'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
+import { IntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
+import { PipedreamIntegrationConfiguration } from './_components/Configuration/Pipedream'
+import { ExternalIntegrationConfiguration } from './_components/Configuration/External'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 
-const SELECTABLE_TYPES: {
-  value: IntegrationType | HostedIntegrationType
-  label: string
-  icon: IconName | ReactNode
-}[] = [
-  {
-    value: IntegrationType.ExternalMCP,
-    label: INTEGRATION_TYPE_VALUES[IntegrationType.ExternalMCP].label,
-    icon: (
-      <Icon
-        name={INTEGRATION_TYPE_VALUES[IntegrationType.ExternalMCP].icon}
-        color='foregroundMuted'
-      />
-    ),
-  },
-  ...Object.values(HostedIntegrationType)
-    .map((value) => ({
-      value,
-      label: HOSTED_INTEGRATION_TYPE_OPTIONS[value].label,
-      icon: (
-        <Icon
-          name={HOSTED_INTEGRATION_TYPE_OPTIONS[value].icon}
-          color='foregroundMuted'
-        />
-      ),
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label)),
-]
+type ValidIntegration = Exclude<
+  IntegrationConfiguration,
+  { type: IntegrationType.Latitude }
+>
 
 export default function NewIntegration() {
   const { toast } = useToast()
@@ -59,40 +28,10 @@ export default function NewIntegration() {
     (open: boolean) => !open && navigate.push(ROUTES.settings.root),
     [navigate],
   )
-  const { create, isCreating } = useIntegrations()
-  const onSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
+  const { create } = useIntegrations()
 
-      const payload = buildIntegrationPayload({
-        formData: new FormData(event.currentTarget),
-      })
+  const [isCreating, setIsCreating] = useState<boolean>(false)
 
-      const hostedType = payload.type as unknown as HostedIntegrationType
-      if (Object.values(HostedIntegrationType).includes(hostedType)) {
-        payload.configuration = {
-          ...(payload.configuration ?? {}),
-          type: hostedType,
-        }
-        payload.type = IntegrationType.HostedMCP
-      }
-      const [_, error] = await create(payload)
-
-      if (!error) onOpenChange(false)
-      if (error) {
-        toast({
-          title: 'Error creating integration',
-          description: error.message,
-          variant: 'destructive',
-        })
-      }
-    },
-    [create, onOpenChange, toast],
-  )
-
-  const [integrationType, setIntegrationType] = useState<
-    IntegrationType | HostedIntegrationType | undefined
-  >()
   const [integrationName, setIntegrationName] = useState<string>('')
   const nameErrors = useMemo<string[] | undefined>(() => {
     const errors = []
@@ -104,6 +43,48 @@ export default function NewIntegration() {
     }
     return errors.length ? errors : undefined
   }, [integrationName])
+
+  const [integrationType, setIntegrationType] = useState<IntegrationType>(
+    IntegrationType.Pipedream,
+  )
+
+  const [error, setError] = useState<Error | undefined>(undefined)
+
+  const configRef = useRef<{
+    validate: () => Promise<ValidIntegration>
+  }>(null)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setIsCreating(true)
+    setError(undefined)
+    let integration: ValidIntegration
+
+    try {
+      integration = await configRef.current!.validate()
+    } catch (err) {
+      setIsCreating(false)
+      setError(err as Error)
+      return
+    }
+
+    const [_, createError] = await create({
+      ...integration,
+      name: integrationName,
+    })
+    setIsCreating(false)
+
+    if (createError) {
+      toast({
+        title: 'Error creating integration',
+        description: createError.message,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    onOpenChange(false)
+  }
 
   return (
     <Modal
@@ -120,38 +101,64 @@ export default function NewIntegration() {
             form='createIntegrationForm'
             type='submit'
             isLoading={isCreating}
+            iconProps={{
+              name: 'unplug',
+            }}
           >
-            Create Integration
+            Connect & Create
           </Button>
         </>
       }
     >
-      <form id='createIntegrationForm' onSubmit={onSubmit}>
-        <FormWrapper>
-          <Input
-            required
-            type='text'
-            name='name'
-            label='Name'
-            description="This is the name you'll use in the prompt editor to refer to use this integration and model."
-            placeholder='my_integration'
-            onChange={(event) => setIntegrationName(event.target.value)}
-            value={integrationName}
-            errors={nameErrors}
-          />
-          <Select
-            required
-            searchable
-            name='type'
-            options={SELECTABLE_TYPES}
-            onChange={(value) => setIntegrationType(value)}
-            label='Type'
-          />
+      <form
+        id='createIntegrationForm'
+        onSubmit={handleSubmit}
+        className='flex flex-col gap-4'
+      >
+        <Input
+          required
+          type='text'
+          name='name'
+          label='Name'
+          disabled={isCreating}
+          description="This is the name you'll use in the prompt editor to refer to use this integration and model."
+          placeholder='my_integration'
+          onChange={(event) => setIntegrationName(event.target.value)}
+          value={integrationName}
+          errors={nameErrors}
+        />
 
-          {integrationType ? (
-            <IntegrationConfigurationForm integrationType={integrationType} />
-          ) : null}
-        </FormWrapper>
+        <TabSelect
+          value={integrationType}
+          disabled={isCreating}
+          options={[
+            {
+              value: IntegrationType.Pipedream,
+              label: 'Connect to an App',
+            },
+            {
+              value: IntegrationType.ExternalMCP,
+              label: 'Custom MCP server',
+            },
+          ]}
+          onChange={(value) => {
+            setIntegrationType(value)
+          }}
+        />
+
+        {integrationType === IntegrationType.Pipedream ? (
+          <PipedreamIntegrationConfiguration ref={configRef} />
+        ) : (
+          <ExternalIntegrationConfiguration ref={configRef} />
+        )}
+
+        {error && (
+          <Alert
+            variant='destructive'
+            title={error.name}
+            description={error.message}
+          />
+        )}
       </form>
     </Modal>
   )

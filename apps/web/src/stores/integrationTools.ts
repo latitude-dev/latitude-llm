@@ -1,13 +1,22 @@
-import type { IntegrationDto } from '@latitude-data/core/browser'
+import { AppDto, type IntegrationDto } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
-import { McpTool } from '@latitude-data/constants'
+import { IntegrationType, McpTool } from '@latitude-data/constants'
+import { useMemo } from 'react'
 
 const EMPTY_ARRAY: McpTool[] = []
 
+export type McpToolDto = McpTool & {
+  displayName?: string
+}
+
 type ToolResponse =
   | { data: McpTool[]; ok: true }
+  | { errorMessage: string; ok: false }
+
+type AppResponse =
+  | { data: AppDto; ok: true }
   | { errorMessage: string; ok: false }
 
 export default function useIntegrationTools(
@@ -27,12 +36,50 @@ export default function useIntegrationTools(
       },
     },
   )
+
   const {
-    data = EMPTY_ARRAY,
+    data: toolsData = EMPTY_ARRAY,
     isLoading,
     isValidating,
     error,
   } = useSWR<McpTool[]>(['integrationTools', integration?.name], fetcher, opts)
+
+  const displayNameFetcher = useFetcher<AppDto | undefined, AppResponse>(
+    integration?.type === IntegrationType.Pipedream
+      ? ROUTES.api.integrations.pipedream.detail(
+          integration.configuration.appName,
+        ).root
+      : undefined,
+    {
+      serializer: (response) => {
+        if (!response.ok) return undefined
+        return response.data
+      },
+    },
+  )
+
+  const { data: appData = undefined } = useSWR<AppDto | undefined>(
+    ['integrationApp', integration?.id],
+    displayNameFetcher,
+  )
+
+  const data = useMemo<McpToolDto[] | undefined>(() => {
+    if (!toolsData) return undefined
+
+    if (!appData) return toolsData
+
+    return toolsData.map((tool) => {
+      const displayName = appData.tools?.find(
+        (action) => action.key === tool.name,
+      )?.name
+
+      if (!displayName) return tool
+      return {
+        ...tool,
+        displayName,
+      }
+    })
+  }, [toolsData, appData])
 
   return {
     data,

@@ -28,6 +28,11 @@ export const API_ROUTES = {
         root: `/api/integrations/${integrationName}/listTools`,
       },
     }),
+    pipedream: {
+      detail: (slugName: string) => ({
+        root: `/api/integrations/pipedream/${slugName}`,
+      }),
+    },
   },
   webhooks: {
     root: '/api/webhooks',

@@ -8,6 +8,7 @@ import { IntegrationType } from '@latitude-data/constants'
 import {
   externalMcpIntegrationConfigurationSchema,
   hostedMcpIntegrationConfigurationFormSchema,
+  pipedreamIntegrationConfigurationSchema,
 } from '@latitude-data/core/services/integrations/helpers/schema'
 import { Workspace } from '@latitude-data/core/browser'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
@@ -48,6 +49,11 @@ export const createIntegrationAction = authProcedure
         name: nameSchema(ctx.workspace),
         type: z.literal(IntegrationType.HostedMCP),
         configuration: hostedMcpIntegrationConfigurationFormSchema,
+      }),
+      z.object({
+        name: nameSchema(ctx.workspace),
+        type: z.literal(IntegrationType.Pipedream),
+        configuration: pipedreamIntegrationConfigurationSchema,
       }),
     ]),
   )

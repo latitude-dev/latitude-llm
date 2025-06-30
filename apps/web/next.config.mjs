@@ -29,6 +29,9 @@ const nextConfig = {
       bodySizeLimit: '25mb',
     },
   },
+  images: {
+    remotePatterns: [new URL('https://assets.pipedream.net/**')],
+  },
 }
 
 let config

@@ -6,6 +6,7 @@ import {
   ExternalMcpIntegrationConfiguration,
   HostedMcpIntegrationConfiguration,
   HostedMcpIntegrationConfigurationForm,
+  PipedreamIntegrationConfiguration,
 } from './helpers/schema'
 import { deployMcpServer } from '../mcpServers/deployService'
 import { HOSTED_MCP_CONFIGS } from './hostedTypes'
@@ -16,7 +17,9 @@ import { Result } from './../../lib/Result'
 type ConfigurationFormType<T extends IntegrationType> =
   T extends IntegrationType.ExternalMCP
     ? ExternalMcpIntegrationConfiguration
-    : HostedMcpIntegrationConfigurationForm
+    : T extends IntegrationType.Pipedream
+      ? PipedreamIntegrationConfiguration
+      : HostedMcpIntegrationConfigurationForm
 
 type IntegrationCreateParams<T extends IntegrationType> = {
   workspace: Workspace
