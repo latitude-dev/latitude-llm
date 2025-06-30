@@ -2,13 +2,9 @@ import {
   ATTR_ERROR_TYPE,
   ATTR_EXCEPTION_MESSAGE,
   ATTR_EXCEPTION_TYPE,
-  ATTR_HTTP_REQUEST_METHOD,
 } from '@opentelemetry/semantic-conventions'
 import {
   ATTR_GEN_AI_OPERATION_NAME,
-  ATTR_GEN_AI_TOOL_CALL_ID,
-  ATTR_GEN_AI_USAGE_COMPLETION_TOKENS,
-  ATTR_GEN_AI_USAGE_OUTPUT_TOKENS,
   GEN_AI_OPERATION_NAME_VALUE_CHAT,
   GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS,
   GEN_AI_OPERATION_NAME_VALUE_EXECUTE_TOOL,
@@ -17,7 +13,13 @@ import {
 } from '@opentelemetry/semantic-conventions/incubating'
 import { z } from 'zod'
 import {
+  AI_OPERATION_ID_VALUE_GENERATE_OBJECT,
+  AI_OPERATION_ID_VALUE_GENERATE_TEXT,
+  AI_OPERATION_ID_VALUE_STREAM_OBJECT,
+  AI_OPERATION_ID_VALUE_STREAM_TEXT,
+  AI_OPERATION_ID_VALUE_TOOL,
   ApiKey,
+  ATTR_AI_OPERATION_ID,
   ATTR_LATITUDE_SEGMENTS,
   ATTR_LATITUDE_TYPE,
   ATTR_LLM_REQUEST_TYPE,
@@ -269,7 +271,6 @@ export function extractSpanType(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<SpanType> {
   const type = String(attributes[ATTR_LATITUDE_TYPE] || '')
-
   switch (type) {
     case SpanType.Tool:
       return Result.ok(SpanType.Tool)
@@ -289,7 +290,7 @@ export function extractSpanType(
       return Result.ok(SpanType.Unknown)
   }
 
-  const operation = String(attributes[ATTR_GEN_AI_OPERATION_NAME] || '')
+  let operation = String(attributes[ATTR_GEN_AI_OPERATION_NAME] || '')
   switch (operation) {
     case GEN_AI_OPERATION_NAME_VALUE_TOOL:
     case GEN_AI_OPERATION_NAME_VALUE_EXECUTE_TOOL:
@@ -319,20 +320,15 @@ export function extractSpanType(
       return Result.ok(SpanType.Reranking)
   }
 
-  if (ATTR_GEN_AI_TOOL_CALL_ID in attributes) {
-    return Result.ok(SpanType.Tool)
-  }
-
-  if (ATTR_GEN_AI_USAGE_COMPLETION_TOKENS in attributes) {
-    return Result.ok(SpanType.Completion)
-  }
-
-  if (ATTR_GEN_AI_USAGE_OUTPUT_TOKENS in attributes) {
-    return Result.ok(SpanType.Completion)
-  }
-
-  if (ATTR_HTTP_REQUEST_METHOD in attributes) {
-    return Result.ok(SpanType.Http)
+  operation = String(attributes[ATTR_AI_OPERATION_ID] || '')
+  switch (operation) {
+    case AI_OPERATION_ID_VALUE_TOOL:
+      return Result.ok(SpanType.Tool)
+    case AI_OPERATION_ID_VALUE_GENERATE_TEXT:
+    case AI_OPERATION_ID_VALUE_STREAM_TEXT:
+    case AI_OPERATION_ID_VALUE_GENERATE_OBJECT:
+    case AI_OPERATION_ID_VALUE_STREAM_OBJECT:
+      return Result.ok(SpanType.Completion)
   }
 
   return Result.ok(SpanType.Unknown)

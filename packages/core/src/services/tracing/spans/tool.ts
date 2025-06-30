@@ -3,9 +3,17 @@ import {
   ATTR_GEN_AI_TOOL_NAME,
 } from '@opentelemetry/semantic-conventions/incubating'
 import {
+  ATTR_AI_TOOL_CALL_ARGS,
+  ATTR_AI_TOOL_CALL_ID,
+  ATTR_AI_TOOL_CALL_NAME,
+  ATTR_AI_TOOL_CALL_RESULT,
   ATTR_GEN_AI_TOOL_CALL_ARGUMENTS,
   ATTR_GEN_AI_TOOL_RESULT_IS_ERROR,
   ATTR_GEN_AI_TOOL_RESULT_VALUE,
+  ATTR_TOOL_CALL_FUNCTION_ARGUMENTS,
+  ATTR_TOOL_CALL_FUNCTION_RESULT,
+  ATTR_TOOL_CALL_ID,
+  ATTR_TOOL_NAME,
   SPAN_SPECIFICATIONS,
   SpanAttribute,
   SpanStatus,
@@ -73,7 +81,9 @@ async function process(
 function extractToolName(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<ToolSpanMetadata['name']> {
-  const name = String(attributes[ATTR_GEN_AI_TOOL_NAME] || '')
+  let name = String(attributes[ATTR_GEN_AI_TOOL_NAME] || '')
+  if (!name) name = String(attributes[ATTR_TOOL_NAME] || '')
+  if (!name) name = String(attributes[ATTR_AI_TOOL_CALL_NAME] || '')
   if (name) return Result.ok(name)
 
   return Result.error(new UnprocessableEntityError('Tool name is required'))
@@ -82,7 +92,9 @@ function extractToolName(
 function extractToolCallId(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<ToolSpanMetadata['call']['id']> {
-  const id = String(attributes[ATTR_GEN_AI_TOOL_CALL_ID] || '')
+  let id = String(attributes[ATTR_GEN_AI_TOOL_CALL_ID] || '')
+  if (!id) id = String(attributes[ATTR_TOOL_CALL_ID] || '')
+  if (!id) id = String(attributes[ATTR_AI_TOOL_CALL_ID] || '')
   if (id) return Result.ok(id)
 
   return Result.error(new UnprocessableEntityError('Tool call id is required'))
@@ -91,7 +103,11 @@ function extractToolCallId(
 function extractToolCallArguments(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<ToolSpanMetadata['call']['arguments']> {
-  const attribute = String(attributes[ATTR_GEN_AI_TOOL_CALL_ARGUMENTS] || '')
+  let attribute = String(attributes[ATTR_GEN_AI_TOOL_CALL_ARGUMENTS] || '')
+  if (!attribute) {
+    attribute = String(attributes[ATTR_TOOL_CALL_FUNCTION_ARGUMENTS] || '')
+  }
+  if (!attribute) attribute = String(attributes[ATTR_AI_TOOL_CALL_ARGS] || '')
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))
@@ -108,7 +124,11 @@ function extractToolCallArguments(
 function extractToolResultValue(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<Required<ToolSpanMetadata>['result']['value']> {
-  const attribute = String(attributes[ATTR_GEN_AI_TOOL_RESULT_VALUE] || '')
+  let attribute = String(attributes[ATTR_GEN_AI_TOOL_RESULT_VALUE] || '')
+  if (!attribute) {
+    attribute = String(attributes[ATTR_TOOL_CALL_FUNCTION_RESULT] || '')
+  }
+  if (!attribute) attribute = String(attributes[ATTR_AI_TOOL_CALL_RESULT] || '')
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))

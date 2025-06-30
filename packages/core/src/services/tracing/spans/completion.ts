@@ -1,4 +1,15 @@
 import {
+  ATTR_GEN_AI_RESPONSE_MODEL,
+  ATTR_GEN_AI_SYSTEM,
+} from '@opentelemetry/semantic-conventions/incubating'
+import {
+  ATTR_AI_MODEL_ID,
+  ATTR_AI_MODEL_PROVIDER,
+  ATTR_AI_RESPONSE_MODEL,
+  ATTR_GEN_AI_REQUEST_MODEL,
+  ATTR_LLM_MODEL_NAME,
+  ATTR_LLM_PROVIDER,
+  ATTR_LLM_SYSTEM,
   CompletionSpanMetadata,
   SPAN_SPECIFICATIONS,
   SpanAttribute,
@@ -6,8 +17,9 @@ import {
   SpanType,
 } from '../../../browser'
 import { database, Database } from '../../../client'
+import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from './../../../lib/Result'
-import { SpanProcessArgs } from './shared'
+import { SpanProcessArgs, toCamelCase } from './shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Completion]
 export const CompletionSpanSpecification = {
@@ -29,7 +41,7 @@ async function process(
 
   const extractingcc = extractConfiguration(attributes)
   if (extractingcc.error) return Result.error(extractingcc.error)
-  const configuration = extractingcc.value
+  const configuration = toCamelCase(extractingcc.value)
 
   const extractingci = extractInput(attributes)
   if (extractingci.error) return Result.error(extractingci.error)
@@ -94,13 +106,30 @@ async function process(
 function extractProvider(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<CompletionSpanMetadata['provider']> {
-  return Result.nil()
+  let provider = String(attributes[ATTR_GEN_AI_SYSTEM] || '')
+  if (!provider) provider = String(attributes[ATTR_LLM_SYSTEM] || '')
+  if (!provider) provider = String(attributes[ATTR_LLM_PROVIDER] || '')
+  if (!provider) provider = String(attributes[ATTR_AI_MODEL_PROVIDER] || '')
+  if (provider) return Result.ok(provider)
+
+  return Result.error(
+    new UnprocessableEntityError('Completion provider is required'),
+  )
 }
 
 function extractModel(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<CompletionSpanMetadata['model']> {
-  return Result.nil()
+  let model = String(attributes[ATTR_GEN_AI_RESPONSE_MODEL] || '')
+  if (!model) model = String(attributes[ATTR_GEN_AI_REQUEST_MODEL] || '')
+  if (!model) model = String(attributes[ATTR_LLM_MODEL_NAME] || '')
+  if (!model) model = String(attributes[ATTR_AI_RESPONSE_MODEL] || '')
+  if (!model) model = String(attributes[ATTR_AI_MODEL_ID] || '')
+  if (model) return Result.ok(model)
+
+  return Result.error(
+    new UnprocessableEntityError('Completion model is required'),
+  )
 }
 
 function extractConfiguration(
