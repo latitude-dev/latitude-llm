@@ -24,7 +24,7 @@
     "concurrently": "^9.1.2",
     "eslint": "^8.57.1",
     "glob": "^11.0.1",
-    "mintlify": "4.0.571",
+    "mintlify": "4.1.98",
     "prettier": "^3.5.3",
     "recast": "^0.23.11",
     "tsx": "^4.16.2",
