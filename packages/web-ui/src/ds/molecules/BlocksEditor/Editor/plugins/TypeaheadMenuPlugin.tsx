@@ -13,6 +13,7 @@ import {
   ElementNode,
   LexicalEditor,
   TextNode,
+  $createParagraphNode,
 } from 'lexical'
 import { cn } from '../../../../../lib/utils'
 import { Text } from '../../../../atoms/Text'
@@ -135,7 +136,14 @@ function getAllOptions(editor: LexicalEditor): ComponentPickerOption[] {
           const selection = $getSelection()
           if ($isRangeSelection(selection)) {
             const stepBlock = $createStepBlockNode('Step')
-            selection.insertNodes([stepBlock])
+            const blankParagraph = $createParagraphNode()
+            selection.insertNodes([stepBlock, blankParagraph])
+
+            // Move cursor inside the step block content
+            const firstChild = stepBlock.getFirstChild()
+            if (firstChild) {
+              firstChild.selectEnd()
+            }
           }
         }),
     }),
@@ -150,7 +158,14 @@ function getAllOptions(editor: LexicalEditor): ComponentPickerOption[] {
           const selection = $getSelection()
           if ($isRangeSelection(selection)) {
             const messageBlock = $createMessageBlockNode('system')
-            selection.insertNodes([messageBlock])
+            const blankParagraph = $createParagraphNode()
+            selection.insertNodes([messageBlock, blankParagraph])
+
+            // Move cursor inside the message block content
+            const firstChild = messageBlock.getFirstChild()
+            if (firstChild) {
+              firstChild.selectEnd()
+            }
           }
         }),
     }),
@@ -163,7 +178,14 @@ function getAllOptions(editor: LexicalEditor): ComponentPickerOption[] {
           const selection = $getSelection()
           if ($isRangeSelection(selection)) {
             const messageBlock = $createMessageBlockNode('user')
-            selection.insertNodes([messageBlock])
+            const blankParagraph = $createParagraphNode()
+            selection.insertNodes([messageBlock, blankParagraph])
+
+            // Move cursor inside the message block content
+            const firstChild = messageBlock.getFirstChild()
+            if (firstChild) {
+              firstChild.selectEnd()
+            }
           }
         }),
     }),
@@ -176,7 +198,14 @@ function getAllOptions(editor: LexicalEditor): ComponentPickerOption[] {
           const selection = $getSelection()
           if ($isRangeSelection(selection)) {
             const messageBlock = $createMessageBlockNode('assistant')
-            selection.insertNodes([messageBlock])
+            const blankParagraph = $createParagraphNode()
+            selection.insertNodes([messageBlock, blankParagraph])
+
+            // Move cursor inside the message block content
+            const firstChild = messageBlock.getFirstChild()
+            if (firstChild) {
+              firstChild.selectEnd()
+            }
           }
         }),
     }),
@@ -189,7 +218,14 @@ function getAllOptions(editor: LexicalEditor): ComponentPickerOption[] {
           const selection = $getSelection()
           if ($isRangeSelection(selection)) {
             const messageBlock = $createMessageBlockNode('developer')
-            selection.insertNodes([messageBlock])
+            const blankParagraph = $createParagraphNode()
+            selection.insertNodes([messageBlock, blankParagraph])
+
+            // Move cursor inside the message block content
+            const firstChild = messageBlock.getFirstChild()
+            if (firstChild) {
+              firstChild.selectEnd()
+            }
           }
         }),
     }),
