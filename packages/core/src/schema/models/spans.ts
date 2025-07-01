@@ -4,6 +4,7 @@ import {
   index,
   primaryKey,
   timestamp,
+  uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
 import { SpanKind, SpanStatus, SpanType } from '../../constants'
@@ -17,7 +18,7 @@ export const spans = latitudeSchema.table(
   {
     id: varchar('id', { length: 16 }).notNull(),
     traceId: varchar('trace_id', { length: 32 }).notNull(),
-    segmentId: varchar('segment_id', { length: 32 }),
+    segmentId: uuid('segment_id'),
     parentId: varchar('parent_id', { length: 16 }),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
