@@ -2,9 +2,10 @@ import { useCallback, useMemo, EventHandler, MouseEvent } from 'react'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { SerializedNode } from '../index'
 import { triggerToggleDevEditor } from '../../../plugins/ReferencesPlugin'
 import { useBlocksEditorContext } from '../../../Provider'
+import { ReferenceLink as SerializedReferenceLink } from '../../../state/promptlToLexical/types'
+import { resolveRelativePath } from '@latitude-data/constants'
 
 function LoadingLink() {
   return (
@@ -22,10 +23,12 @@ function LoadingLink() {
 }
 
 function LinkInfo({
-  missingValues,
+  hasErrors,
+  errors,
   path,
 }: {
-  missingValues: boolean
+  hasErrors: boolean
+  errors?: SerializedReferenceLink['errors']
   path: string
 }) {
   const linkText = useMemo(
@@ -33,44 +36,52 @@ function LinkInfo({
       <div className='flex flex-rowitems-center gap-x-1'>
         <Icon
           name='file'
-          color={missingValues ? 'destructive' : 'foregroundMuted'}
+          color={hasErrors ? 'destructive' : 'foregroundMuted'}
           className='relative flex-none align-baseline top-[3px]'
         />
-        <Text.H5M
-          ellipsis
-          noWrap
-          color={missingValues ? 'destructive' : 'primary'}
-        >
+        <Text.H5M ellipsis noWrap color={hasErrors ? 'destructive' : 'primary'}>
           {path}
         </Text.H5M>
       </div>
     ),
-    [missingValues, path],
+    [hasErrors, path],
   )
 
-  if (!missingValues) return linkText
+  if (!hasErrors) return linkText
 
   return (
     <Tooltip variant='destructive' align='end' trigger={linkText}>
-      Missing values. Click to configure
+      {errors && errors.length > 0
+        ? errors[0]?.message
+        : 'Missing values. Click to configure'}
     </Tooltip>
   )
 }
 
 function ReferenceLinkReal({
-  path,
+  path: relativePath,
   attributes: initialAttributes,
+  errors,
 }: {
   path: string
-  attributes: SerializedNode['attributes']
+  errors?: SerializedReferenceLink['errors']
+  attributes: SerializedReferenceLink['attributes']
 }) {
-  const { Link, prompts } = useBlocksEditorContext()
+  const { Link, currentDocument, prompts } = useBlocksEditorContext()
+  const path = resolveRelativePath(relativePath, currentDocument.path)
   const url = prompts[path]?.url
-  const values = Object.values(initialAttributes)
-  const missingValues = values.length > 0
+  const attributeKeys = Object.keys(initialAttributes).filter(
+    (k) =>
+      k !== 'path' &&
+      (initialAttributes[k] === undefined || initialAttributes[k] === null),
+  )
+  const missingValues = attributeKeys.length > 0
+  const hasErrors = useMemo(() => {
+    return (errors && errors.length > 0) || missingValues
+  }, [errors, missingValues])
   const onClickLink: EventHandler<MouseEvent<HTMLAnchorElement>> = useCallback(
     (event) => {
-      if (missingValues) {
+      if (hasErrors) {
         event.preventDefault()
         event.stopPropagation()
         triggerToggleDevEditor()
@@ -84,7 +95,7 @@ function ReferenceLinkReal({
         return
       }
     },
-    [missingValues, url, path],
+    [hasErrors, url, path],
   )
 
   return (
@@ -93,7 +104,7 @@ function ReferenceLinkReal({
       href={url!} // We hope for the best
       className='gap-x-1 inline-flex items-baseline min-w-0 max-w-[400px]'
     >
-      <LinkInfo missingValues={missingValues} path={path} />
+      <LinkInfo hasErrors={hasErrors} errors={errors} path={path} />
     </Link>
   )
 }
@@ -101,13 +112,17 @@ function ReferenceLinkReal({
 export function ReferenceLink({
   path,
   attributes,
+  errors,
   isLoading = false,
 }: {
   path: string
-  attributes?: SerializedNode['attributes']
+  attributes?: SerializedReferenceLink['attributes']
+  errors?: SerializedReferenceLink['errors']
   isLoading?: boolean
 }) {
   if (isLoading || !attributes) return <LoadingLink />
 
-  return <ReferenceLinkReal path={path} attributes={attributes} />
+  return (
+    <ReferenceLinkReal errors={errors} path={path} attributes={attributes} />
+  )
 }

@@ -1,12 +1,13 @@
 import { DecoratorNode } from 'lexical'
 import { JSX } from 'react'
 import { Badge } from '../../../../../atoms/Badge'
+import { BLOCK_EDITOR_TYPE, Variable } from '../../state/promptlToLexical/types'
 
 export class VariableNode extends DecoratorNode<JSX.Element> {
   __name: string
 
   static getType() {
-    return 'variable'
+    return BLOCK_EDITOR_TYPE.VARIABLE
   }
 
   static clone(node: VariableNode) {
@@ -33,14 +34,15 @@ export class VariableNode extends DecoratorNode<JSX.Element> {
     return <Badge variant='accent'>&#123;&#123;{this.__name}&#125;&#125;</Badge>
   }
 
-  static importJSON(serializedNode: any) {
+  static importJSON(serializedNode: Variable) {
     return new VariableNode(serializedNode.name)
   }
 
-  exportJSON() {
+  exportJSON(): Variable {
     return {
-      type: 'variable',
+      ...super.exportJSON(),
       version: 1,
+      type: BLOCK_EDITOR_TYPE.VARIABLE,
       name: this.__name,
     }
   }

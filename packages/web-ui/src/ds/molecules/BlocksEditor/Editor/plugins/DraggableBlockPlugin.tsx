@@ -3,11 +3,13 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { $createParagraphNode, $getNearestNodeFromDOMNode } from 'lexical'
 
 import { DraggableBlockPlugin_EXPERIMENTAL } from '../overrides/plugins/DraggableBlockPlugin'
-import { $isStepBlockNode, $isMessageBlockNode } from '../nodes/utils'
 import { $isParagraphNode, LexicalNode } from 'lexical'
 
 import { Icon } from '../../../../atoms/Icons'
 import { cn } from '../../../../../lib/utils'
+import { $isStepBlockNode } from '../nodes/StepBlock'
+import { $isMessageBlockNode } from '../nodes/MessageBlock'
+import { $isCodeNode } from '@lexical/code'
 
 const DRAGGABLE_BLOCK_MENU_CLASSNAME = 'draggable-block-menu'
 
@@ -63,8 +65,9 @@ export function DraggableBlockPlugin({
 
   const validateDrop = useCallback(
     (draggedNode: LexicalNode, targetNode: LexicalNode) => {
-      // Paragraphs should never be drop targets - they are only draggable items
+      // Never drop targets
       if ($isParagraphNode(targetNode)) return false
+      if ($isCodeNode(targetNode)) return false
 
       // Handle direct drops onto custom blocks
       if ($isMessageBlockNode(targetNode)) {

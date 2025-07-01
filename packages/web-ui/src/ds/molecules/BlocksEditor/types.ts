@@ -1,9 +1,7 @@
 import { ComponentType, EventHandler, MouseEvent, ReactNode } from 'react'
+import type { UrlObject } from 'url'
 import { ConversationMetadata } from 'promptl-ai'
-import { AnyBlock } from '@latitude-data/constants/simpleBlocks'
-import { type UrlObject } from 'url'
-
-export type JSONContent = object
+import { BlockRootNode } from './Editor/state/promptlToLexical/types'
 
 export type IncludedPrompt = {
   url: string
@@ -14,11 +12,12 @@ export type IncludedPrompt = {
   documentUuid: string
 }
 
-export { type PromptBlock } from '@latitude-data/constants/simpleBlocks'
-
 export type BlocksEditorProps = {
-  placeholder?: string
+  currentDocument: { path: string }
+  initialValue: BlockRootNode
+  placeholder: string
   onToggleDevEditor: () => void
+  onError: (error: Error) => void
   Link: ComponentType<{
     children: ReactNode
     href: string | UrlObject
@@ -29,9 +28,7 @@ export type BlocksEditorProps = {
   onRequestPromptMetadata: (
     prompt: IncludedPrompt,
   ) => Promise<ConversationMetadata>
-  initialValue?: AnyBlock[] // Support both string and blocks array
-  onChange?: (content: string) => void
-  onBlocksChange?: (blocks: AnyBlock[]) => void // New callback for blocks
+  onChange: (value: string) => void
   className?: string
   readOnly?: boolean
   autoFocus?: boolean

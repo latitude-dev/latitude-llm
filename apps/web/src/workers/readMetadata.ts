@@ -1,18 +1,16 @@
 import { AgentToolsMap, resolveRelativePath } from '@latitude-data/constants'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 import {
-  astToSimpleBlocks,
-  type AnyBlock,
-} from '@latitude-data/constants/simpleBlocks'
+  fromAstToBlocks,
+  type BlockRootNode,
+} from '@latitude-data/web-ui/fromAstToBlocks'
 import type { DocumentVersion } from '@latitude-data/core/browser'
-import { AstError } from '@latitude-data/constants/simpleBlocks'
+import { AstError } from '@latitude-data/constants/promptl'
 
 import {
   CompileError as PromptlCompileError,
   ConversationMetadata as PromptlConversationMetadata,
-  Fragment,
   scan,
-  parse,
 } from 'promptl-ai'
 
 type CompileError = PromptlCompileError
@@ -60,12 +58,10 @@ function handleMetadata({
   prompt,
   editorType,
   metadata,
-  ast,
 }: {
   prompt: string
   editorType: EditorType
   metadata: PromptlConversationMetadata
-  ast: Fragment
 }) {
   const { setConfig: _, errors: rawErrors, ...returnedMetadata } = metadata
   const errors = rawErrors.map((error: CompileError) => {
@@ -85,16 +81,17 @@ function handleMetadata({
     } satisfies AstError
   })
 
-  let blocks: AnyBlock[] = []
+  let rootBlock: BlockRootNode
 
-  if (ast && editorType === 'visual') {
-    blocks = astToSimpleBlocks({ ast, prompt, errors })
+  if (metadata.ast && editorType === 'visual') {
+    rootBlock = fromAstToBlocks({ ast: metadata.ast, prompt, errors })
   }
 
   return {
     ...(returnedMetadata as PromptlConversationMetadata),
     errors,
-    blocks,
+    // We lie with `!` but is ok because this is used only when visual editor
+    rootBlock: rootBlock!,
   }
 }
 
@@ -134,10 +131,8 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
     configSchema,
   }
 
-  const ast = parse(prompt)
   const scanParams = {
     prompt,
-    serialized: ast,
     fullPath: document?.path,
     referenceFn: props.referenceFn,
     withParamters: props.withParameters,
@@ -146,5 +141,5 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
   }
   const metadata = await scan(scanParams)
 
-  self.postMessage(handleMetadata({ editorType, metadata, prompt, ast }))
+  self.postMessage(handleMetadata({ editorType, metadata, prompt }))
 }

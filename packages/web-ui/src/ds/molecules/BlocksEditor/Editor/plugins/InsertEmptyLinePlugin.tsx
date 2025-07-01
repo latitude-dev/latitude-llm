@@ -9,7 +9,8 @@ import {
 } from 'lexical'
 import { $findMatchingParent } from '@lexical/utils'
 import { Icon } from '../../../../atoms/Icons'
-import { $isMessageBlockNode, $isStepBlockNode } from '../nodes/utils'
+import { $isMessageBlockNode } from '../nodes/MessageBlock'
+import { $isStepBlockNode } from '../nodes/StepBlock'
 
 interface BlockWithCursor {
   blockKey: string

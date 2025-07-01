@@ -326,9 +326,8 @@ export default function DocumentEditor({
                   readOnlyMessage={readOnlyMessage}
                   isSaved={!isUpdatingContent}
                   onToggleBlocksEditor={setBlockEditorVisible}
-                  defaultValue={document.content}
                   value={value}
-                  blocks={metadata?.blocks}
+                  rootBlock={metadata?.rootBlock}
                   onChange={onChange}
                   compileErrors={metadata?.errors}
                 />

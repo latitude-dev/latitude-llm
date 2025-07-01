@@ -1,5 +1,4 @@
-import camelCase from 'lodash.camelcase'
-import kebabCase from 'lodash.kebabcase'
+import { camelCase, kebabCase } from 'lodash-es'
 
 import {
   CONTENT_BLOCK,
@@ -7,46 +6,18 @@ import {
   type MessageBlockType,
   type ContentBlockType,
   type MustacheTag,
-  IfBlock,
-  ForBlock,
   TemplateNode,
-  Text,
-  BLOCK_TYPES,
-  BlockType,
   StepBlock,
   BlockAttributes,
-  PromptBlock,
+  ReferenceLink,
   FileBlock,
   ToolCallBlock,
+  MESSAGE_BLOCK,
+  BLOCK_WITH_CHILDREN,
+  BlockWithChildren,
+  BLOCK_EDITOR_TYPE,
+  TextBlock,
 } from './types'
-
-export function isMessageBlock(tag: ElementTag): boolean {
-  const promptlToBlockType: Record<string, MessageBlockType> = {
-    system: 'system',
-    user: 'user',
-    assistant: 'assistant',
-    developer: 'developer',
-  }
-  return tag.name in promptlToBlockType
-}
-
-export function getMessageBlockType(tag: ElementTag): MessageBlockType {
-  const promptlToBlockType: Record<string, MessageBlockType> = {
-    system: 'system',
-    user: 'user',
-    assistant: 'assistant',
-    developer: 'developer',
-  }
-  return promptlToBlockType[tag.name] || 'system'
-}
-
-export function isContentBlock(tag: ElementTag): boolean {
-  return CONTENT_BLOCK.includes(tag.name as ContentBlockType)
-}
-
-export function isStepBlock(tag: ElementTag): boolean {
-  return tag.name === 'step'
-}
 
 export function expressionToString(
   expression: MustacheTag['expression'],
@@ -73,60 +44,19 @@ export function expressionToString(
   return JSON.stringify(expression)
 }
 
-function convertIfBlockToText(ifBlock: IfBlock, insideStep = false): string {
-  let result = `{{#if ${expressionToString(ifBlock.expression)}}}\n`
-  result += extractTextContent(ifBlock.children || [], insideStep)
-
-  if (ifBlock.else) {
-    result += '\n{{else}}\n'
-    result += extractTextContent(ifBlock.else.children || [], insideStep)
-  }
-
-  result += '\n{{/if}}'
-  return result
-}
-
-function convertForBlockToText(forBlock: ForBlock, insideStep = false): string {
-  const context = forBlock.context.name
-  const index = forBlock.index ? `, ${forBlock.index.name}` : ''
-
-  let result = `{{#for ${expressionToString(forBlock.expression)} as ${context}${index}}}\n`
-  result += extractTextContent(forBlock.children || [], insideStep)
-
-  if (forBlock.else) {
-    result += '\n{{else}}\n'
-    result += extractTextContent(forBlock.else.children || [], insideStep)
-  }
-
-  result += '\n{{/for}}'
-  return result
-}
-
-export function nodeToText(node: TemplateNode, insideStep = false): string {
+export function nodeToText(node: TemplateNode): string {
   switch (node.type) {
     case 'Text':
-      return (node as Text).data
-
+      return node.raw
     case 'MustacheTag': {
       const mustache = node as MustacheTag
       return `{{${expressionToString(mustache.expression)}}}`
     }
-
-    case 'IfBlock':
-      return convertIfBlockToText(node as IfBlock, insideStep)
-
-    case 'ForBlock':
-      return convertForBlockToText(node as ForBlock, insideStep)
-
     case 'ElementTag': {
       const tag = node as ElementTag
       // Always convert element tags to text when they're nested in content
-      return convertElementToText(tag, insideStep)
+      return convertElementToText(tag)
     }
-
-    case 'Config':
-      // Config nodes should not appear in content
-      return ''
 
     case 'Comment':
       return `<!-- ${node.data} -->`
@@ -136,11 +66,10 @@ export function nodeToText(node: TemplateNode, insideStep = false): string {
   }
 }
 
-export function extractTextContent(
-  nodes: TemplateNode[],
-  insideStep = false,
-): string {
-  return nodes.map((node) => nodeToText(node, insideStep)).join('')
+export function extractTextContent(nodes: TemplateNode[] | undefined): string {
+  if (!nodes || nodes.length === 0) return ''
+
+  return nodes.map((node) => nodeToText(node)).join('')
 }
 
 export function getPromptAttributes({
@@ -161,25 +90,67 @@ export function getPromptAttributes({
     attributes.path = ''
   }
 
-  return attributes as PromptBlock['attributes']
+  return attributes as ReferenceLink['attributes']
 }
 
-export function isTopLevelBlock(tag: ElementTag): boolean {
-  return BLOCK_TYPES.includes(tag.name as BlockType)
+export function isConfigNode(
+  node: TemplateNode | undefined,
+): node is ElementTag {
+  if (!node) return false
+
+  return node.type === 'ElementTag' && node.name === 'config'
 }
 
-export function convertElementToText(
-  tag: ElementTag,
-  insideStep = false,
-): string {
+export function isBlockWithChildren(
+  node: TemplateNode | undefined,
+): node is ElementTag {
+  if (!node) return false
+
+  return (
+    node.type === 'ElementTag' &&
+    BLOCK_WITH_CHILDREN.includes(node.name as BlockWithChildren)
+  )
+}
+
+export function isStepBlock(node: TemplateNode): node is ElementTag {
+  return node.type === 'ElementTag' && node.name === 'step'
+}
+
+export function isReferenceLink(node: TemplateNode): node is ElementTag {
+  return node.type === 'ElementTag' && node.name === 'prompt'
+}
+
+export function isMessageBlock(node: TemplateNode): node is ElementTag {
+  return (
+    node.type === 'ElementTag' &&
+    MESSAGE_BLOCK.includes(node.name as MessageBlockType)
+  )
+}
+
+export function isContentBlock(
+  node: TemplateNode | undefined,
+): node is ElementTag {
+  if (!node) return false
+
+  return (
+    node.type === 'ElementTag' &&
+    CONTENT_BLOCK.includes(node.name as ContentBlockType)
+  )
+}
+
+export function isVariable(node: TemplateNode) {
+  return node.type === 'MustacheTag' && node.expression.type === 'Identifier'
+}
+
+export function convertElementToText(tag: ElementTag): string {
   const attrs = tag.attributes
-    .map((attr: any) => {
+    .map((attr) => {
       if (attr.value === true) {
         return attr.name
       }
 
       if (Array.isArray(attr.value)) {
-        return `${attr.name}="${extractTextContent(attr.value, insideStep)}"`
+        return `${attr.name}="${extractTextContent(attr.value)}"`
       }
 
       return `${attr.name}="${attr.value}"`
@@ -187,7 +158,7 @@ export function convertElementToText(
     .join(' ')
 
   const attrsStr = attrs ? ` ${attrs}` : ''
-  const content = extractTextContent(tag.children, insideStep)
+  const content = extractTextContent(tag.children)
 
   if (content.trim()) {
     return `<${tag.name}${attrsStr}>${content}</${tag.name}>`
@@ -247,7 +218,13 @@ export function attributesToString({
       if (value === true) {
         stepAttrs.push(treatedKey)
       } else {
-        stepAttrs.push(`${treatedKey}="${value}"`)
+        // Don't quote mustache expressions (e.g., {{variable}})
+        const stringValue = String(value)
+        if (stringValue.startsWith('{{') && stringValue.endsWith('}}')) {
+          stepAttrs.push(`${treatedKey}=${value}`)
+        } else {
+          stepAttrs.push(`${treatedKey}="${value}"`)
+        }
       }
     }
   }
@@ -332,4 +309,16 @@ export function getToolCallAttributes({
   attr.parameters = attributes
 
   return attr
+}
+
+export function createTextNode({ text }: { text: string }) {
+  return {
+    type: BLOCK_EDITOR_TYPE.TEXT_CONTENT,
+    text,
+    version: 1,
+    detail: 0,
+    format: 0,
+    mode: 'normal',
+    style: '',
+  } satisfies TextBlock
 }
