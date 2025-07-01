@@ -1,6 +1,6 @@
 # BlocksEditor
 
-A Notion-like, block-based editor built with Lexical that enforces hierarchical content structure. The editor supports custom blocks with strict nesting rules to maintain content organization and prevent invalid configurations.
+A Notion-like, block-based editor built with Lexical that enforces hierarchical content structure. The editor supports custom blocks with strict nesting rules to maintain content organization and prevent invalid configurations
 
 ## Overview
 

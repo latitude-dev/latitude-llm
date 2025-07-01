@@ -320,8 +320,12 @@ export default function DocumentEditor({
               ) : null}
               {showBlocksEditor ? (
                 <PlaygroundBlocksEditor
+                  project={project}
+                  document={document}
+                  commit={commit}
                   readOnlyMessage={readOnlyMessage}
                   isSaved={!isUpdatingContent}
+                  onToggleBlocksEditor={setBlockEditorVisible}
                   defaultValue={document.content}
                   value={value}
                   blocks={metadata?.blocks}
