@@ -10,7 +10,7 @@ import {
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
 import type { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
-import type { AstError } from '@latitude-data/constants/simpleBlocks'
+import type { AstError } from '@latitude-data/constants/promptl'
 import { memo, Suspense, useCallback } from 'react'
 import { DocumentRefinement } from '../DocumentRefinement'
 import { DocumentSuggestions } from '../DocumentSuggestions'

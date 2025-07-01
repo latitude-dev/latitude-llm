@@ -3,11 +3,12 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { $createParagraphNode, $getNearestNodeFromDOMNode } from 'lexical'
 
 import { DraggableBlockPlugin_EXPERIMENTAL } from '../overrides/plugins/DraggableBlockPlugin'
-import { $isStepBlockNode, $isMessageBlockNode } from '../nodes/utils'
 import { $isParagraphNode, LexicalNode } from 'lexical'
 
 import { Icon } from '../../../../atoms/Icons'
 import { cn } from '../../../../../lib/utils'
+import { $isStepBlockNode } from '../nodes/StepBlock'
+import { $isMessageBlockNode } from '../nodes/MessageBlock'
 
 const DRAGGABLE_BLOCK_MENU_CLASSNAME = 'draggable-block-menu'
 

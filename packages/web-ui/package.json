@@ -66,6 +66,7 @@
     "./molecules/BlankSlate": "./src/ds/molecules/BlankSlate/index.tsx",
     "./molecules/BlankSlateWithSteps": "./src/ds/molecules/BlankSlateWithSteps/index.tsx",
     "./molecules/BlocksEditor": "./src/ds/molecules/BlocksEditor/index.tsx",
+    "./fromAstToBlocks": "./src/ds/molecules/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks.ts",
     "./molecules/Breadcrumb": "./src/ds/molecules/Breadcrumb/index.tsx",
     "./molecules/BreadcrumbBadge": "./src/ds/molecules/BreadcrumbBadge/index.tsx",
     "./molecules/ButtonWithBadge": "./src/ds/molecules/ButtonWithBadge/index.tsx",

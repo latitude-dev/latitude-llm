@@ -2,6 +2,7 @@ import { createContext, ReactNode, useContext, useRef } from 'react'
 import { BlocksEditorProps } from '../../types'
 
 type IBlocksProvider = {
+  currentDocument: BlocksEditorProps['currentDocument']
   prompts: BlocksEditorProps['prompts']
   Link: BlocksEditorProps['Link']
 }
@@ -12,14 +13,16 @@ const BlocksEditorContext = createContext<IBlocksProvider | undefined>(
 
 export function BlocksEditorProvider({
   children,
+  currentDocument,
   Link,
   prompts,
 }: {
   children: ReactNode
+  currentDocument: BlocksEditorProps['currentDocument']
   prompts: BlocksEditorProps['prompts']
   Link: BlocksEditorProps['Link']
 }) {
-  const value = useRef<IBlocksProvider>({ prompts, Link })
+  const value = useRef<IBlocksProvider>({ currentDocument, prompts, Link })
   return (
     <BlocksEditorContext.Provider value={value.current}>
       {children}

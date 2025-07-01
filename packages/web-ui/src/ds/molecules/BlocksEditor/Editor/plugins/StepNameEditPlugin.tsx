@@ -1,7 +1,7 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $getNodeByKey } from 'lexical'
 import { useEffect } from 'react'
-import { $isStepBlockNode } from '../nodes/utils'
+import { $isStepBlockNode } from '../nodes/StepBlock'
 
 export function StepNameEditPlugin() {
   const [editor] = useLexicalComposerContext()

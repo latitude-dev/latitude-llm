@@ -6,7 +6,7 @@ function getEditableSpan(header: HTMLElement) {
   return header.getElementsByClassName('editable-step-name')[0]! as HTMLElement
 }
 
-function getStepName({ block }: { block: StepBlockNode }): string {
+function getStepName({ block }: { block: StepBlockNode }): string | undefined {
   return block.getLatest().__stepName
 }
 
@@ -29,7 +29,7 @@ export function createLabel({ block }: { block: StepBlockNode }) {
   const editableSpan = document.createElement('span')
   editableSpan.className =
     'editable-step-name focus:outline-none focus:shadow-none focus:bg-transparent'
-  editableSpan.textContent = name
+  editableSpan.textContent = name ?? ''
   stepLabel.appendChild(editableSpan)
 
   const handleMouseEnter = (e: Event) => {
@@ -72,7 +72,7 @@ export function onUpdateHeader({
 
   if (stepLabel) {
     const input = getEditableSpan(stepLabel)
-    input.textContent = name
+    input.textContent = name ?? ''
   }
   return true
 }

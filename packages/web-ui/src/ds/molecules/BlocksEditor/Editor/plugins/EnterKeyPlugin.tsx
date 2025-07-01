@@ -8,7 +8,8 @@ import {
   $isParagraphNode,
   $createParagraphNode,
 } from 'lexical'
-import { $isMessageBlockNode, $isStepBlockNode } from '../nodes/utils'
+import { $isMessageBlockNode } from '../nodes/MessageBlock'
+import { $isStepBlockNode } from '../nodes/StepBlock'
 
 export function EnterKeyPlugin(): null {
   const [editor] = useLexicalComposerContext()
