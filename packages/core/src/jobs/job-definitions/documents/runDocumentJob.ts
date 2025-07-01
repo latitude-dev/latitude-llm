@@ -17,6 +17,7 @@ export type RunDocumentJobData = {
   autoRespondToolCalls: boolean
   parameters?: Record<string, unknown>
   batchId?: string
+  source?: LogSources
 }
 
 const emitDocumentBatchRunStatus = async (
@@ -49,6 +50,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     projectId,
     parameters = {},
     batchId = randomUUID(),
+    source = LogSources.Playground,
     autoRespondToolCalls,
   } = job.data
 
@@ -62,7 +64,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
       documentUuid,
       commitUuid,
       parameters,
-      source: LogSources.Playground,
+      source,
       autoRespondToolCalls,
     }).then((r) => r.unwrap())
 

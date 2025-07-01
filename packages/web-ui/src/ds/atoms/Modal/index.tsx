@@ -51,6 +51,7 @@ export type ModalProps = {
     current: number
   }
   dismissible?: boolean
+  scrollable?: boolean
 }
 
 export function Modal({
@@ -64,6 +65,7 @@ export function Modal({
   size = 'regular',
   steps,
   dismissible = false,
+  scrollable = true,
 }: ModalProps) {
   return (
     <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
@@ -101,7 +103,13 @@ export function Modal({
           ) : null}
 
           {children ? (
-            <div className='px-6 pb-6 overflow-y-auto custom-scrollbar'>
+            <div
+              className={cn('px-6', {
+                'overflow-y-auto custom-scrollbar pb-6': scrollable,
+                'overflow-y-hidden min-h-0 flex-grow flex flex-col':
+                  !scrollable,
+              })}
+            >
               {children}
             </div>
           ) : null}

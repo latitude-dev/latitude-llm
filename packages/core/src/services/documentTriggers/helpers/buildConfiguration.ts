@@ -3,6 +3,7 @@ import {
   DocumentTriggerConfiguration,
   EmailTriggerConfiguration,
   InsertScheduledTriggerConfiguration,
+  IntegrationTriggerConfiguration,
   ScheduledTriggerConfiguration,
 } from './schema'
 import { getNextRunTime } from './cronHelper'
@@ -13,9 +14,14 @@ export function buildConfiguration({
   configuration,
 }: {
   triggerType: DocumentTriggerType
-  configuration: InsertScheduledTriggerConfiguration | EmailTriggerConfiguration
+  configuration:
+    | InsertScheduledTriggerConfiguration
+    | EmailTriggerConfiguration
+    | IntegrationTriggerConfiguration
 }): DocumentTriggerConfiguration {
   switch (triggerType) {
+    case 'integration':
+      return configuration as IntegrationTriggerConfiguration
     case 'email':
       return configuration as EmailTriggerConfiguration
     case 'scheduled':

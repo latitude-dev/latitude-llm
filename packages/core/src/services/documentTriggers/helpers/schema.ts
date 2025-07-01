@@ -25,6 +25,13 @@ export const scheduledTriggerConfigurationSchema = z.object({
   nextRunTime: z.date().or(z.undefined()),
   parameters: z.record(z.string(), z.unknown()).optional(),
 })
+export const integrationTriggerConfigurationSchema = z.object({
+  integrationId: z.number(),
+  componentId: z.string(),
+  properties: z.record(z.string(), z.unknown()).optional(),
+  payloadParameters: z.array(z.string()),
+  triggerId: z.string(),
+})
 
 export type InsertScheduledTriggerConfiguration = z.infer<
   typeof insertScheduledTriggerConfigurationSchema
@@ -32,6 +39,10 @@ export type InsertScheduledTriggerConfiguration = z.infer<
 
 export type ScheduledTriggerConfiguration = z.infer<
   typeof scheduledTriggerConfigurationSchema
+>
+
+export type IntegrationTriggerConfiguration = z.infer<
+  typeof integrationTriggerConfigurationSchema
 >
 
 export const documentTriggerConfigurationSchema = z.discriminatedUnion(
@@ -44,6 +55,10 @@ export const documentTriggerConfigurationSchema = z.discriminatedUnion(
     z.object({
       triggerType: z.literal(DocumentTriggerType.Scheduled),
       configuration: scheduledTriggerConfigurationSchema,
+    }),
+    z.object({
+      triggerType: z.literal(DocumentTriggerType.Integration),
+      configuration: integrationTriggerConfigurationSchema,
     }),
   ],
 )
@@ -59,12 +74,19 @@ export const insertDocumentTriggerConfigurationSchema = z.discriminatedUnion(
       triggerType: z.literal(DocumentTriggerType.Scheduled),
       configuration: insertScheduledTriggerConfigurationSchema,
     }),
+    z.object({
+      triggerType: z.literal(DocumentTriggerType.Integration),
+      configuration: integrationTriggerConfigurationSchema.omit({
+        triggerId: true,
+      }),
+    }),
   ],
 )
 
 export type DocumentTriggerConfiguration =
   | EmailTriggerConfiguration
   | ScheduledTriggerConfiguration
+  | IntegrationTriggerConfiguration
 
 export type DocumentTriggerWithConfiguration = z.infer<
   typeof documentTriggerConfigurationSchema

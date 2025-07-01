@@ -94,7 +94,7 @@ function Badge({
         <Icon {...iconProps} size='xsmall' />
       ) : null}
       <span
-        className={cn({
+        className={cn('max-w-full', {
           truncate: ellipsis,
           'whitespace-nowrap': noWrap,
         })}
