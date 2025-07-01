@@ -20,7 +20,7 @@ export async function destroyPipedreamAccountFromIntegration(
   const pipedream = createBackendClient(pipedreamEnv.unwrap())
 
   try {
-    await pipedream.deleteAccount(integration.configuration.connectionId)
+    await pipedream.deleteExternalUser(integration.configuration.externalUserId)
     return Result.nil()
   } catch (error) {
     return Result.error(error as Error)
