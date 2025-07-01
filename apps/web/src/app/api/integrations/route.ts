@@ -22,6 +22,8 @@ export const GET = errorHandler(
         id: -1,
         name: 'latitude',
         type: IntegrationType.Latitude,
+        hasTools: true,
+        hasTriggers: false,
         workspaceId: workspace.id,
         createdAt: workspace.createdAt,
         updatedAt: workspace.updatedAt,

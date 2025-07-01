@@ -11,6 +11,7 @@ import { ScheduleTriggerSettings } from './ScheduleTrigger'
 enum ShareSettingsTabs {
   Email = 'email',
   Schedule = 'schedule',
+  Integrations = 'integrations',
 }
 
 function TabLabel({ text, isActive }: { text: string; isActive: boolean }) {
@@ -64,6 +65,17 @@ export function TriggerSettings({
               />
             ),
           },
+          {
+            value: ShareSettingsTabs.Integrations,
+            label: (
+              <TabLabel
+                text='Integrations'
+                isActive={triggers?.some(
+                  (t) => t.triggerType === DocumentTriggerType.Integration,
+                )}
+              />
+            ),
+          },
         ]}
         selected={selectedTab}
         onSelect={setSelectedTab}
@@ -73,6 +85,11 @@ export function TriggerSettings({
       )}
       {selectedTab === ShareSettingsTabs.Schedule && (
         <ScheduleTriggerSettings document={document} projectId={projectId} />
+      )}
+      {selectedTab === ShareSettingsTabs.Integrations && (
+        <Text.H5 color='foregroundMuted'>
+          Integrations settings will be available soon.
+        </Text.H5>
       )}
     </div>
   )

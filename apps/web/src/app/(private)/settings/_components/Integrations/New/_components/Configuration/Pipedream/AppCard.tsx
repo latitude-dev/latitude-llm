@@ -2,7 +2,7 @@
 import Image from 'next/image'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import type { App, V1Component } from '@pipedream/sdk/browser'
+import type { App } from '@pipedream/sdk/browser'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -13,7 +13,7 @@ import {
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { ReactNode } from 'react'
 
-function AppComponent({ component }: { component: V1Component }) {
+function AppComponent({ component }: { component: PipedreamComponent }) {
   return (
     <div className='flex flex-col gap-2'>
       <Text.H5>{component.name}</Text.H5>
@@ -115,6 +115,23 @@ function AppComponents({ app }: { app: App }) {
             />
           ) : (
             <Text.H5 color='foregroundMuted'>No tools available</Text.H5>
+          )
+        }
+      />
+      <AppComponentsCard
+        title='Triggers'
+        icon='zap'
+        isLoading={isLoading}
+        components={data?.triggers}
+        header={
+          isLoading || data?.triggers?.length ? (
+            <AppComponentsHeader
+              label='triggers'
+              isLoading={isLoading}
+              count={data?.triggers?.length}
+            />
+          ) : (
+            <Text.H5 color='foregroundMuted'>No triggers available</Text.H5>
           )
         }
       />

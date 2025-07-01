@@ -6,6 +6,7 @@ import {
   unique,
   varchar,
   jsonb,
+  boolean,
 } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
@@ -34,6 +35,8 @@ export const integrations = latitudeSchema.table(
     type: integrationTypesEnum('integration_type')
       .$type<IntegrationType>()
       .notNull(),
+    hasTools: boolean('has_tools').notNull().default(true),
+    hasTriggers: boolean('has_triggers').notNull().default(false),
     configuration: jsonb('configuration').$type<IntegrationProviderConfig>(),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()

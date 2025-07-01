@@ -10,7 +10,7 @@ import { sql } from 'drizzle-orm'
 
 export const documentTriggerTypeEnum = latitudeSchema.enum(
   'document_trigger_types',
-  [DocumentTriggerType.Email, DocumentTriggerType.Scheduled],
+  Object.values(DocumentTriggerType) as [string, ...string[]],
 )
 
 export const documentTriggers = latitudeSchema.table(

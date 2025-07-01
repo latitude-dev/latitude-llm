@@ -59,7 +59,7 @@ export default function DocumentEditor({
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
-  const { data: integrations } = useIntegrations()
+  const { data: integrations } = useIntegrations({ withTools: true })
   const {
     data: documents,
     updateContent,
