@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import objectHash from 'object-hash'
-import { useDebouncedCallback } from 'use-debounce'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
@@ -8,6 +7,7 @@ import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
 import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin'
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin'
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary'
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 
 import { cn } from '../../../../lib/utils'
 import { font } from '../../../tokens'
@@ -31,9 +31,6 @@ import { VariableNode } from './nodes/VariableNode'
 import { VariableMenuPlugin } from './plugins/VariablesMenuPlugin'
 import { ReferencesPlugin } from './plugins/ReferencesPlugin'
 import { ReferenceNode } from './nodes/ReferenceNode'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { BlockRootNode, fromBlocksToText } from './state/promptlToLexical'
-import { SerializedLexicalNode, SerializedRootNode } from 'lexical'
 
 const theme = {
   ltr: 'ltr',
@@ -50,62 +47,86 @@ const theme = {
   },
 }
 
-function isBlockRootNode(
-  node: SerializedRootNode<SerializedLexicalNode>,
-): node is BlockRootNode {
-  return node.type === 'root' && Array.isArray(node.children)
-}
-
-function useExternalSync({
-  isEditing,
+export function useBidirectionalLexicalSync({
+  rootBlock,
   onChange,
 }: {
-  isEditing: boolean
-  onChange: BlocksEditorProps['onChange']
+  rootBlock: BlocksEditorProps['rootBlock']
+  onChange: (value: string) => void
 }) {
   const [editor] = useLexicalComposerContext()
+  const [isEditing, setIsEditing] = useState(false)
+  const editTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastSyncedHash = useRef('')
+  const [pendingExternal, setPendingExternal] = useState<
+    typeof rootBlock | null
+  >(null)
 
+  // Call this on every user change
+  const onChangeLexical = useCallback(() => {
+    setIsEditing(true)
+    if (editTimeoutRef.current) clearTimeout(editTimeoutRef.current)
+    editTimeoutRef.current = setTimeout(() => setIsEditing(false), 1000)
+  }, [])
+
+  // When backend sends a new rootBlock
+  useEffect(() => {
+    const rootBlockHash = objectHash(rootBlock)
+    if (isEditing) {
+      setPendingExternal(rootBlock)
+    } else {
+      if (rootBlockHash !== lastSyncedHash.current) {
+        console.log('Syncing...')
+        fromBlocksToLexical({ root: rootBlock, editor })
+        lastSyncedHash.current = rootBlockHash
+      }
+      setPendingExternal(null)
+    }
+  }, [rootBlock, isEditing, editor])
+
+  // When editing ends, flush pending backend update if present
+  useEffect(() => {
+    if (!isEditing && pendingExternal) {
+      const pendingHash = objectHash(pendingExternal)
+      if (pendingHash !== lastSyncedHash.current) {
+
+        console.log('Syncing with Lexical AFTER EDITING ENDS')
+
+        fromBlocksToLexical({ root: pendingExternal, editor })
+        lastSyncedHash.current = pendingHash
+      }
+      setPendingExternal(null)
+    }
+  }, [isEditing, pendingExternal, editor])
+
+  // When editing ends, emit Lexical -> backend
   useEffect(() => {
     if (!isEditing) {
       editor.update(() => {
-        editor.toJSON()
-        const root = editor.toJSON().editorState.root
-        if (!isBlockRootNode(root)) {
-          // Typescript happiness is the most important to me.
-          // This can't happen because `EditorState.toJSON()` always returns a root node.
-          console.error('Invalid root node:', root)
-          return
-        }
-        onChange(fromBlocksToText(root))
+        console.log('Saving Lexical state to backend...')
+        const text = fromLexicalToText({ editor })
+        if (text !== null) onChange(text)
       })
     }
   }, [isEditing, editor, onChange])
+
+  return { onChangeLexical }
 }
 
-function OnChangeHandler({
+function DelayedChangePlugin({
+  rootBlock,
   onChange,
 }: {
+  rootBlock: BlocksEditorProps['rootBlock']
   onChange: BlocksEditorProps['onChange']
 }) {
-  const [isEditing, setIsEditing] = useState(false)
-  let editTimeout = null
-
-  const onEdit = useCallback(() => {
-    setIsEditing(true)
-    clearTimeout(editTimeout)
-    editTimeout = setTimeout(() => setIsEditing(false), 1000)
-  }, [])
-
-  const handleChange = useDebouncedCallback(
-    fromLexicalToText({ onChange }),
-    500,
-    { trailing: true },
-  )
-  useExternalSync({ isEditing, onChange })
-
+  const { onChangeLexical } = useBidirectionalLexicalSync({
+    rootBlock,
+    onChange,
+  })
   return (
     <OnChangePlugin
-      onChange={onEdit}
+      onChange={onChangeLexical}
       ignoreHistoryMergeTagChange
       ignoreSelectionChange
     />
@@ -134,6 +155,8 @@ export function BlocksEditor({
       setFloatingAnchorElem(floatingAnchorElem)
     }
   }, [])
+
+  // Only create initialConfig once (DO NOT depend on rootBlock!)
   const initialConfig = useMemo(
     () => ({
       namespace: 'BlocksEditor',
@@ -141,6 +164,7 @@ export function BlocksEditor({
       onError,
       editable: !readOnly,
       nodes: [MessageBlockNode, StepBlockNode, VariableNode, ReferenceNode],
+      // Don't set editorState here! We set it via the useSyncRootBlockToLexical hook.
     }),
     [readOnly, onError],
   )
@@ -202,7 +226,7 @@ export function BlocksEditor({
 
             {autoFocus && <AutoFocusPlugin />}
 
-            <OnChangeHandler onChange={onChange} />
+            <DelayedChangePlugin rootBlock={rootBlock} onChange={onChange} />
           </div>
         </LexicalComposer>
       </div>
