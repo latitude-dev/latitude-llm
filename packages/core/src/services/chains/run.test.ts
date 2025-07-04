@@ -73,8 +73,6 @@ describe('runChain', () => {
     vi.resetAllMocks()
     mocks.v4.mockReturnValue(mockUUID)
 
-    context = await factories.createTelemetryContext()
-
     const {
       workspace: w,
       commit,
@@ -89,6 +87,7 @@ describe('runChain', () => {
     providersMap = new Map(providers.map((p) => [p.name, p]))
     workspace = w
     promptSource = { document: documents[0]!, commit }
+    context = await factories.createTelemetryContext({ workspace })
   })
 
   it('runs a chain without schema override', async () => {

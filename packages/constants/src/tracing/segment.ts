@@ -1,7 +1,6 @@
 import { Message } from 'promptl-ai'
 import { z } from 'zod'
 import { DocumentType } from '../index'
-import { LatitudePromptConfig } from '../latitudePromptSchema'
 import { SpanStatus } from './span'
 
 export enum SegmentSource {
@@ -21,24 +20,44 @@ export enum SegmentType {
   Step = 'step',
 }
 
-type BaseSegmentMetadata<T extends SegmentType = SegmentType> = {
+export type SegmentSpecification<T extends SegmentType = SegmentType> = {
+  name: string
+  description: string
+  _type?: T // TODO(tracing): required for type inference, remove this when something in the specification uses the type
+}
+
+export const SEGMENT_SPECIFICATIONS = {
+  [SegmentType.Document]: {
+    name: 'Prompt',
+    description: 'A prompt',
+  },
+  [SegmentType.Step]: {
+    name: 'Step',
+    description: 'A step in a prompt',
+  },
+} as const satisfies {
+  [T in SegmentType]: SegmentSpecification<T>
+}
+
+export type BaseSegmentMetadata<T extends SegmentType = SegmentType> = {
   traceId: string
   segmentId: string
   type: T
 }
 
-type StepSegmentMetadata = BaseSegmentMetadata<SegmentType.Step> & {
-  configuration: LatitudePromptConfig // From the first completion span
-  input: Message[] // From the first completion span
+export type StepSegmentMetadata = BaseSegmentMetadata<SegmentType.Step> & {
+  configuration: Record<string, unknown> // From the first completion span/segment
+  input: Message[] // From the first completion span/segment
   // Fields below are optional if the spans had an error
-  output?: Message[] // From the last completion span
+  output?: Message[] // From the last completion span/segment
 }
 
-type DocumentSegmentMetadata = BaseSegmentMetadata<SegmentType.Document> &
-  Omit<StepSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Step>> & {
-    prompt: string // From the first segment span
-    parameters: Record<string, unknown> // From the first segment span
-  }
+export type DocumentSegmentMetadata =
+  BaseSegmentMetadata<SegmentType.Document> &
+    Omit<StepSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Step>> & {
+      prompt: string // From first segment span/segment or current run or document
+      parameters: Record<string, unknown> // From first segment span/segment or current run
+    }
 
 // prettier-ignore
 export type SegmentMetadata<T extends SegmentType = SegmentType> =
@@ -46,31 +65,38 @@ export type SegmentMetadata<T extends SegmentType = SegmentType> =
   T extends SegmentType.Step ? StepSegmentMetadata :
   never;
 
+export const SEGMENT_METADATA_STORAGE_KEY = (
+  workspaceId: number,
+  traceId: string,
+  segmentId: string,
+) => encodeURI(`workspaces/${workspaceId}/traces/${traceId}/${segmentId}`)
+export const SEGMENT_METADATA_CACHE_TTL = 1 * 60 // 1 hour
+
 export type Segment<T extends SegmentType = SegmentType> = {
   id: string
   traceId: string
   parentId?: string // Parent segment identifier
   workspaceId: number
   apiKeyId: number
-  externalId?: string // Custom user identifier from the first span or inherited from parent
+  externalId?: string // Custom user identifier from current or inherited from parent
   name: string // Enriched when ingested
-  source: SegmentSource // From the first span or inherited from parent
+  source: SegmentSource // From current or inherited from parent
   type: T
-  status: SpanStatus // From the last span (errored spans have priority)
-  message?: string // From the last span (errored spans have priority)
+  status: SpanStatus // From the last span/segment (errored spans have priority)
+  message?: string // From the last span/segment (errored spans have priority)
   logUuid?: string // TODO(tracing): temporal related log, remove when observability is ready
-  commitUuid: string // From the first span or inherited from parent
-  documentUuid: string // From the first span or inherited from parent. When running an llm evaluation this is the evaluation uuid and source is Evaluation
-  documentHash: string // From the first completion span or current document
-  documentType: DocumentType // From the first completion span or current document
-  experimentUuid?: string // From the first span or inherited from parent
-  provider: string // From the first completion span or current document
-  model: string // From the first completion span or current document
-  tokens: number // Aggregated tokens from all completion spans
-  cost: number // Aggregated cost from all completion spans
-  duration: number // Elapsed time between the first and last span
-  startedAt: Date
-  endedAt?: Date // From the last span when the segment is closed
+  commitUuid: string // From current or inherited from parent
+  documentUuid: string // From current or inherited from parent. When running an llm evaluation this is the evaluation uuid and source is Evaluation
+  documentHash: string // From current run or document
+  documentType: DocumentType // From current run or document
+  experimentUuid?: string // From current or inherited from parent
+  provider: string // From first completion span/segment or current run or document
+  model: string // From first completion span/segment or current run or document
+  tokens: number // Aggregated tokens from all completion spans/segments
+  cost: number // Aggregated cost from all completion spans/segments
+  duration: number // Elapsed time between the first and last span/segment
+  startedAt: Date // From the first span/segment
+  endedAt: Date // From the last span/segment
   createdAt: Date
   updatedAt: Date
 }

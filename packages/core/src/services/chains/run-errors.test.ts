@@ -8,6 +8,7 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Workspace } from '../../browser'
 import {
   ErrorableEntity,
@@ -15,18 +16,17 @@ import {
   PromptSource,
   Providers,
 } from '../../constants'
-import { Result } from '../../lib/Result'
-import * as factories from '../../tests/factories'
-import * as aiModule from '../ai'
 import {
   AsyncStreamIteable,
   PARTIAL_FINISH_CHUNK,
   TOOLS,
 } from '../../lib/chainStreamManager/ChainStreamConsumer/consumeStream.test'
+import { Result } from '../../lib/Result'
+import { TelemetryContext } from '../../telemetry'
+import * as factories from '../../tests/factories'
+import * as aiModule from '../ai'
 import * as ChainValidator from './ChainValidator'
 import { runChain } from './run'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { TelemetryContext } from '../../telemetry'
 
 let context: TelemetryContext
 let providersMap: Map<string, any>
@@ -64,8 +64,6 @@ describe('run chain error handling', () => {
   beforeEach(async () => {
     vi.resetAllMocks()
 
-    context = await factories.createTelemetryContext()
-
     const {
       workspace: w,
       providers,
@@ -83,6 +81,7 @@ describe('run chain error handling', () => {
     providersMap = new Map(providers.map((p) => [p.name, p]))
     workspace = w
     promptSource = { document: documents[0]!, commit }
+    context = await factories.createTelemetryContext({ workspace })
 
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,

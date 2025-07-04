@@ -35,3 +35,5 @@ export type AssembledTrace = {
   id: string
   parts: (AssembledSegment | AssembledSpan)[]
 }
+
+export const TRACE_CACHE_TTL = 5 * 60 // 5 minutes

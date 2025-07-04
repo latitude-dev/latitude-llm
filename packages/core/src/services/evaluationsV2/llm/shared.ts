@@ -178,7 +178,7 @@ export async function runPrompt<
       schema,
     }).then((r) => r.unwrap())
 
-  const $prompt = telemetry.prompt(BACKGROUND(), {
+  const $prompt = telemetry.prompt(BACKGROUND({ workspaceId: workspace.id }), {
     logUuid: resultUuid,
     versionUuid: commit.uuid,
     promptUuid: evaluation.uuid,

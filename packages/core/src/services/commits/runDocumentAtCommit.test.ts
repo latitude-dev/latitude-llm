@@ -57,8 +57,6 @@ model: gpt-4o
 `
 
 async function buildData({ doc1Content }: { doc1Content: string }) {
-  const context = await createTelemetryContext()
-
   const { workspace, project, documents, commit, user, providers } =
     await createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
@@ -66,6 +64,8 @@ async function buildData({ doc1Content }: { doc1Content: string }) {
         doc1: doc1Content,
       },
     })
+
+  const context = await createTelemetryContext({ workspace })
 
   return {
     context,

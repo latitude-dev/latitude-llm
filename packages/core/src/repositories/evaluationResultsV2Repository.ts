@@ -2,7 +2,7 @@ import {
   isAfter,
   isBefore,
   isToday,
-  parseISO,
+  parseJSON,
   startOfDay,
   subDays,
 } from 'date-fns'
@@ -361,7 +361,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         const dailyStats = await this.db
           .select({
             date: sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`
-              .mapWith(parseISO)
+              .mapWith(parseJSON)
               .as('date'),
             ...stats,
           })

@@ -44,7 +44,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   }
 
   const result = await runDocumentAtCommit({
-    context: BACKGROUND(),
+    context: BACKGROUND({ workspaceId: workspace.id }),
     workspace,
     document,
     commit,

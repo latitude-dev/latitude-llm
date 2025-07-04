@@ -45,7 +45,7 @@ export const runDocumentForExperimentJob = async (
 
   try {
     const result = await runDocumentAtCommitWithAutoToolResponses({
-      context: BACKGROUND(),
+      context: BACKGROUND({ workspaceId }),
       workspaceId,
       projectId,
       commitUuid,

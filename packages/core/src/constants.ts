@@ -28,6 +28,7 @@ import { App, V1Component } from '@pipedream/sdk/browser'
 export {
   DocumentType,
   EvaluationResultableType,
+  FinishReason,
   HEAD_COMMIT,
   LegacyChainEventTypes,
   LogSources,

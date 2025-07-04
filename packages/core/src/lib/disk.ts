@@ -86,9 +86,9 @@ export class DiskWrapper {
     return this.disk.getSignedUrl(key, options)
   }
 
-  async putFile(key: string, file: File) {
+  async putFile(key: string, file: File, options?: WriteOptions) {
     const contents = await getReadableStreamFromFile(file)
-    return this.putStream(key, contents)
+    return this.putStream(key, contents, options)
   }
 
   async deleteAll(prefix: string) {
@@ -103,6 +103,10 @@ export class DiskWrapper {
       const error = e as Error
       return Result.error(error)
     }
+  }
+
+  async get(key: string) {
+    return this.disk.get(key)
   }
 
   async put(key: string, contents: string, options?: WriteOptions) {

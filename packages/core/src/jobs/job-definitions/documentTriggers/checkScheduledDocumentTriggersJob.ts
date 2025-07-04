@@ -25,7 +25,6 @@ export const checkScheduledDocumentTriggersJob = async (
   }
 
   const triggers = triggersResult.unwrap()
-  console.log(`Found ${triggers.length} scheduled triggers due to run`)
 
   // Enqueue individual jobs for each trigger
   triggers.forEach(async (trigger) => {

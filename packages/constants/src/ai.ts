@@ -1,12 +1,17 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
-import { Tool, FinishReason, LanguageModelUsage, TextStreamPart } from 'ai'
+import {
+  LanguageModelUsage,
+  TextStreamPart,
+  Tool,
+  FinishReason as VercelFinishReason,
+} from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
-import { ProviderLog } from './models'
-import { LatitudeEventData, LegacyChainEventTypes } from './events'
 import { ParameterType } from './config'
+import { LatitudeEventData, LegacyChainEventTypes } from './events'
 import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
+import { ProviderLog } from './models'
 import { TraceContext } from './tracing/trace'
 
 export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
@@ -121,7 +126,7 @@ export type LegacyLatitudeChainCompleteEventData = {
   messages?: Message[]
   object?: any
   response: ChainStepResponse<StreamType>
-  finishReason: FinishReason
+  finishReason: VercelFinishReason
   documentLogUuid?: string
 }
 
@@ -156,3 +161,13 @@ export const toolCallResponseSchema = z.object({
 })
 
 export type ToolCallResponse = z.infer<typeof toolCallResponseSchema>
+
+export enum FinishReason {
+  Stop = 'stop',
+  Length = 'length',
+  ContentFilter = 'content-filter',
+  ToolCalls = 'tool-calls',
+  Error = 'error',
+  Other = 'other',
+  Unknown = 'unknown',
+}

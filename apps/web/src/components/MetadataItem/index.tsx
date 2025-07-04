@@ -14,6 +14,7 @@ type MetadataItemProps = {
   color?: TextColor
   loading?: boolean
   children?: ReactNode
+  contentClassName?: string
 }
 export function MetadataItem({
   label,
@@ -24,6 +25,7 @@ export function MetadataItem({
   color = 'foregroundMuted',
   loading,
   children,
+  contentClassName,
 }: MetadataItemProps) {
   const className = stacked
     ? 'flex-flex-col gap-2'
@@ -51,7 +53,7 @@ export function MetadataItem({
         </span>
         {stacked && action}
       </span>
-      <div>
+      <div className={contentClassName}>
         {loading ? (
           <Skeleton height='h4' className='w-12' />
         ) : (

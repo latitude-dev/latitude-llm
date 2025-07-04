@@ -28,8 +28,6 @@ let runDocumentAtCommitWithAutoToolResponses: RunDocumentAtCommitWithAutoToolRes
 
 describe('runDocumentAtCommitWithAutoToolResponses', () => {
   beforeAll(async () => {
-    context = await factories.createTelemetryContext()
-
     copilot = await mockToolRequestsCopilot()
     const setup = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'Latitude' }],
@@ -41,6 +39,8 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
     project = setup.project
     document = setup.documents[0]!
     commit = setup.commit
+
+    context = await factories.createTelemetryContext({ workspace })
 
     const mod = await import('./index')
     runDocumentAtCommitWithAutoToolResponses =
