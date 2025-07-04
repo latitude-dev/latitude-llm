@@ -4,29 +4,38 @@ import {
   LexicalNode,
   EditorConfig,
   setDOMUnmanaged,
+  $applyNodeReplacement,
+  $createParagraphNode,
+  $createTextNode,
+  SerializedLexicalNode,
 } from 'lexical'
 import { cn } from '../../../../../../lib/utils'
-import {
-  $isStepBlockNode,
-  SerializedBlockNode,
-  VERTICAL_SPACE_CLASS,
-} from '../utils'
+import { VERTICAL_SPACE_CLASS } from '../utils'
 import { createLabel, onUpdateHeader } from './createLabel'
+import {
+  BLOCK_EDITOR_TYPE,
+  StepBlock,
+} from '../../state/promptlToLexical/types'
 
+interface SerializedStepBlock extends Omit<StepBlock, 'children'> {
+  children: SerializedLexicalNode[]
+}
 export class StepBlockNode extends ElementNode {
-  __stepName: string
+  __stepName: string | undefined
+  __isolated: boolean = false
 
   static getType(): string {
-    return 'step-block'
+    return BLOCK_EDITOR_TYPE.STEP
   }
 
   static clone(node: StepBlockNode): StepBlockNode {
-    return new StepBlockNode(node.__stepName, node.__key)
+    return new StepBlockNode(node.__stepName, node.__isolated, node.__key)
   }
 
-  constructor(stepName: string = 'Step', key?: NodeKey) {
+  constructor(stepName?: string, isolated?: boolean, key?: NodeKey) {
     super(key)
     this.__stepName = stepName
+    this.__isolated = isolated ?? false
   }
 
   createDOM(_config: EditorConfig): HTMLElement {
@@ -70,17 +79,21 @@ export class StepBlockNode extends ElementNode {
     return writable
   }
 
-  static importJSON(serializedNode: SerializedBlockNode): StepBlockNode {
-    const { stepName } = serializedNode
-    return new StepBlockNode(stepName || 'Step')
+  static importJSON(serializedNode: SerializedStepBlock): StepBlockNode {
+    return new StepBlockNode(
+      serializedNode.attributes?.as,
+      serializedNode.attributes?.isolated ?? false,
+    )
   }
 
-  exportJSON(): SerializedBlockNode {
+  exportJSON(): SerializedStepBlock {
     return {
       ...super.exportJSON(),
-      type: 'step-block',
-      blockType: 'step',
-      stepName: this.__stepName,
+      type: BLOCK_EDITOR_TYPE.STEP,
+      attributes: {
+        as: this.__stepName,
+        isolated: this.__isolated,
+      },
     }
   }
 
@@ -120,4 +133,18 @@ export class StepBlockNode extends ElementNode {
     ) as HTMLElement
     return super.getDOMSlot(element).withElement(contentArea)
   }
+}
+
+export function $isStepBlockNode(
+  node: LexicalNode | null | undefined,
+): node is StepBlockNode {
+  return node instanceof StepBlockNode
+}
+
+export function $createStepBlockNode(stepName: string = 'Step'): StepBlockNode {
+  const block = new StepBlockNode(stepName)
+  const paragraph = $createParagraphNode()
+  paragraph.append($createTextNode(''))
+  block.append(paragraph)
+  return $applyNodeReplacement(block)
 }

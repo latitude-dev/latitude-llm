@@ -17,12 +17,11 @@ import {
 } from 'lexical'
 import { cn } from '../../../../../lib/utils'
 import { Text } from '../../../../atoms/Text'
+import { $createStepBlockNode, $isStepBlockNode } from '../nodes/StepBlock'
 import {
   $createMessageBlockNode,
-  $createStepBlockNode,
   $isMessageBlockNode,
-  $isStepBlockNode,
-} from '../nodes/utils'
+} from '../nodes/MessageBlock'
 
 interface MenuItemOption {
   key: string
@@ -198,26 +197,6 @@ function getAllOptions(editor: LexicalEditor): ComponentPickerOption[] {
           const selection = $getSelection()
           if ($isRangeSelection(selection)) {
             const messageBlock = $createMessageBlockNode('assistant')
-            const blankParagraph = $createParagraphNode()
-            selection.insertNodes([messageBlock, blankParagraph])
-
-            // Move cursor inside the message block content
-            const firstChild = messageBlock.getFirstChild()
-            if (firstChild) {
-              firstChild.selectEnd()
-            }
-          }
-        }),
-    }),
-    new ComponentPickerOption('Developer Message', {
-      key: 'message_developer',
-      emoji: '👨‍💻',
-      keywords: ['developer', 'message', 'dev', 'debug'],
-      onSelect: () =>
-        editor.update(() => {
-          const selection = $getSelection()
-          if ($isRangeSelection(selection)) {
-            const messageBlock = $createMessageBlockNode('developer')
             const blankParagraph = $createParagraphNode()
             selection.insertNodes([messageBlock, blankParagraph])
 

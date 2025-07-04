@@ -1,11 +1,11 @@
 import { AgentToolsMap, resolveRelativePath } from '@latitude-data/constants'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 import {
-  astToSimpleBlocks,
-  type AnyBlock,
-} from '@latitude-data/constants/simpleBlocks'
+  fromAstToBlocks,
+  type BlockRootNode,
+} from '@latitude-data/web-ui/fromAstToBlocks'
 import type { DocumentVersion } from '@latitude-data/core/browser'
-import { AstError } from '@latitude-data/constants/simpleBlocks'
+import { AstError } from '@latitude-data/constants/promptl'
 
 import {
   CompileError as PromptlCompileError,
@@ -85,16 +85,17 @@ function handleMetadata({
     } satisfies AstError
   })
 
-  let blocks: AnyBlock[] = []
+  let rootBlock: BlockRootNode
 
   if (ast && editorType === 'visual') {
-    blocks = astToSimpleBlocks({ ast, prompt, errors })
+    rootBlock = fromAstToBlocks({ ast, prompt, errors })
   }
 
   return {
     ...(returnedMetadata as PromptlConversationMetadata),
     errors,
-    blocks,
+    // We lie with `!` but is ok because this is used only when visual editor
+    rootBlock: rootBlock!,
   }
 }
 

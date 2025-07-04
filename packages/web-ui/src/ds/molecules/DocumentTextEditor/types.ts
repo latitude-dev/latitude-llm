@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import type { AstError } from '@latitude-data/constants/simpleBlocks'
+import { AstError } from '@latitude-data/constants/promptl'
 
 export type DiffOptions = {
   newValue: string

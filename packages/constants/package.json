@@ -8,9 +8,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint src",
-    "tc": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "tc": "tsc --noEmit"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -21,22 +19,17 @@
     "./tracing": "./src/tracing/index.ts",
     "./latitudePromptSchema": "./src/latitudePromptSchema/index.ts",
     "./latte": "./src/latte/index.ts",
-    "./simpleBlocks": "./src/simpleBlocks/index.ts"
+    "./promptl": "./src/promptl.ts"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
-    "@types/json-schema": "^7.0.15",
-    "@types/lodash.camelcase": "^4.3.9",
-    "@types/lodash.kebabcase": "^4.1.9",
-    "vitest": "^3.1.4"
+    "@types/json-schema": "^7.0.15"
   },
   "dependencies": {
     "@latitude-data/compiler": "workspace:^",
     "ai": "^4.2.9",
     "json-schema": "^0.4.0",
-    "lodash.camelcase": "^4.3.0",
-    "lodash.kebabcase": "^4.1.1",
     "promptl-ai": "catalog:",
     "zod": "catalog:"
   }

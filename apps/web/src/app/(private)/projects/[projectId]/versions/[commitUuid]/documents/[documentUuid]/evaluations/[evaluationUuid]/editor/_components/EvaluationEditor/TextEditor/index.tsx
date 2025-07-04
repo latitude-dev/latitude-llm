@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import type { AstError } from '@latitude-data/constants/simpleBlocks'
+import type { AstError } from '@latitude-data/constants/promptl'
 import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import { LLM_EVALUATION_PROMPT_PARAMETERS } from '@latitude-data/constants'

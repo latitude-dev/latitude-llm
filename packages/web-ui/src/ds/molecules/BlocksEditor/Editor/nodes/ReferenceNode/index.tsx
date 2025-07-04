@@ -1,26 +1,26 @@
 import { DecoratorNode } from 'lexical'
 import { JSX } from 'react'
 import { ReferenceLink } from './ReferenceLink'
-
-export type SerializedNode = {
-  type: 'prompt'
-  version: number
-  attributes: Record<string, string | undefined | null>
-  path: string
-}
+import {
+  BLOCK_EDITOR_TYPE,
+  type ReferenceLink as SerializedReferenceLink,
+} from '../../state/promptlToLexical/types'
+import { AstError } from '@latitude-data/constants/promptl'
 
 export class ReferenceNode extends DecoratorNode<JSX.Element> {
-  __path: SerializedNode['path']
-  __attributes: SerializedNode['attributes']
-  __isLoading: boolean
+  __errors: AstError[] | undefined = undefined
+  __path: string
+  __attributes: SerializedReferenceLink['attributes']
+  __isLoading: boolean = false
 
   static getType() {
-    return 'prompt'
+    return BLOCK_EDITOR_TYPE.REFERENCE_LINK
   }
 
   static clone(node: ReferenceNode) {
     return new ReferenceNode({
       key: node.__key,
+      errors: node.__errors,
       attributes: node.__attributes,
       path: node.__path,
     })
@@ -28,14 +28,18 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
 
   constructor({
     key,
+    errors,
     attributes,
-    path,
     isLoading = false,
-  }: Omit<SerializedNode, 'type' | 'version'> & {
+    path,
+  }: Omit<SerializedReferenceLink, 'type' | 'version'> & {
+    errors?: AstError[]
+    path: string
     isLoading?: boolean
     key?: string
   }) {
     super(key)
+    this.__errors = errors
     this.__path = path
     this.__attributes = attributes
     this.__isLoading = isLoading
@@ -54,14 +58,23 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
   decorate() {
     return (
       <ReferenceLink
+        isLoading={this.__isLoading}
         path={this.__path}
         attributes={this.__attributes}
-        isLoading={this.__isLoading}
+        errors={this.__errors}
       />
     )
   }
 
-  updateAttributes(attributes: SerializedNode['attributes']) {
+  static importJSON(serializedNode: SerializedReferenceLink): ReferenceNode {
+    return new ReferenceNode({
+      errors: serializedNode.errors,
+      path: serializedNode.path,
+      attributes: serializedNode.attributes,
+    })
+  }
+
+  updateAttributes(attributes: SerializedReferenceLink['attributes']) {
     const writable = this.getWritable()
     writable.__attributes = {
       ...writable.__attributes,
@@ -70,28 +83,12 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
     writable.__isLoading = false
   }
 
-  setLoading(isLoading: boolean) {
-    const writable = this.getWritable()
-    writable.__isLoading = isLoading
-  }
-
-  static importJSON(serializedNode: SerializedNode): ReferenceNode {
-    const { path, attributes } = serializedNode
-    return new ReferenceNode({
-      path,
-      attributes,
-    })
-  }
-
-  exportJSON(): SerializedNode & { type: 'prompt'; version: number } {
+  exportJSON(): SerializedReferenceLink {
     return {
-      type: 'prompt',
       version: 1,
+      type: BLOCK_EDITOR_TYPE.REFERENCE_LINK,
       path: this.__path,
-      attributes: {
-        ...this.__attributes,
-        path: this.__path, // Ensure path is always included
-      },
+      attributes: this.__attributes,
     }
   }
 
