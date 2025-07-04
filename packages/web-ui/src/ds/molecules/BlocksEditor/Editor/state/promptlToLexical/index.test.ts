@@ -53,6 +53,21 @@ Compare these two images.
     expect(output).toBe(prompt)
   })
 
+  // FIXME: WHAT TO DO WITH CONFIG?!!!
+  it('can parse config', () => {
+    const prompt = `---
+provider: OpenAI
+model: gpt-4o-mini
+---
+I'm a simple prompt`
+
+    const ast = parse(prompt)
+
+    const rootNode = fromAstToBlocks({ ast, prompt })
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt)
+  })
+
   it('should handle content-image with data URLs', () => {
     const prompt = `<content-image>
 data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD...

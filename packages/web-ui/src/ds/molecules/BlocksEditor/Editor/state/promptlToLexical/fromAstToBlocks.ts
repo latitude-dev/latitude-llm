@@ -14,6 +14,7 @@ import {
   isVariable,
   isBlockWithChildren,
   isContentBlockOrCodeBlock,
+  nodeToText,
 } from './astParsingUtils'
 import {
   type ElementTag,
@@ -289,7 +290,7 @@ function proccesInlineNodes({
       flushChildren()
       blocks.push(
         createCodeBlock({
-          text: convertElementToText(node as unknown as ElementTag),
+          text: nodeToText(node as unknown as ElementTag),
           errors: errors.length ? findErrorsForNode(node, errors) : undefined,
         }),
       )

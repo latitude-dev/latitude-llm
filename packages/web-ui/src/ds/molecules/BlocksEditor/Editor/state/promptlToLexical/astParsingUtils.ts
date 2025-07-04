@@ -91,15 +91,15 @@ export function nodeToText(node: TemplateNode): string {
     case 'ForBlock':
       return convertForBlockToText(node as ForBlock)
 
+    case 'Config':
+      // Config nodes should not appear in content
+      return ''
+
     case 'ElementTag': {
       const tag = node as ElementTag
       // Always convert element tags to text when they're nested in content
       return convertElementToText(tag)
     }
-
-    case 'Config':
-      // Config nodes should not appear in content
-      return ''
 
     case 'Comment':
       return `<!-- ${node.data} -->`
