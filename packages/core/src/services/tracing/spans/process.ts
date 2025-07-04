@@ -216,7 +216,9 @@ export async function processSpan(
 
       await tracingQueue.add('processSegmentJob', payload, {
         attempts: TRACING_JOBS_MAX_ATTEMPTS,
-        deduplication: { id: processSegmentJobKey(payload) },
+        deduplication: {
+          id: processSegmentJobKey(payload, { ...span, metadata }),
+        },
       })
     }
 

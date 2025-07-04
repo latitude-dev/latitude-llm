@@ -23,7 +23,7 @@ import { publisher } from '../../../events/publisher'
 import { processSegmentJobKey } from '../../../jobs/job-definitions/tracing/processSegmentJob'
 import { tracingQueue } from '../../../jobs/queues'
 import { diskFactory, DiskWrapper } from '../../../lib/disk'
-import { UnprocessableEntityError } from '../../../lib/errors'
+import { ConflictError, UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import {
@@ -135,7 +135,9 @@ export async function processSegment(
   return await Transaction.call(async (tx) => {
     const repository = new SegmentsRepository(args.workspace.id, tx)
     const locking = await repository.lock({ segmentId: id, traceId })
-    if (locking.error) return Result.error(locking.error)
+    if (locking.error) {
+      return Result.error(new ConflictError('Segment processing data race'))
+    }
 
     const saving = await saveMetadata({ metadata, workspace: args.workspace }, disk) // prettier-ignore
     if (saving.error) return Result.error(saving.error)
@@ -222,7 +224,9 @@ export async function processSegment(
 
       await tracingQueue.add('processSegmentJob', payload, {
         attempts: TRACING_JOBS_MAX_ATTEMPTS,
-        deduplication: { id: processSegmentJobKey(payload) },
+        deduplication: {
+          id: processSegmentJobKey(payload, { ...segment, metadata }),
+        },
       })
     }
 

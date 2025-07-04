@@ -1,11 +1,14 @@
 import { Job } from 'bullmq'
 import {
   SegmentBaggage,
+  SegmentWithDetails,
+  SpanWithDetails,
   TRACING_JOBS_DELAY_BETWEEN_CONFLICTS,
   TRACING_JOBS_MAX_ATTEMPTS,
 } from '../../../browser'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { ConflictError, UnprocessableEntityError } from '../../../lib/errors'
+import { hashContent as hash } from '../../../lib/hashContent'
 import { ApiKeysRepository } from '../../../repositories'
 import { processSegment } from '../../../services/tracing/segments/process'
 import { captureException } from '../../../utils/workers/sentry'
@@ -21,12 +24,12 @@ export type ProcessSegmentJobData = {
   workspaceId: number
 }
 
-export function processSegmentJobKey({
-  segment,
-  childId,
-  traceId,
-}: ProcessSegmentJobData) {
-  return `processSegmentJob-${traceId}-${segment.id}-${childId}`
+export function processSegmentJobKey(
+  data: ProcessSegmentJobData,
+  child: SpanWithDetails | SegmentWithDetails,
+) {
+  const state = hash(JSON.stringify({ data, child }))
+  return `processSegmentJob-${state}`
 }
 
 export const processSegmentJob = async (job: Job<ProcessSegmentJobData>) => {
@@ -54,10 +57,13 @@ export const processSegmentJob = async (job: Job<ProcessSegmentJobData>) => {
     if (result.error instanceof UnprocessableEntityError) {
       captureException(result.error)
     } else if (result.error instanceof ConflictError) {
+      const parts = job.deduplicationId!.split('-')
+      const retries = Number(parts.at(-1) ?? 0)
+      const idempotencyKey = `${parts.slice(0, -1).join('-')}-${isNaN(retries) ? 0 : retries + 1}`
       await tracingQueue.add('processSegmentJob', job.data, {
         attempts: TRACING_JOBS_MAX_ATTEMPTS,
         delay: TRACING_JOBS_DELAY_BETWEEN_CONFLICTS(),
-        deduplication: { id: processSegmentJobKey(job.data) },
+        deduplication: { id: idempotencyKey },
       })
     } else throw result.error
   }
