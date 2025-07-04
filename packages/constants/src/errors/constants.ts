@@ -34,6 +34,7 @@ export enum RunErrorCodes {
   MaxStepCountExceededError = 'max_step_count_exceeded_error',
   FailedToWakeUpIntegrationError = 'failed_to_wake_up_integration_error',
   InvalidResponseFormatError = 'invalid_response_format_error',
+  ErrorGeneratingMockToolResult = 'error_generating_mock_tool_result',
 }
 // NOTE: If you add a new error code, please add it to the pg enum in models/runErrors.ts
 

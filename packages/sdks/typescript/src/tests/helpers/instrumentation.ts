@@ -30,15 +30,6 @@ export class MockInstrumentation implements Instrumentation {
     },
   )
 
-  wrapRenderAgent = vi.fn(
-    async <F extends Latitude['renderAgent']>(
-      fn: F,
-      ...args: Parameters<F>
-    ): Promise<Awaited<ReturnType<F>>> => {
-      return await ((fn as any)(...args) as ReturnType<F>)
-    },
-  )
-
   wrapRenderStep = vi.fn(
     async <F extends Latitude['renderStep']>(
       fn: F,
@@ -70,7 +61,6 @@ export class MockInstrumentation implements Instrumentation {
     this.withTraceContext.mockClear()
     this.wrapToolHandler.mockClear()
     this.wrapRenderChain.mockClear()
-    this.wrapRenderAgent.mockClear()
     this.wrapRenderStep.mockClear()
     this.wrapRenderCompletion.mockClear()
     this.wrapRenderTool.mockClear()
@@ -80,7 +70,6 @@ export class MockInstrumentation implements Instrumentation {
     this.withTraceContext.mockReset()
     this.wrapToolHandler.mockReset()
     this.wrapRenderChain.mockReset()
-    this.wrapRenderAgent.mockReset()
     this.wrapRenderStep.mockReset()
     this.wrapRenderCompletion.mockReset()
     this.wrapRenderTool.mockReset()
@@ -90,7 +79,6 @@ export class MockInstrumentation implements Instrumentation {
     this.withTraceContext.mockRestore()
     this.wrapToolHandler.mockRestore()
     this.wrapRenderChain.mockRestore()
-    this.wrapRenderAgent.mockRestore()
     this.wrapRenderStep.mockRestore()
     this.wrapRenderCompletion.mockRestore()
     this.wrapRenderTool.mockRestore()

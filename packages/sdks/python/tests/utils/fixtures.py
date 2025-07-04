@@ -1269,7 +1269,6 @@ CONVERSATION_FINISHED_RESULT_RESPONSE: dict[str, Any] = {
         ],
         "usage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
     },
-    "agent_response": {"response": "I used the calculator!"},
 }
 
 CONVERSATION_FINISHED_RESULT = FinishedResult(
@@ -1336,7 +1335,6 @@ CONVERSATION_FINISHED_RESULT = FinishedResult(
             arguments={"expression": "9.9 less than 9.11"},
         ),
     ],
-    agent_response={"response": "I used the calculator!"},
 )
 
 CONVERSATION_TOOL_CALLS = CONVERSATION_FINISHED_RESULT.tool_requests

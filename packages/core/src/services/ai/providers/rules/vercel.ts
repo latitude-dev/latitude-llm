@@ -1,9 +1,8 @@
 import type {
-  ContentType,
   Message,
   SystemMessage,
   TextContent,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import { FilePart, ToolCallPart } from 'ai'
 
 import { Providers } from '../models'
@@ -71,7 +70,7 @@ function groupContentMetadata({
   const key = getProviderMetadataKey(provider)
 
   if (typeof content === 'string') {
-    const baseMsg = { type: 'text' as ContentType, text: content }
+    const baseMsg = { type: 'text', text: content }
     if (!messageMetadata) return [baseMsg]
 
     return [

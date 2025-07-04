@@ -1,7 +1,6 @@
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
-import { ContentType, MessageRole } from '@latitude-data/compiler'
-import { ChainEventTypes } from '@latitude-data/constants'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainError,
   LatitudeError,
@@ -28,6 +27,7 @@ import { Result } from '@latitude-data/core/lib/Result'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ChainEventTypes } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),
@@ -189,6 +189,7 @@ describe('POST /run', () => {
         document: expect.anything(),
         commit,
         parameters: {},
+        tools: {},
         source: LogSources.Playground,
         abortSignal: expect.anything(),
       })
@@ -318,7 +319,7 @@ describe('POST /run', () => {
                   ],
                   content: [
                     {
-                      type: ContentType.toolCall,
+                      type: 'tool-call',
                       toolCallId: 'fake-tool-call-id',
                       toolName: 'get_the_weather',
                       args: { location: 'Barcelona, Spain' },
@@ -456,6 +457,7 @@ describe('POST /run', () => {
         document: expect.anything(),
         commit,
         parameters: {},
+        tools: {},
         source: LogSources.Playground,
         abortSignal: expect.anything(),
       })
@@ -525,7 +527,6 @@ describe('POST /run', () => {
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual({
         uuid: 'fake-document-log-uuid',
-        toolRequests: [],
         conversation: [
           {
             role: MessageRole.assistant,
@@ -540,7 +541,6 @@ describe('POST /run', () => {
           object: { something: { else: 'here' } },
           toolCalls: [],
         },
-        trace: await trace,
       })
     })
 

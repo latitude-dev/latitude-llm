@@ -211,7 +211,6 @@ class FinishedResult(Model):
     uuid: str
     conversation: List[Message]
     response: ChainResponse
-    agent_response: Optional[dict[str, Any]] = Field(default=None, alias=str("agentResponse"))
     tool_requests: List[ToolCall] = Field(alias=str("toolRequests"))
 
 

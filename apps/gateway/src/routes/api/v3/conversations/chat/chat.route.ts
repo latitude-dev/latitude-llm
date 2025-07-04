@@ -8,7 +8,6 @@ import {
 import { ROUTES } from '$/routes'
 import { conversationsParamsSchema } from '$/routes/api/v3/conversations/paramsSchema'
 import { createRoute, z } from '@hono/zod-openapi'
-import { traceContextSchema } from '@latitude-data/constants'
 import { messageSchema } from '@latitude-data/core/browser'
 
 export const chatRoute = createRoute({
@@ -25,7 +24,7 @@ export const chatRoute = createRoute({
           schema: internalInfoSchema.extend({
             messages: z.array(messageSchema),
             stream: z.boolean().default(false),
-            trace: traceContextSchema.optional(),
+            tools: z.array(z.string()).optional().default([]),
           }),
         },
       },

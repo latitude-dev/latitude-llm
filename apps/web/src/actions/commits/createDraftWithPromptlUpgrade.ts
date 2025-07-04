@@ -57,22 +57,6 @@ export const createDraftWithPromptlUpgradeAction = withProject
         document,
         promptlVersion: 1,
       }).then((r) => r.unwrap())
-    } else {
-      const documents = await docsScope
-        .getDocumentsAtCommit(draft)
-        .then((r) => r.unwrap())
-
-      await Promise.all(
-        documents
-          .filter((doc) => doc.promptlVersion === 0)
-          .map((doc) =>
-            updateDocument({
-              commit: draft,
-              document: doc,
-              promptlVersion: 1,
-            }).then((r) => r.unwrap()),
-          ),
-      )
     }
 
     return draft

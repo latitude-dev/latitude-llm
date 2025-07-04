@@ -1,4 +1,3 @@
-import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -15,7 +14,6 @@ import {
 } from '../../../browser'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import * as factories from '../../../tests/factories'
-import * as agents from '../../agents/run'
 import * as chains from '../../chains/run'
 import { buildPrompt, promptSchema } from './binary'
 import { runPrompt } from './shared'
@@ -106,7 +104,7 @@ describe('runPrompt', () => {
       return {
         errorableUuid: resultUuid,
         error: Promise.resolve(undefined),
-        lastResponse: Promise.resolve({
+        response: Promise.resolve({
           streamType: 'object',
           object: { passed: true, reason: 'reason' },
           text: 'text',
@@ -154,7 +152,7 @@ describe('runPrompt', () => {
             message: `Failed!`,
           }),
         ),
-        lastResponse: Promise.resolve(undefined),
+        response: Promise.resolve(undefined),
       } as any
     })
 
@@ -184,7 +182,7 @@ describe('runPrompt', () => {
       return {
         errorableUuid: resultUuid,
         error: Promise.resolve(undefined),
-        lastResponse: Promise.resolve({
+        response: Promise.resolve({
           streamType: 'text',
           text: 'text',
           toolCalls: [],
@@ -218,60 +216,6 @@ describe('runPrompt', () => {
     )
   })
 
-  it('fails when verdict cannot be parsed from an agent response', async () => {
-    vi.spyOn(agents, 'runAgent').mockImplementation((args) => {
-      ;(args.chain as any)._completed = true
-
-      return {
-        errorableUuid: resultUuid,
-        error: Promise.resolve(undefined),
-        lastResponse: Promise.resolve({
-          streamType: 'text',
-          text: 'text',
-          toolCalls: [
-            {
-              id: 'id',
-              name: 'get_weather',
-              arguments: { city: 'London' },
-            },
-          ],
-          usage: {
-            promptTokens: 10,
-            completionTokens: 10,
-            totalTokens: 20,
-          },
-          documentLogUuid: providerLog.documentLogUuid,
-          providerLog: providerLog,
-        }),
-      } as any
-    })
-
-    const parts = prompt.split('---')
-    prompt = [
-      parts.slice(0, 1),
-      prompt.split('---')[1] + 'type: agent\n',
-      parts.slice(2),
-    ].join('---')
-
-    await expect(
-      runPrompt({
-        prompt: prompt,
-        parameters: parameters,
-        schema: promptSchema,
-        resultUuid: 'resultUuid',
-        evaluation: evaluation,
-        providers: new Map([[provider.name, provider]]),
-        commit: commit,
-        workspace: workspace,
-      }),
-    ).rejects.toThrowError(
-      new ChainError({
-        code: RunErrorCodes.InvalidResponseFormatError,
-        message: 'Evaluation conversation response is not an agent return call',
-      }),
-    )
-  })
-
   it('fails when verdict does not match the schema', async () => {
     vi.spyOn(chains, 'runChain').mockImplementation((args) => {
       ;(args.chain as any)._completed = true
@@ -279,7 +223,7 @@ describe('runPrompt', () => {
       return {
         errorableUuid: resultUuid,
         error: Promise.resolve(undefined),
-        lastResponse: Promise.resolve({
+        response: Promise.resolve({
           streamType: 'object',
           object: { score: 0.5, reason: 'reason' },
           text: 'text',
@@ -340,77 +284,6 @@ describe('runPrompt', () => {
         streamType: 'object',
         object: { passed: true, reason: 'reason' },
         text: 'text',
-        usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
-        documentLogUuid: resultUuid,
-        providerLog: providerLog,
-      },
-      stats: {
-        documentLogUuid: resultUuid,
-        tokens: 62,
-        duration: 2000,
-        costInMillicents: 1000,
-      },
-      verdict: { passed: true, reason: 'reason' },
-    })
-  })
-
-  it('succeeds when running an agent prompt', async () => {
-    vi.spyOn(agents, 'runAgent').mockImplementation((args) => {
-      ;(args.chain as any)._completed = true
-
-      return {
-        errorableUuid: resultUuid,
-        error: Promise.resolve(undefined),
-        lastResponse: Promise.resolve({
-          streamType: 'text',
-          text: 'text',
-          toolCalls: [
-            {
-              id: 'id',
-              name: AGENT_RETURN_TOOL_NAME,
-              arguments: { passed: true, reason: 'reason' },
-            },
-          ],
-          usage: {
-            promptTokens: 10,
-            completionTokens: 10,
-            totalTokens: 20,
-          },
-          documentLogUuid: providerLog.documentLogUuid,
-          providerLog: providerLog,
-        }),
-      } as any
-    })
-
-    const parts = prompt.split('---')
-    prompt = [
-      parts.slice(0, 1),
-      prompt.split('---')[1] + 'type: agent\n',
-      parts.slice(2),
-    ].join('---')
-
-    const result = await runPrompt({
-      prompt: prompt,
-      parameters: parameters,
-      schema: promptSchema,
-      resultUuid: 'resultUuid',
-      evaluation: evaluation,
-      providers: new Map([[provider.name, provider]]),
-      commit: commit,
-      workspace: workspace,
-    })
-
-    expect(result).toEqual({
-      response: {
-        streamType: 'text',
-        text: 'text',
-        toolCalls: [
-          {
-            id: 'id',
-            name: AGENT_RETURN_TOOL_NAME,
-            arguments: { passed: true, reason: 'reason' },
-          },
-        ],
         usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
         documentLogUuid: resultUuid,
         providerLog: providerLog,

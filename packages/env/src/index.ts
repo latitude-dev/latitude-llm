@@ -64,7 +64,6 @@ if (environment === 'development' || environment === 'test') {
       CACHE_HOST: '0.0.0.0',
       COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: 'evaluation-generator',
       COPILOT_EVALUATION_GENERATOR_PROMPT_PATH: 'evaluation-v2-generator',
-      COPILOT_GENERATE_TOOL_RESPONSES_PATH: 'tool-responses-generator',
       DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
       READ_DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
       READ_2_DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
@@ -198,7 +197,8 @@ export const env = createEnv({
     COPILOT_CODE_SUGGESTION_PROMPT_PATH: z.string().optional(),
     COPILOT_DATASET_GENERATOR_PROMPT_PATH: z.string().optional(),
     COPILOT_EVALUATION_GENERATOR_PROMPT_PATH: z.string().optional(),
-    COPILOT_GENERATE_TOOL_RESPONSES_PATH: z.string().optional(),
+    COPILOT_GENERATE_TOOL_RESPONSES_PATH: z.string(),
+    COPILOT_GENERATE_TOOL_RESPONSES_COMMIT_UUID: z.string().optional(),
     COPILOT_PROJECT_ID: z.coerce.number().optional(),
     COPILOT_REFINE_PROMPT_PATH: z.string().optional(),
     COPILOT_WORKSPACE_API_KEY: z.string().optional(),
@@ -291,5 +291,8 @@ export const env = createEnv({
     DISABLE_EMAIL_AUTHENTICATION:
       process.env.DISABLE_EMAIL_AUTHENTICATION === 'true',
     ENABLE_ALL_FLAGS: process.env.ENABLE_ALL_FLAGS === 'true',
+    COPILOT_GENERATE_TOOL_RESPONSES_PATH:
+      process.env.COPILOT_GENERATE_TOOL_RESPONSES_PATH ??
+      'tool-responses-generator',
   },
 })

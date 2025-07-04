@@ -26,10 +26,6 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import {
-  MessageList,
-  MessageListSkeleton,
-} from '@latitude-data/web-ui/molecules/ChatWrapper'
 import { useMemo } from 'react'
 import {
   ChartConfigurationArgs,
@@ -45,6 +41,7 @@ import LlmEvaluationComparisonSpecification from './Comparison'
 import LlmEvaluationCustomSpecification from './Custom'
 import LlmEvaluationCustomLabeledSpecification from './CustomLabeled'
 import LlmEvaluationRatingSpecification from './Rating'
+import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
 
 // prettier-ignore
 const METRICS: {

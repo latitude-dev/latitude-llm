@@ -1,6 +1,5 @@
 import path from 'path'
 
-import { readMetadata, Document as RefDocument } from '@latitude-data/compiler'
 import { type ConversationMetadata, scan } from 'promptl-ai'
 
 import { Commit, DocumentVersion, Workspace } from '../../browser'
@@ -18,10 +17,7 @@ export async function getDocumentMetadata({
   document: DocumentVersion
   getDocumentByPath: (path: string) => DocumentVersion | undefined
 }) {
-  const referenceFn = async (
-    refPath: string,
-    from?: string,
-  ): Promise<RefDocument | undefined> => {
+  const referenceFn = async (refPath: string, from?: string) => {
     const fullPath = path
       .resolve(path.dirname(`/${from ?? ''}`), refPath)
       .replace(/^\//, '')
@@ -35,26 +31,13 @@ export async function getDocumentMetadata({
     }
   }
 
-  const metadata =
-    document.promptlVersion === 0
-      ? ((await readMetadata({
-          prompt: document.content,
-          fullPath: document.path,
-          referenceFn,
-        })) as ConversationMetadata)
-      : await scan({
-          prompt: document.content,
-          fullPath: document.path,
-          referenceFn,
-        })
-  return metadata
+  return await scan({
+    prompt: document.content,
+    fullPath: document.path,
+    referenceFn,
+  })
 }
 
-/**
- * This is an internal method. It should always receives
- * workspaceId from a trusted source. Like for example API gateway that validates
- * requested documents belongs to the right workspace.
- */
 export async function scanDocumentContent(
   {
     workspaceId,

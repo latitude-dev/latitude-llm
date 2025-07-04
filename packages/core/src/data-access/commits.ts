@@ -56,17 +56,10 @@ export async function findCommitByUuid(
   return Result.ok(commit)
 }
 
-export async function findCommitById(
-  { id }: { id: number },
-  tx = database,
-): Promise<TypedResult<Commit, LatitudeError>> {
-  const commit = await tx.query.commits.findFirst({
+export async function findCommitById(id: number, tx = database) {
+  return await tx.query.commits.findFirst({
     where: eq(commits.id, id),
   })
-
-  if (!commit) return Result.error(new NotFoundError('Commit not found'))
-
-  return Result.ok(commit)
 }
 
 export async function unsafelyFindCommitsByProjectId(

@@ -1,7 +1,6 @@
 import { BACKGROUND, LatitudeTelemetry } from '$telemetry/index'
 import { Latitude } from '@latitude-data/sdk'
 import { setupServer } from 'msw/node'
-import { Adapters } from 'promptl-ai'
 import {
   afterAll,
   afterEach,
@@ -66,26 +65,6 @@ describe('latitude', () => {
         response: fixtures.RUN_RESPONSE(trace1),
       })
 
-      const step2 = sdk.step(sdk.resume(trace1))
-      const trace2 = sdk.pause(step2.context)
-      step2.end()
-      const { bodyMock: chat1BodyMock } = mockRequest({
-        server: gatewayMock,
-        method: 'post',
-        endpoint: '/api/v3/conversations/fake-conversation-uuid-1/chat',
-        response: fixtures.CHAT_RESPONSES[0]!(trace2),
-      })
-
-      const step3 = sdk.step(sdk.resume(trace2))
-      const trace3 = sdk.pause(step3.context)
-      step3.end()
-      const { bodyMock: chat2BodyMock } = mockRequest({
-        server: gatewayMock,
-        method: 'post',
-        endpoint: '/api/v3/conversations/fake-conversation-uuid-2/chat',
-        response: fixtures.CHAT_RESPONSES[1]!(trace3),
-      })
-
       const latitude = new Latitude('fake-api-key', { projectId: 1 })
 
       await latitude.prompts.run('fake-document-path', {
@@ -101,54 +80,7 @@ describe('latitude', () => {
       await sdk.shutdown()
 
       expect(runBodyMock).toHaveBeenCalled()
-      expect(chat1BodyMock).toHaveBeenCalledWith(
-        expect.objectContaining({ trace: trace1 }),
-      )
-      expect(chat2BodyMock).toHaveBeenCalledWith(
-        expect.objectContaining({ trace: trace2 }),
-      )
       expect(bodyMock).toHaveBeenCalledWith(fixtures.LATITUDE_RUN_SPANS)
-    }),
-  )
-
-  it(
-    'succeeds when instrumenting latitude renders',
-    gatewayMock.boundary(async () => {
-      const { bodyMock } = mockRequest({
-        server: gatewayMock,
-        method: 'post',
-        endpoint: '/api/v3/traces',
-      })
-
-      const sdk = new LatitudeTelemetry('fake-api-key', {
-        instrumentations: {
-          latitude: {
-            module: Latitude,
-            completions: true,
-          },
-        },
-      })
-
-      const latitude = new Latitude('fake-api-key', { projectId: 1 })
-
-      let step = -1
-      await latitude.prompts.renderAgent({
-        prompt: fixtures.PROMPT,
-        parameters: fixtures.PARAMETERS,
-        adapter: Adapters.openai,
-        onStep: async () => {
-          step += 1
-          return fixtures.COMPLETIONS[step] as any
-        },
-        tools: {
-          get_weather: fixtures.TOOL,
-        },
-        logResponses: false,
-      })
-
-      await sdk.shutdown()
-
-      expect(bodyMock).toHaveBeenCalledWith(fixtures.LATITUDE_RENDERING_SPANS)
     }),
   )
 })

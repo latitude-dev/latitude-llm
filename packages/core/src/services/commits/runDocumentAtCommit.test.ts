@@ -37,6 +37,7 @@ const mocks = {
         totalTokens: 0,
       }),
       toolCalls: Promise.resolve([]),
+      response: Promise.resolve({ messages: [] }),
       fullStream,
     })
   }),
@@ -359,6 +360,7 @@ model: gpt-4o
           }),
           toolCalls: Promise.resolve([]),
           fullStream,
+          response: Promise.resolve({ messages: [] }),
         }),
       )
 

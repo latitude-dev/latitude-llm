@@ -27,9 +27,8 @@ export const notifyToClientDocumentLogCreatedJob = async ({
 
   let commit
   try {
-    commit = await findCommitById({ id: documentLog.commitId }).then((r) =>
-      r.unwrap(),
-    )
+    commit = await findCommitById(documentLog.commitId)
+    if (!commit) throw new NotFoundError('Commit not found')
   } catch (error) {
     // do nothing, we don't wanna retry the job
     return

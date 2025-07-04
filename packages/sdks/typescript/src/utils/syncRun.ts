@@ -1,7 +1,5 @@
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
-import { syncChat } from '$sdk/utils/syncChat'
-import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
 import {
   HandlerType,
   RunPromptOptions,
@@ -15,6 +13,7 @@ import {
   ApiErrorJsonResponse,
   LatitudeErrorCodes,
 } from '@latitude-data/constants/errors'
+import { waitForTools } from './streamRun'
 
 export async function syncRun<Tools extends ToolSpec>(
   path: string,
@@ -23,11 +22,10 @@ export async function syncRun<Tools extends ToolSpec>(
     versionUuid,
     parameters,
     customIdentifier,
+    tools,
     onFinished,
     onError,
-    tools,
     options,
-    instrumentation,
   }: RunPromptOptions<Tools> & {
     options: SDKOptions
     instrumentation?: ToolInstrumentation
@@ -58,6 +56,7 @@ export async function syncRun<Tools extends ToolSpec>(
       path,
       parameters,
       customIdentifier,
+      tools: waitForTools(tools),
     },
   })
 
@@ -83,21 +82,7 @@ export async function syncRun<Tools extends ToolSpec>(
 
   const finalResponse = (await response.json()) as RunSyncAPIResponse
 
-  if (hasTools(tools) && finalResponse.toolRequests.length) {
-    return handleToolRequests<Tools, false>({
-      originalResponse: finalResponse,
-      messages: finalResponse.conversation,
-      toolRequests: finalResponse.toolRequests,
-      onFinished,
-      onError,
-      chatFn: syncChat,
-      tools,
-      options,
-      trace: finalResponse.trace,
-      instrumentation,
-    })
-  }
-
   onFinished?.(finalResponse)
+
   return Promise.resolve(finalResponse)
 }

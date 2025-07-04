@@ -4,15 +4,14 @@ import type {
   SystemMessage,
   ToolCall,
   UserMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import {
   EvaluationResultableType,
   LatitudeTool,
   LatitudeToolInternalName,
   LogSources,
-  type ToolDefinition,
 } from '@latitude-data/constants'
-import { FinishReason, LanguageModelUsage } from 'ai'
+import { FinishReason, LanguageModelUsage, Tool } from 'ai'
 import { z } from 'zod'
 
 import type {
@@ -24,11 +23,11 @@ import type {
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
 import { App, V1Component } from '@pipedream/sdk/browser'
+import { TelemetryContext } from '@latitude-data/telemetry'
 
 export {
   DocumentType,
   EvaluationResultableType,
-  FinishReason,
   HEAD_COMMIT,
   LegacyChainEventTypes,
   LogSources,
@@ -451,7 +450,7 @@ export type PromptSource = EvaluationV2 | DocumentRunPromptSource
 export type LatitudeToolDefinition = {
   name: LatitudeTool
   internalName: LatitudeToolInternalName
-  definition: ToolDefinition
+  definition: (context: TelemetryContext) => Tool
   method: (args: unknown) => PromisedResult<unknown, LatitudeError>
 }
 

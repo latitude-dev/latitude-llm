@@ -1,4 +1,8 @@
-import { Config, Message, ToolCall } from '@latitude-data/compiler'
+import {
+  Config,
+  Message,
+  ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
 import {
   ChainStepResponse,
   ProviderData,
@@ -7,7 +11,6 @@ import {
 } from '..'
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { ChainError, RunErrorCodes } from '../errors'
-import { TraceContext } from '../tracing/trace'
 
 export enum ChainEventTypes {
   ChainStarted = 'chain-started',
@@ -15,6 +18,7 @@ export enum ChainEventTypes {
   ProviderStarted = 'provider-started',
   ProviderCompleted = 'provider-completed',
   ToolsStarted = 'tools-started',
+  ToolResult = 'tool-result',
   ToolCompleted = 'tool-completed',
   StepCompleted = 'step-completed',
   ChainCompleted = 'chain-completed',
@@ -74,7 +78,6 @@ export interface LatitudeChainCompletedEventData
   type: ChainEventTypes.ChainCompleted
   tokenUsage: LanguageModelUsage
   finishReason: FinishReason
-  trace: TraceContext
 }
 
 export interface LatitudeChainErrorEventData extends GenericLatitudeEventData {
@@ -86,7 +89,6 @@ export interface LatitudeToolsRequestedEventData
   extends GenericLatitudeEventData {
   type: ChainEventTypes.ToolsRequested
   tools: ToolCall[]
-  trace: TraceContext
 }
 
 export interface LatitudeIntegrationWakingUpEventData

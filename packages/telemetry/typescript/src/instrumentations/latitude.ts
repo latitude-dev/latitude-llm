@@ -74,12 +74,12 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
     F extends latitude.ToolHandler<latitude.ToolSpec, keyof latitude.ToolSpec>,
   >(fn: F, ...args: Parameters<F>): Promise<Awaited<ReturnType<F>>> {
     const toolArguments = args[0]
-    const { toolId, toolName } = args[1]
+    const { id, name } = args[1]
 
     const $tool = this.telemetry.tool(context.active(), {
-      name: toolName,
+      name,
       call: {
-        id: toolId,
+        id,
         arguments: toolArguments,
       },
     })
@@ -116,35 +116,6 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   }
 
   async wrapRenderChain<F extends latitude.Latitude['renderChain']>(
-    fn: F,
-    ...args: Parameters<F>
-  ): Promise<Awaited<ReturnType<F>>> {
-    const { prompt, parameters } = args[0]
-
-    const $prompt = this.telemetry.prompt(context.active(), {
-      versionUuid: prompt.versionUuid,
-      promptUuid: prompt.uuid,
-      template: prompt.content,
-      parameters: parameters,
-    })
-
-    let result
-    try {
-      result = await context.with(
-        $prompt.context,
-        async () => await ((fn as any)(...args) as ReturnType<F>),
-      )
-    } catch (error) {
-      $prompt.fail(error as Error)
-      throw error
-    }
-
-    $prompt.end()
-
-    return result
-  }
-
-  async wrapRenderAgent<F extends latitude.Latitude['renderAgent']>(
     fn: F,
     ...args: Parameters<F>
   ): Promise<Awaited<ReturnType<F>>> {

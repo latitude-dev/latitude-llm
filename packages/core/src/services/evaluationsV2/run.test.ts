@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
@@ -241,7 +241,7 @@ value1,value2,value3
     vi.spyOn(helpers, 'buildConversation').mockReturnValue([
       {
         role: MessageRole.user,
-        content: [{ type: ContentType.text, text: 'hi' }],
+        content: [{ type: 'text', text: 'hi' }],
       },
     ])
     mocks.publisher.mockClear()

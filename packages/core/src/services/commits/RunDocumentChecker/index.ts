@@ -1,7 +1,3 @@
-import {
-  createChain as createLegacyChain,
-  readMetadata,
-} from '@latitude-data/compiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   isPromptLFile,
@@ -53,48 +49,30 @@ export class RunDocumentChecker {
 
   private async createChain() {
     try {
-      if (this.document.promptlVersion === 0) {
-        const metadata = await readMetadata({
-          prompt: this.prompt,
-          fullPath: this.document.path,
-        })
+      const ast = await parsePrompt(this.prompt).then((r) => r.unwrap())
+      const metadata = await scan({
+        serialized: ast,
+        prompt: this.prompt,
+        fullPath: this.document.path,
+      })
 
-        return Result.ok({
-          chain: createLegacyChain({
-            prompt: metadata.resolvedPrompt,
-            parameters: this.parameters,
-            includeSourceMap: true,
-          }),
-          config: metadata.config,
-          isChain: true,
-        })
-      } else {
-        const ast = await parsePrompt(this.prompt).then((r) => r.unwrap())
-        const metadata = await scan({
-          serialized: ast,
-          prompt: this.prompt,
-          fullPath: this.document.path,
-        })
+      const processedParameters = await this.processParameters({
+        parameters: this.parameters,
+        config: metadata.config as LatitudePromptConfig,
+      })
+      if (processedParameters.error) return processedParameters
 
-        const processedParameters = await this.processParameters({
-          parameters: this.parameters,
-          config: metadata.config as LatitudePromptConfig,
-        })
-
-        if (processedParameters.error) return processedParameters
-
-        return Result.ok({
-          chain: new Chain({
-            serialized: { ast },
-            prompt: metadata.resolvedPrompt,
-            parameters: processedParameters.unwrap(),
-            includeSourceMap: true,
-            adapter: Adapters.default,
-          }),
-          config: metadata.config,
-          isChain: metadata.isChain,
-        })
-      }
+      return Result.ok({
+        chain: new Chain({
+          serialized: { ast },
+          prompt: metadata.resolvedPrompt,
+          parameters: processedParameters.unwrap(),
+          includeSourceMap: true,
+          adapter: Adapters.default,
+        }),
+        config: metadata.config,
+        isChain: metadata.isChain,
+      })
     } catch (e) {
       const err = e as Error
       const error = new ChainError({

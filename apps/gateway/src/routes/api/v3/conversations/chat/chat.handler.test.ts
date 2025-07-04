@@ -1,7 +1,4 @@
-import { parseSSEvent } from '$/common/parseSSEEvent'
-import app from '$/routes/app'
-import { MessageRole } from '@latitude-data/compiler'
-import { ChainEventTypes } from '@latitude-data/constants'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainError,
   LatitudeError,
@@ -23,6 +20,9 @@ import {
 import { Result } from '@latitude-data/core/lib/Result'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import app from '$/routes/app'
+import { ChainEventTypes } from '@latitude-data/constants'
+import { parseSSEvent } from '$/common/parseSSEEvent'
 
 const mocks = vi.hoisted(() => ({
   addMessages: vi.fn(),
@@ -240,6 +240,7 @@ describe('POST /chat', () => {
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
         source: LogSources.API,
+        tools: {},
         abortSignal: expect.anything(),
       })
     })
@@ -291,6 +292,7 @@ describe('POST /chat', () => {
         workspace,
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
+        tools: {},
         source: LogSources.Playground,
         abortSignal: expect.anything(),
       })
@@ -360,6 +362,7 @@ describe('POST /chat', () => {
 
   describe('authorized without stream', () => {
     beforeEach(async () => {
+      mocks.captureException.mockClear()
       mocks.addMessages.mockClear()
 
       const project = await createProject()
@@ -400,7 +403,7 @@ describe('POST /chat', () => {
           resolve(
             Result.ok({
               stream: new ReadableStream({}),
-              lastResponse: Promise.resolve(step),
+              response: Promise.resolve(step),
               trace,
             }),
           )
@@ -418,14 +421,12 @@ describe('POST /chat', () => {
       expect(await res.json()).toEqual({
         uuid: step.documentLogUuid,
         conversation: step.providerLog?.messages,
-        toolRequests: [],
         response: {
           streamType: step.streamType,
           text: step.text,
           usage: step.usage,
           toolCalls: step.toolCalls,
         },
-        trace: await trace,
       })
     })
 
@@ -458,6 +459,7 @@ describe('POST /chat', () => {
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
         source: LogSources.API,
+        tools: {},
         abortSignal: expect.anything(),
       })
     })
@@ -494,6 +496,7 @@ describe('POST /chat', () => {
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
         source: LogSources.Playground,
+        tools: {},
         abortSignal: expect.anything(),
       })
     })
@@ -512,7 +515,7 @@ describe('POST /chat', () => {
                   message: 'API call error',
                 }),
               ),
-              lastResponse: Promise.resolve(undefined),
+              response: Promise.resolve(undefined),
               trace,
             }),
           )
@@ -546,7 +549,7 @@ describe('POST /chat', () => {
           resolve(
             Result.ok({
               stream: new ReadableStream({}),
-              lastResponse: Promise.resolve({
+              response: Promise.resolve({
                 ...step,
                 documentLogUuid: undefined,
               }),
@@ -583,7 +586,7 @@ describe('POST /chat', () => {
           resolve(
             Result.ok({
               stream: new ReadableStream({}),
-              lastResponse: Promise.resolve({
+              response: Promise.resolve({
                 ...step,
                 providerLog: undefined,
               }),
