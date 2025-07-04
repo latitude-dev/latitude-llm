@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import objectHash from 'object-hash'
 import { useDebouncedCallback } from 'use-debounce'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
@@ -30,6 +31,9 @@ import { VariableNode } from './nodes/VariableNode'
 import { VariableMenuPlugin } from './plugins/VariablesMenuPlugin'
 import { ReferencesPlugin } from './plugins/ReferencesPlugin'
 import { ReferenceNode } from './nodes/ReferenceNode'
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { BlockRootNode, fromBlocksToText } from './state/promptlToLexical'
+import { SerializedLexicalNode, SerializedRootNode } from 'lexical'
 
 const theme = {
   ltr: 'ltr',
@@ -46,23 +50,62 @@ const theme = {
   },
 }
 
+function isBlockRootNode(
+  node: SerializedRootNode<SerializedLexicalNode>,
+): node is BlockRootNode {
+  return node.type === 'root' && Array.isArray(node.children)
+}
+
+function useExternalSync({
+  isEditing,
+  onChange,
+}: {
+  isEditing: boolean
+  onChange: BlocksEditorProps['onChange']
+}) {
+  const [editor] = useLexicalComposerContext()
+
+  useEffect(() => {
+    if (!isEditing) {
+      editor.update(() => {
+        editor.toJSON()
+        const root = editor.toJSON().editorState.root
+        if (!isBlockRootNode(root)) {
+          // Typescript happiness is the most important to me.
+          // This can't happen because `EditorState.toJSON()` always returns a root node.
+          console.error('Invalid root node:', root)
+          return
+        }
+        onChange(fromBlocksToText(root))
+      })
+    }
+  }, [isEditing, editor, onChange])
+}
+
 function OnChangeHandler({
   onChange,
 }: {
   onChange: BlocksEditorProps['onChange']
 }) {
-  // TODO: review the storing strategy.
-  // Now we do this debounce of 100 and there is another debounce of 500
-  // in the playground before saving the text. But maybe there is a better way.
+  const [isEditing, setIsEditing] = useState(false)
+  let editTimeout = null
+
+  const onEdit = useCallback(() => {
+    setIsEditing(true)
+    clearTimeout(editTimeout)
+    editTimeout = setTimeout(() => setIsEditing(false), 1000)
+  }, [])
+
   const handleChange = useDebouncedCallback(
     fromLexicalToText({ onChange }),
     500,
     { trailing: true },
   )
+  useExternalSync({ isEditing, onChange })
 
   return (
     <OnChangePlugin
-      onChange={handleChange}
+      onChange={onEdit}
       ignoreHistoryMergeTagChange
       ignoreSelectionChange
     />
@@ -95,12 +138,11 @@ export function BlocksEditor({
     () => ({
       namespace: 'BlocksEditor',
       theme,
-      editorState: fromBlocksToLexical(rootBlock),
       onError,
       editable: !readOnly,
       nodes: [MessageBlockNode, StepBlockNode, VariableNode, ReferenceNode],
     }),
-    [rootBlock, readOnly, onError],
+    [readOnly, onError],
   )
 
   return (
