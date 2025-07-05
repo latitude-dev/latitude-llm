@@ -17,91 +17,136 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useApiKeys from '$/stores/apiKeys'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
+import { useState } from 'react'
+import type { ApiKey } from '@latitude-data/core/browser'
+import EditWorkspaceApiKeyForm from './EditWorkspaceApiKeyForm'
+import Link from 'next/link'
+import { ROUTES } from '$/services/routes'
+import { useRouter } from 'next/navigation'
 
 export default function WorkspaceApiKeys() {
   const { data: apiKeys, isLoading, destroy } = useApiKeys()
   const { toast } = useToast()
+  const router = useRouter()
+  const [editingApiKey, setEditingApiKey] = useState<ApiKey | null>(null)
+
+  const handleEdit = (apiKey: ApiKey) => {
+    setEditingApiKey(apiKey)
+  }
+
+  const handleCloseEditForm = () => {
+    setEditingApiKey(null)
+  }
+
   return (
-    <TableWithHeader
-      title={
-        <div className='flex flex-row items-center gap-2'>
-          <Text.H4B>API Keys</Text.H4B>
-          <OpenInDocsButton route={DocsRoute.HttpApi} />
-        </div>
-      }
-      table={
-        isLoading ? (
-          <TableSkeleton cols={3} rows={3} />
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>API Key</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {apiKeys.map((apiKey) => (
-                  <TableRow key={apiKey.id} verticalPadding hoverable={false}>
-                    <TableCell>
-                      <Text.H5>{apiKey.name || 'Latitude API Key'}</Text.H5>
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip
-                        asChild
-                        trigger={
-                          <Button
-                            variant='ghost'
-                            onClick={() => {
-                              navigator.clipboard.writeText(apiKey.token)
-                              toast({
-                                title: 'Copied to clipboard',
-                              })
-                            }}
-                          >
-                            <div className='flex flex-row items-center gap-2'>
-                              <Text.H5 color='foregroundMuted'>
-                                {apiKey.token.slice(0, 3) +
-                                  '********' +
-                                  apiKey.token.slice(-4)}
-                              </Text.H5>
-                              <Icon name='clipboard' color='foregroundMuted' />
-                            </div>
-                          </Button>
-                        }
-                      >
-                        Click to copy
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell align='right'>
-                      <Tooltip
-                        asChild
-                        trigger={
-                          <div className='px-2'>
-                            <Button
-                              disabled={apiKeys.length === 1}
-                              variant='ghost'
-                              onClick={() => destroy({ id: apiKey.id })}
-                            >
-                              <Icon name='trash' />
-                            </Button>
-                          </div>
-                        }
-                      >
-                        {apiKeys.length === 1
-                          ? "You can't delete the last API key"
-                          : 'Delete API key'}
-                      </Tooltip>
-                    </TableCell>
+    <>
+      <TableWithHeader
+        title={
+          <div className='flex flex-row items-center gap-2'>
+            <Text.H4B>API Keys</Text.H4B>
+            <OpenInDocsButton route={DocsRoute.HttpApi} />
+          </div>
+        }
+        actions={
+          <Link href={ROUTES.settings.apiKeys.new}>
+            <Button fancy variant='outline'>
+              Create API Key
+            </Button>
+          </Link>
+        }
+        table={
+          isLoading ? (
+            <TableSkeleton cols={3} rows={3} />
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>API Key</TableHead>
+                    <TableHead />
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </>
-        )
-      }
-    />
+                </TableHeader>
+                <TableBody>
+                  {apiKeys.map((apiKey) => (
+                    <TableRow key={apiKey.id} verticalPadding hoverable={false}>
+                      <TableCell>
+                        <Text.H5>{apiKey.name || 'Latitude API Key'}</Text.H5>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip
+                          asChild
+                          trigger={
+                            <Button
+                              variant='ghost'
+                              onClick={() => {
+                                navigator.clipboard.writeText(apiKey.token)
+                                toast({
+                                  title: 'Copied to clipboard',
+                                })
+                              }}
+                            >
+                              <div className='flex flex-row items-center gap-2'>
+                                <Text.H5 color='foregroundMuted'>
+                                  {apiKey.token.slice(0, 3) +
+                                    '********' +
+                                    apiKey.token.slice(-4)}
+                                </Text.H5>
+                                <Icon name='clipboard' color='foregroundMuted' />
+                              </div>
+                            </Button>
+                          }
+                        >
+                          Click to copy
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell align='right'>
+                        <div className='flex flex-row gap-2 justify-end'>
+                          <Tooltip
+                            asChild
+                            trigger={
+                              <Button variant='ghost' onClick={() => handleEdit(apiKey)}>
+                                <Icon name='pencil' />
+                              </Button>
+                            }
+                          >
+                            Edit API key
+                          </Tooltip>
+                          <Tooltip
+                            asChild
+                            trigger={
+                              <div className='px-2'>
+                                <Button
+                                  disabled={apiKeys.length === 1}
+                                  variant='ghost'
+                                onClick={() => router.push(ROUTES.settings.apiKeys.destroy(apiKey.id))}
+                                >
+                                  <Icon name='trash' />
+                                </Button>
+                              </div>
+                            }
+                          >
+                            {apiKeys.length === 1
+                              ? "You can't delete the last API key"
+                              : 'Delete API key'}
+                          </Tooltip>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
+          )
+        }
+      />
+      {editingApiKey && (
+        <EditWorkspaceApiKeyForm
+          apiKey={editingApiKey}
+          isOpen={!!editingApiKey}
+          onClose={handleCloseEditForm}
+        />
+      )}
+    </>
   )
 }

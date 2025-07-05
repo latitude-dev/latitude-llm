@@ -60,6 +60,10 @@ export const ROUTES = {
         root: '/settings/webhooks/new',
       },
     },
+    apiKeys: {
+      new: '/settings/api-keys/new',
+      destroy: (id: number) => `/settings/api-keys/${id}/destroy`,
+    },
     providerApiKeys: {
       new: {
         root: '/settings/apikeys/new',
