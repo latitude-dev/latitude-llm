@@ -22,6 +22,7 @@ export type TimelineItemProps<T extends SpanType = SpanType> = {
   isFirst: boolean
   isLast: boolean
   isSelected: boolean
+  isParentSelected: boolean
 }
 
 export type DetailsPanelProps<T extends SpanType = SpanType> = {

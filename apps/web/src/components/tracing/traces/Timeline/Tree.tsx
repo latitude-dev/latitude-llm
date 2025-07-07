@@ -10,56 +10,130 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { useState } from 'react'
 import { SPAN_SPECIFICATIONS, TimelineItemProps } from '../../spans'
 
-// Component for rendering tree connection lines
-function TreeConnector({
-  isLast,
-  depth,
+function IndentationLine({
+  showCurve,
+  isSelected,
+  isParentSelected,
 }: {
-  depth: number
-  isFirst: boolean
-  isLast: boolean
+  showCurve: boolean
+  isSelected: boolean
+  isParentSelected: boolean
 }) {
-  if (depth === 0) return null
+  const getLineColor = () => {
+    if (isSelected) return 'white'
+    if (isParentSelected) return 'primary'
+    return 'border'
+  }
+
+  const lineColor = getLineColor()
 
   return (
-    <div className='flex'>
-      {/* Render vertical lines for parent levels */}
-      {Array.from({ length: depth - 1 }).map((_, index) => (
-        <div key={index} className='w-6 flex justify-center'>
-          <div className='w-px bg-border h-full' />
+    <div className='relative w-4 h-full flex justify-center'>
+      {showCurve ? (
+        <div className='relative -mt-1 -ml-3'>
+          <div
+            className={cn('border-l h-2.5', {
+              'border-white': lineColor === 'white',
+              'border-primary': lineColor === 'primary',
+              'border-border': lineColor === 'border',
+            })}
+          />
+          <div
+            className={cn(
+              'absolute top-2.5 border-l border-b h-2 w-2 rounded-bl-sm',
+              {
+                'border-white': lineColor === 'white',
+                'border-primary': lineColor === 'primary',
+                'border-border': lineColor === 'border',
+              },
+            )}
+          />
         </div>
-      ))}
-
-      {/* Render the connector for current level */}
-      <div className='w-6 flex justify-center relative'>
-        <div className='w-px bg-border h-2' />
+      ) : (
         <div
-          className={cn(
-            'absolute top-2 left-1/2 w-3 h-px bg-border',
-            '-translate-x-1/2',
-          )}
+          className={cn('w-px h-7 -mt-1 -ml-3', {
+            'bg-white': lineColor === 'white',
+            'bg-primary': lineColor === 'primary',
+            'bg-border': lineColor === 'border',
+          })}
         />
-        {!isLast && (
-          <div className='w-px bg-border h-full absolute top-2 left-1/2 -translate-x-1/2' />
-        )}
-      </div>
+      )}
+    </div>
+  )
+}
+
+function IndentationBar({
+  depth,
+  isLast,
+  isSelected,
+  isParentSelected,
+  selectedSpanDepth,
+  ancestorEndedLevels = new Set(),
+}: {
+  depth: number
+  isLast: boolean
+  isSelected: boolean
+  isParentSelected: boolean
+  selectedSpanDepth?: number
+  ancestorEndedLevels?: Set<number>
+}) {
+  return (
+    <div className='flex -mr-3'>
+      {Array.from({ length: depth }).map((_, index) => {
+        const currentLevel = index + 1
+        const isCurrentLevel = currentLevel === depth
+        const hasEndedAtThisLevel = ancestorEndedLevels.has(currentLevel)
+        const showCurve = isCurrentLevel && isLast
+        const shouldShowLine =
+          !hasEndedAtThisLevel && (isCurrentLevel || currentLevel < depth)
+
+        // Determine color for this specific level
+        const isThisLevelSelected = isSelected && isCurrentLevel
+        const isThisLevelFromSelectedSpan =
+          selectedSpanDepth !== undefined &&
+          currentLevel >= selectedSpanDepth &&
+          isParentSelected
+
+        return (
+          <div key={index} className='h-7 w-4'>
+            {shouldShowLine ? (
+              <IndentationLine
+                showCurve={showCurve}
+                isSelected={isThisLevelSelected}
+                isParentSelected={isThisLevelFromSelectedSpan}
+              />
+            ) : null}
+          </div>
+        )
+      })}
     </div>
   )
 }
 
 function TimelineTreeItem<T extends SpanType>({
   span,
-  isFirst,
+  isFirst: _isFirst,
   isLast,
   isSelected,
+  isParentSelected,
   selectedSpanId,
+  selectedSpanDepth,
   setSelectedSpan,
+  ancestorEndedLevels = new Set(),
 }: TimelineItemProps<T> & {
   selectedSpanId?: string
+  selectedSpanDepth?: number
   setSelectedSpan: (span?: AssembledSpan) => void
+  ancestorEndedLevels?: Set<number>
 }) {
   const [expanded, setExpanded] = useState(true)
   const isExpanded = expanded || span.children.length < 1
+
+  // Create new set of ended levels for children
+  const newEndedLevels = new Set(ancestorEndedLevels)
+  if (isLast) {
+    newEndedLevels.add(span.depth)
+  }
 
   const specification = SPAN_SPECIFICATIONS[span.type]
   if (!specification) return null
@@ -80,7 +154,14 @@ function TimelineTreeItem<T extends SpanType>({
           else setSelectedSpan(span)
         }}
       >
-        <TreeConnector isFirst={isFirst} isLast={isLast} depth={span.depth} />
+        <IndentationBar
+          depth={span.depth}
+          isLast={isLast}
+          isSelected={isSelected}
+          isParentSelected={isParentSelected}
+          selectedSpanDepth={selectedSpanDepth}
+          ancestorEndedLevels={ancestorEndedLevels}
+        />
         <Button
           variant='ghost'
           size='none'
@@ -120,8 +201,11 @@ function TimelineTreeItem<T extends SpanType>({
             isFirst={index === 0}
             isLast={index === span.children.length - 1}
             isSelected={selectedSpanId === child.id}
+            isParentSelected={isParentSelected || selectedSpanId === span.id}
             selectedSpanId={selectedSpanId}
+            selectedSpanDepth={selectedSpanDepth}
             setSelectedSpan={setSelectedSpan}
+            ancestorEndedLevels={newEndedLevels}
           />
         ))}
     </div>
@@ -146,7 +230,9 @@ export function TimelineTree({
           isFirst={index === 0}
           isLast={index === trace.children.length - 1}
           isSelected={selectedSpan?.id === span.id}
+          isParentSelected={selectedSpan?.id === span.parentId}
           selectedSpanId={selectedSpan?.id}
+          selectedSpanDepth={selectedSpan?.depth}
           setSelectedSpan={setSelectedSpan}
         />
       ))}
