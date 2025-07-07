@@ -1,5 +1,5 @@
 import { max, min, parseJSON } from 'date-fns'
-import { and, asc, eq, getTableColumns, or, sql, SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns, or, sql, SQL } from 'drizzle-orm'
 import {
   Segment,
   SEGMENT_METADATA_CACHE_TTL,
@@ -154,7 +154,7 @@ export class SegmentsRepository extends Repository<Segment> {
     segmentId: string
     traceId: string
   }) {
-    const [childs, completions, documents, errors] = await Promise.all([
+    const [children, completions, documents, errors] = await Promise.all([
       (async () => {
         const spansts = await this.timestampsQuery({
           segmentId: segmentId,
@@ -220,7 +220,7 @@ export class SegmentsRepository extends Repository<Segment> {
       })(),
     ])
 
-    return Result.ok({ childs, completions, documents, errors })
+    return Result.ok({ children, completions, documents, errors })
   }
 
   async getRun({ segmentId, traceId }: { segmentId: string; traceId: string }) {
@@ -257,6 +257,21 @@ export class SegmentsRepository extends Repository<Segment> {
     return Result.ok<Segment<SegmentType.Document>>(
       result as Segment<SegmentType.Document>,
     )
+  }
+
+  async listTracesByLog({ logUuid }: { logUuid: string }) {
+    const result = await this.db
+      .select({
+        traceId: segments.traceId,
+        startedAt: sql`max(${segments.startedAt})`.mapWith(parseJSON),
+      })
+      .from(segments)
+      .where(and(this.scopeFilter, eq(segments.logUuid, logUuid)))
+      .groupBy(segments.traceId)
+      .orderBy(desc(sql`max(${segments.startedAt})`))
+      .then((r) => r.map((r) => r.traceId))
+
+    return Result.ok<string[]>(result)
   }
 }
 

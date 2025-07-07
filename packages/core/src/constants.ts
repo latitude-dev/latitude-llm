@@ -15,6 +15,7 @@ import {
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { z } from 'zod'
 
+import { App, ConfigurableProps, V1Component } from '@pipedream/sdk/browser'
 import type {
   Commit,
   DocumentVersion,
@@ -23,15 +24,11 @@ import type {
 } from './browser'
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
-import type {
-  App,
-  ConfigurableProps,
-  V1Component,
-} from '@pipedream/sdk/browser'
 
 export {
   DocumentType,
   EvaluationResultableType,
+  FINISH_REASON_DETAILS,
   FinishReason,
   HEAD_COMMIT,
   LegacyChainEventTypes,

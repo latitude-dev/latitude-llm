@@ -53,7 +53,7 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
         />
       </div>
       {externalFooter ? (
-        <div className='border-t bg-muted w-full py-2 px-4'>
+        <div className='border-t bg-secondary w-full py-2 px-4'>
           {externalFooter}
         </div>
       ) : null}
@@ -90,7 +90,7 @@ const TableFooter = forwardRef<HTMLTableSectionElement, TableFooterProps>(
     <tfoot
       ref={ref}
       className={cn(
-        'border-t bg-muted font-medium [&>tr]:last:border-b-0',
+        'border-t bg-secondary font-medium [&>tr]:last:border-b-0',
         className,
         {
           'sticky bottom-0': sticky,
@@ -123,10 +123,10 @@ const TableRow = forwardRef<
     <tr
       ref={ref}
       className={cn(
-        'transition-colors data-[state=selected]:bg-muted',
+        'transition-colors data-[state=selected]:bg-secondary',
         {
           '[&>td]:py-4': verticalPadding,
-          'hover:bg-muted/50': hoverable,
+          'hover:bg-secondary': hoverable,
           'border-b': borderBottom,
         },
         className,
@@ -185,6 +185,7 @@ type CommonCellProps = TdHTMLAttributes<HTMLTableCellElement> & {
   align?: 'left' | 'center' | 'right'
   xSpace?: 'none' | 'normal'
   verticalBorder?: boolean
+  innerClassName?: string
 }
 
 const ServerSideTableCell = forwardRef<HTMLTableCellElement, CommonCellProps>(
@@ -195,6 +196,7 @@ const ServerSideTableCell = forwardRef<HTMLTableCellElement, CommonCellProps>(
       align = 'left',
       xSpace = 'normal',
       verticalBorder = false,
+      innerClassName,
       ...props
     },
     ref,
@@ -214,7 +216,7 @@ const ServerSideTableCell = forwardRef<HTMLTableCellElement, CommonCellProps>(
       {...props}
     >
       <div
-        className={cn('flex', {
+        className={cn(innerClassName, 'flex', {
           'justify-start': align === 'left',
           'justify-center': align === 'center',
           'justify-end': align === 'right',
@@ -241,6 +243,7 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
       preventDefault = false,
       verticalBorder = false,
       onClick,
+      innerClassName,
       ...props
     },
     ref,
@@ -266,7 +269,7 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
       }}
     >
       <div
-        className={cn('flex', {
+        className={cn(innerClassName, 'flex', {
           'justify-start': align === 'left',
           'justify-center': align === 'center',
           'justify-end': align === 'right',

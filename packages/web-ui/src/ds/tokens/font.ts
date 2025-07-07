@@ -14,6 +14,7 @@ export const font = {
     mono: 'font-mono',
   },
   weight: {
+    light: 'font-light',
     normal: 'font-normal',
     medium: 'font-medium',
     semibold: 'font-semibold',

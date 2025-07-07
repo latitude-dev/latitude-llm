@@ -17,7 +17,7 @@ export const ingestSpansJob = async (job: Job<IngestSpansJobData>) => {
   if (result.error) {
     // @ts-expect-error ingestSpans currently ignores all errors but leaving this for the future
     if (result.error instanceof UnprocessableEntityError) {
-      captureException(result.error)
+      if (process.env.NODE_ENV === 'development') captureException(result.error)
     } else throw result.error
   }
 }

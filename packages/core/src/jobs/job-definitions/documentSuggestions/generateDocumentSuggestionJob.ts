@@ -68,7 +68,7 @@ export const generateDocumentSuggestionJob = async (
 
   if (result.error) {
     if (result.error instanceof UnprocessableEntityError) {
-      captureException(result.error)
+      if (process.env.NODE_ENV === 'development') captureException(result.error)
     } else throw result.error
   }
 }

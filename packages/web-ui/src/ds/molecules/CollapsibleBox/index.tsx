@@ -1,8 +1,8 @@
 'use client'
 import { MouseEvent, ReactNode, useCallback, useState } from 'react'
+import { cn } from '../../../lib/utils'
 import { Icon, IconName } from '../../atoms/Icons'
 import { Text } from '../../atoms/Text'
-import { cn } from '../../../lib/utils'
 
 export const COLLAPSED_BOX_HEIGHT = 48
 
@@ -18,11 +18,15 @@ export function CollapsibleBox({
   initialExpanded = false,
   onToggle,
   scrollable = true,
-  paddingLeft = true,
+  headerDivider = false,
   paddingBottom = true,
   paddingRight = true,
+  paddingLeft = true,
   isExpanded: isExpandedProp,
   avoidToggleOnTitleClick = false,
+  handlePosition = 'right',
+  className,
+  headerClassName,
 }: {
   title: string | ReactNode
   icon?: IconName
@@ -35,10 +39,14 @@ export function CollapsibleBox({
   onToggle?: OnToggleFn
   isExpanded?: boolean
   scrollable?: boolean
+  headerDivider?: boolean
   paddingBottom?: boolean
-  paddingLeft?: boolean
   paddingRight?: boolean
+  paddingLeft?: boolean
   avoidToggleOnTitleClick?: boolean
+  handlePosition?: 'left' | 'right'
+  className?: string
+  headerClassName?: string
 }) {
   const [internalExpanded, setInternalExpanded] = useState(initialExpanded)
   const isControlled = isExpandedProp !== undefined
@@ -63,22 +71,42 @@ export function CollapsibleBox({
 
   return (
     <div
-      className={cn('w-full border rounded-lg relative overflow-hidden', {
-        'h-auto': !isExpanded,
-        'custom-scrollbar': scrollable,
-        'flex flex-col': !scrollable,
-      })}
+      className={cn(
+        className,
+        'w-full border rounded-lg relative overflow-hidden',
+        {
+          'h-auto': !isExpanded,
+          'custom-scrollbar': scrollable,
+          'flex flex-col': !scrollable,
+        },
+      )}
       style={{ minHeight: COLLAPSED_BOX_HEIGHT }}
     >
       <div
-        className='flex flex-col cursor-pointer sticky top-0 z-10 bg-background'
+        className={cn(
+          headerClassName,
+          'flex flex-col cursor-pointer sticky top-0 z-10 bg-background',
+        )}
         onClick={handleToggle}
       >
-        <div className='flex flex-shrink-0 justify-between items-center py-3.5 px-4 gap-x-4'>
+        <div
+          className={cn(
+            'min-h-14 flex flex-shrink-0 justify-between items-center py-3.5 px-4 gap-x-4',
+            {
+              'border-b': isExpanded && headerDivider,
+            },
+          )}
+        >
           <div
             className='flex flex-row items-center gap-x-2'
             onClick={onTitleClick}
           >
+            {handlePosition === 'left' && (
+              <Icon
+                className='flex-shrink-0'
+                name={isExpanded ? 'chevronUp' : 'chevronDown'}
+              />
+            )}
             {icon && <Icon className='flex-shrink-0' name={icon} />}
             {typeof title === 'string' ? (
               <Text.H5M userSelect={false}>{title}</Text.H5M>
@@ -90,10 +118,12 @@ export function CollapsibleBox({
             <div className='flex-grow min-w-0'>
               {isExpanded ? expandedContentHeader : collapsedContentHeader}
             </div>
-            <Icon
-              className='flex-none'
-              name={isExpanded ? 'chevronUp' : 'chevronDown'}
-            />
+            {handlePosition === 'right' && (
+              <Icon
+                className='flex-shrink-0'
+                name={isExpanded ? 'chevronUp' : 'chevronDown'}
+              />
+            )}
           </div>
         </div>
         {!isExpanded && collapsedContent && (
@@ -103,7 +133,7 @@ export function CollapsibleBox({
       <div
         className={cn('transition-all duration-300 ease-in-out', {
           'flex flex-col min-h-0': !scrollable,
-          'overflow-y-auto custom-scrollbar': scrollable,
+          'overflow-y-auto custom-scrollbar scrollable-indicator': scrollable,
         })}
         style={{
           maxHeight: isExpanded ? expandedHeight : 0,

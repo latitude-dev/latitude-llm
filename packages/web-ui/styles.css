@@ -100,7 +100,9 @@
     --secondary-foreground: 221 39% 11%;
 
     --yellow: 41 96% 91%;
+
     --purple: 289 51% 92%;
+    --purple-foreground: 289 51% 14%;
 
     --muted: 220 14% 96%;
     --muted-foreground: 211 11% 45%;
@@ -155,7 +157,9 @@
     --secondary-foreground: 0 0% 98%;
 
     --yellow: 41 90% 14%;
+
     --purple: 289 51% 14%;
+    --purple-foreground: 289 51% 65%;
 
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 63.9%;

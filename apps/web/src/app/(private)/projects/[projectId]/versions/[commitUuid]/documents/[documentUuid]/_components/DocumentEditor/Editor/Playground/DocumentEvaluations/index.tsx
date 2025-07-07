@@ -1,3 +1,5 @@
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 import {
   EventArgs,
   useSockets,
@@ -140,9 +142,19 @@ export default function DocumentEvaluations({
         icon='listCheck'
         isExpanded={isExpanded}
         onToggle={onToggle}
-        collapsedContentHeader={<CollapsedContentHeader {...props} />}
+        collapsedContentHeader={
+          <div className='flex flex-row items-center justify-start gap-x-2'>
+            <OpenInDocsButton route={DocsRoute.Evaluations} />
+            <CollapsedContentHeader {...props} />
+          </div>
+        }
         expandedContent={<ExpandedContent {...props} />}
-        expandedContentHeader={<ExpandedContentHeader {...props} />}
+        expandedContentHeader={
+          <div className='flex flex-row items-center justify-start gap-x-2'>
+            <OpenInDocsButton route={DocsRoute.Evaluations} />
+            <ExpandedContentHeader {...props} />
+          </div>
+        }
       />
     </ClientOnly>
   )

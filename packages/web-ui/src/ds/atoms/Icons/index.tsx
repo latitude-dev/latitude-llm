@@ -3,6 +3,7 @@ import {
   AlertCircle,
   AppWindow,
   ArrowDownIcon,
+  ArrowDownUp,
   ArrowLeft,
   ArrowRightIcon,
   ArrowUpIcon,
@@ -16,6 +17,7 @@ import {
   Braces,
   Brain,
   CalendarIcon,
+  ChartNoAxesGantt,
   CheckCircle2,
   CheckIcon,
   ChevronDown,
@@ -45,6 +47,7 @@ import {
   EqualApproximatelyIcon,
   EqualIcon,
   EqualNotIcon,
+  Expand,
   ExternalLink,
   Eye,
   File,
@@ -92,6 +95,7 @@ import {
   PlusIcon,
   Puzzle,
   Radio,
+  RectangleHorizontal,
   RefreshCcw,
   RegexIcon,
   Repeat2,
@@ -133,6 +137,17 @@ import {
   LatitudeLogoMonochrome,
   MCP,
 } from './custom-icons'
+import AmazonBedrock from './custom-icons/llmProviders/amazoBedrock'
+import Anthropic from './custom-icons/llmProviders/anthropic'
+import Azure from './custom-icons/llmProviders/azure'
+import DeepSeek from './custom-icons/llmProviders/deepSeek'
+import GoogleGemini from './custom-icons/llmProviders/googleGemini'
+import GoogleVertex from './custom-icons/llmProviders/googleVertex'
+import Groq from './custom-icons/llmProviders/groq'
+import Mistral from './custom-icons/llmProviders/mistral'
+import OpenAI from './custom-icons/llmProviders/openai'
+import Perplexity from './custom-icons/llmProviders/perplexity'
+import XAI from './custom-icons/llmProviders/xai'
 import Airbnb from './custom-icons/logos/Airbnb'
 import Airtable from './custom-icons/logos/Airtable'
 import Apify from './custom-icons/logos/Apify'
@@ -167,17 +182,6 @@ import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import YepCode from './custom-icons/logos/YepCode'
-import OpenAI from './custom-icons/llmProviders/openai'
-import Anthropic from './custom-icons/llmProviders/anthropic'
-import Groq from './custom-icons/llmProviders/groq'
-import Mistral from './custom-icons/llmProviders/mistral'
-import Azure from './custom-icons/llmProviders/azure'
-import GoogleGemini from './custom-icons/llmProviders/googleGemini'
-import GoogleVertex from './custom-icons/llmProviders/googleVertex'
-import XAI from './custom-icons/llmProviders/xai'
-import AmazonBedrock from './custom-icons/llmProviders/amazoBedrock'
-import DeepSeek from './custom-icons/llmProviders/deepSeek'
-import Perplexity from './custom-icons/llmProviders/perplexity'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -194,6 +198,7 @@ const Icons = {
   arrowRight: ArrowRightIcon,
   arrowUp: ArrowUpIcon,
   arrowUpRight: ArrowUpRight,
+  arrowDownUp: ArrowDownUp,
   atSign: AtSign,
   attio: Attio,
   audiense: Audiense,
@@ -353,6 +358,9 @@ const Icons = {
   deepSeek: DeepSeek,
   perplexity: Perplexity,
   zap: Zap,
+  chartNoAxesGantt: ChartNoAxesGantt,
+  rectangleHorizontal: RectangleHorizontal,
+  expand: Expand,
 }
 
 export type IconName = keyof typeof Icons
@@ -370,7 +378,15 @@ export type IconProps = {
   onClick?: (event: MouseEvent<SVGSVGElement>) => void
 }
 
-type Size = 'xsmall' | 'small' | 'normal' | 'large' | 'xlarge' | 'xxxlarge'
+type Size =
+  | 'xsmall'
+  | 'small'
+  | 'xnormal'
+  | 'normal'
+  | 'medium'
+  | 'large'
+  | 'xlarge'
+  | 'xxxlarge'
 
 export function Icon({
   name,
@@ -391,7 +407,9 @@ export function Icon({
           [colors.darkTextColors[darkColor!]]: darkColor,
           'w-2.5 h-2.5': size === 'xsmall',
           'w-3 h-3': size === 'small',
+          'w-3.5 h-3.5': size === 'xnormal',
           'w-4 h-4': size === 'normal',
+          'w-5 h-5': size === 'medium',
           'w-6 h-6': size === 'large',
           'w-8 h-8': size === 'xlarge',
           'w-14 h-14': size === 'xxxlarge',
