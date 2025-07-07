@@ -102,6 +102,9 @@ export function runAgent<T extends boolean, C extends SomeChain>({
         // Stop the stream and request tools from the user
         chainStreamManager.requestTools(value.data.tools, value.data.trace)
         const conversation = await chainResult.conversation
+
+        resolveTrace(value.data.trace)
+        resolveConversation(conversation)
         return { conversation, trace: value.data.trace }
       }
 
