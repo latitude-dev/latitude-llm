@@ -81,38 +81,36 @@ function TimelineTreeItem<T extends SpanType>({
         }}
       >
         <TreeConnector isFirst={isFirst} isLast={isLast} depth={span.depth} />
+        <Button
+          variant='ghost'
+          size='none'
+          iconProps={{
+            name: isExpanded ? 'chevronDown' : 'chevronRight',
+            color: isSelected ? 'primaryForeground' : 'foregroundMuted',
+            className: 'flex-shrink-0',
+          }}
+          className='w-4 h-7'
+          onClick={(e) => {
+            e.stopPropagation()
+            setExpanded(!expanded)
+          }}
+        />
         <Icon
           name={specification.icon}
           size='small'
           color={isSelected ? 'primaryForeground' : specification.color}
           className='flex-shrink-0'
         />
-        <div className='flex-1 min-w-0 flex items-center justify-between gap-2'>
-          <Text.H6
-            color={isSelected ? 'primaryForeground' : 'foreground'}
-            weight={isSelected || !isExpanded ? 'semibold' : 'normal'}
-            isItalic={!isExpanded}
-            userSelect={false}
-            noWrap
-            ellipsis
-          >
-            {span.name}
-          </Text.H6>
-          <Button
-            variant='ghost'
-            size='none'
-            iconProps={{
-              name: isExpanded ? 'chevronDown' : 'chevronLeft',
-              color: isSelected ? 'primaryForeground' : 'foregroundMuted',
-              className: 'flex-shrink-0',
-            }}
-            className='w-4 h-7'
-            onClick={(e) => {
-              e.stopPropagation()
-              setExpanded(!expanded)
-            }}
-          />
-        </div>
+        <Text.H6
+          color={isSelected ? 'primaryForeground' : 'foreground'}
+          weight={isSelected || !isExpanded ? 'semibold' : 'normal'}
+          isItalic={!isExpanded}
+          userSelect={false}
+          noWrap
+          ellipsis
+        >
+          {span.name}
+        </Text.H6>
       </div>
       {isExpanded &&
         span.children.map((child, index) => (
