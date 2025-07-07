@@ -86,6 +86,11 @@ export class NotImplementedError extends LatitudeError {
   public name = LatitudeErrorCodes.NotImplementedError
 }
 
+export class ImATeapotError extends LatitudeError {
+  public statusCode = 418
+  public name = LatitudeErrorCodes.ImATeapotError
+}
+
 export const databaseErrorCodes = {
   foreignKeyViolation: '23503',
   uniqueViolation: '23505',
