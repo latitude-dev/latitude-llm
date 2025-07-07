@@ -104,7 +104,7 @@ export function CollapsibleBox({
       <div
         className={cn('transition-all duration-300 ease-in-out ', {
           'flex flex-col min-h-0': !scrollable,
-          'overflow-y-auto custom-scrollbar': scrollable,
+          'overflow-y-auto custom-scrollbar scrollable-indicator': scrollable,
         })}
         style={{
           maxHeight: isExpanded ? expandedHeight : 0,

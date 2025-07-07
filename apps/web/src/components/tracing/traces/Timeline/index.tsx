@@ -1,7 +1,6 @@
 import { AssembledSpan, AssembledTrace } from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { cn } from '@latitude-data/web-ui/utils'
 import { useEffect, useState } from 'react'
 import { TimelineGraph } from './Graph'
 import { TimelineTree } from './Tree'
@@ -15,11 +14,9 @@ export type OnSelectedSpanFn = (args?: {
 export function Timeline({
   trace,
   onSelectedSpan,
-  className,
 }: {
   trace: AssembledTrace
   onSelectedSpan?: OnSelectedSpanFn
-  className?: string
 }) {
   const [selectedSpan, setSelectedSpan] = useState<AssembledSpan>()
   useEffect(() => {
@@ -42,16 +39,11 @@ export function Timeline({
   }
 
   return (
-    <div
-      className={cn(
-        className,
-        'w-full h-full flex items-center justify-center',
-      )}
-    >
+    <div className='w-full h-full flex items-center justify-center'>
       <SplitPane
         direction='horizontal'
         initialPercentage={25}
-        minSize={100}
+        minSize={125}
         firstPane={
           <div className='w-full h-full overflow-hidden'>
             <TimelineTree
@@ -62,7 +54,7 @@ export function Timeline({
           </div>
         }
         secondPane={
-          <div className='w-full h-full overflow-scroll custom-scrollbar scrollable-indicator'>
+          <div className='w-full h-full overflow-hidden'>
             <TimelineGraph
               trace={trace}
               selectedSpan={selectedSpan}
