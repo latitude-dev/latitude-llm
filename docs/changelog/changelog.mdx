@@ -3,6 +3,22 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-07-07'>
+
+### Dependency Updates
+- **Zustand**: Bumped from version 4.5.6 to 5.0.5, including improvements and new features like `devtools.cleanup()` method and inferred action type in devtools. [PR #1372](https://github.com/latitude-dev/latitude-llm/pull/1372)
+
+### Features and Improvements
+- **Compiler Removal**: Deprecated the compiler package to improve compilation times, as it was only kept for supporting old prompt syntax. [PR #1073](https://github.com/latitude-dev/latitude-llm/pull/1073)
+- **Ingest Spans and Process Segments**: Implemented features related to issue #1273. [PR #1436](https://github.com/latitude-dev/latitude-llm/pull/1436)
+- **Project Retrieval by ID**: Added SDK method and gateway endpoint for retrieving a project by its ID, including a new v3 API endpoint. [PR #1420](https://github.com/latitude-dev/latitude-llm/pull/1420)
+- **New Gemini Models**: Added new models such as `gemini-2.5-pro` and `gemini-2.5-flash`. [PR #1415](https://github.com/latitude-dev/latitude-llm/pull/1415)
+- **Lexical Block Editor**: Explored Lexical as a block editor with features like keyboard navigation and drag & drop. [PR #1425](https://github.com/latitude-dev/latitude-llm/pull/1425)
+- **Prompt Inclusion**: Implemented inclusion of prompts into other prompts by typing "@". [PR #1434](https://github.com/latitude-dev/latitude-llm/pull/1434)
+- **Variables in Blocks Editor**: Implemented variables insertion and display in blocks editor. [PR #1433](https://github.com/latitude-dev/latitude-llm/pull/1433)
+
+</Update>
+
 <Update label='2025-06-04'>
 
 ## Numeric similarity evaluation metric
