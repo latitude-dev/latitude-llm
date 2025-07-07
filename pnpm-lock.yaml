@@ -857,8 +857,8 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
       cron-parser:
-        specifier: 5.0.4
-        version: 5.0.4
+        specifier: 5.3.0
+        version: 5.3.0
       csv-parse:
         specifier: 5.5.6
         version: 5.5.6
@@ -8527,8 +8527,8 @@ packages:
     resolution: {integrity: sha512-p0SaNjrHOnQeR8/VnfGbmg9te2kfyYSQ7Sc/j/6DtPL3JQvKxmjO9TSjNFpujqV3vEYYBvNNvXSxzyksBWAx1Q==}
     engines: {node: '>=12.0.0'}
 
-  cron-parser@5.0.4:
-    resolution: {integrity: sha512-ud6L7uGE4a7QxKndq106+99iKMlhG1/gSVlA4SH7qy3xO/R/EUoXFTJFMBOogdk00mZiXPONRI4wFKAcymKp6w==}
+  cron-parser@5.3.0:
+    resolution: {integrity: sha512-IS4mnFu6n3CFgEmXjr+B2zzGHsjJmHEdN+BViKvYSiEn3KWss9ICRDETDX/VZldiW82B94OyAZm4LIT4vcKK0g==}
     engines: {node: '>=18'}
 
   cross-fetch@3.2.0:
@@ -23710,7 +23710,7 @@ snapshots:
     dependencies:
       luxon: 3.6.1
 
-  cron-parser@5.0.4:
+  cron-parser@5.3.0:
     dependencies:
       luxon: 3.6.1
 
