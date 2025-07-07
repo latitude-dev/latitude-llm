@@ -85,7 +85,7 @@
     "argon2": "0.41.0",
     "bullmq": "5.44.4",
     "compute-cosine-similarity": "1.1.0",
-    "cron-parser": "5.0.4",
+    "cron-parser": "5.3.0",
     "csv-parse": "5.5.6",
     "csv-stringify": "6.5.2",
     "date-fns": "3.6.0",
