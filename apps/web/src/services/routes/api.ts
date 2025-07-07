@@ -334,4 +334,31 @@ export const API_ROUTES = {
       root: `/api/documentLogs/download-logs`,
     },
   },
+  conversations: {
+    root: '/api/conversations',
+    detail: (conversationId: string) => {
+      const conversationRoot = `/api/conversations/${conversationId}`
+      return {
+        root: conversationRoot,
+        traces: {
+          root: `${conversationRoot}/traces`,
+          detail: (traceId: string) => {
+            const traceRoot = `${conversationRoot}/traces/${traceId}`
+            return {
+              root: traceRoot,
+              spans: {
+                root: `${traceRoot}/spans`,
+                detail: (spanId: string) => {
+                  const spanRoot = `${traceRoot}/spans/${spanId}`
+                  return {
+                    root: spanRoot,
+                  }
+                },
+              },
+            }
+          },
+        },
+      }
+    },
+  },
 }

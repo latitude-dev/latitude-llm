@@ -8,6 +8,7 @@ import {
   DocumentLogWithMetadataAndError,
   ProviderLogDto,
   ResultWithEvaluationV2,
+  SpanWithDetails,
 } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
@@ -51,6 +52,8 @@ export function DocumentLogInfo({
   children,
   bottomActions,
   offset,
+  span,
+  isSpanLoading,
 }: {
   documentLog: DocumentLogWithMetadataAndError
   providerLogs?: ProviderLogDto[]
@@ -63,6 +66,8 @@ export function DocumentLogInfo({
   children?: ReactNode
   bottomActions?: ReactNode
   offset?: StickyOffset
+  span?: SpanWithDetails
+  isSpanLoading?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [target, setTarget] = useState<HTMLDivElement | null>(null)
@@ -111,6 +116,8 @@ export function DocumentLogInfo({
                     documentLog={documentLog}
                     providerLogs={providerLogs}
                     lastResponse={conversation.at(-1)}
+                    span={span}
+                    isSpanLoading={isSpanLoading}
                   />
                 )}
                 {selectedTab === 'messages' && (

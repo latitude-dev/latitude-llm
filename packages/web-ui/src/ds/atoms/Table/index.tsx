@@ -185,6 +185,7 @@ type CommonCellProps = TdHTMLAttributes<HTMLTableCellElement> & {
   align?: 'left' | 'center' | 'right'
   xSpace?: 'none' | 'normal'
   verticalBorder?: boolean
+  innerClassName?: string
 }
 
 const ServerSideTableCell = forwardRef<HTMLTableCellElement, CommonCellProps>(
@@ -195,6 +196,7 @@ const ServerSideTableCell = forwardRef<HTMLTableCellElement, CommonCellProps>(
       align = 'left',
       xSpace = 'normal',
       verticalBorder = false,
+      innerClassName,
       ...props
     },
     ref,
@@ -214,7 +216,7 @@ const ServerSideTableCell = forwardRef<HTMLTableCellElement, CommonCellProps>(
       {...props}
     >
       <div
-        className={cn('flex', {
+        className={cn(innerClassName, 'flex', {
           'justify-start': align === 'left',
           'justify-center': align === 'center',
           'justify-end': align === 'right',
@@ -241,6 +243,7 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
       preventDefault = false,
       verticalBorder = false,
       onClick,
+      innerClassName,
       ...props
     },
     ref,
@@ -266,7 +269,7 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
       }}
     >
       <div
-        className={cn('flex', {
+        className={cn(innerClassName, 'flex', {
           'justify-start': align === 'left',
           'justify-center': align === 'center',
           'justify-end': align === 'right',

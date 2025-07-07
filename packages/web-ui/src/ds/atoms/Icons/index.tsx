@@ -3,6 +3,7 @@ import {
   AlertCircle,
   AppWindow,
   ArrowDownIcon,
+  ArrowDownUp,
   ArrowLeft,
   ArrowRightIcon,
   ArrowUpIcon,
@@ -16,6 +17,7 @@ import {
   Braces,
   Brain,
   CalendarIcon,
+  ChartNoAxesGantt,
   CheckCircle2,
   CheckIcon,
   ChevronDown,
@@ -90,6 +92,7 @@ import {
   PlusIcon,
   Puzzle,
   Radio,
+  RectangleHorizontal,
   RefreshCcw,
   RegexIcon,
   RotateCcw,
@@ -129,6 +132,17 @@ import {
   LatitudeLogoMonochrome,
   MCP,
 } from './custom-icons'
+import AmazonBedrock from './custom-icons/llmProviders/amazoBedrock'
+import Anthropic from './custom-icons/llmProviders/anthropic'
+import Azure from './custom-icons/llmProviders/azure'
+import DeepSeek from './custom-icons/llmProviders/deepSeek'
+import GoogleGemini from './custom-icons/llmProviders/googleGemini'
+import GoogleVertex from './custom-icons/llmProviders/googleVertex'
+import Groq from './custom-icons/llmProviders/groq'
+import Mistral from './custom-icons/llmProviders/mistral'
+import OpenAI from './custom-icons/llmProviders/openai'
+import Perplexity from './custom-icons/llmProviders/perplexity'
+import XAI from './custom-icons/llmProviders/xai'
 import Airbnb from './custom-icons/logos/Airbnb'
 import Airtable from './custom-icons/logos/Airtable'
 import Apify from './custom-icons/logos/Apify'
@@ -163,17 +177,6 @@ import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import YepCode from './custom-icons/logos/YepCode'
-import OpenAI from './custom-icons/llmProviders/openai'
-import Anthropic from './custom-icons/llmProviders/anthropic'
-import Groq from './custom-icons/llmProviders/groq'
-import Mistral from './custom-icons/llmProviders/mistral'
-import Azure from './custom-icons/llmProviders/azure'
-import GoogleGemini from './custom-icons/llmProviders/googleGemini'
-import GoogleVertex from './custom-icons/llmProviders/googleVertex'
-import XAI from './custom-icons/llmProviders/xai'
-import AmazonBedrock from './custom-icons/llmProviders/amazoBedrock'
-import DeepSeek from './custom-icons/llmProviders/deepSeek'
-import Perplexity from './custom-icons/llmProviders/perplexity'
 
 const Icons = {
   // hubspot: Hubspot,
@@ -190,6 +193,7 @@ const Icons = {
   arrowRight: ArrowRightIcon,
   arrowUp: ArrowUpIcon,
   arrowUpRight: ArrowUpRight,
+  arrowDownUp: ArrowDownUp,
   atSign: AtSign,
   attio: Attio,
   audiense: Audiense,
@@ -345,6 +349,8 @@ const Icons = {
   amazonBedrock: AmazonBedrock,
   deepSeek: DeepSeek,
   perplexity: Perplexity,
+  chartNoAxesGantt: ChartNoAxesGantt,
+  rectangleHorizontal: RectangleHorizontal,
 }
 
 export type IconName = keyof typeof Icons

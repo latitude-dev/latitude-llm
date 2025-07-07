@@ -515,7 +515,7 @@ function computeStatus({ child, current }: SegmentProcessArgs): TypedResult<{
     if (current?.status === SpanStatus.Error) {
       return Result.ok({ status: current.status, message: current.message })
     }
-    if (isLast(current, child, 'childs')) {
+    if (isLast(current, child, 'children')) {
       return Result.ok({ status: child.status, message: child.message })
     }
   }

@@ -25,7 +25,7 @@ export type SegmentProcessArgs<T extends SegmentType = SegmentType> = {
   child: SpanWithDetails | SegmentWithDetails
   traceId: string
   current?: SegmentWithDetails<T> & {
-    childs?: Timestamps
+    children?: Timestamps
     completions?: Timestamps
     documents?: Timestamps
     errors?: Timestamps
@@ -73,7 +73,7 @@ export function hashContent(content?: string) {
   return content ? hash(content) : undefined
 }
 
-type TimestampsOption = 'childs' | 'completions' | 'documents' | 'errors'
+type TimestampsOption = 'children' | 'completions' | 'documents' | 'errors'
 
 export function isFirst(
   current: SegmentProcessArgs['current'],

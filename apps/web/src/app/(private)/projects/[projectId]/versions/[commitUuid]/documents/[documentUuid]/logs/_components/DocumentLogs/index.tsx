@@ -1,15 +1,17 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
+import { OnSelectedSpanFn } from '$/components/tracing/traces/Timeline'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs from '$/stores/providerLogs'
+import { useSpan } from '$/stores/spans'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import {
   DocumentLogFilterOptions,
-  DocumentLogsLimitedView,
   DocumentLogsAggregations,
+  DocumentLogsLimitedView,
   DocumentLogWithMetadataAndError,
   EvaluationV2,
   ResultWithEvaluationV2,
@@ -144,6 +146,14 @@ export function DocumentLogs({
     return lastProviderLog
   }, [selectedLog, providerLogs])
 
+  const [selectedSpan, setSelectedSpan] =
+    useState<Parameters<OnSelectedSpanFn>[0]>()
+  const { data: span, isLoading: isSpanLoading } = useSpan({
+    conversationId: selectedSpan?.conversationId ?? '',
+    traceId: selectedSpan?.traceId ?? '',
+    spanId: selectedSpan?.spanId ?? '',
+  })
+
   if (
     !documentLogFilterOptions.logSources.length &&
     !documentLogFilterOptions.logSources.length
@@ -192,6 +202,7 @@ export function DocumentLogs({
           limitedView={limitedView}
           limitedCursor={limitedCursor}
           setLimitedCursor={setLimitedCursor}
+          onSelectedSpan={setSelectedSpan}
         />
         {selectedLog && (
           <div ref={sidebarWrapperRef}>
@@ -203,6 +214,8 @@ export function DocumentLogs({
               stickyRef={stickyRef}
               sidebarWrapperRef={sidebarWrapperRef}
               offset={{ top: 12, bottom: 12 }}
+              span={span}
+              isSpanLoading={isSpanLoading}
             >
               {manualEvaluations.length > 0 && !!responseLog && (
                 <div className='w-full border-t flex flex-col gap-y-4 mt-4 pt-4'>
