@@ -1,4 +1,4 @@
-import { DecoratorNode } from 'lexical'
+import { $nodesOfType, DecoratorNode } from 'lexical'
 import { JSX } from 'react'
 import { Badge } from '../../../../../atoms/Badge'
 import { BLOCK_EDITOR_TYPE, Variable } from '../../state/promptlToLexical/types'
@@ -20,7 +20,6 @@ export class VariableNode extends DecoratorNode<JSX.Element> {
   }
 
   createDOM() {
-    // Lexical manages the DOM for React components, so just return a span
     const span = document.createElement('span')
     span.className = 'variable-pill'
     return span
@@ -50,4 +49,8 @@ export class VariableNode extends DecoratorNode<JSX.Element> {
   isInline() {
     return true
   }
+}
+
+export function $getVariableNames(): string[] {
+  return $nodesOfType(VariableNode).map((node) => node.__name)
 }

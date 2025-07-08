@@ -14,6 +14,10 @@ import { BlocksEditorProps, IncludedPrompt } from '../../types'
 import { Icon } from '../../../../atoms/Icons'
 import { ConversationMetadata } from 'promptl-ai'
 
+export function buildReferencePath(path: string): string {
+  return `/${path}`
+}
+
 class ReferencePickerOption extends MenuOption {
   label: string
   path: string
@@ -22,7 +26,7 @@ class ReferencePickerOption extends MenuOption {
   constructor(path: string, prompt: IncludedPrompt) {
     super(path)
     this.label = path
-    this.path = `/${path}`
+    this.path = buildReferencePath(path)
     this.prompt = prompt
   }
 }

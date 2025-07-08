@@ -1,11 +1,14 @@
 import { useCallback, useMemo, EventHandler, MouseEvent } from 'react'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { Icon } from '../../../../../../atoms/Icons'
+import { Text } from '../../../../../../atoms/Text'
+import { Tooltip } from '../../../../../../atoms/Tooltip'
+import { DropdownMenu, MenuOption } from '../../../../../../atoms/DropdownMenu'
+import { cn } from '../../../../../../../lib/utils'
 import { triggerToggleDevEditor } from '../../../plugins/ReferencesPlugin'
 import { useBlocksEditorContext } from '../../../Provider'
 import { ReferenceLink as SerializedReferenceLink } from '../../../state/promptlToLexical/types'
 import { resolveRelativePath } from '@latitude-data/constants'
+import { triggerReferencePathUpdate } from '../../../plugins/ReferenceEditPlugin'
 
 function LoadingLink() {
   return (
@@ -33,13 +36,17 @@ function LinkInfo({
 }) {
   const linkText = useMemo(
     () => (
-      <div className='flex flex-rowitems-center gap-x-1'>
+      <div className='min-w-0 flex-grow flex flex-row tems-center gap-x-1'>
         <Icon
           name='file'
           color={hasErrors ? 'destructive' : 'foregroundMuted'}
           className='relative flex-none align-baseline top-[3px]'
         />
-        <Text.H5M ellipsis noWrap color={hasErrors ? 'destructive' : 'primary'}>
+        <Text.H5M
+          ellipsis
+          noWrap
+          color={hasErrors ? 'destructive' : 'foreground'}
+        >
           {path}
         </Text.H5M>
       </div>
@@ -50,7 +57,7 @@ function LinkInfo({
   if (!hasErrors) return linkText
 
   return (
-    <Tooltip variant='destructive' align='end' trigger={linkText}>
+    <Tooltip variant='destructive' align='start' asChild trigger={linkText}>
       {errors && errors.length > 0
         ? errors[0]?.message
         : 'Missing values. Click to configure'}
@@ -59,15 +66,29 @@ function LinkInfo({
 }
 
 function ReferenceLinkReal({
+  nodeKey,
   path: relativePath,
   attributes: initialAttributes,
   errors,
 }: {
+  nodeKey: string
   path: string
   errors?: SerializedReferenceLink['errors']
   attributes: SerializedReferenceLink['attributes']
 }) {
   const { Link, currentDocument, prompts } = useBlocksEditorContext()
+  const promptOptions = useMemo<MenuOption[]>(
+    () =>
+      Object.values(prompts).map((prompt) => ({
+        checked: `/${prompt.path}` === relativePath,
+        label: prompt.path,
+        ellipsis: true,
+        onClick: () => {
+          triggerReferencePathUpdate(nodeKey, prompt.path)
+        },
+      })),
+    [prompts, relativePath, nodeKey],
+  )
   const path = resolveRelativePath(relativePath, currentDocument.path)
   const url = prompts[path]?.url
   const attributeKeys = Object.keys(initialAttributes).filter(
@@ -99,22 +120,46 @@ function ReferenceLinkReal({
   )
 
   return (
-    <Link
-      onClick={onClickLink}
-      href={url!} // We hope for the best
-      className='gap-x-1 inline-flex items-baseline min-w-0 max-w-[400px]'
+    <div
+      className={cn(
+        'bg-background flex-grow inline-flex flex-row items-center max-w-60 overflow-hidden',
+        'border border-border rounded-lg px-1 py-px',
+        'gap-x-1',
+      )}
     >
-      <LinkInfo hasErrors={hasErrors} errors={errors} path={path} />
-    </Link>
+      <Link
+        onClick={onClickLink}
+        href={url!} // We hope for the best
+        className='inline-flex items-baseline min-w-0 flex-grow'
+      >
+        <LinkInfo hasErrors={hasErrors} errors={errors} path={path} />
+      </Link>
+      <DropdownMenu
+        title='Link documents'
+        align='end'
+        width='extraWide'
+        sideOffset={8}
+        alignOffset={-4}
+        triggerButtonProps={{
+          size: 'icon',
+          variant: 'ghost',
+          iconProps: { name: 'chevronDown' },
+          className: 'min-h-4 flex items-center',
+        }}
+        options={promptOptions}
+      />
+    </div>
   )
 }
 
 export function ReferenceLink({
+  nodeKey,
   path,
   attributes,
   errors,
   isLoading = false,
 }: {
+  nodeKey: string
   path: string
   attributes?: SerializedReferenceLink['attributes']
   errors?: SerializedReferenceLink['errors']
@@ -123,6 +168,11 @@ export function ReferenceLink({
   if (isLoading || !attributes) return <LoadingLink />
 
   return (
-    <ReferenceLinkReal errors={errors} path={path} attributes={attributes} />
+    <ReferenceLinkReal
+      nodeKey={nodeKey}
+      errors={errors}
+      path={path}
+      attributes={attributes}
+    />
   )
 }

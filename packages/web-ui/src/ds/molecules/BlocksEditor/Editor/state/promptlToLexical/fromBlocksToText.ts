@@ -119,8 +119,6 @@ export function fromBlocksToText(rootNode: BlockRootNode): string {
   return rootNode.children
     .map((block) => {
       switch (block.type) {
-        case BLOCK_EDITOR_TYPE.CONFIG:
-          return `---${block.config}\n---`
         case BLOCK_EDITOR_TYPE.CODE:
           return codeBlockToText(block)
         case BLOCK_EDITOR_TYPE.STEP: {

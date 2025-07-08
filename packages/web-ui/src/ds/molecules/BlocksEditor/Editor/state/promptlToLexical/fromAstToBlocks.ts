@@ -33,7 +33,6 @@ import {
   StepBlock,
   MessageBlock,
   MessageBlockType,
-  ConfigBlock,
 } from './types'
 import { createCodeBlock } from './createCodeBlock'
 
@@ -82,21 +81,6 @@ function createParagraph({
     textFormat: 0,
     textStyle: '',
   }
-}
-
-function createConfigBlock({
-  config,
-  errors,
-}: {
-  config: string
-  errors?: AstError[]
-}) {
-  return {
-    type: BLOCK_EDITOR_TYPE.CONFIG,
-    version: 1,
-    errors,
-    config,
-  } satisfies ConfigBlock
 }
 
 function createEmptyParagraph({
@@ -218,8 +202,8 @@ function proccesInlineNodes({
   previousWasBlockWithChildren: boolean
   isLastNode: boolean
   errors?: AstError[]
-}): Array<ParagraphBlock | CodeBlock | ConfigBlock> {
-  const blocks: Array<ParagraphBlock | CodeBlock | ConfigBlock> = []
+}): Array<ParagraphBlock | CodeBlock> {
+  const blocks: Array<ParagraphBlock | CodeBlock> = []
   let paragraphChildren: InlineBlock[] = []
   let prevWasWithChildren = previousWasBlockWithChildren
 
@@ -238,20 +222,7 @@ function proccesInlineNodes({
     const node = nodes[idx]!
     const previousNode = nodes[idx - 1]
 
-    if (node.type === 'Config') {
-      flushChildren()
-      blocks.push(
-        createConfigBlock({
-          config: node.value,
-          errors: errors.length
-            ? findErrorsForNode({ node, errors })
-            : undefined,
-        }),
-      )
-
-      previousWasBlock = true
-      endsWithEmptyLine = false
-    } else if (node.type === 'Text') {
+    if (node.type === 'Text') {
       let lines = node.data.split('\n')
 
       const nextNode = nodes[idx + 1]
@@ -499,6 +470,10 @@ function maybeCreateCodeBlockWithFailedAst({
   })
 }
 
+function childrenWithoutConfig(children: TemplateNode[]): TemplateNode[] {
+  return children.filter((node) => !isConfigNode(node))
+}
+
 export function fromAstToBlocks({
   ast,
   prompt,
@@ -508,8 +483,9 @@ export function fromAstToBlocks({
   prompt: string
   errors?: AstError[]
 }) {
+  const nodes = childrenWithoutConfig(ast.children)
   const children = processNodes({
-    nodes: ast.children,
+    nodes,
     prompt,
     errors,
     isRoot: true,

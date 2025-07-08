@@ -1,11 +1,11 @@
 'use client'
 import { MouseEvent, ReactNode, useCallback, useState } from 'react'
-import { Check } from 'lucide-react'
 
 import { Button, ButtonProps } from '../Button'
 import { Icon } from '../Icons'
 import { type IconProps } from '../Icons'
 import { Text } from '../Text'
+import { cn } from '../../../lib/utils'
 
 import {
   DropdownMenu as DropdownMenuRoot,
@@ -57,6 +57,7 @@ export type MenuOption = {
   lookDisabled?: boolean
   shortcut?: string
   checked?: boolean | undefined
+  ellipsis?: boolean
   hidden?: boolean
 }
 function DropdownItem({
@@ -69,6 +70,7 @@ function DropdownItem({
   shortcut,
   disabled,
   checked,
+  ellipsis = false,
 }: MenuOption) {
   const onSelect = useCallback(() => {
     if (disabled) return
@@ -81,18 +83,24 @@ function DropdownItem({
       onClick={onElementClick}
       onSelect={onSelect}
       disabled={disabled}
-      className='gap-2 items-start cursor-pointer'
+      className={cn('gap-2 items-center cursor-pointer', {
+        'min-w-0': ellipsis,
+      })}
     >
       {iconProps ? <Icon {...iconProps} /> : null}
-      <div className='w-full'>
-        <Text.H5 color={type === 'destructive' ? 'destructive' : 'foreground'}>
+      <div className={cn('w-full', { 'flex min-w-0': ellipsis })}>
+        <Text.H5
+          noWrap={ellipsis}
+          ellipsis={ellipsis}
+          color={type === 'destructive' ? 'destructive' : 'foreground'}
+        >
           {label}
         </Text.H5>
       </div>
       {shortcut && <DropdownMenuShortcut>{shortcut}</DropdownMenuShortcut>}
       {checked !== undefined && (
-        <div className='flex align-items w-5 h-5'>
-          {checked ? <Check className='h-5 w-5' strokeWidth={1.25} /> : null}
+        <div className='flex items-center'>
+          {checked ? <Icon name='checkClean' /> : null}
         </div>
       )}
     </DropdownMenuItem>
@@ -105,6 +113,7 @@ type Props = ContentProps & {
   triggerButtonProps?: TriggerButtonProps | TriggerButtonPropsFn
   trigger?: (renderTriggerProps: RenderTriggerProps) => ReactNode
   title?: string
+  width?: 'normal' | 'wide' | 'extraWide'
   options: MenuOption[]
   onOpenChange?: (open: boolean) => void
   controlledOpen?: boolean
@@ -120,6 +129,7 @@ export function DropdownMenu({
   options,
   onOpenChange,
   controlledOpen,
+  width = 'normal',
 }: Props) {
   const [open, setOpen] = useState(false)
   const isFn = typeof triggerButtonProps === 'function'
@@ -149,7 +159,11 @@ export function DropdownMenu({
           sideOffset={sideOffset}
           align={align}
           alignOffset={alignOffset}
-          className='w-52'
+          className={cn({
+            'w-52': width === 'normal',
+            'w-72': width === 'wide',
+            'w-96': width === 'extraWide',
+          })}
         >
           {title && (
             <>

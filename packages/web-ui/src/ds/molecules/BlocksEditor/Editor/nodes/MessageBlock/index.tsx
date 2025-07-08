@@ -1,26 +1,33 @@
+import { Root } from 'react-dom/client'
 import {
   ElementNode,
   NodeKey,
   LexicalNode,
   EditorConfig,
-  setDOMUnmanaged,
   $createParagraphNode,
   $createTextNode,
   $applyNodeReplacement,
   SerializedLexicalNode,
 } from 'lexical'
 import { cn } from '../../../../../../lib/utils'
-import { VERTICAL_SPACE_CLASS } from '../utils'
+import {
+  createReactDivWrapper,
+  replaceReactRoot,
+  VERTICAL_SPACE_CLASS,
+} from '../utils'
 import {
   BLOCK_EDITOR_TYPE,
   MessageBlock,
   MessageBlockType,
 } from '../../state/promptlToLexical/types'
 import { $isStepBlockNode } from '../StepBlock'
+import { MessageHeader } from './MessageHeader'
 
 interface SerializedMessageBlock extends Omit<MessageBlock, 'children'> {
   children: SerializedLexicalNode[]
 }
+
+const HEADER_CLASS = 'message-header'
 
 export class MessageBlockNode extends ElementNode {
   __role: MessageBlockType
@@ -46,64 +53,44 @@ export class MessageBlockNode extends ElementNode {
 
     const div = document.createElement('div')
     wrapper.appendChild(div)
-
-    const roleColors = {
-      system: 'bg-purple-50 border-purple-300',
-      user: 'bg-blue-50 border-blue-300',
-      assistant: 'bg-green-50 border-green-300',
-      developer: 'bg-orange-50 border-orange-300',
-    }
-
     div.className = cn(
-      'message-block border-2 rounded-lg',
-      roleColors[this.__role],
+      'message-block',
+      'p-3 border border-border bg-secondary',
+      'rounded-lg flex flex-col gap-y-3',
     )
 
-    // Add role indicator (explicitly NOT draggable/droppable)
-    const roleLabel = document.createElement('div')
-    roleLabel.className =
-      'message-role text-xs font-semibold text-gray-600 mb-2 uppercase px-4 pt-4'
-    roleLabel.textContent = `${this.__role} message`
-    roleLabel.contentEditable = 'false'
-    // Explicitly mark as non-draggable
-    roleLabel.setAttribute('data-draggable-area', 'false')
-    div.appendChild(roleLabel)
-    setDOMUnmanaged(roleLabel)
+    createReactDivWrapper({
+      className: cn('flex', HEADER_CLASS),
+      parentDiv: div,
+      onRender: (headerDiv) => {
+        if (!headerDiv.__reactHeaderRoot__) return // Ensure the root is set
+
+        this.__renderHeader(headerDiv.__reactHeaderRoot__)
+      },
+    })
 
     // Create content area where children will be inserted
     const contentArea = document.createElement('div')
     contentArea.setAttribute('data-content-area', 'true')
-    contentArea.className = cn(
-      'message-content pb-4 [&_>*]:px-4',
-      VERTICAL_SPACE_CLASS,
-    )
+    contentArea.className = cn('message-content', VERTICAL_SPACE_CLASS)
     div.appendChild(contentArea)
 
     return wrapper
   }
 
-  updateDOM(prevNode: this, dom: HTMLElement): boolean {
-    if (prevNode.__role !== this.__role) {
-      const roleColors = {
-        system: 'bg-purple-50 border-purple-300',
-        user: 'bg-blue-50 border-blue-300',
-        assistant: 'bg-green-50 border-green-300',
-        developer: 'bg-orange-50 border-orange-300',
-      }
-
-      dom.className = cn(
-        'message-block p-4 border-2 rounded-lg',
-        VERTICAL_SPACE_CLASS,
-        roleColors[this.__role],
-      )
-
-      const roleLabel = dom.querySelector('.message-role')
-      if (roleLabel) {
-        roleLabel.textContent = `${this.__role} message`
-      }
-      return true
-    }
+  updateDOM(_prevNode: this, dom: HTMLElement): boolean {
+    replaceReactRoot({
+      className: HEADER_CLASS,
+      dom,
+      onRender: (root) => {
+        this.__renderHeader(root)
+      },
+    })
     return false
+  }
+
+  __renderHeader(root: Root) {
+    root.render(<MessageHeader nodeKey={this.getKey()} role={this.getRole()} />)
   }
 
   getRole(): MessageBlockType {

@@ -52,6 +52,7 @@ export type SelectProps<V extends unknown = unknown> = Omit<
   required?: boolean
   onChange?: (value: V) => void
   width?: 'auto' | 'full'
+  size?: 'small' | 'default'
   removable?: boolean
 }
 export function Select<V extends unknown = unknown>({
@@ -69,6 +70,7 @@ export function Select<V extends unknown = unknown>({
   info,
   onChange,
   width = 'full',
+  size = 'default',
   loading = false,
   disabled = false,
   required = false,
@@ -117,6 +119,7 @@ export function Select<V extends unknown = unknown>({
             ) : (
               <SelectTrigger
                 autoFocus={autoFocus}
+                size={size}
                 className={cn({
                   'border-red-500 focus:ring-red-500': errors,
                 })}

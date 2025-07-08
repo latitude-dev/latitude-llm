@@ -36,6 +36,7 @@ import {
   hideTargetLine,
   setTargetLine,
 } from './targetLine'
+import { cn } from '../../../../../../lib/utils'
 
 const DRAG_DATA_FORMAT = 'application/x-lexical-drag-block'
 
@@ -270,6 +271,7 @@ function setMenuPosition(
   targetElem: HTMLElement | null,
   floatingElem: HTMLElement,
   anchorElem: HTMLElement,
+  menuComponentWidth: number,
 ) {
   if (!targetElem) {
     floatingElem.style.opacity = '0'
@@ -294,7 +296,7 @@ function setMenuPosition(
     (targetCalculateHeight - floatingElemRect.height) / 2 -
     anchorElementRect.top
 
-  const left = targetRect.left - anchorElementRect.left - 8
+  const left = targetRect.left - menuComponentWidth
 
   floatingElem.style.opacity = '1'
   floatingElem.style.transform = `translate(${left}px, ${top}px)`
@@ -302,21 +304,21 @@ function setMenuPosition(
 
 function setDragImage(
   dataTransfer: DataTransfer,
-  _draggableBlockElem: HTMLElement,
+  draggableBlockElem: HTMLElement,
 ) {
-  // Create an invisible drag image
-  const invisibleImg = document.createElement('div')
-  invisibleImg.style.width = '1px'
-  invisibleImg.style.height = '1px'
-  invisibleImg.style.opacity = '0'
-  invisibleImg.style.position = 'absolute'
-  invisibleImg.style.top = '-1000px'
+  const dragImg = document.createElement('div')
+  dragImg.className = cn(
+    'border border-primary/90 bg-primary/40',
+    'rounded pointer-events-none',
+  )
+  dragImg.style.width = `${draggableBlockElem.offsetWidth}px`
+  dragImg.style.height = `${draggableBlockElem.offsetHeight}px`
 
-  document.body.appendChild(invisibleImg)
-  dataTransfer.setDragImage(invisibleImg, 0, 0)
+  document.body.appendChild(dragImg)
+  dataTransfer.setDragImage(dragImg, 0, 0)
 
   setTimeout(() => {
-    document.body.removeChild(invisibleImg)
+    document.body.removeChild(dragImg)
   }, 0)
 }
 
@@ -327,6 +329,7 @@ function useDraggableBlockMenu(
   targetLineRef: React.RefObject<HTMLElement | null>,
   isEditable: boolean,
   menuComponent: ReactNode,
+  menuComponentWidth: number,
   targetLineComponent: ReactNode,
   isOnMenu: (element: HTMLElement) => boolean,
   onElementChanged?: (element: HTMLElement | null) => void,
@@ -392,9 +395,14 @@ function useDraggableBlockMenu(
 
   useEffect(() => {
     if (menuRef.current) {
-      setMenuPosition(draggableBlockElem, menuRef.current, anchorElem)
+      setMenuPosition(
+        draggableBlockElem,
+        menuRef.current,
+        anchorElem,
+        menuComponentWidth,
+      )
     }
-  }, [anchorElem, draggableBlockElem, menuRef])
+  }, [anchorElem, draggableBlockElem, menuRef, menuComponentWidth])
 
   useEffect(() => {
     // Helper function to calculate drop mode based on mouse position and target capabilities
@@ -851,6 +859,7 @@ export function DraggableBlockPlugin_EXPERIMENTAL({
   menuRef,
   targetLineRef,
   menuComponent,
+  menuComponentWidth,
   targetLineComponent,
   isOnMenu,
   onElementChanged,
@@ -861,6 +870,7 @@ export function DraggableBlockPlugin_EXPERIMENTAL({
   menuRef: React.RefObject<HTMLElement | null>
   targetLineRef: React.RefObject<HTMLElement | null>
   menuComponent: ReactNode
+  menuComponentWidth: number
   targetLineComponent: ReactNode
   isOnMenu: (element: HTMLElement) => boolean
   onElementChanged?: (element: HTMLElement | null) => void
@@ -875,6 +885,7 @@ export function DraggableBlockPlugin_EXPERIMENTAL({
     targetLineRef,
     editor._editable,
     menuComponent,
+    menuComponentWidth,
     targetLineComponent,
     isOnMenu,
     onElementChanged,

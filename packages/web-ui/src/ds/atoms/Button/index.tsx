@@ -81,7 +81,7 @@ const buttonVariants = cva(
       },
       size: {
         default: 'py-buttonDefaultVertical px-3',
-        small: 'py-1 px-1.5',
+        small: 'py-0 px-1.5 min-h-6',
         none: 'py-0 px-0',
         icon: 'h-6 w-6',
       },

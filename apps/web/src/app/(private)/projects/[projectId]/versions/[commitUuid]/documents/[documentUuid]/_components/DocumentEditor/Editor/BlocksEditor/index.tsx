@@ -1,7 +1,9 @@
 import { memo, useState, Suspense, useCallback, useEffect, useRef } from 'react'
+import { stringify as stringifyObjectToYaml } from 'yaml'
 import Link from 'next/link'
 import { AstError } from '@latitude-data/constants/promptl'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { scan, Config } from 'promptl-ai'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
@@ -15,7 +17,6 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { type DocumentVersion } from '@latitude-data/core/browser'
 import { useIncludabledPrompts } from './useIncludabledPrompts'
-import { scan } from 'promptl-ai'
 import useDocumentVersions from '$/stores/documentVersions'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
@@ -28,12 +29,14 @@ export const PlaygroundBlocksEditor = memo(
     onToggleBlocksEditor,
     readOnlyMessage,
     onChange,
+    config,
   }: {
     project: IProjectContextType['project']
     commit: ICommitContextType['commit']
     document: DocumentVersion
     compileErrors: AstError[] | undefined
     rootBlock?: BlockRootNode
+    config?: Config
     value: string
     isSaved: boolean
     readOnlyMessage?: string
@@ -87,11 +90,27 @@ export const PlaygroundBlocksEditor = memo(
       isMounted.current = true
     }, [defaultRootBlock])
 
+    /*
+     * We don't touch Promptl config on Blocks editor atm
+     * So we restore the latest config from the document when a change
+     * happens
+     */
+    const onChangePrompt = useCallback(
+      (value: string) => {
+        if (!config) {
+          onChange(value)
+        }
+
+        const frontMatter = stringifyObjectToYaml(config)
+        onChange(`---\n${frontMatter}\n---\n${value}`)
+      },
+      [config, onChange],
+    )
+
     // FIXME: How to refresh the Lexical editor when Promptl errors are introduced or fixed
     // The thing is that Lexical manage his own state and we can not be passing new state whenever
     // we save it in the DB because it will be raise conditions and the state will do weird things.
-    // But the problem with this approach of never updating the `initialValue` is that I don't know how to
-    // refresh the editor when the Promptl errors are fixed or introduced.
+    // But the problem with this approach of never updating the `initialValue`
     return (
       <Suspense fallback={<TextEditorPlaceholder />}>
         {initialValue ? (
@@ -103,9 +122,9 @@ export const PlaygroundBlocksEditor = memo(
             Link={Link}
             onRequestPromptMetadata={onRequestPromptMetadata}
             onToggleDevEditor={onToogleDevEditor}
-            onChange={onChange}
+            onChange={onChangePrompt}
             readOnly={!!readOnlyMessage}
-            placeholder='Write your prompt, type "/" to insert messages or steps, "@" for include other prompts, "{{" for variables, Try typing "{{my_variable}}"'
+            placeholder='Type your instructions here, use / for commands'
           />
         ) : (
           <Text.H6>Loading....</Text.H6>

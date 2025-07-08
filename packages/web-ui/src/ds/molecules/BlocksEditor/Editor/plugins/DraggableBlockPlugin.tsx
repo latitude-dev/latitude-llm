@@ -1,11 +1,16 @@
-import React, { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, MouseEvent } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $createParagraphNode, $getNearestNodeFromDOMNode } from 'lexical'
+import {
+  $createParagraphNode,
+  $createTextNode,
+  $getNearestNodeFromDOMNode,
+} from 'lexical'
 
 import { DraggableBlockPlugin_EXPERIMENTAL } from '../overrides/plugins/DraggableBlockPlugin'
 import { $isParagraphNode, LexicalNode } from 'lexical'
 
 import { Icon } from '../../../../atoms/Icons'
+import { Tooltip } from '../../../../atoms/Tooltip'
 import { cn } from '../../../../../lib/utils'
 import { $isStepBlockNode } from '../nodes/StepBlock'
 import { $isMessageBlockNode } from '../nodes/MessageBlock'
@@ -21,9 +26,7 @@ interface DraggableBlockPluginProps {
   anchorElem?: HTMLElement
 }
 
-export function DraggableBlockPlugin({
-  anchorElem = document.body,
-}: DraggableBlockPluginProps) {
+export function DraggableBlockPlugin(_p: DraggableBlockPluginProps) {
   const [editor] = useLexicalComposerContext()
   const menuRef = useRef<HTMLDivElement>(null)
   const targetLineRef = useRef<HTMLDivElement>(null)
@@ -31,26 +34,35 @@ export function DraggableBlockPlugin({
     null,
   )
 
-  function insertBlock(e: React.MouseEvent) {
-    if (!draggableElement || !editor) {
-      return
-    }
-
-    editor.update(() => {
-      const node = $getNearestNodeFromDOMNode(draggableElement)
-      if (!node) {
+  const insertBlock = useCallback(
+    (e: MouseEvent) => {
+      if (!draggableElement || !editor) {
         return
       }
 
-      const pNode = $createParagraphNode()
-      if (e.altKey || e.ctrlKey) {
-        node.insertBefore(pNode)
-      } else {
-        node.insertAfter(pNode)
-      }
-      pNode.select()
-    })
-  }
+      editor.update(() => {
+        const node = $getNearestNodeFromDOMNode(draggableElement)
+        if (!node) return
+
+        // When in an empty paragraph, insert a new paragraph with a slash
+        if ($isParagraphNode(node) && node.getTextContent() === '') {
+          node.append($createTextNode('/'))
+          node.select()
+          return
+        }
+
+        const pNode = $createParagraphNode()
+        pNode.append($createTextNode('/'))
+        if (e.altKey || e.ctrlKey) {
+          node.insertBefore(pNode)
+        } else {
+          node.insertAfter(pNode)
+        }
+        pNode.select()
+      })
+    },
+    [draggableElement, editor],
+  )
 
   const canDropInside = useCallback((node: LexicalNode) => {
     if ($isParagraphNode(node)) {
@@ -88,32 +100,46 @@ export function DraggableBlockPlugin({
 
   return (
     <DraggableBlockPlugin_EXPERIMENTAL
-      anchorElem={anchorElem}
+      anchorElem={document.body}
       menuRef={menuRef}
       targetLineRef={targetLineRef}
+      menuComponentWidth={44}
       menuComponent={
         <div
           ref={menuRef}
           className={cn(
             DRAGGABLE_BLOCK_MENU_CLASSNAME,
-            'rounded p-0.5 cursor-grab absolute -left-4 top-0',
-            'will-change-transform flex gap-0.5 bg-white border border-gray-200',
-            'active:cursor-grabbing shadow-sm z-10',
+            'absolute pr-1 top-0 z-[1000]',
           )}
         >
-          <button
-            type='button'
-            title='Click to add below'
+          <div
             className={cn(
-              'inline-block border-none cursor-pointer bg-transparent',
-              'rounded flex items-center justify-center',
+              'rounded p-0.5 cursor-grab bg-background',
+              'will-change-transform flex gap-0.5 border border-border',
+              'active:cursor-grabbing shadow-sm z-10',
             )}
-            onClick={insertBlock}
           >
-            <Icon name='plus' color='foregroundMuted' />
-          </button>
-          <div className='flex items-center justify-center'>
-            <Icon name='gridVertical' color='foregroundMuted' />
+            <Tooltip
+              asChild
+              trigger={
+                <button
+                  type='button'
+                  title='Click to add below'
+                  className={cn(
+                    'inline-block border-none cursor-pointer bg-transparent',
+                    'rounded flex items-center justify-center',
+                  )}
+                  onClick={insertBlock}
+                >
+                  <Icon name='plus' color='foregroundMuted' />
+                </button>
+              }
+            >
+              Press "Alt" (Option) to insert above
+            </Tooltip>
+            <div className='flex items-center justify-center'>
+              <Icon name='gridVertical' color='foregroundMuted' />
+            </div>
           </div>
         </div>
       }

@@ -1,28 +1,37 @@
+import { Root } from 'react-dom/client'
 import {
   ElementNode,
   NodeKey,
   LexicalNode,
   EditorConfig,
-  setDOMUnmanaged,
   $applyNodeReplacement,
   $createParagraphNode,
   $createTextNode,
   SerializedLexicalNode,
+  $nodesOfType,
 } from 'lexical'
 import { cn } from '../../../../../../lib/utils'
-import { VERTICAL_SPACE_CLASS } from '../utils'
-import { createLabel, onUpdateHeader } from './createLabel'
+import {
+  createReactDivWrapper,
+  replaceReactRoot,
+  VERTICAL_SPACE_CLASS,
+} from '../utils'
 import {
   BLOCK_EDITOR_TYPE,
   StepBlock,
 } from '../../state/promptlToLexical/types'
+import { StepHeader } from './StepHeader'
 
 interface SerializedStepBlock extends Omit<StepBlock, 'children'> {
   children: SerializedLexicalNode[]
 }
+
+const HEADER_CLASS = 'step-header'
+
 export class StepBlockNode extends ElementNode {
   __stepName: string | undefined
   __isolated: boolean = false
+  __headerRoot?: Root
 
   static getType(): string {
     return BLOCK_EDITOR_TYPE.STEP
@@ -47,36 +56,71 @@ export class StepBlockNode extends ElementNode {
     const div = document.createElement('div')
     wrapper.appendChild(div)
     div.className = cn(
-      'step-block border-2 border-indigo-400 rounded-lg bg-indigo-50',
+      'step-block',
+      'p-3 border border-border bg-background',
+      'rounded-lg flex flex-col gap-y-3',
     )
-    const stepLabel = createLabel({ block: this })
-    div.appendChild(stepLabel)
-    setDOMUnmanaged(stepLabel)
+
+    createReactDivWrapper({
+      className: HEADER_CLASS,
+      parentDiv: div,
+      onRender: (headerDiv) => {
+        if (!headerDiv.__reactHeaderRoot__) return // Make Typescript happy
+
+        this.__renderHeader(headerDiv.__reactHeaderRoot__)
+      },
+    })
 
     // Create content area where children will be inserted
     const contentArea = document.createElement('div')
     contentArea.setAttribute('data-content-area', 'true')
-    contentArea.className = cn(
-      'step-content pb-4 [&_>*]:px-4',
-      VERTICAL_SPACE_CLASS,
-    )
+    contentArea.className = cn('step-content', VERTICAL_SPACE_CLASS)
     div.appendChild(contentArea)
 
     return wrapper
   }
 
-  updateDOM(prevNode: this, dom: HTMLElement): boolean {
-    return onUpdateHeader({ prevNode, currentBlock: this, dom })
+  updateDOM(_prevNode: this, dom: HTMLElement): boolean {
+    replaceReactRoot({
+      className: HEADER_CLASS,
+      dom,
+      onRender: (root) => {
+        this.__renderHeader(root)
+      },
+    })
+
+    return false
   }
 
-  getStepName() {
-    return this.getLatest().__stepName
+  __renderHeader(root: Root) {
+    root.render(
+      <StepHeader
+        stepIndex={this._getStepIndex()}
+        stepKey={this.getKey()}
+        as={this.getStepName()}
+        isolated={this.getIsolated()}
+      />,
+    )
   }
 
   setStepName(newName: string): StepBlockNode {
     const writable = this.getWritable()
     writable.__stepName = newName
     return writable
+  }
+
+  getStepName() {
+    return this.getLatest().__stepName
+  }
+
+  setIsolated(isolated: boolean): StepBlockNode {
+    const writable = this.getWritable()
+    writable.__isolated = isolated
+    return writable
+  }
+
+  getIsolated() {
+    return this.getLatest().__isolated
   }
 
   static importJSON(serializedNode: SerializedStepBlock): StepBlockNode {
@@ -103,6 +147,15 @@ export class StepBlockNode extends ElementNode {
 
   isInline(): boolean {
     return false
+  }
+
+  _getStepIndex(): number {
+    const parent = this.getParent()
+    if (!parent) return 1
+    const siblings = parent
+      .getChildren()
+      .filter((child) => child.getType() === StepBlockNode.getType())
+    return siblings.findIndex((child) => child.getKey() === this.__key) + 1
   }
 
   canInsertChild(child: LexicalNode): boolean {
@@ -141,10 +194,16 @@ export function $isStepBlockNode(
   return node instanceof StepBlockNode
 }
 
-export function $createStepBlockNode(stepName: string = 'Step'): StepBlockNode {
+export function $createStepBlockNode(stepName?: string): StepBlockNode {
   const block = new StepBlockNode(stepName)
   const paragraph = $createParagraphNode()
   paragraph.append($createTextNode(''))
   block.append(paragraph)
   return $applyNodeReplacement(block)
+}
+
+export function $getStepNames() {
+  return $nodesOfType(StepBlockNode)
+    .filter((step) => step.getStepName() !== undefined)
+    .map((step) => step.getStepName()!)
 }
