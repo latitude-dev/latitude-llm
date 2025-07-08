@@ -8,7 +8,8 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo, useState } from 'react'
-import { SPAN_SPECIFICATIONS, TimelineItemProps } from '../../spans'
+import { SPAN_SPECIFICATIONS } from '../../spans/specifications'
+import { TimelineItemProps } from './shared'
 
 function IndentationLine({
   showCurve,
@@ -154,7 +155,7 @@ function TimelineTreeItem<T extends SpanType>({
         <Icon
           name={specification.icon}
           size='small'
-          color={isSelected ? 'primaryForeground' : specification.color}
+          color={isSelected ? 'primaryForeground' : specification.color.text}
           className='flex-shrink-0'
         />
         <Text.H6

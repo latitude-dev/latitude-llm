@@ -1,13 +1,4 @@
-import {
-  AssembledSpan,
-  Span,
-  SpanSpecification,
-  SpanType,
-  SpanWithDetails,
-} from '@latitude-data/core/browser'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { TextColor } from '@latitude-data/web-ui/tokens'
-import React from 'react'
+import { Span, SpanType } from '@latitude-data/core/browser'
 import CompletionSpanSpecification from './Completion'
 import EmbeddingSpanSpecification from './Embedding'
 import HttpSpanSpecification from './Http'
@@ -16,27 +7,7 @@ import RetrievalSpanSpecification from './Retrieval'
 import SegmentSpanSpecification from './Segment'
 import ToolSpanSpecification from './Tool'
 import UnknownSpanSpecification from './Unknown'
-
-export type TimelineItemProps<T extends SpanType = SpanType> = {
-  span: AssembledSpan<T>
-  isFirst: boolean
-  isLast: boolean
-  isSelected: boolean
-  isParentSelected: boolean
-}
-
-export type DetailsPanelProps<T extends SpanType = SpanType> = {
-  span: SpanWithDetails<T>
-}
-
-export type SpanFrontendSpecification<T extends SpanType = SpanType> =
-  SpanSpecification<T> & {
-    icon: IconName
-    color: TextColor
-    TimelineTreeItem: (props: TimelineItemProps<T>) => React.ReactNode
-    TimelineGraphItem: (props: TimelineItemProps<T>) => React.ReactNode
-    DetailsPanel: (props: DetailsPanelProps<T>) => React.ReactNode
-  }
+import { SpanFrontendSpecification } from './shared'
 
 // prettier-ignore
 export const SPAN_SPECIFICATIONS: {

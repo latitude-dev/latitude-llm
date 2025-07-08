@@ -72,7 +72,7 @@ function DocumentLogTrace({
       onToggle={setExpanded}
       scrollable={false}
       expandedContent={
-        <div className='w-full h-full max-h-96 overflow-y-scroll custom-scrollbar scrollable-indicator z-10'>
+        <div className='w-full h-full max-h-96 overflow-y-auto custom-scrollbar scrollable-indicator z-10'>
           <Timeline trace={trace} onSelectedSpan={onSelectedSpan} />
         </div>
       }

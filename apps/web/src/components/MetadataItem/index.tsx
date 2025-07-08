@@ -1,14 +1,14 @@
-import { ReactNode } from 'react'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { TextColor } from '@latitude-data/web-ui/tokens'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { ReactNode } from 'react'
 
 type MetadataItemProps = {
   stacked?: boolean
   label: string
-  tooltip?: string
+  tooltip?: string | ReactNode
   action?: ReactNode
   value?: string
   color?: TextColor

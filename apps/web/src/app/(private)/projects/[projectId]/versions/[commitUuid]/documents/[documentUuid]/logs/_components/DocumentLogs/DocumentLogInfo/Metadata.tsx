@@ -327,7 +327,7 @@ export function DocumentLogMetadata({
       )}
       {!isSpanLoading && span && (
         <>
-          <DetailsPanel span={span} />
+          <DetailsPanel span={{ ...span, conversationId: documentLog.uuid }} />
           <LineSeparator text='Log details' />
         </>
       )}

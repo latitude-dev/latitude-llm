@@ -1,10 +1,16 @@
 export const colors = {
   backgrounds: {
     transparent: 'bg-transparent',
+    white: 'bg-white',
+    purple: 'bg-purple',
+    background: 'bg-background',
     backgroundCode: 'bg-backgroundCode',
     backgroundSecondary: 'bg-secondary',
     mutedForeground: 'bg-muted-foreground',
     accent: 'bg-accent',
+    warningMuted: 'bg-warning-muted',
+    destructiveMuted: 'bg-destructive-muted',
+    successMuted: 'bg-success-muted',
     destructiveMutedForeground: 'bg-destructive-muted-foreground',
   },
   textColors: {
@@ -18,6 +24,8 @@ export const colors = {
     secondaryForeground: 'text-secondary-foreground',
     accent: 'text-accent',
     accentForeground: 'text-accent-foreground',
+    purple: 'text-purple',
+    purpleForeground: 'text-white',
     destructive: 'text-destructive',
     destructiveForeground: 'text-destructive-foreground',
     destructiveMutedForeground: 'text-destructive-muted-foreground',

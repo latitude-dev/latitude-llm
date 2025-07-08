@@ -47,6 +47,7 @@ import {
   EqualApproximatelyIcon,
   EqualIcon,
   EqualNotIcon,
+  Expand,
   ExternalLink,
   Eye,
   File,
@@ -351,6 +352,7 @@ const Icons = {
   perplexity: Perplexity,
   chartNoAxesGantt: ChartNoAxesGantt,
   rectangleHorizontal: RectangleHorizontal,
+  expand: Expand,
 }
 
 export type IconName = keyof typeof Icons
@@ -368,7 +370,15 @@ export type IconProps = {
   onClick?: (event: MouseEvent<SVGSVGElement>) => void
 }
 
-type Size = 'xsmall' | 'small' | 'normal' | 'large' | 'xlarge' | 'xxxlarge'
+type Size =
+  | 'xsmall'
+  | 'small'
+  | 'xnormal'
+  | 'normal'
+  | 'medium'
+  | 'large'
+  | 'xlarge'
+  | 'xxxlarge'
 
 export function Icon({
   name,
@@ -389,7 +399,9 @@ export function Icon({
           [colors.darkTextColors[darkColor!]]: darkColor,
           'w-2.5 h-2.5': size === 'xsmall',
           'w-3 h-3': size === 'small',
+          'w-3.5 h-3.5': size === 'xnormal',
           'w-4 h-4': size === 'normal',
+          'w-5 h-5': size === 'medium',
           'w-6 h-6': size === 'large',
           'w-8 h-8': size === 'xlarge',
           'w-14 h-14': size === 'xxxlarge',
