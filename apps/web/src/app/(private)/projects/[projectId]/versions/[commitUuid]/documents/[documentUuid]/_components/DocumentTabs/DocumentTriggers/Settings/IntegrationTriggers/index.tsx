@@ -34,7 +34,7 @@ export function IntegrationTriggerSettings({
 
   return (
     <div className='flex flex-col gap-4'>
-      {!integrationTriggers || isLoading ? (
+      {!integrationTriggers.length || isLoading ? (
         <TriggersBlankSlate openTriggerModal={openTriggerModal} />
       ) : (
         <IntegrationTriggerList

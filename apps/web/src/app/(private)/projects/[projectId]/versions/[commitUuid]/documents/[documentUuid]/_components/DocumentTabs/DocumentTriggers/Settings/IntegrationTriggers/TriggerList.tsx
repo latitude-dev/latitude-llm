@@ -1,21 +1,107 @@
+import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import {
   DocumentTrigger,
+  PipedreamComponent,
   PipedreamIntegration,
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 type IntegrationTrigger = Extract<
   DocumentTrigger,
   { triggerType: DocumentTriggerType.Integration }
 >
+
+function DeleteTriggerButton({
+  trigger,
+  integration,
+  component,
+}: {
+  trigger: IntegrationTrigger
+  integration: PipedreamIntegration
+  component?: PipedreamComponent
+}) {
+  const { isHead } = useCurrentCommit()
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const { delete: deleteTrigger, isDeleting } = useDocumentTriggers(
+    {
+      documentUuid: trigger.documentUuid,
+      projectId: trigger.projectId,
+    },
+    {
+      onDeleted: () => setIsModalOpen(false),
+    },
+  )
+
+  return (
+    <>
+      <Button
+        variant='ghost'
+        className='p-0'
+        disabled={!isHead || isDeleting}
+        onClick={() => setIsModalOpen(true)}
+        iconProps={{
+          name: 'trash',
+        }}
+      />
+      <Modal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        dismissible={!isDeleting}
+        zIndex='popover'
+        title='Delete Trigger'
+        description='Are you sure you want to delete this trigger? This action cannot be undone.'
+        footer={
+          <div className='flex w-full gap-2 items-center justify-end'>
+            <Button
+              variant='secondary'
+              fancy
+              onClick={() => setIsModalOpen(false)}
+              isLoading={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant='destructive'
+              fancy
+              onClick={() => deleteTrigger(trigger)}
+              disabled={isDeleting}
+            >
+              Delete Trigger
+            </Button>
+          </div>
+        }
+      >
+        <div className='p-4 bg-destructive-muted rounded flex flex-col gap-2'>
+          <div className='flex items-center justify-between'>
+            <Text.H5B color='destructiveMutedForeground'>
+              {component?.name}
+            </Text.H5B>
+          </div>
+          <div className='flex items-center gap-2'>
+            <Image
+              src={integration.configuration.metadata?.imageUrl || ''}
+              alt={`${integration.name} icon`}
+              width={16}
+              height={16}
+              unoptimized
+            />
+            <Text.H6 color='destructive'>{integration.name}</Text.H6>
+          </div>
+        </div>
+      </Modal>
+    </>
+  )
+}
 
 function IntegrationTriggerItem({
   trigger,
@@ -26,6 +112,7 @@ function IntegrationTriggerItem({
 }) {
   const { data: integrations, isLoading: isLoadingIntegrations } =
     useIntegrations()
+
   const integration = useMemo(() => {
     return integrations.find(
       (i) => i.id === trigger.configuration.integrationId,
@@ -61,7 +148,14 @@ function IntegrationTriggerItem({
       )}
       // onClick={onOpen} // TODO(triggers): Enable this when trigger updates are implemented
     >
-      <Text.H5B>{component?.name}</Text.H5B>
+      <div className='flex items-center justify-between'>
+        <Text.H5B>{component?.name}</Text.H5B>
+        <DeleteTriggerButton
+          trigger={trigger}
+          integration={integration}
+          component={component}
+        />
+      </div>
       <div className='flex items-center gap-2'>
         <Image
           src={integration.configuration.metadata?.imageUrl || ''}
@@ -83,6 +177,8 @@ export function IntegrationTriggerList({
   triggers: IntegrationTrigger[]
   onOpenTrigger: (trigger?: IntegrationTrigger) => void
 }) {
+  const { isHead } = useCurrentCommit()
+
   return (
     <div className='flex flex-col gap-2'>
       {triggers.map((trigger) => (
@@ -92,7 +188,7 @@ export function IntegrationTriggerList({
           onOpen={() => onOpenTrigger(trigger)}
         />
       ))}
-      <Button fancy onClick={() => onOpenTrigger()}>
+      <Button fancy onClick={() => onOpenTrigger()} disabled={!isHead}>
         Add New Trigger
       </Button>
     </div>

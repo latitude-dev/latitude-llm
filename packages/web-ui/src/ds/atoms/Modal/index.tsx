@@ -3,7 +3,7 @@
 import { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { zIndex } from '../../tokens/zIndex'
+import { zIndex as globalZIndex, ZIndex } from '../../tokens/zIndex'
 import { Alert } from '../Alert'
 import { Button } from '../Button'
 import { Text } from '../Text'
@@ -52,6 +52,7 @@ export type ModalProps = {
   }
   dismissible?: boolean
   scrollable?: boolean
+  zIndex?: ZIndex
 }
 
 export function Modal({
@@ -66,12 +67,13 @@ export function Modal({
   steps,
   dismissible = false,
   scrollable = true,
+  zIndex = 'modal',
 }: ModalProps) {
   return (
     <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       <DialogContent
         dismissible={dismissible}
-        className={cn('flex flex-col', zIndex.modal, {
+        className={cn('flex flex-col', globalZIndex[zIndex], {
           'max-w-modal-sm': size === 'small',
           'max-w-modal': size === 'regular',
           'max-w-modal-md': size === 'medium',
