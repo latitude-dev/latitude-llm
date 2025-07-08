@@ -3,7 +3,7 @@ import { AssembledSpan, AssembledTrace } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { colors } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { SPAN_SPECIFICATIONS } from '../../spans/specifications'
 
 // Helper function to get all spans in hierarchical order (same as tree)
@@ -28,14 +28,20 @@ function TimelineScale({
   width: number
 }) {
   const tickMarks = useMemo(() => {
-    const marks = []
-    const tickCount = Math.min(10, Math.max(5, Math.floor(width / 100)))
+    const marks: Array<{
+      positionPercent: number
+      time: number
+      label: string
+    }> = []
+    const idealTickCount = Math.min(10, Math.max(5, Math.floor(width / 100)))
 
-    for (let i = 0; i <= tickCount; i++) {
-      const position = (i / tickCount) * width
-      const timeValue = (i / tickCount) * duration
+    // Skip the initial 0.000s tick, but always include the end (duration) tick
+    for (let i = 1; i <= idealTickCount; i++) {
+      const timeValue =
+        i === idealTickCount ? duration : (i / idealTickCount) * duration
+      const positionPercent = (timeValue / duration) * 100
       marks.push({
-        position,
+        positionPercent,
         time: timeValue,
         label: formatDuration(timeValue),
       })
@@ -45,22 +51,24 @@ function TimelineScale({
   }, [duration, width])
 
   return (
-    <div
-      className='relative h-8 border-b border-border bg-background'
-      style={{ paddingLeft: '0.5rem' }}
-    >
-      {tickMarks.map((mark, index) => (
-        <div
-          key={index}
-          className='absolute top-0 h-full flex flex-col items-center'
-          style={{ left: mark.position }}
-        >
-          <div className='w-px h-2 bg-border' />
-          <Text.H6 color='foregroundMuted' userSelect={false}>
-            {mark.label}
-          </Text.H6>
-        </div>
-      ))}
+    <div className='relative h-8 border-b border-border bg-background'>
+      <div
+        className='relative w-full h-full'
+        style={{ paddingLeft: '0.5rem', paddingRight: '0.5rem' }}
+      >
+        {tickMarks.map((mark, index) => (
+          <div
+            key={index}
+            className='absolute top-0 h-full flex flex-col items-start'
+            style={{ left: `${mark.positionPercent}%` }}
+          >
+            <div className='w-px h-2 bg-border' />
+            <Text.H6 color='foregroundMuted' userSelect={false}>
+              {mark.label}
+            </Text.H6>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -89,6 +97,20 @@ function SpanBar({
     }
   }, [span.startOffset, span.duration, traceDuration])
 
+  const durationLabelPosition = useMemo(() => {
+    const spanEndPercent =
+      ((span.startOffset + span.duration) / traceDuration) * 100
+    // If the span ends after 85%, position the label inside the span (right-aligned)
+    // Otherwise, position it outside the span (left-aligned)
+    const shouldPositionInside = spanEndPercent > 85
+
+    return {
+      left: shouldPositionInside ? `${spanEndPercent}%` : `${spanEndPercent}%`,
+      transform: shouldPositionInside ? 'translateX(-100%)' : 'translateX(8px)',
+      marginLeft: shouldPositionInside ? '-8px' : '0px',
+    }
+  }, [span.startOffset, span.duration, traceDuration])
+
   return (
     <div className='relative w-full h-full'>
       {/* Span bar - no text inside */}
@@ -106,12 +128,10 @@ function SpanBar({
         onClick={onClick}
       />
 
-      {/* Duration label on the right - outside the rectangle */}
+      {/* Duration label - positioned smart to avoid clipping */}
       <div
-        className='absolute flex items-center ml-2 top-1 h-5'
-        style={{
-          left: `${((span.startOffset + span.duration) / traceDuration) * 100}%`,
-        }}
+        className='absolute flex items-center top-1 h-5'
+        style={durationLabelPosition}
       >
         <Text.H6 color='foregroundMuted' userSelect={false}>
           {formatDuration(span.duration)}
@@ -136,7 +156,27 @@ export function TimelineGraph({
     [trace.children],
   )
 
-  const containerWidth = 800 // This will be the timeline width
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState(800)
+
+  // Measure container width and update when it changes
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        setContainerWidth(rect.width)
+      }
+    }
+
+    updateWidth() // Initial measurement
+
+    const resizeObserver = new ResizeObserver(updateWidth)
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+
+    return () => resizeObserver.disconnect()
+  }, [])
 
   if (allSpans.length === 0) {
     return (
@@ -147,10 +187,10 @@ export function TimelineGraph({
   }
 
   return (
-    <div className='w-full h-full flex flex-col'>
+    <div ref={containerRef} className='w-full h-full flex flex-col'>
       {/* Spans area - no internal scrolling */}
       <div className='flex-1 pt-2'>
-        <div className='relative' style={{ width: containerWidth }}>
+        <div className='relative w-full'>
           {allSpans.map((span, _index) => (
             <div
               key={`${span.conversationId}-${span.traceId}-${span.id}`}
@@ -158,7 +198,7 @@ export function TimelineGraph({
             >
               <div
                 className='relative w-full h-full'
-                style={{ paddingLeft: '0.5rem' }}
+                style={{ paddingLeft: '0.5rem', paddingRight: '0.5rem' }}
               >
                 <SpanBar
                   span={span}
