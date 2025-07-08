@@ -46,7 +46,7 @@ Latitude is designed for cross-functional teams, enabling collaboration between 
 - **Logs & Observability**: Automatically capture all interactions with prompts and models
 - **Datasets**: Manage test data for batch evaluations and regression testing
 - **Integrations**: Seamlessly integrate with your existing stack via SDKs and APIs
-- **Open-source**: Driven by the community
+- **Open-source**: Community-driven
 
 ## 📚 Table Of Contents
 
@@ -80,7 +80,7 @@ To get started with Latitude, follow these steps:
 
 3. **Write your first prompt**: Navigate to the Editor and create a new prompt. Start with a simple task, like generating a short story or answering a question.
 
-4. **Test your prompt**: Use the playground to test your prompt with different inputs and see the model's responses.
+4. **Test your prompt**: Use the playground to test your prompt with different inputs and observe the model's responses.
 
 5. **Evaluate in batch**: Before deploying, you can upload a dataset and run a batch evaluation to assess your prompt's performance across various scenarios.
 
@@ -92,7 +92,7 @@ To get started with Latitude, follow these steps:
 
 9. **Collaborate with your team**: Invite team members to your Latitude workspace to collaborate on prompt engineering and evaluations.
 
-For more detailed information on each step, explore our documentation or join our [community](https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw) for support and discussions.
+For more detailed information on each step, explore our documentation, or join our [community](https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw) for support and discussions.
 
 ### Latitude Self-Hosted
 
