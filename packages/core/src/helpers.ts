@@ -13,12 +13,25 @@ import {
   type DateRange,
 } from './constants'
 import type { QueryParams } from './lib/pagination'
+import { env } from '@latitude-data/env'
 
 export function buildCsvFile(csvData: CsvData, name: string): File {
   const headers = csvData.headers.map((h) => JSON.stringify(h)).join(',')
   const rows = csvData.data.map((row) => Object.values(row.record).join(','))
   const csv = [headers, ...rows].join('\n')
   return new File([csv], `${name}.csv`, { type: 'text/csv' })
+}
+
+export function gatewayPath(pathname: string) {
+  const protocol = env.GATEWAY_SSL ? 'https' : 'http'
+  const port = env.GATEWAY_PORT ? `:${env.GATEWAY_PORT}` : ''
+  const hostname = env.GATEWAY_HOSTNAME
+
+  const pathnameWithLeadingSlash = pathname.startsWith('/')
+    ? pathname
+    : `/${pathname}`
+
+  return `${protocol}://${hostname}${port}${pathnameWithLeadingSlash}`
 }
 
 export function buildMessagesFromResponse<T extends StreamType>({

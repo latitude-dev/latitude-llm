@@ -8,7 +8,7 @@ import { createDocumentTriggerAction } from '$/actions/documents/triggers/create
 import { deleteDocumentTriggerAction } from '$/actions/documents/triggers/deleteDocumentTriggerAction'
 import {
   DocumentTriggerConfiguration,
-  DocumentTriggerWithConfiguration,
+  InsertDocumentTriggerWithConfiguration,
 } from '@latitude-data/core/services/documentTriggers/helpers/schema'
 import { useCallback } from 'react'
 import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/triggers/updateDocumentTriggerConfigurationAction'
@@ -16,7 +16,12 @@ import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/tr
 const EMPTY_ARRAY = [] as const
 export default function useDocumentTriggers(
   { projectId, documentUuid }: { projectId: number; documentUuid: string },
-  opts?: SWRConfiguration,
+  {
+    onCreated,
+    ...opts
+  }: SWRConfiguration & {
+    onCreated?: (createdDocumentTrigger: DocumentTrigger) => void
+  } = {},
 ) {
   const { toast } = useToast()
   const fetcher = useFetcher<DocumentTrigger[]>(
@@ -43,6 +48,14 @@ export default function useDocumentTriggers(
           description: 'Created a new document trigger successfully.',
         })
         mutate([...data, createdDocumentTrigger])
+        onCreated?.(createdDocumentTrigger)
+      },
+      onError: ({ err }) => {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: `Failed to create document trigger: ${err.message}`,
+        })
       },
     },
   )
@@ -79,7 +92,7 @@ export default function useDocumentTriggers(
   )
 
   const create = useCallback(
-    ({ triggerType, configuration }: DocumentTriggerWithConfiguration) =>
+    ({ triggerType, configuration }: InsertDocumentTriggerWithConfiguration) =>
       executeCreate({
         projectId,
         documentUuid,

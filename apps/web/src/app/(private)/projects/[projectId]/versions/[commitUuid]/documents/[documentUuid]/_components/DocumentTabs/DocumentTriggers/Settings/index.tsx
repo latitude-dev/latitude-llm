@@ -1,4 +1,4 @@
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -7,10 +7,13 @@ import { EmailTriggerSettings } from './EmailTrigger'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { ScheduleTriggerSettings } from './ScheduleTrigger'
+import { IntegrationTriggerSettings } from './IntegrationTriggers'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 enum ShareSettingsTabs {
   Email = 'email',
   Schedule = 'schedule',
+  Integrations = 'integrations',
 }
 
 function TabLabel({ text, isActive }: { text: string; isActive: boolean }) {
@@ -25,13 +28,24 @@ function TabLabel({ text, isActive }: { text: string; isActive: boolean }) {
 export function TriggerSettings({
   document,
   projectId,
+  openTriggerModal,
 }: {
   document: DocumentVersion
   projectId: number
+  openTriggerModal: (
+    trigger?: Extract<
+      DocumentTrigger,
+      { triggerType: DocumentTriggerType.Integration }
+    >,
+  ) => void
 }) {
   const { data: triggers } = useDocumentTriggers({
     documentUuid: document.documentUuid,
     projectId,
+  })
+
+  const { enabled: integrationTriggersEnabled } = useFeatureFlag({
+    featureFlag: 'integrationTriggers',
   })
 
   const [selectedTab, setSelectedTab] = useState<ShareSettingsTabs>(
@@ -64,6 +78,22 @@ export function TriggerSettings({
               />
             ),
           },
+          ...(integrationTriggersEnabled
+            ? [
+                {
+                  value: ShareSettingsTabs.Integrations,
+                  label: (
+                    <TabLabel
+                      text='Integrations'
+                      isActive={triggers?.some(
+                        (t) =>
+                          t.triggerType === DocumentTriggerType.Integration,
+                      )}
+                    />
+                  ),
+                },
+              ]
+            : []),
         ]}
         selected={selectedTab}
         onSelect={setSelectedTab}
@@ -73,6 +103,13 @@ export function TriggerSettings({
       )}
       {selectedTab === ShareSettingsTabs.Schedule && (
         <ScheduleTriggerSettings document={document} projectId={projectId} />
+      )}
+      {selectedTab === ShareSettingsTabs.Integrations && (
+        <IntegrationTriggerSettings
+          document={document}
+          projectId={projectId}
+          openTriggerModal={openTriggerModal}
+        />
       )}
     </div>
   )

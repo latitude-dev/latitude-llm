@@ -23,7 +23,11 @@ import type {
 } from './browser'
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
-import { App, V1Component } from '@pipedream/sdk/browser'
+import type {
+  App,
+  ConfigurableProps,
+  V1Component,
+} from '@pipedream/sdk/browser'
 
 export {
   DocumentType,
@@ -495,8 +499,8 @@ export enum PipedreamComponentType {
   Trigger = 'source',
 }
 
-export type PipedreamComponent<T extends PipedreamComponentType> = Omit<
-  V1Component,
+export type PipedreamComponent<T extends PipedreamComponentType = any> = Omit<
+  V1Component<ConfigurableProps>,
   'component_type'
 > & {
   component_type: T

@@ -18,6 +18,7 @@ import { Popover } from '../../atoms/Popover'
 import { Separator } from '../../atoms/Separator'
 import { Text } from '../../atoms/Text'
 import { Icon, IconName } from '../../atoms/Icons'
+import { Skeleton } from '../../atoms/Skeleton'
 
 interface MultiSelectProps extends Omit<typeof FormField, 'children'> {
   options: {
@@ -39,6 +40,8 @@ interface MultiSelectProps extends Omit<typeof FormField, 'children'> {
   name?: string
   badgeLabel?: boolean
   errors?: string[]
+  disabled?: boolean
+  loading?: boolean
 }
 
 export const MultiSelect = React.forwardRef<
@@ -62,6 +65,8 @@ export const MultiSelect = React.forwardRef<
       info,
       errors,
       name,
+      disabled,
+      loading,
       ...props
     },
     ref,
@@ -88,6 +93,7 @@ export const MultiSelect = React.forwardRef<
     const handleInputKeyDown = (
       event: React.KeyboardEvent<HTMLInputElement>,
     ) => {
+      if (disabled) return
       if (event.key === 'Enter') {
         setIsPopoverOpen(true)
       } else if (event.key === 'Backspace' && !event.currentTarget.value) {
@@ -99,6 +105,7 @@ export const MultiSelect = React.forwardRef<
     }
 
     const toggleOption = (option: string) => {
+      if (disabled) return
       const newSelectedValues = selectedValues.includes(option)
         ? selectedValues.filter((value) => value !== option)
         : [...selectedValues, option]
@@ -107,6 +114,7 @@ export const MultiSelect = React.forwardRef<
     }
 
     const handleClear = () => {
+      if (disabled) return
       setSelectedValues([])
       onValueChange?.([])
     }
@@ -116,12 +124,14 @@ export const MultiSelect = React.forwardRef<
     }
 
     const clearExtraOptions = () => {
+      if (disabled) return
       const newSelectedValues = selectedValues.slice(0, maxCount)
       setSelectedValues(newSelectedValues)
       onValueChange?.(newSelectedValues)
     }
 
     const toggleAll = () => {
+      if (disabled) return
       if (selectedValues.length === options.length) {
         handleClear()
       } else {
@@ -129,6 +139,20 @@ export const MultiSelect = React.forwardRef<
         setSelectedValues(allValues)
         onValueChange?.(allValues)
       }
+    }
+
+    if (loading) {
+      return (
+        <FormField
+          badgeLabel={badgeLabel}
+          label={label}
+          info={info}
+          description={description}
+          errors={errors}
+        >
+          <Skeleton className='w-full h-8 rounded-md' />
+        </FormField>
+      )
     }
 
     return (
@@ -158,7 +182,7 @@ export const MultiSelect = React.forwardRef<
                 {...props}
                 onClick={handleTogglePopover}
                 className={cn(
-                  'flex w-full p-2 h-8 rounded-md border items-center justify-between bg-inherit hover:bg-inherit [&_svg]:pointer-events-auto overflow-y-auto',
+                  'flex w-full p-2 min-h-8 rounded-md border items-center justify-between bg-inherit hover:bg-inherit [&_svg]:pointer-events-auto',
                   className,
                 )}
               >
@@ -202,9 +226,11 @@ export const MultiSelect = React.forwardRef<
                             clearExtraOptions()
                           }}
                         >
-                          <Text.H6>{`+ ${selectedValues.length - maxCount} more`}</Text.H6>
-                          <div className='cursor-pointer'>
-                            <Icon name='close' size='small' />
+                          <div className='flex items-center gap-2'>
+                            <Text.H6>{`+ ${selectedValues.length - maxCount} more`}</Text.H6>
+                            <div className='cursor-pointer'>
+                              <Icon name='close' size='small' />
+                            </div>
                           </div>
                         </Badge>
                       )}
@@ -260,6 +286,7 @@ export const MultiSelect = React.forwardRef<
                   placeholder='Search...'
                   onKeyDown={handleInputKeyDown}
                   className='text-xs'
+                  disabled={disabled}
                 />
                 <CommandList>
                   <CommandEmpty>
@@ -275,6 +302,7 @@ export const MultiSelect = React.forwardRef<
                         <Checkbox
                           checked={selectedValues.length === options.length}
                           onChange={toggleAll}
+                          disabled={disabled}
                         />
                       </div>
                       <Text.H6>(Select All)</Text.H6>
@@ -291,6 +319,7 @@ export const MultiSelect = React.forwardRef<
                             <Checkbox
                               checked={isSelected}
                               onChange={() => toggleOption(option.value)}
+                              disabled={disabled}
                             />
                           </div>
                           {option.icon && (

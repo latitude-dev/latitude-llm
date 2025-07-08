@@ -14,19 +14,33 @@ const EMPTY_ARRAY: IntegrationDto[] = []
 
 export default function useIntegrations({
   includeLatitudeTools,
+  withTools,
+  withTriggers,
   ...opts
 }: SWRConfiguration & {
   includeLatitudeTools?: boolean
+  withTools?: boolean
+  withTriggers?: boolean
 } = {}) {
   const { toast } = useToast()
   const fetcher = useFetcher(ROUTES.api.integrations.root, {
     serializer: (rows: IntegrationDto[]) =>
       rows
         .map(deserialize)
-        .filter(
-          (item) =>
-            includeLatitudeTools || item.type !== IntegrationType.Latitude,
-        )
+        .filter((item) => {
+          if (!includeLatitudeTools && item.type === IntegrationType.Latitude) {
+            return false
+          }
+
+          if (withTools !== undefined && item.hasTools !== withTools) {
+            return false
+          }
+          if (withTriggers !== undefined && item.hasTriggers !== withTriggers) {
+            return false
+          }
+
+          return true
+        })
         .sort((a, b) => a.id - b.id),
   })
   const {

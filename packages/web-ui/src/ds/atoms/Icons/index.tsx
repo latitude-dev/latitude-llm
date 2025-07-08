@@ -68,12 +68,14 @@ import {
   InfoIcon,
   LetterText,
   Lightbulb,
+  Link2,
   ListCheck,
   ListOrdered,
   ListVideo,
   LoaderCircle,
   Lock,
   Logs,
+  Mail,
   MapPin,
   Maximize2,
   Minimize2,
@@ -92,6 +94,7 @@ import {
   Radio,
   RefreshCcw,
   RegexIcon,
+  Repeat2,
   RotateCcw,
   ScrollTextIcon,
   SearchIcon,
@@ -118,6 +121,7 @@ import {
   WholeWord,
   XIcon,
   Youtube,
+  Zap,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -263,6 +267,7 @@ const Icons = {
   letterText: LetterText,
   lightBulb: Lightbulb,
   linear: Linear,
+  link: Link2,
   listCheck: ListCheck,
   listOrdered: ListOrdered,
   listVideo: ListVideo,
@@ -271,6 +276,7 @@ const Icons = {
   logo: LatitudeLogo,
   logoMonochrome: LatitudeLogoMonochrome,
   logs: Logs,
+  mail: Mail,
   mapPin: MapPin,
   maximize: Maximize2,
   mcp: MCP,
@@ -298,6 +304,7 @@ const Icons = {
   redis: Redis,
   refresh: RefreshCcw,
   regex: RegexIcon,
+  repeat: Repeat2,
   rollText: ScrollTextIcon,
   rotate: RotateCcw,
   search: SearchIcon,
@@ -345,6 +352,7 @@ const Icons = {
   amazonBedrock: AmazonBedrock,
   deepSeek: DeepSeek,
   perplexity: Perplexity,
+  zap: Zap,
 }
 
 export type IconName = keyof typeof Icons

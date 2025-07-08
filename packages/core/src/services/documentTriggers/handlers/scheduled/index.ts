@@ -117,6 +117,11 @@ export async function findAllScheduledTriggers(
   }
 }
 
+type ScheduledTrigger = Extract<
+  DocumentTrigger,
+  { triggerType: DocumentTriggerType.Scheduled }
+>
+
 /**
  * Finds all scheduled triggers that are due to run based on nextRunTime
  *
@@ -125,7 +130,7 @@ export async function findAllScheduledTriggers(
  */
 export async function findScheduledTriggersDueToRun(
   db = database,
-): PromisedResult<DocumentTrigger[]> {
+): PromisedResult<ScheduledTrigger[]> {
   const now = new Date()
 
   try {
@@ -141,7 +146,7 @@ export async function findScheduledTriggersDueToRun(
           sql`(${documentTriggers.configuration}->>'enabled')::boolean IS NOT FALSE`,
         ),
       )
-      .execute()) as DocumentTrigger[]
+      .execute()) as ScheduledTrigger[]
 
     // Also fetch triggers that don't have nextRunTime set yet
     const triggersWithoutNextRunTime = (await db
@@ -154,7 +159,7 @@ export async function findScheduledTriggersDueToRun(
           sql`(${documentTriggers.configuration}->>'enabled')::boolean IS NOT FALSE`,
         ),
       )
-      .execute()) as DocumentTrigger[]
+      .execute()) as ScheduledTrigger[]
 
     // Filter the triggers without nextRunTime using the cron expression
     const dueTriggers = triggersWithoutNextRunTime.filter((trigger) => {

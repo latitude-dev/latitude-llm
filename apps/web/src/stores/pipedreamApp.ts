@@ -8,9 +8,11 @@ type AppResponse =
   | { data: AppDto; ok: true }
   | { errorMessage: string; ok: false }
 
-export function usePipedreamApp(slugName: string) {
+export function usePipedreamApp(slugName: string | undefined) {
   const fetcher = useFetcher<AppDto, AppResponse>(
-    ROUTES.api.integrations.pipedream.detail(slugName).root,
+    slugName
+      ? ROUTES.api.integrations.pipedream.detail(slugName).root
+      : undefined,
     {
       serializer: (response) => {
         if (!response.ok) {

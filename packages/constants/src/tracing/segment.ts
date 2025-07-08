@@ -13,6 +13,7 @@ export enum SegmentSource {
   AgentAsTool = 'agent_as_tool', // TODO(tracing): deprecated, use SegmentType.Document with DocumentType.Agent instead
   EmailTrigger = 'email_trigger',
   ScheduledTrigger = 'scheduled_trigger',
+  IntegrationTrigger = 'integration_trigger',
 }
 
 export enum SegmentType {

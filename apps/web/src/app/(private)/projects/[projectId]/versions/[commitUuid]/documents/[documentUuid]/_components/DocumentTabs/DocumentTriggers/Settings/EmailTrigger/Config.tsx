@@ -90,7 +90,12 @@ function ParameterSelects({
           <div className='flex gap-2 items-center' key={paramName}>
             <Badge
               variant={value ? 'accent' : 'muted'}
-            >{`{{${paramName}}}`}</Badge>
+              noWrap
+              ellipsis
+              className='min-w-24'
+            >
+              {`{{${paramName}}}`}
+            </Badge>
             <Select
               name={paramName}
               options={Object.entries(PARAMETER_OPTIONS).map(

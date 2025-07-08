@@ -8,6 +8,7 @@ import { z } from 'zod'
 import {
   emailTriggerConfigurationSchema,
   insertScheduledTriggerConfigurationSchema,
+  integrationTriggerConfigurationSchema,
 } from '@latitude-data/core/services/documentTriggers/helpers/schema'
 
 export const createDocumentTriggerAction = withDocument
@@ -18,6 +19,7 @@ export const createDocumentTriggerAction = withDocument
       configuration: z.union([
         insertScheduledTriggerConfigurationSchema,
         emailTriggerConfigurationSchema,
+        integrationTriggerConfigurationSchema.omit({ triggerId: true }),
       ]),
     }),
   )

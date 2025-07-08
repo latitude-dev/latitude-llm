@@ -18,6 +18,7 @@ export function PromptIntegrations({
   const [isOpen, setIsOpen] = useState(false)
   const { data: integrations, isLoading } = useIntegrations({
     includeLatitudeTools: true,
+    withTools: true,
   })
   const {
     isInitialized,

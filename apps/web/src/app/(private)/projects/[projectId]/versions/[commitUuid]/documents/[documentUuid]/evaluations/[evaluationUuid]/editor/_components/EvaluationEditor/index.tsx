@@ -60,7 +60,7 @@ export function EvaluationEditor({
   const originalPrompt = evaluation.configuration.prompt
   const [value, setValue] = useState(originalPrompt)
   const providerNames = useMemo(() => providers.map((p) => p.name), [providers])
-  const { data: integrations } = useIntegrations()
+  const { data: integrations } = useIntegrations({ withTools: true })
   const integrationNames = useMemo(
     () => integrations?.map((i) => i.name) ?? [],
     [integrations],

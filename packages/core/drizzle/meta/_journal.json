@@ -1317,6 +1317,13 @@
       "when": 1751490301630,
       "tag": "0188_black_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 189,
+      "version": "7",
+      "when": 1751983137585,
+      "tag": "0189_integration_triggers",
+      "breakpoints": true
     }
   ]
 }

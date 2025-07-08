@@ -4,6 +4,7 @@ import {
   DocumentLog,
   EvaluationResultDto,
   ExperimentScores,
+  IntegrationType,
 } from '@latitude-data/constants'
 import {
   EvaluationMetadataType,
@@ -250,6 +251,10 @@ export type DocumentSuggestionWithDetails = DocumentSuggestion & {
 export type Integration = InferSelectModel<typeof integrations>
 export type IntegrationDto = Omit<Integration, 'configuration' | 'type'> &
   IntegrationConfiguration
+export type PipedreamIntegration = Extract<
+  IntegrationDto,
+  { type: IntegrationType.Pipedream }
+>
 
 type _DocumentTrigger = InferSelectModel<typeof documentTriggers>
 export type DocumentTrigger = Omit<_DocumentTrigger, 'configuration' | 'type'> &

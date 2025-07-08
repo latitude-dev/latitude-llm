@@ -62,7 +62,7 @@ export async function listApps({
       q: query,
       limit: LIST_APPS_LIMIT,
       after: cursor,
-      hasActions: true,
+      hasComponents: true,
     })
     return Result.ok({
       apps: apps.data,

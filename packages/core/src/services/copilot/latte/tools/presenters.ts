@@ -66,6 +66,8 @@ export function integrationPresenter(integration: IntegrationDto) {
     return {
       name: integration.name,
       type: integration.configuration.type,
+      hasTools: integration.hasTools,
+      hasTriggers: integration.hasTriggers,
     }
   }
 
@@ -73,6 +75,8 @@ export function integrationPresenter(integration: IntegrationDto) {
     return {
       name: integration.name,
       type: integration.configuration.appName,
+      hasTools: integration.hasTools,
+      hasTriggers: integration.hasTriggers,
     }
   }
 
@@ -80,12 +84,16 @@ export function integrationPresenter(integration: IntegrationDto) {
     return {
       name: integration.name,
       type: integration.type,
+      hasTools: integration.hasTools,
+      hasTriggers: integration.hasTriggers,
     }
   }
 
   return {
     name: integration.name,
     type: integration.type,
+    hasTools: integration.hasTools,
+    hasTriggers: integration.hasTriggers,
     configuration: integration.configuration,
   }
 }
