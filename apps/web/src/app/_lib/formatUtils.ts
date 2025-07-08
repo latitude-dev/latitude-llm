@@ -2,8 +2,8 @@ const SECONDS = 1000 // ms
 const MINUTES = 60 * SECONDS
 const HOURS = MINUTES * 60
 
-export function formatDuration(duration?: number | null) {
-  if (!duration) return '-'
+export function formatDuration(duration?: number | null, hyphens = false) {
+  if (!duration) return hyphens ? '-' : '0.000s'
   if (duration < MINUTES) return `${(duration / SECONDS).toFixed(3)}s`
 
   const hours = Math.floor(duration / HOURS)

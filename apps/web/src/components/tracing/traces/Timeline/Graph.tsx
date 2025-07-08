@@ -45,7 +45,10 @@ function TimelineScale({
   }, [duration, width])
 
   return (
-    <div className='relative h-8 border-b border-border bg-background'>
+    <div
+      className='relative h-8 border-b border-border bg-background'
+      style={{ paddingLeft: '0.5rem' }}
+    >
       {tickMarks.map((mark, index) => (
         <div
           key={index}
@@ -82,7 +85,7 @@ function SpanBar({
 
     return {
       left: `${startPercent}%`,
-      width: `${Math.max(widthPercent, 0.1)}%`, // Minimum width for visibility
+      width: `${Math.max(widthPercent, 0.5)}%`, // Minimum width for visibility (4px on 800px container)
     }
   }, [span.startOffset, span.duration, traceDuration])
 
@@ -147,27 +150,29 @@ export function TimelineGraph({
     <div className='w-full h-full flex flex-col'>
       {/* Spans area - no internal scrolling */}
       <div className='flex-1 pt-2'>
-        <div
-          className='relative'
-          style={{ width: containerWidth, paddingLeft: '0.5rem' }}
-        >
+        <div className='relative' style={{ width: containerWidth }}>
           {allSpans.map((span, _index) => (
             <div
               key={`${span.conversationId}-${span.traceId}-${span.id}`}
               className='h-7 flex items-center border-b border-border/50 last:border-b-0'
             >
-              <SpanBar
-                span={span}
-                traceDuration={trace.duration}
-                isSelected={selectedSpan?.id === span.id}
-                onClick={() => {
-                  if (selectedSpan?.id === span.id) {
-                    setSelectedSpan(undefined)
-                  } else {
-                    setSelectedSpan(span)
-                  }
-                }}
-              />
+              <div
+                className='relative w-full h-full'
+                style={{ paddingLeft: '0.5rem' }}
+              >
+                <SpanBar
+                  span={span}
+                  traceDuration={trace.duration}
+                  isSelected={selectedSpan?.id === span.id}
+                  onClick={() => {
+                    if (selectedSpan?.id === span.id) {
+                      setSelectedSpan(undefined)
+                    } else {
+                      setSelectedSpan(span)
+                    }
+                  }}
+                />
+              </div>
             </div>
           ))}
         </div>
