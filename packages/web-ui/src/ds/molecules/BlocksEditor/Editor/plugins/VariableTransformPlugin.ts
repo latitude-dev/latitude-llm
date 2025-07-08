@@ -2,6 +2,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { useEffect } from 'react'
 import { TextNode, $getSelection, $isRangeSelection } from 'lexical'
 import { VariableNode } from '../nodes/VariableNode'
+import { $isCodeNode } from '@lexical/code'
 
 const VARIABLE_REGEX = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/
 
@@ -32,6 +33,8 @@ const VARIABLE_REGEX = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/
  * Output: "Hello [NAME_PILL] , welcome to [APP_PILL] !"
  */
 function transformTextNode(node: TextNode) {
+  if ($isCodeNode(node.getParent())) return
+
   const text = node.getTextContent()
   const match = VARIABLE_REGEX.exec(text)
 

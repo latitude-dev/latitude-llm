@@ -15,12 +15,14 @@ import { Icon } from '../../../../atoms/Icons'
 import { ConversationMetadata } from 'promptl-ai'
 
 class ReferencePickerOption extends MenuOption {
+  label: string
   path: string
   prompt: IncludedPrompt
 
   constructor(path: string, prompt: IncludedPrompt) {
     super(path)
-    this.path = path
+    this.label = path
+    this.path = `/${path}`
     this.prompt = prompt
   }
 }
@@ -93,7 +95,7 @@ function ReferencePickerMenuItem({
     >
       <Icon name='file' color='foregroundMuted' />
       <Text.H5 noWrap ellipsis>
-        {option.path}
+        {option.label}
       </Text.H5>
     </li>
   )

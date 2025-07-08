@@ -1,48 +1,54 @@
-import { useCallback, useState } from 'react'
-import { $getRoot, EditorState, $isParagraphNode } from 'lexical'
-
-import { LexicalComposer } from '@lexical/react/LexicalComposer'
+import { useCallback, useMemo, useState } from 'react'
+import { useDebouncedCallback } from 'use-debounce'
+import {
+  InitialConfigType,
+  LexicalComposer,
+} from '@lexical/react/LexicalComposer'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
 import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin'
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin'
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 
 import { cn } from '../../../../lib/utils'
+import { font } from '../../../tokens'
 import { BlocksEditorProps } from '../types'
+import { BlocksEditorProvider } from './Provider'
 
-import {
-  BlocksPlugin,
-  InitializeBlocksPlugin,
-  HierarchyValidationPlugin,
-} from './plugins/BlocksPlugin'
+import { fromBlocksToLexical } from './state/fromBlocksToLexical'
+import { fromLexicalToText } from './state/fromLexicalToText'
+
+import { HierarchyValidationPlugin } from './plugins/HierarchyValidationPlugin'
 import { EnterKeyPlugin } from './plugins/EnterKeyPlugin'
 import { DraggableBlockPlugin } from './plugins/DraggableBlockPlugin'
 import { StepNameEditPlugin } from './plugins/StepNameEditPlugin'
 import { TypeaheadMenuPlugin } from './plugins/TypeaheadMenuPlugin'
-import { AnyBlock } from '@latitude-data/constants/simpleBlocks'
 import { MessageBlockNode } from './nodes/MessageBlock'
 import { StepBlockNode } from './nodes/StepBlock'
-import {
-  $isMessageBlockNode,
-  $isStepBlockNode,
-  VERTICAL_SPACE_CLASS,
-} from './nodes/utils'
+import { VERTICAL_SPACE_CLASS } from './nodes/utils'
 import { InsertEmptyLinePlugin } from './plugins/InsertEmptyLinePlugin'
 import { VariableTransformPlugin } from './plugins/VariableTransformPlugin'
 import { VariableNode } from './nodes/VariableNode'
 import { VariableMenuPlugin } from './plugins/VariablesMenuPlugin'
 import { ReferencesPlugin } from './plugins/ReferencesPlugin'
 import { ReferenceNode } from './nodes/ReferenceNode'
-import { font } from '../../../tokens'
-import { BlocksEditorProvider } from './Provider'
+import { ConfigNode } from './nodes/ConfigNode'
+import { CodeNode } from './nodes/CodeNode'
 
 const theme = {
   ltr: 'ltr',
   rtl: 'rtl',
   paragraph: cn('block-paragraph align-middle', font.size.h5),
+  code: cn(
+    'block whitespace-pre',
+    'whitespace-pre',
+    'text-sm text-muted-foreground',
+    'px-4 py-2',
+    'rounded-lg',
+    'bg-backgroundCode',
+    'border before:border-border/80',
+  ),
   text: {
     bold: 'font-bold',
     italic: 'italic',
@@ -56,131 +62,30 @@ const theme = {
 
 function OnChangeHandler({
   onChange,
-  onBlocksChange,
 }: {
-  onChange?: (content: string) => void
-  onBlocksChange?: (blocks: AnyBlock[]) => void
+  onChange: BlocksEditorProps['onChange']
 }) {
-  const [_editor] = useLexicalComposerContext()
-
-  const handleChange = useCallback(
-    (editorState: EditorState) => {
-      editorState.read(() => {
-        if (onChange) {
-          const root = $getRoot()
-          const textContent = root.getTextContent()
-          onChange(textContent)
-        }
-
-        // Move to a separate function to handle blocks conversion
-        // This can be tested
-        if (onBlocksChange) {
-          const root = $getRoot()
-          const blocks: AnyBlock[] = []
-
-          // Convert Lexical nodes to AnyBlock[] format
-          root.getChildren().forEach((node) => {
-            if ($isMessageBlockNode(node)) {
-              // Message block
-              const messageBlock: AnyBlock = {
-                id: crypto.randomUUID(),
-                type: node.getRole(),
-                children: [],
-              }
-
-              // Get message children
-              node.getChildren().forEach((child: any) => {
-                if ($isParagraphNode(child)) {
-                  const textContent = child.getTextContent()
-                  if (textContent.trim()) {
-                    messageBlock.children.push({
-                      id: crypto.randomUUID(),
-                      type: 'text',
-                      content: textContent,
-                    })
-                  }
-                }
-              })
-
-              blocks.push(messageBlock)
-            } else if ($isStepBlockNode(node)) {
-              // Step block
-              const stepBlock: AnyBlock = {
-                id: crypto.randomUUID(),
-                type: 'step',
-                children: [],
-                attributes: {
-                  as: node.getStepName(),
-                },
-              }
-
-              // Get step children
-              node.getChildren().forEach((child: any) => {
-                if ($isMessageBlockNode(child)) {
-                  const messageBlock: any = {
-                    id: crypto.randomUUID(),
-                    type: child.getRole(),
-                    children: [],
-                  }
-
-                  // Get message children
-                  child.getChildren().forEach((grandchild: any) => {
-                    if ($isParagraphNode(grandchild)) {
-                      const textContent = grandchild.getTextContent()
-                      if (textContent.trim()) {
-                        messageBlock.children.push({
-                          id: crypto.randomUUID(),
-                          type: 'text',
-                          content: textContent,
-                        })
-                      }
-                    }
-                  })
-
-                  if (messageBlock.children.length > 0) {
-                    stepBlock.children?.push(messageBlock)
-                  }
-                } else if ($isParagraphNode(child)) {
-                  const textContent = child.getTextContent()
-                  if (textContent.trim()) {
-                    stepBlock.children?.push({
-                      id: crypto.randomUUID(),
-                      type: 'text',
-                      content: textContent,
-                    })
-                  }
-                }
-              })
-
-              blocks.push(stepBlock)
-            } else if ($isParagraphNode(node)) {
-              // Regular paragraph node at root level
-              const textContent = node.getTextContent()
-              if (textContent.trim()) {
-                blocks.push({
-                  id: crypto.randomUUID(),
-                  type: 'text',
-                  content: textContent,
-                })
-              }
-            }
-          })
-
-          onBlocksChange(blocks)
-        }
-      })
-    },
-    [onChange, onBlocksChange],
+  const handleChange = useDebouncedCallback(
+    fromLexicalToText({ onChange }),
+    100,
+    { leading: false, trailing: true },
   )
 
-  return <OnChangePlugin onChange={handleChange} />
+  return (
+    <OnChangePlugin
+      onChange={handleChange}
+      ignoreHistoryMergeTagChange
+      ignoreSelectionChange
+    />
+  )
 }
 
 export function BlocksEditor({
+  currentDocument,
   placeholder = 'Start typing...',
-  initialValue = [],
+  initialValue,
   onChange,
-  onBlocksChange,
+  onError,
   className,
   prompts,
   onRequestPromptMetadata,
@@ -197,19 +102,30 @@ export function BlocksEditor({
       setFloatingAnchorElem(floatingAnchorElem)
     }
   }, [])
-
-  const initialConfig = {
-    namespace: 'BlocksEditor',
-    theme,
-    onError: (error: Error) => {
-      console.error('Editor error:', error)
-    },
-    editable: !readOnly,
-    nodes: [MessageBlockNode, StepBlockNode, VariableNode, ReferenceNode],
-  }
+  const initialConfig = useMemo<InitialConfigType>(() => {
+    return {
+      namespace: 'BlocksEditor',
+      theme,
+      editorState: fromBlocksToLexical(initialValue),
+      editable: !readOnly,
+      onError,
+      nodes: [
+        CodeNode,
+        ConfigNode,
+        MessageBlockNode,
+        StepBlockNode,
+        VariableNode,
+        ReferenceNode,
+      ],
+    }
+  }, [readOnly, onError, initialValue])
 
   return (
-    <BlocksEditorProvider Link={Link} prompts={prompts}>
+    <BlocksEditorProvider
+      currentDocument={currentDocument}
+      Link={Link}
+      prompts={prompts}
+    >
       <div
         className={cn(
           'relative border border-gray-200 rounded-lg bg-white',
@@ -220,10 +136,11 @@ export function BlocksEditor({
         <LexicalComposer initialConfig={initialConfig}>
           <div className='relative' ref={onRef}>
             <RichTextPlugin
+              ErrorBoundary={LexicalErrorBoundary}
               contentEditable={
                 <ContentEditable
                   className={cn(
-                    'min-h-[300px] py-4 [&_>*]:px-4 outline-none resize-none text-sm leading-relaxed',
+                    'py-4 [&_>*]:px-4 outline-none resize-none text-sm leading-relaxed',
                     'focus:outline-none',
                     VERTICAL_SPACE_CLASS,
                     {
@@ -238,12 +155,7 @@ export function BlocksEditor({
                   }
                 />
               }
-              ErrorBoundary={LexicalErrorBoundary}
             />
-
-            {/* Core Plugins */}
-            <HistoryPlugin />
-            <BlocksPlugin />
             <EnterKeyPlugin />
             <InsertEmptyLinePlugin />
             <StepNameEditPlugin />
@@ -254,23 +166,17 @@ export function BlocksEditor({
               onRequestPromptMetadata={onRequestPromptMetadata}
               onToggleDevEditor={onToggleDevEditor}
             />
-            <InitializeBlocksPlugin initialBlocks={initialValue} />
             <HierarchyValidationPlugin />
             <VariableTransformPlugin />
+            <HistoryPlugin />
 
-            {/* Drag and Drop Plugin */}
             {!readOnly && floatingAnchorElem && (
               <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
             )}
 
-            {/* Auto focus */}
             {autoFocus && <AutoFocusPlugin />}
 
-            {/* Change handler */}
-            <OnChangeHandler
-              onChange={onChange}
-              onBlocksChange={onBlocksChange}
-            />
+            <OnChangeHandler onChange={onChange} />
           </div>
         </LexicalComposer>
       </div>

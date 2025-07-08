@@ -3,7 +3,7 @@ import { CheckCircle2, LoaderCircle } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { MarkerSeverity, type editor } from 'monaco-editor'
-import { AstError } from '@latitude-data/constants/simpleBlocks'
+import { AstError } from '@latitude-data/constants/promptl'
 
 import {
   AppLocalStorage,

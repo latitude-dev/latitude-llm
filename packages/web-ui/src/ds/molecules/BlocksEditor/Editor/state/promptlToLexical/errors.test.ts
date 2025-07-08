@@ -1,14 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import { parse } from 'promptl-ai'
-import { astToSimpleBlocks } from './astToSimpleBlocks'
+import { fromAstToBlocks } from './fromAstToBlocks'
+import { AstError } from '@latitude-data/constants/promptl'
 import {
-  AstError,
   StepBlock,
   MessageBlock,
-  PromptBlock,
+  ReferenceLink,
   ToolCallBlock,
   FileBlock,
   ImageBlock,
+  ParagraphBlock,
 } from './types'
 
 describe('astToSimpleBlocks with errors', () => {
@@ -16,22 +17,24 @@ describe('astToSimpleBlocks with errors', () => {
     it('should handle prompts without errors', () => {
       const prompt = `<user>Hello world</user>`
       const ast = parse(prompt)
-      const blocks = astToSimpleBlocks({ ast, prompt, errors: [] })
+      const root = fromAstToBlocks({ ast, prompt, errors: [] })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
       const userBlock = blocks[0] as MessageBlock
-      expect(userBlock.type).toBe('user')
+      expect(userBlock.role).toBe('user')
       expect(userBlock.errors).toBeUndefined()
     })
 
     it('should handle prompts when errors parameter is omitted', () => {
       const prompt = `<user>Hello world</user>`
       const ast = parse(prompt)
-      const blocks = astToSimpleBlocks({ ast, prompt })
+      const root = fromAstToBlocks({ ast, prompt, errors: [] })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
       const userBlock = blocks[0] as MessageBlock
-      expect(userBlock.type).toBe('user')
+      expect(userBlock.role).toBe('user')
       expect(userBlock.errors).toBeUndefined()
     })
   })
@@ -52,11 +55,15 @@ describe('astToSimpleBlocks with errors', () => {
         },
       ]
 
-      const blocks = astToSimpleBlocks({ ast, prompt, errors })
+      const root = fromAstToBlocks({ ast, prompt, errors })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
-      const promptBlock = blocks[0] as PromptBlock
-      expect(promptBlock.type).toBe('prompt')
+      // Prompt blocks are now wrapped in paragraphs
+      const paragraphBlock = blocks[0] as ParagraphBlock
+      expect(paragraphBlock.type).toBe('paragraph')
+      const promptBlock = paragraphBlock.children[0] as ReferenceLink
+      expect(promptBlock.type).toBe('reference_link')
       expect(promptBlock.errors).toBeDefined()
       expect(promptBlock.errors).toHaveLength(1)
       expect(promptBlock.errors?.[0]?.message).toBe(
@@ -89,10 +96,12 @@ describe('astToSimpleBlocks with errors', () => {
         },
       ]
 
-      const blocks = astToSimpleBlocks({ ast, prompt, errors })
+      const root = fromAstToBlocks({ ast, prompt, errors })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
-      const promptBlock = blocks[0] as PromptBlock
+      const paragraphBlock = blocks[0] as ParagraphBlock
+      const promptBlock = paragraphBlock.children[0] as ReferenceLink
       expect(promptBlock.errors).toHaveLength(2)
       expect(promptBlock.errors?.[0]?.message).toBe(
         'Reference tags must have a prompt attribute',
@@ -119,11 +128,13 @@ describe('astToSimpleBlocks with errors', () => {
         },
       ]
 
-      const blocks = astToSimpleBlocks({ ast, prompt, errors })
+      const root = fromAstToBlocks({ ast, prompt, errors })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
-      const toolCallBlock = blocks[0] as ToolCallBlock
-      expect(toolCallBlock.type).toBe('tool-call')
+      const paragraphBlock = blocks[0] as ParagraphBlock
+      const toolCallBlock = paragraphBlock.children[0] as ToolCallBlock
+      expect(toolCallBlock.type).toBe('tool_call')
       expect(toolCallBlock.errors).toBeDefined()
       expect(toolCallBlock.errors).toHaveLength(1)
       expect(toolCallBlock.errors?.[0]?.message).toBe(
@@ -148,11 +159,13 @@ describe('astToSimpleBlocks with errors', () => {
         },
       ]
 
-      const blocks = astToSimpleBlocks({ ast, prompt, errors })
+      const root = fromAstToBlocks({ ast, prompt, errors })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
-      const fileBlock = blocks[0] as FileBlock
-      expect(fileBlock.type).toBe('content-file')
+      const paragraphBlock = blocks[0] as ParagraphBlock
+      const fileBlock = paragraphBlock.children[0] as FileBlock
+      expect(fileBlock.type).toBe('content_file')
       expect(fileBlock.errors).toBeDefined()
       expect(fileBlock.errors).toHaveLength(1)
       expect(fileBlock.errors?.[0]?.message).toBe(
@@ -177,11 +190,13 @@ describe('astToSimpleBlocks with errors', () => {
         },
       ]
 
-      const blocks = astToSimpleBlocks({ ast, prompt, errors })
+      const root = fromAstToBlocks({ ast, prompt, errors })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
-      const imageBlock = blocks[0] as ImageBlock
-      expect(imageBlock.type).toBe('content-image')
+      const paragraphBlock = blocks[0] as ParagraphBlock
+      const imageBlock = paragraphBlock.children[0] as ImageBlock
+      expect(imageBlock.type).toBe('content_image')
       expect(imageBlock.errors).toBeDefined()
       expect(imageBlock.errors).toHaveLength(1)
       expect(imageBlock.errors?.[0]?.message).toBe('Invalid image URL format')
@@ -204,11 +219,12 @@ describe('astToSimpleBlocks with errors', () => {
         },
       ]
 
-      const blocks = astToSimpleBlocks({ ast, prompt, errors })
+      const root = fromAstToBlocks({ ast, prompt, errors })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
       const userBlock = blocks[0] as MessageBlock
-      expect(userBlock.type).toBe('user')
+      expect(userBlock.role).toBe('user')
       expect(userBlock.errors).toBeDefined()
       expect(userBlock.errors).toHaveLength(1)
       expect(userBlock.errors?.[0]?.message).toBe(
@@ -235,7 +251,8 @@ describe('astToSimpleBlocks with errors', () => {
         },
       ]
 
-      const blocks = astToSimpleBlocks({ ast, prompt, errors })
+      const root = fromAstToBlocks({ ast, prompt, errors })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
       const stepBlock = blocks[0] as StepBlock
@@ -259,7 +276,7 @@ describe('astToSimpleBlocks with errors', () => {
 
       const errors: AstError[] = [
         {
-          startIndex: 17, // Position of <user> tag (not 17 as before)
+          startIndex: 17, // Position of <user> tag
           endIndex: 94,
           start: { line: 2, column: 1 },
           end: { line: 4, column: 7 },
@@ -267,7 +284,7 @@ describe('astToSimpleBlocks with errors', () => {
           name: 'ValidationError',
         },
         {
-          startIndex: 44, // Position of <content-image> tag (not 43 as before)
+          startIndex: 44, // Position of <content-image> tag
           endIndex: 86,
           start: { line: 3, column: 1 },
           end: { line: 3, column: 33 },
@@ -276,24 +293,24 @@ describe('astToSimpleBlocks with errors', () => {
         },
       ]
 
-      const blocks = astToSimpleBlocks({ ast, prompt, errors })
+      const root = fromAstToBlocks({ ast, prompt, errors })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
       const stepBlock = blocks[0] as StepBlock
       expect(stepBlock.type).toBe('step')
       expect(stepBlock.errors).toBeUndefined() // No error for step itself
 
-      const userBlock = stepBlock.children![1] as MessageBlock // Changed from index 0 to 1
-      expect(userBlock.type).toBe('user')
+      const userBlock = stepBlock.children[1] as MessageBlock
+      expect(userBlock.role).toBe('user')
       expect(userBlock.errors).toBeDefined()
       expect(userBlock.errors).toHaveLength(1)
       expect(userBlock.errors?.[0]?.message).toBe(
         'User message validation failed',
       )
 
-      const imageBlock = userBlock.children.find(
-        (child) => child.type === 'content-image',
-      ) as ImageBlock
+      // @ts-ignore
+      const imageBlock = userBlock.children[1].children[0] as ImageBlock
       expect(imageBlock).toBeDefined()
       expect(imageBlock.errors).toBeDefined()
       expect(imageBlock.errors).toHaveLength(1)
@@ -311,8 +328,7 @@ And this image:
 <content-image>https://example.com/image.jpg</content-image>
 
 Then call this tool:
-<tool-call name="analyze">{"data": "test"}</tool-call>
-</user>`
+<tool-call name="analyze">{"data": "test"}</tool-call></user>`
       const ast = parse(prompt)
 
       const errors: AstError[] = [
@@ -334,16 +350,16 @@ Then call this tool:
         },
       ]
 
-      const blocks = astToSimpleBlocks({ ast, prompt, errors })
+      const root = fromAstToBlocks({ ast, prompt, errors })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
       const userBlock = blocks[0] as MessageBlock
-      expect(userBlock.type).toBe('user')
+      expect(userBlock.role).toBe('user')
       expect(userBlock.errors).toBeUndefined()
 
-      const fileBlock = userBlock.children.find(
-        (child) => child.type === 'content-file',
-      ) as FileBlock
+      // @ts-ignore
+      const fileBlock = userBlock.children[2].children[0] as FileBlock
       expect(fileBlock).toBeDefined()
       expect(fileBlock.errors).toBeDefined()
       expect(fileBlock.errors).toHaveLength(1)
@@ -351,15 +367,13 @@ Then call this tool:
         'Content file must have name attribute',
       )
 
-      const imageBlock = userBlock.children.find(
-        (child) => child.type === 'content-image',
-      ) as ImageBlock
+      // @ts-ignore
+      const imageBlock = userBlock.children[5].children[0] as ImageBlock
       expect(imageBlock).toBeDefined()
       expect(imageBlock.errors).toBeUndefined() // No error for image
 
-      const toolCallBlock = userBlock.children.find(
-        (child) => child.type === 'tool-call',
-      ) as ToolCallBlock
+      // @ts-ignore
+      const toolCallBlock = userBlock.children[8].children[0] as ToolCallBlock
       expect(toolCallBlock).toBeDefined()
       expect(toolCallBlock.errors).toBeDefined()
       expect(toolCallBlock.errors).toHaveLength(1)
@@ -385,11 +399,12 @@ Then call this tool:
         },
       ]
 
-      const blocks = astToSimpleBlocks({ ast, prompt, errors })
+      const root = fromAstToBlocks({ ast, prompt, errors })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
       const userBlock = blocks[0] as MessageBlock
-      expect(userBlock.type).toBe('user')
+      expect(userBlock.role).toBe('user')
       expect(userBlock.errors).toBeUndefined()
     })
   })
@@ -398,7 +413,8 @@ Then call this tool:
     it('should handle empty errors array', () => {
       const prompt = `<user>Hello world</user>`
       const ast = parse(prompt)
-      const blocks = astToSimpleBlocks({ ast, prompt, errors: [] })
+      const root = fromAstToBlocks({ ast, prompt, errors: [] })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
       const userBlock = blocks[0] as MessageBlock
@@ -425,7 +441,8 @@ Then call this tool:
         },
       ]
 
-      const blocks = astToSimpleBlocks({ ast, prompt, errors })
+      const root = fromAstToBlocks({ ast, prompt, errors })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
       const userBlock = blocks[0] as MessageBlock
@@ -447,10 +464,12 @@ Then call this tool:
         },
       ]
 
-      const blocks = astToSimpleBlocks({ ast, prompt, errors })
+      const root = fromAstToBlocks({ ast, prompt, errors })
+      const blocks = root.children
 
       expect(blocks).toHaveLength(1)
-      const promptBlock = blocks[0] as PromptBlock
+      const paragraphBlock = blocks[0] as ParagraphBlock
+      const promptBlock = paragraphBlock.children[0] as ReferenceLink
       expect(promptBlock.errors).toBeDefined()
       expect(promptBlock.errors).toHaveLength(1)
       expect(promptBlock.errors?.[0]?.message).toBe(

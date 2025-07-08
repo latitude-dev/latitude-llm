@@ -8,7 +8,9 @@ import {
   $isParagraphNode,
   $createParagraphNode,
 } from 'lexical'
-import { $isMessageBlockNode, $isStepBlockNode } from '../nodes/utils'
+import { $isMessageBlockNode } from '../nodes/MessageBlock'
+import { $isStepBlockNode } from '../nodes/StepBlock'
+import { $isCodeNode } from '@lexical/code'
 
 export function EnterKeyPlugin(): null {
   const [editor] = useLexicalComposerContext()
@@ -17,9 +19,6 @@ export function EnterKeyPlugin(): null {
     const removeEnterListener = editor.registerCommand(
       KEY_ENTER_COMMAND,
       (_event) => {
-        // We need to determine synchronously if we should handle this command
-        // So we'll use editor.getEditorState().read() instead of editor.update()
-
         let shouldHandle = false
 
         editor.getEditorState().read(() => {
@@ -36,7 +35,8 @@ export function EnterKeyPlugin(): null {
           while (currentNode) {
             if (
               $isMessageBlockNode(currentNode) ||
-              $isStepBlockNode(currentNode)
+              $isStepBlockNode(currentNode) ||
+              $isCodeNode(currentNode)
             ) {
               blockNode = currentNode
               break

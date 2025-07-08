@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useMemo, useState } from 'react'
 
 import { ToastActionElement, ToastProps } from './index'
 
@@ -180,11 +180,15 @@ function useToast() {
     }
   }, [state])
 
-  return {
-    ...state,
-    toast,
-    dismiss: (toastId?: string) => dispatch({ type: 'DISMISS_TOAST', toastId }),
-  }
+  return useMemo(
+    () => ({
+      ...state,
+      toast,
+      dismiss: (toastId?: string) =>
+        dispatch({ type: 'DISMISS_TOAST', toastId }),
+    }),
+    [state],
+  )
 }
 
 export { useToast, toast }
