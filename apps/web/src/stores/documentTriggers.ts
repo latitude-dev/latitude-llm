@@ -18,9 +18,11 @@ export default function useDocumentTriggers(
   { projectId, documentUuid }: { projectId: number; documentUuid: string },
   {
     onCreated,
+    onDeleted,
     ...opts
   }: SWRConfiguration & {
     onCreated?: (createdDocumentTrigger: DocumentTrigger) => void
+    onDeleted?: (deletedDocumentTrigger: DocumentTrigger) => void
   } = {},
 ) {
   const { toast } = useToast()
@@ -87,6 +89,7 @@ export default function useDocumentTriggers(
         })
 
         mutate(data.filter((t) => t.id !== deletedTrigger.id))
+        onDeleted?.(deletedTrigger)
       },
     },
   )

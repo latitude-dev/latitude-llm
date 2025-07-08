@@ -16,7 +16,7 @@ import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { BadRequestError, LatitudeError } from './../../lib/errors'
 import Transaction, { PromisedResult } from './../../lib/Transaction'
 import { Result } from './../../lib/Result'
-import { deployPipedreamTrigger } from '../integrations/pipedream/deployTrigger'
+import { deployPipedreamTrigger } from '../integrations/pipedream/triggers'
 import { IntegrationsRepository } from '../../repositories'
 
 async function completeIntegrationTriggerConfig(
