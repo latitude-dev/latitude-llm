@@ -7,7 +7,11 @@ import {
 } from '@latitude-data/core/browser'
 import { BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { BackgroundColor, TextColor } from '@latitude-data/web-ui/tokens'
+import {
+  BackgroundColor,
+  BorderColor,
+  TextColor,
+} from '@latitude-data/web-ui/tokens'
 import React from 'react'
 
 export type DetailsPanelProps<T extends SpanType = SpanType> = {
@@ -26,6 +30,7 @@ export type SpanFrontendSpecification<T extends SpanType = SpanType> =
 export type SpanColor = {
   text: TextColor
   background: BackgroundColor
+  border: BorderColor
   badge: {
     outline: BadgeProps['variant']
     filled: BadgeProps['variant']
@@ -36,6 +41,7 @@ export const SPAN_COLORS = {
   green: {
     text: 'successMutedForeground',
     background: 'successMuted',
+    border: 'successMutedForeground',
     badge: {
       outline: 'outlineSuccessMuted',
       filled: 'successMuted',
@@ -44,6 +50,7 @@ export const SPAN_COLORS = {
   blue: {
     text: 'accentForeground',
     background: 'accent',
+    border: 'accentForeground',
     badge: {
       outline: 'outlineAccent',
       filled: 'accent',
@@ -52,6 +59,7 @@ export const SPAN_COLORS = {
   yellow: {
     text: 'warningMutedForeground',
     background: 'warningMuted',
+    border: 'warningMutedForeground',
     badge: {
       outline: 'outlineWarningMuted',
       filled: 'warningMuted',
@@ -60,6 +68,7 @@ export const SPAN_COLORS = {
   red: {
     text: 'destructiveMutedForeground',
     background: 'destructiveMuted',
+    border: 'destructiveMutedForeground',
     badge: {
       outline: 'outlineDestructiveMuted',
       filled: 'destructiveMuted',
@@ -68,14 +77,16 @@ export const SPAN_COLORS = {
   purple: {
     text: 'purpleForeground',
     background: 'purple',
+    border: 'purpleForeground',
     badge: {
       outline: 'outlinePurple',
       filled: 'purple',
     },
   },
   gray: {
-    text: 'foreground',
-    background: 'background',
+    text: 'foregroundMuted',
+    background: 'muted',
+    border: 'foregroundMuted',
     badge: {
       outline: 'outlineMuted',
       filled: 'muted',
