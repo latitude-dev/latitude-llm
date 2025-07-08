@@ -7,7 +7,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { SPAN_SPECIFICATIONS, TimelineItemProps } from '../../spans'
 
 function IndentationLine({
@@ -19,44 +19,26 @@ function IndentationLine({
   isSelected: boolean
   isParentSelected: boolean
 }) {
-  const getLineColor = () => {
-    if (isSelected) return 'white'
-    if (isParentSelected) return 'primary'
-    return 'border'
-  }
-
-  const lineColor = getLineColor()
+  const [borderColor, backgroundColor] = useMemo(() => {
+    if (isSelected) return ['border-background', 'bg-background']
+    if (isParentSelected) return ['border-primary', 'bg-primary']
+    return ['border-border', 'bg-border']
+  }, [isSelected, isParentSelected])
 
   return (
     <div className='relative w-4 h-full flex justify-center'>
       {showCurve ? (
         <div className='relative -mt-1 -ml-3'>
-          <div
-            className={cn('border-l h-2.5', {
-              'border-white': lineColor === 'white',
-              'border-primary': lineColor === 'primary',
-              'border-border': lineColor === 'border',
-            })}
-          />
+          <div className={cn('border-l h-2.5', borderColor)} />
           <div
             className={cn(
               'absolute top-2.5 border-l border-b h-2 w-2 rounded-bl-sm',
-              {
-                'border-white': lineColor === 'white',
-                'border-primary': lineColor === 'primary',
-                'border-border': lineColor === 'border',
-              },
+              borderColor,
             )}
           />
         </div>
       ) : (
-        <div
-          className={cn('w-px h-7 -mt-1 -ml-3', {
-            'bg-white': lineColor === 'white',
-            'bg-primary': lineColor === 'primary',
-            'bg-border': lineColor === 'border',
-          })}
-        />
+        <div className={cn('w-px h-7 -mt-1 -ml-3', backgroundColor)} />
       )}
     </div>
   )
@@ -87,7 +69,6 @@ function IndentationBar({
         const shouldShowLine =
           !hasEndedAtThisLevel && (isCurrentLevel || currentLevel < depth)
 
-        // Determine color for this specific level
         const isThisLevelSelected = isSelected && isCurrentLevel
         const isThisLevelFromSelectedSpan =
           selectedSpanDepth !== undefined &&
@@ -96,13 +77,13 @@ function IndentationBar({
 
         return (
           <div key={index} className='h-7 w-4'>
-            {shouldShowLine ? (
+            {shouldShowLine && (
               <IndentationLine
                 showCurve={showCurve}
                 isSelected={isThisLevelSelected}
                 isParentSelected={isThisLevelFromSelectedSpan}
               />
-            ) : null}
+            )}
           </div>
         )
       })}
@@ -112,28 +93,22 @@ function IndentationBar({
 
 function TimelineTreeItem<T extends SpanType>({
   span,
-  isFirst: _isFirst,
   isLast,
   isSelected,
   isParentSelected,
-  selectedSpanId,
-  selectedSpanDepth,
+  selectedSpan,
   setSelectedSpan,
   ancestorEndedLevels = new Set(),
 }: TimelineItemProps<T> & {
-  selectedSpanId?: string
-  selectedSpanDepth?: number
+  selectedSpan?: AssembledSpan
   setSelectedSpan: (span?: AssembledSpan) => void
   ancestorEndedLevels?: Set<number>
 }) {
   const [expanded, setExpanded] = useState(true)
   const isExpanded = expanded || span.children.length < 1
 
-  // Create new set of ended levels for children
-  const newEndedLevels = new Set(ancestorEndedLevels)
-  if (isLast) {
-    newEndedLevels.add(span.depth)
-  }
+  const currentEndedLevels = new Set(ancestorEndedLevels)
+  if (isLast) currentEndedLevels.add(span.depth)
 
   const specification = SPAN_SPECIFICATIONS[span.type]
   if (!specification) return null
@@ -159,7 +134,7 @@ function TimelineTreeItem<T extends SpanType>({
           isLast={isLast}
           isSelected={isSelected}
           isParentSelected={isParentSelected}
-          selectedSpanDepth={selectedSpanDepth}
+          selectedSpanDepth={selectedSpan?.depth}
           ancestorEndedLevels={ancestorEndedLevels}
         />
         <Button
@@ -200,12 +175,11 @@ function TimelineTreeItem<T extends SpanType>({
             span={child}
             isFirst={index === 0}
             isLast={index === span.children.length - 1}
-            isSelected={selectedSpanId === child.id}
-            isParentSelected={isParentSelected || selectedSpanId === span.id}
-            selectedSpanId={selectedSpanId}
-            selectedSpanDepth={selectedSpanDepth}
+            isSelected={selectedSpan?.id === child.id}
+            isParentSelected={isParentSelected || selectedSpan?.id === span.id}
+            selectedSpan={selectedSpan}
             setSelectedSpan={setSelectedSpan}
-            ancestorEndedLevels={newEndedLevels}
+            ancestorEndedLevels={currentEndedLevels}
           />
         ))}
     </div>
@@ -231,8 +205,7 @@ export function TimelineTree({
           isLast={index === trace.children.length - 1}
           isSelected={selectedSpan?.id === span.id}
           isParentSelected={selectedSpan?.id === span.parentId}
-          selectedSpanId={selectedSpan?.id}
-          selectedSpanDepth={selectedSpan?.depth}
+          selectedSpan={selectedSpan}
           setSelectedSpan={setSelectedSpan}
         />
       ))}

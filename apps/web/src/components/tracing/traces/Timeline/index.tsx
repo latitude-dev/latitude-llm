@@ -42,7 +42,7 @@ export function Timeline({
     <div className='w-full h-full flex items-center justify-center'>
       <SplitPane
         direction='horizontal'
-        initialPercentage={25}
+        initialPercentage={33}
         minSize={125}
         firstPane={
           <div className='w-full h-full overflow-hidden'>
