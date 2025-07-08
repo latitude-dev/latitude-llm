@@ -163,7 +163,11 @@ export function DetailsPanel<T extends SpanType>({
                     </span>
                     <div className='w-full min-w-0 flex flex-grow'>
                       <TextArea
-                        value={String(value || '')}
+                        value={
+                          typeof value === 'string'
+                            ? value
+                            : JSON.stringify(value, null, 2)
+                        }
                         minRows={1}
                         maxRows={6}
                         disabled={true}

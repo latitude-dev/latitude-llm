@@ -166,13 +166,8 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Completion>) {
         />
       )}
       {!!span.metadata?.configuration && (
-        <MetadataItem
-          label='Configuration'
-          contentClassName='pt-2 relative'
-          stacked
-        >
-          <div className='w-[calc(100%-1.25rem)] h-32 top-2 absolute inset-0 bg-backgroundCode rounded-xl' />
-          <div className='w-full max-h-32 overflow-y-auto custom-scrollbar scrollable-indicator rounded-xl'>
+        <MetadataItem label='Configuration' contentClassName='pt-2' stacked>
+          <div className='w-full max-h-32 overflow-y-auto custom-scrollbar scrollable-indicator rounded-xl bg-backgroundCode'>
             <CodeBlock language='json'>
               {JSON.stringify(span.metadata.configuration, null, 2)}
             </CodeBlock>
