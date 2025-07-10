@@ -6,7 +6,7 @@ export const ingestHandler: AppRouteHandler<IngestRoute> = async (ctx) => {
   //const apiKey = ctx.get('apiKey')
   //const request = ctx.req.valid('json')
   //
-  // TODO: Causing too much strain in background job processing. Uncomment when fixed.
+  // TODO(tracing): fix queue memory issues and uncomment
   //await tracingQueue.add(
   //  'ingestSpansJob',
   //  {

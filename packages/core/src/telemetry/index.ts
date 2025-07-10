@@ -42,15 +42,16 @@ class InternalExporter implements SpanExporter {
   }
 
   export(
-    spans: ReadableSpan[],
-    callback: (result: ExportResult) => void,
+    _: ReadableSpan[],
+    __: (result: ExportResult) => void,
   ): void {
-    tracingQueue
-      .add('ingestSpansJob', { spans: this.convert(spans) })
-      .then(() => callback({ code: ExportResultCode.SUCCESS }))
-      .catch((error: Error) =>
-        callback({ code: ExportResultCode.FAILED, error }),
-      )
+    // TODO(tracing): fix queue memory issues and uncomment
+    //tracingQueue
+    //  .add('ingestSpansJob', { spans: this.convert(spans) })
+    //  .then(() => callback({ code: ExportResultCode.SUCCESS }))
+    //  .catch((error: Error) =>
+    //    callback({ code: ExportResultCode.FAILED, error }),
+    //  )
   }
 
   shutdown(): Promise<void> {
