@@ -43,6 +43,7 @@
             "group": "Getting started",
             "pages": [
               "guides/getting-started/introduction",
+              "guides/getting-started/core-concepts",
               {
                 "group": "Onboarding Paths",
                 "pages": [
@@ -50,7 +51,6 @@
                   "guides/getting-started/quick-start-dev"
                 ]
               },
-              "guides/getting-started/core-concepts",
               {
                 "group": "Providers",
                 "pages": [
