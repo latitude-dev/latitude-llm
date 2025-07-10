@@ -98,7 +98,7 @@ export function isConfigNode(
 ): node is ElementTag {
   if (!node) return false
 
-  return node.type === 'ElementTag' && node.name === 'config'
+  return node.type === 'Config'
 }
 
 export function isBlockWithChildren(

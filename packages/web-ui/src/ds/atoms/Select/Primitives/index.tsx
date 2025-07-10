@@ -14,6 +14,7 @@ import {
 import { SelectOption, SelectOptionGroup } from '..'
 import { cn } from '../../../../lib/utils'
 import { Icon, IconName } from '../../Icons'
+import { type SelectProps } from '../index'
 
 const SelectRoot = SelectPrimitive.Root
 
@@ -105,6 +106,7 @@ type TriggerProps = ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
   fullWidth?: boolean
   removable?: boolean
   onRemove?: () => void
+  size?: SelectProps['size']
 }
 const SelectTrigger = forwardRef<
   ElementRef<typeof SelectPrimitive.Trigger>,
@@ -117,24 +119,33 @@ const SelectTrigger = forwardRef<
       onRemove,
       className,
       children,
+      size = 'default',
       ...props
     },
     ref,
   ) => {
     return (
-      <div className='relative'>
+      <div
+        className={cn(
+          'flex items-center justify-between gap-x-1 whitespace-nowrap rounded-md',
+          'border border-input bg-transparent text-sm shadow-sm ring-offset-background ',
+          'placeholder:text-muted-foreground focus:outline-none focus:ring-offset-2 focus:ring-2 focus:ring-ring',
+          'disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
+          'bg-background',
+          className,
+          {
+            'w-full': fullWidth,
+            'py-buttonDefaultVertical px-3 min-h-8': size === 'default',
+            'py-0 px-1.5 min-h-6': size === 'small',
+          },
+        )}
+      >
         <SelectPrimitive.Trigger
           ref={ref}
-          className={cn(
-            'flex w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-[5px] text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-offset-2 focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
-            'min-h-8',
-            'bg-background',
-            className,
-            {
-              'w-full': fullWidth,
-            },
-          )}
           {...props}
+          className={cn('flex flex-row justify-between items-center gap-x-1', {
+            'w-full': fullWidth,
+          })}
         >
           {children}
           <SelectPrimitive.Icon asChild>
@@ -149,7 +160,7 @@ const SelectTrigger = forwardRef<
         {removable && (
           <Icon
             name='close'
-            className='min-w-0 flex-none opacity-50 cursor-pointer absolute top-1/2 -translate-y-1/2 right-3'
+            className='min-w-0 flex-none opacity-50 cursor-pointer'
             onClick={(event) => {
               event.preventDefault()
               onRemove?.()

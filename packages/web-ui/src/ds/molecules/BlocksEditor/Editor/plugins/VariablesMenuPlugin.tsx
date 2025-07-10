@@ -6,10 +6,11 @@ import {
   useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodes, $nodesOfType, LexicalEditor, TextNode } from 'lexical'
+import { $insertNodes, LexicalEditor, TextNode } from 'lexical'
 import { cn } from '../../../../../lib/utils'
 import { Text } from '../../../../atoms/Text'
-import { VariableNode } from '../nodes/VariableNode'
+import { $getVariableNames, VariableNode } from '../nodes/VariableNode'
+import { $getStepNames } from '../nodes/StepBlock'
 
 class ComponentPickerOption extends MenuOption {
   name: string
@@ -57,14 +58,18 @@ function ComponentPickerMenuItem({
   )
 }
 
-function getVariableOptions(editor: LexicalEditor): ComponentPickerOption[] {
+export function getAllVariables(editor: LexicalEditor): string[] {
   let variables: string[] = []
   editor.getEditorState().read(() => {
-    const variableNodes = $nodesOfType(VariableNode)
-    variables = [...new Set(variableNodes.map((node) => node.__name))]
+    variables = Array.from(
+      new Set([...$getVariableNames(), ...$getStepNames()]),
+    )
   })
+  return variables
+}
 
-  return variables.map((variable) => {
+function getVariableOptions(editor: LexicalEditor): ComponentPickerOption[] {
+  return getAllVariables(editor).map((variable) => {
     return new ComponentPickerOption({ name: variable })
   })
 }
@@ -143,7 +148,8 @@ export function VariableMenuPlugin(): React.JSX.Element {
         return createPortal(
           <div
             className={cn(
-              'min-w-[200px] w-max max-w-[300px] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md',
+              'min-w-[200px] w-max max-w-[300px] overflow-hidden rounded-md border ',
+              'bg-backgroundCode text-popover-foreground shadow-md',
               'z-50 animate-in fade-in-0 zoom-in-95',
             )}
           >

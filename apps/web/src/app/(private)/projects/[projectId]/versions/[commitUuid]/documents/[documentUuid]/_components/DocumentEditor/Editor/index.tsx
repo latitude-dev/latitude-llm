@@ -329,6 +329,7 @@ export default function DocumentEditor({
                   value={value}
                   rootBlock={metadata?.rootBlock}
                   onChange={onChange}
+                  config={metadata?.config}
                   compileErrors={metadata?.errors}
                 />
               ) : (

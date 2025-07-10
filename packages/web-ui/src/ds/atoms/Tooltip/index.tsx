@@ -82,7 +82,7 @@ function useTooltipTextContentColor(variant: TooltipVariant): TextColor {
 type Props = PropviderProps &
   RootProps &
   ContentProps & {
-    trigger: ReactNode
+    trigger?: ReactNode
     children?: ReactNode
     triggerIcon?: IconProps
     triggerBadge?: BadgeProps

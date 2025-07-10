@@ -54,7 +54,6 @@ You are an image analysis assistant.
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
-    // @ts-expect-error - children is not defined
     expect(rootNode.children[0]!.children).toEqual([
       {
         type: 'paragraph',
@@ -87,7 +86,6 @@ You are an image analysis assistant.
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
-    // @ts-expect-error - children is not defined
     expect(rootNode.children[0]!.children).toEqual([
       {
         type: 'paragraph',
@@ -191,8 +189,7 @@ Compare these two images.
     expect(output).toBe(prompt)
   })
 
-  // FIXME: WHAT TO DO WITH CONFIG?!!!
-  it('can parse config', () => {
+  it('filters config', () => {
     const prompt = `---
 provider: OpenAI
 model: gpt-4o-mini
@@ -203,7 +200,7 @@ I'm a simple prompt`
 
     const rootNode = fromAstToBlocks({ ast, prompt })
     const output = fromBlocksToText(rootNode)
-    expect(output).toBe(prompt)
+    expect(output).toBe("I'm a simple prompt")
   })
 
   it('should handle content-image with data URLs', () => {

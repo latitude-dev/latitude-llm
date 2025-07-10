@@ -15,6 +15,7 @@ import { cn } from '../../../../lib/utils'
 import { font } from '../../../tokens'
 import { BlocksEditorProps } from '../types'
 import { BlocksEditorProvider } from './Provider'
+import { Text } from '../../../atoms/Text'
 
 import { fromBlocksToLexical } from './state/fromBlocksToLexical'
 import { fromLexicalToText } from './state/fromLexicalToText'
@@ -22,19 +23,20 @@ import { fromLexicalToText } from './state/fromLexicalToText'
 import { HierarchyValidationPlugin } from './plugins/HierarchyValidationPlugin'
 import { EnterKeyPlugin } from './plugins/EnterKeyPlugin'
 import { DraggableBlockPlugin } from './plugins/DraggableBlockPlugin'
-import { StepNameEditPlugin } from './plugins/StepNameEditPlugin'
+import { StepEditPlugin } from './plugins/StepEditPlugin'
 import { TypeaheadMenuPlugin } from './plugins/TypeaheadMenuPlugin'
 import { MessageBlockNode } from './nodes/MessageBlock'
 import { StepBlockNode } from './nodes/StepBlock'
 import { VERTICAL_SPACE_CLASS } from './nodes/utils'
-import { InsertEmptyLinePlugin } from './plugins/InsertEmptyLinePlugin'
 import { VariableTransformPlugin } from './plugins/VariableTransformPlugin'
 import { VariableNode } from './nodes/VariableNode'
 import { VariableMenuPlugin } from './plugins/VariablesMenuPlugin'
 import { ReferencesPlugin } from './plugins/ReferencesPlugin'
+import { ReferenceEditPlugin } from './plugins/ReferenceEditPlugin'
 import { ReferenceNode } from './nodes/ReferenceNode'
-import { ConfigNode } from './nodes/ConfigNode'
 import { CodeNode } from './nodes/CodeNode'
+import { PreventBackspaceEscapePlugin } from './plugins/PreventBackspaceEscapePlugin'
+import { MessageEditPlugin } from './plugins/MessageEditPlugin'
 
 const theme = {
   ltr: 'ltr',
@@ -86,7 +88,6 @@ export function BlocksEditor({
   initialValue,
   onChange,
   onError,
-  className,
   prompts,
   onRequestPromptMetadata,
   onToggleDevEditor,
@@ -111,7 +112,6 @@ export function BlocksEditor({
       onError,
       nodes: [
         CodeNode,
-        ConfigNode,
         MessageBlockNode,
         StepBlockNode,
         VariableNode,
@@ -126,60 +126,56 @@ export function BlocksEditor({
       Link={Link}
       prompts={prompts}
     >
-      <div
-        className={cn(
-          'relative border border-gray-200 rounded-lg bg-white',
-          'focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500',
-          className,
-        )}
-      >
-        <LexicalComposer initialConfig={initialConfig}>
-          <div className='relative' ref={onRef}>
-            <RichTextPlugin
-              ErrorBoundary={LexicalErrorBoundary}
-              contentEditable={
-                <ContentEditable
-                  className={cn(
-                    'py-4 [&_>*]:px-4 outline-none resize-none text-sm leading-relaxed',
-                    'focus:outline-none',
-                    VERTICAL_SPACE_CLASS,
-                    {
-                      'cursor-default': readOnly,
-                    },
-                  )}
-                  aria-placeholder={placeholder}
-                  placeholder={
-                    <div className='absolute top-4 left-4 text-gray-400 pointer-events-none select-none'>
+      <LexicalComposer initialConfig={initialConfig}>
+        <div className='relative' ref={onRef}>
+          <RichTextPlugin
+            ErrorBoundary={LexicalErrorBoundary}
+            contentEditable={
+              <ContentEditable
+                className={cn(
+                  'outline-none resize-none text-sm leading-relaxed',
+                  'focus:outline-none',
+                  VERTICAL_SPACE_CLASS,
+                  {
+                    'cursor-default': readOnly,
+                  },
+                )}
+                aria-placeholder={placeholder}
+                placeholder={
+                  <div className='absolute top-0 text-gray-400 pointer-events-none select-none'>
+                    <Text.H5 color='foregroundMuted' textOpacity={50}>
                       {placeholder}
-                    </div>
-                  }
-                />
-              }
-            />
-            <EnterKeyPlugin />
-            <InsertEmptyLinePlugin />
-            <StepNameEditPlugin />
-            <TypeaheadMenuPlugin />
-            <VariableMenuPlugin />
-            <ReferencesPlugin
-              prompts={prompts}
-              onRequestPromptMetadata={onRequestPromptMetadata}
-              onToggleDevEditor={onToggleDevEditor}
-            />
-            <HierarchyValidationPlugin />
-            <VariableTransformPlugin />
-            <HistoryPlugin />
+                    </Text.H5>
+                  </div>
+                }
+              />
+            }
+          />
+          <EnterKeyPlugin />
+          <PreventBackspaceEscapePlugin />
+          <StepEditPlugin />
+          <MessageEditPlugin />
+          <TypeaheadMenuPlugin />
+          <VariableMenuPlugin />
+          <ReferencesPlugin
+            prompts={prompts}
+            onRequestPromptMetadata={onRequestPromptMetadata}
+            onToggleDevEditor={onToggleDevEditor}
+          />
+          <ReferenceEditPlugin />
+          <HierarchyValidationPlugin />
+          <VariableTransformPlugin />
+          <HistoryPlugin />
 
-            {!readOnly && floatingAnchorElem && (
-              <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
-            )}
+          {!readOnly && floatingAnchorElem && (
+            <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
+          )}
 
-            {autoFocus && <AutoFocusPlugin />}
+          {autoFocus && <AutoFocusPlugin />}
 
-            <OnChangeHandler onChange={onChange} />
-          </div>
-        </LexicalComposer>
-      </div>
+          <OnChangeHandler onChange={onChange} />
+        </div>
+      </LexicalComposer>
     </BlocksEditorProvider>
   )
 }

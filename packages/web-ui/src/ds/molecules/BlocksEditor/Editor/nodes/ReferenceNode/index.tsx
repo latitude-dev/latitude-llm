@@ -1,4 +1,4 @@
-import { DecoratorNode } from 'lexical'
+import { DecoratorNode, LexicalNode } from 'lexical'
 import { JSX } from 'react'
 import { ReferenceLink } from './ReferenceLink'
 import {
@@ -59,6 +59,7 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
     return (
       <ReferenceLink
         isLoading={this.__isLoading}
+        nodeKey={this.getKey()}
         path={this.__path}
         attributes={this.__attributes}
         errors={this.__errors}
@@ -72,6 +73,12 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
       path: serializedNode.path,
       attributes: serializedNode.attributes,
     })
+  }
+
+  setPath(newPath: string) {
+    const writable = this.getWritable()
+    writable.__path = newPath
+    return writable
   }
 
   updateAttributes(attributes: SerializedReferenceLink['attributes']) {
@@ -95,4 +102,10 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
   isInline() {
     return true
   }
+}
+
+export function $isReferenceNode(
+  node: LexicalNode | null | undefined,
+): node is ReferenceNode {
+  return node instanceof ReferenceNode
 }

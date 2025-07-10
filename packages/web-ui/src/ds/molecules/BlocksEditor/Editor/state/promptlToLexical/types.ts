@@ -84,12 +84,6 @@ export interface Variable extends SimpleBlock {
   errors?: AstError[]
 }
 
-export interface ConfigBlock extends SimpleBlock {
-  type: typeof BLOCK_EDITOR_TYPE.CONFIG
-  config: string
-  errors?: AstError[]
-}
-
 export interface TextBlock extends SerializedTextNode {
   type: typeof BLOCK_EDITOR_TYPE.TEXT_CONTENT
 }
@@ -127,7 +121,7 @@ export interface StepBlock extends SerializedElementNode {
   }
 }
 
-type RootChild = ConfigBlock | StepBlock | StepChild
+type RootChild = StepBlock | StepChild
 export interface BlockRootNode
   extends SerializedRootNode<SerializedLexicalNode> {
   type: 'root'
