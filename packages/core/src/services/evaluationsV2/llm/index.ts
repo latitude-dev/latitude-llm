@@ -6,7 +6,7 @@ import {
   LlmEvaluationMetric,
   LlmEvaluationSpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { ProviderApiKeysRepository } from '../../../repositories'
@@ -54,7 +54,7 @@ async function validate<M extends LlmEvaluationMetric>(
   }: EvaluationMetricValidateArgs<EvaluationType.Llm, M> & {
     metric: M
   },
-  db: Database = database,
+  db = database,
 ) {
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) {
@@ -114,7 +114,7 @@ async function run<M extends LlmEvaluationMetric>(
   }: EvaluationMetricRunArgs<EvaluationType.Llm, M> & {
     metric: M
   },
-  db: Database = database,
+  db = database,
 ) {
   try {
     const metricSpecification = METRICS[metric]
@@ -167,7 +167,7 @@ async function clone<M extends LlmEvaluationMetric>(
   }: EvaluationMetricCloneArgs<EvaluationType.Llm, M> & {
     metric: M
   },
-  db: Database = database,
+  db = database,
 ) {
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) {

@@ -7,7 +7,7 @@ import {
   ProviderApiKey,
   LlmEvaluationComparisonSpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
@@ -33,7 +33,7 @@ async function validate(
     EvaluationType.Llm,
     LlmEvaluationMetric.Comparison
   >,
-  _: Database = database,
+  _ = database,
 ) {
   configuration.criteria = configuration.criteria.trim()
   if (!configuration.criteria) {
@@ -161,7 +161,7 @@ async function run(
     EvaluationType.Llm,
     LlmEvaluationMetric.Comparison
   >,
-  db: Database = database,
+  db = database,
 ) {
   const metadata = {
     configuration: evaluation.configuration,
@@ -233,7 +233,7 @@ async function clone(
     EvaluationType.Llm,
     LlmEvaluationMetric.Comparison
   >,
-  _: Database = database,
+  _ = database,
 ) {
   const provider = providers?.get(evaluation.configuration.provider)
   if (!provider) {

@@ -3,7 +3,7 @@ import {
   SegmentType,
   StepSegmentMetadata,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { Result, TypedResult } from '../../../lib/Result'
 import {
   CompletionPart,
@@ -21,7 +21,7 @@ export const StepSegmentSpecification = {
 
 async function process(
   state: SegmentProcessArgs<SegmentType.Step>,
-  _: Database = database,
+  _ = database,
 ) {
   const computingcg = computeConfiguration(state)
   if (computingcg.error) return Result.error(computingcg.error)

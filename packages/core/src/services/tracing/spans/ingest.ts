@@ -14,7 +14,7 @@ import {
   TRACING_JOBS_MAX_ATTEMPTS,
   Workspace,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { processSpanJobKey } from '../../../jobs/job-definitions/tracing/processSpanJob'
 import { tracingQueue } from '../../../jobs/queues'
@@ -38,7 +38,7 @@ export async function ingestSpans(
     apiKeyId?: number
     workspaceId?: number
   },
-  db: Database = database,
+  db = database,
 ) {
   const workspaces: Record<number, Workspace> = {}
   const apiKeys: Record<number, ApiKey> = {}
@@ -136,7 +136,7 @@ async function getWorkspace(
   }: {
     workspaceId?: number
   },
-  db: Database = database,
+  db = database,
 ) {
   if (!workspaceId) {
     return Result.error(new UnprocessableEntityError('Workspace is required'))
@@ -158,7 +158,7 @@ async function getApiKey(
     apiKeyId?: number
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   const repository = new ApiKeysRepository(workspace.id, db)
 

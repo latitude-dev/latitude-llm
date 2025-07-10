@@ -20,7 +20,7 @@ import {
   Providers,
   Workspace,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { ProviderLogsRepository } from '../../../repositories'
 import { BACKGROUND, telemetry } from '../../../telemetry'
@@ -165,7 +165,7 @@ export async function runPrompt<
     commit: Commit
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   const { promptChain, promptConfig, runFunction, runArgs } =
     await buildLlmEvaluationRunFunction({

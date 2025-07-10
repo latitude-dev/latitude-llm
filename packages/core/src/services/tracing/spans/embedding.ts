@@ -1,5 +1,5 @@
 import { SPAN_SPECIFICATIONS, SpanType } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { SpanProcessArgs } from './shared'
 
@@ -9,9 +9,6 @@ export const EmbeddingSpanSpecification = {
   process: process,
 }
 
-async function process(
-  _: SpanProcessArgs<SpanType.Embedding>,
-  __: Database = database,
-) {
+async function process(_: SpanProcessArgs<SpanType.Embedding>, __ = database) {
   return Result.ok({})
 }

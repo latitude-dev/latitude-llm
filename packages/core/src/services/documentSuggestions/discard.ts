@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { DocumentSuggestion, User, Workspace } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from './../../lib/Transaction'
@@ -16,7 +16,7 @@ export async function discardDocumentSuggestion(
     workspace: Workspace
     user: User
   },
-  db: Database = database,
+  db = database,
 ) {
   return Transaction.call(async (tx) => {
     await tx

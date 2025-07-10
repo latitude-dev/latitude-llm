@@ -3,7 +3,7 @@ import {
   HumanEvaluationMetric,
   HumanEvaluationRatingSpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {
@@ -25,7 +25,7 @@ async function validate(
     EvaluationType.Human,
     HumanEvaluationMetric.Rating
   >,
-  _: Database = database,
+  _ = database,
 ) {
   if (configuration.minRating >= configuration.maxRating) {
     return Result.error(
@@ -101,7 +101,7 @@ async function annotate(
     EvaluationType.Human,
     HumanEvaluationMetric.Rating
   >,
-  _: Database = database,
+  _ = database,
 ) {
   const metadata = {
     configuration: evaluation.configuration,

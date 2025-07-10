@@ -1,7 +1,7 @@
 import type { ExperimentVariant } from '@latitude-data/constants/experiments'
 import { Dataset, Experiment, User } from '../../browser'
 import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { ProviderApiKeysRepository } from '../../repositories'
 import Transaction from '../../lib/Transaction'
 import { Result } from '../../lib/Result'
@@ -36,7 +36,7 @@ export async function createExperimentVariants(
     fromRow?: number
     toRow?: number
   },
-  db: Database = database,
+  db = database,
 ) {
   const providersScope = new ProviderApiKeysRepository(workspace.id, db)
   const providers = await providersScope.findAll().then((r) => r.unwrap())

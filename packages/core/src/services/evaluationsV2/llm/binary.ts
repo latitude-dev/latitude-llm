@@ -7,7 +7,7 @@ import {
   ProviderApiKey,
   LlmEvaluationBinarySpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
@@ -33,7 +33,7 @@ async function validate(
     EvaluationType.Llm,
     LlmEvaluationMetric.Binary
   >,
-  _: Database = database,
+  _ = database,
 ) {
   configuration.criteria = configuration.criteria.trim()
   if (!configuration.criteria) {
@@ -115,7 +115,7 @@ async function run(
     commit,
     workspace,
   }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Binary>,
-  db: Database = database,
+  db = database,
 ) {
   const metadata = {
     configuration: evaluation.configuration,
@@ -175,7 +175,7 @@ async function clone(
     evaluation,
     providers,
   }: EvaluationMetricCloneArgs<EvaluationType.Llm, LlmEvaluationMetric.Binary>,
-  _: Database = database,
+  _ = database,
 ) {
   const provider = providers?.get(evaluation.configuration.provider)
   if (!provider) {

@@ -103,6 +103,7 @@ const editProject = defineLatteTool(
       }
 
       // Scan the updated project for errors
+      const documentsScope = new DocumentVersionsRepository(workspace.id, tx)
       const newDocuments = await documentsScope
         .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())

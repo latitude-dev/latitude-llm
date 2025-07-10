@@ -159,10 +159,13 @@ export async function scanDocuments(
   }
   const integrations = integrationsResult.unwrap()
 
-  const agentsToolMapResult = await buildAgentsToolsMap({
-    commit,
-    workspace,
-  })
+  const agentsToolMapResult = await buildAgentsToolsMap(
+    {
+      commit,
+      workspace,
+    },
+    db,
+  )
   if (!agentsToolMapResult.ok) {
     return Result.error(agentsToolMapResult.error!)
   }

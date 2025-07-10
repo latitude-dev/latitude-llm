@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, isNull, max, sql } from 'drizzle-orm'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { ErrorableEntity } from '../../../constants'
 import { SubscriptionPlan } from '../../../plans'
 import {
@@ -37,7 +37,7 @@ export async function getUsageOverview(
     page: number
     targetDate?: Date
   },
-  db: Database = database,
+  db = database,
 ) {
   const targetDate =
     target?.toISOString().replace('T', ' ').replace('Z', '') ?? undefined

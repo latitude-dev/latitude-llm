@@ -1,14 +1,11 @@
 import { env } from '@latitude-data/env'
 
 import { Providers, Workspace } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { ProviderApiKeysRepository } from '../../repositories'
 
-export async function findDefaultProvider(
-  workspace: Workspace,
-  db: Database = database,
-) {
+export async function findDefaultProvider(workspace: Workspace, db = database) {
   const providerScope = new ProviderApiKeysRepository(workspace.id, db)
 
   if (workspace.defaultProviderId) {
@@ -24,7 +21,7 @@ export async function findDefaultProvider(
 
 export async function findDefaultEvaluationProvider(
   workspace: Workspace,
-  db: Database = database,
+  db = database,
 ) {
   const providerScope = new ProviderApiKeysRepository(workspace.id, db)
   let providers = await providerScope.findAll().then((r) => r.unwrap())

@@ -1,5 +1,5 @@
 import { Experiment } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
@@ -10,7 +10,7 @@ import { ProgressTracker } from '../../jobs/utils/progressTracker'
 
 export async function completeExperiment(
   experiment: Experiment,
-  db: Database = database,
+  db = database,
 ): PromisedResult<Experiment, LatitudeError> {
   const updateResult = await Transaction.call(async (tx) => {
     const result = await tx

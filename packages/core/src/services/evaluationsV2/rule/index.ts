@@ -3,7 +3,7 @@ import {
   RuleEvaluationMetric,
   RuleEvaluationSpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {
@@ -47,7 +47,7 @@ async function validate<M extends RuleEvaluationMetric>(
   }: EvaluationMetricValidateArgs<EvaluationType.Rule, M> & {
     metric: M
   },
-  db: Database = database,
+  db = database,
 ) {
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) {
@@ -85,7 +85,7 @@ async function run<M extends RuleEvaluationMetric>(
   }: EvaluationMetricRunArgs<EvaluationType.Rule, M> & {
     metric: M
   },
-  db: Database = database,
+  db = database,
 ) {
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) {

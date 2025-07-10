@@ -11,7 +11,7 @@ import {
   ProviderLogDto,
   Workspace,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
@@ -44,7 +44,7 @@ export async function createEvaluationResultV2<
     usedForSuggestion?: boolean
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   return await Transaction.call(async (tx) => {
     const result = (await tx

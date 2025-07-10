@@ -1,5 +1,5 @@
 import { env } from '@latitude-data/env'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import {
   unsafelyFindWorkspace,
   unsafelyGetApiKeyByToken,
@@ -11,10 +11,7 @@ import {
 } from '../../repositories'
 import { Copilot } from './shared'
 
-export async function getCopilot(
-  { path }: { path: string },
-  db: Database = database,
-) {
+export async function getCopilot({ path }: { path: string }, db = database) {
   if (!env.COPILOT_WORKSPACE_API_KEY) {
     return Result.error(new Error('COPILOT_WORKSPACE_API_KEY is not set'))
   }

@@ -1,7 +1,7 @@
 import { Experiment } from '../../../browser'
 import { LatitudeError } from '../../../lib/errors'
 import { Workspace } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { documentsQueue } from '../../../jobs/queues'
 import { experiments } from '../../../schema'
 import { eq } from 'drizzle-orm'
@@ -18,7 +18,7 @@ export async function startExperiment(
     experimentUuid: string
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ): PromisedResult<Experiment, LatitudeError> {
   const updateResult = await Transaction.call(async (tx) => {
     const result = await tx

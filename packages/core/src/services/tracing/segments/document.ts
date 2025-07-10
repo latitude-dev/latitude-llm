@@ -9,7 +9,7 @@ import {
   SpanType,
   SpanWithDetails,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import { isFirst, SegmentProcessArgs } from './shared'
@@ -23,7 +23,7 @@ export const DocumentSegmentSpecification = {
 
 async function process(
   state: SegmentProcessArgs<SegmentType.Document>,
-  db: Database = database,
+  db = database,
 ) {
   const processing = await StepSegmentSpecification.process(
     state as unknown as SegmentProcessArgs<SegmentType.Step>,

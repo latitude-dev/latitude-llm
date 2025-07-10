@@ -11,7 +11,7 @@ import {
   ExpectedOutputConfiguration,
   Workspace,
 } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { EvaluationsV2Repository } from '../../repositories'
@@ -38,7 +38,7 @@ export async function validateEvaluationV2<
     commit: Commit
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   if (mode === 'update' && !evaluation) {
     return Result.error(

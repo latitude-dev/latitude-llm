@@ -51,7 +51,7 @@ import {
   Workspace,
 } from '../../../browser'
 import { cache as redis } from '../../../cache'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { processSegmentJobKey } from '../../../jobs/job-definitions/tracing/processSegmentJob'
 import { tracingQueue } from '../../../jobs/queues'
@@ -76,7 +76,7 @@ export async function processSpan(
     apiKey: ApiKey
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
   disk: DiskWrapper = diskFactory('private'),
 ) {
   const getting = await getExisting({ span, workspace }, db)
@@ -234,7 +234,7 @@ async function getExisting(
     span: Otlp.Span
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ): Promise<TypedResult<SpanWithDetails | undefined>> {
   const spansRepository = new SpansRepository(workspace.id, db)
   const finding = await spansRepository.get({ spanId, traceId })

@@ -3,7 +3,7 @@ import {
   RuleEvaluationMetric,
   RuleEvaluationExactMatchSpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import {
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
@@ -25,7 +25,7 @@ async function validate(
     EvaluationType.Rule,
     RuleEvaluationMetric.ExactMatch
   >,
-  _: Database = database,
+  _ = database,
 ) {
   // Note: all settings are explicitly returned to ensure we don't
   // carry dangling fields from the original settings object
@@ -47,7 +47,7 @@ async function run(
     EvaluationType.Rule,
     RuleEvaluationMetric.ExactMatch
   >,
-  _: Database = database,
+  _ = database,
 ) {
   const metadata = {
     configuration: evaluation.configuration,

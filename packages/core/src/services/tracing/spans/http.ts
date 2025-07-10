@@ -16,7 +16,7 @@ import {
   SpanStatus,
   SpanType,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import { SpanProcessArgs, toCamelCase } from './shared'
@@ -29,7 +29,7 @@ export const HttpSpanSpecification = {
 
 async function process(
   { attributes, status }: SpanProcessArgs<SpanType.Http>,
-  _: Database = database,
+  _ = database,
 ) {
   const extractingqm = extractRequestMethod(attributes)
   if (extractingqm.error) return Result.error(extractingqm.error)

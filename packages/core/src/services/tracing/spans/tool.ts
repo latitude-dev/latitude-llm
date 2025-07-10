@@ -20,7 +20,7 @@ import {
   SpanType,
   ToolSpanMetadata,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import { SpanProcessArgs } from './shared'
@@ -33,7 +33,7 @@ export const ToolSpanSpecification = {
 
 async function process(
   { attributes, status }: SpanProcessArgs<SpanType.Tool>,
-  _: Database = database,
+  _ = database,
 ) {
   const extractingtn = extractToolName(attributes)
   if (extractingtn.error) return Result.error(extractingtn.error)

@@ -11,7 +11,7 @@ import {
   Workspace,
 } from '../../browser'
 import { cache as getCache } from '../../cache'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { hashContent } from '../../lib/hashContent'
 import { Result } from '../../lib/Result'
@@ -41,7 +41,7 @@ export async function generateEvaluationV2(
     commit: Commit
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   if (!env.LATITUDE_CLOUD) {
     return Result.error(new Error(CLOUD_MESSAGES.generateEvaluations))

@@ -5,7 +5,7 @@ import {
   LlmEvaluationMetric,
   LlmEvaluationCustomLabeledSpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import {
   EvaluationMetricRunArgs,
@@ -27,7 +27,7 @@ async function validate(
     EvaluationType.Llm,
     LlmEvaluationMetric.CustomLabeled
   >,
-  db: Database = database,
+  db = database,
 ) {
   return await LlmEvaluationCustomSpecification.validate({ ...rest }, db)
 }
@@ -42,7 +42,7 @@ async function run(
     EvaluationType.Llm,
     LlmEvaluationMetric.CustomLabeled
   >,
-  db: Database = database,
+  db = database,
 ) {
   if (!expectedOutput) {
     throw new BadRequestError('Expected output is required')

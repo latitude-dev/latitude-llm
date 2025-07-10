@@ -1,7 +1,7 @@
 import Stripe from 'stripe'
 import { eq } from 'drizzle-orm'
 
-import { database, Database } from '../../client'
+import { Database, database } from '../../client'
 import { workspaces } from '../../schema/models/workspaces'
 import { subscriptions } from '../../schema/models/subscriptions'
 import { SubscriptionPlan } from '../../plans'

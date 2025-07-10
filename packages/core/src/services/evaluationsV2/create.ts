@@ -8,7 +8,7 @@ import {
   EvaluationV2,
   Workspace,
 } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { compactObject } from '../../lib/compactObject'
 import { Result } from '../../lib/Result'
@@ -33,7 +33,7 @@ export async function createEvaluationV2<
     options?: Partial<EvaluationOptions>
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   if (!options) options = {}
   options = compactObject(options)
