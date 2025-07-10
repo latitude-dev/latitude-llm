@@ -1,6 +1,6 @@
 import { Slot, Slottable } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
-import { ButtonHTMLAttributes, forwardRef, ReactNode } from 'react'
+import { ButtonHTMLAttributes, forwardRef, ReactNode, useMemo } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { font } from '../../tokens'
@@ -11,7 +11,7 @@ import { IconProps } from '../Icons'
 
 const buttonContainerVariants = cva(
   cn(
-    'group relative h-fit',
+    'group relative',
     'rounded-md inline-flex',
     'disabled:opacity-50 disabled:pointer-events-none',
   ),
@@ -62,10 +62,10 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground group-hover:bg-primary/90 shadow-[inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]  disabled:cursor-default',
+          'bg-primary text-primary-foreground group-hover:bg-primary/90 disabled:cursor-default',
         nope: 'bg-transparent text-primary-foreground group-hover:bg-transparent',
         destructive:
-          'bg-destructive text-destructive-foreground group-hover:bg-destructive/90 shadow-[inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]',
+          'bg-destructive text-destructive-foreground group-hover:bg-destructive/90',
         outline:
           'border border-input bg-background group-hover:bg-secondary group-hover:text-secondary-foreground/80',
         secondary:
@@ -80,10 +80,11 @@ const buttonVariants = cva(
         ),
       },
       size: {
-        default: 'py-buttonDefaultVertical px-3',
-        small: 'py-0 px-1.5 min-h-6',
+        default: 'py-buttonDefaultVertical px-3 min-h-8',
+        small: 'py-0 px-1.5 min-h-7',
         none: 'py-0 px-0',
-        icon: 'h-6 w-6',
+        iconDefault: 'h-8 w-8',
+        icon: 'h-7 w-7',
       },
       fanciness: {
         default: '',
@@ -127,21 +128,81 @@ const buttonVariants = cva(
 type ButtonIconProps = IconProps & {
   placement?: 'left' | 'right'
 }
+export type ButtonStylesProps = VariantProps<typeof buttonVariants> & {
+  containerClassName?: string
+  className?: string
+  innerClassName?: string
+  lookDisabled?: boolean
+  fullWidth?: boolean
+  isLoading?: boolean
+  ellipsis?: boolean
+}
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
-  VariantProps<typeof buttonVariants> & {
+  ButtonStylesProps & {
     children?: ReactNode
     iconProps?: ButtonIconProps
-    fullWidth?: boolean
     asChild?: boolean
-    isLoading?: boolean
     fancy?: boolean
-    lookDisabled?: boolean
-    ellipsis?: boolean
-    containerClassName?: string
-    innerClassName?: string
     indicator?: DotIndicatorProps
     childrenOnlyText?: boolean
   }
+
+export function useButtonStyles({
+  variant,
+  size,
+  fanciness,
+  fullWidth,
+  containerClassName,
+  className,
+  innerClassName,
+  isLoading,
+  lookDisabled,
+  ellipsis,
+}: ButtonStylesProps) {
+  return useMemo(() => {
+    return {
+      container: cn(
+        'group relative',
+        buttonContainerVariants({ fanciness, variant }),
+        containerClassName,
+        {
+          'w-full': fullWidth,
+          'opacity-50': lookDisabled,
+          'overflow-hidden': ellipsis,
+          'animate-pulse': isLoading,
+        },
+      ),
+      buttonClass: cn(
+        'relative',
+        buttonVariants({ variant, size, className, fanciness }),
+        {
+          'overflow-hidden': ellipsis,
+          'animate-pulse': isLoading,
+        },
+      ),
+      innerButtonClass: cn(
+        'flex flex-row items-center gap-x-1.5 cursor-pointer max-w-full',
+        innerClassName,
+        {
+          'w-full justify-center': fullWidth,
+          'overflow-hidden flex-grow min-w-0': ellipsis,
+          'animate-pulse': isLoading,
+        },
+      ),
+    }
+  }, [
+    variant,
+    size,
+    fanciness,
+    containerClassName,
+    className,
+    innerClassName,
+    ellipsis,
+    fullWidth,
+    lookDisabled,
+    isLoading,
+  ])
+}
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
@@ -171,37 +232,30 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     throw new Error('Button must have children or iconProps')
   }
 
-  const fanciness = fancy ? 'fancy' : 'default'
   const iconPlacement = iconProps?.placement || 'left'
+  const fanciness = fancy ? 'fancy' : 'default'
+  const buttonStyles = useButtonStyles({
+    variant,
+    size,
+    fanciness,
+    fullWidth,
+    containerClassName,
+    className,
+    innerClassName,
+    isLoading,
+    lookDisabled,
+    ellipsis,
+  })
 
   return (
     <Comp
-      disabled={disabled || isLoading}
-      className={cn(
-        'group relative',
-        buttonContainerVariants({ fanciness, variant }),
-        containerClassName,
-        {
-          'w-full': fullWidth,
-          'opacity-50': lookDisabled,
-          'overflow-hidden': ellipsis,
-          'animate-pulse': isLoading,
-        },
-      )}
       ref={ref}
+      disabled={disabled || isLoading}
+      className={buttonStyles.container}
       {...props}
     >
       <Slottable>
-        <div
-          className={cn(
-            'relative',
-            buttonVariants({ variant, size, className, fanciness }),
-            {
-              'overflow-hidden': ellipsis,
-              'animate-pulse': isLoading,
-            },
-          )}
-        >
+        <div className={buttonStyles.buttonClass}>
           {variant === 'shiny' && (
             <span
               className={cn(
@@ -209,19 +263,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
                 'bg-gradient-to-r from-transparent via-background to-transparent dark:from-transparent',
                 'opacity-50 transform -translate-x-full group-hover:animate-shine animate-shine',
               )}
-            ></span>
+            />
           )}
-          <div
-            className={cn(
-              'flex flex-row items-center gap-x-2 cursor-pointer max-w-full',
-              innerClassName,
-              {
-                'w-full justify-center': fullWidth,
-                'overflow-hidden flex-grow min-w-0': ellipsis,
-                'animate-pulse': isLoading,
-              },
-            )}
-          >
+          <div className={buttonStyles.innerButtonClass}>
             {indicator ? <DotIndicator {...indicator} /> : null}
             {iconProps && iconPlacement === 'left' ? (
               <Icon

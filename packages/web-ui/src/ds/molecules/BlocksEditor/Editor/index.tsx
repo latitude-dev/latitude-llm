@@ -37,6 +37,7 @@ import { ReferenceNode } from './nodes/ReferenceNode'
 import { CodeNode } from './nodes/CodeNode'
 import { PreventBackspaceEscapePlugin } from './plugins/PreventBackspaceEscapePlugin'
 import { MessageEditPlugin } from './plugins/MessageEditPlugin'
+import { EditorReadOnlyBanner } from '../../DocumentTextEditor/ReadOnlyMessage'
 
 const theme = {
   ltr: 'ltr',
@@ -92,9 +93,10 @@ export function BlocksEditor({
   onRequestPromptMetadata,
   onToggleDevEditor,
   Link,
-  readOnly = false,
+  readOnlyMessage,
   autoFocus = false,
 }: BlocksEditorProps) {
+  const readOnly = Boolean(readOnlyMessage)
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLDivElement | null>(null)
 
@@ -127,7 +129,13 @@ export function BlocksEditor({
       prompts={prompts}
     >
       <LexicalComposer initialConfig={initialConfig}>
-        <div className='relative' ref={onRef}>
+        <div
+          className={cn('relative', {
+            'border border-border bg-backgroundCode rounded-md px-3': readOnly,
+          })}
+          ref={onRef}
+        >
+          <EditorReadOnlyBanner readOnlyMessage={readOnlyMessage} />
           <RichTextPlugin
             ErrorBoundary={LexicalErrorBoundary}
             contentEditable={
@@ -137,7 +145,7 @@ export function BlocksEditor({
                   'focus:outline-none',
                   VERTICAL_SPACE_CLASS,
                   {
-                    'cursor-default': readOnly,
+                    'cursor-default opacity-80': readOnly,
                   },
                 )}
                 aria-placeholder={placeholder}

@@ -30,6 +30,6 @@ export type BlocksEditorProps = {
   ) => Promise<ConversationMetadata>
   onChange: (value: string) => void
   className?: string
-  readOnly?: boolean
+  readOnlyMessage?: string
   autoFocus?: boolean
 }

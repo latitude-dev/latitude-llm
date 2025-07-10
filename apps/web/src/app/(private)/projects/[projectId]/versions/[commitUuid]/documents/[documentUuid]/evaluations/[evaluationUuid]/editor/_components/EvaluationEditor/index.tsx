@@ -1,7 +1,6 @@
 'use client'
 
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
-import { EditorHeader } from '$/components/EditorHeader'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderApiKeys from '$/stores/providerApiKeys'
@@ -23,7 +22,9 @@ import useIntegrations from '$/stores/integrations'
 import { EvaluationTitle } from '../../../../_components/EvaluationTitle'
 import { Playground } from './Playground'
 import { TextEditor } from './TextEditor'
+import { EditorHeader } from './EditorHeader'
 import { useEvaluationParameters } from './hooks/useEvaluationParamaters'
+import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 
 const ALLOWED_PARAMETERS =
   LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
@@ -117,6 +118,7 @@ export function EvaluationEditor({
     evaluation,
     metadata,
   })
+  const isLatitudeProvider = useIsLatitudeProvider({ metadata })
 
   useEffect(() => {
     const metadataProps = buildPromptMetadata({ promptValue: value })
@@ -155,6 +157,7 @@ export function EvaluationEditor({
                 metadata={metadata}
                 prompt={originalPrompt}
                 onChangePrompt={onChange}
+                isLatitudeProvider={isLatitudeProvider}
                 freeRunsCount={freeRunsCount}
                 showCopilotSetting={copilotEnabled}
               />

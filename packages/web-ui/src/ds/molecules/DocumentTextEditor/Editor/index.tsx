@@ -11,12 +11,12 @@ import {
 } from '../../../../lib/hooks/useLocalStorage'
 import { cn } from '../../../../lib/utils'
 import { Button } from '../../../atoms/Button'
-import { Icon } from '../../../atoms/Icons'
 import { Text } from '../../../atoms/Text'
 import { type DocumentError, type DocumentTextEditorProps } from '../types'
 import { CopilotSection } from './CopilotSection'
 import { MonacoDiffEditor } from './DiffEditor'
 import { RegularMonacoEditor } from './RegularEditor'
+import { EditorReadOnlyBanner } from '../ReadOnlyMessage'
 
 const NO_ERRORS: AstError[] = []
 export function DocumentTextEditor({
@@ -111,14 +111,7 @@ export function DocumentTextEditor({
 
   return (
     <div className='relative h-full rounded-lg border border-border overflow-hidden flex flex-col bg-secondary'>
-      {!!readOnlyMessage && (
-        <div className='flex flex-row w-full items-center justify-center px-2 gap-2 py-2'>
-          <Icon name='lock' color='foregroundMuted' />
-          <Text.H6 color='foregroundMuted'>
-            Version published. {readOnlyMessage}
-          </Text.H6>
-        </div>
-      )}
+      <EditorReadOnlyBanner readOnlyMessage={readOnlyMessage} />
       {diff ? (
         <MonacoDiffEditor
           editorRef={diffEditorRef}

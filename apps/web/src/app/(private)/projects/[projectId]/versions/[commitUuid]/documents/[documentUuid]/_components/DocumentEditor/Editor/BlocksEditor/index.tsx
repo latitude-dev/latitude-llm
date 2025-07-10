@@ -6,6 +6,7 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { scan, Config } from 'promptl-ai'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { cn } from '@latitude-data/web-ui/utils'
 import {
   type BlockRootNode,
   BlocksEditor,
@@ -123,11 +124,18 @@ export const PlaygroundBlocksEditor = memo(
             onRequestPromptMetadata={onRequestPromptMetadata}
             onToggleDevEditor={onToogleDevEditor}
             onChange={onChangePrompt}
-            readOnly={!!readOnlyMessage}
+            readOnlyMessage={readOnlyMessage}
             placeholder='Type your instructions here, use / for commands'
           />
         ) : (
-          <Text.H6>Loading....</Text.H6>
+          <div
+            className={cn('flex items-center justify-center h-full', {
+              'border border-border bg-backgroundCode rounded-md px-3':
+                !!readOnlyMessage,
+            })}
+          >
+            <Text.H6 color='foregroundMuted'>Loading prompt....</Text.H6>
+          </div>
         )}
       </Suspense>
     )

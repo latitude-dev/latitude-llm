@@ -15,6 +15,7 @@ export type PromptConfigurationProps = {
   canUseSubagents: boolean
   setConfig: (config: Record<string, unknown>) => void
   disabled?: boolean
+  fancyButton?: boolean
 }
 
 export const useReactiveConfig = ({

@@ -6,10 +6,13 @@ import {
   forwardRef,
   HTMLAttributes,
   ReactNode,
+  useCallback,
+  useEffect,
   useId,
+  useMemo,
+  useState,
 } from 'react'
 import * as SwitchPrimitives from '@radix-ui/react-switch'
-import React from 'react'
 
 import { cn } from '../../../lib/utils'
 import {
@@ -18,6 +21,8 @@ import {
   InlineFormErrorMessage,
 } from '../FormField'
 import { Label } from '../Label'
+import { Icon, IconProps } from '../Icons'
+import { ButtonStylesProps, useButtonStyles } from '../Button'
 
 type ToogleProps = ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> & {
   size?: 'normal'
@@ -28,7 +33,9 @@ const SwitchToggle = forwardRef<
 >(({ className, size = 'normal', ...props }, ref) => (
   <SwitchPrimitives.Root
     className={cn(
-      'peer inline-flex w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary dark:data-[state=checked]:bg-white',
+      'peer inline-flex w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+      'disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-accent-button dark:data-[state=checked]:bg-white/20',
       'data-[state=unchecked]:bg-input dark:data-[state=unchecked]:bg-muted-foreground',
       className,
       {
@@ -40,7 +47,7 @@ const SwitchToggle = forwardRef<
   >
     <SwitchPrimitives.Thumb
       className={cn(
-        'pointer-events-none block rounded-full bg-background shadow-lg',
+        'pointer-events-none block rounded-full bg-white shadow-lg',
         'ring-0 transition-transform data-[state=unchecked]:translate-x-0',
         {
           'h-3 w-3 data-[state=checked]:translate-x-4 ': size === 'normal',
@@ -51,6 +58,33 @@ const SwitchToggle = forwardRef<
 ))
 
 SwitchToggle.displayName = SwitchPrimitives.Root.displayName
+
+function useCheckedState({
+  checked,
+  defaultChecked,
+  onCheckedChange,
+}: {
+  checked?: boolean
+  defaultChecked?: boolean
+  onCheckedChange?: (checked: boolean) => void
+}) {
+  const [isChecked, setIsChecked] = useState(!!defaultChecked)
+
+  useEffect(() => {
+    if (checked !== undefined) {
+      setIsChecked(checked)
+    }
+  }, [checked])
+
+  const onChange = useCallback(
+    (checked: boolean) => {
+      setIsChecked(checked)
+      onCheckedChange?.(checked)
+    },
+    [setIsChecked, onCheckedChange],
+  )
+  return useMemo(() => ({ isChecked, onChange }), [isChecked, onChange])
+}
 
 type Props = ToogleProps &
   Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> & {
@@ -78,13 +112,11 @@ function SwitchInput({
   const formItemId = `${id}-form-item`
   const formDescriptionId = `${id}-form-item-description`
   const formMessageId = `${id}-form-item-message`
-  const [isChecked, setIsChecked] = React.useState(!!defaultChecked)
-
-  React.useEffect(() => {
-    if (checked !== undefined) {
-      setIsChecked(checked)
-    }
-  }, [checked])
+  const { isChecked, onChange } = useCheckedState({
+    checked: checked,
+    defaultChecked,
+    onCheckedChange: rest.onCheckedChange,
+  })
 
   return (
     <div
@@ -114,10 +146,7 @@ function SwitchInput({
             <SwitchToggle
               {...rest}
               checked={isChecked}
-              onCheckedChange={(checked) => {
-                setIsChecked(checked)
-                rest.onCheckedChange?.(checked)
-              }}
+              onCheckedChange={onChange}
             />
           </div>
         </FormControl>
@@ -137,4 +166,46 @@ function SwitchInput({
   )
 }
 
-export { SwitchToggle, SwitchInput }
+type FancySwitchProps = ToogleProps &
+  Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> & {
+    checked?: boolean
+    defaultChecked?: boolean
+    onCheckedChange?: (checked: boolean) => void
+    iconProps: IconProps
+    buttonProps: ButtonStylesProps
+  }
+
+function FancySwitchToggle({
+  iconProps,
+  buttonProps,
+  checked,
+  defaultChecked,
+  onCheckedChange,
+  ...rest
+}: FancySwitchProps) {
+  const { isChecked, onChange } = useCheckedState({
+    checked: checked,
+    defaultChecked,
+    onCheckedChange,
+  })
+  const buttonStyles = useButtonStyles(buttonProps)
+  const toggleChecked = useCallback(() => {
+    onChange(!isChecked)
+  }, [isChecked, onChange])
+  return (
+    <div className={buttonStyles.container} onClick={toggleChecked}>
+      <div className={buttonStyles.buttonClass}>
+        <div className={buttonStyles.innerButtonClass}>
+          <Icon {...iconProps} />
+          <SwitchToggle
+            {...rest}
+            checked={isChecked}
+            onCheckedChange={onChange}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export { SwitchToggle, SwitchInput, FancySwitchToggle }
