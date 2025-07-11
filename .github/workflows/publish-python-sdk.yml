@@ -47,8 +47,8 @@ jobs:
           cd packages/sdks/python
           CURRENT_VERSION="${{ steps.get_version.outputs.version }}"
           
-          # Check if version exists on PyPI using pip show command
-          if pip show latitude-sdk==$CURRENT_VERSION >/dev/null 2>&1; then
+          # Check if version exists on PyPI using the PyPI API
+          if curl -s "https://pypi.org/pypi/latitude-sdk/$CURRENT_VERSION/json" | grep -q '"version"'; then
             echo "should_publish=false" >> $GITHUB_OUTPUT
             echo "Version $CURRENT_VERSION already exists on PyPI, skipping publish"
           else
@@ -69,7 +69,7 @@ jobs:
           # Try to publish, but don't fail if version already exists
           uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }} || {
             echo "Publish failed, checking if it's due to version already existing..."
-            if pip show latitude-sdk==${{ steps.get_version.outputs.version }} >/dev/null 2>&1; then
+            if curl -s "https://pypi.org/pypi/latitude-sdk/${{ steps.get_version.outputs.version }}/json" | grep -q '"version"'; then
               echo "Version ${{ steps.get_version.outputs.version }} already exists on PyPI, treating as success"
               exit 0
             else
