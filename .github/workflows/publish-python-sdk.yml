@@ -31,15 +31,29 @@ jobs:
           uv venv
           uv sync --all-extras --all-groups
 
+      - name: Get current version
+        id: get_version
+        run: |
+          cd packages/sdks/python
+          # Install toml package to read pyproject.toml
+          pip install toml
+          CURRENT_VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
       - name: Check version on pypi
         id: check_version
         run: |
           cd packages/sdks/python
-          PYPI_VERSION=$(uv pip show latitude-sdk | grep Version | awk '{print $2}')
-          if [ "${{ steps.get_version.outputs.version }}" != "$PYPI_VERSION" ]; then
-            echo "should_publish=true" >> $GITHUB_OUTPUT
-          else
+          CURRENT_VERSION="${{ steps.get_version.outputs.version }}"
+          
+          # Check if version exists on PyPI using pip show command
+          if pip show latitude-sdk==$CURRENT_VERSION >/dev/null 2>&1; then
             echo "should_publish=false" >> $GITHUB_OUTPUT
+            echo "Version $CURRENT_VERSION already exists on PyPI, skipping publish"
+          else
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+            echo "Version $CURRENT_VERSION not found on PyPI, will publish"
           fi
 
       - name: Build package (with workspace dependencies)
@@ -52,4 +66,14 @@ jobs:
         if: steps.check_version.outputs.should_publish == 'true'
         run: |
           cd packages/sdks/python
-          uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }}
+          # Try to publish, but don't fail if version already exists
+          uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }} || {
+            echo "Publish failed, checking if it's due to version already existing..."
+            if pip show latitude-sdk==${{ steps.get_version.outputs.version }} >/dev/null 2>&1; then
+              echo "Version ${{ steps.get_version.outputs.version }} already exists on PyPI, treating as success"
+              exit 0
+            else
+              echo "Publish failed for unknown reason"
+              exit 1
+            fi
+          }
