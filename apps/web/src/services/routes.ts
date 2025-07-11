@@ -60,12 +60,17 @@ export const ROUTES = {
         root: '/settings/webhooks/new',
       },
     },
+    apiKeys: {
+      new: '/settings/api-keys/new',
+      destroy: (id: number) => `/settings/api-keys/${id}/destroy`,
+      update: (id: number) => `/settings/api-keys/${id}/update`,
+    },
     providerApiKeys: {
       new: {
-        root: '/settings/apikeys/new',
+        root: '/settings/provider-api-keys/new',
       },
       destroy: (id: number) => {
-        return { root: `/settings/apikeys/${id}/destroy` }
+        return { root: `/settings/provider-api-keys/${id}/destroy` }
       },
     },
     integrations: {
