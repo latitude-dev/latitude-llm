@@ -84,7 +84,7 @@ function ReferenceLinkReal({
         label: prompt.path,
         ellipsis: true,
         onClick: () => {
-          triggerReferencePathUpdate(nodeKey, prompt.path)
+          triggerReferencePathUpdate(nodeKey, prompt)
         },
       })),
     [prompts, relativePath, nodeKey],

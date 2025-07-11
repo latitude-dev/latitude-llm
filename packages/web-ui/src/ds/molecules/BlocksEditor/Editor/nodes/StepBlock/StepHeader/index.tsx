@@ -19,6 +19,7 @@ import {
   triggerStepNameUpdate,
 } from '../../../plugins/StepEditPlugin'
 import { SwitchInput } from '../../../../../../atoms/Switch'
+import { triggerToggleDevEditor } from '../../../plugins/ReferencesPlugin'
 
 function StepName({
   as,
@@ -51,9 +52,11 @@ function StepName({
 function RightArea({
   isolated,
   stepKey,
+  otherAttributes,
 }: {
   isolated: boolean
   stepKey: string
+  otherAttributes: Record<string, unknown> | undefined
 }) {
   const onIsolatedChange = useCallback(
     (newIsolated: boolean) => {
@@ -62,20 +65,39 @@ function RightArea({
     [stepKey],
   )
   return (
-    <div className='flex flex-row items-center gap-x-2'>
-      <div className='flex flex-row items-center gap-x-1'>
-        <SwitchInput
-          fullWidth={false}
-          defaultChecked={isolated}
-          checked={isolated}
-          onCheckedChange={onIsolatedChange}
-        />
-        <Tooltip triggerIcon={{ name: 'circleHelp', color: 'foregroundMuted' }}>
-          {`Isolated: Prevent this step from inheriting context
+    <div className='flex flex-row items-center gap-x-1'>
+      <Tooltip triggerIcon={{ name: 'circleHelp', color: 'foregroundMuted' }}>
+        {`Isolated: Prevent this step from inheriting context
         from previous steps. This can reduce unnecessary costs or confusion for
         the model. Type '{{ nameOfStep }}' to reference the step name in the prompt.`}
+      </Tooltip>
+      <Text.H6 color='foregroundMuted'>Isolated</Text.H6>
+      <SwitchInput
+        fullWidth={false}
+        defaultChecked={isolated}
+        checked={isolated}
+        onCheckedChange={onIsolatedChange}
+      />
+
+      {otherAttributes ? (
+        <Tooltip
+          asChild
+          trigger={
+            <Button
+              size='icon'
+              variant='nope'
+              iconProps={{
+                name: 'settings',
+                color: 'foregroundMuted',
+              }}
+              onClick={() => triggerToggleDevEditor()}
+            />
+          }
+        >
+          This step has extra configuration. Please click to edit it on the code
+          editor.
         </Tooltip>
-      </div>
+      ) : null}
       <Button
         size='icon'
         variant='nope'
@@ -95,11 +117,13 @@ export function StepHeader({
   stepIndex,
   as,
   isolated,
+  otherAttributes,
 }: {
   stepKey: string
   stepIndex: number
   as: string | undefined
   isolated: boolean
+  otherAttributes: Record<string, unknown> | undefined
 }) {
   const inputWrapper = useRef<HTMLDivElement>(null)
   const [editing, setEditing] = useState(false)
@@ -183,7 +207,11 @@ export function StepHeader({
             )}
           </div>
         </div>
-        <RightArea isolated={isolated} stepKey={stepKey} />
+        <RightArea
+          isolated={isolated}
+          stepKey={stepKey}
+          otherAttributes={otherAttributes}
+        />
       </div>
     </TooltipProvider>
   )

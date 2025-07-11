@@ -7,7 +7,6 @@ import {
   type ContentBlockType,
   type MustacheTag,
   TemplateNode,
-  StepBlock,
   BlockAttributes,
   ReferenceLink,
   FileBlock,
@@ -239,27 +238,23 @@ export function getStepAttributes({
   tag: ElementTag
   prompt: string
 }) {
-  let attr: StepBlock['attributes'] = {}
-
   const attributes = getAttributes({
     tag,
     prompt,
     shouldCamelCase: ['as', 'isolated'],
   })
 
-  if ('as' in attributes) {
-    if (typeof attributes.as === 'string') {
-      attr.as = attributes.as.trim()
-    }
+  const { as, isolated, ...rest } = attributes
+
+  const attr: Record<string, string | boolean | object> = {}
+  if (typeof as === 'string') attr.as = as.trim()
+  if (isolated === true) attr.isolated = true
+
+  if (Object.keys(rest).length) {
+    attr.otherAttributes = rest
   }
 
-  if ('isolated' in attributes) {
-    if (attributes.isolated === true) {
-      attr.isolated = true
-    }
-  }
-
-  if (!Object.keys(attributes).length) return undefined
+  if (!Object.keys(attr).length) return undefined
 
   return attr
 }

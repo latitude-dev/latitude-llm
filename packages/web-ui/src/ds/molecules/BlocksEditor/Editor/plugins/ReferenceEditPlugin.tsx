@@ -1,26 +1,36 @@
+import { useEffect } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $getNodeByKey } from 'lexical'
-import { useEffect } from 'react'
 import { $isReferenceNode } from '../nodes/ReferenceNode'
-import { buildReferencePath } from './ReferencesPlugin'
+import { buildEmptyAttributes, buildReferencePath } from './ReferencesPlugin'
+import { BlocksEditorProps, IncludedPrompt } from '../../types'
 
-export function ReferenceEditPlugin() {
+export function ReferenceEditPlugin({
+  onRequestPromptMetadata,
+}: {
+  onRequestPromptMetadata: BlocksEditorProps['onRequestPromptMetadata']
+}) {
   const [editor] = useLexicalComposerContext()
 
   useEffect(() => {
     const abortController = new AbortController()
 
-    const handleReferencePathUpdate = (event: Event) => {
+    const handleReferencePathUpdate = async (event: Event) => {
       const customEvent = event as CustomEvent<{
         nodeKey: string
-        newPath: string
+        newPrompt: IncludedPrompt
       }>
-      const { nodeKey, newPath } = customEvent.detail
+      const { nodeKey, newPrompt } = customEvent.detail
 
+      const metadata = await onRequestPromptMetadata(newPrompt)
+      const attrs = buildEmptyAttributes(metadata)
       editor.update(() => {
         const node = $getNodeByKey(nodeKey)
         if ($isReferenceNode(node)) {
-          node.setPath(buildReferencePath(newPath))
+          node.onChangeReference({
+            path: buildReferencePath(newPrompt.path),
+            attributes: attrs,
+          })
         }
       })
     }
@@ -36,14 +46,17 @@ export function ReferenceEditPlugin() {
     return () => {
       abortController.abort()
     }
-  }, [editor])
+  }, [editor, onRequestPromptMetadata])
 
   return null
 }
 
-export function triggerReferencePathUpdate(nodeKey: string, newPath: string) {
+export function triggerReferencePathUpdate(
+  nodeKey: string,
+  newPrompt: IncludedPrompt,
+) {
   const event = new CustomEvent('reference-path-update', {
-    detail: { nodeKey, newPath },
+    detail: { nodeKey, newPrompt },
   })
   document.dispatchEvent(event)
 }

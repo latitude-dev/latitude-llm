@@ -840,4 +840,18 @@ How are you?
     const output = fromBlocksToText(rootNode)
     expect(output).toBe(prompt)
   })
+
+  it('should parse steps with everything', () => {
+    const prompt = `
+<step as="analysis" isolated raw="rawAnalysis" schema={{{type: "object", properties: {correct: {type: "boolean"}}, required: ["correct"]}}}>
+  Is this statement correct? {{statement}}
+  Respond only with "correct: true" or "correct: false" in a JSON object.
+</step>
+`
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt)
+  })
 })

@@ -307,12 +307,13 @@ export default function DocumentEditor({
   return (
     <>
       <SplitPane
+        visibleHandle={false}
         className='pt-6'
         direction='horizontal'
         reversed
         initialWidthClass='min-w-1/2'
         minSize={350}
-        initialPercentage={40}
+        initialPercentage={50}
         firstPane={
           <SplitPane.Pane>
             <div className='flex flex-col flex-1 flex-grow flex-shrink gap-y-4 min-w-0 min-h-0 pl-6 pr-4 pb-6'>
@@ -381,14 +382,12 @@ export default function DocumentEditor({
         }
         secondPane={
           <SplitPane.Pane>
-            <div className='flex-1 relative max-h-full px-4'>
-              <Playground
-                document={document}
-                prompt={document.content}
-                setPrompt={onChange}
-                metadata={metadata!}
-              />
-            </div>
+            <Playground
+              document={document}
+              prompt={document.content}
+              setPrompt={onChange}
+              metadata={metadata!}
+            />
           </SplitPane.Pane>
         }
       />

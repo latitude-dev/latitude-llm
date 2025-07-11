@@ -75,6 +75,23 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
     })
   }
 
+  onChangeReference({
+    path,
+    attributes,
+  }: {
+    path: string
+    attributes: SerializedReferenceLink['attributes']
+  }) {
+    const writable = this.getWritable()
+    writable.__path = path
+    writable.__attributes = attributes
+
+    // When changing reference we reset loading errors
+    writable.__errors = undefined
+    writable.__isLoading = false
+    return writable
+  }
+
   setPath(newPath: string) {
     const writable = this.getWritable()
     writable.__path = newPath
@@ -88,6 +105,7 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
       ...attributes,
     }
     writable.__isLoading = false
+    return writable
   }
 
   exportJSON(): SerializedReferenceLink {

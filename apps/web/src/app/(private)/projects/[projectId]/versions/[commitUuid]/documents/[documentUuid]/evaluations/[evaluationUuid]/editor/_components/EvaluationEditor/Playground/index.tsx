@@ -89,6 +89,7 @@ export const Playground = memo(
         <div className='h-full flex-grow flex-shrink min-h-0 flex flex-col gap-2 overflow-hidden pr-0.5'>
           {mode === 'preview' ? (
             <PreviewPrompt
+              showHeader
               metadata={metadata}
               parameters={parameters}
               runPrompt={runPrompt}
@@ -97,6 +98,7 @@ export const Playground = memo(
             />
           ) : (
             <Chat
+              showHeader
               canChat={false}
               parameters={parameters}
               clearChat={clearChat}

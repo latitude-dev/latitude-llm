@@ -50,13 +50,9 @@ export function EventListeners({
 }) {
   useEffect(() => {
     const abortController = new AbortController()
-    const handleGoToDevEditor = () => {
-      onToggleDevEditor()
-    }
-
     document.addEventListener(
       CUSTOM_EVENTS.GO_TO_DEV_EDITOR,
-      handleGoToDevEditor,
+      onToggleDevEditor,
       { signal: abortController.signal },
     )
 
@@ -64,7 +60,7 @@ export function EventListeners({
       abortController.abort()
       document.removeEventListener(
         CUSTOM_EVENTS.GO_TO_DEV_EDITOR,
-        handleGoToDevEditor,
+        onToggleDevEditor,
       )
     }
   }, [onToggleDevEditor])
@@ -105,7 +101,7 @@ function ReferencePickerMenuItem({
   )
 }
 
-function buildEmptyAttributes(metadata: ConversationMetadata) {
+export function buildEmptyAttributes(metadata: ConversationMetadata) {
   return Object.fromEntries(
     Array.from(metadata.parameters).map((key) => [key, undefined]),
   )

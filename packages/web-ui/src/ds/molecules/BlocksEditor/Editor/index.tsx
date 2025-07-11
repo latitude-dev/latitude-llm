@@ -171,7 +171,9 @@ export function BlocksEditor({
             onRequestPromptMetadata={onRequestPromptMetadata}
             onToggleDevEditor={onToggleDevEditor}
           />
-          <ReferenceEditPlugin />
+          <ReferenceEditPlugin
+            onRequestPromptMetadata={onRequestPromptMetadata}
+          />
           <HierarchyValidationPlugin />
           <VariableTransformPlugin />
           <HistoryPlugin />

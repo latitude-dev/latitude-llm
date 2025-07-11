@@ -118,6 +118,7 @@ export interface StepBlock extends SerializedElementNode {
   attributes?: {
     as?: string
     isolated?: boolean
+    otherAttributes?: Record<string, unknown>
   }
 }
 

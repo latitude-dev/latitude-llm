@@ -64,7 +64,7 @@ export const PlaygroundBlocksEditor = memo(
       [documents],
     )
     const onToogleDevEditor = useCallback(() => {
-      onToggleBlocksEditor(false)
+      onToggleBlocksEditor(true)
     }, [onToggleBlocksEditor])
 
     const onError = useCallback(
