@@ -6,7 +6,7 @@ import {
   User,
   Workspace,
 } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from './../../lib/Transaction'
@@ -32,7 +32,7 @@ export async function applyDocumentSuggestion(
     project: Project
     user: User
   },
-  db: Database = database,
+  db = database,
 ) {
   prompt = prompt ?? suggestion.newPrompt
 
@@ -58,15 +58,17 @@ export async function applyDocumentSuggestion(
 
     let draft
     if (commit.mergedAt) {
-      draft = await createCommit({
-        project: project,
-        user: user,
-        data: {
-          title: `Refined '${document.path.split('/').pop()}'`,
-          description: 'Created by a suggestion.',
+      draft = await createCommit(
+        {
+          project: project,
+          user: user,
+          data: {
+            title: `Refined '${document.path.split('/').pop()}'`,
+            description: 'Created by a suggestion.',
+          },
         },
-        db: tx,
-      }).then((r) => r.unwrap())
+        tx,
+      ).then((r) => r.unwrap())
 
       await updateDocument(
         {

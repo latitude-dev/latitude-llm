@@ -5,7 +5,7 @@ import {
   EvaluationV2,
   Workspace,
 } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import {
   DocumentLogsRepository,
@@ -62,7 +62,7 @@ export async function serializeEvaluationResult<
     result: EvaluationResultV2<T, M>
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) {

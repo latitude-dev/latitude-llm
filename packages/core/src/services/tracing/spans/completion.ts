@@ -71,7 +71,7 @@ import {
   SpanType,
   Workspace,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import { ProviderApiKeysRepository } from '../../../repositories'
@@ -91,7 +91,7 @@ export const CompletionSpanSpecification = {
 
 async function process(
   { attributes, status, workspace }: SpanProcessArgs<SpanType.Completion>,
-  db: Database = database,
+  db = database,
 ) {
   const extractingcp = extractProvider(attributes)
   if (extractingcp.error) return Result.error(extractingcp.error)
@@ -677,7 +677,7 @@ async function enrichCost(
   model: CompletionSpanMetadata['model'],
   tokens: Required<CompletionSpanMetadata>['tokens'],
   workspace: Workspace,
-  db: Database = database,
+  db = database,
 ): Promise<TypedResult<Required<CompletionSpanMetadata>['cost']>> {
   const inputTokens = tokens.prompt + tokens.cached
   const outputTokens = tokens.reasoning + tokens.completion

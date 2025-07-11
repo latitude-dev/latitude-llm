@@ -18,7 +18,7 @@ import {
   Workspace,
 } from '../../../browser'
 import { cache as redis } from '../../../cache'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { processSegmentJobKey } from '../../../jobs/job-definitions/tracing/processSegmentJob'
 import { tracingQueue } from '../../../jobs/queues'
@@ -54,7 +54,7 @@ export async function processSegment(
     apiKey: ApiKey
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
   disk: DiskWrapper = diskFactory('private'),
 ) {
   const validating = validateSegmentChain(args.segment, args.chain)
@@ -262,7 +262,7 @@ async function getCurrentState(
     traceId: string
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
   disk: DiskWrapper,
 ): Promise<TypedResult<SegmentProcessArgs['current']>> {
   const segmentsRepository = new SegmentsRepository(workspace.id, db)
@@ -294,7 +294,7 @@ async function getRunState(
     traceId: string
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
   disk: DiskWrapper,
 ): Promise<TypedResult<SegmentProcessArgs['run']>> {
   const segmentsRepository = new SegmentsRepository(workspace.id, db)
@@ -324,7 +324,7 @@ async function getChildState(
     traceId: string
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
   disk: DiskWrapper,
 ): Promise<TypedResult<SegmentProcessArgs['child']>> {
   if (childType === 'span') {
@@ -372,7 +372,7 @@ async function getState(
     apiKey: ApiKey
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
   disk: DiskWrapper,
 ): Promise<TypedResult<SegmentProcessArgs>> {
   return await Transaction.call(async (tx) => {

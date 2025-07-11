@@ -8,7 +8,7 @@ import {
   EvaluationV2,
   Workspace,
 } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { compactObject } from '../../lib/compactObject'
@@ -35,7 +35,7 @@ export async function updateEvaluationV2<
     options?: Partial<EvaluationOptions>
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   let settingsChanged = false
   for (const setting in settings ?? {}) {

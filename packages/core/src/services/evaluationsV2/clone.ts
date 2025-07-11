@@ -5,7 +5,7 @@ import {
   EvaluationV2,
   Workspace,
 } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import {
@@ -28,7 +28,7 @@ export async function cloneEvaluationV2<
     commit: Commit
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
   const document = await documentsRepository

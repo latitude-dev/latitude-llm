@@ -10,7 +10,7 @@ import {
   MAX_DOCUMENT_SUGGESTIONS_PER_EVALUATION,
   Workspace,
 } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -38,7 +38,7 @@ async function checkSuggestionLimits(
     commit: Commit
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   const repository = new DocumentSuggestionsRepository(workspace.id, db)
   const count = await repository
@@ -79,7 +79,7 @@ export async function generateDocumentSuggestion(
     commit: Commit
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   if (!env.LATITUDE_CLOUD) {
     return Result.error(new Error(CLOUD_MESSAGES.documentSuggestions))

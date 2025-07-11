@@ -3,7 +3,7 @@ import {
   HumanEvaluationMetric,
   HumanEvaluationSpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {
@@ -37,7 +37,7 @@ async function validate<M extends HumanEvaluationMetric>(
   }: EvaluationMetricValidateArgs<EvaluationType.Human, M> & {
     metric: M
   },
-  db: Database = database,
+  db = database,
 ) {
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) {
@@ -79,7 +79,7 @@ async function annotate<M extends HumanEvaluationMetric>(
   }: EvaluationMetricAnnotateArgs<EvaluationType.Human, M> & {
     metric: M
   },
-  db: Database = database,
+  db = database,
 ) {
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) {

@@ -1,27 +1,28 @@
 import { Commit, Project, User } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from './../../lib/Transaction'
 import { commits } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 
-export async function createCommit({
-  project,
-  user,
-  data: { title, description, mergedAt, version },
+export async function createCommit(
+  {
+    project,
+    user,
+    data: { title, description, mergedAt, version },
+  }: {
+    project: Project
+    user: User
+    data: {
+      title: string
+      description?: string
+      version?: number
+      mergedAt?: Date
+    }
+  },
   db = database,
-}: {
-  project: Project
-  user: User
-  data: {
-    title: string
-    description?: string
-    version?: number
-    mergedAt?: Date
-  }
-  db?: Database
-}) {
+) {
   return Transaction.call<Commit>(async (tx) => {
     const result = await tx
       .insert(commits)

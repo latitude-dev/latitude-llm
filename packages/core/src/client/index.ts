@@ -9,7 +9,11 @@ import * as schema from '../schema'
 const { Pool } = pg
 
 export type Replica = NodePgDatabase<typeof schema> & { $client: IPool }
-export type Database = PgWithReplicas<Replica>
+export type Database =
+  | PgWithReplicas<Replica>
+  | (NodePgDatabase<typeof schema> & {
+      $client: IPool
+    })
 
 // TODO: Send pool vitals to datadog when they change
 const POOL_CONFIG: PoolConfig = {
@@ -25,23 +29,32 @@ const pool = new Pool({
   connectionString: env.DATABASE_URL,
 })
 
-const read1Pool = new Pool({
-  ...POOL_CONFIG,
-  connectionString: env.READ_DATABASE_URL,
-})
+const readReplicas: Replica[] = []
 
-const read2Pool = new Pool({
-  ...POOL_CONFIG,
-  connectionString: env.READ_2_DATABASE_URL,
-})
+if (env.READ_DATABASE_URL) {
+  const read1Pool = new Pool({
+    ...POOL_CONFIG,
+    connectionString: env.READ_DATABASE_URL,
+  })
+  readReplicas.push(drizzle(read1Pool, { schema }))
+}
+
+if (env.READ_2_DATABASE_URL) {
+  const read2Pool = new Pool({
+    ...POOL_CONFIG,
+    connectionString: env.READ_2_DATABASE_URL,
+  })
+  readReplicas.push(drizzle(read2Pool, { schema }))
+}
 
 export * as utils from './utils'
 
 const primary = drizzle(pool, { schema })
-const read1 = drizzle(read1Pool, { schema })
-const read2 = drizzle(read2Pool, { schema })
 
-export const database = withReplicas(primary, [read1, read2])
+export const database =
+  readReplicas.length > 0
+    ? withReplicas(primary, readReplicas as [Replica, ...Replica[]])
+    : primary
 
 const LRO_POOL_CONFIG: PoolConfig = {
   ...POOL_CONFIG,
@@ -67,18 +80,31 @@ export function lro() {
 export function setupLRO() {
   if (_lro) return
 
-  const pools = [
-    new Pool({
+  const pools: IPool[] = []
+  const replicas: Replica[] = []
+
+  if (env.READ_DATABASE_URL) {
+    const pool = new Pool({
       ...LRO_POOL_CONFIG,
       connectionString: env.READ_DATABASE_URL,
-    }),
-    new Pool({
+    })
+    pools.push(pool)
+    replicas.push(drizzle(pool, { schema }))
+  }
+
+  if (env.READ_2_DATABASE_URL) {
+    const pool = new Pool({
       ...LRO_POOL_CONFIG,
       connectionString: env.READ_2_DATABASE_URL,
-    }),
-  ]
-  const replicas = pools.map((pool) => drizzle(pool, { schema }))
-  const database = withReplicas(primary, replicas as [Replica, ...Replica[]])
+    })
+    pools.push(pool)
+    replicas.push(drizzle(pool, { schema }))
+  }
+
+  const database =
+    replicas.length > 0
+      ? withReplicas(primary, replicas as [Replica, ...Replica[]])
+      : primary
 
   _lro = { pools, replicas, database }
 }

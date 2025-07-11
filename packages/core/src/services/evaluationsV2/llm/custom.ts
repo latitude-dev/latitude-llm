@@ -6,7 +6,7 @@ import {
   LlmEvaluationMetric,
   LlmEvaluationCustomSpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
@@ -30,7 +30,7 @@ async function validate(
     EvaluationType.Llm,
     LlmEvaluationMetric.Custom
   >,
-  _: Database = database,
+  _ = database,
 ) {
   if (configuration.prompt === undefined) {
     return Result.error(new BadRequestError('Prompt is required'))
@@ -132,7 +132,7 @@ async function run(
     commit,
     workspace,
   }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Custom>,
-  db: Database = database,
+  db = database,
 ) {
   // Note: expectedOutput is optional for this metric as this function
   // is reused for both, custom and custom labeled, llm metrics

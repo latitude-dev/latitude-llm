@@ -19,15 +19,17 @@ export const refineApplyAction = withDocument
     const result = await Transaction.call(async (tx) => {
       let draft
       if (ctx.commit.mergedAt) {
-        draft = await createCommit({
-          project: ctx.project,
-          user: ctx.user,
-          data: {
-            title: `Refined '${ctx.document.path.split('/').pop()}'`,
-            description: 'Created by refiner.',
+        draft = await createCommit(
+          {
+            project: ctx.project,
+            user: ctx.user,
+            data: {
+              title: `Refined '${ctx.document.path.split('/').pop()}'`,
+              description: 'Created by refiner.',
+            },
           },
-          db: tx,
-        }).then((r) => r.unwrap())
+          tx,
+        ).then((r) => r.unwrap())
 
         await updateDocument(
           {

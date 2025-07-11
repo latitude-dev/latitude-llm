@@ -17,7 +17,7 @@ import {
   ProviderLogDto,
   Workspace,
 } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
@@ -55,7 +55,7 @@ export async function runEvaluationV2<
     commit: Commit
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   const resultsRepository = new EvaluationResultsV2Repository(workspace.id, db)
   const result = await resultsRepository.findByEvaluatedLogAndEvaluation({

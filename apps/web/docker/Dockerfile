@@ -104,6 +104,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   NEXT_PUBLIC_SENTRY_WEB_DSN=$NEXT_PUBLIC_SENTRY_WEB_DSN \
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=$NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
   NEXT_PUBLIC_DOCS_URL=$NEXT_PUBLIC_DOCS_URL \
+  NODE_OPTIONS="--max-old-space-size=8192" \
   pnpm turbo build --filter="${PROJECT}..."
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional

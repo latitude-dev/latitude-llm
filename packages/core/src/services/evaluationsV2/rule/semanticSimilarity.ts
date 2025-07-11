@@ -7,7 +7,7 @@ import {
   RuleEvaluationMetric,
   RuleEvaluationSemanticSimilaritySpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import {
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
@@ -29,7 +29,7 @@ async function validate(
     EvaluationType.Rule,
     RuleEvaluationMetric.SemanticSimilarity
   >,
-  _: Database = database,
+  _ = database,
 ) {
   if (
     configuration.minSimilarity !== undefined &&
@@ -87,7 +87,7 @@ async function run(
     EvaluationType.Rule,
     RuleEvaluationMetric.SemanticSimilarity
   >,
-  _: Database = database,
+  _ = database,
 ) {
   const metadata = {
     configuration: evaluation.configuration,

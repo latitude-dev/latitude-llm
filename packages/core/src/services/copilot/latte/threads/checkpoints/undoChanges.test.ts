@@ -149,6 +149,7 @@ describe('undo latte changes', () => {
       [ - ] delete/unedited
       [ - ] delete/new
     */
+
     const changesAfterLatte = await documentsScope
       .listCommitChanges(draft)
       .then((r) => r.unwrap())

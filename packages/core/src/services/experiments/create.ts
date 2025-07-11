@@ -1,6 +1,6 @@
 import { Dataset, Experiment } from '../../browser'
 import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { scanDocumentContent } from '../documents'
 import { experiments } from '../../schema'
 import { DatasetRowsRepository } from '../../repositories'
@@ -93,7 +93,7 @@ export async function createExperiment(
     toRow?: number
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   const requirementsResult = assertEvaluationRequirements({
     evaluations,

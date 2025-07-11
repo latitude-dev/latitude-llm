@@ -6,7 +6,7 @@ import {
   EvaluationV2,
   Workspace,
 } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import { EvaluationsV2Repository } from '../../repositories'
@@ -26,7 +26,7 @@ export async function deleteEvaluationV2<
     commit: Commit
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   return await Transaction.call(async (tx) => {
     const repository = new EvaluationsV2Repository(workspace.id, tx)

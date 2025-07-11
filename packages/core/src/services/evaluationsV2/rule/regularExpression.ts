@@ -4,7 +4,7 @@ import {
   RuleEvaluationMetric,
   RuleEvaluationRegularExpressionSpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import {
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
@@ -28,7 +28,7 @@ async function validate(
     EvaluationType.Rule,
     RuleEvaluationMetric.RegularExpression
   >,
-  _: Database = database,
+  _ = database,
 ) {
   configuration.pattern = configuration.pattern.trim()
   if (!configuration.pattern) {
@@ -63,7 +63,7 @@ async function run(
     EvaluationType.Rule,
     RuleEvaluationMetric.RegularExpression
   >,
-  _: Database = database,
+  _ = database,
 ) {
   const metadata = {
     configuration: evaluation.configuration,

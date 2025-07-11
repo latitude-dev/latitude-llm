@@ -3,7 +3,7 @@ import {
   RuleEvaluationMetric,
   RuleEvaluationLengthCountSpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import {
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
@@ -25,7 +25,7 @@ async function validate(
     EvaluationType.Rule,
     RuleEvaluationMetric.LengthCount
   >,
-  _: Database = database,
+  _ = database,
 ) {
   if (configuration.minLength !== undefined && configuration.minLength < 0) {
     return Result.error(
@@ -69,7 +69,7 @@ async function run(
     EvaluationType.Rule,
     RuleEvaluationMetric.LengthCount
   >,
-  _: Database = database,
+  _ = database,
 ) {
   const metadata = {
     configuration: evaluation.configuration,

@@ -28,16 +28,18 @@ export async function createProject(
         .returning()
     )[0]!
 
-    const result = await createCommit({
-      data: {
-        title: 'Initial version',
-        version: 0,
-        mergedAt,
+    const result = await createCommit(
+      {
+        data: {
+          title: 'Initial version',
+          version: 0,
+          mergedAt,
+        },
+        project,
+        user,
       },
-      project,
-      user,
-      db: tx,
-    })
+      tx,
+    )
     if (result.error) return result
 
     publisher.publishLater({

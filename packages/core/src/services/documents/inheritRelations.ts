@@ -1,5 +1,5 @@
 import { DocumentVersion, Workspace } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { DocumentSuggestionsRepository } from '../../repositories'
 import { documentSuggestions } from '../../schema'
 import { ConflictError } from './../../lib/errors'
@@ -16,7 +16,7 @@ async function inheritSuggestions(
     toVersion: DocumentVersion
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   if (toVersion.deletedAt) return Result.nil()
 
@@ -53,7 +53,7 @@ export async function inheritDocumentRelations(
     toVersion: DocumentVersion
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   if (
     fromVersion.id === toVersion.id ||

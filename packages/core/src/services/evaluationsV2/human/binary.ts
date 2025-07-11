@@ -3,7 +3,7 @@ import {
   HumanEvaluationMetric,
   HumanEvaluationBinarySpecification as specification,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import {
   EvaluationMetricAnnotateArgs,
@@ -24,7 +24,7 @@ async function validate(
     EvaluationType.Human,
     HumanEvaluationMetric.Binary
   >,
-  _: Database = database,
+  _ = database,
 ) {
   configuration.passDescription = configuration.passDescription?.trim()
 
@@ -52,7 +52,7 @@ async function annotate(
     EvaluationType.Human,
     HumanEvaluationMetric.Binary
   >,
-  _: Database = database,
+  _ = database,
 ) {
   const metadata = {
     configuration: evaluation.configuration,

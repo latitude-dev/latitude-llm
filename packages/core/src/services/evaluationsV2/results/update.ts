@@ -7,7 +7,7 @@ import {
   EvaluationType,
   Workspace,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
@@ -28,7 +28,7 @@ export async function updateEvaluationResultV2<
     value: Partial<EvaluationResultValue<T, M>>
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   return await Transaction.call(async (tx) => {
     const result = (await tx

@@ -1,5 +1,5 @@
 import type { Commit, Workspace } from '../../browser'
-import { database, Database } from '../../client'
+import { database } from '../../client'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { DocumentVersionsRepository } from '../../repositories/documentVersionsRepository'
 import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
@@ -7,17 +7,18 @@ import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
 import Transaction from './../../lib/Transaction'
 
-export async function destroyFolder({
-  path,
-  commit,
-  workspace,
+export async function destroyFolder(
+  {
+    path,
+    commit,
+    workspace,
+  }: {
+    path: string
+    commit: Commit
+    workspace: Workspace
+  },
   db = database,
-}: {
-  path: string
-  commit: Commit
-  workspace: Workspace
-  db?: Database
-}) {
+) {
   return Transaction.call(async (tx) => {
     const assertResult = assertCommitIsDraft(commit)
     assertResult.unwrap()
