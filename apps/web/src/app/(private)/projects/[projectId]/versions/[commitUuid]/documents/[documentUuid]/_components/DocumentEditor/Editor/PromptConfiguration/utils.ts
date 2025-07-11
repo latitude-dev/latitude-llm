@@ -16,6 +16,7 @@ export type PromptConfigurationProps = {
   setConfig: (config: Record<string, unknown>) => void
   disabled?: boolean
   fancyButton?: boolean
+  showBehaviorSettings?: boolean
 }
 
 export const useReactiveConfig = ({
@@ -142,3 +143,5 @@ export const useLatitudeAgentsConfig = ({
     toggleAgent,
   }
 }
+
+export type UseLatitudeAgentsConfig = ReturnType<typeof useLatitudeAgentsConfig>

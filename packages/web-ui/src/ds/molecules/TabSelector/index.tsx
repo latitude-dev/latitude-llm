@@ -59,7 +59,6 @@ export function TabSelector<T extends string>({
       background.style.top = `${button.offsetTop}px`
       background.style.left = `${button.offsetLeft}px`
       background.style.width = `${button.offsetWidth}px`
-      background.style.height = `${button.offsetHeight}px`
       background.style.display = 'block'
     }
 
@@ -89,7 +88,11 @@ export function TabSelector<T extends string>({
         )}
       >
         <div
-          className='absolute hidden bg-secondary rounded-lg border border-border -m-px p-1 gap-2 transition-all duration-200 ease-in-out'
+          className={cn(
+            'h-8', // Button normal size height
+            'absolute hidden bg-secondary rounded-lg border border-border',
+            '-m-px p-1 gap-2 transition-all duration-200 ease-in-out',
+          )}
           ref={selectedOptionBackgroundRef}
         />
         {options.map((option, idx) => {

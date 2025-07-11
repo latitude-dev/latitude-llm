@@ -315,13 +315,12 @@ export default function DocumentEditor({
         initialPercentage={40}
         firstPane={
           <SplitPane.Pane>
-            <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0 pl-6 pb-6 pr-4'>
+            <div className='flex flex-col flex-1 flex-grow flex-shrink gap-y-4 min-w-0 min-h-0 pl-6 pr-4 pb-6'>
               {blocksEditorEnabled ? (
                 <EditorHeader
                   title={name}
                   prompt={value}
                   providers={providers}
-                  document={document}
                   metadata={metadata}
                   onChangePrompt={onChange}
                   isLatitudeProvider={isLatitudeProvider}

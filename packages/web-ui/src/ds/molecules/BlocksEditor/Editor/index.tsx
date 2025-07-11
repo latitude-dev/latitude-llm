@@ -44,8 +44,7 @@ const theme = {
   rtl: 'rtl',
   paragraph: cn('block-paragraph align-middle', font.size.h5),
   code: cn(
-    'block whitespace-pre',
-    'whitespace-pre',
+    'block whitespace-pre-wrap ',
     'text-sm text-muted-foreground',
     'px-4 py-2',
     'rounded-lg',
@@ -130,7 +129,8 @@ export function BlocksEditor({
     >
       <LexicalComposer initialConfig={initialConfig}>
         <div
-          className={cn('relative', {
+          className={cn('relative overflow-y-auto custom-scrollbar', {
+            'scrollable-indicator': !readOnly,
             'border border-border bg-backgroundCode rounded-md px-3': readOnly,
           })}
           ref={onRef}
@@ -143,6 +143,7 @@ export function BlocksEditor({
                 className={cn(
                   'outline-none resize-none text-sm leading-relaxed',
                   'focus:outline-none',
+                  'whitespace-pre-wrap break-words',
                   VERTICAL_SPACE_CLASS,
                   {
                     'cursor-default opacity-80': readOnly,

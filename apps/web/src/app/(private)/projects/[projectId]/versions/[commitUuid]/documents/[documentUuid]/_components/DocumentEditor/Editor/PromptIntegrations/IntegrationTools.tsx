@@ -12,11 +12,22 @@ import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
+import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 
-export function ItemWrapper({ children }: { children: ReactNode }) {
+export function ItemWrapper({
+  children,
+  isFirst,
+}: {
+  children: ReactNode
+  isFirst?: boolean
+}) {
   return (
-    <div className='flex flex-col gap-2 p-4 border-t border-border'>
+    <div
+      className={cn('flex flex-col gap-2 p-4', {
+        'border-t border-border': !isFirst,
+      })}
+    >
       {children}
     </div>
   )
@@ -25,16 +36,18 @@ export function ItemWrapper({ children }: { children: ReactNode }) {
 function IntegrationToolItem({
   disabled,
   tool,
+  isFirst,
   isActive,
   onToggle,
 }: {
   disabled?: boolean
+  isFirst?: boolean
   tool: McpToolDto
   isActive: boolean
   onToggle: () => void
 }) {
   return (
-    <ItemWrapper>
+    <ItemWrapper isFirst={isFirst}>
       <div className='flex flex-row items-center gap-2 justify-between min-w-0'>
         <Text.H6B ellipsis noWrap color='foreground'>
           {tool.displayName ?? tool.name}
@@ -255,7 +268,7 @@ export function IntegrationToolsList({
 
   return (
     <div className='divide-y divide-border'>
-      <ItemWrapper>
+      <ItemWrapper isFirst>
         <Text.H6B color='foreground'>Enable all</Text.H6B>
         <SwitchToggle
           checked={allEnabled}
