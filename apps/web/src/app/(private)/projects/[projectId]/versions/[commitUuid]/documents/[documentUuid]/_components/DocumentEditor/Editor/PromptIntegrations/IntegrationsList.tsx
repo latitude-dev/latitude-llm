@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from 'react'
 import { IntegrationDto } from '@latitude-data/core/browser'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   TwoColumnSelect,
   TwoColumnSelectOption,
@@ -8,6 +9,7 @@ import { ActiveIntegrations } from './useActiveIntegrations'
 import { ROUTES } from '$/services/routes'
 import { IntegrationToolsList } from './IntegrationTools'
 import { integrationOptions } from '$/lib/integrationTypeOptions'
+import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
 import { useNavigate } from '$/hooks/useNavigate'
 
 export function IntegrationsList({
@@ -67,7 +69,7 @@ export function IntegrationsList({
       addNew={addNew}
       onChange={onChange}
     >
-      {selectedIntegration && (
+      {selectedIntegration ? (
         <IntegrationToolsList
           disabled={disabled}
           integration={selectedIntegration}
@@ -75,6 +77,10 @@ export function IntegrationsList({
           addIntegrationTool={addIntegrationTool}
           removeIntegrationTool={removeIntegrationTool}
         />
+      ) : (
+        <BlankSlate>
+          <Text.H6>Select an integration to see available tools</Text.H6>
+        </BlankSlate>
       )}
     </TwoColumnSelect>
   )

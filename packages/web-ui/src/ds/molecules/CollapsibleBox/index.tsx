@@ -1,10 +1,10 @@
 'use client'
-import { ReactNode, useCallback, useState } from 'react'
+import { MouseEvent, ReactNode, useCallback, useState } from 'react'
 import { Icon, IconName } from '../../atoms/Icons'
 import { Text } from '../../atoms/Text'
 import { cn } from '../../../lib/utils'
 
-export const COLLAPSED_BOX_HEIGHT = 56
+export const COLLAPSED_BOX_HEIGHT = 48
 
 export type OnToggleFn = (expanded: boolean) => void
 export function CollapsibleBox({
@@ -18,11 +18,13 @@ export function CollapsibleBox({
   initialExpanded = false,
   onToggle,
   scrollable = true,
+  paddingLeft = true,
   paddingBottom = true,
   paddingRight = true,
   isExpanded: isExpandedProp,
+  avoidToggleOnTitleClick = false,
 }: {
-  title: string
+  title: string | ReactNode
   icon?: IconName
   collapsedContent?: ReactNode
   collapsedContentHeader?: ReactNode
@@ -34,19 +36,30 @@ export function CollapsibleBox({
   isExpanded?: boolean
   scrollable?: boolean
   paddingBottom?: boolean
+  paddingLeft?: boolean
   paddingRight?: boolean
+  avoidToggleOnTitleClick?: boolean
 }) {
   const [internalExpanded, setInternalExpanded] = useState(initialExpanded)
   const isControlled = isExpandedProp !== undefined
   const isExpanded = isControlled ? isExpandedProp : internalExpanded
   const handleToggle = useCallback(() => {
     const next = !isExpanded
+
     if (isControlled) {
       onToggle?.(next)
     } else {
       setInternalExpanded(next)
     }
   }, [isControlled, isExpanded, onToggle])
+  const onTitleClick = useCallback(
+    (e: MouseEvent) => {
+      if (!avoidToggleOnTitleClick) return
+
+      e.stopPropagation()
+    },
+    [avoidToggleOnTitleClick],
+  )
 
   return (
     <div
@@ -61,10 +74,17 @@ export function CollapsibleBox({
         className='flex flex-col cursor-pointer sticky top-0 z-10 bg-background'
         onClick={handleToggle}
       >
-        <div className='min-h-14 flex flex-shrink-0 justify-between items-center py-3.5 px-4 gap-x-4'>
-          <div className='flex flex-row items-center gap-x-2'>
+        <div className='flex flex-shrink-0 justify-between items-center py-3.5 px-4 gap-x-4'>
+          <div
+            className='flex flex-row items-center gap-x-2'
+            onClick={onTitleClick}
+          >
             {icon && <Icon className='flex-shrink-0' name={icon} />}
-            <Text.H5M userSelect={false}>{title}</Text.H5M>
+            {typeof title === 'string' ? (
+              <Text.H5M userSelect={false}>{title}</Text.H5M>
+            ) : (
+              title
+            )}
           </div>
           <div className='flex flex-row flex-grow min-w-0 items-center gap-x-2'>
             <div className='flex-grow min-w-0'>
@@ -81,7 +101,7 @@ export function CollapsibleBox({
         )}
       </div>
       <div
-        className={cn('transition-all duration-300 ease-in-out ', {
+        className={cn('transition-all duration-300 ease-in-out', {
           'flex flex-col min-h-0': !scrollable,
           'overflow-y-auto custom-scrollbar': scrollable,
         })}
@@ -92,8 +112,9 @@ export function CollapsibleBox({
       >
         {expandedContent && (
           <div
-            className={cn('pl-4', {
+            className={cn({
               'flex min-h-0': !scrollable,
+              'pl-4': paddingLeft,
               'pr-4': paddingRight,
               'pb-3.5': paddingBottom,
             })}

@@ -9,6 +9,7 @@ import { LimitSettings } from './LimitSettings'
 export function PromptConfiguration({
   disabled,
   fancyButton = false,
+  showBehaviorSettings = true,
   ...restProps
 }: PromptConfigurationProps) {
   const canUseSubagents = restProps.canUseSubagents
@@ -50,12 +51,14 @@ export function PromptConfiguration({
             setConfig={setConfig}
             disabled={disabled}
           />
-          <BehaviourSettings
-            config={config}
-            canUseSubagents={canUseSubagents}
-            setConfig={setConfig}
-            disabled={disabled}
-          />
+          {showBehaviorSettings ? (
+            <BehaviourSettings
+              config={config}
+              canUseSubagents={canUseSubagents}
+              setConfig={setConfig}
+              disabled={disabled}
+            />
+          ) : null}
           <LimitSettings
             config={config}
             canUseSubagents={canUseSubagents}
