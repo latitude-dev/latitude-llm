@@ -71,9 +71,9 @@
               "guides/prompt-manager/configuration",
               "guides/prompt-manager/playground",
               "guides/prompt-manager/version-control",
-              "guides/prompt-manager/triggers",
               "guides/prompt-manager/json-output",
               "guides/prompt-manager/tools",
+              "guides/prompt-manager/triggers",
               "guides/prompt-manager/prompt-best-practices"
             ]
           },

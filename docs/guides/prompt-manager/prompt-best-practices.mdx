@@ -19,6 +19,8 @@ Writing effective prompts is key to getting the best results from AI models. Her
 3.  **Define the Persona/Role**: Tell the model _who_ it should be.
 
     - **Example**: `<system>You are a helpful and friendly customer support agent for a SaaS company.</system>`
+    - **Note**: It can be helpful to use made up tags to organize information for the model.
+      -  **Example:**  `<rules> You must never produce more than 5 lines. </rules>`
 
 4.  **Specify the Output Format**: Use instructions or [JSON Schema](/guides/prompt-manager/json-output) to guide the format.
 
@@ -107,8 +109,8 @@ Query: {{ customer_query }}
 
 This example demonstrates:
 
-- Persona setting (`<system>`).
-- Using input parameters (`{{ customer_email }}`, `{{ customer_query }}`).
+- Role setting (`<system>`).
+- Using variables (`{{ customer_email }}`, `{{ customer_query }}`).
 - Defining and enabling a custom tool (`get_customer_details`).
 - Enforcing structured output (`schema`).
 - Clear instructions within the system message.
