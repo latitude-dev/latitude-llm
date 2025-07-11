@@ -4,11 +4,12 @@ import {
   ProviderApiKey,
   Providers,
 } from '@latitude-data/core/browser'
-import { Popover } from '@latitude-data/web-ui/atoms/Popover'
+import {
+  Popover,
+  type PopoverContentProps,
+} from '@latitude-data/web-ui/atoms/Popover'
 import { envClient } from '$/envClient'
-import useProviderApiKeys, {
-  SerializedProviderApiKey,
-} from '$/stores/providerApiKeys'
+import { SerializedProviderApiKey } from '$/stores/providerApiKeys'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { updatePromptMetadata } from '$/lib/promptMetadata'
 import { getModelOptionsForProvider } from '$/hooks/useModelOptions'
@@ -81,38 +82,39 @@ export function ProviderModelSelector({
   onChangePrompt,
   providers = [],
   disabledMetadataSelectors = false,
+  alignPopover = 'start',
+  fancyButton = false,
 }: {
   prompt: string
   onChangePrompt: (prompt: string) => void
   providers?: ProviderApiKey[]
   disabledMetadataSelectors?: boolean
+  alignPopover?: PopoverContentProps['align']
+  fancyButton?: boolean
 }) {
   const [isInitialized, setInitialized] = useState(false)
   const { data: workspace } = useCurrentWorkspace()
   const [open, setOpen] = useState(false)
   const [provider, setProvider] = useState<ProviderApiKey | undefined>()
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
-  const { data: providerApiKeys, isLoading } = useProviderApiKeys({
-    fallbackData: providers,
-  })
   const [model, setModel] = useState<string | undefined | null>()
   const defaultProviderId = workspace?.defaultProviderId
   const providerOptions = useMemo<TwoColumnSelectOption<number>[]>(
     () =>
-      providerApiKeys.sort(sortProviders(defaultProviderId)).map((p) => ({
+      providers.sort(sortProviders(defaultProviderId)).map((p) => ({
         label: getProviderLabel(p),
         icon: getProviderIcon({ provider: p }).name,
         value: p.id,
         name: defaultProviderId !== p.id ? p.name : `${p.name} (default)`,
       })),
-    [providerApiKeys, defaultProviderId],
+    [providers, defaultProviderId],
   )
   const onProviderChange = useCallback(
     (providerId: number) => {
       if (!providerId) return
       if (providerId === provider?.id) return
 
-      const selectedProvider = providerApiKeys.find((p) => p.id === providerId)
+      const selectedProvider = providers.find((p) => p.id === providerId)
       if (!selectedProvider) return
 
       const firstModel = findFirstModelForProvider({
@@ -130,7 +132,7 @@ export function ProviderModelSelector({
       })
       onChangePrompt(updatedPrompt)
     },
-    [providerApiKeys, provider, prompt, onChangePrompt],
+    [providers, provider, prompt, onChangePrompt],
   )
   const navigate = useNavigate()
   const onAddNewProvider = useCallback(() => {
@@ -144,8 +146,9 @@ export function ProviderModelSelector({
     [onAddNewProvider],
   )
 
-  const isReady = !isLoading && isInitialized
-  const isDisabled = disabledMetadataSelectors || !isReady
+  const isReady = isInitialized
+  const isLoading = !isInitialized
+  const isDisabled = disabledMetadataSelectors || !isInitialized
   const providerDisabled = isDisabled || !providerOptions.length
   const onModelChange = useCallback(
     (selectedModel: string | null) => {
@@ -175,12 +178,12 @@ export function ProviderModelSelector({
   useEvents({
     onPromptMetadataChanged: ({ promptLoaded, config }) => {
       if (!promptLoaded) return
-      if (!isInitialized) setInitialized(true)
+      if (!isInitialized && !!config) {
+        setInitialized(true)
+      }
 
       const { provider: providerName, model: m } = config || {}
-      const selectedProvider = providerApiKeys.find(
-        (p) => p.name === providerName,
-      )
+      const selectedProvider = providers.find((p) => p.name === providerName)
 
       setProvider(selectedProvider)
 
@@ -205,11 +208,12 @@ export function ProviderModelSelector({
 
     return provider.name
   }, [provider?.name, model, isReady])
+
   const { name: iconName, spin } = getProviderIcon({
     provider,
     model,
     checkModel: true,
-    isLoading: !isReady,
+    isLoading,
   })
 
   const onModelSearchChange = useCallback(
@@ -224,6 +228,7 @@ export function ProviderModelSelector({
       <Popover.Trigger asChild>
         <Button
           variant='outline'
+          fancy={fancyButton}
           ellipsis
           disabled={isDisabled}
           onClick={() => setOpen(true)}
@@ -250,12 +255,12 @@ export function ProviderModelSelector({
         </Button>
       </Popover.Trigger>
       <Popover.Content
-        align='start'
+        align={alignPopover}
         maxHeight='normal'
         style={{ width: 600, maxWidth: 600, padding: 0 }}
       >
         <TwoColumnSelect
-          loading={isLoading}
+          loading={!isReady}
           options={providerOptions}
           emptySlateLabel='No providers available. Add one'
           addNew={addNewProvider}

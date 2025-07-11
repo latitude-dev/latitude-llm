@@ -8,6 +8,7 @@ import { LimitSettings } from './LimitSettings'
 
 export function PromptConfiguration({
   disabled,
+  fancyButton = false,
   ...restProps
 }: PromptConfigurationProps) {
   const canUseSubagents = restProps.canUseSubagents
@@ -21,14 +22,16 @@ export function PromptConfiguration({
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
       <Popover.Trigger asChild>
         <Button
-          ellipsis
+          fancy={fancyButton}
+          variant='outline'
+          size='iconDefault'
           disabled={disabled}
           childrenOnlyText
-          iconProps={{ name: 'settings', className: 'my-0.5' }}
-          variant='outline'
+          iconProps={{ name: 'settings' }}
           onClick={() => setIsOpen(true)}
         />
       </Popover.Trigger>
+
       <Popover.Content
         side='right'
         align='start'

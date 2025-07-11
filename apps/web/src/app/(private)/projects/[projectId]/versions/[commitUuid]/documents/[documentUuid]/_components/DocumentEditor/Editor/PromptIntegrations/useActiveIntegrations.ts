@@ -271,7 +271,7 @@ export function useActiveIntegrations({
       }
 
       const active = readActiveIntegrations({
-        tools: config.tools,
+        tools: config?.tools,
         integrations,
       })
       setActiveIntegrations(active)

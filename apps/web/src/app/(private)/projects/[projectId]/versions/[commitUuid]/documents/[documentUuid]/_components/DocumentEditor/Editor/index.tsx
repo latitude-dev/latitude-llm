@@ -1,6 +1,5 @@
 'use client'
 
-import { EditorHeader } from '$/components/EditorHeader'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useMetadata } from '$/hooks/useMetadata'
 import { ROUTES } from '$/services/routes'
@@ -14,6 +13,8 @@ import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import {
+  ICommitContextType,
+  IProjectContextType,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
@@ -25,12 +26,70 @@ import { useDebouncedCallback } from 'use-debounce'
 import { useEvents } from '$/lib/events'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
-import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { UpdateToPromptLButton } from './UpdateToPromptl'
 import { Playground } from './Playground'
 import { useLatteStreaming } from './useLatteStreaming'
 import { PlaygroundTextEditor } from './TextEditor'
 import { PlaygroundBlocksEditor } from './BlocksEditor'
+import { EditorHeader as EvaluationEditorHeader } from '../../../evaluations/[evaluationUuid]/editor/_components/EvaluationEditor/EditorHeader'
+import { EditorHeader } from './EditorHeader'
+import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
+
+/**
+ * DEPRECATED: This will be not needed once new editor header
+ * is fully implemented.
+ */
+function useOldEditorHeaderActions({
+  project,
+  commit,
+  document,
+}: {
+  project: IProjectContextType['project']
+  commit: ICommitContextType['commit']
+  document: DocumentVersion
+}) {
+  return useMemo(() => {
+    return {
+      leftActions: (
+        <ClickToCopyUuid
+          tooltipContent='Click to copy the prompt UUID'
+          uuid={document.documentUuid}
+        />
+      ),
+      rightActions: (
+        <>
+          <Tooltip
+            asChild
+            trigger={
+              <Link
+                href={
+                  ROUTES.projects
+                    .detail({ id: project.id })
+                    .commits.detail({ uuid: commit.uuid })
+                    .history.detail({
+                      uuid: document.documentUuid,
+                    }).root
+                }
+              >
+                <Button
+                  variant='outline'
+                  size='small'
+                  iconProps={{
+                    name: 'history',
+                    color: 'foregroundMuted',
+                  }}
+                />
+              </Link>
+            }
+          >
+            View prompt history
+          </Tooltip>
+          <UpdateToPromptLButton document={document} />
+        </>
+      ),
+    }
+  }, [project.id, commit.uuid, document])
+}
 
 export default function DocumentEditor({
   document: _document,
@@ -50,7 +109,7 @@ export default function DocumentEditor({
   const { enabled: blocksEditorEnabled } = useFeatureFlag({
     featureFlag: 'blocksEditor',
   })
-  const [showBlocksEditor, setBlockEditorVisible] = useState(false)
+  const [devMode, setDevMode] = useState(true)
 
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -80,7 +139,11 @@ export default function DocumentEditor({
       _document,
     [documents, _document],
   )
-
+  const oldHeaderEditorActions = useOldEditorHeaderActions({
+    project: useCurrentProject().project,
+    commit: useCurrentCommit().commit,
+    document,
+  })
   const [value, setValue] = useState(document.content)
   const {
     customReadOnlyMessage,
@@ -144,7 +207,7 @@ export default function DocumentEditor({
       } else {
         runReadMetadata({
           prompt: val,
-          editorType: showBlocksEditor ? 'visual' : 'code',
+          editorType: devMode ? 'visual' : 'code',
           documents,
           document,
           fullPath: document.path,
@@ -160,6 +223,7 @@ export default function DocumentEditor({
   )
 
   const { metadata, runReadMetadata } = useMetadata()
+  const isLatitudeProvider = useIsLatitudeProvider({ metadata })
   useDocumentParameters({
     commitVersionUuid: commit.uuid,
     document,
@@ -173,7 +237,7 @@ export default function DocumentEditor({
   useEffect(() => {
     runReadMetadata({
       prompt: value,
-      editorType: showBlocksEditor ? 'visual' : 'code',
+      editorType: devMode ? 'visual' : 'code',
       documents,
       document,
       fullPath: document.path,
@@ -188,7 +252,7 @@ export default function DocumentEditor({
     providers,
     integrations,
     document,
-    showBlocksEditor,
+    devMode,
     documents,
     runReadMetadata,
     value,
@@ -252,87 +316,37 @@ export default function DocumentEditor({
         firstPane={
           <SplitPane.Pane>
             <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0 pl-6 pb-6 pr-4'>
-              <EditorHeader
-                documentVersion={document}
-                providers={providers}
-                disabledMetadataSelectors={isMerged}
-                title={name}
-                rightActions={useMemo(
-                  () => (
-                    <>
-                      <Tooltip
-                        asChild
-                        trigger={
-                          <Link
-                            href={
-                              ROUTES.projects
-                                .detail({ id: project.id })
-                                .commits.detail({ uuid: commit.uuid })
-                                .history.detail({
-                                  uuid: document.documentUuid,
-                                }).root
-                            }
-                          >
-                            <Button
-                              variant='outline'
-                              size='small'
-                              className='h-7'
-                              iconProps={{
-                                name: 'history',
-                                color: 'foregroundMuted',
-                              }}
-                            />
-                          </Link>
-                        }
-                      >
-                        View prompt history
-                      </Tooltip>
-                      <UpdateToPromptLButton document={document} />
-                    </>
-                  ),
-                  [project.id, commit.uuid, document],
-                )}
-                leftActions={useMemo(
-                  () => (
-                    <ClickToCopyUuid
-                      tooltipContent='Click to copy the prompt UUID'
-                      uuid={document.documentUuid}
-                    />
-                  ),
-                  [document.documentUuid],
-                )}
-                metadata={metadata}
-                prompt={document.content}
-                onChangePrompt={onChange}
-                freeRunsCount={freeRunsCount}
-                showCopilotSetting={copilotEnabled}
-              />
               {blocksEditorEnabled ? (
-                <div className='flex flex-row justify-end'>
-                  <SwitchInput
-                    fullWidth={false}
-                    label='Enable Simple editor'
-                    defaultChecked={showBlocksEditor}
-                    checked={showBlocksEditor}
-                    onCheckedChange={setBlockEditorVisible}
-                  />
-                </div>
-              ) : null}
-              {showBlocksEditor ? (
-                <PlaygroundBlocksEditor
-                  project={project}
+                <EditorHeader
+                  title={name}
+                  prompt={value}
+                  providers={providers}
                   document={document}
-                  commit={commit}
-                  readOnlyMessage={readOnlyMessage}
-                  isSaved={!isUpdatingContent}
-                  onToggleBlocksEditor={setBlockEditorVisible}
-                  value={value}
-                  rootBlock={metadata?.rootBlock}
-                  onChange={onChange}
-                  config={metadata?.config}
-                  compileErrors={metadata?.errors}
+                  metadata={metadata}
+                  onChangePrompt={onChange}
+                  isLatitudeProvider={isLatitudeProvider}
+                  isMerged={isMerged}
+                  freeRunsCount={freeRunsCount}
+                  devMode={devMode}
+                  setDevMode={setDevMode}
                 />
               ) : (
+                <EvaluationEditorHeader
+                  documentVersion={document}
+                  providers={providers}
+                  disabledMetadataSelectors={isMerged}
+                  title={name}
+                  leftActions={oldHeaderEditorActions.leftActions}
+                  rightActions={oldHeaderEditorActions.rightActions}
+                  metadata={metadata}
+                  prompt={document.content}
+                  isLatitudeProvider={isLatitudeProvider}
+                  onChangePrompt={onChange}
+                  freeRunsCount={freeRunsCount}
+                  showCopilotSetting={copilotEnabled}
+                />
+              )}
+              {devMode ? (
                 <PlaygroundTextEditor
                   compileErrors={metadata?.errors}
                   project={project}
@@ -347,6 +361,20 @@ export default function DocumentEditor({
                   isSaved={!isUpdatingContent}
                   onChange={onChange}
                   highlightedCursorIndex={highlightedCursorIndex}
+                />
+              ) : (
+                <PlaygroundBlocksEditor
+                  project={project}
+                  document={document}
+                  commit={commit}
+                  readOnlyMessage={readOnlyMessage}
+                  isSaved={!isUpdatingContent}
+                  onToggleBlocksEditor={setDevMode}
+                  value={value}
+                  rootBlock={metadata?.rootBlock}
+                  onChange={onChange}
+                  config={metadata?.config}
+                  compileErrors={metadata?.errors}
                 />
               )}
             </div>
