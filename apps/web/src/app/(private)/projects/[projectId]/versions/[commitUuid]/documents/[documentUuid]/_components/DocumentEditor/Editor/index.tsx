@@ -273,29 +273,29 @@ export default function DocumentEditor({
   const [diff, setDiff] = useState<DiffOptions | undefined>(
     initialDiff
       ? {
-          newValue: initialDiff,
-          onAccept: (newValue: string) => {
-            setDiff(undefined)
-            onChange(newValue)
+        newValue: initialDiff,
+        onAccept: (newValue: string) => {
+          setDiff(undefined)
+          onChange(newValue)
 
-            // Remove applyExperimentId from URL
-            if (window?.location) {
-              const url = new URL(window.location.href)
-              url.searchParams.delete('applyExperimentId')
-              window.history.replaceState({}, '', url.toString())
-            }
-          },
-          onReject: () => {
-            setDiff(undefined)
+          // Remove applyExperimentId from URL
+          if (window?.location) {
+            const url = new URL(window.location.href)
+            url.searchParams.delete('applyExperimentId')
+            window.history.replaceState({}, '', url.toString())
+          }
+        },
+        onReject: () => {
+          setDiff(undefined)
 
-            // Remove applyExperimentId from URL
-            if (window?.location) {
-              const url = new URL(window.location.href)
-              url.searchParams.delete('applyExperimentId')
-              window.history.replaceState({}, '', url.toString())
-            }
-          },
-        }
+          // Remove applyExperimentId from URL
+          if (window?.location) {
+            const url = new URL(window.location.href)
+            url.searchParams.delete('applyExperimentId')
+            window.history.replaceState({}, '', url.toString())
+          }
+        },
+      }
       : undefined,
   )
 
@@ -381,14 +381,12 @@ export default function DocumentEditor({
         }
         secondPane={
           <SplitPane.Pane>
-            <div className='flex-1 relative max-h-full px-4'>
-              <Playground
-                document={document}
-                prompt={document.content}
-                setPrompt={onChange}
-                metadata={metadata!}
-              />
-            </div>
+            <Playground
+              document={document}
+              prompt={document.content}
+              setPrompt={onChange}
+              metadata={metadata!}
+            />
           </SplitPane.Pane>
         }
       />

@@ -112,7 +112,7 @@ export default function PreviewPrompt({
         )}
       </div>
 
-      <div className='absolute bottom-3 flex flex-row items-center justify-center w-full'>
+      <div className='absolute left-0 right-0 bottom-3 flex flex-row items-center justify-center'>
         <ToolBarWrapper>
           {preview.error || (metadata?.errors.length ?? 0) > 0 ? (
             <Tooltip

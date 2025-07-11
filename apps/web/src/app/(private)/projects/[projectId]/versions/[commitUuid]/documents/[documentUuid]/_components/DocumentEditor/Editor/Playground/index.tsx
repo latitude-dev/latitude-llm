@@ -91,31 +91,23 @@ export const Playground = memo(
       })
 
     return (
-      <SplitPane
-        direction='vertical'
-        gap={4}
-        initialPercentage={50}
-        forcedSize={forcedSize}
-        minSize={
-          DOCUMENT_PLAYGROUND_COLLAPSED_SIZE + DOCUMENT_PLAYGROUND_GAP_PADDING
-        }
-        dragDisabled={collapsed}
-        firstPane={
-          <div className={cn('grid gap-2 w-full pr-0.5', expander.cssClass)}>
-            {!parameters ? (
-              <DocumentParamsLoading source={source} />
-            ) : (
-              <DocumentParams
-                commit={commit}
-                document={document}
-                prompt={prompt}
-                source={source}
-                setSource={setSource}
-                setPrompt={setPrompt}
-                onToggle={expander.onToggle('parameters')}
-                isExpanded={expander.parametersExpanded}
-              />
-            )}
+      <div className='h-full px-4 relative min-h-0 flex flex-col gap-y-4 min-w-0'>
+        <div className={cn('gap-2 w-full flex flex-col gap-y-2', expander.cssClass)}>
+          {!parameters ? (
+            <DocumentParamsLoading source={source} />
+          ) : (
+            <DocumentParams
+              commit={commit}
+              document={document}
+              prompt={prompt}
+              source={source}
+              setSource={setSource}
+              setPrompt={setPrompt}
+              onToggle={expander.onToggle('parameters')}
+              isExpanded={expander.parametersExpanded}
+            />
+          )}
+          {mode === 'chat' ? (
             <DocumentEvaluations
               documentLog={documentLog}
               commit={commit}
@@ -125,35 +117,33 @@ export const Playground = memo(
               onToggle={expander.onToggle('evaluations')}
               isLoading={isDocumentLogLoading}
             />
-          </div>
-        }
-        secondPane={
-          <div className='h-full flex-grow flex-shrink min-h-0 flex flex-col gap-2 overflow-hidden pr-0.5'>
-            {mode === 'preview' ? (
-              <Preview
-                metadata={metadata}
-                parameters={parameters}
-                runPrompt={runPrompt}
-                expandParameters={expandParameters}
-                setExpandParameters={setExpandParameters}
-              />
-            ) : (
-              <Chat
-                canChat
-                parameters={parameters}
-                clearChat={clearChat}
-                abortCurrentStream={abortCurrentStream}
-                hasActiveStream={hasActiveStream}
-                runPromptFn={runPromptFn}
-                addMessagesFn={addMessagesFn}
-                onPromptRan={onPromptRan}
-                expandParameters={expandParameters}
-                setExpandParameters={setExpandParameters}
-              />
-            )}
-          </div>
-        }
-      />
+          ) : null}
+        </div>
+        <div className='h-full flex-grow flex flex-col gap-2 overflow-hidden pr-0.5'>
+          {mode === 'preview' ? (
+            <Preview
+              metadata={metadata}
+              parameters={parameters}
+              runPrompt={runPrompt}
+              expandParameters={expandParameters}
+              setExpandParameters={setExpandParameters}
+            />
+          ) : (
+            <Chat
+              canChat
+              parameters={parameters}
+              clearChat={clearChat}
+              abortCurrentStream={abortCurrentStream}
+              hasActiveStream={hasActiveStream}
+              runPromptFn={runPromptFn}
+              addMessagesFn={addMessagesFn}
+              onPromptRan={onPromptRan}
+              expandParameters={expandParameters}
+              setExpandParameters={setExpandParameters}
+            />
+          )}
+        </div>
+      </div>
     )
   },
 )
