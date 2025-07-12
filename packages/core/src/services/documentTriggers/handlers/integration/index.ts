@@ -44,7 +44,6 @@ export async function handleIntegrationTrigger(
     projectId: trigger.projectId,
     documentUuid: trigger.documentUuid,
     parameters,
-    autoRespondToolCalls: false,
     commitUuid: HEAD_COMMIT,
   }
 

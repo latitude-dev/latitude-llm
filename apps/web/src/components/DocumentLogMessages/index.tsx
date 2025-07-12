@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
 
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants/legacyCompiler'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { MessageList } from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { MessageList } from '$/components/ChatWrapper'
+import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 
 export function DocumentLogMessages({
   documentLogParameters,
@@ -16,6 +17,7 @@ export function DocumentLogMessages({
   documentLogParameters: Record<string, unknown>
   messages: Message[]
 }) {
+  const toolContentMap = useToolContentMap(messages)
   const sourceMapAvailable = useMemo(() => {
     return messages.some((message) => {
       if (typeof message.content !== 'object') return false
@@ -57,6 +59,7 @@ export function DocumentLogMessages({
         messages={messages}
         parameters={Object.keys(documentLogParameters)}
         collapseParameters={!expandParameters}
+        toolContentMap={toolContentMap}
       />
     </>
   )

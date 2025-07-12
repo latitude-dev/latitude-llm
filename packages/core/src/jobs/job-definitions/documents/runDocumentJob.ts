@@ -14,7 +14,6 @@ export type RunDocumentJobData = {
   documentUuid: string
   commitUuid: string
   projectId: number
-  autoRespondToolCalls: boolean
   parameters?: Record<string, unknown>
   batchId?: string
   source?: LogSources
@@ -51,7 +50,6 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     parameters = {},
     batchId = randomUUID(),
     source = LogSources.Playground,
-    autoRespondToolCalls,
   } = job.data
 
   const progressTracker = new ProgressTracker(batchId)
@@ -65,7 +63,6 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
       commitUuid,
       parameters,
       source,
-      autoRespondToolCalls,
     }).then((r) => r.unwrap())
 
     await progressTracker.incrementCompleted()

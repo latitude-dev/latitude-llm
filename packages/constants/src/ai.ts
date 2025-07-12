@@ -1,10 +1,5 @@
-import { Message, ToolCall } from '@latitude-data/compiler'
-import {
-  LanguageModelUsage,
-  TextStreamPart,
-  Tool,
-  FinishReason as VercelFinishReason,
-} from 'ai'
+import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import { FinishReason, LanguageModelUsage, TextStreamPart } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
@@ -12,7 +7,6 @@ import { ParameterType } from './config'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
 import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
 import { ProviderLog } from './models'
-import { TraceContext } from './tracing/trace'
 
 export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
 
@@ -54,7 +48,7 @@ export type VercelConfig = {
 
 export type PartialPromptConfig = Omit<LatitudePromptConfig, 'provider'>
 
-export type ProviderData = TextStreamPart<Record<string, Tool>>
+export type ProviderData = TextStreamPart<any>
 
 export type ChainEventDto = ProviderData | LatitudeEventData
 
@@ -126,7 +120,7 @@ export type LegacyLatitudeChainCompleteEventData = {
   messages?: Message[]
   object?: any
   response: ChainStepResponse<StreamType>
-  finishReason: VercelFinishReason
+  finishReason: FinishReason
   documentLogUuid?: string
 }
 
@@ -144,10 +138,7 @@ export type LegacyLatitudeEventData =
 export type RunSyncAPIResponse = {
   uuid: string
   conversation: Message[]
-  toolRequests: ToolCall[]
   response: ChainCallResponseDto
-  agentResponse?: { response: string } | Record<string, unknown>
-  trace: TraceContext
 }
 
 export type ChatSyncAPIResponse = RunSyncAPIResponse
@@ -161,13 +152,3 @@ export const toolCallResponseSchema = z.object({
 })
 
 export type ToolCallResponse = z.infer<typeof toolCallResponseSchema>
-
-export enum FinishReason {
-  Stop = 'stop',
-  Length = 'length',
-  ContentFilter = 'content-filter',
-  ToolCalls = 'tool-calls',
-  Error = 'error',
-  Other = 'other',
-  Unknown = 'unknown',
-}

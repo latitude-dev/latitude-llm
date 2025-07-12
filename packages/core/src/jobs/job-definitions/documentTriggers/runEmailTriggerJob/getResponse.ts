@@ -1,4 +1,3 @@
-import { type AssistantMessage } from '@latitude-data/compiler'
 import {
   DocumentLog,
   DocumentTriggerParameters,
@@ -14,6 +13,7 @@ import {
   DocumentVersionsRepository,
 } from '../../../../repositories'
 import { runDocumentAtCommit } from '../../../../services/commits'
+import { type AssistantMessage } from '@latitude-data/constants/legacyCompiler'
 import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
 import { uploadFile } from '../../../../services/files'
 import { BACKGROUND } from '../../../../telemetry'

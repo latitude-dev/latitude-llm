@@ -41,7 +41,7 @@ latitude = Latitude(os.getenv("LATITUDE_API_KEY"), LatitudeOptions(
 
 ## Examples
 
-Check out our [Examples](/examples) section  for more examples of how to use the Latitude SDK.
+Check out our [Examples](/examples) section for more examples of how to use the Latitude SDK.
 
 ## SDK Usage
 
@@ -124,13 +124,6 @@ result = await latitude.prompts.run('prompt-path', RunPromptOptions(
 print('Conversation UUID:', result.uuid)
 print('Conversation messages:', result.conversation)
 ```
-
-<Note>
-  If your prompt is an agent, an `agent_response` property will be defined in the
-  result. The structure of the response will depend on the agent's
-  configuration, although by default it will be: `{ "response": "Your
-  agent's response" }`.
-</Note>
 
 ### Handling Streaming Responses
 
@@ -376,7 +369,6 @@ class RunPromptResult:
     uuid: str
     conversation: list[Message]
     response: ChainResponse
-    tool_requests: list[ToolCall]
 
 latitude.prompts.run(
     path: str,
@@ -395,7 +387,6 @@ class ChatPromptResult:
     uuid: str
     conversation: list[Message]
     response: ChainResponse
-    tool_requests: list[ToolCall]
 
 latitude.prompts.chat(
     uuid: str,

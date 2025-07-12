@@ -1,17 +1,13 @@
-import {
-  AssistantMessage,
-  ContentType,
-  MessageRole,
-  ToolMessage,
-} from '@latitude-data/compiler'
+import { LatitudeToolCall } from '../../constants'
+import { LATITUDE_TOOLS } from './tools'
 import {
   LatitudeTool,
   LatitudeToolInternalName,
-  ToolDefinition,
 } from '@latitude-data/constants'
-import { LatitudeToolCall } from '../../constants'
 import { TypedResult } from './../../lib/Result'
-import { LATITUDE_TOOLS } from './tools'
+import { AssistantMessage, MessageRole } from 'promptl-ai'
+import { CoreToolMessage, Tool } from 'ai'
+import { TelemetryContext } from '@latitude-data/telemetry'
 
 export const getLatitudeToolName = (
   internalName: LatitudeToolInternalName,
@@ -38,15 +34,16 @@ export function getLatitudeToolCallsFromAssistantMessage(
 ): LatitudeToolCall[] {
   const toolCalls = message.toolCalls ?? []
   const builtinToolCallNames = Object.values(LatitudeToolInternalName)
-  return toolCalls.filter((toolCall) =>
+  return Object.values(toolCalls).filter((toolCall) =>
     builtinToolCallNames.includes(toolCall.name as LatitudeToolInternalName),
   ) as LatitudeToolCall[]
 }
 
 export function getLatitudeToolDefinition(
   tool: LatitudeTool,
-): ToolDefinition | undefined {
-  return LATITUDE_TOOLS.find((t) => t.name === tool)?.definition
+  context?: TelemetryContext,
+): Tool | undefined {
+  return LATITUDE_TOOLS.find((t) => t.name === tool)?.definition(context)
 }
 
 export function buildToolMessage({
@@ -57,12 +54,12 @@ export function buildToolMessage({
   toolName: string
   toolId: string
   result: TypedResult<unknown, Error>
-}): ToolMessage {
+}): CoreToolMessage {
   return {
     role: MessageRole.tool,
     content: [
       {
-        type: ContentType.toolResult,
+        type: 'tool-result',
         toolName: toolName,
         toolCallId: toolId,
         result: result.value ?? result.error?.message,

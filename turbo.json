@@ -37,6 +37,7 @@
     "NEXT_PUBLIC_POSTHOG_HOST",
     "COPILOT_DATASET_GENERATOR_PROMPT_PATH",
     "COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH",
+    "COPILOT_GENERATE_TOOL_RESPONSES_PATH",
     "CI",
     "SUPPORT_APP_ID",
     "SUPPORT_APP_SECRET_KEY",
@@ -57,7 +58,8 @@
     "TMPDIR",
     "TEMP",
     "GIT_PAGER",
-    "PAGER"
+    "PAGER",
+    "TEST_LATITUDE_API_KEY"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],

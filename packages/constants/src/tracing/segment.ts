@@ -5,15 +5,16 @@ import { SpanStatus } from './span'
 
 export enum SegmentSource {
   API = 'api',
-  Playground = 'playground',
+  AgentAsTool = 'agent_as_tool', // TODO(tracing): deprecated, use SegmentType.Document with DocumentType.Agent instead
+  Copilot = 'copilot',
+  EmailTrigger = 'email_trigger',
   Evaluation = 'evaluation', // Note: from prompts of llm evaluations
   Experiment = 'experiment',
-  User = 'user',
-  SharedPrompt = 'shared_prompt',
-  AgentAsTool = 'agent_as_tool', // TODO(tracing): deprecated, use SegmentType.Document with DocumentType.Agent instead
-  EmailTrigger = 'email_trigger',
+  Playground = 'playground',
   ScheduledTrigger = 'scheduled_trigger',
   IntegrationTrigger = 'integration_trigger',
+  SharedPrompt = 'shared_prompt',
+  User = 'user',
 }
 
 export enum SegmentType {

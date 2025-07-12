@@ -1,6 +1,10 @@
+import { type Message } from '@latitude-data/constants/legacyCompiler'
+import { setupServer } from 'msw/node'
 import { parseSSE } from '$sdk/utils/parseSSE'
-import { ToolCallDetails, ToolCalledFn } from '$sdk/utils/types'
-import { type Message } from '@latitude-data/compiler'
+import { vi } from 'vitest'
+import { TOOL_EVENTS, TOOL_EVENTS_OBJECT, TOOLS_DOCUMENT_UUID } from './events'
+import { ToolCalledFn } from '$sdk/utils/types'
+import { http, HttpResponse } from 'msw'
 import {
   ChainEventDto,
   ChainEventTypes,
@@ -8,10 +12,6 @@ import {
   LatitudeProviderCompletedEventData,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { http, HttpResponse } from 'msw'
-import { setupServer } from 'msw/node'
-import { vi } from 'vitest'
-import { TOOL_EVENTS, TOOL_EVENTS_OBJECT, TOOLS_DOCUMENT_UUID } from './events'
 
 const encoder = new TextEncoder()
 
@@ -57,8 +57,6 @@ function findCompleteChainEvent(events: StreamEvent[]) {
   return {
     uuid: TOOLS_DOCUMENT_UUID,
     conversation: lastEvent.messages,
-    toolRequests:
-      lastEvent.type === ChainEventTypes.ToolsRequested ? lastEvent.tools : [],
     response: lastResponse,
     trace: {
       traceparent: '00-12345678901234567890123456789012-1234567890123456-01',
@@ -192,25 +190,13 @@ export type MockedTools = {
   get_coordinates: { location: string }
 }
 
-export function buildMockTools(
-  {
-    pauseExecution,
-    onPausedExecutionCallback,
-  }: {
-    pauseExecution?: boolean
-    onPausedExecutionCallback?: (toolCallDetails: ToolCallDetails) => void
-  } = { pauseExecution: false },
-): ToolCalledFn<MockedTools> {
+export function buildMockTools(): ToolCalledFn<MockedTools> {
   return {
     tool_not_requested: async () => {
       // This is here only to prove that tools are filtered
       return 'do-nothing'
     },
-    get_coordinates: async ({ location }, details) => {
-      if (pauseExecution) {
-        onPausedExecutionCallback?.(details)
-        return details.pauseExecution()
-      }
+    get_coordinates: async ({ location }) => {
       const { latitude, longitude } = LOCATIONS.find(
         (loc) => loc.name === location,
       )!

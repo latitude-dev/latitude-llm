@@ -1324,6 +1324,13 @@
       "when": 1751983137585,
       "tag": "0189_integration_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 190,
+      "version": "7",
+      "when": 1752331155819,
+      "tag": "0190_woozy_thunderbird",
+      "breakpoints": true
     }
   ]
 }

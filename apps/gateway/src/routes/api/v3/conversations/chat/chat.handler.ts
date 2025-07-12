@@ -2,29 +2,28 @@ import { captureException } from '$/common/sentry'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
 import { ChatRoute } from '$/routes/api/v3/conversations/chat/chat.route'
+import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { addMessages } from '@latitude-data/core/services/documentLogs/addMessages/index'
-import { BACKGROUND, telemetry } from '@latitude-data/core/telemetry'
+import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
+import { buildClientToolHandlersMap } from '../../projects/versions/documents/run'
 
 // @ts-expect-error: streamSSE has type issues
 export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const { conversationUuid } = c.req.valid('param')
-  const { messages, stream: useSSE, trace, __internal } = c.req.valid('json')
+  const { messages, tools, stream: useSSE, __internal } = c.req.valid('json')
   const workspace = c.get('workspace')
-
-  let context = BACKGROUND({ workspaceId: workspace.id })
-  if (trace) context = telemetry.resume(trace)
 
   const result = (
     await addMessages({
-      context,
+      context: BACKGROUND({ workspaceId: workspace.id }),
       workspace,
+      tools: buildClientToolHandlersMap(tools),
       documentLogUuid: conversationUuid,
-      // @ts-expect-error: messages types are different
-      messages,
+      messages: messages as LegacyMessage[],
       source: __internal?.source ?? LogSources.API,
       abortSignal: c.req.raw.signal,
     })
@@ -56,10 +55,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
       },
       (error: Error) => {
         const unknownError = getUnknownError(error)
-
-        if (unknownError) {
-          captureException(error)
-        }
+        if (unknownError) captureException(error)
 
         return Promise.resolve()
       },
@@ -70,9 +66,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   if (error) throw error
 
   const body = runPresenter({
-    response: (await result.lastResponse)!,
-    toolCalls: await result.toolCalls,
-    trace: await result.trace,
+    response: (await result.response)!,
   }).unwrap()
 
   return c.json(body, 200)

@@ -101,8 +101,17 @@ export class RouteResolver {
         return this.projects
           .project((params as PushVersionUrlParams).projectId)
           .versions.version((params as PushVersionUrlParams).commitUuid).push
+      case HandlerType.ToolResults:
+        return this.tools().results
       default:
         throw new Error(`Unknown handler: ${handler}`)
+    }
+  }
+
+  private tools() {
+    const base = `${this.baseUrl}/tools`
+    return {
+      results: `${base}/results`,
     }
   }
 

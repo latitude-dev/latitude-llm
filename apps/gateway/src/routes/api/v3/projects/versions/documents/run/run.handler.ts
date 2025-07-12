@@ -12,6 +12,10 @@ import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDoc
 import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 import { RunRoute } from './run.route'
+import {
+  awaitClientToolResult,
+  ToolHandler,
+} from '@latitude-data/core/lib/streamManager/clientTools/handlers'
 
 // https://github.com/honojs/middleware/issues/735
 // https://github.com/orgs/honojs/discussions/1803
@@ -22,6 +26,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     path,
     parameters,
     customIdentifier,
+    tools,
     stream: useSSE,
     __internal,
   } = c.req.valid('json')
@@ -50,11 +55,13 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     commit,
     parameters,
     customIdentifier,
+    tools: useSSE ? buildClientToolHandlersMap(tools) : {},
     source: __internal?.source ?? LogSources.API,
     abortSignal: c.req.raw.signal,
   }).then((r) => r.unwrap())
 
   if (useSSE) {
+    console.log('returning sse stream...')
     return streamSSE(
       c,
       async (stream) => {
@@ -91,9 +98,14 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
 
   const body = runPresenter({
     response: (await result.lastResponse)!,
-    toolCalls: await result.toolCalls,
-    trace: await result.trace,
   }).unwrap()
 
   return c.json(body)
+}
+
+export function buildClientToolHandlersMap(tools: string[]) {
+  return tools.reduce((acc: Record<string, ToolHandler>, toolName: string) => {
+    acc[toolName] = awaitClientToolResult
+    return acc
+  }, {})
 }

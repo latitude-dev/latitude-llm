@@ -4,9 +4,9 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { FancySwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { ProviderModelSelector } from '$/components/ProviderModelSelector'
-import { updatePromptMetadata } from '$/lib/promptMetadata'
 import { PromptConfiguration } from '../../PromptConfiguration'
 import { EditorHeaderProps } from '../index'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 
 export function TitleRow({
   providers,

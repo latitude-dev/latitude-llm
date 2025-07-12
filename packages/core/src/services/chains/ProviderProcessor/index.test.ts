@@ -1,14 +1,10 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
-import { LanguageModelUsage, TextStreamPart } from 'ai'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import * as factories from '../../../tests/factories'
+import { LanguageModelUsage } from 'ai'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import { processResponse } from '.'
 import { LogSources, Providers } from '../../../constants'
-import {
-  AsyncStreamIteable,
-  TOOLS,
-} from '../../../lib/chainStreamManager/ChainStreamConsumer/consumeStream.test'
 import { generateUUIDIdentifier } from './../../../lib/generateUUID'
 import { buildProviderLogDto } from './saveOrPublishProviderLogs'
 
@@ -53,7 +49,7 @@ describe('ProviderProcessor', () => {
       messages: [
         {
           role: MessageRole.user,
-          content: [{ text: 'Hello', type: ContentType.text }],
+          content: [{ text: 'Hello', type: 'text' }],
         },
       ],
       toolCalls: [],
@@ -64,6 +60,7 @@ describe('ProviderProcessor', () => {
   it('process AI provider result', async () => {
     const result = await processResponse({
       documentLogUuid: data.documentLogUuid!,
+      // @ts-expect-error - mock implementation
       aiResult: {
         type: 'text' as const,
         toolCalls: new Promise((resolve) => resolve([])),
@@ -76,11 +73,6 @@ describe('ProviderProcessor', () => {
         usage: new Promise<LanguageModelUsage>((resolve) =>
           resolve(data.usage),
         ),
-        fullStream: new AsyncStreamIteable<TextStreamPart<TOOLS>>({
-          start: (controller) => {
-            controller.close()
-          },
-        }),
         providerName: Providers.OpenAI,
         providerMetadata: new Promise<undefined>((resolve) =>
           resolve(undefined),

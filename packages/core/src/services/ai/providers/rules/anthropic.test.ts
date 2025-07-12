@@ -1,4 +1,7 @@
-import { type Message, MessageRole } from '@latitude-data/compiler'
+import {
+  type Message,
+  MessageRole,
+} from '@latitude-data/constants/legacyCompiler'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { applyProviderRules } from '.'

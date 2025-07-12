@@ -2,11 +2,10 @@ import { addMessageToLatteAction } from '$/actions/latte/addMessage'
 import { createNewLatteAction } from '$/actions/latte/new'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useServerAction } from 'zsa-react'
-import { ContentType, MessageRole, TextContent } from '@latitude-data/compiler'
 import {
-  AGENT_RETURN_TOOL_NAME,
-  extractAgentToolCalls,
-} from '@latitude-data/constants'
+  MessageRole,
+  TextContent,
+} from '@latitude-data/constants/legacyCompiler'
 import { Message } from '@latitude-data/core/browser'
 import { useCallback, useMemo, useState } from 'react'
 import { LatteInteraction, LatteToolStep } from './types'
@@ -140,6 +139,7 @@ export function useLatte() {
   const sendMessage = useCallback(
     (message: string) => {
       setIsLoading(true)
+
       const newInteraction: LatteInteraction = {
         input: message,
         steps: [],
@@ -206,7 +206,6 @@ export function useLatte() {
           }
         }
 
-        // Add new steps to the last interaction
         if (message.role === MessageRole.assistant) {
           if (typeof message.content === 'string') {
             lastInteraction.steps.push({
@@ -215,7 +214,7 @@ export function useLatte() {
             })
           } else {
             const textContent = message.content
-              .filter((c) => c.type === ContentType.text)
+              .filter((c) => c.type === 'text')
               .map((c) => (c as unknown as TextContent).text!)
 
             if (textContent.length) {
@@ -228,56 +227,34 @@ export function useLatte() {
             }
           }
 
-          const [responseToolCalls, otherToolCalls] = extractAgentToolCalls(
-            message.toolCalls,
-          )
-
-          if (otherToolCalls.length) {
-            const toolSteps = message.toolCalls.map((toolCall) => {
-              if (toolCall.name === LatteTool.editProject) {
-                const params = toolCall.arguments as {
-                  actions: LatteEditAction[]
-                }
-                return params.actions.map((action) => ({
-                  type: 'action' as 'action',
-                  action,
-                }))
+          const toolSteps = message.toolCalls.map((toolCall) => {
+            if (toolCall.name === LatteTool.editProject) {
+              const params = toolCall.arguments as {
+                actions: LatteEditAction[]
               }
+              return params.actions.map((action) => ({
+                type: 'action' as 'action',
+                action,
+              }))
+            }
 
-              return {
-                type: 'tool' as 'tool',
-                id: toolCall.id,
-                toolName: toolCall.name,
-                parameters: toolCall.arguments,
-                finished: false,
-                ...getDescriptionFromToolCall(toolCall),
-              } as LatteToolStep
-            })
+            return {
+              type: 'tool' as 'tool',
+              id: toolCall.id,
+              toolName: toolCall.name,
+              parameters: toolCall.arguments,
+              finished: false,
+              ...getDescriptionFromToolCall(toolCall),
+            } as LatteToolStep
+          })
 
-            lastInteraction.steps.push(...toolSteps.flat())
-          }
-
-          if (responseToolCalls.length) {
-            const response = responseToolCalls[0]!.arguments[
-              'response'
-            ] as string
-            lastInteraction.output = response
-          }
+          lastInteraction.steps.push(...toolSteps.flat())
         }
 
         return [...otherInteractions, lastInteraction]
       })
 
-      if (
-        Array.isArray(message.content) &&
-        message.content.some(
-          (c) =>
-            c.type === ContentType.toolCall &&
-            c.toolName === AGENT_RETURN_TOOL_NAME,
-        )
-      ) {
-        setIsLoading(false)
-      }
+      setIsLoading(false)
     },
     [threadUuid],
   )

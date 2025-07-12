@@ -15,7 +15,6 @@ from promptl_ai import (
 )
 
 from latitude_sdk import (
-    AGENT_END_TOOL_NAME,
     AnnotateEvaluationResult,
     ApiError,
     ApiErrorCodes,
@@ -28,7 +27,6 @@ from latitude_sdk import (
     ChainEvents,
     ChainEventStepCompleted,
     ChainEventStepStarted,
-    ChainEventToolsRequested,
     ChainTextResponse,
     FinishedResult,
     FinishReason,
@@ -36,6 +34,7 @@ from latitude_sdk import (
     LogSources,
     ModelUsage,
     ParameterType,
+    Project,
     Prompt,
     PromptParameter,
     Providers,
@@ -43,6 +42,7 @@ from latitude_sdk import (
     StreamEvents,
     ToolCall,
     ToolResult,
+    Version,
 )
 
 ERROR_RESPONSE: dict[str, Any] = {
@@ -169,6 +169,65 @@ EVALUATIONS_RESPONSE: dict[str, Any] = {
 EVALUATIONS = [
     "9c40e485-4275-49d3-91a5-ccda5b317eaf",
     "a58dc320-596e-41a4-8a45-8bcc28dbe4b9",
+]
+
+PROJECT_RESPONSE: dict[str, Any] = {
+    "id": 1,
+    "uuid": "project-uuid-123",
+    "name": "Test Project",
+    "createdAt": "2025-01-01 00:00:00.000",
+    "updatedAt": "2025-01-01 00:00:00.000",
+}
+
+PROJECT = Project(
+    id=1,
+    uuid="project-uuid-123",
+    name="Test Project",
+    created_at=datetime(2025, 1, 1, 0, 0, 0, 0),
+    updated_at=datetime(2025, 1, 1, 0, 0, 0, 0),
+)
+
+VERSION_RESPONSE: dict[str, Any] = {
+    "uuid": "version-uuid-456",
+    "name": "Version 1",
+    "projectId": 1,
+    "createdAt": "2025-01-01 00:00:00.000",
+    "updatedAt": "2025-01-01 00:00:00.000",
+}
+
+VERSION = Version(
+    uuid="version-uuid-456",
+    name="Version 1",
+    project_id=1,
+    created_at=datetime(2025, 1, 1, 0, 0, 0, 0),
+    updated_at=datetime(2025, 1, 1, 0, 0, 0, 0),
+)
+
+CREATE_PROJECT_RESPONSE: dict[str, Any] = {
+    "project": PROJECT_RESPONSE,
+    "version": VERSION_RESPONSE,
+}
+
+PROJECTS_LIST_RESPONSE: list[dict[str, Any]] = [
+    PROJECT_RESPONSE,
+    {
+        "id": 2,
+        "uuid": "project-uuid-789",
+        "name": "Another Test Project",
+        "createdAt": "2025-01-01 01:00:00.000",
+        "updatedAt": "2025-01-01 01:00:00.000",
+    },
+]
+
+PROJECTS_LIST = [
+    PROJECT,
+    Project(
+        id=2,
+        uuid="project-uuid-789",
+        name="Another Test Project",
+        created_at=datetime(2025, 1, 1, 1, 0, 0, 0),
+        updated_at=datetime(2025, 1, 1, 1, 0, 0, 0),
+    ),
 ]
 
 EVALUATION_RESULT_RESPONSE: dict[str, Any] = {
@@ -505,19 +564,6 @@ event: provider-event
 data: {
         json.dumps(
             {
-                "type": "tool-call",
-                "toolCallId": "toolu_K12398312kjadbsadZ77JAS4",
-                "toolName": AGENT_END_TOOL_NAME,
-                "args": {"response": "I used the calculator!"},
-            },
-        )
-    }
-""".strip(),
-    f"""
-event: provider-event
-data: {
-        json.dumps(
-            {
                 "type": "step-finish",
                 "finishReason": "tool-calls",
                 "isContinued": False,
@@ -572,11 +618,6 @@ data: {
                             "name": "calculator",
                             "arguments": {"expression": "9.9 less than 9.11"},
                         },
-                        {
-                            "id": "toolu_K12398312kjadbsadZ77JAS4",
-                            "name": AGENT_END_TOOL_NAME,
-                            "arguments": {"response": "I used the calculator!"},
-                        },
                     ],
                     "usage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
                 },
@@ -618,58 +659,10 @@ data: {
                                 "toolName": "calculator",
                                 "args": {"expression": "9.9 less than 9.11"},
                             },
-                            {
-                                "toolCallId": "toolu_K12398312kjadbsadZ77JAS4",
-                                "toolName": AGENT_END_TOOL_NAME,
-                                "args": {"response": "I used the calculator!"},
-                            },
                         ],
                     },
                 ],
             },
-        )
-    }
-""".strip(),
-    f"""
-event: latitude-event
-data: {
-        json.dumps(
-            {
-                "type": "tools-requested",
-                "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": [{"type": "text", "text": "Reason before answering."}],
-                    },
-                    {
-                        "role": "user",
-                        "content": [{"type": "text", "text": "My question was: Is 9.9 greater than 9.11?"}],
-                    },
-                    {
-                        "role": "assistant",
-                        "content": [{"type": "text", "text": "I should look at their decimals."}],
-                    },
-                ],
-                "tools": [
-                    {
-                        "id": "toolu_01ARatRfRidTDshkg1UuQhW2",
-                        "name": "calculator",
-                        "arguments": {"expression": "9.9 > 9.11"},
-                    },
-                    {
-                        "id": "toolu_B0398l23AOdTDshkg1UuQhZ3",
-                        "name": "calculator",
-                        "arguments": {"expression": "9.9 less than 9.11"},
-                    },
-                    {
-                        "id": "toolu_K12398312kjadbsadZ77JAS4",
-                        "name": AGENT_END_TOOL_NAME,
-                        "arguments": {"response": "I used the calculator!"},
-                    },
-                ],
-            },
-            ensure_ascii=False,
         )
     }
 """.strip(),
@@ -717,11 +710,6 @@ data: {
                                 "toolCallId": "toolu_B0398l23AOdTDshkg1UuQhZ3",
                                 "toolName": "calculator",
                                 "args": {"expression": "9.9 less than 9.11"},
-                            },
-                            {
-                                "toolCallId": "toolu_K12398312kjadbsadZ77JAS4",
-                                "toolName": AGENT_END_TOOL_NAME,
-                                "args": {"response": "I used the calculator!"},
                             },
                         ],
                     },
@@ -776,11 +764,6 @@ data: {
                                 "toolCallId": "toolu_B0398l23AOdTDshkg1UuQhZ3",
                                 "toolName": "calculator",
                                 "args": {"expression": "9.9 less than 9.11"},
-                            },
-                            {
-                                "toolCallId": "toolu_K12398312kjadbsadZ77JAS4",
-                                "toolName": AGENT_END_TOOL_NAME,
-                                "args": {"response": "I used the calculator!"},
                             },
                         ],
                     },
@@ -942,13 +925,6 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
     },
     {
         "event": StreamEvents.Provider,
-        "type": "tool-call",
-        "toolCallId": "toolu_K12398312kjadbsadZ77JAS4",
-        "toolName": AGENT_END_TOOL_NAME,
-        "args": {"response": "I used the calculator!"},
-    },
-    {
-        "event": StreamEvents.Provider,
         "type": "step-finish",
         "finishReason": "tool-calls",
         "isContinued": False,
@@ -990,11 +966,6 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
                     name="calculator",
                     arguments={"expression": "9.9 less than 9.11"},
                 ),
-                ToolCall(
-                    id="toolu_K12398312kjadbsadZ77JAS4",
-                    name=AGENT_END_TOOL_NAME,
-                    arguments={"response": "I used the calculator!"},
-                ),
             ],
             usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
         ),
@@ -1017,39 +988,7 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
                         name="calculator",
                         arguments={"expression": "9.9 less than 9.11"},
                     ),
-                    ToolCallContent(
-                        id="toolu_K12398312kjadbsadZ77JAS4",
-                        name=AGENT_END_TOOL_NAME,
-                        arguments={"response": "I used the calculator!"},
-                    ),
                 ]
-            ),
-        ],
-    ),
-    ChainEventToolsRequested(
-        event=StreamEvents.Latitude,
-        type=ChainEvents.ToolsRequested,
-        uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
-        messages=[
-            SystemMessage(content=[TextContent(text="Reason before answering.")]),
-            UserMessage(content=[TextContent(text="My question was: Is 9.9 greater than 9.11?")]),
-            AssistantMessage(content=[TextContent(text="I should look at their decimals.")]),
-        ],
-        tools=[
-            ToolCall(
-                id="toolu_01ARatRfRidTDshkg1UuQhW2",
-                name="calculator",
-                arguments={"expression": "9.9 > 9.11"},
-            ),
-            ToolCall(
-                id="toolu_B0398l23AOdTDshkg1UuQhZ3",
-                name="calculator",
-                arguments={"expression": "9.9 less than 9.11"},
-            ),
-            ToolCall(
-                id="toolu_K12398312kjadbsadZ77JAS4",
-                name=AGENT_END_TOOL_NAME,
-                arguments={"response": "I used the calculator!"},
             ),
         ],
     ),
@@ -1075,11 +1014,6 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
                         id="toolu_B0398l23AOdTDshkg1UuQhZ3",
                         name="calculator",
                         arguments={"expression": "9.9 less than 9.11"},
-                    ),
-                    ToolCallContent(
-                        id="toolu_K12398312kjadbsadZ77JAS4",
-                        name=AGENT_END_TOOL_NAME,
-                        arguments={"response": "I used the calculator!"},
                     ),
                 ]
             ),
@@ -1107,11 +1041,6 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
                         id="toolu_B0398l23AOdTDshkg1UuQhZ3",
                         name="calculator",
                         arguments={"expression": "9.9 less than 9.11"},
-                    ),
-                    ToolCallContent(
-                        id="toolu_K12398312kjadbsadZ77JAS4",
-                        name=AGENT_END_TOOL_NAME,
-                        arguments={"response": "I used the calculator!"},
                     ),
                 ]
             ),
@@ -1169,18 +1098,6 @@ CONVERSATION_ERROR = ApiError(
 
 CONVERSATION_FINISHED_RESULT_RESPONSE: dict[str, Any] = {
     "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
-    "tool_requests": [
-        {
-            "id": "toolu_01ARatRfRidTDshkg1UuQhW2",
-            "name": "calculator",
-            "arguments": {"expression": "9.9 > 9.11"},
-        },
-        {
-            "id": "toolu_B0398l23AOdTDshkg1UuQhZ3",
-            "name": "calculator",
-            "arguments": {"expression": "9.9 less than 9.11"},
-        },
-    ],
     "conversation": [
         {
             "role": "system",
@@ -1221,12 +1138,6 @@ CONVERSATION_FINISHED_RESULT_RESPONSE: dict[str, Any] = {
                     "toolName": "calculator",
                     "args": {"expression": "9.9 less than 9.11"},
                 },
-                {
-                    "type": "tool-call",
-                    "toolCallId": "toolu_K12398312kjadbsadZ77JAS4",
-                    "toolName": AGENT_END_TOOL_NAME,
-                    "args": {"response": "I used the calculator!"},
-                },
             ],
             "toolCalls": [
                 {
@@ -1238,11 +1149,6 @@ CONVERSATION_FINISHED_RESULT_RESPONSE: dict[str, Any] = {
                     "id": "toolu_B0398l23AOdTDshkg1UuQhZ3",
                     "name": "calculator",
                     "arguments": {"expression": "9.9 less than 9.11"},
-                },
-                {
-                    "id": "toolu_K12398312kjadbsadZ77JAS4",
-                    "name": AGENT_END_TOOL_NAME,
-                    "arguments": {"response": "I used the calculator!"},
                 },
             ],
         },
@@ -1261,15 +1167,9 @@ CONVERSATION_FINISHED_RESULT_RESPONSE: dict[str, Any] = {
                 "name": "calculator",
                 "arguments": {"expression": "9.9 less than 9.11"},
             },
-            {
-                "id": "toolu_K12398312kjadbsadZ77JAS4",
-                "name": AGENT_END_TOOL_NAME,
-                "arguments": {"response": "I used the calculator!"},
-            },
         ],
         "usage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
     },
-    "agent_response": {"response": "I used the calculator!"},
 }
 
 CONVERSATION_FINISHED_RESULT = FinishedResult(
@@ -1295,11 +1195,6 @@ CONVERSATION_FINISHED_RESULT = FinishedResult(
                     name="calculator",
                     arguments={"expression": "9.9 less than 9.11"},
                 ),
-                ToolCallContent(
-                    id="toolu_K12398312kjadbsadZ77JAS4",
-                    name=AGENT_END_TOOL_NAME,
-                    arguments={"response": "I used the calculator!"},
-                ),
             ]
         ),
     ],
@@ -1316,30 +1211,10 @@ CONVERSATION_FINISHED_RESULT = FinishedResult(
                 name="calculator",
                 arguments={"expression": "9.9 less than 9.11"},
             ),
-            ToolCall(
-                id="toolu_K12398312kjadbsadZ77JAS4",
-                name=AGENT_END_TOOL_NAME,
-                arguments={"response": "I used the calculator!"},
-            ),
         ],
         usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
     ),
-    tool_requests=[
-        ToolCall(
-            id="toolu_01ARatRfRidTDshkg1UuQhW2",
-            name="calculator",
-            arguments={"expression": "9.9 > 9.11"},
-        ),
-        ToolCall(
-            id="toolu_B0398l23AOdTDshkg1UuQhZ3",
-            name="calculator",
-            arguments={"expression": "9.9 less than 9.11"},
-        ),
-    ],
-    agent_response={"response": "I used the calculator!"},
 )
-
-CONVERSATION_TOOL_CALLS = CONVERSATION_FINISHED_RESULT.tool_requests
 
 CONVERSATION_TOOL_RESULTS = [
     ToolResult(
@@ -1614,7 +1489,6 @@ FOLLOW_UP_CONVERSATION_FINISHED_RESULT_RESPONSE: dict[str, Any] = {
         "toolCalls": [],
         "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
     },
-    "tool_requests": [],
 }
 
 FOLLOW_UP_CONVERSATION_FINISHED_RESULT = FinishedResult(
@@ -1629,5 +1503,4 @@ FOLLOW_UP_CONVERSATION_FINISHED_RESULT = FinishedResult(
         tool_calls=[],
         usage=ModelUsage(prompt_tokens=77, completion_tokens=3, total_tokens=80),
     ),
-    tool_requests=[],
 )

@@ -1,6 +1,4 @@
 import type { DocumentVersion, SimplifiedDocumentVersion } from './models'
-import { AGENT_RETURN_TOOL_NAME } from './config'
-import { ToolCall } from '@latitude-data/compiler'
 
 export function resolveRelativePath(refPath: string, from?: string): string {
   if (refPath.startsWith('/')) {
@@ -52,28 +50,6 @@ export function createRelativePath(refPath: string, from?: string): string {
   const fullRefPath = [...upSegments, ...downSegments].join('/')
 
   return refPath.length < fullRefPath.length ? '/' + refPath : fullRefPath
-}
-
-/**
- * From a list of tool calls, extracts all agent finish tool calls and returns
- * and array with the following structure:
- *
- * @returns [agentToolCalls, otherToolCalls]
- */
-export function extractAgentToolCalls(
-  toolCalls: ToolCall[],
-): [ToolCall[], ToolCall[]] {
-  return toolCalls.reduce(
-    (acc, tool) => {
-      if (tool.name === AGENT_RETURN_TOOL_NAME) {
-        acc[0].push(tool)
-      } else {
-        acc[1].push(tool)
-      }
-      return acc
-    },
-    [[], []] as [ToolCall[], ToolCall[]],
-  )
 }
 
 export function simplifyDocument(

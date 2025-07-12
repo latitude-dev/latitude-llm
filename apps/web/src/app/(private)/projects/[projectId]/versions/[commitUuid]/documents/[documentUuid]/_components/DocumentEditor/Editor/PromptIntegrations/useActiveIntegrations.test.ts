@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useActiveIntegrations } from './useActiveIntegrations'
 import { trigger } from '$/lib/events'
 import { IntegrationDto } from '@latitude-data/core/browser'
-import { updatePromptMetadata } from '$/lib/promptMetadata'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 
 describe('useActiveIntegrations', () => {
   let mockOnChangePrompt: ReturnType<typeof vi.fn>

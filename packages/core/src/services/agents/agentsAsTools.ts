@@ -1,51 +1,45 @@
-import {
-  AgentToolsMap,
-  resolveRelativePath,
-  ToolDefinition,
-} from '@latitude-data/constants'
+import { AgentToolsMap, LogSources } from '@latitude-data/constants'
 import { DocumentVersionsRepository } from '../../repositories'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { scan } from 'promptl-ai'
-import { readMetadata } from '@latitude-data/compiler'
 import { JSONSchema7 } from 'json-schema'
 import { getAgentToolName } from './helpers'
 import { database } from '../../client'
 import { PromisedResult } from './../../lib/Transaction'
 import { Result } from './../../lib/Result'
+import { Tool } from 'ai'
+import { runDocumentAtCommit } from '../commits'
+import { TelemetryContext } from '@latitude-data/telemetry'
+import { telemetry } from '../../telemetry'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 const DEFAULT_PARAM_DEFINITION: JSONSchema7 = {
   type: 'string',
 }
 
 export async function getToolDefinitionFromDocument({
-  doc,
-  allDocs,
+  workspace,
+  commit,
+  document,
+  referenceFn,
+  context,
 }: {
-  doc: DocumentVersion
-  allDocs: DocumentVersion[]
-}): Promise<ToolDefinition> {
-  // FIXME
-  // @ts-ignore - type instantiation infinite loop
-  const metadataFn = doc.promptlVersion === 1 ? scan : readMetadata
-  const referenceFn = async (target: string, from?: string) => {
-    const fullPath = from ? resolveRelativePath(from, target) : target
-    const refDoc = allDocs.find((doc) => doc.path === fullPath)
-    return refDoc
-      ? {
-          path: refDoc.path,
-          content: refDoc.content,
-        }
-      : undefined
-  }
-
-  const metadata = await metadataFn({
-    prompt: doc.content,
-    fullPath: doc.path,
+  workspace: Workspace
+  commit: Commit
+  document: DocumentVersion
+  referenceFn: (
+    target: string,
+    from?: string,
+  ) => Promise<{ path: string; content: string } | undefined>
+  context: TelemetryContext
+}): Promise<Tool> {
+  const metadata = await scan({
+    prompt: document.content,
+    fullPath: document.path,
     referenceFn,
   })
 
   const description = metadata.config['description'] as string | undefined
-
   const params = (metadata.config['parameters'] ?? {}) as Record<
     string,
     JSONSchema7
@@ -62,6 +56,50 @@ export async function getToolDefinitionFromDocument({
       properties: params,
       required: Object.keys(params),
       additionalProperties: false,
+    },
+    execute: async (args: Record<string, unknown>, toolCall) => {
+      const $span = telemetry.tool(context, {
+        name: getAgentToolName(document.path),
+        call: {
+          id: toolCall.toolCallId,
+          arguments: args,
+        },
+      })
+
+      try {
+        const { response, error } = await runDocumentAtCommit({
+          context,
+          workspace,
+          document,
+          commit,
+          parameters: args,
+          source: LogSources.AgentAsTool,
+        }).then((r) => r.unwrap())
+
+        const res = await response
+        if (!res) {
+          const err = await error
+          if (err) {
+            throw err
+          } else {
+            const error = new ChainError({
+              code: RunErrorCodes.AIRunError,
+              message: `Subagent ${document.path} failed unexpectedly.`,
+            })
+
+            throw error
+          }
+        }
+
+        const value = res.streamType === 'text' ? res.text : res.object
+
+        $span?.end({ result: { value, isError: false } })
+
+        return value
+      } catch (e) {
+        $span?.fail(e as Error)
+        throw e
+      }
     },
   }
 }

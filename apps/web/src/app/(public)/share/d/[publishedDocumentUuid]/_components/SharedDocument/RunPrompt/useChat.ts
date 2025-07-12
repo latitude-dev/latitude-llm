@@ -2,8 +2,7 @@ import { addSharedMessagesAction } from '$/actions/sdk/addSharedMessagesAction'
 import {
   Message as ConversationMessage,
   MessageRole,
-  ContentType,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import {
   PublishedDocument,
   StreamEventTypes,
@@ -32,7 +31,7 @@ export function useChat({
 
       const message: ConversationMessage = {
         role: MessageRole.user,
-        content: [{ type: ContentType.text, text: input }],
+        content: [{ type: 'text', text: input }],
       }
 
       setResponseStream('')

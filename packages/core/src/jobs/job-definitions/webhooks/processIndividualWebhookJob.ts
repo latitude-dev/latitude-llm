@@ -13,6 +13,7 @@ import { processWebhookPayload } from './utils/processWebhookPayload'
 import { WEBHOOK_EVENTS } from './processWebhookJob'
 import { findCommitById } from '../../../data-access/commits'
 import { DocumentLogsRepository } from '../../../repositories'
+import { NotFoundError } from '@latitude-data/constants/errors'
 
 export type ProcessIndividualWebhookJobData = {
   event: typeof events.$inferSelect
@@ -105,9 +106,10 @@ async function fetchProjectIdFromEvent(event: LatitudeEvent) {
       const repo = new DocumentLogsRepository(workspaceId)
       const log = await repo.find(id).then((r) => r.unwrap())
 
-      return await findCommitById({ id: log.commitId })
-        .then((r) => r.unwrap())
-        .then((c) => c.projectId)
+      const commit = await findCommitById(log.commitId)
+      if (!commit) throw new NotFoundError('Commit not found')
+
+      return commit.projectId
     }
     default:
       return
