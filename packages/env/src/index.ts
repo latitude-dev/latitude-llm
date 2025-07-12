@@ -64,7 +64,6 @@ if (environment === 'development' || environment === 'test') {
       CACHE_HOST: '0.0.0.0',
       COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: 'evaluation-generator',
       COPILOT_EVALUATION_GENERATOR_PROMPT_PATH: 'evaluation-v2-generator',
-      COPILOT_GENERATE_TOOL_RESPONSES_PATH: 'tool-responses-generator',
       DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
       DRIVE_DISK: 'local',
       FILES_STORAGE_PATH,
@@ -97,7 +96,6 @@ if (environment === 'development' || environment === 'test') {
       GOOGLE_CLIENT_SECRET: '',
       GOOGLE_REDIRECT_URI: 'http://localhost:3000/api/auth/google/callback',
       ENABLE_ALL_FLAGS: 'false',
-      DEFAULT_PROVIDER_API_KEY: 'openai-api-key',
       STRIPE_SECRET_KEY: '',
       STRIPE_WEBHOOK_SECRET: '',
     },
@@ -126,6 +124,7 @@ export const env = createEnv({
     // Default settings when creating a new workspace
     DEFAULT_PROJECT_ID: z.coerce.number().optional(),
     DEFAULT_PROVIDER_API_KEY: z.string(),
+
     NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: z.string(),
 
     APP_DOMAIN: z.string(),
@@ -196,7 +195,8 @@ export const env = createEnv({
     COPILOT_CODE_SUGGESTION_PROMPT_PATH: z.string().optional(),
     COPILOT_DATASET_GENERATOR_PROMPT_PATH: z.string().optional(),
     COPILOT_EVALUATION_GENERATOR_PROMPT_PATH: z.string().optional(),
-    COPILOT_GENERATE_TOOL_RESPONSES_PATH: z.string().optional(),
+    COPILOT_GENERATE_TOOL_RESPONSES_PATH: z.string(),
+    COPILOT_GENERATE_TOOL_RESPONSES_COMMIT_UUID: z.string().optional(),
     COPILOT_PROJECT_ID: z.coerce.number().optional(),
     COPILOT_REFINE_PROMPT_PATH: z.string().optional(),
     COPILOT_WORKSPACE_API_KEY: z.string().optional(),
@@ -278,6 +278,12 @@ export const env = createEnv({
       .default(
         'https://avatars.slack-edge.com/2022-04-13/3400058239233_835a74c233883cd5699b_88.png',
       ),
+
+    // Workspaces in dev mode are created with this default workspace API key
+    TEST_LATITUDE_API_KEY: z
+      .string()
+      .optional()
+      .default('test-42afab4d-cafe-babe-b0df0833a7b2'),
   },
   runtimeEnv: {
     ...process.env,
@@ -296,5 +302,10 @@ export const env = createEnv({
     DISABLE_EMAIL_AUTHENTICATION:
       process.env.DISABLE_EMAIL_AUTHENTICATION === 'true',
     ENABLE_ALL_FLAGS: process.env.ENABLE_ALL_FLAGS === 'true',
+    COPILOT_GENERATE_TOOL_RESPONSES_PATH:
+      process.env.COPILOT_GENERATE_TOOL_RESPONSES_PATH ??
+      'tool-responses-generator',
+    DEFAULT_PROVIDER_API_KEY:
+      process.env.DEFAULT_PROVIDER_API_KEY ?? 'default_api_key',
   },
 })

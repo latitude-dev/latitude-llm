@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import (
     Any,
-    Callable,
     List,
     Literal,
     Optional,
@@ -70,7 +69,6 @@ class FinishReason(StrEnum):
 
 
 AGENT_START_TOOL_NAME = "start_autonomous_chain"
-AGENT_END_TOOL_NAME = "end_autonomous_chain"
 
 
 class ToolCall(Model):
@@ -131,7 +129,6 @@ class ChainEvents(StrEnum):
     StepCompleted = "step-completed"
     ChainCompleted = "chain-completed"
     ChainError = "chain-error"
-    ToolsRequested = "tools-requested"
 
 
 class GenericChainEvent(Model):
@@ -185,11 +182,6 @@ class ChainEventChainError(GenericChainEvent):
     error: ChainError
 
 
-class ChainEventToolsRequested(GenericChainEvent):
-    type: Literal[ChainEvents.ToolsRequested] = ChainEvents.ToolsRequested
-    tools: List[ToolCall]
-
-
 ChainEvent = Union[
     ChainEventChainStarted,
     ChainEventStepStarted,
@@ -200,7 +192,6 @@ ChainEvent = Union[
     ChainEventStepCompleted,
     ChainEventChainCompleted,
     ChainEventChainError,
-    ChainEventToolsRequested,
 ]
 
 LatitudeEvent = ChainEvent
@@ -211,8 +202,6 @@ class FinishedResult(Model):
     uuid: str
     conversation: List[Message]
     response: ChainResponse
-    agent_response: Optional[dict[str, Any]] = Field(default=None, alias=str("agentResponse"))
-    tool_requests: List[ToolCall] = Field(alias=str("toolRequests"))
 
 
 StreamEvent = Union[ProviderEvent, LatitudeEvent]
@@ -240,6 +229,22 @@ class Log(Model):
     updated_at: datetime = Field(alias=str("updatedAt"))
 
 
+class Project(Model):
+    id: int
+    uuid: Optional[str] = None
+    name: str
+    created_at: datetime = Field(alias=str("createdAt"))
+    updated_at: datetime = Field(alias=str("updatedAt"))
+
+
+class Version(Model):
+    uuid: str
+    name: str
+    project_id: int = Field(alias=str("projectId"))
+    created_at: datetime = Field(alias=str("createdAt"))
+    updated_at: datetime = Field(alias=str("updatedAt"))
+
+
 class StreamCallbacks(Model):
     @runtime_checkable
     class OnEvent(Protocol):
@@ -263,10 +268,7 @@ class StreamCallbacks(Model):
 class OnToolCallDetails(Model):
     id: str
     name: str
-    conversation_uuid: str
-    messages: List[Message]
-    pause_execution: Callable[[], ToolResult]
-    requested_tool_calls: List[ToolCall]
+    arguments: dict[str, Any]
 
 
 @runtime_checkable

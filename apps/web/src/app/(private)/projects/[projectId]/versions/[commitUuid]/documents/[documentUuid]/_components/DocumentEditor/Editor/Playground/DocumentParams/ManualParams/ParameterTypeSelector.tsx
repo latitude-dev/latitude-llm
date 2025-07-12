@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 
-import { updatePromptMetadata } from '$/lib/promptMetadata'
 import {
   Inputs,
   InputSource,
@@ -11,6 +10,7 @@ import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { SelectTriggerPrimitive } from '@latitude-data/web-ui/atoms/Select'
 import { ParameterType } from '@latitude-data/constants'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 
 const ParameterTypes = Object.values(ParameterType) as string[]
 

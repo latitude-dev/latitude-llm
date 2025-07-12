@@ -1,28 +1,21 @@
 import {
-  ContentType,
   Message,
   MessageRole,
   ToolCall,
   ToolMessage,
-} from '@latitude-data/compiler'
-import {
-  AGENT_RETURN_TOOL_NAME,
-  ChainEvent,
-  ChainEventTypes,
-  LatitudeChainCompletedEventData,
-  LatitudeEventData,
-} from '@latitude-data/constants'
-import { StreamEventTypes, TraceContext } from '@latitude-data/core/browser'
+} from '@latitude-data/constants/legacyCompiler'
+import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 import { LanguageModelUsage } from 'ai'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { useProviderEventHandler } from './useProviderEventHandler'
 
 function buildMessage({ input }: { input: string | ToolMessage[] }) {
   if (typeof input === 'string') {
     return [
       {
         role: MessageRole.user,
-        content: [{ type: ContentType.text, text: input }],
+        content: [{ type: 'text', text: input }],
       } as Message,
     ]
   }
@@ -34,12 +27,10 @@ export type AddMessagesFn = ({
   documentLogUuid,
   messages,
   toolCalls,
-  trace,
 }: {
   documentLogUuid: string
   messages: Message[]
   toolCalls?: ToolCall[]
-  trace?: TraceContext
 }) => Promise<ReadableStream<ParsedEvent>>
 
 export function usePlaygroundChat({
@@ -53,24 +44,15 @@ export function usePlaygroundChat({
 }) {
   const isChat = useRef(false)
   const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
-  const [trace, setTrace] = useState<TraceContext | undefined>()
   const [error, setError] = useState<Error | undefined>()
-  const [streamingResponse, setStreamingResponse] = useState<
-    string | undefined
-  >()
-  const [streamingReasoning, setStreamingReasoning] = useState<
-    string | undefined
-  >()
   const [isLoading, setIsLoading] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [unresponedToolCalls, setUnresponedToolCalls] = useState<ToolCall[]>([])
-  const [chainLength, setChainLength] = useState(Infinity)
   const [usage, setUsage] = useState<LanguageModelUsage>({
     promptTokens: 0,
     completionTokens: 0,
     totalTokens: 0,
   })
-  const [time, setTime] = useState<number | undefined>()
   const [runningLatitudeTools, setRunningLatitudeTools] = useState<number>(0)
   const [wakingUpIntegration, setWakingUpIntegration] = useState<string>()
 
@@ -81,6 +63,73 @@ export function usePlaygroundChat({
     [setMessages],
   )
 
+  const handleIntegrationEvent = useCallback(
+    (data: ChainEvent['data']) => {
+      if (data.type === ChainEventTypes.IntegrationWakingUp) {
+        setWakingUpIntegration(data.integrationName)
+      } else {
+        setWakingUpIntegration(undefined)
+      }
+    },
+    [setWakingUpIntegration],
+  )
+
+  // Use the provider event handler hook
+  const { handleProviderEvent } = useProviderEventHandler({
+    setMessages,
+    setUnresponedToolCalls,
+    setRunningLatitudeTools,
+    addMessages,
+  })
+
+  const handleLatitudeEvent = useCallback(
+    (data: ChainEvent['data']) => {
+      if (data.type === ChainEventTypes.ProviderCompleted) {
+        setUsage(data.tokenUsage)
+      }
+
+      if (data.type === ChainEventTypes.ToolsStarted) {
+        setRunningLatitudeTools(data.tools.length)
+      }
+
+      if (data.type === ChainEventTypes.StepCompleted) {
+        setRunningLatitudeTools(0)
+      }
+
+      if (data.type === ChainEventTypes.ChainError) {
+        throw data.error
+      }
+    },
+    [setUsage, setRunningLatitudeTools],
+  )
+
+  const handleGenericStreamError = useCallback(
+    (parsedEvent: ParsedEvent, data: Error) => {
+      if (parsedEvent.event !== 'error') return
+
+      setError(data)
+    },
+    [setError],
+  )
+
+  const parseEvent = useCallback((value: ParsedEvent) => {
+    const parsedEvent = value as ParsedEvent
+    if (parsedEvent.type !== 'event') return { parsedEvent, data: undefined }
+
+    const data = JSON.parse(parsedEvent.data) as ChainEvent['data'] | Error
+
+    return { parsedEvent, data }
+  }, [])
+
+  const setDocumentLogUuidd = useCallback(
+    (data: ChainEvent['data']) => {
+      if ('uuid' in data) {
+        setDocumentLogUuid(data.uuid)
+      }
+    },
+    [setDocumentLogUuid],
+  )
+
   const handleStream = useCallback(
     async (
       stream: ReadableStream<ParsedEvent>,
@@ -88,9 +137,7 @@ export function usePlaygroundChat({
     ) => {
       setIsLoading(true)
       setError(undefined)
-      const start = performance.now()
-      let accumulatedTextDelta = ''
-      let accumulatedReasoningDelta = ''
+
       let documentLogUuid: string | undefined
 
       const reader = stream.getReader()
@@ -101,89 +148,33 @@ export function usePlaygroundChat({
           if (done) break
           if (!value) continue
 
-          const parsedEvent = value as ParsedEvent
-          if (parsedEvent.type !== 'event') continue
+          const { parsedEvent, data } = parseEvent(value)
+          if (!data) continue
 
-          const data = JSON.parse(parsedEvent.data) as ChainEvent['data']
-          const { uuid } = data as LatitudeChainCompletedEventData
-
-          if (uuid) {
-            documentLogUuid = uuid
-            setDocumentLogUuid(uuid)
-          }
-
-          if (data.type === ChainEventTypes.IntegrationWakingUp) {
-            setWakingUpIntegration(data.integrationName)
-          } else {
-            setWakingUpIntegration(undefined)
-          }
-
-          // Delta text from the provider
-          if (parsedEvent.event === StreamEventTypes.Provider) {
-            if (data.type === 'text-delta') {
-              accumulatedTextDelta += data.textDelta
-              setStreamingResponse(accumulatedTextDelta)
-            }
-            if (data.type === 'reasoning') {
-              accumulatedReasoningDelta += data.textDelta
-              setStreamingReasoning(accumulatedReasoningDelta)
-            }
-            continue
-          }
-
-          if ((data as LatitudeEventData).messages) {
-            setMessages((data as LatitudeEventData).messages)
-          }
-
-          if (data.type === ChainEventTypes.StepStarted) {
-            accumulatedTextDelta = ''
-            accumulatedReasoningDelta = ''
-          }
-          if (data.type === ChainEventTypes.ProviderCompleted) {
-            accumulatedTextDelta = ''
-            accumulatedReasoningDelta = ''
-            setStreamingResponse(undefined)
-            setStreamingReasoning(undefined)
-            setUsage(data.tokenUsage)
-          }
-
-          if (data.type === ChainEventTypes.ToolsStarted) {
-            setRunningLatitudeTools(data.tools.length)
-          }
-          if (data.type === ChainEventTypes.ToolCompleted) {
-            setRunningLatitudeTools((prev) => prev - 1)
-          }
-          if (data.type === ChainEventTypes.StepCompleted) {
-            setRunningLatitudeTools(0) // fallback
-          }
-          if (data.type === ChainEventTypes.ChainCompleted) {
-            if (!isChat.current) {
-              setChainLength(data.messages.length)
-              setTime((prev) => (prev ?? 0) + (performance.now() - start))
-            }
-          }
-          if (data.type === ChainEventTypes.ToolsRequested) {
-            setTrace(data.trace)
-            setUnresponedToolCalls(
-              data.tools.filter((t) => t.name !== AGENT_RETURN_TOOL_NAME),
-            )
-          }
-
-          if (data.type === ChainEventTypes.ChainError) {
-            throw data.error
-          }
+          setDocumentLogUuidd(data as ChainEvent['data'])
+          handleIntegrationEvent(data as ChainEvent['data'])
+          handleLatitudeEvent(data as ChainEvent['data'])
+          handleProviderEvent(parsedEvent, data as ChainEvent['data'])
+          handleGenericStreamError(parsedEvent, data as Error)
         }
       } catch (error) {
-        onPromptRan?.(documentLogUuid, error as Error)
         setError(error as Error)
+      } finally {
+        setIsLoading(false)
+        onPromptRan?.(documentLogUuid, error)
       }
-
-      setStreamingResponse(undefined)
-      setStreamingReasoning(undefined)
-      setIsLoading(false)
-      onPromptRan?.(documentLogUuid)
     },
-    [],
+    [
+      error,
+      setDocumentLogUuidd,
+      handleIntegrationEvent,
+      handleLatitudeEvent,
+      handleProviderEvent,
+      handleGenericStreamError,
+      parseEvent,
+      setError,
+      setIsLoading,
+    ],
   )
 
   const submitUserMessage = useCallback(
@@ -209,7 +200,7 @@ export function usePlaygroundChat({
         const respondedToolCallIds = newMessages.reduce((acc, message) => {
           if (message.role !== MessageRole.tool) return acc
           const toolResponseContents = message.content.filter(
-            (c) => c.type === ContentType.toolResult,
+            (c) => c.type === 'tool-result',
           )
           return [...acc, ...toolResponseContents.map((c) => c.toolCallId)]
         }, [] as string[])
@@ -223,10 +214,6 @@ export function usePlaygroundChat({
         )
       }
 
-      if (!isChat.current) {
-        setChainLength((prev) => prev + newMessages.length)
-      }
-
       try {
         setIsLoading(true)
 
@@ -234,7 +221,6 @@ export function usePlaygroundChat({
           documentLogUuid,
           messages: newMessages,
           toolCalls: respondedToolCalls,
-          trace: trace,
         })
 
         await handleStream(stream)
@@ -246,7 +232,6 @@ export function usePlaygroundChat({
     [
       addMessagesFn,
       documentLogUuid,
-      trace,
       unresponedToolCalls,
       handleStream,
       addMessages,
@@ -270,36 +255,26 @@ export function usePlaygroundChat({
       start,
       submitUserMessage,
       addMessages: addMessagesFn ? addMessages : undefined,
-      setError,
       error,
-      streamingReasoning,
-      streamingResponse,
       messages,
       wakingUpIntegration,
       runningLatitudeTools,
-      chainLength,
       usage,
-      time,
       unresponedToolCalls,
       isLoading,
     }),
     [
+      addMessages,
+      addMessagesFn,
+      error,
+      isLoading,
+      messages,
+      runningLatitudeTools,
       start,
       submitUserMessage,
-      addMessagesFn,
-      addMessages,
-      setError,
-      error,
-      streamingReasoning,
-      streamingResponse,
-      messages,
-      wakingUpIntegration,
-      runningLatitudeTools,
-      chainLength,
-      usage,
-      time,
       unresponedToolCalls,
-      isLoading,
+      usage,
+      wakingUpIntegration,
     ],
   )
 }

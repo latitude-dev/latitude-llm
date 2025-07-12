@@ -8,12 +8,16 @@ import {
 } from '../../../browser'
 import { Result, TypedResult } from '../../../lib/Result'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
-import { BACKGROUND } from '../../../telemetry'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { buildLlmEvaluationRunFunction } from './shared'
+import { runChain } from '../../chains/run'
+import { BACKGROUND, telemetry } from '../../../telemetry'
 
 const buildStreamHandler =
-  (stream: ReadableStream<ChainEvent>) =>
+  (
+    stream: ReadableStream<ChainEvent>,
+    $span: ReturnType<typeof telemetry.prompt>,
+  ) =>
   async ({
     signal,
     onEvent,
@@ -47,8 +51,10 @@ const buildStreamHandler =
           }
         }
 
+        $span.end()
         onFinished?.()
       } catch (err) {
+        $span.fail(err as Error)
         onError(err as Error)
       } finally {
         signal?.removeEventListener('abort', abortHandler)
@@ -86,15 +92,18 @@ export async function buildStreamEvaluationRun({
       reason: z.string(),
     }),
   })
-
   if (result.error) return result
 
-  const { runFunction, runArgs } = result.value
-  const { stream } = runFunction({
-    context: BACKGROUND({ workspaceId: workspace.id }),
-    ...runArgs,
+  const { runArgs } = result.unwrap()
+
+  const $prompt = telemetry.prompt(BACKGROUND({ workspaceId: workspace.id }), {
+    logUuid: resultUuid,
+    promptUuid: evaluation.uuid,
+    template: evaluation.configuration.prompt,
+    parameters: parameters,
   })
-  const streamHandler = buildStreamHandler(stream)
+  const { stream } = runChain({ context: $prompt.context, ...runArgs })
+  const streamHandler = buildStreamHandler(stream, $prompt)
 
   return Result.ok({ streamHandler })
 }

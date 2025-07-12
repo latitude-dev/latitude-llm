@@ -453,9 +453,7 @@ async function run({
     )
 
     const response = result.response
-    const toolCalls = 'toolCalls' in response ? response.toolCalls : []
-    const agentResponse = toolCalls[0] ?? { error: 'Agent response not found' }
-    console.log('Agent Response: \n', JSON.stringify(agentResponse, null, 2))
+    console.log('Agent Response: \n', JSON.stringify(response, null, 2))
   } catch (error) {
     console.error('Error: ', error.message, '\nStack:', error.stack)
   }

@@ -109,11 +109,7 @@ export async function createNewDocument(
       docContent = await applyContent({ content, defaultContent })
     }
 
-    const documentType = await getDocumentType({
-      content: docContent,
-      promptlVersion,
-    })
-
+    const documentType = await getDocumentType({ content: docContent })
     const newDoc = await tx
       .insert(documentVersions)
       .values({

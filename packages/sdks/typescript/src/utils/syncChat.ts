@@ -1,31 +1,26 @@
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
-import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
 import {
   ChatOptionsWithSDKOptions,
   ChatSyncAPIResponse,
   HandlerType,
-  ToolInstrumentation,
   ToolSpec,
 } from '$sdk/utils/types'
 import {
   ApiErrorCodes,
   ApiErrorJsonResponse,
 } from '@latitude-data/constants/errors'
+import { waitForTools } from './streamRun'
 
 export async function syncChat<Tools extends ToolSpec>(
   uuid: string,
   {
     messages,
+    tools,
     onFinished,
     onError,
-    tools,
     options,
-    instrumentation,
-    trace,
-  }: ChatOptionsWithSDKOptions<Tools> & {
-    instrumentation?: ToolInstrumentation
-  },
+  }: ChatOptionsWithSDKOptions<Tools>,
 ) {
   try {
     const response = await makeRequest({
@@ -33,7 +28,7 @@ export async function syncChat<Tools extends ToolSpec>(
       handler: HandlerType.Chat,
       params: { conversationUuid: uuid },
       options: options,
-      body: { messages, stream: false, trace },
+      body: { messages, tools: waitForTools(tools), stream: false },
     })
 
     if (!response.ok) {
@@ -52,22 +47,8 @@ export async function syncChat<Tools extends ToolSpec>(
 
     const finalResponse = (await response.json()) as ChatSyncAPIResponse
 
-    if (hasTools(tools) && finalResponse.toolRequests.length) {
-      return handleToolRequests<Tools, false>({
-        originalResponse: finalResponse,
-        messages: finalResponse.conversation,
-        toolRequests: finalResponse.toolRequests,
-        onFinished,
-        onError,
-        chatFn: syncChat,
-        tools,
-        options,
-        trace: finalResponse.trace,
-        instrumentation,
-      })
-    }
-
     onFinished?.(finalResponse)
+
     return Promise.resolve(finalResponse)
   } catch (e) {
     const err = e as Error

@@ -2,9 +2,10 @@ import { legacyChainEventPresenter } from '$/common/documents/getData'
 import { AppRouteHandler } from '$/openApi/types'
 import { v2RunPresenter } from '$/presenters/runPresenter'
 import { ChatRoute } from '$/routes/api/v2/conversations/chat/chat.route'
+import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '@latitude-data/core/browser'
-import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
+import { convertToLegacyChainStream } from '@latitude-data/core/lib/streamManager/index'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { addMessages } from '@latitude-data/core/services/documentLogs/addMessages/index'
 import { captureException } from '@sentry/node'
@@ -18,15 +19,13 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
 
   const {
     stream: newStream,
-    lastResponse,
+    response,
     error,
-    trace,
   } = (
     await addMessages({
       workspace,
       documentLogUuid: conversationUuid,
-      // @ts-expect-error: messages types are different
-      messages,
+      messages: messages as LegacyMessage[],
       source: __internal?.source ?? LogSources.API,
     })
   ).unwrap()
@@ -63,9 +62,8 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const awaitedError = await error
   if (awaitedError) throw awaitedError
 
-  const awaitedResponse = await lastResponse
-  const awaitedTrace = await trace
+  const awaitedResponse = await response
 
-  const body = v2RunPresenter(awaitedResponse!, awaitedTrace).unwrap()
+  const body = v2RunPresenter(awaitedResponse!).unwrap()
   return c.json(body, 200)
 }

@@ -1,6 +1,5 @@
 import { memo, ReactNode } from 'react'
 
-import { updatePromptMetadata } from '$/lib/promptMetadata'
 import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
 import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
@@ -15,8 +14,9 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { PromptConfiguration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptConfiguration'
 import { PromptIntegrations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptIntegrations'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { ProviderModelSelector } from '$/components/ProviderModelSelector'
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
+import { ProviderModelSelector } from '$/components/ProviderModelSelector'
 
 export type IProviderByName = Record<string, ProviderApiKey>
 

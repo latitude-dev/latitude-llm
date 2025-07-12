@@ -128,9 +128,6 @@ importers:
       '@hono/zod-openapi':
         specifier: 0.16.4
         version: 0.16.4(hono@4.6.6)(zod@3.24.2)
-      '@latitude-data/compiler':
-        specifier: workspace:^
-        version: link:../../packages/compiler
       '@latitude-data/constants':
         specifier: workspace:^
         version: link:../../packages/constants
@@ -213,9 +210,6 @@ importers:
       '@intercom/messenger-js-sdk':
         specifier: 0.0.14
         version: 0.0.14
-      '@latitude-data/compiler':
-        specifier: workspace:^
-        version: link:../../packages/compiler
       '@latitude-data/constants':
         specifier: workspace:*
         version: link:../../packages/constants
@@ -254,7 +248,7 @@ importers:
         version: 1.6.9
       '@sentry/nextjs':
         specifier: 9.10.1
-        version: 9.10.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.3.3(@opentelemetry/api@1.8.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.99.9(esbuild@0.25.5))
+        version: 9.10.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.3.3(@opentelemetry/api@1.8.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.99.9)
       '@sindresorhus/slugify':
         specifier: 2.2.1
         version: 2.2.1
@@ -519,11 +513,11 @@ importers:
   apps/workers:
     dependencies:
       '@bull-board/api':
-        specifier: 6.7.9
-        version: 6.7.9(@bull-board/ui@6.7.9)
+        specifier: 6.10.1
+        version: 6.10.1(@bull-board/ui@6.10.1)
       '@bull-board/express':
-        specifier: 6.7.9
-        version: 6.7.9
+        specifier: 6.10.1
+        version: 6.10.1
       '@latitude-data/core':
         specifier: workspace:^
         version: link:../../packages/core
@@ -690,9 +684,6 @@ importers:
 
   packages/constants:
     dependencies:
-      '@latitude-data/compiler':
-        specifier: workspace:^
-        version: link:../compiler
       ai:
         specifier: ^4.2.9
         version: 4.3.16(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.24.2)
@@ -1060,9 +1051,6 @@ importers:
         specifier: 'catalog:'
         version: 3.24.2
     devDependencies:
-      '@latitude-data/compiler':
-        specifier: workspace:^
-        version: link:../../compiler
       '@latitude-data/constants':
         specifier: workspace:*
         version: link:../../constants
@@ -1259,9 +1247,6 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@18.3.0)
-      '@latitude-data/compiler':
-        specifier: workspace:^
-        version: link:../compiler
       '@latitude-data/constants':
         specifier: workspace:^
         version: link:../constants
@@ -2355,16 +2340,16 @@ packages:
     resolution: {integrity: sha512-ETyHEk2VHHvl9b9jZP5IHPavHYk57EhanlRRuae9XCpb/j5bDCbPPMOBfCWhnl/7EDJz0jEMCi/RhccCE8r1+Q==}
     engines: {node: '>=6.9.0'}
 
-  '@bull-board/api@6.7.9':
-    resolution: {integrity: sha512-wgUoaOq7JmY0udhQ+AyMrRdFRpGCtaQJpSgM/QLkAqKRpRpVz5yHFJK9uI6iV+uNvGJkUWE6hNsn3xamzcMy5A==}
+  '@bull-board/api@6.10.1':
+    resolution: {integrity: sha512-VPkZa2XZI2Wk2MqK1XyiiS+tOhNan54mnm2fpv2KA0fdZ92mQqNjhKkOpsykhQv9XUEc8cCRlZqGxf67YCMJbQ==}
     peerDependencies:
-      '@bull-board/ui': 6.7.9
+      '@bull-board/ui': 6.10.1
 
-  '@bull-board/express@6.7.9':
-    resolution: {integrity: sha512-l6PmKDZB7GyaEGiPwzRGSTMHcwHr2dLOntBPTELpYJqhO9HuIGFez+T2hkxRo02CQ0hFJHhIXxOXmGN9pO8V5A==}
+  '@bull-board/express@6.10.1':
+    resolution: {integrity: sha512-IZl+t6B8bGCHqd/8Mbvit9RXqndXBe2Kx7pYHq7PZRrEKjK9b643Uizlc+OVqmWpLSjpQMP96K1SO5/Nq24o+A==}
 
-  '@bull-board/ui@6.7.9':
-    resolution: {integrity: sha512-41a6rr04wu5uVCtnozqYaAhxUMlJZ3Mu4UwbEmGEvwrkTplKb3TKc8uvP3x0KgKUcIl7WU34Wr9N3lHciAUosQ==}
+  '@bull-board/ui@6.10.1':
+    resolution: {integrity: sha512-b6z6MBid/0DEShAMFPjPVZoPSoWqRBHCvTknyaxr/m8gL2/C+QP7jlCXut+L7uTFbCj9qs+CreAP0x/VdLI/Ig==}
 
   '@bundled-es-modules/cookie@2.0.1':
     resolution: {integrity: sha512-8o+5fRPLNbjbdGRRmJj3h6Hh1AQJf2dk3qQ/5ZFb+PXkRNiSoMGGUKlsgLfrxneb72axVJyIYji64E2+nNfYyw==}
@@ -12391,6 +12376,7 @@ packages:
     engines: {node: '>=0.6.0', teleport: '>=0.2.0'}
     deprecated: |-
       You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
+
       (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
 
   qs@6.11.2:
@@ -13374,10 +13360,12 @@ packages:
   superagent@10.2.1:
     resolution: {integrity: sha512-O+PCv11lgTNJUzy49teNAWLjBZfc+A1enOwTpLlH6/rsvKcTwcdTT8m9azGkVqM7HBl5jpyZ7KTPhHweokBcdg==}
     engines: {node: '>=14.18.0'}
+    deprecated: Please upgrade to superagent v10.2.2+, see release notes at https://github.com/forwardemail/superagent/releases/tag/v10.2.2 - maintenance is supported by Forward Email @ https://forwardemail.net
 
   supertest@7.1.1:
     resolution: {integrity: sha512-aI59HBTlG9e2wTjxGJV+DygfNLgnWbGdZxiA/sgrnNNikIW8lbDvCtF6RnhZoJ82nU7qv7ZLjrvWqCEm52fAmw==}
     engines: {node: '>=14.18.0'}
+    deprecated: Please upgrade to supertest v7.1.3+, see release notes at https://github.com/forwardemail/supertest/releases/tag/v7.1.3 - maintenance is supported by Forward Email @ https://forwardemail.net
 
   supports-color@7.2.0:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
@@ -16679,23 +16667,23 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
 
-  '@bull-board/api@6.7.9(@bull-board/ui@6.7.9)':
+  '@bull-board/api@6.10.1(@bull-board/ui@6.10.1)':
     dependencies:
-      '@bull-board/ui': 6.7.9
+      '@bull-board/ui': 6.10.1
       redis-info: 3.1.0
 
-  '@bull-board/express@6.7.9':
+  '@bull-board/express@6.10.1':
     dependencies:
-      '@bull-board/api': 6.7.9(@bull-board/ui@6.7.9)
-      '@bull-board/ui': 6.7.9
+      '@bull-board/api': 6.10.1(@bull-board/ui@6.10.1)
+      '@bull-board/ui': 6.10.1
       ejs: 3.1.10
       express: 4.21.2
     transitivePeerDependencies:
       - supports-color
 
-  '@bull-board/ui@6.7.9':
+  '@bull-board/ui@6.10.1':
     dependencies:
-      '@bull-board/api': 6.7.9(@bull-board/ui@6.7.9)
+      '@bull-board/api': 6.10.1(@bull-board/ui@6.10.1)
 
   '@bundled-es-modules/cookie@2.0.1':
     dependencies:
@@ -17639,7 +17627,7 @@ snapshots:
   '@jridgewell/gen-mapping@0.3.8':
     dependencies:
       '@jridgewell/set-array': 1.2.1
-      '@jridgewell/sourcemap-codec': 1.5.0
+      '@jridgewell/sourcemap-codec': 1.5.4
       '@jridgewell/trace-mapping': 0.3.25
 
   '@jridgewell/resolve-uri@3.1.2': {}
@@ -20554,7 +20542,7 @@ snapshots:
 
   '@sentry/core@9.9.0': {}
 
-  '@sentry/nextjs@9.10.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.3.3(@opentelemetry/api@1.8.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.99.9(esbuild@0.25.5))':
+  '@sentry/nextjs@9.10.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.3.3(@opentelemetry/api@1.8.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.99.9)':
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/semantic-conventions': 1.34.0
@@ -20562,10 +20550,10 @@ snapshots:
       '@sentry-internal/browser-utils': 9.10.1
       '@sentry/core': 9.10.1
       '@sentry/node': 9.10.1
-      '@sentry/opentelemetry': 9.10.1(@opentelemetry/api@1.9.0)(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.8.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.8.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.8.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.8.0))(@opentelemetry/semantic-conventions@1.34.0)
+      '@sentry/opentelemetry': 9.10.1(@opentelemetry/api@1.9.0)(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.34.0)
       '@sentry/react': 9.10.1(react@19.0.0-rc-5d19e1c8-20240923)
       '@sentry/vercel-edge': 9.10.1
-      '@sentry/webpack-plugin': 3.2.4(webpack@5.99.9(esbuild@0.25.5))
+      '@sentry/webpack-plugin': 3.2.4(webpack@5.99.9)
       chalk: 3.0.0
       next: 15.3.3(@opentelemetry/api@1.8.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
       resolve: 1.22.8
@@ -20615,7 +20603,7 @@ snapshots:
       '@opentelemetry/semantic-conventions': 1.34.0
       '@prisma/instrumentation': 6.5.0(@opentelemetry/api@1.9.0)
       '@sentry/core': 9.10.1
-      '@sentry/opentelemetry': 9.10.1(@opentelemetry/api@1.9.0)(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.8.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.8.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.8.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.8.0))(@opentelemetry/semantic-conventions@1.34.0)
+      '@sentry/opentelemetry': 9.10.1(@opentelemetry/api@1.9.0)(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.34.0)
       import-in-the-middle: 1.14.0
     transitivePeerDependencies:
       - supports-color
@@ -20659,7 +20647,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@sentry/opentelemetry@9.10.1(@opentelemetry/api@1.9.0)(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.8.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.8.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.8.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.8.0))(@opentelemetry/semantic-conventions@1.34.0)':
+  '@sentry/opentelemetry@9.10.1(@opentelemetry/api@1.9.0)(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.34.0)':
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/context-async-hooks': 1.30.1(@opentelemetry/api@1.9.0)
@@ -20691,12 +20679,12 @@ snapshots:
       '@opentelemetry/api': 1.9.0
       '@sentry/core': 9.10.1
 
-  '@sentry/webpack-plugin@3.2.4(webpack@5.99.9(esbuild@0.25.5))':
+  '@sentry/webpack-plugin@3.2.4(webpack@5.99.9)':
     dependencies:
       '@sentry/bundler-plugin-core': 3.2.4
       unplugin: 1.0.1
       uuid: 9.0.1
-      webpack: 5.99.9(esbuild@0.25.5)
+      webpack: 5.99.9
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -23467,7 +23455,7 @@ snapshots:
 
   code-red@1.0.4:
     dependencies:
-      '@jridgewell/sourcemap-codec': 1.5.0
+      '@jridgewell/sourcemap-codec': 1.5.4
       '@types/estree': 1.0.8
       acorn: 8.15.0
       estree-walker: 3.0.3
@@ -26709,7 +26697,7 @@ snapshots:
 
   magic-string@0.30.8:
     dependencies:
-      '@jridgewell/sourcemap-codec': 1.5.0
+      '@jridgewell/sourcemap-codec': 1.5.4
 
   mailgun.js@8.2.2:
     dependencies:
@@ -30205,16 +30193,14 @@ snapshots:
       - encoding
       - supports-color
 
-  terser-webpack-plugin@5.3.14(esbuild@0.25.5)(webpack@5.99.9(esbuild@0.25.5)):
+  terser-webpack-plugin@5.3.14(webpack@5.99.9):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.29
       jest-worker: 27.5.1
       schema-utils: 4.3.2
       serialize-javascript: 6.0.2
       terser: 5.43.1
-      webpack: 5.99.9(esbuild@0.25.5)
-    optionalDependencies:
-      esbuild: 0.25.5
+      webpack: 5.99.9
 
   terser@5.42.0:
     dependencies:
@@ -31194,7 +31180,7 @@ snapshots:
 
   webpack-virtual-modules@0.5.0: {}
 
-  webpack@5.99.9(esbuild@0.25.5):
+  webpack@5.99.9:
     dependencies:
       '@types/eslint-scope': 3.7.7
       '@types/estree': 1.0.8
@@ -31217,7 +31203,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.2
       tapable: 2.2.2
-      terser-webpack-plugin: 5.3.14(esbuild@0.25.5)(webpack@5.99.9(esbuild@0.25.5))
+      terser-webpack-plugin: 5.3.14(webpack@5.99.9)
       watchpack: 2.4.4
       webpack-sources: 3.3.3
     transitivePeerDependencies:

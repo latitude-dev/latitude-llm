@@ -1,16 +1,4 @@
-import { type ToolCall, type ToolContent } from '@latitude-data/compiler'
-import {
-  LogSources,
-  toolCallSchema,
-  traceContextSchema,
-  User,
-  Workspace,
-} from '@latitude-data/core/browser'
-import {
-  BACKGROUND,
-  telemetry,
-  TelemetryContext,
-} from '@latitude-data/core/telemetry'
+import { LogSources, User, Workspace } from '@latitude-data/core/browser'
 import { type Message } from '@latitude-data/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -27,8 +15,6 @@ const inputSchema = z.object({
       content: z.any(),
     }),
   ),
-  toolCalls: z.array(toolCallSchema),
-  trace: traceContextSchema.optional(),
 })
 
 export const POST = errorHandler(
@@ -50,15 +36,9 @@ export const POST = errorHandler(
       const body = await req.json()
 
       try {
-        const { messages: response, toolCalls, trace } = inputSchema.parse(body)
+        const { messages: response } = inputSchema.parse(body)
         const documentLogUuid = params.documentLogUuid
         const messages = response as Message[]
-        const context = trace
-          ? telemetry.resume(trace)
-          : BACKGROUND({ workspaceId: workspace.id })
-
-        // Note: faking playground tool spans so they show in the trace
-        await fakeToolSpans(context, messages, toolCalls)
 
         // Publish chat message event
         publisher.publishLater({
@@ -120,7 +100,6 @@ export const POST = errorHandler(
             writer.close()
           },
           signal: req.signal,
-          trace: trace,
         })
 
         return new NextResponse(readable, {
@@ -143,40 +122,3 @@ export const POST = errorHandler(
     },
   ),
 )
-
-async function fakeToolSpans(
-  context: TelemetryContext,
-  messages: Message[],
-  toolCalls: ToolCall[],
-) {
-  const toolResults = messages.reduce((acc, message) => {
-    if (message.role !== 'tool') return acc
-    for (const content of message.content) {
-      if (content.type !== 'tool-result') continue
-      acc.push(content)
-    }
-    return acc
-  }, [] as ToolContent[])
-
-  for (const call of toolCalls) {
-    const $tool = telemetry.tool(context, {
-      name: call.name,
-      call: {
-        id: call.id,
-        arguments: call.arguments,
-      },
-    })
-
-    const result = toolResults.find((r) => r.toolCallId === call.id)
-    if (result) {
-      $tool.end({
-        result: {
-          value: result.result,
-          isError: !!result.isError,
-        },
-      })
-    } else {
-      $tool.fail(new Error('Tool call not answered'))
-    }
-  }
-}

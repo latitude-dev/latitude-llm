@@ -11,16 +11,16 @@ import {
   DEFAULT_RETRY_CONFIG,
 } from './utils'
 import { publisher } from '../../../events/publisher'
-import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { maintenanceQueue } from '../../../jobs/queues'
 import { Result } from './../../../lib/Result'
 import { TypedResult } from './../../../lib/Result'
 import { IntegrationType } from '@latitude-data/constants'
+import { StreamManager } from '../../../lib/streamManager'
 
 async function ensureMcpServerScaled(
   integration: IntegrationDto,
-  chainStreamManager?: ChainStreamManager,
+  streamManager?: StreamManager,
 ): Promise<TypedResult<McpServer | undefined, McpConnectionError>> {
   if (!integration.mcpServerId) return Result.nil()
 
@@ -37,14 +37,14 @@ async function ensureMcpServerScaled(
 
   const mcpServer = mcpServerResult.value
   if (mcpServer.replicas === 0) {
-    chainStreamManager?.wakingIntegration(integration)
+    streamManager?.wakingIntegration(integration)
     const scaleResult = await scaleMcpServer({
       mcpServer,
       replicas: 1,
     })
 
     if (!Result.isOk(scaleResult)) {
-      chainStreamManager?.error(
+      streamManager?.endWithError(
         new ChainError({
           message: `Failed to scale up integration: ${integration.name}. Please try again or contact support.`,
           code: RunErrorCodes.FailedToWakeUpIntegrationError,
@@ -97,7 +97,7 @@ async function updateMcpServerLastUsed(
 
 export async function createAndConnectHostedMcpClient(
   integration: IntegrationDto,
-  chainStreamManager?: ChainStreamManager,
+  streamManager?: StreamManager,
 ): Promise<TypedResult<McpClientConnection, McpConnectionError>> {
   if (integration.type !== IntegrationType.HostedMCP) {
     return Result.error(
@@ -122,10 +122,7 @@ export async function createAndConnectHostedMcpClient(
   }
 
   // Ensure MCP server is scaled up if needed
-  const scaleResult = await ensureMcpServerScaled(
-    integration,
-    chainStreamManager,
-  )
+  const scaleResult = await ensureMcpServerScaled(integration, streamManager)
   if (!Result.isOk(scaleResult)) {
     return Result.error(scaleResult.error)
   }

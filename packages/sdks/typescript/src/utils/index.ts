@@ -106,8 +106,17 @@ export class RouteResolver {
           .project((params as RunDocumentUrlParams).projectId)
           .versions.version((params as RunDocumentUrlParams).versionUuid!)
           .documents.logs
+      case HandlerType.ToolResults:
+        return this.tools().results
       default:
         throw new Error(`Unknown handler: ${handler}`)
+    }
+  }
+
+  private tools() {
+    const base = `${this.baseUrl}/tools`
+    return {
+      results: `${base}/results`,
     }
   }
 

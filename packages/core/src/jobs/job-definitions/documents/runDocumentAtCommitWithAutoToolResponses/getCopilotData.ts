@@ -7,17 +7,18 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../../../repositories'
-import { Commit, Workspace, DocumentVersion } from '../../../../browser'
+import {
+  Commit,
+  Workspace,
+  DocumentVersion,
+  HEAD_COMMIT,
+} from '../../../../browser'
 import { Result } from './../../../../lib/Result'
 
-export const DEFAULT_COPILOT_GENERATE_TOOL_RESPONSES_PATH =
-  'tool-responses-generator'
 function getCopilotCredentials() {
   const apiKey = env.COPILOT_WORKSPACE_API_KEY
   const projectId = env.COPILOT_PROJECT_ID
-  const generateToolResponsesPath =
-    env.COPILOT_GENERATE_TOOL_RESPONSES_PATH ??
-    DEFAULT_COPILOT_GENERATE_TOOL_RESPONSES_PATH
+  const generateToolResponsesPath = env.COPILOT_GENERATE_TOOL_RESPONSES_PATH
   if (!apiKey) {
     return Result.error(new Error('COPILOT_WORKSPACE_API_KEY is not set'))
   }
@@ -65,7 +66,10 @@ export async function getCopilotDataForGenerateToolResponses() {
   if (!workspace) return buildError({ data: 'workspace' })
 
   const commitScope = new CommitsRepository(workspace.id)
-  const commitResult = await commitScope.getHeadCommit(projectId)
+  const commitResult = await commitScope.getCommitByUuid({
+    projectId,
+    uuid: env.COPILOT_GENERATE_TOOL_RESPONSES_COMMIT_UUID || HEAD_COMMIT,
+  })
   if (commitResult.error) return buildError({ data: 'head commit' })
 
   const commit = commitResult.value!

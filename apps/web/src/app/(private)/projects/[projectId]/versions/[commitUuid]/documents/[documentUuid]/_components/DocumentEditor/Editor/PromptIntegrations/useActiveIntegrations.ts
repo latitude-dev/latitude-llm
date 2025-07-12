@@ -3,7 +3,7 @@ import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSch
 import { IntegrationDto } from '@latitude-data/core/browser'
 import { useCallback, useState } from 'react'
 import { useEvents } from '$/lib/events'
-import { updatePromptMetadata } from '$/lib/promptMetadata'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 
 export type ActiveIntegrations = Record<string, true | string[]> // true means '*'
 

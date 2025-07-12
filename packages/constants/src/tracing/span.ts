@@ -1,5 +1,5 @@
+import { FinishReason } from 'ai'
 import { Message } from 'promptl-ai'
-import { FinishReason } from '../ai'
 
 export enum SpanKind {
   Internal = 'internal',

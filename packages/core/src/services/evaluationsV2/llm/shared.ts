@@ -1,8 +1,4 @@
-import {
-  AGENT_RETURN_TOOL_NAME,
-  ChainStepResponse,
-  StreamType,
-} from '@latitude-data/constants'
+import { ChainStepResponse, StreamType } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Adapters, Chain, Chain as PromptlChain, scan } from 'promptl-ai'
@@ -10,7 +6,6 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   Commit,
-  DocumentType,
   EvaluationType,
   EvaluationV2,
   LLM_EVALUATION_PROMPT_PARAMETERS,
@@ -24,9 +19,9 @@ import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { ProviderLogsRepository } from '../../../repositories'
 import { BACKGROUND, telemetry } from '../../../telemetry'
-import { runAgent } from '../../agents/run'
 import { runChain } from '../../chains/run'
 import { parsePrompt } from '../../documents/parse'
+import { updatePromptMetadata } from '../../../lib/updatePromptMetadata'
 
 export function promptTask({ provider }: { provider: ProviderApiKey }) {
   return `
@@ -82,6 +77,11 @@ export async function buildLlmEvaluationRunFunction<
   let promptConfig: LatitudePromptConfig
   let promptChain: PromptlChain
   try {
+    prompt = schema
+      ? updatePromptMetadata(prompt, {
+          schema: zodToJsonSchema(schema, { target: 'openAi' }),
+        })
+      : prompt
     const ast = await parsePrompt(prompt).then((r) => r.unwrap())
     const result = await scan({
       prompt,
@@ -101,6 +101,7 @@ export async function buildLlmEvaluationRunFunction<
       ...result.config,
       ...(schema && { schema: zodToJsonSchema(schema, { target: 'openAi' }) }),
     } as LatitudePromptConfig
+
     promptChain = new Chain({
       serialized: { ast },
       prompt: prompt,
@@ -121,25 +122,17 @@ export async function buildLlmEvaluationRunFunction<
   const runArgs = {
     generateUUID: () => resultUuid,
     chain: promptChain,
-    globalConfig: promptConfig,
-    configOverrides: schema
-      ? {
-          schema: zodToJsonSchema(schema, { target: 'openAi' }),
-          output: 'object' as const,
-        }
-      : undefined,
     source: LogSources.Evaluation,
-    promptlVersion: 1,
-    persistErrors: false as const, // Note: required so TypeScript doesn't infer true
     promptSource: { ...evaluation, version: 'v2' as const },
     providersMap: providers,
     workspace: workspace,
   }
 
-  const isAgent = promptConfig.type === DocumentType.Agent
-  const runFunction = isAgent ? runAgent : runChain
-
-  return Result.ok({ promptChain, promptConfig, runFunction, runArgs })
+  return Result.ok({
+    promptChain,
+    promptConfig,
+    runArgs,
+  })
 }
 
 export async function runPrompt<
@@ -167,16 +160,15 @@ export async function runPrompt<
   },
   db = database,
 ) {
-  const { promptChain, promptConfig, runFunction, runArgs } =
-    await buildLlmEvaluationRunFunction({
-      resultUuid,
-      workspace,
-      providers,
-      evaluation,
-      prompt,
-      parameters,
-      schema,
-    }).then((r) => r.unwrap())
+  const { promptChain, runArgs } = await buildLlmEvaluationRunFunction({
+    resultUuid,
+    workspace,
+    providers,
+    evaluation,
+    prompt,
+    parameters,
+    schema,
+  }).then((r) => r.unwrap())
 
   const $prompt = telemetry.prompt(BACKGROUND({ workspaceId: workspace.id }), {
     logUuid: resultUuid,
@@ -189,13 +181,12 @@ export async function runPrompt<
 
   let response
   try {
-    const result = runFunction({ context: $prompt.context, ...runArgs })
+    const result = runChain({ context: $prompt.context, ...runArgs })
     const error = await result.error
     if (error) throw error
 
-    response = await result.lastResponse
-
     $prompt.end()
+    response = await result.response
   } catch (error) {
     $prompt.fail(error as Error)
 
@@ -226,7 +217,7 @@ export async function runPrompt<
   }
 
   let verdict: S extends z.ZodSchema ? z.infer<S> : unknown
-  verdict = parseVerdict(response, promptConfig.type as DocumentType)
+  verdict = parseVerdict(response)
 
   if (schema) {
     const result = schema.safeParse(verdict)
@@ -248,24 +239,7 @@ export async function runPrompt<
   return { response, stats, verdict }
 }
 
-function parseVerdict(
-  response: ChainStepResponse<StreamType>,
-  type?: DocumentType,
-): any {
-  if (type === DocumentType.Agent) {
-    if (
-      response.streamType !== 'text' ||
-      response.toolCalls[0]?.name !== AGENT_RETURN_TOOL_NAME
-    ) {
-      throw new ChainError({
-        code: RunErrorCodes.InvalidResponseFormatError,
-        message: 'Evaluation conversation response is not an agent return call',
-      })
-    }
-
-    return response.toolCalls[0].arguments
-  }
-
+function parseVerdict(response: ChainStepResponse<StreamType>): any {
   if (response.streamType !== 'object') {
     throw new ChainError({
       code: RunErrorCodes.InvalidResponseFormatError,

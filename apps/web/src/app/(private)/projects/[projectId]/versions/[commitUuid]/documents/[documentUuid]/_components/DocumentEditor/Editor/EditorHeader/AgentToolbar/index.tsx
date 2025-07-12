@@ -4,7 +4,6 @@ import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
-import { updatePromptMetadata } from '$/lib/promptMetadata'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import useIntegrations from '$/stores/integrations'
@@ -17,6 +16,7 @@ import {
   UseLatitudeAgentsConfig,
   useLatitudeAgentsConfig,
 } from '../../PromptConfiguration/utils'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 
 const singularPluralLabel = (c: number, s: string, p: string) =>
   c === 0 ? `0 ${p}` : c === 1 ? `1 ${s}` : `${c} ${p} `

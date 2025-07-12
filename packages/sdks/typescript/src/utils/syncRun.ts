@@ -1,13 +1,10 @@
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
-import { syncChat } from '$sdk/utils/syncChat'
-import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
 import {
   HandlerType,
   RunPromptOptions,
   RunSyncAPIResponse,
   SDKOptions,
-  ToolInstrumentation,
   ToolSpec,
 } from '$sdk/utils/types'
 import {
@@ -25,12 +22,9 @@ export async function syncRun<Tools extends ToolSpec>(
     customIdentifier,
     onFinished,
     onError,
-    tools,
     options,
-    instrumentation,
   }: RunPromptOptions<Tools> & {
     options: SDKOptions
-    instrumentation?: ToolInstrumentation
   },
 ) {
   projectId = projectId ?? options.projectId
@@ -42,6 +36,7 @@ export async function syncRun<Tools extends ToolSpec>(
       serverResponse: 'Project ID is required',
       errorCode: LatitudeErrorCodes.NotFoundError,
     })
+
     onError?.(error)
     return Promise.reject(error)
   }
@@ -58,6 +53,7 @@ export async function syncRun<Tools extends ToolSpec>(
       path,
       parameters,
       customIdentifier,
+      tools: [],
     },
   })
 
@@ -83,21 +79,7 @@ export async function syncRun<Tools extends ToolSpec>(
 
   const finalResponse = (await response.json()) as RunSyncAPIResponse
 
-  if (hasTools(tools) && finalResponse.toolRequests.length) {
-    return handleToolRequests<Tools, false>({
-      originalResponse: finalResponse,
-      messages: finalResponse.conversation,
-      toolRequests: finalResponse.toolRequests,
-      onFinished,
-      onError,
-      chatFn: syncChat,
-      tools,
-      options,
-      trace: finalResponse.trace,
-      instrumentation,
-    })
-  }
-
   onFinished?.(finalResponse)
+
   return Promise.resolve(finalResponse)
 }

@@ -1,36 +1,32 @@
-import { LogSources } from '@latitude-data/constants'
-import { Experiment } from '../../../../browser'
-import { TelemetryContext } from '../../../../telemetry'
+import { LogSources, ToolDefinition } from '@latitude-data/constants'
+import { BACKGROUND, TelemetryContext } from '../../../../telemetry'
 import { getCopilotDataForGenerateToolResponses } from './getCopilotData'
 import {
   getDataForInitialRequest,
   GetDataParams,
 } from './getDataForInitialRequest'
-import { runDocumentUntilItStops } from './runDocumentUntilItStops'
+import { scan } from 'promptl-ai'
+import { Experiment } from '../../../../browser'
+import { runDocumentAtCommit } from '../../../../services/commits'
+import { isOldToolsSchema } from '../../../../lib/streamManager/resolveTools/clientTools'
+import {
+  mockClientToolResult,
+  ToolHandler,
+} from '../../../../lib/streamManager/clientTools/handlers'
 
-/**
- * This function handle the processing of a document even when
- * it has tool calls in it. If one or more tool calls are detected
- * we generate a response with AI so the chain can be finished.
- *
- * WARNING: This is for internal use inside Latitude app. Do not
- * use for users' requests from the API gateway.
- */
 export async function runDocumentAtCommitWithAutoToolResponses({
-  context,
   parameters,
   customPrompt,
   source,
-  autoRespondToolCalls,
   experiment,
+  context,
   ...dataParams
 }: GetDataParams & {
-  context: TelemetryContext
   parameters: Record<string, unknown>
   customPrompt?: string
   experiment?: Experiment
   source: LogSources
-  autoRespondToolCalls: boolean
+  context?: TelemetryContext
 }) {
   const copilotResult = await getCopilotDataForGenerateToolResponses()
   if (copilotResult.error) return copilotResult
@@ -40,28 +36,44 @@ export async function runDocumentAtCommitWithAutoToolResponses({
 
   const { workspace, document, commit } = dataResult.value
 
-  return await runDocumentUntilItStops(
-    {
-      hasToolCalls: false,
-      autoRespondToolCalls,
-      data: {
-        context,
-        workspace,
-        commit,
-        document,
-        customPrompt,
-        parameters,
-        source,
-        experiment,
-        copilot: copilotResult.value,
-      },
-    },
-    // This is a recursive function, it call itself. To properly test
-    // that the mocked version is called we need to pass the function
-    // by reference.
-    runDocumentUntilItStops,
-  )
+  return runDocumentAtCommit({
+    context: context ?? BACKGROUND({ workspaceId: workspace.id }),
+    workspace,
+    document,
+    parameters,
+    commit,
+    source,
+    customPrompt,
+    experiment,
+    tools: await mockClientToolHandlers(customPrompt ?? document.content),
+  })
 }
 
 export type RunDocumentAtCommitWithAutoToolResponsesFn =
   typeof runDocumentAtCommitWithAutoToolResponses
+
+async function mockClientToolHandlers(
+  prompt: string,
+): Promise<Record<string, ToolHandler>> {
+  const { config } = await scan({ prompt })
+  if (!config.tools) return {}
+
+  let tools: Record<string, ToolDefinition>
+  if (
+    isOldToolsSchema(
+      config.tools as Record<string, ToolDefinition> | ToolDefinition[],
+    )
+  ) {
+    tools = config.tools as Record<string, ToolDefinition>
+  } else {
+    tools = Object.assign({}, config.tools)
+  }
+
+  return Object.entries(tools).reduce(
+    (acc, [name]) => {
+      acc[name] = mockClientToolResult
+      return acc
+    },
+    {} as Record<string, ToolHandler>,
+  )
+}

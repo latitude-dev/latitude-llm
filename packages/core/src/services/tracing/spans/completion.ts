@@ -56,14 +56,12 @@ import {
   ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_READ,
   ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_WRITE,
   CompletionSpanMetadata,
-  FinishReason,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_CONTENT_FILTER,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_ERROR,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_LENGTH,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_OTHER,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS,
-  GEN_AI_RESPONSE_FINISH_REASON_VALUE_UNKNOWN,
   Providers,
   SPAN_SPECIFICATIONS,
   SpanAttribute,
@@ -706,7 +704,6 @@ const FINISH_REASON_CONTENT_FILTER = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_V
 const FINISH_REASON_TOOL_CALLS = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS) // prettier-ignore
 const FINISH_REASON_ERROR = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_ERROR) // prettier-ignore
 const FINISH_REASON_OTHER = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_OTHER) // prettier-ignore
-const FINISH_REASON_UNKNOWN = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_UNKNOWN) // prettier-ignore
 
 function extractFinishReason(
   attributes: Record<string, SpanAttribute>,
@@ -724,20 +721,18 @@ function extractFinishReason(
   }
   switch (toCamelCase(reason)) {
     case FINISH_REASON_STOP:
-      return Result.ok(FinishReason.Stop)
+      return Result.ok('stop')
     case FINISH_REASON_LENGTH:
-      return Result.ok(FinishReason.Length)
+      return Result.ok('length')
     case FINISH_REASON_CONTENT_FILTER:
-      return Result.ok(FinishReason.ContentFilter)
+      return Result.ok('content-filter')
     case FINISH_REASON_TOOL_CALLS:
-      return Result.ok(FinishReason.ToolCalls)
+      return Result.ok('tool-calls')
     case FINISH_REASON_ERROR:
-      return Result.ok(FinishReason.Error)
+      return Result.ok('error')
     case FINISH_REASON_OTHER:
-      return Result.ok(FinishReason.Other)
-    case FINISH_REASON_UNKNOWN:
-      return Result.ok(FinishReason.Unknown)
+      return Result.ok('other')
+    default:
+      return Result.ok('unknown')
   }
-
-  return Result.ok(FinishReason.Unknown)
 }

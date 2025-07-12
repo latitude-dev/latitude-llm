@@ -54,13 +54,7 @@ export function useRunOnboardingPrompt({
     }
   }, [document, createStreamHandler, project.id, commit.uuid])
 
-  const {
-    start,
-    streamingResponse,
-    streamingReasoning,
-    messages,
-    chainLength,
-  } = usePlaygroundChat({
+  const { start, messages } = usePlaygroundChat({
     runPromptFn: () => {
       return runDocument()
     },
@@ -75,19 +69,9 @@ export function useRunOnboardingPrompt({
   return useMemo(
     () => ({
       start,
-      streamingResponse,
-      streamingReasoning,
       messages,
-      chainLength,
       activeStream,
     }),
-    [
-      start,
-      streamingResponse,
-      streamingReasoning,
-      messages,
-      chainLength,
-      activeStream,
-    ],
+    [start, messages, activeStream],
   )
 }

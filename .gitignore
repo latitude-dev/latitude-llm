@@ -78,3 +78,4 @@ bin/connect.sh
 ONLY_FOR_COPILOT/
 
 .claude
+__testing__

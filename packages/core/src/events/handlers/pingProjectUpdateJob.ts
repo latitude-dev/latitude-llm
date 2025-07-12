@@ -1,4 +1,6 @@
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { findCommitById } from '../../data-access/commits'
+import { Result } from '../../lib/Result'
 import { pingProjectUpdate } from '../../services/projects'
 import {
   EvaluationV2CreatedEvent,
@@ -15,10 +17,8 @@ export async function pingProjectUpdateJob({
     | EvaluationV2DeletedEvent
 }) {
   const { evaluation } = event.data
-  const commit = await findCommitById({ id: evaluation.commitId }).then((r) =>
-    r.unwrap(),
-  )
-  if (!commit) return
+  const commit = await findCommitById(evaluation.commitId)
+  if (!commit) return Result.error(new NotFoundError('Commit not found'))
 
   await pingProjectUpdate({ projectId: commit.projectId }).then((r) =>
     r.unwrap(),

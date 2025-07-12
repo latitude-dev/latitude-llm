@@ -1,4 +1,3 @@
-import { ContentType, createChain } from '@latitude-data/compiler'
 import { eq } from 'drizzle-orm'
 import { v4 as uuid } from 'uuid'
 
@@ -17,7 +16,9 @@ import { createDocumentLog as ogCreateDocumentLog } from '../../services/documen
 import { getResolvedContent } from '../../services/documents'
 import { createProviderLog } from '../../services/providerLogs'
 import { helpers } from './helpers'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { createChain } from 'promptl-ai'
+import { PartialConfig } from '../../services/ai'
+import { Message } from '@latitude-data/constants/legacyCompiler'
 
 export type IDocumentLogData = {
   document: DocumentVersion
@@ -54,21 +55,19 @@ async function generateProviderLogs({
   const providerScope = new ProviderApiKeysRepository(workspace.id)
 
   while (true) {
-    const { completed, conversation } = await chain.step(mockedResponse)
-
-    const config = conversation.config as LatitudePromptConfig
+    const { completed, config, messages } = await chain.step(mockedResponse)
     const provider = await providerScope
-      .findByName(config.provider!)
+      .findByName(config.provider as string)
       .then((r) => r.unwrap())
 
     mockedResponse = helpers.randomSentence()
-    const promptTokens = conversation.messages.reduce((acc, message) => {
-      let content = message.content
-      if (Array.isArray(content)) {
-        content = content
-          .map((c) => (c.type === ContentType.text ? c.text : ''))
-          .join('')
-      }
+    const promptTokens = messages.reduce((acc, message) => {
+      const content =
+        typeof message.content === 'string'
+          ? message.content
+          : message.content
+              .map((c) => (c.type === 'text' ? c.text : ''))
+              .join('')
       return acc + content.length
     }, 0)
     const completionTokens = mockedResponse.length
@@ -79,9 +78,9 @@ async function generateProviderLogs({
       documentLogUuid,
       providerId: provider.id,
       providerType: provider.provider,
-      model: config.model!,
-      config: config,
-      messages: conversation.messages,
+      model: config.model as string,
+      config: config as PartialConfig,
+      messages: messages as unknown as Message[],
       responseText: mockedResponse,
       toolCalls: [],
       usage: {
@@ -120,8 +119,8 @@ export async function createDocumentLog({
     commit,
   }).then((r) => r.unwrap())
   const documentLogUuid = uuid()
-  let providerLogs: ProviderLog[] = []
 
+  let providerLogs: ProviderLog[] = []
   if (!skipProviderLogs) {
     providerLogs = await generateProviderLogs({
       workspace,

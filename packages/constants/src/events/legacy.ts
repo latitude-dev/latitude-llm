@@ -1,4 +1,4 @@
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants/legacyCompiler'
 import { ChainEventDtoResponse } from '..'
 import { FinishReason } from 'ai'
 import { LatitudePromptConfig } from '../latitudePromptSchema'

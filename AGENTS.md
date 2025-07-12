@@ -21,6 +21,8 @@
 - Event handlers prefixed with "handle" (handleClick, handleSubmit)
 - Directories use lowercase with dashes (auth-wizard)
 - Avoid enums, use const maps or type unions instead
+- Use JSDoc comments for functions and classes that are exported. You can skip
+  JSDoc for internal functions that are simple and self-explanatory.
 
 ## Architecture
 
@@ -231,3 +233,31 @@ import { updateApiKeyAction } from '$/actions/apiKeys/update'
 // Admin action
 import { createFeatureAction } from '$/actions/admin/features/create'
 ```
+
+## SDK Release Process
+
+### TypeScript SDK (`packages/sdks/typescript/`)
+
+The TypeScript SDK is automatically published to npm and GitHub releases via `.github/workflows/publish-typescript-sdk.yml`:
+
+1. **Manual Changelog**: Update `CHANGELOG.md` with release notes for the new version
+2. **Version Bump**: Update version in `package.json`
+3. **Push to Main**: Workflow automatically:
+   - Builds and tests the package
+   - Publishes to npm if version is new
+   - Extracts changelog content for the version
+   - Creates GitHub release with changelog as release notes
+   - Tags release as `typescript-sdk-VERSION`
+
+### Changelog Format
+
+- Follow [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format
+- Use sections: Added, Changed, Deprecated, Removed, Fixed, Security
+- See `CHANGELOG_TEMPLATE.md` for detailed instructions
+- Workflow extracts content between `## [VERSION]` headers
+
+### Release Detection
+
+- Workflow compares `package.json` version with published npm version
+- Only publishes if versions differ
+- Supports prerelease detection (beta, alpha, rc) for GitHub release flags

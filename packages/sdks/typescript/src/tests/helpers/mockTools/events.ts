@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainEvent,
   ChainEventTypes,
@@ -31,11 +31,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -44,7 +44,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -62,11 +62,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -75,7 +75,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -94,11 +94,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -107,7 +107,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -116,7 +116,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -124,7 +124,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -132,7 +132,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -217,11 +217,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -230,7 +230,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -239,7 +239,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -247,7 +247,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -255,7 +255,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -300,11 +300,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -313,7 +313,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -322,7 +322,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -330,7 +330,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -338,7 +338,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -371,116 +371,6 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
         ],
-      },
-    },
-    {
-      event: StreamEventTypes.Latitude,
-      data: {
-        type: ChainEventTypes.ToolsRequested,
-        uuid: TOOLS_DOCUMENT_UUID,
-        messages: [
-          {
-            role: MessageRole.system,
-            content: [
-              {
-                type: ContentType.text,
-                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
-              },
-              {
-                type: ContentType.text,
-                text: 'First, locate the one or many recommendation requests.',
-              },
-            ],
-          },
-          {
-            role: MessageRole.user,
-            content: [
-              {
-                type: ContentType.text,
-                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
-              },
-            ],
-          },
-          {
-            role: MessageRole.assistant,
-            content: [
-              {
-                type: ContentType.toolCall,
-                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
-                toolName: 'get_coordinates',
-                args: {
-                  location: 'Barcelona',
-                },
-              },
-              {
-                type: ContentType.toolCall,
-                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
-                toolName: 'get_coordinates',
-                args: {
-                  location: 'Miami',
-                },
-              },
-              {
-                type: ContentType.toolCall,
-                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
-                toolName: 'get_coordinates',
-                args: {
-                  location: 'Boston',
-                },
-              },
-            ],
-            toolCalls: [
-              {
-                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
-                name: 'get_coordinates',
-                arguments: {
-                  location: 'Barcelona',
-                },
-              },
-              {
-                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
-                name: 'get_coordinates',
-                arguments: {
-                  location: 'Miami',
-                },
-              },
-              {
-                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
-                name: 'get_coordinates',
-                arguments: {
-                  location: 'Boston',
-                },
-              },
-            ],
-          },
-        ],
-        tools: [
-          {
-            id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
-            name: 'get_coordinates',
-            arguments: {
-              location: 'Barcelona',
-            },
-          },
-          {
-            id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
-            name: 'get_coordinates',
-            arguments: {
-              location: 'Miami',
-            },
-          },
-          {
-            id: 'call_LRmAwTyy8NXChQo6reGll0tG',
-            name: 'get_coordinates',
-            arguments: {
-              location: 'Boston',
-            },
-          },
-        ],
-        trace: {
-          traceparent:
-            '00-12345678901234567890123456789012-1234567890123456-01',
-        },
       },
     },
   ],
@@ -495,11 +385,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -508,7 +398,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -517,7 +407,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -525,7 +415,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -533,7 +423,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -578,11 +468,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -591,7 +481,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -600,7 +490,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -608,7 +498,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -616,7 +506,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -652,7 +542,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 result: {
@@ -667,7 +557,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 result: {
@@ -682,7 +572,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 result: {
@@ -697,7 +587,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now get the weather from the one or many recommendation requests.',
               },
             ],
@@ -715,11 +605,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -728,7 +618,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -737,7 +627,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -745,7 +635,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -753,7 +643,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -789,7 +679,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 result: {
@@ -804,7 +694,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 result: {
@@ -819,7 +709,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 result: {
@@ -834,7 +724,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now get the weather from the one or many recommendation requests.',
               },
             ],
@@ -853,11 +743,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -866,7 +756,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -875,7 +765,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -883,7 +773,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -891,7 +781,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -927,7 +817,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 result: {
@@ -942,7 +832,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 result: {
@@ -957,7 +847,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 result: {
@@ -972,7 +862,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now get the weather from the one or many recommendation requests.',
               },
             ],
@@ -981,7 +871,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 args: {
@@ -990,7 +880,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 args: {
@@ -999,7 +889,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 args: {
@@ -1091,11 +981,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -1104,7 +994,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -1113,7 +1003,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -1121,7 +1011,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -1129,7 +1019,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -1165,7 +1055,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 result: {
@@ -1180,7 +1070,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 result: {
@@ -1195,7 +1085,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 result: {
@@ -1210,7 +1100,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now get the weather from the one or many recommendation requests.',
               },
             ],
@@ -1219,7 +1109,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 args: {
@@ -1228,7 +1118,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 args: {
@@ -1237,7 +1127,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 args: {
@@ -1274,231 +1164,6 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             ],
           },
         ],
-      },
-    },
-    {
-      event: StreamEventTypes.Latitude,
-      data: {
-        type: ChainEventTypes.ToolsRequested,
-        uuid: TOOLS_DOCUMENT_UUID,
-        messages: [
-          {
-            role: MessageRole.system,
-            content: [
-              {
-                type: ContentType.text,
-                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
-              },
-              {
-                type: ContentType.text,
-                text: 'First, locate the one or many recommendation requests.',
-              },
-            ],
-          },
-          {
-            role: MessageRole.user,
-            content: [
-              {
-                type: ContentType.text,
-                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
-              },
-            ],
-          },
-          {
-            role: MessageRole.assistant,
-            content: [
-              {
-                type: ContentType.toolCall,
-                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
-                toolName: 'get_coordinates',
-                args: {
-                  location: 'Barcelona',
-                },
-              },
-              {
-                type: ContentType.toolCall,
-                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
-                toolName: 'get_coordinates',
-                args: {
-                  location: 'Miami',
-                },
-              },
-              {
-                type: ContentType.toolCall,
-                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
-                toolName: 'get_coordinates',
-                args: {
-                  location: 'Boston',
-                },
-              },
-            ],
-            toolCalls: [
-              {
-                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
-                name: 'get_coordinates',
-                arguments: {
-                  location: 'Barcelona',
-                },
-              },
-              {
-                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
-                name: 'get_coordinates',
-                arguments: {
-                  location: 'Miami',
-                },
-              },
-              {
-                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
-                name: 'get_coordinates',
-                arguments: {
-                  location: 'Boston',
-                },
-              },
-            ],
-          },
-          {
-            role: MessageRole.tool,
-            content: [
-              {
-                type: ContentType.toolResult,
-                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
-                toolName: 'get_coordinates',
-                result: {
-                  latitude: '41.3851',
-                  longitude: '2.1734',
-                },
-                isError: false,
-              },
-            ],
-          },
-          {
-            role: MessageRole.tool,
-            content: [
-              {
-                type: ContentType.toolResult,
-                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
-                toolName: 'get_coordinates',
-                result: {
-                  latitude: '25.7617',
-                  longitude: '-80.1918',
-                },
-                isError: false,
-              },
-            ],
-          },
-          {
-            role: MessageRole.tool,
-            content: [
-              {
-                type: ContentType.toolResult,
-                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
-                toolName: 'get_coordinates',
-                result: {
-                  latitude: '42.3601',
-                  longitude: '-71.0589',
-                },
-                isError: false,
-              },
-            ],
-          },
-          {
-            role: MessageRole.system,
-            content: [
-              {
-                type: ContentType.text,
-                text: 'Now get the weather from the one or many recommendation requests.',
-              },
-            ],
-          },
-          {
-            role: MessageRole.assistant,
-            content: [
-              {
-                type: ContentType.toolCall,
-                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
-                toolName: 'get_weather',
-                args: {
-                  latitude: '41.3851',
-                  longitude: '2.1734',
-                },
-              },
-              {
-                type: ContentType.toolCall,
-                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
-                toolName: 'get_weather',
-                args: {
-                  latitude: '25.7617',
-                  longitude: '-80.1918',
-                },
-              },
-              {
-                type: ContentType.toolCall,
-                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
-                toolName: 'get_weather',
-                args: {
-                  latitude: '42.3601',
-                  longitude: '-71.0589',
-                },
-              },
-            ],
-            toolCalls: [
-              {
-                id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
-                name: 'get_weather',
-                arguments: {
-                  latitude: '41.3851',
-                  longitude: '2.1734',
-                },
-              },
-              {
-                id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
-                name: 'get_weather',
-                arguments: {
-                  latitude: '25.7617',
-                  longitude: '-80.1918',
-                },
-              },
-              {
-                id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
-                name: 'get_weather',
-                arguments: {
-                  latitude: '42.3601',
-                  longitude: '-71.0589',
-                },
-              },
-            ],
-          },
-        ],
-        tools: [
-          {
-            id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
-            name: 'get_weather',
-            arguments: {
-              latitude: '41.3851',
-              longitude: '2.1734',
-            },
-          },
-          {
-            id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
-            name: 'get_weather',
-            arguments: {
-              latitude: '25.7617',
-              longitude: '-80.1918',
-            },
-          },
-          {
-            id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
-            name: 'get_weather',
-            arguments: {
-              latitude: '42.3601',
-              longitude: '-71.0589',
-            },
-          },
-        ],
-        trace: {
-          traceparent:
-            '00-12345678901234567890123456789012-1234567890123456-01',
-        },
       },
     },
   ],
@@ -1513,11 +1178,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -1526,7 +1191,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -1535,7 +1200,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -1543,7 +1208,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -1551,7 +1216,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -1587,7 +1252,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 result: {
@@ -1602,7 +1267,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 result: {
@@ -1617,7 +1282,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 result: {
@@ -1632,7 +1297,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now get the weather from the one or many recommendation requests.',
               },
             ],
@@ -1641,7 +1306,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 args: {
@@ -1650,7 +1315,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 args: {
@@ -1659,7 +1324,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 args: {
@@ -1708,11 +1373,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -1721,7 +1386,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -1730,7 +1395,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -1738,7 +1403,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -1746,7 +1411,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -1782,7 +1447,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 result: {
@@ -1797,7 +1462,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 result: {
@@ -1812,7 +1477,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 result: {
@@ -1827,7 +1492,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now get the weather from the one or many recommendation requests.',
               },
             ],
@@ -1836,7 +1501,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 args: {
@@ -1845,7 +1510,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 args: {
@@ -1854,7 +1519,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 args: {
@@ -1894,7 +1559,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 result: {
@@ -1909,7 +1574,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 result: {
@@ -1924,7 +1589,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 result: {
@@ -1939,7 +1604,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now make the recommendations based on the weather.',
               },
             ],
@@ -1957,11 +1622,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -1970,7 +1635,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -1979,7 +1644,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -1987,7 +1652,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -1995,7 +1660,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -2031,7 +1696,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 result: {
@@ -2046,7 +1711,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 result: {
@@ -2061,7 +1726,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 result: {
@@ -2076,7 +1741,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now get the weather from the one or many recommendation requests.',
               },
             ],
@@ -2085,7 +1750,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 args: {
@@ -2094,7 +1759,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 args: {
@@ -2103,7 +1768,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 args: {
@@ -2143,7 +1808,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 result: {
@@ -2158,7 +1823,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 result: {
@@ -2173,7 +1838,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 result: {
@@ -2188,7 +1853,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now make the recommendations based on the weather.',
               },
             ],
@@ -2207,11 +1872,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -2220,7 +1885,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -2229,7 +1894,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -2237,7 +1902,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -2245,7 +1910,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -2281,7 +1946,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 result: {
@@ -2296,7 +1961,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 result: {
@@ -2311,7 +1976,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 result: {
@@ -2326,7 +1991,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now get the weather from the one or many recommendation requests.',
               },
             ],
@@ -2335,7 +2000,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 args: {
@@ -2344,7 +2009,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 args: {
@@ -2353,7 +2018,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 args: {
@@ -2393,7 +2058,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 result: {
@@ -2408,7 +2073,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 result: {
@@ -2423,7 +2088,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 result: {
@@ -2438,7 +2103,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now make the recommendations based on the weather.',
               },
             ],
@@ -2447,7 +2112,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "- **Barcelona**: It's 24°C, so I recommend wearing light layers, like a t-shirt with a light jacket or cardigan, especially if you're going to be out in the evening.\n\n- **Miami**: It's hot at 30°C! Make sure to wear light, breathable clothing, and don't forget sunscreen and a hat to protect yourself from the sun.\n\n- **Boston**: It's quite chilly at 10°C. Please wear warm clothes, like a sweater or a jacket, and consider a scarf and gloves if you'll be outside for a while.",
               },
             ],
@@ -2484,11 +2149,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -2497,7 +2162,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -2506,7 +2171,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -2514,7 +2179,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -2522,7 +2187,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -2558,7 +2223,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 result: {
@@ -2573,7 +2238,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 result: {
@@ -2588,7 +2253,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 result: {
@@ -2603,7 +2268,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now get the weather from the one or many recommendation requests.',
               },
             ],
@@ -2612,7 +2277,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 args: {
@@ -2621,7 +2286,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 args: {
@@ -2630,7 +2295,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 args: {
@@ -2670,7 +2335,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 result: {
@@ -2685,7 +2350,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 result: {
@@ -2700,7 +2365,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 result: {
@@ -2715,7 +2380,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now make the recommendations based on the weather.',
               },
             ],
@@ -2724,7 +2389,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "- **Barcelona**: It's 24°C, so I recommend wearing light layers, like a t-shirt with a light jacket or cardigan, especially if you're going to be out in the evening.\n\n- **Miami**: It's hot at 30°C! Make sure to wear light, breathable clothing, and don't forget sunscreen and a hat to protect yourself from the sun.\n\n- **Boston**: It's quite chilly at 10°C. Please wear warm clothes, like a sweater or a jacket, and consider a scarf and gloves if you'll be outside for a while.",
               },
             ],
@@ -2749,11 +2414,11 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
@@ -2762,7 +2427,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
@@ -2771,7 +2436,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -2779,7 +2444,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -2787,7 +2452,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -2823,7 +2488,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 result: {
@@ -2838,7 +2503,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 result: {
@@ -2853,7 +2518,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 result: {
@@ -2868,7 +2533,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now get the weather from the one or many recommendation requests.',
               },
             ],
@@ -2877,7 +2542,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 args: {
@@ -2886,7 +2551,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 args: {
@@ -2895,7 +2560,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
                 },
               },
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 args: {
@@ -2935,7 +2600,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 result: {
@@ -2950,7 +2615,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 result: {
@@ -2965,7 +2630,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.tool,
             content: [
               {
-                type: ContentType.toolResult,
+                type: 'tool-result',
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 result: {
@@ -2980,7 +2645,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.system,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'Now make the recommendations based on the weather.',
               },
             ],
@@ -2989,17 +2654,13 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: "- **Barcelona**: It's 24°C, so I recommend wearing light layers, like a t-shirt with a light jacket or cardigan, especially if you're going to be out in the evening.\n\n- **Miami**: It's hot at 30°C! Make sure to wear light, breathable clothing, and don't forget sunscreen and a hat to protect yourself from the sun.\n\n- **Boston**: It's quite chilly at 10°C. Please wear warm clothes, like a sweater or a jacket, and consider a scarf and gloves if you'll be outside for a while.",
               },
             ],
             toolCalls: [],
           },
         ],
-        trace: {
-          traceparent:
-            '00-12345678901234567890123456789012-1234567890123456-01',
-        },
       },
     },
   ],

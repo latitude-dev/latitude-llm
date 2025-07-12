@@ -1345,6 +1345,13 @@
       "when": 1752490691954,
       "tag": "0192_damp_silver_centurion",
       "breakpoints": true
+    },
+    {
+      "idx": 193,
+      "version": "7",
+      "when": 1752589010521,
+      "tag": "0193_dry_freak",
+      "breakpoints": true
     }
   ]
 }

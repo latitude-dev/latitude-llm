@@ -1,13 +1,9 @@
 import {
-  type ToolCall,
-  type ToolContent,
-  readMetadata,
-} from '@latitude-data/compiler'
-import {
   ToolCallResponse,
   buildResponseMessage,
 } from '@latitude-data/constants'
 import { scan } from 'promptl-ai'
+import { ToolCall, ToolContent } from '@latitude-data/constants/legacyCompiler'
 import {
   Commit,
   DocumentVersion,
@@ -32,10 +28,7 @@ async function buildToolSpecifications({
 }) {
   const prompt = customPrompt ?? document.content
 
-  const metadata =
-    document.promptlVersion === 0
-      ? await readMetadata({ prompt })
-      : await scan({ prompt })
+  const metadata = await scan({ prompt })
   const schemas = metadata.config.tools as
     | Record<string, ToolSchema>
     | undefined

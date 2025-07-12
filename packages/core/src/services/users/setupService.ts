@@ -52,7 +52,6 @@ export default function setupService(
       },
       tx,
     ).then((r) => r.unwrap())
-
     const firstProvider = await createProviderApiKey(
       {
         workspace,

@@ -1,6 +1,5 @@
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { MetadataItem } from '$/components/MetadataItem'
-import { Message } from '@latitude-data/compiler'
 import {
   FINISH_REASON_DETAILS,
   SPAN_SPECIFICATIONS,
@@ -16,9 +15,10 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import {
   Message as MessageComponent,
   MessageList,
-} from '@latitude-data/web-ui/molecules/ChatWrapper'
+} from '$/components/ChatWrapper'
 import { useState } from 'react'
 import { DetailsPanelProps, SPAN_COLORS } from './shared'
+import { Message } from '@latitude-data/constants/legacyCompiler'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Completion]
 export default {

@@ -1,6 +1,6 @@
 import { omit } from 'lodash-es'
 
-import { Message } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/constants/legacyCompiler'
 import {
   Commit,
   DocumentVersion,
