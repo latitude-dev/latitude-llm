@@ -3,7 +3,7 @@ import { Commit, DocumentVersion, Workspace } from '../../../browser'
 import { DocumentVersionsRepository } from '../../../repositories'
 import { scanCommitDocumentContents } from '../scan'
 import { ConversationMetadata as PromptlMetadata } from 'promptl-ai'
-import { ConversationMetadata as LegacyMetadata } from '@latitude-data/compiler'
+import { ConversationMetadata as LegacyMetadata } from '@latitude-data/constants/legacyCompiler'
 import { NotFoundError } from './../../../lib/errors'
 import { Result } from './../../../lib/Result'
 

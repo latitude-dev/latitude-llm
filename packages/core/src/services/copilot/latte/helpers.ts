@@ -197,12 +197,14 @@ export async function scanDocuments(
         agentToolsMap,
       })
 
+      // FIXME: infinite recursion
+      // @ts-ignore
       return scan({
         prompt: document.content,
         fullPath: document.path,
         referenceFn,
-        // @ts-expect-error – TODO: fix "Type instantiation is excessively deep and possibly infinite"
-        configSchema,
+        // @ts-expect-error - TODO(compiler): fix types
+        configSchema: configSchema,
       })
     }),
   )

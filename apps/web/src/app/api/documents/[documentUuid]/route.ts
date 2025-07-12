@@ -30,7 +30,7 @@ export const GET = errorHandler(
       }
       const commitUuid = req.nextUrl.searchParams.get('commitUuid')
 
-      let commit: Commit | null = null
+      let commit: Commit | undefined
       if (commitUuid) {
         const commitsScope = new CommitsRepository(workspace.id)
         commit = await commitsScope
@@ -46,13 +46,11 @@ export const GET = errorHandler(
         })
         .then((r) => r.unwrap())
 
-      commit =
-        commit ||
-        (await findCommitById({ id: documentVersion.commitId }).then((r) =>
-          r.unwrap(),
-        ))
       if (!commit) {
-        throw new NotFoundError('Commit not found')
+        commit = await findCommitById(documentVersion.commitId)
+        if (!commit) {
+          throw new NotFoundError('Commit not found')
+        }
       }
 
       return NextResponse.json(

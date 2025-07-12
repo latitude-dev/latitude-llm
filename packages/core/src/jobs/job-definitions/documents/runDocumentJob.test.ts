@@ -96,7 +96,6 @@ describe('runDocumentJob', () => {
       commitUuid: commit.uuid,
       parameters: { param1: 'value1' },
       source: LogSources.Playground,
-      autoRespondToolCalls: true,
     })
 
     expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(

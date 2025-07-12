@@ -9,6 +9,8 @@ import { BadRequestError } from './../../../lib/errors'
 import { LatitudeError } from './../../../lib/errors'
 import { PromisedResult } from './../../../lib/Transaction'
 import { Result } from './../../../lib/Result'
+import { TelemetryContext } from '@latitude-data/telemetry'
+import { withTelemetryWrapper } from '../telemetryWrapper'
 
 const HANDINGER_API_URL = 'https://api.handinger.com/markdown'
 
@@ -74,7 +76,7 @@ export default {
   name: LatitudeTool.WebExtract,
   internalName: LatitudeToolInternalName.WebExtract,
   method: webExtract,
-  definition: {
+  definition: (context: TelemetryContext) => ({
     description: 'Given a URL, returns the contents of the page.',
     parameters: {
       type: 'object',
@@ -86,5 +88,12 @@ export default {
       required: ['url'],
       additionalProperties: false,
     },
-  },
+    execute: async (args: ExtractToolArgs, toolCall) =>
+      withTelemetryWrapper(webExtract, {
+        toolName: LatitudeTool.WebExtract,
+        context,
+        args,
+        toolCall,
+      }),
+  }),
 } as LatitudeToolDefinition

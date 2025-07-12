@@ -10,19 +10,16 @@ import { ResolvedMetadata } from '$/workers/readMetadata'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import {
-  ErrorMessage,
-  Message,
-} from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { ErrorMessage, Message } from '$/components/ChatWrapper'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import Link from 'next/link'
-import { ToolBarWrapper } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/ChatWrapper/ChatTextArea/ToolBar'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { usePreviewConversation } from '$/hooks/playgrounds/usePreviewConversation'
 import Actions, {
   type ActionsState,
 } from '$/components/PlaygroundCommon/Actions'
+import { ToolBarWrapper } from '$/components/ChatWrapper/ChatTextArea/ToolBar'
 
 function WarningLink({ providerRule }: { providerRule: ProviderRules }) {
   const docPath = providerRule.startsWith('vertex') ? 'vertex' : providerRule

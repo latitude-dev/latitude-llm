@@ -9,15 +9,16 @@ import { FilterButton, useFilterButtonColor } from '../FilterButton'
 
 const LogSourceLabel: { [key in LogSources]: string } = {
   [LogSources.API]: 'API',
-  [LogSources.Evaluation]: 'Evaluation',
-  [LogSources.Playground]: 'Playground',
-  [LogSources.User]: 'User',
-  [LogSources.SharedPrompt]: 'Public prompts',
   [LogSources.AgentAsTool]: 'Sub agents',
+  [LogSources.Copilot]: 'Latitude Copilot',
   [LogSources.EmailTrigger]: 'Email trigger',
-  [LogSources.ScheduledTrigger]: 'Scheduled trigger',
   [LogSources.IntegrationTrigger]: 'Integration trigger',
+  [LogSources.Evaluation]: 'Evaluation',
   [LogSources.Experiment]: 'Experiment',
+  [LogSources.Playground]: 'Playground',
+  [LogSources.ScheduledTrigger]: 'Scheduled trigger',
+  [LogSources.SharedPrompt]: 'Public prompts',
+  [LogSources.User]: 'User',
 }
 
 function LogSourceCheckbox({

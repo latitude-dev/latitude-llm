@@ -1,4 +1,7 @@
-import { ContentType, type Message, MessageRole } from '@latitude-data/compiler'
+import {
+  type Message,
+  MessageRole,
+} from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError } from 'ai'
 import { describe, expect, it, vi } from 'vitest'
@@ -43,14 +46,12 @@ describe('ai function', () => {
     const messages: Message[] = [
       {
         role: MessageRole.system,
-        content: [{ type: ContentType.text, text: 'System message' }],
+        content: [{ type: 'text', text: 'System message' }],
       },
       {
         role: MessageRole.assistant,
         toolCalls: [],
-        content: [
-          { type: ContentType.image, image: 'https://example.com/image.png' },
-        ],
+        content: [{ type: 'image', image: 'https://example.com/image.png' }],
       },
     ]
 
@@ -86,7 +87,7 @@ There are rule violations:
     const messages: Message[] = [
       {
         role: MessageRole.system,
-        content: [{ type: ContentType.text, text: 'System message' }],
+        content: [{ type: 'text', text: 'System message' }],
       },
     ]
 

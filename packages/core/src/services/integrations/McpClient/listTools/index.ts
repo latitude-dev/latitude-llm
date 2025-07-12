@@ -4,16 +4,16 @@ import { getMcpClient } from '../McpClientManager'
 import { touchIntegration } from '../../touch'
 import { fixToolSchema } from './fixToolSchema'
 import { JSONSchema7 } from 'json-schema'
-import { ChainStreamManager } from '../../../../lib/chainStreamManager'
 import { LatitudeError } from './../../../../lib/errors'
 import { PromisedResult } from './../../../../lib/Transaction'
 import { Result } from './../../../../lib/Result'
+import { StreamManager } from '../../../../lib/streamManager'
 
 export async function listTools(
   integration: IntegrationDto,
-  chainStreamManager?: ChainStreamManager,
+  streamManager?: StreamManager,
 ): PromisedResult<McpTool[], LatitudeError> {
-  const clientResult = await getMcpClient(integration, chainStreamManager)
+  const clientResult = await getMcpClient(integration, streamManager)
   if (clientResult.error) {
     return clientResult
   }

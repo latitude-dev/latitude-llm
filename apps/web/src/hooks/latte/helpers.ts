@@ -1,4 +1,4 @@
-import type { ToolCall } from '@latitude-data/compiler'
+import type { ToolCall } from '@latitude-data/constants/legacyCompiler'
 import { LatteTool } from '@latitude-data/constants/latte'
 import { LatteToolStep } from './types'
 

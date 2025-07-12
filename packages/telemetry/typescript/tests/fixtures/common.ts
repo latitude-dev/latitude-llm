@@ -1,5 +1,4 @@
 import {
-  AGENT_RETURN_TOOL_NAME,
   ParameterType,
   Providers,
   TraceContext,
@@ -89,17 +88,13 @@ export const COMPLETIONS: Record<string, unknown>[] = [
   },
   {
     role: 'assistant',
-    content: null,
-    tool_calls: [
+    content: [
       {
-        id: 'fake-tool-call-id-2',
-        type: 'function',
-        function: {
-          name: AGENT_RETURN_TOOL_NAME,
-          arguments: '{"response": "The weather in Barcelona is sunny."}',
-        },
+        type: 'text',
+        text: 'The weather in Barcelona is sunny.',
       },
     ],
+    tool_calls: [],
   },
 ]
 
@@ -138,15 +133,6 @@ export const RUN_RESPONSE = (trace: TraceContext) => ({
           },
         },
       ],
-    },
-  ],
-  toolRequests: [
-    {
-      id: 'fake-tool-call-id-1',
-      name: 'get_weather',
-      arguments: {
-        location: 'Barcelona',
-      },
     },
   ],
   response:
@@ -214,15 +200,6 @@ export const CHAT_RESPONSES = [
             },
           },
         ],
-      },
-    ],
-    toolRequests: [
-      {
-        id: 'fake-tool-call-id-2',
-        name: 'get_weather',
-        arguments: {
-          location: 'Madrid',
-        },
       },
     ],
     response: 'I will do it again for Madrid.',
@@ -313,7 +290,6 @@ export const CHAT_RESPONSES = [
         ],
       },
     ],
-    toolRequests: [],
     response: 'Done!',
     trace: trace,
   }),

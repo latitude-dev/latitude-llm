@@ -1,6 +1,5 @@
-import type { Message, ToolCall } from '@latitude-data/compiler'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
-  AGENT_RETURN_TOOL_NAME,
   buildResponseMessage,
   ChainStepResponse,
   StreamType,
@@ -289,18 +288,4 @@ export function evaluationResultsV2SearchToQueryParams(
   }
 
   return params.toString()
-}
-
-export function getAgentResponseFromToolCalls(
-  toolCalls?: ToolCall[],
-): Record<string, unknown> | undefined {
-  if (!toolCalls?.length) return undefined
-
-  const firstAgentToolCall = toolCalls.find(
-    (t) => t.name === AGENT_RETURN_TOOL_NAME,
-  )
-
-  if (!firstAgentToolCall) return undefined
-
-  return firstAgentToolCall.arguments
 }

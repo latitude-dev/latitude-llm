@@ -27,7 +27,7 @@ class Router:
     def __init__(self, options: RouterOptions):
         self.options = options
 
-    def resolve(self, handler: RequestHandler, params: RequestParams) -> Tuple[str, str]:
+    def resolve(self, handler: RequestHandler, params: Optional[RequestParams] = None) -> Tuple[str, str]:
         if handler == RequestHandler.GetPrompt:
             assert isinstance(params, GetPromptRequestParams)
 
@@ -89,6 +89,15 @@ class Router:
             assert isinstance(params, AnnotateEvaluationRequestParams)
 
             return "POST", self.conversations().annotate(params.conversation_uuid, params.evaluation_uuid)
+
+        elif handler == RequestHandler.ToolResults:
+            return "POST", f"{self.options.gateway.base_url}/tools/results"
+
+        elif handler == RequestHandler.GetAllProjects:
+            return "GET", f"{self.options.gateway.base_url}/projects"
+
+        elif handler == RequestHandler.CreateProject:
+            return "POST", f"{self.options.gateway.base_url}/projects"
 
         raise TypeError(f"Unknown handler: {handler}")
 

@@ -16,10 +16,7 @@ import { LineSeparator } from '@latitude-data/web-ui/atoms/LineSeparator'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  MessageList,
-  MessageListSkeleton,
-} from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
 import { SelectableSwitch } from '@latitude-data/web-ui/molecules/SelectableSwitch'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import {

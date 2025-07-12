@@ -1,4 +1,4 @@
-import type { ContentType, Message } from '@latitude-data/compiler'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
   ActualOutputConfiguration,
@@ -15,7 +15,7 @@ import { getColumnData } from '../../datasets/utils'
 
 const CONTENT_FILTER_TYPE: Record<
   Required<ActualOutputConfiguration>['contentFilter'],
-  `${ContentType}`
+  string
 > = {
   text: 'text',
   image: 'image',

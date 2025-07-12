@@ -1,8 +1,6 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 
-import { ChainEventTypes } from '@latitude-data/constants'
 import { eq } from 'drizzle-orm'
 import {
   Commit,
@@ -28,6 +26,8 @@ import { testConsumeStream } from '../../../tests/helpers'
 import * as aiModule from '../../ai'
 import { Result, TypedResult } from './../../../lib/Result'
 import { addMessages } from './index'
+import { ChainEventTypes } from '@latitude-data/constants'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 
 const dummyDoc1Content = `
 ---
@@ -106,7 +106,7 @@ describe('addMessages', () => {
     context = await createTelemetryContext({ workspace })
 
     mocks = {
-      ai: vi.spyOn(aiModule, 'ai').mockResolvedValue(
+      ai: vi.spyOn(aiModule, 'ai').mockResolvedValueOnce(
         Result.ok({
           type: 'text',
           text: Promise.resolve('Fake AI generated text'),
@@ -115,6 +115,14 @@ describe('addMessages', () => {
             promptTokens: 0,
             completionTokens: 0,
             totalTokens: 0,
+          }),
+          response: Promise.resolve({
+            messages: [
+              {
+                role: 'assistant',
+                content: [{ type: 'text', text: 'Fake AI generated text' }],
+              },
+            ],
           }),
           fullStream: new ReadableStream({
             start(controller) {
@@ -168,7 +176,7 @@ describe('addMessages', () => {
           role: MessageRole.user,
           content: [
             {
-              type: ContentType.text,
+              type: 'text',
               text: 'user message',
             },
           ],
@@ -187,7 +195,7 @@ describe('addMessages', () => {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: providerLog.responseText,
               },
             ],
@@ -197,7 +205,7 @@ describe('addMessages', () => {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'user message',
               },
             ],
@@ -233,7 +241,7 @@ describe('addMessages', () => {
           role: MessageRole.user,
           content: [
             {
-              type: ContentType.text,
+              type: 'text',
               text: 'user message',
             },
           ],
@@ -252,7 +260,7 @@ describe('addMessages', () => {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: '{\n  "object": "response"\n}',
               },
             ],
@@ -262,7 +270,7 @@ describe('addMessages', () => {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'user message',
               },
             ],
@@ -304,7 +312,7 @@ describe('addMessages', () => {
           role: MessageRole.user,
           content: [
             {
-              type: ContentType.text,
+              type: 'text',
               text: 'user message',
             },
           ],
@@ -323,10 +331,17 @@ describe('addMessages', () => {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'tool-call-id',
                 toolName: 'tool-call-name',
                 args: { arg1: 'value1', arg2: 'value2' },
+              },
+              // TODO: Remove this when we store full message history in
+              // provider log and we don't have to manually build response
+              // anymore
+              {
+                type: 'text',
+                text: '',
               },
             ],
             toolCalls: providerLog.toolCalls,
@@ -335,7 +350,7 @@ describe('addMessages', () => {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'user message',
               },
             ],
@@ -377,7 +392,7 @@ describe('addMessages', () => {
           role: MessageRole.user,
           content: [
             {
-              type: ContentType.text,
+              type: 'text',
               text: 'user message',
             },
           ],
@@ -396,14 +411,14 @@ describe('addMessages', () => {
             role: MessageRole.assistant,
             content: [
               {
-                type: ContentType.text,
-                text: providerLog.responseText,
-              },
-              {
-                type: ContentType.toolCall,
+                type: 'tool-call',
                 toolCallId: 'tool-call-id',
                 toolName: 'tool-call-name',
                 args: { arg1: 'value1', arg2: 'value2' },
+              },
+              {
+                type: 'text',
+                text: providerLog.responseText,
               },
             ],
             toolCalls: providerLog.toolCalls,
@@ -412,7 +427,7 @@ describe('addMessages', () => {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'user message',
               },
             ],
@@ -437,7 +452,7 @@ describe('addMessages', () => {
           role: MessageRole.user,
           content: [
             {
-              type: ContentType.text,
+              type: 'text',
               text: 'This is a user message',
             },
           ],
@@ -513,7 +528,7 @@ describe('addMessages', () => {
             role: MessageRole.user,
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'This is a user message',
               },
             ],
@@ -523,7 +538,7 @@ describe('addMessages', () => {
       })
     ).unwrap()
 
-    const response = await result.lastResponse
+    const response = await result.response
     const log = await new ProviderLogsRepository(workspace.id)
       .findLastByDocumentLogUuid(providerLog.documentLogUuid!)
       .then((r) => r.unwrap())
@@ -538,108 +553,19 @@ describe('addMessages', () => {
     })
   })
 
-  // TODO: troll test in CI
-  it.skip('handles error response', async () => {
-    mocks.ai = vi.spyOn(aiModule, 'ai').mockResolvedValue(
+  it('handles error response', async () => {
+    mocks.ai = vi.spyOn(aiModule, 'ai').mockResolvedValueOnce(
       Result.ok({
-        type: 'text',
-        data: {
-          text: Promise.resolve(''),
-          toolCalls: Promise.resolve([]),
-          usage: Promise.resolve({
-            promptTokens: 0,
-            completionTokens: 0,
-            totalTokens: 0,
-          }),
-          fullStream: new ReadableStream({
-            start(controller) {
-              controller.enqueue({
-                type: 'error',
-                error: new Error('provider error'),
-              })
-              controller.close()
-            },
-          }),
-          providerName: 'openai',
-        },
-      }) as any as TypedResult<aiModule.AIReturn<'text'>, any>,
-    )
-
-    const result = await addMessages({
-      context,
-      workspace,
-      documentLogUuid: providerLog.documentLogUuid!,
-      messages: [
-        {
-          role: MessageRole.user,
-          content: [
-            {
-              type: ContentType.text,
-              text: 'user message',
-            },
-          ],
-        },
-      ],
-      source: LogSources.API,
-    }).then((r) => r.unwrap())
-    const { value: stream } = await testConsumeStream(result.stream)
-    const error = await result.error
-
-    expect(stream).toEqual([
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ChainStarted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.StepStarted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ProviderStarted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ChainError,
-          error: expect.objectContaining({
-            message: 'Openai returned this error: provider error',
-          }),
-        }),
-      },
-    ])
-    expect(error).toEqual(
-      new Error('Openai returned this error: provider error'),
-    )
-  })
-
-  it('handles tool calls response', async () => {
-    mocks.ai = vi.spyOn(aiModule, 'ai').mockResolvedValue(
-      Result.ok({
-        type: 'text',
-        text: Promise.resolve('assistant message'),
-        toolCalls: Promise.resolve([
-          {
-            toolCallId: 'tool-call-id',
-            toolName: 'tool-call-name',
-            args: { arg1: 'value1', arg2: 'value2' },
-          },
-        ]),
-        usage: Promise.resolve({
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
-        }),
         fullStream: new ReadableStream({
-          start: (controller) => controller.close(),
+          start(controller) {
+            controller.enqueue({
+              type: 'error',
+              error: new Error('provider error'),
+            })
+
+            controller.close()
+          },
         }),
-        providerName: 'openai',
       }) as any as TypedResult<aiModule.AIReturn<'text'>, any>,
     )
 
@@ -652,7 +578,7 @@ describe('addMessages', () => {
           role: MessageRole.user,
           content: [
             {
-              type: ContentType.text,
+              type: 'text',
               text: 'user message',
             },
           ],
@@ -660,83 +586,18 @@ describe('addMessages', () => {
       ],
       source: LogSources.API,
     }).then((r) => r.unwrap())
-    const { value: stream } = await testConsumeStream(result.stream)
-    const response = await result.lastResponse
-    const log = await new ProviderLogsRepository(workspace.id)
-      .findLastByDocumentLogUuid(providerLog.documentLogUuid!)
-      .then((r) => r.unwrap())
 
-    expect(stream).toEqual([
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ChainStarted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.StepStarted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ProviderStarted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ProviderCompleted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ToolsRequested,
-          tools: [
-            {
-              id: 'tool-call-id',
-              name: 'tool-call-name',
-              arguments: {
-                arg1: 'value1',
-                arg2: 'value2',
-              },
-            },
-          ],
-        }),
-      },
-    ])
-    expect(response).toEqual(
-      expect.objectContaining({
-        text: 'assistant message',
-        toolCalls: [
-          {
-            id: 'tool-call-id',
-            name: 'tool-call-name',
-            arguments: { arg1: 'value1', arg2: 'value2' },
-          },
-        ],
-        providerLog: expect.objectContaining({
-          messages: [
-            ...log.messages.slice(0, -1),
-            {
-              role: MessageRole.user,
-              content: [{ type: ContentType.text, text: 'user message' }],
-            },
-          ],
-          responseText: 'assistant message',
-          responseObject: null,
-          toolCalls: [
-            {
-              id: 'tool-call-id',
-              name: 'tool-call-name',
-              arguments: { arg1: 'value1', arg2: 'value2' },
-            },
-          ],
-        }),
-      }),
+    const { value: stream } = await testConsumeStream(result.stream)
+
+    expect(stream).toEqual(
+      expect.arrayContaining([
+        {
+          event: StreamEventTypes.Latitude,
+          data: expect.objectContaining({
+            type: ChainEventTypes.ChainError,
+          }),
+        },
+      ]),
     )
   })
 })

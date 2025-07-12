@@ -4,8 +4,9 @@ import {
   ToolCall,
   ToolRequestContent,
   ToolContent,
+  MessageRole,
   ToolMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import { ToolCallContent as ToolRequest } from 'promptl-ai'
 import { StreamType, ToolCallResponse } from './index'
 
@@ -56,77 +57,116 @@ export function buildResponseMessage<T extends StreamType>({
   data,
 }: BuildMessageParams<T>) {
   if (!data) return undefined
-
-  if (type === 'text' && data.toolCalls && data.toolCallResponses) {
-    throw new Error(
-      'A message cannot have both toolCalls and toolCallResponses',
-    )
+  if (
+    'toolCallResponses' in data &&
+    data.toolCallResponses &&
+    data.toolCallResponses.length > 0
+  ) {
+    return buildToolResultMessage(data.toolCallResponses)
   }
 
-  const toolCallResponses =
-    type === 'text' ? (data.toolCallResponses ?? []) : []
+  // @ts-expect-error - fix types
+  return buildAssistantMessage<T>({ type, data })
+}
 
-  const text = data.text
-  const object = type === 'object' ? data.object : undefined
-  const toolCalls = type === 'text' ? (data.toolCalls ?? []) : []
-  const reasoning = type === 'text' ? data.reasoning : undefined
+function buildAssistantMessage<T extends StreamType>({
+  type,
+  data,
+}: BuildMessageParams<T>) {
+  const text = data!.text
+  const object = type === 'object' ? data!.object : undefined
+  const reasoning = type === 'text' ? data!.reasoning : undefined
+  const toolCalls = type === 'text' ? (data!.toolCalls ?? []) : []
   let content: MessageContent[] = []
 
+  if (toolCalls.length > 0) {
+    content = addToolCallContents(toolCalls, content)
+  }
   if (object) {
-    content.push({
+    content = addObjectContent(object, content)
+  } else if (reasoning !== undefined && reasoning !== null) {
+    content = addReasoningContent(reasoning, content)
+  } else if (text !== undefined && text !== null) {
+    content = addTextContent(text, content)
+  }
+
+  return {
+    role: 'assistant',
+    content,
+    toolCalls,
+  } as AssistantMessage
+}
+
+function addToolCallContents(toolCalls: ToolCall[], content: MessageContent[]) {
+  const toolCallContents = toolCalls.map((toolCall) => {
+    return {
+      type: 'tool-call',
+      toolCallId: toolCall.id,
+      toolName: toolCall.name,
+      args: toolCall.arguments,
+    } as ToolRequestContent
+  })
+
+  return [...content, ...toolCallContents]
+}
+
+function addObjectContent(
+  object: any,
+  content: MessageContent[],
+): MessageContent[] {
+  return [
+    ...content,
+    {
       type: 'text',
       text: objectToString(object),
-    } as MessageContent)
-    // Text can be empty string. We want to always at least generate
-    // an empty text response
-  } else if ((text === '' && !toolCalls.length) || (text && text.length > 0)) {
-    content.push({
+    } as MessageContent,
+  ]
+}
+
+function addReasoningContent(
+  reasoning: string,
+  content: MessageContent[],
+): MessageContent[] {
+  return [
+    ...content,
+    {
+      type: 'reasoning',
+      text: reasoning,
+    } as MessageContent,
+  ]
+}
+
+function addTextContent(
+  text: string,
+  content: MessageContent[],
+): MessageContent[] {
+  return [
+    ...content,
+    {
       type: 'text',
       text,
-      reasoning,
-    } as MessageContent)
-  }
+    } as MessageContent,
+  ]
+}
 
-  if (toolCalls.length > 0) {
-    const toolContents = toolCalls.map((toolCall) => {
-      return {
-        type: 'tool-call',
-        toolCallId: toolCall.id,
-        toolName: toolCall.name,
-        args: toolCall.arguments,
-      } as ToolRequestContent
-    })
-
-    content = content.concat(toolContents)
-  }
-
-  if (toolCallResponses.length > 0) {
-    const toolResponseContents = toolCallResponses.map((toolCallResponse) => {
-      return {
-        type: 'tool-result',
-        toolCallId: toolCallResponse.id,
-        toolName: toolCallResponse.name,
-        result:
-          typeof toolCallResponse.result === 'string'
-            ? parseToolResponseResult(toolCallResponse.result)
-            : toolCallResponse.result,
-        isError: toolCallResponse.isError || false,
-      }
-    })
-
-    content = content.concat(toolResponseContents as unknown as ToolContent[])
-  }
-
-  if (!content.length) return undefined
-
-  if (toolCallResponses.length > 0) {
+function buildToolResultMessage(toolCallResponses: ToolCallResponse[]) {
+  const toolResults = toolCallResponses.map((toolCallResponse) => {
     return {
-      role: 'tool',
-      content,
-    } as ToolMessage
-  }
+      type: 'tool-result',
+      toolCallId: toolCallResponse.id,
+      toolName: toolCallResponse.name,
+      result:
+        typeof toolCallResponse.result === 'string'
+          ? parseToolResponseResult(toolCallResponse.result)
+          : toolCallResponse.result,
+      isError: toolCallResponse.isError || false,
+    } as ToolContent
+  })
 
-  return { role: 'assistant', content, toolCalls } as AssistantMessage
+  return {
+    role: MessageRole.tool,
+    content: toolResults,
+  } as ToolMessage
 }
 
 export type { ToolRequest }
