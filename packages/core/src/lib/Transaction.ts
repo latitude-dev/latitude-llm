@@ -57,8 +57,8 @@ export default class Transaction {
    */
   static toResultError(e: unknown): ErrorResult<Error> {
     const error = 'cause' in (e as Error) ? (e as Error).cause : undefined
-
     const code = (error as DatabaseError)?.code
+
     switch (code) {
       case DB_ERROR_CODES.UNIQUE_VIOLATION:
         return Result.error(new ConflictError((error as DatabaseError).message))
@@ -69,7 +69,7 @@ export default class Transaction {
           }),
         )
       default:
-        return Result.error(e as Error)
+        return Result.error((error as DatabaseError) ?? (e as Error))
     }
   }
 }

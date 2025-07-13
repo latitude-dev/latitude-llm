@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "workspace_feature_unique" ON "latitude"."workspace_features" USING btree ("workspace_id","feature_id");

@@ -51,6 +51,8 @@ import { users } from './models/users'
 import { workspaces } from './models/workspaces'
 import { latteThreads } from './models/latteThreads'
 import { latteThreadCheckpoints } from './models/latteThreadCheckpoints'
+import { features } from './models/features'
+import { workspaceFeatures } from './models/workspaceFeatures'
 
 export type {
   DocumentLog,
@@ -126,6 +128,8 @@ export type LatteThread = InferSelectModel<typeof latteThreads>
 export type LatteThreadCheckpoint = InferSelectModel<
   typeof latteThreadCheckpoints
 >
+export type Feature = InferSelectModel<typeof features>
+export type WorkspaceFeature = InferSelectModel<typeof workspaceFeatures>
 
 export type Cursor<V = string, I = string> = { value: V; id: I }
 
