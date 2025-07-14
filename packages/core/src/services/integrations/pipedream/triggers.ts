@@ -38,6 +38,7 @@ export async function deployPipedreamTrigger({
   const externalUserId = integration.configuration.externalUserId
 
   const configuredPropsResult = await fillConfiguredProps({
+    pipedream,
     integration,
     componentId,
     configuredProps: configuredClientProps ?? {},
