@@ -25,6 +25,7 @@ export class MembershipsRepository extends RepositoryLegacy<
       .select()
       .from(this.scope)
       .where(eq(this.scope.userId, userId))
+
     if (result.length === 0) {
       return Result.error(new NotFoundError('Membership not found'))
     }

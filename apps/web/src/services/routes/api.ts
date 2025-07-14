@@ -334,4 +334,18 @@ export const API_ROUTES = {
       root: `/api/documentLogs/download-logs`,
     },
   },
+  workspaceFeatures: {
+    root: '/api/workspaceFeatures',
+    byName: (featureName: string) => `/api/workspaceFeatures/${featureName}`,
+  },
+  admin: {
+    workspaces: {
+      root: '/api/admin/workspaces',
+    },
+    features: {
+      root: '/api/admin/features',
+      workspaces: (featureId: number) =>
+        `/api/admin/features/${featureId}/workspaces`,
+    },
+  },
 }

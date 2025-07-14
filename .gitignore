@@ -77,5 +77,4 @@ bin/connect.sh
 # Usually AI editors only pick files from inside the git project.
 ONLY_FOR_COPILOT/
 
-AGENTS.md
 .claude
