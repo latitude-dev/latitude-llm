@@ -106,8 +106,6 @@ export function FeaturesManager() {
     }
   }
 
-  console.log(adminFeatures)
-
   return (
     <div className='space-y-6'>
       {/* Features Management Section */}
@@ -162,7 +160,8 @@ export function FeaturesManager() {
         <div className='flex flex-col gap-2'>
           <Text.H4B>Feature Workspace Management</Text.H4B>
           <Text.H5 color='foregroundMuted'>
-            Manage which workspaces have access to each feature
+            Manage which workspaces have access to each feature by entering
+            workspace IDs
           </Text.H5>
         </div>
 
@@ -171,7 +170,7 @@ export function FeaturesManager() {
             <TableRow>
               <TableHead>Feature</TableHead>
               <TableHead>Description</TableHead>
-              <TableHead>Workspaces Enabled</TableHead>
+              <TableHead>Workspace IDs Enabled</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -196,7 +195,7 @@ export function FeaturesManager() {
                     {feature.workspaces.length > 0
                       ? feature.workspaces
                           .filter((w) => w.enabled)
-                          .map((w) => w.name)
+                          .map((w) => w.id)
                           .join(', ')
                       : 'No workspaces enabled'}
                   </Tooltip>
@@ -209,7 +208,7 @@ export function FeaturesManager() {
                     onClick={() => handleManageWorkspaces(feature)}
                     disabled={isToggling}
                   >
-                    Manage Workspaces
+                    Manage Workspace IDs
                   </Button>
                 </TableCell>
               </TableRow>

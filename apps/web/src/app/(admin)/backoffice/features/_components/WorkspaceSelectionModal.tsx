@@ -4,9 +4,7 @@ import React, { useState, useCallback } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
-import useAdminWorkspaces from '$/stores/adminWorkspaces'
+import { MultipleInput } from '@latitude-data/web-ui/molecules/MultipleInput'
 
 type WorkspaceSelectionModalProps = {
   isOpen: boolean
@@ -25,24 +23,11 @@ export function WorkspaceSelectionModal({
   isLoading,
   currentWorkspaceIds,
 }: WorkspaceSelectionModalProps) {
-  console.log(currentWorkspaceIds)
-
-  const { data: workspaces } = useAdminWorkspaces()
   const [selectedWorkspaceIds, setSelectedWorkspaceIds] =
     useState<number[]>(currentWorkspaceIds)
 
-  // Transform workspaces to MultiSelect format
-  const workspaceOptions = workspaces.map((workspace) => ({
-    value: workspace.id.toString(),
-    label: workspace.name,
-  }))
-
-  // Convert selected IDs to strings for MultiSelect
-  const selectedValues = selectedWorkspaceIds.map((id) => id.toString())
-
-  const handleMultiSelectChange = useCallback((values: string[]) => {
-    const numericIds = values.map((value) => parseInt(value, 10))
-    setSelectedWorkspaceIds(numericIds)
+  const handleMultipleInputChange = useCallback((values: number[]) => {
+    setSelectedWorkspaceIds(values)
   }, [])
 
   const handleConfirm = async () => {
@@ -78,22 +63,18 @@ export function WorkspaceSelectionModal({
       open={isOpen}
       onOpenChange={onOpenChange}
       title={`Manage Feature: ${featureName}`}
-      description='Select workspaces to enable/disable this feature'
+      description='Enter workspace IDs to enable/disable this feature'
     >
       <FormWrapper>
-        <div className='space-y-4'>
-          <div>
-            <Text.H4>Select Workspaces</Text.H4>
-            <MultiSelect
-              options={workspaceOptions}
-              defaultValue={selectedValues}
-              onChange={handleMultiSelectChange}
-              placeholder='Search and select workspaces...'
-              disabled={isLoading}
-              maxCount={5}
-            />
-          </div>
-        </div>
+        <MultipleInput
+          values={selectedWorkspaceIds}
+          setValues={handleMultipleInputChange}
+          type='number'
+          placeholder='Enter workspace ID and press Enter'
+          disabled={isLoading}
+          label='Workspace IDs'
+          description='Enter the workspace IDs where this feature should be enabled'
+        />
         <div className='flex gap-2 pt-4'>
           <Button fancy onClick={handleConfirm} disabled={isLoading}>
             {isLoading ? 'Updating...' : 'Update Feature'}
