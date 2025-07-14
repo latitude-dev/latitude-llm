@@ -1,4 +1,4 @@
-import { IntegrationDto } from '../../../browser'
+import { IntegrationDto, PipedreamIntegration } from '../../../browser'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import { touchIntegration } from '../touch'
 import { createMcpClientManager } from './McpClientManager'
@@ -6,6 +6,8 @@ import { LatitudeError } from './../../../lib/errors'
 import { PromisedResult } from './../../../lib/Transaction'
 import { Result } from './../../../lib/Result'
 import { TelemetryContext } from '../../../telemetry'
+import { IntegrationType } from '@latitude-data/constants'
+import { runAction } from '../pipedream/components'
 
 type ResultContent =
   | { type: 'text'; text: string }
@@ -42,6 +44,20 @@ export async function callIntegrationTool({
   chainStreamManager?: ChainStreamManager
   mcpClientManager?: ReturnType<typeof createMcpClientManager>
 }): PromisedResult<unknown, LatitudeError> {
+  if (integration.type === IntegrationType.Pipedream) {
+    const callResult = await runAction({
+      integration: integration as PipedreamIntegration,
+      toolName,
+      args,
+    })
+
+    if (!Result.isOk(callResult)) {
+      return Result.error(new LatitudeError(callResult.error.message))
+    }
+
+    return callResult
+  }
+
   if (!mcpClientManager) {
     return Result.error(new LatitudeError('MCP Client Manager not provided'))
   }

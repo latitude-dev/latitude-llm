@@ -271,6 +271,13 @@ export const env = createEnv({
     PIPEDREAM_CLIENT_ID: z.string().optional(),
     PIPEDREAM_CLIENT_SECRET: z.string().optional(),
     PIPEDREAM_PROJECT_ID: z.string().optional(),
+    SLACK_DEFAULT_BOT_NAME: z.string().optional().default('Latitude'),
+    SLACK_DEFAULT_BOT_ICON_URL: z
+      .string()
+      .optional()
+      .default(
+        'https://avatars.slack-edge.com/2022-04-13/3400058239233_835a74c233883cd5699b_88.png',
+      ),
   },
   runtimeEnv: {
     ...process.env,
