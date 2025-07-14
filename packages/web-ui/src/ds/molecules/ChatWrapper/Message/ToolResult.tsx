@@ -74,7 +74,7 @@ export function ToolResultContent({
     const strResult = JSON.stringify(toolResponse.result, null, 2)
     return (
       <CodeBlock
-        language={strResult.length > MAX_LENGTH_JSON_PREVIEW ? '' : 'json'}
+        language={strResult?.length > MAX_LENGTH_JSON_PREVIEW ? '' : 'json'}
         bgColor={toolResponse.isError ? 'bg-destructive-muted' : undefined}
       >
         {JSON.stringify(toolResponse.result, null, 2)}

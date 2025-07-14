@@ -231,13 +231,35 @@ export async function runAction({
     return Result.error(configuredPropsResult.error)
   }
 
-  const result = await pipedream.runAction({
+  // We need to do this to obtain the dynamicPropsId. I do not know why, ask Pipedream.
+  const reload = await pipedream.reloadComponentProps({
     externalUserId: integration.configuration.externalUserId,
-    actionId: {
-      key: toolName,
-    },
+    componentId: toolName,
     configuredProps: configuredPropsResult.unwrap(),
   })
 
-  return Result.ok(result.ret)
+  const result = await pipedream.runAction({
+    externalUserId: integration.configuration.externalUserId,
+    actionId: toolName,
+    configuredProps: configuredPropsResult.unwrap(),
+    dynamicPropsId: reload.dynamicProps.id,
+  })
+
+  if (result.os.length > 0) {
+    const output = result.os[0]! as {
+      ts?: number
+      k?: 'error'
+      err?: { name: string; message: string; stack: string }
+    }
+
+    if (output.k === 'error' && output.err) {
+      return Result.error(new Error(output.err.message))
+    }
+  }
+
+  if (result.ret !== undefined && result.ret !== null) {
+    return Result.ok(result.ret)
+  }
+
+  return Result.ok({ ok: true }) // Default response if no return value is provided
 }
