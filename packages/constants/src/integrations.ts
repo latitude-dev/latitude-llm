@@ -108,3 +108,10 @@ export enum HostedIntegrationType {
   // Hubspot = 'hubspot', // Docker based
   // Loops = 'loops', // Does not exist
 }
+
+export type IntegrationReference = {
+  projectId: number
+  documentUuid: string
+  asTrigger: boolean
+  // asTool: boolean // TODO: This would be really useful
+}

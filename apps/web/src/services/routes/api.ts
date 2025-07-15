@@ -27,6 +27,9 @@ export const API_ROUTES = {
       listTools: {
         root: `/api/integrations/${integrationName}/listTools`,
       },
+      references: {
+        root: `/api/integrations/${integrationName}/references`,
+      },
     }),
     pipedream: {
       detail: (slugName: string) => ({

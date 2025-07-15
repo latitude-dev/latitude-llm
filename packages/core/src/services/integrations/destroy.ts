@@ -9,11 +9,26 @@ import { IntegrationType } from '@latitude-data/constants'
 import { destroyMcpServer } from '../mcpServers/destroyService'
 import { McpServerRepository } from '../../repositories'
 import { destroyPipedreamAccountFromIntegration } from './pipedream/destroy'
+import { listReferences } from './references'
+import { ForbiddenError } from '@latitude-data/constants/errors'
 
 export async function destroyIntegration(
   integration: IntegrationDto,
   db = database,
 ) {
+  const referencesResult = await listReferences(integration, db)
+  if (!Result.isOk(referencesResult)) {
+    return referencesResult
+  }
+  const references = referencesResult.unwrap()
+  if (references.length > 0) {
+    return Result.error(
+      new ForbiddenError(
+        `Cannot delete integration ${integration.name} because it has ${references.length} references.`,
+      ),
+    )
+  }
+
   // If integration type is MCPServer, first destroy the associated MCP server
   let mcpServer: McpServer | null = null
   if (
