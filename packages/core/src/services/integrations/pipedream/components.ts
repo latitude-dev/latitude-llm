@@ -242,7 +242,7 @@ export async function runAction({
     externalUserId: integration.configuration.externalUserId,
     actionId: toolName,
     configuredProps: configuredPropsResult.unwrap(),
-    dynamicPropsId: reload.dynamicProps.id,
+    dynamicPropsId: reload.dynamicProps?.id,
   })
 
   if (result.os.length > 0) {
