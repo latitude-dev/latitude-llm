@@ -101,6 +101,11 @@ export class RouteResolver {
         return this.projects
           .project((params as PushVersionUrlParams).projectId)
           .versions.version((params as PushVersionUrlParams).commitUuid).push
+      case HandlerType.Log:
+        return this.projects
+          .project((params as RunDocumentUrlParams).projectId)
+          .versions.version((params as RunDocumentUrlParams).versionUuid!)
+          .documents.logs
       default:
         throw new Error(`Unknown handler: ${handler}`)
     }
@@ -133,6 +138,7 @@ export class RouteResolver {
                 `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}/documents/${path}`,
               getOrCreate: `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}/documents/get-or-create`,
               run: `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}/documents/run`,
+              logs: `${this.baseUrl}/projects/${projectId}/versions/${versionUuid}/documents/logs`,
             },
           }),
         },

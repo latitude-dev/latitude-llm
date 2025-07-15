@@ -460,9 +460,8 @@ class Latitude {
     } = {},
   ) {
     projectId = projectId ?? this.options.projectId
-    if (!projectId) {
-      throw new Error('Project ID is required')
-    }
+    if (!projectId) throw new Error('Project ID is required')
+
     versionUuid = versionUuid ?? this.options.versionUuid
 
     const httpResponse = await makeRequest({
