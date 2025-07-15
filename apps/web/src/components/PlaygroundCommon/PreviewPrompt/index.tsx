@@ -60,10 +60,12 @@ export default function PreviewPrompt({
   expandParameters,
   setExpandParameters,
   actions,
+  showHeader,
 }: {
   metadata: ResolvedMetadata | undefined
   parameters: Record<string, unknown> | undefined
   runPrompt: () => void
+  showHeader: boolean
   actions?: ReactNode
 } & ActionsState) {
   const { document } = useCurrentDocument()
@@ -77,13 +79,15 @@ export default function PreviewPrompt({
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
       {preview.warningRule ? <Warnings warnings={preview.warningRule} /> : null}
-      <div className='flex flex-row items-center justify-between w-full'>
-        <Text.H6M>Preview</Text.H6M>
-        <Actions
-          expandParameters={expandParameters}
-          setExpandParameters={setExpandParameters}
-        />
-      </div>
+      {showHeader ? (
+        <div className='flex flex-row items-center justify-between w-full'>
+          <Text.H6M>Preview</Text.H6M>
+          <Actions
+            expandParameters={expandParameters}
+            setExpandParameters={setExpandParameters}
+          />
+        </div>
+      ) : null}
       <div
         ref={containerRef}
         className={cn(
@@ -112,7 +116,7 @@ export default function PreviewPrompt({
         )}
       </div>
 
-      <div className='absolute bottom-3 flex flex-row items-center justify-center w-full'>
+      <div className='absolute left-0 right-0 bottom-3 flex flex-row items-center justify-center'>
         <ToolBarWrapper>
           {preview.error || (metadata?.errors.length ?? 0) > 0 ? (
             <Tooltip

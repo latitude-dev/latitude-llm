@@ -34,14 +34,16 @@ export default function Chat({
   onPromptRan,
   expandParameters,
   setExpandParameters,
+  showHeader,
 }: {
   canChat: boolean
   parameters: Record<string, unknown> | undefined
   clearChat: () => void
-  onPromptRan?: (documentLogUuid?: string, error?: Error) => void
   runPromptFn: RunPromptFn
   abortCurrentStream: () => boolean
   hasActiveStream: () => boolean
+  showHeader: boolean
+  onPromptRan?: (documentLogUuid?: string, error?: Error) => void
   addMessagesFn?: AddMessagesFn
 } & ActionsState) {
   const runOnce = useRef(false)
@@ -111,14 +113,15 @@ export default function Chat({
 
   return (
     <div className='flex flex-col flex-1 h-full overflow-hidden'>
-      {/* Header */}
-      <div className='flex flex-row items-center justify-between w-full pb-3'>
-        <Text.H6M>Prompt</Text.H6M>
-        <Actions
-          expandParameters={expandParameters}
-          setExpandParameters={setExpandParameters}
-        />
-      </div>
+      {showHeader ? (
+        <div className='flex flex-row items-center justify-between w-full pb-3'>
+          <Text.H6M>Prompt</Text.H6M>
+          <Actions
+            expandParameters={expandParameters}
+            setExpandParameters={setExpandParameters}
+          />
+        </div>
+      ) : null}
 
       {/* Messages container */}
       <div

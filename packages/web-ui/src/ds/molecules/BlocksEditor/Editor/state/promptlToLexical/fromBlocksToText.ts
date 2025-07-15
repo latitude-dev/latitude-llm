@@ -124,8 +124,12 @@ export function fromBlocksToText(rootNode: BlockRootNode): string {
         case BLOCK_EDITOR_TYPE.STEP: {
           const children = block.children ?? []
           const attr = attributesToString({
-            attributes: block.attributes as BlockAttributes,
-            shouldKebabCase: ['as', 'isolate'],
+            attributes: {
+              as: block.attributes?.as,
+              isolated: block.attributes?.isolated,
+              ...block.attributes?.otherAttributes,
+            },
+            shouldKebabCase: ['as', 'isolated'],
           })
           const stepContent = children
             .map((child: any) => stepChildToText(child))

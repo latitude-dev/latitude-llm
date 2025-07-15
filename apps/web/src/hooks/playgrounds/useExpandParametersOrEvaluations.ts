@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 type Section = 'parameters' | 'evaluations'
 
@@ -19,17 +19,29 @@ export function useExpandParametersOrEvaluations({
   )
   const parametersExpanded = expandedSection === 'parameters'
   const evaluationsExpanded = expandedSection === 'evaluations'
-  const cssClass = {
-    'grid-rows-[1fr,auto]': parametersExpanded,
-    'grid-rows-[auto,1fr]': evaluationsExpanded,
-    'grid-rows-2': expandedSection === null,
-  }
+  const closeAll = useCallback(() => {
+    setExpandedSection(null)
+  }, [])
 
-  return {
-    expandedSection,
-    cssClass,
-    onToggle,
-    parametersExpanded,
-    evaluationsExpanded,
-  }
+  return useMemo(
+    () => ({
+      expandedSection,
+      cssClass: {
+        'grid-rows-[1fr,auto]': parametersExpanded,
+        'grid-rows-[auto,1fr]': evaluationsExpanded,
+        'grid-rows-2': expandedSection === null,
+      },
+      onToggle,
+      parametersExpanded,
+      evaluationsExpanded,
+      closeAll,
+    }),
+    [
+      expandedSection,
+      onToggle,
+      parametersExpanded,
+      evaluationsExpanded,
+      closeAll,
+    ],
+  )
 }

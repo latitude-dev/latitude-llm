@@ -34,6 +34,7 @@ export default function Preview({
   return (
     <>
       <PreviewPrompt
+        showHeader={false}
         metadata={metadata}
         parameters={parameters}
         runPrompt={runPrompt}

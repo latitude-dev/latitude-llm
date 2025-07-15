@@ -137,7 +137,7 @@ function SwitchInput({
           formDescriptionId={formDescriptionId}
           formMessageId={formMessageId}
         >
-          <div>
+          <div className='flex items-center'>
             <input
               type='hidden'
               name={name}

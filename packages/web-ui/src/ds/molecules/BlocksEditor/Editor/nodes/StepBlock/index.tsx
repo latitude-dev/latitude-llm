@@ -31,6 +31,7 @@ const HEADER_CLASS = 'step-header'
 export class StepBlockNode extends ElementNode {
   __stepName: string | undefined
   __isolated: boolean = false
+  __otherAttributes: Record<string, unknown> | undefined = undefined
   __headerRoot?: Root
 
   static getType(): string {
@@ -38,13 +39,24 @@ export class StepBlockNode extends ElementNode {
   }
 
   static clone(node: StepBlockNode): StepBlockNode {
-    return new StepBlockNode(node.__stepName, node.__isolated, node.__key)
+    return new StepBlockNode(
+      node.__stepName,
+      node.__isolated,
+      node.__otherAttributes,
+      node.__key,
+    )
   }
 
-  constructor(stepName?: string, isolated?: boolean, key?: NodeKey) {
+  constructor(
+    stepName?: string,
+    isolated?: boolean,
+    __otherAttributes?: Record<string, unknown>,
+    key?: NodeKey,
+  ) {
     super(key)
     this.__stepName = stepName
     this.__isolated = isolated ?? false
+    this.__otherAttributes = __otherAttributes
   }
 
   createDOM(_config: EditorConfig): HTMLElement {
@@ -99,6 +111,7 @@ export class StepBlockNode extends ElementNode {
         stepKey={this.getKey()}
         as={this.getStepName()}
         isolated={this.getIsolated()}
+        otherAttributes={this.__otherAttributes}
       />,
     )
   }
@@ -127,6 +140,7 @@ export class StepBlockNode extends ElementNode {
     return new StepBlockNode(
       serializedNode.attributes?.as,
       serializedNode.attributes?.isolated ?? false,
+      serializedNode.attributes?.otherAttributes,
     )
   }
 
@@ -137,6 +151,7 @@ export class StepBlockNode extends ElementNode {
       attributes: {
         as: this.__stepName,
         isolated: this.__isolated,
+        otherAttributes: this.__otherAttributes,
       },
     }
   }

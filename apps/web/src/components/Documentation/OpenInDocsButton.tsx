@@ -15,6 +15,7 @@ export function OpenInDocsButton({ route }: { route: DocsRoute }) {
       asChild
       trigger={
         <Button
+          size='none'
           iconProps={{
             name: 'bookMarked',
             className: 'w-4 h-4',
