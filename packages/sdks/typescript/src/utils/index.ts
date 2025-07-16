@@ -11,7 +11,7 @@ import {
   RunDocumentUrlParams,
   UrlParams,
 } from '$sdk/utils/types'
-import { HEAD_COMMIT } from '@latitude-data/constants/index'
+import { HEAD_COMMIT } from '@latitude-data/constants'
 
 type ResolveParams<T extends HandlerType> = {
   handler: T
