@@ -1,14 +1,15 @@
-import { ReactNode } from 'react'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { TextColor } from '@latitude-data/web-ui/tokens'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { cn } from '@latitude-data/web-ui/utils'
+import { ReactNode } from 'react'
 
 type MetadataItemProps = {
   stacked?: boolean
   label: string
-  tooltip?: string
+  tooltip?: string | ReactNode
   action?: ReactNode
   value?: string
   color?: TextColor
@@ -34,7 +35,9 @@ export function MetadataItem({
     <div className={className}>
       <span className='flex flex-row items-center justify-between gap-4'>
         <span className='flex flex-row items-center gap-2'>
-          <Text.H5M color='foreground'>{label}</Text.H5M>
+          <Text.H5M color='foreground' noWrap ellipsis>
+            {label}
+          </Text.H5M>
           {tooltip && (
             <Tooltip
               asChild
@@ -53,13 +56,13 @@ export function MetadataItem({
         </span>
         {stacked && action}
       </span>
-      <div className={contentClassName}>
+      <div className={cn(contentClassName, 'truncate')}>
         {loading ? (
           <Skeleton height='h4' className='w-12' />
         ) : (
           <>
             {value && (
-              <Text.H5 align='right' color={color}>
+              <Text.H5 align='right' color={color} noWrap ellipsis>
                 {value}
               </Text.H5>
             )}

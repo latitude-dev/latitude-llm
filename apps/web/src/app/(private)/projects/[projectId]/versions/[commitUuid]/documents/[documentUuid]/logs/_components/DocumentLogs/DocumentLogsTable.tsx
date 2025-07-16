@@ -3,8 +3,10 @@
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { KeysetTablePaginationFooter } from '$/components/TablePaginationFooter/KeysetTablePaginationFooter'
+import { OnSelectedSpanFn } from '$/components/tracing/traces/Timeline'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
 import {
@@ -34,7 +36,8 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import { capitalize } from 'lodash-es'
-import { forwardRef, useMemo } from 'react'
+import { forwardRef, Fragment, useMemo } from 'react'
+import { DocumentLogTraces } from './DocumentLogInfo/Traces'
 
 type DocumentLogRow = DocumentLogWithMetadataAndError & {
   realtimeAdded?: boolean
@@ -118,6 +121,7 @@ type Props = {
   limitedView?: DocumentLogsLimitedView
   limitedCursor?: string | null
   setLimitedCursor?: (cursor: string | null) => void
+  onSelectedSpan: OnSelectedSpanFn
 }
 export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
   function DocumentLogsTable(
@@ -139,9 +143,14 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
       limitedView,
       limitedCursor,
       setLimitedCursor,
+      onSelectedSpan,
     },
     ref,
   ) {
+    const { enabled: tracingEnabled } = useFeatureFlag({
+      featureFlag: 'tracing',
+    })
+
     const queryParams =
       typeof window !== 'undefined' ? window.location.search : undefined
 
@@ -208,91 +217,108 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
               ? 'destructiveMutedForeground'
               : 'foreground'
             return (
-              <TableRow
-                key={documentLog.uuid}
-                onClick={() =>
-                  setSelectedLog(
-                    selectedLog?.uuid === documentLog.uuid
-                      ? undefined
-                      : documentLog,
-                  )
-                }
-                className={cn(
-                  'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
-                  {
-                    'bg-secondary': selectedLog?.uuid === documentLog.uuid,
-                    'animate-flash': documentLog.realtimeAdded,
-                  },
-                )}
-              >
-                <TableCell
-                  preventDefault
-                  align='left'
+              <Fragment key={documentLog.uuid}>
+                <TableRow
                   onClick={() =>
-                    toggleRow(documentLog.id, !isSelected(documentLog.id))
+                    setSelectedLog(
+                      selectedLog?.uuid === documentLog.uuid
+                        ? undefined
+                        : documentLog,
+                    )
                   }
+                  className={cn(
+                    'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
+                    {
+                      'bg-secondary': selectedLog?.uuid === documentLog.uuid,
+                      'animate-flash': documentLog.realtimeAdded,
+                    },
+                  )}
                 >
-                  <Checkbox
-                    fullWidth={false}
-                    disabled={!!error}
-                    checked={error ? false : isSelected(documentLog.id)}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Text.H5 noWrap color={cellColor}>
-                    {relativeTime(documentLog.createdAt)}
-                  </Text.H5>
-                </TableCell>
-                <TableCell>
-                  <div className='flex flex-row gap-2 items-center min-w-0 max-w-xs'>
-                    <Badge
-                      variant={documentLog.commit.version ? 'accent' : 'muted'}
-                    >
-                      <Text.H6 noWrap>
-                        {documentLog.commit.version
-                          ? `v${documentLog.commit.version}`
-                          : 'Draft'}
-                      </Text.H6>
-                    </Badge>
-                    <Text.H5 noWrap ellipsis color={cellColor}>
-                      {documentLog.commit.title}
+                  <TableCell
+                    preventDefault
+                    align='left'
+                    onClick={() =>
+                      toggleRow(documentLog.id, !isSelected(documentLog.id))
+                    }
+                  >
+                    <Checkbox
+                      fullWidth={false}
+                      disabled={!!error}
+                      checked={error ? false : isSelected(documentLog.id)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Text.H5 noWrap color={cellColor}>
+                      {relativeTime(documentLog.createdAt)}
                     </Text.H5>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Text.H5 color={cellColor}>
-                    {capitalize(documentLog.source || '-')}
-                  </Text.H5>
-                </TableCell>
-                <TableCell>
-                  <EvaluationsColumn
-                    color={cellColor}
-                    documentLog={documentLog}
-                    evaluationResults={evaluationResults[documentLog.uuid]}
-                    evaluations={evaluations}
-                    isLoading={isLoading}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Text.H5 noWrap color={cellColor}>
-                    {formatDuration(documentLog.duration)}
-                  </Text.H5>
-                </TableCell>
-                <TableCell>
-                  <Text.H5 noWrap color={cellColor}>
-                    {typeof documentLog.tokens === 'number'
-                      ? documentLog.tokens
-                      : '-'}
-                  </Text.H5>
-                </TableCell>
-                <TableCell>
-                  <Text.H5 noWrap color={cellColor}>
-                    {typeof documentLog.costInMillicents === 'number'
-                      ? formatCostInMillicents(documentLog.costInMillicents)
-                      : '-'}
-                  </Text.H5>
-                </TableCell>
-              </TableRow>
+                  </TableCell>
+                  <TableCell>
+                    <div className='flex flex-row gap-2 items-center min-w-0 max-w-xs'>
+                      <Badge
+                        variant={
+                          documentLog.commit.version ? 'accent' : 'muted'
+                        }
+                      >
+                        <Text.H6 noWrap>
+                          {documentLog.commit.version
+                            ? `v${documentLog.commit.version}`
+                            : 'Draft'}
+                        </Text.H6>
+                      </Badge>
+                      <Text.H5 noWrap ellipsis color={cellColor}>
+                        {documentLog.commit.title}
+                      </Text.H5>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Text.H5 color={cellColor}>
+                      {capitalize(documentLog.source || '-')}
+                    </Text.H5>
+                  </TableCell>
+                  <TableCell>
+                    <EvaluationsColumn
+                      color={cellColor}
+                      documentLog={documentLog}
+                      evaluationResults={evaluationResults[documentLog.uuid]}
+                      evaluations={evaluations}
+                      isLoading={isLoading}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Text.H5 noWrap color={cellColor}>
+                      {formatDuration(documentLog.duration)}
+                    </Text.H5>
+                  </TableCell>
+                  <TableCell>
+                    <Text.H5 noWrap color={cellColor}>
+                      {typeof documentLog.tokens === 'number'
+                        ? documentLog.tokens
+                        : '-'}
+                    </Text.H5>
+                  </TableCell>
+                  <TableCell>
+                    <Text.H5 noWrap color={cellColor}>
+                      {typeof documentLog.costInMillicents === 'number'
+                        ? formatCostInMillicents(documentLog.costInMillicents)
+                        : '-'}
+                    </Text.H5>
+                  </TableCell>
+                </TableRow>
+                {tracingEnabled && selectedLog?.uuid === documentLog.uuid && (
+                  <TableRow hoverable={false}>
+                    <TableCell
+                      colSpan={999}
+                      className='max-w-full w-full h-full !p-0'
+                      innerClassName='w-full h-full flex !justify-center !items-center'
+                    >
+                      <DocumentLogTraces
+                        documentLog={documentLog}
+                        onSelectedSpan={onSelectedSpan}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
             )
           })}
         </TableBody>

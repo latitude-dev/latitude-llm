@@ -6,6 +6,7 @@ import {
   DocumentLogWithMetadataAndError,
   ProviderApiKey,
   ProviderLogDto,
+  SpanWithDetails,
 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -21,12 +22,15 @@ import {
   asPromptLFile,
   PromptLFileParameter,
 } from '$/components/PromptLFileParameter'
+import { DetailsPanel } from '$/components/tracing/spans/DetailsPanel'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { Message } from '@latitude-data/compiler'
 import { getCostPer1M } from '@latitude-data/core/services/ai/estimateCost/index'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { LineSeparator } from '@latitude-data/web-ui/atoms/LineSeparator'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useCurrentCommit } from 'node_modules/@latitude-data/web-ui/src/providers/CommitProvider'
 import { useCurrentProject } from 'node_modules/@latitude-data/web-ui/src/providers/ProjectProvider'
@@ -296,14 +300,40 @@ export function DocumentLogMetadata({
   documentLog,
   providerLogs = [],
   lastResponse,
+  span,
+  isSpanLoading,
 }: {
   documentLog: DocumentLogWithMetadataAndError
   providerLogs?: ProviderLogDto[]
   lastResponse?: Message
+  span?: SpanWithDetails
+  isSpanLoading?: boolean
 }) {
   const providerLog = providerLogs[providerLogs.length - 1]
   return (
     <div className='flex flex-col gap-4'>
+      {isSpanLoading ? (
+        <>
+          <div className='w-full h-full flex items-center justify-center gap-2'>
+            <Icon
+              name='loader'
+              color='foregroundMuted'
+              className='animate-spin'
+            />
+            <Text.H5 color='foregroundMuted'>Loading details</Text.H5>
+          </div>
+          <LineSeparator text='Log details' />
+        </>
+      ) : (
+        !!span && (
+          <>
+            <DetailsPanel
+              span={{ ...span, conversationId: documentLog.uuid }}
+            />
+            <LineSeparator text='Log details' />
+          </>
+        )
+      )}
       <RunErrorMessage error={documentLog.error} />
       <MetadataItem label='Log uuid'>
         <ClickToCopy copyValue={documentLog.uuid}>

@@ -78,6 +78,7 @@ export default {
         },
         purple: {
           DEFAULT: 'hsl(var(--purple) / <alpha-value>)',
+          foreground: 'hsl(var(--purple-foreground) / <alpha-value>)',
         },
         yellow: {
           DEFAULT: 'hsl(var(--yellow) / <alpha-value>)',

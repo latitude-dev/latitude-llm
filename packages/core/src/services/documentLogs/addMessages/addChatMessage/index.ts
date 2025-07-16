@@ -5,6 +5,7 @@ import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSch
 import {
   buildConversation,
   ChainStepResponse,
+  DocumentRunPromptSource,
   LogSources,
   PromptSource,
   ProviderLog,
@@ -78,6 +79,14 @@ export async function addChatMessage({
     resolveTrace = resolve
   })
 
+  const $prompt = telemetry.prompt(context, {
+    logUuid: providerLog.documentLogUuid!,
+    versionUuid: (promptSource as DocumentRunPromptSource).commit.uuid,
+    promptUuid: (promptSource as DocumentRunPromptSource).document.documentUuid,
+    template: (promptSource as DocumentRunPromptSource).document.content,
+    _internal: { source },
+  })
+
   const chainStreamManager = new ChainStreamManager({
     workspace,
     errorableUuid: providerLog.documentLogUuid!,
@@ -93,7 +102,7 @@ export async function addChatMessage({
     }).then((r) => r.unwrap())
 
     const { clientToolCalls } = await chainStreamManager.getProviderResponse({
-      context,
+      context: $prompt.context,
       provider,
       source,
       conversation,
@@ -102,7 +111,7 @@ export async function addChatMessage({
       schema: getInputSchema({ config: conversation.config }),
     })
 
-    const trace = telemetry.pause(context)
+    const trace = telemetry.pause($prompt.context)
     resolveTrace(trace)
 
     // Pause the follow up if response has client tool calls
@@ -113,6 +122,14 @@ export async function addChatMessage({
 
     return { conversation, trace }
   })
+
+  streamResult.lastResponse
+    .then(async () => {
+      const error = await streamResult.error
+      if (error) $prompt.fail(error)
+      else $prompt.end()
+    })
+    .catch((error) => $prompt.fail(error))
 
   return Result.ok({ ...streamResult, trace })
 }

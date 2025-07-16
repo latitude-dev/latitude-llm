@@ -2,8 +2,8 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import * as React from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Icon, IconProps } from '../Icons'
 import { font } from '../../tokens'
+import { Icon, IconProps } from '../Icons'
 
 const badgeVariants = cva(
   'inline-flex items-center rounded-md border font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
@@ -17,7 +17,7 @@ const badgeVariants = cva(
         yellow:
           'border-transparent bg-yellow text-foreground hover:bg-yellow/80',
         purple:
-          'border-transparent bg-purple text-foreground hover:bg-purple/80',
+          'border-purple-foreground/10 bg-purple text-purple-foreground hover:bg-purple/80',
         accent:
           'border-accent-foreground/10 bg-accent text-accent-foreground hover:bg-accent/80',
         success:
@@ -33,6 +33,15 @@ const badgeVariants = cva(
         muted:
           'border-muted-foreground/10 bg-muted text-muted-foreground hover:bg-muted/80',
         outline: 'text-foreground',
+        outlineMuted: 'border-muted-foreground/30 text-muted-foreground',
+        outlineAccent: 'border-accent-foreground/30 text-accent-foreground',
+        outlinePurple: 'border-purple-foreground/30 text-purple-foreground',
+        outlineSuccessMuted:
+          'border-success-muted-foreground/30 text-success-muted-foreground',
+        outlineDestructiveMuted:
+          'border-destructive-muted-foreground/30 text-destructive-muted-foreground',
+        outlineWarningMuted:
+          'border-warning-muted-foreground/30 text-warning-muted-foreground',
       },
       shape: {
         default: 'max-h-5 ',
@@ -60,6 +69,7 @@ export interface BadgeProps
   iconProps?: Omit<IconProps, 'size'> & {
     placement: 'start' | 'end'
   }
+  userSelect?: boolean
   disabled?: boolean
 }
 
@@ -72,6 +82,7 @@ function Badge({
   noWrap = false,
   centered = false,
   disabled = false,
+  userSelect = false,
   children,
   iconProps,
   ...props
@@ -86,6 +97,7 @@ function Badge({
           'opacity-50': disabled,
           'flex-row max-h-none gap-x-1 py-px': !!iconProps,
           'justify-center': centered,
+          'select-none': !userSelect,
         },
       )}
       {...props}

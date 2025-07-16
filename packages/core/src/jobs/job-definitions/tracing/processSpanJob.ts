@@ -31,7 +31,7 @@ export const processSpanJob = async (job: Job<ProcessSpanJobData>) => {
   const result = await processSpan({ span, scope, apiKey, workspace })
   if (result.error) {
     if (result.error instanceof UnprocessableEntityError) {
-      captureException(result.error)
+      if (process.env.NODE_ENV === 'development') captureException(result.error)
     } else throw result.error
   }
 }

@@ -55,7 +55,7 @@ export const processSegmentJob = async (job: Job<ProcessSegmentJobData>) => {
   })
   if (result.error) {
     if (result.error instanceof UnprocessableEntityError) {
-      captureException(result.error)
+      if (process.env.NODE_ENV === 'development') captureException(result.error)
     } else if (result.error instanceof ConflictError) {
       const parts = job.deduplicationId!.split('-')
       const retries = Number(parts.at(-1) ?? 0)

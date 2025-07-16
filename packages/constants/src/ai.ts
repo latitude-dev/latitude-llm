@@ -171,3 +171,45 @@ export enum FinishReason {
   Other = 'other',
   Unknown = 'unknown',
 }
+
+export const FINISH_REASON_DETAILS = {
+  [FinishReason.Stop]: {
+    name: 'Stop',
+    description:
+      'Generation ended naturally, either the model thought it was done, or it emitted a user-supplied stop-sequence, before hitting any limits.',
+  },
+  [FinishReason.Length]: {
+    name: 'Length',
+    description:
+      'The model hit a hard token boundary in the overall context window, so output was truncated.',
+  },
+  [FinishReason.ContentFilter]: {
+    name: 'Content Filter',
+    description:
+      "The provider's safety filters flagged part of the prospective text (hate, sexual, self-harm, violence, etc.), so generation was withheld, returning early.",
+  },
+  [FinishReason.ToolCalls]: {
+    name: 'Tool Calls',
+    description:
+      'Instead of generating text, the assistant asked for one or more declared tools to run; your code should handle them before asking the model to continue.',
+  },
+  [FinishReason.Error]: {
+    name: 'Error',
+    description:
+      'The generation terminated because the provider encountered an error. This could be due to a variety of reasons, including timeouts, server issues, or problems with the input data.',
+  },
+  [FinishReason.Other]: {
+    name: 'Other',
+    description:
+      'The generation ended without a specific reason. This could be due to a variety of reasons, including timeouts, server issues, or problems with the input data.',
+  },
+  [FinishReason.Unknown]: {
+    name: 'Unknown',
+    description: `The provider returned a finish-reason not yet standardized. Check out the provider's documentation for more information.`,
+  },
+} as const satisfies {
+  [R in FinishReason]: {
+    name: string
+    description: string
+  }
+}

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { Segment, SegmentBaggage, SegmentType } from './segment'
+import { SegmentBaggage } from './segment'
 import { Span, SpanType } from './span'
 
 // Note: Traces are unmaterialized but this context is used to propagate the trace
@@ -19,21 +19,30 @@ export type TraceBaggage = {
     })[]
 }
 
-export type AssembledSpan<T extends SpanType = SpanType> = Span<T> & {
-  class: 'span'
-  parts: AssembledSpan[]
-}
+// TODO(tracing): lets see if we can remove the concept of segments
+// export type AssembledSegment<T extends SegmentType = SegmentType> =
+//   Segment<T> & {
+//     class: 'segment'
+//     parts: (AssembledSegment | AssembledSpan)[]
+//   }
 
-export type AssembledSegment<T extends SegmentType = SegmentType> =
-  Segment<T> & {
-    class: 'segment'
-    parts: (AssembledSegment | AssembledSpan)[]
-  }
+export type AssembledSpan<T extends SpanType = SpanType> = Span<T> & {
+  conversationId: string
+  children: AssembledSpan[]
+  depth: number
+  startOffset: number
+  endOffset: number
+}
 
 // Note: full trace structure ready to be drawn, parts are ordered by timestamp
 export type AssembledTrace = {
   id: string
-  parts: (AssembledSegment | AssembledSpan)[]
+  conversationId: string
+  children: AssembledSpan[]
+  spans: number
+  duration: number
+  startedAt: Date
+  endedAt: Date
 }
 
 export const TRACE_CACHE_TTL = 5 * 60 // 5 minutes

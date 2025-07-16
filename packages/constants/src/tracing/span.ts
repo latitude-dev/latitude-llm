@@ -70,7 +70,7 @@ export const SPAN_SPECIFICATIONS = {
     name: 'Segment',
     description: 'A (partial) segment of a trace',
     isGenAI: false,
-    isHidden: true,
+    isHidden: false,
   },
   [SpanType.Unknown]: {
     name: 'Unknown',
