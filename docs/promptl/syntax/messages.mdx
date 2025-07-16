@@ -34,33 +34,6 @@ User messages simulate user input in the conversation.
   How can I save more money each month?
 </user>
 ```
-
-### Assistant Messages
-Assistant messages represent LLM responses or "fake" previous outputs to guide the conversation.
-
-```xml
-<user>
-  What's your name?
-</user>
-
-<assistant>
-  I’m BudgetBot, your personal finance assistant. How can I help you today?
-</assistant>
-```
-
-### Tool Messages
-Tool messages represent the output of external tools or APIs called by the assistant during the conversation. They require a unique `id` attribute to match the tool call.
-
-```xml
-<assistant>
-  <tool-call id="123" name="get-weather" arguments={{ { location: "Barcelona" } }} />
-</assistant>
-
-<tool id="123">
-  It's 17ºC in Barcelona.
-</tool>
-```
-
 ---
 
 ## Tags
