@@ -125,7 +125,7 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.check_version.outputs.should_publish == 'true'
-        uses: actions/create-release@v1
+        uses: comnoco/create-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
