@@ -1,11 +1,10 @@
-import { AgentToolsMap, resolveRelativePath } from '@latitude-data/constants'
+import { resolveRelativePath } from '@latitude-data/constants'
+import { fromAstToBlocks } from '@latitude-data/web-ui/fromAstToBlocks'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
-import {
-  fromAstToBlocks,
-  type BlockRootNode,
-} from '@latitude-data/web-ui/fromAstToBlocks'
-import type { DocumentVersion } from '@latitude-data/core/browser'
-import { AstError } from '@latitude-data/constants/promptl'
+
+import type { AstError } from '@latitude-data/constants/promptl'
+import type { AgentToolsMap } from '@latitude-data/constants'
+import type { BlockRootNode } from '@latitude-data/web-ui/fromAstToBlocks'
 
 import {
   CompileError as PromptlCompileError,
@@ -19,19 +18,15 @@ type EditorType = 'code' | 'visual'
 export type ReadMetadataWorkerProps = Parameters<typeof scan>[0] & {
   promptlVersion: number
   editorType: EditorType
-  document?: DocumentVersion
-  documents?: DocumentVersion[]
+  document?: any
+  documents?: any[]
   providerNames?: string[]
   integrationNames?: string[]
   agentToolsMap?: AgentToolsMap
   noOutputSchemaConfig?: { message: string }
 }
 
-function readDocument(
-  document?: DocumentVersion,
-  documents?: DocumentVersion[],
-  prompt?: string,
-) {
+function readDocument(document?: any, documents?: any[], prompt?: string) {
   if (!document || !documents || !prompt) return undefined
 
   return async (refPath: string, from?: string) => {
