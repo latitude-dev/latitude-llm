@@ -42,14 +42,7 @@ export function OnboardingClient({
   )
   const navigate = useNavigate()
   const { toast } = useToast()
-  const {
-    start,
-    streamingResponse,
-    streamingReasoning,
-    messages,
-    chainLength,
-    activeStream,
-  } = useRunOnboardingPrompt({
+  const { start, messages, activeStream } = useRunOnboardingPrompt({
     project,
     commit,
     document,
@@ -106,9 +99,6 @@ export function OnboardingClient({
             activeStream={activeStream}
             currentStep={currentStep}
             messages={messages}
-            streamingResponse={streamingResponse}
-            streamingReasoning={streamingReasoning}
-            chainLength={chainLength}
           />
 
           <ExperimentStep
@@ -117,10 +107,7 @@ export function OnboardingClient({
             commit={commit}
             dataset={dataset}
             currentStep={currentStep}
-            chainLength={chainLength}
             messages={messages}
-            streamingResponse={streamingResponse}
-            streamingReasoning={streamingReasoning}
             onCompleteOnboarding={onCompleteOnboarding}
           />
         </div>

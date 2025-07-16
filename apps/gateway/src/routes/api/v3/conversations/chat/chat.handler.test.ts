@@ -1,7 +1,4 @@
-import { parseSSEvent } from '$/common/parseSSEEvent'
-import app from '$/routes/app'
-import { MessageRole } from '@latitude-data/compiler'
-import { ChainEventTypes } from '@latitude-data/constants'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainError,
   LatitudeError,
@@ -23,9 +20,13 @@ import {
 import { Result } from '@latitude-data/core/lib/Result'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import app from '$/routes/app'
+import { ChainEventTypes } from '@latitude-data/constants'
+import { parseSSEvent } from '$/common/parseSSEEvent'
 
 const mocks = vi.hoisted(() => ({
   addMessages: vi.fn(),
+  addMessagesLegacy: vi.fn(),
   captureException: vi.fn(),
   queues: {
     defaultQueue: {
@@ -44,6 +45,14 @@ vi.mock(
       addMessages: mocks.addMessages,
     }
   },
+)
+
+vi.mock(
+  '@latitude-data/core/services/__deprecated/documentLogs/addMessages/index',
+  async (importActual) => ({
+    ...(await importActual()),
+    addMessagesLegacy: mocks.addMessagesLegacy,
+  }),
 )
 
 vi.mock('$/common/sentry', async (importOriginal) => {
@@ -136,6 +145,7 @@ describe('POST /chat', () => {
       headers = {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'X-Latitude-SDK-Version': '5.0.0',
       }
     })
 
@@ -240,7 +250,64 @@ describe('POST /chat', () => {
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
         source: LogSources.API,
+        tools: {},
         abortSignal: expect.anything(),
+        sdkVersion: '5.0.0',
+      })
+    })
+
+    it('passes SDK version header to addMessages', async () => {
+      const trace = createTelemetryTrace({})
+      const sdkVersion = '5.1.0'
+
+      mocks.addMessages.mockReturnValue(
+        new Promise((resolve) => {
+          resolve(
+            Result.ok({
+              stream: new ReadableStream({
+                start(controller) {
+                  controller.enqueue({
+                    event: StreamEventTypes.Latitude,
+                    data: {
+                      type: ChainEventTypes.ProviderCompleted,
+                      response: step,
+                    },
+                  })
+                  controller.enqueue({
+                    event: StreamEventTypes.Latitude,
+                    data: {
+                      type: ChainEventTypes.ChainCompleted,
+                      messages: step.providerLog?.messages,
+                    },
+                  })
+                  controller.close()
+                },
+              }),
+              response: new Promise((resolve) => resolve(Result.ok({}))),
+              trace,
+            }),
+          )
+        }),
+      )
+
+      await app.request(route, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: {
+          ...headers,
+          'X-Latitude-SDK-Version': sdkVersion,
+        },
+      })
+
+      expect(mocks.addMessages).toHaveBeenCalledWith({
+        context: expect.anything(),
+        workspace,
+        documentLogUuid: step.documentLogUuid,
+        messages: body.messages,
+        source: LogSources.API,
+        tools: {},
+        abortSignal: expect.anything(),
+        sdkVersion,
       })
     })
 
@@ -291,8 +358,10 @@ describe('POST /chat', () => {
         workspace,
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
+        tools: {},
         source: LogSources.Playground,
         abortSignal: expect.anything(),
+        sdkVersion: '5.0.0',
       })
     })
 
@@ -360,6 +429,7 @@ describe('POST /chat', () => {
 
   describe('authorized without stream', () => {
     beforeEach(async () => {
+      mocks.captureException.mockClear()
       mocks.addMessages.mockClear()
 
       const project = await createProject()
@@ -389,6 +459,7 @@ describe('POST /chat', () => {
       headers = {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'X-Latitude-SDK-Version': '5.0.0',
       }
     })
 
@@ -400,7 +471,7 @@ describe('POST /chat', () => {
           resolve(
             Result.ok({
               stream: new ReadableStream({}),
-              lastResponse: Promise.resolve(step),
+              response: Promise.resolve(step),
               trace,
             }),
           )
@@ -418,14 +489,12 @@ describe('POST /chat', () => {
       expect(await res.json()).toEqual({
         uuid: step.documentLogUuid,
         conversation: step.providerLog?.messages,
-        toolRequests: [],
         response: {
           streamType: step.streamType,
           text: step.text,
           usage: step.usage,
           toolCalls: step.toolCalls,
         },
-        trace: await trace,
       })
     })
 
@@ -458,7 +527,48 @@ describe('POST /chat', () => {
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
         source: LogSources.API,
+        tools: {},
         abortSignal: expect.anything(),
+        sdkVersion: '5.0.0',
+      })
+    })
+
+    it('passes SDK version header to addMessages', async () => {
+      const trace = createTelemetryTrace({})
+      const sdkVersion = '4.2.1'
+
+      mocks.addMessages.mockReturnValue(
+        new Promise((resolve) => {
+          resolve(
+            Result.ok({
+              stream: new ReadableStream({}),
+              response: new Promise((resolve) => {
+                resolve(Result.ok(step))
+              }),
+              trace,
+            }),
+          )
+        }),
+      )
+
+      await app.request(route, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: {
+          ...headers,
+          'X-Latitude-SDK-Version': sdkVersion,
+        },
+      })
+
+      expect(mocks.addMessagesLegacy).toHaveBeenCalledWith({
+        context: expect.anything(),
+        workspace,
+        documentLogUuid: step.documentLogUuid,
+        messages: body.messages,
+        source: LogSources.API,
+        tools: {},
+        abortSignal: expect.anything(),
+        sdkVersion,
       })
     })
 
@@ -494,7 +604,9 @@ describe('POST /chat', () => {
         documentLogUuid: step.documentLogUuid,
         messages: body.messages,
         source: LogSources.Playground,
+        tools: {},
         abortSignal: expect.anything(),
+        sdkVersion: '5.0.0',
       })
     })
 
@@ -512,7 +624,7 @@ describe('POST /chat', () => {
                   message: 'API call error',
                 }),
               ),
-              lastResponse: Promise.resolve(undefined),
+              response: Promise.resolve(undefined),
               trace,
             }),
           )
@@ -546,7 +658,7 @@ describe('POST /chat', () => {
           resolve(
             Result.ok({
               stream: new ReadableStream({}),
-              lastResponse: Promise.resolve({
+              response: Promise.resolve({
                 ...step,
                 documentLogUuid: undefined,
               }),
@@ -583,7 +695,7 @@ describe('POST /chat', () => {
           resolve(
             Result.ok({
               stream: new ReadableStream({}),
-              lastResponse: Promise.resolve({
+              response: Promise.resolve({
                 ...step,
                 providerLog: undefined,
               }),

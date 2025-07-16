@@ -1,4 +1,4 @@
-import type { Config, Message } from '@latitude-data/compiler'
+import type { Config, Message } from '@latitude-data/constants/legacyCompiler'
 import { PartialConfig } from '../../helpers'
 
 export enum ProviderRules {

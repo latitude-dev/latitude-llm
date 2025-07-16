@@ -12,6 +12,12 @@ import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDoc
 import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 import { RunRoute } from './run.route'
+import {
+  awaitClientToolResult,
+  ToolHandler,
+} from '@latitude-data/core/lib/streamManager/clientTools/handlers'
+import { runDocumentAtCommitLegacy } from '@latitude-data/core/services/__deprecated/commits/runDocumentAtCommit'
+import { compareVersion } from '$/utils/versionComparison'
 
 // https://github.com/honojs/middleware/issues/735
 // https://github.com/orgs/honojs/discussions/1803
@@ -22,6 +28,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     path,
     parameters,
     customIdentifier,
+    tools,
     stream: useSSE,
     __internal,
   } = c.req.valid('json')
@@ -43,15 +50,19 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     })
   }
 
-  const result = await runDocumentAtCommit({
+  const sdkVersion = c.req.header('X-Latitude-SDK-Version')
+
+  const result = await _runDocumentAtCommit({
     context: BACKGROUND({ workspaceId: workspace.id }),
     workspace,
     document,
     commit,
     parameters,
     customIdentifier,
+    tools: useSSE ? buildClientToolHandlersMap(tools) : {},
     source: __internal?.source ?? LogSources.API,
     abortSignal: c.req.raw.signal,
+    sdkVersion,
   }).then((r) => r.unwrap())
 
   if (useSSE) {
@@ -91,9 +102,24 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
 
   const body = runPresenter({
     response: (await result.lastResponse)!,
-    toolCalls: await result.toolCalls,
-    trace: await result.trace,
   }).unwrap()
 
   return c.json(body)
+}
+
+export function buildClientToolHandlersMap(tools: string[]) {
+  return tools.reduce((acc: Record<string, ToolHandler>, toolName: string) => {
+    acc[toolName] = awaitClientToolResult
+    return acc
+  }, {})
+}
+
+async function _runDocumentAtCommit(args: any) {
+  const { sdkVersion } = args
+
+  if (compareVersion(sdkVersion, '5.0.0')) {
+    return runDocumentAtCommit(args)
+  } else {
+    return runDocumentAtCommitLegacy(args)
+  }
 }

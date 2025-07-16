@@ -1,14 +1,7 @@
-import {
-  Chain,
-  ContentType,
-  createChain,
-  MessageRole,
-} from '@latitude-data/compiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Workspace } from '../../browser'
 import {
   ErrorableEntity,
@@ -16,24 +9,19 @@ import {
   PromptSource,
   Providers,
 } from '../../constants'
-import {
-  AsyncStreamIteable,
-  PARTIAL_FINISH_CHUNK,
-  TOOLS,
-} from '../../lib/chainStreamManager/ChainStreamConsumer/consumeStream.test'
 import { Result } from '../../lib/Result'
-import { TelemetryContext } from '../../telemetry'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
 import * as ChainValidator from './ChainValidator'
 import { runChain } from './run'
+import { TelemetryContext } from '../../telemetry'
+import { Chain, createChain, MessageRole } from 'promptl-ai'
 
 let context: TelemetryContext
 let providersMap: Map<string, any>
 let workspace: Workspace
 let promptSource: PromptSource
-
-function buildMockAIresponse(chunks: TextStreamPart<TOOLS>[]) {
+function buildMockAIresponse(chunks: TextStreamPart<any>[]) {
   return Result.ok({
     type: 'text' as const,
     text: new Promise((resolve) => resolve('MY TEXT')),
@@ -45,8 +33,9 @@ function buildMockAIresponse(chunks: TextStreamPart<TOOLS>[]) {
       }),
     ),
     toolCalls: new Promise((resolve) => resolve([])),
-    fullStream: new AsyncStreamIteable({
+    fullStream: new ReadableStream({
       start(controller) {
+        // @ts-expect-error - TODO(compiler): fix types
         chunks.forEach((chunk) => controller.enqueue(chunk))
         controller.close()
       },
@@ -83,42 +72,43 @@ describe('run chain error handling', () => {
     promptSource = { document: documents[0]!, commit }
     context = await factories.createTelemetryContext({ workspace })
 
-    vi.mocked(mockChain.step!).mockResolvedValue({
-      completed: true,
-      conversation: {
+    vi.mocked(mockChain.step!)
+      .mockResolvedValue({
+        completed: false,
         messages: [
           {
             role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'Test message' }],
+            // @ts-expect-error - TODO(compiler): fix types
+            content: [{ type: 'text', text: 'Test message' }],
           },
         ],
         config: { provider: 'openai', model: 'gpt-4o-mini' },
-      },
-    })
+      })
+      .mockResolvedValue({
+        completed: true,
+        messages: [],
+        config: { provider: 'openai', model: 'gpt-4o-mini' },
+      })
   })
 
   // TODO: troll test in CI
   it.skip('stores error when default provider quota is exceeded', async () => {
     const chainValidatorCall = vi
-      .spyOn(ChainValidator, 'validateChain')
-      .mockImplementation(() =>
-        Promise.resolve(
-          Result.error(
-            new ChainError({
-              code: RunErrorCodes.DefaultProviderExceededQuota,
-              message:
-                'You have exceeded your maximum number of free runs for today',
-            }),
-          ),
+      .spyOn(ChainValidator, 'renderChain')
+      .mockResolvedValueOnce(
+        Result.error(
+          new ChainError({
+            code: RunErrorCodes.DefaultProviderExceededQuota,
+            message:
+              'You have exceeded your maximum number of free runs for today',
+          }),
         ),
       )
+
     const run = runChain({
       context: context,
-      errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain: mockChain as Chain,
-      globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       promptSource,
@@ -148,39 +138,32 @@ describe('run chain error handling', () => {
 
   it('store error as unknown when something undefined happens', async () => {
     const chainValidatorCall = vi
-      .spyOn(ChainValidator, 'validateChain')
-      .mockImplementation(() =>
-        // @ts-expect-error - Error is not valid here but we fake an unknown error
-        Promise.resolve(
-          Result.error(new Error('Something undefined happened')),
+      .spyOn(ChainValidator, 'renderChain')
+      .mockResolvedValue(
+        Result.error(
+          new ChainError({
+            code: RunErrorCodes.Unknown,
+            message: 'Something undefined happened',
+          }),
         ),
       )
+
     const run = runChain({
       context: context,
-      errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain: mockChain as Chain,
-      globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       promptSource,
     })
 
     const error = await run.error
-    expect(error?.dbError).toEqual({
-      id: expect.any(Number),
-      errorableUuid: expect.any(String),
-      errorableType: ErrorableEntity.DocumentLog,
-      code: RunErrorCodes.Unknown,
-      message: 'Something undefined happened',
-      details: {
-        errorCode: RunErrorCodes.Unknown,
-        stack: expect.any(String),
-      },
-      createdAt: expect.any(Date),
-      updatedAt: expect.any(Date),
-    })
+    expect(error).toEqual(
+      new ChainError({
+        message: 'Something undefined happened',
+        code: RunErrorCodes.Unknown,
+      }),
+    )
     chainValidatorCall.mockRestore()
   })
 
@@ -191,30 +174,21 @@ describe('run chain error handling', () => {
     })
     const run = runChain({
       context: context,
-      errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
-      globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       promptSource,
     })
 
     const error = await run.error
-    expect(error?.dbError).toEqual({
-      id: expect.any(Number),
-      errorableUuid: expect.any(String),
-      errorableType: ErrorableEntity.DocumentLog,
-      code: RunErrorCodes.DocumentConfigError,
-      message:
-        '"model" attribute is required. Read more here: https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts',
-      details: {
-        errorCode: RunErrorCodes.DocumentConfigError,
-      },
-      createdAt: expect.any(Date),
-      updatedAt: expect.any(Date),
-    })
+    expect(error).toEqual(
+      new ChainError({
+        code: RunErrorCodes.DocumentConfigError,
+        message:
+          '"model" attribute is required. Read more here: https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts',
+      }),
+    )
   })
 
   it('store error when missing provider config is wrong', async () => {
@@ -224,81 +198,28 @@ describe('run chain error handling', () => {
         provider: patata_provider
         model: gpt-4o-mini
         ---
+
+        miau
       `,
       parameters: {},
     })
     const run = runChain({
       context: context,
-      errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
-      globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       promptSource,
     })
 
     const error = await run.error
-    expect(error?.dbError).toEqual({
-      id: expect.any(Number),
-      errorableUuid: expect.any(String),
-      errorableType: ErrorableEntity.DocumentLog,
-      code: RunErrorCodes.MissingProvider,
-      message:
-        'Provider API Key with name patata_provider not found. Go to https://app.latitude.so/settings to add a new provider if there is not one already with that name.',
-      details: {
-        errorCode: 'missing_provider_error',
-      },
-      createdAt: expect.any(Date),
-      updatedAt: expect.any(Date),
-    })
-  })
-
-  it('store error when chain fail compiling', async () => {
-    const chain = createChain({
-      prompt: `
-        ---
-        provider: openai
-        model: gpt-4o-mini
-        ---
-        <ref>NOT VALID TAG</ref>
-      `,
-      parameters: {},
-    })
-    const run = runChain({
-      context: context,
-      errorableType: ErrorableEntity.DocumentLog,
-      workspace,
-      chain,
-      globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
-      providersMap,
-      source: LogSources.API,
-      promptSource,
-    })
-
-    const error = await run.error
-    expect(error?.dbError).toEqual({
-      id: expect.any(Number),
-      errorableUuid: expect.any(String),
-      errorableType: ErrorableEntity.DocumentLog,
-      code: RunErrorCodes.ChainCompileError,
-      message: "Error validating chain:\n Unknown tag: 'ref'",
-      details: {
-        errorCode: RunErrorCodes.ChainCompileError,
-        compileCode: 'unknown-tag',
-        frame: `4:         model: gpt-4o-mini
-5:         ---
-6:         <ref>NOT VALID TAG</ref>
-
-            ^~~~~~~~~~~~~~~~~~~~~~~~
-7:       `,
-        message: "Unknown tag: 'ref'",
-      },
-      createdAt: expect.any(Date),
-      updatedAt: expect.any(Date),
-    })
+    expect(error).toEqual(
+      new ChainError({
+        code: RunErrorCodes.MissingProvider,
+        message:
+          'Provider API Key with name patata_provider not found. Go to https://app.latitude.so/settings to add a new provider if there is not one already with that name.',
+      }),
+    )
   })
 
   it('store error when google prompt miss first user message', async () => {
@@ -308,34 +229,27 @@ describe('run chain error handling', () => {
         provider: google
         model: gemini-something
         ---
+
+        miau
       `,
       parameters: {},
     })
     const run = runChain({
       context: context,
-      errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
-      globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       promptSource,
     })
 
     const error = await run.error
-    expect(error?.dbError).toEqual({
-      id: expect.any(Number),
-      errorableUuid: expect.any(String),
-      errorableType: ErrorableEntity.DocumentLog,
-      code: RunErrorCodes.AIProviderConfigError,
-      message: 'Google provider requires at least one user message',
-      details: {
-        errorCode: RunErrorCodes.AIProviderConfigError,
-      },
-      createdAt: expect.any(Date),
-      updatedAt: expect.any(Date),
-    })
+    expect(error).toEqual(
+      new ChainError({
+        code: RunErrorCodes.AIProviderConfigError,
+        message: 'Google provider requires at least one user message',
+      }),
+    )
   })
 
   it('store error when AI provider stream finish with error', async () => {
@@ -353,94 +267,25 @@ describe('run chain error handling', () => {
         provider: openai
         model: gpt-4o-mini
         ---
+
+        miau
       `,
       parameters: {},
     })
     const run = runChain({
       context: context,
-      errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
-      globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       promptSource,
     })
     const error = await run.error
-    expect(error?.dbError).toEqual({
-      id: expect.any(Number),
-      errorableUuid: expect.any(String),
-      errorableType: ErrorableEntity.DocumentLog,
-      code: RunErrorCodes.AIRunError,
-      message: 'Openai returned this error: AI stream finished with error',
-      details: {
-        errorCode: RunErrorCodes.AIRunError,
-      },
-      createdAt: expect.any(Date),
-      updatedAt: expect.any(Date),
-    })
-  })
-
-  it('returns a successful response', async () => {
-    vi.spyOn(aiModule, 'ai').mockResolvedValue(
-      buildMockAIresponse([
-        {
-          ...PARTIAL_FINISH_CHUNK,
-          type: 'finish',
-          finishReason: 'stop',
-          providerMetadata: undefined,
-        },
-      ]),
-    )
-    const chain = createChain({
-      prompt: `
-        ---
-        provider: openai
-        model: gpt-4o-mini
-        ---
-      `,
-      parameters: {},
-    })
-    const run = runChain({
-      context: context,
-      errorableType: ErrorableEntity.DocumentLog,
-      workspace,
-      chain,
-      globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
-      providersMap,
-      source: LogSources.API,
-      promptSource,
-    })
-    const response = await run.lastResponse
-    expect(response).toEqual({
-      documentLogUuid: expect.any(String),
-      streamType: 'text',
-      text: 'MY TEXT',
-      toolCalls: [],
-      usage: {
-        promptTokens: 3,
-        completionTokens: 7,
-        totalTokens: 10,
-      },
-      providerLog: expect.objectContaining({
-        uuid: expect.any(String),
-        documentLogUuid: expect.any(String),
-        apiKeyId: null,
-        config: { model: 'gpt-4o-mini', provider: 'openai' },
-        costInMillicents: 0,
-        duration: expect.any(Number),
-        finishReason: 'stop',
-        generatedAt: expect.any(Date),
-        providerId: providersMap.get('openai').id,
-        model: 'gpt-4o-mini',
-        responseText: 'MY TEXT',
-        responseObject: null,
-        source: 'api',
-        tokens: 10,
-        toolCalls: [],
+    expect(error).toEqual(
+      new ChainError({
+        code: RunErrorCodes.AIRunError,
+        message: 'Openai returned this error: AI stream finished with error',
       }),
-    })
+    )
   })
 })

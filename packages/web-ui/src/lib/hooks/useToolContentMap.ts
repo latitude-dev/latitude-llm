@@ -1,10 +1,12 @@
 'use client'
+
 import {
-  ContentType,
   Message,
+  MessageContent,
   MessageRole,
   ToolContent,
-} from '@latitude-data/compiler'
+  ToolRequestContent,
+} from '@latitude-data/constants/legacyCompiler'
 import { useMemo } from 'react'
 
 export function useToolContentMap(
@@ -14,16 +16,21 @@ export function useToolContentMap(
   return useMemo(() => {
     if (toolContentMap) return toolContentMap
 
-    return messages.reduce((acc: Record<string, ToolContent>, message) => {
-      if (message.role !== MessageRole.tool) return acc
+    const res = messages.reduce((acc: Record<string, ToolContent>, message) => {
+      if (![MessageRole.assistant, MessageRole.tool].includes(message.role)) {
+        return acc
+      }
+
       return Object.assign(
         acc,
         Object.fromEntries(
-          message.content
-            .filter((content) => content.type === ContentType.toolResult)
+          (message.content as MessageContent[] | ToolRequestContent[])
+            .filter((content) => content.type === 'tool-result')
             .map((content) => [content.toolCallId, content]),
         ),
       )
     }, {})
+
+    return res
   }, [messages, toolContentMap])
 }

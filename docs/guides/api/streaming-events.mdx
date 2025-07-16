@@ -40,9 +40,10 @@ Every chain execution follows the same flow:
 2. **Processing Steps**: Multiple steps can be executed within a chain. All steps start with a `step-started` event and end with a `step-completed` event. Within a step, you may receive additional events:
    - **Provider Interaction**: The LLM processing includes `provider-started` and `provider-completed` events.
    - **Tool Execution**: If Latitude built-in tools are involved, `tools-started` and `tool-completed` events occur, indicating the execution status of the requested tool.
-      <Note>
-        Check out [Latitude Tools](/guides/prompt-manager/latitude-tools) for more information about built-in tools.
-      </Note>
+     <Note>
+       Check out [Latitude Tools](/guides/prompt-manager/latitude-tools) for
+       more information about built-in tools.
+     </Note>
 3. **Chain Completion**: The chain concludes with a `chain-completed`.
 
 However, the chain execution can be interrupted by any of the following events:
@@ -138,7 +139,8 @@ Your LLM Provider has completed the response generation.
 Latitude has started running built-in tools requested by the LLM response.
 
 <Note>
-  Check out [Latitude Tools](/guides/prompt-manager/latitude-tools) for more information about built-in tools.
+  Check out [Latitude Tools](/guides/prompt-manager/latitude-tools) for more
+  information about built-in tools.
 </Note>
 
 ```json
@@ -167,7 +169,8 @@ Latitude has started running built-in tools requested by the LLM response.
 A built-in tool has completed its execution.
 
 <Note>
-  Check out [Latitude Tools](/guides/prompt-manager/latitude-tools) for more information about built-in tools.
+  Check out [Latitude Tools](/guides/prompt-manager/latitude-tools) for more
+  information about built-in tools.
 </Note>
 
 ```json
@@ -177,33 +180,6 @@ A built-in tool has completed its execution.
     "type": "tool-completed",
     "uuid": "conversation-uuid",
     "messages": [...]
-  }
-}
-```
-
-</Accordion>
-
-<Accordion title="ToolsRequested">
-The AI provider has requested additional tools to be executed, and they are required to continue processing the chain.
-
-This event will terminate the SSE stream. To continue it, you will need to use the [Chat API Endpoint](/guides/api/api-access#4-chat) to send the requested tools response, and continue the chain processing.
-
-```json
-{
-  "type": "latitude-event",
-  "data": {
-    "type": "tools-requested",
-    "uuid": "conversation-uuid",
-    "messages": [...],
-    "tools": [
-      {
-        "id": "tool-id",
-        "name": "tool-name",
-        "arguments": {
-          "argument-name": "argument-value"
-        }
-      }
-    ]
   }
 }
 ```

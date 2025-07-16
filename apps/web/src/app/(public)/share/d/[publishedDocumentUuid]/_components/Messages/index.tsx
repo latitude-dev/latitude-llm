@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react'
 
-import { Conversation } from '@latitude-data/compiler'
+import { Conversation } from '@latitude-data/constants/legacyCompiler'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { AnimatedDots } from '@latitude-data/web-ui/molecules/AnimatedDots'
-import { ChatTextArea } from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { ChatTextArea } from '$/components/ChatWrapper'
 import { LastMessage } from '../SharedDocument/RunPrompt/usePrompt'
 import { AllMessages } from './AllMessages'
 import { ChatMessages } from './ChatMessages'

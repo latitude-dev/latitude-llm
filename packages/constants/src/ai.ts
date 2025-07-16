@@ -1,10 +1,5 @@
-import { Message, ToolCall } from '@latitude-data/compiler'
-import {
-  LanguageModelUsage,
-  TextStreamPart,
-  Tool,
-  FinishReason as VercelFinishReason,
-} from 'ai'
+import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import { FinishReason, LanguageModelUsage, TextStreamPart } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
@@ -12,7 +7,6 @@ import { ParameterType } from './config'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
 import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
 import { ProviderLog } from './models'
-import { TraceContext } from './tracing/trace'
 
 export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
 
@@ -54,7 +48,7 @@ export type VercelConfig = {
 
 export type PartialPromptConfig = Omit<LatitudePromptConfig, 'provider'>
 
-export type ProviderData = TextStreamPart<Record<string, Tool>>
+export type ProviderData = TextStreamPart<any>
 
 export type ChainEventDto = ProviderData | LatitudeEventData
 
@@ -126,7 +120,7 @@ export type LegacyLatitudeChainCompleteEventData = {
   messages?: Message[]
   object?: any
   response: ChainStepResponse<StreamType>
-  finishReason: VercelFinishReason
+  finishReason: FinishReason
   documentLogUuid?: string
 }
 
@@ -144,10 +138,7 @@ export type LegacyLatitudeEventData =
 export type RunSyncAPIResponse = {
   uuid: string
   conversation: Message[]
-  toolRequests: ToolCall[]
   response: ChainCallResponseDto
-  agentResponse?: { response: string } | Record<string, unknown>
-  trace: TraceContext
 }
 
 export type ChatSyncAPIResponse = RunSyncAPIResponse
@@ -162,48 +153,38 @@ export const toolCallResponseSchema = z.object({
 
 export type ToolCallResponse = z.infer<typeof toolCallResponseSchema>
 
-export enum FinishReason {
-  Stop = 'stop',
-  Length = 'length',
-  ContentFilter = 'content-filter',
-  ToolCalls = 'tool-calls',
-  Error = 'error',
-  Other = 'other',
-  Unknown = 'unknown',
-}
-
 export const FINISH_REASON_DETAILS = {
-  [FinishReason.Stop]: {
+  stop: {
     name: 'Stop',
     description:
       'Generation ended naturally, either the model thought it was done, or it emitted a user-supplied stop-sequence, before hitting any limits.',
   },
-  [FinishReason.Length]: {
+  length: {
     name: 'Length',
     description:
       'The model hit a hard token boundary in the overall context window, so output was truncated.',
   },
-  [FinishReason.ContentFilter]: {
+  'content-filter': {
     name: 'Content Filter',
     description:
       "The provider's safety filters flagged part of the prospective text (hate, sexual, self-harm, violence, etc.), so generation was withheld, returning early.",
   },
-  [FinishReason.ToolCalls]: {
+  'tool-calls': {
     name: 'Tool Calls',
     description:
       'Instead of generating text, the assistant asked for one or more declared tools to run; your code should handle them before asking the model to continue.',
   },
-  [FinishReason.Error]: {
+  error: {
     name: 'Error',
     description:
       'The generation terminated because the provider encountered an error. This could be due to a variety of reasons, including timeouts, server issues, or problems with the input data.',
   },
-  [FinishReason.Other]: {
+  other: {
     name: 'Other',
     description:
       'The generation ended without a specific reason. This could be due to a variety of reasons, including timeouts, server issues, or problems with the input data.',
   },
-  [FinishReason.Unknown]: {
+  unknown: {
     name: 'Unknown',
     description: `The provider returned a finish-reason not yet standardized. Check out the provider's documentation for more information.`,
   },

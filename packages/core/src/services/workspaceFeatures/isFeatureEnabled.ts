@@ -1,7 +1,6 @@
 import { eq, and } from 'drizzle-orm'
 
 import { database } from '../../client'
-import { Result } from '../../lib/Result'
 import { workspaceFeatures } from '../../schema'
 
 export async function isFeatureEnabled(
@@ -24,5 +23,5 @@ export async function isFeatureEnabled(
   const enabled =
     workspaceFeature.length > 0 ? workspaceFeature[0]!.enabled : false
 
-  return Result.ok(enabled)
+  return enabled
 }

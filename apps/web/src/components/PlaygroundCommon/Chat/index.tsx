@@ -1,15 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  ErrorMessage,
-  MessageList,
-} from '@latitude-data/web-ui/molecules/ChatWrapper'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { ChatTextArea } from '@latitude-data/web-ui/molecules/ChatWrapper'
 
 import {
   AddMessagesFn,
@@ -20,8 +15,12 @@ import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import { useToolContentMap } from 'node_modules/@latitude-data/web-ui/src/lib/hooks/useToolContentMap'
 import Actions, { ActionsState } from '../Actions'
 import { StatusIndicator } from '$/components/PlaygroundCommon/StatusIndicator'
-import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
-import { Timer } from '$/components/PlaygroundCommon/Timer'
+import { AgentToolsMap } from '@latitude-data/constants'
+import {
+  ChatTextArea,
+  ErrorMessage,
+  MessageList,
+} from '$/components/ChatWrapper'
 
 export default function Chat({
   canChat,
@@ -76,30 +75,9 @@ export default function Chat({
   }, [abortCurrentStream, clearChat, playground.messages.length])
 
   const toolContentMap = useToolContentMap(playground.messages)
-
-  // Memoize all values that were previously in conditional hooks
-  const promptMessages = useMemo(
-    () => playground.messages.slice(0, playground.chainLength - 1) ?? [],
-    [playground.messages, playground.chainLength],
-  )
-
   const parameterKeys = useMemo(
     () => Object.keys(parameters ?? {}),
     [parameters],
-  )
-
-  const chainResultMessages = useMemo(
-    () =>
-      playground.messages.slice(
-        playground.chainLength - 1,
-        playground.chainLength,
-      ) ?? [],
-    [playground.messages, playground.chainLength],
-  )
-
-  const chatMessages = useMemo(
-    () => playground.messages.slice(playground.chainLength),
-    [playground.messages, playground.chainLength],
   )
 
   // FIXME: Do not run side effects on useEffect. Move to event handler.
@@ -114,86 +92,113 @@ export default function Chat({
   return (
     <div className='flex flex-col flex-1 h-full overflow-hidden'>
       {showHeader ? (
-        <div className='flex flex-row items-center justify-between w-full pb-3'>
-          <Text.H6M>Prompt</Text.H6M>
-          <Actions
-            expandParameters={expandParameters}
-            setExpandParameters={setExpandParameters}
-          />
-        </div>
+        <Header
+          expandParameters={expandParameters}
+          setExpandParameters={setExpandParameters}
+        />
       ) : null}
 
-      {/* Messages container */}
-      <div
-        ref={containerRef}
-        className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar scrollable-indicator pb-12'
-      >
-        {/* Prompt messages */}
-        <MessageList
-          messages={promptMessages}
-          parameters={parameterKeys}
-          collapseParameters={!expandParameters}
-          agentToolsMap={agentToolsMap}
-          toolContentMap={toolContentMap}
-        />
+      <Messages
+        playground={playground}
+        containerRef={containerRef}
+        parameterKeys={parameterKeys}
+        expandParameters={expandParameters}
+        agentToolsMap={agentToolsMap}
+        toolContentMap={toolContentMap}
+      />
 
-        {/* Chain result */}
-        {(playground.messages.length ?? 0) >= playground.chainLength && (
-          <>
-            <MessageList
-              messages={chainResultMessages}
-              toolContentMap={toolContentMap}
-            />
-            {playground.time && <Timer timeMs={playground.time} />}
-          </>
-        )}
+      <ChatInputBox
+        canChat={canChat}
+        clearChat={clearChat}
+        hasActiveStream={hasActiveStream}
+        isScrolledToBottom={isScrolledToBottom}
+        playground={playground}
+        stopStreaming={stopStreaming}
+      />
+    </div>
+  )
+}
 
-        {/* Chat messages */}
-        {(playground.messages.length ?? 0) > playground.chainLength && (
-          <>
-            <Text.H6M>Chat</Text.H6M>
-            <MessageList
-              messages={chatMessages}
-              toolContentMap={toolContentMap}
-            />
-          </>
-        )}
+function Header({ expandParameters, setExpandParameters }: ActionsState) {
+  return (
+    <div className='flex flex-row items-center justify-between w-full pb-3'>
+      <Text.H6M>Prompt</Text.H6M>
+      <Actions
+        expandParameters={expandParameters}
+        setExpandParameters={setExpandParameters}
+      />
+    </div>
+  )
+}
 
-        {/* Error or streaming response */}
-        {playground.error ? (
-          <ErrorMessage error={playground.error} />
-        ) : (
-          <StreamMessage
-            responseStream={playground.streamingResponse}
-            reasoningStream={playground.streamingReasoning}
-            messages={playground.messages}
-            chainLength={playground.chainLength}
-          />
-        )}
-      </div>
+function Messages({
+  playground,
+  containerRef,
+  parameterKeys,
+  expandParameters,
+  agentToolsMap,
+  toolContentMap,
+}: {
+  playground: ReturnType<typeof usePlaygroundChat>
+  containerRef: React.RefObject<HTMLDivElement>
+  parameterKeys: string[]
+  expandParameters: boolean
+  agentToolsMap: AgentToolsMap
+  toolContentMap: ReturnType<typeof useToolContentMap>
+}) {
+  return (
+    <div
+      ref={containerRef}
+      className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar scrollable-indicator pb-12'
+    >
+      <MessageList
+        messages={playground.messages}
+        parameters={parameterKeys}
+        collapseParameters={!expandParameters}
+        agentToolsMap={agentToolsMap}
+        toolContentMap={toolContentMap}
+      />
 
-      {/* Chat input */}
-      <div className='flex relative flex-row w-full items-center justify-center'>
-        <StatusIndicator
-          isScrolledToBottom={isScrolledToBottom}
-          usage={playground.usage}
-          wakingUpIntegration={playground.wakingUpIntegration}
-          runningLatitudeTools={playground.runningLatitudeTools}
-          isStreaming={playground.isLoading}
-          stopStreaming={stopStreaming}
-          canStopStreaming={hasActiveStream() && playground.isLoading}
-        />
-        <ChatTextArea
-          canChat={canChat}
-          clearChat={clearChat}
-          placeholder='Enter follow up message...'
-          onSubmit={playground.submitUserMessage}
-          toolRequests={playground.unresponedToolCalls}
-          addMessages={playground.addMessages}
-          disabled={playground.isLoading || !!playground.error}
-          disableReset={playground.isLoading}
-        />
-      </div>
+      {playground.error && <ErrorMessage error={playground.error} />}
+    </div>
+  )
+}
+
+function ChatInputBox({
+  canChat,
+  clearChat,
+  hasActiveStream,
+  isScrolledToBottom,
+  playground,
+  stopStreaming,
+}: {
+  canChat: boolean
+  clearChat: () => void
+  hasActiveStream: () => boolean
+  isScrolledToBottom: boolean
+  playground: ReturnType<typeof usePlaygroundChat>
+  stopStreaming: () => void
+}) {
+  return (
+    <div className='flex relative flex-row w-full items-center justify-center'>
+      <StatusIndicator
+        isScrolledToBottom={isScrolledToBottom}
+        usage={playground.usage}
+        wakingUpIntegration={playground.wakingUpIntegration}
+        runningLatitudeTools={playground.runningLatitudeTools}
+        isStreaming={playground.isLoading}
+        stopStreaming={stopStreaming}
+        canStopStreaming={hasActiveStream() && playground.isLoading}
+      />
+      <ChatTextArea
+        minRows={5}
+        canChat={canChat}
+        clearChat={clearChat}
+        placeholder='Enter follow up message...'
+        onSubmit={playground.submitUserMessage}
+        disabled={playground.isLoading || !!playground.error}
+        disableReset={playground.isLoading}
+      />
     </div>
   )
 }

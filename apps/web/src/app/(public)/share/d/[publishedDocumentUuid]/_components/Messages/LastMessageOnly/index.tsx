@@ -1,17 +1,11 @@
 import { LastMessage } from '../../SharedDocument/RunPrompt/usePrompt'
-import {
-  ContentType,
-  Message as ConversationMessage,
-} from '@latitude-data/compiler'
+import { Message as ConversationMessage } from '@latitude-data/constants/legacyCompiler'
 import { ExpandMessages } from '../ExpandMessages'
-import {
-  ErrorMessage,
-  Message,
-} from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { ErrorMessage, Message } from '$/components/ChatWrapper'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
-import { MessageItem } from '@latitude-data/web-ui/molecules/ChatWrapper'
-import { MessageItemContent } from '@latitude-data/web-ui/molecules/ChatWrapper'
+import { MessageItem } from '$/components/ChatWrapper'
+import { MessageItemContent } from '$/components/ChatWrapper'
 import { useEffect, useState } from 'react'
 
 const streamBuilder = (chunks: string[]) => {
@@ -81,7 +75,7 @@ function ChainResponseMessage<L extends boolean>({
             <MessageItemContent
               content={[
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: responseStream ?? '',
                   reasoning: reasoningStream,
                 },

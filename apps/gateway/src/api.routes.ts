@@ -23,6 +23,9 @@ export const API_ROUTES = {
     },
   },
   v3: {
+    tools: {
+      results: `/api/v3/tools/results`,
+    },
     projects: {
       getAll: '/api/v3/projects',
       create: '/api/v3/projects',

@@ -1,10 +1,9 @@
 import {
-  ContentType,
   Message,
   MessageRole,
   type ToolCall,
   type ToolMessage,
-} from '@latitude-data/compiler'
+} from '@latitude-data/constants/legacyCompiler'
 import { LatteTool } from '@latitude-data/constants/latte'
 import { Workspace } from '../../../../browser'
 import { Result, TypedResult } from '../../../../lib/Result'
@@ -81,7 +80,7 @@ export async function handleToolRequest({
     role: MessageRole.tool,
     content: [
       {
-        type: ContentType.toolResult,
+        type: 'tool-result',
         toolCallId: tool.id,
         toolName: toolName,
         result: result.ok

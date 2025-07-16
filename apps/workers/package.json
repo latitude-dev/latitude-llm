@@ -14,8 +14,8 @@
     "sentry:sourcemaps": "sentry-cli sourcemaps inject --org latitude-l5 --project latitude-workers ./dist && sentry-cli sourcemaps upload --org latitude-l5 --project latitude-workers ./dist"
   },
   "dependencies": {
-    "@bull-board/api": "6.7.9",
-    "@bull-board/express": "6.7.9",
+    "@bull-board/api": "6.10.1",
+    "@bull-board/express": "6.10.1",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "@latitude-data/telemetry": "workspace:*",

@@ -6,7 +6,7 @@ import {
   createEvaluationV2,
   helpers,
 } from '@latitude-data/core/factories'
-import { MessageRole, ContentType, Message } from '@latitude-data/compiler'
+import { MessageRole, Message } from '@latitude-data/constants/legacyCompiler'
 import {
   LogSources,
   Providers,
@@ -27,7 +27,7 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
       role: MessageRole.user,
       content: [
         {
-          type: ContentType.text,
+          type: 'text',
           text: 'Hello World',
         },
       ],
@@ -36,7 +36,7 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
       role: MessageRole.assistant,
       content: [
         {
-          type: ContentType.text,
+          type: 'text',
           text: 'Hello! How can I assist you today?',
         },
       ],

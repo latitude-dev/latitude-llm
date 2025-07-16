@@ -1,13 +1,11 @@
 import { IntegrationDto, PipedreamIntegration } from '../../../browser'
-import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import { touchIntegration } from '../touch'
-import { createMcpClientManager } from './McpClientManager'
 import { LatitudeError } from './../../../lib/errors'
 import { PromisedResult } from './../../../lib/Transaction'
 import { Result } from './../../../lib/Result'
-import { TelemetryContext } from '../../../telemetry'
 import { IntegrationType } from '@latitude-data/constants'
 import { runAction } from '../pipedream/components'
+import { StreamManager } from '../../../lib/streamManager'
 
 type ResultContent =
   | { type: 'text'; text: string }
@@ -34,15 +32,12 @@ export async function callIntegrationTool({
   integration,
   toolName,
   args,
-  chainStreamManager,
-  mcpClientManager,
+  streamManager,
 }: {
-  context: TelemetryContext
   integration: IntegrationDto
   toolName: string
   args: Record<string, unknown>
-  chainStreamManager?: ChainStreamManager
-  mcpClientManager?: ReturnType<typeof createMcpClientManager>
+  streamManager: StreamManager
 }): PromisedResult<unknown, LatitudeError> {
   if (integration.type === IntegrationType.Pipedream) {
     const callResult = await runAction({
@@ -58,13 +53,13 @@ export async function callIntegrationTool({
     return callResult
   }
 
-  if (!mcpClientManager) {
+  if (!streamManager.mcpClientManager) {
     return Result.error(new LatitudeError('MCP Client Manager not provided'))
   }
 
-  const clientResult = await mcpClientManager.getClient(
+  const clientResult = await streamManager.mcpClientManager.getClient(
     integration,
-    chainStreamManager,
+    streamManager,
   )
   if (clientResult.error) {
     return clientResult

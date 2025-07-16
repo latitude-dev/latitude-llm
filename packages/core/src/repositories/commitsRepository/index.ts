@@ -52,6 +52,12 @@ export class CommitsRepository extends RepositoryLegacy<
     )
   }
 
+  /**
+   * Get a commit by its UUID or otherwise the head commit of the project
+   * @param uuid The commit UUID
+   * @param projectId The project ID (optional)
+   * @returns A Commit object
+   */
   async getCommitByUuid({
     uuid,
     projectId,

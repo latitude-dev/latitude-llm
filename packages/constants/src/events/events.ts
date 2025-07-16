@@ -1,26 +1,31 @@
-import { Config, Message, ToolCall } from '@latitude-data/compiler'
+import {
+  Config,
+  Message,
+  ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
 import {
   ChainStepResponse,
   ProviderData,
   StreamEventTypes,
   StreamType,
+  TraceContext,
 } from '..'
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { ChainError, RunErrorCodes } from '../errors'
-import { TraceContext } from '../tracing/trace'
 
 export enum ChainEventTypes {
-  ChainStarted = 'chain-started',
-  StepStarted = 'step-started',
-  ProviderStarted = 'provider-started',
-  ProviderCompleted = 'provider-completed',
-  ToolsStarted = 'tools-started',
-  ToolCompleted = 'tool-completed',
-  StepCompleted = 'step-completed',
   ChainCompleted = 'chain-completed',
   ChainError = 'chain-error',
-  ToolsRequested = 'tools-requested',
+  ChainStarted = 'chain-started',
   IntegrationWakingUp = 'integration-waking-up',
+  ProviderCompleted = 'provider-completed',
+  ProviderStarted = 'provider-started',
+  StepCompleted = 'step-completed',
+  StepStarted = 'step-started',
+  ToolCompleted = 'tool-completed',
+  ToolsRequested = 'tools-requested', // TODO(compiler): remove
+  ToolResult = 'tool-result',
+  ToolsStarted = 'tools-started',
 }
 
 interface GenericLatitudeEventData {
@@ -74,7 +79,6 @@ export interface LatitudeChainCompletedEventData
   type: ChainEventTypes.ChainCompleted
   tokenUsage: LanguageModelUsage
   finishReason: FinishReason
-  trace: TraceContext
 }
 
 export interface LatitudeChainErrorEventData extends GenericLatitudeEventData {
@@ -82,17 +86,18 @@ export interface LatitudeChainErrorEventData extends GenericLatitudeEventData {
   error: Error | ChainError<RunErrorCodes>
 }
 
+export interface LatitudeIntegrationWakingUpEventData
+  extends GenericLatitudeEventData {
+  type: ChainEventTypes.IntegrationWakingUp
+  integrationName: string
+}
+
+// TODO(compiler): remove
 export interface LatitudeToolsRequestedEventData
   extends GenericLatitudeEventData {
   type: ChainEventTypes.ToolsRequested
   tools: ToolCall[]
   trace: TraceContext
-}
-
-export interface LatitudeIntegrationWakingUpEventData
-  extends GenericLatitudeEventData {
-  type: ChainEventTypes.IntegrationWakingUp
-  integrationName: string
 }
 
 export type LatitudeEventData =
@@ -105,7 +110,6 @@ export type LatitudeEventData =
   | LatitudeStepCompletedEventData
   | LatitudeChainCompletedEventData
   | LatitudeChainErrorEventData
-  | LatitudeToolsRequestedEventData
   | LatitudeIntegrationWakingUpEventData
 
 // Just a type helper for ChainStreamManager. Omit<LatitudeEventData, 'messages' | 'uuid'> does not work.

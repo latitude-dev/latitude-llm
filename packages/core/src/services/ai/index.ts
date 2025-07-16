@@ -1,6 +1,6 @@
 import { omit } from 'lodash-es'
 
-import type { Message } from '@latitude-data/compiler'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   CoreMessage,
@@ -41,6 +41,8 @@ export type AIReturn<T extends StreamType> = Pick<
   | 'toolCalls'
   | 'providerMetadata'
   | 'reasoning'
+  | 'finishReason'
+  | 'response'
 > & {
   type: T
   providerName: Providers
@@ -168,6 +170,8 @@ export async function ai({
       toolCalls: result.toolCalls,
       providerMetadata: result.providerMetadata,
       sources: result.sources,
+      finishReason: result.finishReason,
+      response: result.response,
     })
   } catch (e) {
     return handleAICallAPIError(e)

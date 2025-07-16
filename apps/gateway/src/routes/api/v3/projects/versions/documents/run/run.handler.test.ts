@@ -1,7 +1,6 @@
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
-import { ContentType, MessageRole } from '@latitude-data/compiler'
-import { ChainEventTypes } from '@latitude-data/constants'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainError,
   LatitudeError,
@@ -28,9 +27,11 @@ import { Result } from '@latitude-data/core/lib/Result'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ChainEventTypes } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),
+  runDocumentAtCommitLegacy: vi.fn(),
   captureExceptionMock: vi.fn(),
   queues: {
     defaultQueue: {
@@ -59,6 +60,18 @@ vi.mock(
     return {
       ...original,
       runDocumentAtCommit: mocks.runDocumentAtCommit,
+    }
+  },
+)
+
+vi.mock(
+  '@latitude-data/core/services/__deprecated/commits/runDocumentAtCommit',
+  async (importOriginal) => {
+    const original = (await importOriginal()) as typeof importOriginal
+
+    return {
+      ...original,
+      runDocumentAtCommitLegacy: mocks.runDocumentAtCommitLegacy,
     }
   },
 )
@@ -131,6 +144,7 @@ describe('POST /run', () => {
       headers = {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'X-Latitude-SDK-Version': '5.0.0',
       }
     })
 
@@ -189,8 +203,10 @@ describe('POST /run', () => {
         document: expect.anything(),
         commit,
         parameters: {},
+        tools: {},
         source: LogSources.Playground,
         abortSignal: expect.anything(),
+        sdkVersion: '5.0.0',
       })
     })
 
@@ -318,7 +334,7 @@ describe('POST /run', () => {
                   ],
                   content: [
                     {
-                      type: ContentType.toolCall,
+                      type: 'tool-call',
                       toolCallId: 'fake-tool-call-id',
                       toolName: 'get_the_weather',
                       args: { location: 'Barcelona, Spain' },
@@ -401,6 +417,7 @@ describe('POST /run', () => {
       headers = {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'X-Latitude-SDK-Version': '5.0.0',
       }
     })
 
@@ -456,8 +473,10 @@ describe('POST /run', () => {
         document: expect.anything(),
         commit,
         parameters: {},
+        tools: {},
         source: LogSources.Playground,
         abortSignal: expect.anything(),
+        sdkVersion: '5.0.0',
       })
     })
 
@@ -525,7 +544,6 @@ describe('POST /run', () => {
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual({
         uuid: 'fake-document-log-uuid',
-        toolRequests: [],
         conversation: [
           {
             role: MessageRole.assistant,
@@ -540,7 +558,6 @@ describe('POST /run', () => {
           object: { something: { else: 'here' } },
           toolCalls: [],
         },
-        trace: await trace,
       })
     })
 
@@ -664,6 +681,178 @@ describe('POST /run', () => {
         message: 'Conversation messages not found in response',
         details: {},
       })
+    })
+  })
+
+  describe('version-based routing', () => {
+    beforeEach(async () => {
+      const {
+        workspace: wsp,
+        user,
+        project: prj,
+        providers,
+      } = await createProject()
+      project = prj
+      workspace = wsp
+      const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
+        workspaceId: workspace.id,
+      }).then((r) => r.unwrap())
+      token = apikey?.token!
+      const path = 'path/to/document'
+      const { commit: cmt } = await createDraft({
+        project,
+        user,
+      })
+      const document = await createDocumentVersion({
+        workspace,
+        user,
+        commit: cmt,
+        path,
+        content: helpers.createPrompt({ provider: providers[0]! }),
+      })
+
+      commit = await mergeCommit(cmt).then((r) => r.unwrap())
+
+      route = `/api/v3/projects/${project!.id}/versions/${commit!.uuid}/documents/run`
+      body = JSON.stringify({
+        path: document.documentVersion.path,
+        parameters: {},
+      })
+      headers = {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-Latitude-SDK-Version': '5.0.0',
+      }
+
+      // Reset mocks
+      mocks.runDocumentAtCommit.mockClear()
+      mocks.runDocumentAtCommitLegacy.mockClear()
+    })
+
+    it('uses new method when SDK version >= 5.0.0', async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.close()
+        },
+      })
+
+      const lastResponse = Promise.resolve({ text: 'Hello', usage: {} })
+      const trace = createTelemetryTrace({})
+
+      mocks.runDocumentAtCommit.mockReturnValue(
+        Promise.resolve(
+          Result.ok({
+            stream,
+            lastResponse,
+            trace,
+          }),
+        ),
+      )
+
+      await app.request(route, {
+        method: 'POST',
+        body,
+        headers: {
+          ...headers,
+          'X-Latitude-SDK-Version': '5.0.0',
+        },
+      })
+
+      expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith({
+        context: expect.anything(),
+        workspace,
+        document: expect.anything(),
+        commit,
+        parameters: {},
+        tools: {},
+        source: LogSources.API,
+        abortSignal: expect.anything(),
+        sdkVersion: '5.0.0',
+      })
+      expect(mocks.runDocumentAtCommitLegacy).not.toHaveBeenCalled()
+    })
+
+    it('uses legacy method when SDK version < 5.0.0', async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.close()
+        },
+      })
+
+      const lastResponse = Promise.resolve({ text: 'Hello', usage: {} })
+      const trace = createTelemetryTrace({})
+
+      mocks.runDocumentAtCommitLegacy.mockReturnValue(
+        Promise.resolve(
+          Result.ok({
+            stream,
+            lastResponse,
+            trace,
+          }),
+        ),
+      )
+
+      await app.request(route, {
+        method: 'POST',
+        body,
+        headers: {
+          ...headers,
+          'X-Latitude-SDK-Version': '4.9.0',
+        },
+      })
+
+      expect(mocks.runDocumentAtCommitLegacy).toHaveBeenCalledWith({
+        context: expect.anything(),
+        workspace,
+        document: expect.anything(),
+        commit,
+        parameters: {},
+        tools: {},
+        source: LogSources.API,
+        abortSignal: expect.anything(),
+        sdkVersion: '4.9.0',
+      })
+      expect(mocks.runDocumentAtCommit).not.toHaveBeenCalled()
+    })
+
+    it('uses new method when no SDK version header (defaults to latest)', async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.close()
+        },
+      })
+
+      const lastResponse = Promise.resolve({ text: 'Hello', usage: {} })
+      const trace = createTelemetryTrace({})
+
+      mocks.runDocumentAtCommit.mockReturnValue(
+        Promise.resolve(
+          Result.ok({
+            stream,
+            lastResponse,
+            trace,
+          }),
+        ),
+      )
+
+      await app.request(route, {
+        method: 'POST',
+        body,
+        headers,
+      })
+
+      expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith({
+        context: expect.anything(),
+        workspace,
+        document: expect.anything(),
+        commit,
+        parameters: {},
+        tools: {},
+        source: LogSources.API,
+        abortSignal: expect.anything(),
+        sdkVersion: '5.0.0',
+      })
+      expect(mocks.runDocumentAtCommitLegacy).not.toHaveBeenCalled()
     })
   })
 })

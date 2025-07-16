@@ -4,6 +4,7 @@ import {
   SDKOptions,
   UrlParams,
 } from '$sdk/utils/types'
+import { SDK_VERSION } from '$sdk/utils/version'
 import nodeFetch, { Response } from 'node-fetch'
 
 const MAX_RETRIES = 2
@@ -12,6 +13,7 @@ function getAuthHeader(apiKey: string) {
   return {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
+    'X-Latitude-SDK-Version': SDK_VERSION,
   }
 }
 

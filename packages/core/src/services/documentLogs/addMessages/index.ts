@@ -1,20 +1,103 @@
-import { type Message } from '@latitude-data/compiler'
+import { type Message } from '@latitude-data/constants/legacyCompiler'
 
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { LogSources, Workspace } from '../../../browser'
+import { buildConversation, LogSources, Workspace } from '../../../browser'
 import {
   CommitsRepository,
   DocumentLogsRepository,
   DocumentVersionsRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
-import { TelemetryContext } from '../../../telemetry'
-import { getCachedChain } from '../../chains/chainCache'
+import serializeProviderLog from '../../providerLogs/serialize'
+import { BACKGROUND, TelemetryContext } from '../../../telemetry'
 import { scanDocumentContent } from '../../documents'
 import { Result } from './../../../lib/Result'
-import { addChatMessage } from './addChatMessage'
-import { resumeAgent } from './resumeAgent'
-import { resumePausedPrompt } from './resumePausedPrompt'
+import { ToolHandler } from '../../../lib/streamManager/clientTools/handlers'
+import { NotFoundError } from '@latitude-data/constants/errors'
+import { unsafelyFindProviderApiKey } from '../../../data-access'
+import { DefaultStreamManager } from '../../../lib/streamManager/defaultStreamManager'
+import { VercelConfig } from '@latitude-data/constants'
+import { getInputSchema, getOutputType } from '../../chains/ChainValidator'
+
+type AddMessagesArgs = {
+  workspace: Workspace
+  documentLogUuid: string | undefined
+  messages: Message[]
+  source: LogSources
+  tools?: Record<string, ToolHandler>
+  abortSignal?: AbortSignal
+  context?: TelemetryContext
+}
+
+export async function addMessages({
+  workspace,
+  documentLogUuid,
+  messages,
+  source,
+  abortSignal,
+  tools = {},
+  context = BACKGROUND({ workspaceId: workspace.id }),
+}: AddMessagesArgs) {
+  if (!documentLogUuid) {
+    return Result.error(new Error('documentLogUuid is required'))
+  }
+
+  const dataResult = await retrieveData({
+    workspace,
+    documentLogUuid,
+  })
+  if (dataResult.error) return dataResult
+  const { document, commit, providerLog, globalConfig } = dataResult.unwrap()
+
+  if (!providerLog.providerId) {
+    return Result.error(
+      new NotFoundError(
+        `Cannot add messages to a conversation that has no associated provider`,
+      ),
+    )
+  }
+
+  const provider = await unsafelyFindProviderApiKey(providerLog.providerId)
+  if (!provider) {
+    return Result.error(
+      new NotFoundError(
+        `Could not find provider API key with id ${providerLog.providerId}`,
+      ),
+    )
+  }
+
+  // TODO: store messages in provider log and forget about manually handling
+  // response messages
+  const previousMessages = buildConversation(serializeProviderLog(providerLog))
+  const conversation = {
+    config: globalConfig,
+    messages: [...previousMessages, ...messages],
+  }
+
+  const streamManager = new DefaultStreamManager({
+    context,
+    uuid: providerLog.documentLogUuid!,
+    config: conversation.config as VercelConfig,
+    provider,
+    output: getOutputType(conversation)!,
+    schema: getInputSchema(conversation)!,
+    messages: conversation.messages,
+    promptSource: {
+      document,
+      commit,
+    },
+    source,
+    workspace,
+    tools,
+    abortSignal,
+  })
+
+  const { start, ...streamResult } = streamManager.prepare()
+
+  start()
+
+  return Result.ok(streamResult)
+}
 
 async function retrieveData({
   workspace,
@@ -56,84 +139,4 @@ async function retrieveData({
   const globalConfig = metadataResult.value.config as LatitudePromptConfig
 
   return Result.ok({ commit, document, providerLog, globalConfig })
-}
-
-export async function addMessages({
-  context,
-  workspace,
-  documentLogUuid,
-  messages,
-  source,
-  abortSignal,
-}: {
-  context: TelemetryContext
-  workspace: Workspace
-  documentLogUuid: string | undefined
-  messages: Message[]
-  source: LogSources
-  abortSignal?: AbortSignal
-}) {
-  if (!documentLogUuid) {
-    return Result.error(new Error('documentLogUuid is required'))
-  }
-
-  const dataResult = await retrieveData({
-    workspace,
-    documentLogUuid,
-  })
-  if (dataResult.error) return dataResult
-  const { commit, document, providerLog, globalConfig } = dataResult.unwrap()
-
-  const chainCacheData = await getCachedChain({ workspace, documentLogUuid })
-
-  // Resume from client tools in running chain (agent can have a chain inside)
-  if (chainCacheData) {
-    return resumePausedPrompt({
-      context,
-      workspace,
-      commit,
-      document,
-      globalConfig,
-      pausedChain: chainCacheData.chain,
-      previousResponse: chainCacheData.previousResponse,
-      responseMessages: messages,
-      documentLogUuid,
-      source,
-      abortSignal,
-    })
-  }
-
-  /* Chain already finished running */
-
-  // Follow up messages or resume from client tools
-  if (document.documentType === 'agent') {
-    return resumeAgent({
-      context,
-      workspace,
-      providerLog,
-      globalConfig,
-      messages,
-      source,
-      promptSource: {
-        document,
-        commit,
-      },
-      abortSignal,
-    })
-  }
-
-  // Follow up messages
-  return addChatMessage({
-    context,
-    abortSignal,
-    workspace,
-    providerLog,
-    globalConfig,
-    messages,
-    source,
-    promptSource: {
-      document,
-      commit,
-    },
-  })
 }

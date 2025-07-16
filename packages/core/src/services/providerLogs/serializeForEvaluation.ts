@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 
 import { objectToString } from '@latitude-data/constants'
 import {
@@ -53,11 +53,11 @@ export function formatContext(
       content = message.content
         .map((item) => {
           switch (item.type) {
-            case ContentType.text:
+            case 'text':
               return item.text
-            case ContentType.image:
+            case 'image':
               return '[IMAGE]'
-            case ContentType.file:
+            case 'file':
               return '[FILE]'
           }
         })

@@ -1,23 +1,19 @@
 import {
-  ContentType,
   Message,
   MessageRole,
-  ToolMessage,
   UserMessage,
-} from '@latitude-data/compiler'
-import { extractAgentToolCalls, LogSources } from '@latitude-data/constants'
+} from '@latitude-data/constants/legacyCompiler'
+import { LogSources } from '@latitude-data/constants'
 import { Commit, DocumentVersion, Workspace } from '../../../browser'
 import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
 import { documentsQueue } from '../../../jobs/queues'
-import { LatitudeError } from '../../../lib/errors'
-import { ErrorResult, Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
-import { BACKGROUND, telemetry, TelemetryContext } from '../../../telemetry'
-import { WebsocketClient } from '../../../websockets/workers'
-import { runDocumentAtCommit } from '../../commits/runDocumentAtCommit'
-import { addMessages } from '../../documentLogs/addMessages'
+import { BACKGROUND, TelemetryContext } from '../../../telemetry'
 import { assertCopilotIsSupported, sendWebsockets } from './helpers'
-import { handleToolRequest } from './tools'
+import { PromisedResult } from '../../../lib/Transaction'
+import { runDocumentAtCommit } from '../../commits'
+import { addMessages } from '../../documentLogs/addMessages'
+import { ErrorResult, Result } from '../../../lib/Result'
+import { LatitudeError } from '@latitude-data/constants/errors'
 
 export * from './threads/checkpoints/clearCheckpoints'
 export * from './threads/checkpoints/createCheckpoint'
@@ -75,53 +71,6 @@ async function generateCopilotResponse({
     return Result.error(runError)
   }
 
-  const [agentToolCalls, otherToolCalls] = extractAgentToolCalls(
-    await run.toolCalls,
-  )
-
-  // Note: resume trace to continue it syncronously
-  context = telemetry.resume(await run.trace)
-
-  let toolResponseMessages: ToolMessage[] = []
-  try {
-    if (otherToolCalls.length) {
-      toolResponseMessages = await Promise.all(
-        otherToolCalls.map(async (toolCall) => {
-          const r = await handleToolRequest({
-            context,
-            threadUuid,
-            tool: toolCall,
-            workspace: clientWorkspace,
-            messages: await run.messages,
-            onFinish: async (msg) => {
-              WebsocketClient.sendEvent('latteMessage', {
-                workspaceId: clientWorkspace.id,
-                data: { threadUuid, message: msg },
-              })
-            },
-          })
-          return r.unwrap()
-        }),
-      )
-    }
-  } catch (error) {
-    return Result.error(error as LatitudeError)
-  }
-
-  if (agentToolCalls.length === 0) {
-    // Agent did not return a response. We add the tool responses and keep iterating
-    await run.lastResponse // Await for the response to be fully processed
-    return generateCopilotResponse({
-      context,
-      copilotWorkspace,
-      copilotCommit,
-      copilotDocument,
-      clientWorkspace,
-      threadUuid,
-      messages: toolResponseMessages,
-    })
-  }
-
   // Agent returned a response. The run flow has finished.
   return Result.nil()
 }
@@ -175,11 +124,11 @@ export async function addMessageToExistingLatte({
     role: MessageRole.user,
     content: [
       {
-        type: ContentType.text,
+        type: 'text',
         text: context,
       },
       {
-        type: ContentType.text,
+        type: 'text',
         text: message,
       },
     ],

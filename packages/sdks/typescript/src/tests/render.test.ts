@@ -1,6 +1,5 @@
 import { Latitude } from '$sdk/index'
 import { Prompt } from '$sdk/utils/types'
-import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 import { Adapters } from 'promptl-ai'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { MockInstrumentation } from './helpers/instrumentation'
@@ -246,7 +245,6 @@ This is a custom prompt language
       })
 
       expect(onStep).toHaveBeenCalledTimes(2)
-
       expect(onStep).toHaveBeenCalledWith({
         config: {
           provider: 'openai',
@@ -295,77 +293,157 @@ This is a custom prompt language
       ])
     })
 
-    it('handles requested tools', async () => {
-      const prompt = {
-        path: 'prompt/with/tools',
-        content: `
----
-provider: openai
-model: gpt-4o
-tools:
-  - get_weather:
-      description: Get the weather for a location
-      parameters:
-        location:
-          type: string
-          description: The location to get the weather for
----
-<step>
-  Request the weather for {{ location }}
-</step>
-<step>
-  Now, return a detailed report about the weather to the user.
-</step>
-`,
-      }
+    it('automatically runs tool handlers when the response contains a tool call request', async () => {
+      const getWeatherTool = vi.fn(
+        async (args: Record<string, unknown>) =>
+          `The weather in ${args.location as string} is sunny and 25°C`,
+      )
 
-      const get_weather = vi.fn(async ({ location }) => ({
-        location,
-        temperature: 20,
-        description: 'Sunny',
-        humidity: 50,
-      }))
+      const searchTool = vi.fn(
+        async (args: Record<string, unknown>) =>
+          `Search results for "${args.query as string}": Found 5 relevant articles`,
+      )
 
-      let step = 0
-      const onStep = vi.fn(async (_args) => {
-        step++
-        if (step === 1) {
+      const onStep = vi.fn(async (args) => {
+        // Simulate a response that contains tool calls
+        if (args.messages.length === 2) {
+          // First step - return a tool call
           return {
             role: 'assistant',
-            content: [],
-            tool_calls: [
+            content: [
+              { type: 'text', text: 'Let me check the weather for you.' },
               {
-                id: 'call_12345xyz',
-                type: 'function',
-                function: {
-                  name: 'get_weather',
-                  arguments: '{"location":"Paris"}',
-                },
+                type: 'tool-call',
+                toolCallId: 'weather_1',
+                toolName: 'get_weather',
+                toolArguments: { location: 'Barcelona' },
+              },
+            ],
+          }
+        } else {
+          // Second step - return another tool call
+          return {
+            role: 'assistant',
+            content: [
+              { type: 'text', text: 'Now let me search for more information.' },
+              {
+                type: 'tool-call',
+                toolCallId: 'search_1',
+                toolName: 'search',
+                toolArguments: { query: 'Barcelona weather' },
               },
             ],
           }
         }
-        return `It is sunny in Paris with a temperature of 20°C and humidity of 50%.`
       })
 
-      await sdk.prompts.renderChain({
-        prompt: prompt as Prompt,
-        parameters: {
-          location: 'Paris',
-        },
-        onStep: (_args) => onStep(_args),
+      const { messages } = await sdk.prompts.renderChain({
+        prompt: CHAIN_PROMPT as Prompt,
+        parameters: { name: 'John' },
+        onStep,
         tools: {
-          get_weather,
+          get_weather: getWeatherTool,
+          search: searchTool,
         },
       })
 
-      expect(get_weather).toHaveBeenCalledTimes(1)
-      expect(get_weather).toHaveBeenCalledWith(
-        {
-          location: 'Paris',
-        },
-        expect.any(Object),
+      // Verify onStep was called twice
+      expect(onStep).toHaveBeenCalledTimes(2)
+
+      // Verify tool handlers were called with correct arguments
+      expect(getWeatherTool).toHaveBeenCalledWith(
+        { location: 'Barcelona' },
+        { id: 'weather_1', name: 'get_weather' },
       )
+      expect(searchTool).toHaveBeenCalledWith(
+        { query: 'Barcelona weather' },
+        { id: 'search_1', name: 'search' },
+      )
+
+      // Verify the final messages include tool responses
+      expect(messages).toEqual([
+        {
+          role: 'system',
+          content: 'This is a custom prompt language',
+        },
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Hi, my name is John' }],
+          name: undefined,
+        },
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: 'Let me check the weather for you.' },
+          ],
+          tool_calls: [
+            {
+              id: 'weather_1',
+              type: 'function',
+              function: {
+                name: 'get_weather',
+                arguments: '{"location":"Barcelona"}',
+              },
+            },
+          ],
+        },
+        {
+          role: 'tool',
+          // @TODO(compiler): review these, promptl does not properly support
+          // tool result messages and it includes these random properties
+          toolName: '',
+          tool_call_id: undefined,
+          content: [
+            {
+              type: 'tool-result',
+              toolCallId: 'weather_1',
+              toolName: 'get_weather',
+              result: 'The weather in Barcelona is sunny and 25°C',
+              isError: false,
+            },
+          ],
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Wow, what a cool way to write prompts!' },
+          ],
+          name: undefined,
+        },
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: 'Now let me search for more information.' },
+          ],
+          tool_calls: [
+            {
+              id: 'search_1',
+              type: 'function',
+              function: {
+                name: 'search',
+                arguments: '{"query":"Barcelona weather"}',
+              },
+            },
+          ],
+        },
+        {
+          role: 'tool',
+          // @TODO(compiler): review these, promptl does not properly support
+          // tool result messages and it includes these random properties
+          toolName: '',
+          tool_call_id: undefined,
+          content: [
+            {
+              type: 'tool-result',
+              toolCallId: 'search_1',
+              toolName: 'search',
+              isError: false,
+              result:
+                'Search results for "Barcelona weather": Found 5 relevant articles',
+            },
+          ],
+        },
+      ])
     })
 
     it('handles instrumentation', async () => {
@@ -391,14 +469,12 @@ tools:
 </step>
 `,
       }
-
       const get_weather = vi.fn(async ({ location }) => ({
         location,
         temperature: 20,
         description: 'Sunny',
         humidity: 50,
       }))
-
       let step = 0
       const onStep = vi.fn(async (_args) => {
         step++
@@ -420,10 +496,8 @@ tools:
         }
         return `It is sunny in Paris with a temperature of 20°C and humidity of 50%.`
       })
-
       const instrumentation = new MockInstrumentation()
       Latitude.instrument(instrumentation)
-
       await sdk.prompts.renderChain({
         prompt: prompt as Prompt,
         parameters: {
@@ -434,7 +508,6 @@ tools:
           get_weather,
         },
       })
-
       expect(get_weather).toHaveBeenCalledExactlyOnceWith(
         { location: 'Paris' },
         expect.any(Object),
@@ -443,239 +516,6 @@ tools:
       expect(instrumentation.wrapRenderStep).toHaveBeenCalledTimes(2)
       expect(instrumentation.wrapRenderCompletion).toHaveBeenCalledTimes(2)
       expect(instrumentation.wrapRenderTool).toHaveBeenCalledTimes(1)
-    })
-  })
-
-  describe('agent', () => {
-    it('handles tools and executes autonomously until it returns a custom tool call', async () => {
-      const prompt = {
-        path: 'prompt/agent',
-        content: `
----
-provider: openai
-model: gpt-4o
-tools:
-  - get_weather:
-      description: Get the weather for a location
-      parameters:
-        location:
-          type: string
-          description: The location to get the weather for
-  - get_location:
-      description: Returns the location of the user
----
-What's the weather like in my location?
-`,
-      }
-
-      const get_weather = vi.fn(async ({ location }) => ({
-        location,
-        temperature: 20,
-        description: 'Sunny',
-        humidity: 50,
-      }))
-
-      const get_location = vi.fn(async () => ({
-        location: 'Paris',
-      }))
-
-      let step = 0
-      const onStep = vi.fn(async (_args) => {
-        step++
-        if (step === 1) {
-          return {
-            role: 'assistant',
-            content: [],
-            tool_calls: [
-              {
-                id: 'call_1',
-                type: 'function',
-                function: {
-                  name: 'get_location',
-                  arguments: '{}',
-                },
-              },
-            ],
-          }
-        }
-        if (step === 2) {
-          return {
-            role: 'assistant',
-            content: [],
-            tool_calls: [
-              {
-                id: 'call_2',
-                type: 'function',
-                function: {
-                  name: 'get_weather',
-                  arguments: '{"location":"Paris"}',
-                },
-              },
-            ],
-          }
-        }
-        return {
-          role: 'assistant',
-          content: [],
-          tool_calls: [
-            {
-              id: 'call_3',
-              type: 'function',
-              function: {
-                name: AGENT_RETURN_TOOL_NAME,
-                arguments:
-                  '{"response":"It is sunny in Paris with a temperature of 20°C and humidity of 50%."}',
-              },
-            },
-          ],
-        }
-      })
-
-      const { result } = await sdk.prompts.renderAgent({
-        prompt: prompt as Prompt,
-        parameters: {
-          location: 'Paris',
-        },
-        onStep,
-        tools: {
-          get_weather,
-          get_location,
-        },
-      })
-
-      expect(get_weather).toHaveBeenCalledTimes(1)
-      expect(get_weather).toHaveBeenCalledWith(
-        { location: 'Paris' },
-        expect.any(Object),
-      )
-
-      expect(get_location).toHaveBeenCalledTimes(1)
-      expect(get_location).toHaveBeenCalledWith({}, expect.any(Object))
-
-      expect(onStep).toHaveBeenCalledTimes(3)
-
-      expect(result).toEqual({
-        response:
-          'It is sunny in Paris with a temperature of 20°C and humidity of 50%.',
-      })
-    })
-
-    it('handles instrumentation', async () => {
-      const prompt = {
-        path: 'prompt/agent',
-        content: `
----
-provider: openai
-model: gpt-4o
-tools:
-  - get_weather:
-      description: Get the weather for a location
-      parameters:
-        location:
-          type: string
-          description: The location to get the weather for
-  - get_location:
-      description: Returns the location of the user
----
-What's the weather like in my location?
-`,
-      }
-
-      const get_weather = vi.fn(async ({ location }) => ({
-        location,
-        temperature: 20,
-        description: 'Sunny',
-        humidity: 50,
-      }))
-
-      const get_location = vi.fn(async () => ({
-        location: 'Paris',
-      }))
-
-      let step = 0
-      const onStep = vi.fn(async (_args) => {
-        step++
-        if (step === 1) {
-          return {
-            role: 'assistant',
-            content: [],
-            tool_calls: [
-              {
-                id: 'call_1',
-                type: 'function',
-                function: {
-                  name: 'get_location',
-                  arguments: '{}',
-                },
-              },
-            ],
-          }
-        }
-        if (step === 2) {
-          return {
-            role: 'assistant',
-            content: [],
-            tool_calls: [
-              {
-                id: 'call_2',
-                type: 'function',
-                function: {
-                  name: 'get_weather',
-                  arguments: '{"location":"Paris"}',
-                },
-              },
-            ],
-          }
-        }
-        return {
-          role: 'assistant',
-          content: [],
-          tool_calls: [
-            {
-              id: 'call_3',
-              type: 'function',
-              function: {
-                name: AGENT_RETURN_TOOL_NAME,
-                arguments:
-                  '{"response":"It is sunny in Paris with a temperature of 20°C and humidity of 50%."}',
-              },
-            },
-          ],
-        }
-      })
-
-      const instrumentation = new MockInstrumentation()
-      Latitude.instrument(instrumentation)
-
-      const { result } = await sdk.prompts.renderAgent({
-        prompt: prompt as Prompt,
-        parameters: {
-          location: 'Paris',
-        },
-        onStep,
-        tools: {
-          get_weather,
-          get_location,
-        },
-      })
-
-      expect(get_weather).toHaveBeenCalledExactlyOnceWith(
-        { location: 'Paris' },
-        expect.any(Object),
-      )
-      expect(get_location).toHaveBeenCalledExactlyOnceWith(
-        {},
-        expect.any(Object),
-      )
-      expect(onStep).toHaveBeenCalledTimes(3)
-      expect(result).toEqual({
-        response:
-          'It is sunny in Paris with a temperature of 20°C and humidity of 50%.',
-      })
-      expect(instrumentation.wrapRenderAgent).toHaveBeenCalledTimes(1)
-      expect(instrumentation.wrapRenderStep).toHaveBeenCalledTimes(3)
-      expect(instrumentation.wrapRenderCompletion).toHaveBeenCalledTimes(3)
-      expect(instrumentation.wrapRenderTool).toHaveBeenCalledTimes(3)
     })
   })
 })

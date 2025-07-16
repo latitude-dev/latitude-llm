@@ -53,12 +53,10 @@ export const runDocumentForExperimentJob = async (
       customPrompt: experiment.metadata.prompt,
       parameters,
       experiment,
-      autoRespondToolCalls: true,
       source: LogSources.Experiment,
     }).then((r) => r.unwrap())
 
     const providerLog = (await result.lastResponse)?.providerLog
-
     if (!providerLog) {
       throw new NotFoundError('Provider log not found after running document')
     }

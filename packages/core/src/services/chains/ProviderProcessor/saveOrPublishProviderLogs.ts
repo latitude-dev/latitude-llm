@@ -1,13 +1,33 @@
-import { Conversation } from '@latitude-data/compiler'
+import { Conversation } from '@latitude-data/constants/legacyCompiler'
 import { FinishReason } from 'ai'
 
-import { ProviderApiKey, ProviderLog, Workspace } from '../../../browser'
+import { ProviderApiKey, Workspace } from '../../../browser'
 import { ChainStepResponse, LogSources, StreamType } from '../../../constants'
 import { PartialConfig } from '../../ai'
 import { createProviderLog } from '../../providerLogs'
-import { defaultQueue } from '../../../jobs/queues'
 import { generateUUIDIdentifier } from './../../../lib/generateUUID'
+import { ProviderLog } from '@latitude-data/constants'
+import { defaultQueue } from '../../../jobs/queues'
 
+export async function saveProviderLog({
+  workspace,
+  data,
+  finishReason,
+}: {
+  workspace: Workspace
+  data: ReturnType<typeof buildProviderLogDto>
+  finishReason: FinishReason
+}) {
+  const providerLogsData = {
+    ...data,
+    workspace,
+    finishReason,
+  }
+
+  return await createProviderLog(providerLogsData)
+}
+
+// TODO(compiler): remove
 export async function saveOrPublishProviderLogs<
   S extends boolean,
   P = S extends true ? ProviderLog : void,

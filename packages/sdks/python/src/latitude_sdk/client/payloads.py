@@ -45,6 +45,7 @@ class RunPromptRequestBody(Model):
     parameters: Optional[Dict[str, Any]] = None
     custom_identifier: Optional[str] = Field(default=None, alias=str("customIdentifier"))
     stream: Optional[bool] = None
+    tools: Optional[List[str]] = None
 
 
 class ChatPromptRequestParams(Model):
@@ -88,6 +89,16 @@ class AnnotateEvaluationRequestBody(Model):
     metadata: Optional[Metadata] = None
 
 
+class ToolResultsRequestBody(Model):
+    tool_call_id: str = Field(alias=str("toolCallId"))
+    result: Any
+    is_error: Optional[bool] = Field(default=None, alias=str("isError"))
+
+
+class CreateProjectRequestBody(Model):
+    name: str
+
+
 RequestParams = Union[
     GetPromptRequestParams,
     GetAllPromptRequestParams,
@@ -105,6 +116,8 @@ RequestBody = Union[
     ChatPromptRequestBody,
     CreateLogRequestBody,
     AnnotateEvaluationRequestBody,
+    ToolResultsRequestBody,
+    CreateProjectRequestBody,
 ]
 
 
@@ -116,3 +129,6 @@ class RequestHandler(StrEnum):
     ChatPrompt = "CHAT_PROMPT"
     CreateLog = "CREATE_LOG"
     AnnotateEvaluation = "ANNOTATE_EVALUATION"
+    ToolResults = "TOOL_RESULTS"
+    GetAllProjects = "GET_ALL_PROJECTS"
+    CreateProject = "CREATE_PROJECT"

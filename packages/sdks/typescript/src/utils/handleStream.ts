@@ -1,5 +1,6 @@
 import { Readable } from 'stream'
 
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
   ApiErrorCodes,
   LatitudeApiError,
@@ -7,15 +8,13 @@ import {
 } from '$sdk/utils/errors'
 import { nodeFetchResponseToReadableStream } from '$sdk/utils/nodeFetchResponseToReadableStream'
 import { StreamResponseCallbacks } from '$sdk/utils/types'
-import type { Message, ToolCall } from '@latitude-data/compiler'
 import {
   ChainCallResponseDto,
-  ChainEventTypes,
-  extractAgentToolCalls,
-  LatitudeEventData,
   ProviderData,
   StreamEventTypes,
-  TraceContext,
+  ChainEventTypes,
+  LatitudeEventData,
+  ChainEvent,
 } from '@latitude-data/constants'
 import { ParsedEvent, ReconnectInterval } from 'eventsource-parser'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
@@ -32,14 +31,14 @@ export async function handleStream({
   body,
   onEvent,
   onError,
+  onToolCall,
 }: Omit<StreamResponseCallbacks, 'onFinished'> & {
   body: Readable
+  onToolCall: (data: ProviderData) => Promise<void>
 }) {
   let conversation: Message[] = []
   let uuid: string | undefined
   let chainResponse: ChainCallResponseDto | undefined
-  let toolsRequested: ToolCall[] = []
-  let trace: TraceContext | undefined
 
   const parser = new EventSourceParserStream()
   const stream = nodeFetchResponseToReadableStream(body, onError)
@@ -58,7 +57,7 @@ export async function handleStream({
 
       const parsedEvent = value as ParsedEvent | ReconnectInterval
       if (parsedEvent.type === 'event') {
-        const data = parseJSON(parsedEvent.data) as LatitudeEventData
+        const data = parseJSON(parsedEvent.data) as ChainEvent['data']
         if (!data) {
           throw new LatitudeApiError({
             status: 402,
@@ -71,8 +70,8 @@ export async function handleStream({
         onEvent?.({ event: parsedEvent.event as StreamEventTypes, data })
 
         if (parsedEvent.event === StreamEventTypes.Latitude) {
-          uuid = data.uuid
-          conversation = data.messages
+          uuid = (data as LatitudeEventData).uuid
+          conversation = (data as LatitudeEventData).messages
 
           if (data.type === ChainEventTypes.ChainError) {
             throw new LatitudeApiError({
@@ -86,15 +85,8 @@ export async function handleStream({
           if (data.type === ChainEventTypes.ProviderCompleted) {
             chainResponse = data.response
           }
-
-          if (data.type === ChainEventTypes.ToolsRequested) {
-            toolsRequested = data.tools
-            trace = data.trace
-          }
-
-          if (data.type === ChainEventTypes.ChainCompleted) {
-            trace = data.trace
-          }
+        } else if (parsedEvent.event === StreamEventTypes.Provider) {
+          if (data.type === 'tool-call') await onToolCall(data)
         }
       }
     }
@@ -103,19 +95,10 @@ export async function handleStream({
       throw new Error('Stream ended without returning a provider response.')
     }
 
-    if (!trace) {
-      throw new Error('Stream ended without returning a trace context.')
-    }
-
-    const [agentTools, otherTools] = extractAgentToolCalls(toolsRequested)
-
     const finalResponse = {
       conversation,
       uuid,
       response: chainResponse,
-      toolRequests: otherTools,
-      agentResponse: agentTools[0]?.arguments,
-      trace,
     }
 
     return finalResponse

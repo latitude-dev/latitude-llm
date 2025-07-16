@@ -1,25 +1,22 @@
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import {
   ChainStepResponse,
   Commit,
-  DocumentType,
-  ErrorableEntity,
   Experiment,
   LogSources,
   StreamType,
   type DocumentVersion,
   type Workspace,
 } from '../../browser'
-import { telemetry, TelemetryContext } from '../../telemetry'
-import { runAgent } from '../agents/run'
-import { runChain } from '../chains/run'
-import { createDocumentLog } from '../documentLogs/create'
 import { getResolvedContent } from '../documents'
 import { isErrorRetryable } from '../evaluationsV2/run'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { Result } from './../../lib/Result'
+import { createDocumentLog } from '../documentLogs/create'
+import { runChain } from '../chains/run'
 import { RunDocumentChecker } from './RunDocumentChecker'
+import { telemetry, TelemetryContext } from '../../telemetry'
+import { ToolHandler } from '../../lib/streamManager/clientTools/handlers'
 
 async function createDocumentRunResult({
   document,
@@ -62,6 +59,21 @@ async function createDocumentRunResult({
   }).then((r) => r.unwrap())
 }
 
+type RunDocumentAtCommitArgs = {
+  context: TelemetryContext
+  workspace: Workspace
+  commit: Commit
+  document: DocumentVersion
+  parameters: Record<string, unknown>
+  customIdentifier?: string
+  source: LogSources
+  tools?: Record<string, ToolHandler>
+  customPrompt?: string
+  experiment?: Experiment
+  errorableUuid?: string
+  abortSignal?: AbortSignal
+}
+
 export async function runDocumentAtCommit({
   context,
   workspace,
@@ -70,24 +82,12 @@ export async function runDocumentAtCommit({
   commit,
   customIdentifier,
   source,
-  abortSignal,
   customPrompt,
   experiment,
   errorableUuid,
-}: {
-  context: TelemetryContext
-  workspace: Workspace
-  commit: Commit
-  document: DocumentVersion
-  parameters: Record<string, unknown>
-  customIdentifier?: string
-  source: LogSources
-  abortSignal?: AbortSignal
-  customPrompt?: string
-  experiment?: Experiment
-  errorableUuid?: string
-}) {
-  const errorableType = ErrorableEntity.DocumentLog
+  abortSignal,
+  tools = {},
+}: RunDocumentAtCommitArgs) {
   errorableUuid = errorableUuid ?? generateUUIDIdentifier()
   const providersMap = await buildProvidersMap({
     workspaceId: workspace.id,
@@ -122,7 +122,6 @@ export async function runDocumentAtCommit({
     parameters,
   })
   const checkerResult = await checker.call()
-
   if (checkerResult.error) {
     await createDocumentRunResult({
       workspace,
@@ -135,64 +134,55 @@ export async function runDocumentAtCommit({
       publishEvent: false,
       experiment,
     })
+
     $prompt.fail(checkerResult.error)
     return checkerResult
   }
 
-  const runArgs = {
+  const runResult = runChain({
     context: $prompt.context,
     abortSignal,
-    generateUUID: () => errorableUuid,
-    errorableType,
-    workspace,
-    chain: checkerResult.value.chain,
-    isChain: checkerResult.value.isChain,
-    globalConfig: checkerResult.value.config as LatitudePromptConfig,
-    promptlVersion: document.promptlVersion,
     providersMap,
     source,
+    workspace,
+    chain: checkerResult.value.chain,
+    uuid: errorableUuid,
+    tools,
     promptSource: {
       document,
       commit,
     },
-  }
-
-  const runFn =
-    document.documentType === DocumentType.Agent ? runAgent : runChain
-  const runResult = runFn(runArgs)
+  })
 
   return Result.ok({
     ...runResult,
     resolvedContent: result.value,
     errorableUuid,
-    lastResponse: runResult.lastResponse
-      .then(async (response) => {
-        const error = await runResult.error
-        if (error) {
-          $prompt.fail(error)
-          if (isErrorRetryable(error)) return response
-        } else {
-          $prompt.end()
-        }
-
-        await createDocumentRunResult({
-          workspace,
-          document,
-          commit,
-          errorableUuid,
-          parameters,
-          resolvedContent: result.value,
-          customIdentifier,
-          source,
-          duration: await runResult.duration,
-          publishEvent: true,
-          experiment,
-        })
+    lastResponse: runResult.response.then(async (response) => {
+      const error = await runResult.error
+      if (error && isErrorRetryable(error)) {
+        $prompt.fail(error)
 
         return response
+      }
+
+      await createDocumentRunResult({
+        workspace,
+        document,
+        commit,
+        errorableUuid,
+        parameters,
+        resolvedContent: result.value,
+        customIdentifier,
+        source,
+        duration: await runResult.duration,
+        publishEvent: true,
+        experiment,
       })
-      .catch((error) => {
-        $prompt.fail(error)
-      }),
+
+      $prompt.end()
+
+      return response
+    }),
   })
 }

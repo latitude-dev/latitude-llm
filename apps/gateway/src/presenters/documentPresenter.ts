@@ -1,5 +1,4 @@
 import { z } from '@hono/zod-openapi'
-import { ConversationMetadata as CompilerConversationMetadata } from '@latitude-data/compiler'
 import { ParameterType } from '@latitude-data/constants'
 import {
   Commit,
@@ -9,11 +8,8 @@ import {
 } from '@latitude-data/core/browser'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
-import { ConversationMetadata as PromptlConversationMetadata } from 'promptl-ai'
+import { ConversationMetadata } from 'promptl-ai'
 
-type ConversationMetadata =
-  | CompilerConversationMetadata
-  | PromptlConversationMetadata
 export const documentPresenterSchema = z.object({
   versionUuid: z.string(),
   uuid: z.string(),

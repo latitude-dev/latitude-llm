@@ -11,7 +11,6 @@ import {
 import { envClient } from '$/envClient'
 import { SerializedProviderApiKey } from '$/stores/providerApiKeys'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { updatePromptMetadata } from '$/lib/promptMetadata'
 import { getModelOptionsForProvider } from '$/hooks/useModelOptions'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
@@ -29,6 +28,7 @@ import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { ModelOption, ModelSelector } from './ModelSelector'
 import { useEvents } from '$/lib/events'
 import { sortProviders } from './sortProviders'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 
 function getProviderIcon({
   provider,

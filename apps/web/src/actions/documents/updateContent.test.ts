@@ -42,13 +42,11 @@ describe('updateDocumentAction', async () => {
     })
 
     it('errors when the user is not authenticated', async () => {
-      const commit = await findCommitById({ id: doc1.commitId }).then((r) =>
-        r.unwrap(),
-      )
+      const commit = await findCommitById(doc1.commitId)
       const [_, error] = await updateDocumentContentAction({
         projectId,
         documentUuid: doc1.documentUuid,
-        commitUuid: commit.uuid,
+        commitUuid: commit!.uuid,
         content: 'foo2',
       })
 

@@ -1,15 +1,10 @@
 {
   "name": "@latitude-data/telemetry",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Latitude Telemetry for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
-  "keywords": [
-    "AI",
-    "Telemetry",
-    "sdk",
-    "typescript"
-  ],
+  "keywords": ["AI", "Telemetry", "sdk", "typescript"],
   "repository": {
     "type": "git",
     "url": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/typescript"
@@ -24,9 +19,7 @@
     "lint": "eslint src"
   },
   "type": "module",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -5,19 +5,19 @@ import {
   McpClientConnection,
   McpClientTransport,
 } from './utils'
-import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import { Result } from './../../../lib/Result'
 import { TypedResult } from './../../../lib/Result'
 import { IntegrationType } from '@latitude-data/constants'
 import { createAndConnectHostedMcpClient } from './hosted'
 import { createAndConnectExternalMcpClient } from './external'
 import { createAndConnectPipedreamMcpClient } from './pipedream'
+import { StreamManager } from '../../../lib/streamManager'
 
 // Public Types
 export interface McpClientManager {
   getClient: (
     integration: IntegrationDto,
-    chainStreamManager?: ChainStreamManager,
+    streamManager?: StreamManager,
   ) => Promise<TypedResult<McpClient, McpConnectionError>>
   closeClient: (integration: IntegrationDto) => void
   closeAllClients: () => void
@@ -26,9 +26,9 @@ export interface McpClientManager {
 // Public Functions
 export async function getMcpClient(
   integration: IntegrationDto,
-  chainStreamManager?: ChainStreamManager,
+  streamManager?: StreamManager,
 ): Promise<TypedResult<McpClient, McpConnectionError>> {
-  const result = await createAndConnectClient(integration, chainStreamManager)
+  const result = await createAndConnectClient(integration, streamManager)
   if (!Result.isOk(result)) return result
   return Result.ok(result.value.client)
 }
@@ -42,7 +42,7 @@ export const createMcpClientManager = (): McpClientManager => {
 
   const getClient = async (
     integration: IntegrationDto,
-    chainStreamManager?: ChainStreamManager,
+    streamManager?: StreamManager,
   ): Promise<TypedResult<McpClient, McpConnectionError>> => {
     const key = getClientKey(integration)
 
@@ -52,7 +52,7 @@ export const createMcpClientManager = (): McpClientManager => {
     }
 
     // Create new client
-    const result = await createAndConnectClient(integration, chainStreamManager)
+    const result = await createAndConnectClient(integration, streamManager)
     if (!Result.isOk(result)) return result
 
     const { client, transport } = result.value
@@ -97,10 +97,10 @@ export const createMcpClientManager = (): McpClientManager => {
 
 async function createAndConnectClient(
   integration: IntegrationDto,
-  chainStreamManager?: ChainStreamManager,
+  streamManager?: StreamManager,
 ): Promise<TypedResult<McpClientConnection, McpConnectionError>> {
   if (integration.type === IntegrationType.HostedMCP) {
-    return createAndConnectHostedMcpClient(integration, chainStreamManager)
+    return createAndConnectHostedMcpClient(integration, streamManager)
   }
 
   if (integration.type === IntegrationType.ExternalMCP) {

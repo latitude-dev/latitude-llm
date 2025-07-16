@@ -16,11 +16,10 @@ export const GET = errorHandler(
         params: { featureName: string }
       },
     ) => {
-      const result = await isFeatureEnabledByName(
+      const isEnabled = await isFeatureEnabledByName(
         workspace.id,
         params.featureName,
       )
-      const isEnabled = result.unwrap()
 
       return NextResponse.json({ enabled: isEnabled }, { status: 200 })
     },

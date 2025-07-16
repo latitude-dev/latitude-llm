@@ -8,7 +8,11 @@ export type HandlerConfig<U, B> = {
 
 import { RouteResolver } from '$sdk/utils'
 import { LatitudeApiError } from '$sdk/utils/errors'
-import type { Config, Message, ToolCall } from '@latitude-data/compiler'
+import type {
+  Config,
+  Message,
+  ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
 import {
   ChainCallResponseDto,
   LegacyChainEvent as ChainEvent,
@@ -19,7 +23,6 @@ import {
   Providers,
   RunSyncAPIResponse,
   StreamEventTypes,
-  TraceContext,
 } from '@latitude-data/constants'
 import {
   AdapterMessageType,
@@ -134,6 +137,12 @@ export type LogBodyParams = {
   response?: string
 }
 
+export type ToolResultsBodyParams = {
+  toolCallId: string
+  result: unknown
+  isError?: boolean
+}
+
 export enum HandlerType {
   Annotate = 'annotate',
   Chat = 'chat',
@@ -148,6 +157,7 @@ export enum HandlerType {
   PushVersion = 'push-version',
   RunDocument = 'run-document',
   Log = 'log',
+  ToolResults = 'tool-results',
 }
 
 export type HandlerConfigs = {
@@ -179,6 +189,7 @@ export type HandlerConfigs = {
     RunDocumentBodyParams
   >
   [HandlerType.Log]: HandlerConfig<RunDocumentUrlParams, LogBodyParams>
+  [HandlerType.ToolResults]: HandlerConfig<never, ToolResultsBodyParams>
 }
 
 export type UrlParams<H extends HandlerType> = HandlerConfigs[H]['UrlParams']
@@ -188,7 +199,6 @@ export type StreamChainResponse = {
   uuid: string
   conversation: Message[]
   response: ChainCallResponseDto
-  agentResponse?: { response: string } | Record<string, unknown>
 }
 
 export type StreamResponseCallbacks = {
@@ -203,50 +213,24 @@ export type StreamResponseCallbacks = {
   onError?: (error: LatitudeApiError) => void
 }
 
-export interface TraceInstrumentation {
-  withTraceContext<F extends () => ReturnType<F>>(
-    ctx: TraceContext,
-    fn: F,
-  ): ReturnType<F>
-}
-
 export enum LogSources {
   API = 'api',
   Playground = 'playground',
   Evaluation = 'evaluation',
 }
 
-export type ToolCallDetails = {
-  toolId: string
-  toolName: string
-  requestedToolCalls: ToolCall[]
-  conversationUuid: string
-  messages: Message[]
-  trace: TraceContext
-  pauseExecution: () => void
-}
-
 export type RenderToolCallDetails = {
-  toolId: string
-  toolName: string
-  requestedToolCalls: ToolCall[]
-  messages: Message[]
+  id: string
+  name: string
 }
 
 export type ToolSpec = Record<string, Record<string, unknown>>
 export type ToolHandler<T extends ToolSpec, K extends keyof T> = (
   toolCall: T[K],
-  details: ToolCallDetails,
+  details: ToolCall,
 ) => Promise<unknown>
 export type ToolCalledFn<Tools extends ToolSpec> = {
   [K in keyof Tools]: ToolHandler<Tools, K>
-}
-
-export interface ToolInstrumentation extends TraceInstrumentation {
-  wrapToolHandler<F extends ToolHandler<any, any>>(
-    fn: F,
-    ...args: Parameters<F>
-  ): Promise<Awaited<ReturnType<F>>>
 }
 
 export type RenderToolHandler<T extends ToolSpec, K extends keyof T> = (
@@ -298,25 +282,26 @@ export type RenderPromptOptions<M extends AdapterMessageType = PromptlMessage> =
     adapter?: ProviderAdapter<M>
   }
 
-export type RenderChainOptions<M extends AdapterMessageType = PromptlMessage> =
-  {
-    prompt: Prompt
-    parameters: Record<string, unknown>
-    adapter?: ProviderAdapter<M>
-    onStep: (args: {
-      config: Config
-      messages: M[]
-    }) => Promise<string | Omit<M, 'role'>>
-    tools?: RenderToolCalledFn<ToolSpec>
-    logResponses?: boolean
-  }
+export type RenderChainOptions<
+  M extends AdapterMessageType = PromptlMessage,
+  Tool extends ToolSpec = ToolSpec,
+> = {
+  prompt: Prompt
+  parameters: Record<string, unknown>
+  adapter?: ProviderAdapter<M>
+  onStep: (args: {
+    config: Config
+    messages: M[]
+  }) => Promise<string | Omit<M, 'role'>>
+  tools?: RenderToolCalledFn<Tool>
+  logResponses?: boolean
+}
 
 export type ChatOptions<Tools extends ToolSpec> = StreamResponseCallbacks & {
   messages: Message[]
   stream?: boolean
   tools?: ToolCalledFn<Tools>
   signal?: AbortSignal
-  trace?: TraceContext
 }
 
 export type SDKOptions = {
@@ -364,10 +349,11 @@ type RunDocumentBodyParams = {
   parameters?: Record<string, unknown>
   customIdentifier?: string
   stream?: boolean
+  tools?: string[]
 }
 
 type ChatBodyParams = {
   messages: Message[]
   stream?: boolean
-  trace?: TraceContext
+  tools?: string[]
 }
