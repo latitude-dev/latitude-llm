@@ -1,8 +1,9 @@
-import { eq, getTableColumns } from 'drizzle-orm'
+import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 
 import { DocumentTrigger } from '../browser'
 import { documentTriggers } from '../schema'
 import Repository from './repositoryV2'
+import { DocumentTriggerType } from '@latitude-data/constants'
 
 const tt = getTableColumns(documentTriggers)
 
@@ -22,6 +23,17 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
   findByDocumentUuid(documentUuid: string): Promise<DocumentTrigger[]> {
     return this.scope
       .where(eq(documentTriggers.documentUuid, documentUuid))
+      .execute() as Promise<DocumentTrigger[]>
+  }
+
+  findByIntegrationId(integrationId: number): Promise<DocumentTrigger[]> {
+    return this.scope
+      .where(
+        and(
+          eq(documentTriggers.triggerType, DocumentTriggerType.Integration),
+          sql`${documentTriggers.configuration}->>'integrationId' = ${integrationId}`,
+        ),
+      )
       .execute() as Promise<DocumentTrigger[]>
   }
 }

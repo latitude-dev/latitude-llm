@@ -9,6 +9,7 @@ import { createProject } from './createProject'
 import {
   ScheduledTriggerConfiguration,
   EmailTriggerConfiguration,
+  IntegrationTriggerConfiguration,
 } from '../../services/documentTriggers/helpers/schema'
 import { DocumentTrigger } from '../../browser'
 
@@ -109,4 +110,50 @@ export async function createEmailDocumentTrigger({
     .returning()
 
   return trigger
+}
+
+export async function createIntegrationDocumentTrigger({
+  workspaceId,
+  projectId,
+  componentId = 'default',
+  documentUuid = uuidv4(),
+  integrationId,
+  properties = {},
+  payloadParameters = [],
+}: {
+  workspaceId?: number
+  projectId?: number
+  componentId?: string
+  documentUuid?: string
+  integrationId: number
+  properties?: Record<string, unknown>
+  payloadParameters?: string[]
+}): Promise<DocumentTrigger> {
+  // Create project if not provided
+  if (!projectId || !workspaceId) {
+    const { project } = await createProject()
+    workspaceId = project.workspaceId
+    projectId = project.id
+  }
+
+  const configuration: IntegrationTriggerConfiguration = {
+    integrationId,
+    componentId,
+    properties,
+    payloadParameters,
+    triggerId: uuidv4(),
+  }
+
+  const [trigger] = await database
+    .insert(documentTriggers)
+    .values({
+      workspaceId,
+      projectId,
+      documentUuid,
+      triggerType: DocumentTriggerType.Integration,
+      configuration,
+    })
+    .returning()
+
+  return trigger as DocumentTrigger
 }

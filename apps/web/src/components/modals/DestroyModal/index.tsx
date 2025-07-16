@@ -10,6 +10,7 @@ import {
   inferServerActionReturnData,
   TAnyZodSafeFunctionHandler,
 } from 'zsa'
+import { ReactNode } from 'react'
 
 type Props<TServerAction extends TAnyZodSafeFunctionHandler> = {
   action: (
@@ -25,6 +26,8 @@ type Props<TServerAction extends TAnyZodSafeFunctionHandler> = {
   submitStr: string
   isDestroying?: boolean
   model: { id: string | number }
+  disabled?: boolean
+  children?: ReactNode
 }
 export default function DestroyModal<
   TServerAction extends TAnyZodSafeFunctionHandler,
@@ -37,6 +40,8 @@ export default function DestroyModal<
   description,
   submitStr,
   model,
+  disabled,
+  children,
 }: Props<TServerAction>) {
   const { toast } = useToast()
   const { action: actionFn } = useFormAction(action, {
@@ -65,7 +70,7 @@ export default function DestroyModal<
           <CloseTrigger />
           <Button
             fancy
-            disabled={isDestroying}
+            disabled={disabled || isDestroying}
             variant='destructive'
             form='destroyProjectForm'
             type='submit'
@@ -78,6 +83,8 @@ export default function DestroyModal<
           </Button>
         </>
       }
-    />
+    >
+      {children}
+    </Modal>
   )
 }

@@ -1,4 +1,5 @@
 export * from './create'
 export * from './destroy'
+export * from './references'
 export * from './McpClient/pingCustomMCPServer'
 export * from './McpClient/listTools'
