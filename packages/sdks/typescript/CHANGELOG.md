@@ -8,20 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Initial changelog setup
 
 ## [5.0.0-beta.1] - 2025-01-16
 
 ### Added
+
 - Initial beta release of the TypeScript SDK
 - Support for prompt execution and streaming
 - Integration with Latitude's prompt management system
 - Type-safe API client with full TypeScript support
 
 ### Changed
+
 - Migrated to new SDK architecture
 
 ### Fixed
+
 - Various bug fixes and improvements
-
-

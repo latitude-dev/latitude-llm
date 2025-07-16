@@ -16,21 +16,27 @@ have a section with the following structure:
 ## [VERSION] - YYYY-MM-DD
 
 ### Added
+
 - New features
 
 ### Changed
+
 - Changes in existing functionality
 
 ### Deprecated
+
 - Soon-to-be removed features
 
 ### Removed
+
 - Removed features
 
 ### Fixed
+
 - Bug fixes
 
 ### Security
+
 - Security improvements
 ```
 
@@ -39,14 +45,17 @@ have a section with the following structure:
 1. **Open `CHANGELOG.md`** in the `packages/sdks/typescript/` directory
 
 2. **Add your new version section** below the `[Unreleased]` section:
+
    ```markdown
    ## [1.2.3] - 2025-01-16
-   
+
    ### Added
+
    - New streaming API support
    - Better error handling
-   
+
    ### Fixed
+
    - Fixed timeout issues in chat completion
    ```
 
@@ -57,6 +66,7 @@ have a section with the following structure:
 ## What Happens Next
 
 When you push to the main branch:
+
 1. The GitHub Action will detect the new version
 2. It will extract the changelog section for your version
 3. It will create a GitHub release with that changelog content
@@ -65,12 +75,13 @@ When you push to the main branch:
 ## Example
 
 If your `package.json` has version `1.2.3`, the workflow will look for:
+
 ```markdown
 ## [1.2.3] - 2025-01-16
 
 ### Added
+
 - New streaming API support
 ```
 
 And use this content in the GitHub release.
-
