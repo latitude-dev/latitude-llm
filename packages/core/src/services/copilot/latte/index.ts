@@ -2,6 +2,7 @@ import {
   Message,
   MessageRole,
   UserMessage,
+  ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '@latitude-data/constants'
 import { Commit, DocumentVersion, Workspace } from '../../../browser'
@@ -14,6 +15,8 @@ import { runDocumentAtCommit } from '../../commits'
 import { addMessages } from '../../documentLogs/addMessages'
 import { ErrorResult, Result } from '../../../lib/Result'
 import { LatitudeError } from '@latitude-data/constants/errors'
+import { handleToolRequest } from './tools'
+import { WebsocketClient } from '../../../websockets/workers'
 
 export * from './threads/checkpoints/clearCheckpoints'
 export * from './threads/checkpoints/createCheckpoint'
@@ -69,6 +72,45 @@ async function generateCopilotResponse({
   const runError = await run.error
   if (runError) {
     return Result.error(runError)
+  }
+
+  const toolCalls = await run.toolCalls
+  let toolResponseMessages: ToolMessage[] = []
+  try {
+    toolResponseMessages = await Promise.all(
+      toolCalls.map(async (toolCall) => {
+        const toolMsgResult = await handleToolRequest({
+          context,
+          threadUuid,
+          tool: toolCall,
+          workspace: clientWorkspace,
+          messages: await run.messages,
+          onFinish: async (msg) => {
+            WebsocketClient.sendEvent('latteMessage', {
+              workspaceId: clientWorkspace.id,
+              data: { threadUuid, message: msg },
+            })
+          },
+        })
+
+        return toolMsgResult.unwrap()
+      }),
+    )
+  } catch (error) {
+    return Result.error(error as Error)
+  }
+
+  if (toolCalls.length > 0) {
+    // Agent did not return a response. We add the tool responses and keep iterating
+    return generateCopilotResponse({
+      context,
+      copilotWorkspace,
+      copilotCommit,
+      copilotDocument,
+      clientWorkspace,
+      threadUuid,
+      messages: toolResponseMessages,
+    })
   }
 
   // Agent returned a response. The run flow has finished.
