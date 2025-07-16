@@ -11,5 +11,5 @@
 -- ALTER TABLE "latitude"."provider_logs" ALTER COLUMN "source" SET DATA TYPE "latitude"."log_source" USING "source"::"latitude"."log_source";
 -- ================================================================================
 
--- TODO: Uncomment
--- ALTER TYPE latitude.log_source ADD VALUE 'copilot';
+-- Alternative migration
+ALTER TYPE latitude.log_source ADD VALUE 'copilot';
