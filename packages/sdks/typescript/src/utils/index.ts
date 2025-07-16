@@ -11,6 +11,7 @@ import {
   RunDocumentUrlParams,
   UrlParams,
 } from '$sdk/utils/types'
+import { HEAD_COMMIT } from '@latitude-data/constants/index'
 
 type ResolveParams<T extends HandlerType> = {
   handler: T
@@ -104,8 +105,9 @@ export class RouteResolver {
       case HandlerType.Log:
         return this.projects
           .project((params as RunDocumentUrlParams).projectId)
-          .versions.version((params as RunDocumentUrlParams).versionUuid!)
-          .documents.logs
+          .versions.version(
+            (params as RunDocumentUrlParams).versionUuid ?? HEAD_COMMIT,
+          ).documents.logs
       case HandlerType.ToolResults:
         return this.tools().results
       default:
