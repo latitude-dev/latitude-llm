@@ -1,12 +1,12 @@
-import type { ToolCall } from '@latitude-data/constants/legacyCompiler'
 import { LatteTool } from '@latitude-data/constants/latte'
 import { LatteToolStep } from './types'
+import { ToolCall } from 'ai'
 
 export function getDescriptionFromToolCall(
-  toolCall: ToolCall,
+  toolCall: ToolCall<string, Record<string, unknown>>,
 ): Partial<LatteToolStep> {
-  const name = toolCall.name as LatteTool
-  const params = toolCall.arguments
+  const name = toolCall.toolName as LatteTool
+  const params = toolCall.args
 
   switch (name) {
     case LatteTool.listProjects:

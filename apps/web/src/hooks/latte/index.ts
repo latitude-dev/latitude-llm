@@ -2,13 +2,16 @@ import { addMessageToLatteAction } from '$/actions/latte/addMessage'
 import { createNewLatteAction } from '$/actions/latte/new'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useServerAction } from 'zsa-react'
-import {
-  MessageRole,
-  TextContent,
-} from '@latitude-data/constants/legacyCompiler'
-import { Message } from '@latitude-data/core/browser'
+import { CoreMessage as Message, ToolCall } from 'ai'
+
 import { useCallback, useMemo, useState } from 'react'
-import { LatteInteraction, LatteToolStep } from './types'
+import {
+  LatteInteraction,
+  LatteInteractionStep,
+  LatteToolStep,
+  LatteThoughtStep,
+  LatteActionStep,
+} from './types'
 import { getDescriptionFromToolCall } from './helpers'
 import { trigger } from '$/lib/events'
 import { useLatteContext } from './context'
@@ -20,6 +23,7 @@ import {
 import { acceptLatteChangesAction } from '$/actions/latte/acceptChanges'
 import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
 import { addFeedbackToLatteChangeAction } from '$/actions/latte/addFeedbackToLatteChange'
+import { ContentType, MessageRole, TextContent } from 'promptl-ai'
 
 export function useLatte() {
   const [threadUuid, setThreadUuid] = useState<string>()
@@ -208,50 +212,66 @@ export function useLatte() {
 
         if (message.role === MessageRole.assistant) {
           if (typeof message.content === 'string') {
-            lastInteraction.steps.push({
-              type: 'thought',
-              content: message.content,
-            })
-          } else {
-            const textContent = message.content
-              .filter((c) => c.type === 'text')
-              .map((c) => (c as unknown as TextContent).text!)
-
-            if (textContent.length) {
-              lastInteraction.steps.push(
-                ...textContent.map((text) => ({
-                  type: 'thought' as 'thought',
-                  content: text,
-                })),
-              )
-            }
+            lastInteraction.output = message.content
+            return [...otherInteractions, lastInteraction]
           }
 
-          const toolSteps = message.toolCalls.map((toolCall) => {
-            if (toolCall.name === LatteTool.editProject) {
-              const params = toolCall.arguments as {
-                actions: LatteEditAction[]
+          if (message.content.every((c) => c.type === ContentType.text)) {
+            const textContent = message.content
+              .filter((c) => c.type === ContentType.text)
+              .map((c) => (c as unknown as TextContent).text!)
+              .join('\n')
+
+            lastInteraction.output = textContent
+            return [...otherInteractions, lastInteraction]
+          }
+
+          const newInteractionSteps: LatteInteractionStep[] = message.content
+            .map((c) => {
+              if (c.type === ContentType.toolCall) {
+                const toolCall = c as ToolCall<string, Record<string, unknown>>
+
+                if (toolCall.toolName === LatteTool.editProject) {
+                  const params = toolCall.args as {
+                    actions: LatteEditAction[]
+                  }
+
+                  return params.actions.map(
+                    (action) =>
+                      ({
+                        type: 'action',
+                        action,
+                      }) as LatteActionStep,
+                  )
+                }
+
+                return {
+                  type: 'tool',
+                  id: toolCall.toolCallId,
+                  toolName: toolCall.toolName,
+                  parameters: toolCall.args,
+                  finished: false,
+                  ...getDescriptionFromToolCall(toolCall),
+                } as LatteToolStep
               }
-              return params.actions.map((action) => ({
-                type: 'action' as 'action',
-                action,
-              }))
-            }
 
-            return {
-              type: 'tool' as 'tool',
-              id: toolCall.id,
-              toolName: toolCall.name,
-              parameters: toolCall.arguments,
-              finished: false,
-              ...getDescriptionFromToolCall(toolCall),
-            } as LatteToolStep
-          })
+              if (c.type === ContentType.text && c.text?.length) {
+                return {
+                  type: 'thought',
+                  content: c.text,
+                } as LatteThoughtStep
+              }
 
-          lastInteraction.steps.push(...toolSteps.flat())
+              return [] // Ignore other content types
+            })
+            .flat()
+
+          lastInteraction.steps.push(...newInteractionSteps)
+
+          return [...otherInteractions, lastInteraction]
         }
 
-        return [...otherInteractions, lastInteraction]
+        return prev
       })
 
       setIsLoading(false)
