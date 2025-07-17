@@ -4,7 +4,7 @@ import {
 } from '$/common/documents/getData'
 import { captureException } from '$/common/sentry'
 import { AppRouteHandler } from '$/openApi/types'
-import { runPresenter } from '$/presenters/runPresenter'
+import { runPresenter, runPresenterLegacy } from '$/presenters/runPresenter'
 import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
@@ -51,6 +51,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   }
 
   const sdkVersion = c.req.header('X-Latitude-SDK-Version')
+  const isLegacy = !compareVersion(sdkVersion, '5.0.0')
 
   const result = await _runDocumentAtCommit({
     context: BACKGROUND({ workspaceId: workspace.id }),
@@ -62,7 +63,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     tools: useSSE ? buildClientToolHandlersMap(tools) : {},
     source: __internal?.source ?? LogSources.API,
     abortSignal: c.req.raw.signal,
-    sdkVersion,
+    isLegacy,
   }).then((r) => r.unwrap())
 
   if (useSSE) {
@@ -100,9 +101,20 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   const error = await result.error
   if (error) throw error
 
-  const body = runPresenter({
-    response: (await result.lastResponse)!,
-  }).unwrap()
+  let body
+  if (isLegacy) {
+    body = runPresenterLegacy({
+      response: (await result.lastResponse)!,
+      toolCalls: await result.toolCalls,
+      // @ts-expect-error: trace is not in the type of new runDocumentAtCommit
+      // (but it is in the legacy version)
+      trace: await result.trace,
+    }).unwrap()
+  } else {
+    body = runPresenter({
+      response: (await result.lastResponse)!,
+    }).unwrap()
+  }
 
   return c.json(body)
 }
@@ -115,11 +127,11 @@ export function buildClientToolHandlersMap(tools: string[]) {
 }
 
 async function _runDocumentAtCommit(args: any) {
-  const { sdkVersion } = args
+  const { isLegacy } = args
 
-  if (compareVersion(sdkVersion, '5.0.0')) {
-    return runDocumentAtCommit(args)
-  } else {
+  if (isLegacy) {
     return runDocumentAtCommitLegacy(args)
+  } else {
+    return runDocumentAtCommit(args)
   }
 }
