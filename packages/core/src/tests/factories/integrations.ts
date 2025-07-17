@@ -30,5 +30,6 @@ export async function createIntegration({
     .then((r) => r[0]!)
 
   const integrationsRepo = new IntegrationsRepository(workspace.id, database)
-  return await integrationsRepo.find(res.id).then((r) => r.unwrap())
+  const result = await integrationsRepo.find(res.id)
+  return result.unwrap()
 }

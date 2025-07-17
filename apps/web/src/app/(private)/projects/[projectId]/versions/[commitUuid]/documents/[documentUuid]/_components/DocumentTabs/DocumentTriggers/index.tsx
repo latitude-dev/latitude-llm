@@ -42,6 +42,13 @@ export function DocumentTriggersButton({
     [],
   )
 
+  const onModalOpenChange = useCallback((open: boolean) => {
+    setIsModalOpen(open)
+    if (!open) {
+      setOpenTrigger(undefined)
+    }
+  }, [])
+
   return (
     <>
       <Popover.Root>
@@ -66,9 +73,9 @@ export function DocumentTriggersButton({
         </Popover.Content>
       </Popover.Root>
       <TriggerConfigModal
-        key={openTrigger?.id}
+        // key={openTrigger?.id}
         isOpen={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        onOpenChange={onModalOpenChange}
         document={document}
         projectId={projectId}
         trigger={openTrigger}

@@ -105,15 +105,16 @@ function DeleteTriggerButton({
 
 function IntegrationTriggerItem({
   trigger,
-  // onOpen,
+  onClick,
 }: {
   trigger: IntegrationTrigger
-  onOpen: () => void
+  onClick: () => void
 }) {
   const { data: integrations, isLoading: isLoadingIntegrations } =
     useIntegrations()
 
   const integration = useMemo(() => {
+    if (!integrations) return undefined
     return integrations.find(
       (i) => i.id === trigger.configuration.integrationId,
     ) as PipedreamIntegration | undefined
@@ -124,7 +125,7 @@ function IntegrationTriggerItem({
   )
 
   const component = useMemo(() => {
-    if (!app) return undefined
+    if (!app?.triggers) return undefined
     return app.triggers.find((c) => c.key === trigger.configuration.componentId)
   }, [app, trigger.configuration.componentId])
 
@@ -146,7 +147,7 @@ function IntegrationTriggerItem({
         'p-4 bg-muted hover:bg-accent rounded cursor-pointer',
         'flex flex-col gap-2',
       )}
-      // onClick={onOpen} // TODO(triggers): Enable this when trigger updates are implemented
+      onClick={onClick}
     >
       <div className='flex items-center justify-between'>
         <Text.H5B>{component?.name}</Text.H5B>
@@ -185,7 +186,7 @@ export function IntegrationTriggerList({
         <IntegrationTriggerItem
           key={trigger.uuid}
           trigger={trigger}
-          onOpen={() => onOpenTrigger(trigger)}
+          onClick={() => onOpenTrigger(trigger)}
         />
       ))}
       <Button fancy onClick={() => onOpenTrigger()} disabled={!isHead}>
