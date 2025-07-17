@@ -2,12 +2,12 @@ import { legacyChainEventPresenter } from '$/common/documents/getData'
 import { AppRouteHandler } from '$/openApi/types'
 import { v2RunPresenter } from '$/presenters/runPresenter'
 import { ChatRoute } from '$/routes/api/v2/conversations/chat/chat.route'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { convertToLegacyChainStream } from '@latitude-data/core/lib/streamManager/index'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
-import { addMessages } from '@latitude-data/core/services/documentLogs/addMessages/index'
+import { addMessagesLegacy } from '@latitude-data/core/services/__deprecated/documentLogs/addMessages/index'
+import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { captureException } from '@sentry/node'
 import { streamSSE } from 'hono/streaming'
 
@@ -19,13 +19,16 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
 
   const {
     stream: newStream,
-    response,
+    lastResponse,
     error,
+    trace,
   } = (
-    await addMessages({
+    await addMessagesLegacy({
+      context: BACKGROUND({ workspaceId: workspace.id }),
       workspace,
       documentLogUuid: conversationUuid,
-      messages: messages as LegacyMessage[],
+      // @ts-expect-error: messages is Message[] from compiler
+      messages: messages,
       source: __internal?.source ?? LogSources.API,
     })
   ).unwrap()
@@ -62,8 +65,9 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const awaitedError = await error
   if (awaitedError) throw awaitedError
 
-  const awaitedResponse = await response
+  const awaitedResponse = await lastResponse
+  const awaitedTrace = await trace
+  const body = v2RunPresenter(awaitedResponse!, awaitedTrace).unwrap()
 
-  const body = v2RunPresenter(awaitedResponse!).unwrap()
   return c.json(body, 200)
 }

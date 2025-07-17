@@ -11,7 +11,8 @@ type DocumentResponse = ChainStepObjectResponse | ChainStepTextResponse
 
 export function v2RunPresenter(
   response: DocumentResponse,
-): TypedResult<RunSyncAPIResponse, LatitudeError> {
+  trace: TraceContext,
+): TypedResult<Omit<RunSyncAPIResponse, 'toolRequests'>, LatitudeError> {
   const conversation = response.providerLog?.messages
   const uuid = response.documentLogUuid
   const errorMessage = !uuid
@@ -38,6 +39,7 @@ export function v2RunPresenter(
       object: type === 'object' ? response.object : undefined,
       toolCalls: type === 'text' ? response.toolCalls : [],
     },
+    trace,
   })
 }
 
