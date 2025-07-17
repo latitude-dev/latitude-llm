@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { ConfigElement, ConfigSection } from './_components/ConfigSection'
-import { PromptConfigurationProps, useConfigValue } from './utils'
+import { PromptConfigurationProps } from './utils'
 import { SubAgentSelector } from './_components/AgentSelector'
 
 export function BehaviourSettings({
@@ -11,16 +11,6 @@ export function BehaviourSettings({
   canUseSubagents,
 }: PromptConfigurationProps) {
   const agentValue = (config['type'] ?? undefined) as 'agent' | undefined
-  const {
-    value: disabledAgentOptimization,
-    setValue: setDisableAgentOptimization,
-  } = useConfigValue<boolean>({
-    config,
-    setConfig,
-    key: 'disableAgentOptimization',
-    defaultValue: false,
-  })
-
   const setValues = useCallback(
     (updates: Partial<PromptConfigurationProps['config']>) => {
       setConfig({ ...config, ...updates })
@@ -57,28 +47,6 @@ Unlike regular prompts or predefined Chains, Agents can adapt dynamically, respo
           onCheckedChange={onAgentCheckedChange}
         />
       </ConfigElement>
-      {agentValue === 'agent' && (
-        <div className='w-full pl-6'>
-          <ConfigElement
-            label='Advanced agent optimization'
-            icon='sparkles'
-            summary='Automatically optimizes the agent behaviour without needing to add additional prompting.'
-            description={`When enabled, the agent will automatically know that they are in an autonomous workflow and how it works.
-                Otherwise, you will need to add custom prompting to avoid the AI falling into infinite loops and using the agent tools correctly.
-                This optimization is done without adding or modifying any SYSTEM or USER message from your prompt, it's all handled internally by Latitude.`}
-          >
-            <SwitchToggle
-              disabled={disabled}
-              checked={!disabledAgentOptimization}
-              onCheckedChange={() =>
-                setDisableAgentOptimization(
-                  disabledAgentOptimization ? undefined : true,
-                )
-              }
-            />
-          </ConfigElement>
-        </div>
-      )}
       {canUseSubagents ? (
         <ConfigElement
           label='Subagents'
