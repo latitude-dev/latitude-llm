@@ -43,6 +43,7 @@
             "group": "Getting started",
             "pages": [
               "guides/getting-started/introduction",
+              "guides/getting-started/core-concepts",
               {
                 "group": "Onboarding Paths",
                 "pages": [
@@ -50,7 +51,6 @@
                   "guides/getting-started/quick-start-dev"
                 ]
               },
-              "guides/getting-started/core-concepts",
               {
                 "group": "Providers",
                 "pages": [
@@ -81,8 +81,13 @@
             "group": "Agents",
             "pages": [
               "guides/prompt-manager/agents",
-              "guides/prompt-manager/latitude-tools",
-              "guides/integration/mcp-integrations"
+              {
+                "group": "Integrations",
+                "pages": [
+                  "guides/prompt-manager/latitude-tools",
+                  "guides/integration/mcp-integrations"
+                ]
+              }
             ]
           },
           {
@@ -189,7 +194,8 @@
             "group": "Advanced",
             "pages": [
               "promptl/advanced/chains",
-              "promptl/advanced/snippets"
+              "promptl/advanced/snippets",
+              "promptl/advanced/mocking"
             ]
           }
         ]
