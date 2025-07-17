@@ -8,11 +8,11 @@ import { AppRouteHandler } from '$/openApi/types'
 import { RunRoute } from '$/routes/api/v1/run/run.route'
 import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
-import { convertToLegacyChainStream } from '@latitude-data/core/lib/streamManager/index'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
-import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
+import { runDocumentAtCommitLegacy } from '@latitude-data/core/services/__deprecated/commits/runDocumentAtCommit'
 import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
+import { convertToLegacyChainStream } from 'node_modules/@latitude-data/core/src/__deprecated/lib/chainStreamManager'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
@@ -41,7 +41,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
         })
       }
 
-      const { stream: newStream } = await runDocumentAtCommit({
+      const { stream: newStream } = await runDocumentAtCommitLegacy({
         context: BACKGROUND({ workspaceId: workspace.id }),
         workspace,
         document,

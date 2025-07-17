@@ -1,8 +1,10 @@
 import { captureException } from '$/common/sentry'
 import {
+  AGENT_RETURN_TOOL_NAME,
   ChainStepObjectResponse,
   ChainStepTextResponse,
   RunSyncAPIResponse,
+  TraceContext,
 } from '@latitude-data/constants'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { Result, TypedResult } from '@latitude-data/core/lib/Result'
@@ -11,7 +13,8 @@ type DocumentResponse = ChainStepObjectResponse | ChainStepTextResponse
 
 export function v2RunPresenter(
   response: DocumentResponse,
-): TypedResult<RunSyncAPIResponse, LatitudeError> {
+  trace: TraceContext,
+): TypedResult<Omit<RunSyncAPIResponse, 'toolRequests'>, LatitudeError> {
   const conversation = response.providerLog?.messages
   const uuid = response.documentLogUuid
   const errorMessage = !uuid
@@ -38,6 +41,54 @@ export function v2RunPresenter(
       object: type === 'object' ? response.object : undefined,
       toolCalls: type === 'text' ? response.toolCalls : [],
     },
+    trace,
+  })
+}
+
+// TODO(compiler): remove this
+export function extractAgentToolCalls(toolCalls: any[]): [any[], any[]] {
+  return toolCalls.reduce(
+    (acc, tool) => {
+      if (tool.name === AGENT_RETURN_TOOL_NAME) {
+        acc[0].push(tool)
+      } else {
+        acc[1].push(tool)
+      }
+      return acc
+    },
+    [[], []] as [any[], any[]],
+  )
+}
+
+// TODO(compiler): remove this
+export function runPresenterLegacy({
+  response,
+  toolCalls = [],
+  trace,
+}: {
+  response: DocumentResponse
+  toolCalls: any[]
+  trace: TraceContext
+}): TypedResult<RunSyncAPIResponse, LatitudeError> {
+  const conversation = response.providerLog?.messages
+  const uuid = response.documentLogUuid
+
+  const [agentTools, toolRequests] = extractAgentToolCalls(toolCalls)
+
+  const type = response.streamType
+  return Result.ok({
+    uuid: uuid!,
+    conversation: conversation!,
+    toolRequests,
+    agentResponse: agentTools[0]?.arguments,
+    response: {
+      streamType: type,
+      usage: response.usage!,
+      text: response.text,
+      object: type === 'object' ? response.object : undefined,
+      toolCalls: type === 'text' ? response.toolCalls : [],
+    },
+    trace,
   })
 }
 
