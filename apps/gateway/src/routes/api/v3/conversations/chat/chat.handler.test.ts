@@ -252,7 +252,7 @@ describe('POST /chat', () => {
         source: LogSources.API,
         tools: {},
         abortSignal: expect.anything(),
-        sdkVersion: '5.0.0',
+        isLegacy: false,
       })
     })
 
@@ -307,7 +307,7 @@ describe('POST /chat', () => {
         source: LogSources.API,
         tools: {},
         abortSignal: expect.anything(),
-        sdkVersion,
+        isLegacy: false,
       })
     })
 
@@ -361,7 +361,7 @@ describe('POST /chat', () => {
         tools: {},
         source: LogSources.Playground,
         abortSignal: expect.anything(),
-        sdkVersion: '5.0.0',
+        isLegacy: false,
       })
     })
 
@@ -529,7 +529,7 @@ describe('POST /chat', () => {
         source: LogSources.API,
         tools: {},
         abortSignal: expect.anything(),
-        sdkVersion: '5.0.0',
+        isLegacy: false,
       })
     })
 
@@ -568,7 +568,7 @@ describe('POST /chat', () => {
         source: LogSources.API,
         tools: {},
         abortSignal: expect.anything(),
-        sdkVersion,
+        isLegacy: true,
       })
     })
 
@@ -606,7 +606,7 @@ describe('POST /chat', () => {
         source: LogSources.Playground,
         tools: {},
         abortSignal: expect.anything(),
-        sdkVersion: '5.0.0',
+        isLegacy: false,
       })
     })
 
