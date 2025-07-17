@@ -1,10 +1,10 @@
+import { env } from '@latitude-data/env'
 import type { Workspace } from '../../browser'
 import { database } from '../../client'
-import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
-import { apiKeys } from '../../schema'
-import { env } from '@latitude-data/env'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
+import { apiKeys } from '../../schema'
 
 export function createApiKey(
   { name, workspace }: { name?: string; workspace: Workspace },

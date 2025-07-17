@@ -4,13 +4,13 @@ import {
   RuleEvaluationLengthCountSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
+import { BadRequestError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
 import {
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
-import { BadRequestError } from './../../../lib/errors'
-import { Result } from './../../../lib/Result'
 
 export const RuleEvaluationLengthCountSpecification = {
   ...specification,

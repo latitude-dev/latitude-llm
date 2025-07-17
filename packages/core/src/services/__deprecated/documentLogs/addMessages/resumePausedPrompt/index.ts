@@ -14,13 +14,13 @@ import {
   DocumentType,
   StreamType,
 } from '../../../../../constants'
+import { Result } from '../../../../../lib/Result'
 import { TelemetryContext } from '../../../../../telemetry'
-import { runAgent } from '../../../agents/run'
 import { deleteCachedChain } from '../../../../chains/chainCache'
-import { runChain } from '../../../chains/run'
 import { getResolvedContent } from '../../../../documents'
 import { buildProvidersMap } from '../../../../providerApiKeys/buildMap'
-import { Result } from './../../../../../lib/Result'
+import { runAgent } from '../../../agents/run'
+import { runChain } from '../../../chains/run'
 
 /**
  * Resuming a prompt

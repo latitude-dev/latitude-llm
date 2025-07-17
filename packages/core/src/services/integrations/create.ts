@@ -1,19 +1,18 @@
 import { IntegrationType } from '@latitude-data/constants'
 import type { IntegrationDto, User, Workspace } from '../../browser'
 import { database } from '../../client'
+import { BadRequestError } from '../../lib/errors'
+import { ErrorResult, Result } from '../../lib/Result'
+import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { integrations } from '../../schema'
+import { deployMcpServer } from '../mcpServers/deployService'
 import {
   ExternalMcpIntegrationConfiguration,
   HostedMcpIntegrationConfiguration,
   HostedMcpIntegrationConfigurationForm,
   PipedreamIntegrationConfiguration,
 } from './helpers/schema'
-import { deployMcpServer } from '../mcpServers/deployService'
 import { HOSTED_MCP_CONFIGS } from './hostedTypes'
-import { BadRequestError } from './../../lib/errors'
-import { ErrorResult } from './../../lib/Result'
-import Transaction, { PromisedResult } from './../../lib/Transaction'
-import { Result } from './../../lib/Result'
 import { getApp } from './pipedream/apps'
 
 type ConfigurationFormTypeMap = {

@@ -1,9 +1,9 @@
 import { DocumentLog } from '@latitude-data/constants'
 import { DocumentLogWithMetadataAndError } from '../../browser'
 import { database } from '../../client'
+import { NotFoundError } from '../../lib/errors'
+import { Result, TypedResult } from '../../lib/Result'
 import { DocumentLogsRepository } from '../../repositories'
-import { NotFoundError } from './../../lib/errors'
-import { Result, TypedResult } from './../../lib/Result'
 import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 
 function throwNotFound({

@@ -9,10 +9,8 @@ import * as _pdfjsSandbox from 'pdfjs-dist/legacy/build/pdf.sandbox.mjs'
 import * as _pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs'
 import type { TextItem } from 'pdfjs-dist/types/src/display/api'
 import { MAX_UPLOAD_SIZE_IN_MB } from '../../constants'
-import { BadRequestError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import { TypedResult } from './../../lib/Result'
-import { UnprocessableEntityError } from './../../lib/errors'
+import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
+import { Result, TypedResult } from '../../lib/Result'
 
 // @ts-expect-error force webpack to include the sandbox
 const __pdfjsSandbox = _pdfjsSandbox

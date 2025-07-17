@@ -1,10 +1,10 @@
 import { DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
+import { ConflictError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { DocumentSuggestionsRepository } from '../../repositories'
 import { documentSuggestions } from '../../schema'
-import { ConflictError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 
 async function inheritSuggestions(
   {

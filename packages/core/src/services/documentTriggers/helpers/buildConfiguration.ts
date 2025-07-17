@@ -1,4 +1,6 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
+import { LatitudeError } from '../../../lib/errors'
+import { getNextRunTime } from './cronHelper'
 import {
   DocumentTriggerConfiguration,
   EmailTriggerConfiguration,
@@ -6,8 +8,6 @@ import {
   IntegrationTriggerConfiguration,
   ScheduledTriggerConfiguration,
 } from './schema'
-import { getNextRunTime } from './cronHelper'
-import { LatitudeError } from './../../../lib/errors'
 
 export function buildConfiguration({
   triggerType,

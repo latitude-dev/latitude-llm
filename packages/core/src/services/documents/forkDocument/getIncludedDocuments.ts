@@ -1,11 +1,11 @@
 import { resolveRelativePath } from '@latitude-data/constants'
+import { ConversationMetadata as LegacyMetadata } from '@latitude-data/constants/legacyCompiler'
+import { ConversationMetadata as PromptlMetadata } from 'promptl-ai'
 import { Commit, DocumentVersion, Workspace } from '../../../browser'
+import { NotFoundError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
 import { DocumentVersionsRepository } from '../../../repositories'
 import { scanCommitDocumentContents } from '../scan'
-import { ConversationMetadata as PromptlMetadata } from 'promptl-ai'
-import { ConversationMetadata as LegacyMetadata } from '@latitude-data/constants/legacyCompiler'
-import { NotFoundError } from './../../../lib/errors'
-import { Result } from './../../../lib/Result'
 
 type ConversationMetadata = PromptlMetadata | LegacyMetadata
 

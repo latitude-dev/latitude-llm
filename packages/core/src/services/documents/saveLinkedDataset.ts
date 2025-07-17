@@ -7,9 +7,9 @@ import {
   LinkedDatasetRow,
 } from '../../browser'
 import { database } from '../../client'
+import { Result, TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { documentVersions } from '../../schema'
-import { Result, TypedResult } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 
 function getLinkedData({
   inputs,

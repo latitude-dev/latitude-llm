@@ -1,8 +1,7 @@
 import { LatitudeTool } from '@latitude-data/constants'
-import { TelemetryContext } from '@latitude-data/telemetry'
-import { telemetry } from '../../telemetry'
-import { TypedResult } from '../../lib/Result'
 import { ToolExecutionOptions } from 'ai'
+import { TypedResult } from '../../lib/Result'
+import { telemetry, TelemetryContext } from '../../telemetry'
 
 export interface ToolCall {
   toolCallId: string

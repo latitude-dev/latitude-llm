@@ -1,12 +1,12 @@
 import pg from 'pg'
 import { User, Workspace } from '../../browser'
 import { database } from '../../client'
+import { BadRequestError, databaseErrorCodes } from '../../lib/errors'
 import { syncReadCsv } from '../../lib/readCsv'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { datasets } from '../../schema'
 import { Column } from '../../schema/models/datasets'
-import { BadRequestError, databaseErrorCodes } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 import { buildColumns, HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 const { DatabaseError } = pg
 

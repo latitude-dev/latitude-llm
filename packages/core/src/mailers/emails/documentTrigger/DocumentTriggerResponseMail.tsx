@@ -1,12 +1,11 @@
-import React from 'react'
-import { Text, Img } from '@react-email/components'
-import ContainerLayout from '../_components/ContainerLayout'
 import {
   type AssistantMessage,
   type MessageContent,
 } from '@latitude-data/constants/legacyCompiler'
+import { Img, Text } from '@react-email/components'
+import { TypedResult } from '../../../lib/Result'
+import ContainerLayout from '../_components/ContainerLayout'
 import PlainLayout from '../_components/PlainLayout'
-import { TypedResult } from './../../../lib/Result'
 
 export default function DocumentTriggerResponseMail({
   result,

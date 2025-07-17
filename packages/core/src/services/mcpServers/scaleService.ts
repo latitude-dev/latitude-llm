@@ -1,11 +1,11 @@
+import { eq } from 'drizzle-orm'
+import { McpServer } from '../../browser'
+import { database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { Result, TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { mcpServers } from '../../schema/models/mcpServers'
 import { getK8sClient } from '../k8s/k8sClient'
-import { database } from '../../client'
-import Transaction from './../../lib/Transaction'
-import { McpServer } from '../../browser'
-import { eq } from 'drizzle-orm'
-import { publisher } from '../../events/publisher'
 
 /**
  * Scale an MCP server deployment up or down

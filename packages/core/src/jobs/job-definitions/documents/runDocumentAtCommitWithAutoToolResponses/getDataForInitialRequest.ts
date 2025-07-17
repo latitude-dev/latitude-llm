@@ -1,10 +1,10 @@
+import { unsafelyFindWorkspace } from '../../../../data-access'
+import { NotFoundError } from '../../../../lib/errors'
+import { Result } from '../../../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../../../repositories'
-import { unsafelyFindWorkspace } from '../../../../data-access'
-import { NotFoundError } from './../../../../lib/errors'
-import { Result } from './../../../../lib/Result'
 
 export type GetDataParams = {
   workspaceId: number

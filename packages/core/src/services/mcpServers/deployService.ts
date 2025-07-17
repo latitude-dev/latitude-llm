@@ -1,14 +1,14 @@
+import * as k8s from '@kubernetes/client-node'
+import { env } from '@latitude-data/env'
+import yaml from 'js-yaml'
+import { database } from '../../client'
 import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
+import { encrypt } from '../../lib/encryption'
 import { mcpServers } from '../../schema/models/mcpServers'
 import { getK8sClient } from '../k8s/k8sClient'
-import { database } from '../../client'
-import Transaction from './../../lib/Transaction'
-import { encrypt } from '../../lib/encryption'
-import yaml from 'js-yaml'
-import * as k8s from '@kubernetes/client-node'
-import { generateK8sManifest } from './manifestGenerator'
-import { env } from '@latitude-data/env'
 import { generateUniqueAppName } from './appNameGenerator'
+import { generateK8sManifest } from './manifestGenerator'
 type K8sDeploymentParams = {
   appName: string
   environmentVariables?: Record<string, string>

@@ -1,12 +1,12 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { database } from '../../../../client'
-import { DocumentTrigger } from '../../../../browser'
-import { documentTriggers } from '../../../../schema'
 import { and, eq, sql } from 'drizzle-orm'
-import { ScheduledTriggerConfiguration } from '../../helpers/schema'
+import { DocumentTrigger } from '../../../../browser'
+import { database } from '../../../../client'
+import { Result } from '../../../../lib/Result'
+import Transaction, { PromisedResult } from '../../../../lib/Transaction'
+import { documentTriggers } from '../../../../schema'
 import { checkCronExpression, getNextRunTime } from '../../helpers/cronHelper'
-import { Result } from './../../../../lib/Result'
-import Transaction, { PromisedResult } from './../../../../lib/Transaction'
+import { ScheduledTriggerConfiguration } from '../../helpers/schema'
 
 /**
  * Checks if a scheduled trigger is due to run based on its configuration

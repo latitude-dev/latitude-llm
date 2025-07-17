@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { Project } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { projects } from '../../schema'
 
 export async function updateProject(

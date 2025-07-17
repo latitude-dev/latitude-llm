@@ -1,6 +1,8 @@
 import { and, eq, getTableColumns, isNull, sql, sum } from 'drizzle-orm'
 
 import { DocumentLogWithMetadataAndError, ErrorableEntity } from '../../browser'
+import { NotFoundError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
 import {
   commits,
   documentLogs,
@@ -10,8 +12,6 @@ import {
   workspaces,
 } from '../../schema'
 import Repository from '../repositoryV2'
-import { NotFoundError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
 
 // TODO: remove
 export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<DocumentLogWithMetadataAndError> {

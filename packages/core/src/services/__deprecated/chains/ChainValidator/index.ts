@@ -19,9 +19,9 @@ import {
   ProviderApiKey,
   Workspace,
 } from '../../../../browser'
+import { Result, TypedResult } from '../../../../lib/Result'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
-import { Result, TypedResult } from './../../../../lib/Result'
 
 type SomeChain = LegacyChain | PromptlChain
 

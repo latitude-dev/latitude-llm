@@ -4,9 +4,9 @@ import { PromptLFile, toPromptLFile } from 'promptl-ai'
 import { Workspace } from '../../browser'
 import { MAX_UPLOAD_SIZE_IN_MB } from '../../constants'
 import { diskFactory, DiskWrapper } from '../../lib/disk'
-import { BadRequestError, UnprocessableEntityError } from './../../lib/errors'
-import { generateUUIDIdentifier } from './../../lib/generateUUID'
-import { Result, TypedResult } from './../../lib/Result'
+import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
+import { generateUUIDIdentifier } from '../../lib/generateUUID'
+import { Result, TypedResult } from '../../lib/Result'
 
 function generateKey({
   filename,

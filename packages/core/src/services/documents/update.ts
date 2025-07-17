@@ -8,13 +8,12 @@ import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError, NotFoundError } from '../../lib/errors'
+import { Result, TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories/documentVersionsRepository'
 import { documentVersions } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 import { inheritDocumentRelations } from './inheritRelations'
-import { Result } from './../../lib/Result'
-import { TypedResult } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 
 export async function getDocumentType({
   content,

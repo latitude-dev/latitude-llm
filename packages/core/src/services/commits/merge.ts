@@ -4,7 +4,7 @@ import { Commit } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import {
   LatitudeError,
   NotFoundError,

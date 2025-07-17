@@ -1,6 +1,8 @@
+import { MAX_STEPS_CONFIG_NAME } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import { LanguageModelUsage } from 'ai'
 import { Chain as PromptlChain } from 'promptl-ai'
-
 import { ProviderApiKey, Workspace } from '../../browser'
 import {
   ChainStepResponse,
@@ -8,14 +10,11 @@ import {
   PromptSource,
   StreamType,
 } from '../../constants'
-import { LanguageModelUsage } from 'ai'
-import { MAX_STEPS_CONFIG_NAME } from '@latitude-data/constants'
-import { TypedResult } from './../../lib/Result'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
-import { ChainStreamManager } from '../../lib/streamManager/chainStreamManager'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
-import { TelemetryContext } from '@latitude-data/telemetry'
+import { TypedResult } from '../../lib/Result'
+import { ChainStreamManager } from '../../lib/streamManager/chainStreamManager'
 import { ToolHandler } from '../../lib/streamManager/clientTools/handlers'
+import { TelemetryContext } from '../../telemetry'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
 

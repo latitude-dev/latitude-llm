@@ -1,12 +1,12 @@
+import * as k8s from '@kubernetes/client-node'
 import { eq } from 'drizzle-orm'
+import yaml from 'js-yaml'
+import { McpServer } from '../../browser'
+import { database } from '../../client'
 import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { mcpServers } from '../../schema/models/mcpServers'
 import { getK8sClient } from '../k8s/k8sClient'
-import Transaction from './../../lib/Transaction'
-import { database } from '../../client'
-import yaml from 'js-yaml'
-import * as k8s from '@kubernetes/client-node'
-import { McpServer } from '../../browser'
 import { getDecryptedEnvironmentVariables } from './getDecryptedEnvironmentVariables'
 
 /**

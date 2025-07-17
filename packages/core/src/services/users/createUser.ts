@@ -2,7 +2,7 @@ import { User } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { users } from '../../schema'
 
 export async function createUser(

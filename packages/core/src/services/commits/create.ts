@@ -2,7 +2,7 @@ import { Commit, Project, User } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { commits } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 

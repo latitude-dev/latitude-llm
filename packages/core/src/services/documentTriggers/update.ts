@@ -1,12 +1,12 @@
-import { DocumentTrigger, Workspace } from '../../browser'
-import { DocumentTriggerWithConfiguration } from './helpers/schema'
-import { documentTriggers } from '../../schema'
-import { database } from '../../client'
-import { and, eq } from 'drizzle-orm'
-import { buildConfiguration } from './helpers/buildConfiguration'
 import { LatitudeError } from '@latitude-data/constants/errors'
-import Transaction, { PromisedResult } from './../../lib/Transaction'
-import { Result } from './../../lib/Result'
+import { and, eq } from 'drizzle-orm'
+import { DocumentTrigger, Workspace } from '../../browser'
+import { database } from '../../client'
+import { Result } from '../../lib/Result'
+import Transaction, { PromisedResult } from '../../lib/Transaction'
+import { documentTriggers } from '../../schema'
+import { buildConfiguration } from './helpers/buildConfiguration'
+import { DocumentTriggerWithConfiguration } from './helpers/schema'
 
 export async function updateDocumentTriggerConfiguration(
   {

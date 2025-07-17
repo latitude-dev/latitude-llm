@@ -4,13 +4,13 @@ import {
   DocumentLogWithMetadataAndError,
   Workspace,
 } from '../../../browser'
+import { Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
 import { ProviderLogsRepository } from '../../../repositories'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../../repositories/documentLogsWithMetadataAndErrorsRepository'
 import { Column, DatasetRowData, documentLogs } from '../../../schema'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from '../../datasets/utils'
 import { buildProviderLogResponse } from '../../providerLogs'
-import { Result } from './../../../lib/Result'
-import { PromisedResult } from './../../../lib/Transaction'
 import { buildColumns, FixedColumnsByName } from './buildColumns'
 
 export type ExportedDocumentLogs = {

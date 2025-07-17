@@ -8,6 +8,7 @@ import {
   ToolRequestContent,
 } from '@latitude-data/compiler'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { ChainStreamManager } from '../../../../../__deprecated/lib/chainStreamManager'
 import {
   LogSources,
   ProviderLog,
@@ -15,11 +16,10 @@ import {
   Workspace,
 } from '../../../../../browser'
 import { PromptSource } from '../../../../../constants'
-import { ChainStreamManager } from '../../../../../__deprecated/lib/chainStreamManager'
+import { Result } from '../../../../../lib/Result'
 import { TelemetryContext } from '../../../../../telemetry'
-import { runAgentStep } from '../../../agents/runStep'
 import { buildProvidersMap } from '../../../../providerApiKeys/buildMap'
-import { Result } from './../../../../../lib/Result'
+import { runAgentStep } from '../../../agents/runStep'
 
 function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
   const toolContents: ToolRequestContent[] = providerLog.toolCalls.map(

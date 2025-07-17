@@ -1,11 +1,11 @@
-import { IntegrationDto, PipedreamIntegration } from '../../../browser'
-import { touchIntegration } from '../touch'
-import { LatitudeError } from './../../../lib/errors'
-import { PromisedResult } from './../../../lib/Transaction'
-import { Result } from './../../../lib/Result'
 import { IntegrationType } from '@latitude-data/constants'
-import { runAction } from '../pipedream/components'
+import { IntegrationDto, PipedreamIntegration } from '../../../browser'
+import { LatitudeError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
 import { StreamManager } from '../../../lib/streamManager'
+import { PromisedResult } from '../../../lib/Transaction'
+import { runAction } from '../pipedream/components'
+import { touchIntegration } from '../touch'
 
 type ResultContent =
   | { type: 'text'; text: string }

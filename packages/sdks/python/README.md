@@ -43,7 +43,13 @@ Requires uv `0.5.10` or higher.
 
 ### Running only a specific test
 
-Mark the test with an `only` marker:
+Specify the test inline:
+
+```python
+uv run scripts/test.py <test_path>::<test_case>::<test_name>
+```
+
+Or mark the test with an `only` marker:
 
 ```python
 import pytest
@@ -57,12 +63,6 @@ async def my_test(self):
 
 ```sh
 uv run scripts/test.py -m only
-```
-
-Another way is to specify the test in line:
-
-```python
-uv run scripts/test.py <test_path>::<test_case>::<test_name>
 ```
 
 ## License

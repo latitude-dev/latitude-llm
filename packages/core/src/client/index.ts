@@ -8,12 +8,8 @@ import * as schema from '../schema'
 
 const { Pool } = pg
 
-export type Replica = NodePgDatabase<typeof schema> & { $client: IPool }
-export type Database =
-  | PgWithReplicas<Replica>
-  | (NodePgDatabase<typeof schema> & {
-      $client: IPool
-    })
+type Connection = NodePgDatabase<typeof schema> & { $client: IPool }
+export type Database = Connection | PgWithReplicas<Connection>
 
 // TODO: Send pool vitals to datadog when they change
 const POOL_CONFIG: PoolConfig = {
@@ -29,7 +25,7 @@ const pool = new Pool({
   connectionString: env.DATABASE_URL,
 })
 
-const readReplicas: Replica[] = []
+const readReplicas: Connection[] = []
 
 if (env.READ_DATABASE_URL) {
   const read1Pool = new Pool({
@@ -53,7 +49,7 @@ const primary = drizzle(pool, { schema })
 
 export const database =
   readReplicas.length > 0
-    ? withReplicas(primary, readReplicas as [Replica, ...Replica[]])
+    ? withReplicas(primary, readReplicas as [Connection, ...Connection[]])
     : primary
 
 const LRO_POOL_CONFIG: PoolConfig = {
@@ -67,7 +63,7 @@ const LRO_POOL_CONFIG: PoolConfig = {
 let _lro:
   | {
       pools: IPool[]
-      replicas: Replica[]
+      replicas: Connection[]
       database: Database
     }
   | undefined
@@ -81,7 +77,7 @@ export function setupLRO() {
   if (_lro) return
 
   const pools: IPool[] = []
-  const replicas: Replica[] = []
+  const replicas: Connection[] = []
 
   if (env.READ_DATABASE_URL) {
     const pool = new Pool({
@@ -103,7 +99,7 @@ export function setupLRO() {
 
   const database =
     replicas.length > 0
-      ? withReplicas(primary, replicas as [Replica, ...Replica[]])
+      ? withReplicas(primary, replicas as [Connection, ...Connection[]])
       : primary
 
   _lro = { pools, replicas, database }

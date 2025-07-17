@@ -1,12 +1,10 @@
+import DiffMatchPatch from 'diff-match-patch'
 import { omit } from 'lodash-es'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
+import { BadRequestError, ConflictError } from '../../lib/errors'
+import { Result, TypedResult } from '../../lib/Result'
 import { DocumentVersionsRepository } from '../../repositories'
-import DiffMatchPatch from 'diff-match-patch'
-import { BadRequestError } from './../../lib/errors'
-import { ConflictError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import { TypedResult } from './../../lib/Result'
 
 /**
  * Computes the patches made from oldValue to newValue, and applies them to target

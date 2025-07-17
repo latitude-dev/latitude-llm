@@ -3,10 +3,10 @@ import { eq } from 'drizzle-orm'
 
 import { ProviderApiKey } from '../../browser'
 import { database } from '../../client'
+import { BadRequestError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { providerApiKeys, workspaces } from '../../schema'
-import { BadRequestError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 
 export async function destroyProviderApiKey(
   providerApiKey: ProviderApiKey,

@@ -1,7 +1,7 @@
 import { omit } from 'lodash-es'
 
-import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
   CoreMessage,
   jsonSchema,
@@ -17,8 +17,8 @@ import { JSONSchema7 } from 'json-schema'
 
 import { VercelConfig } from '@latitude-data/constants'
 import { ProviderApiKey, StreamType } from '../../browser'
+import { Result, TypedResult } from '../../lib/Result'
 import { TelemetryContext } from '../../telemetry'
-import { Result, TypedResult } from './../../lib/Result'
 import { buildTools } from './buildTools'
 import { getLanguageModel } from './getLanguageModel'
 import { handleAICallAPIError } from './handleError'

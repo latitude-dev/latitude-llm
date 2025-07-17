@@ -1,10 +1,10 @@
 import { findWorkspaceFromDocumentLog } from '../../data-access'
 import { findCommitById } from '../../data-access/commits'
+import { NotFoundError } from '../../lib/errors'
 import { DocumentLogsWithErrorsRepository } from '../../repositories'
 import { computeDocumentLogWithMetadata } from '../../services/documentLogs/computeDocumentLogWithMetadata'
 import { WebsocketClient } from '../../websockets/workers'
 import { DocumentLogCreatedEvent } from '../events'
-import { NotFoundError } from './../../lib/errors'
 
 export const notifyToClientDocumentLogCreatedJob = async ({
   data: event,

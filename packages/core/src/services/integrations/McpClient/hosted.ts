@@ -1,22 +1,21 @@
+import { IntegrationType } from '@latitude-data/constants'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { IntegrationDto, McpServer } from '../../../browser'
+import { publisher } from '../../../events/publisher'
+import { maintenanceQueue } from '../../../jobs/queues'
+import { Result, TypedResult } from '../../../lib/Result'
+import { StreamManager } from '../../../lib/streamManager'
 import { McpServerRepository } from '../../../repositories'
 import { scaleMcpServer } from '../../mcpServers/scaleService'
 import {
-  McpConnectionError,
+  DEFAULT_RETRY_CONFIG,
   McpClientConnection,
+  McpConnectionError,
   normalizeMcpUrl,
   retryWithBackoff,
-  DEFAULT_RETRY_CONFIG,
 } from './utils'
-import { publisher } from '../../../events/publisher'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { maintenanceQueue } from '../../../jobs/queues'
-import { Result } from './../../../lib/Result'
-import { TypedResult } from './../../../lib/Result'
-import { IntegrationType } from '@latitude-data/constants'
-import { StreamManager } from '../../../lib/streamManager'
 
 async function ensureMcpServerScaled(
   integration: IntegrationDto,

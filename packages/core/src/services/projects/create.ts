@@ -2,7 +2,7 @@ import { Commit, Project, User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { projects } from '../../schema'
 import { createCommit } from '../commits/create'
 

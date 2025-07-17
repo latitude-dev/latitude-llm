@@ -1,21 +1,20 @@
-import { findUnscopedDocumentTriggers } from '../../find'
 import {
   DocumentTriggerType,
   EMAIL_TRIGGER_DOMAIN,
 } from '@latitude-data/constants'
-import { database } from '../../../../client'
-import { DocumentTrigger, HEAD_COMMIT, Workspace } from '../../../../browser'
-import { DocumentVersionsRepository } from '../../../../repositories'
-import { EmailTriggerConfiguration } from '../../helpers/schema'
 import { PromptLFile } from 'promptl-ai'
-import { uploadFile } from '../../../files'
+import { DocumentTrigger, HEAD_COMMIT, Workspace } from '../../../../browser'
+import { database } from '../../../../client'
 import { unsafelyFindWorkspace } from '../../../../data-access'
 import { RunEmailTriggerJobData } from '../../../../jobs/job-definitions/documentTriggers/runEmailTriggerJob'
 import { defaultQueue } from '../../../../jobs/queues'
-import { BadRequestError } from './../../../../lib/errors'
-import { LatitudeError } from './../../../../lib/errors'
-import { PromisedResult } from './../../../../lib/Transaction'
-import { Result } from './../../../../lib/Result'
+import { BadRequestError, LatitudeError } from '../../../../lib/errors'
+import { Result } from '../../../../lib/Result'
+import { PromisedResult } from '../../../../lib/Transaction'
+import { DocumentVersionsRepository } from '../../../../repositories'
+import { uploadFile } from '../../../files'
+import { findUnscopedDocumentTriggers } from '../../find'
+import { EmailTriggerConfiguration } from '../../helpers/schema'
 
 async function getTriggerName(
   trigger: DocumentTrigger,

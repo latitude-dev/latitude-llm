@@ -3,14 +3,14 @@ import { Job } from 'bullmq'
 import { PromptLFile } from 'promptl-ai'
 import { DocumentTrigger, HEAD_COMMIT, Workspace } from '../../../../browser'
 import { unsafelyFindWorkspace } from '../../../../data-access'
+import { Result } from '../../../../lib/Result'
+import { PromisedResult } from '../../../../lib/Transaction'
 import { DocumentTriggerMailer } from '../../../../mailers'
 import {
   DocumentTriggersRepository,
   DocumentVersionsRepository,
 } from '../../../../repositories'
 import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
-import { Result } from './../../../../lib/Result'
-import { PromisedResult } from './../../../../lib/Transaction'
 import { getEmailResponse } from './getResponse'
 
 export type RunEmailTriggerJobData = {

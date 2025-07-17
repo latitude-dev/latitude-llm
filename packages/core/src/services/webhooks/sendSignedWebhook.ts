@@ -1,8 +1,7 @@
-import { type WebhookPayload } from './types'
-import { sendWebhook, type WebhookSendResponse } from './sendWebhook'
+import { Result, TypedResult } from '../../lib/Result'
 import { generateWebhookSignature } from './generateSignature'
-import { Result } from './../../lib/Result'
-import { TypedResult } from './../../lib/Result'
+import { sendWebhook, type WebhookSendResponse } from './sendWebhook'
+import { type WebhookPayload } from './types'
 
 export interface SendSignedWebhookParams {
   url: string

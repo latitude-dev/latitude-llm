@@ -9,20 +9,19 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
+import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
+import {
+  azureConfig,
+  LatitudePromptConfig,
+} from '@latitude-data/constants/latitudePromptSchema'
 import {
   applyProviderRules,
   ProviderApiKey,
   Workspace,
 } from '../../../../browser'
+import { Result, TypedResult } from '../../../../lib/Result'
 import { checkFreeProviderQuota } from '../../chains/checkFreeProviderQuota'
 import { CachedApiKeys } from '../../chains/run'
-import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
-import { Result } from './../../../../lib/Result'
-import { TypedResult } from './../../../../lib/Result'
-import {
-  azureConfig,
-  LatitudePromptConfig,
-} from '@latitude-data/constants/latitudePromptSchema'
 
 export type ValidatedAgentStep = {
   config: LatitudePromptConfig

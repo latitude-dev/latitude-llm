@@ -2,7 +2,7 @@ import { evaluationAdvancedTemplates } from '../../assets/evaluationAdvancedTemp
 import { database } from '../../client'
 import { EvaluationResultableType } from '../../constants'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { createEvaluationTemplate } from './create'
 
 export function createDefaultEvaluationTemplates(db = database) {

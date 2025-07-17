@@ -8,17 +8,17 @@ import {
   type DocumentVersion,
   type Workspace,
 } from '../../browser'
+import { generateUUIDIdentifier } from '../../lib/generateUUID'
+import { Result } from '../../lib/Result'
+import { createChainRunError } from '../../lib/streamManager/ChainErrors'
+import { ToolHandler } from '../../lib/streamManager/clientTools/handlers'
+import { telemetry, TelemetryContext } from '../../telemetry'
+import { runChain } from '../chains/run'
+import { createDocumentLog } from '../documentLogs/create'
 import { getResolvedContent } from '../documents'
 import { isErrorRetryable } from '../evaluationsV2/run'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
-import { generateUUIDIdentifier } from './../../lib/generateUUID'
-import { Result } from './../../lib/Result'
-import { createDocumentLog } from '../documentLogs/create'
-import { runChain } from '../chains/run'
 import { RunDocumentChecker } from './RunDocumentChecker'
-import { telemetry, TelemetryContext } from '../../telemetry'
-import { ToolHandler } from '../../lib/streamManager/clientTools/handlers'
-import { createChainRunError } from '../../lib/streamManager/ChainErrors'
 
 async function createDocumentRunResult({
   document,

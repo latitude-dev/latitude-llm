@@ -1,9 +1,9 @@
 import { and, desc, eq, isNotNull } from 'drizzle-orm'
 
 import { database } from '../../../client'
+import { InferedReturnType } from '../../../lib/commonTypes'
+import { Result } from '../../../lib/Result'
 import { buildCommitsScope } from './buildCommitsScope'
-import { InferedReturnType } from './../../../lib/commonTypes'
-import { Result } from './../../../lib/Result'
 
 export async function getHeadCommitForProject(
   {

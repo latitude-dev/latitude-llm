@@ -10,16 +10,16 @@ import {
   type DocumentVersion,
   type Workspace,
 } from '../../../browser'
+import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import { Result } from '../../../lib/Result'
 import { telemetry, TelemetryContext } from '../../../telemetry'
-import { runAgent } from '../agents/run'
-import { runChain } from '../chains/run'
+import { RunDocumentChecker } from '../../commits/RunDocumentChecker'
 import { createDocumentLog } from '../../documentLogs/create'
 import { getResolvedContent } from '../../documents'
 import { isErrorRetryable } from '../../evaluationsV2/run'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
-import { generateUUIDIdentifier } from './../../../lib/generateUUID'
-import { Result } from './../../../lib/Result'
-import { RunDocumentChecker } from '../../commits/RunDocumentChecker'
+import { runAgent } from '../agents/run'
+import { runChain } from '../chains/run'
 
 async function createDocumentRunResult({
   document,

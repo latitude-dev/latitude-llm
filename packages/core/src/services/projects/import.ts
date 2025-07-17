@@ -9,13 +9,13 @@ import {
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
+import { NotFoundError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { projects } from '../../schema'
 import { createNewDocument } from '../documents'
 import { createProject } from './create'
-import { NotFoundError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 
 export async function importOnboardingProject(
   {

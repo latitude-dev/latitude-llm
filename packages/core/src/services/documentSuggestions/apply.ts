@@ -9,7 +9,7 @@ import {
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { documentSuggestions } from '../../schema'
 import { createCommit } from '../commits/create'

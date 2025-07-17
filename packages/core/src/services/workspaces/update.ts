@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import type { Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { workspaces } from '../../schema'
 
 export async function updateWorkspace(

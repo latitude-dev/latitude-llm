@@ -9,9 +9,9 @@ import {
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { EvaluationsV2Repository } from '../../repositories'
 import { evaluationVersions } from '../../schema'
-import Transaction from './../../lib/Transaction'
 
 export async function deleteEvaluationV2<
   T extends EvaluationType = EvaluationType,

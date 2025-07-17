@@ -17,11 +17,11 @@ import {
 } from '../../../browser'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
+import { updatePromptMetadata } from '../../../lib/updatePromptMetadata'
 import { ProviderLogsRepository } from '../../../repositories'
 import { BACKGROUND, telemetry } from '../../../telemetry'
 import { runChain } from '../../chains/run'
 import { parsePrompt } from '../../documents/parse'
-import { updatePromptMetadata } from '../../../lib/updatePromptMetadata'
 
 export function promptTask({ provider }: { provider: ProviderApiKey }) {
   return `

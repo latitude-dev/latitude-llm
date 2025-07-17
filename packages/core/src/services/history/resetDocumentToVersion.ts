@@ -1,12 +1,12 @@
 import { Commit, DraftChange, Project, User, Workspace } from '../../browser'
+import { Result } from '../../lib/Result'
+import { PromisedResult } from '../../lib/Transaction'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
 import { createCommit } from '../commits'
 import { computeDocumentRevertChanges, updateDocument } from '../documents'
-import { PromisedResult } from './../../lib/Transaction'
-import { Result } from './../../lib/Result'
 
 async function fetchDocumentVersionDetails({
   workspace,

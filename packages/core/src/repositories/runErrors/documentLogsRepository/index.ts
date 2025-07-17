@@ -4,6 +4,8 @@ import {
   DocumentLogWithMetadataAndError,
   ErrorableEntity,
 } from '../../../browser'
+import { NotFoundError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
 import {
   commits,
   documentLogs,
@@ -12,8 +14,6 @@ import {
   workspaces,
 } from '../../../schema'
 import Repository from '../../repositoryV2'
-import { NotFoundError } from './../../../lib/errors'
-import { Result } from './../../../lib/Result'
 
 const tt = {
   ...getTableColumns(documentLogs),

@@ -1,8 +1,8 @@
 import { faker } from '@faker-js/faker'
 
 import { Project, User } from '../../browser'
+import { hasOwnProperty } from '../../lib/commonTypes'
 import { createCommit as createCommitFn } from '../../services/commits/create'
-import { hasOwnProperty } from './../../lib/commonTypes'
 import { createProject } from './createProject'
 import { ICreateProject } from './projects'
 

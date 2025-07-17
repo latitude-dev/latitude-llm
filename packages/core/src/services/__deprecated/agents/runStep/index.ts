@@ -13,17 +13,17 @@ import {
 } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { ChainStreamManager } from '../../../../__deprecated/lib/chainStreamManager'
 import {
   buildMessagesFromResponse,
   LogSources,
   TraceContext,
   Workspace,
 } from '../../../../browser'
-import { ChainStreamManager } from '../../../../__deprecated/lib/chainStreamManager'
+import { Result } from '../../../../lib/Result'
 import { telemetry, TelemetryContext } from '../../../../telemetry'
 import { CachedApiKeys, stepLimitExceededErrorMessage } from '../../chains/run'
 import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
-import { Result } from './../../../../lib/Result'
 
 function inferStepsFromConversation(messages: Message[]): number {
   // Returns the count of assistant messages since the last agent response

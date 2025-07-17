@@ -1,5 +1,6 @@
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
+import { NotFoundError } from '../../../lib/errors'
 import {
   CommitsRepository,
   DatasetRowsRepository,
@@ -16,7 +17,6 @@ import {
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import { captureException } from '../../../utils/workers/sentry'
 import { updateExperimentStatus } from '../experiments/shared'
-import { NotFoundError } from './../../../lib/errors'
 
 export type RunEvaluationV2JobData = {
   workspaceId: number

@@ -1,6 +1,6 @@
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { evaluationTemplateCategories } from '../../schema'
 type Props = {
   name: string

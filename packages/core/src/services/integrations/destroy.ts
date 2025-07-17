@@ -1,16 +1,16 @@
 import { eq } from 'drizzle-orm'
 
+import { IntegrationType } from '@latitude-data/constants'
+import { ForbiddenError } from '@latitude-data/constants/errors'
 import { IntegrationDto, McpServer } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
-import { integrations } from '../../schema'
-import { IntegrationType } from '@latitude-data/constants'
-import { destroyMcpServer } from '../mcpServers/destroyService'
+import Transaction from '../../lib/Transaction'
 import { McpServerRepository } from '../../repositories'
+import { integrations } from '../../schema'
+import { destroyMcpServer } from '../mcpServers/destroyService'
 import { destroyPipedreamAccountFromIntegration } from './pipedream/destroy'
 import { listReferences } from './references'
-import { ForbiddenError } from '@latitude-data/constants/errors'
 
 export async function destroyIntegration(
   integration: IntegrationDto,

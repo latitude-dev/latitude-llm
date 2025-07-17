@@ -7,10 +7,10 @@ import {
   LogSources,
   StreamType,
 } from '../../../../constants'
+import { defaultQueue } from '../../../../jobs/queues'
+import { generateUUIDIdentifier } from '../../../../lib/generateUUID'
 import { PartialConfig } from '../../../ai'
 import { createProviderLog } from '../../../providerLogs'
-import { defaultQueue } from '../../../../jobs/queues'
-import { generateUUIDIdentifier } from './../../../../lib/generateUUID'
 
 export async function saveOrPublishProviderLogs<
   S extends boolean,

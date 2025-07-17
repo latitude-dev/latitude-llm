@@ -4,10 +4,9 @@ import { Commit } from '../../browser'
 import { database } from '../../client'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError } from '../../lib/errors'
+import { Result, TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { commits } from '../../schema'
-import { Result } from './../../lib/Result'
-import { TypedResult } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 
 export async function updateCommit(
   commit: Commit,

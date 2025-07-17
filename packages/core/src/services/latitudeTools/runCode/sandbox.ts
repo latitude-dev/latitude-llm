@@ -1,10 +1,8 @@
 import { CodeSandbox, type Sandbox } from '@codesandbox/sdk'
 import { env } from '@latitude-data/env'
+import { BadRequestError, LatitudeError } from '../../../lib/errors'
+import { Result, TypedResult } from '../../../lib/Result'
 import { CodeRunResult } from './types.js'
-import { BadRequestError } from './../../../lib/errors'
-import { LatitudeError } from './../../../lib/errors'
-import { Result } from './../../../lib/Result'
-import { TypedResult } from './../../../lib/Result'
 
 export function normalizedResult(result: CodeRunResult): CodeRunResult {
   const ansiEscapeCodes = new RegExp(String.raw`\x1b\[[0-9;]*m`, 'g')

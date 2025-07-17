@@ -14,9 +14,10 @@ import {
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Chain as PromptlChain } from 'promptl-ai'
+import { ChainStreamManager } from '../../../../__deprecated/lib/chainStreamManager'
 import { buildMessagesFromResponse, Workspace } from '../../../../browser'
 import { LogSources } from '../../../../constants'
-import { ChainStreamManager } from '../../../../__deprecated/lib/chainStreamManager'
+import { Result } from '../../../../lib/Result'
 import { telemetry, TelemetryContext } from '../../../../telemetry'
 import { cacheChain } from '../chainCache'
 import {
@@ -25,7 +26,6 @@ import {
   ValidatedChainStep,
 } from '../ChainValidator'
 import { CachedApiKeys, SomeChain, stepLimitExceededErrorMessage } from '../run'
-import { Result } from './../../../../lib/Result'
 
 function assertValidStepCount({
   stepCount,

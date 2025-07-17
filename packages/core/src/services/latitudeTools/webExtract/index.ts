@@ -4,13 +4,12 @@ import {
 } from '@latitude-data/constants'
 import { env } from '@latitude-data/env'
 import { LatitudeToolDefinition } from '../../../constants'
-import { ExtractToolArgs, ExtractToolResult } from './types'
-import { BadRequestError } from './../../../lib/errors'
-import { LatitudeError } from './../../../lib/errors'
-import { PromisedResult } from './../../../lib/Transaction'
-import { Result } from './../../../lib/Result'
-import { TelemetryContext } from '@latitude-data/telemetry'
+import { BadRequestError, LatitudeError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
+import { TelemetryContext } from '../../../telemetry'
 import { withTelemetryWrapper } from '../telemetryWrapper'
+import { ExtractToolArgs, ExtractToolResult } from './types'
 
 const HANDINGER_API_URL = 'https://api.handinger.com/markdown'
 

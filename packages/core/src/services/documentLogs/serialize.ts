@@ -5,11 +5,11 @@ import {
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
+import { NotFoundError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
+import { PromisedResult } from '../../lib/Transaction'
 import { ProviderLogsRepository } from '../../repositories'
 import { serializeForEvaluation as serializeProviderLog } from '../providerLogs'
-import { NotFoundError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import { PromisedResult } from './../../lib/Transaction'
 
 export function serializeAggregatedProviderLog({
   documentLog,

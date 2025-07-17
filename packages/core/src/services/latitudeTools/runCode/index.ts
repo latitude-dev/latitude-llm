@@ -1,17 +1,16 @@
-import { CodeToolArgs } from './types'
-import { runCodeWithoutDependencies } from './withoutDependencies'
-import { runCodeWithDependencies } from './withDependencies'
-import { LatitudeToolDefinition } from '../../../constants'
 import {
   LatitudeTool,
   LatitudeToolInternalName,
 } from '@latitude-data/constants'
-import { LatitudeError } from './../../../lib/errors'
-import { BadRequestError } from './../../../lib/errors'
-import { PromisedResult } from './../../../lib/Transaction'
-import { Result } from './../../../lib/Result'
-import { TelemetryContext } from '@latitude-data/telemetry'
+import { LatitudeToolDefinition } from '../../../constants'
+import { BadRequestError, LatitudeError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
+import { TelemetryContext } from '../../../telemetry'
 import { withTelemetryWrapper } from '../telemetryWrapper'
+import { CodeToolArgs } from './types'
+import { runCodeWithDependencies } from './withDependencies'
+import { runCodeWithoutDependencies } from './withoutDependencies'
 
 function assertContainsPrintStatement({ code, language }: CodeToolArgs) {
   const printStatementResult = (() => {

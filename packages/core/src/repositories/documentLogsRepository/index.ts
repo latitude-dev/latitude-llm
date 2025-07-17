@@ -10,11 +10,11 @@ import {
 } from 'drizzle-orm'
 
 import { DocumentLog, ErrorableEntity, LogSources } from '../../browser'
+import { NotFoundError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
+import rowsFromQueryPlan from '../../lib/rowsFromQueryPlan'
 import { commits, documentLogs, projects, runErrors } from '../../schema'
 import Repository from '../repositoryV2'
-import { NotFoundError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import rowsFromQueryPlan from './../../lib/rowsFromQueryPlan'
 
 const tt = getTableColumns(documentLogs)
 

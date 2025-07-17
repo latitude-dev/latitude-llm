@@ -1,19 +1,19 @@
 import { env } from '@latitude-data/env'
 import {
+  Commit,
+  DocumentVersion,
+  HEAD_COMMIT,
+  Workspace,
+} from '../../../../browser'
+import {
   unsafelyFindWorkspace,
   unsafelyGetApiKeyByToken,
 } from '../../../../data-access'
+import { Result } from '../../../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../../../repositories'
-import {
-  Commit,
-  Workspace,
-  DocumentVersion,
-  HEAD_COMMIT,
-} from '../../../../browser'
-import { Result } from './../../../../lib/Result'
 
 function getCopilotCredentials() {
   const apiKey = env.COPILOT_WORKSPACE_API_KEY

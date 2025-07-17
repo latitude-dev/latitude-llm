@@ -1,7 +1,7 @@
 import { Job } from 'bullmq'
+import { Result } from '../../../lib/Result'
 import { McpServerRepository } from '../../../repositories'
 import { updateMcpServerLastUsed } from '../../../services/mcpServers/updateLastUsed'
-import { Result } from './../../../lib/Result'
 
 export interface UpdateMcpServerLastUsedJobData {
   workspaceId: number

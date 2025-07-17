@@ -6,12 +6,11 @@ import { Commit } from '../../browser'
 import { database } from '../../client'
 import { unsafelyFindCommitsByProjectId } from '../../data-access/commits'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
+import { BadRequestError, databaseErrorCodes } from '../../lib/errors'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { commits } from '../../schema'
 import { pingProjectUpdate } from '../projects'
-import { BadRequestError } from './../../lib/errors'
-import { databaseErrorCodes } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 
 export async function deleteCommitDraft(commit: Commit, db = database) {
   const assertionResult = assertCommitIsDraft(commit)

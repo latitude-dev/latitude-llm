@@ -3,7 +3,7 @@ import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { RewardType } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { claimedRewards } from '../../schema'
 
 export async function claimNewUserReferrals(

@@ -1,18 +1,18 @@
-import { eq, and } from 'drizzle-orm'
+import { env } from '@latitude-data/env'
+import { and, eq } from 'drizzle-orm'
 import { Workspace } from '../../browser'
 import { database } from '../../client'
+import { BadRequestError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import {
-  users,
-  oauthAccounts,
   memberships,
-  workspaces,
+  oauthAccounts,
   OAuthProvider,
+  users,
+  workspaces,
 } from '../../schema'
 import setupServiceFn from '../users/setupService'
-import { BadRequestError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
-import { env } from '@latitude-data/env'
 
 interface FindOrCreateUserFromOAuthInput {
   providerId: OAuthProvider

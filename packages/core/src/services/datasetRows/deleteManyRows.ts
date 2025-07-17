@@ -2,7 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { Dataset, DatasetRow } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { datasetRows } from '../../schema'
 export const deleteManyRows = async (
   { dataset, rows }: { dataset: Dataset; rows: DatasetRow[] },

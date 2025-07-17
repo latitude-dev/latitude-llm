@@ -3,12 +3,10 @@ import path from 'path'
 import { type ConversationMetadata, scan } from 'promptl-ai'
 
 import { Commit, DocumentVersion, Workspace } from '../../browser'
-import { DocumentVersionsRepository } from '../../repositories'
-import { LatitudeError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import { TypedResult } from './../../lib/Result'
-import { UnprocessableEntityError } from './../../lib/errors'
 import { database } from '../../client'
+import { LatitudeError, UnprocessableEntityError } from '../../lib/errors'
+import { Result, TypedResult } from '../../lib/Result'
+import { DocumentVersionsRepository } from '../../repositories'
 
 export async function getDocumentMetadata({
   document,

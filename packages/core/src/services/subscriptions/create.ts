@@ -1,7 +1,7 @@
 import { Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { SubscriptionPlans } from '../../plans'
 import { subscriptions } from '../../schema/models/subscriptions'
 

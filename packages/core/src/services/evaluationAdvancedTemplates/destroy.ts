@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { evaluationAdvancedTemplates } from '../../schema'
 
 export function destroyEvaluationTemplate(

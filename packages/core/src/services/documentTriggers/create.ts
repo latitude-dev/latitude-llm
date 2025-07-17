@@ -4,20 +4,20 @@ import {
   IntegrationType,
 } from '@latitude-data/constants'
 import { DocumentTrigger, Project, Workspace } from '../../browser'
+import { database } from '../../client'
+import { BadRequestError, LatitudeError } from '../../lib/errors'
+import { generateUUIDIdentifier } from '../../lib/generateUUID'
+import { Result } from '../../lib/Result'
+import Transaction, { PromisedResult } from '../../lib/Transaction'
+import { IntegrationsRepository } from '../../repositories'
+import { documentTriggers } from '../../schema'
+import { deployPipedreamTrigger } from '../integrations/pipedream/triggers'
+import { buildConfiguration } from './helpers/buildConfiguration'
 import {
   DocumentTriggerConfiguration,
   InsertDocumentTriggerWithConfiguration,
   IntegrationTriggerConfiguration,
 } from './helpers/schema'
-import { documentTriggers } from '../../schema'
-import { database } from '../../client'
-import { buildConfiguration } from './helpers/buildConfiguration'
-import { generateUUIDIdentifier } from './../../lib/generateUUID'
-import { BadRequestError, LatitudeError } from './../../lib/errors'
-import Transaction, { PromisedResult } from './../../lib/Transaction'
-import { Result } from './../../lib/Result'
-import { deployPipedreamTrigger } from '../integrations/pipedream/triggers'
-import { IntegrationsRepository } from '../../repositories'
 
 async function completeIntegrationTriggerConfig(
   {

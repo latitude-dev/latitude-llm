@@ -1,7 +1,7 @@
 import { unsafelyFindWorkspace } from '../../data-access'
+import { NotFoundError } from '../../lib/errors'
 import { WebsocketClient } from '../../websockets/workers'
 import { EvaluationResultV2CreatedEvent } from '../events'
-import { NotFoundError } from './../../lib/errors'
 
 export const notifyClientOfEvaluationResultV2Created = async ({
   data: event,

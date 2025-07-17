@@ -1,13 +1,13 @@
 import { Conversation } from '@latitude-data/constants/legacyCompiler'
 import { FinishReason } from 'ai'
 
+import { ProviderLog } from '@latitude-data/constants'
 import { ProviderApiKey, Workspace } from '../../../browser'
 import { ChainStepResponse, LogSources, StreamType } from '../../../constants'
+import { defaultQueue } from '../../../jobs/queues'
+import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { PartialConfig } from '../../ai'
 import { createProviderLog } from '../../providerLogs'
-import { generateUUIDIdentifier } from './../../../lib/generateUUID'
-import { ProviderLog } from '@latitude-data/constants'
-import { defaultQueue } from '../../../jobs/queues'
 
 export async function saveProviderLog({
   workspace,

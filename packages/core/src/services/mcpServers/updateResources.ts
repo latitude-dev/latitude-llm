@@ -1,14 +1,14 @@
-import { Result } from '../../lib/Result'
-import { mcpServers } from '../../schema/models/mcpServers'
-import { getK8sClient } from '../k8s/k8sClient'
+import * as k8s from '@kubernetes/client-node'
 import { eq } from 'drizzle-orm'
 import yaml from 'js-yaml'
-import * as k8s from '@kubernetes/client-node'
-import { decrypt } from '../../lib/encryption'
-import { generateK8sManifest } from './manifestGenerator'
 import { McpServer } from '../../browser'
 import { database } from '../../client'
-import Transaction from './../../lib/Transaction'
+import { decrypt } from '../../lib/encryption'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
+import { mcpServers } from '../../schema/models/mcpServers'
+import { getK8sClient } from '../k8s/k8sClient'
+import { generateK8sManifest } from './manifestGenerator'
 
 /**
  * Updates the Kubernetes resources for an existing MCP server

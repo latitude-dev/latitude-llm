@@ -2,19 +2,19 @@ import {
   ToolCallResponse,
   buildResponseMessage,
 } from '@latitude-data/constants'
-import { scan } from 'promptl-ai'
 import { ToolCall, ToolContent } from '@latitude-data/constants/legacyCompiler'
+import { scan } from 'promptl-ai'
 import {
   Commit,
   DocumentVersion,
   LogSources,
   Workspace,
 } from '../../../../browser'
+import { Result } from '../../../../lib/Result'
+import { UnprocessableEntityError } from '../../../../lib/errors'
 import { ToolSchema } from '../../../../services/ai'
 import { runDocumentAtCommit } from '../../../../services/commits/runDocumentAtCommit'
 import { TelemetryContext, telemetry } from '../../../../telemetry'
-import { Result } from './../../../../lib/Result'
-import { UnprocessableEntityError } from './../../../../lib/errors'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 
 async function buildToolSpecifications({

@@ -1,5 +1,5 @@
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { JSONSchema7 } from 'json-schema'
 import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
 import { z } from 'zod'
@@ -10,10 +10,10 @@ import {
 } from '@latitude-data/constants/latitudePromptSchema'
 import { CompileError as PromptlCompileError } from 'promptl-ai'
 import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
+import { Result, TypedResult } from '../../../lib/Result'
+import { Output } from '../../../lib/streamManager/step/streamAIResponse'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
-import { Result, TypedResult } from './../../../lib/Result'
-import { Output } from '../../../lib/streamManager/step/streamAIResponse'
 
 const DEFAULT_AGENT_MAX_STEPS = 20
 

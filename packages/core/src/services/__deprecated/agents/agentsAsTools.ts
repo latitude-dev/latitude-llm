@@ -1,17 +1,17 @@
+import { readMetadata } from '@latitude-data/compiler'
 import {
   AgentToolsMap,
   resolveRelativePath,
   ToolDefinition,
 } from '@latitude-data/constants'
-import { DocumentVersionsRepository } from '../../../repositories'
-import { Commit, DocumentVersion, Workspace } from '../../../browser'
-import { scan } from 'promptl-ai'
-import { readMetadata } from '@latitude-data/compiler'
 import { JSONSchema7 } from 'json-schema'
-import { getAgentToolName } from './helpers'
+import { scan } from 'promptl-ai'
+import { Commit, DocumentVersion, Workspace } from '../../../browser'
 import { database } from '../../../client'
-import { PromisedResult } from './../../../lib/Transaction'
-import { Result } from './../../../lib/Result'
+import { Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
+import { DocumentVersionsRepository } from '../../../repositories'
+import { getAgentToolName } from './helpers'
 
 const DEFAULT_PARAM_DEFINITION: JSONSchema7 = {
   type: 'string',

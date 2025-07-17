@@ -15,6 +15,8 @@ import {
 } from '../../../browser'
 import { database } from '../../../client'
 import { assertCommitIsDraft } from '../../../lib/assertCommitIsDraft'
+import { Result, TypedResult } from '../../../lib/Result'
+import Transaction from '../../../lib/Transaction'
 import {
   IntegrationsRepository,
   ProviderApiKeysRepository,
@@ -24,9 +26,6 @@ import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
 import { inheritDocumentRelations } from '../inheritRelations'
 import { getHeadDocumentsAndDraftDocumentsForCommit } from './getHeadDocumentsAndDraftDocuments'
 import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
-import { Result } from './../../../lib/Result'
-import { TypedResult } from './../../../lib/Result'
-import Transaction from './../../../lib/Transaction'
 
 async function resolveDocumentChanges({
   originalDocuments,

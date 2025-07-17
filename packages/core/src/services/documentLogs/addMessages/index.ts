@@ -1,23 +1,23 @@
 import { type Message } from '@latitude-data/constants/legacyCompiler'
 
+import { VercelConfig } from '@latitude-data/constants'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { buildConversation, LogSources, Workspace } from '../../../browser'
+import { unsafelyFindProviderApiKey } from '../../../data-access'
+import { Result } from '../../../lib/Result'
+import { ToolHandler } from '../../../lib/streamManager/clientTools/handlers'
+import { DefaultStreamManager } from '../../../lib/streamManager/defaultStreamManager'
 import {
   CommitsRepository,
   DocumentLogsRepository,
   DocumentVersionsRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
-import serializeProviderLog from '../../providerLogs/serialize'
 import { BACKGROUND, TelemetryContext } from '../../../telemetry'
-import { scanDocumentContent } from '../../documents'
-import { Result } from './../../../lib/Result'
-import { ToolHandler } from '../../../lib/streamManager/clientTools/handlers'
-import { NotFoundError } from '@latitude-data/constants/errors'
-import { unsafelyFindProviderApiKey } from '../../../data-access'
-import { DefaultStreamManager } from '../../../lib/streamManager/defaultStreamManager'
-import { VercelConfig } from '@latitude-data/constants'
 import { getInputSchema, getOutputType } from '../../chains/ChainValidator'
+import { scanDocumentContent } from '../../documents'
+import serializeProviderLog from '../../providerLogs/serialize'
 
 type AddMessagesArgs = {
   workspace: Workspace

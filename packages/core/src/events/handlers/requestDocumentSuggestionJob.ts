@@ -2,8 +2,8 @@ import { LogSources } from '../../browser'
 import { unsafelyFindWorkspace } from '../../data-access'
 import { generateDocumentSuggestionJobKey } from '../../jobs/job-definitions'
 import { documentSuggestionsQueue } from '../../jobs/queues'
+import { NotFoundError } from '../../lib/errors'
 import { EvaluationResultV2CreatedEvent } from '../events'
-import { NotFoundError } from './../../lib/errors'
 
 const LIVE_SUGGESTION_SOURCES = [LogSources.Playground, LogSources.Experiment]
 

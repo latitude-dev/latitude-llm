@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm'
 import { database } from '../../client'
-import { webhooks } from '../../schema/models/webhooks'
-import { Result, type TypedResult } from '../../lib/Result'
-import { type Webhook } from './types'
 import { NotFoundError } from '../../lib/errors'
-import Transaction from './../../lib/Transaction'
+import { Result, type TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
+import { webhooks } from '../../schema/models/webhooks'
+import { type Webhook } from './types'
 
 export async function updateWebhookTimestamp(
   webhookId: number,

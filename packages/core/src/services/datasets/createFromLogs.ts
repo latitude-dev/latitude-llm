@@ -1,11 +1,11 @@
+import { Dataset, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
-import { Dataset, Workspace } from '../../browser'
-import { HashAlgorithmFn } from './utils'
+import Transaction from '../../lib/Transaction'
+import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
 import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
 import { updateDataset } from './update'
-import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
+import { HashAlgorithmFn } from './utils'
 
 export const updateDatasetFromLogs = async (
   {

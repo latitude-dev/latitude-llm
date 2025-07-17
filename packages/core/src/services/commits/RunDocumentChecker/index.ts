@@ -1,22 +1,20 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
-  isPromptLFile,
-  toPromptLFile,
-  scan,
-  type PromptLFile,
-  Chain,
   Adapters,
+  Chain,
+  isPromptLFile,
+  scan,
+  toPromptLFile,
+  type PromptLFile,
 } from 'promptl-ai'
 
-import { DocumentVersion, ErrorableEntity } from '../../../browser'
-import { createRunError } from '../../runErrors/create'
-import { BadRequestError } from './../../../lib/errors'
-import { ErrorResult } from './../../../lib/Result'
-import { LatitudeError } from './../../../lib/errors'
-import { PromisedResult } from './../../../lib/Transaction'
-import { Result } from './../../../lib/Result'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { DocumentVersion, ErrorableEntity } from '../../../browser'
+import { BadRequestError, LatitudeError } from '../../../lib/errors'
+import { ErrorResult, Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
 import { parsePrompt } from '../../documents/parse'
+import { createRunError } from '../../runErrors/create'
 
 type RunDocumentErrorCodes = RunErrorCodes.ChainCompileError
 

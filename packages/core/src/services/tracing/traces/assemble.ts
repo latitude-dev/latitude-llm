@@ -4,7 +4,7 @@ import {
   Span,
   Workspace,
 } from '../../../browser'
-import { database, Database } from '../../../client'
+import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { SpansRepository } from '../../../repositories'
@@ -19,7 +19,7 @@ export async function assembleTrace(
     conversationId: string
     workspace: Workspace
   },
-  db: Database = database,
+  db = database,
 ) {
   const repository = new SpansRepository(workspace.id, db)
   const listing = await repository.list({ traceId })

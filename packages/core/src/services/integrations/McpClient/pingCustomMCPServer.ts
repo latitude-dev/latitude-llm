@@ -1,8 +1,8 @@
+import { McpTool } from '@latitude-data/constants'
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
-import { McpTool } from '@latitude-data/constants'
-import { PromisedResult } from './../../../lib/Transaction'
-import { Result } from './../../../lib/Result'
+import { Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
 
 export async function pingCustomMCPServer(
   url: string,

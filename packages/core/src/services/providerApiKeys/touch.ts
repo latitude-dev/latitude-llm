@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm'
 
 import { database } from '../../client'
+import { NotFoundError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { providerApiKeys } from '../../schema'
-import { NotFoundError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 
 export function touchProviderApiKey(id: number, db = database) {
   return Transaction.call(async (tx) => {

@@ -9,6 +9,8 @@ import { Chain as PromptlChain } from 'promptl-ai'
 import { MAX_STEPS_CONFIG_NAME } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { LanguageModelUsage } from 'ai'
+import { ChainStreamManager } from '../../../__deprecated/lib/chainStreamManager'
+import { createChainRunError } from '../../../__deprecated/lib/chainStreamManager/ChainErrors'
 import { ProviderApiKey, TraceContext, Workspace } from '../../../browser'
 import {
   ChainStepResponse,
@@ -17,11 +19,9 @@ import {
   PromptSource,
   StreamType,
 } from '../../../constants'
-import { ChainStreamManager } from '../../../__deprecated/lib/chainStreamManager'
-import { createChainRunError } from '../../../__deprecated/lib/chainStreamManager/ChainErrors'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import { TypedResult } from '../../../lib/Result'
 import { TelemetryContext } from '../../../telemetry'
-import { TypedResult } from './../../../lib/Result'
 import { ConfigOverrides } from './ChainValidator'
 import { runStep } from './runStep'
 

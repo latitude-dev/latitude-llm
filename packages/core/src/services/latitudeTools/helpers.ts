@@ -1,13 +1,13 @@
-import { LatitudeToolCall } from '../../constants'
-import { LATITUDE_TOOLS } from './tools'
 import {
   LatitudeTool,
   LatitudeToolInternalName,
 } from '@latitude-data/constants'
-import { TypedResult } from './../../lib/Result'
-import { AssistantMessage, MessageRole } from 'promptl-ai'
 import { CoreToolMessage, Tool } from 'ai'
-import { TelemetryContext } from '@latitude-data/telemetry'
+import { AssistantMessage, MessageRole } from 'promptl-ai'
+import { LatitudeToolCall } from '../../constants'
+import { TypedResult } from '../../lib/Result'
+import { TelemetryContext } from '../../telemetry'
+import { LATITUDE_TOOLS } from './tools'
 
 export const getLatitudeToolName = (
   internalName: LatitudeToolInternalName,

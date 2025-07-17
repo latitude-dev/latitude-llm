@@ -1,11 +1,11 @@
-import { DocumentTrigger, Workspace } from '../../browser'
-import { documentTriggers } from '../../schema'
-import { database } from '../../client'
-import { and, eq } from 'drizzle-orm'
-import { LatitudeError } from './../../lib/errors'
-import Transaction, { PromisedResult } from './../../lib/Transaction'
-import { Result } from './../../lib/Result'
 import { DocumentTriggerType } from '@latitude-data/constants'
+import { and, eq } from 'drizzle-orm'
+import { DocumentTrigger, Workspace } from '../../browser'
+import { database } from '../../client'
+import { LatitudeError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
+import Transaction, { PromisedResult } from '../../lib/Transaction'
+import { documentTriggers } from '../../schema'
 import { destroyPipedreamTrigger } from '../integrations/pipedream/triggers'
 
 export async function deleteDocumentTrigger(

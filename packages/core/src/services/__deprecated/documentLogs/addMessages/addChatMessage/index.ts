@@ -6,6 +6,7 @@ import {
 } from '@latitude-data/constants/errors'
 
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { ChainStreamManager } from '../../../../../__deprecated/lib/chainStreamManager'
 import {
   buildConversation,
   ChainStepResponse,
@@ -18,12 +19,11 @@ import {
   Workspace,
 } from '../../../../../browser'
 import { unsafelyFindProviderApiKey } from '../../../../../data-access'
-import { ChainStreamManager } from '../../../../../__deprecated/lib/chainStreamManager'
+import { Result, TypedResult } from '../../../../../lib/Result'
 import { telemetry, TelemetryContext } from '../../../../../telemetry'
+import serializeProviderLog from '../../../../providerLogs/serialize'
 import { getInputSchema, getOutputType } from '../../../chains/ChainValidator'
 import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
-import serializeProviderLog from '../../../../providerLogs/serialize'
-import { Result, TypedResult } from './../../../../../lib/Result'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,

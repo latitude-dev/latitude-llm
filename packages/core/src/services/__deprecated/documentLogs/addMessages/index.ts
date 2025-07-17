@@ -2,6 +2,7 @@ import { type Message } from '@latitude-data/compiler'
 
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { LogSources, Workspace } from '../../../../browser'
+import { Result } from '../../../../lib/Result'
 import {
   CommitsRepository,
   DocumentLogsRepository,
@@ -9,9 +10,8 @@ import {
   ProviderLogsRepository,
 } from '../../../../repositories'
 import { TelemetryContext } from '../../../../telemetry'
-import { getCachedChain } from '../../chains/chainCache'
 import { scanDocumentContent } from '../../../documents'
-import { Result } from './../../../../lib/Result'
+import { getCachedChain } from '../../chains/chainCache'
 import { addChatMessage } from './addChatMessage'
 import { resumeAgent } from './resumeAgent'
 import { resumePausedPrompt } from './resumePausedPrompt'

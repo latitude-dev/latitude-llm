@@ -1,9 +1,9 @@
-import { Result, TypedResult } from '../../lib/Result'
-import { mcpServers } from '../../schema/models/mcpServers'
-import { database } from '../../client'
-import Transaction from './../../lib/Transaction'
 import { eq } from 'drizzle-orm'
 import { McpServer } from '../../browser'
+import { database } from '../../client'
+import { Result, TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
+import { mcpServers } from '../../schema/models/mcpServers'
 
 /**
  * Updates the lastUsedAt timestamp of an MCP server to the current time

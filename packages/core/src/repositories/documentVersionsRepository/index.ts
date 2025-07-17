@@ -13,13 +13,15 @@ import {
 
 import { Commit, DocumentVersion } from '../../browser'
 import { database } from '../../client'
+import {
+  databaseErrorCodes,
+  NotFoundError,
+  UnprocessableEntityError,
+} from '../../lib/errors'
+import { Result } from '../../lib/Result'
 import { commits, documentVersions, projects } from '../../schema'
 import { CommitsRepository } from '../commitsRepository'
 import RepositoryLegacy from '../repository'
-import { databaseErrorCodes } from './../../lib/errors'
-import { NotFoundError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
-import { UnprocessableEntityError } from './../../lib/errors'
 
 function mergeDocuments(
   ...documentsArr: DocumentVersion[][]

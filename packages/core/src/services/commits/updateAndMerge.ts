@@ -1,10 +1,10 @@
 import { Commit } from '../../browser'
 import { database } from '../../client'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
+import { TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { mergeCommit } from './merge'
 import { updateCommit } from './update'
-import { TypedResult } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 
 export async function updateAndMergeCommit(
   commit: Commit,

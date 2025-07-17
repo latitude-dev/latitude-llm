@@ -1,8 +1,8 @@
+import { VercelTools } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Tool, jsonSchema } from 'ai'
 import { compactObject } from '../../../lib/compactObject'
-import { VercelTools } from '@latitude-data/constants'
-import { Result } from './../../../lib/Result'
+import { Result } from '../../../lib/Result'
 
 export const buildTools = (tools: VercelTools | undefined) => {
   if (!tools) return Result.ok(undefined)

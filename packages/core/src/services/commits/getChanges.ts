@@ -1,3 +1,5 @@
+import { ChangedDocument } from '@latitude-data/constants'
+import type { CompileError } from 'promptl-ai'
 import {
   Commit,
   DocumentVersion,
@@ -5,15 +7,13 @@ import {
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
-import type { CompileError } from 'promptl-ai'
-import { recomputeChanges } from '../documents'
+import { Result } from '../../lib/Result'
+import { PromisedResult } from '../../lib/Transaction'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
-import { PromisedResult } from './../../lib/Transaction'
-import { Result } from './../../lib/Result'
-import { ChangedDocument } from '@latitude-data/constants'
+import { recomputeChanges } from '../documents'
 
 type DocumentErrors = { [documentUuid: string]: CompileError[] }
 

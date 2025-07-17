@@ -1,7 +1,6 @@
 import crypto from 'crypto'
-import { Result } from './../../../lib/Result'
-import { TypedResult } from './../../../lib/Result'
-import { UnauthorizedError } from './../../../lib/errors'
+import { Result, TypedResult } from '../../../lib/Result'
+import { UnauthorizedError } from '../../../lib/errors'
 
 type VerifyWebhookSignatureOptions = {
   maxTimestampAge: number

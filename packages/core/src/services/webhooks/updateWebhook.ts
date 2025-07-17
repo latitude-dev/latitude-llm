@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm'
 
 import { database } from '../../client'
-import { webhooks } from '../../schema/models/webhooks'
 import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
 import { Result, type TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
+import { webhooks } from '../../schema/models/webhooks'
 import { type UpdateWebhookParams, type Webhook } from './types'
-import Transaction from './../../lib/Transaction'
 
 export async function updateWebhook(
   params: UpdateWebhookParams,

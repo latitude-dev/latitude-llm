@@ -3,23 +3,23 @@ import {
   DocumentTriggerParameters,
   LogSources,
 } from '@latitude-data/constants'
+import { type AssistantMessage } from '@latitude-data/constants/legacyCompiler'
 import { type PromptLFile } from 'promptl-ai'
 import { DocumentTrigger, Workspace } from '../../../../browser'
 import { database } from '../../../../client'
 import { unsafelyFindWorkspace } from '../../../../data-access'
+import { BadRequestError } from '../../../../lib/errors'
+import { Result } from '../../../../lib/Result'
+import { PromisedResult } from '../../../../lib/Transaction'
 import {
   CommitsRepository,
   DocumentLogsRepository,
   DocumentVersionsRepository,
 } from '../../../../repositories'
 import { runDocumentAtCommit } from '../../../../services/commits'
-import { type AssistantMessage } from '@latitude-data/constants/legacyCompiler'
 import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
 import { uploadFile } from '../../../../services/files'
 import { BACKGROUND } from '../../../../telemetry'
-import { BadRequestError } from './../../../../lib/errors'
-import { Result } from './../../../../lib/Result'
-import { PromisedResult } from './../../../../lib/Transaction'
 
 async function getNewTriggerResponse(
   {

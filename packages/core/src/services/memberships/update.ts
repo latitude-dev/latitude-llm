@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { Membership } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
+import Transaction from '../../lib/Transaction'
 import { memberships } from '../../schema'
 export const updateMembership = async (
   membership: Membership,

@@ -12,13 +12,13 @@ import {
 
 import { Commit, Project } from '../../browser'
 import { CommitStatus, HEAD_COMMIT } from '../../constants'
+import { InferedReturnType } from '../../lib/commonTypes'
+import { NotFoundError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
+import { documentVersions } from '../../schema'
 import RepositoryLegacy from '../repository'
 import { buildCommitsScope, columnSelection } from './utils/buildCommitsScope'
 import { getHeadCommitForProject } from './utils/getHeadCommit'
-import { documentVersions } from '../../schema'
-import { InferedReturnType } from './../../lib/commonTypes'
-import { NotFoundError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
 
 function filterByStatusQuery({
   scope,

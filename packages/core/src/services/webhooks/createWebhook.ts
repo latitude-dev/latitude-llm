@@ -1,19 +1,17 @@
 import { randomBytes } from 'crypto'
 
 import { database } from '../../client'
-import { webhooks } from '../../schema/models/webhooks'
 import { UnprocessableEntityError } from '../../lib/errors'
+import { Result, TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
+import { webhooks } from '../../schema/models/webhooks'
 import { type CreateWebhookParams, type Webhook } from './types'
-import { type Database } from '../../client'
-import { Result } from './../../lib/Result'
-import { TypedResult } from './../../lib/Result'
-import Transaction from './../../lib/Transaction'
 
 export async function createWebhook(
   params: CreateWebhookParams,
   db = database,
 ): Promise<TypedResult<Webhook, Error>> {
-  return Transaction.call<Webhook>(async (tx: Database) => {
+  return Transaction.call<Webhook>(async (tx) => {
     const { workspaceId, name, url, projectIds = [], isActive } = params
 
     // Validate URL

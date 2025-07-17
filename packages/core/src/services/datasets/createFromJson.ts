@@ -1,12 +1,12 @@
 import { Dataset, User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from './../../lib/Transaction'
-import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
-import { createDataset } from './create'
+import Transaction from '../../lib/Transaction'
+import { Column, DatasetRowData } from '../../schema'
 import { extractHeadersFromFirstRow } from '../datasetRows/generatePreviewRowsFromJson'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
-import { Column, DatasetRowData } from '../../schema'
+import { createDataset } from './create'
+import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 
 function generateRowsFromJson({
   columns,

@@ -1,17 +1,16 @@
+import { IntegrationType } from '@latitude-data/constants'
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import { IntegrationDto } from '../../../browser'
+import { Result, TypedResult } from '../../../lib/Result'
+import { StreamManager } from '../../../lib/streamManager'
+import { createAndConnectExternalMcpClient } from './external'
+import { createAndConnectHostedMcpClient } from './hosted'
+import { createAndConnectPipedreamMcpClient } from './pipedream'
 import {
-  McpConnectionError,
   McpClientConnection,
   McpClientTransport,
+  McpConnectionError,
 } from './utils'
-import { Result } from './../../../lib/Result'
-import { TypedResult } from './../../../lib/Result'
-import { IntegrationType } from '@latitude-data/constants'
-import { createAndConnectHostedMcpClient } from './hosted'
-import { createAndConnectExternalMcpClient } from './external'
-import { createAndConnectPipedreamMcpClient } from './pipedream'
-import { StreamManager } from '../../../lib/streamManager'
 
 // Public Types
 export interface McpClientManager {
