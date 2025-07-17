@@ -32,8 +32,10 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { LineSeparator } from '@latitude-data/web-ui/atoms/LineSeparator'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { useCurrentCommit } from 'node_modules/@latitude-data/web-ui/src/providers/CommitProvider'
-import { useCurrentProject } from 'node_modules/@latitude-data/web-ui/src/providers/ProjectProvider'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import { FinishReasonItem } from '../../../../../[documentUuid]/_components/FinishReasonItem'
 
 function costNotCalculatedReason({

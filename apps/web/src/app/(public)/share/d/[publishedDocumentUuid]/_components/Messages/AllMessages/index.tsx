@@ -6,8 +6,8 @@ import {
   Message as ConversationMessage,
 } from '@latitude-data/constants/legacyCompiler'
 import { ExpandMessages } from '../ExpandMessages'
-import { useToolContentMap } from 'node_modules/@latitude-data/web-ui/src/lib/hooks/useToolContentMap'
 import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
+import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 
 export function AllMessages({
   messages,

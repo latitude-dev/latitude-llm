@@ -13,6 +13,7 @@
   "type": "module",
   "exports": {
     "./atoms/Alert": "./src/ds/atoms/Alert/index.tsx",
+    "./atoms/Alert/Primitives": "./src/ds/atoms/Alert/Primitives/index.tsx",
     "./atoms/Avatar": "./src/ds/atoms/Avatar/index.tsx",
     "./atoms/Badge": "./src/ds/atoms/Badge/index.tsx",
     "./atoms/Button": "./src/ds/atoms/Button/index.tsx",
@@ -37,6 +38,7 @@
     "./atoms/FormFieldGroup": "./src/ds/atoms/FormFieldGroup/index.tsx",
     "./atoms/FormWrapper": "./src/ds/atoms/FormWrapper/index.tsx",
     "./atoms/Icons": "./src/ds/atoms/Icons/index.tsx",
+    "./atoms/Icons/custom-icons": "./src/ds/atoms/Icons/custom-icons/index.ts",
     "./atoms/Illustrations": "./src/ds/atoms/Illustrations/index.tsx",
     "./atoms/Image": "./src/ds/atoms/Image/index.tsx",
     "./atoms/Input": "./src/ds/atoms/Input/index.tsx",
@@ -75,6 +77,7 @@
     "./molecules/CollapsibleBox": "./src/ds/molecules/CollapsibleBox/index.tsx",
     "./molecules/DocumentChange": "./src/ds/molecules/DocumentChange/index.tsx",
     "./molecules/DocumentTextEditor": "./src/ds/molecules/DocumentTextEditor/index.tsx",
+    "./molecules/DocumentTextEditor/types": "./src/ds/molecules/DocumentTextEditor/types.ts",
     "./molecules/EditableText": "./src/ds/molecules/EditableText/index.tsx",
     "./molecules/ErrorComponent": "./src/ds/molecules/ErrorComponent/index.tsx",
     "./molecules/FakeProgress": "./src/ds/molecules/FakeProgress/index.tsx",

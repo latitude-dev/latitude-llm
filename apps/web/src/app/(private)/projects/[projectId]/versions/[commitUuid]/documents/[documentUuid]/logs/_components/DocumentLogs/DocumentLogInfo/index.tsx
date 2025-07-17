@@ -11,7 +11,7 @@ import {
   SpanWithDetails,
 } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
+import { usePanelDomRef } from '@latitude-data/web-ui/atoms/SplitPane'
 import {
   ReactNode,
   RefObject,

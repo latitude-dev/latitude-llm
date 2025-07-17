@@ -39,7 +39,7 @@ import {
 import { format } from 'date-fns'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
+import { usePanelDomRef } from '@latitude-data/web-ui/atoms/SplitPane'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
