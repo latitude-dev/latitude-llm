@@ -62,7 +62,7 @@ export function MetadataItem({
         ) : (
           <>
             {value && (
-              <Text.H5 align='right' color={color} noWrap ellipsis>
+              <Text.H5 align='right' color={color}>
                 {value}
               </Text.H5>
             )}
