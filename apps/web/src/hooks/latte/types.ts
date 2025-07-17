@@ -5,7 +5,7 @@ interface ILatteInteractionStep {
   type: 'thought' | 'tool' | 'action'
 }
 
-type LatteThoughtStep = ILatteInteractionStep & {
+export type LatteThoughtStep = ILatteInteractionStep & {
   type: 'thought'
   content: string
 }
@@ -19,7 +19,7 @@ export type LatteToolStep = ILatteInteractionStep & {
   finished: boolean
   customIcon?: IconName
 }
-type LatteActionStep = ILatteInteractionStep & {
+export type LatteActionStep = ILatteInteractionStep & {
   type: 'action'
   action: LatteEditAction
 }

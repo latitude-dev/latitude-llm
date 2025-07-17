@@ -3,7 +3,6 @@
 // All this can be seen in the browser. If you want something private
 // put in other place.
 
-import type { Message } from '@latitude-data/constants/legacyCompiler'
 import type {
   Commit,
   Dataset,
@@ -16,6 +15,7 @@ import type {
   ProviderLogDto,
 } from '../browser'
 import { LatteChange } from '@latitude-data/constants/latte'
+import type { CoreMessage as Message } from 'ai'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
