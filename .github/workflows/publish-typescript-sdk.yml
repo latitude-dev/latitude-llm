@@ -86,7 +86,7 @@ jobs:
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
           CHANGELOG_FILE="packages/sdks/typescript/CHANGELOG.md"
-          
+
           if [ ! -f "$CHANGELOG_FILE" ]; then
             echo "## What's Changed" > release_notes.md
             echo "" >> release_notes.md
@@ -116,7 +116,7 @@ jobs:
               }
             ' "$CHANGELOG_FILE" > release_notes.md
           fi
-          
+
           # Read changelog content for use in release
           CHANGELOG_CONTENT=$(cat release_notes.md)
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
@@ -125,12 +125,10 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.check_version.outputs.should_publish == 'true'
-        uses: comnoco/create-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: typescript-sdk-${{ steps.get_version.outputs.version }}
-          release_name: TypeScript SDK v${{ steps.get_version.outputs.version }}
+          name: TypeScript SDK v${{ steps.get_version.outputs.version }}
           body: ${{ steps.extract_changelog.outputs.changelog }}
           draft: false
           prerelease: ${{ contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'rc') }}
