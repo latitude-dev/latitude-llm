@@ -138,10 +138,20 @@ async function addIntegrationTools({
             }).then((r) => r.unwrap())
 
             $tool?.end({ result: { value, isError: false } })
-            return value
+
+            return {
+              value,
+              isError: false,
+            }
           } catch (err) {
-            $tool?.fail(err as Error)
-            throw err
+            const result = {
+              value: err as Error,
+              isError: true,
+            }
+
+            $tool?.end({ result })
+
+            return result
           }
         },
       },

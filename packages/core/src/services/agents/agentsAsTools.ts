@@ -94,10 +94,19 @@ export async function getToolDefinitionFromDocument({
 
         $span?.end({ result: { value, isError: false } })
 
-        return value
+        return {
+          value,
+          isError: false,
+        }
       } catch (e) {
-        $span?.fail(e as Error)
-        throw e
+        const result = {
+          value: e as Error,
+          isError: true,
+        }
+
+        $span?.end({ result })
+
+        return result
       }
     },
   }
