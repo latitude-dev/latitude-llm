@@ -84,6 +84,9 @@ export function usePlaygroundChat({
 
   const handleLatitudeEvent = useCallback(
     (data: ChainEvent['data']) => {
+      if (data.type === ChainEventTypes.StepStarted) {
+        setMessages(data.messages)
+      }
       if (data.type === ChainEventTypes.ProviderCompleted) {
         setUsage(data.tokenUsage)
       }

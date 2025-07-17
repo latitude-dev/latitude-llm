@@ -44,22 +44,23 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
 
   async step(messages?: LegacyMessage[]): Promise<void> {
     try {
-      const step = await renderChain({
+      const chain = await renderChain({
         workspace: this.workspace,
         chain: this.chain,
         newMessages: messages,
         providersMap: this.providersMap,
       }).then((r) => r.unwrap())
-      if (step.chainCompleted) return this.endStream()
+      if (chain.chainCompleted) return this.endStream()
 
-      const toolsBySource = await this.getToolsBySource(step).then((r) =>
+      const toolsBySource = await this.getToolsBySource(chain).then((r) =>
         r.unwrap(),
       )
       const config = this.transformPromptlToVercelToolDeclarations(
-        step.config,
+        chain.config,
         toolsBySource,
       )
 
+      this.setMessages(chain.messages)
       this.startStep()
       this.startProviderStep(config)
 
@@ -74,10 +75,10 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
         abortSignal: this.abortSignal,
         controller: this.controller!,
         documentLogUuid: this.uuid,
-        messages: step.messages,
-        output: step.output,
-        provider: step.provider,
-        schema: step.schema,
+        messages: chain.messages,
+        output: chain.output,
+        provider: chain.provider,
+        schema: chain.schema,
         source: this.source,
         workspace: this.workspace,
       })

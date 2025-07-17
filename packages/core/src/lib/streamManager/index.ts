@@ -329,7 +329,7 @@ export abstract class StreamManager {
     tokenUsage: LanguageModelUsage
     finishReason?: FinishReason
   }) {
-    this.addMessages(messages)
+    this.messages.push(...messages)
     this.response = response
     this.finishReason = finishReason
     this.tokenUsage = {
@@ -340,8 +340,8 @@ export abstract class StreamManager {
     }
   }
 
-  private addMessages(messages: LegacyMessage[]) {
-    this.messages.push(...messages)
+  protected setMessages(messages: LegacyMessage[]) {
+    this.messages = messages
   }
 }
 
