@@ -206,7 +206,7 @@ describe('POST /run', () => {
         tools: {},
         source: LogSources.Playground,
         abortSignal: expect.anything(),
-        sdkVersion: '5.0.0',
+        isLegacy: false,
       })
     })
 
@@ -476,7 +476,7 @@ describe('POST /run', () => {
         tools: {},
         source: LogSources.Playground,
         abortSignal: expect.anything(),
-        sdkVersion: '5.0.0',
+        isLegacy: false,
       })
     })
 
@@ -767,7 +767,7 @@ describe('POST /run', () => {
         tools: {},
         source: LogSources.API,
         abortSignal: expect.anything(),
-        sdkVersion: '5.0.0',
+        isLegacy: false,
       })
       expect(mocks.runDocumentAtCommitLegacy).not.toHaveBeenCalled()
     })
@@ -810,9 +810,93 @@ describe('POST /run', () => {
         tools: {},
         source: LogSources.API,
         abortSignal: expect.anything(),
-        sdkVersion: '4.9.0',
+        isLegacy: true,
       })
       expect(mocks.runDocumentAtCommit).not.toHaveBeenCalled()
+    })
+
+    it('returns tool calls when using legacy sdk and the response has tool calls', async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.close()
+        },
+      })
+
+      const lastResponse = Promise.resolve({
+        streamType: 'object',
+        object: { something: { else: 'here' } },
+        text: 'Hello',
+        usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+        documentLogUuid: 'fake-document-log-uuid',
+        providerLog: {
+          messages: [
+            {
+              role: MessageRole.assistant,
+              toolCalls: [
+                {
+                  id: 'fake-tool-call-id',
+                  name: 'get_the_weather',
+                  arguments: { location: 'Barcelona, Spain' },
+                },
+              ],
+              content: 'Hello',
+            },
+          ],
+        } as unknown as ProviderLog,
+      })
+
+      const trace = createTelemetryTrace({})
+
+      mocks.runDocumentAtCommitLegacy.mockReturnValue(
+        Promise.resolve(
+          Result.ok({
+            stream,
+            lastResponse,
+            trace,
+            toolCalls: Promise.resolve([
+              {
+                id: 'fake-tool-call-id',
+                name: 'get_the_weather',
+                arguments: { location: 'Barcelona, Spain' },
+              },
+            ]),
+          }),
+        ),
+      )
+
+      const response = await app.request(route, {
+        method: 'POST',
+        body,
+        headers: {
+          ...headers,
+          'X-Latitude-SDK-Version': '4.9.0',
+        },
+      })
+
+      expect(mocks.runDocumentAtCommitLegacy).toHaveBeenCalledWith({
+        context: expect.anything(),
+        workspace,
+        document: expect.anything(),
+        commit,
+        parameters: {},
+        tools: {},
+        source: LogSources.API,
+        abortSignal: expect.anything(),
+        isLegacy: true,
+      })
+
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual(
+        expect.objectContaining({
+          toolRequests: [
+            {
+              id: 'fake-tool-call-id',
+              name: 'get_the_weather',
+              arguments: { location: 'Barcelona, Spain' },
+            },
+          ],
+        }),
+      )
     })
 
     it('uses new method when no SDK version header (defaults to latest)', async () => {
@@ -850,7 +934,7 @@ describe('POST /run', () => {
         tools: {},
         source: LogSources.API,
         abortSignal: expect.anything(),
-        sdkVersion: '5.0.0',
+        isLegacy: false,
       })
       expect(mocks.runDocumentAtCommitLegacy).not.toHaveBeenCalled()
     })

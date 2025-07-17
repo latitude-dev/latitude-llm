@@ -1,6 +1,7 @@
 import {
   ChainStepResponse,
   Commit,
+  ErrorableEntity,
   Experiment,
   LogSources,
   StreamType,
@@ -17,6 +18,7 @@ import { runChain } from '../chains/run'
 import { RunDocumentChecker } from './RunDocumentChecker'
 import { telemetry, TelemetryContext } from '../../telemetry'
 import { ToolHandler } from '../../lib/streamManager/clientTools/handlers'
+import { createChainRunError } from '../../lib/streamManager/ChainErrors'
 
 async function createDocumentRunResult({
   document,
@@ -123,17 +125,19 @@ export async function runDocumentAtCommit({
   })
   const checkerResult = await checker.call()
   if (checkerResult.error) {
-    await createDocumentRunResult({
-      workspace,
-      document,
+    await createDocumentLog({
       commit,
-      errorableUuid,
-      parameters,
-      resolvedContent: result.value,
-      source,
-      publishEvent: false,
-      experiment,
-    })
+      data: {
+        documentUuid: document.documentUuid,
+        customIdentifier,
+        duration: 0,
+        parameters,
+        resolvedContent: result.value,
+        uuid: errorableUuid,
+        source,
+        experimentId: experiment?.id,
+      },
+    }).then((r) => r.unwrap())
 
     $prompt.fail(checkerResult.error)
     return checkerResult
@@ -156,14 +160,27 @@ export async function runDocumentAtCommit({
 
   return Result.ok({
     ...runResult,
-    resolvedContent: result.value,
     errorableUuid,
+    resolvedContent: result.value,
+    error: runResult.error.then(async (error) => {
+      if (error) {
+        await createChainRunError({
+          error,
+          errorableUuid,
+          errorableType: ErrorableEntity.DocumentLog,
+        })
+      }
+
+      return error
+    }),
     lastResponse: runResult.response.then(async (response) => {
       const error = await runResult.error
-      if (error && isErrorRetryable(error)) {
+      if (error) {
         $prompt.fail(error)
 
-        return response
+        if (isErrorRetryable(error)) return response
+      } else {
+        $prompt.end()
       }
 
       await createDocumentRunResult({
@@ -179,8 +196,6 @@ export async function runDocumentAtCommit({
         publishEvent: true,
         experiment,
       })
-
-      $prompt.end()
 
       return response
     }),

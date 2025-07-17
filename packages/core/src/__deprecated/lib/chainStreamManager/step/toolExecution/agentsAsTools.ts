@@ -1,7 +1,7 @@
 import { ToolCall } from '@latitude-data/compiler'
 import { AGENT_RETURN_TOOL_NAME, LogSources } from '@latitude-data/constants'
 import { DocumentVersionsRepository } from '../../../../../repositories'
-import { runDocumentAtCommit } from '../../../../../services/commits/runDocumentAtCommit'
+import { runDocumentAtCommitLegacy } from '../../../../../services/__deprecated/commits/runDocumentAtCommit'
 import { BadRequestError, NotFoundError } from '../../../../../lib/errors'
 import { Result } from '../../../../../lib/Result'
 import { PromisedResult } from '../../../../../lib/Transaction'
@@ -42,7 +42,7 @@ export function getAgentsAsToolCallsResults({
       return Result.error(new NotFoundError(`Agent '${agentPath}' not found`))
     }
 
-    const result = await runDocumentAtCommit({
+    const result = await runDocumentAtCommitLegacy({
       context: contexts[idx]!,
       workspace,
       document,

@@ -8,14 +8,12 @@ export async function createChainRunError({
   error,
   errorableUuid,
   errorableType,
-  persistErrors,
 }: {
   errorableUuid: string
   error: ChainError<RunErrorCodes> | Error
-  persistErrors: boolean
   errorableType?: ErrorableEntity
 }) {
-  if (!persistErrors || !errorableType) return error
+  if (!errorableType) return error
 
   let chainError: ChainError<RunErrorCodes, RunError> = error as ChainError<
     RunErrorCodes,
