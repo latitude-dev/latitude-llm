@@ -1,14 +1,6 @@
-import {
-  Message,
-  MessageRole,
-  type ToolCall,
-  type ToolMessage,
-} from '@latitude-data/constants/legacyCompiler'
 import { LatteTool } from '@latitude-data/constants/latte'
 import { Workspace } from '../../../../browser'
 import { Result, TypedResult } from '../../../../lib/Result'
-import { PromisedResult } from '../../../../lib/Transaction'
-import { telemetry, TelemetryContext } from '../../../../telemetry'
 import type { LatteToolFn } from './types'
 
 import listDrafts from './commits/list'
@@ -19,8 +11,11 @@ import listProjects from './projects/list'
 import listIntegrations from './settings/listIntegrations'
 import listIntegrationTools from './settings/listIntegrationTools'
 import listProviders from './settings/listProviders'
+import think from './general/think'
+import { ToolHandler } from '../../../../lib/streamManager/clientTools/handlers'
 
 export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
+  [LatteTool.think]: think,
   [LatteTool.listProjects]: listProjects,
   [LatteTool.listDrafts]: listDrafts,
   [LatteTool.listPrompts]: listPrompts,
@@ -31,73 +26,41 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.listIntegrationTools]: listIntegrationTools,
 } as const
 
-export async function handleToolRequest({
-  context,
-  tool,
-  threadUuid,
+export function buildToolHandlers({
   workspace,
-  messages,
-  onFinish,
+  threadUuid,
 }: {
-  context: TelemetryContext
-  tool: ToolCall
-  threadUuid: string
-  messages: Message[]
   workspace: Workspace
-  onFinish?: (toolMessage: ToolMessage) => Promise<void>
-}): PromisedResult<ToolMessage> {
-  const $tool = telemetry.tool(context, {
-    name: tool.name,
-    call: {
-      id: tool.id,
-      arguments: tool.arguments,
-    },
-  })
+  threadUuid: string
+}): Record<LatteTool, ToolHandler> {
+  const latteToolEntries = Object.entries(LATTE_TOOLS) as [
+    LatteTool,
+    LatteToolFn<any>,
+  ][]
+  return latteToolEntries.reduce(
+    (acc, [toolName, toolFn]) => {
+      acc[toolName] = async ({ args, context, toolCall }) => {
+        let result: TypedResult<unknown, Error>
+        try {
+          result = await toolFn(args, {
+            context,
+            threadUuid,
+            workspace,
+            toolName,
+            toolCall,
+          })
+        } catch (error) {
+          result = Result.error(error as Error)
+        }
 
-  const toolName = tool.name as LatteTool
-  const latteTool = LATTE_TOOLS[toolName]
-  let result: TypedResult<unknown, Error>
-
-  if (!latteTool) {
-    result = Result.error(
-      new Error(`Tool '${toolName}' is not supported in this environment.`),
-    )
-  } else {
-    try {
-      result = await latteTool(tool.arguments, {
-        context: $tool.context,
-        threadUuid,
-        workspace,
-        tool,
-        messages,
-      })
-    } catch (error) {
-      result = Result.error(error as Error)
-    }
-  }
-
-  const message: ToolMessage = {
-    role: MessageRole.tool,
-    content: [
-      {
-        type: 'tool-result',
-        toolCallId: tool.id,
-        toolName: toolName,
-        result: result.ok
+        return Result.isOk(result)
           ? result.value
-          : `${result.error!.name}: ${result.error!.message}`,
-        isError: !result.ok,
-      },
-    ],
-  }
-
-  $tool.end({
-    result: {
-      value: result.value ?? result.error,
-      isError: !result.ok,
+          : {
+              error: { name: result.error.name, message: result.error.message },
+            }
+      }
+      return acc
     },
-  })
-
-  await onFinish?.(message)
-  return Result.ok(message)
+    {} as Record<LatteTool, ToolHandler>,
+  )
 }

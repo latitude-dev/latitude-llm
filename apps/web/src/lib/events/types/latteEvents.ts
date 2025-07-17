@@ -1,5 +1,5 @@
 import { LatteChange } from '@latitude-data/constants/latte'
 
 export interface LatteEvents {
-  LatteChanges: { changes: LatteChange[]; simulateStreaming?: boolean }
+  LatteProjectChanges: { changes: LatteChange[]; simulateStreaming?: boolean }
 }

@@ -2,14 +2,12 @@ import { addMessageToLatteAction } from '$/actions/latte/addMessage'
 import { createNewLatteAction } from '$/actions/latte/new'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useServerAction } from 'zsa-react'
-import { CoreMessage as Message, ToolCall } from 'ai'
 
 import { useCallback, useMemo, useState } from 'react'
 import {
   LatteInteraction,
   LatteInteractionStep,
   LatteToolStep,
-  LatteThoughtStep,
   LatteActionStep,
 } from './types'
 import { getDescriptionFromToolCall } from './helpers'
@@ -23,7 +21,7 @@ import {
 import { acceptLatteChangesAction } from '$/actions/latte/acceptChanges'
 import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
 import { addFeedbackToLatteChangeAction } from '$/actions/latte/addFeedbackToLatteChange'
-import { ContentType, MessageRole, TextContent } from 'promptl-ai'
+import { LatteThreadUpdateArgs } from '@latitude-data/core/browser'
 
 export function useLatte() {
   const [threadUuid, setThreadUuid] = useState<string>()
@@ -86,7 +84,7 @@ export function useLatte() {
     {
       onSuccess: ({ data: { evaluationUuid } }) => {
         // Undo changes in the UI
-        trigger('LatteChanges', {
+        trigger('LatteProjectChanges', {
           changes: changes.map((c) => ({
             ...c,
             previous: c.current,
@@ -166,19 +164,25 @@ export function useLatte() {
     [threadUuid, addMessageToExistingChat, createNewChat, latteContext],
   )
 
-  const handleNewMessage = useCallback(
-    (msg: { threadUuid: string; message: Message }) => {
+  const handleThreadUpdate = useCallback(
+    (update: LatteThreadUpdateArgs) => {
       const currentTimeAsString = new Date().toString()
-      if (!msg) {
+      if (!update) {
         console.warn(
-          'Received empty latteMessage message from server',
+          'Received empty latteThreadUpdate event from server',
           currentTimeAsString,
         )
         return
       }
-      const { threadUuid: incomingthreadUuid, message } = msg
+      const { threadUuid: incomingthreadUuid } = update
       if (!threadUuid) return
       if (threadUuid !== incomingthreadUuid) return
+
+      if (update.type === 'error') {
+        setError(update.error.message)
+        setIsLoading(false)
+        return
+      }
 
       // React strict mode will call this function twice. this fixes that.
       let fuckReactStrictMode = false
@@ -192,86 +196,69 @@ export function useLatte() {
         const otherInteractions = prev.slice(0, -1)
         const lastInteraction = [...prev.slice(-1)][0]!
 
-        if (message.role === MessageRole.tool) {
-          // Mark actions from last interaction as finished
-          const finishedToolIds = message.content.map((c) => c.toolCallId)
-          if (lastInteraction) {
-            lastInteraction.steps = lastInteraction.steps.map((step) => {
-              if (
-                step.type === 'tool' &&
-                !step.finished &&
-                finishedToolIds.includes(step.id)
-              ) {
-                step.finished = true
-              }
-
-              return step
-            })
-          }
+        if (update.type === 'response') {
+          lastInteraction.output = update.response
         }
 
-        if (message.role === MessageRole.assistant) {
-          if (typeof message.content === 'string') {
-            lastInteraction.output = message.content
-            return [...otherInteractions, lastInteraction]
-          }
-
-          if (message.content.every((c) => c.type === ContentType.text)) {
-            const textContent = message.content
-              .filter((c) => c.type === ContentType.text)
-              .map((c) => (c as unknown as TextContent).text!)
-              .join('\n')
-
-            lastInteraction.output = textContent
-            return [...otherInteractions, lastInteraction]
-          }
-
-          const newInteractionSteps: LatteInteractionStep[] = message.content
-            .map((c) => {
-              if (c.type === ContentType.toolCall) {
-                const toolCall = c as ToolCall<string, Record<string, unknown>>
-
-                if (toolCall.toolName === LatteTool.editProject) {
-                  const params = toolCall.args as {
-                    actions: LatteEditAction[]
-                  }
-
-                  return params.actions.map(
-                    (action) =>
-                      ({
-                        type: 'action',
-                        action,
-                      }) as LatteActionStep,
-                  )
-                }
-
-                return {
-                  type: 'tool',
-                  id: toolCall.toolCallId,
-                  toolName: toolCall.toolName,
-                  parameters: toolCall.args,
-                  finished: false,
-                  ...getDescriptionFromToolCall(toolCall),
-                } as LatteToolStep
-              }
-
-              if (c.type === ContentType.text && c.text?.length) {
-                return {
-                  type: 'thought',
-                  content: c.text,
-                } as LatteThoughtStep
-              }
-
-              return [] // Ignore other content types
-            })
-            .flat()
-
-          lastInteraction.steps.push(...newInteractionSteps)
-
-          return [...otherInteractions, lastInteraction]
+        if (update.type === 'toolCompleted') {
+          const finishedToolId = update.toolCallId
+          lastInteraction.steps = lastInteraction.steps.map((step) => {
+            if (
+              step.type === 'tool' &&
+              !step.finished &&
+              step.id === finishedToolId
+            ) {
+              step.finished = true
+            }
+            return step
+          })
         }
 
-        return prev
+        if (update.type === 'toolStarted') {
+          let steps: LatteInteractionStep[] = [
+            {
+              type: 'tool',
+              id: update.toolCallId,
+              toolName: update.toolName,
+              parameters: update.args,
+              finished: false,
+              ...getDescriptionFromToolCall({
+                toolCallId: update.toolCallId,
+                toolName: update.toolName,
+                args: update.args,
+              }),
+            } as LatteToolStep,
+          ]
+
+          if (update.toolName === LatteTool.editProject) {
+            const actions = (
+              update.args as {
+                actions: LatteEditAction[]
+              }
+            ).actions
+
+            steps = actions.map(
+              (action) =>
+                ({
+                  type: 'action',
+                  action,
+                }) as LatteActionStep,
+            )
+          }
+
+          if (update.toolName === LatteTool.think) {
+            steps = [
+              {
+                type: 'thought',
+                content: update.args['thought'] as string,
+              },
+            ]
+          }
+
+          lastInteraction.steps.push(...steps)
+        }
+
+        return [...otherInteractions, lastInteraction]
       })
 
       setIsLoading(false)
@@ -280,20 +267,23 @@ export function useLatte() {
   )
 
   useSockets({
-    event: 'latteMessage',
-    onMessage: handleNewMessage,
+    event: 'latteThreadUpdate',
+    onMessage: handleThreadUpdate,
   })
 
   useSockets({
-    event: 'latteChanges',
+    event: 'latteProjectChanges',
     onMessage: (msg: { threadUuid: string; changes: LatteChange[] }) => {
       if (!msg) {
-        console.warn('Received empty latteChanges message from server')
+        console.warn('Received empty latteProjectChanges event from server')
         return
       }
       const { threadUuid: incomingThreadUuid, changes: newChanges } = msg
 
-      trigger('LatteChanges', { changes: newChanges, simulateStreaming: true })
+      trigger('LatteProjectChanges', {
+        changes: newChanges,
+        simulateStreaming: true,
+      })
       if (!threadUuid || threadUuid !== incomingThreadUuid) return
 
       setLatteActionsFeedbackUuid(undefined)
@@ -331,27 +321,6 @@ export function useLatte() {
         return updatedChanges
       })
     },
-  })
-
-  const handleError = useCallback(
-    ({
-      threadUuid: incomingthreadUuid,
-      error,
-    }: {
-      threadUuid: string
-      error: string
-    }) => {
-      if (!threadUuid) return
-      if (threadUuid !== incomingthreadUuid) return
-      setError(error)
-      setIsLoading(false)
-    },
-    [threadUuid],
-  )
-
-  useSockets({
-    event: 'latteError',
-    onMessage: handleError,
   })
 
   return useMemo(

@@ -1,17 +1,18 @@
 import { z } from 'zod'
 import { Workspace } from '../../../../browser'
 import { PromisedResult } from '../../../../lib/Transaction'
-import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../lib/Result'
 import { TelemetryContext } from '../../../../telemetry'
+import { ToolExecutionOptions } from 'ai'
+import { LatteTool } from '@latitude-data/constants/latte'
 
 type LatteToolContext = {
   context: TelemetryContext
   workspace: Workspace
   threadUuid: string
-  messages: Message[]
-  tool: ToolCall
+  toolName: LatteTool
+  toolCall: ToolExecutionOptions
 }
 export type LatteToolFn<P extends { [key: string]: unknown } = {}> = (
   parameters: P,
@@ -34,7 +35,7 @@ export const defineLatteTool = <
     if (!result.success) {
       return Result.error(
         new BadRequestError(
-          `Invalid parameters for tool '${context.tool.name}': ${result.error.message}`,
+          `Invalid parameters for tool '${context.toolName}': ${result.error.message}`,
         ),
       )
     }

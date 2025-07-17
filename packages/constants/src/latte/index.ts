@@ -1,6 +1,8 @@
 export * from './actions'
 
 export enum LatteTool {
+  think = 'think',
+
   listProjects = 'list_projects',
   listDrafts = 'list_drafts',
 

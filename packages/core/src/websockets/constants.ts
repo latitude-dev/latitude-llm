@@ -15,7 +15,6 @@ import type {
   ProviderLogDto,
 } from '../browser'
 import { LatteChange } from '@latitude-data/constants/latte'
-import type { CoreMessage as Message } from 'ai'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
@@ -97,6 +96,39 @@ type McpServerConnectedArgs = {
   mcpServerId: number
 }
 
+type LatteThreadResponse = {
+  type: 'response'
+  response: string
+}
+
+type LatteThreadToolStarted = {
+  type: 'toolStarted'
+  toolName: string
+  toolCallId: string
+  args: Record<string, unknown>
+}
+
+type LatteThreadToolCompleted = {
+  type: 'toolCompleted'
+  toolName: string
+  toolCallId: string
+  result: Record<string, unknown> | { error: { name: string; message: string } }
+}
+
+type LatteThreadError = {
+  type: 'error'
+  error: { name: string; message: string }
+}
+
+export type LatteThreadUpdateArgs = {
+  threadUuid: string
+} & (
+  | LatteThreadResponse
+  | LatteThreadToolStarted
+  | LatteThreadToolCompleted
+  | LatteThreadError
+)
+
 export type WebServerToClientEvents = {
   documentBatchRunStatus: (args: DocumentBatchRunStatusArgs) => void
   experimentStatus: (args: ExperimentStatusArgs) => void
@@ -107,9 +139,11 @@ export type WebServerToClientEvents = {
   evaluationResultV2Created: (args: EvaluationResultV2CreatedArgs) => void
   mcpServerScaleEvent: (args: McpServerScaleEventArgs) => void
   mcpServerConnected: (args: McpServerConnectedArgs) => void
-  latteMessage: (args: { threadUuid: string; message: Message }) => void
-  latteChanges: (args: { threadUuid: string; changes: LatteChange[] }) => void
-  latteError: (args: { threadUuid: string; error: string }) => void
+  latteThreadUpdate: (args: LatteThreadUpdateArgs) => void
+  latteProjectChanges: (args: {
+    threadUuid: string
+    changes: LatteChange[]
+  }) => void
 }
 
 export type WebClientToServerEvents = {
@@ -149,22 +183,12 @@ export type WorkersClientToServerEvents = {
     workspaceId: number
     data: McpServerConnectedArgs
   }) => void
-  latteMessage: (args: {
+  latteThreadUpdate: (args: {
     workspaceId: number
-    data: {
-      threadUuid: string
-      message: Message
-    }
+    data: LatteThreadUpdateArgs
   }) => void
-  latteChanges: (args: {
+  latteProjectChanges: (args: {
     workspaceId: number
     data: { threadUuid: string; changes: LatteChange[] }
-  }) => void
-  latteError: (args: {
-    workspaceId: number
-    data: {
-      threadUuid: string
-      error: string
-    }
   }) => void
 }
