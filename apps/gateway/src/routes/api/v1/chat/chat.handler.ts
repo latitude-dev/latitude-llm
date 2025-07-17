@@ -8,7 +8,7 @@ import { ChatRoute } from '$/routes/api/v1/chat/chat.route'
 import { legacyChainEventPresenter } from '$/common/documents/getData'
 import { addMessagesLegacy } from '@latitude-data/core/services/__deprecated/documentLogs/addMessages/index'
 import { BACKGROUND } from '@latitude-data/core/telemetry'
-import { convertToLegacyChainStream } from 'node_modules/@latitude-data/core/src/__deprecated/lib/chainStreamManager'
+import { convertToLegacyChainStream } from '@latitude-data/core/__deprecated/lib/chainStreamManager/index'
 
 // @ts-expect-error: streamSSE has type issues
 export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {

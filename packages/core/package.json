@@ -4,6 +4,7 @@
   "description": "Core services used across the latitude LLM stack",
   "type": "module",
   "exports": {
+    "./__deprecated/*": "./src/__deprecated/*.ts",
     "./browser": "./src/browser.ts",
     "./cache": "./src/cache/index.ts",
     "./client": "./src/client/index.ts",
