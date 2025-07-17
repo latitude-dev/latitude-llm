@@ -12,7 +12,7 @@ import {
   usePlaygroundChat,
 } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
-import { useToolContentMap } from 'node_modules/@latitude-data/web-ui/src/lib/hooks/useToolContentMap'
+import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import Actions, { ActionsState } from '../Actions'
 import { StatusIndicator } from '$/components/PlaygroundCommon/StatusIndicator'
 import { AgentToolsMap } from '@latitude-data/constants'

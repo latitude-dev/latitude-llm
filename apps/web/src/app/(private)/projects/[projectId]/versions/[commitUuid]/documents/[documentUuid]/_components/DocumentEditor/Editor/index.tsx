@@ -19,7 +19,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
-import { type DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
+import { type DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'

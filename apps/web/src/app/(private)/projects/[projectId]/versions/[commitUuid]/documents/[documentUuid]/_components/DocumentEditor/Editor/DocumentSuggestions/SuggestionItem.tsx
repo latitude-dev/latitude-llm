@@ -13,7 +13,7 @@ import {
 import DiffMatchPatch from 'diff-match-patch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
+import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import { useCallback, useMemo } from 'react'
 
 const dmp = new DiffMatchPatch()

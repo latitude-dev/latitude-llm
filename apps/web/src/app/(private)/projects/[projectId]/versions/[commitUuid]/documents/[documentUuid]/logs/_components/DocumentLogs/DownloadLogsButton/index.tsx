@@ -12,9 +12,11 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useState } from 'react'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { downloadLogsAsyncAction } from '$/actions/documentLogs/downloadLogs'
-import { useCurrentCommit } from 'node_modules/@latitude-data/web-ui/src/providers/CommitProvider'
-import { useCurrentProject } from 'node_modules/@latitude-data/web-ui/src/providers/ProjectProvider'
-import { DocumentLogFilterOptions } from 'node_modules/@latitude-data/core/src/constants'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 
 const MAX_IMMEDIATE_DOWNLOAD = 25
 

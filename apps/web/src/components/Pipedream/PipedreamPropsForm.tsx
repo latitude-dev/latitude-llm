@@ -16,7 +16,7 @@ import {
 import DynamicPipedreamProp, { isDynamicProp } from './Props/DynamicProp'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { AlertProps } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Alert/Primitives'
+import { AlertProps } from '@latitude-data/web-ui/atoms/Alert/Primitives'
 import PipedreamTimerProp from './Props/TimerProp'
 import ArrayPipedreamProp from './Props/ArrayProp'
 
