@@ -26,32 +26,42 @@ export async function mockClientToolResult({
   context,
   args,
 }: ToolHandlerProps) {
-  const copilot = await getCopilotDataForGenerateToolResponses().then((r) =>
-    r.unwrap(),
-  )
+  try {
+    const copilot = await getCopilotDataForGenerateToolResponses().then((r) =>
+      r.unwrap(),
+    )
 
-  const { response } = await runDocumentAtCommit({
-    context,
-    commit: copilot.commit,
-    document: copilot.document,
-    workspace: copilot.workspace,
-    source: LogSources.Copilot,
-    parameters: {
-      parameters: args,
-      toolDefinition,
-    },
-  }).then((r) => r.unwrap())
+    const { response } = await runDocumentAtCommit({
+      context,
+      commit: copilot.commit,
+      document: copilot.document,
+      workspace: copilot.workspace,
+      source: LogSources.Copilot,
+      parameters: {
+        parameters: args,
+        toolDefinition,
+      },
+    }).then((r) => r.unwrap())
 
-  const res = (await response) as ChainStepObjectResponse
-  const { isError, result } = res.object
-  if (isError) {
-    throw new ChainError({
-      message: result,
-      code: RunErrorCodes.ErrorGeneratingMockToolResult,
-    })
+    const res = (await response) as ChainStepObjectResponse
+    const { isError, result } = res.object
+    if (isError) {
+      throw new ChainError({
+        message: result,
+        code: RunErrorCodes.ErrorGeneratingMockToolResult,
+      })
+    }
+
+    return {
+      isError: false,
+      result: result,
+    }
+  } catch (e) {
+    return {
+      isError: true,
+      result: e as Error,
+    }
   }
-
-  return res.object
 }
 
 export function awaitClientToolResult({ toolCall }: ToolHandlerProps) {

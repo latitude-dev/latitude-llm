@@ -21,11 +21,26 @@ export async function withTelemetryWrapper<
     args: TArgs
     toolCall: ToolExecutionOptions
   },
-): Promise<TResult> {
+): Promise<{
+  isError: boolean
+  value: TResult | Error
+}> {
   const { toolName, context, args, toolCall } = options
 
   if (!context) {
-    return executeFn(args, toolCall).then((r) => r.unwrap())
+    try {
+      const value = await executeFn(args, toolCall).then((r) => r.unwrap())
+
+      return {
+        isError: false,
+        value,
+      }
+    } catch (e) {
+      return {
+        isError: true,
+        value: e as Error,
+      }
+    }
   }
 
   const $tool = telemetry.tool(context, {
@@ -39,9 +54,19 @@ export async function withTelemetryWrapper<
   try {
     const value = await executeFn(args, toolCall).then((r) => r.unwrap())
     $tool?.end({ result: { value, isError: false } })
-    return value
+
+    return {
+      isError: false,
+      value,
+    }
   } catch (e) {
-    $tool?.fail(e as Error)
-    throw e
+    const result = {
+      value: e as Error,
+      isError: true,
+    }
+
+    $tool?.end({ result })
+
+    return result
   }
 }
