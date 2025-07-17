@@ -1,6 +1,7 @@
 'use client'
 import { useMemo } from 'react'
 
+import { ROUTES } from '$/services/routes'
 import {
   DocumentVersion,
   HEAD_COMMIT,
@@ -9,14 +10,13 @@ import {
 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { cn } from '@latitude-data/web-ui/utils'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { ROUTES } from '$/services/routes'
+import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useSelectedLayoutSegment } from 'next/navigation'
 
@@ -40,7 +40,14 @@ export function BadgeCommit({
     : commit?.mergedAt
       ? `v${commit?.version}`
       : 'Draft'
-  return <Badge variant={commit?.mergedAt ? 'accent' : 'muted'}>{text}</Badge>
+  return (
+    <Badge
+      variant={commit?.mergedAt ? 'accent' : 'muted'}
+      className='flex-shrink-0'
+    >
+      {text}
+    </Badge>
+  )
 }
 
 export function CommitItem({

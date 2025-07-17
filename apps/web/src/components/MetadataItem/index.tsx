@@ -3,7 +3,6 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { TextColor } from '@latitude-data/web-ui/tokens'
-import { cn } from '@latitude-data/web-ui/utils'
 import { ReactNode } from 'react'
 
 type MetadataItemProps = {
@@ -56,13 +55,18 @@ export function MetadataItem({
         </span>
         {stacked && action}
       </span>
-      <div className={cn(contentClassName, 'truncate')}>
+      <div className={contentClassName}>
         {loading ? (
           <Skeleton height='h4' className='w-12' />
         ) : (
           <>
             {value && (
-              <Text.H5 align='right' color={color}>
+              <Text.H5
+                align='right'
+                color={color}
+                whiteSpace='preWrap'
+                wordBreak='breakWord'
+              >
                 {value}
               </Text.H5>
             )}
