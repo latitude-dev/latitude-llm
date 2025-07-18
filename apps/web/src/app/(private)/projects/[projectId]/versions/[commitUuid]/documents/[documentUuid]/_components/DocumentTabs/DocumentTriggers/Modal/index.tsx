@@ -36,13 +36,16 @@ export function TriggerConfigModal({
 }) {
   const isEditing = Boolean(trigger)
 
-  const { create, isCreating } = useDocumentTriggers(
+  const { create, update, isCreating, isUpdating } = useDocumentTriggers(
     {
       projectId,
       documentUuid: document.documentUuid,
     },
     {
       onCreated: () => {
+        onOpenChange(false)
+      },
+      onUpdated: () => {
         onOpenChange(false)
       },
     },
@@ -97,6 +100,13 @@ export function TriggerConfigModal({
     pipedreamData,
   ])
 
+  useEffect(() => {
+    // Reset state when modal is closed
+    if (isOpen) return
+    setSelectedPair([undefined, undefined])
+    setConfiguredProps({})
+  }, [isOpen])
+
   const handleSelect = useCallback(
     (
       integration: IntegrationDto,
@@ -111,8 +121,23 @@ export function TriggerConfigModal({
   const onSubmit = useCallback(
     (e: FormEvent) => {
       e.preventDefault()
-      if (isCreating) return
+      if (isCreating || isUpdating) return
       if (!integration || !component) return
+
+      if (trigger) {
+        update({
+          documentTrigger: trigger,
+          configuration: {
+            integrationId: integration.id,
+            componentId: component.key,
+            properties: configuredProps,
+            payloadParameters,
+            triggerId: trigger.configuration.triggerId,
+          },
+        })
+        return
+      }
+
       create({
         triggerType: DocumentTriggerType.Integration,
         configuration: {
@@ -125,11 +150,14 @@ export function TriggerConfigModal({
     },
     [
       create,
+      update,
+      trigger,
       configuredProps,
       payloadParameters,
       integration,
       component,
       isCreating,
+      isUpdating,
     ],
   )
 
@@ -154,7 +182,7 @@ export function TriggerConfigModal({
             variant='default'
             type='submit'
             form='triggerConfigForm'
-            isLoading={isCreating}
+            isLoading={isCreating || isUpdating}
           >
             {isEditing ? 'Save Changes' : 'Add Trigger'}
           </Button>
@@ -183,7 +211,7 @@ export function TriggerConfigModal({
               setConfiguredProps={setConfiguredProps}
               payloadParameters={payloadParameters}
               setPayloadParameters={setPayloadParameters}
-              disabled={isCreating}
+              disabled={isCreating || isUpdating}
             />
           )}
         </form>

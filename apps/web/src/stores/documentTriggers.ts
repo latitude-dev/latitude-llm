@@ -18,10 +18,12 @@ export default function useDocumentTriggers(
   { projectId, documentUuid }: { projectId: number; documentUuid: string },
   {
     onCreated,
+    onUpdated,
     onDeleted,
     ...opts
   }: SWRConfiguration & {
     onCreated?: (createdDocumentTrigger: DocumentTrigger) => void
+    onUpdated?: (updatedDocumentTrigger: DocumentTrigger) => void
     onDeleted?: (deletedDocumentTrigger: DocumentTrigger) => void
   } = {},
 ) {
@@ -75,6 +77,7 @@ export default function useDocumentTriggers(
           ...data.filter((t) => t.id !== updatedTrigger.id),
           updatedTrigger,
         ])
+        onUpdated?.(updatedTrigger)
       },
     },
   )

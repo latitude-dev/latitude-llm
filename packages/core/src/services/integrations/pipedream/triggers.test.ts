@@ -1,0 +1,310 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { IntegrationType } from '@latitude-data/constants'
+import {
+  Workspace,
+  IntegrationDto,
+  PipedreamIntegration,
+} from '../../../browser'
+import { updatePipedreamTrigger } from './triggers'
+import { Result } from '../../../lib/Result'
+import { IntegrationTriggerConfiguration } from '../../documentTriggers/helpers/schema'
+import * as appsModule from './apps'
+import * as componentsModule from './components'
+import * as triggersModule from './triggers'
+import { BadRequestError } from '@latitude-data/constants/errors'
+import * as factories from '../../../tests/factories'
+
+const mockPipedreamClient = {
+  updateTrigger: vi.fn(),
+  deleteTrigger: vi.fn(),
+  deployTrigger: vi.fn(),
+}
+
+vi.mock('@pipedream/sdk', () => ({
+  createBackendClient: vi.fn(() => mockPipedreamClient),
+}))
+
+describe('updatePipedreamTrigger', () => {
+  let workspace: Workspace
+  let integration1: IntegrationDto
+  let integration2: IntegrationDto
+  let originalConfig: IntegrationTriggerConfiguration
+  let updatedConfig: IntegrationTriggerConfiguration
+
+  beforeEach(async () => {
+    const { workspace: createdWorkspace } = await factories.createProject()
+    workspace = createdWorkspace
+
+    integration1 = await factories.createIntegration({
+      workspace,
+      type: IntegrationType.Pipedream,
+      configuration: {
+        appName: 'test-app-1',
+        connectionId: 'connection-1',
+        externalUserId: 'external-user-1',
+        authType: 'oauth',
+        oauthAppId: 'oauth-app-1',
+      },
+    })
+
+    integration2 = await factories.createIntegration({
+      workspace,
+      type: IntegrationType.Pipedream,
+      configuration: {
+        appName: 'test-app-2',
+        connectionId: 'connection-2',
+        externalUserId: 'external-user-2',
+        authType: 'oauth',
+        oauthAppId: 'oauth-app-2',
+      },
+    })
+
+    originalConfig = {
+      integrationId: integration1.id,
+      componentId: 'component-1',
+      properties: { prop1: 'value1' },
+      payloadParameters: ['param1'],
+      triggerId: 'trigger-1',
+    }
+
+    updatedConfig = {
+      integrationId: integration1.id,
+      componentId: 'component-1',
+      properties: { prop1: 'updatedValue1' },
+      payloadParameters: ['param1', 'param2'],
+      triggerId: 'trigger-1',
+    }
+
+    vi.clearAllMocks()
+
+    vi.spyOn(appsModule, 'getPipedreamEnvironment').mockReturnValue(
+      Result.ok({
+        environment: 'development' as const,
+        credentials: {
+          clientId: 'test-client-id',
+          clientSecret: 'test-client-secret',
+        },
+        projectId: 'test-project-id',
+      }),
+    )
+
+    vi.spyOn(componentsModule, 'fillConfiguredProps').mockResolvedValue(
+      Result.ok({ prop1: 'filledValue1' }),
+    )
+
+    vi.spyOn(triggersModule, 'deployPipedreamTrigger').mockResolvedValue(
+      Result.ok({ id: 'new-trigger-id' }),
+    )
+  })
+
+  describe('when configuration has not changed', () => {
+    it('returns the updated config without making external calls', async () => {
+      const identicalConfig = { ...originalConfig }
+
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig,
+        updatedConfig: identicalConfig,
+      })
+
+      expect(Result.isOk(result)).toBe(true)
+      expect(result.unwrap()).toEqual(identicalConfig)
+      expect(appsModule.getPipedreamEnvironment).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('when same trigger with different properties', () => {
+    beforeEach(() => {
+      mockPipedreamClient.updateTrigger.mockResolvedValue({ success: true })
+    })
+
+    it('updates the trigger properties successfully', async () => {
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig,
+        updatedConfig,
+      })
+
+      expect(Result.isOk(result)).toBe(true)
+      expect(result.unwrap()).toEqual(updatedConfig)
+      expect(componentsModule.fillConfiguredProps).toHaveBeenCalledWith({
+        pipedream: mockPipedreamClient,
+        integration: integration1 as PipedreamIntegration,
+        componentId: originalConfig.componentId,
+        configuredProps: updatedConfig.properties,
+      })
+      expect(mockPipedreamClient.updateTrigger).toHaveBeenCalledWith({
+        id: originalConfig.triggerId,
+        externalUserId: (integration1 as PipedreamIntegration).configuration
+          .externalUserId,
+        configuredProps: { prop1: 'filledValue1' },
+      })
+    })
+
+    it('returns error when integration not found', async () => {
+      const configWithInvalidIntegration = {
+        ...originalConfig,
+        integrationId: 99999,
+        properties: { prop1: 'updatedValue1' }, // different from original to trigger update path
+      }
+
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig,
+        updatedConfig: configWithInvalidIntegration,
+      })
+
+      expect(Result.isOk(result)).toBe(false)
+      expect(result.error).toBeDefined()
+    })
+
+    it('returns error when integration is not Pipedream type', async () => {
+      const nonPipedreamIntegration = await factories.createIntegration({
+        workspace,
+        type: IntegrationType.ExternalMCP,
+        configuration: {
+          url: 'http://example.com/mcp',
+        },
+      })
+
+      const configWithNonPipedreamIntegration = {
+        ...originalConfig,
+        integrationId: nonPipedreamIntegration.id,
+        properties: { prop1: 'updatedValue1' }, // different to trigger update path
+      }
+
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig,
+        updatedConfig: configWithNonPipedreamIntegration,
+      })
+
+      expect(Result.isOk(result)).toBe(false)
+      expect(result.error).toBeInstanceOf(BadRequestError)
+      if (result.error) {
+        expect(result.error.message).toContain(
+          "Integration type 'custom_mcp' is not supported for document triggers",
+        )
+      }
+    })
+
+    it('returns error when getPipedreamEnvironment fails', async () => {
+      const envError = new Error('Environment not configured')
+      vi.spyOn(appsModule, 'getPipedreamEnvironment').mockReturnValue(
+        Result.error(envError as any),
+      )
+
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig,
+        updatedConfig,
+      })
+
+      expect(Result.isOk(result)).toBe(false)
+      expect(result.error).toBe(envError)
+    })
+
+    it('returns error when fillConfiguredProps fails', async () => {
+      const fillPropsError = new Error('Failed to fill props')
+      vi.spyOn(componentsModule, 'fillConfiguredProps').mockResolvedValue(
+        Result.error(fillPropsError),
+      )
+
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig,
+        updatedConfig,
+      })
+
+      expect(Result.isOk(result)).toBe(false)
+      expect(result.error).toBe(fillPropsError)
+    })
+
+    it('returns error when pipedream updateTrigger fails', async () => {
+      const updateError = new Error('Update failed')
+      mockPipedreamClient.updateTrigger.mockRejectedValue(updateError)
+
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig,
+        updatedConfig,
+      })
+
+      expect(Result.isOk(result)).toBe(false)
+      expect(result.error).toBe(updateError)
+    })
+  })
+
+  describe('when different trigger (integration or component changed)', () => {
+    let updatedConfigDifferentTrigger: IntegrationTriggerConfiguration
+
+    beforeEach(() => {
+      updatedConfigDifferentTrigger = {
+        ...updatedConfig,
+        integrationId: integration2.id,
+        componentId: 'component-2',
+      }
+
+      mockPipedreamClient.deleteTrigger.mockResolvedValue({ success: true })
+      mockPipedreamClient.deployTrigger.mockResolvedValue({
+        data: { id: 'new-trigger-id' },
+      })
+    })
+
+    it('deletes old trigger and deploys new one successfully', async () => {
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig,
+        updatedConfig: updatedConfigDifferentTrigger,
+      })
+
+      expect(Result.isOk(result)).toBe(true)
+      const resultValue = result.unwrap()
+      expect(resultValue.integrationId).toBe(integration2.id)
+      expect(resultValue.componentId).toBe('component-2')
+      expect(resultValue.triggerId).toBe('new-trigger-id')
+
+      expect(mockPipedreamClient.deleteTrigger).toHaveBeenCalledWith({
+        id: originalConfig.triggerId,
+        externalUserId: (integration1 as PipedreamIntegration).configuration
+          .externalUserId,
+      })
+
+      expect(mockPipedreamClient.deployTrigger).toHaveBeenCalledWith({
+        externalUserId: (integration2 as PipedreamIntegration).configuration
+          .externalUserId,
+        triggerId: { key: updatedConfigDifferentTrigger.componentId },
+        configuredProps: { prop1: 'filledValue1' },
+        webhookUrl: expect.stringContaining('/webhook/integration/'),
+      })
+    })
+
+    it('returns error when delete trigger fails', async () => {
+      const deleteError = new Error('Delete failed')
+      mockPipedreamClient.deleteTrigger.mockRejectedValue(deleteError)
+
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig,
+        updatedConfig: updatedConfigDifferentTrigger,
+      })
+
+      expect(Result.isOk(result)).toBe(false)
+      expect(result.error).toBe(deleteError)
+    })
+
+    it('returns error when deploy new trigger fails', async () => {
+      const deployError = new Error('Deploy failed')
+      mockPipedreamClient.deployTrigger.mockRejectedValue(deployError)
+
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig,
+        updatedConfig: updatedConfigDifferentTrigger,
+      })
+
+      expect(Result.isOk(result)).toBe(false)
+      expect(result.error).toBe(deployError)
+    })
+  })
+})

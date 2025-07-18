@@ -49,13 +49,31 @@ export function TriggerSettings({
   })
 
   const [selectedTab, setSelectedTab] = useState<ShareSettingsTabs>(
-    ShareSettingsTabs.Email,
+    integrationTriggersEnabled
+      ? ShareSettingsTabs.Integrations
+      : ShareSettingsTabs.Email,
   )
 
   return (
     <div className='flex flex-col w-full gap-2 p-2'>
       <TabSelector
         options={[
+          ...(integrationTriggersEnabled
+            ? [
+                {
+                  value: ShareSettingsTabs.Integrations,
+                  label: (
+                    <TabLabel
+                      text='Integrations'
+                      isActive={triggers?.some(
+                        (t) =>
+                          t.triggerType === DocumentTriggerType.Integration,
+                      )}
+                    />
+                  ),
+                },
+              ]
+            : []),
           {
             value: ShareSettingsTabs.Email,
             label: (
@@ -78,22 +96,6 @@ export function TriggerSettings({
               />
             ),
           },
-          ...(integrationTriggersEnabled
-            ? [
-                {
-                  value: ShareSettingsTabs.Integrations,
-                  label: (
-                    <TabLabel
-                      text='Integrations'
-                      isActive={triggers?.some(
-                        (t) =>
-                          t.triggerType === DocumentTriggerType.Integration,
-                      )}
-                    />
-                  ),
-                },
-              ]
-            : []),
         ]}
         selected={selectedTab}
         onSelect={setSelectedTab}
