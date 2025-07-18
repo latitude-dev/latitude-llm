@@ -157,7 +157,7 @@ export default function DocumentEditor({
 
   useEvents(
     {
-      onLatteChanges: ({ changes, simulateStreaming }) => {
+      onLatteProjectChanges: ({ changes, simulateStreaming }) => {
         const updatedDocument = changes.find(
           (change) =>
             change.draftUuid === commit.uuid &&

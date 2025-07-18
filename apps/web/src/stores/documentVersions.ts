@@ -341,7 +341,7 @@ export default function useDocumentVersions(
     })
 
   useEvents({
-    onLatteChanges: ({ changes }) => {
+    onLatteProjectChanges: ({ changes }) => {
       const commitChanges = changes.filter((c) => c.draftUuid === commitUuid)
       if (commitChanges.length === 0) return
 

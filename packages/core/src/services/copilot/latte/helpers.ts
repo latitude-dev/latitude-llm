@@ -1,7 +1,13 @@
 import { env } from '@latitude-data/env'
 import { ErrorResult, Result, TypedResult } from '../../../lib/Result'
 import { LatitudeError, NotImplementedError } from '../../../lib/errors'
-import { Project, Workspace, DocumentVersion, Commit } from '../../../browser'
+import {
+  Project,
+  Workspace,
+  DocumentVersion,
+  Commit,
+  LatteThreadUpdateArgs,
+} from '../../../browser'
 import {
   unsafelyFindProject,
   unsafelyFindWorkspace,
@@ -113,20 +119,48 @@ export async function sendWebsockets({
 }) {
   for await (const payload of streamToGenerator(stream)) {
     const { event, data } = payload
-    if (event !== StreamEventTypes.Latitude) continue
 
-    if (
-      data.type === ChainEventTypes.ProviderCompleted ||
-      data.type === ChainEventTypes.ToolCompleted
-    ) {
-      const message = data.messages.at(-1)!
-      WebsocketClient.sendEvent('latteMessage', {
-        workspaceId: workspace.id,
-        data: {
-          threadUuid,
-          message,
-        },
-      })
+    if (event === StreamEventTypes.Provider) {
+      if (data.type === 'tool-result') {
+        WebsocketClient.sendEvent('latteThreadUpdate', {
+          workspaceId: workspace.id,
+          data: {
+            threadUuid,
+            type: 'toolCompleted',
+            toolCallId: data.toolCallId,
+            toolName: data.toolName,
+            result: data.result,
+          } as LatteThreadUpdateArgs,
+        })
+      }
+
+      if (data.type === 'tool-call') {
+        WebsocketClient.sendEvent('latteThreadUpdate', {
+          workspaceId: workspace.id,
+          data: {
+            threadUuid,
+            type: 'toolStarted',
+            toolCallId: data.toolCallId,
+            toolName: data.toolName,
+            args: data.args,
+          } as LatteThreadUpdateArgs,
+        })
+      }
+    }
+
+    if (event === StreamEventTypes.Latitude) {
+      if (data.type === ChainEventTypes.ProviderCompleted) {
+        const textResponse = data.response.text
+
+        WebsocketClient.sendEvent('latteThreadUpdate', {
+          workspaceId: workspace.id,
+          data: {
+            threadUuid,
+            type: 'response',
+            response: textResponse,
+          } as LatteThreadUpdateArgs,
+        })
+      }
     }
   }
 }

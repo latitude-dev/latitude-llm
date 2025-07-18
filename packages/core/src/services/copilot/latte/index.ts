@@ -2,7 +2,6 @@ import {
   Message,
   MessageRole,
   UserMessage,
-  ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '@latitude-data/constants'
 import { Commit, DocumentVersion, Workspace } from '../../../browser'
@@ -15,7 +14,7 @@ import { runDocumentAtCommit } from '../../commits'
 import { addMessages } from '../../documentLogs/addMessages'
 import { ErrorResult, Result } from '../../../lib/Result'
 import { LatitudeError } from '@latitude-data/constants/errors'
-import { handleToolRequest } from './tools'
+import { buildToolHandlers } from './tools'
 import { WebsocketClient } from '../../../websockets/workers'
 
 export * from './threads/checkpoints/clearCheckpoints'
@@ -23,7 +22,7 @@ export * from './threads/checkpoints/createCheckpoint'
 export * from './threads/checkpoints/undoChanges'
 export * from './threads/createThread'
 
-async function generateCopilotResponse({
+async function generateLatteResponse({
   context,
   copilotWorkspace,
   copilotCommit,
@@ -42,6 +41,11 @@ async function generateCopilotResponse({
   initialParameters?: { message: string; context: string } // for the first “new” request
   messages?: Message[] // for subsequent “add” requests
 }): PromisedResult<undefined> {
+  const tools = buildToolHandlers({
+    workspace: clientWorkspace,
+    threadUuid,
+  })
+
   const runResult = initialParameters
     ? await runDocumentAtCommit({
         context: context,
@@ -52,6 +56,7 @@ async function generateCopilotResponse({
         parameters: initialParameters,
         source: LogSources.API,
         errorableUuid: threadUuid,
+        tools,
       })
     : await addMessages({
         context: context,
@@ -59,6 +64,7 @@ async function generateCopilotResponse({
         documentLogUuid: threadUuid,
         messages: messages!,
         source: LogSources.API,
+        tools,
       })
   if (!runResult.ok) return runResult as ErrorResult<LatitudeError>
   const run = runResult.unwrap()
@@ -71,49 +77,20 @@ async function generateCopilotResponse({
 
   const runError = await run.error
   if (runError) {
+    WebsocketClient.sendEvent('latteThreadUpdate', {
+      workspaceId: clientWorkspace.id,
+      data: {
+        threadUuid,
+        type: 'error',
+        error: {
+          name: runError.name,
+          message: runError.message,
+        },
+      },
+    })
     return Result.error(runError)
   }
 
-  const toolCalls = await run.toolCalls
-  let toolResponseMessages: ToolMessage[] = []
-  try {
-    toolResponseMessages = await Promise.all(
-      toolCalls.map(async (toolCall) => {
-        const toolMsgResult = await handleToolRequest({
-          context,
-          threadUuid,
-          tool: toolCall,
-          workspace: clientWorkspace,
-          messages: await run.messages,
-          onFinish: async (msg) => {
-            WebsocketClient.sendEvent('latteMessage', {
-              workspaceId: clientWorkspace.id,
-              data: { threadUuid, message: msg },
-            })
-          },
-        })
-
-        return toolMsgResult.unwrap()
-      }),
-    )
-  } catch (error) {
-    return Result.error(error as Error)
-  }
-
-  if (toolCalls.length > 0) {
-    // Agent did not return a response. We add the tool responses and keep iterating
-    return generateCopilotResponse({
-      context,
-      copilotWorkspace,
-      copilotCommit,
-      copilotDocument,
-      clientWorkspace,
-      threadUuid,
-      messages: toolResponseMessages,
-    })
-  }
-
-  // Agent returned a response. The run flow has finished.
   return Result.nil()
 }
 
@@ -134,7 +111,7 @@ export async function runNewLatte({
   message: string
   context: string
 }): PromisedResult<undefined> {
-  return generateCopilotResponse({
+  return generateLatteResponse({
     context: BACKGROUND({ workspaceId: copilotWorkspace.id }),
     copilotWorkspace,
     copilotCommit,
@@ -176,7 +153,7 @@ export async function addMessageToExistingLatte({
     ],
   }
 
-  return generateCopilotResponse({
+  return generateLatteResponse({
     context: BACKGROUND({ workspaceId: copilotWorkspace.id }),
     copilotWorkspace,
     copilotCommit,

@@ -62,7 +62,7 @@ const editProject = defineLatteTool(
         latteChanges.push(result.unwrap())
       }
 
-      WebsocketClient.sendEvent('latteChanges', {
+      WebsocketClient.sendEvent('latteProjectChanges', {
         workspaceId: workspace.id,
         data: {
           threadUuid,
