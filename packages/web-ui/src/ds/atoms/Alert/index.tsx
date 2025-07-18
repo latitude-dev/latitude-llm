@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 
+import { cn } from '../../../lib/utils'
 import { TextColor } from '../../tokens'
 import { Icon } from '../Icons'
 import {
@@ -8,7 +9,6 @@ import {
   AlertRoot,
   AlertTitle,
 } from './Primitives'
-import { cn } from '../../../lib/utils'
 
 type Props = {
   variant?: AlertProps['variant']
@@ -52,7 +52,10 @@ export function Alert({
           'justify-center': centered,
         })}
       >
-        <div className='flex flex-col gap-2 whitespace-pre-wrap'>
+        <div
+          className='flex flex-col gap-2 whitespace-pre-wrap'
+          style={{ wordBreak: 'break-word' }}
+        >
           {title && <AlertTitle>{title}</AlertTitle>}
           {description && <AlertDescription>{description}</AlertDescription>}
         </div>

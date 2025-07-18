@@ -1,21 +1,17 @@
 import { AppRouteHandler } from '$/openApi/types'
+import { enqueueSpans } from '@latitude-data/core/services/tracing/spans/enqueue'
 import { IngestRoute } from './ingest.route'
 
 export const ingestHandler: AppRouteHandler<IngestRoute> = async (ctx) => {
-  //const workspace = ctx.get('workspace')
-  //const apiKey = ctx.get('apiKey')
-  //const request = ctx.req.valid('json')
-  //
-  // TODO(tracing): fix queue memory issues and uncomment
-  //await tracingQueue.add(
-  //  'ingestSpansJob',
-  //  {
-  //    spans: request.resourceSpans,
-  //    apiKeyId: apiKey.id,
-  //    workspaceId: workspace.id,
-  //  },
-  //  { attempts: TRACING_JOBS_MAX_ATTEMPTS },
-  //)
+  const workspace = ctx.get('workspace')
+  const apiKey = ctx.get('apiKey')
+  const request = ctx.req.valid('json')
+
+  await enqueueSpans({
+    spans: request.resourceSpans,
+    apiKey: apiKey,
+    workspace: workspace,
+  }).then((r) => r.unwrap())
 
   return ctx.body(null, 200)
 }

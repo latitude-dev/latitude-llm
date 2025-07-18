@@ -134,6 +134,7 @@ export function DetailsPanel<T extends SpanType>({
         >
           <Alert
             variant='destructive'
+            showIcon={false}
             description={span.message || 'Unknown error'}
           />
         </MetadataItem>

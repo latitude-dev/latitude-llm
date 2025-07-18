@@ -274,6 +274,27 @@ export namespace Otlp {
   export type ServiceRequest = z.infer<typeof serviceRequestSchema>
 }
 
+export type SpanIngestionData = {
+  ingestionId: string
+  spans: Otlp.ResourceSpan[]
+}
+
+// prettier-ignore
+export const SPAN_INGESTION_STORAGE_KEY = (
+  ingestionId: string, // Note: using single id to avoid dangling folders
+) => encodeURI(`ingest/traces/${ingestionId}`)
+
+export type SpanProcessingData = {
+  span: Otlp.Span
+  scope: Otlp.Scope
+  resource: Otlp.Resource
+}
+
+// prettier-ignore
+export const SPAN_PROCESSING_STORAGE_KEY = (
+  processingId: string, // Note: using single id to avoid dangling folders
+) => encodeURI(`process/traces/${processingId}`)
+
 export const TRACING_JOBS_MAX_ATTEMPTS = 3
 export const TRACING_JOBS_DELAY_BETWEEN_CONFLICTS = () =>
   (Math.floor(Math.random() * 10) + 1) * 1000 // 1-10 random seconds in order to serialize conflicts (best effort)
