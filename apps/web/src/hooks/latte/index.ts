@@ -196,8 +196,13 @@ export function useLatte() {
         const otherInteractions = prev.slice(0, -1)
         const lastInteraction = [...prev.slice(-1)][0]!
 
-        if (update.type === 'response') {
+        if (update.type === 'fullResponse') {
           lastInteraction.output = update.response
+          setIsLoading(false)
+        }
+
+        if (update.type === 'responseDelta') {
+          lastInteraction.output = (lastInteraction.output ?? '') + update.delta
         }
 
         if (update.type === 'toolCompleted') {
@@ -260,8 +265,6 @@ export function useLatte() {
 
         return [...otherInteractions, lastInteraction]
       })
-
-      setIsLoading(false)
     },
     [threadUuid],
   )

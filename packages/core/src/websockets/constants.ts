@@ -97,8 +97,13 @@ type McpServerConnectedArgs = {
 }
 
 type LatteThreadResponse = {
-  type: 'response'
+  type: 'fullResponse'
   response: string
+}
+
+type LatteThreadResponseDelta = {
+  type: 'responseDelta'
+  delta: string
 }
 
 type LatteThreadToolStarted = {
@@ -123,6 +128,7 @@ type LatteThreadError = {
 export type LatteThreadUpdateArgs = {
   threadUuid: string
 } & (
+  | LatteThreadResponseDelta
   | LatteThreadResponse
   | LatteThreadToolStarted
   | LatteThreadToolCompleted
