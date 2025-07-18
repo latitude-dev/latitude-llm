@@ -4,7 +4,6 @@ import {
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS,
   SegmentSource,
-  TraceContext,
 } from '@latitude-data/constants'
 import type * as latitude from '@latitude-data/sdk'
 import * as otel from '@opentelemetry/api'
@@ -61,58 +60,6 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
 
     // Note: this is an estimation to not bundle a tokenizer
     return Math.ceil(length / 4)
-  }
-
-  withTraceContext<F extends () => ReturnType<F>>(
-    ctx: TraceContext,
-    fn: F,
-  ): ReturnType<F> {
-    return context.with(this.telemetry.resume(ctx), fn)
-  }
-
-  async wrapToolHandler<
-    F extends latitude.ToolHandler<latitude.ToolSpec, keyof latitude.ToolSpec>,
-  >(fn: F, ...args: Parameters<F>): Promise<Awaited<ReturnType<F>>> {
-    const toolArguments = args[0]
-    const { id, name } = args[1]
-
-    const $tool = this.telemetry.tool(context.active(), {
-      name,
-      call: {
-        id,
-        arguments: toolArguments,
-      },
-    })
-
-    let result
-    try {
-      result = await context.with(
-        $tool.context,
-        async () => await ((fn as any)(...args) as ReturnType<F>),
-      )
-    } catch (error) {
-      if ((error as Error).name === 'ToolExecutionPausedError') {
-        $tool.fail(error as Error)
-        throw error
-      }
-
-      $tool.end({
-        result: {
-          value: (error as Error).message,
-          isError: true,
-        },
-      })
-      throw error
-    }
-
-    $tool.end({
-      result: {
-        value: result,
-        isError: false,
-      },
-    })
-
-    return result
   }
 
   async wrapRenderChain<F extends latitude.Latitude['renderChain']>(
@@ -244,8 +191,8 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
 
     $tool.end({
       result: {
-        value: result,
-        isError: false, // Note: currently unknown
+        value: result.result,
+        isError: result.isError,
       },
     })
 

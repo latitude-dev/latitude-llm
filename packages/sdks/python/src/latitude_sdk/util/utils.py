@@ -5,6 +5,11 @@ from typing import Any, Callable, List, TypeVar
 import pydantic
 from typing_extensions import ParamSpec, Self
 
+
+def get_package() -> str:
+    return (__package__ or __name__).split(".")[0].replace("_", "-")
+
+
 T = TypeVar("T", str, bool, int, List[str])
 
 

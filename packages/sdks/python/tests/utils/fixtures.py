@@ -5,17 +5,13 @@ from unittest import mock
 
 from promptl_ai import (
     AssistantMessage,
-    Message,
     SystemMessage,
     TextContent,
     ToolCallContent,
-    ToolMessage,
-    ToolResultContent,
     UserMessage,
 )
 
 from latitude_sdk import (
-    AnnotateEvaluationResult,
     ApiError,
     ApiErrorCodes,
     ChainError,
@@ -28,6 +24,7 @@ from latitude_sdk import (
     ChainEventStepCompleted,
     ChainEventStepStarted,
     ChainTextResponse,
+    EvaluationResult,
     FinishedResult,
     FinishReason,
     Log,
@@ -56,6 +53,21 @@ ERROR = ApiError(
     status=500,
     code=ApiErrorCodes.InternalServerError,
     message="An unexpected error occurred",
+    response=mock.ANY,
+    db_ref=None,
+)
+
+CLIENT_ERROR_RESPONSE: dict[str, Any] = {
+    "name": "BadRequestError",
+    "message": "A client error occurred",
+    "errorCode": "bad_request_error",
+    "details": {},
+}
+
+CLIENT_ERROR = ApiError(
+    status=400,
+    code=ApiErrorCodes.BadRequestError,
+    message="A client error occurred",
     response=mock.ANY,
     db_ref=None,
 )
@@ -122,7 +134,6 @@ topP: 0.9
     parameters={"question": PromptParameter(type=ParameterType.Text)},
 )
 
-
 LOG_RESPONSE: dict[str, Any] = {
     "id": 31,
     "uuid": "935f248c-e36a-4063-a091-a5fdba6078df",
@@ -188,19 +199,25 @@ PROJECT = Project(
 )
 
 VERSION_RESPONSE: dict[str, Any] = {
+    "id": 1,
     "uuid": "version-uuid-456",
-    "name": "Version 1",
+    "title": "Version 1",
+    "description": "Version 1 description",
     "projectId": 1,
     "createdAt": "2025-01-01 00:00:00.000",
     "updatedAt": "2025-01-01 00:00:00.000",
+    "mergedAt": "2025-01-01 00:00:00.000",
 }
 
 VERSION = Version(
+    id=1,
     uuid="version-uuid-456",
-    name="Version 1",
+    title="Version 1",
+    description="Version 1 description",
     project_id=1,
     created_at=datetime(2025, 1, 1, 0, 0, 0, 0),
     updated_at=datetime(2025, 1, 1, 0, 0, 0, 0),
+    merged_at=datetime(2025, 1, 1, 0, 0, 0, 0),
 )
 
 CREATE_PROJECT_RESPONSE: dict[str, Any] = {
@@ -208,7 +225,7 @@ CREATE_PROJECT_RESPONSE: dict[str, Any] = {
     "version": VERSION_RESPONSE,
 }
 
-PROJECTS_LIST_RESPONSE: list[dict[str, Any]] = [
+PROJECTS_RESPONSE: list[dict[str, Any]] = [
     PROJECT_RESPONSE,
     {
         "id": 2,
@@ -219,7 +236,7 @@ PROJECTS_LIST_RESPONSE: list[dict[str, Any]] = [
     },
 ]
 
-PROJECTS_LIST = [
+PROJECTS = [
     PROJECT,
     Project(
         id=2,
@@ -242,8 +259,7 @@ EVALUATION_RESULT_RESPONSE: dict[str, Any] = {
     "error": None,
 }
 
-
-EVALUATION_RESULT = AnnotateEvaluationResult(
+EVALUATION_RESULT = EvaluationResult(
     uuid="e25a317b-c682-4c25-a704-a87ac79507c4",
     score=1,
     normalized_score=1,
@@ -666,6 +682,7 @@ data: {
         )
     }
 """.strip(),
+    # NOTE: At this time tool calls are executed
     f"""
 event: latitude-event
 data: {
@@ -773,7 +790,6 @@ data: {
     }
 """.strip(),
 ]
-
 
 CONVERSATION_EVENTS: list[StreamEvent] = [
     ChainEventChainStarted(
@@ -992,6 +1008,7 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
             ),
         ],
     ),
+    # NOTE: At this time tool calls are executed
     ChainEventStepCompleted(
         event=StreamEvents.Latitude,
         type=ChainEvents.StepCompleted,
@@ -1216,11 +1233,25 @@ CONVERSATION_FINISHED_RESULT = FinishedResult(
     ),
 )
 
+CONVERSATION_TOOL_CALLS = [
+    ToolCall(
+        id="toolu_01ARatRfRidTDshkg1UuQhW2",
+        name="calculator",
+        arguments={"expression": "9.9 > 9.11"},
+    ),
+    ToolCall(
+        id="toolu_B0398l23AOdTDshkg1UuQhZ3",
+        name="calculator",
+        arguments={"expression": "9.9 less than 9.11"},
+    ),
+]
+
 CONVERSATION_TOOL_RESULTS = [
     ToolResult(
         id="toolu_01ARatRfRidTDshkg1UuQhW2",
         name="calculator",
         result=True,
+        is_error=False,
     ),
     ToolResult(
         id="toolu_B0398l23AOdTDshkg1UuQhZ3",
@@ -1229,278 +1260,3 @@ CONVERSATION_TOOL_RESULTS = [
         is_error=True,
     ),
 ]
-
-CONVERSATION_TOOL_RESULTS_MESSAGES: list[Message] = [
-    ToolMessage(
-        content=[
-            ToolResultContent(
-                id="toolu_01ARatRfRidTDshkg1UuQhW2",
-                name="calculator",
-                result=True,
-            ),
-        ],
-    ),
-    ToolMessage(
-        content=[
-            ToolResultContent(
-                id="toolu_B0398l23AOdTDshkg1UuQhZ3",
-                name="calculator",
-                result="Expression is invalid",
-                is_error=True,
-            ),
-        ],
-    ),
-]
-
-FOLLOW_UP_CONVERSATION_EVENTS_STREAM: list[str] = [
-    f"""
-event: latitude-event
-data: {
-        json.dumps(
-            {
-                "type": "step-started",
-                "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
-                "messages": [
-                    *[json.loads(message.model_dump_json()) for message in CONVERSATION_FINISHED_RESULT.conversation],
-                    *[json.loads(message.model_dump_json()) for message in CONVERSATION_TOOL_RESULTS_MESSAGES],
-                ],
-            },
-        )
-    }
-""".strip(),
-    f"""
-event: latitude-event
-data: {
-        json.dumps(
-            {
-                "type": "provider-started",
-                "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
-                "messages": [
-                    *[json.loads(message.model_dump_json()) for message in CONVERSATION_FINISHED_RESULT.conversation],
-                    *[json.loads(message.model_dump_json()) for message in CONVERSATION_TOOL_RESULTS_MESSAGES],
-                ],
-                "config": {"provider": "OpenAI", "model": "gpt-4o-mini"},
-            },
-        )
-    }
-""".strip(),
-    f"""
-event: provider-event
-data: {
-        json.dumps(
-            {
-                "type": "text-delta",
-                "textDelta": "Told ya!",
-            }
-        )
-    }""",
-    f"""
-event: provider-event
-data: {
-        json.dumps(
-            {
-                "type": "step-finish",
-                "finishReason": "stop",
-                "isContinued": False,
-                "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
-                "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
-                "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
-            }
-        )
-    }""",
-    f"""
-event: provider-event
-data: {
-        json.dumps(
-            {
-                "type": "finish",
-                "finishReason": "stop",
-                "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
-                "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
-                "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
-            }
-        )
-    }""",
-    f"""
-event: latitude-event
-data: {
-        json.dumps(
-            {
-                "type": "provider-completed",
-                "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
-                "providerLogUuid": "456",
-                "tokenUsage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
-                "finishReason": "stop",
-                "messages": [
-                    *[json.loads(message.model_dump_json()) for message in CONVERSATION_FINISHED_RESULT.conversation],
-                    *[json.loads(message.model_dump_json()) for message in CONVERSATION_TOOL_RESULTS_MESSAGES],
-                    {
-                        "role": "assistant",
-                        "content": [{"type": "text", "text": "Told ya!"}],
-                    },
-                ],
-                "response": {
-                    "streamType": "text",
-                    "text": "Told ya!",
-                    "toolCalls": [],
-                    "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
-                },
-            },
-        )
-    }
-""".strip(),
-    f"""
-event: latitude-event
-data: {
-        json.dumps(
-            {
-                "type": "step-completed",
-                "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
-                "tokenUsage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
-                "finishReason": "stop",
-                "messages": [
-                    *[json.loads(message.model_dump_json()) for message in CONVERSATION_FINISHED_RESULT.conversation],
-                    *[json.loads(message.model_dump_json()) for message in CONVERSATION_TOOL_RESULTS_MESSAGES],
-                    {
-                        "role": "assistant",
-                        "content": [{"type": "text", "text": "Told ya!"}],
-                    },
-                ],
-            },
-            ensure_ascii=False,
-        )
-    }
-""".strip(),
-    f"""
-event: latitude-event
-data: {
-        json.dumps(
-            {
-                "type": "chain-completed",
-                "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
-                "finishReason": "stop",
-                "tokenUsage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
-                "messages": [
-                    *[json.loads(message.model_dump_json()) for message in CONVERSATION_FINISHED_RESULT.conversation],
-                    *[json.loads(message.model_dump_json()) for message in CONVERSATION_TOOL_RESULTS_MESSAGES],
-                    {
-                        "role": "assistant",
-                        "content": [{"type": "text", "text": "Told ya!"}],
-                    },
-                ],
-            },
-        )
-    }
-""".strip(),
-]
-
-FOLLOW_UP_CONVERSATION_EVENTS: list[StreamEvent] = [
-    ChainEventStepStarted(
-        uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
-        messages=[
-            *CONVERSATION_FINISHED_RESULT.conversation,
-            *CONVERSATION_TOOL_RESULTS_MESSAGES,
-        ],
-    ),
-    ChainEventProviderStarted(
-        uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
-        messages=[
-            *CONVERSATION_FINISHED_RESULT.conversation,
-            *CONVERSATION_TOOL_RESULTS_MESSAGES,
-        ],
-        config={"provider": "OpenAI", "model": "gpt-4o-mini"},
-    ),
-    {
-        "event": StreamEvents.Provider,
-        "type": "text-delta",
-        "textDelta": "Told ya!",
-    },
-    {
-        "event": StreamEvents.Provider,
-        "type": "step-finish",
-        "finishReason": "stop",
-        "isContinued": False,
-        "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
-        "response": {
-            "timestamp": "2025-01-02T12:29:13.000Z",
-            "modelId": "gpt-4o-mini-latest",
-        },
-        "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
-    },
-    {
-        "event": StreamEvents.Provider,
-        "type": "finish",
-        "finishReason": "stop",
-        "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
-        "response": {
-            "timestamp": "2025-01-02T12:29:13.000Z",
-            "modelId": "gpt-4o-mini-latest",
-        },
-        "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
-    },
-    ChainEventProviderCompleted(
-        event=StreamEvents.Latitude,
-        type=ChainEvents.ProviderCompleted,
-        provider_log_uuid="456",
-        uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
-        token_usage=ModelUsage(prompt_tokens=77, completion_tokens=3, total_tokens=80),
-        finish_reason=FinishReason.Stop,
-        response=ChainTextResponse(
-            text="Told ya!",
-            tool_calls=[],
-            usage=ModelUsage(prompt_tokens=77, completion_tokens=3, total_tokens=80),
-        ),
-        messages=[
-            *CONVERSATION_FINISHED_RESULT.conversation,
-            *CONVERSATION_TOOL_RESULTS_MESSAGES,
-            AssistantMessage(content=[TextContent(text="Told ya!")]),
-        ],
-    ),
-    ChainEventStepCompleted(
-        uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
-        messages=[
-            *CONVERSATION_FINISHED_RESULT.conversation,
-            *CONVERSATION_TOOL_RESULTS_MESSAGES,
-            AssistantMessage(content=[TextContent(text="Told ya!")]),
-        ],
-    ),
-    ChainEventChainCompleted(
-        uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
-        token_usage=ModelUsage(prompt_tokens=77, completion_tokens=3, total_tokens=80),
-        finish_reason=FinishReason.Stop,
-        messages=[
-            *CONVERSATION_FINISHED_RESULT.conversation,
-            *CONVERSATION_TOOL_RESULTS_MESSAGES,
-            AssistantMessage(content=[TextContent(text="Told ya!")]),
-        ],
-    ),
-]
-
-FOLLOW_UP_CONVERSATION_FINISHED_RESULT_RESPONSE: dict[str, Any] = {
-    "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
-    "conversation": [
-        *[json.loads(message.model_dump_json()) for message in CONVERSATION_FINISHED_RESULT.conversation],
-        *[json.loads(message.model_dump_json()) for message in CONVERSATION_TOOL_RESULTS_MESSAGES],
-        {"role": "assistant", "content": [{"type": "text", "text": "Told ya!"}]},
-    ],
-    "response": {
-        "streamType": "text",
-        "text": "Told ya!",
-        "toolCalls": [],
-        "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
-    },
-}
-
-FOLLOW_UP_CONVERSATION_FINISHED_RESULT = FinishedResult(
-    uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
-    conversation=[
-        *CONVERSATION_FINISHED_RESULT.conversation,
-        *CONVERSATION_TOOL_RESULTS_MESSAGES,
-        AssistantMessage(content=[TextContent(text="Told ya!")]),
-    ],
-    response=ChainTextResponse(
-        text="Told ya!",
-        tool_calls=[],
-        usage=ModelUsage(prompt_tokens=77, completion_tokens=3, total_tokens=80),
-    ),
-)

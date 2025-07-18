@@ -7,6 +7,7 @@ from latitude_sdk.util import Model, StrEnum
 class ApiErrorCodes(StrEnum):
     # LatitudeErrorCodes
     NotFoundError = "NotFoundError"
+    BadRequestError = "BadRequestError"
 
     # RunErrorCodes
     AIRunError = "ai_run_error"

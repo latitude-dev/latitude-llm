@@ -111,9 +111,9 @@ export async function streamAIResponse({
       output: responseMessages,
       tokens: {
         prompt: usage.promptTokens,
+        cached: 0, // Note: not given by Vercel AI SDK yet
+        reasoning: 0, // Note: not given by Vercel AI SDK yet
         completion: usage.completionTokens,
-        cached: 0, // TODO(telemetry): get cached tokens
-        reasoning: 0, // TODO(telemetry): get reasoning tokens
       },
       finishReason: await aiResult.finishReason,
     })

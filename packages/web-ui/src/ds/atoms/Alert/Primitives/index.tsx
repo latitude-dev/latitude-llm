@@ -1,5 +1,5 @@
-import { forwardRef, HTMLAttributes } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { forwardRef, HTMLAttributes } from 'react'
 
 import { cn } from '../../../../lib/utils'
 
@@ -12,9 +12,10 @@ const alertVariants = cva(
           'border-accent-foreground/10 text-accent-foreground bg-accent [&>svg]:text-accent-foreground',
         destructive:
           'border-destructive-muted-foreground/10 text-destructive-muted-foreground bg-destructive-muted [&>svg]:text-destructive-muted-foreground',
-        success: 'border-green-500 text-green-500 dark:text-white',
+        success:
+          'border-success-muted-foreground/10 text-success-muted-foreground bg-success-muted [&>svg]:text-success-muted-foreground',
         warning:
-          'border-warning-muted-foreground/10 bg-yellow text-warning-muted-foreground [&>svg]:text-warning-muted-foreground',
+          'border-warning-muted-foreground/10 text-warning-muted-foreground bg-warning-muted [&>svg]:text-warning-muted-foreground',
       },
     },
     defaultVariants: {
@@ -44,7 +45,7 @@ const AlertTitle = forwardRef<
 >(({ className, ...props }, ref) => (
   <h5
     ref={ref}
-    className={cn('mb-1 font-medium leading-none tracking-tight', className)}
+    className={cn('font-medium leading-none tracking-tight', className)}
     {...props}
   />
 ))
@@ -65,4 +66,4 @@ const AlertDescription = forwardRef<
 ))
 AlertDescription.displayName = 'AlertDescription'
 
-export { AlertRoot, AlertTitle, AlertDescription }
+export { AlertDescription, AlertRoot, AlertTitle }

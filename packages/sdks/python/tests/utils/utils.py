@@ -19,7 +19,7 @@ from promptl_ai import (
     UserMessage,
 )
 
-from latitude_sdk import InternalOptions, Latitude, LatitudeOptions, LogSources
+from latitude_sdk import InternalOptions, Latitude, LatitudeOptions, LogSources, __version_semver__
 
 
 class TestCase(IsolatedAsyncioTestCase):
@@ -82,7 +82,14 @@ class TestCase(IsolatedAsyncioTestCase):
         self.assertEqual(request.method, method)
         self.assertEqual(request.url, f"{self.base_url}{endpoint}")
         self.assertDictContainsSubset(
-            {**{"authorization": f"Bearer {self.api_key}"}, **(headers or {})},
+            {
+                **{
+                    "authorization": f"Bearer {self.api_key}",
+                    "x-latitude-sdk-version": __version_semver__,
+                    "content-type": "application/json",
+                },
+                **(headers or {}),
+            },
             dict(request.headers),
         )
         try:

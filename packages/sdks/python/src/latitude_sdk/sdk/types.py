@@ -30,6 +30,10 @@ class Providers(StrEnum):
     Google = "google"
     GoogleVertex = "google_vertex"
     AnthropicVertex = "anthropic_vertex"
+    XAI = "xai"
+    AmazonBedrock = "amazon_bedrock"
+    DeepSeek = "deepseek"
+    Perplexity = "perplexity"
     Custom = "custom"
 
 
@@ -66,9 +70,6 @@ class FinishReason(StrEnum):
     Error = "error"
     Other = "other"
     Unknown = "unknown"
-
-
-AGENT_START_TOOL_NAME = "start_autonomous_chain"
 
 
 class ToolCall(Model):
@@ -116,6 +117,23 @@ class StreamEvents(StrEnum):
     Provider = "provider-event"
 
 
+# NOTE: Incomplete list
+class ProviderEvents(StrEnum):
+    ToolCalled = "tool-call"
+
+
+# NOTE: Incomplete event
+class GenericProviderEvent(Model):
+    event: Literal[StreamEvents.Provider] = StreamEvents.Provider
+
+
+# NOTE: Incomplete event
+class ProviderEventToolCalled(GenericProviderEvent, Model):
+    id: str = Field(alias=str("toolCallId"))
+    name: str = Field(alias=str("toolName"))
+    arguments: dict[str, Any] = Field(alias=str("args"))
+
+
 ProviderEvent = dict[str, Any]
 
 
@@ -137,20 +155,20 @@ class GenericChainEvent(Model):
     uuid: str
 
 
-class ChainEventChainStarted(GenericChainEvent):
+class ChainEventChainStarted(GenericChainEvent, Model):
     type: Literal[ChainEvents.ChainStarted] = ChainEvents.ChainStarted
 
 
-class ChainEventStepStarted(GenericChainEvent):
+class ChainEventStepStarted(GenericChainEvent, Model):
     type: Literal[ChainEvents.StepStarted] = ChainEvents.StepStarted
 
 
-class ChainEventProviderStarted(GenericChainEvent):
+class ChainEventProviderStarted(GenericChainEvent, Model):
     type: Literal[ChainEvents.ProviderStarted] = ChainEvents.ProviderStarted
     config: dict[str, Any]
 
 
-class ChainEventProviderCompleted(GenericChainEvent):
+class ChainEventProviderCompleted(GenericChainEvent, Model):
     type: Literal[ChainEvents.ProviderCompleted] = ChainEvents.ProviderCompleted
     provider_log_uuid: str = Field(alias=str("providerLogUuid"))
     token_usage: ModelUsage = Field(alias=str("tokenUsage"))
@@ -158,26 +176,26 @@ class ChainEventProviderCompleted(GenericChainEvent):
     response: ChainResponse
 
 
-class ChainEventToolsStarted(GenericChainEvent):
+class ChainEventToolsStarted(GenericChainEvent, Model):
     type: Literal[ChainEvents.ToolsStarted] = ChainEvents.ToolsStarted
     tools: List[ToolCall]
 
 
-class ChainEventToolCompleted(GenericChainEvent):
+class ChainEventToolCompleted(GenericChainEvent, Model):
     type: Literal[ChainEvents.ToolCompleted] = ChainEvents.ToolCompleted
 
 
-class ChainEventStepCompleted(GenericChainEvent):
+class ChainEventStepCompleted(GenericChainEvent, Model):
     type: Literal[ChainEvents.StepCompleted] = ChainEvents.StepCompleted
 
 
-class ChainEventChainCompleted(GenericChainEvent):
+class ChainEventChainCompleted(GenericChainEvent, Model):
     type: Literal[ChainEvents.ChainCompleted] = ChainEvents.ChainCompleted
     token_usage: ModelUsage = Field(alias=str("tokenUsage"))
     finish_reason: FinishReason = Field(alias=str("finishReason"))
 
 
-class ChainEventChainError(GenericChainEvent):
+class ChainEventChainError(GenericChainEvent, Model):
     type: Literal[ChainEvents.ChainError] = ChainEvents.ChainError
     error: ChainError
 
@@ -229,6 +247,18 @@ class Log(Model):
     updated_at: datetime = Field(alias=str("updatedAt"))
 
 
+class EvaluationResult(Model):
+    uuid: str
+    version_uuid: str = Field(alias=str("versionUuid"))
+    score: int
+    normalized_score: int = Field(alias=str("normalizedScore"))
+    metadata: dict[str, Any]
+    has_passed: bool = Field(alias=str("hasPassed"))
+    error: Optional[Union[str, None]] = None
+    created_at: datetime = Field(alias=str("createdAt"))
+    updated_at: datetime = Field(alias=str("updatedAt"))
+
+
 class Project(Model):
     id: int
     uuid: Optional[str] = None
@@ -238,11 +268,14 @@ class Project(Model):
 
 
 class Version(Model):
+    id: int
     uuid: str
-    name: str
+    title: str
+    description: Optional[str] = None
     project_id: int = Field(alias=str("projectId"))
     created_at: datetime = Field(alias=str("createdAt"))
     updated_at: datetime = Field(alias=str("updatedAt"))
+    merged_at: Optional[datetime] = Field(default=None, alias=str("mergedAt"))
 
 
 class StreamCallbacks(Model):

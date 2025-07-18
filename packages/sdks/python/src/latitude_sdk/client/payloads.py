@@ -44,8 +44,8 @@ class RunPromptRequestBody(Model):
     path: str
     parameters: Optional[Dict[str, Any]] = None
     custom_identifier: Optional[str] = Field(default=None, alias=str("customIdentifier"))
-    stream: Optional[bool] = None
     tools: Optional[List[str]] = None
+    stream: Optional[bool] = None
 
 
 class ChatPromptRequestParams(Model):
@@ -54,6 +54,7 @@ class ChatPromptRequestParams(Model):
 
 class ChatPromptRequestBody(Model):
     messages: List[Message]
+    tools: Optional[List[str]] = None
     stream: Optional[bool] = None
 
 
@@ -81,11 +82,10 @@ class AnnotateEvaluationRequestParams(EvaluationRequestParams, Model):
 
 
 class AnnotateEvaluationRequestBody(Model):
-    score: int
-
     class Metadata(Model):
         reason: str
 
+    score: int
     metadata: Optional[Metadata] = None
 
 

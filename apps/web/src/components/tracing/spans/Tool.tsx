@@ -19,11 +19,9 @@ export default {
 function DetailsPanel({ span }: DetailsPanelProps<SpanType.Tool>) {
   return (
     <>
-      {!!span.metadata?.name && (
-        <MetadataItem label='Tool name' value={span.metadata.name} />
-      )}
-      {!!span.metadata?.call && (
+      {!!span.metadata && (
         <>
+          <MetadataItem label='Tool name' value={span.metadata.name} />
           <MetadataItem label='Call id'>
             <ClickToCopy copyValue={span.metadata.call.id}>
               <Text.H5 align='right' color='foregroundMuted'>
@@ -38,43 +36,43 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Tool>) {
               </CodeBlock>
             </div>
           </MetadataItem>
+          {!!span.metadata.result &&
+            (span.metadata.result.isError ? (
+              <MetadataItem
+                label='Error'
+                color='destructiveMutedForeground'
+                contentClassName='pt-2'
+                stacked
+              >
+                <Alert
+                  variant='destructive'
+                  description={
+                    typeof span.metadata.result.value !== 'string'
+                      ? JSON.stringify(span.metadata.result.value, null, 2)
+                      : String(span.metadata.result.value || 'Execution failed')
+                  }
+                />
+              </MetadataItem>
+            ) : (
+              <MetadataItem label='Result' contentClassName='pt-2' stacked>
+                {typeof span.metadata.result.value === 'string' ? (
+                  <TextArea
+                    value={String(span.metadata.result.value || '')}
+                    minRows={1}
+                    maxRows={6}
+                    disabled={true}
+                  />
+                ) : (
+                  <div className='w-full max-h-32 overflow-y-auto custom-scrollbar scrollable-indicator rounded-xl bg-backgroundCode'>
+                    <CodeBlock language='json'>
+                      {JSON.stringify(span.metadata.result.value, null, 2)}
+                    </CodeBlock>
+                  </div>
+                )}
+              </MetadataItem>
+            ))}
         </>
       )}
-      {!!span.metadata?.result &&
-        (span.metadata.result.isError ? (
-          <MetadataItem
-            label='Error'
-            color='destructiveMutedForeground'
-            contentClassName='pt-2'
-            stacked
-          >
-            <Alert
-              variant='destructive'
-              description={
-                typeof span.metadata.result.value !== 'string'
-                  ? JSON.stringify(span.metadata.result.value, null, 2)
-                  : String(span.metadata.result.value || 'Execution failed')
-              }
-            />
-          </MetadataItem>
-        ) : (
-          <MetadataItem label='Result' contentClassName='pt-2' stacked>
-            {typeof span.metadata.result.value === 'string' ? (
-              <TextArea
-                value={String(span.metadata.result.value || '')}
-                minRows={1}
-                maxRows={6}
-                disabled={true}
-              />
-            ) : (
-              <div className='w-full max-h-32 overflow-y-auto custom-scrollbar scrollable-indicator rounded-xl bg-backgroundCode'>
-                <CodeBlock language='json'>
-                  {JSON.stringify(span.metadata.result.value, null, 2)}
-                </CodeBlock>
-              </div>
-            )}
-          </MetadataItem>
-        ))}
     </>
   )
 }

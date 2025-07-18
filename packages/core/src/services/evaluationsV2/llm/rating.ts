@@ -145,7 +145,7 @@ The resulting verdict is an integer number between \`${minRating}\`, if the resp
 - \`${minRating}\` represents "${minRatingDescription}"
 - \`${maxRating}\` represents "${maxRatingDescription}"
 
-${promptTask({ provider })}
+${promptTask()}
 
 You must give your verdict as a single JSON object with the following properties:
 - rating (number): An integer number between \`${minRating}\` and \`${maxRating}\`.

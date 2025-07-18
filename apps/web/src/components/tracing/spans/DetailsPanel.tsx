@@ -126,23 +126,26 @@ export function DetailsPanel<T extends SpanType>({
         value={format(new Date(span.startedAt), 'PPp')}
       />
       {span.status === SpanStatus.Error && (
-        <MetadataItem
-          label='Error'
-          color='destructiveMutedForeground'
-          contentClassName='pt-2'
-          stacked
-        >
-          <Alert
-            variant='destructive'
-            showIcon={false}
-            description={span.message || 'Unknown error'}
-          />
-        </MetadataItem>
+        <Alert
+          variant='destructive'
+          showIcon={false}
+          title='Event failed'
+          description={span.message || 'Unknown error'}
+        />
       )}
       {!!specification.DetailsPanel && (
         <specification.DetailsPanel span={span} />
       )}
-      {!!span.metadata && (
+      {!span.metadata ? (
+        span.status !== SpanStatus.Error && (
+          <Alert
+            variant='warning'
+            showIcon={false}
+            title='No metadata'
+            description='This event is still being processed or has had an error.'
+          />
+        )
+      ) : (
         <CollapsibleBox
           title='Metadata'
           icon='letterText'

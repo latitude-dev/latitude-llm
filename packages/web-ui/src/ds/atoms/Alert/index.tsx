@@ -21,10 +21,10 @@ type Props = {
 }
 
 const IconColor: Record<string, TextColor> = {
-  destructive: 'destructive',
-  success: 'success',
+  destructive: 'destructiveMutedForeground',
+  success: 'successMutedForeground',
   warning: 'warningMutedForeground',
-  default: 'foreground',
+  default: 'foregroundMuted',
 }
 
 export function Alert({
@@ -40,9 +40,9 @@ export function Alert({
     <AlertRoot variant={variant}>
       {showIcon && (
         <Icon
-          className='mt-0.5' // To align with the Title leading
           name='alert'
           color={variant ? IconColor[variant] || 'foreground' : 'foreground'}
+          className={cn({ 'mt-0.5': !title })}
         />
       )}
       <div

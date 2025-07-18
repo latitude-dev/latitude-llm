@@ -1,6 +1,6 @@
+import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { RunErrorField } from '@latitude-data/core/repositories'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 
 export function RunErrorMessage({ error }: { error: RunErrorField }) {
   const resultError = getRunErrorFromErrorable(error)
@@ -18,9 +18,9 @@ export function RunErrorMessage({ error }: { error: RunErrorField }) {
 
   return (
     <Alert
-      showIcon={false}
       variant='destructive'
-      title='Error message'
+      showIcon={false}
+      title='Run failed'
       description={message}
     />
   )
