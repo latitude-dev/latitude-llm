@@ -6,6 +6,7 @@ import { database, Database } from '../client'
 import * as schema from '../schema'
 import { ConflictError, UnprocessableEntityError } from './errors'
 import { ErrorResult, Result, TypedResult } from './Result'
+import { captureException } from '@sentry/node'
 
 export type DBSchema = typeof schema
 export type ITransaction<T extends DBSchema = DBSchema> = PgTransaction<
@@ -25,25 +26,34 @@ const DB_ERROR_CODES = {
 
 export default class Transaction {
   public static async call<ResultType>(
-    callback: (trx: Database) => PromisedResult<ResultType>,
+    handler: (trx: Database) => PromisedResult<ResultType>,
     db = database,
+    callback?: (result: ResultType, db: Database) => void,
   ): PromisedResult<ResultType> {
-    return new Transaction().call(callback, db)
+    return new Transaction().call(handler, db, callback)
   }
 
   public async call<ResultType>(
-    callback: (trx: Database) => PromisedResult<ResultType>,
+    handler: (trx: Database) => PromisedResult<ResultType>,
     db = database,
+    callback?: (result: ResultType, db: Database) => void,
   ): PromisedResult<ResultType> {
     try {
       let result: TypedResult<ResultType, Error>
 
       await db.transaction(async (trx) => {
         // @ts-expect-error - good luck typing this
-        result = await callback(trx)
+        result = await handler(trx)
 
         if (result.error) throw result.error
       })
+
+      try {
+        // @ts-expect-error - TS complains about the result type are not relevant
+        callback?.(result, db)
+      } catch (error) {
+        captureException(error)
+      }
 
       return result!
     } catch (error) {
