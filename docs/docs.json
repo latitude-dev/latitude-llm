@@ -51,6 +51,7 @@
                   "guides/getting-started/quick-start-dev"
                 ]
               },
+              "guides/contributing/contributing",
               {
                 "group": "Providers",
                 "pages": [
