@@ -146,6 +146,17 @@ export async function sendWebsockets({
           } as LatteThreadUpdateArgs,
         })
       }
+
+      if (data.type === 'text-delta') {
+        WebsocketClient.sendEvent('latteThreadUpdate', {
+          workspaceId: workspace.id,
+          data: {
+            threadUuid,
+            type: 'responseDelta',
+            delta: data.textDelta,
+          } as LatteThreadUpdateArgs,
+        })
+      }
     }
 
     if (event === StreamEventTypes.Latitude) {
@@ -156,7 +167,7 @@ export async function sendWebsockets({
           workspaceId: workspace.id,
           data: {
             threadUuid,
-            type: 'response',
+            type: 'fullResponse',
             response: textResponse,
           } as LatteThreadUpdateArgs,
         })
