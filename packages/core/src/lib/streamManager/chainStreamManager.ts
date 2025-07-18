@@ -52,6 +52,9 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
       }).then((r) => r.unwrap())
       if (chain.chainCompleted) return this.endStream()
 
+      this.setMessages(chain.messages)
+      this.startStep()
+
       const toolsBySource = await this.getToolsBySource(chain).then((r) =>
         r.unwrap(),
       )
@@ -60,8 +63,6 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
         toolsBySource,
       )
 
-      this.setMessages(chain.messages)
-      this.startStep()
       this.startProviderStep(config)
 
       const {
@@ -71,7 +72,7 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
         finishReason,
       } = await streamAIResponse({
         config,
-        context: this.$context,
+        context: this.$step!.context,
         abortSignal: this.abortSignal,
         controller: this.controller!,
         documentLogUuid: this.uuid,

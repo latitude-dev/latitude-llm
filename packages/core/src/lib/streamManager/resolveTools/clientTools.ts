@@ -102,13 +102,13 @@ function buildDefinition(streamManager: StreamManager) {
     const definition = { ...toolDefinition } as Tool
     if (streamManager.source === LogSources.Playground) {
       definition.execute = instrumentToolHandler(awaitClientToolResult, {
-        context: streamManager.$context,
+        context: streamManager.$step!.context,
         toolDefinition,
         toolName: name,
       })
     } else if (streamManager.source === LogSources.Evaluation) {
       definition.execute = instrumentToolHandler(mockClientToolResult, {
-        context: streamManager.$context,
+        context: streamManager.$step!.context,
         toolDefinition,
         toolName: name,
       })
@@ -116,7 +116,7 @@ function buildDefinition(streamManager: StreamManager) {
       const toolHandler = streamManager.tools[name]
       if (toolHandler) {
         definition.execute = instrumentToolHandler(toolHandler, {
-          context: streamManager.$context,
+          context: streamManager.$step!.context,
           toolDefinition,
           toolName: name,
         })

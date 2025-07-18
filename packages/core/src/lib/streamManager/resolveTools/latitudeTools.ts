@@ -61,7 +61,7 @@ function resolveLatitudeToolsFromNewSchema({
     if (latitudeToolName === '*') {
       Object.assign(
         resolvedTools,
-        ALL_LATITUDE_RESOLVED_TOOLS(streamManager.$context),
+        ALL_LATITUDE_RESOLVED_TOOLS(streamManager.$step!.context),
       )
       continue
     }
@@ -81,7 +81,7 @@ function resolveLatitudeToolsFromNewSchema({
     ] = {
       definition: getLatitudeToolDefinition(
         latitudeToolName as LatitudeTool,
-        streamManager.$context,
+        streamManager.$step!.context,
       )!,
       sourceData: {
         source: ToolSource.Latitude,

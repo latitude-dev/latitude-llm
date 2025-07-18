@@ -50,7 +50,6 @@ export type StreamManagerProps = {
  * the specific strategies for their respective use cases.
  */
 export abstract class StreamManager {
-  public $context: TelemetryContext
   public mcpClientManager: McpClientManager
   public source: LogSources
   public stream: ReadableStream<ChainEvent>
@@ -59,7 +58,8 @@ export abstract class StreamManager {
   public promptSource: PromptSource
   public workspace: Workspace
 
-  protected $step: ReturnType<typeof telemetry.step> | undefined
+  public $context: TelemetryContext
+  public $step: ReturnType<typeof telemetry.step> | undefined
 
   protected controller?: ReadableStreamDefaultController<ChainEvent>
   protected messages: LegacyMessage[]

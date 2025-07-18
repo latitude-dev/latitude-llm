@@ -53,13 +53,14 @@ export class DefaultStreamManager
       return
     }
 
+    this.startStep()
+
     const toolsBySource = toolsBySourceResult.unwrap()
     const config = this.transformPromptlToVercelToolDeclarations(
       this.config,
       toolsBySource,
     )
 
-    this.startStep()
     this.startProviderStep(config)
 
     try {
