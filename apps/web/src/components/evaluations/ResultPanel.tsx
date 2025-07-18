@@ -28,6 +28,7 @@ import { buildPagination } from '@latitude-data/core/lib/pagination/buildPaginat
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { usePanelDomRef } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
@@ -39,7 +40,6 @@ import {
 import { format } from 'date-fns'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { usePanelDomRef } from '@latitude-data/web-ui/atoms/SplitPane'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
@@ -184,7 +184,11 @@ function ResultPanelMetadata<
           contentClassName='pt-2'
           stacked
         >
-          <Alert variant='destructive' description={result.error.message} />
+          <Alert
+            variant='destructive'
+            showIcon={false}
+            description={result.error.message}
+          />
         </MetadataItem>
       ) : (
         <>
