@@ -14,7 +14,7 @@ import { PromisedResult } from '../../../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../../../repositories'
 import { uploadFile } from '../../../files'
 import { findUnscopedDocumentTriggers } from '../../find'
-import { EmailTriggerConfiguration } from '../../helpers/schema'
+import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 
 async function getTriggerName(
   trigger: DocumentTrigger,

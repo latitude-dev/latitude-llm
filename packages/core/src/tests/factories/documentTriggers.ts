@@ -10,7 +10,7 @@ import {
   ScheduledTriggerConfiguration,
   EmailTriggerConfiguration,
   IntegrationTriggerConfiguration,
-} from '../../services/documentTriggers/helpers/schema'
+} from '@latitude-data/constants/documentTriggers'
 import { DocumentTrigger } from '../../browser'
 
 /**

@@ -10,7 +10,7 @@ import {
   DocumentTriggersRepository,
   DocumentVersionsRepository,
 } from '../../../../repositories'
-import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
+import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { getEmailResponse } from './getResponse'
 
 export type RunEmailTriggerJobData = {

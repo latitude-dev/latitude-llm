@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { Result } from '../../../../../lib/Result'
 import {
   CommitsRepository,
+  DocumentTriggersRepository,
   DocumentVersionsRepository,
 } from '../../../../../repositories'
 import { promptPresenter } from '../presenters'
@@ -20,17 +21,29 @@ const listPrompts = defineLatteTool(
     const docsScope = new DocumentVersionsRepository(workspace.id)
     const docsResult = await docsScope.getDocumentsAtCommit(commit)
     if (!docsResult.ok) return docsResult
-
     const documents = docsResult.unwrap()
-    return Result.ok(
-      documents.map((document) =>
-        promptPresenter({
-          document,
+
+    const documentTriggerScope = new DocumentTriggersRepository(workspace.id)
+
+    const existingTriggersAtLiveCommit =
+      await documentTriggerScope.findByProjectId(commit.projectId)
+
+    const promptObjects = await Promise.all(
+      documents.map(async (doc) => {
+        const existingTriggers = existingTriggersAtLiveCommit.filter(
+          (trigger) => trigger.documentUuid === doc.documentUuid,
+        )
+        return promptPresenter({
+          document: doc,
           versionUuid,
           projectId,
-        }),
-      ),
+          triggers: existingTriggers,
+          workspaceId: workspace.id,
+        })
+      }),
     )
+
+    return Result.ok(promptObjects)
   },
   z.object({
     projectId: z.number(),

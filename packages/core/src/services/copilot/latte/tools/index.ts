@@ -2,7 +2,6 @@ import { LatteTool } from '@latitude-data/constants/latte'
 import { User, Workspace } from '../../../../browser'
 import { Result, TypedResult } from '../../../../lib/Result'
 import type { LatteToolFn } from './types'
-import { ToolHandler } from '../../../../lib/streamManager/clientTools/handlers'
 
 import listDrafts from './commits/list'
 import listPrompts from './documents/list'
@@ -12,10 +11,14 @@ import listProjects from './projects/list'
 import listIntegrations from './settings/listIntegrations'
 import listIntegrationTools from './settings/listIntegrationTools'
 import listProviders from './settings/listProviders'
+import listIntegrationTriggers from './settings/listIntegrationTriggers'
 import think from './general/think'
 import searchIntegrationResources from './settings/searchIntegrationResources'
 import searchIntegrationApps from './settings/searchIntegrationApps'
 import createIntegration from './settings/createIntegration'
+import { ToolHandler } from '../../../../lib/streamManager/clientTools/handlers'
+import triggerActions from './triggers/triggerActions'
+import listExistingTriggers from './triggers/listExistingTriggers'
 
 export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.think]: think,
@@ -30,6 +33,9 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.searchIntegrationResources]: searchIntegrationResources,
   [LatteTool.searchIntegrationApps]: searchIntegrationApps,
   [LatteTool.createIntegration]: createIntegration,
+  [LatteTool.listIntegrationTriggers]: listIntegrationTriggers,
+  [LatteTool.triggerActions]: triggerActions,
+  [LatteTool.listExistingTriggers]: listExistingTriggers,
 } as const
 
 export function buildToolHandlers({

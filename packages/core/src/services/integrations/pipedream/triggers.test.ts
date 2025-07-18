@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { IntegrationType } from '@latitude-data/constants'
-import { Workspace, PipedreamIntegration } from '../../../browser'
+import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
+import {
+  Workspace,
+  PipedreamIntegration,
+  DocumentTrigger,
+} from '../../../browser'
 import { updatePipedreamTrigger } from './triggers'
 import { Result } from '../../../lib/Result'
-import { IntegrationTriggerConfiguration } from '../../documentTriggers/helpers/schema'
+import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import * as appsModule from './apps'
 import * as componentsModule from './components'
 import * as triggersModule from './triggers'
@@ -31,6 +35,7 @@ describe('updatePipedreamTrigger', () => {
   }
   let originalConfig: IntegrationTriggerConfiguration
   let updatedConfig: IntegrationTriggerConfiguration
+  let originalTrigger: DocumentTrigger
 
   beforeEach(async () => {
     const { workspace: createdWorkspace } = await factories.createProject()
@@ -72,6 +77,18 @@ describe('updatePipedreamTrigger', () => {
       triggerId: 'trigger-1',
     }
 
+    originalTrigger = {
+      id: 123,
+      uuid: '000-0000-0000-0000',
+      documentUuid: '111-1111-1111-1111',
+      projectId: 1,
+      workspaceId: workspace.id,
+      triggerType: DocumentTriggerType.Integration,
+      configuration: originalConfig as IntegrationTriggerConfiguration,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
     updatedConfig = {
       integrationId: integration1.id,
       componentId: 'component-1',
@@ -108,7 +125,10 @@ describe('updatePipedreamTrigger', () => {
 
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig: identicalConfig,
       })
 
@@ -126,7 +146,10 @@ describe('updatePipedreamTrigger', () => {
     it('updates the trigger properties successfully', async () => {
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig,
       })
 
@@ -154,7 +177,10 @@ describe('updatePipedreamTrigger', () => {
 
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig: configWithInvalidIntegration,
       })
 
@@ -179,7 +205,10 @@ describe('updatePipedreamTrigger', () => {
 
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig: configWithNonPipedreamIntegration,
       })
 
@@ -200,7 +229,10 @@ describe('updatePipedreamTrigger', () => {
 
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig,
       })
 
@@ -216,7 +248,10 @@ describe('updatePipedreamTrigger', () => {
 
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig,
       })
 
@@ -230,7 +265,10 @@ describe('updatePipedreamTrigger', () => {
 
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig,
       })
 
@@ -265,7 +303,10 @@ describe('updatePipedreamTrigger', () => {
 
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig: configWithUnconfiguredIntegration,
       })
 
@@ -296,7 +337,10 @@ describe('updatePipedreamTrigger', () => {
 
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig: originalConfigUnconfigured,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig: updatedConfigUnconfigured,
       })
 
@@ -335,7 +379,10 @@ describe('updatePipedreamTrigger', () => {
 
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig: configWithDifferentUnconfiguredIntegration,
       })
 
@@ -372,7 +419,10 @@ describe('updatePipedreamTrigger', () => {
     it('deletes old trigger and deploys new one successfully', async () => {
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig: updatedConfigDifferentTrigger,
       })
 
@@ -401,7 +451,10 @@ describe('updatePipedreamTrigger', () => {
 
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig: updatedConfigDifferentTrigger,
       })
 
@@ -415,7 +468,10 @@ describe('updatePipedreamTrigger', () => {
 
       const result = await updatePipedreamTrigger({
         workspace,
-        originalConfig,
+        trigger: originalTrigger as Extract<
+          DocumentTrigger,
+          { configuration: IntegrationTriggerConfiguration }
+        >,
         updatedConfig: updatedConfigDifferentTrigger,
       })
 

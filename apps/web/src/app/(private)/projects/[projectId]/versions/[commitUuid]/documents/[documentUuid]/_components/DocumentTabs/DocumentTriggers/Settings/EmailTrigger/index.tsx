@@ -4,7 +4,7 @@ import {
   EMAIL_TRIGGER_DOMAIN,
 } from '@latitude-data/constants'
 import { DocumentVersion } from '@latitude-data/core/browser'
-import { EmailTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/helpers/schema'
+import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useMemo } from 'react'
 import { EmailTriggerConfig } from './Config'

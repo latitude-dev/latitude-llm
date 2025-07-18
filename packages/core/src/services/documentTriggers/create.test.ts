@@ -7,7 +7,8 @@ import { documentTriggers } from '../../schema'
 import {
   EmailTriggerConfiguration,
   InsertScheduledTriggerConfiguration,
-} from './helpers/schema'
+  ScheduledTriggerConfiguration,
+} from '@latitude-data/constants/documentTriggers'
 import { LatitudeError } from './../../lib/errors'
 
 describe('createDocumentTrigger', () => {
@@ -60,11 +61,19 @@ describe('createDocumentTrigger', () => {
       ({ triggerType, configuration }) => {
         if (triggerType === DocumentTriggerType.Email) {
           return configuration as EmailTriggerConfiguration
-        } else {
+        } else if (triggerType === DocumentTriggerType.Scheduled) {
           return {
             ...configuration,
             lastRun: new Date('2023-01-01'),
             nextRunTime: new Date('2023-01-02'),
+          } as ScheduledTriggerConfiguration
+        } else {
+          return {
+            integrationId: 1,
+            triggerId: 'mocked-trigger-id',
+            payloadParameters: ['mocked-payload-parameter'],
+            componentId: 'mocked-component-id',
+            properties: {},
           }
         }
       },
@@ -117,6 +126,7 @@ describe('createDocumentTrigger', () => {
       triggerType: DocumentTriggerType.Email,
       configuration: emailConfiguration,
     })
+
     expect(result.value).toEqual({
       uuid: 'mocked-uuid',
       workspaceId: workspace.id,

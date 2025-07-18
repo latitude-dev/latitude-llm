@@ -8,7 +8,7 @@ import {
   emailTriggerConfigurationSchema,
   insertScheduledTriggerConfigurationSchema,
   integrationTriggerConfigurationSchema,
-} from '@latitude-data/core/services/documentTriggers/helpers/schema'
+} from '@latitude-data/constants/documentTriggers'
 import { z } from 'zod'
 import { DocumentTriggersRepository } from '@latitude-data/core/repositories'
 

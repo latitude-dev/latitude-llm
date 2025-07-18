@@ -1,7 +1,7 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { database } from '../../../../client'
 import { HEAD_COMMIT } from '../../../../browser'
-import { IntegrationTriggerConfiguration } from '../../helpers/schema'
+import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import {
   unsafelyFindDocumentTrigger,
   unsafelyFindWorkspace,

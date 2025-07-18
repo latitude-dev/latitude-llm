@@ -17,9 +17,10 @@ import {
   DocumentVersionsRepository,
 } from '../../../../repositories'
 import { runDocumentAtCommit } from '../../../../services/commits'
-import { EmailTriggerConfiguration } from '../../../../services/documentTriggers/helpers/schema'
+
 import { uploadFile } from '../../../../services/files'
 import { BACKGROUND } from '../../../../telemetry'
+import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 
 async function getNewTriggerResponse(
   {

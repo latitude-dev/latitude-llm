@@ -5,7 +5,7 @@ import { Result } from '../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../lib/Transaction'
 import { documentTriggers } from '../../../../schema'
 import { checkCronExpression, getNextRunTime } from '../../helpers/cronHelper'
-import { ScheduledTriggerConfiguration } from '../../helpers/schema'
+import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { database } from '../../../../client'
 
 /**

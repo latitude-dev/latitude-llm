@@ -4,20 +4,18 @@ import { getNextRunTime } from './cronHelper'
 import {
   DocumentTriggerConfiguration,
   EmailTriggerConfiguration,
+  InsertDocumentTriggerWithConfiguration,
   InsertScheduledTriggerConfiguration,
   IntegrationTriggerConfiguration,
   ScheduledTriggerConfiguration,
-} from './schema'
+} from '@latitude-data/constants/documentTriggers'
 
 export function buildConfiguration({
   triggerType,
   configuration,
 }: {
   triggerType: DocumentTriggerType
-  configuration:
-    | InsertScheduledTriggerConfiguration
-    | EmailTriggerConfiguration
-    | IntegrationTriggerConfiguration
+  configuration: InsertDocumentTriggerWithConfiguration['configuration']
 }): DocumentTriggerConfiguration {
   switch (triggerType) {
     case 'integration':
