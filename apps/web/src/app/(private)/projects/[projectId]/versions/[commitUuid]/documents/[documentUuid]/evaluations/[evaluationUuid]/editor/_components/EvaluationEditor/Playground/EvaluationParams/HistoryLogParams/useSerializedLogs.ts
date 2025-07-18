@@ -101,6 +101,7 @@ export function useSerializedLogs({
 
   const isLoading = isLoadingLog || isLoadingCounter
   const log = logs?.[0]
+
   return useMemo(
     () => ({
       selectedLog: log,

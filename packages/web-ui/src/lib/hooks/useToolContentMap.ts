@@ -18,9 +18,9 @@ export function useToolContentMap(
     if (toolContentMap) return toolContentMap
 
     const res = messages.reduce((acc: Record<string, ToolContent>, message) => {
-      if (![MessageRole.assistant, MessageRole.tool].includes(message.role)) {
+      if (typeof message.content === 'string') return acc
+      if (![MessageRole.assistant, MessageRole.tool].includes(message.role))
         return acc
-      }
 
       return Object.assign(
         acc,
