@@ -51,10 +51,7 @@ export function useToolContentMap(
  */
 function transformContent(content: ToolContent): ToolContent {
   const result = content.result
-  if (
-    'value' in (result as ToolResultPayload) &&
-    'isError' in (result as ToolResultPayload)
-  ) {
+  if (typeof result === 'object' && 'value' in result && 'isError' in result) {
     return {
       ...content,
       result: (result as ToolResultPayload).value,
