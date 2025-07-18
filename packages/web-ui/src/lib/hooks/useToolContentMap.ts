@@ -1,6 +1,6 @@
 'use client'
 
-import { ToolResultPayload } from '@latitude-data/constants'
+import { ToolResultPayload } from '@latitude-data/constants/ai'
 import {
   Message,
   MessageContent,

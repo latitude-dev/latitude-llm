@@ -194,3 +194,8 @@ export const FINISH_REASON_DETAILS = {
     description: string
   }
 }
+
+export type ToolResultPayload = {
+  value: unknown
+  isError: boolean
+}
