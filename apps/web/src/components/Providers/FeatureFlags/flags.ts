@@ -17,7 +17,7 @@ export const FEATURE_FLAGS_CONDITIONS: Record<
   FeatureFlagCondition
 > = {
   latte: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [1] },
-  blocksEditor: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [10240] },
+  blocksEditor: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [1, 10240] },
   integrationTriggers: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [1] },
   tracing: { workspaceIds: env.ENABLE_ALL_FLAGS ? 'all' : [1] },
 }
