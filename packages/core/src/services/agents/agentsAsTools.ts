@@ -100,7 +100,7 @@ export async function getToolDefinitionFromDocument({
         }
       } catch (e) {
         const result = {
-          value: e as Error,
+          value: (e as Error).message,
           isError: true,
         }
 

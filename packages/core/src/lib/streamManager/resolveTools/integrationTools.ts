@@ -145,7 +145,7 @@ async function addIntegrationTools({
             }
           } catch (err) {
             const result = {
-              value: err as Error,
+              value: (err as Error).message,
               isError: true,
             }
 

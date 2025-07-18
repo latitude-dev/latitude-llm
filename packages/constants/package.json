@@ -12,6 +12,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
+    "./ai": "./src/ai.ts",
     "./legacyCompiler": "./src/legacyCompiler.ts",
     "./errors": "./src/errors/index.ts",
     "./onboarding": "./src/onboarding.ts",
