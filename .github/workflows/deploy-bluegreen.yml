@@ -2,6 +2,7 @@ name: Deploy Web and Gateway (Blue-Green)
 
 on:
   workflow_call:
+    disabled: true
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
