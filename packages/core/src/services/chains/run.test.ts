@@ -169,66 +169,6 @@ describe('runChain', () => {
     expect(aiModule.ai).toHaveBeenCalledTimes(2)
   })
 
-  it('handles system messages correctly', async () => {
-    const mockAiResponse = createMockAiResponse('AI response', 10)
-    vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
-
-    vi.mocked(mockChain.step!).mockResolvedValue({
-      completed: false,
-      messages: [
-        {
-          role: MessageRole.system,
-          // @ts-expect-error - TODO(compiler): fix types
-          content: [{ type: 'text', text: 'System instruction' }],
-        },
-        {
-          role: MessageRole.user,
-          // @ts-expect-error - TODO(compiler): fix types
-          content: [{ type: 'text', text: 'User message' }],
-        },
-      ],
-      config: { provider: 'openai', model: 'gpt-3.5-turbo' },
-    })
-
-    const run = runChain({
-      context,
-      workspace,
-      // @ts-expect-error - TODO(compiler): fix types
-      chain: mockChain,
-      globalConfig: {} as LatitudePromptConfig,
-      promptlVersion: 0,
-      providersMap,
-      source: LogSources.API,
-      errorableType: ErrorableEntity.DocumentLog,
-      promptSource,
-    })
-
-    const response = await run.response
-    expect(response).toEqual(
-      expect.objectContaining({
-        documentLogUuid: expect.any(String),
-        text: 'AI response',
-        usage: { totalTokens: 10 },
-        toolCalls: [],
-      }),
-    )
-
-    expect(aiModule.ai).toHaveBeenCalledWith(
-      expect.objectContaining({
-        messages: [
-          {
-            role: MessageRole.system,
-            content: [{ type: 'text', text: 'System instruction' }],
-          },
-          {
-            role: MessageRole.user,
-            content: [{ type: 'text', text: 'User message' }],
-          },
-        ],
-      }),
-    )
-  })
-
   it('handles error response', async () => {
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: false,
@@ -366,6 +306,15 @@ describe('runChain', () => {
         uuid: expect.any(String),
         type: ChainEventTypes.ChainCompleted,
         messages: [
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: 'text',
+                text: 'user message',
+              },
+            ],
+          },
           {
             role: MessageRole.assistant,
             content: [

@@ -65,7 +65,6 @@ export default function useIntegrationTools(
 
   const data = useMemo<McpToolDto[] | undefined>(() => {
     if (!toolsData) return undefined
-
     if (!appData) return toolsData
 
     return toolsData.map((tool) => {
