@@ -15,7 +15,6 @@ from promptl_ai import (
 )
 
 from latitude_sdk import (
-    AnnotateEvaluationResult,
     ApiError,
     ApiErrorCodes,
     ChainError,
@@ -28,6 +27,7 @@ from latitude_sdk import (
     ChainEventStepCompleted,
     ChainEventStepStarted,
     ChainTextResponse,
+    EvaluationResult,
     FinishedResult,
     FinishReason,
     Log,
@@ -56,6 +56,21 @@ ERROR = ApiError(
     status=500,
     code=ApiErrorCodes.InternalServerError,
     message="An unexpected error occurred",
+    response=mock.ANY,
+    db_ref=None,
+)
+
+CLIENT_ERROR_RESPONSE: dict[str, Any] = {
+    "name": "BadRequestError",
+    "message": "A client error occurred",
+    "errorCode": "bad_request_error",
+    "details": {},
+}
+
+CLIENT_ERROR = ApiError(
+    status=400,
+    code=ApiErrorCodes.BadRequestError,
+    message="A client error occurred",
     response=mock.ANY,
     db_ref=None,
 )
@@ -121,7 +136,6 @@ topP: 0.9
     provider=Providers.OpenAI,
     parameters={"question": PromptParameter(type=ParameterType.Text)},
 )
-
 
 LOG_RESPONSE: dict[str, Any] = {
     "id": 31,
@@ -208,7 +222,7 @@ CREATE_PROJECT_RESPONSE: dict[str, Any] = {
     "version": VERSION_RESPONSE,
 }
 
-PROJECTS_LIST_RESPONSE: list[dict[str, Any]] = [
+PROJECTS_RESPONSE: list[dict[str, Any]] = [
     PROJECT_RESPONSE,
     {
         "id": 2,
@@ -219,7 +233,7 @@ PROJECTS_LIST_RESPONSE: list[dict[str, Any]] = [
     },
 ]
 
-PROJECTS_LIST = [
+PROJECTS = [
     PROJECT,
     Project(
         id=2,
@@ -242,8 +256,7 @@ EVALUATION_RESULT_RESPONSE: dict[str, Any] = {
     "error": None,
 }
 
-
-EVALUATION_RESULT = AnnotateEvaluationResult(
+EVALUATION_RESULT = EvaluationResult(
     uuid="e25a317b-c682-4c25-a704-a87ac79507c4",
     score=1,
     normalized_score=1,
@@ -773,7 +786,6 @@ data: {
     }
 """.strip(),
 ]
-
 
 CONVERSATION_EVENTS: list[StreamEvent] = [
     ChainEventChainStarted(

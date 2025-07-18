@@ -137,7 +137,7 @@ The resulting verdict is an integer number between \`0\`, if the response compar
 - \`0\` represents "${failDescription}"
 - \`100\` represents "${passDescription}"
 
-${promptTask({ provider })}
+${promptTask()}
 
 You must give your verdict as a single JSON object with the following properties:
 - score (number): An integer number between \`0\` and \`100\`.

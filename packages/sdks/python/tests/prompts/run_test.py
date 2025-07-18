@@ -27,9 +27,7 @@ class TestRunPromptSync(TestCase):
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
-            return_value=httpx.Response(  # type: ignore
-                200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE
-            )
+            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE)
         )
 
         result = await self.sdk.prompts.run(path, options)
@@ -69,9 +67,7 @@ class TestRunPromptSync(TestCase):
         )
         endpoint = f"/projects/{options.project_id}/versions/{options.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
-            return_value=httpx.Response(  # type: ignore
-                200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE
-            )
+            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE)
         )
 
         result = await self.sdk.prompts.run(path, options)
@@ -95,7 +91,7 @@ class TestRunPromptSync(TestCase):
         on_error_mock.assert_not_called()
 
     async def test_success_default_version_uuid(self):
-        self.sdk._options.version_uuid = None
+        self.sdk._options.version_uuid = None  # pyright: ignore [reportPrivateUsage]
         on_event_mock = Mock()
         on_finished_mock = Mock()
         on_error_mock = Mock()
@@ -110,9 +106,7 @@ class TestRunPromptSync(TestCase):
         )
         endpoint = f"/projects/{self.project_id}/versions/live/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
-            return_value=httpx.Response(  # type: ignore
-                200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE
-            )
+            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE)
         )
 
         result = await self.sdk.prompts.run(path, options)
@@ -135,6 +129,8 @@ class TestRunPromptSync(TestCase):
         on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
 
+    # TODO(bigpr): test_success_with_tools
+
     async def test_fails_and_retries(self):
         on_event_mock = Mock()
         on_finished_mock = Mock()
@@ -150,7 +146,7 @@ class TestRunPromptSync(TestCase):
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
-            return_value=httpx.Response(500, json=fixtures.ERROR_RESPONSE)  # type: ignore
+            return_value=httpx.Response(500, json=fixtures.ERROR_RESPONSE)
         )
 
         result = await self.sdk.prompts.run(path, options)
@@ -158,7 +154,7 @@ class TestRunPromptSync(TestCase):
 
         [
             self.assert_requested(
-                request,  # type: ignore
+                request,
                 method="POST",
                 endpoint=endpoint,
                 body={
@@ -168,7 +164,7 @@ class TestRunPromptSync(TestCase):
                     "stream": options.stream,
                 },
             )
-            for request in requests  # type: ignore
+            for request in requests
         ]
         self.assertEqual(endpoint_mock.call_count, self.internal_options.retries)
         self.assertEqual(result, None)
@@ -189,7 +185,7 @@ class TestRunPromptSync(TestCase):
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
-            return_value=httpx.Response(400, json=fixtures.CONVERSATION_ERROR_RESPONSE)  # type: ignore
+            return_value=httpx.Response(400, json=fixtures.CONVERSATION_ERROR_RESPONSE)
         )
 
         with self.assertRaisesRegex(type(fixtures.CONVERSATION_ERROR), fixtures.CONVERSATION_ERROR.message):
@@ -226,7 +222,7 @@ class TestRunPromptSync(TestCase):
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
-            return_value=httpx.Response(400, json=fixtures.CONVERSATION_ERROR_RESPONSE)  # type: ignore
+            return_value=httpx.Response(400, json=fixtures.CONVERSATION_ERROR_RESPONSE)
         )
 
         result = await self.sdk.prompts.run(path, options)
@@ -271,7 +267,7 @@ class TestRunPromptStream(TestCase):
 
         result = await self.sdk.prompts.run(path, options)
         request, _ = endpoint_mock.calls.last
-        events = cast(list[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
+        events = cast(list[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])
 
         self.assert_requested(
             request,
@@ -313,7 +309,7 @@ class TestRunPromptStream(TestCase):
 
         result = await self.sdk.prompts.run(path, options)
         request, _ = endpoint_mock.calls.last
-        events = cast(list[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
+        events = cast(list[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])
 
         print(result)
         print(fixtures.CONVERSATION_FINISHED_RESULT)
@@ -336,7 +332,7 @@ class TestRunPromptStream(TestCase):
         on_error_mock.assert_not_called()
 
     async def test_success_default_version_uuid(self):
-        self.sdk._options.version_uuid = None
+        self.sdk._options.version_uuid = None  # pyright: ignore [reportPrivateUsage]
         on_event_mock = Mock()
         on_finished_mock = Mock()
         on_error_mock = Mock()
@@ -356,7 +352,7 @@ class TestRunPromptStream(TestCase):
 
         result = await self.sdk.prompts.run(path, options)
         request, _ = endpoint_mock.calls.last
-        events = cast(list[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
+        events = cast(list[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])
 
         self.assert_requested(
             request,
@@ -375,6 +371,49 @@ class TestRunPromptStream(TestCase):
         self.assertEqual(on_event_mock.call_count, len(fixtures.CONVERSATION_EVENTS))
         on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
+
+    # TODO(bigpr): test_success_with_tools
+
+    async def test_fails_and_retries(self):
+        on_event_mock = Mock()
+        on_finished_mock = Mock()
+        on_error_mock = Mock()
+        path = "prompt-path"
+        options = RunPromptOptions(
+            on_event=on_event_mock,
+            on_finished=on_finished_mock,
+            on_error=on_error_mock,
+            custom_identifier="custom-identifier",
+            parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
+            stream=True,
+        )
+        endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
+        endpoint_mock = self.gateway_mock.post(endpoint).mock(
+            return_value=httpx.Response(500, json=fixtures.ERROR_RESPONSE)
+        )
+
+        result = await self.sdk.prompts.run(path, options)
+        requests = cast(list[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore
+
+        [
+            self.assert_requested(
+                request,
+                method="POST",
+                endpoint=endpoint,
+                body={
+                    "path": path,
+                    "customIdentifier": options.custom_identifier,
+                    "parameters": options.parameters,
+                    "stream": options.stream,
+                },
+            )
+            for request in requests
+        ]
+        self.assertEqual(endpoint_mock.call_count, self.internal_options.retries)
+        self.assertEqual(result, None)
+        on_event_mock.assert_not_called()
+        on_finished_mock.assert_not_called()
+        on_error_mock.assert_called_once_with(fixtures.ERROR)
 
     async def test_fails_and_raises(self):
         on_event_mock = Mock()

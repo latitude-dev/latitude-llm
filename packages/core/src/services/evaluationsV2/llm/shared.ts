@@ -12,7 +12,6 @@ import {
   LlmEvaluationMetric,
   LogSources,
   ProviderApiKey,
-  Providers,
   Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
@@ -23,35 +22,33 @@ import { BACKGROUND, telemetry } from '../../../telemetry'
 import { runChain } from '../../chains/run'
 import { parsePrompt } from '../../documents/parse'
 
-export function promptTask({ provider }: { provider: ProviderApiKey }) {
+export function promptTask() {
   return `
-${provider.provider === Providers.Anthropic ? '<user>' : ''}
-
-Based on the given instructions, evaluate the assistant response:
-\`\`\`
-{{ actualOutput }}
-\`\`\`
-
-For context, here is the full conversation:
-\`\`\`
-{{ conversation }}
-\`\`\`
-
-{{ if toolCalls?.length }}
-  Also, here are the tool calls that the assistant requested:
+<user>
+  Based on the given instructions, evaluate the assistant response:
   \`\`\`
-  {{ toolCalls }}
+  {{ actualOutput }}
   \`\`\`
-{{ else }}
-  Also, the assistant did not request any tool calls.
-{{ endif }}
 
-Finally, here is some additional metadata about the conversation. It may or may not be relevant for the evaluation.
-- Cost: {{ cost }} cents.
-- Tokens: {{ tokens }} tokens.
-- Duration: {{ duration }} seconds.
+  For context, here is the full conversation:
+  \`\`\`
+  {{ conversation }}
+  \`\`\`
 
-${provider.provider === Providers.Anthropic ? '</user>' : ''}
+  {{ if toolCalls?.length }}
+    Also, here are the tool calls that the assistant requested:
+    \`\`\`
+    {{ toolCalls }}
+    \`\`\`
+  {{ else }}
+    Also, the assistant did not request any tool calls.
+  {{ endif }}
+
+  Finally, here is some additional metadata about the conversation. It may or may not be relevant for the evaluation.
+  - Cost: {{ cost }} cents.
+  - Tokens: {{ tokens }} tokens.
+  - Duration: {{ duration }} seconds.
+</user>'
 `.trim()
 }
 
@@ -72,16 +69,17 @@ export async function buildLlmEvaluationRunFunction<
   evaluation: EvaluationV2<EvaluationType.Llm, M>
   prompt: string
   parameters?: Record<string, unknown>
-  schema: z.ZodSchema
+  schema?: z.ZodSchema
 }) {
   let promptConfig: LatitudePromptConfig
   let promptChain: PromptlChain
   try {
-    prompt = schema
-      ? updatePromptMetadata(prompt, {
-          schema: zodToJsonSchema(schema, { target: 'openAi' }),
-        })
-      : prompt
+    if (schema) {
+      prompt = updatePromptMetadata(prompt, {
+        schema: zodToJsonSchema(schema, { target: 'openAi' }),
+      })
+    }
+
     const ast = await parsePrompt(prompt).then((r) => r.unwrap())
     const result = await scan({
       prompt,
@@ -97,11 +95,7 @@ export async function buildLlmEvaluationRunFunction<
       )
     }
 
-    promptConfig = {
-      ...result.config,
-      ...(schema && { schema: zodToJsonSchema(schema, { target: 'openAi' }) }),
-    } as LatitudePromptConfig
-
+    promptConfig = result.config as LatitudePromptConfig
     promptChain = new Chain({
       serialized: { ast },
       prompt: prompt,
@@ -128,11 +122,7 @@ export async function buildLlmEvaluationRunFunction<
     workspace: workspace,
   }
 
-  return Result.ok({
-    promptChain,
-    promptConfig,
-    runArgs,
-  })
+  return Result.ok({ promptChain, promptConfig, runArgs })
 }
 
 export async function runPrompt<
@@ -151,7 +141,7 @@ export async function runPrompt<
   }: {
     prompt: string
     parameters?: Record<string, unknown>
-    schema: S
+    schema?: S
     resultUuid: string
     evaluation: EvaluationV2<EvaluationType.Llm, M>
     providers: Map<string, ProviderApiKey>
@@ -185,8 +175,9 @@ export async function runPrompt<
     const error = await result.error
     if (error) throw error
 
-    $prompt.end()
     response = await result.response
+
+    $prompt.end()
   } catch (error) {
     $prompt.fail(error as Error)
 
@@ -239,7 +230,7 @@ export async function runPrompt<
   return { response, stats, verdict }
 }
 
-function parseVerdict(response: ChainStepResponse<StreamType>): any {
+function parseVerdict(response: ChainStepResponse<StreamType>) {
   if (response.streamType !== 'object') {
     throw new ChainError({
       code: RunErrorCodes.InvalidResponseFormatError,

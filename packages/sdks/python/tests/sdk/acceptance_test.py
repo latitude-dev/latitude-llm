@@ -1,15 +1,20 @@
 import os
+from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock
 
 import pytest
 
-from latitude_sdk import Latitude
-from latitude_sdk.sdk.latitude import InternalOptions, LatitudeOptions
-from latitude_sdk.sdk.prompts import GetOrCreatePromptOptions, RunPromptOptions
-from latitude_sdk.sdk.types import GatewayOptions
+from latitude_sdk import (
+    GatewayOptions,
+    GetOrCreatePromptOptions,
+    InternalOptions,
+    Latitude,
+    LatitudeOptions,
+    RunPromptOptions,
+)
 
 
-class TestSDKIntegrationE2E:
+class TestSDKIntegrationE2E(IsolatedAsyncioTestCase):
     """SDK Integration Tests (E2E)"""
 
     @pytest.fixture

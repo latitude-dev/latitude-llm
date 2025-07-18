@@ -81,11 +81,10 @@ class AnnotateEvaluationRequestParams(EvaluationRequestParams, Model):
 
 
 class AnnotateEvaluationRequestBody(Model):
-    score: int
-
     class Metadata(Model):
         reason: str
 
+    score: int
     metadata: Optional[Metadata] = None
 
 
