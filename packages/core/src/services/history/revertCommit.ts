@@ -1,6 +1,7 @@
 import { Commit, DraftChange, Project, User, Workspace } from '../../browser'
+import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { PromisedResult } from '../../lib/Transaction'
+import Transaction, { PromisedResult } from '../../lib/Transaction'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -154,19 +155,22 @@ export async function getChangesToRevertCommit({
   return Result.ok(changes)
 }
 
-export async function revertCommit({
-  workspace,
-  project,
-  user,
-  targetDraftUuid,
-  commitUuid,
-}: {
-  workspace: Workspace
-  project: Project
-  user: User
-  targetDraftUuid?: string
-  commitUuid: string
-}): PromisedResult<Commit> {
+export async function revertCommit(
+  {
+    workspace,
+    project,
+    user,
+    targetDraftUuid,
+    commitUuid,
+  }: {
+    workspace: Workspace
+    project: Project
+    user: User
+    targetDraftUuid?: string
+    commitUuid: string
+  },
+  db = database,
+): PromisedResult<Commit> {
   const commitRevisionDetauls = await fetchCommitReversionDetails({
     workspace,
     project,
@@ -185,50 +189,61 @@ export async function revertCommit({
     originalDocuments,
   } = commitRevisionDetauls.unwrap()
 
-  const changes = await computeChangesToRevertCommit({
-    workspace,
-    targetDraft,
-    changedCommit,
-    originalCommit,
-  })
+  return Transaction.call(async (trx) => {
+    const changes = await computeChangesToRevertCommit(
+      {
+        workspace,
+        targetDraft,
+        changedCommit,
+        originalCommit,
+      },
+      trx,
+    )
 
-  if (changes.error) return Result.error(changes.error)
+    if (changes.error) return Result.error(changes.error)
 
-  const finalDraft = targetDraftUuid
-    ? Result.ok(targetDraft)
-    : await createCommit({
-        project: project,
-        user: user,
-        data: {
-          title: `Revert changes for v${changedCommit.version} "${changedCommit.title}"`,
-          description: `Reverted changes of version v${changedCommit.version} "${changedCommit.title}"`,
-        },
-      })
+    const finalDraft = targetDraftUuid
+      ? Result.ok(targetDraft)
+      : await createCommit(
+          {
+            project: project,
+            user: user,
+            data: {
+              title: `Revert changes for v${changedCommit.version} "${changedCommit.title}"`,
+              description: `Reverted changes of version v${changedCommit.version} "${changedCommit.title}"`,
+            },
+          },
+          trx,
+        )
 
-  if (finalDraft.error) return Result.error(finalDraft.error)
+    if (finalDraft.error) return Result.error(finalDraft.error)
 
-  const computedChanges = await Promise.all(
-    changes.value.map((documentVersionChanges) => {
-      const changedDocument = changedDocuments.find(
-        (d) => d.documentUuid == documentVersionChanges.documentUuid!,
-      )
-      const originalDocument = originalDocuments.find(
-        (d) => d.documentUuid == documentVersionChanges.documentUuid!,
-      )
+    const computedChanges = await Promise.all(
+      changes.value.map((documentVersionChanges) => {
+        const changedDocument = changedDocuments.find(
+          (d) => d.documentUuid == documentVersionChanges.documentUuid!,
+        )
+        const originalDocument = originalDocuments.find(
+          (d) => d.documentUuid == documentVersionChanges.documentUuid!,
+        )
 
-      return updateDocument({
-        commit: finalDraft.value,
-        document: changedDocument ?? originalDocument!,
-        path: documentVersionChanges.path,
-        content: documentVersionChanges.content,
-        deletedAt: documentVersionChanges.deletedAt,
-      })
-    }),
-  )
+        return updateDocument(
+          {
+            commit: finalDraft.value,
+            document: changedDocument ?? originalDocument!,
+            path: documentVersionChanges.path,
+            content: documentVersionChanges.content,
+            deletedAt: documentVersionChanges.deletedAt,
+          },
+          trx,
+        )
+      }),
+    )
 
-  for (const result of computedChanges) {
-    if (result.error) return Result.error(result.error)
-  }
+    for (const result of computedChanges) {
+      if (result.error) return Result.error(result.error)
+    }
 
-  return Result.ok(finalDraft.value)
+    return Result.ok(finalDraft.value)
+  }, db)
 }
