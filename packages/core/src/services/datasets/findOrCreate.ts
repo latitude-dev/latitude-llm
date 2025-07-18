@@ -1,6 +1,6 @@
 import { User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { DatasetsRepository } from '../../repositories'
 import { createDataset } from './create'
 
@@ -14,7 +14,7 @@ export async function findOrCreateDataset(
     author: User
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
   const repo = new DatasetsRepository(workspace.id)
   const datasets = await repo.findByName(name)
@@ -27,6 +27,6 @@ export async function findOrCreateDataset(
       workspace,
       data: { name, columns: [] },
     },
-    db,
+    transaction,
   )
 }

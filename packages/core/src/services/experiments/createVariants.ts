@@ -1,7 +1,6 @@
 import type { ExperimentVariant } from '@latitude-data/constants/experiments'
 import { Dataset, Experiment, User } from '../../browser'
 import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
-import { database } from '../../client'
 import { ProviderApiKeysRepository } from '../../repositories'
 import Transaction from '../../lib/Transaction'
 import { Result } from '../../lib/Result'
@@ -36,30 +35,30 @@ export async function createExperimentVariants(
     fromRow?: number
     toRow?: number
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  const providersScope = new ProviderApiKeysRepository(workspace.id, db)
-  const providers = await providersScope.findAll().then((r) => r.unwrap())
-  const nonExistingProvider = inputVariants.find(
-    (variant) =>
-      !providers.some((provider) => provider.name === variant.provider),
-  )
-
-  if (nonExistingProvider) {
-    return Result.error(
-      new NotFoundError(
-        `The provider '${nonExistingProvider.provider}' was not found in your workspace`,
-      ),
+  return transaction.call<Experiment[]>(async (tx) => {
+    const providersScope = new ProviderApiKeysRepository(workspace.id, tx)
+    const providers = await providersScope.findAll().then((r) => r.unwrap())
+    const nonExistingProvider = inputVariants.find(
+      (variant) =>
+        !providers.some((provider) => provider.name === variant.provider),
     )
-  }
 
-  const originalPrompt = document.content
-  // I'll assume everyone uses promptl by now
-  const { config: originalConfig, setConfig } = await scan({
-    prompt: originalPrompt,
-  })
+    if (nonExistingProvider) {
+      return Result.error(
+        new NotFoundError(
+          `The provider '${nonExistingProvider.provider}' was not found in your workspace`,
+        ),
+      )
+    }
 
-  return Transaction.call<Experiment[]>(async (tx) => {
+    const originalPrompt = document.content
+    // I'll assume everyone uses promptl by now
+    const { config: originalConfig, setConfig } = await scan({
+      prompt: originalPrompt,
+    })
+
     const experiments = await Promise.all(
       inputVariants.map(async (variant) => {
         const variantPrompt = setConfig({
@@ -83,7 +82,7 @@ export async function createExperimentVariants(
             toRow,
             workspace,
           },
-          tx,
+          transaction,
         ).then((r) => r.unwrap())
       }),
     )
@@ -100,5 +99,5 @@ export async function createExperimentVariants(
     })
 
     return Result.ok(experiments as Experiment[])
-  }, db)
+  })
 }

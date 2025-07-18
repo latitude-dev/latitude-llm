@@ -34,13 +34,10 @@ export const scaleDownMcpServerJob = async (
     }
 
     // Scale down the server
-    const result = await scaleMcpServer(
-      {
-        mcpServer: server,
-        replicas: 0,
-      },
-      database,
-    )
+    const result = await scaleMcpServer({
+      mcpServer: server,
+      replicas: 0,
+    })
 
     if (Result.isOk(result)) {
       console.log(`Scaled down MCP server ${mcpServerId} to 0 replicas`)

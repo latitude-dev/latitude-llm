@@ -11,7 +11,6 @@ import {
   ProviderLogDto,
   Workspace,
 } from '../../../browser'
-import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
@@ -44,9 +43,9 @@ export async function createEvaluationResultV2<
     usedForSuggestion?: boolean
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     const result = (await tx
       .insert(evaluationResultsV2)
       .values({
@@ -79,5 +78,5 @@ export async function createEvaluationResultV2<
     })
 
     return Result.ok({ result })
-  }, db)
+  })
 }

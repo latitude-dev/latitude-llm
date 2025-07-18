@@ -1,10 +1,9 @@
 import { Membership, User } from '../../browser'
-import { database } from '../../client'
 import Transaction from '../../lib/Transaction'
 import { updateMembership } from '../memberships'
 import { updateUser } from '../users'
 
-export function acceptInvitation(
+export async function acceptInvitation(
   {
     user,
     membership,
@@ -12,14 +11,14 @@ export function acceptInvitation(
     membership: Membership
     user: User
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
-    const date = new Date()
-    if (!user.confirmedAt) {
-      await updateUser(user, { confirmedAt: date }, tx).then((r) => r.unwrap())
-    }
+  const date = new Date()
+  if (!user.confirmedAt) {
+    await updateUser(user, { confirmedAt: date }, transaction).then((r) =>
+      r.unwrap(),
+    )
+  }
 
-    return await updateMembership(membership, { confirmedAt: date }, tx)
-  }, db)
+  return await updateMembership(membership, { confirmedAt: date }, transaction)
 }

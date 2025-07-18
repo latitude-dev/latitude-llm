@@ -1,5 +1,4 @@
 import { Workspace } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { SubscriptionPlans } from '../../plans'
@@ -15,9 +14,9 @@ export function createSubscription(
     plan: keyof typeof SubscriptionPlans
     createdAt?: Date
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const subscription = await tx
       .insert(subscriptions)
       .values({
@@ -28,5 +27,5 @@ export function createSubscription(
       .returning()
 
     return Result.ok(subscription[0]!)
-  }, db)
+  })
 }

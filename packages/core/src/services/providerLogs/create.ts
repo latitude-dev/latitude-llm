@@ -5,7 +5,6 @@ import type {
 import { FinishReason, LanguageModelUsage } from 'ai'
 
 import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -57,9 +56,9 @@ export async function createProviderLog(
     costInMillicents,
     finishReason = 'stop',
   }: CreateProviderLogProps,
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return await Transaction.call<ProviderLog>(async (trx) => {
+  return await transaction.call<ProviderLog>(async (trx) => {
     const cost =
       costInMillicents ??
       (providerType && model && usage
@@ -110,5 +109,5 @@ export async function createProviderLog(
     })
 
     return Result.ok(log)
-  }, db)
+  })
 }

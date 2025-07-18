@@ -1,5 +1,4 @@
 import { REWARD_VALUES, RewardType, User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { unsafelyFindUserByEmail } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
@@ -22,31 +21,31 @@ export async function claimReward(
     reference: string
     autoValidated?: boolean
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  const claimedRewardsScope = new ClaimedRewardsRepository(workspace.id, db)
-  const hasAlreadyClaimed = await claimedRewardsScope.hasClaimed(type)
-  if (hasAlreadyClaimed) {
-    return Result.error(new BadRequestError('Reward already claimed'))
-  }
-
-  if (type === RewardType.Referral) {
-    const alreadyReferred = await claimedRewardsScope.exists({
-      rewardType: RewardType.Referral,
-      reference,
-    })
-
-    if (alreadyReferred) {
-      return Result.error(new BadRequestError('Referral already solicited'))
+  const result = await transaction.call(async (tx) => {
+    const claimedRewardsScope = new ClaimedRewardsRepository(workspace.id, tx)
+    const hasAlreadyClaimed = await claimedRewardsScope.hasClaimed(type)
+    if (hasAlreadyClaimed) {
+      return Result.error(new BadRequestError('Reward already claimed'))
     }
 
-    const invited = await unsafelyFindUserByEmail(reference)
-    if (invited) {
-      return Result.error(new BadRequestError('User already exists'))
-    }
-  }
+    if (type === RewardType.Referral) {
+      const alreadyReferred = await claimedRewardsScope.exists({
+        rewardType: RewardType.Referral,
+        reference,
+      })
 
-  const result = await Transaction.call(async (tx) => {
+      if (alreadyReferred) {
+        return Result.error(new BadRequestError('Referral already solicited'))
+      }
+
+      const invited = await unsafelyFindUserByEmail(reference)
+      if (invited) {
+        return Result.error(new BadRequestError('User already exists'))
+      }
+    }
+
     const newClaimedReward = await tx
       .insert(claimedRewards)
       .values({
@@ -65,7 +64,7 @@ export async function claimReward(
     }
 
     return Result.ok(newClaimedReward)
-  }, db)
+  })
 
   if (result.ok && type === RewardType.Referral) {
     publisher.publishLater({

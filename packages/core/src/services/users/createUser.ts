@@ -1,5 +1,4 @@
 import { User } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -15,9 +14,9 @@ export async function createUser(
     name: string
     confirmedAt?: Date
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  const result = await Transaction.call<User>(async (trx) => {
+  const result = await transaction.call<User>(async (trx) => {
     const inserts = await trx
       .insert(users)
       .values({
@@ -30,7 +29,7 @@ export async function createUser(
     const user = inserts[0]!
 
     return Result.ok(user)
-  }, db)
+  })
 
   if (result.ok) {
     publisher.publishLater({

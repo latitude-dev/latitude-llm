@@ -128,18 +128,19 @@ async function invalidateDocumentsCacheInCommit(
  * 2. Exists in previous commits and in the commit. It will be updated the `deletedAt` field
  * 3. Exists in previous commits but not in the commit. It will be created as soft deleted
  */
-export async function destroyOrSoftDeleteDocuments({
-  documents,
-  commit,
-  workspace,
-  trx = database,
-}: {
-  documents: DocumentVersion[]
-  commit: Commit
-  workspace: Workspace
-  trx?: typeof database
-}): Promise<TypedResult<boolean, Error>> {
-  return Transaction.call(async (tx) => {
+export async function destroyOrSoftDeleteDocuments(
+  {
+    documents,
+    commit,
+    workspace,
+  }: {
+    documents: DocumentVersion[]
+    commit: Commit
+    workspace: Workspace
+  },
+  transaction = new Transaction(),
+): Promise<TypedResult<boolean, Error>> {
+  return transaction.call(async (tx) => {
     const repository = new EvaluationsV2Repository(workspace.id, tx)
 
     await Promise.all(
@@ -153,9 +154,10 @@ export async function destroyOrSoftDeleteDocuments({
 
         await Promise.all(
           evaluations.map((evaluation) =>
-            deleteEvaluationV2({ evaluation, commit, workspace }, tx).then(
-              (r) => r.unwrap(),
-            ),
+            deleteEvaluationV2(
+              { evaluation, commit, workspace },
+              transaction,
+            ).then((r) => r.unwrap()),
           ),
         )
       }),
@@ -177,9 +179,8 @@ export async function destroyOrSoftDeleteDocuments({
     ])
 
     await invalidateDocumentsCacheInCommit(commit.id, tx)
-
-    await pingProjectUpdate({ projectId: commit.projectId }, tx)
+    await pingProjectUpdate({ projectId: commit.projectId }, transaction)
 
     return Result.ok(true)
-  }, trx)
+  })
 }

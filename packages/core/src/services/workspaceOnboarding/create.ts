@@ -1,4 +1,3 @@
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { workspaceOnboarding } from '../../schema/models/workspaceOnboarding'
@@ -10,9 +9,9 @@ export async function createWorkspaceOnboarding(
   }: {
     workspace: typeof workspaces.$inferSelect
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const insertedOnboardings = await tx
       .insert(workspaceOnboarding)
       .values({
@@ -23,5 +22,5 @@ export async function createWorkspaceOnboarding(
     const onboarding = insertedOnboardings[0]!
 
     return Result.ok(onboarding)
-  }, db)
+  })
 }

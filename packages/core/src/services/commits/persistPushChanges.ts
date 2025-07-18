@@ -1,5 +1,4 @@
 import { Commit, DocumentVersion, Workspace } from '../../browser'
-import { database } from '../../client'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -28,14 +27,14 @@ type DocumentVersionToProcess = Partial<DocumentVersion> &
  */
 export async function persistPushChanges(
   { commit, workspace, changes }: PersistPushChangesParams,
-  tx = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<Commit, Error>> {
-  const docsScope = new DocumentVersionsRepository(workspace.id)
-  const originDocuments = await docsScope
-    .getDocumentsAtCommit(commit)
-    .then((r) => r.unwrap())
+  return await transaction.call(async (trx) => {
+    const docsScope = new DocumentVersionsRepository(workspace.id, trx)
+    const originDocuments = await docsScope
+      .getDocumentsAtCommit(commit)
+      .then((r) => r.unwrap())
 
-  return await Transaction.call(async (trx) => {
     // Ensure the commit is a draft
     assertCommitIsDraft(commit).unwrap()
 
@@ -77,12 +76,14 @@ export async function persistPushChanges(
 
     // Delete documents that should be removed
     if (documentsToDelete.length > 0) {
-      await destroyOrSoftDeleteDocuments({
-        documents: documentsToDelete,
-        commit,
-        workspace,
-        trx,
-      })
+      await destroyOrSoftDeleteDocuments(
+        {
+          documents: documentsToDelete,
+          commit,
+          workspace,
+        },
+        transaction,
+      )
     }
 
     // Separate documents to insert vs update
@@ -110,7 +111,7 @@ export async function persistPushChanges(
             commit,
             path: doc.path,
           },
-          trx,
+          transaction,
         ).then((r) => r.unwrap()),
       ),
     )
@@ -125,11 +126,11 @@ export async function persistPushChanges(
             path: doc.path,
             content: doc.content,
           },
-          trx,
+          transaction,
         ).then((r) => r.unwrap()),
       ),
     )
 
     return Result.ok(commit)
-  }, tx)
+  })
 }

@@ -1,5 +1,4 @@
-import { Dataset, User, Workspace } from '../../browser'
-import { database } from '../../client'
+import { User, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { Column, DatasetRowData } from '../../schema'
@@ -36,36 +35,36 @@ export const createDatasetFromJson = async (
     data: { name: string; rows: string }
     hashAlgorithm?: HashAlgorithmFn
   },
-  db = database,
+  transaction = new Transaction(),
 ) => {
   const result = extractHeadersFromFirstRow({ json: data.rows, hashAlgorithm })
   if (result.error) return result
 
   const { columns, rows } = result.value
 
-  return await Transaction.call<Dataset>(async (trx) => {
-    const dataset = await createDataset(
-      {
-        author,
-        workspace,
-        data: { name: data.name, columns },
-      },
-      trx,
-    ).then((r) => r.unwrap())
+  const dataset = await createDataset(
+    {
+      author,
+      workspace,
+      data: { name: data.name, columns },
+    },
+    transaction,
+  )
+  if (dataset.error) return dataset
 
-    await insertRowsInBatch(
-      {
-        dataset,
-        data: {
-          rows: generateRowsFromJson({
-            columns,
-            rows,
-          }),
-        },
+  const row = await insertRowsInBatch(
+    {
+      dataset: dataset.value,
+      data: {
+        rows: generateRowsFromJson({
+          columns,
+          rows,
+        }),
       },
-      trx,
-    ).then((r) => r.unwrap())
+    },
+    transaction,
+  )
+  if (row.error) return row
 
-    return Result.ok(dataset)
-  }, db)
+  return Result.ok(dataset.value)
 }

@@ -11,7 +11,6 @@ import {
 } from '../../browser'
 import * as factories from '../../tests/factories'
 import { createExperimentVariants } from './createVariants'
-import { database } from '../../client'
 
 const publisherSpy = vi.spyOn(publisher, 'publishLater')
 
@@ -113,22 +112,19 @@ describe('createExperimentVariants', () => {
         temperature: 2,
       },
     ]
-    const result = await createExperimentVariants(
-      {
-        workspace,
-        user,
-        commit,
-        document,
-        variants,
-        evaluations,
-        dataset,
-        parametersMap,
-        datasetLabels,
-        fromRow: 0,
-        toRow: 1,
-      },
-      database,
-    )
+    const result = await createExperimentVariants({
+      workspace,
+      user,
+      commit,
+      document,
+      variants,
+      evaluations,
+      dataset,
+      parametersMap,
+      datasetLabels,
+      fromRow: 0,
+      toRow: 1,
+    })
 
     expect(result.ok).toBe(true)
     const experiments = result.unwrap()

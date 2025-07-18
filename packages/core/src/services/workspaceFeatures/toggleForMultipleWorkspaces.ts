@@ -1,6 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm'
 
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { workspaceFeatures } from '../../schema'
 import Transaction from '../../lib/Transaction'
@@ -9,9 +8,9 @@ export async function toggleWorkspaceFeatureForMultipleWorkspaces(
   featureId: number,
   workspaceIds: number[],
   enabled: boolean,
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     if (enabled) {
       // Enable feature for specified workspaces
       const values = workspaceIds.map((workspaceId) => ({
@@ -41,5 +40,5 @@ export async function toggleWorkspaceFeatureForMultipleWorkspaces(
     }
 
     return Result.ok({ featureId, workspaceIds, enabled })
-  }, db)
+  })
 }

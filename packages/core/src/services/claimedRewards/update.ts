@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm'
 
-import { database } from '../../client'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -14,9 +13,9 @@ export async function updateRewardClaim(
     claimId: number
     isValid: boolean | null
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const result = await tx
       .update(claimedRewards)
       .set({
@@ -31,5 +30,5 @@ export async function updateRewardClaim(
     }
 
     return Result.ok(updatedClaimedReward)
-  }, db)
+  })
 }

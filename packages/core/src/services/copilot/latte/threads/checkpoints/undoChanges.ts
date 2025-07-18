@@ -3,7 +3,6 @@ import {
   LatteThreadCheckpoint,
   Workspace,
 } from '../../../../../browser'
-import { database } from '../../../../../client'
 import { Result } from '../../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
 import { LatteThreadsRepository } from '../../../../../repositories'
@@ -19,34 +18,39 @@ export async function undoLatteThreadChanges(
     workspace: Workspace
     threadUuid: string
   },
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<undefined> {
-  const threadsScope = new LatteThreadsRepository(workspace.id, db)
-  const checkpoints = await threadsScope
-    .findAllCheckpoints(threadUuid)
-    .then((r) => r.unwrap())
+  return transaction.call(async (tx) => {
+    const threadsScope = new LatteThreadsRepository(workspace.id, tx)
+    const checkpoints = await threadsScope
+      .findAllCheckpoints(threadUuid)
+      .then((r) => r.unwrap())
 
-  for await (const checkpoint of checkpoints) {
-    const restoreResult = await restoreThreadCheckpoint(checkpoint, db)
+    for await (const checkpoint of checkpoints) {
+      const restoreResult = await restoreThreadCheckpoint(
+        checkpoint,
+        transaction,
+      )
 
-    if (!restoreResult.ok) {
-      return Result.error(restoreResult.error!)
+      if (!restoreResult.ok) {
+        return Result.error(restoreResult.error!)
+      }
     }
-  }
 
-  const result = await clearLatteThreadCheckpoints({
-    threadUuid,
-    workspaceId: workspace.id,
+    const result = await clearLatteThreadCheckpoints({
+      threadUuid,
+      workspaceId: workspace.id,
+    })
+
+    return result
   })
-
-  return result
 }
 
 function restoreThreadCheckpoint(
   checkpoint: LatteThreadCheckpoint,
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<DocumentVersion | undefined> {
-  return Transaction.call<DocumentVersion | undefined>(async (tx) => {
+  return transaction.call<DocumentVersion | undefined>(async (tx) => {
     if (!checkpoint.data) {
       // This document has been created in this draft. To restore the checkpoint, we must remove it.
       // Since there is no previous version of this document, we can safely hard-delete the documentVersion.
@@ -98,5 +102,5 @@ function restoreThreadCheckpoint(
       })
       .returning()
     return Result.ok(upsertResult[0])
-  }, db)
+  })
 }

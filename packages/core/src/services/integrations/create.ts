@@ -1,6 +1,5 @@
 import { IntegrationType } from '@latitude-data/constants'
 import type { IntegrationDto, User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import { ErrorResult, Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
@@ -63,7 +62,7 @@ type IntegrationCreateParams<T extends IntegrationType> = {
 
 export async function createIntegration<p extends IntegrationType>(
   params: IntegrationCreateParams<p>,
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<IntegrationDto> {
   const { workspace, name, type, configuration, author } = params
 
@@ -88,7 +87,7 @@ export async function createIntegration<p extends IntegrationType>(
         authorId: author.id,
         command,
       },
-      db,
+      transaction,
     )
 
     if (!deployResult.ok) return deployResult as ErrorResult<Error>
@@ -96,7 +95,7 @@ export async function createIntegration<p extends IntegrationType>(
     const mcpServer = deployResult.unwrap()
 
     // Now create the integration with a pointer to the MCP server
-    return Transaction.call(async (tx) => {
+    return transaction.call(async (tx) => {
       const result = await tx
         .insert(integrations)
         .values({
@@ -115,7 +114,7 @@ export async function createIntegration<p extends IntegrationType>(
         .returning()
 
       return Result.ok(result[0]! as IntegrationDto)
-    }, db)
+    })
   }
 
   const componentsResult = await obtainIntegrationComponents({
@@ -127,7 +126,7 @@ export async function createIntegration<p extends IntegrationType>(
     return Result.error(componentsResult.error!)
   }
 
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     const result = await tx
       .insert(integrations)
       .values({
@@ -141,5 +140,5 @@ export async function createIntegration<p extends IntegrationType>(
       .returning()
 
     return Result.ok(result[0]! as IntegrationDto)
-  }, db)
+  })
 }

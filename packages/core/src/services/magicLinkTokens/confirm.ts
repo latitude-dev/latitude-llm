@@ -1,13 +1,15 @@
 import { eq } from 'drizzle-orm'
 
-import { database } from '../../client'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { magicLinkTokens } from '../../schema'
 
-export async function confirmMagicLinkToken(token: string, db = database) {
-  return await Transaction.call(async (tx) => {
+export async function confirmMagicLinkToken(
+  token: string,
+  transaction = new Transaction(),
+) {
+  return await transaction.call(async (tx) => {
     const magicLinkToken = await tx
       .select()
       .from(magicLinkTokens)
@@ -25,5 +27,5 @@ export async function confirmMagicLinkToken(token: string, db = database) {
       .then((r) => r[0])
 
     return Result.ok(updatedMagicLinkToken!)
-  }, db)
+  })
 }

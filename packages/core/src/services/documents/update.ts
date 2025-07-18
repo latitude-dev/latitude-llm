@@ -4,7 +4,6 @@ import { eq } from 'drizzle-orm'
 
 import { scan } from 'promptl-ai'
 import { Commit, DocumentType, DocumentVersion } from '../../browser'
-import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError, NotFoundError } from '../../lib/errors'
@@ -55,9 +54,9 @@ export async function updateDocument(
     promptlVersion?: number
     deletedAt?: Date | null
   },
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion, Error>> {
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     const updatedDocData = Object.fromEntries(
       Object.entries({ path, content, promptlVersion, deletedAt }).filter(
         ([_, v]) => v !== undefined,
@@ -125,7 +124,7 @@ export async function updateDocument(
         toVersion: updatedDocs[0]!,
         workspace: workspace!,
       },
-      tx,
+      transaction,
     ).then((r) => r.unwrap())
 
     // Invalidate all resolvedContent for this commit
@@ -138,9 +137,9 @@ export async function updateDocument(
       {
         projectId: commit.projectId,
       },
-      tx,
+      transaction,
     ).then((r) => r.unwrap())
 
     return Result.ok(updatedDocs[0]!)
-  }, db)
+  })
 }

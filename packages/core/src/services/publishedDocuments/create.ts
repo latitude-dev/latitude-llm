@@ -5,7 +5,6 @@ import {
   PublishedDocument,
   Workspace,
 } from '../../browser'
-import { database } from '../../client'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -27,7 +26,7 @@ export async function createPublishedDocument(
     commitUuid: string
     isPublished?: boolean
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
   const commitRepo = new CommitsRepository(workspace.id)
   const liveCommit = await commitRepo
@@ -64,7 +63,7 @@ export async function createPublishedDocument(
     )
   }
 
-  return await Transaction.call<PublishedDocument>(async (trx) => {
+  return await transaction.call<PublishedDocument>(async (trx) => {
     const inserts = await trx
       .insert(publishedDocuments)
       .values({
@@ -77,5 +76,5 @@ export async function createPublishedDocument(
       })
       .returning()
     return Result.ok(inserts[0]!)
-  }, db)
+  })
 }

@@ -1,7 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { omit } from 'lodash-es'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
-import { database } from '../../client'
 import { ConflictError, LatitudeError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -19,27 +18,27 @@ export async function resetToDocumentVersion(
     documentVersion: DocumentVersion
     draft: Commit
   },
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion, Error>> {
-  const docRepo = new DocumentVersionsRepository(workspace!.id, db)
-  const documentsInDraft = await docRepo.getDocumentsAtCommit(draft)
-  if (documentsInDraft.error) return Result.error(documentsInDraft.error)
+  return await transaction.call(async (tx) => {
+    const docRepo = new DocumentVersionsRepository(workspace!.id, tx)
+    const documentsInDraft = await docRepo.getDocumentsAtCommit(draft)
+    if (documentsInDraft.error) return Result.error(documentsInDraft.error)
 
-  if (
-    documentsInDraft.value.some(
-      (d) =>
-        d.path === documentVersion.path &&
-        d.documentUuid !== documentVersion.documentUuid,
-    )
-  ) {
-    return Result.error(
-      new ConflictError(
-        'Document with the same path already exists in the draft',
-      ),
-    )
-  }
+    if (
+      documentsInDraft.value.some(
+        (d) =>
+          d.path === documentVersion.path &&
+          d.documentUuid !== documentVersion.documentUuid,
+      )
+    ) {
+      return Result.error(
+        new ConflictError(
+          'Document with the same path already exists in the draft',
+        ),
+      )
+    }
 
-  return await Transaction.call(async (tx) => {
     await tx
       .delete(documentVersions)
       .where(
@@ -67,7 +66,7 @@ export async function resetToDocumentVersion(
         toVersion: insertedDocument[0]!,
         workspace: workspace,
       },
-      tx,
+      transaction,
     ).then((r) => r.unwrap())
 
     // Invalidate all resolvedContent for this commit
@@ -77,5 +76,5 @@ export async function resetToDocumentVersion(
       .where(eq(documentVersions.commitId, draft.id))
 
     return Result.ok(insertedDocument[0]!)
-  }, db)
+  })
 }

@@ -1,5 +1,4 @@
 import { eq } from 'drizzle-orm'
-import { database } from '../../client'
 import { NotFoundError } from '../../lib/errors'
 import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -8,9 +7,9 @@ import { type Webhook } from './types'
 
 export async function updateWebhookTimestamp(
   webhookId: number,
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<Webhook, Error>> {
-  const result = await Transaction.call(async (trx) => {
+  const result = await transaction.call(async (trx) => {
     const [webhook] = await trx
       .update(webhooks)
       .set({ lastTriggeredAt: new Date() })
@@ -22,7 +21,7 @@ export async function updateWebhookTimestamp(
     }
 
     return Result.ok(webhook)
-  }, db)
+  })
 
   return result
 }

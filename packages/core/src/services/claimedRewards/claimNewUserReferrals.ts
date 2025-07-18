@@ -1,7 +1,6 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 
 import { RewardType } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { claimedRewards } from '../../schema'
@@ -12,24 +11,24 @@ export async function claimNewUserReferrals(
   }: {
     email: string
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  // Find all referrals that will be accepted (only one per workspace)
-  const acceptedReferrals = await db
-    .selectDistinctOn([claimedRewards.workspaceId], {
-      claimId: claimedRewards.id,
-      workspaceId: claimedRewards.workspaceId,
-    })
-    .from(claimedRewards)
-    .where(
-      and(
-        eq(claimedRewards.rewardType, RewardType.Referral),
-        isNull(claimedRewards.isValid),
-        eq(claimedRewards.reference, email),
-      ),
-    )
+  return transaction.call(async (tx) => {
+    // Find all referrals that will be accepted (only one per workspace)
+    const acceptedReferrals = await tx
+      .selectDistinctOn([claimedRewards.workspaceId], {
+        claimId: claimedRewards.id,
+        workspaceId: claimedRewards.workspaceId,
+      })
+      .from(claimedRewards)
+      .where(
+        and(
+          eq(claimedRewards.rewardType, RewardType.Referral),
+          isNull(claimedRewards.isValid),
+          eq(claimedRewards.reference, email),
+        ),
+      )
 
-  return Transaction.call(async (tx) => {
     // Accept referrals
     await tx
       .update(claimedRewards)
@@ -61,5 +60,5 @@ export async function claimNewUserReferrals(
       )
 
     return Result.nil()
-  }, db)
+  })
 }

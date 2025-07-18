@@ -2,7 +2,6 @@ import * as k8s from '@kubernetes/client-node'
 import { eq } from 'drizzle-orm'
 import yaml from 'js-yaml'
 import { McpServer } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { mcpServers } from '../../schema/models/mcpServers'
@@ -15,7 +14,10 @@ import { getDecryptedEnvironmentVariables } from './getDecryptedEnvironmentVaria
  * Using the stored YAML manifest from the database, this function
  * identifies and deletes all resources associated with the application.
  */
-export async function destroyMcpServer(mcpServer: McpServer, db = database) {
+export async function destroyMcpServer(
+  mcpServer: McpServer,
+  transaction = new Transaction(),
+) {
   try {
     const client = getK8sClient()
     const kc = client.kc
@@ -91,7 +93,7 @@ export async function destroyMcpServer(mcpServer: McpServer, db = database) {
       )
     }
 
-    return Transaction.call(async (tx) => {
+    return transaction.call(async (tx) => {
       const k8sApp = await tx
         .update(mcpServers)
         .set({ status: 'deleted' })
@@ -99,7 +101,7 @@ export async function destroyMcpServer(mcpServer: McpServer, db = database) {
         .returning()
 
       return Result.ok(k8sApp)
-    }, db)
+    })
   } catch (error) {
     return Result.error(
       error instanceof Error ? error : new Error(String(error)),

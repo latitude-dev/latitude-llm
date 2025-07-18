@@ -1,5 +1,4 @@
 import type { Commit, Workspace } from '../../browser'
-import { database } from '../../client'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -17,9 +16,9 @@ export async function destroyFolder(
     commit: Commit
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const assertResult = assertCommitIsDraft(commit)
     assertResult.unwrap()
 
@@ -33,11 +32,13 @@ export async function destroyFolder(
       return Result.error(new NotFoundError('Folder does not exist'))
     }
 
-    return destroyOrSoftDeleteDocuments({
-      documents,
-      commit,
-      workspace,
-      trx: tx,
-    })
-  }, db)
+    return destroyOrSoftDeleteDocuments(
+      {
+        documents,
+        commit,
+        workspace,
+      },
+      transaction,
+    )
+  })
 }

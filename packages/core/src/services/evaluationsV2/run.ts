@@ -17,7 +17,6 @@ import {
   ProviderLogDto,
   Workspace,
 } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
@@ -55,145 +54,147 @@ export async function runEvaluationV2<
     commit: Commit
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  const resultsRepository = new EvaluationResultsV2Repository(workspace.id, db)
-  const result = await resultsRepository.findByEvaluatedLogAndEvaluation({
-    evaluatedLogId: providerLog.id,
-    evaluationUuid: evaluation.uuid,
-  })
-
-  if (result.ok) {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that is already evaluated for this evaluation',
-      ),
+  return await transaction.call(async (tx) => {
+    const resultsRepository = new EvaluationResultsV2Repository(
+      workspace.id,
+      tx,
     )
-  }
-
-  const resultUuid = generateUUIDIdentifier()
-
-  const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
-  const document = await documentsRepository
-    .getDocumentAtCommit({
-      commitUuid: commit.uuid,
-      documentUuid: evaluation.documentUuid,
+    const findResult = await resultsRepository.findByEvaluatedLogAndEvaluation({
+      evaluatedLogId: providerLog.id,
+      evaluationUuid: evaluation.uuid,
     })
-    .then((r) => r.unwrap())
-
-  if (!providerLog.documentLogUuid) {
-    return Result.error(
-      new BadRequestError('Provider log is not attached to a document log'),
-    )
-  }
-
-  const documentLogsRepository = new DocumentLogsRepository(workspace.id, db)
-  const documentLog = await documentLogsRepository
-    .findByUuid(providerLog.documentLogUuid)
-    .then((r) => r.unwrap())
-
-  if (documentLog.documentUuid !== document.documentUuid) {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that is from a different document',
-      ),
-    )
-  }
-
-  const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
-  if (!typeSpecification) {
-    return Result.error(new BadRequestError('Invalid evaluation type'))
-  }
-
-  if (!typeSpecification.run) {
-    return Result.error(
-      new BadRequestError('Running is not supported for this evaluation'),
-    )
-  }
-
-  const metricSpecification = typeSpecification.metrics[evaluation.metric]
-  if (!metricSpecification) {
-    return Result.error(new BadRequestError('Invalid evaluation metric'))
-  }
-
-  const conversation = buildConversation(providerLog)
-  if (conversation.at(-1)?.role != 'assistant') {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that does not end with an assistant message',
-      ),
-    )
-  }
-
-  if (dataset && datasetLabel && datasetRow) {
-    if (datasetRow.datasetId !== dataset.id) {
+    if (findResult.ok) {
       return Result.error(
         new UnprocessableEntityError(
-          'Cannot evaluate a row that is from a different dataset',
+          'Cannot evaluate a log that is already evaluated for this evaluation',
         ),
       )
     }
-  } else if (metricSpecification.requiresExpectedOutput) {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log without a dataset row when expected output is required',
-      ),
-    )
-  }
 
-  let value
-  try {
-    const actualOutput = await extractActualOutput({
-      providerLog: providerLog,
-      configuration: evaluation.configuration.actualOutput,
-    }).then((r) => r.unwrap())
+    const resultUuid = generateUUIDIdentifier()
 
-    let expectedOutput = undefined
-    if (dataset && datasetLabel && datasetRow) {
-      expectedOutput = await extractExpectedOutput({
-        dataset: dataset,
-        row: datasetRow,
-        column: datasetLabel,
-        configuration: evaluation.configuration.expectedOutput,
-      }).then((r) => r.unwrap())
-    }
+    const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
+    const document = await documentsRepository
+      .getDocumentAtCommit({
+        commitUuid: commit.uuid,
+        documentUuid: evaluation.documentUuid,
+      })
+      .then((r) => r.unwrap())
 
-    value = (await typeSpecification.run(
-      {
-        metric: evaluation.metric,
-        resultUuid: resultUuid,
-        evaluation: evaluation,
-        actualOutput: actualOutput,
-        expectedOutput: expectedOutput,
-        conversation: conversation,
-        providerLog: providerLog,
-        documentLog: documentLog,
-        document: document,
-        dataset: dataset,
-        datasetLabel: datasetLabel,
-        datasetRow: datasetRow,
-        commit: commit,
-        workspace: workspace,
-      },
-      db,
-    )) as EvaluationResultValue // Note: Typescript cannot resolve conditional types including unbound type arguments: https://github.com/microsoft/TypeScript/issues/53455
-
-    if (
-      !value.error &&
-      (value.normalizedScore < 0 ||
-        value.normalizedScore > EVALUATION_SCORE_SCALE)
-    ) {
-      throw new UnprocessableEntityError(
-        `Normalized metric score must be between 0 and ${EVALUATION_SCORE_SCALE}`,
+    if (!providerLog.documentLogUuid) {
+      return Result.error(
+        new BadRequestError('Provider log is not attached to a document log'),
       )
     }
-  } catch (error) {
-    if (isErrorRetryable(error as Error)) return Result.error(error as Error)
 
-    value = { error: { message: (error as Error).message } }
-  }
+    const documentLogsRepository = new DocumentLogsRepository(workspace.id, tx)
+    const documentLog = await documentLogsRepository
+      .findByUuid(providerLog.documentLogUuid)
+      .then((r) => r.unwrap())
 
-  return await Transaction.call(async (tx) => {
+    if (documentLog.documentUuid !== document.documentUuid) {
+      return Result.error(
+        new UnprocessableEntityError(
+          'Cannot evaluate a log that is from a different document',
+        ),
+      )
+    }
+
+    const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
+    if (!typeSpecification) {
+      return Result.error(new BadRequestError('Invalid evaluation type'))
+    }
+
+    if (!typeSpecification.run) {
+      return Result.error(
+        new BadRequestError('Running is not supported for this evaluation'),
+      )
+    }
+
+    const metricSpecification = typeSpecification.metrics[evaluation.metric]
+    if (!metricSpecification) {
+      return Result.error(new BadRequestError('Invalid evaluation metric'))
+    }
+
+    const conversation = buildConversation(providerLog)
+    if (conversation.at(-1)?.role != 'assistant') {
+      return Result.error(
+        new UnprocessableEntityError(
+          'Cannot evaluate a log that does not end with an assistant message',
+        ),
+      )
+    }
+
+    if (dataset && datasetLabel && datasetRow) {
+      if (datasetRow.datasetId !== dataset.id) {
+        return Result.error(
+          new UnprocessableEntityError(
+            'Cannot evaluate a row that is from a different dataset',
+          ),
+        )
+      }
+    } else if (metricSpecification.requiresExpectedOutput) {
+      return Result.error(
+        new UnprocessableEntityError(
+          'Cannot evaluate a log without a dataset row when expected output is required',
+        ),
+      )
+    }
+
+    let value
+    try {
+      const actualOutput = await extractActualOutput({
+        providerLog: providerLog,
+        configuration: evaluation.configuration.actualOutput,
+      }).then((r) => r.unwrap())
+
+      let expectedOutput = undefined
+      if (dataset && datasetLabel && datasetRow) {
+        expectedOutput = await extractExpectedOutput({
+          dataset: dataset,
+          row: datasetRow,
+          column: datasetLabel,
+          configuration: evaluation.configuration.expectedOutput,
+        }).then((r) => r.unwrap())
+      }
+
+      value = (await typeSpecification.run(
+        {
+          metric: evaluation.metric,
+          resultUuid: resultUuid,
+          evaluation: evaluation,
+          actualOutput: actualOutput,
+          expectedOutput: expectedOutput,
+          conversation: conversation,
+          providerLog: providerLog,
+          documentLog: documentLog,
+          document: document,
+          dataset: dataset,
+          datasetLabel: datasetLabel,
+          datasetRow: datasetRow,
+          commit: commit,
+          workspace: workspace,
+        },
+        tx,
+      )) as EvaluationResultValue // Note: Typescript cannot resolve conditional types including unbound type arguments: https://github.com/microsoft/TypeScript/issues/53455
+
+      if (
+        !value.error &&
+        (value.normalizedScore < 0 ||
+          value.normalizedScore > EVALUATION_SCORE_SCALE)
+      ) {
+        throw new UnprocessableEntityError(
+          `Normalized metric score must be between 0 and ${EVALUATION_SCORE_SCALE}`,
+        )
+      }
+    } catch (error) {
+      if (isErrorRetryable(error as Error)) return Result.error(error as Error)
+
+      value = { error: { message: (error as Error).message } }
+    }
+
     const { result } = await createEvaluationResultV2(
       {
         uuid: resultUuid,
@@ -206,7 +207,7 @@ export async function runEvaluationV2<
         value: value as EvaluationResultValue<T, M>,
         workspace: workspace,
       },
-      tx,
+      transaction,
     ).then((r) => r.unwrap())
 
     await publisher.publishLater({
@@ -221,7 +222,7 @@ export async function runEvaluationV2<
     })
 
     return Result.ok({ result })
-  }, db)
+  })
 }
 
 export function isErrorRetryable(error: Error) {

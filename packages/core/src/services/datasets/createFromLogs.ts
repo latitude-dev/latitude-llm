@@ -1,5 +1,4 @@
 import { Dataset, Workspace } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
@@ -19,7 +18,7 @@ export const updateDatasetFromLogs = async (
     documentLogIds: number[]
     hashAlgorithm?: HashAlgorithmFn
   },
-  db = database,
+  transaction = new Transaction(),
 ) => {
   const builtLogsResult = await buildDocumentLogDatasetRows({
     workspace,
@@ -30,20 +29,19 @@ export const updateDatasetFromLogs = async (
   if (builtLogsResult.error) return builtLogsResult
   const exportedLogs = builtLogsResult.value
 
-  return await Transaction.call(async (trx) => {
-    const ds = await updateDataset(
-      { dataset, data: { columns: exportedLogs.columns } },
-      trx,
-    ).then((r) => r.unwrap())
+  const ds = await updateDataset(
+    { dataset, data: { columns: exportedLogs.columns } },
+    transaction,
+  )
+  if (ds.error) return ds
+  const row = await insertRowsInBatch(
+    {
+      dataset,
+      data: { rows: exportedLogs.rows },
+    },
+    transaction,
+  )
+  if (row.error) return row
 
-    await insertRowsInBatch(
-      {
-        dataset,
-        data: { rows: exportedLogs.rows },
-      },
-      trx,
-    ).then((r) => r.unwrap())
-
-    return Result.ok(ds)
-  }, db)
+  return Result.ok(ds.value)
 }

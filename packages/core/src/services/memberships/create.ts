@@ -1,5 +1,4 @@
 import { Membership, User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -15,21 +14,22 @@ export const createMembership = async (
     workspace: Workspace
     author?: User
   } & Partial<Omit<Membership, 'userId' | 'workspaceId'>>,
-  db = database,
+  transaction = new Transaction(),
 ) => {
-  const result = await Transaction.call(async (tx) => {
-    const result = await tx
-      .insert(memberships)
-      .values({ userId: user.id, workspaceId: workspace.id, ...rest })
-      .returning()
-    const m = result[0]!
+  const result = await transaction.call(
+    async (tx) => {
+      const result = await tx
+        .insert(memberships)
+        .values({ userId: user.id, workspaceId: workspace.id, ...rest })
+        .returning()
+      const m = result[0]!
 
-    return Result.ok(m)
-  }, db)
+      return Result.ok(m)
+    },
+    (m) => publishEvent({ membership: m, author }),
+  )
 
   if (result.error) return result
-
-  publishEvent({ membership: result.value, author })
 
   return result
 }

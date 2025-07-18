@@ -24,6 +24,7 @@ import { LlmEvaluationComparisonSpecification } from './comparison'
 import { LlmEvaluationCustomSpecification } from './custom'
 import { LlmEvaluationCustomLabeledSpecification } from './customLabeled'
 import { LlmEvaluationRatingSpecification } from './rating'
+import Transaction from '../../../lib/Transaction'
 
 // prettier-ignore
 const METRICS: {
@@ -127,9 +128,13 @@ async function run<M extends LlmEvaluationMetric>(
     }
 
     const providers = await buildProvidersMap({ workspaceId: workspace.id })
-
     const value = await metricSpecification.run(
-      { resultUuid, providers, workspace, ...rest },
+      {
+        resultUuid,
+        providers,
+        workspace,
+        ...rest,
+      },
       db,
     )
 
@@ -149,7 +154,8 @@ async function run<M extends LlmEvaluationMetric>(
             details: error.details,
           },
         },
-        db,
+        // TODO: We are stepping out of the db instance. This service should accept an instance of Transaction instead.
+        new Transaction(),
       ).then((r) => r.unwrap())
     }
 

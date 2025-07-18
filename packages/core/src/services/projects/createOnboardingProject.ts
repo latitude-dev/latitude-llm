@@ -1,5 +1,4 @@
 import { User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { createProject } from './create'
@@ -17,27 +16,26 @@ export async function createOnboardingProject(
     workspace: Workspace
     user: User
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
-    // Create a project named "Onboarding"
-    const { project, commit } = await createProject(
-      {
-        name: 'Onboarding',
-        workspace,
-        user,
-      },
-      tx,
-    ).then((r) => r.unwrap())
+  // Create a project named "Onboarding"
+  const { project, commit } = await createProject(
+    {
+      name: 'Onboarding',
+      workspace,
+      user,
+    },
+    transaction,
+  ).then((r) => r.unwrap())
 
-    // Create a document with the specified content
-    const documentResult = await createNewDocument(
-      {
-        workspace,
-        user,
-        commit,
-        path: 'onboarding',
-        content: `---
+  // Create a document with the specified content
+  const documentResult = await createNewDocument(
+    {
+      workspace,
+      user,
+      commit,
+      path: 'onboarding',
+      content: `---
 provider: Latitude
 model: gpt-4o-mini
 ---
@@ -48,20 +46,21 @@ Write a compelling product description for {{product_name}} with the following f
 The description should be appropriate for {{target_audience}} and highlight the main benefits.
 Tone: {{tone}}
 Length: {{word_count}} words`,
-      },
-      tx,
-    )
-    if (documentResult.error) {
-      return documentResult
-    }
+    },
+    transaction,
+  )
+  if (documentResult.error) {
+    return documentResult
+  }
 
-    // Merge the commit to finalize the document
-    const mergedCommit = await mergeCommit(commit, tx).then((r) => r.unwrap())
+  // Merge the commit to finalize the document
+  const mergedCommit = await mergeCommit(commit, transaction).then((r) =>
+    r.unwrap(),
+  )
 
-    return Result.ok({
-      project,
-      documents: [documentResult.unwrap()],
-      commit: mergedCommit,
-    })
-  }, db)
+  return Result.ok({
+    project,
+    documents: [documentResult.unwrap()],
+    commit: mergedCommit,
+  })
 }

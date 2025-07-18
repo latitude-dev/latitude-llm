@@ -1,5 +1,4 @@
 import { and, eq } from 'drizzle-orm'
-import { database } from '../../client'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
@@ -11,9 +10,9 @@ export async function pingProjectUpdate(
   }: {
     projectId: number
   },
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<undefined, Error> {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const result = (
       await tx
         .update(projects)
@@ -27,5 +26,5 @@ export async function pingProjectUpdate(
     }
 
     return Result.ok(undefined)
-  }, db)
+  })
 }

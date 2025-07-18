@@ -1,4 +1,3 @@
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { evaluationTemplateCategories } from '../../schema'
@@ -8,9 +7,9 @@ type Props = {
 
 export async function createEvaluationTemplateCategory(
   { name }: Props,
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     const result = await tx
       .insert(evaluationTemplateCategories)
       .values({
@@ -19,5 +18,5 @@ export async function createEvaluationTemplateCategory(
       .returning()
 
     return Result.ok(result[0]!)
-  }, db)
+  })
 }

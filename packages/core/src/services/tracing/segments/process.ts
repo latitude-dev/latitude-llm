@@ -18,7 +18,6 @@ import {
   Workspace,
 } from '../../../browser'
 import { cache as redis } from '../../../cache'
-import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { processSegmentJobKey } from '../../../jobs/job-definitions/tracing/processSegmentJob'
 import { tracingQueue } from '../../../jobs/queues'
@@ -43,6 +42,7 @@ import {
   SegmentProcessArgs,
 } from './shared'
 import { SEGMENT_SPECIFICATIONS } from './specifications'
+import { database } from '../../../client'
 
 export async function processSegment(
   args: {
@@ -54,85 +54,85 @@ export async function processSegment(
     apiKey: ApiKey
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
   disk: DiskWrapper = diskFactory('private'),
 ) {
-  const validating = validateSegmentChain(args.segment, args.chain)
-  if (validating.error) return Result.error(validating.error)
+  return await transaction.call(async (tx) => {
+    const validating = validateSegmentChain(args.segment, args.chain)
+    if (validating.error) return Result.error(validating.error)
 
-  const getting = await getState(args, db, disk)
-  if (getting.error) return Result.error(getting.error)
-  const state = getting.value
+    const getting = await getState(args, transaction, disk)
+    if (getting.error) return Result.error(getting.error)
+    const state = getting.value
 
-  const id = state.current?.id ?? state.segment.id
+    const id = state.current?.id ?? state.segment.id
 
-  const traceId = state.current?.traceId ?? state.traceId
+    const traceId = state.current?.traceId ?? state.traceId
 
-  const parentId = state.current?.parentId ?? state.chain.at(-1)?.id
+    const parentId = state.current?.parentId ?? state.chain.at(-1)?.id
 
-  const type = state.current?.type ?? state.segment.type
+    const type = state.current?.type ?? state.segment.type
 
-  const specification = SEGMENT_SPECIFICATIONS[type]
-  if (!specification) {
-    return Result.error(new UnprocessableEntityError('Invalid segment type'))
-  }
+    const specification = SEGMENT_SPECIFICATIONS[type]
+    if (!specification) {
+      return Result.error(new UnprocessableEntityError('Invalid segment type'))
+    }
 
-  let metadata = {
-    ...({
-      traceId: traceId,
-      segmentId: id,
-      type: type,
-    } satisfies BaseSegmentMetadata),
-  } as SegmentMetadata
+    let metadata = {
+      ...({
+        traceId: traceId,
+        segmentId: id,
+        type: type,
+      } satisfies BaseSegmentMetadata),
+    } as SegmentMetadata
 
-  // @ts-expect-error seems typescript cannot infer that state types are the same
-  const processing = await specification.process(state, db)
-  if (processing.error) return Result.error(processing.error)
-  metadata = { ...metadata, ...processing.value }
+    // @ts-expect-error seems typescript cannot infer that state types are the same
+    const processing = await specification.process(state, db)
+    if (processing.error) return Result.error(processing.error)
+    metadata = { ...metadata, ...processing.value }
 
-  // Note: edge case when the global document segment is being processed right now for the first time
-  if (metadata.type === SegmentType.Document) {
-    state.run = { metadata } as SegmentWithDetails<SegmentType.Document>
-  }
+    // Note: edge case when the global document segment is being processed right now for the first time
+    if (metadata.type === SegmentType.Document) {
+      state.run = { metadata } as SegmentWithDetails<SegmentType.Document>
+    }
 
-  const computingei = computeExternalId(state)
-  if (computingei.error) return Result.error(computingei.error)
-  const externalId = computingei.value
+    const computingei = computeExternalId(state)
+    if (computingei.error) return Result.error(computingei.error)
+    const externalId = computingei.value
 
-  const enrichingnm = enrichName(state)
-  if (enrichingnm.error) return Result.error(enrichingnm.error)
-  const name = enrichingnm.value
+    const enrichingnm = enrichName(state)
+    if (enrichingnm.error) return Result.error(enrichingnm.error)
+    const name = enrichingnm.value
 
-  const computingsc = computeSource(state)
-  if (computingsc.error) return Result.error(computingsc.error)
-  const source = computingsc.value
+    const computingsc = computeSource(state)
+    if (computingsc.error) return Result.error(computingsc.error)
+    const source = computingsc.value
 
-  const computingst = computeStatus(state)
-  if (computingst.error) return Result.error(computingst.error)
-  const { status, message } = computingst.value
+    const computingst = computeStatus(state)
+    if (computingst.error) return Result.error(computingst.error)
+    const { status, message } = computingst.value
 
-  const computinglu = computeLogUuid(state)
-  if (computinglu.error) return Result.error(computinglu.error)
-  const logUuid = computinglu.value
+    const computinglu = computeLogUuid(state)
+    if (computinglu.error) return Result.error(computinglu.error)
+    const logUuid = computinglu.value
 
-  const computingdc = computeDocument(state)
-  if (computingdc.error) return Result.error(computingdc.error)
-  const { commitUuid, documentUuid, documentHash,
+    const computingdc = computeDocument(state)
+    if (computingdc.error) return Result.error(computingdc.error)
+    const { commitUuid, documentUuid, documentHash,
           documentType, provider, model } = computingdc.value // prettier-ignore
 
-  const computingeu = computeExperimentUuid(state)
-  if (computingeu.error) return Result.error(computingeu.error)
-  const experimentUuid = computingeu.value
+    const computingeu = computeExperimentUuid(state)
+    if (computingeu.error) return Result.error(computingeu.error)
+    const experimentUuid = computingeu.value
 
-  const computingsa = computeStatistics(state)
-  if (computingsa.error) return Result.error(computingsa.error)
-  const { tokens, cost, duration } = computingsa.value
+    const computingsa = computeStatistics(state)
+    if (computingsa.error) return Result.error(computingsa.error)
+    const { tokens, cost, duration } = computingsa.value
 
-  const computingts = computeTimestamps(state)
-  if (computingts.error) return Result.error(computingts.error)
-  const { startedAt, endedAt } = computingts.value
+    const computingts = computeTimestamps(state)
+    if (computingts.error) return Result.error(computingts.error)
+    const { startedAt, endedAt } = computingts.value
 
-  return await Transaction.call(async (tx) => {
     const repository = new SegmentsRepository(args.workspace.id, tx)
     const locking = await repository.lock({ segmentId: id, traceId })
     if (locking.error) {
@@ -231,7 +231,7 @@ export async function processSegment(
     }
 
     return Result.ok({ segment: { ...segment, metadata } })
-  }, db)
+  })
 }
 
 function validateSegmentChain(
@@ -372,10 +372,10 @@ async function getState(
     apiKey: ApiKey
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
   disk: DiskWrapper,
 ): Promise<TypedResult<SegmentProcessArgs>> {
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     const gettingcs = await getCurrentState(
       { segment, traceId, workspace },
       tx,
@@ -450,7 +450,7 @@ async function getState(
       apiKey: apiKey,
       workspace: workspace,
     })
-  }, db)
+  })
 }
 
 function computeExternalId({

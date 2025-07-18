@@ -1,4 +1,3 @@
-import { database } from '../../../../../client'
 import { Result } from '../../../../../lib/Result'
 import Transaction from '../../../../../lib/Transaction'
 import { and, eq, inArray } from 'drizzle-orm'
@@ -12,9 +11,9 @@ export function clearLatteThreadCheckpoints(
     workspaceId: number
     threadUuid: string
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const existingCheckpoints = await tx
       .select({
         id: latteThreadCheckpoints.id,
@@ -39,5 +38,5 @@ export function clearLatteThreadCheckpoints(
     )
 
     return Result.nil()
-  }, db)
+  })
 }

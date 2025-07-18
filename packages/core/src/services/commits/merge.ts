@@ -1,7 +1,6 @@
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 
 import { Commit } from '../../browser'
-import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -14,8 +13,11 @@ import { commits } from '../../schema'
 import { recomputeChanges } from '../documents'
 import { pingProjectUpdate } from '../projects'
 
-export async function mergeCommit(commit: Commit, db = database) {
-  return Transaction.call<Commit>(async (tx) => {
+export async function mergeCommit(
+  commit: Commit,
+  transaction = new Transaction(),
+) {
+  return transaction.call<Commit>(async (tx) => {
     const mergedAt = new Date()
     const otherCommits = await tx
       .select()
@@ -43,7 +45,7 @@ export async function mergeCommit(commit: Commit, db = database) {
 
     const recomputedResults = await recomputeChanges(
       { draft: commit, workspace },
-      tx,
+      transaction,
     )
 
     if (recomputedResults.error) return recomputedResults
@@ -91,9 +93,9 @@ export async function mergeCommit(commit: Commit, db = database) {
       {
         projectId: commit.projectId,
       },
-      tx,
+      transaction,
     ).then((r) => r.unwrap())
 
     return Result.ok(updatedCommit)
-  }, db)
+  })
 }

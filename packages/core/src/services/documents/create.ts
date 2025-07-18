@@ -9,7 +9,6 @@ import {
   type Commit,
   type DocumentVersion,
 } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
@@ -20,6 +19,7 @@ import { createDemoEvaluation } from '../evaluationsV2/createDemoEvaluation'
 import { pingProjectUpdate } from '../projects'
 import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
 import { getDocumentType } from './update'
+import { database } from '../../client'
 
 async function hasMetadata(content: string) {
   try {
@@ -73,9 +73,9 @@ export async function createNewDocument(
     createDemoEvaluation?: boolean
     includeDefaultContent?: boolean
   },
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion, Error>> {
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     if (commit.mergedAt !== null) {
       return Result.error(new BadRequestError('Cannot modify a merged commit'))
     }
@@ -129,7 +129,7 @@ export async function createNewDocument(
       .set({ resolvedContent: null })
       .where(eq(documentVersions.commitId, commit.id))
 
-    await pingProjectUpdate({ projectId: commit.projectId }, tx)
+    await pingProjectUpdate({ projectId: commit.projectId }, transaction)
 
     publisher.publishLater({
       type: 'documentCreated',
@@ -141,11 +141,11 @@ export async function createNewDocument(
     })
 
     if (demoEvaluation && user) {
-      await createDemoEvaluation({ commit, document, workspace }, tx)
+      await createDemoEvaluation({ commit, document, workspace }, transaction)
     }
 
     return Result.ok(document)
-  }, db)
+  })
 }
 
 export async function defaultDocumentContent(

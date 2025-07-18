@@ -2,7 +2,6 @@ import pg from 'pg'
 const { DatabaseError } = pg
 
 import { Providers, User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, databaseErrorCodes } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -31,9 +30,9 @@ export function createProviderApiKey(
     author,
     configuration,
   }: Props,
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     if (provider === Providers.Custom && !url) {
       return Result.error(new BadRequestError('Custom provider requires a URL'))
     }
@@ -104,5 +103,5 @@ export function createProviderApiKey(
 
       throw e
     }
-  }, db)
+  })
 }

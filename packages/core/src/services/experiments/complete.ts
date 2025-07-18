@@ -1,5 +1,4 @@
 import { Experiment } from '../../browser'
-import { database } from '../../client'
 import { LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
@@ -10,9 +9,9 @@ import { ProgressTracker } from '../../jobs/utils/progressTracker'
 
 export async function completeExperiment(
   experiment: Experiment,
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<Experiment, LatitudeError> {
-  const updateResult = await Transaction.call(async (tx) => {
+  const updateResult = await transaction.call(async (tx) => {
     const result = await tx
       .update(experiments)
       .set({
@@ -26,7 +25,7 @@ export async function completeExperiment(
     }
 
     return Result.ok(result[0]! as Experiment)
-  }, db)
+  })
 
   if (updateResult.error) {
     return Result.error(updateResult.error as LatitudeError)

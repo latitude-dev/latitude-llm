@@ -1,7 +1,6 @@
 import * as k8s from '@kubernetes/client-node'
 import { env } from '@latitude-data/env'
 import yaml from 'js-yaml'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { encrypt } from '../../lib/encryption'
@@ -32,7 +31,7 @@ export async function deployMcpServer(
     authorId,
     command,
   }: K8sDeploymentParams,
-  db = database,
+  transaction = new Transaction(),
 ) {
   try {
     // Generate a unique app name with hash to prevent collisions
@@ -140,7 +139,7 @@ export async function deployMcpServer(
     }
 
     // Store the manifest in the database
-    return Transaction.call(async (tx) => {
+    return transaction.call(async (tx) => {
       const mcpServerResult = await tx
         .insert(mcpServers)
         .values({
@@ -160,7 +159,7 @@ export async function deployMcpServer(
         .returning()
 
       return Result.ok(mcpServerResult[0]!)
-    }, db)
+    })
   } catch (error) {
     return Result.error(
       error instanceof Error ? error : new Error(String(error)),

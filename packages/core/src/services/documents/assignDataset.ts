@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm'
 
 import { Dataset, DocumentVersion } from '../../browser'
-import { database } from '../../client'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { documentVersions } from '../../schema'
@@ -14,7 +13,7 @@ export async function assignDataset(
     document: DocumentVersion
     dataset: Dataset
   },
-  trx = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion, Error>> {
   const existingData = document.linkedDatasetAndRow?.[dataset.id]
   const justDatasetId = { datasetV2Id: dataset.id }
@@ -31,7 +30,7 @@ export async function assignDataset(
         },
       }
 
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     const result = await tx
       .update(documentVersions)
       .set(data as Record<string, any>)
@@ -39,5 +38,5 @@ export async function assignDataset(
       .returning()
 
     return Result.ok(result[0]!)
-  }, trx)
+  })
 }

@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm'
 
 import { PublishedDocument } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { publishedDocuments } from '../../schema'
@@ -21,9 +20,9 @@ export async function updatePublishedDocument(
     publishedDocument: PublishedDocument
     data: Partial<UpdatablePublishedDocument>
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return await Transaction.call<PublishedDocument>(async (trx) => {
+  return await transaction.call<PublishedDocument>(async (trx) => {
     const inserts = await trx
       .update(publishedDocuments)
       .set(data)
@@ -31,5 +30,5 @@ export async function updatePublishedDocument(
       .returning()
 
     return Result.ok(inserts[0]!)
-  }, db)
+  })
 }

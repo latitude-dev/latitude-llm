@@ -1,5 +1,4 @@
 import { EvaluationResultConfiguration } from '../../browser'
-import { database } from '../../client'
 import { findEvaluationTemplateCategoryById } from '../../data-access/evaluationTemplateCategories'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -20,9 +19,9 @@ type Props = {
 
 export async function createEvaluationTemplate(
   { name, description, categoryId, categoryName, configuration, prompt }: Props,
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     let category
 
     if (categoryId) {
@@ -32,14 +31,14 @@ export async function createEvaluationTemplate(
       )
 
       if (categoryResult.error instanceof NotFoundError) {
-        category = await createCategory(categoryName, tx)
+        category = await createCategory(categoryName, transaction)
       } else if (categoryResult.error) {
         return categoryResult
       } else {
         category = categoryResult.value
       }
     } else {
-      category = await createCategory(categoryName, tx)
+      category = await createCategory(categoryName, transaction)
     }
 
     const result = await tx
@@ -57,13 +56,16 @@ export async function createEvaluationTemplate(
       ...result[0]!,
       category: category.name,
     })
-  }, db)
+  })
 }
 
-async function createCategory(categoryName: string | undefined, tx = database) {
+async function createCategory(
+  categoryName: string | undefined,
+  transaction = new Transaction(),
+) {
   const newCategoryResult = await createEvaluationTemplateCategory(
     { name: categoryName || DEFAULT_CATEGORY_NAME },
-    tx,
+    transaction,
   )
 
   return newCategoryResult.unwrap()

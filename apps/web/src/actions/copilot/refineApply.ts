@@ -16,44 +16,49 @@ export const refineApplyAction = withDocument
     }),
   )
   .handler(async ({ ctx, input }) => {
-    const result = await Transaction.call(async (tx) => {
-      let draft
-      if (ctx.commit.mergedAt) {
-        draft = await createCommit(
-          {
-            project: ctx.project,
-            user: ctx.user,
-            data: {
-              title: `Refined '${ctx.document.path.split('/').pop()}'`,
-              description: 'Created by refiner.',
-            },
-          },
-          tx,
-        ).then((r) => r.unwrap())
+    const transaction = new Transaction()
+    const result = transaction
+      .call(
+        async () => {
+          let draft
+          if (ctx.commit.mergedAt) {
+            draft = await createCommit(
+              {
+                project: ctx.project,
+                user: ctx.user,
+                data: {
+                  title: `Refined '${ctx.document.path.split('/').pop()}'`,
+                  description: 'Created by refiner.',
+                },
+              },
+              transaction,
+            ).then((r) => r.unwrap())
 
-        await updateDocument(
-          {
-            commit: draft,
-            document: ctx.document,
-            content: input.prompt,
-          },
-          tx,
-        ).then((r) => r.unwrap())
-      }
+            await updateDocument(
+              {
+                commit: draft,
+                document: ctx.document,
+                content: input.prompt,
+              },
+              transaction,
+            ).then((r) => r.unwrap())
+          }
 
-      publisher.publishLater({
-        type: 'copilotRefinerApplied',
-        data: {
-          workspaceId: ctx.workspace.id,
-          projectId: ctx.project.id,
-          commitUuid: ctx.commit.uuid,
-          documentUuid: ctx.document.documentUuid,
-          userEmail: ctx.user.email,
+          return Result.ok({ prompt: input.prompt, draft })
         },
-      })
-
-      return Result.ok({ prompt: input.prompt, draft })
-    }).then((r) => r.unwrap())
+        () =>
+          publisher.publishLater({
+            type: 'copilotRefinerApplied',
+            data: {
+              workspaceId: ctx.workspace.id,
+              projectId: ctx.project.id,
+              commitUuid: ctx.commit.uuid,
+              documentUuid: ctx.document.documentUuid,
+              userEmail: ctx.user.email,
+            },
+          }),
+      )
+      .then((r) => r.unwrap())
 
     return result
   })

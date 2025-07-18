@@ -55,7 +55,7 @@ export const sendSuggestionNotification = async ({
 
   if (hasExceededNotificationLimits(user)) return
 
-  await Transaction.call(async (tx) => {
+  await new Transaction().call(async (tx) => {
     usersRepository = new UsersRepository(workspace.id, tx)
     await usersRepository.lock({ id: commit.userId }).then((r) => r.unwrap())
     user = await usersRepository.find(commit.userId).then((r) => r.unwrap())

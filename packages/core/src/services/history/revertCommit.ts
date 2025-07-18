@@ -1,5 +1,4 @@
 import { Commit, DraftChange, Project, User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import {
@@ -169,7 +168,7 @@ export async function revertCommit(
     targetDraftUuid?: string
     commitUuid: string
   },
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<Commit> {
   const commitRevisionDetauls = await fetchCommitReversionDetails({
     workspace,
@@ -189,7 +188,7 @@ export async function revertCommit(
     originalDocuments,
   } = commitRevisionDetauls.unwrap()
 
-  return Transaction.call(async (trx) => {
+  return transaction.call(async (trx) => {
     const changes = await computeChangesToRevertCommit(
       {
         workspace,
@@ -213,7 +212,7 @@ export async function revertCommit(
               description: `Reverted changes of version v${changedCommit.version} "${changedCommit.title}"`,
             },
           },
-          trx,
+          transaction,
         )
 
     if (finalDraft.error) return Result.error(finalDraft.error)
@@ -235,7 +234,7 @@ export async function revertCommit(
             content: documentVersionChanges.content,
             deletedAt: documentVersionChanges.deletedAt,
           },
-          trx,
+          transaction,
         )
       }),
     )
@@ -245,5 +244,5 @@ export async function revertCommit(
     }
 
     return Result.ok(finalDraft.value)
-  }, db)
+  })
 }

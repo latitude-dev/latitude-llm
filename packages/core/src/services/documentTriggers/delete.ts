@@ -1,7 +1,6 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { and, eq } from 'drizzle-orm'
 import { DocumentTrigger, Workspace } from '../../browser'
-import { database } from '../../client'
 import { LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
@@ -16,7 +15,7 @@ export async function deleteDocumentTrigger(
     workspace: Workspace
     documentTrigger: DocumentTrigger
   },
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<DocumentTrigger> {
   if (documentTrigger.triggerType === DocumentTriggerType.Integration) {
     const destroyIntegrationTriggerResult = await destroyPipedreamTrigger({
@@ -29,7 +28,7 @@ export async function deleteDocumentTrigger(
     }
   }
 
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     const result = await tx
       .delete(documentTriggers)
       .where(
@@ -47,5 +46,5 @@ export async function deleteDocumentTrigger(
     }
 
     return Result.ok(result[0]! as DocumentTrigger)
-  }, db)
+  })
 }

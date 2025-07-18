@@ -3,7 +3,6 @@ import pg from 'pg'
 const { DatabaseError } = pg
 
 import { Commit } from '../../browser'
-import { database } from '../../client'
 import { unsafelyFindCommitsByProjectId } from '../../data-access/commits'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError, databaseErrorCodes } from '../../lib/errors'
@@ -12,11 +11,14 @@ import Transaction from '../../lib/Transaction'
 import { commits } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 
-export async function deleteCommitDraft(commit: Commit, db = database) {
+export async function deleteCommitDraft(
+  commit: Commit,
+  transaction = new Transaction(),
+) {
   const assertionResult = assertCommitIsDraft(commit)
   if (assertionResult.error) return assertionResult
 
-  return Transaction.call<Commit>(async (tx) => {
+  return transaction.call<Commit>(async (tx) => {
     try {
       const projectCommits = await unsafelyFindCommitsByProjectId(
         commit.projectId,
@@ -40,7 +42,7 @@ export async function deleteCommitDraft(commit: Commit, db = database) {
         {
           projectId: commit.projectId,
         },
-        tx,
+        transaction,
       ).then((r) => r.unwrap())
 
       return Result.ok(deletedCommit)
@@ -56,5 +58,5 @@ export async function deleteCommitDraft(commit: Commit, db = database) {
         throw error
       }
     }
-  }, db)
+  })
 }

@@ -1,7 +1,6 @@
 import { Context } from 'hono'
 import { z } from '@hono/zod-openapi'
 import { createProject } from '@latitude-data/core/services/projects/create'
-import { database } from '@latitude-data/core/client'
 import { findFirstUserInWorkspace } from '@latitude-data/core/data-access'
 import { AppRouteHandler } from '$/openApi/types'
 import { createRoute } from './create.route'
@@ -18,7 +17,6 @@ export const createHandler: AppRouteHandler<typeof createRoute> = async (
 
   try {
     const body = await c.req.json()
-
     const validation = createProjectSchema.safeParse(body)
 
     if (!validation.success) {
@@ -38,14 +36,11 @@ export const createHandler: AppRouteHandler<typeof createRoute> = async (
       return c.json({ error: 'No users found in workspace' }, 400)
     }
 
-    const result = await createProject(
-      {
-        name,
-        workspace,
-        user,
-      },
-      database,
-    ).then((r) => r.unwrap())
+    const result = await createProject({
+      name,
+      workspace,
+      user,
+    }).then((r) => r.unwrap())
 
     return c.json({ project: result.project, version: result.commit }, 201)
   } catch (error) {

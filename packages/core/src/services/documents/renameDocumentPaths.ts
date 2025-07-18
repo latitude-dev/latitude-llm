@@ -1,5 +1,4 @@
 import type { Commit, DocumentVersion } from '../../browser'
-import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
@@ -17,9 +16,9 @@ export async function renameDocumentPaths(
     oldPath: string
     newPath: string
   },
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion[], Error>> {
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     if (commit.mergedAt !== null) {
       return Result.error(new BadRequestError('Cannot modify a merged commit'))
     }
@@ -54,12 +53,12 @@ export async function renameDocumentPaths(
             document,
             path: updatedPath,
           },
-          tx,
+          transaction,
         )
         return updatedDoc.unwrap()
       }),
     )
 
     return Result.ok(updatedDocs)
-  }, db)
+  })
 }

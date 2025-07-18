@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm'
 
 import { User, WorkspaceDto } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -21,41 +20,43 @@ export async function createWorkspace(
     createdAt?: Date
     subscriptionPlan?: SubscriptionPlan
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call<WorkspaceDto>(async (tx) => {
-    const insertedWorkspaces = await tx
-      .insert(workspaces)
-      .values({ name, creatorId: user.id, createdAt })
-      .returning()
-    let workspace = insertedWorkspaces[0]!
+  return transaction.call<WorkspaceDto>(
+    async (tx) => {
+      const insertedWorkspaces = await tx
+        .insert(workspaces)
+        .values({ name, creatorId: user.id, createdAt })
+        .returning()
+      let workspace = insertedWorkspaces[0]!
 
-    const subscription = await createSubscription(
-      {
-        workspace,
-        plan: subscriptionPlan,
-        createdAt,
-      },
-      tx,
-    ).then((r) => r.unwrap())
+      const subscription = await createSubscription(
+        {
+          workspace,
+          plan: subscriptionPlan,
+          createdAt,
+        },
+        transaction,
+      ).then((r) => r.unwrap())
 
-    const updated = await tx
-      .update(workspaces)
-      .set({ currentSubscriptionId: subscription.id })
-      .where(eq(workspaces.id, workspace.id))
-      .returning()
-    workspace = updated[0]!
+      const updated = await tx
+        .update(workspaces)
+        .set({ currentSubscriptionId: subscription.id })
+        .where(eq(workspaces.id, workspace.id))
+        .returning()
+      workspace = updated[0]!
 
-    publisher.publishLater({
-      type: 'workspaceCreated',
-      data: {
-        workspace,
-        user,
-        workspaceId: workspace.id,
-        userEmail: user.email,
-      },
-    })
-
-    return Result.ok({ ...workspace, currentSubscription: subscription })
-  }, db)
+      return Result.ok({ ...workspace, currentSubscription: subscription })
+    },
+    (w) =>
+      publisher.publishLater({
+        type: 'workspaceCreated',
+        data: {
+          workspace: w,
+          user,
+          workspaceId: w.id,
+          userEmail: user.email,
+        },
+      }),
+  )
 }

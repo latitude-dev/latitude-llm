@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm'
 
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { workspaceOnboarding } from '../../schema/models/workspaceOnboarding'
@@ -11,9 +10,9 @@ export async function markWorkspaceOnboardingComplete(
   }: {
     onboarding: typeof workspaceOnboarding.$inferSelect
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const updatedOnboardings = await tx
       .update(workspaceOnboarding)
       .set({
@@ -25,5 +24,5 @@ export async function markWorkspaceOnboardingComplete(
     const updatedOnboarding = updatedOnboardings[0]!
 
     return Result.ok(updatedOnboarding)
-  }, db)
+  })
 }

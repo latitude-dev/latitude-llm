@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm'
 
 import { ApiKey } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { apiKeys } from '../../schema'
@@ -9,9 +8,9 @@ import { apiKeys } from '../../schema'
 export async function updateApiKey(
   apiKey: ApiKey,
   { name }: { name: string },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (trx) => {
+  return transaction.call(async (trx) => {
     const result = await trx
       .update(apiKeys)
       .set({ name })
@@ -19,5 +18,5 @@ export async function updateApiKey(
       .returning()
 
     return Result.ok(result[0]!)
-  }, db)
+  })
 }

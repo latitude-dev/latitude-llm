@@ -1,5 +1,4 @@
 import { Commit, Project, User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -18,40 +17,42 @@ export async function createProject(
     user: User
     mergedAt?: Date
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call<{ project: Project; commit: Commit }>(async (tx) => {
-    const project = (
-      await tx
-        .insert(projects)
-        .values({ workspaceId: workspace.id, name })
-        .returning()
-    )[0]!
+  return transaction.call<{ project: Project; commit: Commit }>(
+    async (tx) => {
+      const project = (
+        await tx
+          .insert(projects)
+          .values({ workspaceId: workspace.id, name })
+          .returning()
+      )[0]!
 
-    const result = await createCommit(
-      {
-        data: {
-          title: 'Initial version',
-          version: 0,
-          mergedAt,
+      const result = await createCommit(
+        {
+          data: {
+            title: 'Initial version',
+            version: 0,
+            mergedAt,
+          },
+          project,
+          user,
         },
-        project,
-        user,
-      },
-      tx,
-    )
-    if (result.error) return result
+        transaction,
+      )
+      if (result.error) return result
 
-    publisher.publishLater({
-      type: 'projectCreated',
-      data: {
-        project,
-        commit: result.value,
-        workspaceId: workspace.id,
-        userEmail: user.email,
-      },
-    })
-
-    return Result.ok({ project, commit: result.value })
-  }, db)
+      return Result.ok({ project, commit: result.value })
+    },
+    ({ project, commit }) =>
+      publisher.publishLater({
+        type: 'projectCreated',
+        data: {
+          project,
+          commit,
+          workspaceId: workspace.id,
+          userEmail: user.email,
+        },
+      }),
+  )
 }

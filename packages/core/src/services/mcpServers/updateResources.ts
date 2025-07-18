@@ -2,7 +2,6 @@ import * as k8s from '@kubernetes/client-node'
 import { eq } from 'drizzle-orm'
 import yaml from 'js-yaml'
 import { McpServer } from '../../browser'
-import { database } from '../../client'
 import { decrypt } from '../../lib/encryption'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -25,7 +24,7 @@ import { generateK8sManifest } from './manifestGenerator'
  */
 export async function updateMcpServerResources(
   mcpServer: McpServer,
-  db = database,
+  transaction = new Transaction(),
 ) {
   try {
     // Initialize Kubernetes client
@@ -62,7 +61,7 @@ export async function updateMcpServerResources(
     const secretManifest = generatedManifests.secretManifest
 
     // Update the manifest in the database
-    Transaction.call(async (tx) => {
+    transaction.call(async (tx) => {
       const result = await tx
         .update(mcpServers)
         .set({ k8sManifest: manifest })
@@ -70,7 +69,7 @@ export async function updateMcpServerResources(
         .returning()
 
       return Result.ok(result[0]!)
-    }, db)
+    })
 
     // Apply secret manifest if it exists (from regeneration)
     if (secretManifest) {
@@ -149,7 +148,7 @@ export async function updateMcpServerResources(
         )
       }
 
-      return Transaction.call(async (tx) => {
+      return transaction.call(async (tx) => {
         const result = await tx
           .update(mcpServers)
           .set({
@@ -160,7 +159,7 @@ export async function updateMcpServerResources(
           .returning()
 
         return Result.ok(result[0]!)
-      }, db)
+      })
     } catch (manifestError: any) {
       return Result.error(
         new Error(`Failed to apply manifest: ${manifestError.message}`),

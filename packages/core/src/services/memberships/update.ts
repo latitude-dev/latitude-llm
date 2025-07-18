@@ -1,16 +1,15 @@
 import { eq } from 'drizzle-orm'
 
 import { Membership } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { memberships } from '../../schema'
 export const updateMembership = async (
   membership: Membership,
   values: Partial<Membership>,
-  db = database,
+  transaction = new Transaction(),
 ) => {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const updates = await tx
       .update(memberships)
       .set(values)
@@ -18,5 +17,5 @@ export const updateMembership = async (
       .returning()
 
     return Result.ok(updates[0]!)
-  }, db)
+  })
 }
