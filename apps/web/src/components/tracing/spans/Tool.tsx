@@ -4,6 +4,7 @@ import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { DetailsPanelProps, SPAN_COLORS } from './shared'
 
@@ -49,18 +50,29 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Tool>) {
           >
             <Alert
               variant='destructive'
-              description={String(
-                span.metadata.result.value || 'Tool execution failed',
-              )}
+              description={
+                typeof span.metadata.result.value !== 'string'
+                  ? JSON.stringify(span.metadata.result.value, null, 2)
+                  : String(span.metadata.result.value || 'Execution failed')
+              }
             />
           </MetadataItem>
         ) : (
           <MetadataItem label='Result' contentClassName='pt-2' stacked>
-            <div className='w-full max-h-32 overflow-y-auto custom-scrollbar scrollable-indicator rounded-xl bg-backgroundCode'>
-              <CodeBlock language='json'>
-                {JSON.stringify(span.metadata.result.value, null, 2)}
-              </CodeBlock>
-            </div>
+            {typeof span.metadata.result.value === 'string' ? (
+              <TextArea
+                value={String(span.metadata.result.value || '')}
+                minRows={1}
+                maxRows={6}
+                disabled={true}
+              />
+            ) : (
+              <div className='w-full max-h-32 overflow-y-auto custom-scrollbar scrollable-indicator rounded-xl bg-backgroundCode'>
+                <CodeBlock language='json'>
+                  {JSON.stringify(span.metadata.result.value, null, 2)}
+                </CodeBlock>
+              </div>
+            )}
           </MetadataItem>
         ))}
     </>

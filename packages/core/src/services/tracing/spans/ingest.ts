@@ -8,7 +8,9 @@ import {
   ApiKey,
   ATTR_LATITUDE_INTERNAL,
   Otlp,
+  SPAN_PROCESSING_STORAGE_KEY,
   SpanAttribute,
+  SpanProcessingData,
   SpanStatus,
   SpanType,
   TRACING_JOBS_MAX_ATTEMPTS,
@@ -18,7 +20,9 @@ import { database } from '../../../client'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { processSpanJobKey } from '../../../jobs/job-definitions/tracing/processSpanJob'
 import { tracingQueue } from '../../../jobs/queues'
+import { diskFactory, DiskWrapper } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'
+import { hashContent as hash } from '../../../lib/hashContent'
 import { Result } from '../../../lib/Result'
 import { ApiKeysRepository } from '../../../repositories'
 import { internalBaggageSchema } from '../../../telemetry'
@@ -39,6 +43,7 @@ export async function ingestSpans(
     workspaceId?: number
   },
   db = database,
+  disk: DiskWrapper = diskFactory('private'),
 ) {
   const workspaces: Record<number, Workspace> = {}
   const apiKeys: Record<number, ApiKey> = {}
@@ -92,17 +97,11 @@ export async function ingestSpans(
           ({ key }) => key !== ATTR_LATITUDE_INTERNAL,
         )
 
-        const payload = {
-          span: span,
-          scope: scope,
-          apiKeyId: apiKey.id,
-          workspaceId: workspace.id,
-        }
-
-        await tracingQueue.add('processSpanJob', payload, {
-          attempts: TRACING_JOBS_MAX_ATTEMPTS,
-          deduplication: { id: processSpanJobKey(payload) },
-        })
+        const enqueuing = await enqueueSpan(
+          { span, scope, resource, apiKey, workspace },
+          disk,
+        )
+        if (enqueuing.error) continue
       }
     }
   }
@@ -226,4 +225,45 @@ function enrichAttributes({
   }
 
   return Result.ok(attributes)
+}
+
+async function enqueueSpan(
+  {
+    span,
+    scope,
+    resource,
+    apiKey,
+    workspace,
+  }: {
+    span: Otlp.Span
+    scope: Otlp.Scope
+    resource: Otlp.Resource
+    apiKey: ApiKey
+    workspace: Workspace
+  },
+  disk: DiskWrapper,
+) {
+  const processingId = hash(span.traceId + span.spanId)
+  const key = SPAN_PROCESSING_STORAGE_KEY(processingId)
+  const data = { span, scope, resource } satisfies SpanProcessingData
+
+  try {
+    const payload = JSON.stringify(data)
+    await disk.put(key, payload).then((r) => r.unwrap())
+  } catch (error) {
+    return Result.error(error as Error)
+  }
+
+  const payload = {
+    processingId: processingId,
+    apiKeyId: apiKey.id,
+    workspaceId: workspace.id,
+  }
+
+  await tracingQueue.add('processSpanJob', payload, {
+    attempts: TRACING_JOBS_MAX_ATTEMPTS,
+    deduplication: { id: processSpanJobKey(payload) },
+  })
+
+  return Result.nil()
 }
