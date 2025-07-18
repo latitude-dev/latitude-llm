@@ -23,7 +23,7 @@ export async function withTelemetryWrapper<
   },
 ): Promise<{
   isError: boolean
-  value: TResult | Error
+  value: TResult | string
 }> {
   const { toolName, context, args, toolCall } = options
 
@@ -38,7 +38,7 @@ export async function withTelemetryWrapper<
     } catch (e) {
       return {
         isError: true,
-        value: e as Error,
+        value: (e as Error).message,
       }
     }
   }
@@ -61,7 +61,7 @@ export async function withTelemetryWrapper<
     }
   } catch (e) {
     const result = {
-      value: e as Error,
+      value: (e as Error).message,
       isError: true,
     }
 
