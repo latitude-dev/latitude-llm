@@ -1,10 +1,5 @@
-import { type Message } from '@latitude-data/constants/legacyCompiler'
-import { setupServer } from 'msw/node'
 import { parseSSE } from '$sdk/utils/parseSSE'
-import { vi } from 'vitest'
-import { TOOL_EVENTS, TOOL_EVENTS_OBJECT, TOOLS_DOCUMENT_UUID } from './events'
 import { ToolCalledFn } from '$sdk/utils/types'
-import { http, HttpResponse } from 'msw'
 import {
   ChainEventDto,
   ChainEventTypes,
@@ -12,6 +7,11 @@ import {
   LatitudeProviderCompletedEventData,
   StreamEventTypes,
 } from '@latitude-data/constants'
+import { type Message } from '@latitude-data/constants/legacyCompiler'
+import { http, HttpResponse } from 'msw'
+import { setupServer } from 'msw/node'
+import { vi } from 'vitest'
+import { TOOL_EVENTS, TOOL_EVENTS_OBJECT, TOOLS_DOCUMENT_UUID } from './events'
 
 const encoder = new TextEncoder()
 
@@ -58,9 +58,6 @@ function findCompleteChainEvent(events: StreamEvent[]) {
     uuid: TOOLS_DOCUMENT_UUID,
     conversation: lastEvent.messages,
     response: lastResponse,
-    trace: {
-      traceparent: '00-12345678901234567890123456789012-1234567890123456-01',
-    },
   }
 }
 

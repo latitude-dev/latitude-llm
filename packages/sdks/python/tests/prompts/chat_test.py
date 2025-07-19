@@ -1,6 +1,5 @@
 import json
 from typing import List, cast
-from unittest import skip
 from unittest.mock import Mock
 
 import httpx
@@ -48,6 +47,8 @@ class TestChatPromptSync(TestCase):
         on_event_mock.assert_not_called()
         on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
+
+    # TODO(bigpr): test_success_with_tools
 
     async def test_fails_and_retries(self):
         on_event_mock = Mock()
@@ -175,7 +176,7 @@ class TestChatPromptStream(TestCase):
 
         result = await self.sdk.prompts.chat(conversation_uuid, messages, options)
         request, _ = endpoint_mock.calls.last
-        events = cast(List[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
+        events = cast(List[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])
 
         self.assert_requested(
             request,
@@ -193,7 +194,8 @@ class TestChatPromptStream(TestCase):
         on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
 
-    @skip(reason="TODO: on error mock assert does not match. Figure out why.")
+    # TODO(bigpr): test_success_with_tools
+
     async def test_fails_and_retries(self):
         on_event_mock = Mock()
         on_finished_mock = Mock()

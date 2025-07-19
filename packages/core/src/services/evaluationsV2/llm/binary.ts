@@ -96,7 +96,7 @@ The resulting verdict is \`true\` if the response meets the criteria, \`false\` 
 - \`true\` represents "${passDescription}"
 - \`false\` represents "${failDescription}"
 
-${promptTask({ provider })}
+${promptTask()}
 
 You must give your verdict as a single JSON object with the following properties:
 - passed (boolean): \`true\` if the response meets the criteria, \`false\` otherwise.

@@ -229,6 +229,18 @@ class Log(Model):
     updated_at: datetime = Field(alias=str("updatedAt"))
 
 
+class EvaluationResult(Model):
+    uuid: str
+    version_uuid: str = Field(alias=str("versionUuid"))
+    score: int
+    normalized_score: int = Field(alias=str("normalizedScore"))
+    metadata: dict[str, Any]
+    has_passed: bool = Field(alias=str("hasPassed"))
+    error: Optional[Union[str, None]] = None
+    created_at: datetime = Field(alias=str("createdAt"))
+    updated_at: datetime = Field(alias=str("updatedAt"))
+
+
 class Project(Model):
     id: int
     uuid: Optional[str] = None
