@@ -57,7 +57,7 @@ export async function getToolDefinitionFromDocument({
       additionalProperties: false,
     },
     execute: async (args: Record<string, unknown>, toolCall) => {
-      const $span = telemetry.tool(context, {
+      const $tool = telemetry.tool(context, {
         name: getAgentToolName(document.path),
         call: {
           id: toolCall.toolCallId,
@@ -67,7 +67,7 @@ export async function getToolDefinitionFromDocument({
 
       try {
         const { response, error } = await runDocumentAtCommit({
-          context,
+          context: $tool.context,
           workspace,
           document,
           commit,
@@ -92,7 +92,7 @@ export async function getToolDefinitionFromDocument({
 
         const value = res.streamType === 'text' ? res.text : res.object
 
-        $span?.end({ result: { value, isError: false } })
+        $tool?.end({ result: { value, isError: false } })
 
         return {
           value,
@@ -104,7 +104,7 @@ export async function getToolDefinitionFromDocument({
           isError: true,
         }
 
-        $span?.end({ result })
+        $tool?.end({ result })
 
         return result
       }
