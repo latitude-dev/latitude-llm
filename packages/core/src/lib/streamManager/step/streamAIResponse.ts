@@ -64,7 +64,7 @@ export async function streamAIResponse({
   try {
     // TODO(compiler): get response from cache
     const aiResult = await ai({
-      context,
+      context: $completion.context,
       messages,
       config,
       provider,
