@@ -109,7 +109,7 @@ people.
 
 ## 🤝 Contributing
 
-Contributions to Latitude are welcome and highly appreciated.
+Contributions to Latitude are welcome and highly appreciated. You can find an in-depth explanation of the repo and its architecture [here](https://docs.latitude.so/guides/getting-started/introduction)
 
 If you are interested in contributing, please join us on our [Slack
 community](https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw),

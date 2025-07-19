@@ -1,0 +1,287 @@
+# Repo explanation
+
+Its a monorepo with a few main directories:
+
+- Docs
+- Apps
+- Packages
+
+## 📚 Docs
+
+This is where we save all our [docs](https://docs.latitude.so/guides/getting-started/introduction), made in markdown, and hosted in [Mintlify](https://mintlify.com/)
+
+## 🚀 Apps
+
+Here is where we gather all the different applications Latitude has:
+
+### Console
+
+**Purpose:** An interactive Node REPL that automatically loads the database client, schema models, and utility helpers, letting you poke around a live Latitude instance on the fly
+
+**Status:** ✅ Active
+
+### Gateway (Main API)
+
+**Purpose:** The main API used by frontend and SDKs
+
+**Technologies:** Hono, OpenAPI
+
+**Status:** ✅ Active
+
+---
+
+It enforces authentication by bearer api key and rate limiting specs by workspace plan or IP quotas before doing anything.
+
+We currently have:
+
+- 3 main version of the API, saved in `apps/gateway/src/routes/api`
+- A webhook system currently used for our email system
+
+The business logic of these endpoints, "*la chicha*", is stored separately in `packages/core` which is also reused in other parts of the code.
+
+**Architecture Pattern:**
+
+```
+┌────────────────────┐          ┌────────────────────┐          ┌────────────────────┐
+│                    │          │                    │          │                    │
+│  Data Model Object │──────────▶      Presenter     │──────────▶  Client Response   │
+│                    │          │                    │          │                    │
+└────────────────────┘          └────────────────────┘          └────────────────────┘
+       Contains                       (Optional)                   Contains only what
+     all properties              Serializes/Transforms           the client needs to see
+                                     data model                                            
+```
+
+Abstractions:
+
+- We have an errorHandling abstraction (`errorHandlingMiddleware`) that serializes errors to OpenAPI error schema.
+- We also add here Datadog/OTel tags for user, workspace & HTTP status (`tracerMiddleware`)
+
+Testing:
+
+- We have mainly integration tests in this app, using Factories to create our entities.
+- If we need to use the database for a test, we use a custom built transaction object, `Transaction`, per test, that includes additional logic of retries and more that is useful for our tests (**use it even for 1 row!!)**
+
+### Web (Frontend UI)
+
+**Purpose:** The UI interface of [Latitude.so](http://Latitude.so)
+
+**Technologies:** React, TS, NextJS
+
+**Status:** ✅ Active
+
+---
+
+You can find the pages in route: `apps/web/src/app`
+
+There are two main folders that separate our views:
+
+- **Private** - The logged-in user views (i.e. datasets, projects, experiments…)
+- **Public** - The views that any user can see (i.e. login page)
+
+The rest are other smaller parts:
+
+- **Onboarding** - Views for the onboarding flow
+- **Admin** - Views for the back office feature
+
+To obtain or modify information from the backend, we use *stores* using [Zustand](https://zustand-demo.pmnd.rs/)
+
+To do **write actions to our data models,** we use [*server actions*](https://nextjs.org/docs/14/app/building-your-application/data-fetching/server-actions-and-mutations) from NextJS
+
+We modularized them into directories for each model object (i.e. documents, commits, etc.). You can find them in `apps/web/src/actions`
+
+💡 The idea behind this is to group all write actions in one place
+
+To do **reads,** we use our NextJS App routes that call our backend services
+
+We have a Redis cache used around the code if needed.
+
+We have tests created using Vitest to verify:
+
+- API routes and server actions
+- Business logic helpers (utilities and action factories)
+- E2E behaviour (for some critical flows like ingestion, document import…)
+
+<aside>
+📝
+
+We refer to prompts as documents in the code
+
+</aside>
+
+### Websockets (Real-time Communication)
+
+**Purpose:** Middleman server for real-time communication
+
+**Technologies:** WebSockets, JWT, TSUP
+
+Its built and bundled using [TSUP](https://github.com/egoist/tsup), and dockerized via the Dockerfile.
+
+**Status:** ✅ Active
+
+---
+
+A websocket server used as a middleman server between the frontend client (apps/web) and the backend (workers) to establish a websocket connection for:
+
+- Real time logs
+- Latte
+- …
+
+Its built and bundled using [TSUP](https://github.com/egoist/tsup), and dockerized via the Dockerfile.
+
+**High level flow:**
+
+1. The WS connection can be opened by the worker or the webclient, sending HTTP `POST /worker-events`
+2. Authentication is later done using JWT stored in a cookie (`websocket`) or a bearer token from a worker
+3. WS server places the socket in a workspace room (workspace:{id}) so every user in the same workspace hears the same updates.
+4. Backend workers fire internal events (i.e. dataset rows created) to `POST /worker-events`; then the WS server rebroadcasts to the right room.
+5. Frontend client uses `LatitudeWebsocketsProvider` to reconnect, auto-refresh expired tokens, and listen with React hooks to any updates from the workers
+
+### Workers (Background Job Processing)
+
+**Purpose:** Asynchronous task execution system
+
+**Technologies:** BullMQ, Redis, TSUP
+
+**Status:** ✅ Active
+
+---
+
+This is an async system we built to manage the execution of tasks, with configurable priorities, in an asynchronous fashion.
+
+Our API layer pushes jobs into the Redis queue, which later dedicated workers pull the jobs off and run them in the background concurrently.
+
+Each worker has its configuration for:
+
+- Jobs to do
+- Queues to subscribe
+- Worker options (common connection for BullMQ workers, and amount of jobs a worker can do in parallel)
+
+- **Example of worker**     
+
+Here's a simple diagram to explain the worker queue system:
+
+```
+┌───────────┐     ┌───────────┐     ┌───────────────┐     ┌─────────────────┐      ┌────────────────┐      ┌────────────────┐
+│           │     │           │     │               │     │                 │      │                │      │                │
+│  API      │────▶│  Redis    │────▶│  Workers      │────▶│  (Core package) │ ────▶│  (Core package)│ ────▶│  (Core package)│
+│  Layer    │     │  Queue    │     │  (BullMQ)     │     │  Event handler  │      │ Job definitions│      │   Services...  │
+│           │     │           │     │               │     │                 │      │                │      │                │
+└───────────┘     └───────────┘     └───────────────┘     └─────────────────┘      └────────────────┘      └────────────────┘
+     │                                      │
+     │                                      │
+     │                                      ▼
+     │                             ┌───────────────┐
+     └─────────────────────────────┤ Websockets    │
+                                   │ (Real-time    │
+                                   │  updates)     │
+                                   └───────────────┘
+```
+
+This diagram illustrates how:
+
+1. The API layer publishes events (this means pushing events to the event queue)
+2. Dedicated workers pull these events from the queue and process them concurrently in the background
+3. Each worker has specific configurations for jobs, queues to subscribe to, and worker options (including BullMQ connections and concurrency settings)
+4. Each event has a handler which maps to what jobs it entails (`packages/core/src/events/handlers`), and these job implementations are also defined the core package, which inside calls backend services, and more.
+5. Updates can be sent to clients via websockets for real-time feedback
+
+## 📦 Packages
+
+Here is where we gather many different parts of the application, used within the apps or standalone:
+
+### CLI
+
+**Purpose:** A **command-line interface (CLI) tool** for interacting with the backend or internal systems in a REPL-style environment.
+
+**Status:** ✅ Active
+
+### Compiler
+
+**Purpose:** PromptL compiler. Takes a `.promptl` file (or raw prompt JSON) and returns a fully-typed message array, metadata, and chain representation used by the Gateway and SDKs.
+
+**Status:** ❌ Soon to be deprecated
+
+### Constants
+
+**Purpose:** Package that includes constants used within the code, reused both in the frontend, backend, SDKs, and more.
+
+**Status:** 🔄 Migrating - Some constants still in core package
+
+### Core (Main Business Logic)
+
+**Purpose:** This is the main package that includes most of the business logic used by our apps.
+
+**Status:** ✅ Active
+
+---
+
+This includes:
+
+- **Services** - Business logic implementations
+- **Database object schemas** - Object definitions
+- **Job definitions** - Background job implementations
+- **Database migrations** - Schema changes
+- **Event handlers** - Functions that map events from the queue to job definitions
+- **Lib** - Closet with interesting abstractions we can reuse (i.e. CamelCaseRecursive)
+- **Mailers** - Mail templates we use with React
+- **Repositories** - Functions that contact the DB, which maintain tenancy using the workspaceId (we're migrating to include this attribute in all of our database tables)
+
+Services tend to follow this structure:
+
+- **Arguments:** 1. Payload, 2. DB Object
+- **Return object:** Result object - Rust like abstraction object to return all objects, which will be of type ok if the response worked with the return object inside, or of error type if its an error, with the error as the payload.
+
+### Env
+
+**Purpose:** Environment variables needed throughout the code, such as DB keys, third party keys, etc.
+
+**Status:** ✅ Active
+
+### SDKs
+
+**Purpose:** Implementation of the Python and TS SDKs.
+
+**Status:** ✅ Active (TypeScript ~10% more updated)
+
+---
+
+There is supposed to be a 1 to 1 parity between both SDKs, but we have truly TS more updated (10% discrepancy)
+
+The SDK is mostly redirections to core services.
+
+### Telemetry
+
+**Purpose:** Telemetry package we serve to clients so that they can send and visualize otl-compatible traces/spans in Latitude.
+
+**Status:** ✅ Active
+
+---
+
+### Web-ui
+
+**Purpose:** Our Design system using React/Tailwind component library (built with shadcn/ui).
+
+**Status:** ✅ Active
+
+---
+
+## 🧪 Testing
+
+### Automatic tests
+
+To summarize our testing in our repo, we mainly have:
+
+- Unit tests in the core package, where we mock dependencies to isolate responsibility
+- Integration tests in our applications, such as gateway and web, using factories to instantiate our objects
+
+### Manual testing
+
+To set up development environment to test, you must have the repo pulled locally, and the following:
+
+- NodeJS v22 or above
+- Docker, Docker desktop, and docker-compose (you can use OrbStack instead of Docker Desktop)
+- Pnpm
+- Git
+
+This is how to have the website running locally: (SDK and other services is a bit different)
