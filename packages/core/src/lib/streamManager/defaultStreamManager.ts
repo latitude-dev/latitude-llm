@@ -47,14 +47,13 @@ export class DefaultStreamManager
   }
 
   async step(): Promise<void> {
+    this.startStep()
+
     const toolsBySourceResult = await this.getToolsBySource()
     if (toolsBySourceResult.error) {
       this.endWithError(toolsBySourceResult.error)
       return
     }
-
-    this.startStep()
-
     const toolsBySource = toolsBySourceResult.unwrap()
     const config = this.transformPromptlToVercelToolDeclarations(
       this.config,
