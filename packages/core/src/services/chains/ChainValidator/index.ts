@@ -14,6 +14,7 @@ import { Result, TypedResult } from '../../../lib/Result'
 import { Output } from '../../../lib/streamManager/step/streamAIResponse'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
+import isNumber from 'lodash-es/isNumber'
 
 const DEFAULT_AGENT_MAX_STEPS = 20
 
@@ -124,6 +125,8 @@ export const renderChain = async ({
 
 function applyAgentRule(config: LatitudePromptConfig) {
   if (config.type !== 'agent') return config
+  if ('maxSteps' in config && isNumber(config.maxSteps) && config.maxSteps > 0)
+    return config
 
   return {
     ...config,
