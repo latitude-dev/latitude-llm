@@ -10,8 +10,8 @@ import { ResolvedTools, ToolSource, ToolSourceData } from './types'
 import { DocumentVersion, PromptSource, Workspace } from '../../../../browser'
 import { DocumentVersionsRepository } from '../../../../repositories'
 import { getAgentToolName } from '../../../../services/agents/helpers'
-import { getToolDefinitionFromDocument } from '../../../../services/agents/agentsAsTools'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { getToolDefinitionFromDocument } from '../../../../services/__deprecated/agents/agentsAsTools'
 
 function findAgentDocs({
   agentPaths,
@@ -92,8 +92,6 @@ export async function resolveAgentsAsTools({
   if (agentDocsResult.error) return agentDocsResult
   const agentDocs = agentDocsResult.unwrap()
 
-  // TODO(compiler): fix types
-  // @ts-expect-error - TODO: fix types
   const resolvedToolsEntries: [
     string,
     { definition: ToolDefinition; sourceData: ToolSourceData },
@@ -103,8 +101,6 @@ export async function resolveAgentsAsTools({
         getAgentToolName(doc.path),
         {
           definition: await getToolDefinitionFromDocument({
-            // TODO(compiler): fix types
-            // @ts-expect-error - TODO: fix types
             doc,
             allDocs: docs,
           }),

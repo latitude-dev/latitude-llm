@@ -24,7 +24,7 @@ export async function getToolDefinitionFromDocument({
   doc: DocumentVersion
   allDocs: DocumentVersion[]
 }): Promise<ToolDefinition> {
-  // FIXME
+  // TODO: Fix this
   // @ts-ignore - type instantiation infinite loop
   const metadataFn = doc.promptlVersion === 1 ? scan : readMetadata
   const referenceFn = async (target: string, from?: string) => {
@@ -38,8 +38,8 @@ export async function getToolDefinitionFromDocument({
       : undefined
   }
 
-  // TODO(compiler): fix types
-  // @ts-expect-error - TODO: fix types
+  // TODO: Fix this
+  // @ts-ignore - type instantiation infinite loop
   const metadata = await metadataFn({
     prompt: doc.content,
     fullPath: doc.path,
