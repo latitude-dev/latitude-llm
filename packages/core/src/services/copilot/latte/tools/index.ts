@@ -2,6 +2,7 @@ import { LatteTool } from '@latitude-data/constants/latte'
 import { Workspace } from '../../../../browser'
 import { Result, TypedResult } from '../../../../lib/Result'
 import type { LatteToolFn } from './types'
+import { ToolHandler } from '../../../../lib/streamManager/clientTools/handlers'
 
 import listDrafts from './commits/list'
 import listPrompts from './documents/list'
@@ -12,7 +13,8 @@ import listIntegrations from './settings/listIntegrations'
 import listIntegrationTools from './settings/listIntegrationTools'
 import listProviders from './settings/listProviders'
 import think from './general/think'
-import { ToolHandler } from '../../../../lib/streamManager/clientTools/handlers'
+import searchIntegrationResources from './settings/searchIntegrationResources'
+import searchIntegrationApps from './settings/searchIntegrationApps'
 
 export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.think]: think,
@@ -24,6 +26,8 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.listProviders]: listProviders,
   [LatteTool.listIntegrations]: listIntegrations,
   [LatteTool.listIntegrationTools]: listIntegrationTools,
+  [LatteTool.searchIntegrationResources]: searchIntegrationResources,
+  [LatteTool.searchIntegrationApps]: searchIntegrationApps,
 } as const
 
 export function buildToolHandlers({
