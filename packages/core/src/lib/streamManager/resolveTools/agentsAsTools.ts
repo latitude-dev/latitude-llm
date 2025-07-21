@@ -112,6 +112,7 @@ export async function resolveAgentsAsTools({
             commit: promptSource.commit,
             document: doc,
             referenceFn,
+            streamManager,
             context: streamManager.$step!.context,
           }),
           sourceData: {
