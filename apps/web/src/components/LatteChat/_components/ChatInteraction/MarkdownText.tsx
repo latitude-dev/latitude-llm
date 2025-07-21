@@ -47,13 +47,19 @@ export const MarkdownResponse = React.memo(
     const components = useMemo<Components>(
       () => ({
         h1: ({ children }) => (
-          <Text.H3 color='foregroundMuted'>{children}</Text.H3>
+          <div className='block'>
+            <Text.H3 color='foregroundMuted'>{children}</Text.H3>
+          </div>
         ),
         h2: ({ children }) => (
-          <Text.H4B color='foregroundMuted'>{children}</Text.H4B>
+          <div className='block'>
+            <Text.H4B color='foregroundMuted'>{children}</Text.H4B>
+          </div>
         ),
         h3: ({ children }) => (
-          <Text.H4 color='foregroundMuted'>{children}</Text.H4>
+          <div className='block'>
+            <Text.H4 color='foregroundMuted'>{children}</Text.H4>
+          </div>
         ),
 
         p: ({ children }) => (
