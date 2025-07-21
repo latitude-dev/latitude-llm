@@ -2,7 +2,10 @@ import { App, BackendClient, createBackendClient } from '@pipedream/sdk/server'
 import { PromisedResult } from '../../../lib/Transaction'
 import { env } from '@latitude-data/env'
 import { Result } from '../../../lib/Result'
-import { UnauthorizedError } from '@latitude-data/constants/errors'
+import {
+  BadRequestError,
+  UnauthorizedError,
+} from '@latitude-data/constants/errors'
 import {
   AppDto,
   PipedreamComponent,
@@ -69,6 +72,48 @@ export async function listApps({
       totalCount: apps.page_info.total_count,
       cursor: apps.page_info.end_cursor,
     })
+  } catch (error) {
+    return Result.error(error as Error)
+  }
+}
+
+export async function searchComponents({
+  app,
+  query,
+  componentType,
+}: {
+  app?: string
+  query?: string
+  componentType?: 'trigger' | 'tool'
+}): PromisedResult<PipedreamComponent[]> {
+  if (!app && !query) {
+    return Result.error(
+      new BadRequestError(
+        'Either app or query must be provided to search components.',
+      ),
+    )
+  }
+
+  const pipedreamEnv = getPipedreamEnvironment()
+  if (!pipedreamEnv.ok) {
+    return Result.error(pipedreamEnv.error!)
+  }
+
+  const pipedream = createBackendClient(pipedreamEnv.unwrap())
+
+  try {
+    const limit = !app ? LIST_APPS_LIMIT : 50 // Show up to 50 components if an app is specified
+    const response = await pipedream.getComponents({
+      q: query,
+      limit,
+      componentType: componentType
+        ? componentType === 'trigger'
+          ? 'trigger'
+          : 'action'
+        : undefined,
+    })
+
+    return Result.ok(response.data as PipedreamComponent[])
   } catch (error) {
     return Result.error(error as Error)
   }
