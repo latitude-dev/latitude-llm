@@ -10,12 +10,10 @@ import { ToolSource } from '../../resolveTools/types'
 import { ToolResponsesArgs } from './types'
 
 export function getIntegrationToolCallResults({
-  contexts,
   workspace,
   toolCalls,
   resolvedTools,
   chainStreamManager,
-  mcpClientManager,
 }: ToolResponsesArgs & {
   chainStreamManager?: ChainStreamManager
   mcpClientManager?: ReturnType<typeof createMcpClientManager>
@@ -38,7 +36,7 @@ export function getIntegrationToolCallResults({
     ]),
   )
 
-  return toolCalls.map(async (toolCall, idx) => {
+  return toolCalls.map(async (toolCall) => {
     const toolSourceData = resolvedTools[toolCall.name]?.sourceData
     if (toolSourceData?.source !== ToolSource.Integration) {
       return Result.error(new NotFoundError(`Unknown tool`))
@@ -50,14 +48,11 @@ export function getIntegrationToolCallResults({
     const integration = integrationResult.unwrap()
 
     return callIntegrationTool({
-      // TODO(compiler): fix types
-      // @ts-expect-error - TODO: fix types
-      context: contexts[idx]!,
       integration,
       toolName: toolSourceData.toolName,
       args: toolCall.arguments,
-      chainStreamManager,
-      mcpClientManager,
+      // @ts-expect-error - TODO(compiler): fix types
+      streamManager: chainStreamManager!,
     })
   })
 }
