@@ -35,7 +35,10 @@ export function CollapsibleContent({
           fullWidth
           variant='ghost'
           size='small'
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={(e) => {
+            e.preventDefault()
+            setIsCollapsed(!isCollapsed)
+          }}
         >
           <Text.H6 color='foregroundMuted'>
             {isCollapsed ? 'Show more +' : 'Show less -'}
