@@ -1,4 +1,8 @@
-import { AgentToolsMap, LogSources } from '@latitude-data/constants'
+import {
+  AgentToolsMap,
+  ChainEvent,
+  StreamEventTypes,
+} from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Tool } from 'ai'
 import { JSONSchema7, JSONSchema7TypeName } from 'json-schema'
@@ -11,6 +15,7 @@ import { DocumentVersionsRepository } from '../../repositories'
 import { telemetry, TelemetryContext } from '../../telemetry'
 import { runDocumentAtCommit } from '../commits'
 import { getAgentToolName } from './helpers'
+import { StreamManager } from '../../lib/streamManager'
 
 const JSON_SCHEMA_TYPES = {
   string: 'string',
@@ -33,6 +38,7 @@ export async function getToolDefinitionFromDocument({
   commit,
   document,
   referenceFn,
+  streamManager,
   context,
 }: {
   workspace: Workspace
@@ -42,6 +48,7 @@ export async function getToolDefinitionFromDocument({
     target: string,
     from?: string,
   ) => Promise<{ path: string; content: string } | undefined>
+  streamManager: StreamManager
   context: TelemetryContext
 }): Promise<Tool> {
   const metadata = await scan({
@@ -88,14 +95,26 @@ export async function getToolDefinitionFromDocument({
       })
 
       try {
-        const { response, error } = await runDocumentAtCommit({
+        const { response, stream, error } = await runDocumentAtCommit({
           context: $tool.context,
           workspace,
           document,
           commit,
           parameters: args,
-          source: LogSources.AgentAsTool,
+          tools: streamManager.tools,
+          // TODO: Review this. We are forwarding the parent's source so that
+          // tool calls are automatically handled in playground and evaluation
+          // contexts. This is not ideal. Spoiler: a boolean prop to control
+          // this is also not ideal.
+          //
+          // On the other hand, it's actually useful to konw the context from
+          // which a subagent was called, rather than just "agentAsTool".
+          //
+          // So... I'm not sure what to do here yet.
+          source: streamManager.source,
         }).then((r) => r.unwrap())
+
+        forwardToolEvents({ source: stream, target: streamManager.controller })
 
         const res = await response
         if (!res) {
@@ -156,4 +175,27 @@ export async function buildAgentsToolsMap(
   }, {})
 
   return Result.ok(agentToolsMap)
+}
+
+async function forwardToolEvents({
+  source,
+  target,
+}: {
+  source?: ReadableStream<ChainEvent>
+  target?: ReadableStreamDefaultController<ChainEvent>
+}) {
+  if (!source || !target) return
+
+  const reader = source.getReader()
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    const { event, data } = value
+    if (event === StreamEventTypes.Provider) {
+      if (data.type === 'tool-call' || data.type === 'tool-result') {
+        target.enqueue(value)
+      }
+    }
+  }
 }
