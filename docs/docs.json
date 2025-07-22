@@ -48,7 +48,8 @@
                 "group": "Onboarding Paths",
                 "pages": [
                   "guides/getting-started/quick-start-pm",
-                  "guides/getting-started/quick-start-dev"
+                  "guides/getting-started/quick-start-dev",
+                  "guides/contribution/contributors"
                 ]
               },
               {
