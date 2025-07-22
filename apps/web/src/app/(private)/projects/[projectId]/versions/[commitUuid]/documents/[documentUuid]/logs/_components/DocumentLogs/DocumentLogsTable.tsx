@@ -253,11 +253,12 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                     </Text.H5>
                   </TableCell>
                   <TableCell>
-                    <div className='flex flex-row gap-2 items-center min-w-0 max-w-xs'>
+                    <span className='flex flex-row gap-2 items-center truncate'>
                       <Badge
                         variant={
                           documentLog.commit.version ? 'accent' : 'muted'
                         }
+                        className='flex-shrink-0'
                       >
                         <Text.H6 noWrap>
                           {documentLog.commit.version
@@ -265,10 +266,10 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                             : 'Draft'}
                         </Text.H6>
                       </Badge>
-                      <Text.H5 noWrap ellipsis color={cellColor}>
+                      <Text.H5 color={cellColor} noWrap ellipsis>
                         {documentLog.commit.title}
                       </Text.H5>
-                    </div>
+                    </span>
                   </TableCell>
                   <TableCell>
                     <Text.H5 color={cellColor}>

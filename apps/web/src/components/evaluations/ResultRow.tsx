@@ -50,13 +50,18 @@ export function ResultRowCells<
         </Text.H5>
       </TableCell>
       <TableCell>
-        <span className='flex flex-row gap-2 items-center'>
-          <Badge variant={commit.version ? 'accent' : 'muted'}>
+        <span className='flex flex-row gap-2 items-center truncate'>
+          <Badge
+            variant={commit.version ? 'accent' : 'muted'}
+            className='flex-shrink-0'
+          >
             <Text.H6 noWrap>
               {commit.version ? `v${commit.version}` : 'Draft'}
             </Text.H6>
           </Badge>
-          <Text.H5 color={color}>{commit.title}</Text.H5>
+          <Text.H5 color={color} noWrap ellipsis>
+            {commit.title}
+          </Text.H5>
         </span>
       </TableCell>
       <TableCell>
