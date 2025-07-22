@@ -1,7 +1,7 @@
 import { AgentToolsMap, LogSources } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Tool } from 'ai'
-import { JSONSchema7 } from 'json-schema'
+import { JSONSchema7, JSONSchema7TypeName } from 'json-schema'
 import { scan } from 'promptl-ai'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
@@ -11,6 +11,18 @@ import { DocumentVersionsRepository } from '../../repositories'
 import { telemetry, TelemetryContext } from '../../telemetry'
 import { runDocumentAtCommit } from '../commits'
 import { getAgentToolName } from './helpers'
+
+const JSON_SCHEMA_TYPES = {
+  string: 'string',
+  number: 'number',
+  boolean: 'boolean',
+  object: 'object',
+  integer: 'integer',
+  array: 'array',
+  null: 'null',
+} as const satisfies {
+  [T in JSONSchema7TypeName]: T
+}
 
 const DEFAULT_PARAM_DEFINITION: JSONSchema7 = {
   type: 'string',
@@ -39,10 +51,20 @@ export async function getToolDefinitionFromDocument({
   })
 
   const description = metadata.config['description'] as string | undefined
-  const params = (metadata.config['parameters'] ?? {}) as Record<
-    string,
-    JSONSchema7
-  >
+  const params = Object.fromEntries(
+    Object.entries(
+      (metadata.config['parameters'] ?? {}) as Record<string, JSONSchema7>,
+    ).map(([key, schema]) => [
+      key,
+      {
+        ...schema,
+        type:
+          schema.type && !Array.isArray(schema.type)
+            ? (JSON_SCHEMA_TYPES[schema.type] ?? 'string')
+            : schema.type,
+      },
+    ]),
+  ) as Record<string, JSONSchema7>
   metadata.parameters.forEach((param) => {
     if (param in params) return
     params[param] = DEFAULT_PARAM_DEFINITION
