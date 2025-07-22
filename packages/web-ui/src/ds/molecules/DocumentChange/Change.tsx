@@ -23,6 +23,7 @@ export function DocumentChange({
   onClick,
   options,
   isDimmed,
+  hoverBgColor = 'bg-secondary',
 }: {
   path: string
   changeType: ModifiedDocumentType
@@ -31,6 +32,7 @@ export function DocumentChange({
   onClick?: () => void
   options?: MenuOption[]
   isDimmed?: boolean
+  hoverBgColor?: string
 }) {
   const icon = MODIFICATION_ICONS[changeType]
   const color = MODIFICATION_COLORS[changeType]
@@ -47,7 +49,7 @@ export function DocumentChange({
       variant='ghost'
       onClick={onClick}
       className={cn('min-h-8 rounded-md', {
-        'bg-secondary': !isSelected && (isHovered || isMenuOpen),
+        [hoverBgColor]: !isSelected && (isHovered || isMenuOpen),
         [selectedBackground]: isSelected,
       })}
     >

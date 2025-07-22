@@ -135,6 +135,14 @@
     --chart-5: 27 87% 67%;
 
     --radius: 0.5rem;
+
+    --latte: 45 99% 55%;
+    --latte-border: 45 81% 44%;
+    --latte-background: 43 71% 98%;
+    --latte-widget-background: 43 51% 82%;
+    --latte-input-background: 43 100% 91%;
+    --latte-input-foreground: 43 100% 23%;
+    --latte-output-foreground: 43 25% 33%;
   }
 
   .dark {
@@ -190,6 +198,14 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+
+    --latte: 45 99% 55%;
+    --latte-border: 45 81% 44%;
+    --latte-background: 43 71% 8%;
+    --latte-widget-background: 43 51% 82%;
+    --latte-input-background: 45 99% 55%;
+    --latte-input-foreground: 43 100% 23%;
+    --latte-output-foreground: 43 25% 83%;
   }
 }
 

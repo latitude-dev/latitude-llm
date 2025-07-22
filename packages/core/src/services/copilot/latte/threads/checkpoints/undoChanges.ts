@@ -104,6 +104,7 @@ function restoreThreadCheckpoint(
         set: values,
       })
       .returning()
+
     return Result.ok(upsertResult[0])
   })
 }

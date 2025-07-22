@@ -1,8 +1,9 @@
 'use client'
+
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { useTypeWriterValue } from '@latitude-data/web-ui/browser'
-import { KeyboardEvent, useCallback, useState } from 'react'
+import React, { KeyboardEvent, useCallback, useState } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ChangeList } from './_components/ChangesList'
@@ -50,6 +51,15 @@ export function LatteChatInput({
 
   const [value, setValue] = useState('')
   const [action, setAction] = useState<'accept' | 'undo'>('accept')
+
+  const handleValueChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newValue = e.target.value
+      setValue(newValue)
+    },
+    [],
+  )
+
   const onSubmit = useCallback(() => {
     if (isLoading) return
     if (value.trim() === '') return
@@ -70,7 +80,11 @@ export function LatteChatInput({
   )
 
   return (
-    <div className='p-4 pt-0 max-w-[600px] w-full relative flex flex-col gap-0'>
+    <div
+      className={cn('pt-0 w-full relative flex flex-col gap-0', {
+        'max-w-[600px]': !inConversation,
+      })}
+    >
       {!changes.length && feedbackRequested ? (
         <LatteChangesFeedback
           onSubmit={addFeedbackToLatteChange!}
@@ -92,7 +106,7 @@ export function LatteChatInput({
       )}
       <TextArea
         className={cn(
-          'bg-transparent w-full px-2 pt-2 pb-14 resize-none text-sm',
+          'bg-transparent w-full px-2 pt-2 pb-14 resize-none text-sm focus-visible:ring-latte-border',
           {
             'rounded-t-none border-t-0':
               changes.length > 0 || feedbackRequested,
@@ -102,40 +116,36 @@ export function LatteChatInput({
         autoGrow={value !== ''}
         disabled={isLoading || !!error}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={handleValueChange}
         onKeyDown={handleKeyDown}
         minRows={2}
         maxRows={value === '' ? 2 : 5} // fixes auto-grow with dynamic placeholder
       />
-      <div className='absolute bottom-0 right-0 pb-6 pr-6'>
+      <div className='absolute bottom-0 right-0 pb-2 pr-2'>
         <Button
-          variant='default'
+          variant='latte'
           onClick={onSubmit}
           disabled={isLoading || !!error || value.trim() === ''}
           fancy
-          iconProps={{
-            name: 'arrowUp',
-            color: 'background',
-            placement: 'right',
-          }}
         >
           Send
         </Button>
       </div>
-      <div className='absolute bottom-0 left-0 pb-6 pl-6'>
-        <Button
-          variant='outline'
-          onClick={resetChat}
-          disabled={!inConversation}
-          fancy
-          iconProps={{
-            name: 'addCircle',
-            color: 'foregroundMuted',
-          }}
-        >
-          <Text.H5 color='foregroundMuted'>New chat</Text.H5>
-        </Button>
-      </div>
+      {inConversation && (
+        <div className='absolute bottom-0 left-0 pb-2 pl-2'>
+          <Button
+            variant='outline'
+            onClick={resetChat}
+            fancy
+            iconProps={{
+              name: 'addCircle',
+              color: 'foregroundMuted',
+            }}
+          >
+            <Text.H5 color='foregroundMuted'>New chat</Text.H5>
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

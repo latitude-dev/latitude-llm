@@ -109,7 +109,7 @@
     "./organisms/CronInput": "./src/ds/organisms/CronInput/index.tsx",
     "./tokens": "./src/ds/tokens/index.ts",
     "./providers": "./src/providers/index.ts",
-    "./sections": "./src/sections/index.ts",
+    "./sections/ProjectSidebarLayout": "./src/sections/ProjectSidebarLayout/index.tsx",
     "./utils": "./src/lib/utils.ts",
     "./dateUtils": "./src/lib/dateUtils.ts",
     "./getUserInfo": "./src/lib/getUserInfo.ts",

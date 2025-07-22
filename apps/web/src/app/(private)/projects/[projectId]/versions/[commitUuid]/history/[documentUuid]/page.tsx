@@ -2,7 +2,7 @@ import {
   findCommitsByProjectCached,
   findCommitsWithDocumentChangesCached,
 } from '$/app/(private)/_data-access'
-import DocumentsLayout from '../../_components/DocumentsLayout'
+import ProjectLayout from '../../_components/ProjectLayout'
 
 import { ProjectChanges } from '../_components/ProjectChanges'
 
@@ -25,12 +25,12 @@ export default async function DocumentHistoryPage({
   })
 
   return (
-    <DocumentsLayout projectId={Number(projectId)} commitUuid={commitUuid}>
+    <ProjectLayout projectId={Number(projectId)} commitUuid={commitUuid}>
       <ProjectChanges
         allCommits={allCommits}
         documentCommits={documentCommits}
         documentUuid={documentUuid}
       />
-    </DocumentsLayout>
+    </ProjectLayout>
   )
 }

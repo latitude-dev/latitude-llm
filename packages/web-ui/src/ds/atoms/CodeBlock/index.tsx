@@ -30,10 +30,10 @@ const Content = memo(
   ({
     language,
     children,
-    copy = true,
     action,
     className,
-    textWrap,
+    copy = true,
+    textWrap = true,
     bgColor: overrideBgColor,
   }: CodeBlockProps) => {
     const { resolvedTheme } = useTheme()
@@ -71,20 +71,10 @@ const Content = memo(
   },
 )
 
-export const CodeBlock = memo(
-  ({ children, textWrap = true, ...rest }: CodeBlockProps) => {
-    return (
-      <ClientOnly>
-        <Content
-          language={rest.language}
-          copy={rest.copy}
-          action={rest.action}
-          className={rest.className}
-          textWrap={textWrap}
-        >
-          {children}
-        </Content>
-      </ClientOnly>
-    )
-  },
-)
+export const CodeBlock = memo(({ children, ...rest }: CodeBlockProps) => {
+  return (
+    <ClientOnly>
+      <Content {...rest}>{children}</Content>
+    </ClientOnly>
+  )
+})

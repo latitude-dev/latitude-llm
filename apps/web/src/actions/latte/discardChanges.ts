@@ -2,7 +2,7 @@
 
 import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
-import { undoLatteThreadChanges } from '@latitude-data/core/services/copilot/index'
+import { undoLatteThreadChanges } from '@latitude-data/core/services/copilot/latte/threads/checkpoints/undoChanges'
 import { evaluateLatteThreadChanges } from '@latitude-data/core/services/copilot/latte/threads/evaluateChanges'
 
 export const discardLatteChangesActions = authProcedure

@@ -29,6 +29,7 @@ const buttonContainerVariants = cva(
         linkOutline: 'shadow-none underline-offset-4 hover:underline',
         linkDestructive: 'shadow-none underline-offset-4 hover:underline',
         shiny: '',
+        latte: 'bg-latte hover:bg-latte/90 border-latte-border',
       },
       fanciness: {
         default: 'bg-transparent hover:bg-transparent',
@@ -78,6 +79,8 @@ const buttonVariants = cva(
         shiny: cn(
           'bg-accent border-accent group-hover:bg-primary/15 overflow-hidden',
         ),
+        latte:
+          'bg-latte text-latte-input-foreground group-hover:bg-latte/90 border-latte-border',
       },
       size: {
         default: 'py-buttonDefaultVertical px-3 min-h-8',
