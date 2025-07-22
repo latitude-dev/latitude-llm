@@ -16,7 +16,10 @@ describe('updateDocumentTriggerConfiguration', () => {
   let mockSet: any
   let mockWhere: any
   let mockReturning: any
-  let TransactionMock: any
+
+  const mocks = vi.hoisted(() => ({
+    transactionMock: vi.fn(),
+  }))
 
   beforeEach(() => {
     // Setup test data
@@ -36,13 +39,16 @@ describe('updateDocumentTriggerConfiguration', () => {
     mockSet = vi.fn().mockReturnValue({ where: mockWhere })
     mockUpdate = vi.fn().mockReturnValue({ set: mockSet })
     mockTx = { update: mockUpdate }
+    mocks.transactionMock.prototype.call = vi.fn(
+      async (fn: (tx: any) => Promise<any>) => {
+        return await fn(mockTx)
+      },
+    )
 
-    TransactionMock = vi.fn()
-    TransactionMock.call = vi.fn(async (fn: (tx: any) => Promise<any>) => {
-      return await fn(mockTx)
-    })
-
-    vi.mock('./../../lib/Transaction', () => TransactionMock)
+    vi.mock('./../../lib/Transaction', async (importOriginal) => ({
+      ...(await importOriginal()),
+      default: mocks.transactionMock,
+    }))
 
     // Mock the buildConfiguration function
     vi.spyOn(buildConfigurationModule, 'buildConfiguration').mockImplementation(
@@ -84,7 +90,9 @@ describe('updateDocumentTriggerConfiguration', () => {
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(TransactionMock.call).toHaveBeenCalledWith(expect.any(Function))
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
     expect(mockSet).toHaveBeenCalledWith({
       configuration: newEmailConfiguration,
@@ -145,7 +153,9 @@ describe('updateDocumentTriggerConfiguration', () => {
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(TransactionMock.call).toHaveBeenCalledWith(expect.any(Function))
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
     expect(mockSet).toHaveBeenCalledWith({
       configuration: expectedConfiguration,
@@ -188,7 +198,9 @@ describe('updateDocumentTriggerConfiguration', () => {
     expect(result.error?.message).toBe(
       'Failed to update document trigger configuration',
     )
-    expect(TransactionMock.call).toHaveBeenCalledWith(expect.any(Function))
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
     expect(mockSet).toHaveBeenCalledWith({
       configuration: newEmailConfiguration,

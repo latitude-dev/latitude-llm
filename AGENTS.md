@@ -44,7 +44,7 @@
 ### Service Layer (`packages/core/src/services/`)
 
 - Create services in dedicated folders (e.g., `apiKeys/`, `providerApiKeys/`)
-- Each service exports functions that accept model instances and optional `db` parameter
+- Each service exports functions that accept model instances and optional `instance` parameter
 - Services use Transaction abstraction and return Result objects
 - Always use named exports
 - Avoid exporting all services from an `index.ts` barrel file

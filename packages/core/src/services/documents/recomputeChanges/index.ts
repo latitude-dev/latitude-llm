@@ -187,11 +187,14 @@ async function replaceCommitChanges(
         const fromVersion = docsToInsert.find(
           (d) => d.documentUuid === toVersion.documentUuid,
         )!
-        return await inheritDocumentRelations({
-          fromVersion,
-          toVersion,
-          workspace,
-        }).then((r) => r.unwrap())
+        return await inheritDocumentRelations(
+          {
+            fromVersion,
+            toVersion,
+            workspace,
+          },
+          transaction,
+        ).then((r) => r.unwrap())
       }),
     )
 

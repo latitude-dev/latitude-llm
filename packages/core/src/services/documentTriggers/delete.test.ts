@@ -13,7 +13,10 @@ describe('deleteDocumentTrigger', () => {
   let mockDelete: any
   let mockWhere: any
   let mockReturning: any
-  let TransactionMock: any
+
+  const mocks = vi.hoisted(() => ({
+    transactionMock: vi.fn(),
+  }))
 
   beforeEach(() => {
     // Setup test data
@@ -32,13 +35,16 @@ describe('deleteDocumentTrigger', () => {
     mockWhere = vi.fn().mockReturnValue({ returning: mockReturning })
     mockDelete = vi.fn().mockReturnValue({ where: mockWhere })
     mockTx = { delete: mockDelete }
+    mocks.transactionMock.prototype.call = vi.fn(
+      async (fn: (tx: any) => Promise<any>) => {
+        return await fn(mockTx)
+      },
+    )
 
-    TransactionMock = vi.fn()
-    TransactionMock.call = vi.fn(async (fn: (tx: any) => Promise<any>) => {
-      return await fn(mockTx)
-    })
-
-    vi.mock('./../../lib/Transaction', () => TransactionMock)
+    vi.mock('./../../lib/Transaction', async (importOriginal) => ({
+      ...(await importOriginal()),
+      default: mocks.transactionMock,
+    }))
   })
 
   it('deletes a document trigger successfully', async () => {
@@ -54,7 +60,9 @@ describe('deleteDocumentTrigger', () => {
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(TransactionMock.call).toHaveBeenCalledWith(expect.any(Function))
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.delete).toHaveBeenCalledWith(documentTriggers)
     expect(mockWhere).toHaveBeenCalledWith(
       and(
@@ -79,7 +87,9 @@ describe('deleteDocumentTrigger', () => {
     expect(result.ok).toBeFalsy()
     expect(result.error).toBeInstanceOf(LatitudeError)
     expect(result.error?.message).toBe('Failed to delete document trigger')
-    expect(TransactionMock.call).toHaveBeenCalledWith(expect.any(Function))
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.delete).toHaveBeenCalledWith(documentTriggers)
     expect(mockWhere).toHaveBeenCalledWith(
       and(

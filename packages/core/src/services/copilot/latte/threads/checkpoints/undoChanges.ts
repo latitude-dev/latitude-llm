@@ -37,10 +37,13 @@ export async function undoLatteThreadChanges(
       }
     }
 
-    const result = await clearLatteThreadCheckpoints({
-      threadUuid,
-      workspaceId: workspace.id,
-    })
+    const result = await clearLatteThreadCheckpoints(
+      {
+        threadUuid,
+        workspaceId: workspace.id,
+      },
+      transaction,
+    )
 
     return result
   })

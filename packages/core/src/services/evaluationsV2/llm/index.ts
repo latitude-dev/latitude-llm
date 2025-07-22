@@ -127,7 +127,7 @@ async function run<M extends LlmEvaluationMetric>(
       throw new BadRequestError('Running is not supported for this evaluation')
     }
 
-    const providers = await buildProvidersMap({ workspaceId: workspace.id })
+    const providers = await buildProvidersMap({ workspaceId: workspace.id }, db)
     const value = await metricSpecification.run(
       {
         resultUuid,
@@ -186,7 +186,7 @@ async function clone<M extends LlmEvaluationMetric>(
     )
   }
 
-  const providers = await buildProvidersMap({ workspaceId: workspace.id })
+  const providers = await buildProvidersMap({ workspaceId: workspace.id }, db)
 
   const settings = await metricSpecification
     .clone({ providers, workspace, ...rest }, db)

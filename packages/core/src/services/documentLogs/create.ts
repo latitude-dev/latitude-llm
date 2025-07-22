@@ -1,11 +1,8 @@
 import type { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
 
 import { LanguageModelUsage } from 'ai'
-import { Commit, DocumentLog, LogSources } from '../../browser'
-import {
-  findWorkspaceFromCommit,
-  findWorkspaceFromDocumentLog,
-} from '../../data-access'
+import { Commit, LogSources } from '../../browser'
+import { findWorkspaceFromCommit } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { NotFoundError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
@@ -57,7 +54,12 @@ export async function createDocumentLog(
   }: CreateDocumentLogProps,
   transaction = new Transaction(),
 ) {
-  return transaction.call<DocumentLog>(
+  const workspace = await findWorkspaceFromCommit(commit)
+  if (!workspace) {
+    return Result.error(new NotFoundError('Workspace not found'))
+  }
+
+  return transaction.call(
     async (trx) => {
       const inserts = await trx
         .insert(documentLogs)
@@ -77,10 +79,6 @@ export async function createDocumentLog(
         .returning()
 
       const documentLog = inserts[0]!
-      const workspace = await findWorkspaceFromCommit(commit, trx)
-      if (!workspace) {
-        throw new NotFoundError('Workspace not found')
-      }
 
       if (providerLog) {
         await createProviderLog({
@@ -101,12 +99,12 @@ export async function createDocumentLog(
 
       return Result.ok(documentLog)
     },
-    async (documentLog: DocumentLog) =>
+    async (documentLog) =>
       publisher.publishLater({
         type: 'documentLogCreated',
         data: {
           id: documentLog.id,
-          workspaceId: (await findWorkspaceFromDocumentLog(documentLog))!.id,
+          workspaceId: workspace.id,
         },
       }),
   )

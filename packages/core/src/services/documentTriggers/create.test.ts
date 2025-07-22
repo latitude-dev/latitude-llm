@@ -18,7 +18,10 @@ describe('createDocumentTrigger', () => {
   let mockInsert: any
   let mockValues: any
   let mockReturning: any
-  let TransactionMock: any
+
+  const mocks = vi.hoisted(() => ({
+    transactionMock: vi.fn(),
+  }))
 
   beforeEach(() => {
     // Setup test data
@@ -31,13 +34,16 @@ describe('createDocumentTrigger', () => {
     mockValues = vi.fn().mockReturnValue({ returning: mockReturning })
     mockInsert = vi.fn().mockReturnValue({ values: mockValues })
     mockTx = { insert: mockInsert }
+    mocks.transactionMock.prototype.call = vi.fn(
+      async (fn: (tx: any) => Promise<any>) => {
+        return await fn(mockTx)
+      },
+    )
 
-    TransactionMock = vi.fn()
-    TransactionMock.call = vi.fn(async (fn: (tx: any) => Promise<any>) => {
-      return await fn(mockTx)
-    })
-
-    vi.mock('./../../lib/Transaction', () => TransactionMock)
+    vi.mock('./../../lib/Transaction', async (importOriginal) => ({
+      ...(await importOriginal()),
+      default: mocks.transactionMock,
+    }))
 
     // Mock the generateUUIDIdentifier function by importing and mocking it
     vi.mock('../../lib/generateUUID', async (importOriginal) => {
@@ -95,7 +101,9 @@ describe('createDocumentTrigger', () => {
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(TransactionMock.call).toHaveBeenCalledWith(expect.any(Function))
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.insert).toHaveBeenCalledWith(documentTriggers)
     expect(mockValues).toHaveBeenCalledWith({
       uuid: 'mocked-uuid',
@@ -154,7 +162,9 @@ describe('createDocumentTrigger', () => {
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(TransactionMock.call).toHaveBeenCalledWith(expect.any(Function))
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.insert).toHaveBeenCalledWith(documentTriggers)
     expect(mockValues).toHaveBeenCalledWith({
       uuid: 'mocked-uuid',
@@ -200,7 +210,9 @@ describe('createDocumentTrigger', () => {
     expect(result.ok).toBeFalsy()
     expect(result.error).toBeInstanceOf(LatitudeError)
     expect(result.error?.message).toBe('Failed to create document trigger')
-    expect(TransactionMock.call).toHaveBeenCalledWith(expect.any(Function))
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.insert).toHaveBeenCalledWith(documentTriggers)
     expect(mockValues).toHaveBeenCalledWith({
       uuid: 'mocked-uuid',
