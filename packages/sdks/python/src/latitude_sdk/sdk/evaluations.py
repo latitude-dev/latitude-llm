@@ -1,5 +1,4 @@
-from datetime import datetime
-from typing import Any, Optional, Union
+from typing import Optional
 
 from latitude_sdk.client import (
     AnnotateEvaluationRequestBody,
@@ -7,24 +6,16 @@ from latitude_sdk.client import (
     Client,
     RequestHandler,
 )
-from latitude_sdk.sdk.types import SdkOptions
-from latitude_sdk.util import Field, Model
+from latitude_sdk.sdk.types import EvaluationResult, SdkOptions
+from latitude_sdk.util import Model
 
 
 class AnnotateEvaluationOptions(Model):
     reason: str
 
 
-class AnnotateEvaluationResult(Model):
-    uuid: str
-    score: int
-    normalized_score: int = Field(alias=str("normalizedScore"))
-    metadata: dict[str, Any]
-    has_passed: bool = Field(alias=str("hasPassed"))
-    created_at: datetime = Field(alias=str("createdAt"))
-    updated_at: datetime = Field(alias=str("updatedAt"))
-    version_uuid: str = Field(alias=str("versionUuid"))
-    error: Optional[Union[str, None]] = None
+class AnnotateEvaluationResult(EvaluationResult, Model):
+    pass
 
 
 class Evaluations:

@@ -1,6 +1,6 @@
 [project]
 name = "latitude-sdk"
-version = "4.0.0-beta.1"
+version = "5.0.0-beta.1"
 description = "Latitude SDK for Python"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
@@ -27,6 +27,7 @@ dev = [
     "pyright>=1.1.401",
     "ruff>=0.8.3",
     "sh>=1.14.3",
+    "psutil>=7.0.0",
 ]
 
 [tool.pyright]
@@ -35,6 +36,7 @@ typeCheckingMode = "strict"
 reportMissingTypeStubs = false
 reportUnnecessaryIsInstance = false
 reportPrivateUsage = false
+reportPrivateImportUsage = false
 
 [tool.ruff]
 target-version = "py39"

@@ -178,18 +178,12 @@ function ResultPanelMetadata<
         </ClickToCopy>
       </MetadataItem>
       {result.error ? (
-        <MetadataItem
-          label='Error'
-          color='destructiveMutedForeground'
-          contentClassName='pt-2'
-          stacked
-        >
-          <Alert
-            variant='destructive'
-            showIcon={false}
-            description={result.error.message}
-          />
-        </MetadataItem>
+        <Alert
+          variant='destructive'
+          showIcon={false}
+          title='Evaluation failed'
+          description={result.error.message}
+        />
       ) : (
         <>
           <MetadataItem

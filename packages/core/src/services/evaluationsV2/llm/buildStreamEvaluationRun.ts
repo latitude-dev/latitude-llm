@@ -8,10 +8,10 @@ import {
 } from '../../../browser'
 import { Result, TypedResult } from '../../../lib/Result'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import { BACKGROUND, telemetry } from '../../../telemetry'
+import { runChain } from '../../chains/run'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { buildLlmEvaluationRunFunction } from './shared'
-import { runChain } from '../../chains/run'
-import { BACKGROUND, telemetry } from '../../../telemetry'
 
 const buildStreamHandler =
   (
@@ -73,7 +73,7 @@ export async function buildStreamEvaluationRun({
 }: {
   workspace: Workspace
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
-  parameters: Record<string, any>
+  parameters: Record<string, unknown>
 }): Promise<TypedResult<{ streamHandler: StreamHandler }, Error>> {
   const resultUuid = generateUUIDIdentifier()
   const result = await buildLlmEvaluationRunFunction({

@@ -1,5 +1,10 @@
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
+import {
+  Message as MessageComponent,
+  MessageList,
+} from '$/components/ChatWrapper'
 import { MetadataItem } from '$/components/MetadataItem'
+import { Message } from '@latitude-data/constants/legacyCompiler'
 import {
   FINISH_REASON_DETAILS,
   SPAN_SPECIFICATIONS,
@@ -12,13 +17,8 @@ import { LineSeparator } from '@latitude-data/web-ui/atoms/LineSeparator'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import {
-  Message as MessageComponent,
-  MessageList,
-} from '$/components/ChatWrapper'
 import { useState } from 'react'
 import { DetailsPanelProps, SPAN_COLORS } from './shared'
-import { Message } from '@latitude-data/constants/legacyCompiler'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Completion]
 export default {
@@ -104,80 +104,78 @@ function MessagesDetails({
 function DetailsPanel({ span }: DetailsPanelProps<SpanType.Completion>) {
   return (
     <>
-      {!!span.metadata?.provider && (
-        <MetadataItem label='Provider' value={span.metadata.provider} />
-      )}
-      {!!span.metadata?.model && (
-        <MetadataItem label='Model' value={span.metadata.model} />
-      )}
-      {!!span.metadata?.tokens && (
-        <MetadataItem
-          label='Tokens'
-          value={(
-            span.metadata.tokens.prompt +
-            span.metadata.tokens.cached +
-            span.metadata.tokens.reasoning +
-            span.metadata.tokens.completion
-          ).toString()}
-          tooltip={
-            <div className='w-full flex flex-col justify-between'>
-              <div className='w-full flex flex-row justify-between items-center gap-4'>
-                <Text.H6B color='background'>Prompt</Text.H6B>
-                <Text.H6 color='background'>
-                  {span.metadata.tokens.prompt}
-                </Text.H6>
-              </div>
-              <div className='w-full flex flex-row justify-between items-center gap-4'>
-                <Text.H6B color='background'>Cached</Text.H6B>
-                <Text.H6 color='background'>
-                  {span.metadata.tokens.cached}
-                </Text.H6>
-              </div>
-              <div className='w-full flex flex-row justify-between items-center gap-4'>
-                <Text.H6B color='background'>Reasoning</Text.H6B>
-                <Text.H6 color='background'>
-                  {span.metadata.tokens.reasoning}
-                </Text.H6>
-              </div>
-              <div className='w-full flex flex-row justify-between items-center gap-4'>
-                <Text.H6B color='background'>Completion</Text.H6B>
-                <Text.H6 color='background'>
-                  {span.metadata.tokens.completion}
-                </Text.H6>
-              </div>
+      {!!span.metadata && (
+        <>
+          <MetadataItem label='Provider' value={span.metadata.provider} />
+          <MetadataItem label='Model' value={span.metadata.model} />
+          {!!span.metadata.tokens && (
+            <MetadataItem
+              label='Tokens'
+              value={(
+                span.metadata.tokens.prompt +
+                span.metadata.tokens.cached +
+                span.metadata.tokens.reasoning +
+                span.metadata.tokens.completion
+              ).toString()}
+              tooltip={
+                <div className='w-full flex flex-col justify-between'>
+                  <div className='w-full flex flex-row justify-between items-center gap-4'>
+                    <Text.H6B color='background'>Prompt</Text.H6B>
+                    <Text.H6 color='background'>
+                      {span.metadata.tokens.prompt}
+                    </Text.H6>
+                  </div>
+                  <div className='w-full flex flex-row justify-between items-center gap-4'>
+                    <Text.H6B color='background'>Cached</Text.H6B>
+                    <Text.H6 color='background'>
+                      {span.metadata.tokens.cached}
+                    </Text.H6>
+                  </div>
+                  <div className='w-full flex flex-row justify-between items-center gap-4'>
+                    <Text.H6B color='background'>Reasoning</Text.H6B>
+                    <Text.H6 color='background'>
+                      {span.metadata.tokens.reasoning}
+                    </Text.H6>
+                  </div>
+                  <div className='w-full flex flex-row justify-between items-center gap-4'>
+                    <Text.H6B color='background'>Completion</Text.H6B>
+                    <Text.H6 color='background'>
+                      {span.metadata.tokens.completion}
+                    </Text.H6>
+                  </div>
+                </div>
+              }
+            />
+          )}
+          {!!span.metadata.cost && (
+            <MetadataItem
+              label='Cost'
+              value={formatCostInMillicents(span.metadata.cost)}
+              tooltip="We estimate the cost based on the token usage and your provider's pricing. Actual cost may vary."
+            />
+          )}
+          {!!span.metadata.finishReason && (
+            <MetadataItem
+              label='Finish reason'
+              value={FINISH_REASON_DETAILS[span.metadata.finishReason].name}
+              tooltip={
+                FINISH_REASON_DETAILS[span.metadata.finishReason].description
+              }
+            />
+          )}
+          <MetadataItem label='Configuration' contentClassName='pt-2' stacked>
+            <div className='w-full max-h-32 overflow-y-auto custom-scrollbar scrollable-indicator rounded-xl bg-backgroundCode'>
+              <CodeBlock language='json'>
+                {JSON.stringify(span.metadata.configuration, null, 2)}
+              </CodeBlock>
             </div>
-          }
-        />
+          </MetadataItem>
+          <MessagesDetails
+            input={(span.metadata.input ?? []) as unknown as Message[]}
+            output={(span.metadata.output ?? []) as unknown as Message[]}
+          />
+        </>
       )}
-      {!!span.metadata?.cost && (
-        <MetadataItem
-          label='Cost'
-          value={formatCostInMillicents(span.metadata.cost)}
-          tooltip="We estimate the cost based on the token usage and your provider's pricing. Actual cost may vary."
-        />
-      )}
-      {!!span.metadata?.finishReason && (
-        <MetadataItem
-          label='Finish reason'
-          value={FINISH_REASON_DETAILS[span.metadata.finishReason].name}
-          tooltip={
-            FINISH_REASON_DETAILS[span.metadata.finishReason].description
-          }
-        />
-      )}
-      {!!span.metadata?.configuration && (
-        <MetadataItem label='Configuration' contentClassName='pt-2' stacked>
-          <div className='w-full max-h-32 overflow-y-auto custom-scrollbar scrollable-indicator rounded-xl bg-backgroundCode'>
-            <CodeBlock language='json'>
-              {JSON.stringify(span.metadata.configuration, null, 2)}
-            </CodeBlock>
-          </div>
-        </MetadataItem>
-      )}
-      <MessagesDetails
-        input={(span.metadata?.input ?? []) as unknown as Message[]}
-        output={(span.metadata?.output ?? []) as unknown as Message[]}
-      />
     </>
   )
 }

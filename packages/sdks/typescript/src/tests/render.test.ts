@@ -345,6 +345,7 @@ This is a custom prompt language
           get_weather: getWeatherTool,
           search: searchTool,
         },
+        adapter: Adapters.default,
       })
 
       // Verify onStep was called twice
@@ -364,84 +365,75 @@ This is a custom prompt language
       expect(messages).toEqual([
         {
           role: 'system',
-          content: 'This is a custom prompt language',
+          content: [{ type: 'text', text: 'This is a custom prompt language' }],
         },
         {
           role: 'user',
           content: [{ type: 'text', text: 'Hi, my name is John' }],
-          name: undefined,
         },
         {
           role: 'assistant',
           content: [
-            { type: 'text', text: 'Let me check the weather for you.' },
-          ],
-          tool_calls: [
             {
-              id: 'weather_1',
-              type: 'function',
-              function: {
-                name: 'get_weather',
-                arguments: '{"location":"Barcelona"}',
+              type: 'text',
+              text: 'Let me check the weather for you.',
+            },
+            {
+              type: 'tool-call',
+              toolCallId: 'weather_1',
+              toolName: 'get_weather',
+              toolArguments: {
+                location: 'Barcelona',
               },
             },
           ],
         },
         {
           role: 'tool',
-          // @TODO(compiler): review these, promptl does not properly support
-          // tool result messages and it includes these random properties
-          toolName: '',
-          tool_call_id: undefined,
           content: [
             {
-              type: 'tool-result',
-              toolCallId: 'weather_1',
-              toolName: 'get_weather',
-              result: 'The weather in Barcelona is sunny and 25°C',
-              isError: false,
+              type: 'text',
+              text: '"The weather in Barcelona is sunny and 25°C"',
             },
           ],
+          toolId: 'weather_1',
+          toolName: 'get_weather',
+          isError: false,
         },
         {
           role: 'user',
           content: [
             { type: 'text', text: 'Wow, what a cool way to write prompts!' },
           ],
-          name: undefined,
         },
         {
           role: 'assistant',
           content: [
-            { type: 'text', text: 'Now let me search for more information.' },
-          ],
-          tool_calls: [
             {
-              id: 'search_1',
-              type: 'function',
-              function: {
-                name: 'search',
-                arguments: '{"query":"Barcelona weather"}',
+              type: 'text',
+              text: 'Now let me search for more information.',
+            },
+            {
+              type: 'tool-call',
+              toolCallId: 'search_1',
+              toolName: 'search',
+              toolArguments: {
+                query: 'Barcelona weather',
               },
             },
           ],
         },
         {
           role: 'tool',
-          // @TODO(compiler): review these, promptl does not properly support
-          // tool result messages and it includes these random properties
-          toolName: '',
-          tool_call_id: undefined,
           content: [
             {
-              type: 'tool-result',
-              toolCallId: 'search_1',
-              toolName: 'search',
-              isError: false,
-              result:
-                'Search results for "Barcelona weather": Found 5 relevant articles',
+              type: 'text',
+              text: '"Search results for \\"Barcelona weather\\": Found 5 relevant articles"',
             },
           ],
+          toolId: 'search_1',
+          toolName: 'search',
+          isError: false,
         },
       ])
     })

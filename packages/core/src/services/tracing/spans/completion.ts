@@ -62,6 +62,7 @@ import {
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_OTHER,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS,
+  GEN_AI_RESPONSE_FINISH_REASON_VALUE_UNKNOWN,
   Providers,
   SPAN_SPECIFICATIONS,
   SpanAttribute,
@@ -704,6 +705,7 @@ const FINISH_REASON_CONTENT_FILTER = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_V
 const FINISH_REASON_TOOL_CALLS = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS) // prettier-ignore
 const FINISH_REASON_ERROR = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_ERROR) // prettier-ignore
 const FINISH_REASON_OTHER = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_OTHER) // prettier-ignore
+const FINISH_REASON_UNKNOWN = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_UNKNOWN) // prettier-ignore
 
 function extractFinishReason(
   attributes: Record<string, SpanAttribute>,
@@ -732,7 +734,9 @@ function extractFinishReason(
       return Result.ok('error')
     case FINISH_REASON_OTHER:
       return Result.ok('other')
-    default:
+    case FINISH_REASON_UNKNOWN:
       return Result.ok('unknown')
   }
+
+  return Result.ok('unknown')
 }

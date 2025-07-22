@@ -78,6 +78,7 @@ class Latitude:
         )
 
         self.promptl = Promptl(self._options.promptl)
+
         self.projects = Projects(self._client, self._options)
         self.prompts = Prompts(self._client, self.promptl, self._options)
         self.logs = Logs(self._client, self._options)

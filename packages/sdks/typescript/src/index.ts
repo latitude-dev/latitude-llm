@@ -1,9 +1,4 @@
 import {
-  type Message,
-  type MessageRole,
-  type ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
-import {
   DocumentLog,
   Providers,
   PublicManualEvaluationResultV2,
@@ -11,6 +6,11 @@ import {
   type ChainEventDto,
   type ToolCallResponse,
 } from '@latitude-data/constants'
+import {
+  type Message,
+  type MessageRole,
+  type ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
 
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
@@ -529,6 +529,7 @@ class Latitude {
     prompt,
     parameters,
     onStep,
+    tools,
     adapter,
   }: {
     step: number
@@ -538,7 +539,7 @@ class Latitude {
     parameters: Record<string, unknown>
     messages: M[]
     adapter: ProviderAdapter<M>
-  } & Pick<RenderChainOptions<M>, 'onStep'>) {
+  } & Pick<RenderChainOptions<M>, 'onStep' | 'tools'>) {
     const completion = await this.renderCompletion({
       provider,
       config,
@@ -549,10 +550,19 @@ class Latitude {
       onStep,
     })
 
-    return {
-      messages: completion.messages,
-      toolRequests: completion.toolRequests,
+    messages = completion.messages
+
+    if (completion.toolRequests.length > 0) {
+      messages = messages.concat(
+        await this.handleToolRequests({
+          toolRequests: completion.toolRequests,
+          tools: tools,
+          adapter: adapter,
+        }),
+      )
     }
+
+    return { messages }
   }
 
   protected async renderChain<M extends AdapterMessageType = PromptlMessage>({
@@ -560,7 +570,7 @@ class Latitude {
     parameters,
     adapter: _adapter,
     onStep,
-    tools = {},
+    tools,
   }: RenderChainOptions<M>) {
     const adapter = _adapter ?? getPromptlAdapterFromProvider(prompt.provider)
     const chain = new Chain({
@@ -585,16 +595,10 @@ class Latitude {
         parameters,
         messages: step.messages,
         onStep,
+        tools,
         adapter,
       })
       lastResponse = result.messages
-
-      if (result.toolRequests.length > 0) {
-        lastResponse = lastResponse.concat(
-          await this.handleToolRequests(result.toolRequests, tools),
-        )
-      }
-
       step = await chain.step(lastResponse)
       index++
     }
@@ -621,32 +625,56 @@ class Latitude {
         name: toolRequest.toolName,
       })
 
-      return {
-        role: 'tool',
-        content: [
-          {
-            type: 'tool-result',
-            toolCallId: toolRequest.toolCallId,
-            toolName: toolRequest.toolName,
-            result,
-            isError: false,
-          },
-        ],
-      }
+      return { result, isError: false }
     } catch (error) {
-      return {
-        role: 'tool',
-        content: [
-          {
-            type: 'tool-result',
-            toolCallId: toolRequest.toolCallId,
-            toolName: toolRequest.toolName,
-            result: error,
-            isError: true,
-          },
-        ],
-      }
+      return { result: (error as Error).message, isError: true }
     }
+  }
+
+  private async handleToolRequests<
+    M extends AdapterMessageType = PromptlMessage,
+  >({
+    toolRequests,
+    tools,
+    adapter,
+  }: {
+    toolRequests: ToolRequest[]
+    tools?: RenderToolCalledFn<ToolSpec>
+    adapter: ProviderAdapter<M>
+  }): Promise<M[]> {
+    return Promise.all(
+      toolRequests
+        .filter((t) => t.toolName in (tools || {}))
+        .map(async (t) => {
+          const tool = tools?.[t.toolName]
+          if (!tool) {
+            throw new Error(`Handler for tool '${t.toolName}' not found`)
+          }
+
+          const { result, isError } = await this.renderTool({
+            tool: tool,
+            toolRequest: t,
+          })
+
+          return adapter.fromPromptl({
+            messages: [
+              {
+                role: PromptlMessageRole.tool,
+                content: [
+                  {
+                    type: ContentType.text,
+                    text: JSON.stringify(result),
+                  },
+                ],
+                toolId: t.toolCallId,
+                toolName: t.toolName,
+                isError: isError,
+              },
+            ],
+            config: {},
+          }).messages[0]!
+        }),
+    )
   }
 
   private async getAllProjects() {
@@ -807,25 +835,6 @@ class Latitude {
     return {
       commitUuid: result.commitUuid,
     }
-  }
-
-  private async handleToolRequests<
-    M extends AdapterMessageType = PromptlMessage,
-  >(
-    toolRequests: ToolRequest[],
-    tools: RenderToolCalledFn<ToolSpec>,
-  ): Promise<M[]> {
-    // @ts-expect-error - TODO(compiler): fix types promptl-ai is missing the tool result message type
-    return Promise.all(
-      toolRequests
-        .filter((t) => t.toolName in tools)
-        .map((t) =>
-          this.renderTool({
-            tool: tools[t.toolName]!,
-            toolRequest: t,
-          }),
-        ),
-    ) as Promise<M[]>
   }
 }
 
