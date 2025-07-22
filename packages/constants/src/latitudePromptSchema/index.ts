@@ -1,10 +1,23 @@
+import { JSONSchema7, JSONSchema7TypeName } from 'json-schema'
 import { z } from 'zod'
 import { MAX_STEPS_CONFIG_NAME, ParameterType } from '../config'
 import { AgentToolsMap, resolveRelativePath } from '../index'
 import { azureConfig as azureConfigSchema } from './providers/azure'
-import { JSONSchema7 } from 'json-schema'
 import { buildToolsSchema } from './toolsSchema'
 import { zodJsonSchema } from './zodJsonSchema'
+
+const PARAMETER_TYPES = [
+  'array',
+  'boolean',
+  'integer',
+  'null',
+  'number',
+  'object',
+  'string',
+  ParameterType.Text,
+  ParameterType.Image,
+  ParameterType.File,
+] as const satisfies readonly (JSONSchema7TypeName | ParameterType)[]
 
 export function latitudePromptConfigSchema({
   providerNames,
@@ -63,7 +76,8 @@ export function latitudePromptConfigSchema({
     parameters: z
       .record(
         z.object({
-          type: z.nativeEnum(ParameterType),
+          type: z.enum(PARAMETER_TYPES),
+          description: z.string().optional(),
         }),
       )
       .optional(),
