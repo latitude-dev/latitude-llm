@@ -16,7 +16,7 @@ const POOL_CONFIG: PoolConfig = {
   max: 10, // Maximum number of connections in the pool (default)
   min: 0, // Minimum number of connections in the pool (default)
   idleTimeoutMillis: 30000, // 30 seconds - Idle connection timeout (pool)
-  idle_in_transaction_session_timeout: 1800000, // 30 minutes - Idle connection timeout (database)
+  idle_in_transaction_session_timeout: 30000, // 30 seconds - Idle connection timeout (database)
   statement_timeout: 30000, // 30 seconds - Running statement timeout (database)
 }
 

@@ -21,8 +21,10 @@ export const evaluateLiveLogJob = async ({
 }) => {
   const { id, workspaceId } = event.data
   const repo = new DocumentLogsRepository(workspaceId)
-  const documentLog = await repo.find(id).then((r) => r.unwrap())
+  const documentLogResult = await repo.find(id)
+  if (documentLogResult.error) return
 
+  const documentLog = documentLogResult.unwrap()
   const workspace = await findWorkspaceFromDocumentLog(documentLog)
   if (!workspace) {
     throw new NotFoundError(

@@ -78,12 +78,15 @@ async function validate<M extends RuleEvaluationMetric>(
   })
 }
 
-async function run<M extends RuleEvaluationMetric>({
-  metric,
-  ...rest
-}: EvaluationMetricRunArgs<EvaluationType.Rule, M> & {
-  metric: M
-}) {
+async function run<M extends RuleEvaluationMetric>(
+  {
+    metric,
+    ...rest
+  }: EvaluationMetricRunArgs<EvaluationType.Rule, M> & {
+    metric: M
+  },
+  db = database,
+) {
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) {
     throw new BadRequestError('Invalid evaluation metric')
@@ -93,7 +96,7 @@ async function run<M extends RuleEvaluationMetric>({
     throw new BadRequestError('Running is not supported for this evaluation')
   }
 
-  const value = await metricSpecification.run({ ...rest })
+  const value = await metricSpecification.run({ ...rest }, db)
 
   return value
 }

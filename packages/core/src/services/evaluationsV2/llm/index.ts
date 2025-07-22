@@ -24,7 +24,6 @@ import { LlmEvaluationComparisonSpecification } from './comparison'
 import { LlmEvaluationCustomSpecification } from './custom'
 import { LlmEvaluationCustomLabeledSpecification } from './customLabeled'
 import { LlmEvaluationRatingSpecification } from './rating'
-import Transaction from '../../../lib/Transaction'
 
 // prettier-ignore
 const METRICS: {
@@ -144,19 +143,15 @@ async function run<M extends LlmEvaluationMetric>(
 
     let runError
     if (error instanceof ChainError) {
-      runError = await createRunError(
-        {
-          data: {
-            errorableUuid: resultUuid,
-            errorableType: ErrorableEntity.EvaluationResult,
-            code: error.errorCode,
-            message: error.message,
-            details: error.details,
-          },
+      runError = await createRunError({
+        data: {
+          errorableUuid: resultUuid,
+          errorableType: ErrorableEntity.EvaluationResult,
+          code: error.errorCode,
+          message: error.message,
+          details: error.details,
         },
-        // TODO: We are stepping out of the db instance. This service should accept an instance of Transaction instead.
-        new Transaction(),
-      ).then((r) => r.unwrap())
+      }).then((r) => r.unwrap())
     }
 
     return {
