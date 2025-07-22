@@ -106,9 +106,10 @@ export const useLatitudeAgentsConfig = ({
   })
 
   const selectedAgentsFullPaths = useMemo(() => {
-    return selectedAgents.map((relativePath) =>
-      resolveRelativePath(relativePath, document.path),
-    )
+    if (!Array.isArray(selectedAgents)) return []
+    return selectedAgents
+      .filter(Boolean)
+      .map((relativePath) => resolveRelativePath(relativePath, document.path))
   }, [selectedAgents, document.path])
 
   const toggleAgent = useCallback(
