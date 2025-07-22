@@ -24,6 +24,7 @@ import { LlmEvaluationComparisonSpecification } from './comparison'
 import { LlmEvaluationCustomSpecification } from './custom'
 import { LlmEvaluationCustomLabeledSpecification } from './customLabeled'
 import { LlmEvaluationRatingSpecification } from './rating'
+import Transaction from '../../../lib/Transaction'
 
 // prettier-ignore
 const METRICS: {
@@ -126,10 +127,14 @@ async function run<M extends LlmEvaluationMetric>(
       throw new BadRequestError('Running is not supported for this evaluation')
     }
 
-    const providers = await buildProvidersMap({ workspaceId: workspace.id })
-
+    const providers = await buildProvidersMap({ workspaceId: workspace.id }, db)
     const value = await metricSpecification.run(
-      { resultUuid, providers, workspace, ...rest },
+      {
+        resultUuid,
+        providers,
+        workspace,
+        ...rest,
+      },
       db,
     )
 
@@ -149,7 +154,8 @@ async function run<M extends LlmEvaluationMetric>(
             details: error.details,
           },
         },
-        db,
+        // TODO: We are stepping out of the db instance. This service should accept an instance of Transaction instead.
+        new Transaction(),
       ).then((r) => r.unwrap())
     }
 
@@ -180,7 +186,7 @@ async function clone<M extends LlmEvaluationMetric>(
     )
   }
 
-  const providers = await buildProvidersMap({ workspaceId: workspace.id })
+  const providers = await buildProvidersMap({ workspaceId: workspace.id }, db)
 
   const settings = await metricSpecification
     .clone({ providers, workspace, ...rest }, db)

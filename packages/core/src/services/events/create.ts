@@ -1,11 +1,13 @@
-import { database } from '../../client'
 import { LatitudeEvent } from '../../events/events'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { events } from '../../schema'
 
-export async function createEvent(event: LatitudeEvent, db = database) {
-  return Transaction.call(async (tx) => {
+export async function createEvent(
+  event: LatitudeEvent,
+  transaction = new Transaction(),
+) {
+  return transaction.call(async (tx) => {
     let workspaceId: number | undefined | null
     if ('workspaceId' in event.data) {
       workspaceId = event.data.workspaceId
@@ -25,5 +27,5 @@ export async function createEvent(event: LatitudeEvent, db = database) {
     }
 
     return Result.ok(createdEvent)
-  }, db)
+  })
 }

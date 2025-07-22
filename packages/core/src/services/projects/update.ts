@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm'
 
 import { Project } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { projects } from '../../schema'
@@ -9,9 +8,9 @@ import { projects } from '../../schema'
 export async function updateProject(
   project: Project,
   values: Partial<Project>,
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call<Project>(async (tx) => {
+  return transaction.call<Project>(async (tx) => {
     const updates = await tx
       .update(projects)
       .set(values)
@@ -19,5 +18,5 @@ export async function updateProject(
       .returning()
 
     return Result.ok(updates[0]!)
-  }, db)
+  })
 }

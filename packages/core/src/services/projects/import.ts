@@ -8,7 +8,6 @@ import {
   User,
   Workspace,
 } from '../../browser'
-import { database } from '../../client'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -25,38 +24,38 @@ export async function importOnboardingProject(
     workspace: Workspace
     user: User
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  const defaultProject = await db.query.projects.findFirst({
-    where: eq(projects.id, env.DEFAULT_PROJECT_ID ?? -1),
-  })
-  if (!defaultProject) {
-    return Result.error(new NotFoundError('Default project not found'))
-  }
-
-  const defaultProjectDocumentsScope = new DocumentVersionsRepository(
-    defaultProject!.workspaceId,
-    db,
-  )
-
-  const defaultDocuments = await defaultProjectDocumentsScope
-    .getDocumentsFromMergedCommits({
-      projectId: defaultProject!.id,
-    })
-    .then((r) => r.unwrap())
-
-  return Transaction.call<{
+  return transaction.call<{
     project: Project
     commit: Commit
     documents: DocumentVersion[]
   }>(async (tx) => {
+    const defaultProject = await tx.query.projects.findFirst({
+      where: eq(projects.id, env.DEFAULT_PROJECT_ID ?? -1),
+    })
+    if (!defaultProject) {
+      return Result.error(new NotFoundError('Default project not found'))
+    }
+
+    const defaultProjectDocumentsScope = new DocumentVersionsRepository(
+      defaultProject!.workspaceId,
+      tx,
+    )
+
+    const defaultDocuments = await defaultProjectDocumentsScope
+      .getDocumentsFromMergedCommits({
+        projectId: defaultProject!.id,
+      })
+      .then((r) => r.unwrap())
+
     const { project, commit } = await createProject(
       {
         workspace,
         user,
         name: defaultProject!.name,
       },
-      tx,
+      transaction,
     ).then((r) => r.unwrap())
 
     const results = await Promise.all(
@@ -69,7 +68,7 @@ export async function importOnboardingProject(
             path: document.path,
             content: document.content,
           },
-          tx,
+          transaction,
         ),
       ),
     )
@@ -82,5 +81,5 @@ export async function importOnboardingProject(
       commit,
       documents: results.map((r) => r.unwrap()),
     })
-  }, db)
+  })
 }

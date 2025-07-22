@@ -2,7 +2,6 @@ import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 
 import { ProviderApiKey } from '../../browser'
-import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -10,7 +9,7 @@ import { providerApiKeys, workspaces } from '../../schema'
 
 export async function destroyProviderApiKey(
   providerApiKey: ProviderApiKey,
-  db = database,
+  transaction = new Transaction(),
 ) {
   if (providerApiKey.token === env.DEFAULT_PROVIDER_API_KEY) {
     return Result.error(
@@ -18,7 +17,7 @@ export async function destroyProviderApiKey(
     )
   }
 
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     await tx
       .update(workspaces)
       .set({ defaultProviderId: null })
@@ -32,5 +31,5 @@ export async function destroyProviderApiKey(
     const deleted = result[0]!
 
     return Result.ok(deleted)
-  }, db)
+  })
 }

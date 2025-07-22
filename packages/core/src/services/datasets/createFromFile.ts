@@ -2,12 +2,12 @@ import path from 'path'
 import slugify from '@sindresorhus/slugify'
 
 import { User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import { diskFactory, DiskWrapper } from '../../lib/disk'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 import { createDataset, getCsvAndBuildColumns } from './create'
+import Transaction from '../../lib/Transaction'
 
 export const createDatasetFromFile = async (
   {
@@ -27,7 +27,7 @@ export const createDatasetFromFile = async (
     disk?: DiskWrapper
     hashAlgorithm?: HashAlgorithmFn
   },
-  db = database,
+  transaction = new Transaction(),
 ) => {
   const name = slugify(data.name)
   const extension = path.extname(data.file.name)
@@ -45,37 +45,42 @@ export const createDatasetFromFile = async (
   if (resultColumns.error) return resultColumns
 
   const columns = resultColumns.value
-  const result = await createDataset(
-    {
-      author,
-      workspace,
-      data: { name: data.name, columns },
+
+  return transaction.call(
+    async () => {
+      const result = await createDataset(
+        {
+          author,
+          workspace,
+          data: { name: data.name, columns },
+        },
+        transaction,
+      )
+      if (result.error) return result
+
+      const dataset = result.value
+
+      return Result.ok({
+        fileKey: key,
+        dataset: {
+          ...dataset,
+          author: {
+            id: author.id,
+            name: author.name,
+          },
+        },
+      })
     },
-    db,
+    ({ dataset }) =>
+      publisher.publishLater({
+        type: 'datasetUploaded',
+        data: {
+          workspaceId: workspace.id,
+          datasetId: dataset.id,
+          fileKey: key,
+          csvDelimiter: data.csvDelimiter,
+          userEmail: author.email,
+        },
+      }),
   )
-  if (result.error) return result
-
-  const dataset = result.value
-
-  publisher.publishLater({
-    type: 'datasetUploaded',
-    data: {
-      workspaceId: workspace.id,
-      datasetId: dataset.id,
-      fileKey: key,
-      csvDelimiter: data.csvDelimiter,
-      userEmail: author.email,
-    },
-  })
-
-  return Result.ok({
-    fileKey: key,
-    dataset: {
-      ...dataset,
-      author: {
-        id: author.id,
-        name: author.name,
-      },
-    },
-  })
 }

@@ -6,7 +6,6 @@ import {
   LinkedDataset,
   LinkedDatasetRow,
 } from '../../browser'
-import { database } from '../../client'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { documentVersions } from '../../schema'
@@ -46,7 +45,7 @@ export async function saveLinkedDataset(
       inputs: LinkedDataset['inputs'] | LinkedDatasetRow['inputs']
     }
   },
-  trx = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion, Error>> {
   const prevLinkedData = getCurrentDatasetLinkedData({
     document,
@@ -57,7 +56,7 @@ export async function saveLinkedDataset(
     return Result.error(new Error('Invalid dataset row id'))
   }
 
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     const datasetLinkedData = getLinkedData({
       datasetRowId: data.datasetRowId,
       inputs: data.inputs,
@@ -85,5 +84,5 @@ export async function saveLinkedDataset(
       .returning()
 
     return Result.ok(result[0]!)
-  }, trx)
+  })
 }

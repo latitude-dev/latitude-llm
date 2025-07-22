@@ -1,7 +1,6 @@
 import { Experiment } from '../../../browser'
 import { LatitudeError } from '../../../lib/errors'
 import { Workspace } from '../../../browser'
-import { database } from '../../../client'
 import { documentsQueue } from '../../../jobs/queues'
 import { experiments } from '../../../schema'
 import { eq } from 'drizzle-orm'
@@ -18,9 +17,9 @@ export async function startExperiment(
     experimentUuid: string
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<Experiment, LatitudeError> {
-  const updateResult = await Transaction.call(async (tx) => {
+  const updateResult = await transaction.call(async (tx) => {
     const result = await tx
       .update(experiments)
       .set({
@@ -49,7 +48,7 @@ export async function startExperiment(
       ...payloadResult.unwrap(),
       experiment,
     })
-  }, db)
+  })
 
   if (updateResult.error) {
     return Result.error(updateResult.error as LatitudeError)

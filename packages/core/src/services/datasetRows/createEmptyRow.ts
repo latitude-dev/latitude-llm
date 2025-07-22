@@ -1,5 +1,5 @@
 import { Dataset, Workspace } from '../../browser'
-import { database } from '../../client'
+import Transaction from '../../lib/Transaction'
 import { DatasetRowData } from '../../schema'
 import { createDatasetRow } from './create'
 
@@ -15,18 +15,19 @@ export const createDatasetEmptyRow = async (
     workspace: Workspace
     dataset: Dataset
   },
-  db = database,
+  transaction = new Transaction(),
 ) => {
   const rowData = dataset.columns.reduce((acc, column) => {
     acc[column.identifier] = ''
     return acc
   }, {} as DatasetRowData)
+
   return createDatasetRow(
     {
       workspace,
       dataset,
       data: { rowData },
     },
-    db,
+    transaction,
   )
 }

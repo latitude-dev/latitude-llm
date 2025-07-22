@@ -127,6 +127,7 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
           commit: commit,
           workspace: workspace,
         })
+
         return await createResultV2({
           evaluation: evaluation,
           providerLog: evaluatedProviderLog,

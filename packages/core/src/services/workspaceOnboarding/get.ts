@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm'
 
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { workspaceOnboarding } from '../../schema/models/workspaceOnboarding'
@@ -12,9 +11,9 @@ export async function getWorkspaceOnboarding(
   }: {
     workspace: typeof workspaces.$inferSelect
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const onboardings = await tx
       .select()
       .from(workspaceOnboarding)
@@ -26,5 +25,5 @@ export async function getWorkspaceOnboarding(
     }
 
     return Result.ok(onboarding)
-  }, db)
+  })
 }

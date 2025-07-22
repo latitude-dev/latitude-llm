@@ -13,7 +13,6 @@ import {
   ProviderApiKey,
   Workspace,
 } from '../../../browser'
-import { database } from '../../../client'
 import { assertCommitIsDraft } from '../../../lib/assertCommitIsDraft'
 import { Result, TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
@@ -111,10 +110,10 @@ async function replaceCommitChanges(
     documentChanges: DocumentVersion[]
     workspace: Workspace
   },
-  tx = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion[], Error>> {
   const commitId = commit.id
-  return Transaction.call<DocumentVersion[]>(async (trx) => {
+  return transaction.call<DocumentVersion[]>(async (trx) => {
     const previousDraftDocuments = await trx
       .select()
       .from(documentVersions)
@@ -189,14 +188,18 @@ async function replaceCommitChanges(
           (d) => d.documentUuid === toVersion.documentUuid,
         )!
         return await inheritDocumentRelations(
-          { fromVersion, toVersion, workspace },
-          trx,
+          {
+            fromVersion,
+            toVersion,
+            workspace,
+          },
+          transaction,
         ).then((r) => r.unwrap())
       }),
     )
 
     return Result.ok([...insertedDocs, ...updatedDocs])
-  }, tx)
+  })
 }
 
 export type RecomputedChanges = {
@@ -213,9 +216,9 @@ export async function recomputeChanges(
     workspace: Workspace
     draft: Commit
   },
-  tx = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<RecomputedChanges, Error>> {
-  try {
+  return transaction.call(async (tx) => {
     assertCommitIsDraft(draft).unwrap()
 
     const result = await getHeadDocumentsAndDraftDocumentsForCommit(
@@ -245,7 +248,6 @@ export async function recomputeChanges(
     const integrationsScope = new IntegrationsRepository(workspace.id, tx)
     const integrations = await integrationsScope.findAll()
     if (integrations.error) return Result.error(integrations.error)
-
     if (agentToolsMapResult.error)
       return Result.error(agentToolsMapResult.error)
 
@@ -265,7 +267,7 @@ export async function recomputeChanges(
           documentChanges: documentsToUpdate,
           workspace: workspace,
         },
-        tx,
+        transaction,
       )
     ).unwrap()
 
@@ -274,7 +276,5 @@ export async function recomputeChanges(
       changedDocuments: newDraftDocuments,
       errors,
     })
-  } catch (error) {
-    return Result.error(error as Error)
-  }
+  })
 }

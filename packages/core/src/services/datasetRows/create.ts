@@ -1,5 +1,4 @@
 import { Dataset, Workspace } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DatasetRowData, datasetRows } from '../../schema'
@@ -15,9 +14,9 @@ export const createDatasetRow = async (
       rowData: DatasetRowData
     }
   },
-  db = database,
+  transaction = new Transaction(),
 ) => {
-  return Transaction.call(async (trx) => {
+  return transaction.call(async (trx) => {
     const inserts = await trx
       .insert(datasetRows)
       .values({
@@ -30,5 +29,5 @@ export const createDatasetRow = async (
     const row = inserts[0]!
 
     return Result.ok(row)
-  }, db)
+  })
 }

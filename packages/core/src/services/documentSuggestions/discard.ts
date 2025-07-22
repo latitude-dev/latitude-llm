@@ -1,6 +1,5 @@
 import { and, eq } from 'drizzle-orm'
 import { DocumentSuggestion, User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -16,9 +15,9 @@ export async function discardDocumentSuggestion(
     workspace: Workspace
     user: User
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     await tx
       .delete(documentSuggestions)
       .where(
@@ -38,5 +37,5 @@ export async function discardDocumentSuggestion(
     })
 
     return Result.ok({ suggestion })
-  }, db)
+  })
 }

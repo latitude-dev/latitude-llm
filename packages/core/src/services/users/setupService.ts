@@ -1,6 +1,5 @@
 import { env } from '@latitude-data/env'
 import { Commit, DocumentVersion, User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { Providers } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { LatitudeError } from '../../lib/errors'
@@ -20,7 +19,7 @@ import { createUser } from './createUser'
 
 const DEFAULT_MODEL = 'gpt-4o-mini'
 
-export default function setupService(
+export default async function setupService(
   {
     email,
     name,
@@ -38,69 +37,68 @@ export default function setupService(
     captureException?: (error: Error) => void
     importDefaultProject?: boolean
   },
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<{ user: User; workspace: Workspace }> {
-  return Transaction.call(async (tx) => {
-    const user = await createUser(
-      { email, name, confirmedAt: new Date() },
-      tx,
-    ).then((r) => r.unwrap())
-    const workspace = await createWorkspace(
-      {
-        name: companyName,
-        user,
-      },
-      tx,
-    ).then((r) => r.unwrap())
-    const firstProvider = await createProviderApiKey(
-      {
-        workspace,
-        provider: Providers.OpenAI,
-        name: defaultProviderName,
-        token: defaultProviderApiKey,
-        defaultModel: DEFAULT_MODEL, // TODO: Move this to env variable
-        author: user,
-      },
-      tx,
-    )
-    if (firstProvider.error) {
-      captureException?.(firstProvider.error)
-    }
-
-    const { onboardingDocument, commit } =
-      await createOrImportOnboardingProject(
-        { importDefaultProject, workspace, user },
-        tx,
-      )
-
-    await createMembership(
-      { confirmedAt: new Date(), user, workspace },
-      tx,
-    ).then((r) => r.unwrap())
-    await createApiKey({ workspace }, tx).then((r) => r.unwrap())
-    await createWorkspaceOnboarding({ workspace }, tx).then((r) => r.unwrap())
-    await createOnboardingDataset({ workspace, author: user }, tx).then((r) =>
-      r.unwrap(),
-    )
-    await createDemoEvaluation(
-      { workspace, document: onboardingDocument, commit },
-      tx,
-    ).then((r) => r.unwrap())
-
-    publisher.publishLater({
-      type: 'userCreated',
-      data: {
-        ...user,
-        workspaceId: workspace.id,
-        userEmail: user.email,
-      },
-    })
-
-    return Result.ok({
+  const user = await createUser(
+    { email, name, confirmedAt: new Date() },
+    transaction,
+  ).then((r) => r.unwrap())
+  const workspace = await createWorkspace(
+    {
+      name: companyName,
       user,
+    },
+    transaction,
+  ).then((r) => r.unwrap())
+  const firstProvider = await createProviderApiKey(
+    {
       workspace,
-    })
-  }, db)
+      provider: Providers.OpenAI,
+      name: defaultProviderName,
+      token: defaultProviderApiKey,
+      defaultModel: DEFAULT_MODEL, // TODO: Move this to env variable
+      author: user,
+    },
+    transaction,
+  )
+  if (firstProvider.error) {
+    captureException?.(firstProvider.error)
+  }
+
+  const { onboardingDocument, commit } = await createOrImportOnboardingProject(
+    { importDefaultProject, workspace, user },
+    transaction,
+  )
+
+  await createMembership(
+    { confirmedAt: new Date(), user, workspace },
+    transaction,
+  ).then((r) => r.unwrap())
+  await createApiKey({ workspace }, transaction).then((r) => r.unwrap())
+  await createWorkspaceOnboarding({ workspace }, transaction).then((r) =>
+    r.unwrap(),
+  )
+  await createOnboardingDataset({ workspace, author: user }, transaction).then(
+    (r) => r.unwrap(),
+  )
+  await createDemoEvaluation(
+    { workspace, document: onboardingDocument, commit },
+    transaction,
+  ).then((r) => r.unwrap())
+
+  publisher.publishLater({
+    type: 'userCreated',
+    data: {
+      ...user,
+      workspaceId: workspace.id,
+      userEmail: user.email,
+    },
+  })
+
+  return Result.ok({
+    user,
+    workspace,
+  })
 }
 
 async function createOrImportOnboardingProject(
@@ -113,14 +111,14 @@ async function createOrImportOnboardingProject(
     workspace: Workspace
     user: User
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
   let documents: DocumentVersion[] = []
   let commit: Commit
   if (importDefaultProject) {
     const { documents: ds, commit: c } = await importOnboardingProject(
       { workspace, user },
-      db,
+      transaction,
     ).then((r) => r.unwrap())
     documents = ds
     commit = c
@@ -130,7 +128,7 @@ async function createOrImportOnboardingProject(
         workspace,
         user,
       },
-      db,
+      transaction,
     ).then((r) => r.unwrap())
 
     documents = ds

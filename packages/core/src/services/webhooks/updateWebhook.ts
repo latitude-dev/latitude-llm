@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm'
 
-import { database } from '../../client'
 import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
 import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -9,7 +8,7 @@ import { type UpdateWebhookParams, type Webhook } from './types'
 
 export async function updateWebhook(
   params: UpdateWebhookParams,
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<Webhook, NotFoundError | UnprocessableEntityError>> {
   const { webhook, name, url, projectIds, isActive } = params
 
@@ -22,7 +21,7 @@ export async function updateWebhook(
     }
   }
 
-  const result = await Transaction.call(async (trx) => {
+  const result = await transaction.call(async (trx) => {
     const [updatedWebhook] = await trx
       .update(webhooks)
       .set({
@@ -40,7 +39,7 @@ export async function updateWebhook(
     }
 
     return Result.ok(updatedWebhook)
-  }, db)
+  })
 
   if (!Result.isOk(result)) {
     const error = result.error

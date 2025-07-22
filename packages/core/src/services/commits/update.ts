@@ -1,7 +1,6 @@
 import { eq } from 'drizzle-orm'
 
 import { Commit } from '../../browser'
-import { database } from '../../client'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
@@ -14,9 +13,9 @@ export async function updateCommit(
     title?: string
     description?: string | null
   },
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<Commit, Error>> {
-  return Transaction.call<Commit>(async (tx) => {
+  return transaction.call<Commit>(async (tx) => {
     const assertResult = assertCommitIsDraft(commit)
     if (assertResult.error) return assertResult
 
@@ -34,5 +33,5 @@ export async function updateCommit(
 
     const updatedCommit = result[0]
     return Result.ok(updatedCommit!)
-  }, db)
+  })
 }

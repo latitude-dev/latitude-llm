@@ -6,6 +6,7 @@ import { database, Database } from '../client'
 import * as schema from '../schema'
 import { ConflictError, UnprocessableEntityError } from './errors'
 import { ErrorResult, Result, TypedResult } from './Result'
+import { captureException } from '@sentry/node'
 
 export type DBSchema = typeof schema
 export type ITransaction<T extends DBSchema = DBSchema> = PgTransaction<
@@ -24,30 +25,52 @@ const DB_ERROR_CODES = {
 }
 
 export default class Transaction {
-  public static async call<ResultType>(
-    callback: (trx: Database) => PromisedResult<ResultType>,
-    db = database,
-  ): PromisedResult<ResultType> {
-    return new Transaction().call(callback, db)
-  }
+  private db?: PgTransaction<any, any, any> | Database
+  private callbacks: Array<(result: unknown, db: Database) => void> = []
 
   public async call<ResultType>(
-    callback: (trx: Database) => PromisedResult<ResultType>,
-    db = database,
+    handler: (trx: Database) => PromisedResult<ResultType>,
+    callback?: (result: ResultType) => void,
   ): PromisedResult<ResultType> {
-    try {
-      let result: TypedResult<ResultType, Error>
+    let result: TypedResult<ResultType, Error>
 
-      await db.transaction(async (trx) => {
-        // @ts-expect-error - good luck typing this
-        result = await callback(trx)
+    if (this.db) {
+      // @ts-expect-error - Database and PgTransaction are not the same type
+      // but the mostly ducktype each other so we use them interchangeably
+      result = await handler(this.db)
 
-        if (result.error) throw result.error
-      })
+      if (result.error) throw result.error
+      if (callback) this.callbacks.push(callback.bind(null, result.value))
 
-      return result!
-    } catch (error) {
-      return Transaction.toResultError(error)
+      return result
+    } else {
+      try {
+        await database.transaction(async (trx) => {
+          this.db = trx
+          // @ts-expect-error - Database and PgTransaction are not the same type
+          // but the mostly ducktype each other so we use them interchangeably
+          result = await handler(this.db)
+
+          if (result.error) throw result.error
+          if (callback) this.callbacks.push(callback.bind(null, result.value))
+        })
+
+        this.callbacks.forEach((callback) => {
+          try {
+            // @ts-expect-error - we've bound the first argument of callback but TS can't see that
+            callback()
+          } catch (error) {
+            captureException(error)
+          }
+        })
+
+        // @ts-expect-error - result is defined if we've reached this point but TS can't see that
+        return result
+      } catch (error) {
+        return Transaction.toResultError(error)
+      } finally {
+        this.callbacks = []
+      }
     }
   }
 

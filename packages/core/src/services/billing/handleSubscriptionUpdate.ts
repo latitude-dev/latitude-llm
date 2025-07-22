@@ -1,7 +1,7 @@
 import Stripe from 'stripe'
 import { eq } from 'drizzle-orm'
 
-import { Database, database } from '../../client'
+import { Database } from '../../client'
 import { workspaces } from '../../schema/models/workspaces'
 import { subscriptions } from '../../schema/models/subscriptions'
 import { SubscriptionPlan } from '../../plans'
@@ -27,7 +27,7 @@ interface HandleSubscriptionUpdateParams {
 
 export async function handleSubscriptionUpdate(
   { stripeSubscription, stripe }: HandleSubscriptionUpdateParams,
-  db = database,
+  transaction = new Transaction(),
 ): Promise<
   TypedResult<{ workspace: Workspace; subscription: Subscription }, Error>
 > {
@@ -60,7 +60,7 @@ export async function handleSubscriptionUpdate(
     )
   }
 
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     // 2. Find user by email in our database
     const user = await unsafelyFindUserByEmail(customerEmail, tx)
     if (!user) {
@@ -139,5 +139,5 @@ export async function handleSubscriptionUpdate(
     }
 
     return Result.ok({ workspace, subscription: currentSubscription! })
-  }, db)
+  })
 }

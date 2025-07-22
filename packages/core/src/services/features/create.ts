@@ -1,4 +1,3 @@
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { features } from '../../schema'
@@ -10,9 +9,9 @@ export type CreateFeatureProps = {
 
 export async function createFeature(
   { name, description }: CreateFeatureProps,
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const [feature] = await tx
       .insert(features)
       .values({
@@ -26,5 +25,5 @@ export async function createFeature(
     }
 
     return Result.ok(feature)
-  }, db)
+  })
 }

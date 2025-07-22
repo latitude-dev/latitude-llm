@@ -6,7 +6,6 @@ import {
   User,
   Workspace,
 } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -32,11 +31,11 @@ export async function applyDocumentSuggestion(
     project: Project
     user: User
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
   prompt = prompt ?? suggestion.newPrompt
 
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
     const document = await documentsRepository
       .getDocumentByCompositedId({
@@ -67,7 +66,7 @@ export async function applyDocumentSuggestion(
             description: 'Created by a suggestion.',
           },
         },
-        tx,
+        transaction,
       ).then((r) => r.unwrap())
 
       await updateDocument(
@@ -76,7 +75,7 @@ export async function applyDocumentSuggestion(
           document: document,
           content: prompt,
         },
-        tx,
+        transaction,
       ).then((r) => r.unwrap())
     }
 
@@ -90,5 +89,5 @@ export async function applyDocumentSuggestion(
     })
 
     return Result.ok({ suggestion, draft })
-  }, db)
+  })
 }

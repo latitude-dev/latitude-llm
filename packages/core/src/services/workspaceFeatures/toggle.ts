@@ -1,6 +1,5 @@
 import { eq, and } from 'drizzle-orm'
 
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { workspaceFeatures } from '../../schema'
@@ -9,9 +8,9 @@ export async function toggleWorkspaceFeature(
   workspaceId: number,
   featureId: number,
   enabled: boolean,
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     // Check if the workspace feature already exists
     const existing = await tx
       .select()
@@ -51,5 +50,5 @@ export async function toggleWorkspaceFeature(
 
       return Result.ok(created!)
     }
-  }, db)
+  })
 }

@@ -1,12 +1,16 @@
 import { ProviderApiKey } from '../../browser'
+import { database } from '../../client'
 import { ProviderApiKeysRepository } from '../../repositories'
 
-export async function buildProvidersMap({
-  workspaceId,
-}: {
-  workspaceId: number
-}) {
-  const scope = new ProviderApiKeysRepository(workspaceId)
+export async function buildProvidersMap(
+  {
+    workspaceId,
+  }: {
+    workspaceId: number
+  },
+  db = database,
+) {
+  const scope = new ProviderApiKeysRepository(workspaceId, db)
   const result = await scope.findAll().then((r) => r.unwrap())
 
   return result.reduce((acc, apiKey) => {

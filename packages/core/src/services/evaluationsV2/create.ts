@@ -8,7 +8,6 @@ import {
   EvaluationV2,
   Workspace,
 } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { compactObject } from '../../lib/compactObject'
 import { Result } from '../../lib/Result'
@@ -33,22 +32,22 @@ export async function createEvaluationV2<
     options?: Partial<EvaluationOptions>
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  if (!options) options = {}
-  options = compactObject(options)
+  return await transaction.call(async (tx) => {
+    if (!options) options = {}
+    options = compactObject(options)
 
-  const validation = await validateEvaluationV2(
-    { mode: 'create', settings, options, document, commit, workspace },
-    db,
-  )
-  if (validation.error) {
-    return Result.error(validation.error)
-  }
-  settings = validation.value.settings
-  options = validation.value.options
+    const validation = await validateEvaluationV2(
+      { mode: 'create', settings, options, document, commit, workspace },
+      tx,
+    )
+    if (validation.error) {
+      return Result.error(validation.error)
+    }
+    settings = validation.value.settings
+    options = validation.value.options
 
-  return await Transaction.call(async (tx) => {
     const result = await tx
       .insert(evaluationVersions)
       .values({
@@ -76,5 +75,5 @@ export async function createEvaluationV2<
     })
 
     return Result.ok({ evaluation })
-  }, db)
+  })
 }

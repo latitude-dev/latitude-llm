@@ -1,5 +1,4 @@
 import { Commit, DocumentVersion, Workspace } from '../../browser'
-import { database } from '../../client'
 import Transaction from '../../lib/Transaction'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
@@ -14,17 +13,17 @@ export async function destroyDocument(
     commit: Commit
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
-    const assertResult = assertCommitIsDraft(commit)
-    if (assertResult.error) return assertResult
+  const assertResult = assertCommitIsDraft(commit)
+  if (assertResult.error) return assertResult
 
-    return destroyOrSoftDeleteDocuments({
+  return destroyOrSoftDeleteDocuments(
+    {
       documents: [document],
       commit,
       workspace,
-      trx: tx,
-    })
-  }, db)
+    },
+    transaction,
+  )
 }

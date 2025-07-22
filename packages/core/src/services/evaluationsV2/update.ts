@@ -8,7 +8,6 @@ import {
   EvaluationV2,
   Workspace,
 } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { compactObject } from '../../lib/compactObject'
@@ -35,48 +34,49 @@ export async function updateEvaluationV2<
     options?: Partial<EvaluationOptions>
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  let settingsChanged = false
-  for (const setting in settings ?? {}) {
-    const key = setting as keyof typeof settings
-    if (!isEqual(settings?.[key], evaluation[key])) {
-      settingsChanged = true
-      break
+  return await transaction.call(async (tx) => {
+    let settingsChanged = false
+    for (const setting in settings ?? {}) {
+      const key = setting as keyof typeof settings
+      if (!isEqual(settings?.[key], evaluation[key])) {
+        settingsChanged = true
+        break
+      }
     }
-  }
-  if (settingsChanged) assertCommitIsDraft(commit).unwrap()
+    if (settingsChanged) assertCommitIsDraft(commit).unwrap()
 
-  const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
-  const document = await documentsRepository
-    .getDocumentAtCommit({
-      commitUuid: commit.uuid,
-      documentUuid: evaluation.documentUuid,
-    })
-    .then((r) => r.unwrap())
+    const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
+    const document = await documentsRepository
+      .getDocumentAtCommit({
+        commitUuid: commit.uuid,
+        documentUuid: evaluation.documentUuid,
+      })
+      .then((r) => r.unwrap())
 
-  if (!settings) settings = {}
-  settings = compactObject(settings)
+    if (!settings) settings = {}
+    settings = compactObject(settings)
 
-  if (!options) options = {}
-  options = compactObject(options)
+    if (!options) options = {}
+    options = compactObject(options)
 
-  const { settings: vSettings, options: vOptions } = await validateEvaluationV2(
-    {
-      mode: 'update',
-      evaluation: evaluation,
-      settings: { ...evaluation, ...settings },
-      options: { ...evaluation, ...options },
-      document: document,
-      commit: commit,
-      workspace: workspace,
-    },
-    db,
-  ).then((r) => r.unwrap())
-  settings = vSettings
-  options = vOptions
+    const { settings: vSettings, options: vOptions } =
+      await validateEvaluationV2(
+        {
+          mode: 'update',
+          evaluation: evaluation,
+          settings: { ...evaluation, ...settings },
+          options: { ...evaluation, ...options },
+          document: document,
+          commit: commit,
+          workspace: workspace,
+        },
+        tx,
+      ).then((r) => r.unwrap())
+    settings = vSettings
+    options = vOptions
 
-  return await Transaction.call(async (tx) => {
     const result = await tx
       .insert(evaluationVersions)
       .values({
@@ -112,5 +112,5 @@ export async function updateEvaluationV2<
     })
 
     return Result.ok({ evaluation })
-  }, db)
+  })
 }

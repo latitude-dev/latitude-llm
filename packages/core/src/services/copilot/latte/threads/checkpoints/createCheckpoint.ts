@@ -1,5 +1,4 @@
 import { DocumentVersion, LatteThreadCheckpoint } from '../../../../../browser'
-import { database } from '../../../../../client'
 import { Result } from '../../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
 import { latteThreadCheckpoints } from '../../../../../schema'
@@ -14,9 +13,9 @@ export function createLatteThreadCheckpoints(
     commitId: number
     checkpoints: { [documentUuid: string]: DocumentVersion | undefined }
   },
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<LatteThreadCheckpoint[]> {
-  return Transaction.call<LatteThreadCheckpoint[]>(async (tx) => {
+  return transaction.call<LatteThreadCheckpoint[]>(async (tx) => {
     const newCheckpoints = await tx
       .insert(latteThreadCheckpoints)
       .values(
@@ -36,5 +35,5 @@ export function createLatteThreadCheckpoints(
     }
 
     return Result.ok(newCheckpoints)
-  }, db)
+  })
 }

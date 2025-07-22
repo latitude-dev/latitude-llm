@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm'
 import { McpServer } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -24,7 +23,7 @@ export async function scaleMcpServer(
     mcpServer: McpServer
     replicas: number
   },
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<McpServer, Error>> {
   try {
     if (replicas < 0) {
@@ -56,7 +55,7 @@ export async function scaleMcpServer(
     })
 
     // Update the database record with the new manifest
-    return Transaction.call(async (tx) => {
+    return transaction.call(async (tx) => {
       const updatedRecords = await tx
         .update(mcpServers)
         .set({
@@ -71,7 +70,7 @@ export async function scaleMcpServer(
       }
 
       return Result.ok(updatedRecords[0])
-    }, db)
+    })
   } catch (error) {
     return Result.error(
       error instanceof Error ? error : new Error(String(error)),

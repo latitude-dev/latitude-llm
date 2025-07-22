@@ -70,7 +70,7 @@ export async function fixMcpServerMisconfiguration() {
         .join('---\n')
 
       // Update the database with the actual manifest
-      await Transaction.call(async (tx) => {
+      await new Transaction().call(async (tx) => {
         await tx
           .update(mcpServers)
           .set({

@@ -3,8 +3,7 @@ import { Result } from '../../../../../../lib/Result'
 import { LatteChange, LatteEditAction } from '@latitude-data/constants/latte'
 import { Commit, DocumentVersion, Workspace } from '../../../../../../browser'
 import { createNewDocument, updateDocument } from '../../../../../documents'
-import { PromisedResult } from '../../../../../../lib/Transaction'
-import { database } from '../../../../../../client'
+import Transaction, { PromisedResult } from '../../../../../../lib/Transaction'
 
 export async function executeEditAction(
   {
@@ -18,7 +17,7 @@ export async function executeEditAction(
     documents: DocumentVersion[]
     action: LatteEditAction
   },
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<LatteChange> {
   if (action.operation === 'update') {
     const document = documents.find(
@@ -39,13 +38,14 @@ export async function executeEditAction(
         content: action.content,
         path: action.path,
       },
-      db,
+      transaction,
     )
-
     if (!updateResult.ok) {
       return Result.error(updateResult.error!)
     }
+
     const updatedDocument = updateResult.unwrap()
+
     return Result.ok({
       projectId: commit.projectId,
       draftUuid: commit.uuid,
@@ -72,12 +72,14 @@ export async function executeEditAction(
         content: action.content,
         includeDefaultContent: false,
       },
-      db,
+      transaction,
     )
     if (!createResult.ok) {
       return Result.error(createResult.error!)
     }
+
     const newDocument = createResult.unwrap()
+
     return Result.ok({
       projectId: commit.projectId,
       draftUuid: commit.uuid,
@@ -104,12 +106,14 @@ export async function executeEditAction(
         document,
         deletedAt: new Date(),
       },
-      db,
+      transaction,
     )
     if (!deleteResult.ok) {
       return Result.error(deleteResult.error!)
     }
+
     const updatedDocument = deleteResult.unwrap()
+
     return Result.ok({
       projectId: commit.projectId,
       draftUuid: commit.uuid,

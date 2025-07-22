@@ -1,7 +1,6 @@
 import { env } from '@latitude-data/env'
 import { and, eq } from 'drizzle-orm'
 import { Workspace } from '../../browser'
-import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -30,9 +29,9 @@ interface FindOrCreateUserFromOAuthInput {
  */
 export function findOrCreateUserFromOAuth(
   { providerId, providerUserId, email, name }: FindOrCreateUserFromOAuthInput,
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const getUserAndWorkspace = async (userId: string) => {
       const user = await tx
         .select()
@@ -119,7 +118,7 @@ export function findOrCreateUserFromOAuth(
         defaultProviderApiKey: env.DEFAULT_PROVIDER_API_KEY,
         importDefaultProject: env.IMPORT_DEFAULT_PROJECT,
       },
-      tx,
+      transaction,
     )
 
     if (setupResult.error) {
@@ -139,5 +138,5 @@ export function findOrCreateUserFromOAuth(
       workspace: newWorkspaceDto as Workspace,
       isNewUser: true,
     })
-  }, db)
+  })
 }

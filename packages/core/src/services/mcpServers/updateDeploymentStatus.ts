@@ -1,7 +1,6 @@
 import * as k8s from '@kubernetes/client-node'
 import { eq } from 'drizzle-orm'
 import { McpServer } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { mcpServers } from '../../schema/models/mcpServers'
@@ -18,7 +17,7 @@ type DeploymentStatus = 'deploying' | 'deployed' | 'failed' | 'deleted'
  */
 export async function updateMcpServerStatus(
   mcpServer: McpServer,
-  db = database,
+  transaction = new Transaction(),
 ) {
   try {
     // Initialize Kubernetes client
@@ -89,7 +88,7 @@ export async function updateMcpServerStatus(
       }
 
       // Update the status in the database
-      return Transaction.call(async (tx) => {
+      return transaction.call(async (tx) => {
         const updatedRecords = await tx
           .update(mcpServers)
           .set({
@@ -99,11 +98,11 @@ export async function updateMcpServerStatus(
           .returning()
 
         return Result.ok(updatedRecords[0]!)
-      }, db)
+      })
     } catch (k8sError: any) {
       // If the deployment doesn't exist, mark it as terminated
       if (k8sError.response?.statusCode === 404) {
-        return Transaction.call(async (tx) => {
+        return transaction.call(async (tx) => {
           const updatedRecords = await tx
             .update(mcpServers)
             .set({
@@ -113,7 +112,7 @@ export async function updateMcpServerStatus(
             .returning()
 
           return Result.ok(updatedRecords[0]!)
-        }, db)
+        })
       }
 
       return Result.error(

@@ -13,6 +13,7 @@ import {
 import { database } from '../../client'
 import { evaluationVersions } from '../../schema'
 import { createEvaluationV2 as createEvaluationSvc } from '../../services/evaluationsV2/create'
+import { faker } from '@faker-js/faker'
 
 type CreateEvaluationV2Args<
   T extends EvaluationType = EvaluationType,
@@ -46,8 +47,8 @@ export async function createEvaluationV2<
     document: args.document,
     commit: args.commit,
     settings: {
-      name: args.name ?? 'Evaluation',
-      description: args.description ?? 'Description',
+      name: args.name ?? faker.word.noun(),
+      description: args.description ?? faker.lorem.sentence(),
       type: args.type ?? EvaluationType.Rule,
       metric: args.metric ?? RuleEvaluationMetric.ExactMatch,
       configuration: args.configuration ?? {

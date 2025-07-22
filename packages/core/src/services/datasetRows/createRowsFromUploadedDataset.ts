@@ -1,9 +1,9 @@
 import { Dataset, DatasetRow } from '../../browser'
-import { database } from '../../client'
 import { DatasetV2CreatedEvent } from '../../events/events'
 import { diskFactory, DiskWrapper } from '../../lib/disk'
 import { csvBatchGenerator, CSVRow, type CsvBatch } from '../../lib/readCsv'
 import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { DatasetsRepository } from '../../repositories'
 import { Column, DatasetRowData } from '../../schema'
 import { updateDataset } from '../datasets/update'
@@ -103,7 +103,7 @@ export async function createRowsFromUploadedDataset(
     batchSize?: number
     hashAlgorithm?: HashAlgorithmFn
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
   const { workspaceId, datasetId, fileKey, csvDelimiter } = event.data
   const repo = new DatasetsRepository(workspaceId)
@@ -164,7 +164,7 @@ export async function createRowsFromUploadedDataset(
     rowCount += rows.length
     const insertResult = await insertRowsInBatch(
       { dataset, data: { rows } },
-      db,
+      transaction,
     )
 
     if (insertResult.error) {

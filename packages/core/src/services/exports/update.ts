@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm'
 import { Export } from '../../browser'
-import { database } from '../../client'
 import Transaction from '../../lib/Transaction'
 import { latitudeExports } from '../../schema'
 import { Result } from '../../lib/Result'
@@ -13,9 +12,9 @@ export async function updateExport(
     export: Export
     readyAt: Date
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const [updatedExport] = await tx
       .update(latitudeExports)
       .set({
@@ -30,5 +29,5 @@ export async function updateExport(
     }
 
     return Result.ok(updatedExport)
-  }, db)
+  })
 }

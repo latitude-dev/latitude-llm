@@ -1,12 +1,12 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { and, eq, sql } from 'drizzle-orm'
 import { DocumentTrigger } from '../../../../browser'
-import { database } from '../../../../client'
 import { Result } from '../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../lib/Transaction'
 import { documentTriggers } from '../../../../schema'
 import { checkCronExpression, getNextRunTime } from '../../helpers/cronHelper'
 import { ScheduledTriggerConfiguration } from '../../helpers/schema'
+import { database } from '../../../../client'
 
 /**
  * Checks if a scheduled trigger is due to run based on its configuration
@@ -41,9 +41,9 @@ export function isScheduledTriggerDue(trigger: DocumentTrigger): boolean {
 export async function updateScheduledTriggerLastRun(
   trigger: Pick<DocumentTrigger, 'id' | 'uuid'>,
   lastRunTime = new Date(),
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<DocumentTrigger> {
-  return Transaction.call(async (trx) => {
+  return transaction.call(async (trx) => {
     // First, get the current configuration if only a partial trigger was provided
     let config: ScheduledTriggerConfiguration
 
@@ -93,7 +93,7 @@ export async function updateScheduledTriggerLastRun(
     }
 
     return Result.ok(updateResult[0] as DocumentTrigger)
-  }, db)
+  })
 }
 
 /**

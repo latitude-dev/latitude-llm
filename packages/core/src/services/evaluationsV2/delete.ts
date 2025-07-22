@@ -6,7 +6,6 @@ import {
   EvaluationV2,
   Workspace,
 } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -26,9 +25,9 @@ export async function deleteEvaluationV2<
     commit: Commit
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     const repository = new EvaluationsV2Repository(workspace.id, tx)
     const existsAnotherVersion = await repository
       .existsAnotherVersion({
@@ -78,5 +77,5 @@ export async function deleteEvaluationV2<
     })
 
     return Result.ok({ evaluation })
-  }, db)
+  })
 }

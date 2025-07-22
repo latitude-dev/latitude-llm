@@ -152,45 +152,49 @@ export async function annotateEvaluationV2<
     value = { error: { message: (error as Error).message } }
   }
 
-  return await Transaction.call(async (tx) => {
-    let result
-    if (existingResult.ok) {
-      const { result: updatedResult } = await updateEvaluationResultV2(
-        {
-          result: existingResult.unwrap(),
-          commit: commit,
-          value: value as EvaluationResultValue<T, M>,
-          workspace: workspace,
-        },
-        tx,
-      ).then((r) => r.unwrap())
-      result = updatedResult
-    } else {
-      const { result: createdResult } = await createEvaluationResultV2(
-        {
-          uuid: resultUuid,
+  // TODO: We are stepping out of the db instance. This service should accept an instance of Transaction instead.
+  const transaction = new Transaction()
+  return await transaction.call(
+    async () => {
+      let result
+      if (existingResult.ok) {
+        const { result: updatedResult } = await updateEvaluationResultV2(
+          {
+            result: existingResult.unwrap(),
+            commit: commit,
+            value: value as EvaluationResultValue<T, M>,
+            workspace: workspace,
+          },
+          transaction,
+        ).then((r) => r.unwrap())
+        result = updatedResult
+      } else {
+        const { result: createdResult } = await createEvaluationResultV2(
+          {
+            uuid: resultUuid,
+            evaluation: evaluation,
+            providerLog: providerLog,
+            commit: commit,
+            value: value as EvaluationResultValue<T, M>,
+            workspace: workspace,
+          },
+          transaction,
+        ).then((r) => r.unwrap())
+        result = createdResult
+      }
+
+      return Result.ok({ result })
+    },
+    ({ result }) =>
+      publisher.publishLater({
+        type: 'evaluationV2Annotated',
+        data: {
+          workspaceId: workspace.id,
           evaluation: evaluation,
-          providerLog: providerLog,
+          result: result,
           commit: commit,
-          value: value as EvaluationResultValue<T, M>,
-          workspace: workspace,
+          providerLog: providerLog,
         },
-        tx,
-      ).then((r) => r.unwrap())
-      result = createdResult
-    }
-
-    await publisher.publishLater({
-      type: 'evaluationV2Annotated',
-      data: {
-        workspaceId: workspace.id,
-        evaluation: evaluation,
-        result: result,
-        commit: commit,
-        providerLog: providerLog,
-      },
-    })
-
-    return Result.ok({ result })
-  }, db)
+      }),
+  )
 }

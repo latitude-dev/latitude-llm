@@ -1,5 +1,4 @@
 import { Dataset, DatasetRow } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DatasetRowData, datasetRows } from '../../schema'
@@ -14,7 +13,7 @@ export async function insertRowsInBatch(
       rows: DatasetRowData[]
     }
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
   const rows = data.rows.map((rowData) => ({
     workspaceId: dataset.workspaceId,
@@ -22,12 +21,10 @@ export async function insertRowsInBatch(
     rowData,
   }))
 
-  if (!rows.length) {
-    return Result.ok([])
-  }
+  if (!rows.length) return Result.ok([])
 
-  return await Transaction.call<DatasetRow[]>(async (trx) => {
+  return await transaction.call<DatasetRow[]>(async (trx) => {
     const result = await trx.insert(datasetRows).values(rows).returning()
     return Result.ok(result)
-  }, db)
+  })
 }

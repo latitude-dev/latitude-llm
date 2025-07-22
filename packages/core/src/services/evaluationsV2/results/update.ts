@@ -7,7 +7,6 @@ import {
   EvaluationType,
   Workspace,
 } from '../../../browser'
-import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
@@ -28,9 +27,9 @@ export async function updateEvaluationResultV2<
     value: Partial<EvaluationResultValue<T, M>>
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     const result = (await tx
       .update(evaluationResultsV2)
       .set({
@@ -56,5 +55,5 @@ export async function updateEvaluationResultV2<
     })
 
     return Result.ok({ result })
-  }, db)
+  })
 }

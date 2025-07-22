@@ -1,5 +1,4 @@
 import { User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { nanoidHashAlgorithm } from './utils'
 import { Column, DatasetRowData, DatasetRowDataContent } from '../../schema'
@@ -121,14 +120,14 @@ export async function createOnboardingDataset(
     author: User
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  const repo = new DatasetsRepository(workspace.id, db)
-  const datasets = await repo.findByName('onboarding dataset')
-  const dataset = datasets[0]
-  if (dataset) return Result.ok(dataset)
+  return transaction.call(async (trx) => {
+    const repo = new DatasetsRepository(workspace.id, trx)
+    const datasets = await repo.findByName('onboarding dataset')
+    const dataset = datasets[0]
+    if (dataset) return Result.ok(dataset)
 
-  return Transaction.call(async (trx) => {
     const createdDataset = await createDataset(
       {
         author,
@@ -138,7 +137,7 @@ export async function createOnboardingDataset(
           columns: ONBOARDING_DATASET_COLUMNS,
         },
       },
-      trx,
+      transaction,
     ).then((r) => r.unwrap())
 
     // Create all rows in a single batch operation
@@ -159,11 +158,11 @@ export async function createOnboardingDataset(
           rows: rowsData,
         },
       },
-      trx,
+      transaction,
     )
 
     if (rowsResult.error) return rowsResult
 
     return Result.ok(createdDataset)
-  }, db)
+  })
 }

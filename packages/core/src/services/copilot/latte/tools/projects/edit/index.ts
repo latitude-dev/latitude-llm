@@ -48,13 +48,15 @@ const editProject = defineLatteTool(
       .findAllCheckpoints(threadUuid)
       .then((r) => r.unwrap())
 
-    return await Transaction.call(async (tx) => {
+    const transaction = new Transaction()
+
+    return await transaction.call(async (tx) => {
       // Update all documents requested
       const latteChanges: LatteChange[] = []
       for await (const action of actions) {
         const result = await executeEditAction(
           { workspace, commit, documents, action },
-          tx,
+          transaction,
         )
         if (!result.ok) {
           return Result.error(result.error!)
@@ -95,7 +97,7 @@ const editProject = defineLatteTool(
             commitId: commit.id,
             checkpoints: missingCheckpoints,
           },
-          tx,
+          transaction,
         )
         if (!newCheckpointsResult.ok) {
           return Result.error(newCheckpointsResult.error!)

@@ -1,6 +1,5 @@
 import pg from 'pg'
 import { User, Workspace } from '../../browser'
-import { database } from '../../client'
 import { BadRequestError, databaseErrorCodes } from '../../lib/errors'
 import { syncReadCsv } from '../../lib/readCsv'
 import { Result } from '../../lib/Result'
@@ -64,9 +63,9 @@ export const createDataset = async (
       columns: Column[]
     }
   },
-  db = database,
+  transaction = new Transaction(),
 ) => {
-  return Transaction.call(async (trx) => {
+  return transaction.call(async (trx) => {
     try {
       const inserts = await trx
         .insert(datasets)
@@ -99,5 +98,5 @@ export const createDataset = async (
 
       throw error
     }
-  }, db)
+  })
 }

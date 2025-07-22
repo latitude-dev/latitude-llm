@@ -1,6 +1,5 @@
 import { randomBytes } from 'crypto'
 
-import { database } from '../../client'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -9,9 +8,9 @@ import { type CreateWebhookParams, type Webhook } from './types'
 
 export async function createWebhook(
   params: CreateWebhookParams,
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<Webhook, Error>> {
-  return Transaction.call<Webhook>(async (tx) => {
+  return transaction.call<Webhook>(async (tx) => {
     const { workspaceId, name, url, projectIds = [], isActive } = params
 
     // Validate URL
@@ -45,5 +44,5 @@ export async function createWebhook(
     }
 
     return Result.ok(webhook)
-  }, db)
+  })
 }

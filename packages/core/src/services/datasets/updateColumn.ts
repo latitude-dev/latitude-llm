@@ -1,6 +1,6 @@
 import { Dataset, DatasetColumnRole } from '../../browser'
-import { database } from '../../client'
 import { Result, TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { updateDataset } from './update'
 
 export async function updateDatasetColumn(
@@ -15,7 +15,7 @@ export async function updateDatasetColumn(
       role: DatasetColumnRole
     }
   },
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<Dataset, Error>> {
   const column = dataset.columns.find((c) => c.identifier === data.identifier)
 
@@ -31,7 +31,7 @@ export async function updateDatasetColumn(
 
   const updatedDatasetResult = await updateDataset(
     { dataset, data: { columns } },
-    db,
+    transaction,
   )
   if (updatedDatasetResult.error) return updatedDatasetResult
 

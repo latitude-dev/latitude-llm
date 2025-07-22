@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm'
 import { McpServer } from '../../browser'
-import { database } from '../../client'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { mcpServers } from '../../schema/models/mcpServers'
@@ -14,9 +13,9 @@ import { mcpServers } from '../../schema/models/mcpServers'
  */
 export async function updateMcpServerLastUsed(
   mcpServer: McpServer,
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<McpServer, Error>> {
-  return Transaction.call(async (tx) => {
+  return transaction.call(async (tx) => {
     const updatedRecords = await tx
       .update(mcpServers)
       .set({
@@ -32,5 +31,5 @@ export async function updateMcpServerLastUsed(
     }
 
     return Result.ok(updatedRecords[0])
-  }, db)
+  })
 }

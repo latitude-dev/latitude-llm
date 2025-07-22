@@ -1,4 +1,3 @@
-import { database } from '../../client'
 import { Events } from '../../events/events'
 import { publisher } from '../../events/publisher'
 import { Result, type TypedResult } from '../../lib/Result'
@@ -16,9 +15,9 @@ export async function createWebhookDelivery(
     errorMessage?: string
     nextRetryAt?: Date
   },
-  db = database,
+  transaction = new Transaction(),
 ): Promise<TypedResult<WebhookDelivery, Error>> {
-  const result = await Transaction.call(async (tx) => {
+  const result = await transaction.call(async (tx) => {
     const [delivery] = await tx
       .insert(webhookDeliveries)
       .values({
@@ -37,7 +36,7 @@ export async function createWebhookDelivery(
     }
 
     return Result.ok(delivery)
-  }, db)
+  })
 
   publisher.publishLater({
     type: 'webhookDeliveryCreated',

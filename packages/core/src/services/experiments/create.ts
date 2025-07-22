@@ -1,6 +1,5 @@
 import { Dataset, Experiment } from '../../browser'
 import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
-import { database } from '../../client'
 import { scanDocumentContent } from '../documents'
 import { experiments } from '../../schema'
 import { DatasetRowsRepository } from '../../repositories'
@@ -8,6 +7,7 @@ import { assertEvaluationRequirements } from './assertRequirements'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { Result } from '../../lib/Result'
 import { BadRequestError, LatitudeError } from '../../lib/errors'
+import { database } from '../../client'
 
 function calculateSelectedRangeCount({
   firstIndex,
@@ -93,44 +93,44 @@ export async function createExperiment(
     toRow?: number
     workspace: Workspace
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  const requirementsResult = assertEvaluationRequirements({
-    evaluations,
-    datasetLabels,
-  })
-  if (requirementsResult.error) return requirementsResult
+  return transaction.call(async (tx) => {
+    const requirementsResult = assertEvaluationRequirements({
+      evaluations,
+      datasetLabels,
+    })
+    if (requirementsResult.error) return requirementsResult
 
-  const promptMetadataResult = await getPromptMetadata(
-    {
-      workspace,
-      commit,
-      document,
-      customPrompt,
-    },
-    db,
-  )
-
-  if (promptMetadataResult.error) {
-    return Result.error(new LatitudeError(promptMetadataResult.error.message))
-  }
-  const promptMetadata = promptMetadataResult.unwrap()
-
-  if (!!promptMetadata.parameters.length && !dataset) {
-    return Result.error(
-      new BadRequestError(
-        'A dataset is required when the prompt contains parameters',
-      ),
+    const promptMetadataResult = await getPromptMetadata(
+      {
+        workspace,
+        commit,
+        document,
+        customPrompt,
+      },
+      tx,
     )
-  }
 
-  const datasetRowsScope = new DatasetRowsRepository(workspace.id, db)
-  const countResult = dataset
-    ? await datasetRowsScope.getCountByDataset(dataset.id)
-    : undefined
-  const rowCount = countResult?.[0]?.count
+    if (promptMetadataResult.error) {
+      return Result.error(new LatitudeError(promptMetadataResult.error.message))
+    }
+    const promptMetadata = promptMetadataResult.unwrap()
 
-  return Transaction.call(async (tx) => {
+    if (!!promptMetadata.parameters.length && !dataset) {
+      return Result.error(
+        new BadRequestError(
+          'A dataset is required when the prompt contains parameters',
+        ),
+      )
+    }
+
+    const datasetRowsScope = new DatasetRowsRepository(workspace.id, tx)
+    const countResult = dataset
+      ? await datasetRowsScope.getCountByDataset(dataset.id)
+      : undefined
+    const rowCount = countResult?.[0]?.count
+
     const result = await tx
       .insert(experiments)
       .values({
@@ -161,5 +161,5 @@ export async function createExperiment(
     }
 
     return Result.ok(result[0]! as Experiment)
-  }, db)
+  })
 }

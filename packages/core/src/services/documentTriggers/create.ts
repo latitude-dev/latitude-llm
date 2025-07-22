@@ -4,7 +4,6 @@ import {
   IntegrationType,
 } from '@latitude-data/constants'
 import { DocumentTrigger, Project, Workspace } from '../../browser'
-import { database } from '../../client'
 import { BadRequestError, LatitudeError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
@@ -18,6 +17,7 @@ import {
   InsertDocumentTriggerWithConfiguration,
   IntegrationTriggerConfiguration,
 } from './helpers/schema'
+import { database } from '../../client'
 
 async function completeIntegrationTriggerConfig(
   {
@@ -77,9 +77,9 @@ export async function createDocumentTrigger(
     document: DocumentVersion
     project: Project
   } & InsertDocumentTriggerWithConfiguration,
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<DocumentTrigger> {
-  return await Transaction.call(async (tx) => {
+  return await transaction.call(async (tx) => {
     const triggerUuid = generateUUIDIdentifier()
 
     if (triggerType === DocumentTriggerType.Integration) {
@@ -115,5 +115,5 @@ export async function createDocumentTrigger(
     }
 
     return Result.ok(result[0]! as DocumentTrigger)
-  }, db)
+  })
 }

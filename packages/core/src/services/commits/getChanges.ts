@@ -6,9 +6,8 @@ import {
   ModifiedDocumentType,
   Workspace,
 } from '../../browser'
-import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { PromisedResult } from '../../lib/Transaction'
+import Transaction, { PromisedResult } from '../../lib/Transaction'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -61,9 +60,9 @@ export function changesPresenter({
 
 async function getDraftChanges(
   { workspace, draft }: { workspace: Workspace; draft: Commit },
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<ChangedDocument[]> {
-  const result = await recomputeChanges({ draft, workspace }, db)
+  const result = await recomputeChanges({ draft, workspace }, transaction)
   if (result.error) return result
   const changes = result.value
 
@@ -71,16 +70,13 @@ async function getDraftChanges(
   for (const documentUuid of Object.keys(changes.errors)) {
     if (
       changes.changedDocuments.some((doc) => doc.documentUuid === documentUuid)
-    ) {
+    )
       continue
-    }
 
     const document = changes.headDocuments.find(
       (doc) => doc.documentUuid === documentUuid,
     )
-    if (!document) {
-      continue
-    }
+    if (!document) continue
 
     changes.changedDocuments.push(document)
   }
@@ -96,36 +92,36 @@ async function getDraftChanges(
 
 export async function getCommitChanges(
   { workspace, commit }: { workspace: Workspace; commit: Commit },
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<ChangedDocument[]> {
-  if (!commit.mergedAt) {
-    return getDraftChanges({ workspace, draft: commit }, db)
-  }
+  return transaction.call(async (tx) => {
+    if (!commit.mergedAt)
+      return getDraftChanges({ workspace, draft: commit }, transaction)
 
-  const commitsRepository = new CommitsRepository(workspace.id, db)
-  const previousCommit = await commitsRepository.getPreviousCommit(commit)
+    const commitsRepository = new CommitsRepository(workspace.id, tx)
+    const previousCommit = await commitsRepository.getPreviousCommit(commit)
+    const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
 
-  const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
+    const currentCommitChanges =
+      await documentsRepository.listCommitChanges(commit)
+    if (currentCommitChanges.error) {
+      return Result.error(currentCommitChanges.error)
+    }
 
-  const currentCommitChanges =
-    await documentsRepository.listCommitChanges(commit)
-  if (currentCommitChanges.error) {
-    return Result.error(currentCommitChanges.error)
-  }
+    const previousCommitDocuments = previousCommit
+      ? await documentsRepository.getDocumentsAtCommit(previousCommit)
+      : Result.ok([])
 
-  const previousCommitDocuments = previousCommit
-    ? await documentsRepository.getDocumentsAtCommit(previousCommit)
-    : Result.ok([])
+    if (previousCommitDocuments.error) {
+      return Result.error(previousCommitDocuments.error)
+    }
 
-  if (previousCommitDocuments.error) {
-    return Result.error(previousCommitDocuments.error)
-  }
-
-  return Result.ok(
-    changesPresenter({
-      currentCommitChanges: currentCommitChanges.value,
-      previousCommitDocuments: previousCommitDocuments.value,
-      errors: {},
-    }),
-  )
+    return Result.ok(
+      changesPresenter({
+        currentCommitChanges: currentCommitChanges.value,
+        previousCommitDocuments: previousCommitDocuments.value,
+        errors: {},
+      }),
+    )
+  })
 }

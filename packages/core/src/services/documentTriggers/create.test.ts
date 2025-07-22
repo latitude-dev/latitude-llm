@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType, DocumentVersion } from '@latitude-data/constants'
 import { DocumentTrigger, Project, Workspace } from '../../browser'
 import { createDocumentTrigger } from './create'
-import { database } from '../../client'
 import * as buildConfigurationModule from './helpers/buildConfiguration'
 import { documentTriggers } from '../../schema'
 import {
@@ -10,17 +9,19 @@ import {
   InsertScheduledTriggerConfiguration,
 } from './helpers/schema'
 import { LatitudeError } from './../../lib/errors'
-import Transaction from './../../lib/Transaction'
 
 describe('createDocumentTrigger', () => {
   let workspace: Workspace
   let project: Project
   let document: DocumentVersion
-  let mockDb: typeof database
   let mockTx: any
   let mockInsert: any
   let mockValues: any
   let mockReturning: any
+
+  const mocks = vi.hoisted(() => ({
+    transactionMock: vi.fn(),
+  }))
 
   beforeEach(() => {
     // Setup test data
@@ -33,14 +34,16 @@ describe('createDocumentTrigger', () => {
     mockValues = vi.fn().mockReturnValue({ returning: mockReturning })
     mockInsert = vi.fn().mockReturnValue({ values: mockValues })
     mockTx = { insert: mockInsert }
-    mockDb = {} as typeof database
-
-    // Mock the Transaction.call function
-    vi.spyOn(Transaction, 'call').mockImplementation(
+    mocks.transactionMock.prototype.call = vi.fn(
       async (fn: (tx: any) => Promise<any>) => {
         return await fn(mockTx)
       },
     )
+
+    vi.mock('./../../lib/Transaction', async (importOriginal) => ({
+      ...(await importOriginal()),
+      default: mocks.transactionMock,
+    }))
 
     // Mock the generateUUIDIdentifier function by importing and mocking it
     vi.mock('../../lib/generateUUID', async (importOriginal) => {
@@ -87,21 +90,20 @@ describe('createDocumentTrigger', () => {
     ])
 
     // Act
-    const result = await createDocumentTrigger(
-      {
-        workspace,
-        document,
-        project,
-        triggerType: DocumentTriggerType.Email,
-        configuration: emailConfiguration,
-      },
-      mockDb,
-    )
+    const result = await createDocumentTrigger({
+      workspace,
+      document,
+      project,
+      triggerType: DocumentTriggerType.Email,
+      configuration: emailConfiguration,
+    })
 
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(Transaction.call).toHaveBeenCalledWith(expect.any(Function), mockDb)
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.insert).toHaveBeenCalledWith(documentTriggers)
     expect(mockValues).toHaveBeenCalledWith({
       uuid: 'mocked-uuid',
@@ -149,21 +151,20 @@ describe('createDocumentTrigger', () => {
     ])
 
     // Act
-    const result = await createDocumentTrigger(
-      {
-        workspace,
-        document,
-        project,
-        triggerType: DocumentTriggerType.Scheduled,
-        configuration: scheduledConfiguration,
-      },
-      mockDb,
-    )
+    const result = await createDocumentTrigger({
+      workspace,
+      document,
+      project,
+      triggerType: DocumentTriggerType.Scheduled,
+      configuration: scheduledConfiguration,
+    })
 
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(Transaction.call).toHaveBeenCalledWith(expect.any(Function), mockDb)
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.insert).toHaveBeenCalledWith(documentTriggers)
     expect(mockValues).toHaveBeenCalledWith({
       uuid: 'mocked-uuid',
@@ -197,22 +198,21 @@ describe('createDocumentTrigger', () => {
     mockReturning.mockResolvedValue([])
 
     // Act
-    const result = await createDocumentTrigger(
-      {
-        workspace,
-        document,
-        project,
-        triggerType: DocumentTriggerType.Email,
-        configuration: emailConfiguration,
-      },
-      mockDb,
-    )
+    const result = await createDocumentTrigger({
+      workspace,
+      document,
+      project,
+      triggerType: DocumentTriggerType.Email,
+      configuration: emailConfiguration,
+    })
 
     // Assert
     expect(result.ok).toBeFalsy()
     expect(result.error).toBeInstanceOf(LatitudeError)
     expect(result.error?.message).toBe('Failed to create document trigger')
-    expect(Transaction.call).toHaveBeenCalledWith(expect.any(Function), mockDb)
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.insert).toHaveBeenCalledWith(documentTriggers)
     expect(mockValues).toHaveBeenCalledWith({
       uuid: 'mocked-uuid',
@@ -222,46 +222,5 @@ describe('createDocumentTrigger', () => {
       triggerType: DocumentTriggerType.Email,
       configuration: emailConfiguration,
     })
-  })
-
-  it('uses a custom database instance if provided', async () => {
-    // Arrange
-    const emailConfiguration: EmailTriggerConfiguration = {
-      emailWhitelist: ['test@example.com'],
-      replyWithResponse: true,
-    }
-
-    mockReturning.mockResolvedValue([
-      {
-        uuid: 'mocked-uuid',
-        workspaceId: workspace.id,
-        documentUuid: document.documentUuid,
-        projectId: project.id,
-        triggerType: DocumentTriggerType.Email,
-        configuration: emailConfiguration,
-      } as DocumentTrigger,
-    ])
-
-    const customDb = { customDb: true } as unknown as typeof database
-
-    // Act
-    const result = await createDocumentTrigger(
-      {
-        workspace,
-        document,
-        project,
-        triggerType: DocumentTriggerType.Email,
-        configuration: emailConfiguration,
-      },
-      customDb,
-    )
-
-    // Assert
-    expect(result.error).toBeUndefined()
-    expect(result.value).toBeDefined()
-    expect(Transaction.call).toHaveBeenCalledWith(
-      expect.any(Function),
-      customDb,
-    )
   })
 })

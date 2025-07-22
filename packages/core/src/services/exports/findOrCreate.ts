@@ -1,5 +1,4 @@
 import { NewExport, Workspace } from '../../browser'
-import { database } from '../../client'
 import { latitudeExports } from '../../schema'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -17,12 +16,12 @@ export async function findOrCreateExport(
     userId: string
     fileKey: string
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  const existingExport = await findByUuid({ uuid, workspace }, db)
-  if (existingExport) return Result.ok(existingExport)
+  return transaction.call(async (tx) => {
+    const existingExport = await findByUuid({ uuid, workspace }, tx)
+    if (existingExport) return Result.ok(existingExport)
 
-  return Transaction.call(async (tx) => {
     const newExportData: NewExport = {
       uuid,
       workspaceId: workspace.id,
@@ -40,5 +39,5 @@ export async function findOrCreateExport(
     }
 
     return Result.ok(newExport)
-  }, db)
+  })
 }

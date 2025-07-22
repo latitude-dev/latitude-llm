@@ -11,6 +11,7 @@ import { inArray } from 'drizzle-orm'
 
 let targetDate: Date
 let data: Awaited<ReturnType<typeof buildAllData>>
+
 describe('getUsageOverview', () => {
   beforeAll(async () => {
     // CI uses UTC timezone

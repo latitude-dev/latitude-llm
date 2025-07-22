@@ -1,5 +1,4 @@
 import { Commit, Project, User } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -21,38 +20,40 @@ export async function createCommit(
       mergedAt?: Date
     }
   },
-  db = database,
+  transaction = new Transaction(),
 ) {
-  return Transaction.call<Commit>(async (tx) => {
-    const result = await tx
-      .insert(commits)
-      .values({
-        projectId: project.id,
-        userId: user.id,
-        title,
-        description,
-        version,
-        mergedAt,
-      })
-      .returning()
-    const createdCommit = result[0]
+  return transaction.call<Commit>(
+    async (tx) => {
+      const result = await tx
+        .insert(commits)
+        .values({
+          projectId: project.id,
+          userId: user.id,
+          title,
+          description,
+          version,
+          mergedAt,
+        })
+        .returning()
+      const createdCommit = result[0]
 
-    publisher.publishLater({
-      type: 'commitCreated',
-      data: {
-        commit: createdCommit!,
-        userEmail: user.email,
-        workspaceId: project.workspaceId,
-      },
-    })
+      await pingProjectUpdate(
+        {
+          projectId: project.id,
+        },
+        transaction,
+      ).then((r) => r.unwrap())
 
-    await pingProjectUpdate(
-      {
-        projectId: project.id,
-      },
-      tx,
-    ).then((r) => r.unwrap())
-
-    return Result.ok(createdCommit!)
-  }, db)
+      return Result.ok(createdCommit!)
+    },
+    (createdCommit) =>
+      publisher.publishLater({
+        type: 'commitCreated',
+        data: {
+          commit: createdCommit,
+          userEmail: user.email,
+          workspaceId: project.workspaceId,
+        },
+      }),
+  )
 }

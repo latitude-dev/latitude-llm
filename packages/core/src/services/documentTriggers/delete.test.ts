@@ -2,20 +2,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTrigger, Workspace } from '../../browser'
 import { deleteDocumentTrigger } from './delete'
-import { database } from '../../client'
 import { documentTriggers } from '../../schema'
 import { and, eq } from 'drizzle-orm'
 import { LatitudeError } from './../../lib/errors'
-import Transaction from './../../lib/Transaction'
 
 describe('deleteDocumentTrigger', () => {
   let workspace: Workspace
   let documentTrigger: DocumentTrigger
-  let mockDb: typeof database
   let mockTx: any
   let mockDelete: any
   let mockWhere: any
   let mockReturning: any
+
+  const mocks = vi.hoisted(() => ({
+    transactionMock: vi.fn(),
+  }))
 
   beforeEach(() => {
     // Setup test data
@@ -34,14 +35,16 @@ describe('deleteDocumentTrigger', () => {
     mockWhere = vi.fn().mockReturnValue({ returning: mockReturning })
     mockDelete = vi.fn().mockReturnValue({ where: mockWhere })
     mockTx = { delete: mockDelete }
-    mockDb = {} as typeof database
-
-    // Mock the Transaction.call function
-    vi.spyOn(Transaction, 'call').mockImplementation(
+    mocks.transactionMock.prototype.call = vi.fn(
       async (fn: (tx: any) => Promise<any>) => {
         return await fn(mockTx)
       },
     )
+
+    vi.mock('./../../lib/Transaction', async (importOriginal) => ({
+      ...(await importOriginal()),
+      default: mocks.transactionMock,
+    }))
   })
 
   it('deletes a document trigger successfully', async () => {
@@ -49,18 +52,17 @@ describe('deleteDocumentTrigger', () => {
     mockReturning.mockResolvedValue([documentTrigger])
 
     // Act
-    const result = await deleteDocumentTrigger(
-      {
-        workspace,
-        documentTrigger,
-      },
-      mockDb,
-    )
+    const result = await deleteDocumentTrigger({
+      workspace,
+      documentTrigger,
+    })
 
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(Transaction.call).toHaveBeenCalledWith(expect.any(Function), mockDb)
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.delete).toHaveBeenCalledWith(documentTriggers)
     expect(mockWhere).toHaveBeenCalledWith(
       and(
@@ -76,48 +78,24 @@ describe('deleteDocumentTrigger', () => {
     mockReturning.mockResolvedValue([])
 
     // Act
-    const result = await deleteDocumentTrigger(
-      {
-        workspace,
-        documentTrigger,
-      },
-      mockDb,
-    )
+    const result = await deleteDocumentTrigger({
+      workspace,
+      documentTrigger,
+    })
 
     // Assert
     expect(result.ok).toBeFalsy()
     expect(result.error).toBeInstanceOf(LatitudeError)
     expect(result.error?.message).toBe('Failed to delete document trigger')
-    expect(Transaction.call).toHaveBeenCalledWith(expect.any(Function), mockDb)
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.delete).toHaveBeenCalledWith(documentTriggers)
     expect(mockWhere).toHaveBeenCalledWith(
       and(
         eq(documentTriggers.workspaceId, workspace.id),
         eq(documentTriggers.id, documentTrigger.id),
       ),
-    )
-  })
-
-  it('uses a custom database instance if provided', async () => {
-    // Arrange
-    mockReturning.mockResolvedValue([documentTrigger])
-    const customDb = { customDb: true } as unknown as typeof database
-
-    // Act
-    const result = await deleteDocumentTrigger(
-      {
-        workspace,
-        documentTrigger,
-      },
-      customDb,
-    )
-
-    // Assert
-    expect(result.error).toBeUndefined()
-    expect(result.value).toBeDefined()
-    expect(Transaction.call).toHaveBeenCalledWith(
-      expect.any(Function),
-      customDb,
     )
   })
 })

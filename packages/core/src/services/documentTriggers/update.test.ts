@@ -2,23 +2,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTrigger, Workspace } from '../../browser'
 import { updateDocumentTriggerConfiguration } from './update'
-import { database } from '../../client'
 import * as buildConfigurationModule from './helpers/buildConfiguration'
 import { documentTriggers } from '../../schema'
 import { EmailTriggerConfiguration } from './helpers/schema'
 import { and, eq } from 'drizzle-orm'
 import { LatitudeError } from './../../lib/errors'
-import Transaction from './../../lib/Transaction'
 
 describe('updateDocumentTriggerConfiguration', () => {
   let workspace: Workspace
   let documentTrigger: DocumentTrigger
-  let mockDb: typeof database
   let mockTx: any
   let mockUpdate: any
   let mockSet: any
   let mockWhere: any
   let mockReturning: any
+
+  const mocks = vi.hoisted(() => ({
+    transactionMock: vi.fn(),
+  }))
 
   beforeEach(() => {
     // Setup test data
@@ -38,14 +39,16 @@ describe('updateDocumentTriggerConfiguration', () => {
     mockSet = vi.fn().mockReturnValue({ where: mockWhere })
     mockUpdate = vi.fn().mockReturnValue({ set: mockSet })
     mockTx = { update: mockUpdate }
-    mockDb = {} as typeof database
-
-    // Mock the Transaction.call function
-    vi.spyOn(Transaction, 'call').mockImplementation(
+    mocks.transactionMock.prototype.call = vi.fn(
       async (fn: (tx: any) => Promise<any>) => {
         return await fn(mockTx)
       },
     )
+
+    vi.mock('./../../lib/Transaction', async (importOriginal) => ({
+      ...(await importOriginal()),
+      default: mocks.transactionMock,
+    }))
 
     // Mock the buildConfiguration function
     vi.spyOn(buildConfigurationModule, 'buildConfiguration').mockImplementation(
@@ -78,19 +81,18 @@ describe('updateDocumentTriggerConfiguration', () => {
     ])
 
     // Act
-    const result = await updateDocumentTriggerConfiguration(
-      {
-        workspace,
-        documentTrigger,
-        configuration: newEmailConfiguration,
-      },
-      mockDb,
-    )
+    const result = await updateDocumentTriggerConfiguration({
+      workspace,
+      documentTrigger,
+      configuration: newEmailConfiguration,
+    })
 
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(Transaction.call).toHaveBeenCalledWith(expect.any(Function), mockDb)
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
     expect(mockSet).toHaveBeenCalledWith({
       configuration: newEmailConfiguration,
@@ -142,19 +144,18 @@ describe('updateDocumentTriggerConfiguration', () => {
     ])
 
     // Act
-    const result = await updateDocumentTriggerConfiguration(
-      {
-        workspace,
-        documentTrigger: scheduledTrigger,
-        configuration: newScheduledConfiguration,
-      },
-      mockDb,
-    )
+    const result = await updateDocumentTriggerConfiguration({
+      workspace,
+      documentTrigger: scheduledTrigger,
+      configuration: newScheduledConfiguration,
+    })
 
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(Transaction.call).toHaveBeenCalledWith(expect.any(Function), mockDb)
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
     expect(mockSet).toHaveBeenCalledWith({
       configuration: expectedConfiguration,
@@ -185,14 +186,11 @@ describe('updateDocumentTriggerConfiguration', () => {
     mockReturning.mockResolvedValue([])
 
     // Act
-    const result = await updateDocumentTriggerConfiguration(
-      {
-        workspace,
-        documentTrigger,
-        configuration: newEmailConfiguration,
-      },
-      mockDb,
-    )
+    const result = await updateDocumentTriggerConfiguration({
+      workspace,
+      documentTrigger,
+      configuration: newEmailConfiguration,
+    })
 
     // Assert
     expect(result.ok).toBeFalsy()
@@ -200,7 +198,9 @@ describe('updateDocumentTriggerConfiguration', () => {
     expect(result.error?.message).toBe(
       'Failed to update document trigger configuration',
     )
-    expect(Transaction.call).toHaveBeenCalledWith(expect.any(Function), mockDb)
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
     expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
     expect(mockSet).toHaveBeenCalledWith({
       configuration: newEmailConfiguration,
@@ -210,41 +210,6 @@ describe('updateDocumentTriggerConfiguration', () => {
         eq(documentTriggers.workspaceId, workspace.id),
         eq(documentTriggers.id, documentTrigger.id),
       ),
-    )
-  })
-
-  it('uses a custom database instance if provided', async () => {
-    // Arrange
-    const newEmailConfiguration: EmailTriggerConfiguration = {
-      emailWhitelist: ['test@example.com'],
-      replyWithResponse: true,
-    }
-
-    mockReturning.mockResolvedValue([
-      {
-        ...documentTrigger,
-        configuration: newEmailConfiguration,
-      } as DocumentTrigger,
-    ])
-
-    const customDb = { customDb: true } as unknown as typeof database
-
-    // Act
-    const result = await updateDocumentTriggerConfiguration(
-      {
-        workspace,
-        documentTrigger,
-        configuration: newEmailConfiguration,
-      },
-      customDb,
-    )
-
-    // Assert
-    expect(result.error).toBeUndefined()
-    expect(result.value).toBeDefined()
-    expect(Transaction.call).toHaveBeenCalledWith(
-      expect.any(Function),
-      customDb,
     )
   })
 })
