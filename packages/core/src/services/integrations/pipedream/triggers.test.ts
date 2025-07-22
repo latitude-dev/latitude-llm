@@ -1,18 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { IntegrationType } from '@latitude-data/constants'
-import {
-  Workspace,
-  IntegrationDto,
-  PipedreamIntegration,
-} from '../../../browser'
+import { Workspace, PipedreamIntegration } from '../../../browser'
 import { updatePipedreamTrigger } from './triggers'
 import { Result } from '../../../lib/Result'
 import { IntegrationTriggerConfiguration } from '../../documentTriggers/helpers/schema'
 import * as appsModule from './apps'
 import * as componentsModule from './components'
 import * as triggersModule from './triggers'
-import { BadRequestError } from '@latitude-data/constants/errors'
+import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import * as factories from '../../../tests/factories'
+import { PipedreamIntegrationConfiguration } from '../helpers/schema'
 
 const mockPipedreamClient = {
   updateTrigger: vi.fn(),
@@ -26,8 +23,12 @@ vi.mock('@pipedream/sdk', () => ({
 
 describe('updatePipedreamTrigger', () => {
   let workspace: Workspace
-  let integration1: IntegrationDto
-  let integration2: IntegrationDto
+  let integration1: PipedreamIntegration & {
+    configuration: PipedreamIntegrationConfiguration
+  }
+  let integration2: PipedreamIntegration & {
+    configuration: PipedreamIntegrationConfiguration
+  }
   let originalConfig: IntegrationTriggerConfiguration
   let updatedConfig: IntegrationTriggerConfiguration
 
@@ -35,7 +36,7 @@ describe('updatePipedreamTrigger', () => {
     const { workspace: createdWorkspace } = await factories.createProject()
     workspace = createdWorkspace
 
-    integration1 = await factories.createIntegration({
+    integration1 = (await factories.createIntegration({
       workspace,
       type: IntegrationType.Pipedream,
       configuration: {
@@ -45,9 +46,11 @@ describe('updatePipedreamTrigger', () => {
         authType: 'oauth',
         oauthAppId: 'oauth-app-1',
       },
-    })
+    })) as PipedreamIntegration & {
+      configuration: PipedreamIntegrationConfiguration
+    }
 
-    integration2 = await factories.createIntegration({
+    integration2 = (await factories.createIntegration({
       workspace,
       type: IntegrationType.Pipedream,
       configuration: {
@@ -57,7 +60,9 @@ describe('updatePipedreamTrigger', () => {
         authType: 'oauth',
         oauthAppId: 'oauth-app-2',
       },
-    })
+    })) as PipedreamIntegration & {
+      configuration: PipedreamIntegrationConfiguration
+    }
 
     originalConfig = {
       integrationId: integration1.id,
@@ -135,8 +140,7 @@ describe('updatePipedreamTrigger', () => {
       })
       expect(mockPipedreamClient.updateTrigger).toHaveBeenCalledWith({
         id: originalConfig.triggerId,
-        externalUserId: (integration1 as PipedreamIntegration).configuration
-          .externalUserId,
+        externalUserId: integration1.configuration.externalUserId,
         configuredProps: { prop1: 'filledValue1' },
       })
     })
@@ -235,6 +239,120 @@ describe('updatePipedreamTrigger', () => {
     })
   })
 
+  describe('when integration is not configured', () => {
+    let unconfiguredIntegration: PipedreamIntegration
+
+    beforeEach(async () => {
+      unconfiguredIntegration = (await factories.createIntegration({
+        workspace,
+        type: IntegrationType.Pipedream,
+        configuration: {
+          appName: 'unconfigured-test-app',
+          metadata: {
+            displayName: 'Unconfigured Test App',
+            imageUrl: 'https://example.com/image.png',
+          },
+        },
+      })) as PipedreamIntegration
+    })
+
+    it('returns error when trying to update to an unconfigured integration', async () => {
+      const configWithUnconfiguredIntegration = {
+        ...originalConfig,
+        integrationId: unconfiguredIntegration.id,
+        properties: { prop1: 'updatedValue1' }, // different to trigger update path
+      }
+
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig,
+        updatedConfig: configWithUnconfiguredIntegration,
+      })
+
+      expect(Result.isOk(result)).toBe(false)
+      expect(result.error).toBeInstanceOf(NotFoundError)
+      if (result.error) {
+        expect(result.error.message).toContain(
+          `Integration '${unconfiguredIntegration.name}' has not been configured`,
+        )
+      }
+
+      expect(mockPipedreamClient.updateTrigger).not.toHaveBeenCalled()
+      expect(mockPipedreamClient.deleteTrigger).not.toHaveBeenCalled()
+      expect(mockPipedreamClient.deployTrigger).not.toHaveBeenCalled()
+    })
+
+    it('returns error when trying to update properties of an unconfigured integration', async () => {
+      const originalConfigUnconfigured = {
+        ...originalConfig,
+        integrationId: unconfiguredIntegration.id,
+      }
+
+      const updatedConfigUnconfigured = {
+        ...originalConfigUnconfigured,
+        properties: { prop1: 'updatedValue1', newProp: 'newValue' }, // different properties
+        payloadParameters: ['param1', 'param2'],
+      }
+
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig: originalConfigUnconfigured,
+        updatedConfig: updatedConfigUnconfigured,
+      })
+
+      expect(Result.isOk(result)).toBe(false)
+      expect(result.error).toBeInstanceOf(NotFoundError)
+      if (result.error) {
+        expect(result.error.message).toContain(
+          `Integration '${unconfiguredIntegration.name}' has not been configured`,
+        )
+      }
+
+      expect(mockPipedreamClient.updateTrigger).not.toHaveBeenCalled()
+      expect(mockPipedreamClient.deleteTrigger).not.toHaveBeenCalled()
+      expect(mockPipedreamClient.deployTrigger).not.toHaveBeenCalled()
+    })
+
+    it('returns error when trying to change to a different unconfigured integration', async () => {
+      const anotherUnconfiguredIntegration = (await factories.createIntegration(
+        {
+          workspace,
+          type: IntegrationType.Pipedream,
+          configuration: {
+            appName: 'another-unconfigured-app',
+            metadata: {
+              displayName: 'Another Unconfigured App',
+            },
+          },
+        },
+      )) as PipedreamIntegration
+
+      const configWithDifferentUnconfiguredIntegration = {
+        ...originalConfig,
+        integrationId: anotherUnconfiguredIntegration.id,
+        componentId: 'different-component',
+      }
+
+      const result = await updatePipedreamTrigger({
+        workspace,
+        originalConfig,
+        updatedConfig: configWithDifferentUnconfiguredIntegration,
+      })
+
+      expect(Result.isOk(result)).toBe(false)
+      expect(result.error).toBeInstanceOf(NotFoundError)
+      if (result.error) {
+        expect(result.error.message).toContain(
+          `Integration '${anotherUnconfiguredIntegration.name}' has not been configured`,
+        )
+      }
+
+      expect(mockPipedreamClient.updateTrigger).not.toHaveBeenCalled()
+      expect(mockPipedreamClient.deleteTrigger).not.toHaveBeenCalled()
+      expect(mockPipedreamClient.deployTrigger).not.toHaveBeenCalled()
+    })
+  })
+
   describe('when different trigger (integration or component changed)', () => {
     let updatedConfigDifferentTrigger: IntegrationTriggerConfiguration
 
@@ -266,13 +384,11 @@ describe('updatePipedreamTrigger', () => {
 
       expect(mockPipedreamClient.deleteTrigger).toHaveBeenCalledWith({
         id: originalConfig.triggerId,
-        externalUserId: (integration1 as PipedreamIntegration).configuration
-          .externalUserId,
+        externalUserId: integration1.configuration.externalUserId,
       })
 
       expect(mockPipedreamClient.deployTrigger).toHaveBeenCalledWith({
-        externalUserId: (integration2 as PipedreamIntegration).configuration
-          .externalUserId,
+        externalUserId: integration2.configuration.externalUserId,
         triggerId: { key: updatedConfigDifferentTrigger.componentId },
         configuredProps: { prop1: 'filledValue1' },
         webhookUrl: expect.stringContaining('/webhook/integration/'),

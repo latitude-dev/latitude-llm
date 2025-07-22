@@ -11,14 +11,21 @@ import useIntegrations from '$/stores/integrations'
 import { IntegrationType } from '@latitude-data/constants'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
-import { IntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
+import {
+  IntegrationConfiguration,
+  UnconfiguredPipedreamIntegrationConfiguration,
+} from '@latitude-data/core/services/integrations/helpers/schema'
 import { PipedreamIntegrationConfiguration } from './_components/Configuration/Pipedream'
 import { ExternalIntegrationConfiguration } from './_components/Configuration/External'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 
 type ValidIntegration = Exclude<
   IntegrationConfiguration,
-  { type: IntegrationType.Latitude }
+  | { type: IntegrationType.Latitude }
+  | {
+      type: IntegrationType.Pipedream
+      configuration: UnconfiguredPipedreamIntegrationConfiguration
+    }
 >
 
 export default function NewIntegration() {
