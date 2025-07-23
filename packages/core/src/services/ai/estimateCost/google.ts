@@ -5,7 +5,7 @@ import { createModelSpec } from './helpers'
 // https://generativelanguage.googleapis.com/v1beta/models/?key=[YOUR_GEMINI_KEY]
 
 export const GOOGLE_MODELS = createModelSpec({
-  defaultModel: 'gemini-1.5-flash',
+  defaultModel: 'gemini-2.5-flash',
   models: {
     'gemini-2.5-pro': {
       // Note: Pricing includes thinking tokens
@@ -29,10 +29,6 @@ export const GOOGLE_MODELS = createModelSpec({
         { input: 2.5, output: 15.0, tokensRangeStart: 200_000 },
       ],
     },
-    'gemini-2.5-flash-lite-preview-06-17': {
-      // Note: Using non-thinking output cost
-      cost: { input: 0.1, output: 0.4 }, // Input assumes text/image/video cost
-    },
     'gemini-2.5-flash': {
       // Note: Using non-thinking output cost
       cost: { input: 0.3, output: 2.5 }, // Input assumes text/image/video cost
@@ -44,6 +40,13 @@ export const GOOGLE_MODELS = createModelSpec({
     'gemini-2.5-flash-preview-04-17': {
       // Note: Using non-thinking output cost
       cost: { input: 0.15, output: 0.6 }, // Input assumes text/image/video cost
+    },
+    'gemini-2.5-flash-lite': {
+      cost: { input: 0.1, output: 0.4 }, // Input assumes text/image/video cost
+    },
+    'gemini-2.5-flash-lite-preview-06-17': {
+      // Note: Using non-thinking output cost
+      cost: { input: 0.1, output: 0.4 }, // Input assumes text/image/video cost
     },
     // --- Gemini 2.0 Models ---
     'gemini-2.0-flash': { cost: { input: 0.1, output: 0.4 } },
@@ -93,6 +96,7 @@ export const GOOGLE_MODELS = createModelSpec({
     if (model === 'gemini-2.5-pro-exp-03-25') return 'gemini-2.5-pro-exp-03-25'
     if (model === 'gemini-2.5-pro-preview-03-25')
       return 'gemini-2.5-pro-preview-03-25'
+    if (model === 'gemini-2.5-flash-lite') return 'gemini-2.5-flash-lite'
     if (model === 'gemini-2.5-flash-lite-preview-06-17')
       return 'gemini-2.5-flash-lite-preview-06-17'
     if (model === 'gemini-2.5-flash') return 'gemini-2.5-flash'

@@ -2,16 +2,18 @@ import { createModelSpec } from './helpers'
 
 // source: https://mistral.ai/en/products/la-plateforme#pricing
 export const MISTRAL_MODELS = createModelSpec({
-  defaultModel: 'mistral-nemo',
+  defaultModel: 'mistral-small-latest',
   models: {
     'mistral-large-latest': { cost: { input: 2.0, output: 6.0 } },
     'mistral-small-latest': { cost: { input: 0.1, output: 0.3 } },
+    'mistral-small-3.1': { cost: { input: 0.1, output: 0.3 } },
+
+    // Code capable models
+    'devstral-medium': { cost: { input: 0.4, output: 2.0 } },
+    'codestral-latest': { cost: { input: 0.3, output: 0.9 } },
 
     // Vision capable model
     'pixtral-large-latest': { cost: { input: 2.0, output: 6.0 } },
-
-    // Code capable model
-    'codestral-latest': { cost: { input: 0.3, output: 0.9 } },
 
     'ministral-8b-latest': { cost: { input: 0.1, output: 0.1 } },
     'ministral-3b-latest': { cost: { input: 0.04, output: 0.04 } },
@@ -36,10 +38,12 @@ export const MISTRAL_MODELS = createModelSpec({
     },
   },
   modelName: (model: string) => {
+    if (model.startsWith('mistral-small-3.1')) return 'mistral-small-3.1'
     if (model.startsWith('mistral-small')) return 'mistral-small-latest'
     if (model.startsWith('mistral-large')) return 'mistral-large-latest'
     if (model.startsWith('mistral-medium')) return 'mistral-medium-latest'
 
+    if (model.startsWith('devstral-medium')) return 'devstral-medium'
     if (model.startsWith('codestral')) return 'codestral-latest'
 
     if (model.startsWith('open-mistral')) return 'open-mistral-7b'
