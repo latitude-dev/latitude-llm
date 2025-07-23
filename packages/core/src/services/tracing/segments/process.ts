@@ -613,6 +613,7 @@ function computeDocument({
   if (!documentHash) documentHash = hashContent(document?.content)
   if (!documentHash) documentHash = hashContent(evaluation?.name) // TODO(tracing): compute evaluation prompt
   if (!documentHash) documentHash = current?.documentHash
+  if (!documentHash) documentHash = 'TODO' // TODO(tracing): fix spans from evaluations
   if (!documentHash) {
     return Result.error(
       new UnprocessableEntityError('Document hash is required'),
@@ -624,6 +625,7 @@ function computeDocument({
   if (!documentType) documentType = document?.documentType
   if (!documentType) documentType = evaluation ? DocumentType.Prompt : undefined // TODO(tracing): compute evaluation prompt
   if (!documentType) documentType = current?.documentType
+  if (!documentType) documentType = DocumentType.Prompt // TODO(tracing): fix spans from evaluations
   if (!documentType) {
     return Result.error(
       new UnprocessableEntityError('Document type is required'),
