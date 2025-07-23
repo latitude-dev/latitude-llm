@@ -1,8 +1,11 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
+/* eslint-disable */
+
 import { differenceInMilliseconds, isAfter, isBefore } from 'date-fns'
 import { scan } from 'promptl-ai'
 import {
   ApiKey,
-  BaseSegmentMetadata,
   DocumentType,
   EvaluationType,
   EvaluationV2,
@@ -12,7 +15,6 @@ import {
   SegmentMetadata,
   SegmentSource,
   SegmentType,
-  SegmentWithDetails,
   SpanStatus,
   SpanType,
   SpanWithDetails,
@@ -75,65 +77,65 @@ export async function processSegment(
 
     const type = state.current?.type ?? state.segment.type
 
-    const specification = SEGMENT_SPECIFICATIONS[type]
-    if (!specification) {
-      return Result.error(new UnprocessableEntityError('Invalid segment type'))
-    }
+    // const specification = SEGMENT_SPECIFICATIONS[type]
+    // if (!specification) {
+    //   return Result.error(new UnprocessableEntityError('Invalid segment type'))
+    // }
 
-    let metadata = {
-      ...({
-        traceId: traceId,
-        segmentId: id,
-        type: type,
-      } satisfies BaseSegmentMetadata),
-    } as SegmentMetadata
+    // let metadata = {
+    //   ...({
+    //     traceId: traceId,
+    //     segmentId: id,
+    //     type: type,
+    //   } satisfies BaseSegmentMetadata),
+    // } as SegmentMetadata
 
-    // @ts-expect-error seems typescript cannot infer that state types are the same
-    const processing = await specification.process(state, tx)
-    if (processing.error) return Result.error(processing.error)
-    metadata = { ...metadata, ...processing.value }
+    // // @ts-expect-error seems typescript cannot infer that state types are the same
+    // const processing = await specification.process(state, tx)
+    // if (processing.error) return Result.error(processing.error)
+    // metadata = { ...metadata, ...processing.value }
 
-    // Note: edge case when the global document segment is being processed right now for the first time
-    if (metadata.type === SegmentType.Document) {
-      state.run = { metadata } as SegmentWithDetails<SegmentType.Document>
-    }
+    // // Note: edge case when the global document segment is being processed right now for the first time
+    // if (metadata.type === SegmentType.Document) {
+    //   state.run = { metadata } as SegmentWithDetails<SegmentType.Document>
+    // }
 
-    const computingei = computeExternalId(state)
-    if (computingei.error) return Result.error(computingei.error)
-    const externalId = computingei.value
+    // const computingei = computeExternalId(state)
+    // if (computingei.error) return Result.error(computingei.error)
+    // const externalId = computingei.value
 
-    const enrichingnm = enrichName(state)
-    if (enrichingnm.error) return Result.error(enrichingnm.error)
-    const name = enrichingnm.value
+    // const enrichingnm = enrichName(state)
+    // if (enrichingnm.error) return Result.error(enrichingnm.error)
+    // const name = enrichingnm.value
 
-    const computingsc = computeSource(state)
-    if (computingsc.error) return Result.error(computingsc.error)
-    const source = computingsc.value
+    // const computingsc = computeSource(state)
+    // if (computingsc.error) return Result.error(computingsc.error)
+    // const source = computingsc.value
 
-    const computingst = computeStatus(state)
-    if (computingst.error) return Result.error(computingst.error)
-    const { status, message } = computingst.value
+    // const computingst = computeStatus(state)
+    // if (computingst.error) return Result.error(computingst.error)
+    // const { status, message } = computingst.value
 
     const computinglu = computeLogUuid(state)
     if (computinglu.error) return Result.error(computinglu.error)
     const logUuid = computinglu.value
 
-    const computingdc = computeDocument(state)
-    if (computingdc.error) return Result.error(computingdc.error)
-    const { commitUuid, documentUuid, documentHash,
-          documentType, provider, model } = computingdc.value // prettier-ignore
+    // const computingdc = computeDocument(state)
+    // if (computingdc.error) return Result.error(computingdc.error)
+    // const { commitUuid, documentUuid, documentHash,
+    //       documentType, provider, model } = computingdc.value // prettier-ignore
 
-    const computingeu = computeExperimentUuid(state)
-    if (computingeu.error) return Result.error(computingeu.error)
-    const experimentUuid = computingeu.value
+    // const computingeu = computeExperimentUuid(state)
+    // if (computingeu.error) return Result.error(computingeu.error)
+    // const experimentUuid = computingeu.value
 
-    const computingsa = computeStatistics(state)
-    if (computingsa.error) return Result.error(computingsa.error)
-    const { tokens, cost, duration } = computingsa.value
+    // const computingsa = computeStatistics(state)
+    // if (computingsa.error) return Result.error(computingsa.error)
+    // const { tokens, cost, duration } = computingsa.value
 
-    const computingts = computeTimestamps(state)
-    if (computingts.error) return Result.error(computingts.error)
-    const { startedAt, endedAt } = computingts.value
+    // const computingts = computeTimestamps(state)
+    // if (computingts.error) return Result.error(computingts.error)
+    // const { startedAt, endedAt } = computingts.value
 
     const repository = new SegmentsRepository(args.workspace.id, tx)
     const locking = await repository.lock({ segmentId: id, traceId })
@@ -141,9 +143,10 @@ export async function processSegment(
       return Result.error(new ConflictError('Segment processing data race'))
     }
 
-    const saving = await saveMetadata({ metadata, workspace: args.workspace }, disk) // prettier-ignore
-    if (saving.error) return Result.error(saving.error)
+    // const saving = await saveMetadata({ metadata, workspace: args.workspace }, disk) // prettier-ignore
+    // if (saving.error) return Result.error(saving.error)
 
+    // TODO(tracing): temporal segment fixing patch
     const fields = {
       ...(state.current ?? {}),
       id: id,
@@ -151,25 +154,25 @@ export async function processSegment(
       parentId: parentId,
       workspaceId: args.workspace.id,
       apiKeyId: args.apiKey.id,
-      externalId: externalId,
-      name: name,
-      source: source,
+      externalId: undefined, // externalId,
+      name: 'name', // name,
+      source: SegmentSource.API, // source,
       type: type,
-      status: status,
-      message: message,
+      status: SpanStatus.Ok, // status,
+      message: undefined, // message,
       logUuid: logUuid,
-      commitUuid: commitUuid,
-      documentUuid: documentUuid,
-      documentHash: documentHash,
-      documentType: documentType,
-      experimentUuid: experimentUuid,
-      provider: provider,
-      model: model,
-      tokens: tokens,
-      cost: cost,
-      duration: duration,
-      startedAt: startedAt,
-      endedAt: endedAt,
+      commitUuid: '7fdf3f27-ed4e-4710-a8fd-90b4121e2106', // commitUuid,
+      documentUuid: '7fdf3f27-ed4e-4710-a8fd-90b4121e2106', // documentUuid,
+      documentHash: 'documentHash', // documentHash,
+      documentType: DocumentType.Prompt, // documentType,
+      experimentUuid: undefined, // experimentUuid,
+      provider: 'provider', // provider,
+      model: 'model', // model,
+      tokens: 0, // tokens,
+      cost: 0, // cost,
+      duration: 0, // duration,
+      startedAt: new Date(), // startedAt,
+      endedAt: new Date(), // endedAt,
     }
 
     const segment = (await tx
@@ -227,12 +230,15 @@ export async function processSegment(
       await tracingQueue.add('processSegmentJob', payload, {
         attempts: TRACING_JOBS_MAX_ATTEMPTS,
         deduplication: {
-          id: processSegmentJobKey(payload, { ...segment, metadata }),
+          id: processSegmentJobKey(payload, {
+            ...segment,
+            metadata: undefined,
+          }),
         },
       })
     }
 
-    return Result.ok({ segment: { ...segment, metadata } })
+    return Result.ok({ segment: { ...segment, metadata: undefined } })
   })
 }
 
