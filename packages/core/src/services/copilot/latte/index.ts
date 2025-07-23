@@ -4,7 +4,7 @@ import {
   UserMessage,
 } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '@latitude-data/constants'
-import { Commit, DocumentVersion, Workspace } from '../../../browser'
+import { Commit, DocumentVersion, User, Workspace } from '../../../browser'
 import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
 import { documentsQueue } from '../../../jobs/queues'
 import { BACKGROUND, TelemetryContext } from '../../../telemetry'
@@ -28,6 +28,7 @@ async function generateLatteResponse({
   copilotCommit,
   copilotDocument,
   clientWorkspace,
+  user,
   threadUuid,
   initialParameters,
   messages,
@@ -37,6 +38,7 @@ async function generateLatteResponse({
   copilotCommit: Commit
   copilotDocument: DocumentVersion
   clientWorkspace: Workspace
+  user: User
   threadUuid: string
   initialParameters?: { message: string; context: string } // for the first “new” request
   messages?: Message[] // for subsequent “add” requests
@@ -44,6 +46,7 @@ async function generateLatteResponse({
   const tools = buildToolHandlers({
     workspace: clientWorkspace,
     threadUuid,
+    user,
   })
 
   const runResult = initialParameters
@@ -99,6 +102,7 @@ export async function runNewLatte({
   copilotCommit,
   copilotDocument,
   clientWorkspace,
+  user,
   threadUuid,
   message,
   context,
@@ -107,6 +111,7 @@ export async function runNewLatte({
   copilotCommit: Commit
   copilotDocument: DocumentVersion
   clientWorkspace: Workspace
+  user: User
   threadUuid: string
   message: string
   context: string
@@ -117,6 +122,7 @@ export async function runNewLatte({
     copilotCommit,
     copilotDocument,
     clientWorkspace,
+    user,
     threadUuid,
     initialParameters: { message, context },
   })
@@ -127,6 +133,7 @@ export async function addMessageToExistingLatte({
   copilotCommit,
   copilotDocument,
   clientWorkspace,
+  user,
   threadUuid,
   message,
   context,
@@ -135,6 +142,7 @@ export async function addMessageToExistingLatte({
   copilotCommit: Commit
   copilotDocument: DocumentVersion
   clientWorkspace: Workspace
+  user: User
   threadUuid: string
   message: string
   context: string
@@ -159,6 +167,7 @@ export async function addMessageToExistingLatte({
     copilotCommit,
     copilotDocument,
     clientWorkspace,
+    user,
     threadUuid,
     messages: [userMessage],
   })
@@ -166,11 +175,13 @@ export async function addMessageToExistingLatte({
 
 export async function createLatteJob({
   workspace,
+  user,
   threadUuid,
   message,
   context,
 }: {
   workspace: Workspace
+  user: User
   threadUuid: string
   message: string
   context: string
@@ -180,6 +191,7 @@ export async function createLatteJob({
 
   await documentsQueue.add('runLatteJob', {
     workspaceId: workspace.id,
+    userId: user.id,
     threadUuid,
     message,
     context,

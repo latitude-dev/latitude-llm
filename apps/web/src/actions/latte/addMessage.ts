@@ -25,6 +25,7 @@ export const addMessageToLatteAction = authProcedure
 
     const runResult = await createLatteJob({
       workspace,
+      user,
       threadUuid: thread.uuid,
       message,
       context,

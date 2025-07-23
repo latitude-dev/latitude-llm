@@ -5,6 +5,7 @@ import * as dataAccess from '../../../data-access'
 import {
   CommitsRepository,
   DocumentLogsRepository,
+  UsersRepository,
 } from '../../../repositories'
 import * as chatService from '../../../services/copilot/latte'
 import * as chatHelpers from '../../../services/copilot/latte/helpers'
@@ -14,6 +15,7 @@ import { runLatteJob } from './chat'
 describe('runLatteJob', () => {
   let mockJob: Job<any>
   const workspace = { id: 1 }
+  const user = { id: 'user-123' }
   const project = { id: 2 }
   const commit = { id: 3 }
   const threadUuid = 'chat-uuid'
@@ -25,6 +27,7 @@ describe('runLatteJob', () => {
     mockJob = {
       data: {
         workspaceId: workspace.id,
+        userId: user.id,
         projectId: project.id,
         commitId: commit.id,
         threadUuid,
@@ -42,6 +45,10 @@ describe('runLatteJob', () => {
     vi.spyOn(dataAccess, 'unsafelyFindProject').mockResolvedValue(
       project as any,
     )
+    vi.spyOn(UsersRepository.prototype, 'find').mockResolvedValue({
+      ok: true,
+      unwrap: () => user,
+    } as any)
     vi.spyOn(CommitsRepository.prototype, 'find').mockResolvedValue({
       ok: true,
       unwrap: () => commit,
@@ -82,6 +89,16 @@ describe('runLatteJob', () => {
     expect(chatService.addMessageToExistingLatte).not.toHaveBeenCalled()
   })
 
+  it('returns the userResult if user lookup fails', async () => {
+    const userErr = { ok: false, error: new Error('user not found') }
+    ;(UsersRepository.prototype.find as any).mockResolvedValueOnce(userErr)
+
+    const result = await runLatteJob(mockJob)
+    expect(result).toBe(userErr)
+    expect(chatService.runNewLatte).not.toHaveBeenCalled()
+    expect(chatService.addMessageToExistingLatte).not.toHaveBeenCalled()
+  })
+
   it('creates a new chat when no document log exists', async () => {
     // ensure findByUuid returns ok: false
     ;(DocumentLogsRepository.prototype.findByUuid as any).mockResolvedValueOnce(
@@ -95,6 +112,7 @@ describe('runLatteJob', () => {
       copilotCommit: { id: 98 },
       copilotDocument: { uuid: 'doc-123' },
       clientWorkspace: workspace,
+      user,
       context: {
         path: '/some/path',
       },
@@ -116,6 +134,7 @@ describe('runLatteJob', () => {
       copilotCommit: { id: 98 },
       copilotDocument: { uuid: 'doc-123' },
       clientWorkspace: workspace,
+      user,
       threadUuid,
       message: messageText,
       context: {
