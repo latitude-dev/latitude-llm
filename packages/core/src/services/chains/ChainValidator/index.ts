@@ -124,9 +124,7 @@ export const renderChain = async ({
 }
 
 function applyAgentRule(config: LatitudePromptConfig) {
-  if (config.type !== 'agent') return config
-  if ('maxSteps' in config && isNumber(config.maxSteps) && config.maxSteps > 0)
-    return config
+  if (config.type !== 'agent' || 'maxSteps' in config) return config
 
   return {
     ...config,
