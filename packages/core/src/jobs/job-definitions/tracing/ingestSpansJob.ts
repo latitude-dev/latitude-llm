@@ -24,7 +24,10 @@ export const ingestSpansJob = async (job: Job<IngestSpansJobData>) => {
   try {
     const payload = await disk.get(key)
     data = JSON.parse(payload) as SpanIngestionData
-  } catch { return } // prettier-ignore
+  } catch (error) {
+    captureException(error as Error)
+    return
+  }
   const { spans } = data
 
   const result = await ingestSpans({ spans, apiKeyId, workspaceId })
@@ -37,5 +40,8 @@ export const ingestSpansJob = async (job: Job<IngestSpansJobData>) => {
 
   try {
     await disk.delete(key)
-  } catch { return } // prettier-ignore
+  } catch (error) {
+    captureException(error as Error)
+    return
+  }
 }

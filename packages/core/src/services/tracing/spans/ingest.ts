@@ -26,12 +26,14 @@ import { hashContent as hash } from '../../../lib/hashContent'
 import { Result } from '../../../lib/Result'
 import { ApiKeysRepository } from '../../../repositories'
 import { internalBaggageSchema } from '../../../telemetry'
+import { captureException } from '../../../utils/workers/sentry'
 import {
   convertSpanAttributes,
   convertSpanStatus,
   extractSpanType,
 } from './process'
 
+// TODO(tracing): enhance this function
 export async function ingestSpans(
   {
     spans,
@@ -52,18 +54,27 @@ export async function ingestSpans(
     for (const { scope, spans } of scopeSpans) {
       for (const span of spans) {
         const converting = convertSpanAttributes(span.attributes || [])
-        if (converting.error) continue
+        if (converting.error) {
+          captureException(converting.error)
+          continue
+        }
         const attributes = converting.value
 
         const extracting = extractSpanType(attributes)
-        if (extracting.error) continue
+        if (extracting.error) {
+          captureException(extracting.error)
+          continue
+        }
         const type = extracting.value
         if (type === SpanType.Unknown) continue
 
         let internal
         if (!workspaceId) {
           const extracting = extractInternal(attributes)
-          if (extracting.error) continue
+          if (extracting.error) {
+            captureException(extracting.error)
+            continue
+          }
           internal = extracting.value
         }
 
@@ -73,7 +84,10 @@ export async function ingestSpans(
             { workspaceId: workspaceId ?? internal?.workspaceId },
             db,
           )
-          if (getting.error) continue
+          if (getting.error) {
+            captureException(getting.error)
+            continue
+          }
 
           workspace = getting.value
           workspaces[workspace.id] = workspace
@@ -85,14 +99,20 @@ export async function ingestSpans(
             { apiKeyId: apiKeyId ?? internal?.apiKeyId, workspace },
             db,
           )
-          if (getting.error) continue
+          if (getting.error) {
+            captureException(getting.error)
+            continue
+          }
 
           apiKey = getting.value
           apiKeys[apiKey.id] = apiKey
         }
 
         const enriching = enrichAttributes({ resource, scope, span })
-        if (enriching.error) continue
+        if (enriching.error) {
+          captureException(enriching.error)
+          continue
+        }
         span.attributes = enriching.value.filter(
           ({ key }) => key !== ATTR_LATITUDE_INTERNAL,
         )
@@ -101,7 +121,10 @@ export async function ingestSpans(
           { span, scope, resource, apiKey, workspace },
           disk,
         )
-        if (enqueuing.error) continue
+        if (enqueuing.error) {
+          captureException(enqueuing.error)
+          continue
+        }
       }
     }
   }

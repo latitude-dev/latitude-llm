@@ -37,11 +37,17 @@ export const processSegmentJob = async (job: Job<ProcessSegmentJobData>) => {
     job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
-  if (!workspace) return
+  if (!workspace) {
+    captureException(new UnprocessableEntityError('Workspace not found'))
+    return
+  }
 
   const repository = new ApiKeysRepository(workspace.id)
   const finding = await repository.find(apiKeyId)
-  if (finding.error) return
+  if (finding.error) {
+    captureException(finding.error)
+    return
+  }
   const apiKey = finding.value
 
   const result = await processSegment({
