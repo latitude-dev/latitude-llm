@@ -10,15 +10,17 @@ import {
 import { Result } from '../../../lib/Result'
 import { getPipedreamEnvironment } from './apps'
 import { IntegrationType } from '@latitude-data/constants'
-import { IntegrationDto } from '../../../browser'
-import { BadRequestError } from '@latitude-data/constants/errors'
+import { IntegrationDto, PipedreamIntegration } from '../../../browser'
+import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { PromisedResult } from '../../../lib/Transaction'
 import { env } from '@latitude-data/env'
+import { PipedreamIntegrationConfiguration } from '../helpers/schema'
 
-type PipedreamIntegration = Extract<
-  IntegrationDto,
-  { type: IntegrationType.Pipedream }
->
+export function isIntegrationConfigured<T extends PipedreamIntegration>(
+  integration: T,
+): integration is T & { configuration: PipedreamIntegrationConfiguration } {
+  return 'connectionId' in integration.configuration
+}
 
 export async function reloadComponentProps({
   integration,
@@ -29,6 +31,14 @@ export async function reloadComponentProps({
   componentId: string | ComponentId
   configuredProps: ConfiguredProps<ConfigurableProps>
 }) {
+  if (!isIntegrationConfigured(integration)) {
+    return Result.error(
+      new NotFoundError(
+        `Integration '${integration.name}' has not been configured.`,
+      ),
+    )
+  }
+
   const pipedreamEnv = getPipedreamEnvironment()
   if (!pipedreamEnv.ok) {
     return Result.error(pipedreamEnv.error!)
@@ -88,6 +98,14 @@ export async function fillConfiguredProps({
   componentId: ComponentId | string
   configuredProps: ConfiguredProps<ConfigurableProps>
 }): PromisedResult<ConfiguredProps<ConfigurableProps>> {
+  if (!isIntegrationConfigured(integration)) {
+    return Result.error(
+      new NotFoundError(
+        `Integration '${integration.name}' has not been configured.`,
+      ),
+    )
+  }
+
   try {
     const { data: component } = await pipedream.getComponent(
       typeof componentId === 'string' ? { key: componentId } : componentId,
@@ -169,6 +187,14 @@ export async function configureComponent({
   query?: string
   page?: number
 }) {
+  if (!isIntegrationConfigured(integration)) {
+    return Result.error(
+      new NotFoundError(
+        `Integration '${integration.name}' has not been configured.`,
+      ),
+    )
+  }
+
   const pipedreamEnv = getPipedreamEnvironment()
   if (!pipedreamEnv.ok) {
     return Result.error(pipedreamEnv.error!)
@@ -214,6 +240,14 @@ export async function runAction({
   toolName: string
   args: Record<string, unknown>
 }): PromisedResult<unknown, Error> {
+  if (!isIntegrationConfigured(integration)) {
+    return Result.error(
+      new NotFoundError(
+        `Integration '${integration.name}' has not been configured.`,
+      ),
+    )
+  }
+
   const pipedreamEnv = getPipedreamEnvironment()
   if (!pipedreamEnv.ok) {
     return Result.error(pipedreamEnv.error!)

@@ -30,12 +30,8 @@ export type HostedMcpIntegrationConfiguration = z.infer<
   typeof hostedMcpIntegrationConfigurationSchema
 >
 
-export const pipedreamIntegrationConfigurationSchema = z.object({
+export const unconfiguredPipedreamIntegrationSchema = z.object({
   appName: z.string(),
-  connectionId: z.string(),
-  externalUserId: z.string(),
-  authType: z.enum(['oauth', 'keys', 'none']),
-  oauthAppId: z.string().optional(), // Only required for OAuth apps
   metadata: z
     .object({
       displayName: z.string(),
@@ -44,11 +40,23 @@ export const pipedreamIntegrationConfigurationSchema = z.object({
     .optional(),
 })
 
+export type UnconfiguredPipedreamIntegrationConfiguration = z.infer<
+  typeof unconfiguredPipedreamIntegrationSchema
+>
+
+export const pipedreamIntegrationConfigurationSchema =
+  unconfiguredPipedreamIntegrationSchema.extend({
+    connectionId: z.string(),
+    externalUserId: z.string(),
+    authType: z.enum(['oauth', 'keys', 'none']),
+    oauthAppId: z.string().optional(), // Only required for OAuth apps
+  })
+
 export type PipedreamIntegrationConfiguration = z.infer<
   typeof pipedreamIntegrationConfigurationSchema
 >
 
-export const integrationConfigurationSchema = z.discriminatedUnion('type', [
+export const integrationConfigurationSchema = z.union([
   z.object({
     type: z.literal(IntegrationType.ExternalMCP),
     configuration: externalMcpIntegrationConfigurationSchema,
@@ -60,6 +68,10 @@ export const integrationConfigurationSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal(IntegrationType.Pipedream),
     configuration: pipedreamIntegrationConfigurationSchema,
+  }),
+  z.object({
+    type: z.literal(IntegrationType.Pipedream),
+    configuration: unconfiguredPipedreamIntegrationSchema,
   }),
   z.object({
     // For internal use only, not supported in the db

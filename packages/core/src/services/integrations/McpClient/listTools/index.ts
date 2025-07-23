@@ -1,4 +1,4 @@
-import { McpTool } from '@latitude-data/constants'
+import { IntegrationType, McpTool } from '@latitude-data/constants'
 import { JSONSchema7 } from 'json-schema'
 import { IntegrationDto } from '../../../../browser'
 import { LatitudeError } from '../../../../lib/errors'
@@ -8,11 +8,26 @@ import { PromisedResult } from '../../../../lib/Transaction'
 import { touchIntegration } from '../../touch'
 import { getMcpClient } from '../McpClientManager'
 import { fixToolSchema } from './fixToolSchema'
+import { listPipedreamIntegrationTools } from '../../pipedream/listTools'
 
 export async function listTools(
   integration: IntegrationDto,
   streamManager?: StreamManager,
 ): PromisedResult<McpTool[], LatitudeError> {
+  if (integration.type === IntegrationType.Pipedream) {
+    const toolsResult = await listPipedreamIntegrationTools(integration)
+    if (!Result.isOk(toolsResult)) {
+      return Result.error(new LatitudeError(toolsResult.error.message))
+    }
+
+    const tools = toolsResult.unwrap()
+    const fixedTools = tools.map((tool) => ({
+      ...tool,
+      inputSchema: fixToolSchema(tool.inputSchema as JSONSchema7),
+    }))
+    return Result.ok(fixedTools as McpTool[])
+  }
+
   const clientResult = await getMcpClient(integration, streamManager)
   if (clientResult.error) {
     return clientResult

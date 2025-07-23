@@ -5,7 +5,6 @@ import { Result, TypedResult } from '../../../lib/Result'
 import { StreamManager } from '../../../lib/streamManager'
 import { createAndConnectExternalMcpClient } from './external'
 import { createAndConnectHostedMcpClient } from './hosted'
-import { createAndConnectPipedreamMcpClient } from './pipedream'
 import {
   McpClientConnection,
   McpClientTransport,
@@ -104,10 +103,6 @@ async function createAndConnectClient(
 
   if (integration.type === IntegrationType.ExternalMCP) {
     return createAndConnectExternalMcpClient(integration)
-  }
-
-  if (integration.type === IntegrationType.Pipedream) {
-    return createAndConnectPipedreamMcpClient(integration)
   }
 
   return Result.error(

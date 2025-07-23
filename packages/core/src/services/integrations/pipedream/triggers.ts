@@ -13,12 +13,12 @@ import {
 import { getPipedreamEnvironment } from './apps'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
-import { fillConfiguredProps } from './components'
+import { fillConfiguredProps, isIntegrationConfigured } from './components'
 import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
 import { database } from '../../../client'
 import { IntegrationsRepository } from '../../../repositories'
 import { IntegrationTriggerConfiguration } from '../../documentTriggers/helpers/schema'
-import { BadRequestError } from '@latitude-data/constants/errors'
+import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { isEqual, omit } from 'lodash-es'
 
 export async function deployPipedreamTrigger({
@@ -32,6 +32,14 @@ export async function deployPipedreamTrigger({
   componentId: ComponentId
   configuredProps: ConfiguredProps<ConfigurableProps>
 }): PromisedResult<{ id: string }> {
+  if (!isIntegrationConfigured(integration)) {
+    return Result.error(
+      new BadRequestError(
+        `Integration '${integration.name}' has not been configured.`,
+      ),
+    )
+  }
+
   const pipedreamEnv = getPipedreamEnvironment()
   if (!pipedreamEnv.ok) {
     return Result.error(pipedreamEnv.error!)
@@ -113,6 +121,14 @@ export async function updatePipedreamTrigger(
       )
     }
 
+    if (!isIntegrationConfigured(integration)) {
+      return Result.error(
+        new NotFoundError(
+          `Integration '${integration.name}' has not been configured.`,
+        ),
+      )
+    }
+
     const newConfigPropsResult = await fillConfiguredProps({
       pipedream,
       integration,
@@ -155,10 +171,24 @@ export async function updatePipedreamTrigger(
       ),
     )
   }
+  if (!isIntegrationConfigured(oldIntegration)) {
+    return Result.error(
+      new NotFoundError(
+        `Integration '${oldIntegration.name}' has not been configured.`,
+      ),
+    )
+  }
   if (newIntegration.type !== IntegrationType.Pipedream) {
     return Result.error(
       new BadRequestError(
         `Integration type '${newIntegration.type}' is not supported for document triggers`,
+      ),
+    )
+  }
+  if (!isIntegrationConfigured(newIntegration)) {
+    return Result.error(
+      new NotFoundError(
+        `Integration '${newIntegration.name}' has not been configured.`,
       ),
     )
   }
@@ -215,6 +245,13 @@ export async function destroyPipedreamTrigger(
     return Result.error(
       new Error(
         `Integration type '${integration.type}' is not supported for document triggers`,
+      ),
+    )
+  }
+  if (!isIntegrationConfigured(integration)) {
+    return Result.error(
+      new NotFoundError(
+        `Integration '${integration.name}' has not been configured.`,
       ),
     )
   }
