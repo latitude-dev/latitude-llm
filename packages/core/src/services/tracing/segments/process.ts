@@ -87,7 +87,7 @@ export async function processSegment(
     } as SegmentMetadata
 
     // @ts-expect-error seems typescript cannot infer that state types are the same
-    const processing = await specification.process(state, db)
+    const processing = await specification.process(state, tx)
     if (processing.error) return Result.error(processing.error)
     metadata = { ...metadata, ...processing.value }
 
