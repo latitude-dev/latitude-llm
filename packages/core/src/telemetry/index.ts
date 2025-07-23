@@ -12,6 +12,7 @@ import {
 import { Resource } from '@opentelemetry/resources'
 import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-node'
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
+import { captureException } from '@sentry/node'
 import { z } from 'zod'
 import { ATTR_LATITUDE_INTERNAL, Otlp } from '../browser'
 import { enqueueSpans } from '../services/tracing/spans/enqueue'
@@ -48,9 +49,16 @@ class InternalExporter implements SpanExporter {
     enqueueSpans({ spans: this.convert(spans) })
       .then((r) => r.unwrap())
       .then(() => callback({ code: ExportResultCode.SUCCESS }))
-      .catch((error: Error) =>
-        callback({ code: ExportResultCode.FAILED, error }),
-      )
+      .catch((error: Error) => {
+        // TODO(tracing): temporal error logging
+        console.error(error)
+        try {
+          captureException(error)
+        } catch {
+          // noop
+        }
+        callback({ code: ExportResultCode.FAILED, error })
+      })
   }
 
   shutdown(): Promise<void> {
