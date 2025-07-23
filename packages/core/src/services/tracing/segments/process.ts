@@ -4,6 +4,8 @@ import {
   ApiKey,
   BaseSegmentMetadata,
   DocumentType,
+  EvaluationType,
+  EvaluationV2,
   Segment,
   SEGMENT_METADATA_STORAGE_KEY,
   SegmentBaggage,
@@ -18,6 +20,7 @@ import {
   Workspace,
 } from '../../../browser'
 import { cache as redis } from '../../../cache'
+import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { processSegmentJobKey } from '../../../jobs/job-definitions/tracing/processSegmentJob'
 import { tracingQueue } from '../../../jobs/queues'
@@ -42,7 +45,6 @@ import {
   SegmentProcessArgs,
 } from './shared'
 import { SEGMENT_SPECIFICATIONS } from './specifications'
-import { database } from '../../../client'
 
 export async function processSegment(
   args: {
@@ -400,6 +402,16 @@ async function getState(
     if (gettinghs.error) return Result.error(gettinghs.error)
     const child = gettinghs.value
 
+    let source = segment.source as SegmentSource | undefined
+    if (!source) source = inheritField<SegmentSource>('source', chain)
+    if (!source) source = run?.source
+    if (!source) source = current?.source
+    if (!source) {
+      return Result.error(
+        new UnprocessableEntityError('Segment source is required'),
+      )
+    }
+
     let commitUuid = segment.data?.commitUuid
     if (!commitUuid) commitUuid = inheritField<string>('commitUuid', chain) // prettier-ignore
     if (!commitUuid) commitUuid = run?.commitUuid
@@ -427,16 +439,27 @@ async function getState(
     if (gettingco.error) return Result.error(gettingco.error)
     const commit = gettingco.value
 
-    const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
-    const gettingdo = await documentsRepository.getDocumentAtCommit({
-      commitUuid: commitUuid,
-      documentUuid: documentUuid,
-    })
-    if (gettingdo.error) return Result.error(gettingdo.error)
-    const document = gettingdo.value
+    let document
+    let evaluation
+    if (source === SegmentSource.Evaluation) {
+      // TODO(tracing): we actually don't have the a repository method
+      // to get the versioned evaluation without the document uuid
+      evaluation = undefined as unknown as EvaluationV2<EvaluationType.Llm>
+    } else {
+      const documentsRepository = new DocumentVersionsRepository(
+        workspace.id,
+        tx,
+      )
+      const getting = await documentsRepository.getDocumentAtCommit({
+        commitUuid: commitUuid,
+        documentUuid: documentUuid,
+      })
+      if (getting.error) return Result.error(getting.error)
 
-    const scanning = await scan({ prompt: document.content })
-    const config = scanning.config
+      const scanning = await scan({ prompt: getting.value.content })
+
+      document = { ...getting.value, config: scanning.config }
+    }
 
     return Result.ok({
       segment: segment,
@@ -445,7 +468,8 @@ async function getState(
       traceId: traceId,
       current: current,
       run: run,
-      document: { ...document, config },
+      document: document,
+      evaluation: evaluation,
       commit: commit,
       apiKey: apiKey,
       workspace: workspace,
@@ -471,10 +495,12 @@ function computeExternalId({
 function enrichName({
   segment,
   document,
+  evaluation,
 }: SegmentProcessArgs): TypedResult<string> {
   let name = SEGMENT_SPECIFICATIONS[segment.type].name
   if (segment.type === SegmentType.Document) {
-    name = document.path.split('/').pop()!
+    if (document) name = document.path.split('/').pop()!
+    if (evaluation) name = evaluation.name
   }
 
   name = name.slice(0, 128)
@@ -551,6 +577,7 @@ function computeDocument({
   current,
   run,
   document,
+  evaluation,
   commit,
 }: SegmentProcessArgs): TypedResult<{
   commitUuid: string
@@ -572,7 +599,8 @@ function computeDocument({
   let documentUuid = segment.data?.documentUuid
   if (!documentUuid) documentUuid = inheritField<string>('documentUuid', chain)
   if (!documentUuid) documentUuid = run?.documentUuid
-  if (!documentUuid) documentUuid = document.documentUuid
+  if (!documentUuid) documentUuid = document?.documentUuid
+  if (!documentUuid) documentUuid = evaluation?.uuid
   if (!documentUuid) documentUuid = current?.documentUuid
   if (!documentUuid) {
     return Result.error(
@@ -582,7 +610,8 @@ function computeDocument({
 
   let documentHash = run?.documentHash
   if (!documentHash) documentHash = hashContent(run?.metadata?.prompt)
-  if (!documentHash) documentHash = hashContent(document.content)
+  if (!documentHash) documentHash = hashContent(document?.content)
+  if (!documentHash) documentHash = hashContent(evaluation?.name) // TODO(tracing): compute evaluation prompt
   if (!documentHash) documentHash = current?.documentHash
   if (!documentHash) {
     return Result.error(
@@ -592,7 +621,8 @@ function computeDocument({
 
   let documentType = run?.documentType
   if (!documentType) documentType = run?.metadata?.configuration.type as DocumentType // prettier-ignore
-  if (!documentType) documentType = document.documentType
+  if (!documentType) documentType = document?.documentType
+  if (!documentType) documentType = evaluation ? DocumentType.Prompt : undefined // TODO(tracing): compute evaluation prompt
   if (!documentType) documentType = current?.documentType
   if (!documentType) {
     return Result.error(
@@ -611,7 +641,8 @@ function computeDocument({
 
   if (!provider) provider = run?.provider
   if (!provider) provider = run?.metadata?.configuration.provider as string
-  if (!provider) provider = document.config.provider as string
+  if (!provider) provider = document?.config.provider as string
+  if (!provider) provider = evaluation?.configuration.provider
   if (!provider) provider = current?.provider
   if (!provider) {
     return Result.error(new UnprocessableEntityError('Provider is required'))
@@ -628,7 +659,8 @@ function computeDocument({
 
   if (!model) model = run?.model
   if (!model) model = run?.metadata?.configuration.model as string
-  if (!model) model = document.config.model as string
+  if (!model) model = document?.config.model as string
+  if (!model) model = evaluation?.configuration.model
   if (!model) model = current?.model
   if (!model) {
     return Result.error(new UnprocessableEntityError('Model is required'))

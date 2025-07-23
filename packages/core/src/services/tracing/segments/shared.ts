@@ -4,6 +4,8 @@ import {
   BaseSegmentMetadata,
   Commit,
   DocumentVersion,
+  EvaluationType,
+  EvaluationV2,
   SegmentBaggage,
   SegmentMetadata,
   SegmentSpecification,
@@ -31,9 +33,10 @@ export type SegmentProcessArgs<T extends SegmentType = SegmentType> = {
     errors?: Timestamps
   }
   run?: SegmentWithDetails<SegmentType.Document>
-  document: DocumentVersion & {
+  document?: DocumentVersion & {
     config: Record<string, unknown>
   }
+  evaluation?: EvaluationV2<EvaluationType.Llm>
   commit: Commit
   apiKey: ApiKey
   workspace: Workspace
