@@ -63,6 +63,7 @@ function computePrompt({
   current,
   run,
   document,
+  evaluation,
 }: SegmentProcessArgs<SegmentType.Document>): TypedResult<
   DocumentSegmentMetadata['prompt']
 > {
@@ -80,7 +81,8 @@ function computePrompt({
   }
 
   if (!prompt) prompt = run?.metadata?.prompt
-  if (!prompt) prompt = document.content
+  if (!prompt) prompt = document?.content
+  if (!prompt) prompt = evaluation?.name // TODO(tracing): compute evaluation prompt
   if (!prompt) prompt = current?.metadata?.prompt
   if (!prompt) return Result.ok('')
 
