@@ -14,7 +14,6 @@ import { Result, TypedResult } from '../../../lib/Result'
 import { Output } from '../../../lib/streamManager/step/streamAIResponse'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
-import { isNumber } from 'lodash-es'
 
 const DEFAULT_AGENT_MAX_STEPS = 20
 
