@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/cli",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Latitude CLI for managing projects and prompts",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -28,21 +28,16 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "latitude": "./dist/index.cjs"
+    "latitude": "./dist/index.js"
   },
   "exports": {
     ".": {
       "import": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.cjs"
       }
     }
   },

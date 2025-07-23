@@ -46,28 +46,6 @@ const config = [
     ],
     external: EXTERNALS,
   },
-  // CLI Tool - CommonJS
-  {
-    input: 'src/index.ts',
-    output: {
-      file: 'dist/index.cjs',
-      format: 'cjs',
-      sourcemap: true,
-      banner: '#!/usr/bin/env node',
-    },
-    plugins: [
-      json(),
-      typescript({
-        exclude: ['**/__tests__', '**/*.test.ts'],
-      }),
-      replace({
-        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-        __VERSION__: JSON.stringify(packageJson.version),
-        preventAssignment: true,
-      }),
-    ],
-    external: EXTERNALS,
-  },
 ]
 
 export default config
