@@ -30,13 +30,9 @@ export const ingestSpansJob = async (job: Job<IngestSpansJobData>) => {
   const result = await ingestSpans({ spans, apiKeyId, workspaceId })
   if (result.error) {
     // @ts-expect-error ingestSpans currently ignores all errors but leaving this for the future
-    if (!(result.error instanceof UnprocessableEntityError)) {
-      throw result.error
-    }
-
-    if (process.env.NODE_ENV === 'development') {
+    if (result.error instanceof UnprocessableEntityError) {
       captureException(result.error)
-    }
+    } else throw result.error
   }
 
   try {
