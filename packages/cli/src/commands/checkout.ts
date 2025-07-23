@@ -241,6 +241,10 @@ export function checkout(program: Command): void {
           description:
             'Create a new version/commit with the specified name and checkout to it',
         },
+        {
+          flags: '--dev',
+          description: 'Use localhost development environment',
+        },
       ],
       action: async (command, versionUuid, options) => {
         await command.execute(versionUuid, options)

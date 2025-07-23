@@ -258,6 +258,10 @@ export function status(program: Command): void {
           description: 'Path to the project',
           defaultValue: '.',
         },
+        {
+          flags: '--dev',
+          description: 'Use localhost development environment',
+        },
       ],
       action: async (command, options) => {
         await command.execute(options)

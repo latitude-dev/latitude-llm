@@ -325,6 +325,10 @@ export function pull(program: Command): void {
           flags: '-y, --yes',
           description: 'Skip confirmation and pull automatically',
         },
+        {
+          flags: '--dev',
+          description: 'Use localhost development environment',
+        },
       ],
       action: async (command, options) => {
         await command.execute(options)

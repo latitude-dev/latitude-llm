@@ -329,6 +329,10 @@ export function init(program: Command): void {
           description: 'Path to initialize the project in',
           defaultValue: '.',
         },
+        {
+          flags: '--dev',
+          description: 'Use localhost development environment',
+        },
       ],
       action: async (command, options) => {
         await command.execute(options)

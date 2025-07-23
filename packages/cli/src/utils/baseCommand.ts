@@ -36,10 +36,11 @@ export abstract class BaseCommand {
    */
   abstract execute(...args: any[]): Promise<void>
 
-  protected async setClient() {
+  protected async setClient(options?: CommonOptions) {
     if (!this.client) {
       this.client = this.createLatitudeClient(
         await this.configManager.getApiKey(),
+        options,
       )
     }
 
@@ -57,8 +58,11 @@ export abstract class BaseCommand {
    * Creates a Latitude client with the appropriate configuration
    * Includes optional config for development environments
    */
-  protected createLatitudeClient(apiKey: string): Latitude {
-    if (process.env.NODE_ENV === 'development') {
+  protected createLatitudeClient(
+    apiKey: string,
+    options?: CommonOptions,
+  ): Latitude {
+    if (process.env.NODE_ENV === 'development' || options?.dev) {
       return new Latitude(apiKey, {
         __internal: {
           gateway: {
@@ -83,7 +87,7 @@ export abstract class BaseCommand {
   ): Promise<void> {
     this.setProjectPath(options)
 
-    await this.setClient()
+    await this.setClient(options)
     await this.detectModuleFormat()
     await validateEnvironment(
       this.projectPath,

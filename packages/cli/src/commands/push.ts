@@ -300,6 +300,10 @@ export function push(program: Command): void {
           flags: '-y, --yes',
           description: 'Skip confirmation and push automatically',
         },
+        {
+          flags: '--dev',
+          description: 'Use localhost development environment',
+        },
       ],
       action: async (command, options) => {
         await command.execute(options)

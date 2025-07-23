@@ -10,6 +10,7 @@ export type CommandHandler = (program: Command) => void
  */
 export interface CommonOptions {
   path: string
+  dev?: boolean
 }
 
 /**
