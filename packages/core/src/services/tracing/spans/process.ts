@@ -51,6 +51,7 @@ import {
   Workspace,
 } from '../../../browser'
 import { cache as redis } from '../../../cache'
+import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { processSegmentJobKey } from '../../../jobs/job-definitions/tracing/processSegmentJob'
 import { tracingQueue } from '../../../jobs/queues'
@@ -62,7 +63,6 @@ import { SpanMetadatasRepository, SpansRepository } from '../../../repositories'
 import { spans } from '../../../schema'
 import { convertTimestamp } from './shared'
 import { SPAN_SPECIFICATIONS } from './specifications'
-import { database } from '../../../client'
 
 export async function processSpan(
   {
@@ -96,9 +96,13 @@ export async function processSpan(
       const segments = extractingsb.value
 
       const id = span.spanId
+
       const traceId = span.traceId
+
       const segmentId = segments.at(-1)?.id
+
       const parentId = span.parentSpanId
+
       const name = span.name.slice(0, 128)
 
       const convertingsk = convertSpanKind(span.kind)
@@ -147,7 +151,7 @@ export async function processSpan(
       if (extractingse.error) return Result.error(extractingse.error)
       if (extractingse.value != undefined) {
         status = SpanStatus.Error
-        message = extractingse.value || undefined
+        message = extractingse.value?.slice(0, 256) || undefined
       }
 
       let metadata = {
