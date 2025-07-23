@@ -1,9 +1,9 @@
 import { Command } from 'commander'
 import { init, pull, push, checkout, status } from './commands'
 import { help } from './commands/help'
-import { readFileSync } from 'fs'
-import { dirname, join } from 'path'
-import { fileURLToPath } from 'url'
+
+// Version constant that gets replaced at build time
+declare const __VERSION__: string
 
 // Create the program
 const program = new Command()
@@ -12,7 +12,7 @@ const program = new Command()
 program
   .name('latitude')
   .description('Latitude CLI for managing projects and prompts')
-  .version(getVersion())
+  .version(__VERSION__)
 
 // Register all commands
 init(program)
@@ -28,15 +28,4 @@ program.parse(process.argv)
 // If no arguments are provided, show help
 if (process.argv.length <= 2) {
   program.help()
-}
-
-function getVersion() {
-  // Get the directory of the current file
-  const __filename = fileURLToPath(import.meta.url)
-  const __dirname = dirname(__filename)
-
-  // Navigate to the package.json file (from dist/ back to root)
-  const packageJsonPath = join(__dirname, '..', 'package.json')
-  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'))
-  return packageJson.version
 }

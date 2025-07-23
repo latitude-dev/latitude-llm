@@ -1,6 +1,10 @@
 import replace from '@rollup/plugin-replace'
 import typescript from '@rollup/plugin-typescript'
 import json from '@rollup/plugin-json'
+import { readFileSync } from 'fs'
+
+// Read package.json to get version
+const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'))
 
 const EXTERNALS = [
   '@latitude-data/sdk',
@@ -16,7 +20,7 @@ const EXTERNALS = [
   'child_process',
   'crypto',
   'fast-sha256',
-  'keytar'
+  'keytar',
 ]
 
 const config = [
@@ -36,6 +40,7 @@ const config = [
       }),
       replace({
         'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+        __VERSION__: JSON.stringify(packageJson.version),
         preventAssignment: true,
       }),
     ],
