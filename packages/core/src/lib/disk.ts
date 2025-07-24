@@ -111,9 +111,10 @@ export class DiskWrapper {
 
   async put(key: string, contents: string, options?: WriteOptions) {
     try {
+      const byteLength = Buffer.byteLength(contents, 'utf8')
       await this.disk.put(key, contents, {
         ...options,
-        contentLength: contents.length,
+        contentLength: byteLength,
       })
 
       return Result.nil()
@@ -132,10 +133,17 @@ export class DiskWrapper {
 
   async putStream(key: string, contents: Readable, options?: WriteOptions) {
     try {
-      await this.disk.putStream(key, contents, {
-        ...options,
-        contentLength: contents.readableLength,
-      })
+      // For streams, we'll only set contentLength if it's explicitly provided
+      // or if the stream has a reliable readableLength
+      const streamOptions = { ...options }
+      if (
+        contents.readableLength !== undefined &&
+        contents.readableLength > 0
+      ) {
+        streamOptions.contentLength = contents.readableLength
+      }
+
+      await this.disk.putStream(key, contents, streamOptions)
 
       return Result.nil()
     } catch (e) {
