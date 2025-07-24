@@ -199,7 +199,7 @@ export async function processSegment(
       await publisher.publishLater({
         type: 'segmentUpdated',
         data: {
-          segment: segment,
+          segmentId: segment.id,
           apiKeyId: args.apiKey.id,
           workspaceId: args.workspace.id,
         },
@@ -208,7 +208,7 @@ export async function processSegment(
       await publisher.publishLater({
         type: 'segmentCreated',
         data: {
-          segment: segment,
+          segmentId: segment.id,
           apiKeyId: args.apiKey.id,
           workspaceId: args.workspace.id,
         },

@@ -222,7 +222,7 @@ export async function processSpan(
       publisher.publishLater({
         type: 'spanCreated',
         data: {
-          span,
+          spanId: span.id,
           apiKeyId: apiKey.id,
           workspaceId: workspace.id,
         },
