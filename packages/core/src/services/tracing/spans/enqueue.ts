@@ -12,6 +12,36 @@ import { diskFactory, DiskWrapper } from '../../../lib/disk'
 import { hashContent as hash } from '../../../lib/hashContent'
 import { Result, TypedResult } from '../../../lib/Result'
 
+export async function enqueueSpans(
+  {
+    spans,
+    apiKey,
+    workspace,
+  }: {
+    spans: Otlp.ResourceSpan[]
+    apiKey?: ApiKey
+    workspace?: Workspace
+  },
+  disk: DiskWrapper = diskFactory('private'),
+) {
+  const ingestionId = await generateIngestionId(spans)
+  const uploadResult = await uploadSpansToStorage(ingestionId, spans, disk)
+  if (uploadResult.error) return uploadResult
+
+  const payload = {
+    ingestionId: ingestionId,
+    apiKeyId: apiKey?.id,
+    workspaceId: workspace?.id,
+  }
+
+  await tracingQueue.add('ingestSpansJob', payload, {
+    attempts: TRACING_JOBS_MAX_ATTEMPTS,
+    deduplication: { id: ingestSpansJobKey(payload) },
+  })
+
+  return Result.nil()
+}
+
 async function uploadSpansToStorage(
   ingestionId: string,
   spans: Otlp.ResourceSpan[],
@@ -29,18 +59,9 @@ async function uploadSpansToStorage(
   }
 }
 
-export async function enqueueSpans(
-  {
-    spans,
-    apiKey,
-    workspace,
-  }: {
-    spans: Otlp.ResourceSpan[]
-    apiKey?: ApiKey
-    workspace?: Workspace
-  },
-  disk: DiskWrapper = diskFactory('private'),
-) {
+async function generateIngestionId(
+  spans: Otlp.ResourceSpan[],
+): Promise<string> {
   let ingestionId = ''
   for (const { scopeSpans } of spans) {
     for (const { spans } of scopeSpans) {
@@ -49,21 +70,5 @@ export async function enqueueSpans(
       }
     }
   }
-  ingestionId = hash(ingestionId)
-
-  const uploadResult = await uploadSpansToStorage(ingestionId, spans, disk)
-  if (uploadResult.error) return uploadResult
-
-  const payload = {
-    ingestionId: ingestionId,
-    apiKeyId: apiKey?.id,
-    workspaceId: workspace?.id,
-  }
-
-  await tracingQueue.add('ingestSpansJob', payload, {
-    attempts: TRACING_JOBS_MAX_ATTEMPTS,
-    deduplication: { id: ingestSpansJobKey(payload) },
-  })
-
-  return Result.nil()
+  return hash(ingestionId)
 }
