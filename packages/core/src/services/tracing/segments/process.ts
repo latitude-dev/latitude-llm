@@ -65,9 +65,9 @@ export async function processSegment(
     const validating = validateSegmentChain(args.segment, args.chain)
     if (validating.error) return Result.error(validating.error)
 
-    const getting = await getState(args, transaction, disk)
-    if (getting.error) return Result.error(getting.error)
-    const state = getting.value
+    // const getting = await getState(args, transaction, disk)
+    // if (getting.error) return Result.error(getting.error)
+    // const state = getting.value
 
     const id = state.current?.id ?? state.segment.id
 
@@ -161,7 +161,7 @@ export async function processSegment(
       status: SpanStatus.Ok, // status,
       message: undefined, // message,
       logUuid: logUuid,
-      commitUuid: state.commit.uuid, // commitUuid,
+      commitUuid: '7fdf3f27-ed4e-4710-a8fd-90b4121e2106', // commitUuid,
       documentUuid: '7fdf3f27-ed4e-4710-a8fd-90b4121e2106', // documentUuid,
       documentHash: 'documentHash', // documentHash,
       documentType: DocumentType.Prompt, // documentType,

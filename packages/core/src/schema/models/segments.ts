@@ -16,9 +16,6 @@ import {
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { apiKeys } from './apiKeys'
-import { commits } from './commits'
-import { documentLogs } from './documentLogs'
-import { experiments } from './experiments'
 import { workspaces } from './workspaces'
 
 export const segments = latitudeSchema.table(
@@ -41,20 +38,14 @@ export const segments = latitudeSchema.table(
     message: varchar('message', { length: 256 }),
     // Denormalized fields for filtering and aggregation
     // TODO(tracing): temporal related log, remove when observability is ready
-    logUuid: uuid('log_uuid').references(() => documentLogs.uuid, {
-      onDelete: 'set null',
-    }),
-    commitUuid: uuid('commit_uuid')
-      .references(() => commits.uuid, { onDelete: 'restrict' })
-      .notNull(),
+    logUuid: uuid('log_uuid'),
+    commitUuid: uuid('commit_uuid').notNull(),
     documentUuid: uuid('document_uuid').notNull(),
     documentHash: varchar('document_hash', { length: 64 }).notNull(),
     documentType: varchar('document_type', { length: 32 })
       .notNull()
       .$type<DocumentType>(),
-    experimentUuid: uuid('experiment_uuid').references(() => experiments.uuid, {
-      onDelete: 'set null',
-    }),
+    experimentUuid: uuid('experiment_uuid'),
     provider: varchar('provider', { length: 128 }).notNull(),
     model: varchar('model', { length: 128 }).notNull(),
     tokens: bigint('tokens', { mode: 'number' }).notNull(),

@@ -1352,6 +1352,13 @@
       "when": 1752589010521,
       "tag": "0193_dry_freak",
       "breakpoints": true
+    },
+    {
+      "idx": 194,
+      "version": "7",
+      "when": 1753349747404,
+      "tag": "0194_hard_grey_gargoyle",
+      "breakpoints": true
     }
   ]
 }
