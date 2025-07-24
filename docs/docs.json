@@ -82,6 +82,7 @@
             "group": "Agents",
             "pages": [
               "guides/prompt-manager/agents",
+              "guides/prompt-manager/subagents",
               {
                 "group": "Integrations",
                 "pages": [
