@@ -11,13 +11,14 @@ export enum SpanKind {
 
 // Note: loosely based on OpenTelemetry GenAI semantic conventions
 export enum SpanType {
-  Tool = 'tool', // Note: asynchronous tools such as agents are conversation segments
+  Tool = 'tool',
   Completion = 'completion',
   Embedding = 'embedding',
   Retrieval = 'retrieval',
   Reranking = 'reranking',
-  Http = 'http', // Note: raw HTTP requests and responses
-  Segment = 'segment', // (Partial) Wrappers so spans belong to the same trace
+  Http = 'http',
+  Prompt = 'prompt',
+  Step = 'step',
   Unknown = 'unknown', // Other spans we don't care about
 }
 
@@ -66,9 +67,15 @@ export const SPAN_SPECIFICATIONS = {
     isGenAI: false,
     isHidden: true,
   },
-  [SpanType.Segment]: {
-    name: 'Segment',
-    description: 'A (partial) segment of a trace',
+  [SpanType.Prompt]: {
+    name: 'Prompt',
+    description: 'A prompt',
+    isGenAI: false,
+    isHidden: false,
+  },
+  [SpanType.Step]: {
+    name: 'Step',
+    description: 'A step in a prompt',
     isGenAI: false,
     isHidden: false,
   },
@@ -104,6 +111,7 @@ export type SpanLink = {
 }
 
 export type BaseSpanMetadata<T extends SpanType = SpanType> = {
+  conversationId: string
   traceId: string
   spanId: string
   type: T
@@ -157,6 +165,19 @@ export type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> & {
   }
 }
 
+export type StepSpanMetadata = BaseSpanMetadata<SpanType.Step> & {
+  configuration: Record<string, unknown>
+  input: Message[]
+  // Fields below are optional if the span had an error
+  output?: Message[]
+}
+
+export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> &
+  Omit<StepSpanMetadata, keyof BaseSpanMetadata<SpanType.Step>> & {
+    prompt: string
+    parameters: Record<string, unknown>
+  }
+
 // prettier-ignore
 export type SpanMetadata<T extends SpanType = SpanType> =
   T extends SpanType.Tool ? ToolSpanMetadata :
@@ -165,25 +186,30 @@ export type SpanMetadata<T extends SpanType = SpanType> =
   T extends SpanType.Retrieval ? BaseSpanMetadata<T> :
   T extends SpanType.Reranking ? BaseSpanMetadata<T> :
   T extends SpanType.Http ? HttpSpanMetadata :
-  T extends SpanType.Segment ? BaseSpanMetadata<T> :
+  T extends SpanType.Prompt ? PromptSpanMetadata :
+  T extends SpanType.Step ? StepSpanMetadata :
   T extends SpanType.Unknown ? BaseSpanMetadata<T> :
   never;
 
 export const SPAN_METADATA_STORAGE_KEY = (
   workspaceId: number,
+  conversationId: string,
   traceId: string,
   spanId: string,
-) => encodeURI(`workspaces/${workspaceId}/traces/${traceId}/${spanId}`)
+) =>
+  encodeURI(
+    `workspaces/${workspaceId}/conversations/${conversationId}/${traceId}/${spanId}/metadata.json`,
+  )
 export const SPAN_METADATA_CACHE_TTL = 24 * 60 * 60 // 1 day
 
 export type Span<T extends SpanType = SpanType> = {
   id: string
+  conversationId: string // Alias of logUuid
   traceId: string
-  segmentId?: string
   parentId?: string // Parent span identifier
   workspaceId: number
   apiKeyId: number
-  name: string
+  name: string // Enriched when ingested
   kind: SpanKind
   type: T
   status: SpanStatus
@@ -196,5 +222,12 @@ export type Span<T extends SpanType = SpanType> = {
 }
 
 export type SpanWithDetails<T extends SpanType = SpanType> = Span<T> & {
-  metadata?: SpanMetadata<T> // Metadata is optional if it could not be uploaded
+  metadata: SpanMetadata<T>
+}
+
+export type AssembledSpan<T extends SpanType = SpanType> = Span<T> & {
+  children: AssembledSpan[]
+  depth: number
+  startOffset: number
+  endOffset: number
 }

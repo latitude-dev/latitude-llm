@@ -1,8 +1,8 @@
+import { Message } from 'promptl-ai'
 import { z } from 'zod'
 import { SegmentBaggage } from './segment'
-import { Span, SpanType } from './span'
+import { AssembledSpan } from './span'
 
-// Note: Traces are unmaterialized but this context is used to propagate the trace
 // See www.w3.org/TR/trace-context and w3c.github.io/baggage
 export const traceContextSchema = z.object({
   traceparent: z.string(), // <version>-<trace-id>-<span-id>-<trace-flags>
@@ -19,30 +19,55 @@ export type TraceBaggage = {
     })[]
 }
 
-// TODO(tracing): lets see if we can remove the concept of segments
-// export type AssembledSegment<T extends SegmentType = SegmentType> =
-//   Segment<T> & {
-//     class: 'segment'
-//     parts: (AssembledSegment | AssembledSpan)[]
-//   }
-
-export type AssembledSpan<T extends SpanType = SpanType> = Span<T> & {
-  conversationId: string
-  children: AssembledSpan[]
-  depth: number
-  startOffset: number
-  endOffset: number
+export type TraceMetadata = {
+  prompt: string
+  configuration: Record<string, unknown>
+  parameters: Record<string, unknown>
+  input: Message[]
+  // Fields below are optional if the spans had an error
+  output?: Message[]
 }
 
-// Note: full trace structure ready to be drawn, parts are ordered by timestamp
-export type AssembledTrace = {
+export const TRACE_METADATA_STORAGE_KEY = (
+  workspaceId: number,
+  conversationId: string,
+  traceId: string,
+) =>
+  encodeURI(
+    `workspaces/${workspaceId}/conversations/${conversationId}/${traceId}/metadata.json`,
+  )
+export const TRACE_METADATA_CACHE_TTL = 24 * 60 * 60 // 1 day
+
+export type Trace = {
   id: string
-  conversationId: string
+  conversationId: string // Alias of logUuid
+  workspaceId: number
+  apiKeyId: number
+
+  // externalId?: string // Custom user identifier // ??
+  // source: SegmentSource // ??
+
+  // status: SpanStatus // From the last span (errored spans have priority)
+  // message?: string // From the last span (errored spans have priority)
+
+  commitUuid: string // From current or inherited from parent
+  documentUuid: string // From current or inherited from parent. When running an llm evaluation this is the evaluation uuid and source is Evaluation
+  documentHash: string // From current run or document
+  documentType: DocumentType // From current run or document
+  experimentUuid?: string // From current or inherited from parent
+  provider: string // From first completion span/segment or current run or document
+  model: string // From first completion span/segment or current run or document
+  tokens: number // Aggregated tokens from all completion spans/segments
+  cost: number // Aggregated cost from all completion spans/segments
+
+  duration: number // Elapsed time between the first and last span
+  startedAt: Date // From the first span
+  endedAt: Date // From the last span
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type AssembledTrace = Trace & {
   children: AssembledSpan[]
   spans: number
-  duration: number
-  startedAt: Date
-  endedAt: Date
 }
-
-export const TRACE_CACHE_TTL = 5 * 60 // 5 minutes
