@@ -56,8 +56,8 @@ function ConfigurationSimpleForm<M extends HumanEvaluationMetric>({
         value={configuration.criteria ?? ''}
         name='criteria'
         label='Criteria'
-        description='The criteria to judge against'
-        placeholder='No criteria'
+        description='Optional instructions to guide the evaluators on the criteria to judge against'
+        placeholder='Judge the engagement of the response'
         minRows={2}
         maxRows={4}
         onChange={(e) =>

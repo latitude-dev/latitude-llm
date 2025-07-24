@@ -39,7 +39,7 @@ function ConfigurationSimpleForm({
       <FormFieldGroup
         layout='horizontal'
         label='Minimum rating'
-        description='When should the response be rated low?'
+        description='Additional guidelines describing when the response should be rated low'
       >
         <NumberInput
           value={configuration.minRating ?? undefined}
@@ -59,7 +59,7 @@ function ConfigurationSimpleForm({
         <Input
           value={configuration.minRatingDescription ?? ''}
           name='minRatingDescription'
-          placeholder='No minimum rating description'
+          placeholder='The response discourages interaction'
           onChange={(e) =>
             setConfiguration({
               ...configuration,
@@ -75,7 +75,7 @@ function ConfigurationSimpleForm({
       <FormFieldGroup
         layout='horizontal'
         label='Maximum rating'
-        description='When should the response be rated high?'
+        description='Additional guidelines describing when the response should be rated high'
       >
         <NumberInput
           value={configuration.maxRating ?? undefined}
@@ -95,7 +95,7 @@ function ConfigurationSimpleForm({
         <Input
           value={configuration.maxRatingDescription ?? ''}
           name='maxRatingDescription'
-          placeholder='No maximum rating description'
+          placeholder='The response promotes continued interaction'
           onChange={(e) =>
             setConfiguration({
               ...configuration,

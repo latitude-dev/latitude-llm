@@ -33,7 +33,7 @@ function ConfigurationSimpleForm({
         value={configuration.criteria ?? ''}
         name='criteria'
         label='Criteria'
-        description='The criteria to judge against'
+        description='Instructions to guide the LLM on the criteria to judge against'
         placeholder='Judge the engagement of the response'
         minRows={2}
         maxRows={4}
@@ -49,8 +49,8 @@ function ConfigurationSimpleForm({
         value={configuration.passDescription ?? ''}
         name='passDescription'
         label='Pass description'
-        description='When should the response pass?'
-        placeholder='The response demonstrates continued interaction'
+        description='Additional guidelines describing when the response is acceptable'
+        placeholder='The response promotes continued interaction'
         onChange={(e) =>
           setConfiguration({
             ...configuration,
@@ -66,7 +66,7 @@ function ConfigurationSimpleForm({
         value={configuration.failDescription ?? ''}
         name='failDescription'
         label='Fail description'
-        description='When should the response fail?'
+        description='Additional guidelines describing when the response is not acceptable'
         placeholder='The response discourages interaction'
         onChange={(e) =>
           setConfiguration({

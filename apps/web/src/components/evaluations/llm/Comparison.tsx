@@ -36,7 +36,7 @@ function ConfigurationSimpleForm({
         value={configuration.criteria ?? ''}
         name='criteria'
         label='Criteria'
-        description='The criteria to judge against'
+        description='Instructions to guide the LLM on the criteria to judge against'
         placeholder='Judge the similarity of the translation'
         minRows={2}
         maxRows={4}
@@ -52,7 +52,7 @@ function ConfigurationSimpleForm({
         value={configuration.passDescription ?? ''}
         name='passDescription'
         label='Pass description'
-        description='When should the response adequately compare?'
+        description='Additional guidelines describing when the response adequately compares'
         placeholder='The translation is almost identical'
         onChange={(e) =>
           setConfiguration({
@@ -69,7 +69,7 @@ function ConfigurationSimpleForm({
         value={configuration.failDescription ?? ''}
         name='failDescription'
         label='Fail description'
-        description='When should the response poorly compare?'
+        description='Additional guidelines describing when the response poorly compares'
         placeholder='The translation is completely different'
         onChange={(e) =>
           setConfiguration({

@@ -36,8 +36,8 @@ function ConfigurationSimpleForm({
         value={configuration.passDescription ?? ''}
         name='passDescription'
         label='Pass description'
-        description='When should the response pass?'
-        placeholder='No pass description'
+        description='Additional guidelines describing when the response is acceptable'
+        placeholder='The response promotes continued interaction'
         onChange={(e) =>
           setConfiguration({
             ...configuration,
@@ -53,8 +53,8 @@ function ConfigurationSimpleForm({
         value={configuration.failDescription ?? ''}
         name='failDescription'
         label='Fail description'
-        description='When should the response fail?'
-        placeholder='No fail description'
+        description='Additional guidelines describing when the response is not acceptable'
+        placeholder='The response discourages interaction'
         onChange={(e) =>
           setConfiguration({
             ...configuration,

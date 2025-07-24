@@ -89,7 +89,7 @@ ${
       {mode === 'create' && (
         <FormField
           label='Prompt'
-          description='The custom evaluation prompt to judge against'
+          description='The custom evaluation prompt the LLM will use to judge against'
           errors={errors?.['prompt']}
         >
           <Alert

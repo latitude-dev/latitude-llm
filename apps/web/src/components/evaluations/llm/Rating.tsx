@@ -37,7 +37,7 @@ function ConfigurationSimpleForm({
         value={configuration.criteria ?? ''}
         name='criteria'
         label='Criteria'
-        description='The criteria to judge against'
+        description='Instructions to guide the LLM on the criteria to judge against'
         placeholder='Judge the engagement of the response'
         minRows={2}
         maxRows={4}
@@ -52,7 +52,7 @@ function ConfigurationSimpleForm({
       <FormFieldGroup
         layout='horizontal'
         label='Minimum rating'
-        description='When should the response be rated low?'
+        description='Additional guidelines describing when the response should be rated low'
       >
         <NumberInput
           value={configuration.minRating ?? undefined}
@@ -88,7 +88,7 @@ function ConfigurationSimpleForm({
       <FormFieldGroup
         layout='horizontal'
         label='Maximum rating'
-        description='When should the response be rated high?'
+        description='Additional guidelines describing when the response should be rated high'
       >
         <NumberInput
           value={configuration.maxRating ?? undefined}
@@ -108,7 +108,7 @@ function ConfigurationSimpleForm({
         <Input
           value={configuration.maxRatingDescription ?? ''}
           name='maxRatingDescription'
-          placeholder='The response demonstrates continued interaction'
+          placeholder='The response promotes continued interaction'
           onChange={(e) =>
             setConfiguration({
               ...configuration,
