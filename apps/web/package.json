@@ -16,7 +16,7 @@
     "test:watch": "TZ=UTC vitest"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "3.772.0",
+    "@aws-sdk/client-s3": "3.850.0",
     "@intercom/messenger-js-sdk": "0.0.14",
     "@latitude-data/constants": "workspace:*",
     "@latitude-data/core": "workspace:*",

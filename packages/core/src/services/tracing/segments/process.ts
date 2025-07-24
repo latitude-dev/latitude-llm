@@ -161,7 +161,7 @@ export async function processSegment(
       status: SpanStatus.Ok, // status,
       message: undefined, // message,
       logUuid: logUuid,
-      commitUuid: '7fdf3f27-ed4e-4710-a8fd-90b4121e2106', // commitUuid,
+      commitUuid: state.commit.uuid, // commitUuid,
       documentUuid: '7fdf3f27-ed4e-4710-a8fd-90b4121e2106', // documentUuid,
       documentHash: 'documentHash', // documentHash,
       documentType: DocumentType.Prompt, // documentType,
