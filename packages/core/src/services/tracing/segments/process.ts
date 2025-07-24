@@ -61,82 +61,82 @@ export async function processSegment(
   transaction = new Transaction(),
   disk: DiskWrapper = diskFactory('private'),
 ) {
+  const validating = validateSegmentChain(args.segment, args.chain)
+  if (validating.error) return Result.error(validating.error)
+
+  const getting = await getState(args, disk)
+  if (getting.error) return Result.error(getting.error)
+  const state = getting.value
+
+  const id = state.current?.id ?? state.segment.id
+
+  const traceId = state.current?.traceId ?? state.traceId
+
+  const parentId = state.current?.parentId ?? state.chain.at(-1)?.id
+
+  const type = state.current?.type ?? state.segment.type
+
+  // const specification = SEGMENT_SPECIFICATIONS[type]
+  // if (!specification) {
+  //   return Result.error(new UnprocessableEntityError('Invalid segment type'))
+  // }
+
+  // let metadata = {
+  //   ...({
+  //     traceId: traceId,
+  //     segmentId: id,
+  //     type: type,
+  //   } satisfies BaseSegmentMetadata),
+  // } as SegmentMetadata
+
+  // // @ts-expect-error seems typescript cannot infer that state types are the same
+  // const processing = await specification.process(state, tx)
+  // if (processing.error) return Result.error(processing.error)
+  // metadata = { ...metadata, ...processing.value }
+
+  // // Note: edge case when the global document segment is being processed right now for the first time
+  // if (metadata.type === SegmentType.Document) {
+  //   state.run = { metadata } as SegmentWithDetails<SegmentType.Document>
+  // }
+
+  // const computingei = computeExternalId(state)
+  // if (computingei.error) return Result.error(computingei.error)
+  // const externalId = computingei.value
+
+  // const enrichingnm = enrichName(state)
+  // if (enrichingnm.error) return Result.error(enrichingnm.error)
+  // const name = enrichingnm.value
+
+  // const computingsc = computeSource(state)
+  // if (computingsc.error) return Result.error(computingsc.error)
+  // const source = computingsc.value
+
+  // const computingst = computeStatus(state)
+  // if (computingst.error) return Result.error(computingst.error)
+  // const { status, message } = computingst.value
+
+  const computinglu = computeLogUuid(state)
+  if (computinglu.error) return Result.error(computinglu.error)
+  const logUuid = computinglu.value
+
+  // const computingdc = computeDocument(state)
+  // if (computingdc.error) return Result.error(computingdc.error)
+  // const { commitUuid, documentUuid, documentHash,
+  //       documentType, provider, model } = computingdc.value // prettier-ignore
+
+  // const computingeu = computeExperimentUuid(state)
+  // if (computingeu.error) return Result.error(computingeu.error)
+  // const experimentUuid = computingeu.value
+
+  // const computingsa = computeStatistics(state)
+  // if (computingsa.error) return Result.error(computingsa.error)
+  // const { tokens, cost, duration } = computingsa.value
+
+  // const computingts = computeTimestamps(state)
+  // if (computingts.error) return Result.error(computingts.error)
+  // const { startedAt, endedAt } = computingts.value
+
   return await transaction.call(async (tx) => {
-    const validating = validateSegmentChain(args.segment, args.chain)
-    if (validating.error) return Result.error(validating.error)
-
-    // const getting = await getState(args, transaction, disk)
-    // if (getting.error) return Result.error(getting.error)
-    // const state = getting.value
-
-    const id = state.current?.id ?? state.segment.id
-
-    const traceId = state.current?.traceId ?? state.traceId
-
-    const parentId = state.current?.parentId ?? state.chain.at(-1)?.id
-
-    const type = state.current?.type ?? state.segment.type
-
-    // const specification = SEGMENT_SPECIFICATIONS[type]
-    // if (!specification) {
-    //   return Result.error(new UnprocessableEntityError('Invalid segment type'))
-    // }
-
-    // let metadata = {
-    //   ...({
-    //     traceId: traceId,
-    //     segmentId: id,
-    //     type: type,
-    //   } satisfies BaseSegmentMetadata),
-    // } as SegmentMetadata
-
-    // // @ts-expect-error seems typescript cannot infer that state types are the same
-    // const processing = await specification.process(state, tx)
-    // if (processing.error) return Result.error(processing.error)
-    // metadata = { ...metadata, ...processing.value }
-
-    // // Note: edge case when the global document segment is being processed right now for the first time
-    // if (metadata.type === SegmentType.Document) {
-    //   state.run = { metadata } as SegmentWithDetails<SegmentType.Document>
-    // }
-
-    // const computingei = computeExternalId(state)
-    // if (computingei.error) return Result.error(computingei.error)
-    // const externalId = computingei.value
-
-    // const enrichingnm = enrichName(state)
-    // if (enrichingnm.error) return Result.error(enrichingnm.error)
-    // const name = enrichingnm.value
-
-    // const computingsc = computeSource(state)
-    // if (computingsc.error) return Result.error(computingsc.error)
-    // const source = computingsc.value
-
-    // const computingst = computeStatus(state)
-    // if (computingst.error) return Result.error(computingst.error)
-    // const { status, message } = computingst.value
-
-    const computinglu = computeLogUuid(state)
-    if (computinglu.error) return Result.error(computinglu.error)
-    const logUuid = computinglu.value
-
-    // const computingdc = computeDocument(state)
-    // if (computingdc.error) return Result.error(computingdc.error)
-    // const { commitUuid, documentUuid, documentHash,
-    //       documentType, provider, model } = computingdc.value // prettier-ignore
-
-    // const computingeu = computeExperimentUuid(state)
-    // if (computingeu.error) return Result.error(computingeu.error)
-    // const experimentUuid = computingeu.value
-
-    // const computingsa = computeStatistics(state)
-    // if (computingsa.error) return Result.error(computingsa.error)
-    // const { tokens, cost, duration } = computingsa.value
-
-    // const computingts = computeTimestamps(state)
-    // if (computingts.error) return Result.error(computingts.error)
-    // const { startedAt, endedAt } = computingts.value
-
     const repository = new SegmentsRepository(args.workspace.id, tx)
     const locking = await repository.lock({ segmentId: id, traceId })
     if (locking.error) {
@@ -380,106 +380,95 @@ async function getState(
     apiKey: ApiKey
     workspace: Workspace
   },
-  transaction = new Transaction(),
   disk: DiskWrapper,
+  db = database,
 ): Promise<TypedResult<SegmentProcessArgs>> {
-  return await transaction.call(async (tx) => {
-    const gettingcs = await getCurrentState(
-      { segment, traceId, workspace },
-      tx,
-      disk,
+  const gettingcs = await getCurrentState(
+    { segment, traceId, workspace },
+    db,
+    disk,
+  )
+  if (gettingcs.error) return Result.error(gettingcs.error)
+  const current = gettingcs.value
+
+  const gettingrs = await getRunState({ segment, traceId, workspace }, db, disk)
+  if (gettingrs.error) return Result.error(gettingrs.error)
+  const run = gettingrs.value
+
+  const gettinghs = await getChildState(
+    { childId, childType, traceId, workspace },
+    db,
+    disk,
+  )
+  if (gettinghs.error) return Result.error(gettinghs.error)
+  const child = gettinghs.value
+
+  let source = segment.source as SegmentSource | undefined
+  if (!source) source = inheritField<SegmentSource>('source', chain)
+  if (!source) source = run?.source
+  if (!source) source = current?.source
+  if (!source) {
+    return Result.error(
+      new UnprocessableEntityError('Segment source is required'),
     )
-    if (gettingcs.error) return Result.error(gettingcs.error)
-    const current = gettingcs.value
+  }
 
-    const gettingrs = await getRunState(
-      { segment, traceId, workspace },
-      tx,
-      disk,
+  let commitUuid = segment.data?.commitUuid
+  if (!commitUuid) commitUuid = inheritField<string>('commitUuid', chain) // prettier-ignore
+  if (!commitUuid) commitUuid = run?.commitUuid
+  if (!commitUuid) commitUuid = current?.commitUuid
+  if (!commitUuid) {
+    return Result.error(new UnprocessableEntityError('Commit uuid is required'))
+  }
+
+  let documentUuid = segment.data?.documentUuid
+  if (!documentUuid) documentUuid = inheritField<string>('documentUuid', chain) // prettier-ignore
+  if (!documentUuid) documentUuid = run?.documentUuid
+  if (!documentUuid) documentUuid = current?.documentUuid
+  if (!documentUuid) {
+    return Result.error(
+      new UnprocessableEntityError('Document uuid is required'),
     )
-    if (gettingrs.error) return Result.error(gettingrs.error)
-    const run = gettingrs.value
+  }
 
-    const gettinghs = await getChildState(
-      { childId, childType, traceId, workspace },
-      tx,
-      disk,
-    )
-    if (gettinghs.error) return Result.error(gettinghs.error)
-    const child = gettinghs.value
+  const commitsRepository = new CommitsRepository(workspace.id, db)
+  const gettingco = await commitsRepository.getCommitByUuid({
+    uuid: commitUuid,
+  })
+  if (gettingco.error) return Result.error(gettingco.error)
+  const commit = gettingco.value
 
-    let source = segment.source as SegmentSource | undefined
-    if (!source) source = inheritField<SegmentSource>('source', chain)
-    if (!source) source = run?.source
-    if (!source) source = current?.source
-    if (!source) {
-      return Result.error(
-        new UnprocessableEntityError('Segment source is required'),
-      )
-    }
-
-    let commitUuid = segment.data?.commitUuid
-    if (!commitUuid) commitUuid = inheritField<string>('commitUuid', chain) // prettier-ignore
-    if (!commitUuid) commitUuid = run?.commitUuid
-    if (!commitUuid) commitUuid = current?.commitUuid
-    if (!commitUuid) {
-      return Result.error(
-        new UnprocessableEntityError('Commit uuid is required'),
-      )
-    }
-
-    let documentUuid = segment.data?.documentUuid
-    if (!documentUuid) documentUuid = inheritField<string>('documentUuid', chain) // prettier-ignore
-    if (!documentUuid) documentUuid = run?.documentUuid
-    if (!documentUuid) documentUuid = current?.documentUuid
-    if (!documentUuid) {
-      return Result.error(
-        new UnprocessableEntityError('Document uuid is required'),
-      )
-    }
-
-    const commitsRepository = new CommitsRepository(workspace.id, tx)
-    const gettingco = await commitsRepository.getCommitByUuid({
-      uuid: commitUuid,
+  let document
+  let evaluation
+  if (source === SegmentSource.Evaluation) {
+    // TODO(tracing): we actually don't have the a repository method
+    // to get the versioned evaluation without the document uuid
+    evaluation = undefined as unknown as EvaluationV2<EvaluationType.Llm>
+  } else {
+    const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
+    const getting = await documentsRepository.getDocumentAtCommit({
+      commitUuid: commitUuid,
+      documentUuid: documentUuid,
     })
-    if (gettingco.error) return Result.error(gettingco.error)
-    const commit = gettingco.value
+    if (getting.error) return Result.error(getting.error)
 
-    let document
-    let evaluation
-    if (source === SegmentSource.Evaluation) {
-      // TODO(tracing): we actually don't have the a repository method
-      // to get the versioned evaluation without the document uuid
-      evaluation = undefined as unknown as EvaluationV2<EvaluationType.Llm>
-    } else {
-      const documentsRepository = new DocumentVersionsRepository(
-        workspace.id,
-        tx,
-      )
-      const getting = await documentsRepository.getDocumentAtCommit({
-        commitUuid: commitUuid,
-        documentUuid: documentUuid,
-      })
-      if (getting.error) return Result.error(getting.error)
+    const scanning = await scan({ prompt: getting.value.content })
 
-      const scanning = await scan({ prompt: getting.value.content })
+    document = { ...getting.value, config: scanning.config }
+  }
 
-      document = { ...getting.value, config: scanning.config }
-    }
-
-    return Result.ok({
-      segment: segment,
-      chain: chain,
-      child: child,
-      traceId: traceId,
-      current: current,
-      run: run,
-      document: document,
-      evaluation: evaluation,
-      commit: commit,
-      apiKey: apiKey,
-      workspace: workspace,
-    })
+  return Result.ok({
+    segment: segment,
+    chain: chain,
+    child: child,
+    traceId: traceId,
+    current: current,
+    run: run,
+    document: document,
+    evaluation: evaluation,
+    commit: commit,
+    apiKey: apiKey,
+    workspace: workspace,
   })
 }
 

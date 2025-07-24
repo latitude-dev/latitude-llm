@@ -21,8 +21,6 @@ import type {
   ProviderLog,
   ProviderLogDto,
   Providers,
-  Segment,
-  Span,
   User,
   Workspace,
 } from '../browser'
