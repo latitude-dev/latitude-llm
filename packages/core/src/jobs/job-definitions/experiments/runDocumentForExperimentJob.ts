@@ -40,7 +40,6 @@ export const runDocumentForExperimentJob = async (
   const experiment = await experimentScope
     .find(experimentId)
     .then((r) => r.unwrap())
-
   if (experiment.finishedAt) return
 
   try {

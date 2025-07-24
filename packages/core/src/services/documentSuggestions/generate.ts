@@ -81,97 +81,97 @@ export async function generateDocumentSuggestion(
   },
   transaction = new Transaction(),
 ) {
-  return transaction.call(async (tx) => {
-    if (!env.LATITUDE_CLOUD) {
-      return Result.error(new Error(CLOUD_MESSAGES.documentSuggestions))
-    }
+  if (!env.LATITUDE_CLOUD) {
+    return Result.error(new Error(CLOUD_MESSAGES.documentSuggestions))
+  }
 
-    if (!env.COPILOT_REFINE_PROMPT_PATH) {
-      return Result.error(new Error('COPILOT_REFINE_PROMPT_PATH is not set'))
-    }
+  if (!env.COPILOT_REFINE_PROMPT_PATH) {
+    return Result.error(new Error('COPILOT_REFINE_PROMPT_PATH is not set'))
+  }
 
-    const copilot = await getCopilot(
-      { path: env.COPILOT_REFINE_PROMPT_PATH },
-      tx,
-    ).then((r) => r.unwrap())
+  const copilot = await getCopilot({
+    path: env.COPILOT_REFINE_PROMPT_PATH,
+  }).then((r) => r.unwrap())
 
-    if (!evaluation.enableSuggestions) {
-      return Result.error(
-        new UnprocessableEntityError(
-          'Suggestions are not enabled for this evaluation',
-        ),
-      )
-    }
-
-    const limitsResult = await checkSuggestionLimits(
-      { document, evaluation, commit, workspace },
-      tx,
-    )
-    if (limitsResult.error) return limitsResult
-    if (!results) {
-      const resultsRepository = new EvaluationResultsV2Repository(
-        workspace.id,
-        tx,
-      )
-      results = await resultsRepository
-        .selectForDocumentSuggestion({
-          commitId: commit.id,
-          evaluationUuid: evaluation.uuid,
-        })
-        .then((r) => r.unwrap())
-    }
-
-    if (!results || !results!.length) {
-      return Result.error(
-        new UnprocessableEntityError('Not enough evaluation results found'),
-      )
-    }
-
-    for (const result of results) {
-      if (result.hasPassed || result.error || result.usedForSuggestion) {
-        return Result.error(
-          new UnprocessableEntityError(
-            'Cannot use these results for a suggestion',
-          ),
-        )
-      }
-    }
-
-    const serializedEvaluation = await serializeEvaluationV2({
-      evaluation,
-    }).then((r) => r.unwrap())
-
-    const serializedResults = await Promise.all(
-      results.map((result) =>
-        serializeEvaluationResultV2({ evaluation, result, workspace }, tx).then(
-          (r) => r.unwrap(),
-        ),
+  if (!evaluation.enableSuggestions) {
+    return Result.error(
+      new UnprocessableEntityError(
+        'Suggestions are not enabled for this evaluation',
       ),
     )
+  }
 
-    const result = await runCopilot({
-      copilot: copilot,
-      parameters: {
-        prompt: document.content,
-        evaluation: serializedEvaluation,
-        results: serializedResults,
-      },
-      schema: refinerSchema,
-    }).then((r) => r.unwrap())
+  const limitsResult = await checkSuggestionLimits({
+    document,
+    evaluation,
+    commit,
+    workspace,
+  })
+  if (limitsResult.error) return limitsResult
+  if (!results) {
+    const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
+    results = await resultsRepository
+      .selectForDocumentSuggestion({
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+      })
+      .then((r) => r.unwrap())
+  }
 
-    const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
-    const lock = await documentsRepository.lock({
-      commitId: document.commitId,
-      documentUuid: document.documentUuid,
-    })
-    if (lock.error) return lock
-
-    const limits = await checkSuggestionLimits(
-      { document, evaluation, commit, workspace },
-      tx,
+  if (!results || !results!.length) {
+    return Result.error(
+      new UnprocessableEntityError('Not enough evaluation results found'),
     )
-    if (limits.error) return limits
+  }
 
+  for (const result of results) {
+    if (result.hasPassed || result.error || result.usedForSuggestion) {
+      return Result.error(
+        new UnprocessableEntityError(
+          'Cannot use these results for a suggestion',
+        ),
+      )
+    }
+  }
+
+  const serializedEvaluation = await serializeEvaluationV2({
+    evaluation,
+  }).then((r) => r.unwrap())
+
+  const serializedResults = await Promise.all(
+    results.map((result) =>
+      serializeEvaluationResultV2({ evaluation, result, workspace }).then((r) =>
+        r.unwrap(),
+      ),
+    ),
+  )
+
+  const result = await runCopilot({
+    copilot: copilot,
+    parameters: {
+      prompt: document.content,
+      evaluation: serializedEvaluation,
+      results: serializedResults,
+    },
+    schema: refinerSchema,
+  }).then((r) => r.unwrap())
+
+  const documentsRepository = new DocumentVersionsRepository(workspace.id)
+  const lock = await documentsRepository.lock({
+    commitId: document.commitId,
+    documentUuid: document.documentUuid,
+  })
+  if (lock.error) return lock
+
+  const limits = await checkSuggestionLimits({
+    document,
+    evaluation,
+    commit,
+    workspace,
+  })
+  if (limits.error) return limits
+
+  return transaction.call(async (tx) => {
     const suggestion = await tx
       .insert(documentSuggestions)
       .values({
