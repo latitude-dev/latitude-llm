@@ -10,7 +10,24 @@ import { ingestSpansJobKey } from '../../../jobs/job-definitions/tracing/ingestS
 import { tracingQueue } from '../../../jobs/queues'
 import { diskFactory, DiskWrapper } from '../../../lib/disk'
 import { hashContent as hash } from '../../../lib/hashContent'
-import { Result } from '../../../lib/Result'
+import { Result, TypedResult } from '../../../lib/Result'
+
+async function uploadSpansToStorage(
+  ingestionId: string,
+  spans: Otlp.ResourceSpan[],
+  disk: DiskWrapper,
+): Promise<TypedResult<void, Error>> {
+  const key = SPAN_INGESTION_STORAGE_KEY(ingestionId)
+  const data = { ingestionId, spans } satisfies SpanIngestionData
+
+  try {
+    const payload = JSON.stringify(data)
+    await disk.put(key, payload).then((r) => r.unwrap())
+    return Result.nil()
+  } catch (error) {
+    return Result.error(error as Error)
+  }
+}
 
 export async function enqueueSpans(
   {
@@ -34,15 +51,8 @@ export async function enqueueSpans(
   }
   ingestionId = hash(ingestionId)
 
-  const key = SPAN_INGESTION_STORAGE_KEY(ingestionId)
-  const data = { ingestionId, spans } satisfies SpanIngestionData
-
-  try {
-    const payload = JSON.stringify(data)
-    await disk.put(key, payload).then((r) => r.unwrap())
-  } catch (error) {
-    return Result.error(error as Error)
-  }
+  const uploadResult = await uploadSpansToStorage(ingestionId, spans, disk)
+  if (uploadResult.error) return uploadResult
 
   const payload = {
     ingestionId: ingestionId,

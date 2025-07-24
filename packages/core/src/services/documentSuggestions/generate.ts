@@ -156,22 +156,22 @@ export async function generateDocumentSuggestion(
     schema: refinerSchema,
   }).then((r) => r.unwrap())
 
-  const documentsRepository = new DocumentVersionsRepository(workspace.id)
-  const lock = await documentsRepository.lock({
-    commitId: document.commitId,
-    documentUuid: document.documentUuid,
-  })
-  if (lock.error) return lock
-
-  const limits = await checkSuggestionLimits({
-    document,
-    evaluation,
-    commit,
-    workspace,
-  })
-  if (limits.error) return limits
-
   return transaction.call(async (tx) => {
+    const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
+    const lock = await documentsRepository.lock({
+      commitId: document.commitId,
+      documentUuid: document.documentUuid,
+    })
+    if (lock.error) return lock
+
+    const limits = await checkSuggestionLimits({
+      document,
+      evaluation,
+      commit,
+      workspace,
+    })
+    if (limits.error) return limits
+
     const suggestion = await tx
       .insert(documentSuggestions)
       .values({
