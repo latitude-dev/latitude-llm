@@ -1,25 +1,26 @@
-import { memo, useState, Suspense, useCallback, useEffect, useRef } from 'react'
-import { stringify as stringifyObjectToYaml } from 'yaml'
-import Link from 'next/link'
+import useDocumentVersions from '$/stores/documentVersions'
 import { AstError } from '@latitude-data/constants/promptl'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { scan, Config } from 'promptl-ai'
-import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
+import { type DocumentVersion } from '@latitude-data/core/browser'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { cn } from '@latitude-data/web-ui/utils'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import {
   type BlockRootNode,
   BlocksEditor,
   IncludedPrompt,
 } from '@latitude-data/web-ui/molecules/BlocksEditor'
+import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import {
   ICommitContextType,
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
-import { type DocumentVersion } from '@latitude-data/core/browser'
+import Link from 'next/link'
+import { Config, scan } from 'promptl-ai'
+import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { stringify as stringifyObjectToYaml } from 'yaml'
 import { useIncludabledPrompts } from './useIncludabledPrompts'
-import useDocumentVersions from '$/stores/documentVersions'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 export const PlaygroundBlocksEditor = memo(
   ({
@@ -63,7 +64,7 @@ export const PlaygroundBlocksEditor = memo(
       },
       [documents],
     )
-    const onToogleDevEditor = useCallback(() => {
+    const onToggleDevEditor = useCallback(() => {
       onToggleBlocksEditor(true)
     }, [onToggleBlocksEditor])
 
@@ -102,8 +103,8 @@ export const PlaygroundBlocksEditor = memo(
           onChange(value)
         }
 
-        const frontMatter = stringifyObjectToYaml(config)
-        onChange(`---\n${frontMatter}\n---\n${value}`)
+        const frontMatter = stringifyObjectToYaml(config).trim()
+        onChange(`---\n${frontMatter}\n---\n\n${value}\n`)
       },
       [config, onChange],
     )
@@ -122,20 +123,20 @@ export const PlaygroundBlocksEditor = memo(
             onError={onError}
             Link={Link}
             onRequestPromptMetadata={onRequestPromptMetadata}
-            onToggleDevEditor={onToogleDevEditor}
+            onToggleDevEditor={onToggleDevEditor}
             onChange={onChangePrompt}
             readOnlyMessage={readOnlyMessage}
             placeholder='Type your instructions here, use / for commands'
           />
         ) : (
-          <div
-            className={cn('flex items-center justify-center h-full', {
-              'border border-border bg-backgroundCode rounded-md px-3':
-                !!readOnlyMessage,
-            })}
-          >
-            <Text.H6 color='foregroundMuted'>Loading prompt....</Text.H6>
-          </div>
+          <Skeleton className='w-full h-full rounded-lg flex items-center justify-center gap-2 p-4'>
+            <Icon
+              name='loader'
+              color='foregroundMuted'
+              className='animate-spin'
+            />
+            <Text.H5 color='foregroundMuted'>Assembling prompt</Text.H5>
+          </Skeleton>
         )}
       </Suspense>
     )

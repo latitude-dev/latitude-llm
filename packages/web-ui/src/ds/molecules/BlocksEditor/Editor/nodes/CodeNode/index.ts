@@ -1,3 +1,4 @@
+import { AstError } from '@latitude-data/constants/promptl'
 import {
   CodeNode as LexicalCodeNode,
   SerializedCodeNode as LexicalSerializedCodeNode,
@@ -10,11 +11,11 @@ import {
   Spread,
 } from 'lexical'
 import { BLOCK_EDITOR_TYPE } from '../../state/promptlToLexical/types'
-import { AstError } from '@latitude-data/constants/promptl'
 
 export type SerializedCodeNode = Spread<
   {
     errors?: AstError[] | null | undefined
+    readOnly?: boolean
   },
   LexicalSerializedCodeNode
 >
@@ -26,31 +27,43 @@ export type SerializedCodeNode = Spread<
  */
 export class CodeNode extends LexicalCodeNode {
   __errors?: AstError[] | null
+  __readOnly?: boolean
 
   static getType() {
     return BLOCK_EDITOR_TYPE.CODE
   }
 
   static clone(node: CodeNode): CodeNode {
-    return new CodeNode(node.__language, node.__errors, node.__key)
+    return new CodeNode(
+      node.__language,
+      node.__errors,
+      node.__readOnly,
+      node.__key,
+    )
   }
 
   constructor(
     language?: string | null | undefined,
     errors?: AstError[] | null,
+    readOnly?: boolean,
     key?: NodeKey,
   ) {
     super(language, key)
     this.__errors = errors || undefined
+    this.__readOnly = readOnly
   }
 
   createDOM(config: EditorConfig) {
     const dom = super.createDOM(config)
 
     dom.setAttribute('data-block-type', 'code')
+    // Note: prevent modifying code blocks or triggering the /menu
+    dom.setAttribute('contenteditable', 'false')
+    dom.style.userSelect = 'none'
     this.updateErrorOverlay({
       dom,
       errors: this.getErrors(),
+      readOnly: this.getReadOnly(),
     })
     return dom
   }
@@ -64,6 +77,7 @@ export class CodeNode extends LexicalCodeNode {
       ...super.exportJSON(),
       language: this.getLanguage(),
       errors: this.getErrors(),
+      readOnly: this.getReadOnly(),
     }
   }
 
@@ -72,6 +86,7 @@ export class CodeNode extends LexicalCodeNode {
       this.updateErrorOverlay({
         dom,
         errors: this.getErrors(),
+        readOnly: this.getReadOnly(),
       })
     }
 
@@ -83,6 +98,7 @@ export class CodeNode extends LexicalCodeNode {
       .updateFromJSON(serializedNode)
       .setLanguage(serializedNode.language)
       .setErrors(serializedNode.errors)
+      .setReadOnly(serializedNode.readOnly)
   }
 
   updateErrorOverlay({
@@ -91,6 +107,7 @@ export class CodeNode extends LexicalCodeNode {
   }: {
     dom: HTMLElement
     errors: AstError[] | null | undefined
+    readOnly?: boolean
   }) {
     const overlay = this.getOverlay(dom)
 
@@ -112,10 +129,12 @@ export class CodeNode extends LexicalCodeNode {
     if (overlay) return overlay as HTMLDivElement
 
     const newOverlay = document.createElement('div')
+    newOverlay.setAttribute('contenteditable', 'false')
     newOverlay.className = [
       'code-error-overlay',
+      'pointer-events-none select-none',
       'flex items-center px-4 py-2 mb-2',
-      'bg-destructive text-destructive-foreground rounded pointer-events-none',
+      'border border-destructive-muted-foreground/10 bg-destructive-muted text-destructive-muted-foreground rounded-lg ',
     ].join(' ')
     dom.appendChild(newOverlay)
     return newOverlay
@@ -130,11 +149,22 @@ export class CodeNode extends LexicalCodeNode {
   getErrors(): AstError[] | null | undefined {
     return this.getLatest().__errors
   }
+
+  setReadOnly(readOnly?: boolean): this {
+    const writable = this.getWritable()
+    writable.__readOnly = readOnly
+    return writable
+  }
+
+  getReadOnly(): boolean | undefined {
+    return this.getLatest().__readOnly
+  }
 }
 
 export function $createCodeNode(
   language?: string | null | undefined,
   errors?: AstError[] | null | undefined,
+  readOnly?: boolean,
 ): CodeNode {
-  return $applyNodeReplacement(new CodeNode(language, errors))
+  return $applyNodeReplacement(new CodeNode(language, errors, readOnly))
 }

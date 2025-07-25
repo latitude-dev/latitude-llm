@@ -1,9 +1,9 @@
 import { resolveRelativePath } from '@latitude-data/constants'
-import { fromAstToBlocks } from '@latitude-data/web-ui/fromAstToBlocks'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
+import { fromAstToBlocks } from '@latitude-data/web-ui/fromAstToBlocks'
 
-import type { AstError } from '@latitude-data/constants/promptl'
 import type { AgentToolsMap } from '@latitude-data/constants'
+import type { AstError } from '@latitude-data/constants/promptl'
 import type { BlockRootNode } from '@latitude-data/web-ui/fromAstToBlocks'
 
 import {

@@ -17,14 +17,14 @@ import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
+import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { ROUTES } from '$/services/routes'
 import useIntegrations from '$/stores/integrations'
 import { EvaluationTitle } from '../../../../_components/EvaluationTitle'
-import { Playground } from './Playground'
-import { TextEditor } from './TextEditor'
 import { EditorHeader } from './EditorHeader'
 import { useEvaluationParameters } from './hooks/useEvaluationParamaters'
-import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
+import { Playground } from './Playground'
+import { TextEditor } from './TextEditor'
 
 const ALLOWED_PARAMETERS =
   LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
@@ -159,7 +159,6 @@ export function EvaluationEditor({
                 onChangePrompt={onChange}
                 isLatitudeProvider={isLatitudeProvider}
                 freeRunsCount={freeRunsCount}
-                showCopilotSetting={copilotEnabled}
               />
               <TextEditor
                 compileErrors={metadata?.errors}
@@ -167,6 +166,7 @@ export function EvaluationEditor({
                 value={value}
                 isMerged={commit.mergedAt !== null}
                 isSaved={!isUpdatingEvaluation}
+                copilotEnabled={copilotEnabled}
                 onChange={onChange}
               />
             </div>

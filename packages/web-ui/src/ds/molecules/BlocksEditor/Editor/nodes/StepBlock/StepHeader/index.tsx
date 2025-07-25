@@ -1,4 +1,3 @@
-import { createPortal } from 'react-dom'
 import {
   ChangeEvent,
   KeyboardEvent,
@@ -7,44 +6,53 @@ import {
   useRef,
   useState,
 } from 'react'
-import { Text } from '../../../../../../atoms/Text'
-import { Input } from '../../../../../../atoms/Input'
+import { createPortal } from 'react-dom'
 import { ReactStateDispatch } from '../../../../../../../lib/commonTypes'
-import { Icon } from '../../../../../../atoms/Icons'
 import { Button } from '../../../../../../atoms/Button'
-import { TooltipProvider, Tooltip } from '../../../../../../atoms/Tooltip'
+import { Icon } from '../../../../../../atoms/Icons'
+import { Input } from '../../../../../../atoms/Input'
+import { SwitchInput } from '../../../../../../atoms/Switch'
+import { Text } from '../../../../../../atoms/Text'
+import { Tooltip, TooltipProvider } from '../../../../../../atoms/Tooltip'
+import { triggerToggleDevEditor } from '../../../plugins/ReferencesPlugin'
 import {
   triggerStepDelete,
   triggerStepIsolateUpdate,
   triggerStepNameUpdate,
 } from '../../../plugins/StepEditPlugin'
-import { SwitchInput } from '../../../../../../atoms/Switch'
-import { triggerToggleDevEditor } from '../../../plugins/ReferencesPlugin'
 
 function StepName({
   as,
   onEdit,
+  readOnly,
 }: {
   as: string | undefined
   onEdit: ReactStateDispatch<boolean>
+  readOnly?: boolean
 }) {
   const noName = as === undefined || as === ''
-  const label = as === undefined || as === '' ? 'No step name' : as
+  const label = noName ? 'No step name' : as
   return (
-    <div className='group min-h-6 flex flex-row items-center gap-x-1'>
+    <div
+      className='group min-h-6 flex flex-row items-center gap-x-1 select-none cursor-text'
+      onDoubleClick={() => !readOnly && onEdit(true)}
+    >
       <Text.H6M color='foreground' textOpacity={as ? 100 : 50}>
         {label}
       </Text.H6M>
-      <button
-        onClick={() => onEdit(true)}
-        className='opacity-0 group-hover:opacity-100'
-      >
-        <Icon
-          name={noName ? 'plus' : 'pencil'}
-          color='foregroundMuted'
-          size='small'
-        />
-      </button>
+      {!readOnly && (
+        <button
+          onClick={() => !readOnly && onEdit(true)}
+          className='opacity-0 group-hover:opacity-100'
+          disabled={readOnly}
+        >
+          <Icon
+            name={noName ? 'plus' : 'pencil'}
+            color='foregroundMuted'
+            size='small'
+          />
+        </button>
+      )}
     </div>
   )
 }
@@ -53,10 +61,12 @@ function RightArea({
   isolated,
   stepKey,
   otherAttributes,
+  readOnly,
 }: {
-  isolated: boolean
+  isolated: boolean | undefined
   stepKey: string
   otherAttributes: Record<string, unknown> | undefined
+  readOnly?: boolean
 }) {
   const onIsolatedChange = useCallback(
     (newIsolated: boolean) => {
@@ -67,19 +77,27 @@ function RightArea({
   return (
     <div className='flex flex-row items-center gap-x-1'>
       <Tooltip triggerIcon={{ name: 'circleHelp', color: 'foregroundMuted' }}>
-        {`Isolated: Prevent this step from inheriting context
+        {`Isolated prevents the step from inheriting context
         from previous steps. This can reduce unnecessary costs or confusion for
         the model. Type '{{ nameOfStep }}' to reference the step name in the prompt.`}
       </Tooltip>
-      <Text.H6 color='foregroundMuted'>Isolated</Text.H6>
-      <SwitchInput
-        fullWidth={false}
-        defaultChecked={isolated}
-        checked={isolated}
-        onCheckedChange={onIsolatedChange}
-      />
-
-      {otherAttributes ? (
+      {readOnly ? (
+        <Text.H6 color='foregroundMuted'>
+          {isolated ? 'Isolated' : 'Not isolated'}
+        </Text.H6>
+      ) : (
+        <>
+          <Text.H6 color='foregroundMuted'>Isolated</Text.H6>
+          <SwitchInput
+            fullWidth={false}
+            defaultChecked={!!isolated}
+            checked={!!isolated}
+            onCheckedChange={onIsolatedChange}
+            disabled={readOnly}
+          />
+        </>
+      )}
+      {otherAttributes && (
         <Tooltip
           asChild
           trigger={
@@ -97,17 +115,20 @@ function RightArea({
           This step has extra configuration. Please click to edit it on the code
           editor.
         </Tooltip>
-      ) : null}
-      <Button
-        size='icon'
-        variant='nope'
-        className='opacity-50 hover:opacity-100'
-        iconProps={{
-          name: 'close',
-          color: 'foregroundMuted',
-        }}
-        onClick={() => triggerStepDelete(stepKey)}
-      />
+      )}
+      {!readOnly && (
+        <Button
+          size='icon'
+          variant='nope'
+          className='opacity-50 hover:opacity-100'
+          iconProps={{
+            name: 'close',
+            color: 'foregroundMuted',
+          }}
+          onClick={() => triggerStepDelete(stepKey)}
+          disabled={readOnly}
+        />
+      )}
     </div>
   )
 }
@@ -118,12 +139,14 @@ export function StepHeader({
   as,
   isolated,
   otherAttributes,
+  readOnly,
 }: {
   stepKey: string
   stepIndex: number
   as: string | undefined
-  isolated: boolean
+  isolated: boolean | undefined
   otherAttributes: Record<string, unknown> | undefined
+  readOnly?: boolean
 }) {
   const inputWrapper = useRef<HTMLDivElement>(null)
   const [editing, setEditing] = useState(false)
@@ -174,7 +197,7 @@ export function StepHeader({
       >
         <div className='flex items-center gap-x-2'>
           <div className='flex items-center justify-center border border-border rounded-lg p-0.5 min-w-6 min-h-6'>
-            <Text.H6M>{stepIndex}</Text.H6M>
+            <Text.H6M userSelect={false}>{stepIndex}</Text.H6M>
           </div>
           <div
             ref={inputWrapper}
@@ -199,11 +222,12 @@ export function StepHeader({
                     width: pos.width,
                     zIndex: 10000,
                   }}
+                  disabled={readOnly}
                 />,
                 document.body,
               )
             ) : (
-              <StepName as={value} onEdit={setEditing} />
+              <StepName as={value} onEdit={setEditing} readOnly={readOnly} />
             )}
           </div>
         </div>
@@ -211,6 +235,7 @@ export function StepHeader({
           isolated={isolated}
           stepKey={stepKey}
           otherAttributes={otherAttributes}
+          readOnly={readOnly}
         />
       </div>
     </TooltipProvider>

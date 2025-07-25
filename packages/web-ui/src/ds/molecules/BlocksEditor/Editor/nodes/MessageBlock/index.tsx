@@ -1,26 +1,26 @@
-import { Root } from 'react-dom/client'
 import {
-  ElementNode,
-  NodeKey,
-  LexicalNode,
-  EditorConfig,
+  $applyNodeReplacement,
   $createParagraphNode,
   $createTextNode,
-  $applyNodeReplacement,
+  EditorConfig,
+  ElementNode,
+  LexicalNode,
+  NodeKey,
   SerializedLexicalNode,
 } from 'lexical'
+import { Root } from 'react-dom/client'
 import { cn } from '../../../../../../lib/utils'
-import {
-  createReactDivWrapper,
-  replaceReactRoot,
-  VERTICAL_SPACE_CLASS,
-} from '../utils'
 import {
   BLOCK_EDITOR_TYPE,
   MessageBlock,
   MessageBlockType,
 } from '../../state/promptlToLexical/types'
 import { $isStepBlockNode } from '../StepBlock'
+import {
+  createReactDivWrapper,
+  replaceReactRoot,
+  VERTICAL_SPACE_CLASS,
+} from '../utils'
 import { MessageHeader } from './MessageHeader'
 
 interface SerializedMessageBlock extends Omit<MessageBlock, 'children'> {
@@ -31,18 +31,24 @@ const HEADER_CLASS = 'message-header'
 
 export class MessageBlockNode extends ElementNode {
   __role: MessageBlockType
+  __readOnly?: boolean
 
   static getType(): string {
     return BLOCK_EDITOR_TYPE.MESSAGE
   }
 
   static clone(node: MessageBlockNode): MessageBlockNode {
-    return new MessageBlockNode(node.__role, node.__key)
+    return new MessageBlockNode(node.__role, node.__readOnly, node.__key)
   }
 
-  constructor(role: MessageBlockType = 'user', key?: NodeKey) {
+  constructor(
+    role: MessageBlockType = 'user',
+    readOnly?: boolean,
+    key?: NodeKey,
+  ) {
     super(key)
     this.__role = role
+    this.__readOnly = readOnly
   }
 
   createDOM(_config: EditorConfig): HTMLElement {
@@ -90,7 +96,13 @@ export class MessageBlockNode extends ElementNode {
   }
 
   __renderHeader(root: Root) {
-    root.render(<MessageHeader nodeKey={this.getKey()} role={this.getRole()} />)
+    root.render(
+      <MessageHeader
+        nodeKey={this.getKey()}
+        role={this.getRole()}
+        readOnly={this.getReadOnly()}
+      />,
+    )
   }
 
   getRole(): MessageBlockType {
@@ -103,8 +115,12 @@ export class MessageBlockNode extends ElementNode {
     return writable
   }
 
+  getReadOnly(): boolean | undefined {
+    return this.getLatest().__readOnly
+  }
+
   static importJSON(serializedNode: SerializedMessageBlock): MessageBlockNode {
-    return new MessageBlockNode(serializedNode.role)
+    return new MessageBlockNode(serializedNode.role, serializedNode.readOnly)
   }
 
   exportJSON(): SerializedMessageBlock {
@@ -112,6 +128,7 @@ export class MessageBlockNode extends ElementNode {
       ...super.exportJSON(),
       type: BLOCK_EDITOR_TYPE.MESSAGE,
       role: this.__role,
+      readOnly: this.__readOnly,
       version: 1,
     }
   }
@@ -134,7 +151,11 @@ export class MessageBlockNode extends ElementNode {
   }
 
   canMergeWith(node: LexicalNode): boolean {
-    return $isMessageBlockNode(node) && node.getRole() === this.getRole()
+    return (
+      $isMessageBlockNode(node) &&
+      node.getRole() === this.getRole() &&
+      node.getReadOnly() === this.getReadOnly()
+    )
   }
 
   canInsertTextBefore(): boolean {
@@ -155,8 +176,9 @@ export class MessageBlockNode extends ElementNode {
 
 export function $createMessageBlockNode(
   role: MessageBlockType = 'user',
+  readOnly?: boolean,
 ): MessageBlockNode {
-  const block = new MessageBlockNode(role)
+  const block = new MessageBlockNode(role, readOnly)
   const paragraph = $createParagraphNode()
   paragraph.append($createTextNode(''))
   block.append(paragraph)

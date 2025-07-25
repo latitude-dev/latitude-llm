@@ -1,17 +1,18 @@
+import { AstError } from '@latitude-data/constants/promptl'
 import { DecoratorNode, LexicalNode } from 'lexical'
 import { JSX } from 'react'
-import { ReferenceLink } from './ReferenceLink'
 import {
   BLOCK_EDITOR_TYPE,
   type ReferenceLink as SerializedReferenceLink,
 } from '../../state/promptlToLexical/types'
-import { AstError } from '@latitude-data/constants/promptl'
+import { ReferenceLink } from './ReferenceLink'
 
 export class ReferenceNode extends DecoratorNode<JSX.Element> {
   __errors: AstError[] | undefined = undefined
   __path: string
   __attributes: SerializedReferenceLink['attributes']
   __isLoading: boolean = false
+  __readOnly?: boolean
 
   static getType() {
     return BLOCK_EDITOR_TYPE.REFERENCE_LINK
@@ -23,6 +24,7 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
       errors: node.__errors,
       attributes: node.__attributes,
       path: node.__path,
+      readOnly: node.__readOnly,
     })
   }
 
@@ -32,10 +34,12 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
     attributes,
     isLoading = false,
     path,
+    readOnly,
   }: Omit<SerializedReferenceLink, 'type' | 'version'> & {
     errors?: AstError[]
     path: string
     isLoading?: boolean
+    readOnly?: boolean
     key?: string
   }) {
     super(key)
@@ -43,6 +47,7 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
     this.__path = path
     this.__attributes = attributes
     this.__isLoading = isLoading
+    this.__readOnly = readOnly
   }
 
   createDOM() {
@@ -63,6 +68,7 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
         path={this.__path}
         attributes={this.__attributes}
         errors={this.__errors}
+        readOnly={this.getReadOnly()}
       />
     )
   }
@@ -72,6 +78,7 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
       errors: serializedNode.errors,
       path: serializedNode.path,
       attributes: serializedNode.attributes,
+      readOnly: serializedNode.readOnly,
     })
   }
 
@@ -114,11 +121,16 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
       type: BLOCK_EDITOR_TYPE.REFERENCE_LINK,
       path: this.__path,
       attributes: this.__attributes,
+      readOnly: this.getReadOnly(),
     }
   }
 
   isInline() {
     return true
+  }
+
+  getReadOnly(): boolean | undefined {
+    return this.getLatest().__readOnly
   }
 }
 

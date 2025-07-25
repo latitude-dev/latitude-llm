@@ -1,21 +1,21 @@
 import { camelCase, kebabCase } from 'lodash-es'
 
 import {
-  CONTENT_BLOCK,
-  type ElementTag,
-  type MessageBlockType,
-  type ContentBlockType,
-  type MustacheTag,
-  TemplateNode,
-  BlockAttributes,
-  ReferenceLink,
-  FileBlock,
-  ToolCallBlock,
-  MESSAGE_BLOCK,
-  BLOCK_WITH_CHILDREN,
-  BlockWithChildren,
   BLOCK_EDITOR_TYPE,
+  BLOCK_WITH_CHILDREN,
+  BlockAttributes,
+  BlockWithChildren,
+  CONTENT_BLOCK,
+  type ContentBlockType,
+  type ElementTag,
+  FileBlock,
+  MESSAGE_BLOCK,
+  type MessageBlockType,
+  type MustacheTag,
+  ReferenceLink,
+  TemplateNode,
   TextBlock,
+  ToolCallBlock,
 } from './types'
 
 export function expressionToString(
@@ -71,6 +71,20 @@ export function extractTextContent(nodes: TemplateNode[] | undefined): string {
   return nodes.map((node) => nodeToText(node)).join('')
 }
 
+export function isAttributeLiteral(
+  node: ElementTag,
+  attribute: string,
+): boolean {
+  const attr = node.attributes.find(({ name }) => name === attribute)
+  return (
+    !attr ||
+    attr.value === undefined ||
+    attr.value === null ||
+    attr.value === true ||
+    attr.value.every((v) => v.type === 'Text')
+  )
+}
+
 export function getPromptAttributes({
   tag,
   prompt,
@@ -112,7 +126,12 @@ export function isBlockWithChildren(
 }
 
 export function isStepBlock(node: TemplateNode): node is ElementTag {
-  return node.type === 'ElementTag' && node.name === 'step'
+  return (
+    node.type === 'ElementTag' &&
+    node.name === 'step' &&
+    isAttributeLiteral(node, 'as') &&
+    isAttributeLiteral(node, 'isolated')
+  )
 }
 
 export function isReferenceLink(node: TemplateNode): node is ElementTag {
@@ -144,6 +163,15 @@ export function isVariable(node: TemplateNode) {
 export function convertElementToText(tag: ElementTag): string {
   const attrs = tag.attributes
     .map((attr) => {
+      // Note: do not include not undefined values here as they could be required attributes
+      if (attr.value === undefined) {
+        return ''
+      }
+
+      if (attr.value === null) {
+        return `${attr.name}={{null}}`
+      }
+
       if (attr.value === true) {
         return attr.name
       }
@@ -209,13 +237,18 @@ export function attributesToString({
   const stepAttrs = []
   if (attributes) {
     for (const [key, value] of Object.entries(attributes)) {
-      if (value === undefined || value === null || value === '') {
+      // Note: do not include not undefined values here as they could be required attributes
+      if (value === undefined) {
         continue
       }
 
       const treatedKey = shouldKebabCase.includes(key) ? kebabCase(key) : key
-      if (value === true) {
+      if (value === null) {
+        stepAttrs.push(`${treatedKey}={{null}}`)
+      } else if (value === true) {
         stepAttrs.push(treatedKey)
+      } else if (value === false) {
+        stepAttrs.push(`${treatedKey}={{false}}`)
       } else {
         // Don't quote mustache expressions (e.g., {{variable}})
         const stringValue = String(value)

@@ -1,8 +1,9 @@
-import { Suspense } from 'react'
+import { EditorSettings } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/EditorSettings'
+import { LLM_EVALUATION_PROMPT_PARAMETERS } from '@latitude-data/constants'
 import type { AstError } from '@latitude-data/constants/promptl'
 import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
-import { LLM_EVALUATION_PROMPT_PARAMETERS } from '@latitude-data/constants'
+import { Suspense } from 'react'
 
 const DEFAULT_PARAMETERS =
   LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
@@ -31,6 +32,7 @@ export function TextEditor({
   defaultValue,
   isSaved,
   isMerged,
+  copilotEnabled = false,
   onChange,
 }: {
   compileErrors: AstError[] | undefined
@@ -38,6 +40,7 @@ export function TextEditor({
   defaultValue?: string
   isSaved: boolean
   isMerged: boolean
+  copilotEnabled?: boolean
   onChange: (value: string) => void
 }) {
   return (
@@ -53,6 +56,7 @@ export function TextEditor({
           isMerged ? 'Create a draft to edit this evaluation.' : undefined
         }
         isSaved={isSaved}
+        actionButtons={<EditorSettings copilotEnabled={copilotEnabled} />}
       />
     </Suspense>
   )

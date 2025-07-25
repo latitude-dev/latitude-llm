@@ -4,10 +4,8 @@ import { ButtonHTMLAttributes, forwardRef, ReactNode, useMemo } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { font } from '../../tokens'
-import { DotIndicator } from '../DotIndicator'
-import { DotIndicatorProps } from '../DotIndicator'
-import { Icon } from '../Icons'
-import { IconProps } from '../Icons'
+import { DotIndicator, DotIndicatorProps } from '../DotIndicator'
+import { Icon, IconProps } from '../Icons'
 
 const buttonContainerVariants = cva(
   cn(
@@ -63,7 +61,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground group-hover:bg-primary/90 disabled:cursor-default',
+          'border border-transparent bg-primary text-primary-foreground group-hover:bg-primary/90 disabled:cursor-default',
         nope: 'bg-transparent text-primary-foreground group-hover:bg-transparent',
         destructive:
           'bg-destructive text-destructive-foreground group-hover:bg-destructive/90',
@@ -170,7 +168,7 @@ export function useButtonStyles({
         containerClassName,
         {
           'w-full': fullWidth,
-          'opacity-50': lookDisabled,
+          'opacity-50 cursor-not-allowed': lookDisabled,
           'overflow-hidden': ellipsis,
           'animate-pulse': isLoading,
         },
@@ -181,6 +179,7 @@ export function useButtonStyles({
         {
           'overflow-hidden': ellipsis,
           'animate-pulse': isLoading,
+          'cursor-not-allowed': lookDisabled,
         },
       ),
       innerButtonClass: cn(
@@ -190,6 +189,7 @@ export function useButtonStyles({
           'w-full justify-center': fullWidth,
           'overflow-hidden flex-grow min-w-0': ellipsis,
           'animate-pulse': isLoading,
+          'cursor-not-allowed': lookDisabled,
         },
       ),
     }

@@ -1,34 +1,34 @@
-import { useCallback, useMemo, useState } from 'react'
+import { envClient } from '$/envClient'
+import { getModelOptionsForProvider } from '$/hooks/useModelOptions'
+import { useNavigate } from '$/hooks/useNavigate'
+import { useEvents } from '$/lib/events'
+import {
+  ICON_BY_LLM_PROVIDER,
+  LABEL_BY_LLM_PROVIDER,
+} from '$/lib/providerIcons'
+import { ROUTES } from '$/services/routes'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
+import { SerializedProviderApiKey } from '$/stores/providerApiKeys'
 import {
   findFirstModelForProvider,
   ProviderApiKey,
   Providers,
 } from '@latitude-data/core/browser'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import {
   Popover,
   type PopoverContentProps,
 } from '@latitude-data/web-ui/atoms/Popover'
-import { envClient } from '$/envClient'
-import { SerializedProviderApiKey } from '$/stores/providerApiKeys'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { getModelOptionsForProvider } from '$/hooks/useModelOptions'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
   TwoColumnSelect,
   TwoColumnSelectOption,
 } from '@latitude-data/web-ui/molecules/TwoColumnSelect'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
-import {
-  ICON_BY_LLM_PROVIDER,
-  LABEL_BY_LLM_PROVIDER,
-} from '$/lib/providerIcons'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
+import { useCallback, useMemo, useState } from 'react'
 import { ModelOption, ModelSelector } from './ModelSelector'
-import { useEvents } from '$/lib/events'
 import { sortProviders } from './sortProviders'
-import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 
 function getProviderIcon({
   provider,
@@ -71,8 +71,8 @@ function buildModelOptions({
     provider: provider?.provider,
     name: provider?.name,
   })
-  const exiting = providerModelOptions.find((m) => m.value === model)
-  if (exiting || !model) return providerModelOptions
+  const existing = providerModelOptions.find((m) => m.value === model)
+  if (existing || !model) return providerModelOptions
 
   return [{ value: model, label: model, custom: true }, ...providerModelOptions]
 }
@@ -152,13 +152,18 @@ export function ProviderModelSelector({
   const providerDisabled = isDisabled || !providerOptions.length
   const onModelChange = useCallback(
     (selectedModel: string | null) => {
-      setModelOptions(
-        buildModelOptions({
-          provider,
-          model: selectedModel,
-        }),
-      )
       setModel(selectedModel)
+
+      // For custom providers, we don't need to rebuild options since
+      // the ModelSelector handles custom options internally
+      if (provider?.provider !== Providers.Custom) {
+        setModelOptions(
+          buildModelOptions({
+            provider,
+            model: selectedModel,
+          }),
+        )
+      }
 
       const updatedPrompt = updatePromptMetadata(
         prompt,
@@ -171,9 +176,18 @@ export function ProviderModelSelector({
       setOpen(false)
       onChangePrompt(updatedPrompt)
     },
-    [prompt, provider, onChangePrompt, setModelOptions],
+    [prompt, provider, onChangePrompt],
   )
-  const modelDisabled = isDisabled || !provider || !modelOptions.length
+  const modelDisabled = useMemo(() => {
+    if (isDisabled || !provider) return true
+
+    // For custom providers, they're never disabled due to empty options
+    // since they can create custom models on the fly
+    if (provider.provider === Providers.Custom) return false
+
+    // For non-custom providers, disable if no options available
+    return !modelOptions.length
+  }, [isDisabled, provider, modelOptions.length])
 
   useEvents({
     onPromptMetadataChanged: ({ promptLoaded, config }) => {
@@ -218,9 +232,26 @@ export function ProviderModelSelector({
 
   const onModelSearchChange = useCallback(
     (search: string) => {
+      // For custom providers, we don't need to rebuild options on every search
+      // The ModelSelector will handle adding custom options internally
+      if (provider?.provider === Providers.Custom) return
+
+      // For non-custom providers, only add the search term if it's not empty
+      // and doesn't already exist in the provider options
+      if (!search.trim()) return
+
+      const currentOptions = getModelOptionsForProvider({
+        provider: provider?.provider,
+        name: provider?.name,
+      })
+
+      const existing = currentOptions.find((m) => m.value === search)
+      if (existing) return
+
+      // Only rebuild if we're adding a new custom option
       setModelOptions(buildModelOptions({ provider, model: search }))
     },
-    [setModelOptions, provider],
+    [provider],
   )
 
   return (

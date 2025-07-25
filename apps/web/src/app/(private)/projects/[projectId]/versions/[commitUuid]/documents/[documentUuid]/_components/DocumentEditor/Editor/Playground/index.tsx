@@ -1,9 +1,13 @@
 import { memo, useCallback, useState } from 'react'
 
-import { Text } from '@latitude-data/web-ui/atoms/Text'
+import Actions from '$/components/PlaygroundCommon/Actions'
+import Chat from '$/components/PlaygroundCommon/Chat'
+import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import { DocumentVersion, LogSources } from '@latitude-data/core/browser'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   AppLocalStorage,
   useLocalStorage,
@@ -13,15 +17,11 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
-import { ResolvedMetadata } from '$/workers/readMetadata'
-import Chat from '$/components/PlaygroundCommon/Chat'
-import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
 import DocumentEvaluations from './DocumentEvaluations'
 import DocumentParams from './DocumentParams'
 import DocumentParamsLoading from './DocumentParams/DocumentParamsLoading'
 import { useRunPlaygroundPrompt } from './hooks/useRunPlaygroundPrompt'
 import Preview from './Preview'
-import Actions from '$/components/PlaygroundCommon/Actions'
 
 export const Playground = memo(
   ({
@@ -72,11 +72,14 @@ export const Playground = memo(
       },
       [setRunCount, setDocumentLogUuid, setHistoryLog],
     )
-    const clearChat = useCallback(() => setMode('preview'), [setMode])
+    const clearChat = useCallback(() => {
+      expander.onToggle('parameters')(true)
+      setMode('preview')
+    }, [expander, setMode])
     const runPrompt = useCallback(() => {
       expander.closeAll()
       setMode('chat')
-    }, [setMode, expander])
+    }, [expander, setMode])
     const { runPromptFn, addMessagesFn, abortCurrentStream, hasActiveStream } =
       useRunPlaygroundPrompt({
         commit,

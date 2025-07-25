@@ -1,3 +1,4 @@
+import { AstError } from '@latitude-data/constants/promptl'
 import {
   SerializedElementNode,
   SerializedLexicalNode,
@@ -6,7 +7,6 @@ import {
   SerializedTextNode,
 } from 'lexical'
 import type { Fragment, IParser } from 'promptl-ai'
-import { AstError } from '@latitude-data/constants/promptl'
 
 type ElementTag = IParser.ElementTag
 type TemplateNode = IParser.TemplateNode
@@ -48,6 +48,7 @@ export type BlockAttributes = Record<
 
 interface SimpleBlock extends SerializedLexicalNode {
   errors?: AstError[]
+  readOnly?: boolean
 }
 
 export interface ImageBlock extends SimpleBlock {
@@ -86,6 +87,7 @@ export interface Variable extends SimpleBlock {
 
 export interface TextBlock extends SerializedTextNode {
   type: typeof BLOCK_EDITOR_TYPE.TEXT_CONTENT
+  readOnly?: boolean
 }
 
 export interface CodeBlock extends SimpleBlock {
@@ -101,6 +103,7 @@ export interface ParagraphBlock extends SerializedParagraphNode {
   type: typeof BLOCK_EDITOR_TYPE.PARAGRAPH
   children: Array<ContentBlock | InlineBlock>
   errors?: AstError[]
+  readOnly?: boolean
 }
 
 export interface MessageBlock extends SerializedElementNode {
@@ -108,6 +111,7 @@ export interface MessageBlock extends SerializedElementNode {
   role: MessageBlockType
   children: (ParagraphBlock | CodeBlock)[]
   errors?: AstError[]
+  readOnly?: boolean
 }
 
 export type StepChild = MessageBlock | ParagraphBlock | CodeBlock
@@ -120,6 +124,7 @@ export interface StepBlock extends SerializedElementNode {
     isolated?: boolean
     otherAttributes?: Record<string, unknown>
   }
+  readOnly?: boolean
 }
 
 type RootChild = StepBlock | StepChild
@@ -127,14 +132,15 @@ export interface BlockRootNode
   extends SerializedRootNode<SerializedLexicalNode> {
   type: 'root'
   children: RootChild[]
+  readOnly?: boolean
 }
 
 export type {
-  Fragment,
   ElementTag,
-  TemplateNode,
-  IfBlock,
   ForBlock,
+  Fragment,
+  IfBlock,
   MustacheTag,
+  TemplateNode,
   Text,
 }

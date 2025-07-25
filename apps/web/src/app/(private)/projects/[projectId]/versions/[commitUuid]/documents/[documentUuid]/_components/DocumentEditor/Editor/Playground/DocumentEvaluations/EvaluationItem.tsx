@@ -1,6 +1,7 @@
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import EvaluateLiveLogsSwitch from '$/components/evaluations/EvaluateLiveLogsSwitch'
 import ResultBadge from '$/components/evaluations/ResultBadge'
+import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
 import {
   EvaluationResultV2,
   EvaluationType,
@@ -13,7 +14,6 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useMemo } from 'react'
 import { Props } from './shared'
-import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
 
 function EvaluationItemContent({
   result,
@@ -98,14 +98,23 @@ export default function EvaluationItem({
     projectId: project.id,
     commitUuid: commit.uuid,
     documentUuid: document.documentUuid,
-  })
+  }) /* eslint-disable react-hooks/exhaustive-deps */
   const route = useMemo(() => {
     const documentLogUuid = documentLog?.uuid
     return goToEvaluationsV2Editor({
       evaluationUuid: evaluation.uuid,
       documentLogUuid,
     })
-  }, [goToEvaluationsV2Editor, evaluation.uuid, documentLog?.uuid])
+  }, [
+    project,
+    commit,
+    document,
+    result,
+    evaluation,
+    isWaiting,
+    documentLog,
+    goToEvaluationsV2Editor,
+  ])
 
   return (
     <div

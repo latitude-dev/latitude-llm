@@ -5,6 +5,7 @@ type IBlocksProvider = {
   currentDocument: BlocksEditorProps['currentDocument']
   prompts: BlocksEditorProps['prompts']
   Link: BlocksEditorProps['Link']
+  readOnly: boolean
 }
 
 const BlocksEditorContext = createContext<IBlocksProvider | undefined>(
@@ -16,13 +17,20 @@ export function BlocksEditorProvider({
   currentDocument,
   Link,
   prompts,
+  readOnly,
 }: {
   children: ReactNode
   currentDocument: BlocksEditorProps['currentDocument']
   prompts: BlocksEditorProps['prompts']
   Link: BlocksEditorProps['Link']
+  readOnly: boolean
 }) {
-  const value = useRef<IBlocksProvider>({ currentDocument, prompts, Link })
+  const value = useRef<IBlocksProvider>({
+    currentDocument,
+    prompts,
+    Link,
+    readOnly,
+  })
   return (
     <BlocksEditorContext.Provider value={value.current}>
       {children}
