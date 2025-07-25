@@ -104,6 +104,7 @@ export async function searchComponents({
   try {
     const limit = !app ? LIST_APPS_LIMIT : 50 // Show up to 50 components if an app is specified
     const response = await pipedream.getComponents({
+      app,
       q: query,
       limit,
       componentType: componentType
