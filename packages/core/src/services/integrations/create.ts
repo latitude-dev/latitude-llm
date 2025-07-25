@@ -10,6 +10,7 @@ import {
   HostedMcpIntegrationConfiguration,
   HostedMcpIntegrationConfigurationForm,
   PipedreamIntegrationConfiguration,
+  UnconfiguredPipedreamIntegrationConfiguration,
 } from './helpers/schema'
 import { HOSTED_MCP_CONFIGS } from './hostedTypes'
 import { getApp } from './pipedream/apps'
@@ -18,7 +19,9 @@ type ConfigurationFormTypeMap = {
   [K in IntegrationType]: K extends IntegrationType.ExternalMCP
     ? ExternalMcpIntegrationConfiguration
     : K extends IntegrationType.Pipedream
-      ? PipedreamIntegrationConfiguration
+      ?
+          | PipedreamIntegrationConfiguration
+          | UnconfiguredPipedreamIntegrationConfiguration
       : HostedMcpIntegrationConfigurationForm
 }
 

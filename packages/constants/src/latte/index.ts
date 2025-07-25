@@ -16,4 +16,5 @@ export enum LatteTool {
 
   searchIntegrationApps = 'search_integration_apps',
   searchIntegrationResources = 'search_integration_resources',
+  createIntegration = 'create_integration',
 }
