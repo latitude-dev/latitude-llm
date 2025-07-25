@@ -92,6 +92,12 @@
             ]
           },
           {
+            "group": "Observability",
+            "pages": [
+              "guides/observability/overview"
+            ]
+          },
+          {
             "group": "Evaluations",
             "pages": [
               "guides/evaluations/overview",
