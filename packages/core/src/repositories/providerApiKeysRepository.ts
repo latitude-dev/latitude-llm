@@ -47,7 +47,9 @@ export class ProviderApiKeysRepository extends RepositoryLegacy<
       .where(eq(this.scope.name, name))
 
     if (!result.length) {
-      return Result.error(new NotFoundError('ProviderApiKey not found'))
+      return Result.error(
+        new NotFoundError(`ProviderApiKey not found by name: "${name}"`),
+      )
     }
 
     return Result.ok(result[0]!)
