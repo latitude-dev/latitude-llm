@@ -66,6 +66,13 @@
             ]
           },
           {
+            "group": "Latte: Agent Building Copilot",
+            "pages": [
+              "guides/getting-started/latte",
+              "guides/getting-started/latte-examples"
+            ]
+          },
+          {
             "group": "Prompts",
             "pages": [
               "guides/prompt-manager/overview",
