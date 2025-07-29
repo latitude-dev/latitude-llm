@@ -6,7 +6,8 @@ import type { LatteToolFn } from './types'
 import listDrafts from './commits/list'
 import listPrompts from './documents/list'
 import readPrompt from './documents/read'
-import editProject from './projects/edit'
+import editProject from './projects/editProject'
+import writePrompt from './projects/writePrompt'
 import listProjects from './projects/list'
 import listIntegrations from './settings/listIntegrations'
 import listIntegrationTools from './settings/listIntegrationTools'
@@ -36,6 +37,7 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.listIntegrationTriggers]: listIntegrationTriggers,
   [LatteTool.triggerActions]: triggerActions,
   [LatteTool.listExistingTriggers]: listExistingTriggers,
+  [LatteTool.writePrompt]: writePrompt,
 } as const
 
 export function buildToolHandlers({
