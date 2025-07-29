@@ -157,7 +157,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "cronstrue": "^3.0.0",
-    "date-fns": "^3.6.0",
+    "date-fns": "^4.1.0",
     "hsl-to-hex": "^1.0.0",
     "lexical": "^0.33.0",
     "lodash-es": "^4.17.21",
