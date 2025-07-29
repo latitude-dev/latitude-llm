@@ -38,7 +38,7 @@ export function LatteChat() {
 
   return (
     <div className='w-full h-full max-h-full flex flex-col items-center bg-latte-background'>
-      <div className='flex flex-col h-full w-full items-center p-8 gap-8'>
+      <div className='flex flex-col h-full w-full items-center gap-4'>
         <div className='flex-grow min-h-0 h-full w-full flex flex-col items-center justify-center relative'>
           <div
             className='w-full h-full  overflow-hidden custom-scrollbar flex flex-col gap-4 items-center'
@@ -89,19 +89,21 @@ export function LatteChat() {
           </div>
         </div>
         {inConversation && (
-          <LatteChatInput
-            inConversation
-            sendMessage={sendMessage}
-            resetChat={resetChat}
-            changes={changes}
-            undoChanges={undoChanges}
-            acceptChanges={acceptChanges}
-            error={error}
-            scrollToBottom={scrollToBottom}
-            isLoading={isLoading}
-            feedbackRequested={feedbackRequested}
-            addFeedbackToLatteChange={addFeedbackToLatteChange}
-          />
+          <div className='w-full p-8'>
+            <LatteChatInput
+              inConversation
+              sendMessage={sendMessage}
+              resetChat={resetChat}
+              changes={changes}
+              undoChanges={undoChanges}
+              acceptChanges={acceptChanges}
+              error={error}
+              scrollToBottom={scrollToBottom}
+              isLoading={isLoading}
+              feedbackRequested={feedbackRequested}
+              addFeedbackToLatteChange={addFeedbackToLatteChange}
+            />
+          </div>
         )}
       </div>
     </div>
