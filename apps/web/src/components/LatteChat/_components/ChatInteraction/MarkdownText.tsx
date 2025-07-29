@@ -95,8 +95,6 @@ export const MarkdownResponse = React.memo(
             )
           }
 
-          console.log('is this code?')
-
           return (
             <CodeBlock
               {...props}
