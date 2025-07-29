@@ -283,7 +283,7 @@ export const env = createEnv({
     TEST_LATITUDE_API_KEY: z
       .string()
       .optional()
-      .default('test-42afab4d-cafe-babe-b0df0833a7b2'),
+      .default('709a3398-ed26-4e77-beef-90ed288cdd0a'),
   },
   runtimeEnv: {
     ...process.env,
