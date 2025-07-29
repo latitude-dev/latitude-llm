@@ -35,6 +35,7 @@ import { DocumentLogsTable } from './DocumentLogsTable'
 import { DownloadLogsButton } from './DownloadLogsButton'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
 import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
+import { useSelectedLogFromUrl } from './useSelectedLogFromUrl'
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -74,9 +75,10 @@ export function DocumentLogs({
   const { document } = useCurrentDocument()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const [selectedLog, setSelectedLog] = useState<
-    DocumentLogWithMetadataAndError | undefined
-  >(serverSelectedLog)
+  const searchParams = useSearchParams()
+  const { selectedLog, setSelectedLog } = useSelectedLogFromUrl({
+    serverSelectedLog,
+  })
 
   const { data: providerLogs, isLoading: isProviderLogsLoading } =
     useProviderLogs({
@@ -99,7 +101,6 @@ export function DocumentLogs({
     return dailyCountNormal
   }, [limitedView, dailyCountNormal])
 
-  const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
   const pageSize = searchParams.get('pageSize') ?? '25'
   const { data: pagination } = useDocumentLogsPagination({
