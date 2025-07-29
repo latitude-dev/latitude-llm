@@ -21,7 +21,9 @@
     "./tracing": "./src/tracing/index.ts",
     "./latitudePromptSchema": "./src/latitudePromptSchema/index.ts",
     "./latte": "./src/latte/index.ts",
-    "./promptl": "./src/promptl.ts"
+    "./promptl": "./src/promptl.ts",
+    "./trigger": "./src/trigger.ts",
+    "./documentTriggers": "./src/documentTriggers/schema.ts"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",

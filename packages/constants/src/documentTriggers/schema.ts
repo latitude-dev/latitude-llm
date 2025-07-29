@@ -1,8 +1,5 @@
-import {
-  DocumentTriggerParameters,
-  DocumentTriggerType,
-} from '@latitude-data/constants'
 import { z } from 'zod'
+import { DocumentTriggerParameters, DocumentTriggerType } from '..'
 
 export const emailTriggerConfigurationSchema = z.object({
   name: z.string().optional(),
@@ -32,6 +29,15 @@ export const integrationTriggerConfigurationSchema = z.object({
   payloadParameters: z.array(z.string()),
   triggerId: z.string(),
 })
+
+const insertIntegrationTriggerConfigurationSchema =
+  integrationTriggerConfigurationSchema.omit({
+    triggerId: true,
+  })
+
+export type InsertIntegrationTriggerConfiguration = z.infer<
+  typeof insertIntegrationTriggerConfigurationSchema
+>
 
 export type InsertScheduledTriggerConfiguration = z.infer<
   typeof insertScheduledTriggerConfigurationSchema
@@ -76,9 +82,7 @@ export const insertDocumentTriggerConfigurationSchema = z.discriminatedUnion(
     }),
     z.object({
       triggerType: z.literal(DocumentTriggerType.Integration),
-      configuration: integrationTriggerConfigurationSchema.omit({
-        triggerId: true,
-      }),
+      configuration: insertIntegrationTriggerConfigurationSchema,
     }),
   ],
 )

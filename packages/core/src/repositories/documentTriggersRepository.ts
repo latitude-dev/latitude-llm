@@ -26,6 +26,12 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
       .execute() as Promise<DocumentTrigger[]>
   }
 
+  findByProjectId(projectId: number): Promise<DocumentTrigger[]> {
+    return this.scope
+      .where(eq(documentTriggers.projectId, projectId))
+      .execute() as Promise<DocumentTrigger[]>
+  }
+
   findByIntegrationId(integrationId: number): Promise<DocumentTrigger[]> {
     return this.scope
       .where(

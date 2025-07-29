@@ -4,7 +4,7 @@ import { DocumentTrigger, Workspace } from '../../browser'
 import { updateDocumentTriggerConfiguration } from './update'
 import * as buildConfigurationModule from './helpers/buildConfiguration'
 import { documentTriggers } from '../../schema'
-import { EmailTriggerConfiguration } from './helpers/schema'
+import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { and, eq } from 'drizzle-orm'
 import { LatitudeError } from './../../lib/errors'
 

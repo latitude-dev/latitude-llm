@@ -6,9 +6,9 @@ import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { documentTriggers } from '../../schema'
 import { buildConfiguration } from './helpers/buildConfiguration'
 import {
-  DocumentTriggerWithConfiguration,
-  IntegrationTriggerConfiguration,
-} from './helpers/schema'
+  InsertDocumentTriggerWithConfiguration,
+  InsertIntegrationTriggerConfiguration,
+} from '@latitude-data/constants/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { updatePipedreamTrigger } from '../integrations/pipedream/triggers'
 
@@ -20,15 +20,15 @@ export async function updateDocumentTriggerConfiguration(
   }: {
     workspace: Workspace
     documentTrigger: DocumentTrigger
-    configuration: DocumentTriggerWithConfiguration['configuration']
+    configuration: InsertDocumentTriggerWithConfiguration['configuration']
   },
   transaction = new Transaction(),
 ): PromisedResult<DocumentTrigger> {
   if (documentTrigger.triggerType === DocumentTriggerType.Integration) {
     const preupdateResult = await updatePipedreamTrigger({
       workspace,
-      originalConfig: documentTrigger.configuration,
-      updatedConfig: configuration as IntegrationTriggerConfiguration,
+      trigger: documentTrigger,
+      updatedConfig: configuration as InsertIntegrationTriggerConfiguration,
     })
 
     if (!Result.isOk(preupdateResult)) return preupdateResult

@@ -14,7 +14,7 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '../constants'
-import { DocumentTriggerWithConfiguration } from '../services/documentTriggers/helpers/schema'
+import { DocumentTriggerWithConfiguration } from '@latitude-data/constants/documentTriggers'
 import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
 import { connectedEvaluations } from './legacyModels/connectedEvaluations'
 import { evaluationAdvancedTemplates } from './legacyModels/evaluationAdvancedTemplates'

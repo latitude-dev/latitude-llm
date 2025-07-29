@@ -7,7 +7,7 @@ import { TelemetryContext } from '../../../../telemetry'
 import { ToolExecutionOptions } from 'ai'
 import { LatteTool } from '@latitude-data/constants/latte'
 
-type LatteToolContext = {
+export type LatteToolContext = {
   context: TelemetryContext
   workspace: Workspace
   user: User

@@ -9,7 +9,7 @@ import { deleteDocumentTriggerAction } from '$/actions/documents/triggers/delete
 import {
   DocumentTriggerConfiguration,
   InsertDocumentTriggerWithConfiguration,
-} from '@latitude-data/core/services/documentTriggers/helpers/schema'
+} from '@latitude-data/constants/documentTriggers'
 import { useCallback } from 'react'
 import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/triggers/updateDocumentTriggerConfigurationAction'
 

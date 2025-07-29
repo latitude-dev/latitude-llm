@@ -83,3 +83,9 @@ ONLY_FOR_COPILOT/
 
 .claude
 __testing__
+
+
+# New spans
+apps/web/ingest
+apps/workers/workspaces/*/traces
+

@@ -16,7 +16,7 @@ import {
   DocumentTriggerConfiguration,
   InsertDocumentTriggerWithConfiguration,
   IntegrationTriggerConfiguration,
-} from './helpers/schema'
+} from '@latitude-data/constants/documentTriggers'
 import { database } from '../../client'
 
 async function completeIntegrationTriggerConfig(
@@ -36,9 +36,8 @@ async function completeIntegrationTriggerConfig(
     configuration.integrationId,
   )
 
-  if (!Result.isOk(integrationResult)) {
-    return Result.error(integrationResult.error)
-  }
+  if (!Result.isOk(integrationResult)) return integrationResult
+
   const integration = integrationResult.unwrap()
 
   if (integration.type !== IntegrationType.Pipedream) {
@@ -81,16 +80,15 @@ export async function createDocumentTrigger(
 ): PromisedResult<DocumentTrigger> {
   return await transaction.call(async (tx) => {
     const triggerUuid = generateUUIDIdentifier()
+    const documentTriggerConfiguration = await getFullConfiguration({
+      workspace,
+      triggerUuid,
+      triggerType,
+      configuration,
+    })
 
-    if (triggerType === DocumentTriggerType.Integration) {
-      configuration = await completeIntegrationTriggerConfig(
-        {
-          workspace,
-          triggerUuid,
-          configuration: configuration as IntegrationTriggerConfiguration,
-        },
-        tx,
-      ).then((r) => r.unwrap())
+    if (!Result.isOk(documentTriggerConfiguration)) {
+      return documentTriggerConfiguration
     }
 
     const result = await tx
@@ -101,10 +99,7 @@ export async function createDocumentTrigger(
         documentUuid: document.documentUuid,
         projectId: project.id,
         triggerType,
-        configuration: buildConfiguration({
-          triggerType,
-          configuration: configuration as DocumentTriggerConfiguration,
-        }),
+        configuration: documentTriggerConfiguration.unwrap(),
       })
       .returning()
 
@@ -116,4 +111,26 @@ export async function createDocumentTrigger(
 
     return Result.ok(result[0]! as DocumentTrigger)
   })
+}
+
+export async function getFullConfiguration({
+  workspace,
+  triggerUuid,
+  triggerType,
+  configuration,
+}: {
+  workspace: Workspace
+  triggerUuid: string
+  triggerType: DocumentTriggerType
+  configuration: InsertDocumentTriggerWithConfiguration['configuration']
+}): PromisedResult<DocumentTriggerConfiguration> {
+  if (triggerType === DocumentTriggerType.Integration) {
+    return completeIntegrationTriggerConfig({
+      workspace: workspace,
+      triggerUuid: triggerUuid,
+      configuration: configuration as IntegrationTriggerConfiguration,
+    })
+  }
+  console.log(`Building configuration for trigger type: ${triggerType}`)
+  return Result.ok(buildConfiguration({ triggerType, configuration }))
 }

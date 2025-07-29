@@ -9,7 +9,7 @@ import {
   emailTriggerConfigurationSchema,
   insertScheduledTriggerConfigurationSchema,
   integrationTriggerConfigurationSchema,
-} from '@latitude-data/core/services/documentTriggers/helpers/schema'
+} from '@latitude-data/constants/documentTriggers'
 
 export const createDocumentTriggerAction = withDocument
   .createServerAction()

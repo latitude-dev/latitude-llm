@@ -14,7 +14,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { TriggerTypeSelector } from './TriggerTypeSelector'
 import { IntegrationTriggerConfig } from './IntegrationTriggerConfig'
-import { IntegrationTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/helpers/schema'
+import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 

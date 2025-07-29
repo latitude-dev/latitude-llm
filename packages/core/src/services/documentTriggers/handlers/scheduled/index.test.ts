@@ -7,7 +7,7 @@ import {
 } from './index'
 import * as cronHelperModule from '../../helpers/cronHelper'
 import { createScheduledDocumentTrigger } from '../../../../tests/factories/documentTriggers'
-import { ScheduledTriggerConfiguration } from '../../helpers/schema'
+import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 
 describe('Scheduled Document Triggers Handlers', () => {
   beforeEach(() => {
