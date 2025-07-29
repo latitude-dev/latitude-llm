@@ -131,6 +131,5 @@ export async function getFullConfiguration({
       configuration: configuration as IntegrationTriggerConfiguration,
     })
   }
-  console.log(`Building configuration for trigger type: ${triggerType}`)
   return Result.ok(buildConfiguration({ triggerType, configuration }))
 }
