@@ -12,14 +12,14 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import ProjectLayout from '../_components/ProjectLayout'
 import { DocumentBlankSlateLayout } from '../documents/_components/DocumentBlankSlateLayout'
-import Overview from './_components/Overview'
-import { AddFileButton } from './_components/Overview/AddFileButton'
+import Overview from '../overview/_components/Overview'
+import { AddFileButton } from '../overview/_components/Overview/AddFileButton'
 
 export const metadata = buildMetatags({
-  locationDescription: 'Project General Overview',
+  locationDescription: 'Project Analytics Overview',
 })
 
-export default async function OverviewPage({
+export default async function AnalyticsPage({
   params,
 }: {
   params: Promise<{ projectId: string; commitUuid: string }>
@@ -73,7 +73,7 @@ export default async function OverviewPage({
     <ProjectLayout projectId={projectId} commitUuid={commitUuid}>
       <div className='min-h-full w-full p-6'>
         <TableWithHeader
-          title='Overview'
+          title='Analytics'
           table={<Overview project={project} limitedView={limitedView} />}
         />
       </div>

@@ -8,7 +8,7 @@ import { DocumentVersionProvider } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
-import DocumentsLayout from '../../_components/DocumentsLayout'
+import ProjectLayout from '../../_components/ProjectLayout'
 import DocumentationModal, {
   DocumentationModalProvider,
 } from './_components/DocumentationModal'
@@ -48,7 +48,7 @@ export default async function DocumentPage({
         projectId={projectId}
         commitUuid={commitUuid}
       >
-        <DocumentsLayout
+        <ProjectLayout
           projectId={projectId}
           commitUuid={commitUuid}
           document={document}
@@ -63,7 +63,7 @@ export default async function DocumentPage({
               {children}
             </DocumentTabs>
           </DocumentationModalProvider>
-        </DocumentsLayout>
+        </ProjectLayout>
       </DocumentVersionProvider>
     )
   } catch (error) {

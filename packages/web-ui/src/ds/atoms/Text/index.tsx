@@ -181,6 +181,12 @@ namespace Text {
     },
   )
 
+  export const H3M = forwardRef<HTMLSpanElement, Common>(
+    function H3M(props, ref) {
+      return <TextAtom ref={ref} size='h3' weight='medium' {...props} />
+    },
+  )
+
   export const H3B = forwardRef<HTMLSpanElement, Common>(
     function H3B(props, ref) {
       return <TextAtom ref={ref} size='h3' weight='bold' {...props} />

@@ -17,6 +17,7 @@ export const colors = {
     destructiveMutedForeground: 'bg-destructive-muted-foreground',
     successMuted: 'bg-success-muted',
     successMutedForeground: 'bg-success-muted-foreground',
+    latte: 'bg-latte',
   },
   textColors: {
     white: 'text-white',
@@ -40,6 +41,9 @@ export const colors = {
     successMutedForeground: 'text-success-muted-foreground',
     warningForeground: 'text-warning-foreground',
     warningMutedForeground: 'text-warning-muted-foreground',
+    latteInputForeground: 'text-latte-input-foreground',
+    latteOutputForeground: 'text-latte-output-foreground',
+    latteOutputForegroundMuted: 'text-latte-output-foreground/50',
   },
   darkTextColors: {
     white: 'dark:text-white',
@@ -59,6 +63,9 @@ export const colors = {
     secondaryForeground: 'dark:text-secondary-foreground',
     warningForeground: 'dark:text-warning-foreground',
     warningMutedForeground: 'dark:text-warning-muted-foreground',
+    latteInputForeground: 'dark:text-latte-input-foreground',
+    latteOutputForeground: 'dark:text-latte-output-foreground',
+    latteOutputForegroundMuted: 'dark:text-latte-output-foreground/50',
   },
   borderColors: {
     transparent: 'border-transparent',
@@ -78,6 +85,7 @@ export const colors = {
     warningMutedForeground: 'border-warning-muted-foreground',
     destructiveMutedForeground: 'border-destructive-muted-foreground',
     purpleForeground: 'border-purple-foreground',
+    latte: 'border-latte-border',
   },
 }
 export type TextColor = keyof typeof colors.textColors

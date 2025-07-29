@@ -1,5 +1,5 @@
 import { findCommitsByProjectCached } from '$/app/(private)/_data-access'
-import DocumentsLayout from '../_components/DocumentsLayout'
+import ProjectLayout from '../_components/ProjectLayout'
 import { ProjectChanges } from './_components/ProjectChanges'
 import buildMetatags from '$/app/_lib/buildMetatags'
 
@@ -19,8 +19,8 @@ export default async function HistoryPage({
   })
 
   return (
-    <DocumentsLayout projectId={Number(projectId)} commitUuid={commitUuid}>
+    <ProjectLayout projectId={Number(projectId)} commitUuid={commitUuid}>
       <ProjectChanges allCommits={allCommits} />
-    </DocumentsLayout>
+    </ProjectLayout>
   )
 }

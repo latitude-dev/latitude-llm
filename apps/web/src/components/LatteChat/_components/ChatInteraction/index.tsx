@@ -17,8 +17,8 @@ export function ChatInteraction({
 
   return (
     <div className='flex flex-col gap-4 w-full relative'>
-      <div className='flex flex-col py-2 px-4 gap-2 bg-accent rounded-lg ml-auto'>
-        <Text.H5 color='primary' whiteSpace='preWrap'>
+      <div className='flex flex-col py-2 px-4 gap-2 bg-latte-input rounded-lg ml-auto'>
+        <Text.H5 color='latteInputForeground' whiteSpace='preWrap'>
           {interaction.input}
         </Text.H5>
       </div>
@@ -30,7 +30,7 @@ export function ChatInteraction({
         >
           <Icon
             name='chevronRight'
-            color='foregroundMuted'
+            color='latteOutputForegroundMuted'
             className={cn('transition-all min-w-4', {
               'rotate-90': isOpen,
             })}
@@ -60,7 +60,7 @@ export function ChatInteraction({
       {interaction.output ? (
         <MarkdownResponse text={interaction.output} />
       ) : (
-        <AnimatedDots color='foregroundMuted' />
+        <AnimatedDots color='latteOutputForegroundMuted' />
       )}
     </div>
   )

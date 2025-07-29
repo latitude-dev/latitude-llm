@@ -3,10 +3,8 @@ import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { LatitudeError } from '../../../lib/errors'
 import { DocumentLogsRepository, UsersRepository } from '../../../repositories'
-import {
-  addMessageToExistingLatte,
-  runNewLatte,
-} from '../../../services/copilot/latte'
+import { addMessageToExistingLatte } from '../../../services/copilot/latte/addMessage'
+import { runNewLatte } from '../../../services/copilot/latte/run'
 import { getCopilotDocument } from '../../../services/copilot/latte/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
 

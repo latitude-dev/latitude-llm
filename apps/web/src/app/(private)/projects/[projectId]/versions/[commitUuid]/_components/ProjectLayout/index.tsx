@@ -2,7 +2,7 @@ import { ReactNode } from 'react'
 
 import type { DocumentVersion } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { DocumentDetailWrapper } from '@latitude-data/web-ui/sections'
+import { ProjectSidebarLayout } from '@latitude-data/web-ui/sections/ProjectSidebarLayout'
 import {
   getResizablePanelGroupData,
   MIN_SIDEBAR_WIDTH_PX,
@@ -19,7 +19,7 @@ import { redirect } from 'next/navigation'
 import { LastSeenCommitCookie } from '../LastSeenCommitCookie'
 import Sidebar from '../Sidebar'
 
-export default async function DocumentsLayout({
+export default async function ProjectLayout({
   children,
   commitUuid,
   projectId,
@@ -57,7 +57,7 @@ export default async function DocumentsLayout({
     MIN_SIDEBAR_WIDTH_PX
 
   return (
-    <DocumentDetailWrapper
+    <ProjectSidebarLayout
       resizableId={resizableId}
       sidebarWidth={sidebarWidth}
       minSidebarWidth={MIN_SIDEBAR_WIDTH_PX}
@@ -71,6 +71,6 @@ export default async function DocumentsLayout({
         documentUuid={document?.documentUuid}
       />
       {children}
-    </DocumentDetailWrapper>
+    </ProjectSidebarLayout>
   )
 }

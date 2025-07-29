@@ -15,7 +15,7 @@ export function InteractionStep({
   if (!step) {
     return (
       <Text.H5
-        color='foregroundMuted'
+        color='latteOutputForegroundMuted'
         noWrap={singleLine}
         ellipsis={singleLine}
         animate
@@ -28,7 +28,7 @@ export function InteractionStep({
   if (step.type === 'thought') {
     return (
       <Text.H5
-        color='foregroundMuted'
+        color='latteOutputForeground'
         noWrap={singleLine}
         ellipsis={singleLine}
         whiteSpace='preWrap'
@@ -66,13 +66,13 @@ function ToolStep({
       <Icon
         name={step.customIcon ?? (step.finished ? 'check' : 'loader')}
         spin={!step.customIcon && !step.finished}
-        color='foregroundMuted'
+        color='latteOutputForegroundMuted'
         className='min-w-4 mt-0.5'
       />
       <Text.H5
         noWrap={singleLine}
         ellipsis={singleLine}
-        color='foregroundMuted'
+        color='latteOutputForegroundMuted'
         animate={isLoading}
       >
         {step.finished
@@ -126,11 +126,15 @@ function EditActionStep({
 
   return (
     <div className='flex flex-row gap-2 items-start max-w-full'>
-      <Icon name={icon} color='foregroundMuted' className='min-w-4 mt-0.5' />
+      <Icon
+        name={icon}
+        color='latteOutputForegroundMuted'
+        className='min-w-4 mt-0.5'
+      />
       <Text.H5
         noWrap={singleLine}
         ellipsis={singleLine}
-        color='foregroundMuted'
+        color='latteOutputForegroundMuted'
         animate={isLoading}
       >
         {operationDescription}

@@ -30,6 +30,7 @@ function ChangeListItem({ change }: { change: LatteChange }) {
         changeType={changeType}
         isSelected={false}
         oldPath={oldPath}
+        hoverBgColor='bg-latte-input'
       />
     )
   }
@@ -51,6 +52,7 @@ function ChangeListItem({ change }: { change: LatteChange }) {
         changeType={changeType}
         isSelected={false}
         oldPath={oldPath}
+        hoverBgColor='bg-latte-input'
       />
     </Link>
   )
@@ -83,19 +85,19 @@ export function ChangeList({
             fancy
             iconProps={{
               name: 'undo',
-              color: 'foregroundMuted',
+              color: 'latteInputForeground',
             }}
           >
             Undo
           </Button>
           <Button
-            variant='default'
+            variant='latte'
             onClick={acceptChanges}
             disabled={disabled}
             fancy
             iconProps={{
               name: 'check',
-              color: 'background',
+              color: 'latteInputForeground',
             }}
           >
             Accept

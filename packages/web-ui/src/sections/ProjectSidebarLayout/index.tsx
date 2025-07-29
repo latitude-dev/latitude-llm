@@ -2,7 +2,7 @@
 
 import { ReactNode, useCallback } from 'react'
 
-import { SplitPane } from '../../../ds/atoms/SplitPane'
+import { SplitPane } from '../../ds/atoms/SplitPane'
 
 export function buildResizableCookie({
   key,
@@ -17,7 +17,7 @@ export function buildResizableCookie({
   return `${keyName}=${width}`
 }
 
-export default function DocumentDetailWrapper({
+export function ProjectSidebarLayout({
   resizableId,
   children,
   sidebar,

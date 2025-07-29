@@ -148,6 +148,12 @@ export const ROUTES = {
               overview: {
                 root: `${root}/overview`,
               },
+              preview: {
+                root: `${root}/preview`,
+              },
+              analytics: {
+                root: `${root}/analytics`,
+              },
               history: {
                 root: `${root}/history`,
                 detail: ({ uuid }: { uuid: string }) => ({

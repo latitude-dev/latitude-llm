@@ -83,6 +83,26 @@ export default {
         yellow: {
           DEFAULT: 'hsl(var(--yellow) / <alpha-value>)',
         },
+        latte: {
+          DEFAULT: 'hsl(var(--latte) / <alpha-value>)',
+        },
+        'latte-border': {
+          DEFAULT: 'hsl(var(--latte-border) / <alpha-value>)',
+        },
+        'latte-background': {
+          DEFAULT: 'hsl(var(--latte-background) / <alpha-value>)',
+        },
+        'latte-input': {
+          DEFAULT: 'hsl(var(--latte-input-background) / <alpha-value>)',
+          foreground: 'hsl(var(--latte-input-foreground) / <alpha-value>)',
+        },
+        'latte-output': {
+          DEFAULT: 'hsl(var(--latte-output-foreground) / <alpha-value>)',
+          foreground: 'hsl(var(--latte-output-foreground) / <alpha-value>)',
+        },
+        'latte-widget': {
+          DEFAULT: 'hsl(var(--latte-widget-background) / <alpha-value>)',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

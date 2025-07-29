@@ -2,10 +2,8 @@
 
 import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
-import {
-  createLatteJob,
-  createLatteThread,
-} from '@latitude-data/core/services/copilot/index'
+import { createLatteJob } from '@latitude-data/core/services/copilot/latte/createLatteJob'
+import { createLatteThread } from '@latitude-data/core/services/copilot/latte/threads/createThread'
 
 export const createNewLatteAction = authProcedure
   .createServerAction()
