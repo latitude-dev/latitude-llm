@@ -134,7 +134,7 @@ export class StepBlockNode extends ElementNode {
   setIsolated(isolated: boolean): StepBlockNode {
     const writable = this.getWritable()
     // Note: if isolated is false, we don't want to set the attribute
-    writable.__isolated = isolated ? true : undefined
+    writable.__isolated = isolated || undefined
     return writable
   }
 

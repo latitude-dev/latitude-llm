@@ -163,7 +163,7 @@ export function isVariable(node: TemplateNode) {
 export function convertElementToText(tag: ElementTag): string {
   const attrs = tag.attributes
     .map((attr) => {
-      // Note: do not include not undefined values here as they could be required attributes
+      // Note: exclude not undefined values here as they could be required attributes
       if (attr.value === undefined) {
         return ''
       }
@@ -237,7 +237,7 @@ export function attributesToString({
   const stepAttrs = []
   if (attributes) {
     for (const [key, value] of Object.entries(attributes)) {
-      // Note: do not include not undefined values here as they could be required attributes
+      // Note: exclude not undefined values here as they could be required attributes
       if (value === undefined) {
         continue
       }

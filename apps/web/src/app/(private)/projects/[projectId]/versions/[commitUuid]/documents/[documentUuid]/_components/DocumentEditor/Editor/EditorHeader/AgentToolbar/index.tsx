@@ -21,7 +21,7 @@ import { useActiveIntegrations } from '../../PromptIntegrations/useActiveIntegra
 import { EditorHeaderProps } from '../index'
 
 const singularPluralLabel = (c: number, s: string, p: string) =>
-  c === 0 ? `0 ${p}` : c === 1 ? `1 ${s}` : `${c} ${p} `
+  c === 1 ? `1 ${s}` : `${c} ${p}`
 
 export const TAB_SECTIONS = {
   tools: 'tools',
