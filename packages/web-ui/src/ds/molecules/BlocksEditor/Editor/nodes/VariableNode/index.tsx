@@ -5,18 +5,20 @@ import { BLOCK_EDITOR_TYPE, Variable } from '../../state/promptlToLexical/types'
 
 export class VariableNode extends DecoratorNode<JSX.Element> {
   __name: string
+  __readOnly?: boolean
 
   static getType() {
     return BLOCK_EDITOR_TYPE.VARIABLE
   }
 
   static clone(node: VariableNode) {
-    return new VariableNode(node.__name, node.__key)
+    return new VariableNode(node.__name, node.__readOnly, node.__key)
   }
 
-  constructor(name: string, key?: string) {
+  constructor(name: string, readOnly?: boolean, key?: string) {
     super(key)
     this.__name = name
+    this.__readOnly = readOnly
   }
 
   createDOM() {
@@ -34,7 +36,7 @@ export class VariableNode extends DecoratorNode<JSX.Element> {
   }
 
   static importJSON(serializedNode: Variable) {
-    return new VariableNode(serializedNode.name)
+    return new VariableNode(serializedNode.name, serializedNode.readOnly)
   }
 
   exportJSON(): Variable {
@@ -43,11 +45,16 @@ export class VariableNode extends DecoratorNode<JSX.Element> {
       version: 1,
       type: BLOCK_EDITOR_TYPE.VARIABLE,
       name: this.__name,
+      readOnly: this.getReadOnly(),
     }
   }
 
   isInline() {
     return true
+  }
+
+  getReadOnly(): boolean | undefined {
+    return this.getLatest().__readOnly
   }
 }
 

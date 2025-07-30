@@ -18,6 +18,7 @@ export enum AppLocalStorage {
   evaluationPlaygroundParameters = 'evaluationPlaygroundParameters',
   playgroundActions = 'playgroundActions',
   expandParameters = 'expandParameters',
+  devMode = 'devMode',
 }
 
 export const isLocalStorageAvailable = (() => {

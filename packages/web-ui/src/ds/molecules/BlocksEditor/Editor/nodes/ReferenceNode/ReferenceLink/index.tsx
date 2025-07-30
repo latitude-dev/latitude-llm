@@ -1,14 +1,14 @@
-import { useCallback, useMemo, EventHandler, MouseEvent } from 'react'
+import { resolveRelativePath } from '@latitude-data/constants'
+import { EventHandler, MouseEvent, useCallback, useMemo } from 'react'
+import { cn } from '../../../../../../../lib/utils'
+import { DropdownMenu, MenuOption } from '../../../../../../atoms/DropdownMenu'
 import { Icon } from '../../../../../../atoms/Icons'
 import { Text } from '../../../../../../atoms/Text'
 import { Tooltip } from '../../../../../../atoms/Tooltip'
-import { DropdownMenu, MenuOption } from '../../../../../../atoms/DropdownMenu'
-import { cn } from '../../../../../../../lib/utils'
+import { triggerReferencePathUpdate } from '../../../plugins/ReferenceEditPlugin'
 import { triggerToggleDevEditor } from '../../../plugins/ReferencesPlugin'
 import { useBlocksEditorContext } from '../../../Provider'
 import { ReferenceLink as SerializedReferenceLink } from '../../../state/promptlToLexical/types'
-import { resolveRelativePath } from '@latitude-data/constants'
-import { triggerReferencePathUpdate } from '../../../plugins/ReferenceEditPlugin'
 
 function LoadingLink() {
   return (
@@ -70,13 +70,16 @@ function ReferenceLinkReal({
   path: relativePath,
   attributes: initialAttributes,
   errors,
+  readOnly,
 }: {
   nodeKey: string
   path: string
   errors?: SerializedReferenceLink['errors']
   attributes: SerializedReferenceLink['attributes']
+  readOnly?: boolean
 }) {
   const { Link, currentDocument, prompts } = useBlocksEditorContext()
+
   const promptOptions = useMemo<MenuOption[]>(
     () =>
       Object.values(prompts).map((prompt) => ({
@@ -135,7 +138,7 @@ function ReferenceLinkReal({
         <LinkInfo hasErrors={hasErrors} errors={errors} path={path} />
       </Link>
       <DropdownMenu
-        title='Link documents'
+        title='Reference prompt'
         align='end'
         width='extraWide'
         sideOffset={8}
@@ -147,6 +150,7 @@ function ReferenceLinkReal({
           className: 'min-h-4 flex items-center',
         }}
         options={promptOptions}
+        readOnly={readOnly}
       />
     </div>
   )
@@ -158,12 +162,14 @@ export function ReferenceLink({
   attributes,
   errors,
   isLoading = false,
+  readOnly,
 }: {
   nodeKey: string
   path: string
   attributes?: SerializedReferenceLink['attributes']
   errors?: SerializedReferenceLink['errors']
   isLoading?: boolean
+  readOnly?: boolean
 }) {
   if (isLoading || !attributes) return <LoadingLink />
 
@@ -173,6 +179,7 @@ export function ReferenceLink({
       errors={errors}
       path={path}
       attributes={attributes}
+      readOnly={readOnly}
     />
   )
 }

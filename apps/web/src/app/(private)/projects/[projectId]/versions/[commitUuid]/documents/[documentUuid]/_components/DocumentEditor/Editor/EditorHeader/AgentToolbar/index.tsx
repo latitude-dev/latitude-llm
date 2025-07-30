@@ -1,25 +1,27 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Config } from 'promptl-ai'
-import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
-import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import useIntegrations from '$/stores/integrations'
-import { IntegrationsList } from '../../PromptIntegrations/IntegrationsList'
-import { ItemWrapper } from '../../PromptIntegrations/IntegrationTools'
-import { useActiveIntegrations } from '../../PromptIntegrations/useActiveIntegrations'
-import { EditorHeaderProps } from '../index'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
+import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Config } from 'promptl-ai'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   UseLatitudeAgentsConfig,
   useLatitudeAgentsConfig,
 } from '../../PromptConfiguration/utils'
-import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
+import { IntegrationsList } from '../../PromptIntegrations/IntegrationsList'
+import { ItemWrapper } from '../../PromptIntegrations/IntegrationTools'
+import { useActiveIntegrations } from '../../PromptIntegrations/useActiveIntegrations'
+import { EditorHeaderProps } from '../index'
 
 const singularPluralLabel = (c: number, s: string, p: string) =>
-  c === 0 ? `0 ${p}` : c === 1 ? `1 ${s}` : `${c} ${p} `
+  c === 1 ? `1 ${s}` : `${c} ${p}`
 
 export const TAB_SECTIONS = {
   tools: 'tools',
@@ -72,31 +74,33 @@ function useCounters({
     [prompt, onChangePrompt],
   )
 
-  const subAgents = useLatitudeAgentsConfig({
-    config,
-    setConfig,
-    canUseSubagents: true,
-  })
-
-  const { isInitialized, activeIntegrations } = useActiveIntegrations({
+  const {
+    activeIntegrations,
+    isLoading: isLoadingIntegrations,
+    isInitialized,
+  } = useActiveIntegrations({
     prompt,
     integrations,
     isLoading,
     onChangePrompt,
   })
   const toolsCount = Object.keys(activeIntegrations).length
-  const toolsLabel = !isInitialized
-    ? 'Loading tools...'
-    : toolsCount > 0
-      ? `${toolsCount} tool${toolsCount > 1 ? 's' : ''}`
-      : 'No tools used'
+  const toolsLabel =
+    toolsCount > 0
+      ? singularPluralLabel(toolsCount, 'Tool', 'Tools')
+      : 'No tools'
 
+  const subAgents = useLatitudeAgentsConfig({
+    config,
+    setConfig,
+    canUseSubagents: true,
+  })
   const subAgentsCount = subAgents.selectedAgents.length
-  const subAgentsLabel = singularPluralLabel(
-    subAgentsCount,
-    'Sub-agent',
-    'Sub-agents',
-  )
+  const subAgentsLabel =
+    subAgentsCount > 0
+      ? singularPluralLabel(subAgentsCount, 'Sub-agent', 'Sub-agents')
+      : 'No sub-agents'
+
   return useMemo(
     () => ({
       toolsLabel,
@@ -104,8 +108,17 @@ function useCounters({
       subAgentsLabel,
       subAgentsCount,
       subAgents,
+      isLoading: !isInitialized || isLoadingIntegrations || subAgents.isLoading,
     }),
-    [toolsLabel, toolsCount, subAgentsLabel, subAgentsCount, subAgents],
+    [
+      toolsLabel,
+      toolsCount,
+      subAgentsLabel,
+      subAgentsCount,
+      subAgents,
+      isInitialized,
+      isLoadingIntegrations,
+    ],
   )
 }
 
@@ -222,6 +235,10 @@ function Content({
   )
 }
 
+function AgentToolbarSkeleton() {
+  return <Skeleton className='h-14 w-full rounded-lg' />
+}
+
 export function AgentToolbar({
   isAgent,
   config,
@@ -268,51 +285,63 @@ export function AgentToolbar({
   }, [isAgent])
 
   return (
-    <ClientOnly>
-      <CollapsibleBox
-        paddingLeft={false}
-        paddingRight={false}
-        paddingBottom={false}
-        avoidToggleOnTitleClick
-        isExpanded={isExpanded}
-        onToggle={onToggle}
-        collapsedContentHeader={
-          <div className='flex justify-end'>
-            <Text.H5 color='foregroundMuted'>
-              {counters.toolsLabel}
-              {' · '}
-              {counters.subAgentsLabel}
-            </Text.H5>
-          </div>
-        }
-        title={
-          <div className='flex items-center gap-x-2'>
-            <Text.H5>Agent</Text.H5>
-            <SwitchToggle checked={agent} onCheckedChange={onAgentToggle} />
-            <Tooltip trigger={<Icon name='info' color='foregroundMuted' />}>
-              Prompt needs to be an agent to use tools and sub-agents.
-            </Tooltip>
-          </div>
-        }
-        expandedContent={
-          <div className='w-full flex flex-col overflow-hidden'>
-            <div className='flex justify-center border-b border-border pb-4'>
-              <TabSelector<TabSection>
-                options={tabs.options}
-                selected={tabs.selected}
-                onSelect={tabs.setTab}
+    <ClientOnly loader={<AgentToolbarSkeleton />}>
+      {counters.isLoading ? (
+        <AgentToolbarSkeleton />
+      ) : (
+        <CollapsibleBox
+          paddingLeft={false}
+          paddingRight={false}
+          paddingBottom={false}
+          scrollable={false}
+          handleIcon={agent}
+          avoidToggleOnTitleClick
+          headerClassName={cn({ '!cursor-default': !agent })}
+          isExpanded={isExpanded}
+          onToggle={onToggle}
+          collapsedContentHeader={
+            <div className='flex justify-end'>
+              <Text.H5 color='foregroundMuted' userSelect={false}>
+                {counters.toolsLabel}
+                {' · '}
+                {counters.subAgentsLabel}
+              </Text.H5>
+            </div>
+          }
+          title={
+            <div className='flex items-center gap-x-2'>
+              <Text.H5 userSelect={false}>Agent</Text.H5>
+              <SwitchToggle
+                checked={agent}
+                onCheckedChange={onAgentToggle}
+                disabled={isMerged}
+              />
+              <Tooltip trigger={<Icon name='info' color='foregroundMuted' />}>
+                Make the prompt an agent to use tools and other agents
+              </Tooltip>
+            </div>
+          }
+          expandedContent={
+            <div className='w-full flex flex-col overflow-hidden max-h-[calc((100vh/2)-10rem)]'>
+              <div className='flex justify-center border-b border-border pb-4 px-4'>
+                <TabSelector<TabSection>
+                  options={tabs.options}
+                  selected={tabs.selected}
+                  onSelect={tabs.setTab}
+                  fullWidth
+                />
+              </div>
+              <Content
+                isMerged={isMerged}
+                prompt={prompt}
+                selectedTab={tabs.selected}
+                onChangePrompt={onChangePrompt}
+                subAgents={counters.subAgents}
               />
             </div>
-            <Content
-              isMerged={isMerged}
-              prompt={prompt}
-              selectedTab={tabs.selected}
-              onChangePrompt={onChangePrompt}
-              subAgents={counters.subAgents}
-            />
-          </div>
-        }
-      />
+          }
+        />
+      )}
     </ClientOnly>
   )
 }

@@ -24,6 +24,7 @@ export function CollapsibleBox({
   paddingLeft = true,
   isExpanded: isExpandedProp,
   avoidToggleOnTitleClick = false,
+  handleIcon = true,
   handlePosition = 'right',
   className,
   headerClassName,
@@ -44,6 +45,7 @@ export function CollapsibleBox({
   paddingRight?: boolean
   paddingLeft?: boolean
   avoidToggleOnTitleClick?: boolean
+  handleIcon?: boolean
   handlePosition?: 'left' | 'right'
   className?: string
   headerClassName?: string
@@ -101,7 +103,7 @@ export function CollapsibleBox({
             className='flex flex-row items-center gap-x-2'
             onClick={onTitleClick}
           >
-            {handlePosition === 'left' && (
+            {handlePosition === 'left' && handleIcon && (
               <Icon
                 className='flex-shrink-0'
                 name={isExpanded ? 'chevronUp' : 'chevronDown'}
@@ -118,7 +120,7 @@ export function CollapsibleBox({
             <div className='flex-grow min-w-0'>
               {isExpanded ? expandedContentHeader : collapsedContentHeader}
             </div>
-            {handlePosition === 'right' && (
+            {handlePosition === 'right' && handleIcon && (
               <Icon
                 className='flex-shrink-0'
                 name={isExpanded ? 'chevronUp' : 'chevronDown'}

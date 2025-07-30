@@ -36,7 +36,7 @@ export const PROVIDER_MODELS: Partial<
   [Providers.AmazonBedrock]: AMAZON_BEDROCK_MODELS.uiList,
   [Providers.DeepSeek]: DEEPSEEK_MODELS.uiList,
   [Providers.Perplexity]: PERPLEXITY_MODELS.uiList,
-  [Providers.Azure]: {},
+  [Providers.Azure]: OPENAI_MODELS.uiList,
   [Providers.Custom]: {},
 }
 

@@ -1,7 +1,11 @@
 'use client'
 
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
+import { useNavigate } from '$/hooks/useNavigate'
+import { useEvents } from '$/lib/events'
 import { ROUTES } from '$/services/routes'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import useDocumentVersions from '$/stores/documentVersions'
@@ -10,7 +14,13 @@ import useProviderApiKeys from '$/stores/providerApiKeys'
 import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import {
+  AppLocalStorage,
+  useLocalStorage,
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { type DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import {
   ICommitContextType,
@@ -19,21 +29,15 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
-import { type DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import { useEvents } from '$/lib/events'
-import { useNavigate } from '$/hooks/useNavigate'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
-import { UpdateToPromptLButton } from './UpdateToPromptl'
-import { Playground } from './Playground'
-import { useLatteStreaming } from './useLatteStreaming'
-import { PlaygroundTextEditor } from './TextEditor'
-import { PlaygroundBlocksEditor } from './BlocksEditor'
 import { EditorHeader as EvaluationEditorHeader } from '../../../evaluations/[evaluationUuid]/editor/_components/EvaluationEditor/EditorHeader'
+import { PlaygroundBlocksEditor } from './BlocksEditor'
 import { EditorHeader } from './EditorHeader'
-import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
+import { Playground } from './Playground'
+import { PlaygroundTextEditor } from './TextEditor'
+import { UpdateToPromptLButton } from './UpdateToPromptl'
+import { useLatteStreaming } from './useLatteStreaming'
 
 /**
  * DEPRECATED: This will be not needed once new editor header
@@ -109,7 +113,11 @@ export default function DocumentEditor({
   const { enabled: blocksEditorEnabled } = useFeatureFlag({
     featureFlag: 'blocksEditor',
   })
-  const [devMode, setDevMode] = useState(true)
+
+  const { value: devMode, setValue: setDevMode } = useLocalStorage({
+    key: AppLocalStorage.devMode,
+    defaultValue: true,
+  })
 
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -237,7 +245,7 @@ export default function DocumentEditor({
   useEffect(() => {
     runReadMetadata({
       prompt: value,
-      editorType: devMode ? 'visual' : 'code',
+      editorType: devMode ? 'code' : 'visual',
       documents,
       document,
       fullPath: document.path,
@@ -343,7 +351,6 @@ export default function DocumentEditor({
                   isLatitudeProvider={isLatitudeProvider}
                   onChangePrompt={onChange}
                   freeRunsCount={freeRunsCount}
-                  showCopilotSetting={copilotEnabled}
                 />
               )}
               {devMode ? (

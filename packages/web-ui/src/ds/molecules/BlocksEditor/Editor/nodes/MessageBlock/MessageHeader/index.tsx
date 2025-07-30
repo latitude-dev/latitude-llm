@@ -1,14 +1,14 @@
 import { useCallback } from 'react'
-import { Select, SelectOption } from '../../../../../../atoms/Select'
 import { Button } from '../../../../../../atoms/Button'
-import {
-  MESSAGE_BLOCK,
-  MessageBlockType,
-} from '../../../state/promptlToLexical/types'
+import { Select, SelectOption } from '../../../../../../atoms/Select'
 import {
   triggerMessageDelete,
   triggerMessageRoleUpdate,
 } from '../../../plugins/MessageEditPlugin'
+import {
+  MESSAGE_BLOCK,
+  MessageBlockType,
+} from '../../../state/promptlToLexical/types'
 
 const ROLE_OPTIONS = MESSAGE_BLOCK.map<SelectOption<MessageBlockType>>(
   (role) => ({
@@ -20,9 +20,11 @@ const ROLE_OPTIONS = MESSAGE_BLOCK.map<SelectOption<MessageBlockType>>(
 export function MessageHeader({
   nodeKey,
   role,
+  readOnly,
 }: {
   nodeKey: string
   role: MessageBlockType
+  readOnly?: boolean
 }) {
   const onChange = useCallback(
     (newRole: MessageBlockType) => {
@@ -39,17 +41,21 @@ export function MessageHeader({
         options={ROLE_OPTIONS}
         value={role}
         onChange={onChange}
+        disabled={readOnly}
       />
-      <Button
-        size='icon'
-        variant='nope'
-        className='opacity-50 hover:opacity-100'
-        iconProps={{
-          name: 'close',
-          color: 'foregroundMuted',
-        }}
-        onClick={() => triggerMessageDelete(nodeKey)}
-      />
+      {!readOnly && (
+        <Button
+          size='icon'
+          variant='nope'
+          className='opacity-50 hover:opacity-100'
+          iconProps={{
+            name: 'close',
+            color: 'foregroundMuted',
+          }}
+          onClick={() => triggerMessageDelete(nodeKey)}
+          disabled={readOnly}
+        />
+      )}
     </div>
   )
 }

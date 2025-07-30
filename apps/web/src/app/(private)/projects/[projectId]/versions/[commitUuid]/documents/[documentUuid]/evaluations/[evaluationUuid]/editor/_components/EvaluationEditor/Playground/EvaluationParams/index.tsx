@@ -1,25 +1,28 @@
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 import {
   DocumentVersion,
   EvaluationType,
   EvaluationV2,
   LlmEvaluationMetricAnyCustom,
 } from '@latitude-data/core/browser'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
-import { OnToggleFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
-import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
-import { useLogHistoryParams } from './HistoryLogParams/useLogHistoryParams'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import {
+  CollapsibleBox,
+  OnToggleFn,
+} from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { ICommitContextType } from '@latitude-data/web-ui/providers'
 import { HistoryLogParams } from './HistoryLogParams'
-import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
-import { DocsRoute } from '$/components/Documentation/routes'
+import { UseLogHistoryParams } from './HistoryLogParams/useLogHistoryParams'
 
 export type Props = {
   document: DocumentVersion
   commit: ICommitContextType['commit']
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
+  historyInfo: UseLogHistoryParams
   onToggle?: OnToggleFn
   isExpanded?: boolean
-  selectedDocumentLogUuid?: string
 }
 export default function EvaluationParams({
   onToggle,
@@ -27,17 +30,10 @@ export default function EvaluationParams({
   document,
   evaluation,
   commit,
-  selectedDocumentLogUuid,
+  historyInfo,
 }: Props) {
-  const historyInfo = useLogHistoryParams({
-    commitVersionUuid: commit.uuid,
-    document,
-    evaluation,
-    selectedDocumentLogUuid,
-  })
-
   return (
-    <ClientOnly>
+    <ClientOnly loader={<Skeleton className='h-full w-full rounded-lg' />}>
       <CollapsibleBox
         paddingBottom={false}
         paddingRight={false}

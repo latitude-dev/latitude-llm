@@ -1,25 +1,25 @@
-import { Root } from 'react-dom/client'
 import {
-  ElementNode,
-  NodeKey,
-  LexicalNode,
-  EditorConfig,
   $applyNodeReplacement,
   $createParagraphNode,
   $createTextNode,
-  SerializedLexicalNode,
   $nodesOfType,
+  EditorConfig,
+  ElementNode,
+  LexicalNode,
+  NodeKey,
+  SerializedLexicalNode,
 } from 'lexical'
+import { Root } from 'react-dom/client'
 import { cn } from '../../../../../../lib/utils'
+import {
+  BLOCK_EDITOR_TYPE,
+  StepBlock,
+} from '../../state/promptlToLexical/types'
 import {
   createReactDivWrapper,
   replaceReactRoot,
   VERTICAL_SPACE_CLASS,
 } from '../utils'
-import {
-  BLOCK_EDITOR_TYPE,
-  StepBlock,
-} from '../../state/promptlToLexical/types'
 import { StepHeader } from './StepHeader'
 
 interface SerializedStepBlock extends Omit<StepBlock, 'children'> {
@@ -30,9 +30,10 @@ const HEADER_CLASS = 'step-header'
 
 export class StepBlockNode extends ElementNode {
   __stepName: string | undefined
-  __isolated: boolean = false
+  __isolated: boolean | undefined
   __otherAttributes: Record<string, unknown> | undefined = undefined
   __headerRoot?: Root
+  __readOnly?: boolean
 
   static getType(): string {
     return BLOCK_EDITOR_TYPE.STEP
@@ -43,6 +44,7 @@ export class StepBlockNode extends ElementNode {
       node.__stepName,
       node.__isolated,
       node.__otherAttributes,
+      node.__readOnly,
       node.__key,
     )
   }
@@ -51,12 +53,14 @@ export class StepBlockNode extends ElementNode {
     stepName?: string,
     isolated?: boolean,
     __otherAttributes?: Record<string, unknown>,
+    readOnly?: boolean,
     key?: NodeKey,
   ) {
     super(key)
     this.__stepName = stepName
-    this.__isolated = isolated ?? false
+    this.__isolated = isolated
     this.__otherAttributes = __otherAttributes
+    this.__readOnly = readOnly
   }
 
   createDOM(_config: EditorConfig): HTMLElement {
@@ -112,6 +116,7 @@ export class StepBlockNode extends ElementNode {
         as={this.getStepName()}
         isolated={this.getIsolated()}
         otherAttributes={this.__otherAttributes}
+        readOnly={this.getReadOnly()}
       />,
     )
   }
@@ -128,7 +133,8 @@ export class StepBlockNode extends ElementNode {
 
   setIsolated(isolated: boolean): StepBlockNode {
     const writable = this.getWritable()
-    writable.__isolated = isolated
+    // Note: if isolated is false, we don't want to set the attribute
+    writable.__isolated = isolated || undefined
     return writable
   }
 
@@ -136,11 +142,16 @@ export class StepBlockNode extends ElementNode {
     return this.getLatest().__isolated
   }
 
+  getReadOnly(): boolean | undefined {
+    return this.getLatest().__readOnly
+  }
+
   static importJSON(serializedNode: SerializedStepBlock): StepBlockNode {
     return new StepBlockNode(
       serializedNode.attributes?.as,
-      serializedNode.attributes?.isolated ?? false,
+      serializedNode.attributes?.isolated,
       serializedNode.attributes?.otherAttributes,
+      serializedNode.readOnly,
     )
   }
 
@@ -153,6 +164,7 @@ export class StepBlockNode extends ElementNode {
         isolated: this.__isolated,
         otherAttributes: this.__otherAttributes,
       },
+      readOnly: this.getReadOnly(),
     }
   }
 

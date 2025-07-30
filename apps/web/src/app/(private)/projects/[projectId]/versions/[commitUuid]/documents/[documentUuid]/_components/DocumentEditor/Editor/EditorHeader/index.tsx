@@ -1,10 +1,10 @@
-import { memo } from 'react'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { ProviderApiKey } from '@latitude-data/core/browser'
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { ResolvedMetadata } from '$/workers/readMetadata'
-import { TitleRow } from './TitleRow'
+import { ProviderApiKey } from '@latitude-data/core/browser'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { memo } from 'react'
 import { AgentToolbar } from './AgentToolbar'
+import { TitleRow } from './TitleRow'
 
 export type EditorHeaderProps = {
   providers: ProviderApiKey[]
@@ -47,16 +47,16 @@ export const EditorHeader = memo(
           onChangePrompt={onChangePrompt}
           setDevMode={setDevMode}
         />
+        <FreeRunsBanner
+          isLatitudeProvider={isLatitudeProvider}
+          freeRunsCount={freeRunsCount}
+        />
         <AgentToolbar
           isMerged={isMerged}
           isAgent={isAgent}
           config={metadataConfig}
           prompt={prompt}
           onChangePrompt={onChangePrompt}
-        />
-        <FreeRunsBanner
-          isLatitudeProvider={isLatitudeProvider}
-          freeRunsCount={freeRunsCount}
         />
       </div>
     )

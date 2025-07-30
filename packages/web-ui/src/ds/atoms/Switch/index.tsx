@@ -1,5 +1,6 @@
 'use client'
 
+import * as SwitchPrimitives from '@radix-ui/react-switch'
 import {
   ComponentPropsWithoutRef,
   ElementRef,
@@ -12,17 +13,16 @@ import {
   useMemo,
   useState,
 } from 'react'
-import * as SwitchPrimitives from '@radix-ui/react-switch'
 
 import { cn } from '../../../lib/utils'
+import { ButtonStylesProps, useButtonStyles } from '../Button'
 import {
   FormControl,
   FormDescription,
   InlineFormErrorMessage,
 } from '../FormField'
-import { Label } from '../Label'
 import { Icon, IconProps } from '../Icons'
-import { ButtonStylesProps, useButtonStyles } from '../Button'
+import { Label } from '../Label'
 
 type ToogleProps = ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> & {
   size?: 'normal'
@@ -95,6 +95,7 @@ type Props = ToogleProps &
     checked?: boolean
     defaultChecked?: boolean
     fullWidth?: boolean
+    innerClassName?: string
   }
 function SwitchInput({
   className,
@@ -105,6 +106,7 @@ function SwitchInput({
   checked,
   defaultChecked,
   fullWidth = true,
+  innerClassName,
   ...rest
 }: Props) {
   const error = errors?.[0]
@@ -147,6 +149,7 @@ function SwitchInput({
               {...rest}
               checked={isChecked}
               onCheckedChange={onChange}
+              className={innerClassName}
             />
           </div>
         </FormControl>
@@ -168,9 +171,6 @@ function SwitchInput({
 
 type FancySwitchProps = ToogleProps &
   Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> & {
-    checked?: boolean
-    defaultChecked?: boolean
-    onCheckedChange?: (checked: boolean) => void
     iconProps: IconProps
     buttonProps: ButtonStylesProps
   }
@@ -179,28 +179,32 @@ function FancySwitchToggle({
   iconProps,
   buttonProps,
   checked,
-  defaultChecked,
   onCheckedChange,
+  disabled,
   ...rest
 }: FancySwitchProps) {
-  const { isChecked, onChange } = useCheckedState({
-    checked: checked,
-    defaultChecked,
-    onCheckedChange,
+  const buttonStyles = useButtonStyles({
+    ...buttonProps,
+    containerClassName: cn(buttonProps.containerClassName, {
+      'cursor-pointer': !disabled,
+      'cursor-not-allowed': disabled,
+    }),
+    lookDisabled: disabled,
   })
-  const buttonStyles = useButtonStyles(buttonProps)
-  const toggleChecked = useCallback(() => {
-    onChange(!isChecked)
-  }, [isChecked, onChange])
+
   return (
-    <div className={buttonStyles.container} onClick={toggleChecked}>
+    <div
+      className={buttonStyles.container}
+      onClick={() => !disabled && onCheckedChange?.(!checked)}
+    >
       <div className={buttonStyles.buttonClass}>
         <div className={buttonStyles.innerButtonClass}>
           <Icon {...iconProps} />
           <SwitchToggle
             {...rest}
-            checked={isChecked}
-            onCheckedChange={onChange}
+            checked={checked}
+            onCheckedChange={onCheckedChange}
+            disabled={disabled}
           />
         </div>
       </div>
@@ -208,4 +212,4 @@ function FancySwitchToggle({
   )
 }
 
-export { SwitchToggle, SwitchInput, FancySwitchToggle }
+export { FancySwitchToggle, SwitchInput, SwitchToggle }

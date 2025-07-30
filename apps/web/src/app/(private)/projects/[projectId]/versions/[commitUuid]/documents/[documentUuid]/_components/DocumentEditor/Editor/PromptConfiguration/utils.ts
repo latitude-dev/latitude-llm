@@ -84,7 +84,7 @@ export const useLatitudeAgentsConfig = ({
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
 
-  const { data: agentToolsMap } = useAgentToolsMap({
+  const { data: agentToolsMap, isLoading } = useAgentToolsMap({
     commitUuid: commit?.uuid,
     projectId: project.id,
   })
@@ -142,6 +142,7 @@ export const useLatitudeAgentsConfig = ({
     availableAgents,
     selectedAgents: selectedAgentsFullPaths,
     toggleAgent,
+    isLoading,
   }
 }
 

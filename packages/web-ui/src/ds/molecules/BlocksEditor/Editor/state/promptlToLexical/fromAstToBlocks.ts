@@ -1,40 +1,40 @@
 import { AstError } from '@latitude-data/constants/promptl'
 import {
+  createTextNode,
   extractTextContent,
-  getStepAttributes,
-  getPromptAttributes,
   getContentFileAttributes,
+  getPromptAttributes,
+  getStepAttributes,
   getToolCallAttributes,
+  isBlockWithChildren,
+  isConfigNode,
   isContentBlock,
   isMessageBlock,
-  isStepBlock,
-  isConfigNode,
   isReferenceLink,
+  isStepBlock,
   isVariable,
-  isBlockWithChildren,
-  createTextNode,
 } from './astParsingUtils'
+import { createCodeBlock } from './createCodeBlock'
 import {
-  type ElementTag,
-  type ContentBlock,
-  TemplateNode,
-  Fragment,
-  BlockRootNode,
-  ParagraphBlock,
-  ImageBlock,
-  FileBlock,
-  ToolCallBlock,
-  ReferenceLink,
   BLOCK_EDITOR_TYPE,
   BlockAttributes,
-  Variable,
-  InlineBlock,
+  BlockRootNode,
   CodeBlock,
-  StepBlock,
+  type ContentBlock,
+  type ElementTag,
+  FileBlock,
+  Fragment,
+  ImageBlock,
+  InlineBlock,
   MessageBlock,
   MessageBlockType,
+  ParagraphBlock,
+  ReferenceLink,
+  StepBlock,
+  TemplateNode,
+  ToolCallBlock,
+  Variable,
 } from './types'
-import { createCodeBlock } from './createCodeBlock'
 
 function findErrorsForNode({
   node,
@@ -357,6 +357,9 @@ function processBlockNode({
           : [createEmptyParagraph({ content: '' })],
     } satisfies MessageBlock
   }
+
+  // Any unprocessable entity in Promptl is shown as code
+  return createCodeBlock({ node, prompt, errors })
 }
 
 function processNodes({
@@ -474,6 +477,92 @@ function childrenWithoutConfig(children: TemplateNode[]): TemplateNode[] {
   return children.filter((node) => !isConfigNode(node))
 }
 
+function trimLeadingTexts(
+  blocks: ParagraphBlock['children'],
+): ParagraphBlock['children'] {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]!
+
+    if (block.type != 'text') {
+      return blocks.slice(i)
+    }
+
+    const trimmed = block.text.trimStart()
+    if (trimmed !== '') {
+      block.text = trimmed
+      return blocks.slice(i)
+    }
+  }
+
+  return []
+}
+
+function trimTrailingTexts(
+  blocks: ParagraphBlock['children'],
+): ParagraphBlock['children'] {
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const block = blocks[i]!
+
+    if (block.type != 'text') {
+      return blocks.slice(0, i + 1)
+    }
+
+    const trimmed = block.text.trimEnd()
+    if (trimmed !== '') {
+      block.text = trimmed
+      return blocks.slice(0, i + 1)
+    }
+  }
+
+  return []
+}
+
+function trimLeadingParagraphs(
+  blocks: BlockRootNode['children'],
+): BlockRootNode['children'] {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]!
+
+    if (block.type != 'paragraph') {
+      return blocks.slice(i)
+    }
+
+    const trimmed = trimLeadingTexts(block.children)
+    if (trimmed.length > 0) {
+      block.children = trimmed
+      return blocks.slice(i)
+    }
+  }
+
+  return []
+}
+
+function trimTrailingParagraphs(
+  blocks: BlockRootNode['children'],
+): BlockRootNode['children'] {
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const block = blocks[i]!
+
+    if (block.type != 'paragraph') {
+      return blocks.slice(0, i + 1)
+    }
+
+    const trimmed = trimTrailingTexts(block.children)
+    if (trimmed.length > 0) {
+      block.children = trimmed
+      return blocks.slice(0, i + 1)
+    }
+  }
+
+  return []
+}
+
+function trimEmptyBlocks(
+  blocks: BlockRootNode['children'],
+): BlockRootNode['children'] {
+  return trimTrailingParagraphs(trimLeadingParagraphs(blocks))
+}
+
 export function fromAstToBlocks({
   ast,
   prompt,
@@ -484,7 +573,7 @@ export function fromAstToBlocks({
   errors?: AstError[]
 }) {
   const nodes = childrenWithoutConfig(ast.children)
-  const children = processNodes({
+  let children = processNodes({
     nodes,
     prompt,
     errors,
@@ -501,7 +590,10 @@ export function fromAstToBlocks({
     children.push(astMissingTextAsCodeBlock)
   }
 
-  // If no content, create an empty paragraph with empty text
+  // Note: trimming empty blocks to see the placeholder
+  children = trimEmptyBlocks(children)
+
+  // Note: Lexical must have at least one root child
   if (children.length === 0) {
     children.push(createEmptyParagraph({ content: '' }))
   }

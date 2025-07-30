@@ -1,43 +1,43 @@
-import { useCallback, useMemo, useState } from 'react'
-import { useDebouncedCallback } from 'use-debounce'
+import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin'
 import {
   InitialConfigType,
   LexicalComposer,
 } from '@lexical/react/LexicalComposer'
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
-import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin'
-import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin'
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary'
+import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
+import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin'
+import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
+import { useCallback, useMemo, useState } from 'react'
+import { useDebouncedCallback } from 'use-debounce'
 
 import { cn } from '../../../../lib/utils'
+import { Text } from '../../../atoms/Text'
 import { font } from '../../../tokens'
 import { BlocksEditorProps } from '../types'
 import { BlocksEditorProvider } from './Provider'
-import { Text } from '../../../atoms/Text'
 
 import { fromBlocksToLexical } from './state/fromBlocksToLexical'
 import { fromLexicalToText } from './state/fromLexicalToText'
 
-import { HierarchyValidationPlugin } from './plugins/HierarchyValidationPlugin'
-import { EnterKeyPlugin } from './plugins/EnterKeyPlugin'
-import { DraggableBlockPlugin } from './plugins/DraggableBlockPlugin'
-import { StepEditPlugin } from './plugins/StepEditPlugin'
-import { TypeaheadMenuPlugin } from './plugins/TypeaheadMenuPlugin'
+import { EditorReadOnlyBanner } from '../../DocumentTextEditor/ReadOnlyMessage'
+import { CodeNode } from './nodes/CodeNode'
 import { MessageBlockNode } from './nodes/MessageBlock'
+import { ReferenceNode } from './nodes/ReferenceNode'
 import { StepBlockNode } from './nodes/StepBlock'
 import { VERTICAL_SPACE_CLASS } from './nodes/utils'
-import { VariableTransformPlugin } from './plugins/VariableTransformPlugin'
 import { VariableNode } from './nodes/VariableNode'
-import { VariableMenuPlugin } from './plugins/VariablesMenuPlugin'
-import { ReferencesPlugin } from './plugins/ReferencesPlugin'
-import { ReferenceEditPlugin } from './plugins/ReferenceEditPlugin'
-import { ReferenceNode } from './nodes/ReferenceNode'
-import { CodeNode } from './nodes/CodeNode'
-import { PreventBackspaceEscapePlugin } from './plugins/PreventBackspaceEscapePlugin'
+import { DraggableBlockPlugin } from './plugins/DraggableBlockPlugin'
+import { EnterKeyPlugin } from './plugins/EnterKeyPlugin'
+import { HierarchyValidationPlugin } from './plugins/HierarchyValidationPlugin'
 import { MessageEditPlugin } from './plugins/MessageEditPlugin'
-import { EditorReadOnlyBanner } from '../../DocumentTextEditor/ReadOnlyMessage'
+import { PreventBackspaceEscapePlugin } from './plugins/PreventBackspaceEscapePlugin'
+import { ReferenceEditPlugin } from './plugins/ReferenceEditPlugin'
+import { ReferencesPlugin } from './plugins/ReferencesPlugin'
+import { StepEditPlugin } from './plugins/StepEditPlugin'
+import { TypeaheadMenuPlugin } from './plugins/TypeaheadMenuPlugin'
+import { VariableMenuPlugin } from './plugins/VariablesMenuPlugin'
+import { VariableTransformPlugin } from './plugins/VariableTransformPlugin'
 
 const theme = {
   ltr: 'ltr',
@@ -70,7 +70,7 @@ function OnChangeHandler({
   const handleChange = useDebouncedCallback(
     fromLexicalToText({ onChange }),
     100,
-    { leading: false, trailing: true },
+    { trailing: true },
   )
 
   return (
@@ -108,7 +108,7 @@ export function BlocksEditor({
     return {
       namespace: 'BlocksEditor',
       theme,
-      editorState: fromBlocksToLexical(initialValue),
+      editorState: fromBlocksToLexical(initialValue, readOnly),
       editable: !readOnly,
       onError,
       nodes: [
@@ -126,16 +126,24 @@ export function BlocksEditor({
       currentDocument={currentDocument}
       Link={Link}
       prompts={prompts}
+      readOnly={readOnly}
     >
       <LexicalComposer initialConfig={initialConfig}>
         <div
-          className={cn('relative overflow-y-auto custom-scrollbar', {
-            'scrollable-indicator': !readOnly,
-            'border border-border bg-backgroundCode rounded-md px-3': readOnly,
-          })}
+          className={cn(
+            // Note: min-h-6 necessary to avoid showing the scrollbar when there is no content
+            'min-h-6 relative overflow-y-auto custom-scrollbar scrollable-indicator',
+            {
+              'border border-border bg-backgroundCode rounded-md px-3 pb-3':
+                readOnly,
+            },
+          )}
           ref={onRef}
         >
-          <EditorReadOnlyBanner readOnlyMessage={readOnlyMessage} />
+          <EditorReadOnlyBanner
+            readOnlyMessage={readOnlyMessage}
+            className='pb-3'
+          />
           <RichTextPlugin
             ErrorBoundary={LexicalErrorBoundary}
             contentEditable={
@@ -149,13 +157,31 @@ export function BlocksEditor({
                     'cursor-default opacity-80': readOnly,
                   },
                 )}
-                aria-placeholder={placeholder}
+                aria-placeholder={
+                  readOnly ? readOnlyMessage || '' : placeholder
+                }
                 placeholder={
-                  <div className='absolute top-0 text-gray-400 pointer-events-none select-none'>
-                    <Text.H5 color='foregroundMuted' textOpacity={50}>
-                      {placeholder}
-                    </Text.H5>
-                  </div>
+                  readOnly ? (
+                    <div className='absolute bottom-2 text-gray-400 pointer-events-none select-none'>
+                      <Text.H5
+                        color='foregroundMuted'
+                        textOpacity={50}
+                        userSelect={false}
+                      >
+                        This prompt is empty
+                      </Text.H5>
+                    </div>
+                  ) : (
+                    <div className='absolute top-0 text-gray-400 pointer-events-none select-none'>
+                      <Text.H5
+                        color='foregroundMuted'
+                        textOpacity={50}
+                        userSelect={false}
+                      >
+                        {placeholder}
+                      </Text.H5>
+                    </div>
+                  )
                 }
               />
             }

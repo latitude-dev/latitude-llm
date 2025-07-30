@@ -88,13 +88,13 @@ function getVariableOptions(editor: LexicalEditor): PickerGroup[] {
 function getDocumentsOptions(editor: LexicalEditor): PickerGroup[] {
   return [
     {
-      label: 'Documents',
+      label: 'Prompts',
       key: 'documents',
       options: [
-        new ComponentPickerOption('Include document (or type "@")', {
+        new ComponentPickerOption('Reference prompt (or type "@")', {
           key: 'insert_document',
           icon: 'plus',
-          keywords: ['include', 'document'],
+          keywords: ['include', 'document', 'prompt'],
           onSelect: () =>
             editor.update(() => {
               const selection = $getSelection()
@@ -170,7 +170,7 @@ function getGroupedOptions(editor: LexicalEditor): PickerGroup[] {
       label: 'Steps',
       key: 'steps',
       options: [
-        new ComponentPickerOption('Create step', {
+        new ComponentPickerOption('Add step', {
           key: 'step',
           icon: 'plus',
           keywords: ['step', 'block', 'section'],

@@ -1,12 +1,14 @@
-import { Config } from 'promptl-ai'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { FancySwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { ProviderModelSelector } from '$/components/ProviderModelSelector'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
+import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { FancySwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { Config } from 'promptl-ai'
 import { PromptConfiguration } from '../../PromptConfiguration'
 import { EditorHeaderProps } from '../index'
-import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 
 export function TitleRow({
   providers,
@@ -30,12 +32,12 @@ export function TitleRow({
   setDevMode: EditorHeaderProps['setDevMode']
 }) {
   return (
-    <div className='flex flex-row items-center justify-between gap-x-4'>
+    <div className='flex flex-row items-center justify-between gap-x-4 pt-px'>
       <div className='flex flex-row items-center gap-2 min-w-0'>
         <div className='flex flex-row items-center gap-x-2 min-w-0'>
           {isAgent ? (
             <Tooltip trigger={<Icon name='bot' color='foregroundMuted' />}>
-              This is an agent
+              This prompt is an agent
             </Tooltip>
           ) : null}
           <Text.H4M ellipsis noWrap>
@@ -61,18 +63,31 @@ export function TitleRow({
             onChangePrompt(updatePromptMetadata(prompt, config))
           }}
         />
-        <FancySwitchToggle
-          iconProps={{
-            name: 'terminal',
-            color: devMode ? 'white' : 'foregroundMuted',
-          }}
-          defaultChecked={devMode}
-          checked={devMode}
-          onCheckedChange={setDevMode}
-          buttonProps={{
-            variant: devMode ? 'default' : 'outline',
-          }}
-        />
+        <ClientOnly loader={<Skeleton className='w-20 h-8 rounded-md' />}>
+          <Tooltip
+            asChild
+            trigger={
+              <span>
+                <FancySwitchToggle
+                  iconProps={{
+                    name: 'terminal',
+                    color: devMode ? 'white' : 'foregroundMuted',
+                  }}
+                  checked={devMode}
+                  onCheckedChange={setDevMode}
+                  buttonProps={{
+                    variant: devMode ? 'default' : 'outline',
+                  }}
+                />
+              </span>
+            }
+            align='center'
+            side='top'
+            className='cursor-pointer'
+          >
+            {devMode ? 'Switch to Simple Mode' : 'Switch to Dev Mode'}
+          </Tooltip>
+        </ClientOnly>
       </div>
     </div>
   )

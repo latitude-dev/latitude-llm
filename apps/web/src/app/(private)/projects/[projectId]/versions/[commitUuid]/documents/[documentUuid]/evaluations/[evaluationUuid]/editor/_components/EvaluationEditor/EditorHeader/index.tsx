@@ -1,22 +1,17 @@
 import { memo, ReactNode } from 'react'
 
-import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
+import { PromptConfiguration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptConfiguration'
+import { PromptIntegrations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptIntegrations'
+import { FreeRunsBanner } from '$/components/FreeRunsBanner'
+import { ProviderModelSelector } from '$/components/ProviderModelSelector'
 import { ResolvedMetadata } from '$/workers/readMetadata'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
-import { PromptConfiguration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptConfiguration'
-import { PromptIntegrations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptIntegrations'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { FreeRunsBanner } from '$/components/FreeRunsBanner'
-import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
-import { ProviderModelSelector } from '$/components/ProviderModelSelector'
 
 export type IProviderByName = Record<string, ProviderApiKey>
 
@@ -31,7 +26,6 @@ export const EditorHeader = memo(
     disabledMetadataSelectors = false,
     providers,
     freeRunsCount,
-    showCopilotSetting,
     isLatitudeProvider,
     prompt,
     canUseSubagents = true,
@@ -48,34 +42,11 @@ export const EditorHeader = memo(
     disabledMetadataSelectors?: boolean
     providers?: ProviderApiKey[]
     freeRunsCount?: number
-    showCopilotSetting?: boolean
     canUseSubagents?: boolean
     documentVersion?: DocumentVersion
   }) => {
     const metadataConfig = metadata?.config
     const isAgent = metadataConfig?.type === 'agent' || false
-    const { value: showLineNumbers, setValue: setShowLineNumbers } =
-      useLocalStorage({
-        key: AppLocalStorage.editorLineNumbers,
-        defaultValue: true,
-      })
-    const { value: wrapText, setValue: setWrapText } = useLocalStorage({
-      key: AppLocalStorage.editorWrapText,
-      defaultValue: true,
-    })
-    const { value: showMinimap, setValue: setShowMinimap } = useLocalStorage({
-      key: AppLocalStorage.editorMinimap,
-      defaultValue: false,
-    })
-    const { value: showCopilot, setValue: setShowCopilot } = useLocalStorage({
-      key: AppLocalStorage.editorCopilot,
-      defaultValue: true,
-    })
-    const { value: autoClosingTags, setValue: setAutoClosingTags } =
-      useLocalStorage({
-        key: AppLocalStorage.editorAutoClosingTags,
-        defaultValue: true,
-      })
 
     return (
       <div className='flex flex-col gap-y-3'>
@@ -92,7 +63,7 @@ export const EditorHeader = memo(
                   <Tooltip
                     trigger={<Icon name='bot' color='foregroundMuted' />}
                   >
-                    This is an agent
+                    This prompt is an agent
                   </Tooltip>
                 ) : null}
                 <Text.H4M>{title}</Text.H4M>
@@ -102,45 +73,7 @@ export const EditorHeader = memo(
             )}
             {leftActions}
           </div>
-          <div className='flex flex-row items-start gap-2'>
-            {rightActions}
-            <DropdownMenu
-              triggerButtonProps={{ size: 'icon' }}
-              options={[
-                {
-                  label: 'Show line numbers',
-                  onClick: () => setShowLineNumbers(!showLineNumbers),
-                  checked: showLineNumbers,
-                },
-                {
-                  label: 'Wrap text',
-                  onClick: () => setWrapText(!wrapText),
-                  checked: wrapText,
-                },
-                {
-                  label: 'Show minimap',
-                  onClick: () => setShowMinimap(!showMinimap),
-                  checked: showMinimap,
-                },
-                {
-                  label: 'Auto closing tags',
-                  onClick: () => setAutoClosingTags(!autoClosingTags),
-                  checked: autoClosingTags,
-                },
-                ...(showCopilotSetting
-                  ? [
-                      {
-                        label: 'Show Copilot',
-                        onClick: () => setShowCopilot(!showCopilot),
-                        checked: showCopilot,
-                      },
-                    ]
-                  : []),
-              ]}
-              side='bottom'
-              align='end'
-            />
-          </div>
+          <div className='flex flex-row items-start gap-2'>{rightActions}</div>
         </div>
         <div className='min-w-0 flex flex-row justify-between gap-2'>
           <ProviderModelSelector

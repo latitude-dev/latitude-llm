@@ -1,10 +1,10 @@
+import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 import {
   Message,
   MessageRole,
   ToolCall,
   ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 import { LanguageModelUsage } from 'ai'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useMemo, useRef, useState } from 'react'
@@ -128,6 +128,7 @@ export function usePlaygroundChat({
     (data: ChainEvent['data']) => {
       if ('uuid' in data) {
         setDocumentLogUuid(data.uuid)
+        return data.uuid
       }
     },
     [setDocumentLogUuid],
@@ -141,7 +142,8 @@ export function usePlaygroundChat({
       setIsLoading(true)
       setError(undefined)
 
-      let documentLogUuid: string | undefined
+      let runUuid: string | undefined
+      let runError: Error | undefined
 
       const reader = stream.getReader()
 
@@ -154,7 +156,7 @@ export function usePlaygroundChat({
           const { parsedEvent, data } = parseEvent(value)
           if (!data) continue
 
-          setDocumentLogUuidd(data as ChainEvent['data'])
+          runUuid = setDocumentLogUuidd(data as ChainEvent['data']) ?? runUuid
           handleIntegrationEvent(data as ChainEvent['data'])
           handleLatitudeEvent(data as ChainEvent['data'])
           handleProviderEvent(parsedEvent, data as ChainEvent['data'])
@@ -162,13 +164,13 @@ export function usePlaygroundChat({
         }
       } catch (error) {
         setError(error as Error)
+        runError = error as Error
       } finally {
         setIsLoading(false)
-        onPromptRan?.(documentLogUuid, error)
+        onPromptRan?.(runUuid, runError)
       }
     },
     [
-      error,
       setDocumentLogUuidd,
       handleIntegrationEvent,
       handleLatitudeEvent,
