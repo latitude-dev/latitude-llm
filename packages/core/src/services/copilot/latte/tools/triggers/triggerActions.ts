@@ -8,7 +8,7 @@ import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../lib/Result'
 import Transaction from '../../../../../lib/Transaction'
 import executeTriggerActions from './executeTriggerActions'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import { DocumentTriggerType, HEAD_COMMIT } from '@latitude-data/constants'
 import {
   emailTriggerConfigurationSchema,
   insertScheduledTriggerConfigurationSchema,
@@ -22,7 +22,10 @@ const triggerActions = defineLatteTool(
       .getHeadCommit(projectId)
       .then((r) => r.unwrap())
 
-    if (headCommit == undefined || versionUuid === headCommit.uuid) {
+    if (
+      headCommit == undefined ||
+      (versionUuid !== headCommit.uuid && versionUuid !== HEAD_COMMIT)
+    ) {
       return Result.error(
         new BadRequestError(
           `Cannot modify/add/delete triggers on a draft commit. Select a previous live commit or publish the draft.`,

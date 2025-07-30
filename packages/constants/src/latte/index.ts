@@ -22,5 +22,8 @@ export enum LatteTool {
   listIntegrationTriggers = 'list_integration_triggers',
   listExistingTriggers = 'list_existing_triggers',
 
+  getFullTriggerSchema = 'get_full_trigger_schema',
+  // Adding only validate keyword to latte as it gets confused with the create/deploy word
+  validateAndDeployTriggerSchema = 'validate_trigger_schema',
   triggerActions = 'trigger_actions',
 }

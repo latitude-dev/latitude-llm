@@ -19,6 +19,7 @@ const mockPipedreamClient = {
   updateTrigger: vi.fn(),
   deleteTrigger: vi.fn(),
   deployTrigger: vi.fn(),
+  reloadComponentProps: vi.fn(),
 }
 
 vi.mock('@pipedream/sdk', () => ({
@@ -417,6 +418,9 @@ describe('updatePipedreamTrigger', () => {
     })
 
     it('deletes old trigger and deploys new one successfully', async () => {
+      mockPipedreamClient.reloadComponentProps.mockResolvedValue(
+        Result.ok({ prop1: 'filledValue1' }),
+      )
       const result = await updatePipedreamTrigger({
         workspace,
         trigger: originalTrigger as Extract<
@@ -464,6 +468,9 @@ describe('updatePipedreamTrigger', () => {
 
     it('returns error when deploy new trigger fails', async () => {
       const deployError = new Error('Deploy failed')
+      mockPipedreamClient.reloadComponentProps.mockResolvedValue(
+        Result.ok({ prop1: 'filledValue1' }),
+      )
       mockPipedreamClient.deployTrigger.mockRejectedValue(deployError)
 
       const result = await updatePipedreamTrigger({
