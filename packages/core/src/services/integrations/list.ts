@@ -7,7 +7,13 @@ export async function listIntegrations(workspace: Workspace) {
   const integrationsScope = new IntegrationsRepository(workspace.id)
   const integrations = await integrationsScope.findAll().then((r) => r.unwrap())
   // Adding a fake integration for Latitude, to later be used to its their tools/triggers
-  const latitudeIntegration: IntegrationDto = {
+  const latitudeIntegration: IntegrationDto =
+    buildLatitudeIntegration(workspace)
+  return Result.ok([latitudeIntegration, ...integrations])
+}
+
+export function buildLatitudeIntegration(workspace: Workspace): IntegrationDto {
+  return {
     id: -1,
     name: 'latitude',
     type: IntegrationType.Latitude,
@@ -22,6 +28,4 @@ export async function listIntegrations(workspace: Workspace) {
     deletedAt: null,
     mcpServerId: null,
   }
-
-  return Result.ok([latitudeIntegration, ...integrations])
 }

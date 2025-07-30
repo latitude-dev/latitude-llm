@@ -1,6 +1,7 @@
 import { JSONSchema7 } from 'json-schema'
 
 export function fixToolSchema(schema: JSONSchema7): JSONSchema7 {
+  // Ensure object shema has properties and additionalProperties
   if (schema.type === 'object') {
     if (schema.properties) {
       Object.entries(schema.properties).forEach(([key, value]) => {
@@ -14,6 +15,7 @@ export function fixToolSchema(schema: JSONSchema7): JSONSchema7 {
     }
   }
 
+  // Ensure array schema has items
   if (schema.type === 'array') {
     if (schema.items) {
       if (Array.isArray(schema.items)) {
