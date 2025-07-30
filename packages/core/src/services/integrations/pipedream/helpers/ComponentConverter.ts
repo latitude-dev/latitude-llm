@@ -1,9 +1,9 @@
 import { McpTool } from '@latitude-data/constants'
-import { propsToJSONSchema } from './PropsToJSONConverter'
 import {
   PipedreamComponent,
   PipedreamComponentType,
 } from '../../../../constants'
+import propsToJSONSchema from './propsToJSONConverter'
 
 export function pipedreamComponentToToolDefinition(
   component: PipedreamComponent<PipedreamComponentType.Tool>,

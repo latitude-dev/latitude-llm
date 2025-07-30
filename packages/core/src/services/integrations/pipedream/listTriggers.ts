@@ -3,7 +3,7 @@ import { PipedreamIntegration } from '../../../browser'
 import { PromisedResult } from '../../../lib/Transaction'
 import { getApp } from './apps'
 import { Result } from '../../../lib/Result'
-import { pipedreamComponentToTriggerDefinition } from './helpers/ComponentConverter'
+import { pipedreamComponentToTriggerDefinition } from './helpers/componentConverter'
 
 export async function listPipedreamIntegrationTriggers(
   integration: PipedreamIntegration,
@@ -14,7 +14,6 @@ export async function listPipedreamIntegrationTriggers(
 
   if (!Result.isOk(appResult)) return appResult
   const app = appResult.unwrap()
-
   const triggers = app.triggers.map(pipedreamComponentToTriggerDefinition)
   return Result.ok(triggers)
 }

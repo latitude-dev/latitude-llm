@@ -115,7 +115,7 @@ function propToJSONSchema(prop: ConfigurableProp): JSONSchema7 | undefined {
   }
 }
 
-export function propsToJSONSchema(props: readonly ConfigurableProp[]) {
+function propsToJSONSchema(props: readonly ConfigurableProp[]) {
   const properties: Record<string, JSONSchema7> = {}
   const required: string[] = []
 
@@ -134,3 +134,5 @@ export function propsToJSONSchema(props: readonly ConfigurableProp[]) {
     additionalProperties: props.some((p) => p.reloadProps),
   }
 }
+
+export default propsToJSONSchema

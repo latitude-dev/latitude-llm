@@ -3,7 +3,7 @@ import { PipedreamIntegration } from '../../../browser'
 import { getApp } from './apps'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
-import { pipedreamComponentToToolDefinition } from './helpers/ComponentConverter'
+import { pipedreamComponentToToolDefinition } from './helpers/componentConverter'
 
 export async function listPipedreamIntegrationTools(
   integration: PipedreamIntegration,
