@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { AstError } from '@latitude-data/constants/promptl'
 import { parse, scan } from 'promptl-ai'
+import { describe, expect, it } from 'vitest'
 import { fromAstToBlocks } from './fromAstToBlocks'
 import { fromBlocksToText } from './fromBlocksToText'
-import { AstError } from '@latitude-data/constants/promptl'
+import { StepBlock } from './types'
 
 describe('fromAstToBlocks', () => {
   it('should convert plain text to simple blocks', () => {
@@ -14,8 +15,40 @@ describe('fromAstToBlocks', () => {
     expect(output).toBe(prompt)
   })
 
+  it('should handle empty prompt', () => {
+    const prompt = ''
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt)
+  })
+
+  it('should handle leading and trailing whitespaces', () => {
+    const prompt = `
+
+    
+
+
+    yeeet
+
+
+pong
+
+
+
+
+`
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt.trim())
+  })
+
   it('should handle top-level content-image blocks', () => {
-    const prompt = `<system>
+    const prompt = `
+<system>
 You are an image analysis assistant.
 </system>
 
@@ -25,7 +58,8 @@ https://example.com/image.jpg
 
 <user>
 What do you see in this image?
-</user>`
+</user>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -40,7 +74,7 @@ You are an image analysis assistant.
 {{ if foo == "Bar" }}
   I can not be rendered in Lexical
 {{ endif }}
-`
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -122,7 +156,7 @@ You are an image analysis assistant.
 {{ endif }}
 
 How are you?
-`
+`.trim()
 
     const metadata = await scan({ prompt })
     const rootNode = fromAstToBlocks({
@@ -135,19 +169,19 @@ How are you?
     expect(codeBlock.errors).toEqual([
       {
         start: {
-          line: 4,
+          line: 3,
           column: 19,
-          character: 57,
+          character: 56,
         },
         end: {
-          line: 9,
-          column: 1,
-          character: 121,
+          line: 7,
+          column: 13,
+          character: 119,
         },
         name: 'ParseError',
         message: "Expected '}}' but did not find it.",
-        startIndex: 57,
-        endIndex: 121,
+        startIndex: 56,
+        endIndex: 119,
       },
     ])
     const output = fromBlocksToText(rootNode)
@@ -160,7 +194,7 @@ You are an image analysis assistant.
 {{ for item, index in list }}
   {{ index }}: {{ item }}
 {{ endfor }}
-`
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -170,7 +204,8 @@ You are an image analysis assistant.
   })
 
   it('should handle multiple content-image blocks', () => {
-    const prompt = `<content-image>
+    const prompt = `
+<content-image>
 https://example.com/image1.jpg
 </content-image>
 
@@ -180,7 +215,8 @@ https://example.com/image2.jpg
 
 <user>
 Compare these two images.
-</user>`
+</user>
+`.trim()
 
     const ast = parse(prompt)
 
@@ -190,11 +226,13 @@ Compare these two images.
   })
 
   it('filters config', () => {
-    const prompt = `---
+    const prompt = `
+---
 provider: OpenAI
 model: gpt-4o-mini
 ---
-I'm a simple prompt`
+I'm a simple prompt
+`.trim()
 
     const ast = parse(prompt)
 
@@ -204,9 +242,11 @@ I'm a simple prompt`
   })
 
   it('should handle content-image with data URLs', () => {
-    const prompt = `<content-image>
+    const prompt = `
+<content-image>
 data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD...
-</content-image>`
+</content-image>
+`.trim()
 
     const ast = parse(prompt)
 
@@ -216,7 +256,8 @@ data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD...
   })
 
   it('should handle content-image blocks within steps', () => {
-    const prompt = `<step as="analysis">
+    const prompt = `
+<step as="analysis">
 First, examine this image:
 
 <content-image>
@@ -230,7 +271,8 @@ https://example.com/reference.jpg
 </content-image>
 
 Provide your analysis.
-</step>`
+</step>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -239,7 +281,8 @@ Provide your analysis.
   })
 
   it('should handle mixed content with images in steps', () => {
-    const prompt = `<step as="preparation" isolated>
+    const prompt = `
+<step as="preparation" isolated>
 Review the document:
 
 <content-image>
@@ -253,7 +296,8 @@ https://example.com/chart.jpg
 </content-image>
 
 Consider the implications.
-</step>`
+</step>
+`.trim()
 
     const ast = parse(prompt)
 
@@ -263,7 +307,8 @@ Consider the implications.
   })
 
   it('should handle full conversation with mixed content', () => {
-    const prompt = `<system>
+    const prompt = `
+<system>
 You are a multimodal assistant.
 </system>
 
@@ -291,7 +336,8 @@ Compare with this ideal reference.
 
 <assistant>
 Based on my analysis: {{analysis}}
-</assistant>`
+</assistant>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -301,7 +347,8 @@ Based on my analysis: {{analysis}}
   })
 
   it('should preserve content-image blocks with mustache expressions', () => {
-    const prompt = `<content-image>
+    const prompt = `
+<content-image>
 {{imageUrl}}
 </content-image>
 
@@ -317,7 +364,8 @@ And compare with:
 <content-image>
 {{referenceImage}}
 </content-image>
-</step>`
+</step>
+`.trim()
 
     const ast = parse(prompt)
 
@@ -345,11 +393,13 @@ And compare with:
   })
 
   it('should handle content-image with whitespace variations', () => {
-    const prompt = `<content-image>
+    const prompt = `
+<content-image>
 
 https://example.com/image.jpg
 
-</content-image>`
+</content-image>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -364,29 +414,35 @@ https://example.com/image.jpg
     },
     {
       name: 'multiple content-images',
-      input: `<content-image>image1.jpg</content-image>
+      input: `
+<content-image>image1.jpg</content-image>
 
-<content-image>image2.jpg</content-image>`,
+<content-image>image2.jpg</content-image>
+`.trim(),
     },
     {
       name: 'content-image in conversation',
-      input: `<system>System prompt</system>
+      input: `
+<system>System prompt</system>
 
 <user>User message</user>
 
 <content-image>user-image.jpg</content-image>
 
-<assistant>Response</assistant>`,
+<assistant>Response</assistant>
+`.trim(),
     },
     {
       name: 'content-image in step',
-      input: `<step as="test">
+      input: `
+<step as="test">
 Text before
 
 <content-image>step-image.jpg</content-image>
 
 Text after
-</step>`,
+</step>
+`.trim(),
     },
     {
       name: 'simple content-file',
@@ -398,9 +454,11 @@ Text after
     },
     {
       name: 'tool-call in conversation',
-      input: `<assistant>I'll search for that information</assistant>
+      input: `
+<assistant>I'll search for that information</assistant>
 
-<tool-call id="search_1" name="web_search" query="AI trends 2024" />`,
+<tool-call id="search_1" name="web_search" query="AI trends 2024" />
+`.trim(),
     },
   ]
 
@@ -415,11 +473,13 @@ Text after
   })
 
   it('should parse content-file in conversation', () => {
-    const prompt = `<user>Please review this document</user>
+    const prompt = `
+<user>Please review this document</user>
 
 <content-file name="report.pdf">/uploads/report.pdf</content-file>
 
-<assistant>I'll review the document</assistant>`
+<assistant>I'll review the document</assistant>
+`.trim()
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
     const output = fromBlocksToText(rootNode)
@@ -427,13 +487,15 @@ Text after
   })
 
   it('mixed content types', () => {
-    const prompt = `<user>Analyze this image and document</user>
+    const prompt = `
+<user>Analyze this image and document</user>
 
 <content-image>chart.png</content-image>
 
 <content-file name="data.csv">data.csv</content-file>
 
-<tool-call id="analyze_1" name="analyze_data" image="chart.png" data="data.csv" />`
+<tool-call id="analyze_1" name="analyze_data" image="chart.png" data="data.csv" />
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -442,10 +504,12 @@ Text after
   })
 
   it('should handle content-image inside assistant block', () => {
-    const prompt = `<assistant>
+    const prompt = `
+<assistant>
 Here is the image about the cat you requested:
 <content-image>https://google.com/img/cat.jpg</content-image>
-</assistant>`
+</assistant>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -454,13 +518,15 @@ Here is the image about the cat you requested:
   })
 
   it('should handle text before and after content-image in message block', () => {
-    const prompt = `<user>
+    const prompt = `
+<user>
 Please analyze this image:
 
 <content-image>https://example.com/analysis.jpg</content-image>
 
 What do you see?
-</user>`
+</user>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -469,7 +535,8 @@ What do you see?
   })
 
   it('should handle multiple content blocks in a single message', () => {
-    const prompt = `<system>
+    const prompt = `
+<system>
 You are an image analysis assistant.
 
 <content-image>https://example.com/reference.jpg</content-image>
@@ -479,7 +546,8 @@ Use this as a reference for comparison.
 <content-image>https://example.com/guidelines.pdf</content-image>
 
 Follow these guidelines.
-</system>`
+</system>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -488,11 +556,13 @@ Follow these guidelines.
   })
 
   it('should handle empty content-image inside message block', () => {
-    const prompt = `<assistant>
+    const prompt = `
+<assistant>
 Here's an empty image placeholder:
 <content-image></content-image>
 Please provide an image.
-</assistant>`
+</assistant>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -502,9 +572,11 @@ Please provide an image.
   })
 
   it('should handle only content-image in message block (no text)', () => {
-    const prompt = `<user>
+    const prompt = `
+<user>
 <content-image>https://example.com/only-image.jpg</content-image>
-</user>`
+</user>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -513,10 +585,12 @@ Please provide an image.
   })
 
   it('should handle assistant message with content-image block', () => {
-    const prompt = `<assistant>
+    const prompt = `
+<assistant>
 Here is the image about the cat you requested:
 <content-image>https://google.com/img/cat.jpg</content-image>
-</assistant>`
+</assistant>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -525,13 +599,15 @@ Here is the image about the cat you requested:
   })
 
   it('should handle user message with content before and after content-image', () => {
-    const prompt = `<user>
+    const prompt = `
+<user>
 Please analyze this image:
 
 <content-image>https://example.com/analysis.jpg</content-image>
 
 What do you see in it?
-</user>`
+</user>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -540,7 +616,8 @@ What do you see in it?
   })
 
   it('should handle multiple content-image blocks in assistant message', () => {
-    const prompt = `<assistant>
+    const prompt = `
+<assistant>
 Here are the images you requested:
 
 <content-image>https://example.com/image1.jpg</content-image>
@@ -550,7 +627,8 @@ And here's another one:
 <content-image>https://example.com/image2.jpg</content-image>
 
 Hope these help!
-</assistant>`
+</assistant>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -559,11 +637,13 @@ Hope these help!
   })
 
   it('should handle empty content-image in message blocks', () => {
-    const prompt = `<assistant>
+    const prompt = `
+<assistant>
 Here's an empty image tag:
 <content-image />
 Done.
-</assistant>`
+</assistant>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -572,11 +652,13 @@ Done.
   })
 
   it('should handle system message with content tags', () => {
-    const prompt = `<system>
+    const prompt = `
+<system>
 You are an AI assistant. Here's a reference image:
 <content-image>https://example.com/reference.jpg</content-image>
 Use this as context for your responses.
-</system>`
+</system>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -585,10 +667,12 @@ Use this as context for your responses.
   })
 
   it('should handle prompt block with path and attributes', () => {
-    const prompt = `<user>
+    const prompt = `
+<user>
   Here you can find your guidelines for the city
   <prompt path="./guidelines/cities" location={{city}} />
-</user>`
+</user>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -597,9 +681,11 @@ Use this as context for your responses.
   })
 
   it('should handle prompt block with static attributes', () => {
-    const prompt = `<user>
+    const prompt = `
+<user>
   <prompt path="./guidelines/cities" location="Barcelona" />
-</user>`
+</user>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -608,9 +694,11 @@ Use this as context for your responses.
   })
 
   it('should handle prompt block at root level', () => {
-    const prompt = `<prompt path="./shared/intro" />
+    const prompt = `
+<prompt path="./shared/intro" />
 
-Some text here`
+Some text here
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -622,7 +710,8 @@ Some text here`
     const prompt = `
 
 
-Some text here`
+Some text here
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -631,10 +720,12 @@ Some text here`
   })
 
   it('should handle prompt block inside step', () => {
-    const prompt = `<step as="planning">
+    const prompt = `
+<step as="planning">
   <prompt path="./planning/template" project={{projectName}} />
   Additional planning content
-</step>`
+</step>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -643,12 +734,14 @@ Some text here`
   })
 
   it('should maintain round-trip consistency for prompt blocks', () => {
-    const prompt = `<user>
+    const prompt = `
+<user>
   Guidelines: <prompt path="./guidelines/cities" location={{city}} />
 
 
   Or default: <prompt path="./guidelines/cities" location="Barcelona" />
-</user>`
+</user>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -657,9 +750,11 @@ Some text here`
   })
 
   it('should handle top-level content-file blocks', () => {
-    const prompt = `<content-file name="document.pdf">
+    const prompt = `
+<content-file name="document.pdf">
 /path/to/document.pdf
-</content-file>`
+</content-file>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -668,24 +763,15 @@ Some text here`
   })
 
   it('should handle multiple content-file blocks', () => {
-    const prompt = `<content-file name="doc1.pdf">
+    const prompt = `
+<content-file name="doc1.pdf">
 /path/to/doc1.pdf
 </content-file>
 
 <content-file name="doc2.docx">
 /path/to/doc2.docx
-</content-file>`
-
-    const ast = parse(prompt)
-    const rootNode = fromAstToBlocks({ ast, prompt })
-    const output = fromBlocksToText(rootNode)
-    expect(output).toBe(prompt)
-  })
-
-  it('should handle content-file without name attribute', () => {
-    const prompt = `<content-file>
-/path/to/unnamed.pdf
-</content-file>`
+</content-file>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -721,9 +807,11 @@ Some text here`
   })
 
   it('should handle multiple tool-call blocks', () => {
-    const prompt = `<tool-call id="call_1" name="search" query="AI" />
+    const prompt = `
+<tool-call id="call_1" name="search" query="AI" />
 
-<tool-call id="call_2" name="calculate" expression="2+2" />`
+<tool-call id="call_2" name="calculate" expression="2+2" />
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -767,7 +855,8 @@ Some text here`
   })
 
   it('should handle content-file blocks in steps', () => {
-    const prompt = `<step as="document_review">
+    const prompt = `
+<step as="document_review">
 Please review this document:
 
 <content-file name="report.pdf">
@@ -775,7 +864,8 @@ Please review this document:
 </content-file>
 
 Provide feedback.
-</step>`
+</step>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -784,13 +874,15 @@ Provide feedback.
   })
 
   it('should handle tool-call blocks in steps', () => {
-    const prompt = `<step as="api_call">
+    const prompt = `
+<step as="api_call">
 Making API call:
 
 <tool-call id="weather_1" name="get_weather" city="London" />
 
 Processing response.
-</step>`
+</step>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -799,7 +891,8 @@ Processing response.
   })
 
   it('should handle content-image, content-file, and tool-call together', () => {
-    const prompt = `<user>
+    const prompt = `
+<user>
 Here's an image:
 <content-image>https://example.com/image.jpg</content-image>
 
@@ -808,7 +901,8 @@ And a document:
 
 Please analyze both and call this tool:
 <tool-call id="analyze_1" name="analyze_data" image_url="https://example.com/image.jpg" data_file="/path/to/data.csv" />
-</user>`
+</user>
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -817,8 +911,10 @@ Please analyze both and call this tool:
   })
 
   it('should handle prompt reference followed by text without extra spacing', () => {
-    const prompt = `<prompt path="./other-prompt" myVariable={{42}} />
-Hi, I am a new line`
+    const prompt = `
+<prompt path="./other-prompt" myVariable={{42}} />
+Hi, I am a new line
+`.trim()
 
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -831,10 +927,10 @@ Hi, I am a new line`
     const prompt = `
 Hi there, I am a {{variable}}. Hey, {{me_too}}!
 How are you?
-`
+`.trim()
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
-    expect(rootNode.children).toHaveLength(4)
+    expect(rootNode.children[0]?.children).toHaveLength(5)
 
     // Variables are generated without inner spaces
     const output = fromBlocksToText(rootNode)
@@ -847,9 +943,65 @@ How are you?
   Is this statement correct? {{statement}}
   Respond only with "correct: true" or "correct: false" in a JSON object.
 </step>
-`
+`.trim()
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt)
+  })
+
+  it('handles step without isolated attribute', () => {
+    const prompt = '<step>Hello</step>'
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+
+    expect(rootNode.children[0]?.type).toBe('step')
+    expect(
+      (rootNode.children[0]! as StepBlock).attributes?.isolated,
+    ).toBeFalsy()
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt)
+  })
+
+  it('handles step with literal false isolated attribute', () => {
+    const prompt = '<step isolated="">Hello</step>'
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+
+    expect(rootNode.children[0]?.type).toBe('step')
+    expect(
+      (rootNode.children[0]! as StepBlock).attributes?.isolated,
+    ).toBeFalsy()
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe('<step>Hello</step>')
+  })
+
+  it('handles step with literal isolated attribute', () => {
+    const prompt = '<step isolated>Hello</step>'
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+
+    expect(rootNode.children[0]?.type).toBe('step')
+    expect(
+      (rootNode.children[0]! as StepBlock).attributes?.isolated,
+    ).toBeTruthy()
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt)
+  })
+
+  it('handles step with non literal isolated attribute', () => {
+    const prompt = `
+{{ isolated = true}}
+<step isolated={{isolated}}>Hello</step>
+`.trim()
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+
+    expect(rootNode.children[0]?.type).toBe('code')
 
     const output = fromBlocksToText(rootNode)
     expect(output).toBe(prompt)

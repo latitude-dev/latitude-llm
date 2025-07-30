@@ -60,7 +60,7 @@ export interface FileBlock extends SimpleBlock {
   type: typeof BLOCK_EDITOR_TYPE.FILE_CONTENT
   content: string
   attributes: BlockAttributes & {
-    name?: string
+    mime?: string
   }
 }
 

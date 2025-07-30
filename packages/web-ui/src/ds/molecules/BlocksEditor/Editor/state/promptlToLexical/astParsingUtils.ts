@@ -304,11 +304,6 @@ export function getContentFileAttributes({
     prompt,
   })
 
-  // Ensure name attribute exists (required by promptl compiler)
-  if (!('name' in attributes)) {
-    attributes.name = ''
-  }
-
   return attributes as FileBlock['attributes']
 }
 
