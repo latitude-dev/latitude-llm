@@ -24,6 +24,7 @@ import type {
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
 import { TelemetryContext } from '@latitude-data/telemetry'
+import { ConfigurableProp, PropOption } from '@pipedream/sdk'
 
 export {
   DocumentType,
@@ -506,4 +507,32 @@ export type PipedreamComponent<T extends PipedreamComponentType = any> = Omit<
 export type AppDto = App & {
   tools: PipedreamComponent<PipedreamComponentType.Tool>[]
   triggers: PipedreamComponent<PipedreamComponentType.Trigger>[]
+}
+
+export type ConfigurablePropWithRemoteOptions = ConfigurableProp & {
+  remoteOptionValues?: RemoteOptions
+}
+
+export class RemoteOptions {
+  public remoteOptions: PropOption[] | string[]
+  constructor(remoteOptions: PropOption[] | string[]) {
+    this.remoteOptions = remoteOptions
+  }
+  getFlattenedValues(): string[] {
+    return this.remoteOptions.map((value) => {
+      if (typeof value === 'string') {
+        return value
+      }
+      return value.value
+    })
+  }
+  containsAll(lattesChoices: string[] | string): boolean {
+    const lattesChoicesArray = Array.isArray(lattesChoices)
+      ? lattesChoices
+      : [lattesChoices]
+    return lattesChoicesArray.every((value) => this.includes(value))
+  }
+  private includes(searchValue: string): boolean {
+    return this.getFlattenedValues().includes(searchValue)
+  }
 }

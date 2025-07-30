@@ -22,5 +22,7 @@ export enum LatteTool {
   listIntegrationTriggers = 'list_integration_triggers',
   listExistingTriggers = 'list_existing_triggers',
 
+  getFullTriggerSchema = 'get_full_trigger_schema',
+  validateAndDeployTriggerSchema = 'validate_and_deploy_trigger_schema',
   triggerActions = 'trigger_actions',
 }

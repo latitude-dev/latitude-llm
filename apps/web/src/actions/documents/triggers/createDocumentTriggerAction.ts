@@ -32,7 +32,7 @@ export const createDocumentTriggerAction = withDocument
 
     return createDocumentTrigger({
       workspace: ctx.workspace,
-      project: ctx.project,
+      projectId: ctx.project.id,
       document: ctx.document,
       trigger: {
         type: trigger.type as DocumentTriggerType,

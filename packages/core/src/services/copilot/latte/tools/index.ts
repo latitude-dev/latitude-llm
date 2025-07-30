@@ -12,7 +12,7 @@ import listProjects from './projects/list'
 import listIntegrations from './settings/listIntegrations'
 import listIntegrationTools from './settings/listIntegrationTools'
 import listProviders from './settings/listProviders'
-import listIntegrationTriggers from './settings/listIntegrationTriggers'
+import listIntegrationTriggers from './triggers/listIntegrationTriggers'
 import think from './general/think'
 import searchIntegrationResources from './settings/searchIntegrationResources'
 import searchIntegrationApps from './settings/searchIntegrationApps'
@@ -20,6 +20,8 @@ import createIntegration from './settings/createIntegration'
 import { ToolHandler } from '../../../../lib/streamManager/clientTools/handlers'
 import triggerActions from './triggers/triggerActions'
 import listExistingTriggers from './triggers/listExistingTriggers'
+import { getFullTriggerConfigSchema } from './triggers/getFullTriggerConfigSchema'
+import { validateAndDeployTriggerSchema } from './triggers/validateAndDeployTriggerSchema'
 
 export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.think]: think,
@@ -37,6 +39,8 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.listIntegrationTriggers]: listIntegrationTriggers,
   [LatteTool.triggerActions]: triggerActions,
   [LatteTool.listExistingTriggers]: listExistingTriggers,
+  [LatteTool.getFullTriggerSchema]: getFullTriggerConfigSchema,
+  [LatteTool.validateAndDeployTriggerSchema]: validateAndDeployTriggerSchema,
   [LatteTool.writePrompt]: writePrompt,
 } as const
 

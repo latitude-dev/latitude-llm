@@ -51,8 +51,8 @@ async function executeTriggerActions(
     const result = await createDocumentTrigger(
       {
         workspace,
-        project,
-        document,
+        projectId: project.id,
+        document: document,
         trigger: {
           type: action.triggerType,
           configuration: action.configuration,

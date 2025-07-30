@@ -102,6 +102,7 @@ export function integrationPresenter(integration: IntegrationDto) {
 
   if (integration.type === IntegrationType.Pipedream) {
     return {
+      id: integration.id,
       name: integration.name,
       type: integration.configuration.appName,
       hasTools: integration.hasTools,
