@@ -115,12 +115,12 @@ export default function DocumentHeader({
     [node, documentUuid, onDeleteFile, isLoading, isMerged, onMergeCommitClick],
   )
   const icon = useMemo<IconName>(() => {
+    const docName = node.name
     const docType = node.doc?.documentType
-    if (!docType) return 'file'
-
     if (docType === DocumentType.Agent) return 'bot'
+    if (docName === 'README') return 'info'
     return 'file'
-  }, [node.doc?.documentType])
+  }, [node.doc?.documentType, node.name])
 
   return (
     <NodeHeaderWrapper
