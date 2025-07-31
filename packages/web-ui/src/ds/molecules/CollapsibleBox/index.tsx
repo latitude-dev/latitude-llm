@@ -35,7 +35,7 @@ export function CollapsibleBox({
   collapsedContentHeader?: ReactNode
   expandedContent?: ReactNode
   expandedContentHeader?: ReactNode
-  expandedHeight?: string
+  expandedHeight?: number
   initialExpanded?: boolean
   onToggle?: OnToggleFn
   isExpanded?: boolean
@@ -93,7 +93,7 @@ export function CollapsibleBox({
       >
         <div
           className={cn(
-            'min-h-14 flex flex-shrink-0 justify-between items-center py-3.5 px-4 gap-x-4',
+            'flex flex-shrink-0 justify-between items-center py-3.5 px-4 gap-x-4',
             {
               'border-b': isExpanded && headerDivider,
             },
@@ -138,22 +138,20 @@ export function CollapsibleBox({
           'overflow-y-auto custom-scrollbar scrollable-indicator': scrollable,
         })}
         style={{
-          maxHeight: isExpanded ? expandedHeight : 0,
+          height: isExpanded ? expandedHeight : 0,
           opacity: isExpanded ? 1 : 0,
         }}
       >
-        {expandedContent && (
-          <div
-            className={cn({
-              'flex min-h-0': !scrollable,
-              'pl-4': paddingLeft,
-              'pr-4': paddingRight,
-              'pb-3.5': paddingBottom,
-            })}
-          >
-            {expandedContent}
-          </div>
-        )}
+        <div
+          className={cn({
+            'flex min-h-0': !scrollable,
+            'pl-4': paddingLeft,
+            'pr-4': paddingRight,
+            'pb-3.5': paddingBottom,
+          })}
+        >
+          {expandedContent}
+        </div>
       </div>
     </div>
   )

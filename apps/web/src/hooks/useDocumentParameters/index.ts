@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 
 import { useDatasetUtils } from '$/hooks/useDocumentParameters/datasetUtils'
 import {
@@ -27,6 +27,7 @@ import {
   updateInputsState,
 } from './utils'
 import { type ResolvedMetadata } from '$/workers/readMetadata'
+import { useEvents } from '$/lib/events'
 
 function convertToParams(inputs: Inputs<InputSource>) {
   return Object.fromEntries(
@@ -40,14 +41,13 @@ function convertToParams(inputs: Inputs<InputSource>) {
   )
 }
 
+// TODO: This hook is very complex, refactor it into smaller pieces
 export function useDocumentParameters({
   document,
   commitVersionUuid,
-  metadata,
 }: {
   document: DocumentVersion
   commitVersionUuid: string
-  metadata?: ResolvedMetadata | undefined
 }) {
   const { metadataParameters, setParameters, emptyInputs } =
     useMetadataParameters()
@@ -232,7 +232,6 @@ export function useDocumentParameters({
     [key, setValue, dsId],
   )
   const lastMetadataRef = useRef<ResolvedMetadata | null>(null)
-
   const snapshotCurrentDoc = useCallback(() => {
     setValue((oldState) => {
       const { doc } = getDocState(oldState, key)
@@ -241,32 +240,24 @@ export function useDocumentParameters({
     })
   }, [key, setValue])
 
-  useEffect(() => {
-    if (!metadata) return
+  useEvents({
+    onPromptMetadataChanged: ({ metadata }) => {
+      if (!lastMetadataRef.current) {
+        lastMetadataRef.current = metadata
+      }
 
-    if (!lastMetadataRef.current) {
+      const prevParams = lastMetadataRef.current.parameters
+      const nextParams = metadata.parameters
+      const { removed } = detectParamChanges(prevParams, nextParams)
+
+      if (removed.length > 0) snapshotCurrentDoc()
+
+      setParameters(Array.from(nextParams))
+      onMetadataChange(metadata)
+
       lastMetadataRef.current = metadata
-    }
-
-    const prevParams = lastMetadataRef.current.parameters
-    const nextParams = metadata.parameters
-    const { removed } = detectParamChanges(prevParams, nextParams)
-
-    if (removed.length > 0) {
-      snapshotCurrentDoc()
-    }
-
-    setParameters(Array.from(nextParams))
-    onMetadataChange(metadata)
-    lastMetadataRef.current = metadata
-  }, [
-    metadata,
-    setParameters,
-    onMetadataChange,
-    snapshotCurrentDoc,
-    document,
-    setValue,
-  ])
+    },
+  })
 
   const parameters = useMemo(() => {
     if (!metadataParameters) return undefined
@@ -274,38 +265,63 @@ export function useDocumentParameters({
     return convertToParams(inputsBySource)
   }, [inputsBySource, metadataParameters])
 
-  return {
-    metadataParameters,
-    parameters,
-    source,
-    setSource,
-    setInput,
-    manual: {
-      inputs: inputs['manual'].inputs,
-      setInput: setManualInput,
-      setInputs: setManualInputs,
-    },
-    datasetV2: {
+  return useMemo(
+    () => ({
+      metadataParameters,
+      parameters,
+      source,
+      setSource,
+      setInput,
+      manual: {
+        inputs: inputs['manual'].inputs,
+        setInput: setManualInput,
+        setInputs: setManualInputs,
+      },
+      datasetV2: {
+        isAssigning,
+        assignedDatasets: inputs.datasetV2 ?? {},
+        datasetRowId: dsId
+          ? inputs?.datasetV2?.[dsId]?.datasetRowId
+          : undefined,
+        inputs: dsId
+          ? (inputs.datasetV2?.[dsId]?.inputs ?? emptyInputs.datasetV2)
+          : emptyInputs.datasetV2,
+        mappedInputs: dsId
+          ? (inputs.datasetV2?.[dsId]?.mappedInputs ?? {})
+          : {},
+        setDataset,
+        copyToManual: copyDatasetToManual,
+      },
+      history: {
+        logUuid: inputs['history'].logUuid,
+        inputs: inputs['history'].inputs,
+        force: inputs['history'].force,
+        setInput: setHistoryInput,
+        setInputs: setHistoryInputs,
+        setHistoryLog,
+        mapDocParametersToInputs,
+      },
+    }),
+    [
+      metadataParameters,
+      parameters,
+      source,
+      setSource,
+      setInput,
+      inputs,
+      emptyInputs,
+      setManualInput,
+      setManualInputs,
       isAssigning,
-      assignedDatasets: inputs.datasetV2 ?? {},
-      datasetRowId: dsId ? inputs?.datasetV2?.[dsId]?.datasetRowId : undefined,
-      inputs: dsId
-        ? (inputs.datasetV2?.[dsId]?.inputs ?? emptyInputs.datasetV2)
-        : emptyInputs.datasetV2,
-      mappedInputs: dsId ? (inputs.datasetV2?.[dsId]?.mappedInputs ?? {}) : {},
+      dsId,
       setDataset,
-      copyToManual: copyDatasetToManual,
-    },
-    history: {
-      logUuid: inputs['history'].logUuid,
-      inputs: inputs['history'].inputs,
-      force: inputs['history'].force,
-      setInput: setHistoryInput,
-      setInputs: setHistoryInputs,
+      copyDatasetToManual,
+      setHistoryInput,
+      setHistoryInputs,
       setHistoryLog,
       mapDocParametersToInputs,
-    },
-  }
+    ],
+  )
 }
 
 export type UseDocumentParameters = ReturnType<typeof useDocumentParameters>

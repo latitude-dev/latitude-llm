@@ -32,6 +32,7 @@ export function usePreviewConversation({
 
     return providers.find((p) => p.name === providerName)
   }, [conversation, providers])
+
   useEffect(() => {
     if (!metadata) return
     if (!parameters) return

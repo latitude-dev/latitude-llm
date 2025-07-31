@@ -16,10 +16,12 @@ export function ParameterInputSkeleton() {
 
 export function ParameterInput({
   type,
+  name,
   value,
   onChange,
   disabled = false,
 }: {
+  name: string
   type: ParameterType
   value?: string
   onChange: (value: string) => void
@@ -39,6 +41,7 @@ export function ParameterInput({
   if (type === ParameterType.Text) {
     return (
       <TextParameterInput
+        name={name}
         value={value}
         onChange={onChange}
         disabled={disabled}
@@ -48,6 +51,7 @@ export function ParameterInput({
 
   return (
     <TextArea
+      name={name}
       value='Parameter type not supported'
       minRows={1}
       maxRows={1}
@@ -57,10 +61,12 @@ export function ParameterInput({
 }
 
 function TextParameterInput({
+  name,
   value,
   onChange,
   disabled = false,
 }: {
+  name: string
   value?: string
   onChange: (value: string) => void
   disabled?: boolean
@@ -87,6 +93,7 @@ function TextParameterInput({
 
   return (
     <TextArea
+      name={name}
       defaultValue={textValue}
       onChange={onTextChange}
       minRows={1}
@@ -108,7 +115,6 @@ function FileParameterInput({
   disabled?: boolean
 }) {
   const { uploadFile, isLoading } = useFiles()
-
   const onFileChange = useCallback(
     async (files: FileList | null) => {
       const file = files?.[0]
@@ -121,7 +127,6 @@ function FileParameterInput({
     },
     [uploadFile, onChange],
   )
-
   const [, filename] = useMemo(() => {
     try {
       const file = JSON.parse(value || '')

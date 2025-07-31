@@ -58,6 +58,7 @@ function DebouncedTextArea({
 
   return (
     <TextArea
+      name={param}
       value={localValue}
       minRows={1}
       maxRows={6}

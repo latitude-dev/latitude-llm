@@ -1,14 +1,10 @@
 'use client'
 
+import { Commit } from '@latitude-data/core/browser'
 import { createContext, ReactNode, useContext } from 'react'
 
 interface ICommitContextType {
-  commit: {
-    id: number
-    title: string | null
-    mergedAt: Date | null
-    uuid: string
-  }
+  commit: Commit
   isHead: boolean
 }
 

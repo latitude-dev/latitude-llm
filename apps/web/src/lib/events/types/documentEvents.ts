@@ -1,8 +1,8 @@
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 
 export interface DocumentEvents {
   PromptMetadataChanged: {
     promptLoaded: boolean
-    config: LatitudePromptConfig
+    metadata: ResolvedMetadata
   }
 }

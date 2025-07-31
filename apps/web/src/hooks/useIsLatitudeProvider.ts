@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ResolvedMetadata } from '$/workers/readMetadata'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { envClient } from '$/envClient'
-import { trigger } from '$/lib/events'
 
 /**
  * INFO: React to metadata changes and send event to provider model picker
@@ -16,16 +14,12 @@ export function useIsLatitudeProvider({
 }) {
   const config = metadata?.config
   const [isLatitudeProvider, setIsLatitudeProvider] = useState<boolean>(false)
+
   useEffect(() => {
     const providerName = config ? (config.provider as string) : ''
     const isLimited =
       providerName === envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME
     setIsLatitudeProvider(isLimited)
-
-    trigger('PromptMetadataChanged', {
-      promptLoaded: true,
-      config: config as LatitudePromptConfig,
-    })
   }, [config])
 
   return isLatitudeProvider

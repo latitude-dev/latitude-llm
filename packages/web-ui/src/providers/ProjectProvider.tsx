@@ -1,9 +1,10 @@
 'use client'
 
+import { Project } from '@latitude-data/core/browser'
 import { createContext, ReactNode, useContext } from 'react'
 
 type IProjectContextType = {
-  project: { id: number; name: string }
+  project: Project
 }
 
 const ProjectContext = createContext<IProjectContextType>(

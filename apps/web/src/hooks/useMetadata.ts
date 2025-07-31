@@ -1,63 +1,44 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useMemo } from 'react'
+import { create } from 'zustand'
 
-import { useDebouncedCallback } from 'use-debounce'
 import type {
   ReadMetadataWorkerProps,
   ResolvedMetadata,
 } from '../workers/readMetadata'
+import { debounce } from 'lodash-es'
 
-let workerPath: string | null = null
-
-async function getWorkerUrl(): Promise<string | null> {
-  if (workerPath) return workerPath
-
-  return fetch('/workers/worker-manifest.json')
-    .then((res) => res.json())
-    .then((manifest) => manifest['readMetadata.js'])
-    .catch((err) => {
-      console.error('Failed to load worker manifest:', err)
-      return null
-    })
+type MetadataState = {
+  metadata: ResolvedMetadata | undefined
+  worker: Worker | null
+  setMetadata: (metadata: ResolvedMetadata | undefined) => void
+  setWorker: (worker: Worker | null) => void
+  updateMetadata: (props: ReadMetadataWorkerProps) => void
+  reset: () => void
 }
 
-export function useMetadata() {
-  const workerRef = useRef<Worker | null>(null)
-  const [metadata, setMetadata] = useState<ResolvedMetadata>()
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const initWorker = async () => {
-      workerPath = await getWorkerUrl()
-
-      if (!workerPath) return
-
-      // NOTE: This auto called function avoids TP1001
-      // Turbopack from statically analyzing the worker file
-      const worker = new window.Worker(workerPath)
-      workerRef.current = worker
-
-      worker.onmessage = (event) => {
-        setMetadata(event.data)
-      }
-    }
-
-    initWorker()
-
-    return () => {
-      workerRef.current?.terminate()
-    }
-  }, [])
-
-  const runReadMetadata = useDebouncedCallback(
+export const useMetadataStore = create<MetadataState>((set, get) => ({
+  metadata: undefined,
+  worker: null,
+  setMetadata: (metadata) => set({ metadata }),
+  setWorker: (worker) => set({ worker }),
+  updateMetadata: debounce(
     async (props: ReadMetadataWorkerProps) => {
-      workerRef.current?.postMessage(props)
+      const { worker } = get()
+      worker?.postMessage(props)
     },
     500,
     { trailing: true },
-  )
+  ),
+  reset: () => set({ metadata: undefined, worker: null }),
+}))
 
-  return { metadata, runReadMetadata }
+export function useMetadata() {
+  const { metadata, updateMetadata } = useMetadataStore()
+
+  return useMemo(
+    () => ({ metadata, updateMetadata }),
+    [metadata, updateMetadata],
+  )
 }

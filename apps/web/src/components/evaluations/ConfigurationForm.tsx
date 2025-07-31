@@ -1,4 +1,4 @@
-import { useSerializedLogs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationUuid]/editor/_components/EvaluationEditor/Playground/EvaluationParams/HistoryLogParams/useSerializedLogs'
+import { useSerializedLogs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/evaluations/[evaluationUuid]/editor/_components/EvaluationEditor/Playground/EvaluationParams/HistoryLogParams/useSerializedLogs'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import {

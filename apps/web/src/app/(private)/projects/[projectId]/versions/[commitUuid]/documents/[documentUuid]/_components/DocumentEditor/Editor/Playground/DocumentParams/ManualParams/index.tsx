@@ -32,6 +32,7 @@ function LocalParameterInput({ param, input, setInput }: ManualParameterProps) {
 
   return (
     <ParameterInput
+      name={param}
       value={input.value}
       type={input.metadata.type || ParameterType.Text}
       onChange={setInputDebounced}

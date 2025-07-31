@@ -38,7 +38,7 @@ export function LatteChat() {
 
   return (
     <div className='w-full h-full max-h-full flex flex-col items-center bg-latte-background'>
-      <div className='flex flex-col h-full w-full items-center gap-4'>
+      <div className='flex flex-col h-full w-full items-center gap-4 max-w-[1200px] m-auto'>
         <div className='flex-grow min-h-0 h-full w-full flex flex-col items-center justify-center relative'>
           <div
             className='w-full h-full  overflow-hidden custom-scrollbar flex flex-col gap-4 items-center'
@@ -46,12 +46,14 @@ export function LatteChat() {
           >
             {!inConversation ? (
               <div className='flex flex-col items-center justify-center h-full gap-8 min-w-[50%]'>
-                <img src='/latte.svg' />
-                <div className='flex flex-col items-center justify-center gap-4'>
-                  <Text.H3M>What do you want to automate today?</Text.H3M>
-                  <Text.H5 color='foregroundMuted'>
-                    Chat with Latte to build and improve your agent
-                  </Text.H5>
+                <div className='flex flex-col items-center justify-center gap-6'>
+                  <img src='/latte.svg' />
+                  <div className='flex flex-col items-center justify-center gap-2'>
+                    <Text.H3M>What do you want to automate today?</Text.H3M>
+                    <Text.H5 color='foregroundMuted'>
+                      Chat with Latte to build and improve your agent
+                    </Text.H5>
+                  </div>
                 </div>
                 <LatteChatInput
                   sendMessage={sendMessage}

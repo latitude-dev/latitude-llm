@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 export function useToggleModal({
   initialState = false,
@@ -11,5 +11,8 @@ export function useToggleModal({
     [],
   )
 
-  return { open, onClose, onOpen, onOpenChange }
+  return useMemo(
+    () => ({ open, onClose, onOpen, onOpenChange }),
+    [open, onClose, onOpen, onOpenChange],
+  )
 }

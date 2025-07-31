@@ -1,27 +1,21 @@
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { ResolvedMetadata } from '$/workers/readMetadata'
-import { ProviderApiKey } from '@latitude-data/core/browser'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { memo } from 'react'
 import { AgentToolbar } from './AgentToolbar'
 import { TitleRow } from './TitleRow'
 
 export type EditorHeaderProps = {
-  providers: ProviderApiKey[]
-  metadata: ResolvedMetadata | undefined
-  title: string
-  prompt: string
-  isMerged: boolean
-  isLatitudeProvider: boolean
-  onChangePrompt: (prompt: string) => Promise<void>
   freeRunsCount: number | undefined
-  devMode: boolean
-  setDevMode: ReactStateDispatch<boolean>
+  isLatitudeProvider: boolean
+  isMerged: boolean
+  metadata: ResolvedMetadata | undefined
+  onChangePrompt: (prompt: string) => void
+  prompt: string
+  title: string
 }
 
 export const EditorHeader = memo(
   ({
-    providers,
     metadata,
     title,
     prompt,
@@ -29,23 +23,18 @@ export const EditorHeader = memo(
     isLatitudeProvider,
     freeRunsCount,
     onChangePrompt,
-    devMode,
-    setDevMode,
   }: EditorHeaderProps) => {
     const metadataConfig = metadata?.config
     const isAgent = metadataConfig?.type === 'agent' || false
     return (
       <div className='flex flex-col gap-y-4'>
         <TitleRow
-          providers={providers}
           title={title}
           isAgent={isAgent}
           isMerged={isMerged}
-          devMode={devMode}
           metadataConfig={metadataConfig}
           prompt={prompt}
           onChangePrompt={onChangePrompt}
-          setDevMode={setDevMode}
         />
         <FreeRunsBanner
           isLatitudeProvider={isLatitudeProvider}
