@@ -18,7 +18,8 @@ import {
 function getCopilotCredentials() {
   const apiKey = env.COPILOT_WORKSPACE_API_KEY
   const projectId = env.COPILOT_PROJECT_ID
-  const generateToolResponsesPath = env.COPILOT_GENERATE_TOOL_RESPONSES_PATH
+  const generateToolResponsesPath =
+    env.COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH
   if (!apiKey) {
     return Result.error(new Error('COPILOT_WORKSPACE_API_KEY is not set'))
   }

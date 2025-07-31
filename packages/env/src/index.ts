@@ -62,8 +62,8 @@ if (environment === 'development' || environment === 'test') {
     process.env as DotenvPopulateInput,
     {
       CACHE_HOST: '0.0.0.0',
-      COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: 'evaluation-generator',
-      COPILOT_EVALUATION_GENERATOR_PROMPT_PATH: 'evaluation-v2-generator',
+      COPILOT_PROMPT_EVALUATION_GENERATOR_PATH: 'evaluation-generator',
+      COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH: 'evaluation-v2-generator',
       DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
       DRIVE_DISK: 'local',
       FILES_STORAGE_PATH,
@@ -192,13 +192,13 @@ export const env = createEnv({
     LATITUDE_CLOUD_PAYMENT_URL: z.string().url().optional(),
 
     // Copilot
-    COPILOT_CODE_SUGGESTION_PROMPT_PATH: z.string().optional(),
-    COPILOT_DATASET_GENERATOR_PROMPT_PATH: z.string().optional(),
-    COPILOT_EVALUATION_GENERATOR_PROMPT_PATH: z.string().optional(),
-    COPILOT_GENERATE_TOOL_RESPONSES_PATH: z.string(),
+    COPILOT_PROMPT_EDITOR_COPILOT_PATH: z.string().optional(),
+    COPILOT_PROMPT_DATASET_GENERATOR_PATH: z.string().optional(),
+    COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH: z.string().optional(),
+    COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH: z.string(),
     COPILOT_GENERATE_TOOL_RESPONSES_COMMIT_UUID: z.string().optional(),
     COPILOT_PROJECT_ID: z.coerce.number().optional(),
-    COPILOT_REFINE_PROMPT_PATH: z.string().optional(),
+    COPILOT_PROMPT_REFINE_PATH: z.string().optional(),
     COPILOT_WORKSPACE_API_KEY: z.string().optional(),
     COPILOT_LATTE_PROMPT_PATH: z.string().optional(),
     COPILOT_LATTE_CHANGES_FEEDBACK_HITL_EVALUATION_UUID: z.string().optional(),
@@ -302,8 +302,8 @@ export const env = createEnv({
     DISABLE_EMAIL_AUTHENTICATION:
       process.env.DISABLE_EMAIL_AUTHENTICATION === 'true',
     ENABLE_ALL_FLAGS: process.env.ENABLE_ALL_FLAGS === 'true',
-    COPILOT_GENERATE_TOOL_RESPONSES_PATH:
-      process.env.COPILOT_GENERATE_TOOL_RESPONSES_PATH ??
+    COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH:
+      process.env.COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH ??
       'tool-responses-generator',
     DEFAULT_PROVIDER_API_KEY:
       process.env.DEFAULT_PROVIDER_API_KEY ?? 'default_api_key',

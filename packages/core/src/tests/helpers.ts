@@ -37,7 +37,7 @@ export async function mockToolRequestsCopilot() {
     workspace,
     user: copilot.user,
     commit,
-    path: env.COPILOT_GENERATE_TOOL_RESPONSES_PATH,
+    path: env.COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH,
     content: `
       ---
       provider: ${provider.name}

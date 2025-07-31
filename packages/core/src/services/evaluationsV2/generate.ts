@@ -47,14 +47,14 @@ export async function generateEvaluationV2(
     return Result.error(new Error(CLOUD_MESSAGES.generateEvaluations))
   }
 
-  if (!env.COPILOT_EVALUATION_GENERATOR_PROMPT_PATH) {
+  if (!env.COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH) {
     return Result.error(
-      new Error('COPILOT_EVALUATION_GENERATOR_PROMPT_PATH is not set'),
+      new Error('COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH is not set'),
     )
   }
 
   const copilot = await getCopilot(
-    { path: env.COPILOT_EVALUATION_GENERATOR_PROMPT_PATH },
+    { path: env.COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH },
     db,
   ).then((r) => r.unwrap())
 

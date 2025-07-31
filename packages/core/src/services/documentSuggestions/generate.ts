@@ -85,12 +85,12 @@ export async function generateDocumentSuggestion(
     return Result.error(new Error(CLOUD_MESSAGES.documentSuggestions))
   }
 
-  if (!env.COPILOT_REFINE_PROMPT_PATH) {
-    return Result.error(new Error('COPILOT_REFINE_PROMPT_PATH is not set'))
+  if (!env.COPILOT_PROMPT_REFINE_PATH) {
+    return Result.error(new Error('COPILOT_PROMPT_REFINE_PATH is not set'))
   }
 
   const copilot = await getCopilot({
-    path: env.COPILOT_REFINE_PROMPT_PATH,
+    path: env.COPILOT_PROMPT_REFINE_PATH,
   }).then((r) => r.unwrap())
 
   if (!evaluation.enableSuggestions) {
