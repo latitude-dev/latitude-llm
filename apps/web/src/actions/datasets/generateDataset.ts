@@ -30,9 +30,9 @@ export const generateDatasetAction = authProcedure
     if (!env.COPILOT_PROJECT_ID) {
       throw new BadRequestError('COPILOT_PROJECT_ID is not set')
     }
-    if (!env.COPILOT_DATASET_GENERATOR_PROMPT_PATH) {
+    if (!env.COPILOT_PROMPT_DATASET_GENERATOR_PATH) {
       throw new BadRequestError(
-        'COPILOT_DATASET_GENERATOR_PROMPT_PATH is not set',
+        'COPILOT_PROMPT_DATASET_GENERATOR_PATH is not set',
       )
     }
     if (!env.COPILOT_WORKSPACE_API_KEY) {
@@ -48,7 +48,7 @@ export const generateDatasetAction = authProcedure
     }).then((r) => r.unwrap())
 
     const sdkResponse = await sdk.prompts.run(
-      env.COPILOT_DATASET_GENERATOR_PROMPT_PATH,
+      env.COPILOT_PROMPT_DATASET_GENERATOR_PATH,
       {
         stream: false,
         parameters: {

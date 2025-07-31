@@ -40,8 +40,8 @@ export const refinePromptAction = withDocument
       throw new BadRequestError('COPILOT_PROJECT_ID is not set')
     }
 
-    if (!env.COPILOT_REFINE_PROMPT_PATH) {
-      throw new BadRequestError('COPILOT_REFINE_PROMPT_PATH is not set')
+    if (!env.COPILOT_PROMPT_REFINE_PATH) {
+      throw new BadRequestError('COPILOT_PROMPT_REFINE_PATH is not set')
     }
 
     const { evaluationUuid, resultUuids } = input
@@ -88,7 +88,7 @@ export const refinePromptAction = withDocument
       projectId: env.COPILOT_PROJECT_ID,
     }).then((r) => r.unwrap())
 
-    const result = await sdk.prompts.run(env.COPILOT_REFINE_PROMPT_PATH, {
+    const result = await sdk.prompts.run(env.COPILOT_PROMPT_REFINE_PATH, {
       stream: false,
       parameters: {
         prompt: ctx.document.content,

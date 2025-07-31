@@ -43,10 +43,8 @@ export const requestSuggestionAction = authProcedure
       throw new BadRequestError('COPILOT_PROJECT_ID is not set')
     }
 
-    if (!env.COPILOT_CODE_SUGGESTION_PROMPT_PATH) {
-      throw new BadRequestError(
-        'COPILOT_CODE_SUGGESTION_PROMPT_PATH is not set',
-      )
+    if (!env.COPILOT_PROMPT_EDITOR_COPILOT_PATH) {
+      throw new BadRequestError('COPILOT_PROMPT_EDITOR_COPILOT_PATH is not set')
     }
 
     const { projectId, commitUuid, documentUuid, request } = input
@@ -76,7 +74,7 @@ export const requestSuggestionAction = authProcedure
     }).then((r) => r.unwrap())
 
     const result = await sdk.prompts.run(
-      env.COPILOT_CODE_SUGGESTION_PROMPT_PATH,
+      env.COPILOT_PROMPT_EDITOR_COPILOT_PATH,
       {
         stream: false,
         parameters: {
