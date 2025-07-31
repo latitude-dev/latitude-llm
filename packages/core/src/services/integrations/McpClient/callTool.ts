@@ -4,7 +4,7 @@ import { LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { StreamManager } from '../../../lib/streamManager'
 import { PromisedResult } from '../../../lib/Transaction'
-import { runAction } from '../pipedream/components'
+import { runAction } from '../pipedream/components/runAction'
 import { touchIntegration } from '../touch'
 
 type ResultContent =

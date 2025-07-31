@@ -13,7 +13,10 @@ import {
 import { getPipedreamEnvironment } from './apps'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
-import { fillConfiguredProps, isIntegrationConfigured } from './components'
+import {
+  fillConfiguredProps,
+  isIntegrationConfigured,
+} from './components/fillConfiguredProps'
 import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
 import { database } from '../../../client'
 import { IntegrationsRepository } from '../../../repositories'

@@ -2,7 +2,7 @@
 
 import { z } from 'zod'
 import { authProcedure } from '../../procedures'
-import { reloadComponentProps } from '@latitude-data/core/services/integrations/pipedream/components'
+import { reloadComponentProps } from '@latitude-data/core/services/integrations/pipedream/components/reloadComponentProps'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { IntegrationType } from '@latitude-data/constants'
 
