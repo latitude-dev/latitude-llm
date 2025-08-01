@@ -25,11 +25,33 @@ import { Playground } from './Playground'
 import { TextEditor } from './TextEditor'
 import { EvaluationEditorHeader } from './EditorHeader'
 import { useEvaluationParameters } from './hooks/useEvaluationParamaters'
+import { DocumentValueProvider } from '../../../../../../_components/DocumentEditor/Editor/context/DocumentValueContext'
+import { MetadataProvider } from '$/components/MetadataProvider'
+import { DevModeProvider } from '../../../../../../_components/DocumentEditor/Editor/hooks/useDevMode'
 
 const ALLOWED_PARAMETERS =
   LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
 
-export function EvaluationEditor({
+export function EvaluationEditor(props: {
+  document: DocumentVersion
+  commit: Commit
+  providerApiKeys: ProviderApiKey[]
+  copilotEnabled: boolean
+  freeRunsCount?: number
+  selectedDocumentLogUuid?: string
+}) {
+  return (
+    <MetadataProvider>
+      <DevModeProvider>
+        <DocumentValueProvider document={props.document}>
+          <EvaluationEditorContent {...props} />
+        </DocumentValueProvider>
+      </DevModeProvider>
+    </MetadataProvider>
+  )
+}
+
+function EvaluationEditorContent({
   document,
   commit,
   providerApiKeys,
