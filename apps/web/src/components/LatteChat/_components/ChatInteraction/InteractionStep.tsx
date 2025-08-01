@@ -20,7 +20,7 @@ export function InteractionStep({
         ellipsis={singleLine}
         animate
       >
-        Brewing...
+        Thinking...
       </Text.H5>
     )
   }

@@ -1,7 +1,6 @@
 import { LatteInteraction } from '$/hooks/latte/types'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { AnimatedDots } from '@latitude-data/web-ui/molecules/AnimatedDots'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useState } from 'react'
 import { MarkdownResponse } from './MarkdownText'
@@ -17,7 +16,7 @@ export function ChatInteraction({
 
   return (
     <div className='flex flex-col gap-4 w-full relative'>
-      <div className='flex flex-col py-2 px-4 gap-2 bg-latte-input rounded-lg ml-auto'>
+      <div className='flex flex-col p-4 gap-2 bg-latte-input rounded-2xl ml-auto max-w-[75%]'>
         <Text.H5 color='latteInputForeground' whiteSpace='preWrap'>
           {interaction.input}
         </Text.H5>
@@ -25,7 +24,7 @@ export function ChatInteraction({
 
       {interaction.steps.length > 0 || !interaction.output ? (
         <div
-          className='flex flex-row gap-2 hover:opacity-80 cursor-pointer px-2'
+          className='flex flex-row gap-2 hover:opacity-80 cursor-pointer'
           onClick={() => setIsOpen((prev) => !prev)}
         >
           <Icon
@@ -35,7 +34,7 @@ export function ChatInteraction({
               'rotate-90': isOpen,
             })}
           />
-          <div className='flex flex-col gap-4 flex-grow max-w-full px-2'>
+          <div className='flex flex-col gap-4 flex-grow max-w-[75%]'>
             {isOpen && interaction.steps.length > 0 ? (
               interaction.steps.map((step, i) => (
                 <InteractionStep
@@ -57,11 +56,9 @@ export function ChatInteraction({
         </div>
       ) : null}
 
-      {interaction.output ? (
-        <MarkdownResponse text={interaction.output} />
-      ) : (
-        <AnimatedDots color='latteOutputForegroundMuted' />
-      )}
+      <div className='flex flex-col gap-4 flex-grow max-w-[75%]'>
+        {interaction.output && <MarkdownResponse text={interaction.output} />}
+      </div>
     </div>
   )
 }
