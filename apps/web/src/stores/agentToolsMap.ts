@@ -1,5 +1,5 @@
 import { isEqual } from 'lodash-es'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { type DocumentVersion, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { SWRConfiguration } from 'swr'
 import useDocumentVersions from './documentVersions'
@@ -39,5 +39,8 @@ export function useAgentToolsMap(
     })
   }, [data, isLoading, error])
 
-  return { data: agentToolsMap, isLoading, error }
+  return useMemo(
+    () => ({ data: agentToolsMap, isLoading, error }),
+    [agentToolsMap, isLoading, error],
+  )
 }

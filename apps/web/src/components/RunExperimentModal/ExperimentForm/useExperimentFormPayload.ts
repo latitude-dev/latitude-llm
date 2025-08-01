@@ -57,15 +57,14 @@ export function useExperimentFormPayload({
   initialEvaluation?: EvaluationV2
   experimentCount?: number
 }): ExperimentFormPayload {
-  const { metadata, runReadMetadata } = useMetadata()
+  const { metadata, updateMetadata } = useMetadata()
   useEffect(() => {
-    runReadMetadata({
+    updateMetadata({
       promptlVersion: document.promptlVersion,
-      editorType: 'code',
       prompt: document.content,
       document,
     })
-  }, [document, runReadMetadata])
+  }, [document, updateMetadata])
 
   const parameters = useMemo(() => {
     return Array.from(metadata?.parameters ?? [])

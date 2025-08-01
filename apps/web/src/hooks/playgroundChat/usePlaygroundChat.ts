@@ -255,18 +255,41 @@ export function usePlaygroundChat({
     }
   }, [handleStream, runPromptFn, onPromptRan])
 
+  const reset = useCallback(() => {
+    setMessages([])
+    setUnresponedToolCalls([])
+    setUsage({
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    })
+    setDocumentLogUuid(undefined)
+    setError(undefined)
+    setIsLoading(false)
+    setWakingUpIntegration(undefined)
+  }, [
+    setMessages,
+    setUnresponedToolCalls,
+    setUsage,
+    setDocumentLogUuid,
+    setError,
+    setIsLoading,
+    setWakingUpIntegration,
+  ])
+
   return useMemo(
     () => ({
-      start,
-      submitUserMessage,
       addMessages: addMessagesFn ? addMessages : undefined,
       error,
-      messages,
-      wakingUpIntegration,
-      runningLatitudeTools,
-      usage,
-      unresponedToolCalls,
       isLoading,
+      messages,
+      runningLatitudeTools,
+      start,
+      submitUserMessage,
+      unresponedToolCalls,
+      usage,
+      wakingUpIntegration,
+      reset,
     }),
     [
       addMessages,
@@ -280,6 +303,7 @@ export function usePlaygroundChat({
       unresponedToolCalls,
       usage,
       wakingUpIntegration,
+      reset,
     ],
   )
 }

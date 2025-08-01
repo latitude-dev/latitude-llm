@@ -88,7 +88,7 @@ export const MarkdownResponse = React.memo(
               <div
                 {...restProps}
                 ref={ref as React.LegacyRef<HTMLDivElement>}
-                className='bg-latte-input rounded-sm px-1 py-0.5 inline-flex flex-wrap'
+                className='bg-latte-background rounded-sm px-1 py-0.5 inline-flex flex-wrap'
               >
                 <Text.H6M color='latteInputForeground'>{content}</Text.H6M>
               </div>

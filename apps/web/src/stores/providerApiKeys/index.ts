@@ -5,6 +5,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import type { ProviderApiKey } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export type SerializedProviderApiKey = Omit<
@@ -62,15 +63,18 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
     },
   )
 
-  return {
-    data,
-    create,
-    destroy,
-    mutate,
-    isCreating,
-    isDestroying,
-    ...rest,
-  }
+  return useMemo(
+    () => ({
+      data,
+      create,
+      destroy,
+      mutate,
+      isCreating,
+      isDestroying,
+      ...rest,
+    }),
+    [data, create, destroy, mutate, isCreating, isDestroying, rest],
+  )
 }
 
 function deserialize(item: ProviderApiKey) {

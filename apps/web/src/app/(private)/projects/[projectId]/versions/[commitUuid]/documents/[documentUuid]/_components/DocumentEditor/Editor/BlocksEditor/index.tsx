@@ -1,11 +1,8 @@
-import useDocumentVersions from '$/stores/documentVersions'
-import { AstError } from '@latitude-data/constants/promptl'
 import { type DocumentVersion } from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import {
   type BlockRootNode,
   BlocksEditor,
@@ -18,17 +15,18 @@ import {
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 import { Config, scan } from 'promptl-ai'
-import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, Suspense, useCallback } from 'react'
 import { stringify as stringifyObjectToYaml } from 'yaml'
 import { useIncludabledPrompts } from './useIncludabledPrompts'
+import useDocumentVersions from '$/stores/documentVersions'
+import { useDevMode } from '../hooks/useDevMode'
 
 export const PlaygroundBlocksEditor = memo(
   ({
     project,
     commit,
     document,
-    rootBlock: defaultRootBlock,
-    onToggleBlocksEditor,
+    rootBlock,
     readOnlyMessage,
     onChange,
     config,
@@ -36,16 +34,16 @@ export const PlaygroundBlocksEditor = memo(
     project: IProjectContextType['project']
     commit: ICommitContextType['commit']
     document: DocumentVersion
-    compileErrors: AstError[] | undefined
-    rootBlock?: BlockRootNode
+    rootBlock: BlockRootNode
     config?: Config
-    value: string
-    isSaved: boolean
     readOnlyMessage?: string
-    onToggleBlocksEditor: ReactStateDispatch<boolean>
     onChange: (value: string) => void
   }) => {
     const { toast } = useToast()
+    const { setDevMode } = useDevMode()
+    const toggleDevEditor = useCallback(() => {
+      setDevMode(true)
+    }, [setDevMode])
     const { data: documents } = useDocumentVersions({
       commitUuid: commit?.uuid,
       projectId: project?.id,
@@ -56,18 +54,14 @@ export const PlaygroundBlocksEditor = memo(
       document,
       documents,
     })
-
     const onRequestPromptMetadata = useCallback(
       async ({ id }: IncludedPrompt) => {
         const prompt = documents.find((doc) => doc.id === id)
+        // TODO: call web worker instead, we implemented web workers for a reason!
         return await scan({ prompt: prompt!.content })
       },
       [documents],
     )
-    const onToggleDevEditor = useCallback(() => {
-      onToggleBlocksEditor(true)
-    }, [onToggleBlocksEditor])
-
     const onError = useCallback(
       (error: Error) => {
         toast({
@@ -78,20 +72,6 @@ export const PlaygroundBlocksEditor = memo(
       },
       [toast],
     )
-
-    const isMounted = useRef(false)
-    const [initialValue, setInitialValue] = useState<BlockRootNode | undefined>(
-      defaultRootBlock,
-    )
-
-    useEffect(() => {
-      if (isMounted.current) return
-      if (!defaultRootBlock) return
-
-      setInitialValue(defaultRootBlock)
-      isMounted.current = true
-    }, [defaultRootBlock])
-
     /*
      * We don't touch Promptl config on Blocks editor atm
      * So we restore the latest config from the document when a change
@@ -99,14 +79,15 @@ export const PlaygroundBlocksEditor = memo(
      */
     const onChangePrompt = useCallback(
       (value: string) => {
+        if (commit.mergedAt !== null) return
         if (!config) {
           onChange(value)
+        } else {
+          const frontMatter = stringifyObjectToYaml(config).trim()
+          onChange(`---\n${frontMatter}\n---\n\n${value}\n`)
         }
-
-        const frontMatter = stringifyObjectToYaml(config).trim()
-        onChange(`---\n${frontMatter}\n---\n\n${value}\n`)
       },
-      [config, onChange],
+      [config, onChange, commit],
     )
 
     // FIXME: How to refresh the Lexical editor when Promptl errors are introduced or fixed
@@ -115,15 +96,15 @@ export const PlaygroundBlocksEditor = memo(
     // But the problem with this approach of never updating the `initialValue`
     return (
       <Suspense fallback={<TextEditorPlaceholder />}>
-        {initialValue ? (
+        {rootBlock ? (
           <BlocksEditor
-            initialValue={initialValue}
+            initialValue={rootBlock}
             currentDocument={document}
             prompts={prompts}
             onError={onError}
             Link={Link}
             onRequestPromptMetadata={onRequestPromptMetadata}
-            onToggleDevEditor={onToggleDevEditor}
+            onToggleDevEditor={toggleDevEditor}
             onChange={onChangePrompt}
             readOnlyMessage={readOnlyMessage}
             placeholder='Type your instructions here, use / for commands'

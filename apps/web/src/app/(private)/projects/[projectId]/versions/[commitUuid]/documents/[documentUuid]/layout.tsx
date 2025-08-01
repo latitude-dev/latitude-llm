@@ -12,7 +12,6 @@ import ProjectLayout from '../../_components/ProjectLayout'
 import DocumentationModal, {
   DocumentationModalProvider,
 } from './_components/DocumentationModal'
-import DocumentTabs from './_components/DocumentTabs'
 import buildMetatags from '$/app/_lib/buildMetatags'
 
 export const metadata = buildMetatags({
@@ -59,9 +58,7 @@ export default async function DocumentPage({
               commitUuid={commitUuid}
               apiKeys={apiKeys}
             />
-            <DocumentTabs document={document} params={paramsAwaited}>
-              {children}
-            </DocumentTabs>
+            {children}
           </DocumentationModalProvider>
         </ProjectLayout>
       </DocumentVersionProvider>

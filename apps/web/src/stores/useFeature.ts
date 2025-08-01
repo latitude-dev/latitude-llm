@@ -1,5 +1,6 @@
 import useFetcher from '$/hooks/useFetcher'
 import { API_ROUTES } from '$/services/routes/api'
+import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
 type FeatureStatus = {
@@ -26,9 +27,12 @@ export default function useFeature(
     ...opts,
   })
 
-  return {
-    isEnabled: data?.enabled ?? false,
-    isLoading,
-    ...rest,
-  }
+  return useMemo(
+    () => ({
+      isEnabled: data?.enabled ?? false,
+      isLoading,
+      ...rest,
+    }),
+    [data, isLoading, rest],
+  )
 }

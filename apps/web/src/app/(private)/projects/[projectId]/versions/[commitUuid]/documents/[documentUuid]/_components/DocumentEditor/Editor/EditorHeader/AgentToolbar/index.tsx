@@ -7,6 +7,10 @@ import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import {
+  ActiveIntegrations,
+  useActiveIntegrations,
+} from '../../PromptIntegrations/useActiveIntegrations'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Config } from 'promptl-ai'
@@ -17,7 +21,6 @@ import {
 } from '../../PromptConfiguration/utils'
 import { IntegrationsList } from '../../PromptIntegrations/IntegrationsList'
 import { ItemWrapper } from '../../PromptIntegrations/IntegrationTools'
-import { useActiveIntegrations } from '../../PromptIntegrations/useActiveIntegrations'
 import { EditorHeaderProps } from '../index'
 
 const singularPluralLabel = (c: number, s: string, p: string) =>
@@ -63,7 +66,7 @@ function useCounters({
   prompt: EditorHeaderProps['prompt']
   onChangePrompt: EditorHeaderProps['onChangePrompt']
 }) {
-  const { data: integrations, isLoading } = useIntegrations({
+  const { isLoading } = useIntegrations({
     includeLatitudeTools: true,
     withTools: true,
   })
@@ -74,15 +77,8 @@ function useCounters({
     [prompt, onChangePrompt],
   )
 
-  const {
-    activeIntegrations,
-    isLoading: isLoadingIntegrations,
-    isInitialized,
-  } = useActiveIntegrations({
+  const { isInitialized, activeIntegrations } = useActiveIntegrations({
     prompt,
-    integrations,
-    isLoading,
-    onChangePrompt,
   })
   const toolsCount = Object.keys(activeIntegrations).length
   const toolsLabel =
@@ -108,7 +104,7 @@ function useCounters({
       subAgentsLabel,
       subAgentsCount,
       subAgents,
-      isLoading: !isInitialized || isLoadingIntegrations || subAgents.isLoading,
+      isLoading: !isInitialized || isLoading || subAgents.isLoading,
     }),
     [
       toolsLabel,
@@ -117,7 +113,7 @@ function useCounters({
       subAgentsCount,
       subAgents,
       isInitialized,
-      isLoadingIntegrations,
+      isLoading,
     ],
   )
 }
@@ -177,7 +173,6 @@ function SubAgentItem({
 }
 function Content({
   isMerged,
-  onChangePrompt,
   prompt,
   selectedTab,
   subAgents,
@@ -185,32 +180,25 @@ function Content({
   isMerged: EditorHeaderProps['isMerged']
   selectedTab: TabSection
   prompt: EditorHeaderProps['prompt']
-  onChangePrompt: EditorHeaderProps['onChangePrompt']
   subAgents: UseLatitudeAgentsConfig
 }) {
   const { data: integrations, isLoading } = useIntegrations({
     includeLatitudeTools: true,
     withTools: true,
   })
-  const {
-    isInitialized,
-    activeIntegrations,
-    addIntegrationTool,
-    removeIntegrationTool,
-  } = useActiveIntegrations({
-    prompt,
-    onChangePrompt,
-    integrations,
-    isLoading,
-  })
+  const { activeIntegrations, addIntegrationTool, removeIntegrationTool } =
+    useActiveIntegrations({
+      prompt,
+    })
+
   return (
     <>
       {selectedTab === TAB_SECTIONS.tools ? (
         <IntegrationsList
           disabled={isMerged}
-          isLoading={!isInitialized}
+          isLoading={isLoading}
           integrations={integrations ?? []}
-          activeIntegrations={activeIntegrations}
+          activeIntegrations={activeIntegrations as ActiveIntegrations}
           addIntegrationTool={addIntegrationTool}
           removeIntegrationTool={removeIntegrationTool}
         />
@@ -259,25 +247,23 @@ export function AgentToolbar({
   })
   const [agent, setAgent] = useState(isAgent)
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
-  const onToggle = useCallback(
-    (nextIsExpanded: boolean) => {
-      // Non-agent prompts should not be expanded
-      if (!isAgent) return
-
-      setIsExpanded(nextIsExpanded)
-    },
-    [isAgent],
-  )
   const onAgentToggle = useCallback(
     async (checked: boolean) => {
       setAgent(checked)
-      setIsExpanded(checked)
-
       onChangePrompt(
         updatePromptMetadata(prompt, handleAgentChange({ checked, config })),
       )
     },
     [config, prompt, onChangePrompt],
+  )
+  const onToggle = useCallback(
+    (nextIsExpanded: boolean) => {
+      if (isMerged) return
+      if (!isAgent) onAgentToggle(true)
+
+      setIsExpanded(nextIsExpanded)
+    },
+    [isAgent, onAgentToggle, isMerged],
   )
 
   useEffect(() => {
@@ -335,7 +321,6 @@ export function AgentToolbar({
                 isMerged={isMerged}
                 prompt={prompt}
                 selectedTab={tabs.selected}
-                onChangePrompt={onChangePrompt}
                 subAgents={counters.subAgents}
               />
             </div>

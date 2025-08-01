@@ -8,15 +8,13 @@ import { IntegrationsList } from './IntegrationsList'
 
 export function PromptIntegrations({
   prompt,
-  onChangePrompt,
   disabled,
 }: {
   prompt: string
-  onChangePrompt: (prompt: string) => void
   disabled?: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
-  const { data: integrations, isLoading } = useIntegrations({
+  const { data: integrations } = useIntegrations({
     includeLatitudeTools: true,
     withTools: true,
   })
@@ -27,9 +25,6 @@ export function PromptIntegrations({
     removeIntegrationTool,
   } = useActiveIntegrations({
     prompt,
-    onChangePrompt,
-    integrations,
-    isLoading,
   })
 
   const isDisabled = disabled || !isInitialized

@@ -20,6 +20,7 @@ export default function DocumentTabs({
   children: ReactNode
 }) {
   const { toggleDocumentation } = useContext(DocumentationContext)
+
   return (
     <>
       <div className='flex flex-row items-center justify-between pt-6 px-6'>

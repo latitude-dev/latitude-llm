@@ -9,28 +9,26 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Config } from 'promptl-ai'
 import { PromptConfiguration } from '../../PromptConfiguration'
 import { EditorHeaderProps } from '../index'
+import { useDevMode } from '../../hooks/useDevMode'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 
 export function TitleRow({
-  providers,
   title,
   isAgent,
   isMerged,
   onChangePrompt,
   metadataConfig,
   prompt,
-  devMode,
-  setDevMode,
 }: {
   isAgent: boolean
   prompt: EditorHeaderProps['prompt']
   metadataConfig: Config | undefined
   title: EditorHeaderProps['title']
-  providers: EditorHeaderProps['providers']
   onChangePrompt: EditorHeaderProps['onChangePrompt']
   isMerged: EditorHeaderProps['isMerged']
-  devMode: EditorHeaderProps['devMode']
-  setDevMode: EditorHeaderProps['setDevMode']
 }) {
+  const { data: providers } = useProviderApiKeys()
+  const { devMode, setDevMode } = useDevMode()
   return (
     <div className='flex flex-row items-center justify-between gap-x-4 pt-px'>
       <div className='flex flex-row items-center gap-2 min-w-0'>

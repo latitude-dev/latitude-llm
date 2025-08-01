@@ -51,7 +51,7 @@ export function InputsMapperItem({
       <div className='flex flex-grow min-w-0 items-start w-full'>
         <div className='flex flex-col flex-grow min-w-0 gap-y-1'>
           <Select<SelectValueType>
-            name='datasetId'
+            name={param}
             placeholder='Choose row header'
             options={rowCellOptions}
             disabled={isLoading || rowCellOptions.length === 0}

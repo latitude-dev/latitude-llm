@@ -103,6 +103,7 @@ function PromptForm({
         return (
           <FormField key={name} label={parameter.label}>
             <ParameterInput
+              name={name}
               type={parameter.type}
               value={parameter.value}
               onChange={(value) => {

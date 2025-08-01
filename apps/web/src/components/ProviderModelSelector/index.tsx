@@ -190,13 +190,11 @@ export function ProviderModelSelector({
   }, [isDisabled, provider, modelOptions.length])
 
   useEvents({
-    onPromptMetadataChanged: ({ promptLoaded, config }) => {
+    onPromptMetadataChanged: ({ promptLoaded, metadata }) => {
       if (!promptLoaded) return
-      if (!isInitialized && !!config) {
-        setInitialized(true)
-      }
+      if (!isInitialized && !!metadata) setInitialized(true)
 
-      const { provider: providerName, model: m } = config || {}
+      const { provider: providerName, model: m } = metadata.config || {}
       const selectedProvider = providers.find((p) => p.name === providerName)
 
       setProvider(selectedProvider)
@@ -210,7 +208,7 @@ export function ProviderModelSelector({
       setModelOptions(
         buildModelOptions({
           provider: selectedProvider,
-          model: m,
+          model: m as string,
         }),
       )
     },

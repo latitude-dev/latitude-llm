@@ -4,8 +4,101 @@ import { IntegrationDto } from '@latitude-data/core/browser'
 import { useCallback, useState } from 'react'
 import { useEvents } from '$/lib/events'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
+import { useDocumentValue } from '../context/DocumentValueContext'
+import useIntegrations from '$/stores/integrations'
 
 export type ActiveIntegrations = Record<string, true | string[]> // true means '*'
+
+export function useActiveIntegrations({ prompt }: { prompt: string }) {
+  const { data: integrations, isLoading } = useIntegrations()
+  const { updateDocumentContent } = useDocumentValue()
+  const [promptConfig, setPromptConfig] = useState<LatitudePromptConfig>(
+    {} as LatitudePromptConfig,
+  )
+  const [isInitialized, setInitialized] = useState(false)
+  const [activeIntegrations, setActiveIntegrations] =
+    useState<ActiveIntegrations>({})
+  const addIntegrationTool = useCallback(
+    (integrationName: string, toolName: string) => {
+      // Local state
+      setActiveIntegrations((prev) => {
+        return addIntegrationToActiveIntegrations({
+          activeIntegrations: prev,
+          integrationName,
+          toolName,
+        })
+      })
+
+      // External state
+      const updatedPrompt = updatePromptMetadata(prompt, {
+        tools: updateExistingToolsFromConfig({
+          tools: promptConfig.tools,
+          integrationName,
+          toolName,
+        }),
+      })
+      updateDocumentContent(updatedPrompt)
+    },
+    [promptConfig, prompt, updateDocumentContent],
+  )
+
+  const removeIntegrationTool = useCallback(
+    (
+      integrationName: string,
+      toolName: string,
+      integrationToolNames: string[],
+    ) => {
+      // Local state
+      setActiveIntegrations((prev) => {
+        return removeIntegrationFromActiveIntegrations({
+          activeIntegrations: prev,
+          integrationName,
+          toolName,
+          integrationToolNames,
+        })
+      })
+
+      // External state
+      const updatedPrompt = updatePromptMetadata(prompt, {
+        tools: removeToolsFromConfigTools({
+          tools: promptConfig.tools,
+          integrationName,
+          toolName,
+          integrationToolNames,
+        }),
+      })
+      updateDocumentContent(updatedPrompt)
+    },
+    [promptConfig, updateDocumentContent, prompt],
+  )
+
+  // Use the same event-driven pattern as ProviderModelSelector
+  useEvents({
+    onPromptMetadataChanged: ({ promptLoaded, metadata }) => {
+      const isReady = promptLoaded && !isLoading
+      if (!metadata) return
+      if (!isReady) return
+      if (!isInitialized) {
+        setInitialized(true)
+      }
+
+      const active = readActiveIntegrations({
+        tools: metadata.config?.tools as LatitudePromptConfig['tools'],
+        integrations,
+      })
+      setActiveIntegrations(active)
+      setPromptConfig(metadata?.config as LatitudePromptConfig)
+    },
+  })
+
+  return {
+    isInitialized,
+    isLoading,
+    activeIntegrations,
+    addIntegrationTool,
+    removeIntegrationTool,
+  }
+}
 
 function isValidIntegration(name: string, integrations: IntegrationDto[]) {
   return (
@@ -186,104 +279,4 @@ function removeToolsFromConfigTools({
     .concat(
       integrationToolsToAdd.map((tn) => `${removedIntegrationName}/${tn}`),
     )
-}
-
-export function useActiveIntegrations({
-  isLoading,
-  prompt,
-  onChangePrompt,
-  integrations,
-}: {
-  isLoading: boolean
-  prompt: string
-  onChangePrompt: (prompt: string) => void
-  integrations: IntegrationDto[]
-}) {
-  const [promptConfig, setPromptConfig] = useState<LatitudePromptConfig>(
-    {} as LatitudePromptConfig,
-  )
-  const [isInitialized, setInitialized] = useState(false)
-  const [activeIntegrations, setActiveIntegrations] =
-    useState<ActiveIntegrations>({})
-  const addIntegrationTool = useCallback(
-    (integrationName: string, toolName: string) => {
-      // Local state
-      setActiveIntegrations((prev) => {
-        return addIntegrationToActiveIntegrations({
-          activeIntegrations: prev,
-          integrationName,
-          toolName,
-        })
-      })
-
-      // External state
-      const updatedPrompt = updatePromptMetadata(prompt, {
-        tools: updateExistingToolsFromConfig({
-          tools: promptConfig.tools,
-          integrationName,
-          toolName,
-        }),
-      })
-      onChangePrompt(updatedPrompt)
-    },
-    [promptConfig, prompt, onChangePrompt],
-  )
-
-  const removeIntegrationTool = useCallback(
-    (
-      integrationName: string,
-      toolName: string,
-      integrationToolNames: string[],
-    ) => {
-      // Local state
-      setActiveIntegrations((prev) => {
-        return removeIntegrationFromActiveIntegrations({
-          activeIntegrations: prev,
-          integrationName,
-          toolName,
-          integrationToolNames,
-        })
-      })
-
-      // External state
-      const updatedPrompt = updatePromptMetadata(prompt, {
-        tools: removeToolsFromConfigTools({
-          tools: promptConfig.tools,
-          integrationName,
-          toolName,
-          integrationToolNames,
-        }),
-      })
-      onChangePrompt(updatedPrompt)
-    },
-    [promptConfig, onChangePrompt, prompt],
-  )
-
-  // Use the same event-driven pattern as ProviderModelSelector
-  useEvents({
-    onPromptMetadataChanged: ({ promptLoaded, config }) => {
-      const isReady = promptLoaded && !isLoading
-
-      if (!isReady) return
-
-      if (!isInitialized) {
-        setInitialized(true)
-      }
-
-      const active = readActiveIntegrations({
-        tools: config?.tools,
-        integrations,
-      })
-      setActiveIntegrations(active)
-      setPromptConfig(config)
-    },
-  })
-
-  return {
-    isInitialized,
-    isLoading,
-    activeIntegrations,
-    addIntegrationTool,
-    removeIntegrationTool,
-  }
 }

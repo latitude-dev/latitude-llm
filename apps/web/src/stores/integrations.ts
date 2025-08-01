@@ -9,6 +9,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { IntegrationType } from '@latitude-data/constants'
+import { useMemo } from 'react'
 
 const EMPTY_ARRAY: IntegrationDto[] = []
 
@@ -117,20 +118,36 @@ export default function useIntegrations({
     },
   )
 
-  return {
-    data,
-    create,
-    createError,
-    isCreating,
-    destroy,
-    isDestroying,
-    scaleDown,
-    isScalingDown,
-    scaleUp,
-    isScalingUp,
-    mutate,
-    ...rest,
-  }
+  return useMemo(
+    () => ({
+      data,
+      create,
+      createError,
+      isCreating,
+      destroy,
+      isDestroying,
+      scaleDown,
+      isScalingDown,
+      scaleUp,
+      isScalingUp,
+      mutate,
+      ...rest,
+    }),
+    [
+      data,
+      create,
+      createError,
+      isCreating,
+      destroy,
+      isDestroying,
+      scaleDown,
+      isScalingDown,
+      scaleUp,
+      isScalingUp,
+      mutate,
+      rest,
+    ],
+  )
 }
 
 function deserialize(item: IntegrationDto): IntegrationDto {
