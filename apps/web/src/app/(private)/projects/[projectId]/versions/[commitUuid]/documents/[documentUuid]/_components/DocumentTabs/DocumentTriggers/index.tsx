@@ -73,7 +73,6 @@ export function DocumentTriggersButton({
         </Popover.Content>
       </Popover.Root>
       <TriggerConfigModal
-        // key={openTrigger?.id}
         isOpen={isModalOpen}
         onOpenChange={onModalOpenChange}
         document={document}

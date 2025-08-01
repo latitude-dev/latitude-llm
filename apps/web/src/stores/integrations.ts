@@ -49,7 +49,12 @@ export default function useIntegrations({
     mutate,
     ...rest
   } = useSWR<IntegrationDto[]>(
-    ['integrations', includeLatitudeTools ?? false, withTools, withTriggers],
+    [
+      'integrations',
+      includeLatitudeTools ?? false,
+      withTools ?? false,
+      withTriggers ?? false,
+    ],
     fetcher,
     opts,
   )

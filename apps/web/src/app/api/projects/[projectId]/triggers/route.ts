@@ -7,17 +7,26 @@ import { DocumentTriggersRepository } from '@latitude-data/core/repositories'
 export const GET = errorHandler(
   authHandler(
     async (
-      _: NextRequest,
+      request: NextRequest,
       {
-        params: { documentUuid },
+        params: { projectId },
         workspace,
       }: {
-        params: { documentUuid: string }
+        params: { projectId: string }
         workspace: Workspace
       },
     ) => {
+      const { searchParams } = new URL(request.url)
+      const documentUuid = searchParams.get('documentUuid')
+
       const scope = new DocumentTriggersRepository(workspace.id)
-      const rows = await scope.findByDocumentUuid(documentUuid)
+
+      let rows
+      if (documentUuid) {
+        rows = await scope.findByDocumentUuid(documentUuid)
+      } else {
+        rows = await scope.findByProjectId(parseInt(projectId))
+      }
 
       return NextResponse.json(rows, { status: 200 })
     },

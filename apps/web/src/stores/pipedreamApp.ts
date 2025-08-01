@@ -18,6 +18,7 @@ export function usePipedreamApp(slugName: string | undefined) {
         if (!response.ok) {
           throw new Error(response.errorMessage)
         }
+
         return response.data
       },
     },

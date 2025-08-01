@@ -126,6 +126,7 @@ export function TriggerConfigModal({
 
       if (trigger) {
         update({
+          documentUuid: document.documentUuid,
           documentTrigger: trigger,
           configuration: {
             integrationId: integration.id,
@@ -139,12 +140,15 @@ export function TriggerConfigModal({
       }
 
       create({
-        triggerType: DocumentTriggerType.Integration,
-        configuration: {
-          integrationId: integration.id,
-          componentId: component.key,
-          properties: configuredProps,
-          payloadParameters,
+        documentUuid: document.documentUuid,
+        trigger: {
+          type: DocumentTriggerType.Integration,
+          configuration: {
+            integrationId: integration.id,
+            componentId: component.key,
+            properties: configuredProps,
+            payloadParameters,
+          },
         },
       })
     },
@@ -158,6 +162,7 @@ export function TriggerConfigModal({
       component,
       isCreating,
       isUpdating,
+      document.documentUuid,
     ],
   )
 
@@ -205,6 +210,7 @@ export function TriggerConfigModal({
           {integration && component && (
             <IntegrationTriggerConfig
               key={component.key}
+              document={document}
               integration={integration}
               component={component}
               configuredProps={configuredProps}

@@ -103,8 +103,10 @@ describe('createDocumentTrigger', () => {
       workspace,
       document,
       project,
-      triggerType: DocumentTriggerType.Email,
-      configuration: emailConfiguration,
+      trigger: {
+        type: DocumentTriggerType.Email,
+        configuration: emailConfiguration,
+      },
     })
 
     // Assert
@@ -165,8 +167,10 @@ describe('createDocumentTrigger', () => {
       workspace,
       document,
       project,
-      triggerType: DocumentTriggerType.Scheduled,
-      configuration: scheduledConfiguration,
+      trigger: {
+        type: DocumentTriggerType.Scheduled,
+        configuration: scheduledConfiguration,
+      },
     })
 
     // Assert
@@ -212,8 +216,10 @@ describe('createDocumentTrigger', () => {
       workspace,
       document,
       project,
-      triggerType: DocumentTriggerType.Email,
-      configuration: emailConfiguration,
+      trigger: {
+        type: DocumentTriggerType.Email,
+        configuration: emailConfiguration,
+      },
     })
 
     // Assert

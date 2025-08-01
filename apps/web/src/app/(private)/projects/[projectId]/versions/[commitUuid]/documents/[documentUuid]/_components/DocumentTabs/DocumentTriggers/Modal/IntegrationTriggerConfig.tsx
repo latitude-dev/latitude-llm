@@ -1,7 +1,7 @@
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { PipedreamComponentPropsForm } from '$/components/Pipedream/PipedreamPropsForm'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import {
+  DocumentVersion,
   IntegrationDto,
   PipedreamComponent,
   PipedreamComponentType,
@@ -14,15 +14,16 @@ import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 
 function ParameterSelects({
+  document,
   payloadParameters,
   setPayloadParameters,
   disabled,
 }: {
+  document: DocumentVersion
   payloadParameters: string[]
   setPayloadParameters: ReactStateDispatch<string[]>
   disabled: boolean
 }) {
-  const { document } = useCurrentDocument()
   const { commit } = useCurrentCommit()
 
   const {
@@ -89,6 +90,7 @@ function ParameterSelects({
 export function IntegrationTriggerConfig({
   integration,
   component,
+  document,
   configuredProps,
   setConfiguredProps,
   payloadParameters,
@@ -97,6 +99,7 @@ export function IntegrationTriggerConfig({
 }: {
   integration: IntegrationDto
   component: PipedreamComponent<PipedreamComponentType.Trigger>
+  document: DocumentVersion
   configuredProps: ConfiguredProps<ConfigurableProps>
   setConfiguredProps: ReactStateDispatch<ConfiguredProps<ConfigurableProps>>
   payloadParameters: string[]
@@ -113,6 +116,7 @@ export function IntegrationTriggerConfig({
         disabled={disabled}
       />
       <ParameterSelects
+        document={document}
         payloadParameters={payloadParameters}
         setPayloadParameters={setPayloadParameters}
         disabled={disabled}

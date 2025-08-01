@@ -183,7 +183,7 @@ TableHead.displayName = 'TableHead'
 
 type CommonCellProps = TdHTMLAttributes<HTMLTableCellElement> & {
   align?: 'left' | 'center' | 'right'
-  xSpace?: 'none' | 'normal'
+  xSpace?: 'none' | 'small' | 'normal'
   verticalBorder?: boolean
   innerClassName?: string
 }
@@ -208,6 +208,7 @@ const ServerSideTableCell = forwardRef<HTMLTableCellElement, CommonCellProps>(
         'max-w-60',
         {
           'px-4': xSpace === 'normal',
+          'px-2': xSpace === 'small',
           'px-0': xSpace === 'none',
           'border-r last:border-r-0': verticalBorder,
         },
@@ -253,12 +254,12 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
       className={cn(
         'align-middle [&:has([role=checkbox])]:pr-0',
         'max-w-60',
-        className,
         {
           'px-4': xSpace === 'normal',
           'px-0': xSpace === 'none',
           'border-r last:border-r-0': verticalBorder,
         },
+        className,
       )}
       {...props}
       onClick={(e) => {
