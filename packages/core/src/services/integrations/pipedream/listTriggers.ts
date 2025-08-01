@@ -1,19 +1,25 @@
-import { McpTool } from '@latitude-data/constants'
 import { PipedreamIntegration } from '../../../browser'
 import { PromisedResult } from '../../../lib/Transaction'
 import { getApp } from './apps'
 import { Result } from '../../../lib/Result'
-import { pipedreamComponentToTriggerDefinition } from './helpers/componentConverter'
 
 export async function listPipedreamIntegrationTriggers(
   integration: PipedreamIntegration,
-): PromisedResult<McpTool[]> {
+): PromisedResult<{ name: string; description?: string }[]> {
   const appResult = await getApp({
     name: integration.configuration.appName,
   })
 
   if (!Result.isOk(appResult)) return appResult
   const app = appResult.unwrap()
-  const triggers = app.triggers.map(pipedreamComponentToTriggerDefinition)
+  const triggers = app.triggers.map((trigger) => ({
+    name: trigger.key,
+    description: trigger.description,
+  }))
+
+  console.log(
+    '🔍 Fetched Pipedream Integration Triggers:',
+    JSON.stringify(triggers, null, 8),
+  )
   return Result.ok(triggers)
 }

@@ -14,13 +14,3 @@ export function pipedreamComponentToToolDefinition(
     inputSchema: propsToJSONSchema(component.configurable_props),
   }
 }
-
-export function pipedreamComponentToTriggerDefinition(
-  component: PipedreamComponent<PipedreamComponentType.Trigger>,
-): McpTool {
-  return {
-    name: component.key,
-    description: component.description,
-    inputSchema: propsToJSONSchema(component.configurable_props),
-  }
-}
