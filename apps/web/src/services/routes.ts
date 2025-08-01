@@ -150,6 +150,11 @@ export const ROUTES = {
               },
               preview: {
                 root: `${root}/preview`,
+                triggers: {
+                  new: {
+                    root: `${root}/preview/triggers/new`,
+                  },
+                },
               },
               analytics: {
                 root: `${root}/analytics`,

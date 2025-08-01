@@ -4,8 +4,16 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { LatteLayout } from '$/components/LatteLayout'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { TriggersPreview } from '../documents/[documentUuid]/_components/DocumentTabs/DocumentTriggers/Settings/IntegrationTriggers/Preview'
+import { ROUTES } from '$/services/routes'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import Link from 'next/link'
 
 export function Client() {
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
   return (
     <div className='flex-1 min-h-0'>
       <LatteLayout>
@@ -19,13 +27,18 @@ export function Client() {
               </Text.H5>
             </div>
             <TriggersPreview />
-            <Button
-              variant='outline'
-              onClick={() => alert('quieto parao')}
-              fancy
+            <Link
+              href={
+                ROUTES.projects
+                  .detail({ id: project.id })
+                  .commits.detail({ uuid: commit.uuid }).preview.triggers.new
+                  .root
+              }
             >
-              Add trigger
-            </Button>
+              <Button variant='outline' fancy>
+                Add trigger
+              </Button>
+            </Link>
           </div>
         </div>
       </LatteLayout>
