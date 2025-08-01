@@ -3,6 +3,7 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { LatteLayout } from '$/components/LatteLayout'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { TriggersPreview } from '../documents/[documentUuid]/_components/DocumentTabs/DocumentTriggers/Settings/IntegrationTriggers/Preview'
 
 export function Client() {
   return (
@@ -17,9 +18,7 @@ export function Client() {
                 schedule…
               </Text.H5>
             </div>
-            <div className='max-w-[75%] overflow-hidden rounded-2xl border'>
-              <img src='/new_trigger.png' />
-            </div>
+            <TriggersPreview />
             <Button
               variant='outline'
               onClick={() => alert('quieto parao')}
