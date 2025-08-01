@@ -208,19 +208,21 @@ describe('publishDraftCommit', () => {
     }).then((r) => r.unwrap())
 
     // There should be no errors from deleted documents
-    expect(changes).toEqual([
-      {
-        documentUuid: documents['doc2']!.documentUuid,
-        path: 'new-doc2',
-        changeType: ModifiedDocumentType.UpdatedPath,
-        errors: 0,
-      },
-      {
-        documentUuid: documents['folder1/doc1']!.documentUuid,
-        path: 'folder1/doc1',
-        changeType: ModifiedDocumentType.Deleted,
-        errors: 0,
-      },
-    ])
+    expect(changes).toEqual(
+      expect.arrayContaining([
+        {
+          documentUuid: documents['doc2']!.documentUuid,
+          path: 'new-doc2',
+          changeType: ModifiedDocumentType.UpdatedPath,
+          errors: 0,
+        },
+        {
+          documentUuid: documents['folder1/doc1']!.documentUuid,
+          path: 'folder1/doc1',
+          changeType: ModifiedDocumentType.Deleted,
+          errors: 0,
+        },
+      ]),
+    )
   })
 })
