@@ -4,7 +4,7 @@ import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { getPipedreamEnvironment } from './apps'
 import { IntegrationType } from '@latitude-data/constants'
-import { isIntegrationConfigured } from './components'
+import { isIntegrationConfigured } from './components/reloadComponentProps'
 
 export async function destroyPipedreamAccountFromIntegration(
   integration: IntegrationDto,

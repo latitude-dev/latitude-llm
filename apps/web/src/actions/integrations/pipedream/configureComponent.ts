@@ -2,9 +2,9 @@
 
 import { z } from 'zod'
 import { authProcedure } from '../../procedures'
-import { configureComponent } from '@latitude-data/core/services/integrations/pipedream/components'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { IntegrationType } from '@latitude-data/constants'
+import { configureComponent } from '@latitude-data/core/services/integrations/pipedream/components/configureComponent'
 
 export const configurePipedreamComponentAction = authProcedure
   .createServerAction()
