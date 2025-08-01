@@ -17,9 +17,5 @@ export async function listPipedreamIntegrationTriggers(
     description: trigger.description,
   }))
 
-  console.log(
-    '🔍 Fetched Pipedream Integration Triggers:',
-    JSON.stringify(triggers, null, 8),
-  )
   return Result.ok(triggers)
 }
