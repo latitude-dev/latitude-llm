@@ -18,6 +18,7 @@ import {
   LogSources,
   Project,
   DocumentVersion,
+  INPUT_SOURCE,
 } from '@latitude-data/core/browser'
 import { TitleRow } from './EditorHeader/TitleRow'
 import { AgentToolbar } from './EditorHeader/AgentToolbar'
@@ -48,29 +49,30 @@ export function DocumentEditor(props: DocumentEditorProps) {
   )
 }
 
+const MANUAL_BASE_HEIGHT = 64
+const DATASET_BASE_HEIGHT = 64 + 49 + 16
+const HISTORY_BASE_HEIGHT = 64 + 41 + 16
+const MANUAL_ELM_HEIGHT = 44
+const DATASET_ELM_HEIGHT = 52 + 16
+const HISTORY_ELM_HEIGHT = 44
+
+/**
+ * Main content component for the document editor that handles the UI layout and state management
+ * @param props - Document editor properties
+ * @param props.document - The document to edit
+ * @param props.documents - Array of all documents in the commit
+ * @param props.freeRunsCount - Number of free runs available
+ * @param props.initialDiff - Initial diff data for the document
+ */
 function DocumentEditorContent({
   document: _document,
   documents: _documents,
   freeRunsCount,
   initialDiff,
 }: DocumentEditorProps) {
-  const { open: isPlaygroundOpen, onOpenChange: _togglePlaygroundOpen } =
-    useToggleModal()
-  const {
-    open: isPlaygroundTransitioning,
-    onOpenChange: togglePLaygroundTransitioning,
-  } = useToggleModal()
-  const { open: isExperimentModalOpen, onOpenChange: toggleExperimentModal } =
-    useToggleModal()
-  const togglePlaygroundOpen = useCallback(() => {
-    togglePLaygroundTransitioning()
-    setTimeout(() => {
-      togglePLaygroundTransitioning()
-      _togglePlaygroundOpen()
-    }, 400)
-  }, [_togglePlaygroundOpen, togglePLaygroundTransitioning])
   const { updateDocumentContent } = useDocumentValue()
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
+  const { metadata } = useMetadata()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { data: documents } = useDocumentVersions(
@@ -88,12 +90,18 @@ function DocumentEditorContent({
       _document,
     [documents, _document],
   )
+  const {
+    isPlaygroundOpen,
+    isPlaygroundTransitioning,
+    isExperimentModalOpen,
+    togglePlaygroundOpen,
+    toggleExperimentModal,
+  } = useToggleStates()
   const name = useMemo(
     () => document.path.split('/').pop() ?? document.path,
     [document.path],
   )
   const isMerged = useMemo(() => commit.mergedAt !== null, [commit.mergedAt])
-  const { metadata } = useMetadata()
   const isLatitudeProvider = useIsLatitudeProvider({ metadata })
   const {
     parameters,
@@ -104,53 +112,22 @@ function DocumentEditorContent({
     commitVersionUuid: commit.uuid,
     document,
   })
-  const focusFirstParameterInput = useCallback(
-    (parameters: Record<string, unknown> = {}) => {
-      const inputElement = window.document.querySelector(
-        `[name="${Object.keys(parameters ?? {})[0]}"]`,
-      )
-      // @ts-expect-error - TS is wrong? the inputElement has a focus method
-      if (inputElement) inputElement.focus()
-    },
-    [],
-  )
-  const runPromptButtonHandler = useCallback(() => {
-    if (!isPlaygroundOpen) {
-      togglePlaygroundOpen()
-      if (Object.keys(parameters ?? {}).length === 0) {
-        setMode('chat')
-      } else {
-        focusFirstParameterInput(parameters)
-      }
-    } else {
-      setMode('chat')
-    }
-  }, [
-    setMode,
-    togglePlaygroundOpen,
-    parameters,
-    focusFirstParameterInput,
+  const {
+    calcExpandedHeight,
+    runPromptButtonHandler,
+    toggleDocumentParamsHandler,
+  } = useEditorCallbacks({
     isPlaygroundOpen,
-  ])
-  const toggleDocumentParamsHandler = useCallback(() => {
-    setMode('preview')
-    togglePlaygroundOpen()
-    focusFirstParameterInput(parameters)
-  }, [togglePlaygroundOpen, parameters, focusFirstParameterInput])
+    togglePlaygroundOpen,
+    setMode,
+    parameters,
+    source,
+  })
   const isDocumentParamsOpen = useMemo(
     () =>
       (!isPlaygroundOpen && isPlaygroundTransitioning) ||
       (isPlaygroundOpen && !isPlaygroundTransitioning),
     [isPlaygroundOpen, isPlaygroundTransitioning],
-  )
-  const calcExpandedHeight = useCallback(
-    (parameters: Record<string, unknown> | undefined) => {
-      const keys = Object.keys(parameters ?? {})
-      if (!keys.length) return 90
-
-      return 64 + keys.length * 44
-    },
-    [],
   )
   const { playground, hasActiveStream, clearChat, stopStreaming } =
     usePlaygroundLogic({
@@ -283,7 +260,20 @@ function DocumentEditorContent({
 }
 
 /**
- * Local hook that manages playground-related logic and state
+ * Hook that manages playground-related logic and state for document execution
+ * @param params - Configuration parameters for playground functionality
+ * @param params.commit - The current commit containing the document
+ * @param params.project - The project containing the document
+ * @param params.document - The document version to execute in playground
+ * @param params.parameters - Document parameters for execution context
+ * @param params.setMode - Function to switch between preview and chat modes
+ * @param params.togglePlaygroundOpen - Function to toggle playground visibility
+ * @param params.setHistoryLog - Function to log execution history
+ * @returns Object containing playground state and control functions
+ * @returns playground - The playground chat instance with message history
+ * @returns hasActiveStream - Whether there's currently an active streaming response
+ * @returns clearChat - Function to clear chat history and reset playground
+ * @returns stopStreaming - Function to stop current streaming and optionally clear chat
  */
 function usePlaygroundLogic({
   commit,
@@ -348,5 +338,141 @@ function usePlaygroundLogic({
       stopStreaming,
     }),
     [playground, hasActiveStream, clearChat, stopStreaming],
+  )
+}
+
+/**
+ * Hook that manages editor callback functions for playground interactions
+ * @param params - Configuration parameters
+ * @param params.isPlaygroundOpen - Whether the playground is currently open
+ * @param params.togglePlaygroundOpen - Function to toggle playground open/closed
+ * @param params.setMode - Function to set preview/chat mode
+ * @param params.parameters - Document parameters object
+ * @param params.source - Input source type (manual, dataset, history)
+ * @returns Object containing callback functions and height calculation utility
+ */
+function useEditorCallbacks({
+  isPlaygroundOpen,
+  togglePlaygroundOpen,
+  setMode,
+  parameters,
+  source,
+}: {
+  isPlaygroundOpen: boolean
+  togglePlaygroundOpen: () => void
+  setMode: (mode: 'preview' | 'chat') => void
+  parameters: Record<string, any> | undefined
+  source: (typeof INPUT_SOURCE)[keyof typeof INPUT_SOURCE]
+}) {
+  const focusFirstParameterInput = useCallback(
+    (parameters: Record<string, unknown> = {}) => {
+      const inputElement = window.document.querySelector(
+        `[name="${Object.keys(parameters ?? {})[0]}"]`,
+      )
+      // @ts-expect-error - TS is wrong? the inputElement has a focus method
+      if (inputElement) inputElement.focus()
+    },
+    [],
+  )
+  const runPromptButtonHandler = useCallback(() => {
+    if (!isPlaygroundOpen) {
+      togglePlaygroundOpen()
+      if (Object.keys(parameters ?? {}).length === 0) {
+        setMode('chat')
+      } else {
+        focusFirstParameterInput(parameters)
+      }
+    } else {
+      setMode('chat')
+    }
+  }, [
+    setMode,
+    togglePlaygroundOpen,
+    parameters,
+    focusFirstParameterInput,
+    isPlaygroundOpen,
+  ])
+  const toggleDocumentParamsHandler = useCallback(() => {
+    setMode('preview')
+    togglePlaygroundOpen()
+    focusFirstParameterInput(parameters)
+  }, [togglePlaygroundOpen, parameters, focusFirstParameterInput])
+  const calcExpandedHeight = useCallback(
+    (parameters: Record<string, unknown> | undefined) => {
+      const keys = Object.keys(parameters ?? {})
+      if (!keys.length) return 90
+
+      const baseHeight =
+        source === INPUT_SOURCE.manual
+          ? MANUAL_BASE_HEIGHT
+          : source === INPUT_SOURCE.dataset
+            ? DATASET_BASE_HEIGHT
+            : HISTORY_BASE_HEIGHT
+      const elmHeight =
+        source === INPUT_SOURCE.manual
+          ? MANUAL_ELM_HEIGHT
+          : source === INPUT_SOURCE.dataset
+            ? DATASET_ELM_HEIGHT
+            : HISTORY_ELM_HEIGHT
+
+      return baseHeight + keys.length * elmHeight
+    },
+    [source],
+  )
+
+  return useMemo(
+    () => ({
+      focusFirstParameterInput,
+      calcExpandedHeight,
+      runPromptButtonHandler,
+      toggleDocumentParamsHandler,
+    }),
+    [
+      focusFirstParameterInput,
+      runPromptButtonHandler,
+      toggleDocumentParamsHandler,
+      calcExpandedHeight,
+    ],
+  )
+}
+
+/**
+ * Hook that manages toggle states for playground and experiment modal
+ * @returns Object containing playground and modal state management functions
+ */
+function useToggleStates() {
+  const { open: isPlaygroundOpen, onOpenChange: _togglePlaygroundOpen } =
+    useToggleModal()
+  const {
+    open: isPlaygroundTransitioning,
+    onOpenChange: togglePLaygroundTransitioning,
+  } = useToggleModal()
+  const { open: isExperimentModalOpen, onOpenChange: toggleExperimentModal } =
+    useToggleModal()
+  const togglePlaygroundOpen = useCallback(() => {
+    togglePLaygroundTransitioning()
+    setTimeout(() => {
+      togglePLaygroundTransitioning()
+      _togglePlaygroundOpen()
+    }, 400)
+  }, [_togglePlaygroundOpen, togglePLaygroundTransitioning])
+
+  return useMemo(
+    () => ({
+      isPlaygroundOpen,
+      isPlaygroundTransitioning,
+      isExperimentModalOpen,
+      togglePlaygroundOpen,
+      togglePLaygroundTransitioning,
+      toggleExperimentModal,
+    }),
+    [
+      isPlaygroundOpen,
+      isPlaygroundTransitioning,
+      isExperimentModalOpen,
+      togglePlaygroundOpen,
+      togglePLaygroundTransitioning,
+      toggleExperimentModal,
+    ],
   )
 }
