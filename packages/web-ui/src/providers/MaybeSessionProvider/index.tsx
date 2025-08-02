@@ -27,10 +27,10 @@ const MaybeSessionProvider = ({
 
 const useMaybeSession = () => {
   const context = useContext(MaybeSessionContext)
-
   if (!context) {
     throw new Error('useMaybeSession must be used within a SessionProvider')
   }
+
   return context
 }
 
