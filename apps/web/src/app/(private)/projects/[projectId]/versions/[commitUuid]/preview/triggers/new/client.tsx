@@ -7,6 +7,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import { Column1, Column2, Column3 } from './_components'
 
 export function Client() {
   const navigate = useNavigate()
@@ -27,7 +28,11 @@ export function Client() {
         )
       }
     >
-      <div className='flex flex-col gap-4'>Ola k ase</div>
+      <div className='grid grid-cols-3 gap-4 w-full'>
+        <Column1 />
+        <Column2 />
+        <Column3 />
+      </div>
     </Modal>
   )
 }
