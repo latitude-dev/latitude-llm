@@ -396,7 +396,7 @@ function useEditorCallbacks({
     setMode('preview')
     togglePlaygroundOpen()
     focusFirstParameterInput(parameters)
-  }, [togglePlaygroundOpen, parameters, focusFirstParameterInput])
+  }, [togglePlaygroundOpen, parameters, focusFirstParameterInput, setMode])
   const calcExpandedHeight = useCallback(
     (parameters: Record<string, unknown> | undefined) => {
       const keys = Object.keys(parameters ?? {})
