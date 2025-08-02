@@ -3,7 +3,7 @@ import { DocumentLogWithMetadataAndError } from '../../browser'
 import { database } from '../../client'
 import { NotFoundError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
-import { DocumentLogsRepository } from '../../repositories'
+import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
 import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 
 function throwNotFound({
@@ -34,7 +34,7 @@ export async function fetchDocumentLogWithMetadata(
   const type = documentLogUuid ? 'uuid' : 'id'
   if (identifier === undefined) return throwNotFound({ identifier, type })
 
-  const repo = new DocumentLogsRepository(workspaceId, db)
+  const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspaceId, db)
   let documentLog: DocumentLog | undefined = undefined
   if (documentLogUuid) {
     documentLog = await repo.findByUuid(documentLogUuid).then((r) => r.unwrap())
