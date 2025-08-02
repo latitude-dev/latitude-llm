@@ -12,7 +12,7 @@ import {
   findCommitCached,
   findProjectCached,
 } from '$/app/(private)/_data-access'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
@@ -30,7 +30,7 @@ export default async function ProjectLayout({
   commitUuid: string
   document?: DocumentVersion
 }) {
-  const session = await getCurrentUser()
+  const session = await getCurrentUserOrRedirect()
   let project
   try {
     project = await findProjectCached({

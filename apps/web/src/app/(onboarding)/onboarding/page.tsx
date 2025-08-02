@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { isOnboardingCompleted } from '$/data-access/workspaceOnboarding'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { OnboardingClient } from './_components/OnboardingClient'
 import { findOnboardingDocument } from '@latitude-data/core/services/documents/findOnboardingDocument'
@@ -12,7 +12,7 @@ export default async function OnboardingRedirect() {
     redirect('/dashboard')
   }
 
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   if (!workspace?.id) {
     throw new NotFoundError('Workspace ID is required')
   }

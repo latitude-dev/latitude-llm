@@ -31,7 +31,7 @@ describe('GET handler for provider API keys', () => {
 
   describe('unauthorized', () => {
     it('should return 401 if user is not authenticated', async () => {
-      mocks.getSession.mockReturnValue(null)
+      mocks.getSession.mockResolvedValue(null)
 
       const response = await GET(mockRequest, {
         workspace: mockWorkspace,
@@ -46,7 +46,10 @@ describe('GET handler for provider API keys', () => {
 
   describe('authorized', () => {
     beforeEach(() => {
-      mocks.getSession.mockReturnValue({ user: mockUser })
+      mocks.getSession.mockResolvedValue({
+        user: mockUser,
+        session: { userId: mockUser.id, currentWorkspaceId: mockWorkspace.id },
+      })
     })
 
     it('should return empty array when no provider API keys exist', async () => {

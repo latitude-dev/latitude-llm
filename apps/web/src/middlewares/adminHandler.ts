@@ -1,4 +1,4 @@
-import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { NextRequest, NextResponse } from 'next/server'
 
 export function adminHandler(handler: any) {
@@ -8,7 +8,8 @@ export function adminHandler(handler: any) {
   ) => {
     let user, workspace
     try {
-      const { user: uzer, workspace: workzpace } = await getCurrentUserOrError()
+      const { user: uzer, workspace: workzpace } =
+        await getCurrentUserOrRedirect()
       user = uzer
       workspace = workzpace
     } catch (error) {

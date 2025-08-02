@@ -1,6 +1,5 @@
 import { cache } from 'react'
 
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import {
   DOCUMENT_STATS_CACHE_KEY,
   DocumentLogsLimitedView,
@@ -27,6 +26,7 @@ import {
   ProviderLogsRepository,
 } from '@latitude-data/core/repositories/index'
 import { notFound } from 'next/navigation'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 
 export const getFirstProjectCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
@@ -66,7 +66,7 @@ export const findProjectCached = cache(
 
 export const findCommitCached = cache(
   async ({ uuid, projectId }: { uuid: string; projectId: number }) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     if (!workspace) return notFound()
 
     const commitsScope = new CommitsRepository(workspace.id)
@@ -79,7 +79,7 @@ export const findCommitCached = cache(
 
 export const findCommitsByProjectCached = cache(
   async ({ projectId }: { projectId: number }) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     const commitsScope = new CommitsRepository(workspace.id)
     const result = await commitsScope.filterByProject(projectId)
     const commits = result.unwrap()
@@ -96,7 +96,7 @@ export const findCommitsWithDocumentChangesCached = cache(
     projectId: number
     documentUuid: string
   }) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     const projectsScope = new ProjectsRepository(workspace.id)
     const project = await projectsScope
       .getProjectById(projectId)
@@ -121,7 +121,7 @@ export const getDocumentByUuidCached = cache(
     documentUuid: string
     commitUuid: string
   }) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     const scope = new DocumentVersionsRepository(workspace.id)
     const result = await scope.getDocumentAtCommit({
       documentUuid,
@@ -143,7 +143,7 @@ export const getDocumentByUuidCached = cache(
 
 export const getDocumentByPathCached = cache(
   async ({ commit, path }: { commit: Commit; path: string }) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     const docsScope = new DocumentVersionsRepository(workspace!.id)
     const documents = await docsScope
       .getDocumentsAtCommit(commit)
@@ -158,7 +158,7 @@ export const getDocumentByPathCached = cache(
 
 export const getDocumentsAtCommitCached = cache(
   async ({ commit }: { commit: Commit }) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     const docsScope = new DocumentVersionsRepository(workspace.id)
     const result = await docsScope.getDocumentsAtCommit(commit)
     const documents = result.unwrap()
@@ -182,7 +182,7 @@ export const getHeadCommitCached = cache(
 )
 
 export const getDocumentByIdCached = cache(async (id: number) => {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const docsScope = new DocumentVersionsRepository(workspace.id)
   const result = await docsScope.getDocumentById(id)
   const document = result.unwrap()
@@ -201,7 +201,7 @@ export const getDocumentsFromMergedCommitsCache = cache(
 )
 
 export const getEvaluationByUuidCached = cache(async (uuid: string) => {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const evaluationScope = new EvaluationsRepository(workspace.id)
   const result = await evaluationScope.findByUuid(uuid)
   const evaluation = result.unwrap()
@@ -210,7 +210,7 @@ export const getEvaluationByUuidCached = cache(async (uuid: string) => {
 })
 
 export const getEvaluationByIdCached = cache(async (id: number) => {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const evaluationScope = new EvaluationsRepository(workspace.id)
   const result = await evaluationScope.find(id)
   const evaluation = result.unwrap()
@@ -219,7 +219,7 @@ export const getEvaluationByIdCached = cache(async (id: number) => {
 })
 
 export const getDocumentStatsCached = cache(async (documentUuid: string) => {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const cache = await redis()
   const key = DOCUMENT_STATS_CACHE_KEY(workspace.id, documentUuid)
   const stats = await cache.get(key)
@@ -227,7 +227,7 @@ export const getDocumentStatsCached = cache(async (documentUuid: string) => {
 })
 
 export const getProjectStatsCached = cache(async (projectId: number) => {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const cache = await redis()
   const key = PROJECT_STATS_CACHE_KEY(workspace.id, projectId)
   const stats = await cache.get(key)
@@ -236,7 +236,7 @@ export const getProjectStatsCached = cache(async (projectId: number) => {
 
 export const getDocumentLogsApproximatedCountCached = cache(
   async (documentUuid: string) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     const repository = new DocumentLogsRepository(workspace.id)
     return await repository
       .approximatedCount({ documentUuid })
@@ -246,7 +246,7 @@ export const getDocumentLogsApproximatedCountCached = cache(
 
 export const getDocumentLogsApproximatedCountByProjectCached = cache(
   async (projectId: number) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     const repository = new DocumentLogsRepository(workspace.id)
     return await repository
       .approximatedCountByProject({ projectId })
@@ -255,14 +255,14 @@ export const getDocumentLogsApproximatedCountByProjectCached = cache(
 )
 
 export const hasDocumentLogsCached = cache(async (documentUuid: string) => {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const repository = new DocumentLogsRepository(workspace.id)
   return await repository.hasLogs({ documentUuid }).then((r) => r.unwrap())
 })
 
 export const hasDocumentLogsByProjectCached = cache(
   async (projectId: number) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     const repository = new DocumentLogsRepository(workspace.id)
     return await repository
       .hasLogsByProject({ projectId })
@@ -271,20 +271,20 @@ export const hasDocumentLogsByProjectCached = cache(
 )
 
 export const getDocumentLogCached = cache(async (uuid: string) => {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const repository = new DocumentLogsRepository(workspace.id)
   return await repository.findByUuid(uuid).then((r) => r.unwrap())
 })
 
 export const getProviderLogCached = cache(async (uuid: string) => {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const scope = new ProviderLogsRepository(workspace.id)
   return await scope.findByUuid(uuid).then((r) => r.unwrap())
 })
 
 export const getEvaluationsByDocumentUuidCached = cache(
   async (documentUuid: string) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     const scope = new EvaluationsRepository(workspace.id)
     const result = await scope.findByDocumentUuid(documentUuid)
     return result.unwrap()
@@ -306,7 +306,7 @@ export const getEvaluationV2AtCommitByDocumentCached = cache(
     documentUuid: string
     evaluationUuid: string
   }) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     const repository = new EvaluationsV2Repository(workspace.id)
     const result = await repository.getAtCommitByDocument({
       projectId: projectId,
@@ -333,7 +333,7 @@ export const listEvaluationsV2AtCommitByDocumentCached = cache(
     commitUuid: string
     documentUuid: string
   }) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     const repository = new EvaluationsV2Repository(workspace.id)
     const evaluations = await repository
       .listAtCommitByDocument({
@@ -349,7 +349,7 @@ export const listEvaluationsV2AtCommitByDocumentCached = cache(
 
 export const getConnectedDocumentsWithMetadataCached = cache(
   async (evaluationId: number) => {
-    const { workspace } = await getCurrentUser()
+    const { workspace } = await getCurrentUserOrRedirect()
     const connectedEvaluationsScope = new ConnectedEvaluationsRepository(
       workspace.id,
     )
@@ -362,28 +362,28 @@ export const getConnectedDocumentsWithMetadataCached = cache(
 )
 
 export const getApiKeysCached = cache(async () => {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const scope = new ApiKeysRepository(workspace.id)
   const result = await scope.findAll()
   return result.unwrap()
 })
 
 export const getProviderApiKeyByNameCached = cache(async (name: string) => {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const scope = new ProviderApiKeysRepository(workspace.id)
   const result = await scope.findByName(name)
   return result.unwrap()
 })
 
 export const getProviderApiKeyByIdCached = cache(async (id: number) => {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const scope = new ProviderApiKeysRepository(workspace.id)
   const result = await scope.find(id)
   return result.unwrap()
 })
 
 export const getProviderApiKeysCached = cache(async () => {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const scope = new ProviderApiKeysRepository(workspace.id)
   const result = await scope.findAll()
   return result.unwrap()

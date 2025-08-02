@@ -8,6 +8,7 @@ import { RootBreadcrumbItems } from './Root'
 
 export function HeaderBreadcrumb() {
   const segments = useSelectedLayoutSegments()
+  const logoElement = <Icon name='logo' size='large' />
 
   return (
     <Breadcrumb>
@@ -15,7 +16,7 @@ export function HeaderBreadcrumb() {
         href={ROUTES.dashboard.root}
         className='flex flex-row items-center gap-x-4'
       >
-        <Icon name='logo' size='large' />
+        {logoElement}
       </Link>
 
       <RootBreadcrumbItems segments={segments} />

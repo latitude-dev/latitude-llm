@@ -5,7 +5,7 @@ import { createContext, ReactNode, useContext } from 'react'
 import { SessionUser } from '../SessionProvider'
 
 interface ISessionContext {
-  currentUser: SessionUser | undefined
+  currentUser: SessionUser | undefined | null
 }
 
 const MaybeSessionContext = createContext<ISessionContext>(

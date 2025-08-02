@@ -7,6 +7,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { LatteChatInput } from './LatteChatInput'
+import Image from 'next/image'
 
 export function LatteChat() {
   const {
@@ -47,7 +48,7 @@ export function LatteChat() {
             {!inConversation ? (
               <div className='flex flex-col items-center justify-center h-full gap-8 min-w-[50%]'>
                 <div className='flex flex-col items-center justify-center gap-6'>
-                  <img src='/latte.svg' />
+                  <Image src='/latte.svg' alt='Latte' width={64} height={64} />
                   <div className='flex flex-col items-center justify-center gap-2'>
                     <Text.H3M>What do you want to automate today?</Text.H3M>
                     <Text.H5 color='foregroundMuted'>

@@ -5,7 +5,7 @@ import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { AppTabs } from '$/app/(private)/AppTabs'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
@@ -22,7 +22,7 @@ export default async function DashboardLayout({
 }: Readonly<{
   children: ReactNode
 }>) {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
 
   const projects = await getActiveProjectsCached({ workspaceId: workspace.id })
 

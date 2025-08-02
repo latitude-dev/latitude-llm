@@ -3,7 +3,7 @@ import { ReactNode } from 'react'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { findProjectCached } from '$/app/(private)/_data-access'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import type { ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 
@@ -21,7 +21,7 @@ export async function generateMetadata(
   const { projectId } = await params
 
   try {
-    const session = await getCurrentUser()
+    const session = await getCurrentUserOrRedirect()
     const project = await findProjectCached({
       projectId: Number(projectId),
       workspaceId: session.workspace.id,

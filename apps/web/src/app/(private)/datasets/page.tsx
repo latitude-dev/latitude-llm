@@ -1,6 +1,6 @@
 import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { env } from '@latitude-data/env'
 import { RootDatasetHeader } from './_components/RootHeader'
 import { DatasetsTable } from './_components/DatasetsTable'
@@ -22,7 +22,7 @@ export default async function DatasetsRoot({
     parameters?: string
   }>
 }) {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const {
     pageSize,
     page: pageString,

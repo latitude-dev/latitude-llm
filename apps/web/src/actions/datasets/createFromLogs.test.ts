@@ -82,10 +82,9 @@ describe('createDatasetFromLogsAction', () => {
     commit = c
 
     // Mock authentication
-    mocks.getSession.mockReturnValue({
+    mocks.getSession.mockResolvedValue({
       user,
-      workspace,
-      document,
+      session: { userId: user.id, currentWorkspaceId: workspace.id },
     })
 
     // Default filter options based on the actual schema from constants.ts
@@ -114,7 +113,7 @@ describe('createDatasetFromLogsAction', () => {
   describe('unauthorized', () => {
     it('errors when the user is not authenticated', async () => {
       // Setup unauthorized session
-      mocks.getSession.mockReturnValue(null)
+      mocks.getSession.mockResolvedValue(null)
 
       const [_, error] = await createDatasetFromLogsAction({
         projectId: project.id,

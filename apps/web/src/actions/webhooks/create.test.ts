@@ -31,9 +31,11 @@ describe('createWebhookAction', () => {
     workspace = ws
     user = userData
 
-    mocks.getSession.mockReturnValue({
+    mocks.getSession.mockResolvedValue({
       user: workspace.user,
-      workspace: { id: workspace.id, name: workspace.name },
+      session: {
+        currentWorkspaceId: workspace.id,
+      },
     })
 
     // Reset publisher mock before each test
@@ -42,7 +44,7 @@ describe('createWebhookAction', () => {
 
   describe('unauthorized', () => {
     it('errors when the user is not authenticated', async () => {
-      mocks.getSession.mockReturnValue(null)
+      mocks.getSession.mockResolvedValue(null)
 
       const [_, error] = await createWebhookAction({
         name: 'Test Webhook',
@@ -56,8 +58,9 @@ describe('createWebhookAction', () => {
 
   describe('authorized', () => {
     beforeEach(async () => {
-      mocks.getSession.mockReturnValue({
+      mocks.getSession.mockResolvedValue({
         user,
+        session: { userId: user.id, currentWorkspaceId: workspace.id },
       })
     })
 

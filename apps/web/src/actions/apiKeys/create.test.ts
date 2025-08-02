@@ -16,7 +16,7 @@ vi.mock('$/services/auth/getSession', () => ({
 describe('createApiKeyAction', () => {
   describe('unauthorized', () => {
     it('errors when the user is not authenticated', async () => {
-      mocks.getSession.mockReturnValue(null)
+      mocks.getSession.mockResolvedValue(null)
 
       const [_, error] = await createApiKeyAction({
         name: 'Test API Key',
@@ -28,10 +28,11 @@ describe('createApiKeyAction', () => {
 
   describe('authorized', () => {
     beforeEach(async () => {
-      const { userData } = await factories.createWorkspace()
+      const { workspace: ws, userData } = await factories.createWorkspace()
 
-      mocks.getSession.mockReturnValue({
+      mocks.getSession.mockResolvedValue({
         user: userData,
+        session: { userId: userData.id, currentWorkspaceId: ws.id },
       })
     })
 

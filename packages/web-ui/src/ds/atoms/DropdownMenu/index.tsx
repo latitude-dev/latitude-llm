@@ -109,7 +109,7 @@ function DropdownItem({
   )
 }
 
-type RenderTriggerProps = { open: boolean }
+type RenderTriggerProps = { open: boolean; setOpen: (open: boolean) => void }
 type TriggerButtonPropsFn = (open: boolean) => TriggerButtonProps
 type Props = ContentProps & {
   triggerButtonProps?: TriggerButtonProps | TriggerButtonPropsFn
@@ -159,7 +159,7 @@ export function DropdownMenu({
           })}
         />
       ) : trigger ? (
-        trigger({ open })
+        trigger({ open, setOpen })
       ) : (
         <TriggerButton />
       )}

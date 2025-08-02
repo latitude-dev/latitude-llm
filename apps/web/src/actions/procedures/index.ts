@@ -1,7 +1,7 @@
 import { getUnsafeIp } from '$/helpers/ip'
 import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { Dataset } from '@latitude-data/core/browser'
-import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { cache } from '@latitude-data/core/cache'
 import {
   LatitudeError,
@@ -20,6 +20,7 @@ import { headers } from 'next/headers'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 import { z } from 'zod'
 import { createServerActionProcedure, TAnyCompleteProcedure } from 'zsa'
+import { getDataFromSession } from '$/data-access'
 
 const DEFAULT_RATE_LIMIT_POINTS = 1000
 const DEFAULT_RATE_LIMIT_DURATION = 60
@@ -29,7 +30,7 @@ export const errorHandlingProcedure = createServerActionProcedure()
     if (error instanceof LatitudeError) return
 
     try {
-      const data = await getCurrentUserOrError()
+      const data = await getCurrentUserOrRedirect()
 
       Sentry.captureException(error, {
         user: {
@@ -47,32 +48,30 @@ export const errorHandlingProcedure = createServerActionProcedure()
 export const maybeAuthProcedure = createServerActionProcedure(
   errorHandlingProcedure,
 ).handler(async () => {
-  try {
-    const data = await getCurrentUserOrError()
-
-    return {
-      session: data.session!,
-      workspace: data.workspace,
-      user: data.user,
-    }
-  } catch (error) {
+  const data = await getDataFromSession()
+  if (!data.user || !data.workspace) {
     return {}
+  }
+
+  return {
+    session: data.session,
+    workspace: data.workspace,
+    user: data.user,
   }
 })
 
 export const authProcedure = createServerActionProcedure(
   errorHandlingProcedure,
 ).handler(async () => {
-  try {
-    const data = await getCurrentUserOrError()
+  const data = await getDataFromSession()
+  if (!data.user || !data.workspace) {
+    throw new UnauthorizedError('Unauthorized')
+  }
 
-    return {
-      session: data.session!,
-      workspace: data.workspace,
-      user: data.user,
-    }
-  } catch (error) {
-    throw new UnauthorizedError((error as Error).message)
+  return {
+    session: data.session,
+    workspace: data.workspace,
+    user: data.user,
   }
 })
 

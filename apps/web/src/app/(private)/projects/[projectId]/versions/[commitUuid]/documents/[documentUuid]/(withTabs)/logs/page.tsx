@@ -6,7 +6,7 @@ import {
   getDocumentStatsCached,
   hasDocumentLogsCached,
 } from '$/app/(private)/_data-access'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import {
   Commit,
@@ -67,7 +67,7 @@ export default async function DocumentPage({
   }>
   searchParams: Promise<QueryParams>
 }) {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const { projectId: pjid, commitUuid, documentUuid } = await params
   const projectId = Number(pjid)
   const document = await getDocumentByUuidCached({

@@ -4,7 +4,7 @@ import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { Latitude, type ChainEventDto } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
-import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 import { ChainEvent } from '@latitude-data/constants'
 import { captureException } from '$/helpers/captureException'
@@ -29,7 +29,7 @@ export async function runDocumentAction({
   commitUuid,
   parameters,
 }: RunDocumentActionProps) {
-  const { workspace, user } = await getCurrentUserOrError()
+  const { workspace, user } = await getCurrentUserOrRedirect()
 
   publisher.publishLater({
     type: 'documentRunRequested',

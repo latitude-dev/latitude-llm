@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 
 import { MaybeSessionProvider } from '@latitude-data/web-ui/browser'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getDataFromSession } from '$/data-access'
 
 /**
  * This layout is here only to add providers.
@@ -13,7 +13,7 @@ export default async function PublicLayout({
 }: Readonly<{
   children: ReactNode
 }>) {
-  const { user } = await getCurrentUser()
+  const { user } = await getDataFromSession()
 
   return (
     <MaybeSessionProvider currentUser={user}>{children}</MaybeSessionProvider>

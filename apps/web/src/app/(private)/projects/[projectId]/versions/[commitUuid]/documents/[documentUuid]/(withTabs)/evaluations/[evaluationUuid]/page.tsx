@@ -1,6 +1,6 @@
 'use server'
 
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import {
   DEFAULT_PAGINATION_SIZE,
@@ -49,7 +49,7 @@ export default async function EvaluationPage({
     },
   }
 
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
 
   const repository = new EvaluationResultsV2Repository(workspace.id)
 

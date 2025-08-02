@@ -6,7 +6,7 @@ import {
 } from '$/app/(private)/_data-access'
 import { AddPromptTextarea } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/overview/_components/Overview/AddPromptTextarea'
 import buildMetatags from '$/app/_lib/buildMetatags'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { LIMITED_VIEW_THRESHOLD } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
@@ -27,7 +27,7 @@ export default async function AnalyticsPage({
   const { projectId: projectIdString, commitUuid } = await params
   const projectId = Number(projectIdString)
 
-  const session = await getCurrentUser()
+  const session = await getCurrentUserOrRedirect()
   const project = await findProjectCached({
     projectId: projectId,
     workspaceId: session.workspace.id,

@@ -1,4 +1,4 @@
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { DatasetRow, Dataset, Workspace } from '@latitude-data/core/browser'
 import { Result, TypedResult } from '@latitude-data/core/lib/Result'
@@ -98,7 +98,9 @@ export default async function DatasetDetail({
   } = await searchParams
   const isProcessing = isProcessingString === 'true'
   const { datasetId } = await params
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
+  if (!workspace) return notFound()
+
   const result = await getData({
     workspace,
     datasetId,
