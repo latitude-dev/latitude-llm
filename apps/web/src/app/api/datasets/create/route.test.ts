@@ -44,7 +44,7 @@ describe('POST handler for datasets/create', () => {
 
   describe('unauthorized', () => {
     beforeEach(() => {
-      mocks.getSession.mockReturnValue(null)
+      mocks.getSession.mockResolvedValue(null)
     })
 
     it('should return 401 if user is not authenticated', async () => {
@@ -70,7 +70,10 @@ describe('POST handler for datasets/create', () => {
 
   describe('authorized', () => {
     beforeEach(() => {
-      mocks.getSession.mockReturnValue({ user: mockUser })
+      mocks.getSession.mockResolvedValue({
+        user: mockUser,
+        session: { userId: mockUser.id, currentWorkspaceId: mockWorkspace.id },
+      })
     })
 
     describe('content-length validation', () => {

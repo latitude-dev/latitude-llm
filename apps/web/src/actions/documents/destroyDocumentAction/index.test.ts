@@ -68,7 +68,13 @@ describe('destroyDocumentAction', async () => {
 
   describe('authorized', () => {
     beforeEach(async () => {
-      mocks.getSession.mockReturnValue({ user: userData })
+      mocks.getSession.mockResolvedValue({
+        user: userData,
+        session: {
+          userId: userData.id,
+          currentWorkspaceId: project.workspaceId,
+        },
+      })
     })
 
     it('fails when commit from other workspace', async () => {

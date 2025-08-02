@@ -1,4 +1,4 @@
-import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
+import { getDataFromSession } from '$/data-access'
 import { NextRequest, NextResponse } from 'next/server'
 
 export function authHandler(handler: any) {
@@ -6,12 +6,8 @@ export function authHandler(handler: any) {
     req: NextRequest,
     { params, ...rest }: { params: Promise<Record<string, string>> },
   ) => {
-    let user, workspace
-    try {
-      const { user: uzer, workspace: workzpace } = await getCurrentUserOrError()
-      user = uzer
-      workspace = workzpace
-    } catch (error) {
+    const { user, workspace } = await getDataFromSession()
+    if (!user || !workspace) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 

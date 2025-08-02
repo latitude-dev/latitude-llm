@@ -1,5 +1,5 @@
 import { createSupportUserIdentity } from '$/app/(private)/_lib/createSupportUserIdentity'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { IntercomProvider } from '$/components/IntercomSupportChat'
 import { ROUTES } from '$/services/routes'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function NoWorkspace() {
-  const { user } = await getCurrentUser()
+  const { user } = await getCurrentUserOrRedirect()
   if (!user) return redirect(ROUTES.auth.login)
 
   const supportIdentity = createSupportUserIdentity(user)

@@ -1,6 +1,6 @@
 import { database, utils } from '@latitude-data/core/client'
 import {
-  unsafelyFindWorkspacesFromUser,
+  unsafelyFindWorkspace,
   unsafelyGetUser,
 } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/constants/errors'
@@ -14,13 +14,11 @@ import {
   User,
   Workspace,
 } from '@latitude-data/core/browser'
+import { Session } from 'lucia'
+import { getSession } from '$/services/auth/getSession'
 
 function notFoundWithEmail(email: string | undefined | null) {
   return Result.error(new NotFoundError(`Not found user with email: ${email}`))
-}
-
-function notFoundWithId(id: string | undefined | null) {
-  return Result.error(new NotFoundError(`Not found user with ID: ${id}`))
 }
 
 type ReturnType = {
@@ -51,29 +49,6 @@ export async function getUserFromCredentials({
   })
 }
 
-export async function getCurrentUserFromDB({
-  userId,
-}: {
-  userId: string | undefined
-}): PromisedResult<ReturnType, Error> {
-  try {
-    const user = await unsafelyGetUser(userId)
-    if (!user) return notFoundWithId(userId)
-
-    const wpResult = await getFirstWorkspace({ userId: user.id })
-    if (wpResult.error) return wpResult
-
-    const workspace = wpResult.value!
-
-    return Result.ok({
-      user,
-      workspace,
-    })
-  } catch (err) {
-    return Result.error(err as Error)
-  }
-}
-
 export function getPlanFromSubscriptionSlug(
   slug: SubscriptionPlan | undefined,
 ) {
@@ -82,16 +57,41 @@ export function getPlanFromSubscriptionSlug(
   return { ...planData, plan }
 }
 
-export async function unsafelyGetCurrentUserFromDb({
-  userId,
-}: {
-  userId: string | undefined
-}) {
-  const user = await unsafelyGetUser(userId)
-  const workspaces = await unsafelyFindWorkspacesFromUser(userId)
-  const workspace = workspaces[0]
+/**
+ * Retrieves user, workspace, and subscription data from a session.
+ *
+ * This function extracts user and workspace information from a session object.
+ * If no session is provided, it attempts to get the current session.
+ * Returns null values for all fields if no valid session exists.
+ *
+ * @param session - Optional session object. If not provided, will attempt to get current session
+ * @returns Promise<{
+ *   user: User | null
+ *   workspace: Workspace | null
+ *   subscriptionPlan: { ...planData, plan: SubscriptionPlan }
+ *   session: Session | null
+ * }> - User data, workspace data, subscription plan, and session object
+ */
+export async function getDataFromSession(session?: Session | null) {
+  try {
+    session = session ?? (await getSession().then((s) => s?.session))
+  } catch {
+    // do nothing
+  }
+
+  if (!session) {
+    return {
+      session: null,
+      user: null,
+      workspace: null,
+      subscriptionPlan: null,
+    }
+  }
+
+  const user = await unsafelyGetUser(session.userId)
+  const workspace = await unsafelyFindWorkspace(session.currentWorkspaceId)
   const plan = workspace?.currentSubscription.plan
   const subscriptionPlan = getPlanFromSubscriptionSlug(plan)
 
-  return { user, workspace, subscriptionPlan }
+  return { user, workspace, subscriptionPlan, session }
 }

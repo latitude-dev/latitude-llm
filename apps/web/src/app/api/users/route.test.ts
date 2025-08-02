@@ -43,7 +43,10 @@ describe('GET handler for users', () => {
 
   describe('authorized', () => {
     beforeEach(async () => {
-      mocks.getSession.mockReturnValue({ user: mockUser })
+      mocks.getSession.mockResolvedValue({
+        user: mockUser,
+        session: { userId: mockUser.id, currentWorkspaceId: mockWorkspace.id },
+      })
     })
 
     it('should return all users when authenticated', async () => {

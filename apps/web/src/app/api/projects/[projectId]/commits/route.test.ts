@@ -32,7 +32,7 @@ describe('GET handler for commits', () => {
 
   describe('unauthorized', () => {
     it('should return 401 if user is not authenticated', async () => {
-      mocks.getSession.mockReturnValue(null)
+      mocks.getSession.mockResolvedValue(null)
 
       const response = await GET(mockRequest, {
         params: { projectId: '1', status: CommitStatus.Draft },
@@ -48,7 +48,10 @@ describe('GET handler for commits', () => {
 
   describe('authorized', () => {
     beforeEach(() => {
-      mocks.getSession.mockReturnValue({ user: mockUser })
+      mocks.getSession.mockResolvedValue({
+        user: mockUser,
+        session: { userId: mockUser.id, currentWorkspaceId: mockWorkspace.id },
+      })
     })
 
     it('should return 404 when project is not found', async () => {

@@ -60,9 +60,9 @@ describe('publishDraftCommitAction', () => {
 
   describe('authorized', () => {
     beforeEach(async () => {
-      mocks.getSession.mockReturnValue({
+      mocks.getSession.mockResolvedValue({
         user,
-        workspace: { id: workspace.id, name: workspace.name },
+        session: { userId: user.id, currentWorkspaceId: workspace.id },
       })
     })
 

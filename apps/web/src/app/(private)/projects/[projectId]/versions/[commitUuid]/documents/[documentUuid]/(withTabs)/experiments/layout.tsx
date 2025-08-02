@@ -1,4 +1,4 @@
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ExperimentsRepository } from '@latitude-data/core/repositories'
 import { ExperimentsPageContent } from './_components/ExperimentsPage'
 import buildMetatags from '$/app/_lib/buildMetatags'
@@ -14,7 +14,7 @@ export default async function ExperimentsLayout({
     documentUuid: string
   }>
 }) {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const { documentUuid } = await params
 
   const experimentsScope = new ExperimentsRepository(workspace.id)

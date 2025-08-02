@@ -1359,6 +1359,13 @@
       "when": 1753349747404,
       "tag": "0194_hard_grey_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 195,
+      "version": "7",
+      "when": 1754131692237,
+      "tag": "0195_panoramic_hardball",
+      "breakpoints": true
     }
   ]
 }

@@ -5,7 +5,10 @@ import {
   findProjectCached,
 } from '$/app/(private)/_data-access'
 import { lastSeenCommitCookieName } from '$/helpers/cookies/lastSeenCommit'
-import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
+import {
+  SessionData,
+  getCurrentUserOrRedirect,
+} from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { cookies } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
@@ -28,7 +31,7 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
   let url
 
   try {
-    session = await getCurrentUser()
+    session = await getCurrentUserOrRedirect()
     project = await findProjectCached({
       projectId: Number(projectId),
       workspaceId: session.workspace.id,

@@ -7,6 +7,7 @@ import { ProjectBreadcrumbItems } from '../Projects'
 import { DatasetBreadcrumbItems } from '../Datasets'
 import { BreadcrumbSelector, BreadcrumbSelectorOption } from '../Selector'
 import { useMemo } from 'react'
+import { WorkspaceSwitcher } from '../WorkspaceSwitcher'
 
 export function RootBreadcrumbItems({ segments }: { segments: string[] }) {
   const options = useMemo(
@@ -35,6 +36,7 @@ export function RootBreadcrumbItems({ segments }: { segments: string[] }) {
 
   return (
     <>
+      <WorkspaceSwitcher />
       <BreadcrumbSeparator />
       <BreadcrumbItem noShrink>
         <BreadcrumbSelector

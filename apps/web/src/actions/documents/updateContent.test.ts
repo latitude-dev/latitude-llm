@@ -77,8 +77,9 @@ describe('updateDocumentAction', async () => {
       project = projectData
       user = userData
 
-      mocks.getSession.mockReturnValue({
+      mocks.getSession.mockResolvedValue({
         user: userData,
+        session: { userId: user.id, currentWorkspaceId: workspace.id },
       })
     })
 

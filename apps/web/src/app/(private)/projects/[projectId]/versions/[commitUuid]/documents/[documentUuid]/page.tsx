@@ -5,7 +5,7 @@ import {
   getProviderApiKeysCached,
 } from '$/app/(private)/_data-access'
 import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
@@ -47,7 +47,7 @@ export default async function DocumentPage({
 }) {
   const { projectId: pjid, commitUuid, documentUuid } = await params
   const projectId = Number(pjid)
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
 
   let commit
   try {

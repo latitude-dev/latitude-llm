@@ -84,7 +84,10 @@ describe('GET logs', () => {
 
   describe('authorized', () => {
     beforeEach(async () => {
-      mocks.getSession.mockReturnValue({ user })
+      mocks.getSession.mockResolvedValue({
+        user,
+        session: { userId: user.id, currentWorkspaceId: workspace.id },
+      })
     })
 
     it('should return all logs', async () => {

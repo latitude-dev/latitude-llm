@@ -53,7 +53,10 @@ describe('GET handler for datasets/[id]', () => {
 
   describe('authorized', () => {
     beforeEach(async () => {
-      mocks.getSession.mockReturnValue({ user: mockUser })
+      mocks.getSession.mockResolvedValue({
+        user: mockUser,
+        session: { userId: mockUser.id, currentWorkspaceId: mockWorkspace.id },
+      })
     })
 
     it('should return the dataset when a valid id is provided', async () => {

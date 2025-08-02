@@ -10,8 +10,7 @@ import {
   SocketIOProvider,
 } from '$/components/Providers/WebsocketsProvider'
 import { env } from '@latitude-data/env'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
-import { getSession } from '$/services/auth/getSession'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 import { isOnboardingCompleted } from '$/data-access/workspaceOnboarding'
@@ -31,20 +30,10 @@ export default async function PrivateLayout({
 }: Readonly<{
   children: ReactNode
 }>) {
-  const data = await getSession()
-  if (!data.session) return redirect(ROUTES.auth.login)
-
-  const { workspace, user, subscriptionPlan } = await getCurrentUser()
-  if (!user) return redirect(ROUTES.auth.login)
-
-  if (!workspace) {
-    return redirect(ROUTES.noWorkspace.root)
-  }
+  const { workspace, user, subscriptionPlan } = await getCurrentUserOrRedirect()
 
   const completed = await isOnboardingCompleted()
-  if (!completed) {
-    redirect(ROUTES.onboarding.root)
-  }
+  if (!completed) redirect(ROUTES.onboarding.root)
 
   const supportIdentity = createSupportUserIdentity(user)
   const featureFlags = getFeatureFlagsForWorkspaceCached({ workspace })

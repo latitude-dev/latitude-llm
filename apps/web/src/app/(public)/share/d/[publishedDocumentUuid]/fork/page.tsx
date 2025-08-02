@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { findSharedDocumentCached } from '$/app/(public)/_data_access'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ForkDocument } from './_components/ForkDocument'
 
 export default async function ForkedDocumentPage({
@@ -10,7 +10,7 @@ export default async function ForkedDocumentPage({
   searchParams: Promise<{ commitUuid: string; documentUuid: string }>
 }) {
   const { publishedDocumentUuid } = await params
-  const { workspace, user } = await getCurrentUser()
+  const { workspace, user } = await getCurrentUserOrRedirect()
 
   const result = await findSharedDocumentCached(publishedDocumentUuid)
 

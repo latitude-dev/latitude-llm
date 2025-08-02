@@ -1,11 +1,11 @@
 import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 /**
  * Get the current workspace onboarding status
  * If the onboarding status doesn't exist, it creates a new one
  */
 export async function getWorkspaceOnboardingStatus() {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   if (!workspace) {
     throw new Error('No workspace found')
   }

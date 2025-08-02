@@ -2,8 +2,7 @@ import { ReactNode } from 'react'
 
 import { SessionProvider } from '@latitude-data/web-ui/providers'
 import buildMetatags from '$/app/_lib/buildMetatags'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
-import { getSession } from '$/services/auth/getSession'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
@@ -18,10 +17,7 @@ export default async function AdminLayout({
 }: {
   children: ReactNode
 }) {
-  const data = await getSession()
-  if (!data.session) redirect(ROUTES.root)
-
-  const { user, workspace, subscriptionPlan } = await getCurrentUser()
+  const { user, workspace, subscriptionPlan } = await getCurrentUserOrRedirect()
   if (!user?.admin) redirect(ROUTES.root)
 
   return (

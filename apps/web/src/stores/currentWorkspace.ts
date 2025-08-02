@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useMemo, useCallback } from 'react'
 
 import { Workspace } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
@@ -42,6 +42,7 @@ export default function useCurrentWorkspace() {
       })
 
       mutate(workspace)
+
       return workspace
     },
     [mutate, data, toast, updateWorkspace],
@@ -78,5 +79,14 @@ export default function useCurrentWorkspace() {
     [mutate, data, setDefaultProvider, toast],
   )
 
-  return { data, updateName, updateDefaultProvider, ...rest }
+  return useMemo(
+    () => ({
+      data,
+      updateName,
+      updateDefaultProvider,
+      mutate,
+      ...rest,
+    }),
+    [data, updateName, updateDefaultProvider, mutate, rest],
+  )
 }

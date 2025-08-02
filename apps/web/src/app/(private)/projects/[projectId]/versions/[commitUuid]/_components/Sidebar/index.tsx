@@ -10,7 +10,7 @@ import {
   getDocumentsAtCommitCached,
   getHeadCommitCached,
 } from '$/app/(private)/_data-access'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 
 import ClientFilesTree from './ClientFilesTree'
 import CommitSelector from './CommitSelector'
@@ -27,7 +27,7 @@ export default async function Sidebar({
   commit: Commit
   currentDocument?: DocumentVersion
 }) {
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   const documents = await getDocumentsAtCommitCached({ commit })
   const commitsScope = new CommitsRepository(workspace.id)
   const headCommit = await getHeadCommitCached({

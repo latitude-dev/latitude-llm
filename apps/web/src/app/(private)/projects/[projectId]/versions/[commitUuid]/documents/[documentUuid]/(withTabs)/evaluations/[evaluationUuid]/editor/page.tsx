@@ -5,7 +5,7 @@ import {
   getProviderApiKeysCached,
 } from '$/app/(private)/_data-access'
 import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import {
   EvaluationType,
@@ -51,7 +51,7 @@ export default async function EvaluationEditorPage({
     commitUuid,
   })
   const providerApiKeys = await getProviderApiKeysCached()
-  const { workspace } = await getCurrentUser()
+  const { workspace } = await getCurrentUserOrRedirect()
   let commit
   try {
     commit = await findCommitCached({ projectId, uuid: commitUuid })

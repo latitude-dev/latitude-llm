@@ -18,7 +18,7 @@ vi.mock('$/services/auth/getSession', () => ({
 describe('createProviderApiKeyAction', () => {
   describe('unauthorized', () => {
     it('errors when the user is not authenticated', async () => {
-      mocks.getSession.mockReturnValue(null)
+      mocks.getSession.mockResolvedValue(null)
 
       const [_, error] = await createProviderApiKeyAction({
         provider: Providers.OpenAI,
@@ -41,9 +41,9 @@ describe('createProviderApiKeyAction', () => {
       user = userData
       workspace = w
 
-      mocks.getSession.mockReturnValue({
+      mocks.getSession.mockResolvedValue({
         user: userData,
-        workspace,
+        session: { userId: user.id, currentWorkspaceId: workspace.id },
       })
     })
 
