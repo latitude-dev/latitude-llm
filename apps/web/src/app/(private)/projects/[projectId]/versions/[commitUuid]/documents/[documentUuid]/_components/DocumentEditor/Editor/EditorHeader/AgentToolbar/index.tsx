@@ -7,10 +7,6 @@ import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
-import {
-  ActiveIntegrations,
-  useActiveIntegrations,
-} from '../../PromptIntegrations/useActiveIntegrations'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Config } from 'promptl-ai'
@@ -21,6 +17,10 @@ import {
 } from '../../PromptConfiguration/utils'
 import { IntegrationsList } from '../../PromptIntegrations/IntegrationsList'
 import { ItemWrapper } from '../../PromptIntegrations/IntegrationTools'
+import {
+  ActiveIntegrations,
+  useActiveIntegrations,
+} from '../../PromptIntegrations/useActiveIntegrations'
 import { EditorHeaderProps } from '../index'
 
 const singularPluralLabel = (c: number, s: string, p: string) =>
@@ -224,7 +224,7 @@ function Content({
 }
 
 function AgentToolbarSkeleton() {
-  return <Skeleton className='h-14 w-full rounded-lg' />
+  return <Skeleton className='h-[3.125rem] w-full rounded-lg' />
 }
 
 export function AgentToolbar({

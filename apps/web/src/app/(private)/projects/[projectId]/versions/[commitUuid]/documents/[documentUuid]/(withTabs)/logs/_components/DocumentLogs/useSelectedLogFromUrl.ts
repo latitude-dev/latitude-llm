@@ -1,5 +1,5 @@
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/browser'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
 /**
@@ -16,7 +16,6 @@ export function useSelectedLogFromUrl({
 }: {
   serverSelectedLog?: DocumentLogWithMetadataAndError
 }) {
-  const router = useRouter()
   const searchParams = useSearchParams()
 
   const [selectedLog, setSelectedLog] = useState<
@@ -34,8 +33,10 @@ export function useSelectedLogFromUrl({
     const newUrl = `?${newSearchParams.toString()}`
     const currentUrl = `?${searchParams.toString()}`
 
-    if (newUrl !== currentUrl) router.replace(newUrl)
-  }, [selectedLog, searchParams, router])
+    if (newUrl !== currentUrl) {
+      window.history.replaceState(null, '', newUrl)
+    }
+  }, [selectedLog, searchParams])
 
   return useMemo(
     () => ({
