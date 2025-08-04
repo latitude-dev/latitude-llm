@@ -43,7 +43,7 @@ function DeleteTriggerButton({
   )
 
   return (
-    <>
+    <div onClick={(e) => e.stopPropagation()}>
       <Button
         variant='ghost'
         className='p-0'
@@ -99,7 +99,7 @@ function DeleteTriggerButton({
           </div>
         </div>
       </Modal>
-    </>
+    </div>
   )
 }
 

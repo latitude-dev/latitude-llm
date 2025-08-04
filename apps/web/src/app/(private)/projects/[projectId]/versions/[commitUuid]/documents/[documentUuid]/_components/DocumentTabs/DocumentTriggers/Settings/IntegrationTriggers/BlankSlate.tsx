@@ -25,7 +25,7 @@ export function TriggersBlankSlate({
           fullWidth
           fancy
           variant='default'
-          onClick={openTriggerModal}
+          onClick={() => openTriggerModal()}
           disabled={!isHead}
         >
           Add Trigger
