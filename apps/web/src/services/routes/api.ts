@@ -82,6 +82,7 @@ export const API_ROUTES = {
   },
   users: {
     root: '/api/users',
+    current: '/api/users/current',
   },
   documents: {
     logs: {

@@ -1,22 +1,25 @@
-import { useMemo, useCallback } from 'react'
-
-import { Workspace } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { setDefaultProviderAction } from '$/actions/workspaces/setDefaultProvider'
 import { updateWorkspaceAction } from '$/actions/workspaces/update'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import useSWR from 'swr'
+import { Workspace } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { compact } from 'lodash-es'
+import { useCallback, useMemo } from 'react'
+import useSWR, { SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
 
-export default function useCurrentWorkspace() {
+export default function useCurrentWorkspace(opts?: SWRConfiguration) {
   const { toast } = useToast()
-  const fetcher = useFetcher<Workspace>(ROUTES.api.workspaces.current)
 
-  const { mutate, data, ...rest } = useSWR<Workspace, Error>(
-    'api/workspaces/current',
-    fetcher,
-  )
+  const route = ROUTES.api.workspaces.current
+  const fetcher = useFetcher<Workspace>(route, { fallback: null })
+
+  const {
+    data = undefined,
+    mutate,
+    ...rest
+  } = useSWR<Workspace>(compact(route), fetcher, opts)
 
   const { execute: updateWorkspace } = useServerAction(updateWorkspaceAction)
   const updateName = useCallback(

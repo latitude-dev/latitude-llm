@@ -173,6 +173,7 @@ type FancySwitchProps = ToogleProps &
   Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> & {
     iconProps: IconProps
     buttonProps: ButtonStylesProps
+    loading?: boolean
   }
 
 function FancySwitchToggle({
@@ -181,30 +182,42 @@ function FancySwitchToggle({
   checked,
   onCheckedChange,
   disabled,
+  loading,
   ...rest
 }: FancySwitchProps) {
+  const isDisabled = disabled || loading
+
   const buttonStyles = useButtonStyles({
     ...buttonProps,
     containerClassName: cn(buttonProps.containerClassName, {
-      'cursor-pointer': !disabled,
-      'cursor-not-allowed': disabled,
+      'cursor-pointer': !isDisabled,
+      'cursor-not-allowed': isDisabled,
     }),
-    lookDisabled: disabled,
+    lookDisabled: isDisabled,
   })
 
   return (
     <div
       className={buttonStyles.container}
-      onClick={() => !disabled && onCheckedChange?.(!checked)}
+      onClick={() => !isDisabled && onCheckedChange?.(!checked)}
     >
       <div className={buttonStyles.buttonClass}>
         <div className={buttonStyles.innerButtonClass}>
-          <Icon {...iconProps} />
+          {loading ? (
+            <Icon
+              name='loader'
+              color={iconProps.color}
+              className='animate-spin'
+            />
+          ) : (
+            <Icon {...iconProps} />
+          )}
+
           <SwitchToggle
             {...rest}
             checked={checked}
             onCheckedChange={onCheckedChange}
-            disabled={disabled}
+            disabled={isDisabled}
           />
         </div>
       </div>

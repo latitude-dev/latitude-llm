@@ -1,4 +1,5 @@
 import { ProviderModelSelector } from '$/components/ProviderModelSelector'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -7,10 +8,9 @@ import { FancySwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Config } from 'promptl-ai'
+import { useDevMode } from '../../hooks/useDevMode'
 import { PromptConfiguration } from '../../PromptConfiguration'
 import { EditorHeaderProps } from '../index'
-import { useDevMode } from '../../hooks/useDevMode'
-import useProviderApiKeys from '$/stores/providerApiKeys'
 
 export function TitleRow({
   title,
@@ -28,7 +28,7 @@ export function TitleRow({
   isMerged: EditorHeaderProps['isMerged']
 }) {
   const { data: providers } = useProviderApiKeys()
-  const { devMode, setDevMode } = useDevMode()
+  const { devMode, setDevMode, isLoading: isLoadingDevMode } = useDevMode()
   return (
     <div className='flex flex-row items-center justify-between gap-x-4 pt-px'>
       <div className='flex flex-row items-center gap-2 min-w-0'>
@@ -76,6 +76,7 @@ export function TitleRow({
                   buttonProps={{
                     variant: devMode ? 'default' : 'outline',
                   }}
+                  loading={isLoadingDevMode}
                 />
               </span>
             }

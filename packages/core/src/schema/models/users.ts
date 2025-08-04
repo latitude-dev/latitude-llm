@@ -1,5 +1,4 @@
 import { boolean, text, timestamp } from 'drizzle-orm/pg-core'
-
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 
@@ -12,5 +11,6 @@ export const users = latitudeSchema.table('users', {
   confirmedAt: timestamp('confirmed_at'),
   admin: boolean('admin').notNull().default(false),
   lastSuggestionNotifiedAt: timestamp('last_suggestion_notified_at'),
+  devMode: boolean('dev_mode'),
   ...timestamps(),
 })
