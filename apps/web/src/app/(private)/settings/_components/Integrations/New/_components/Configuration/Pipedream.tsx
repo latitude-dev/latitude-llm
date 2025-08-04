@@ -26,6 +26,7 @@ export const PipedreamIntegrationConfiguration = forwardRef<{
 
         const [connectionId, error] = await connect()
         if (error) throw error
+
         return {
           type: IntegrationType.Pipedream,
           configuration: {

@@ -46,6 +46,7 @@ export function EmailTriggerSettings({
 
       if (emailTrigger) {
         update({
+          documentUuid: document.documentUuid,
           documentTrigger: emailTrigger,
           configuration: config,
         })
@@ -53,11 +54,14 @@ export function EmailTriggerSettings({
       }
 
       create({
-        triggerType: DocumentTriggerType.Email,
-        configuration: config,
+        documentUuid: document.documentUuid,
+        trigger: {
+          type: DocumentTriggerType.Email,
+          configuration: config,
+        },
       })
     },
-    [emailTrigger, create, deleteFn, update],
+    [emailTrigger, create, deleteFn, update, document.documentUuid],
   )
 
   const triggerEmailAddress = `${document.documentUuid}@${EMAIL_TRIGGER_DOMAIN}`

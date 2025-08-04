@@ -69,13 +69,13 @@ export async function createDocumentTrigger(
     workspace,
     document,
     project,
-    triggerType,
-    configuration,
+    trigger: { type, configuration },
   }: {
     workspace: Workspace
     document: DocumentVersion
     project: Project
-  } & InsertDocumentTriggerWithConfiguration,
+    trigger: InsertDocumentTriggerWithConfiguration
+  },
   transaction = new Transaction(),
 ): PromisedResult<DocumentTrigger> {
   return await transaction.call(async (tx) => {
@@ -83,7 +83,7 @@ export async function createDocumentTrigger(
     const documentTriggerConfiguration = await getFullConfiguration({
       workspace,
       triggerUuid,
-      triggerType,
+      triggerType: type,
       configuration,
     })
 
@@ -98,7 +98,7 @@ export async function createDocumentTrigger(
         workspaceId: workspace.id,
         documentUuid: document.documentUuid,
         projectId: project.id,
-        triggerType,
+        triggerType: type,
         configuration: documentTriggerConfiguration.unwrap(),
       })
       .returning()

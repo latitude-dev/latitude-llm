@@ -67,6 +67,8 @@ function OptionSkeleton() {
   )
 }
 
+// TODO: review this component, it should receive the cursor and items state
+// from its parent component and simply handle the frontend interactions.
 export function PaginatedSelect<V extends unknown = unknown>({
   name,
   label,
@@ -92,7 +94,6 @@ export function PaginatedSelect<V extends unknown = unknown>({
   removable = false,
 }: PaginatedSelectProps<V>) {
   const [isOpen, setIsOpen] = useState(false)
-
   const [items, setItems] = useState<V[]>([])
   const options = useMemo(() => {
     return items.map(serialize)

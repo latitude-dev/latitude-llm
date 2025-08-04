@@ -36,6 +36,7 @@ export const API_ROUTES = {
       detail: (slugName: string) => ({
         root: `/api/integrations/pipedream/${slugName}`,
       }),
+      apps: '/api/integrations/pipedream/apps',
     },
   },
   webhooks: {
@@ -105,6 +106,9 @@ export const API_ROUTES = {
         },
         stats: {
           root: `${projectRoot}/stats`,
+        },
+        triggers: {
+          root: `${projectRoot}/triggers`,
         },
         commits: {
           root: `${projectRoot}/commits`,
@@ -293,9 +297,6 @@ export const API_ROUTES = {
                       }),
                   }
                 },
-              },
-              triggers: {
-                root: `${documentRoot}/triggers`,
               },
             }
           },

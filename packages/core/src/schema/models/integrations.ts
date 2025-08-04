@@ -15,17 +15,13 @@ import { users } from './users'
 import { workspaces } from './workspaces'
 import { mcpServers } from './mcpServers'
 import { IntegrationType } from '@latitude-data/constants'
-import { ExternalMcpIntegrationConfiguration } from '../../services/integrations/helpers/schema'
+import { IntegrationConfiguration } from '../../services/integrations/helpers/schema'
 
 export const integrationTypesEnum = latitudeSchema.enum('integration_types', [
   IntegrationType.ExternalMCP,
   IntegrationType.HostedMCP,
   IntegrationType.Pipedream,
 ])
-
-// Even though there are two integration types they both share the same
-// configuration schema
-export type IntegrationProviderConfig = ExternalMcpIntegrationConfiguration
 
 export const integrations = latitudeSchema.table(
   'integrations',
@@ -37,7 +33,8 @@ export const integrations = latitudeSchema.table(
       .notNull(),
     hasTools: boolean('has_tools').notNull().default(true),
     hasTriggers: boolean('has_triggers').notNull().default(false),
-    configuration: jsonb('configuration').$type<IntegrationProviderConfig>(),
+    configuration:
+      jsonb('configuration').$type<IntegrationConfiguration['configuration']>(),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id),

@@ -1,9 +1,8 @@
-import { listPipedreamIntegrationsAction } from '$/actions/integrations/pipedream/list'
 import { PaginatedSelect } from '@latitude-data/web-ui/molecules/PaginatedSelect'
 import { App } from '@pipedream/sdk/browser'
+import { ROUTES } from '$/services/routes'
 import Image from 'next/image'
 import { useCallback } from 'react'
-import { useServerAction } from 'zsa-react'
 
 export function AppSelector({
   value,
@@ -14,10 +13,6 @@ export function AppSelector({
   onChange: (value: App | undefined) => void
   isLoading?: boolean
 }) {
-  const { execute: executeListPipedreamApps } = useServerAction(
-    listPipedreamIntegrationsAction,
-  )
-
   const fetchOptions = useCallback(
     async ({
       query,
@@ -26,9 +21,14 @@ export function AppSelector({
       query: string
       cursor: string | undefined
     }) => {
-      const [data, error] = await executeListPipedreamApps({ query, cursor })
+      const params = new URLSearchParams()
+      if (query) params.append('query', query)
+      if (cursor) params.append('cursor', cursor)
 
-      if (error) {
+      const response = await fetch(
+        `${ROUTES.api.integrations.pipedream.apps}?${params}`,
+      )
+      if (!response.ok) {
         return {
           items: [],
           totalCount: 0,
@@ -36,13 +36,14 @@ export function AppSelector({
         }
       }
 
+      const data = await response.json()
       return {
         items: data.apps,
         totalCount: data.totalCount,
         cursor: data.cursor,
       }
     },
-    [executeListPipedreamApps],
+    [],
   )
 
   return (

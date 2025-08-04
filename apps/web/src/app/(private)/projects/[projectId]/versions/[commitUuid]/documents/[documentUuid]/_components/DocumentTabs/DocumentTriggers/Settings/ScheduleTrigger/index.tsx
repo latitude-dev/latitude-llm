@@ -43,6 +43,7 @@ export function ScheduleTriggerSettings({
 
       if (trigger) {
         update({
+          documentUuid: document.documentUuid,
           documentTrigger: trigger,
           configuration: config,
         })
@@ -50,11 +51,14 @@ export function ScheduleTriggerSettings({
       }
 
       create({
-        triggerType: DocumentTriggerType.Scheduled,
-        configuration: config,
+        documentUuid: document.documentUuid,
+        trigger: {
+          type: DocumentTriggerType.Scheduled,
+          configuration: config,
+        },
       })
     },
-    [trigger, create, deleteFn, update],
+    [trigger, create, deleteFn, update, document.documentUuid],
   )
 
   return (

@@ -10,12 +10,12 @@ import {
   DocumentTriggerConfiguration,
   InsertDocumentTriggerWithConfiguration,
 } from '@latitude-data/constants/documentTriggers'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/triggers/updateDocumentTriggerConfigurationAction'
 
 const EMPTY_ARRAY = [] as const
 export default function useDocumentTriggers(
-  { projectId, documentUuid }: { projectId: number; documentUuid: string },
+  { projectId, documentUuid }: { projectId: number; documentUuid?: string },
   {
     onCreated,
     onUpdated,
@@ -29,8 +29,9 @@ export default function useDocumentTriggers(
 ) {
   const { toast } = useToast()
   const fetcher = useFetcher<DocumentTrigger[]>(
-    ROUTES.api.projects.detail(projectId).documents.detail(documentUuid)
-      .triggers.root,
+    documentUuid
+      ? `${ROUTES.api.projects.detail(projectId).triggers.root}?documentUuid=${documentUuid}`
+      : ROUTES.api.projects.detail(projectId).triggers.root,
   )
 
   const {
@@ -97,57 +98,82 @@ export default function useDocumentTriggers(
     },
   )
 
+  // TODO: Remove, unnecessary wrap
   const create = useCallback(
-    ({ triggerType, configuration }: InsertDocumentTriggerWithConfiguration) =>
+    ({
+      documentUuid,
+      trigger: { type, configuration },
+    }: {
+      documentUuid: string
+      trigger: InsertDocumentTriggerWithConfiguration
+    }) =>
       executeCreate({
         projectId,
         documentUuid,
         commitUuid: HEAD_COMMIT,
-        triggerType,
-        configuration,
+        trigger: {
+          type,
+          configuration,
+        },
       }),
-    [executeCreate, documentUuid, projectId],
+    [executeCreate, projectId],
   )
 
+  // TODO: Remove, unnecessary wrap
   const update = useCallback(
     ({
+      documentUuid,
       documentTrigger,
       configuration,
     }: {
+      documentUuid: string
       documentTrigger: DocumentTrigger
       configuration: DocumentTriggerConfiguration
     }) => {
       executeUpdate({
-        documentUuid,
         projectId,
+        documentUuid,
         commitUuid: HEAD_COMMIT,
         documentTriggerId: documentTrigger.id,
         configuration,
       })
     },
-    [executeUpdate, documentUuid, projectId],
+    [executeUpdate, projectId],
   )
 
+  // TODO: Remove, unnecessary wrap
   const deleteFn = useCallback(
     (documentTrigger: DocumentTrigger) => {
       executeDelete({
-        documentUuid,
         projectId,
+        documentUuid: documentTrigger.documentUuid,
         commitUuid: HEAD_COMMIT,
         documentTriggerId: documentTrigger.id,
       })
     },
-    [executeDelete, documentUuid, projectId],
+    [executeDelete, projectId],
   )
 
-  return {
-    data,
-    isLoading,
-    create,
-    isCreating,
-    update,
-    isUpdating,
-    delete: deleteFn,
-    isDeleting,
-  }
+  return useMemo(
+    () => ({
+      data,
+      isLoading,
+      create,
+      isCreating,
+      update,
+      isUpdating,
+      delete: deleteFn,
+      isDeleting,
+    }),
+    [
+      data,
+      isLoading,
+      create,
+      isCreating,
+      update,
+      isUpdating,
+      deleteFn,
+      isDeleting,
+    ],
+  )
 }

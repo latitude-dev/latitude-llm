@@ -48,17 +48,15 @@ async function executeTriggerActions(
       )
     }
 
-    const triggerInput = {
-      triggerType: action.triggerType,
-      configuration: action.configuration,
-    } as InsertDocumentTriggerWithConfiguration
-
     const result = await createDocumentTrigger(
       {
         workspace,
         project,
         document,
-        ...triggerInput,
+        trigger: {
+          type: action.triggerType,
+          configuration: action.configuration,
+        } as InsertDocumentTriggerWithConfiguration,
       },
       transaction,
     )
