@@ -66,7 +66,7 @@ export function Integrations() {
                     <div className='flex flex-col gap-1 max-w-full'>
                       <Text.H4M>{app.name}</Text.H4M>
                       <div className='truncate'>
-                        <Text.H5 noWrap color='foregroundMuted'>
+                        <Text.H5 ellipsis noWrap color='foregroundMuted'>
                           {app.description || 'No description'}
                         </Text.H5>
                       </div>

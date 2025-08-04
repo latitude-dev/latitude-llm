@@ -70,7 +70,7 @@ export function Column2() {
                 <div className='flex flex-col gap-1 max-w-full'>
                   <Text.H4M>{trigger.name}</Text.H4M>
                   <div className='truncate'>
-                    <Text.H5 noWrap color='foregroundMuted'>
+                    <Text.H5 ellipsis noWrap color='foregroundMuted'>
                       {trigger.description || 'No description'}
                     </Text.H5>
                   </div>

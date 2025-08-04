@@ -11,7 +11,7 @@ import {
 } from '@latitude-data/web-ui/providers'
 import useDocumentVersions from '$/stores/documentVersions'
 import useDocumentTriggers from '$/stores/documentTriggers'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import { DocumentTriggerType, DocumentType } from '@latitude-data/constants'
 import {
   IntegrationDto,
   PipedreamComponent,
@@ -86,7 +86,7 @@ export function TriggerConfigurationForm({
   return (
     <form onSubmit={handleSubmit}>
       <FormWrapper>
-        <PromptSelect
+        <AgentSelect
           selectedDocumentUuid={selectedDocumentUuid}
           setSelectedDocumentUuid={setSelectedDocumentUuid}
         />
@@ -115,7 +115,7 @@ export function TriggerConfigurationForm({
   )
 }
 
-function PromptSelect({
+function AgentSelect({
   selectedDocumentUuid,
   setSelectedDocumentUuid,
 }: {
@@ -130,16 +130,18 @@ function PromptSelect({
   return (
     <Select
       required
-      label='Prompt'
-      description='Select the prompt that should be triggered'
-      name='prompt'
-      placeholder='Select a prompt'
+      label='Agent'
+      description='Select the agent that should be triggered'
+      name='agent'
+      placeholder='Select an agent'
       options={useMemo(
         () =>
-          documents.map((d) => ({
-            label: d.path,
-            value: d.documentUuid,
-          })),
+          documents
+            .filter((d) => d.documentType === DocumentType.Agent)
+            .map((d) => ({
+              label: d.path,
+              value: d.documentUuid,
+            })),
         [documents],
       )}
       value={selectedDocumentUuid}
