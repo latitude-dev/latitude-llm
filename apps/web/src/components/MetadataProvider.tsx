@@ -1,9 +1,8 @@
 'use client'
 
-import React from 'react'
-import { useEffect } from 'react'
 import { useMetadataStore } from '$/hooks/useMetadata'
 import { trigger } from '$/lib/events'
+import React, { useEffect } from 'react'
 
 let workerPath: string | null = null
 

@@ -1,41 +1,64 @@
-import { useCallback } from 'react'
-
-import { Avatar } from '@latitude-data/web-ui/atoms/Avatar'
-import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
-import { SessionUser } from '@latitude-data/web-ui/providers'
-import { getUserInfoFromSession } from '@latitude-data/web-ui/getUserInfoFromSession'
-import { DropdownMenuTrigger } from '@latitude-data/web-ui/atoms/DropdownMenu'
-import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { logoutAction } from '$/actions/user/logoutAction'
+import { ROUTES } from '$/services/routes'
+import { User } from '@latitude-data/core/browser'
+import { Avatar } from '@latitude-data/web-ui/atoms/Avatar'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  MenuOption,
+} from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { getUserInfoFromSession } from '@latitude-data/web-ui/getUserInfoFromSession'
+import { useRouter } from 'next/navigation'
+import { useCallback, useMemo } from 'react'
 
 export default function AvatarDropdown({
   currentUser,
+  isCloud,
 }: {
-  currentUser: SessionUser | undefined
+  currentUser: User | undefined
+  isCloud: boolean
 }) {
+  const router = useRouter()
+  const onClickBackoffice = useCallback(() => {
+    router.push(ROUTES.backoffice.root)
+  }, [router])
+
   const onClickLogout = useCallback(async () => {
     await logoutAction()
   }, [])
 
+  let options = useMemo(
+    () =>
+      [
+        ...(currentUser?.email
+          ? [
+              {
+                label: currentUser.email,
+              },
+            ]
+          : []),
+        ...(currentUser?.admin && isCloud
+          ? [
+              {
+                label: 'Backoffice',
+                iconProps: {
+                  name: 'terminal',
+                },
+                onClick: onClickBackoffice,
+              },
+            ]
+          : []),
+        {
+          label: 'Logout',
+          type: 'destructive',
+          onClick: onClickLogout,
+        },
+      ] as MenuOption[],
+    [currentUser, isCloud, onClickBackoffice, onClickLogout],
+  )
+
   const info = currentUser ? getUserInfoFromSession(currentUser) : null
   if (!info) return null
-
-  let options: MenuOption[] = [
-    {
-      label: 'Logout',
-      type: 'destructive',
-      onClick: onClickLogout,
-    },
-  ]
-  options = currentUser
-    ? [
-        {
-          label: currentUser?.email,
-          onClick: () => {},
-        },
-        ...options,
-      ]
-    : options
 
   return (
     <DropdownMenu

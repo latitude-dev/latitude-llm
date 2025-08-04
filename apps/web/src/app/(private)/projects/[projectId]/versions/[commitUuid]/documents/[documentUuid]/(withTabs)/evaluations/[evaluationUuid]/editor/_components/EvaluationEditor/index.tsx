@@ -1,8 +1,14 @@
 'use client'
 
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
+import { MetadataProvider } from '$/components/MetadataProvider'
+import { DevModeProvider } from '$/hooks/useDevMode'
+import { DocumentValueProvider } from '$/hooks/useDocumentValueContext'
+import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
+import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import useIntegrations from '$/stores/integrations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
   Commit,
@@ -16,18 +22,11 @@ import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-
-import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
-import { ROUTES } from '$/services/routes'
-import useIntegrations from '$/stores/integrations'
 import { EvaluationTitle } from '../../../../_components/EvaluationTitle'
-import { Playground } from './Playground'
-import { TextEditor } from './TextEditor'
 import { EvaluationEditorHeader } from './EditorHeader'
 import { useEvaluationParameters } from './hooks/useEvaluationParamaters'
-import { DocumentValueProvider } from '../../../../../../_components/DocumentEditor/Editor/context/DocumentValueContext'
-import { MetadataProvider } from '$/components/MetadataProvider'
-import { DevModeProvider } from '../../../../../../_components/DocumentEditor/Editor/hooks/useDevMode'
+import { Playground } from './Playground'
+import { TextEditor } from './TextEditor'
 
 const ALLOWED_PARAMETERS =
   LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]

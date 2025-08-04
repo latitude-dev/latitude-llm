@@ -16,8 +16,10 @@ export default function AdminUsers() {
         <Text.H1>Impersonate User</Text.H1>
         <Text.H4>
           This will allow you to access the application as the specified user.
-          Use with caution.
         </Text.H4>
+        <Text.H4B>
+          Use it ONLY for SUPPORT purposes after ACKNOWLEDGEMENT from the user.
+        </Text.H4B>
         <ImpersonateUser />
       </section>
     </div>

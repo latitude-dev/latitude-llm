@@ -50,7 +50,7 @@ export const TriggerButton = ({
 
 export type MenuOption = {
   label: string
-  onClick: () => void
+  onClick?: () => void
   closeDropdown?: () => void
   onElementClick?: (e: MouseEvent) => void
   type?: 'normal' | 'destructive'
@@ -77,7 +77,7 @@ function DropdownItem({
   const onSelect = useCallback(() => {
     if (disabled) return
 
-    onClick()
+    onClick?.()
     closeDropdown?.()
   }, [disabled, onClick, closeDropdown])
   return (
@@ -87,6 +87,7 @@ function DropdownItem({
       disabled={disabled}
       className={cn('gap-2 items-center cursor-pointer', {
         'min-w-0': ellipsis,
+        'cursor-auto pointer-events-none': !onClick,
       })}
     >
       {iconProps ? <Icon {...iconProps} /> : null}

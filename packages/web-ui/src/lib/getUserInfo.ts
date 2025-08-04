@@ -1,4 +1,4 @@
-import { SessionUser } from '../providers'
+import { User } from '@latitude-data/core/browser'
 
 const BG_COLORS = {
   yellow: 'bg-yellow-500 text-yellow-100',
@@ -29,7 +29,7 @@ function getFallback(name: string | null | undefined) {
   return { initials, bgColorClass }
 }
 
-export function getUserInfoFromSession({ name }: SessionUser) {
+export function getUserInfoFromSession({ name }: User) {
   if (!name) {
     return {
       name: 'Unknown',

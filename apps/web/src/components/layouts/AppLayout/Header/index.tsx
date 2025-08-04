@@ -1,9 +1,9 @@
 'use client'
 import { ReactNode } from 'react'
 
-import { cn } from '@latitude-data/web-ui/utils'
-import { SessionUser } from '@latitude-data/web-ui/providers'
+import { User } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { cn } from '@latitude-data/web-ui/utils'
 
 import AvatarDropdown from './AvatarDropdown'
 import { HeaderBreadcrumb } from './Breadcrumb'
@@ -51,13 +51,15 @@ function NavLink({ label, href, onClick, _target }: INavigationLink) {
 
 export type AppHeaderProps = {
   navigationLinks: INavigationLink[]
-  currentUser: SessionUser | undefined
+  currentUser: User | undefined
   cloudInfo?: { paymentUrl: string }
+  isCloud: boolean
 }
 export default function AppHeader({
   navigationLinks,
   currentUser,
   cloudInfo,
+  isCloud,
 }: AppHeaderProps) {
   return (
     <AppHeaderWrapper>
@@ -74,7 +76,7 @@ export default function AppHeader({
             <NavLink key={idx} {...link} />
           ))}
         </nav>
-        <AvatarDropdown currentUser={currentUser} />
+        <AvatarDropdown currentUser={currentUser} isCloud={isCloud} />
       </div>
     </AppHeaderWrapper>
   )

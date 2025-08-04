@@ -246,10 +246,12 @@ export function AgentToolbar({
     subAgentsCount: counters.subAgentsCount,
   })
   const [agent, setAgent] = useState(isAgent)
+  useEffect(() => setAgent(isAgent), [isAgent]) // TODO: remove the local state and this useEffect
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
   const onAgentToggle = useCallback(
     async (checked: boolean) => {
       setAgent(checked)
+      setIsExpanded(checked)
       onChangePrompt(
         updatePromptMetadata(prompt, handleAgentChange({ checked, config })),
       )
@@ -258,17 +260,11 @@ export function AgentToolbar({
   )
   const onToggle = useCallback(
     (nextIsExpanded: boolean) => {
-      if (isMerged) return
-      if (!isAgent) onAgentToggle(true)
-
+      if (isMerged || !agent) return
       setIsExpanded(nextIsExpanded)
     },
-    [isAgent, onAgentToggle, isMerged],
+    [agent, isMerged],
   )
-
-  useEffect(() => {
-    setAgent(isAgent)
-  }, [isAgent])
 
   return (
     <ClientOnly loader={<AgentToolbarSkeleton />}>

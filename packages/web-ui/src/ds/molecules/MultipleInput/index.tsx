@@ -24,18 +24,18 @@ function InputElement({
   return (
     <div
       className={cn(
-        'flex gap-2 p-2 h-fit bg-accent rounded-md border border-border',
+        'flex gap-2 px-2 py-1 justify-center items-center h-fit bg-accent rounded-md border border-border',
         className,
       )}
     >
-      <Text.H6
+      <Text.H6M
         color='accentForeground'
         noWrap={noWrap}
         ellipsis={noWrap}
         whiteSpace={noWrap ? 'nowrap' : 'preWrap'}
       >
         {value}
-      </Text.H6>
+      </Text.H6M>
       <Button
         variant='ghost'
         size='small'
@@ -43,7 +43,7 @@ function InputElement({
         disabled={disabled}
         className='p-0'
       >
-        <Icon name={icon} color='accentForeground' />
+        <Icon name={icon} size='xnormal' color='accentForeground' />
       </Button>
     </div>
   )

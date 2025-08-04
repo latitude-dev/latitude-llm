@@ -17,7 +17,6 @@ export enum EvaluationRoutes {
 }
 
 export enum BackofficeRoutes {
-  templates = 'templates',
   rewards = 'rewards',
   users = 'users',
   usageOverview = 'usageOverview',
@@ -35,9 +34,6 @@ export const ROUTES = {
   },
   backoffice: {
     root: BACKOFFICE_ROOT,
-    [BackofficeRoutes.templates]: {
-      root: `${BACKOFFICE_ROOT}/templates`,
-    },
     [BackofficeRoutes.rewards]: {
       root: `${BACKOFFICE_ROOT}/rewards`,
     },

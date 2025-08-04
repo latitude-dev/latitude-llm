@@ -1,11 +1,10 @@
 'use client'
 
+import { User } from '@latitude-data/core/browser'
 import { createContext, ReactNode, useContext } from 'react'
 
-import { SessionUser } from '../SessionProvider'
-
 interface ISessionContext {
-  currentUser: SessionUser | undefined | null
+  currentUser: User | undefined | null
 }
 
 const MaybeSessionContext = createContext<ISessionContext>(

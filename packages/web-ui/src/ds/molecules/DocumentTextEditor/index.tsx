@@ -1,8 +1,8 @@
 'use client'
 
 import React, { lazy, useEffect, useState } from 'react'
-
 import { TextEditorPlaceholder } from '../TextEditorPlaceholder'
+import { EditorReadOnlyBanner } from './ReadOnlyMessage'
 import { DocumentTextEditorProps } from './types'
 
 const DocumentTextEditor = lazy(() =>
@@ -33,4 +33,9 @@ function EditorWrapper(props: DocumentTextEditorProps) {
   return <DocumentTextEditor {...props} />
 }
 
-export { EditorWrapper as DocumentTextEditor, TextEditorPlaceholder }
+export {
+  EditorWrapper as DocumentTextEditor,
+  EditorReadOnlyBanner,
+  TextEditorPlaceholder,
+  type DocumentTextEditorProps,
+}

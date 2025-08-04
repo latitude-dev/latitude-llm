@@ -1,32 +1,31 @@
-import { type DocumentVersion } from '@latitude-data/core/browser'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import {
   type BlockRootNode,
   BlocksEditor,
+  BlocksEditorPlaceholder,
   IncludedPrompt,
-} from '@latitude-data/web-ui/molecules/BlocksEditor'
-import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
+} from '$/components/BlocksEditor'
+import { useDevMode } from '$/hooks/useDevMode'
+import { updateContentFn } from '$/hooks/useDocumentValueContext'
+import { useEvents } from '$/lib/events'
+import useDocumentVersions from '$/stores/documentVersions'
+import { type DocumentVersion } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import {
   ICommitContextType,
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 import { Config, scan } from 'promptl-ai'
-import { memo, Suspense, useCallback } from 'react'
+import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { stringify as stringifyObjectToYaml } from 'yaml'
 import { useIncludabledPrompts } from './useIncludabledPrompts'
-import useDocumentVersions from '$/stores/documentVersions'
-import { useDevMode } from '../hooks/useDevMode'
 
 export const PlaygroundBlocksEditor = memo(
   ({
     project,
     commit,
     document,
-    rootBlock,
+    defaultValue,
     readOnlyMessage,
     onChange,
     config,
@@ -34,10 +33,10 @@ export const PlaygroundBlocksEditor = memo(
     project: IProjectContextType['project']
     commit: ICommitContextType['commit']
     document: DocumentVersion
-    rootBlock: BlockRootNode
+    defaultValue?: BlockRootNode
     config?: Config
     readOnlyMessage?: string
-    onChange: (value: string) => void
+    onChange: updateContentFn
   }) => {
     const { toast } = useToast()
     const { setDevMode } = useDevMode()
@@ -72,53 +71,65 @@ export const PlaygroundBlocksEditor = memo(
       },
       [toast],
     )
-    /*
-     * We don't touch Promptl config on Blocks editor atm
-     * So we restore the latest config from the document when a change
-     * happens
-     */
     const onChangePrompt = useCallback(
       (value: string) => {
-        if (commit.mergedAt !== null) return
-        if (!config) {
-          onChange(value)
-        } else {
+        if (commit.mergedAt) return
+        if (config) {
           const frontMatter = stringifyObjectToYaml(config).trim()
-          onChange(`---\n${frontMatter}\n---\n\n${value}\n`)
+          value = `---\n${frontMatter}\n---\n\n${value}\n`
         }
+
+        onChange(value, { origin: 'blocksEditor' })
       },
       [config, onChange, commit],
     )
 
-    // FIXME: How to refresh the Lexical editor when Promptl errors are introduced or fixed
-    // The thing is that Lexical manage his own state and we can not be passing new state whenever
-    // we save it in the DB because it will be raise conditions and the state will do weird things.
-    // But the problem with this approach of never updating the `initialValue`
+    // Note: Wait for, hopefully, the correct metadata to be set
+    // this follows the same pattern as the provider model selector
+    const [isInitialized, setInitialized] = useState(false)
+
+    useEvents({
+      onPromptMetadataChanged: ({ promptLoaded, metadata }) => {
+        if (!promptLoaded || !metadata) return
+        if (isInitialized) return
+        setInitialized(true)
+      },
+    })
+
+    // Note: Avoid setting the initial value more than once
+    const once = useRef(false)
+    const [initialValue, setInitialValue] = useState<BlockRootNode>()
+
+    useEffect(() => {
+      if (once.current) return
+      if (!isInitialized) return
+      if (!defaultValue) return
+      once.current = true
+      setInitialValue(defaultValue)
+    }, [isInitialized, defaultValue])
+
+    if (!isInitialized || !initialValue) {
+      return <BlocksEditorPlaceholder />
+    }
+
     return (
-      <Suspense fallback={<TextEditorPlaceholder />}>
-        {rootBlock ? (
-          <BlocksEditor
-            initialValue={rootBlock}
-            currentDocument={document}
-            prompts={prompts}
-            onError={onError}
-            Link={Link}
-            onRequestPromptMetadata={onRequestPromptMetadata}
-            onToggleDevEditor={toggleDevEditor}
-            onChange={onChangePrompt}
-            readOnlyMessage={readOnlyMessage}
-            placeholder='Type your instructions here, use / for commands'
-          />
-        ) : (
-          <Skeleton className='w-full h-full rounded-lg flex items-center justify-center gap-2 p-4'>
-            <Icon
-              name='loader'
-              color='foregroundMuted'
-              className='animate-spin'
-            />
-            <Text.H5 color='foregroundMuted'>Assembling prompt</Text.H5>
-          </Skeleton>
-        )}
+      <Suspense fallback={<BlocksEditorPlaceholder />}>
+        <BlocksEditor
+          initialValue={initialValue}
+          currentDocument={document}
+          project={project}
+          commit={commit}
+          document={document}
+          prompts={prompts}
+          onError={onError}
+          Link={Link}
+          onRequestPromptMetadata={onRequestPromptMetadata}
+          onToggleDevEditor={toggleDevEditor}
+          onChange={onChangePrompt}
+          readOnlyMessage={readOnlyMessage}
+          placeholder='Type your instructions here, use / for commands'
+          autoFocus
+        />
       </Suspense>
     )
   },
