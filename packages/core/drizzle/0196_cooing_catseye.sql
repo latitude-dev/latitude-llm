@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."users" ADD COLUMN "dev_mode" boolean;
