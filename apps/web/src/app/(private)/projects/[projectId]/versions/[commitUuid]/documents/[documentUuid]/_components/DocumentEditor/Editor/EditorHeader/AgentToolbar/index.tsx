@@ -205,7 +205,7 @@ function Content({
       ) : null}
 
       {selectedTab === TAB_SECTIONS.subAgents ? (
-        <ul className='bg-backgroundCode'>
+        <ul className='bg-backgroundCode overflow-auto custom-scrollbar'>
           {subAgents.availableAgents.map((agent, index) => (
             <li key={agent}>
               <SubAgentItem
