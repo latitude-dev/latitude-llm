@@ -64,7 +64,7 @@ function OldDocumentEditorContent({
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
-  const { data: documents, isUpdatingContent } = useDocumentVersions(
+  const { data: documents } = useDocumentVersions(
     {
       commitUuid: commit.uuid,
       projectId: project.id,
@@ -93,7 +93,7 @@ function OldDocumentEditorContent({
   })
   const isMerged = commit.mergedAt !== null
   const { devMode } = useDevMode()
-  const { value, setValue, updateDocumentContent } = useDocumentValue()
+  const { value, setValue, updateDocumentContent, isSaved } = useDocumentValue()
   const { customReadOnlyMessage, highlightedCursorIndex } = useLatteStreaming({
     value,
     setValue,
@@ -161,7 +161,7 @@ function OldDocumentEditorContent({
                   defaultValue={document.content}
                   copilotEnabled={copilotEnabled}
                   readOnlyMessage={readOnlyMessage}
-                  isSaved={!isUpdatingContent}
+                  isSaved={isSaved}
                   onChange={updateDocumentContent}
                   highlightedCursorIndex={highlightedCursorIndex}
                 />

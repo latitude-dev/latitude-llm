@@ -1,16 +1,15 @@
-import { PlaygroundTextEditor } from '../TextEditor'
-import { PlaygroundBlocksEditor } from '../BlocksEditor'
-import { useDiffState } from '../hooks/useDiffState'
-import { useLatteStreaming } from '../hooks/useLatteStreaming'
-import { DocumentVersion } from '@latitude-data/core/browser'
-import useDocumentVersions from '$/stores/documentVersions'
 import { useMetadata } from '$/hooks/useMetadata'
+import { DocumentVersion } from '@latitude-data/core/browser'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useDevMode } from '../hooks/useDevMode'
+import { PlaygroundBlocksEditor } from '../BlocksEditor'
 import { useDocumentValue } from '../context/DocumentValueContext'
+import { useDevMode } from '../hooks/useDevMode'
+import { useDiffState } from '../hooks/useDiffState'
+import { useLatteStreaming } from '../hooks/useLatteStreaming'
+import { PlaygroundTextEditor } from '../TextEditor'
 
 export function Editors({
   document,
@@ -23,11 +22,7 @@ export function Editors({
   const { commit } = useCurrentCommit()
   const { devMode } = useDevMode()
   const { metadata } = useMetadata()
-  const { isUpdatingContent } = useDocumentVersions({
-    commitUuid: commit.uuid,
-    projectId: project.id,
-  })
-  const { value, setValue, updateDocumentContent } = useDocumentValue()
+  const { value, setValue, updateDocumentContent, isSaved } = useDocumentValue()
   const { customReadOnlyMessage, highlightedCursorIndex } = useLatteStreaming({
     value,
     setValue,
@@ -50,7 +45,7 @@ export function Editors({
       value={value}
       defaultValue={document.content}
       readOnlyMessage={readOnlyMessage}
-      isSaved={!isUpdatingContent}
+      isSaved={isSaved}
       onChange={updateDocumentContent}
       highlightedCursorIndex={highlightedCursorIndex}
     />

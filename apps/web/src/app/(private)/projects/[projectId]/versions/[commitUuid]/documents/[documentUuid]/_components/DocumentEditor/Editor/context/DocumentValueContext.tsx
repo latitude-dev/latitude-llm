@@ -1,32 +1,33 @@
 'use client'
 
-import {
-  createContext,
-  useContext,
-  useState,
-  ReactNode,
-  useEffect,
-} from 'react'
-import { useDebouncedCallback } from 'use-debounce'
-import { useEvents } from '$/lib/events'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { ROUTES } from '$/services/routes'
+import { useMetadata } from '$/hooks/useMetadata'
 import { useNavigate } from '$/hooks/useNavigate'
+import { useEvents } from '$/lib/events'
+import { ROUTES } from '$/services/routes'
+import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import useDocumentVersions from '$/stores/documentVersions'
+import useIntegrations from '$/stores/integrations'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useMetadata } from '$/hooks/useMetadata'
-import useIntegrations from '$/stores/integrations'
-import useProviderApiKeys from '$/stores/providerApiKeys'
-import { useAgentToolsMap } from '$/stores/agentToolsMap'
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from 'react'
+import { useDebouncedCallback } from 'use-debounce'
 
 type DocumentValueContextType = {
   value: string
   setValue: (value: string) => void
   updateDocumentContent: (content: string) => void
+  isSaved: boolean
 }
 
 const DocumentValueContext = createContext<
@@ -45,7 +46,7 @@ export function DocumentValueProvider({
   const [value, setValue] = useState(document.content)
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { updateContent } = useDocumentVersions({
+  const { updateContent, isUpdatingContent } = useDocumentVersions({
     commitUuid: commit.uuid,
     projectId: project.id,
   })
@@ -82,7 +83,12 @@ export function DocumentValueProvider({
 
   return (
     <DocumentValueContext.Provider
-      value={{ value, setValue, updateDocumentContent }}
+      value={{
+        value,
+        setValue,
+        updateDocumentContent,
+        isSaved: !isUpdatingContent,
+      }}
     >
       {children}
     </DocumentValueContext.Provider>

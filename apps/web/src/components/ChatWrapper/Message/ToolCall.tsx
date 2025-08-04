@@ -1,34 +1,34 @@
 'use client'
 
-import {
-  ToolRequestContent,
-  ToolContent,
-} from '@latitude-data/constants/legacyCompiler'
-import { ToolCallContent as PromptlToolCall } from 'promptl-ai'
-import { CodeLatitudeToolCallContent } from './LatitudeTools/Code'
-import { WebSearchLatitudeToolCallContent } from './LatitudeTools/Search'
-import { WebExtractLatitudeToolCallContent } from './LatitudeTools/Extract'
-import type { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
-import type { SearchToolArgs } from '@latitude-data/core/services/latitudeTools/webSearch/types'
-import type { ExtractToolArgs } from '@latitude-data/core/services/latitudeTools/webExtract/types'
-import { LatitudeToolCallContent } from './LatitudeTools/SubAgent'
+import { submitToolResultAction } from '$/actions/tools/results/submit'
+import { useFormAction } from '$/hooks/useFormAction'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 import {
   AGENT_TOOL_PREFIX,
   AgentToolsMap,
   LATITUDE_TOOL_PREFIX,
   LatitudeToolInternalName,
 } from '@latitude-data/constants'
-import { ToolResultContent, ToolResultFooter } from './ToolResult'
-import { KeyboardEventHandler, useCallback, useState } from 'react'
-import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import {
+  ToolContent,
+  ToolRequestContent,
+} from '@latitude-data/constants/legacyCompiler'
+import type { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
+import type { ExtractToolArgs } from '@latitude-data/core/services/latitudeTools/webExtract/types'
+import type { SearchToolArgs } from '@latitude-data/core/services/latitudeTools/webSearch/types'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import { ContentCard } from './ContentCard'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { submitToolResultAction } from '$/actions/tools/results/submit'
-import { useFormAction } from '$/hooks/useFormAction'
+import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Label } from '@latitude-data/web-ui/atoms/Label'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { ToolCallContent as PromptlToolCall } from 'promptl-ai'
+import { KeyboardEventHandler, useCallback, useState } from 'react'
+import { ContentCard } from './ContentCard'
+import { CodeLatitudeToolCallContent } from './LatitudeTools/Code'
+import { WebExtractLatitudeToolCallContent } from './LatitudeTools/Extract'
+import { WebSearchLatitudeToolCallContent } from './LatitudeTools/Search'
+import { LatitudeToolCallContent } from './LatitudeTools/SubAgent'
+import { ToolResultContent, ToolResultFooter } from './ToolResult'
 
 function toolArgs(
   value: ToolRequestContent | PromptlToolCall,
@@ -140,7 +140,9 @@ function ClientToolCallContent({
 
 function ToolEditor({ toolCallId }: { toolCallId: string }) {
   const [value, setValue] = useState<string>('')
-  const { execute, isPending } = useLatitudeAction(submitToolResultAction)
+  const { execute, isPending } = useLatitudeAction(submitToolResultAction, {
+    onSuccess: () => {}, // Note: overriding onSuccess to mute success toast
+  })
   const { action } = useFormAction(execute)
   const onKeyUp = useCallback(
     (event) => {
