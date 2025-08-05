@@ -1,4 +1,6 @@
-import {
+'use client'
+
+import React, {
   createContext,
   useContext,
   useMemo,
@@ -8,14 +10,13 @@ import {
 import { IntegrationType } from '@latitude-data/constants'
 import { AppDto } from '@latitude-data/core/browser'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
-export type SelectedIntegration = {
+type SelectedIntegration = {
   id?: number
   name: string
   type: IntegrationType
   pipedream?: {
-    name_slug: string
+    app: Pick<AppDto, 'name'>
     trigger?: AppDto['triggers'][number]
   }
 }
@@ -24,8 +25,8 @@ type TriggersModalContextType = {
   selectedIntegration: SelectedIntegration | null | undefined
   selectedPipedreamApp: AppDto | null | undefined
   isSelectedPipedreamAppLoading: boolean
-  setSelectedIntegration: ReactStateDispatch<
-    SelectedIntegration | null | undefined
+  setSelectedIntegration: React.Dispatch<
+    React.SetStateAction<SelectedIntegration | null | undefined>
   >
 }
 
@@ -47,7 +48,7 @@ export function TriggersModalProvider({
   const {
     data: selectedPipedreamApp,
     isLoading: isSelectedPipedreamAppLoading,
-  } = usePipedreamApp(selectedIntegration?.pipedream?.name_slug)
+  } = usePipedreamApp(selectedIntegration?.pipedream?.app.name)
 
   const value: TriggersModalContextType = useMemo(
     () => ({

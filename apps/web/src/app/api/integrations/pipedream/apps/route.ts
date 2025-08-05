@@ -8,8 +8,8 @@ export const GET = errorHandler(
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('query') || undefined
     const cursor = searchParams.get('cursor') || undefined
-
-    const result = await listApps({ query, cursor })
+    const withTriggers = searchParams.get('withTriggers') === 'true'
+    const result = await listApps({ query, cursor, withTriggers })
 
     return NextResponse.json(result.unwrap(), { status: 200 })
   }),

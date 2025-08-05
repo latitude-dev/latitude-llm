@@ -10,12 +10,13 @@ import { AppDto } from '@latitude-data/core/browser'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
+export type PipedreamSlug = Pick<AppDto, 'name_slug'>
 export type SelectedIntegration = {
   id?: number
   name: string
   type: IntegrationType
   pipedream?: {
-    name_slug: string
+    name_slug: PipedreamSlug
     trigger?: AppDto['triggers'][number]
   }
 }
