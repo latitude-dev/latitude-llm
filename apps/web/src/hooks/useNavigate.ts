@@ -1,3 +1,5 @@
+'use client'
+
 import { useMemo } from 'react'
 
 import { type NavigateOptions } from 'next/dist/shared/lib/app-router-context.shared-runtime'

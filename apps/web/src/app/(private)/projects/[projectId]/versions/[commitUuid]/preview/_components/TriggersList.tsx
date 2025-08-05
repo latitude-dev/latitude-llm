@@ -1,9 +1,12 @@
+'use client'
+
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import {
   DocumentTrigger,
+  IntegrationDto,
   PipedreamIntegration,
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -13,33 +16,45 @@ import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import Image from 'next/image'
 import { useCallback, useMemo, useState } from 'react'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
-import { TriggersPreview } from '../../../documents/[documentUuid]/_components/DocumentTabs/DocumentTriggers/Settings/IntegrationTriggers/Preview'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
-import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 
 type IntegrationTrigger = Extract<
   DocumentTrigger,
   { triggerType: DocumentTriggerType.Integration }
 >
 
-export function TriggersList() {
+export function TriggersList({
+  triggers: fallbackData,
+  integrations: fallbackIntegrations,
+}: {
+  triggers: IntegrationTrigger[]
+  integrations: IntegrationTrigger[]
+}) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { data: triggers } = useDocumentTriggers({
-    projectId: project.id,
-  })
+  const { data: triggers } = useDocumentTriggers(
+    {
+      projectId: project.id,
+    },
+    {
+      fallbackData,
+      keepPreviousData: true,
+    },
+  )
   const integrationTriggers = useMemo(
     () =>
       triggers.filter((t) => t.triggerType === DocumentTriggerType.Integration),
     [triggers],
   )
-
-  if (integrationTriggers.length === 0) return <TriggersPreview />
+  const { data: integrations } = useIntegrations({
+    fallbackData: fallbackIntegrations,
+  })
 
   return (
-    <div className='flex-1 flex flex-col gap-6 items-start justify-start'>
+    <div className='flex-1 flex flex-col gap-6 items-start justify-start w-full h-full'>
       <div className='flex flex-col gap-4 w-full'>
         <div className='flex flex-col gap-2 items-start justify-start'>
           <Text.H3M>{project.name}</Text.H3M>
@@ -49,7 +64,11 @@ export function TriggersList() {
         </div>
         <div className='flex flex-col gap-4'>
           {integrationTriggers.map((trigger) => (
-            <TriggersCard key={trigger.uuid} trigger={trigger} />
+            <TriggersCard
+              key={trigger.uuid}
+              trigger={trigger}
+              integrations={integrations}
+            />
           ))}
         </div>
         <Link
@@ -119,9 +138,13 @@ function DeleteTriggerButton({ trigger }: { trigger: IntegrationTrigger }) {
   )
 }
 
-function TriggersCard({ trigger }: { trigger: IntegrationTrigger }) {
-  const { data: integrations, isLoading: isLoadingIntegrations } =
-    useIntegrations()
+function TriggersCard({
+  trigger,
+  integrations,
+}: {
+  trigger: IntegrationTrigger
+  integrations: IntegrationDto[]
+}) {
   const { data: documents } = useDocumentVersions({
     projectId: trigger.projectId,
   })
@@ -138,18 +161,14 @@ function TriggersCard({ trigger }: { trigger: IntegrationTrigger }) {
     ) as PipedreamIntegration | undefined
   }, [integrations, trigger.configuration.integrationId])
 
-  const { data: app, isLoading: isLoadingApp } = usePipedreamApp(
-    integration?.configuration.appName,
-  )
+  const { data: app } = usePipedreamApp(integration?.configuration.appName)
 
   const component = useMemo(() => {
     if (!app?.triggers) return undefined
     return app.triggers.find((c) => c.key === trigger.configuration.componentId)
   }, [app, trigger.configuration.componentId])
 
-  if (isLoadingIntegrations || isLoadingApp || !integration || !app) {
-    return <TableSkeleton cols={3} rows={4} />
-  }
+  if (!integration) return null
 
   return (
     <div className='w-full p-4 border rounded-lg flex flex-row justify-between items-center gap-4'>
@@ -164,9 +183,13 @@ function TriggersCard({ trigger }: { trigger: IntegrationTrigger }) {
         />
         <div className='flex-1 flex flex-col gap-0'>
           <Text.H5>{component?.name}</Text.H5>
-          <Text.H6 color='foregroundMuted'>
-            {app.name} - Runs {document?.path?.split('/').at(-1) ?? ''}
-          </Text.H6>
+          {app ? (
+            <Text.H6 color='foregroundMuted'>
+              {app.name} - Runs {document?.path?.split('/').at(-1) ?? ''}
+            </Text.H6>
+          ) : (
+            <Skeleton className='w-24 h-4' />
+          )}
         </div>
       </div>
       <DeleteTriggerButton trigger={trigger} />

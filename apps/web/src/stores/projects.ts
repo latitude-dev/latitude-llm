@@ -1,3 +1,5 @@
+'use client'
+
 import { Project } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createProjectAction } from '$/actions/projects/create'

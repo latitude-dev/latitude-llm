@@ -30,7 +30,7 @@ export default function useProviderLogs(
     isLoading,
     error: swrError,
   } = useSWR<ProviderLogDto[]>(
-    compact(['providerLogs', documentUuid, documentLogUuid]),
+    buildKey(documentUuid, documentLogUuid, documentLogId),
     fetcher,
     opts,
   )
@@ -78,9 +78,7 @@ function buildRoute({
   documentLogUuid?: string
   documentLogId?: number
 }) {
-  if (!documentUuid && !documentLogUuid && !documentLogId) {
-    return undefined
-  }
+  if (!documentUuid && !documentLogUuid && !documentLogId) return undefined
 
   let route = ROUTES.api.providerLogs.root
   if (documentUuid) {
@@ -115,4 +113,14 @@ function deserialize(item: ProviderLogDto) {
     createdAt: new Date(item.createdAt),
     updatedAt: new Date(item.updatedAt),
   }
+}
+
+function buildKey(
+  documentUuid?: string,
+  documentLogUuid?: string,
+  documentLogId?: number,
+) {
+  if (!documentUuid && !documentLogUuid && !documentLogId) return undefined
+
+  return compact(['providerLogs', documentUuid, documentLogUuid, documentLogId])
 }

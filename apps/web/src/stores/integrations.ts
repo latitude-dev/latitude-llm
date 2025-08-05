@@ -1,3 +1,5 @@
+'use client'
+
 import type { IntegrationDto } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createIntegrationAction } from '$/actions/integrations/create'

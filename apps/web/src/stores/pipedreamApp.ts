@@ -1,3 +1,5 @@
+'use client'
+
 import { ROUTES } from '$/services/routes'
 import useSWR from 'swr'
 import useFetcher from '../hooks/useFetcher'

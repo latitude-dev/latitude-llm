@@ -1,3 +1,5 @@
+'use client'
+
 import useIntegrations from '$/stores/integrations'
 import { IntegrationType } from '@latitude-data/constants'
 import type { PipedreamIntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
