@@ -1,4 +1,3 @@
-import { SegmentBaggage } from '@latitude-data/constants'
 import * as otel from '@opentelemetry/api'
 import { ReadableSpan, SpanProcessor } from '@opentelemetry/sdk-trace-node'
 import { http, HttpResponse } from 'msw'
@@ -84,16 +83,4 @@ export function expectMasked(value: string) {
   const regex = new RegExp(`^${pattern}$`)
 
   return expect.stringMatching(regex)
-}
-
-export function expectSegments(segments: SegmentBaggage[]) {
-  const value = JSON.stringify(
-    segments.map((segment) => ({
-      ...segment,
-      id: '%ANY%',
-      parentId: 'parentId' in segment ? '%ANY%' : undefined,
-    })),
-  )
-
-  return expectMasked(value)
 }

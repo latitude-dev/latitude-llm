@@ -160,6 +160,7 @@ export async function ai({
         ? Output.object({ schema: jsonSchema(schema) })
         : undefined,
     })
+
     return Result.ok({
       type: resultType,
       providerName: providerType,

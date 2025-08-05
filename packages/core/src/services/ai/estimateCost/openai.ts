@@ -3,7 +3,7 @@ import { createModelSpec } from './helpers'
 // source: https://openai.com/api/pricing/
 // NOTE: Order matters here, the first model is the default model
 export const OPENAI_MODELS = createModelSpec({
-  defaultModel: 'gpt-4.1-mini',
+  defaultModel: 'gpt-4o-mini',
   models: {
     // gpt-5 family
     'gpt-5': { cost: { input: 1.25, output: 10.0 } },

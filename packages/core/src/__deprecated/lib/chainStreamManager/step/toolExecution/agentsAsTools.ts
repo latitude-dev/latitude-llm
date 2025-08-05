@@ -9,7 +9,6 @@ import { ToolSource } from '../../resolveTools/types'
 import { ToolResponsesArgs } from './types'
 
 export function getAgentsAsToolCallsResults({
-  contexts,
   workspace,
   promptSource,
   toolCalls,
@@ -26,7 +25,7 @@ export function getAgentsAsToolCallsResults({
     promptSource.commit,
   )
 
-  return toolCalls.map(async (toolCall, idx) => {
+  return toolCalls.map(async (toolCall) => {
     const allDocsResult = await promisedAllDocsResult
     if (allDocsResult.error) return allDocsResult
     const allDocs = allDocsResult.unwrap()
@@ -43,7 +42,6 @@ export function getAgentsAsToolCallsResults({
     }
 
     const result = await runDocumentAtCommitLegacy({
-      context: contexts[idx]!,
       workspace,
       document,
       commit: promptSource.commit,

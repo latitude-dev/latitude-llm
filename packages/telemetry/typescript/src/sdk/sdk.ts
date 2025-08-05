@@ -4,8 +4,7 @@ import {
   LatitudeInstrumentation,
   LatitudeInstrumentationOptions,
   ManualInstrumentation,
-  PromptSegmentOptions,
-  SegmentOptions,
+  PromptSpanOptions,
   StartCompletionSpanOptions,
   StartHttpSpanOptions,
   StartSpanOptions,
@@ -15,7 +14,6 @@ import { DEFAULT_REDACT_SPAN_PROCESSOR } from '$telemetry/sdk/redact'
 import {
   InstrumentationScope,
   SCOPE_LATITUDE,
-  SegmentSource,
   TraceContext,
 } from '@latitude-data/constants'
 import * as otel from '@opentelemetry/api'
@@ -241,14 +239,13 @@ export class LatitudeTelemetry {
     this.instrumentations = []
 
     const tracer = this.tracer(InstrumentationScope.Manual as any)
-    this.telemetry = new ManualInstrumentation(SegmentSource.API, tracer)
+    this.telemetry = new ManualInstrumentation(tracer)
     this.instrumentations.push(this.telemetry)
 
     const latitude = this.options.instrumentations?.latitude
     if (latitude) {
       const tracer = this.tracer(Instrumentation.Latitude)
       const instrumentation = new LatitudeInstrumentation(
-        SegmentSource.API,
         tracer,
         typeof latitude === 'object' ? latitude : { module: latitude },
       )
@@ -400,24 +397,8 @@ export class LatitudeTelemetry {
     })
   }
 
-  baggage(ctx: otel.Context | TraceContext) {
-    return this.telemetry.baggage(ctx)
-  }
-
-  pause(ctx: otel.Context) {
-    return this.telemetry.pause(ctx)
-  }
-
   resume(ctx: TraceContext) {
     return this.telemetry.resume(ctx)
-  }
-
-  restored(ctx: otel.Context) {
-    return this.telemetry.restored(ctx)
-  }
-
-  restore(ctx: otel.Context) {
-    return this.telemetry.restore(ctx)
   }
 
   tool(ctx: otel.Context, options: StartToolSpanOptions) {
@@ -444,11 +425,11 @@ export class LatitudeTelemetry {
     return this.telemetry.http(ctx, options)
   }
 
-  prompt(ctx: otel.Context, options: PromptSegmentOptions) {
+  prompt(ctx: otel.Context, options: PromptSpanOptions) {
     return this.telemetry.prompt(ctx, options)
   }
 
-  step(ctx: otel.Context, options?: SegmentOptions) {
+  step(ctx: otel.Context, options?: StartSpanOptions) {
     return this.telemetry.step(ctx, options)
   }
 }
@@ -459,8 +440,7 @@ export type {
   EndSpanOptions,
   EndToolSpanOptions,
   ErrorOptions,
-  PromptSegmentOptions,
-  SegmentOptions,
+  PromptSpanOptions as PromptSegmentOptions,
   StartCompletionSpanOptions,
   StartHttpSpanOptions,
   StartSpanOptions,

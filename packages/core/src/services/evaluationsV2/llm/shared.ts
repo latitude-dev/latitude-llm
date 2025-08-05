@@ -161,12 +161,11 @@ export async function runPrompt<
   }).then((r) => r.unwrap())
 
   const $prompt = telemetry.prompt(BACKGROUND({ workspaceId: workspace.id }), {
-    logUuid: resultUuid,
+    documentLogUuid: resultUuid,
     versionUuid: commit.uuid,
     promptUuid: evaluation.uuid,
     template: prompt,
     parameters: parameters,
-    _internal: { source: runArgs.source },
   })
 
   let response

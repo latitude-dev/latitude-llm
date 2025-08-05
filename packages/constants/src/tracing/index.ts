@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-export * from './segment'
 export * from './span'
 export * from './trace'
 
@@ -41,10 +40,6 @@ const ATTR_LATITUDE = 'latitude'
 export const ATTR_LATITUDE_INTERNAL = `${ATTR_LATITUDE}.internal`
 
 export const ATTR_LATITUDE_TYPE = `${ATTR_LATITUDE}.type`
-
-export const ATTR_LATITUDE_SEGMENT_ID = `${ATTR_LATITUDE}.segment.id`
-export const ATTR_LATITUDE_SEGMENT_PARENT_ID = `${ATTR_LATITUDE}.segment.parent_id`
-export const ATTR_LATITUDE_SEGMENTS = `${ATTR_LATITUDE}.segments`
 
 export const GEN_AI_TOOL_TYPE_VALUE_FUNCTION = 'function'
 export const ATTR_GEN_AI_TOOL_CALL_ARGUMENTS = 'gen_ai.tool.call.arguments'

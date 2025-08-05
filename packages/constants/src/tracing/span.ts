@@ -17,8 +17,9 @@ export enum SpanType {
   Retrieval = 'retrieval',
   Reranking = 'reranking',
   Http = 'http', // Note: raw HTTP requests and responses
-  Segment = 'segment', // (Partial) Wrappers so spans belong to the same trace
   Unknown = 'unknown', // Other spans we don't care about
+  Prompt = 'prompt',
+  Step = 'step',
 }
 
 export type SpanSpecification<T extends SpanType = SpanType> = {
@@ -66,17 +67,23 @@ export const SPAN_SPECIFICATIONS = {
     isGenAI: false,
     isHidden: true,
   },
-  [SpanType.Segment]: {
-    name: 'Segment',
-    description: 'A (partial) segment of a trace',
-    isGenAI: false,
-    isHidden: false,
-  },
   [SpanType.Unknown]: {
     name: 'Unknown',
     description: 'An unknown span',
     isGenAI: false,
     isHidden: true,
+  },
+  [SpanType.Prompt]: {
+    name: 'Prompt',
+    description: 'A prompt span',
+    isGenAI: false,
+    isHidden: false,
+  },
+  [SpanType.Step]: {
+    name: 'Step',
+    description: 'A step span',
+    isGenAI: false,
+    isHidden: false,
   },
 } as const satisfies {
   [T in SpanType]: SpanSpecification<T>
@@ -165,7 +172,6 @@ export type SpanMetadata<T extends SpanType = SpanType> =
   T extends SpanType.Retrieval ? BaseSpanMetadata<T> :
   T extends SpanType.Reranking ? BaseSpanMetadata<T> :
   T extends SpanType.Http ? HttpSpanMetadata :
-  T extends SpanType.Segment ? BaseSpanMetadata<T> :
   T extends SpanType.Unknown ? BaseSpanMetadata<T> :
   never;
 

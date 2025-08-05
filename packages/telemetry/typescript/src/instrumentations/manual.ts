@@ -30,19 +30,11 @@ import {
   ATTR_HTTP_REQUEST_URL,
   ATTR_HTTP_RESPONSE_BODY,
   ATTR_HTTP_RESPONSE_HEADER,
-  ATTR_LATITUDE_SEGMENT_ID,
-  ATTR_LATITUDE_SEGMENT_PARENT_ID,
-  ATTR_LATITUDE_SEGMENTS,
   ATTR_LATITUDE_TYPE,
   GEN_AI_TOOL_TYPE_VALUE_FUNCTION,
   HEAD_COMMIT,
-  SEGMENT_SPECIFICATIONS,
-  SegmentBaggage,
-  SegmentSource,
-  SegmentType,
   SPAN_SPECIFICATIONS,
   SpanType,
-  TraceBaggage,
   TraceContext,
 } from '@latitude-data/constants'
 import * as otel from '@opentelemetry/api'
@@ -62,7 +54,6 @@ import {
   ATTR_GEN_AI_USAGE_INPUT_TOKENS,
   ATTR_GEN_AI_USAGE_OUTPUT_TOKENS,
 } from '@opentelemetry/semantic-conventions/incubating'
-import { v4 as uuid } from 'uuid'
 
 export type StartSpanOptions = {
   name?: string
@@ -127,17 +118,8 @@ export type EndHttpSpanOptions = EndSpanOptions & {
   }
 }
 
-export type SegmentOptions = {
-  attributes?: otel.Attributes
-  baggage?: Record<string, otel.BaggageEntry>
-  _internal?: {
-    id?: string
-    source?: SegmentSource
-  }
-}
-
-export type PromptSegmentOptions = SegmentOptions & {
-  logUuid?: string // TODO(tracing): temporal related log, remove when observability is ready
+export type PromptSpanOptions = StartSpanOptions & {
+  documentLogUuid?: string // TODO(tracing): temporal related log, remove when observability is ready
   versionUuid?: string // Alias for commitUuid
   promptUuid: string // Alias for documentUuid
   experimentUuid?: string
@@ -148,12 +130,10 @@ export type PromptSegmentOptions = SegmentOptions & {
 
 export class ManualInstrumentation implements BaseInstrumentation {
   private enabled: boolean
-  private readonly source: SegmentSource
   private readonly tracer: otel.Tracer
 
-  constructor(source: SegmentSource, tracer: otel.Tracer) {
+  constructor(tracer: otel.Tracer) {
     this.enabled = false
-    this.source = source
     this.tracer = tracer
   }
 
@@ -169,128 +149,8 @@ export class ManualInstrumentation implements BaseInstrumentation {
     this.enabled = false
   }
 
-  baggage(ctx: otel.Context | TraceContext) {
-    if ('traceparent' in ctx) {
-      ctx = propagation.extract(otel.ROOT_CONTEXT, ctx)
-    }
-
-    const baggage = Object.fromEntries(
-      propagation.getBaggage(ctx)?.getAllEntries() || [],
-    )
-    if (
-      !(ATTR_LATITUDE_SEGMENT_ID in baggage) ||
-      !(ATTR_LATITUDE_SEGMENTS in baggage)
-    ) {
-      return undefined
-    }
-
-    const segment = {
-      id: baggage[ATTR_LATITUDE_SEGMENT_ID]!.value,
-      parentId: baggage[ATTR_LATITUDE_SEGMENT_PARENT_ID]?.value,
-    }
-
-    let segments = []
-    try {
-      segments = JSON.parse(baggage[ATTR_LATITUDE_SEGMENTS]!.value)
-    } catch (error) {
-      return undefined
-    }
-
-    if (segments.length < 1) {
-      return undefined
-    }
-
-    return { segment, segments } as TraceBaggage
-  }
-
-  private setBaggage(
-    ctx: otel.Context,
-    baggage: TraceBaggage | undefined,
-    extra?: Record<string, otel.BaggageEntry>,
-  ) {
-    let parent = Object.fromEntries(
-      propagation.getBaggage(ctx)?.getAllEntries() || [],
-    )
-
-    parent = Object.fromEntries(
-      Object.entries(parent).filter(
-        ([attribute]) =>
-          attribute !== ATTR_LATITUDE_SEGMENT_ID &&
-          attribute !== ATTR_LATITUDE_SEGMENT_PARENT_ID &&
-          attribute !== ATTR_LATITUDE_SEGMENTS,
-      ),
-    )
-
-    if (!baggage) {
-      const payload = propagation.createBaggage({ ...parent, ...(extra || {}) })
-      return propagation.setBaggage(ctx, payload)
-    }
-
-    let jsonSegments = ''
-    try {
-      jsonSegments = JSON.stringify(baggage.segments)
-    } catch (error) {
-      jsonSegments = '[]'
-    }
-
-    const payload = propagation.createBaggage({
-      ...parent,
-      [ATTR_LATITUDE_SEGMENT_ID]: { value: baggage.segment.id },
-      ...(baggage.segment.parentId && {
-        [ATTR_LATITUDE_SEGMENT_PARENT_ID]: { value: baggage.segment.parentId },
-      }),
-      [ATTR_LATITUDE_SEGMENTS]: { value: jsonSegments },
-      ...(extra || {}),
-    })
-
-    return propagation.setBaggage(ctx, payload)
-  }
-
-  pause(ctx: otel.Context) {
-    const baggage = this.baggage(ctx)
-    if (baggage) {
-      baggage.segments.at(-1)!.paused = true
-    }
-
-    ctx = this.setBaggage(ctx, baggage)
-    let carrier = {} as TraceContext
-    propagation.inject(ctx, carrier)
-
-    return carrier
-  }
-
   resume(ctx: TraceContext) {
     return propagation.extract(otel.ROOT_CONTEXT, ctx)
-  }
-
-  restored(ctx: otel.Context) {
-    const baggage = this.baggage(ctx)
-    return !baggage?.segments.some((segment) => segment.paused)
-  }
-
-  restore(ctx: otel.Context) {
-    let baggage = this.baggage(ctx)
-    if (!baggage) return ctx
-
-    const segments = baggage.segments
-    while (segments.at(-1)?.paused) segments.pop()
-
-    const segment = segments.at(-1)
-    if (!segment) return otel.ROOT_CONTEXT
-
-    baggage = {
-      segment: { id: segment.id, parentId: segment.parentId },
-      segments: segments,
-    }
-
-    ctx = this.setBaggage(ctx, baggage)
-    let carrier = {} as TraceContext
-    propagation.inject(ctx, carrier)
-
-    carrier.traceparent = segment.traceparent
-    carrier.tracestate = segment.tracestate
-
-    return this.resume(carrier)
   }
 
   private capitalize(str: string) {
@@ -847,83 +707,20 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }
   }
 
-  private segment<T extends SegmentType>(
-    ctx: otel.Context,
-    type: T,
-    data: SegmentBaggage<T>['data'],
-    options?: SegmentOptions,
-  ) {
-    options = options || {}
-
-    let baggage = this.baggage(ctx)
-    const parent = baggage?.segments.at(-1)
-    const segments = baggage?.segments || []
-
-    segments.push({
-      ...({
-        id: options._internal?.id || uuid(),
-        ...(parent?.id && { parentId: parent.id }),
-        source: options._internal?.source || parent?.source || this.source,
-        type: type,
-        data: data,
-      } as SegmentBaggage<T>),
-      traceparent: 'undefined',
-      tracestate: undefined,
-    })
-    const segment = segments.at(-1)!
-
-    baggage = {
-      segment: { id: segment.id, parentId: segment.parentId },
-      segments: segments,
-    }
-
-    ctx = this.setBaggage(ctx, baggage, options.baggage)
-
-    // Dummy wrapper to force the same trace and carry on some segment attributes
-    const span = this.span(
-      ctx,
-      SEGMENT_SPECIFICATIONS[type].name,
-      SpanType.Segment,
-      { attributes: options.attributes },
-    )
-
-    let carrier = {} as TraceContext
-    propagation.inject(span.context, carrier)
-
-    baggage.segments.at(-1)!.traceparent = carrier.traceparent
-    baggage.segments.at(-1)!.tracestate = carrier.tracestate
-
-    // Fix current segment span segments attribute now that we know the trace
-    trace
-      .getSpan(span.context)!
-      .setAttribute(ATTR_LATITUDE_SEGMENTS, JSON.stringify(baggage.segments))
-
-    ctx = this.setBaggage(span.context, baggage, options.baggage)
-
-    return { context: ctx, end: span.end, fail: span.fail }
-  }
-
   prompt(
     ctx: otel.Context,
     {
-      logUuid,
+      documentLogUuid,
       versionUuid,
       promptUuid,
       experimentUuid,
       externalId,
       template,
       parameters,
+      name,
       ...rest
-    }: PromptSegmentOptions,
+    }: PromptSpanOptions,
   ) {
-    const baggage = {
-      ...(logUuid && { logUuid }), // TODO(tracing): temporal related log, remove when observability is ready
-      commitUuid: versionUuid || HEAD_COMMIT,
-      documentUuid: promptUuid,
-      ...(experimentUuid && { experimentUuid }),
-      ...(externalId && { externalId }),
-    }
-
     let jsonParameters = ''
     try {
       jsonParameters = JSON.stringify(parameters || {})
@@ -934,16 +731,20 @@ export class ManualInstrumentation implements BaseInstrumentation {
     const attributes = {
       [ATTR_GEN_AI_REQUEST_TEMPLATE]: template,
       [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
+      commitUuid: versionUuid || HEAD_COMMIT,
+      documentUuid: promptUuid,
+      ...(documentLogUuid && { documentLogUuid }),
+      ...(experimentUuid && { experimentUuid }),
+      ...(externalId && { externalId }),
       ...(rest.attributes || {}),
     }
 
-    return this.segment(ctx, SegmentType.Document, baggage, {
-      ...rest,
+    return this.span(ctx, name || `prompt-${promptUuid}`, SpanType.Prompt, {
       attributes,
     })
   }
 
-  step(ctx: otel.Context, options?: SegmentOptions) {
-    return this.segment(ctx, SegmentType.Step, undefined, options)
+  step(ctx: otel.Context, options?: StartSpanOptions) {
+    return this.span(ctx, 'step', SpanType.Step, options)
   }
 }
