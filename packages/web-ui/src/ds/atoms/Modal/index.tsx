@@ -11,6 +11,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogContentProps,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -46,6 +47,7 @@ export type ModalProps = {
   children?: ReactNode
   footer?: ReactNode
   size?: 'small' | 'regular' | 'medium' | 'large' | 'xl' | 'full'
+  height?: DialogContentProps['height']
   steps?: {
     total: number
     current: number
@@ -64,6 +66,7 @@ export function Modal({
   title,
   description,
   size = 'regular',
+  height = 'content',
   steps,
   dismissible = false,
   scrollable = true,
@@ -73,6 +76,7 @@ export function Modal({
     <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       <DialogContent
         dismissible={dismissible}
+        height={height}
         className={cn('flex flex-col', globalZIndex[zIndex], {
           'max-w-modal-sm': size === 'small',
           'max-w-modal': size === 'regular',
@@ -82,7 +86,7 @@ export function Modal({
           'max-w-[97.5%]': size === 'full',
         })}
       >
-        <div className='flex flex-col relative max-h-full overflow-hidden'>
+        <div className='flex flex-col relative h-full overflow-hidden'>
           {steps || title || description ? (
             <div className='flex flex-col gap-y-4 pb-6'>
               {steps && (
@@ -108,21 +112,22 @@ export function Modal({
             <div
               className={cn('px-6', {
                 'overflow-y-auto custom-scrollbar pb-6': scrollable,
-                'overflow-y-hidden min-h-0 flex-grow flex flex-col':
-                  !scrollable,
+                'min-h-0 flex-grow flex flex-col': !scrollable,
               })}
             >
               {children}
             </div>
           ) : null}
 
-          <div
-            className={cn('px-6 border-border border-t rounded-b-lg', {
-              'bg-background-gray py-6': !!footer,
-            })}
-          >
-            {footer ? <DialogFooter>{footer}</DialogFooter> : null}
-          </div>
+          {footer ? (
+            <div
+              className={cn('px-6 border-border border-t rounded-b-lg', {
+                'bg-background-gray py-6': !!footer,
+              })}
+            >
+              {footer ? <DialogFooter>{footer}</DialogFooter> : null}
+            </div>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

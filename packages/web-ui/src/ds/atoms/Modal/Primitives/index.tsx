@@ -34,20 +34,28 @@ const DialogOverlay = forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
-type DialogContentProps = Omit<
+export type DialogContentProps = Omit<
   ComponentPropsWithoutRef<typeof DialogPrimitive.Content>,
   'onEscapeKeyDown' | 'onPointerDownOutside' | 'onInteractOutside'
 > & {
   // By default clicking outside the dialog does not dismiss it
   // Pressing ESC will neither dismiss the dialog
   dismissible: boolean
+  height?: 'content' | 'screen'
 }
 const DialogContent = forwardRef<
   ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
 >(
   (
-    { className: _cn, children, forceMount, dismissible = false, ...props },
+    {
+      className: _cn,
+      children,
+      forceMount,
+      dismissible = false,
+      height = 'content',
+      ...props
+    },
     ref,
   ) => {
     const onEscapeKeyDown = useCallback(
@@ -81,8 +89,21 @@ const DialogContent = forwardRef<
           ref={ref}
           forceMount={forceMount}
           className={cn(
-            'fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] gap-4 max-h-[90%] border dark:border bg-background shadow duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg',
+            // base: centered + common anims
+            'fixed left-1/2 top-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-4 bg-background shadow rounded-lg duration-200',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out',
+            'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+            'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+            // always keep X-axis slide
+            'data-[state=closed]:slide-out-to-left-1/2 data-[state=open]:slide-in-from-left-1/2',
             _cn,
+            {
+              'max-h-[90%] border dark:border': height === 'content',
+              // only content height gets vertical slide
+              'data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-top-[48%]':
+                height === 'content',
+              'h-[96%]': height === 'screen',
+            },
           )}
           onEscapeKeyDown={onEscapeKeyDown}
           onPointerDownOutside={onPointerDownOutside}

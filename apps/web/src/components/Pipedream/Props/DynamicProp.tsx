@@ -69,6 +69,7 @@ export default function DynamicPipedreamProp({
   return (
     <div className={cn({ 'animate-pulse': isLoading })}>
       <Select
+        searchable
         loading={!config}
         name={prop.name}
         required={!prop.optional}

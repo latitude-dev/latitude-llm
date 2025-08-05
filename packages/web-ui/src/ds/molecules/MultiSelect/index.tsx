@@ -1,7 +1,4 @@
-// src/components/multi-select.tsx
-
-import * as React from 'react'
-
+import { forwardRef, KeyboardEvent, useEffect, useState } from 'react'
 import { cn } from '../../../lib/utils'
 import { Badge } from '../../atoms/Badge'
 import { Checkbox } from '../../atoms/Checkbox'
@@ -15,7 +12,6 @@ import {
 } from '../../atoms/Command'
 import { FormField } from '../../atoms/FormField'
 import { Popover } from '../../atoms/Popover'
-import { Separator } from '../../atoms/Separator'
 import { Text } from '../../atoms/Text'
 import { Icon, IconName } from '../../atoms/Icons'
 import { Skeleton } from '../../atoms/Skeleton'
@@ -42,12 +38,10 @@ interface MultiSelectProps extends Omit<typeof FormField, 'children'> {
   errors?: string[]
   disabled?: boolean
   loading?: boolean
+  size?: 'default' | 'small'
 }
 
-export const MultiSelect = React.forwardRef<
-  HTMLButtonElement,
-  MultiSelectProps
->(
+export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
   (
     {
       options,
@@ -66,17 +60,17 @@ export const MultiSelect = React.forwardRef<
       errors,
       name,
       disabled,
+      size = 'default',
       loading,
       ...props
     },
     ref,
   ) => {
-    const [selectedValues, setSelectedValues] =
-      React.useState<string[]>(defaultValue)
-    const [isPopoverOpen, setIsPopoverOpen] = React.useState(false)
-    const [isAnimating, setIsAnimating] = React.useState(false)
+    const [selectedValues, setSelectedValues] = useState<string[]>(defaultValue)
+    const [isPopoverOpen, setIsPopoverOpen] = useState(false)
+    const [isAnimating, setIsAnimating] = useState(false)
 
-    React.useEffect(() => {
+    useEffect(() => {
       const form = document.querySelector('form')
       if (form) {
         const handleSubmit = (e: Event) => {
@@ -90,9 +84,7 @@ export const MultiSelect = React.forwardRef<
       }
     }, [name, selectedValues])
 
-    const handleInputKeyDown = (
-      event: React.KeyboardEvent<HTMLInputElement>,
-    ) => {
+    const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
       if (disabled) return
       if (event.key === 'Enter') {
         setIsPopoverOpen(true)
@@ -182,8 +174,12 @@ export const MultiSelect = React.forwardRef<
                 {...props}
                 onClick={handleTogglePopover}
                 className={cn(
-                  'flex w-full p-2 min-h-8 rounded-md border items-center justify-between bg-inherit hover:bg-inherit [&_svg]:pointer-events-auto',
+                  'flex w-full rounded-md border items-center justify-between bg-inherit hover:bg-inherit [&_svg]:pointer-events-auto',
                   className,
+                  {
+                    'py-buttonDefaultVertical px-3 min-h-8': size === 'default',
+                    'py-0 px-1.5 min-h-6': size === 'small',
+                  },
                 )}
               >
                 {selectedValues.length > 0 ? (
@@ -243,19 +239,11 @@ export const MultiSelect = React.forwardRef<
                           handleClear()
                         }}
                       >
-                        <Icon
-                          name='close'
-                          size='small'
-                          color='foregroundMuted'
-                        />
+                        <Icon name='close' color='foregroundMuted' />
                       </div>
-                      <Separator
-                        orientation='vertical'
-                        className='flex min-h-6 h-full'
-                      />
                       <div className='cursor-pointer text-muted-foreground'>
                         <Icon
-                          name='chevronDown'
+                          name='chevronsUpDown'
                           size='normal'
                           color='foregroundMuted'
                         />
@@ -264,30 +252,31 @@ export const MultiSelect = React.forwardRef<
                   </div>
                 ) : (
                   <div className='flex items-center justify-between w-full'>
-                    <Text.H6 color='foregroundMuted'>{placeholder}</Text.H6>
-                    <div className='cursor-pointer text-muted-foreground px-2'>
-                      <Icon
-                        name='chevronDown'
-                        size='normal'
-                        color='foregroundMuted'
-                      />
-                    </div>
+                    <Text.H5>{placeholder}</Text.H5>
+                    <Icon
+                      name='chevronsUpDown'
+                      size='normal'
+                      color='foregroundMuted'
+                    />
                   </div>
                 )}
               </button>
             </Popover.Trigger>
             <Popover.Content
-              className='w-auto p-0'
+              size='auto'
+              className='p-0'
               align='start'
               onEscapeKeyDown={() => setIsPopoverOpen(false)}
             >
               <Command>
-                <CommandInput
-                  placeholder='Search...'
-                  onKeyDown={handleInputKeyDown}
-                  className='text-xs'
-                  disabled={disabled}
-                />
+                <div className='px-1'>
+                  <CommandInput
+                    placeholder='Search...'
+                    onKeyDown={handleInputKeyDown}
+                    className='text-xs'
+                    disabled={disabled}
+                  />
+                </div>
                 <CommandList>
                   <CommandEmpty>
                     <Text.H6>No results found.</Text.H6>
