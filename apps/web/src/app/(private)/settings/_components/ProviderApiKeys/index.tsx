@@ -50,10 +50,10 @@ export default function ProviderApiKeys() {
       </div>
       <div className='flex flex-col gap-2'>
         {isLoading && <TableSkeleton cols={6} rows={3} />}
-        {!isLoading && providerApiKeys.length > 0 && (
+        {!isLoading && workspace && providerApiKeys.length > 0 && (
           <ProviderApiKeysTable
             providerApiKeys={providerApiKeys}
-            workspace={workspace!}
+            workspace={workspace}
           />
         )}
         {!isLoading && providerApiKeys.length === 0 && (
