@@ -11,13 +11,19 @@ import { LatteChange } from '@latitude-data/constants/latte'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 
 const INPUT_PLACEHOLDERS = [
+  'How can I see the logs of my agent?',
+  'Optimize my prompts cost without sacrificing performance.',
+  'What is an evaluation?',
+  'How can I give context to an agent?',
+  'Find why my AI is not performing as expected.',
+  'Tell me about PromptL best practices',
+  'Create a workflow that extracts data from PDFs, summarizes it, and stores it in a database.',
+  'Create an AI Agent that automatically responds to support tickets.',
+  'How can I run an A/B test?',
+  'Make my prompt more effective at extracting key insights from a financial report.',
+  'What’s the best way to organize my subagents?',
   'Create a prompt that categorizes tickets based on their content.',
   'Turn this simple chatbot prompt into a multi-step AI agent that first searches the web and then summarizes the results.',
-  'Create an AI Agent that automatically responds to support tickets.',
-  'Create a workflow that extracts data from PDFs, summarizes it, and stores it in a database.',
-  'Make my prompt more effective at extracting key insights from a financial report.',
-  'Find why my AI is not performing as expected.',
-  'Optimize my prompts cost without sacrificing performance.',
 ]
 
 export function LatteChatInput({
