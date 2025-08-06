@@ -10,7 +10,7 @@ import { Commit, Workspace } from '../../../../../../browser'
 import { LatteTriggerAction } from '../../../../../../../../constants/src/latte/triggers'
 import {
   EmailTriggerConfiguration,
-  InsertScheduledTriggerConfiguration,
+  ScheduledTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
 import executeTriggerActions from './executeTriggerActions'
 import { NotFoundError } from '@latitude-data/constants/errors'
@@ -40,6 +40,7 @@ describe('Latte CRUD document triggers', () => {
           content: 'Doc 1 commit 1',
         }),
       },
+      skipMerge: true,
     })
     workspace = project.workspace
     commit = project.commit
@@ -125,7 +126,7 @@ describe('Latte CRUD document triggers', () => {
         triggerType: DocumentTriggerType.Scheduled,
         configuration: {
           cronExpression: '* * * 9 0',
-        } as InsertScheduledTriggerConfiguration,
+        } as ScheduledTriggerConfiguration,
       } as LatteTriggerAction
 
       const expectedError = new Error('Failed to create scheduled trigger')
@@ -320,7 +321,7 @@ describe('Latte CRUD document triggers', () => {
         triggerType: DocumentTriggerType.Scheduled,
         configuration: {
           cronExpression: '0 * * * *',
-        } as InsertScheduledTriggerConfiguration,
+        } as ScheduledTriggerConfiguration,
       } as LatteTriggerAction
 
       await executeTriggerActions({
@@ -339,7 +340,7 @@ describe('Latte CRUD document triggers', () => {
         triggerType: DocumentTriggerType.Scheduled,
         configuration: {
           cronExpression: '0 0 0 0 0',
-        } as InsertScheduledTriggerConfiguration,
+        } as ScheduledTriggerConfiguration,
       } as LatteTriggerAction
 
       const expectedLatteTriggerChanges = {
@@ -370,7 +371,7 @@ describe('Latte CRUD document triggers', () => {
         triggerType: DocumentTriggerType.Scheduled,
         configuration: {
           cronExpression: '0 0 0 0 0',
-        } as InsertScheduledTriggerConfiguration,
+        } as ScheduledTriggerConfiguration,
       } as LatteTriggerAction
 
       const expectedError = new NotFoundError(
@@ -399,7 +400,7 @@ describe('Latte CRUD document triggers', () => {
       triggerType: DocumentTriggerType.Scheduled,
       configuration: {
         cronExpression: '0 0 0 0 0',
-      } as InsertScheduledTriggerConfiguration,
+      } as ScheduledTriggerConfiguration,
     } as LatteTriggerAction
 
     const expectedError = new NotFoundError(

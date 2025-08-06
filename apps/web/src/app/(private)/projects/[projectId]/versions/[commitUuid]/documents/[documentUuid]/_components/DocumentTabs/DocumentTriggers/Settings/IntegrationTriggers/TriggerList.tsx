@@ -11,31 +11,32 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
-
-type IntegrationTrigger = Extract<
-  DocumentTrigger,
-  { triggerType: DocumentTriggerType.Integration }
->
 
 function DeleteTriggerButton({
   trigger,
   integration,
   component,
 }: {
-  trigger: IntegrationTrigger
+  trigger: DocumentTrigger<DocumentTriggerType.Integration>
   integration: PipedreamIntegration
   component?: PipedreamComponent
 }) {
-  const { isHead } = useCurrentCommit()
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const disabled = !!commit.mergedAt
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { delete: deleteTrigger, isDeleting } = useDocumentTriggers(
     {
-      documentUuid: trigger.documentUuid,
-      projectId: trigger.projectId,
+      projectId: project.id,
+      commitUuid: commit.uuid,
     },
     {
       onDeleted: () => setIsModalOpen(false),
@@ -47,7 +48,7 @@ function DeleteTriggerButton({
       <Button
         variant='ghost'
         className='p-0'
-        disabled={!isHead || isDeleting}
+        disabled={disabled || isDeleting}
         onClick={() => setIsModalOpen(true)}
         iconProps={{
           name: 'trash',
@@ -107,7 +108,7 @@ function IntegrationTriggerItem({
   trigger,
   onClick,
 }: {
-  trigger: IntegrationTrigger
+  trigger: DocumentTrigger<DocumentTriggerType.Integration>
   onClick: () => void
 }) {
   const { data: integrations, isLoading: isLoadingIntegrations } =
@@ -175,10 +176,13 @@ export function IntegrationTriggerList({
   triggers,
   onOpenTrigger,
 }: {
-  triggers: IntegrationTrigger[]
-  onOpenTrigger: (trigger?: IntegrationTrigger) => void
+  triggers: DocumentTrigger<DocumentTriggerType.Integration>[]
+  onOpenTrigger: (
+    trigger?: DocumentTrigger<DocumentTriggerType.Integration>,
+  ) => void
 }) {
-  const { isHead } = useCurrentCommit()
+  const { commit } = useCurrentCommit()
+  const disabled = !!commit.mergedAt
 
   return (
     <div className='flex flex-col gap-2'>
@@ -189,7 +193,7 @@ export function IntegrationTriggerList({
           onClick={() => onOpenTrigger(trigger)}
         />
       ))}
-      <Button fancy onClick={() => onOpenTrigger()} disabled={!isHead}>
+      <Button fancy onClick={() => onOpenTrigger()} disabled={disabled}>
         Add New Trigger
       </Button>
     </div>

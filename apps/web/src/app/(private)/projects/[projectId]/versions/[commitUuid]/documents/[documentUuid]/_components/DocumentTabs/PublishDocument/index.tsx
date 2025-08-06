@@ -223,7 +223,10 @@ export function PublishDocumentButton({
         </Button>
       </Popover.Trigger>
       <Popover.Content maxHeight='none' width={500} align='end'>
-        <NotEditableBanner description='Share settings cannot be modified in a Draft.' />
+        <NotEditableBanner
+          description='Share settings cannot be modified in a Draft.'
+          allowOnly='live'
+        />
         {isPublished ? (
           <PublishedDocumentSettings
             document={document}

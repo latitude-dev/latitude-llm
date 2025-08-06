@@ -2,7 +2,10 @@ import { useCallback } from 'react'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { ScheduleTriggerConfig } from './Configuration'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import { OnTriggerCreated } from '../../../client'
 import { type SavedConfig } from './Configuration/scheduleUtils'
 import {
@@ -17,11 +20,14 @@ export function ScheduleTrigger({
   onTriggerCreated: OnTriggerCreated
 }) {
   const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+
   const documentSelection = useDocumentSelection()
   const document = documentSelection.document
   const { create, isCreating } = useDocumentTriggers(
     {
       projectId: project.id,
+      commitUuid: commit.uuid,
     },
     {
       onCreated: (trigger) => {
@@ -36,10 +42,8 @@ export function ScheduleTrigger({
 
       create({
         documentUuid,
-        trigger: {
-          type: DocumentTriggerType.Scheduled,
-          configuration: config,
-        },
+        triggerType: DocumentTriggerType.Scheduled,
+        configuration: config,
       })
     },
     [create, documentUuid],

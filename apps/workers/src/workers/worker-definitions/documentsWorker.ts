@@ -7,6 +7,7 @@ const jobMappings = {
   runDocumentJob: jobs.runDocumentJob,
   runDocumentForExperimentJob: jobs.runDocumentForExperimentJob,
   runLatteJob: jobs.runLatteJob,
+  runDocumentTriggerEventJob: jobs.runDocumentTriggerEventJob,
 }
 
 export function startDocumentsWorker() {

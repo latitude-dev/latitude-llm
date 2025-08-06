@@ -2,37 +2,26 @@
 
 import { updateDocumentTriggerConfiguration } from '@latitude-data/core/services/documentTriggers/update'
 
-import { withDocument } from '../../procedures'
-import {
-  DocumentTriggerConfiguration,
-  emailTriggerConfigurationSchema,
-  insertScheduledTriggerConfigurationSchema,
-  integrationTriggerConfigurationSchema,
-} from '@latitude-data/constants/documentTriggers'
+import { documentTriggerConfigurationSchema } from '@latitude-data/constants/documentTriggers'
 import { z } from 'zod'
-import { DocumentTriggersRepository } from '@latitude-data/core/repositories'
+import { withCommit } from '$/actions/procedures'
 
-export const updateDocumentTriggerConfigurationAction = withDocument
+export const updateDocumentTriggerConfigurationAction = withCommit
   .createServerAction()
   .input(
     z.object({
-      documentTriggerId: z.number(),
-      configuration: z.union([
-        insertScheduledTriggerConfigurationSchema,
-        emailTriggerConfigurationSchema,
-        integrationTriggerConfigurationSchema,
-      ]),
+      documentTriggerUuid: z.string(),
+      configuration: documentTriggerConfigurationSchema,
     }),
   )
   .handler(async ({ input, ctx }) => {
-    const { documentTriggerId, configuration } = input
-    const scope = new DocumentTriggersRepository(ctx.workspace.id)
-    const trigger = await scope.find(documentTriggerId)
-    if (trigger.error) throw trigger.error
+    const { documentTriggerUuid, configuration } = input
+    const { workspace, commit } = ctx
 
     return updateDocumentTriggerConfiguration({
-      workspace: ctx.workspace,
-      documentTrigger: trigger.unwrap(),
-      configuration: configuration as DocumentTriggerConfiguration,
+      workspace,
+      commit,
+      triggerUuid: documentTriggerUuid,
+      configuration,
     }).then((r) => r.unwrap())
   })
