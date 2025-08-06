@@ -4,6 +4,7 @@ import {
   DocumentTrigger,
   DocumentVersion,
   IntegrationDto,
+  listModelsForProvider,
   Project,
   ProviderApiKey,
 } from '../../../../browser'
@@ -11,6 +12,7 @@ import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { IntegrationsRepository } from '../../../../repositories'
 import { Result } from '../../../../lib/Result'
+import { env } from '@latitude-data/env'
 
 export function projectPresenter(project: Project) {
   return {
@@ -77,6 +79,14 @@ export function providerPresenter(provider: ProviderApiKey) {
   return {
     name: provider.name,
     type: provider.provider,
+    models: Object.values(
+      listModelsForProvider({
+        provider: provider.provider,
+        name: provider.name,
+        defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
+      }),
+    ),
+    defaultModel: provider.defaultModel,
   }
 }
 
