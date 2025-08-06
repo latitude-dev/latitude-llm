@@ -4,7 +4,10 @@ import { create } from 'zustand'
 import { LatteInteraction } from '$/hooks/latte/types'
 import { LatteChange } from '@latitude-data/constants/latte'
 import { useCallback, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
+import {
+  AppLocalStorage,
+  useLocalStorage,
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
 
 interface LatteState {
   // Chat state
@@ -173,36 +176,24 @@ const useStore = create<LatteState>((set) => ({
 
 export const useLatteStore = () => {
   const store = useStore()
-  const searchParams = useSearchParams()
-  const replaceUrlState = useCallback(
-    (uuid: string | undefined) => {
-      const newSearchParams = new URLSearchParams(searchParams.toString())
-      if (uuid) {
-        newSearchParams.set('latteThreadUuid', uuid)
-      } else {
-        newSearchParams.delete('latteThreadUuid')
-      }
-
-      const newUrl = `?${newSearchParams.toString()}`
-      const currentUrl = `?${searchParams.toString()}`
-
-      if (newUrl !== currentUrl) {
-        window.history.replaceState(null, '', newUrl)
-      }
+  const { setValue: setStoredThreadUuid } = useLocalStorage<string | undefined>(
+    {
+      key: AppLocalStorage.latteThreadUuid,
+      defaultValue: undefined,
     },
-    [searchParams],
   )
+
   const setThreadUuid = useCallback(
     (uuid: string | undefined) => {
       store.setThreadUuid(uuid)
-      replaceUrlState(uuid)
+      setStoredThreadUuid(uuid)
     },
-    [store, replaceUrlState],
+    [store, setStoredThreadUuid],
   )
   const resetChat = useCallback(() => {
     store.resetChat()
-    replaceUrlState(undefined)
-  }, [store, replaceUrlState])
+    setStoredThreadUuid(undefined)
+  }, [store, setStoredThreadUuid])
 
   return useMemo(
     () => ({

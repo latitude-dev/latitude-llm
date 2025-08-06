@@ -5,7 +5,7 @@ import { createNewLatteAction } from '$/actions/latte/new'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useServerAction } from 'zsa-react'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import {
   LatteInteraction,
   LatteInteractionStep,
@@ -25,45 +25,43 @@ import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
 import { addFeedbackToLatteChangeAction } from '$/actions/latte/addFeedbackToLatteChange'
 import { LatteThreadUpdateArgs } from '@latitude-data/core/browser'
 import { useLatteStore } from '$/stores/latte'
-import { useSearchParams } from 'next/navigation'
-import { useLatteThreadProviderLog } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/providers/LatteThreadProvider'
-import { useMount } from '../useMount'
+import { useOnce } from '../useMount'
+import useProviderLogs from '$/stores/providerLogs'
+import { sortBy } from 'lodash-es'
+import {
+  AppLocalStorage,
+  useLocalStorage,
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
 
 /**
- * Synchronizes the Latte thread UUID with the URL search parameters on mount.
- * Reads the thread UUID from the URL on component mount and updates the store or the URL accordingly.
+ * Synchronizes the Latte thread UUID with local storage on mount.
+ * Reads the thread UUID from local storage on component mount and updates the store accordingly.
  */
 export function useSyncLatteUrlState() {
   const { threadUuid, setThreadUuid } = useLatteStore()
-  const searchParams = useSearchParams()
+  const { value: storedThreadUuid, setValue: setStoredThreadUuid } =
+    useLocalStorage<string | undefined>({
+      key: AppLocalStorage.latteThreadUuid,
+      defaultValue: undefined,
+    })
 
-  useMount(() => {
-    // If `threadUuid` exists and `urlThreadUuid` does not, set the URL search parameter to `threadUuid
-    // If both `threadUuid` and `urlThreadUuid` exist, update the URL search parameter to `threadUuid`
-    // If `threadUuid` does not exist but `urlThreadUuid` does, set `threadUuid` to `urlThreadUuid`
-    // If neither `threadUuid` nor `urlThreadUuid` exist, do nothing
-    const urlThreadUuid = searchParams.get('latteThreadUuid') || undefined
-    const newSearchParams = new URLSearchParams(searchParams.toString())
-
-    if (urlThreadUuid) {
+  useOnce(() => {
+    // If `threadUuid` exists and `storedThreadUuid` does not, set the local storage to `threadUuid`
+    // If both `threadUuid` and `storedThreadUuid` exist, update the local storage to `threadUuid`
+    // If `threadUuid` does not exist but `storedThreadUuid` does, set `threadUuid` to `storedThreadUuid`
+    // If neither `threadUuid` nor `storedThreadUuid` exist, do nothing
+    if (storedThreadUuid) {
       if (threadUuid) {
-        if (threadUuid !== urlThreadUuid) {
-          newSearchParams.set('latteThreadUuid', threadUuid)
+        if (threadUuid !== storedThreadUuid) {
+          setStoredThreadUuid(threadUuid)
         }
       } else {
-        setThreadUuid(urlThreadUuid)
+        setThreadUuid(storedThreadUuid)
       }
     } else {
       if (threadUuid) {
-        newSearchParams.set('latteThreadUuid', threadUuid)
+        setStoredThreadUuid(threadUuid)
       }
-    }
-
-    const newUrl = `?${newSearchParams.toString()}`
-    const currentUrl = `?${searchParams.toString()}`
-
-    if (newUrl !== currentUrl) {
-      window.history.replaceState(null, '', newUrl)
     }
   })
 }
@@ -426,12 +424,14 @@ export function useLatteProjectChanges() {
  * Loads and transforms provider logs into Latte interactions.
  * Fetches provider logs for the current thread UUID and converts them
  * into a structured format of user-assistant interactions with input/output pairs.
+ * Only runs if there are no previous interactions stored in the current chat state so to avoid overriding the current state.
  */
 export function useLoadThreadFromProviderLogs() {
-  const { setInteractions } = useLatteStore()
-  const { providerLog } = useLatteThreadProviderLog()
+  const { interactions, setInteractions } = useLatteStore()
+  const { providerLog, isLoading } = useLatteThreadProviderLog()
 
   useEffect(() => {
+    if (interactions.length > 0) return
     if (!providerLog) return
 
     // iterate over provider log messages and transform them to an array of interactions. Interactors are input/output pairs input defined as any message from a user and outputs defined as all messages not from user until the next user message.
@@ -472,5 +472,23 @@ export function useLoadThreadFromProviderLogs() {
     if (_interactions.length > 0) {
       setInteractions(_interactions)
     }
-  }, [providerLog, setInteractions])
+  }, [providerLog, setInteractions, interactions])
+
+  return isLoading
+}
+
+/**
+ * Fetches the latest provider log for the current thread UUID.
+ */
+const useLatteThreadProviderLog = () => {
+  const { threadUuid } = useLatteStore()
+  const { data: providerLogs, ...rest } = useProviderLogs({
+    documentLogUuid: threadUuid,
+  })
+  const providerLog = useMemo(
+    () => sortBy(providerLogs, 'generatedAt').at(-1),
+    [providerLogs],
+  )
+
+  return useMemo(() => ({ providerLog, ...rest }), [providerLog, rest])
 }

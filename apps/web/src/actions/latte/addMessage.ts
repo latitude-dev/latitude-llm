@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
 import { LatteThreadsRepository } from '@latitude-data/core/repositories'
 import { createLatteJob } from '@latitude-data/core/services/copilot/latte/addMessage'
+import { NotFoundError } from '@latitude-data/constants/errors'
 
 export const addMessageToLatteAction = authProcedure
   .createServerAction()
@@ -19,9 +20,13 @@ export const addMessageToLatteAction = authProcedure
     const { message, threadUuid, context } = input
 
     const threadScope = new LatteThreadsRepository(workspace.id)
-    const thread = await threadScope
-      .findByUuidAndUser({ threadUuid, userId: user.id })
-      .then((r) => r.unwrap())
+    const thread = await threadScope.findByUuidAndUser({
+      threadUuid,
+      userId: user.id,
+    })
+    if (!thread) {
+      throw new NotFoundError('Latte thread not found')
+    }
 
     const runResult = await createLatteJob({
       workspace,

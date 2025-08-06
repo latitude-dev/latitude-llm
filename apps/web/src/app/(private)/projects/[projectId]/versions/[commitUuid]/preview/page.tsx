@@ -2,9 +2,6 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { LatteLayout } from '$/components/LatteLayout'
 import { TriggersList } from './_components/TriggersList'
-import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core/data-access'
-import { LatteThreadProvider } from '../providers/LatteThreadProvider'
-import serializeProviderLog from '@latitude-data/core/services/providerLogs/serialize'
 import {
   DocumentTriggersRepository,
   IntegrationsRepository,
@@ -13,13 +10,10 @@ import { TriggersBlankSlate } from './_components/TriggersBlankSlate'
 
 export default async function PreviewPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ projectId: string; commitUuid: string }>
-  searchParams: Promise<{ latteThreadUuid?: string }>
 }) {
   const { workspace } = await getCurrentUserOrRedirect()
-  const { latteThreadUuid } = await searchParams
   const { projectId } = await params
   const scope = new DocumentTriggersRepository(workspace.id)
   const integrationTriggers = await scope
@@ -32,29 +26,22 @@ export default async function PreviewPage({
     .findAll()
     .then((r) => r.unwrap())
     .then((integrations) => integrations.filter((i) => i.type === 'pipedream'))
-  const providerLog = latteThreadUuid
-    ? await findLastProviderLogFromDocumentLogUuid(latteThreadUuid)
-    : undefined
 
   return (
-    <LatteThreadProvider
-      providerLog={providerLog ? serializeProviderLog(providerLog) : undefined}
-    >
-      <div className='flex-1 min-h-0'>
-        <LatteLayout>
-          <div className='flex flex-col h-full p-4'>
-            {integrationTriggers.length > 0 ? (
-              <TriggersList
-                triggers={integrationTriggers}
-                // @ts-expect-error - integrations is a union type but we are only passing pipedream type integrations
-                integrations={integrations}
-              />
-            ) : (
-              <TriggersBlankSlate />
-            )}
-          </div>
-        </LatteLayout>
-      </div>
-    </LatteThreadProvider>
+    <div className='flex-1 min-h-0'>
+      <LatteLayout>
+        <div className='flex flex-col h-full p-4'>
+          {integrationTriggers.length > 0 ? (
+            <TriggersList
+              triggers={integrationTriggers}
+              // @ts-expect-error - integrations is a union type but we are only passing pipedream type integrations
+              integrations={integrations}
+            />
+          ) : (
+            <TriggersBlankSlate />
+          )}
+        </div>
+      </LatteLayout>
+    </div>
   )
 }
