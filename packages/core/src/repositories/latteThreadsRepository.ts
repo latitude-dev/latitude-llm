@@ -1,7 +1,6 @@
 import { and, eq, getTableColumns } from 'drizzle-orm'
 
 import { LatteThread, LatteThreadCheckpoint } from '../browser'
-import { LatitudeError, NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { PromisedResult } from '../lib/Transaction'
 import { latteThreadCheckpoints, latteThreads } from '../schema'
@@ -26,16 +25,13 @@ export class LatteThreadsRepository extends Repository<LatteThread> {
     threadUuid,
   }: {
     threadUuid: string
-  }): PromisedResult<LatteThread, LatitudeError> {
+  }): Promise<LatteThread | undefined> {
     const result = await this.db
       .select()
       .from(latteThreads)
       .where(and(this.scopeFilter, eq(latteThreads.uuid, threadUuid)))
 
-    if (!result.length) {
-      return Result.error(new NotFoundError('Latte thread not found'))
-    }
-    return Result.ok(result[0]! as LatteThread)
+    return result[0]
   }
 
   async findByUuidAndUser({
@@ -44,7 +40,7 @@ export class LatteThreadsRepository extends Repository<LatteThread> {
   }: {
     threadUuid: string
     userId: string
-  }): PromisedResult<LatteThread, LatitudeError> {
+  }): Promise<LatteThread | undefined> {
     const result = await this.db
       .select()
       .from(latteThreads)
@@ -56,10 +52,7 @@ export class LatteThreadsRepository extends Repository<LatteThread> {
         ),
       )
 
-    if (!result.length) {
-      return Result.error(new NotFoundError('Latte thread not found'))
-    }
-    return Result.ok(result[0]! as LatteThread)
+    return result[0]
   }
 
   async findAllCheckpoints(

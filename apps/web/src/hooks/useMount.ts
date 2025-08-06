@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react'
 
-export function useMount(callback: () => void) {
+export function useOnce(callback: () => void, enabled = true) {
   const mounted = useRef(false)
+
   useEffect(() => {
-    if (mounted.current) return
+    if (mounted.current || !enabled) return
     mounted.current = true
 
     callback()
-  }, [callback])
+  }, [callback, enabled])
 }

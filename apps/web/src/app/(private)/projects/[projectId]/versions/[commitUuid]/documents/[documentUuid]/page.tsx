@@ -13,9 +13,6 @@ import { env } from '@latitude-data/env'
 import { redirect } from 'next/navigation'
 import DocumentEditor from './_components/DocumentEditor/Editor'
 import { ExperimentsRepository } from '@latitude-data/core/repositories'
-import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core/data-access'
-import { LatteThreadProvider } from '../../providers/LatteThreadProvider'
-import serializeProviderLog from '@latitude-data/core/services/providerLogs/serialize'
 
 async function getDiffFromExperimentId({
   workspaceId,
@@ -46,7 +43,6 @@ export default async function DocumentPage({
   }>
   searchParams: Promise<{
     applyExperimentId?: string
-    latteThreadUuid?: string
   }>
 }) {
   const { projectId: pjid, commitUuid, documentUuid } = await params
@@ -79,24 +75,14 @@ export default async function DocumentPage({
     experimentId: Number(awaitedSearchParams?.['applyExperimentId']),
   })
 
-  const providerLog = awaitedSearchParams?.['latteThreadUuid']
-    ? await findLastProviderLogFromDocumentLogUuid(
-        awaitedSearchParams?.['latteThreadUuid'],
-      )
-    : undefined
-
   return (
-    <LatteThreadProvider
-      providerLog={providerLog ? serializeProviderLog(providerLog) : undefined}
-    >
-      <DocumentEditor
-        documents={documents}
-        document={document}
-        providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
-        freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
-        copilotEnabled={env.LATITUDE_CLOUD}
-        initialDiff={initialDiff}
-      />
-    </LatteThreadProvider>
+    <DocumentEditor
+      documents={documents}
+      document={document}
+      providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
+      freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
+      copilotEnabled={env.LATITUDE_CLOUD}
+      initialDiff={initialDiff}
+    />
   )
 }
