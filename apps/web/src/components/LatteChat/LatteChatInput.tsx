@@ -43,7 +43,10 @@ export function LatteChatInput({
   acceptChanges: () => void
   undoChanges: () => void
   feedbackRequested?: boolean
-  addFeedbackToLatteChange?: (feedback: string) => void
+  addFeedbackToLatteChange?: (
+    feedback: string,
+    evaluationResultUuid?: string,
+  ) => void
 }) {
   const placeholder = useTypeWriterValue(
     inConversation ? [] : INPUT_PLACEHOLDERS,
@@ -154,7 +157,7 @@ function LatteChangesFeedback({
   onSubmit,
   action,
 }: {
-  onSubmit: (feedback: string) => void
+  onSubmit: (feedback: string, evaluationResultUuid?: string) => void
   action: 'accept' | 'undo'
 }) {
   const [value, setValue] = useState('')

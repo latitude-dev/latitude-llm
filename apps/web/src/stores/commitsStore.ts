@@ -1,3 +1,5 @@
+'use client'
+
 import { Commit, CommitStatus } from '@latitude-data/core/browser'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'

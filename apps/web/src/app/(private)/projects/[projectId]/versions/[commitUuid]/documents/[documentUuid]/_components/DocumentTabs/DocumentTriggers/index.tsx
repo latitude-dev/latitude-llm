@@ -1,4 +1,5 @@
 'use client'
+
 import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'

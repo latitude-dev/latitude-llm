@@ -1,3 +1,5 @@
+'use client'
+
 import { type DependencyList, useEffect } from 'react'
 import type { SubscriptionEvents, SubscriptionFn, TriggerFn } from './generics'
 import type { Events } from './types'

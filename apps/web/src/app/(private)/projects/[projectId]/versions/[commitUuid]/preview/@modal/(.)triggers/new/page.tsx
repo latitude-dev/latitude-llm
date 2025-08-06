@@ -1,4 +1,4 @@
-import { Client } from '../../@modal/(.)triggers/new/client'
+import { Client } from './client'
 
 export default function NewTriggersPage() {
   return <Client />

@@ -24,6 +24,7 @@ import {
 } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { notFound, redirect } from 'next/navigation'
+import { LatteRealtimeUpdatesProvider } from './providers/LatteRealtimeUpdatesProvider'
 
 export type CommitPageParams = {
   children: ReactNode
@@ -72,10 +73,11 @@ export default async function CommitLayout({
 
     throw error
   }
+
   return (
     <ProjectProvider project={project}>
       <CommitProvider commit={commit} isHead={isHead}>
-        {children}
+        <LatteRealtimeUpdatesProvider>{children}</LatteRealtimeUpdatesProvider>
       </CommitProvider>
     </ProjectProvider>
   )

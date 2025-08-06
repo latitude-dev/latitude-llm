@@ -1,5 +1,5 @@
 'use client'
-import { useLatte } from '$/hooks/latte'
+
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useRef } from 'react'
 import { LatteMessageList } from './_components/MessageList'
@@ -8,20 +8,30 @@ import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { LatteChatInput } from './LatteChatInput'
 import Image from 'next/image'
+import { useLatteStore } from '$/stores/latte'
+import {
+  useLatteChangeActions,
+  useLatteChatActions,
+  useLoadThreadFromProviderLogs,
+  useSyncLatteUrlState,
+} from '$/hooks/latte'
 
 export function LatteChat() {
+  useLoadThreadFromProviderLogs()
+  useSyncLatteUrlState()
+
   const {
-    sendMessage,
     isLoading,
     resetChat,
     interactions,
     error,
     changes,
-    acceptChanges,
-    undoChanges,
-    feedbackRequested,
-    addFeedbackToLatteChange,
-  } = useLatte()
+    latteActionsFeedbackUuid,
+  } = useLatteStore()
+
+  const { sendMessage } = useLatteChatActions()
+  const { acceptChanges, undoChanges, addFeedbackToLatteChange } =
+    useLatteChangeActions()
 
   const inConversation = interactions.length > 0
   const containerRef = useRef<HTMLDivElement>(null)
@@ -39,7 +49,7 @@ export function LatteChat() {
 
   return (
     <div className='w-full h-full max-h-full flex flex-col items-center bg-latte-background'>
-      <div className='flex flex-col h-full w-full items-center gap-4 max-w-[1200px] m-auto'>
+      <div className='flex-1 flex flex-col h-full w-full items-center gap-4 max-w-[1200px] m-auto'>
         <div className='flex-grow min-h-0 h-full w-full flex flex-col items-center justify-center relative'>
           <div
             className='w-full h-full  overflow-hidden custom-scrollbar flex flex-col gap-4 items-center'
@@ -66,7 +76,7 @@ export function LatteChat() {
                   inConversation={false}
                   scrollToBottom={scrollToBottom}
                   isLoading={isLoading}
-                  feedbackRequested={feedbackRequested}
+                  feedbackRequested={!!latteActionsFeedbackUuid}
                   addFeedbackToLatteChange={addFeedbackToLatteChange}
                 />
               </div>
@@ -90,24 +100,24 @@ export function LatteChat() {
               </>
             )}
           </div>
+          {inConversation && (
+            <div className='w-full p-8'>
+              <LatteChatInput
+                inConversation
+                sendMessage={sendMessage}
+                resetChat={resetChat}
+                changes={changes}
+                undoChanges={undoChanges}
+                acceptChanges={acceptChanges}
+                error={error}
+                scrollToBottom={scrollToBottom}
+                isLoading={isLoading}
+                feedbackRequested={!!latteActionsFeedbackUuid}
+                addFeedbackToLatteChange={addFeedbackToLatteChange}
+              />
+            </div>
+          )}
         </div>
-        {inConversation && (
-          <div className='w-full p-8'>
-            <LatteChatInput
-              inConversation
-              sendMessage={sendMessage}
-              resetChat={resetChat}
-              changes={changes}
-              undoChanges={undoChanges}
-              acceptChanges={acceptChanges}
-              error={error}
-              scrollToBottom={scrollToBottom}
-              isLoading={isLoading}
-              feedbackRequested={feedbackRequested}
-              addFeedbackToLatteChange={addFeedbackToLatteChange}
-            />
-          </div>
-        )}
       </div>
     </div>
   )

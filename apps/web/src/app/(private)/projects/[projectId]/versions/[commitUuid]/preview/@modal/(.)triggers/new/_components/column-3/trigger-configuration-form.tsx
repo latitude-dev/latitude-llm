@@ -17,7 +17,7 @@ import {
   PipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/browser'
-import { IntegrationTriggerConfig } from '../../../../../documents/[documentUuid]/_components/DocumentTabs/DocumentTriggers/Modal/IntegrationTriggerConfig'
+import { IntegrationTriggerConfig } from '../../../../../../documents/[documentUuid]/_components/DocumentTabs/DocumentTriggers/Modal/IntegrationTriggerConfig'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 

@@ -20,7 +20,7 @@ export const latteThreads = latitudeSchema.table(
     uuid: uuid('uuid')
       .notNull()
       .unique()
-      .default(sql`gen_random_uuid()`),
+      .default(sql`gen_random_uuid()`), // Points to a document log uuid
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),

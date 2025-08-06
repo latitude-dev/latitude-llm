@@ -14,6 +14,7 @@ export function Client() {
   const navigate = useNavigate()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
+
   return (
     <Modal
       open
@@ -22,13 +23,13 @@ export function Client() {
       size='xl'
       title='Add new trigger'
       description='Add a new trigger to run this project automatically'
-      onOpenChange={() =>
+      onOpenChange={() => {
         navigate.push(
           ROUTES.projects
             .detail({ id: project.id })
             .commits.detail({ uuid: commit.uuid }).preview.root,
         )
-      }
+      }}
     >
       <TriggersModalProvider>
         <div className='grid grid-cols-3 gap-4 w-full h-full overflow-y-hidden'>

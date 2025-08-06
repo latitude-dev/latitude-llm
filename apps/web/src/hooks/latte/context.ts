@@ -1,3 +1,5 @@
+'use client'
+
 import { useCommitsFromProject } from '$/stores/commitsStore'
 import useDocumentVersions from '$/stores/documentVersions'
 import useProjects from '$/stores/projects'
