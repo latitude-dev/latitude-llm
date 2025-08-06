@@ -2,27 +2,23 @@
 
 import { deleteDocumentTrigger } from '@latitude-data/core/services/documentTriggers/delete'
 
-import { withDocument } from '../../procedures'
+import { withCommit } from '$/actions/procedures'
 import { z } from 'zod'
-import { DocumentTriggersRepository } from '@latitude-data/core/repositories'
 
-export const deleteDocumentTriggerAction = withDocument
+export const deleteDocumentTriggerAction = withCommit
   .createServerAction()
   .input(
     z.object({
-      documentTriggerId: z.number(),
+      documentTriggerUuid: z.string(),
     }),
   )
   .handler(async ({ input, ctx }) => {
-    const { documentTriggerId } = input
-
-    const scope = new DocumentTriggersRepository(ctx.workspace.id)
-    const trigger = await scope.find(documentTriggerId)
-
-    if (trigger.error) throw trigger.error
+    const { documentTriggerUuid } = input
+    const { workspace, commit } = ctx
 
     return deleteDocumentTrigger({
-      workspace: ctx.workspace,
-      documentTrigger: trigger.unwrap(),
+      workspace,
+      commit,
+      triggerUuid: documentTriggerUuid,
     }).then((r) => r.unwrap())
   })

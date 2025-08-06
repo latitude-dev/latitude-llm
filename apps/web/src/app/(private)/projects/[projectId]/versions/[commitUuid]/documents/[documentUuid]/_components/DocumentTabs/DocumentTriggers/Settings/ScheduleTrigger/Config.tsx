@@ -49,8 +49,8 @@ export function ScheduleTriggerConfig({
     convertToScheduleConfig(initialConfig),
   )
   const [isDirty, setIsDirty] = useState(false)
-  const { isHead } = useCurrentCommit()
-  const canEdit = isHead && !isLoading
+  const { commit } = useCurrentCommit()
+  const disabled = !!commit.mergedAt || isLoading
 
   const updateConfig = (updater: (prev: ScheduleConfig) => ScheduleConfig) => {
     setConfig(updater)
@@ -136,14 +136,14 @@ export function ScheduleTriggerConfig({
           fancy
           variant='destructive'
           onClick={handleDestroy}
-          disabled={!canEdit || isLoading || !canDestroy}
+          disabled={disabled || isLoading || !canDestroy}
         >
           Remove
         </Button>
         <Button
           fancy
           onClick={handleSave}
-          disabled={!canEdit || isLoading || !isDirty}
+          disabled={disabled || isLoading || !isDirty}
         >
           Save Changes
         </Button>

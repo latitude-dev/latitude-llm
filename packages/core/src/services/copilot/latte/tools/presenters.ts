@@ -152,7 +152,7 @@ async function triggerDocumentPresenter({
   }
   const integrationTriggers = triggers.filter(
     (trigger) => trigger.triggerType === DocumentTriggerType.Integration,
-  )
+  ) as DocumentTrigger<DocumentTriggerType.Integration>[]
 
   const integrationScope = new IntegrationsRepository(workspaceId)
   for (const trigger of integrationTriggers) {

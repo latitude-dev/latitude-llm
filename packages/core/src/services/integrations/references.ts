@@ -1,10 +1,13 @@
 import { LatitudeError } from '@latitude-data/constants/errors'
-import { IntegrationDto } from '../../browser'
+import { DocumentTrigger, IntegrationDto } from '../../browser'
 import { PromisedResult } from '../../lib/Transaction'
 import { DocumentTriggersRepository } from '../../repositories'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { IntegrationReference } from '@latitude-data/constants'
+import {
+  DocumentTriggerType,
+  IntegrationReference,
+} from '@latitude-data/constants'
 
 export async function listReferences(
   integration: IntegrationDto,
@@ -14,7 +17,17 @@ export async function listReferences(
     integration.workspaceId,
     db,
   )
-  const references = await triggersScope.findByIntegrationId(integration.id)
+
+  const triggersResult = await triggersScope.getAllActiveTriggersInWorkspace()
+  if (!Result.isOk(triggersResult)) return triggersResult
+
+  const triggers = triggersResult.unwrap()
+  const references = triggers.filter(
+    (trigger) =>
+      trigger.triggerType === DocumentTriggerType.Integration &&
+      (trigger as DocumentTrigger<DocumentTriggerType.Integration>)
+        .configuration.integrationId === integration.id,
+  )
 
   return Result.ok(
     references.map((trigger) => ({

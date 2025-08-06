@@ -1,5 +1,5 @@
 import useDocumentTriggers from '$/stores/documentTriggers'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useMemo } from 'react'
 import { ScheduleTriggerConfig } from './Config'
@@ -8,9 +8,11 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 export function ScheduleTriggerSettings({
   document,
   projectId,
+  commitUuid,
 }: {
   document: DocumentVersion
   projectId: number
+  commitUuid: string
 }) {
   const {
     data: documentTriggers,
@@ -23,13 +25,14 @@ export function ScheduleTriggerSettings({
     isUpdating,
   } = useDocumentTriggers({
     projectId,
+    commitUuid,
     documentUuid: document.documentUuid,
   })
   const trigger = useMemo(
     () =>
       documentTriggers.find(
         (t) => t.triggerType === DocumentTriggerType.Scheduled,
-      ),
+      ) as DocumentTrigger<DocumentTriggerType.Scheduled> | undefined,
     [documentTriggers],
   )
   const onChangeConfig = useMemo(
@@ -43,8 +46,7 @@ export function ScheduleTriggerSettings({
 
       if (trigger) {
         update({
-          documentUuid: document.documentUuid,
-          documentTrigger: trigger,
+          documentTriggerUuid: trigger.uuid,
           configuration: config,
         })
         return
@@ -52,10 +54,8 @@ export function ScheduleTriggerSettings({
 
       create({
         documentUuid: document.documentUuid,
-        trigger: {
-          type: DocumentTriggerType.Scheduled,
-          configuration: config,
-        },
+        triggerType: DocumentTriggerType.Scheduled,
+        configuration: config,
       })
     },
     [trigger, create, deleteFn, update, document.documentUuid],

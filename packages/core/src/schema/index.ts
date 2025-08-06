@@ -56,6 +56,7 @@ export * from './models/experiments'
 // Public sharing & Triggers
 export * from './models/publishedDocuments'
 export * from './models/documentTriggers'
+export * from './models/documentTriggerEvents'
 
 // Integrations
 export * from './models/integrations'

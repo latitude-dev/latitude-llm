@@ -139,8 +139,9 @@ export function EmailTriggerConfig({
   const { data: users } = useUsers()
 
   const { document } = useCurrentDocument()
-  const { commit, isHead } = useCurrentCommit()
-  const canEdit = isHead && !isLoading
+  const { commit } = useCurrentCommit()
+
+  const disabled = !!commit.mergedAt || isLoading
 
   const {
     manual: { inputs },
@@ -234,7 +235,7 @@ export function EmailTriggerConfig({
     <div className='flex flex-col gap-6'>
       <Section title='Access'>
         <Select
-          disabled={!canEdit}
+          disabled={disabled}
           name='availability'
           options={Object.entries(AVAILABILITY_OPTIONS).map(([key, value]) => ({
             value: key,
@@ -253,7 +254,7 @@ export function EmailTriggerConfig({
                 name='email'
                 placeholder='Email or domain'
                 value={emailInput}
-                disabled={!canEdit}
+                disabled={disabled}
                 onChange={(e) => setEmailInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && onAddEmail()}
               />
@@ -261,7 +262,7 @@ export function EmailTriggerConfig({
                 variant='outline'
                 fancy
                 onClick={onAddEmail}
-                disabled={emailInput.trim().length === 0 || !canEdit}
+                disabled={emailInput.trim().length === 0 || disabled}
               >
                 Add
               </Button>
@@ -296,7 +297,7 @@ export function EmailTriggerConfig({
                 parameterNames={documentParameters}
                 parameters={parameters}
                 setParameters={setParameters}
-                disabled={!canEdit}
+                disabled={disabled}
               />
             </Section>
           )}
@@ -305,7 +306,7 @@ export function EmailTriggerConfig({
               name='emailName'
               label='Name'
               value={name}
-              disabled={!canEdit}
+              disabled={disabled}
               onChange={(e) => setName(e.target.value)}
               placeholder={document.path.split('/').at(-1)}
             />
@@ -327,7 +328,7 @@ export function EmailTriggerConfig({
             <div className='flex gap-2 justify-between'>
               <Text.H5>Reply with response</Text.H5>
               <SwitchToggle
-                disabled={!canEdit}
+                disabled={disabled}
                 checked={replyWithResponse}
                 onClick={() => setReplyWithResponse((prev) => !prev)}
               />
@@ -341,7 +342,7 @@ export function EmailTriggerConfig({
           fancy
           onClick={onSaveChange}
           isLoading={isLoading}
-          disabled={!canEdit}
+          disabled={disabled}
         >
           Save changes
         </Button>

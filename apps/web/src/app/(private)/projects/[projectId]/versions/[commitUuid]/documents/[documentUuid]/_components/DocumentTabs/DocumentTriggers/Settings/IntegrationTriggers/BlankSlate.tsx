@@ -8,7 +8,8 @@ export function TriggersBlankSlate({
 }: {
   openTriggerModal: () => void
 }) {
-  const { isHead } = useCurrentCommit()
+  const { commit } = useCurrentCommit()
+  const disabled = !!commit.mergedAt
 
   return (
     <div className='flex flex-col items-center w-full gap-4 p-4'>
@@ -26,7 +27,7 @@ export function TriggersBlankSlate({
           fancy
           variant='default'
           onClick={() => openTriggerModal()}
-          disabled={!isHead}
+          disabled={disabled}
         >
           Add Trigger
         </Button>

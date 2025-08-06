@@ -1,242 +1,284 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DocumentTriggerType, DocumentVersion } from '@latitude-data/constants'
-import { DocumentTrigger, Project, Workspace } from '../../browser'
+import {
+  DocumentTriggerType,
+  DocumentVersion,
+  Providers,
+} from '@latitude-data/constants'
+import { Commit, Project, Workspace } from '../../browser'
 import { createDocumentTrigger } from './create'
-import * as buildConfigurationModule from './helpers/buildConfiguration'
-import { documentTriggers } from '../../schema'
+import { BadRequestError, LatitudeError } from '../../lib/errors'
+import * as factories from '../../tests/factories'
+import { mergeCommit } from '../commits'
+import { Result } from '../../lib/Result'
 import {
   EmailTriggerConfiguration,
-  InsertScheduledTriggerConfiguration,
   ScheduledTriggerConfiguration,
+  IntegrationTriggerConfiguration,
+  EmailTriggerDeploymentSettings,
+  ScheduledTriggerDeploymentSettings,
+  IntegrationTriggerDeploymentSettings,
 } from '@latitude-data/constants/documentTriggers'
-import { LatitudeError } from './../../lib/errors'
+import { DocumentTriggersRepository } from '../../repositories'
+
+const mocks = vi.hoisted(() => ({
+  deployDocumentTrigger: vi.fn(),
+}))
+
+vi.mock('./deploy', () => ({
+  deployDocumentTrigger: mocks.deployDocumentTrigger,
+}))
 
 describe('createDocumentTrigger', () => {
   let workspace: Workspace
   let project: Project
+  let draft: Commit
   let document: DocumentVersion
-  let mockTx: any
-  let mockInsert: any
-  let mockValues: any
-  let mockReturning: any
 
-  const mocks = vi.hoisted(() => ({
-    transactionMock: vi.fn(),
-  }))
+  beforeEach(async () => {
+    // Reset all mocks
+    vi.clearAllMocks()
 
-  beforeEach(() => {
-    // Setup test data
-    workspace = { id: 1 } as Workspace
-    project = { id: 2 } as Project
-    document = { documentUuid: 'test-doc-uuid' } as DocumentVersion
-
-    // Setup mock transaction and database
-    mockReturning = vi.fn()
-    mockValues = vi.fn().mockReturnValue({ returning: mockReturning })
-    mockInsert = vi.fn().mockReturnValue({ values: mockValues })
-    mockTx = { insert: mockInsert }
-    mocks.transactionMock.prototype.call = vi.fn(
-      async (fn: (tx: any) => Promise<any>) => {
-        return await fn(mockTx)
+    const {
+      workspace: w,
+      project: p,
+      commit: c,
+      documents,
+    } = await factories.createProject({
+      providers: [{ name: 'openai', type: Providers.OpenAI }],
+      documents: {
+        foo: factories.helpers.createPrompt({ provider: 'openai' }),
       },
-    )
-
-    vi.mock('./../../lib/Transaction', async (importOriginal) => ({
-      ...(await importOriginal()),
-      default: mocks.transactionMock,
-    }))
-
-    // Mock the generateUUIDIdentifier function by importing and mocking it
-    vi.mock('../../lib/generateUUID', async (importOriginal) => {
-      const original =
-        await importOriginal<typeof import('../../lib/generateUUID')>()
-      return {
-        ...original,
-        generateUUIDIdentifier: vi.fn().mockReturnValue('mocked-uuid'),
-      }
+      skipMerge: true,
     })
 
-    // Mock the buildConfiguration function
-    vi.spyOn(buildConfigurationModule, 'buildConfiguration').mockImplementation(
-      ({ triggerType, configuration }) => {
-        if (triggerType === DocumentTriggerType.Email) {
-          return configuration as EmailTriggerConfiguration
-        } else if (triggerType === DocumentTriggerType.Scheduled) {
-          return {
-            ...configuration,
-            lastRun: new Date('2023-01-01'),
-            nextRunTime: new Date('2023-01-02'),
-          } as ScheduledTriggerConfiguration
-        } else {
-          return {
-            integrationId: 1,
-            triggerId: 'mocked-trigger-id',
-            payloadParameters: ['mocked-payload-parameter'],
-            componentId: 'mocked-component-id',
-            properties: {},
-          }
-        }
-      },
-    )
+    workspace = w
+    project = p
+    draft = c
+    document = documents[0]!
   })
 
-  it('creates an email document trigger successfully', async () => {
-    // Arrange
-    const emailConfiguration: EmailTriggerConfiguration = {
-      emailWhitelist: ['test@example.com'],
-      replyWithResponse: true,
-    }
+  describe('when commit is merged', () => {
+    it('returns error when trying to create trigger in merged commit', async () => {
+      // Arrange
+      const commit = await mergeCommit(draft).then((r) => r.unwrap())
 
-    mockReturning.mockResolvedValue([
-      {
-        uuid: 'mocked-uuid',
-        workspaceId: workspace.id,
-        documentUuid: document.documentUuid,
-        projectId: project.id,
+      // Act
+      const result = await createDocumentTrigger({
+        workspace,
+        project,
+        commit,
+        document,
         triggerType: DocumentTriggerType.Email,
-        configuration: emailConfiguration,
-      } as DocumentTrigger,
-    ])
+        configuration: {
+          emailWhitelist: ['test@example.com'],
+          replyWithResponse: true,
+        },
+      })
 
-    // Act
-    const result = await createDocumentTrigger({
-      workspace,
-      document,
-      projectId: project.id,
-      trigger: {
-        type: DocumentTriggerType.Email,
-        configuration: emailConfiguration,
-      },
-    })
-
-    // Assert
-    expect(result.error).toBeUndefined()
-    expect(result.value).toBeDefined()
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
-    )
-    expect(mockTx.insert).toHaveBeenCalledWith(documentTriggers)
-    expect(mockValues).toHaveBeenCalledWith({
-      uuid: 'mocked-uuid',
-      workspaceId: workspace.id,
-      documentUuid: document.documentUuid,
-      projectId: project.id,
-      triggerType: DocumentTriggerType.Email,
-      configuration: emailConfiguration,
-    })
-    expect(buildConfigurationModule.buildConfiguration).toHaveBeenCalledWith({
-      triggerType: DocumentTriggerType.Email,
-      configuration: emailConfiguration,
-    })
-
-    expect(result.value).toEqual({
-      uuid: 'mocked-uuid',
-      workspaceId: workspace.id,
-      documentUuid: document.documentUuid,
-      projectId: project.id,
-      triggerType: DocumentTriggerType.Email,
-      configuration: emailConfiguration,
+      // Assert
+      expect(result.ok).toBeFalsy()
+      expect(result.error).toBeInstanceOf(BadRequestError)
+      expect(result.error?.message).toBe(
+        'Cannot create document trigger in a merged commit',
+      )
+      expect(mocks.deployDocumentTrigger).not.toHaveBeenCalled()
     })
   })
 
-  it('creates a scheduled document trigger successfully', async () => {
-    // Arrange
-    const scheduledConfiguration: InsertScheduledTriggerConfiguration = {
-      cronExpression: '0 0 * * *',
-    }
+  describe('when deployment fails', () => {
+    it('returns deployment error without creating database record', async () => {
+      // Arrange
+      const deploymentError = new LatitudeError('Deployment failed')
+      mocks.deployDocumentTrigger.mockResolvedValue(
+        Result.error(deploymentError),
+      )
 
-    const expectedConfiguration = {
-      ...scheduledConfiguration,
-      lastRun: new Date('2023-01-01'),
-      nextRunTime: new Date('2023-01-02'),
-    }
-
-    mockReturning.mockResolvedValue([
-      {
-        uuid: 'mocked-uuid',
-        workspaceId: workspace.id,
-        documentUuid: document.documentUuid,
-        projectId: project.id,
+      // Act
+      const result = await createDocumentTrigger({
+        workspace,
+        project,
+        commit: draft,
+        document,
         triggerType: DocumentTriggerType.Scheduled,
-        configuration: expectedConfiguration,
-      } as DocumentTrigger,
-    ])
+        configuration: {
+          cronExpression: '0 0 * * *',
+        },
+      })
 
-    // Act
-    const result = await createDocumentTrigger({
-      workspace,
-      document,
-      projectId: project.id,
-      trigger: {
-        type: DocumentTriggerType.Scheduled,
-        configuration: scheduledConfiguration,
-      },
-    })
+      const triggersScoppe = new DocumentTriggersRepository(workspace.id)
+      const triggers = await triggersScoppe
+        .getTriggersInDocument({
+          documentUuid: document.documentUuid,
+          commit: draft,
+        })
+        .then((r) => r.unwrap())
 
-    // Assert
-    expect(result.error).toBeUndefined()
-    expect(result.value).toBeDefined()
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
-    )
-    expect(mockTx.insert).toHaveBeenCalledWith(documentTriggers)
-    expect(mockValues).toHaveBeenCalledWith({
-      uuid: 'mocked-uuid',
-      workspaceId: workspace.id,
-      documentUuid: document.documentUuid,
-      projectId: project.id,
-      triggerType: DocumentTriggerType.Scheduled,
-      configuration: expectedConfiguration,
-    })
-    expect(buildConfigurationModule.buildConfiguration).toHaveBeenCalledWith({
-      triggerType: DocumentTriggerType.Scheduled,
-      configuration: scheduledConfiguration,
-    })
-    expect(result.value).toEqual({
-      uuid: 'mocked-uuid',
-      workspaceId: workspace.id,
-      documentUuid: document.documentUuid,
-      projectId: project.id,
-      triggerType: DocumentTriggerType.Scheduled,
-      configuration: expectedConfiguration,
+      // Assert
+      expect(result.ok).toBeFalsy()
+      expect(result.error).toBe(deploymentError)
+      expect(mocks.deployDocumentTrigger).toHaveBeenCalledWith(
+        {
+          workspace,
+          commit: draft,
+          triggerUuid: expect.any(String),
+          triggerType: DocumentTriggerType.Scheduled,
+          configuration: { cronExpression: '0 0 * * *' },
+        },
+        expect.any(Object), // transaction
+      )
+
+      expect(triggers).toHaveLength(0) // No trigger should be created
     })
   })
 
-  it('returns an error when document trigger creation fails', async () => {
-    // Arrange
-    const emailConfiguration: EmailTriggerConfiguration = {
-      emailWhitelist: ['test@example.com'],
-      replyWithResponse: true,
-    }
+  describe('successful email trigger creation', () => {
+    it('creates email trigger with correct configuration', async () => {
+      // Arrange
+      const emailConfig: EmailTriggerConfiguration = {
+        name: 'Test Email Trigger',
+        emailWhitelist: ['test@example.com'],
+        domainWhitelist: ['example.com'],
+        replyWithResponse: true,
+        parameters: {},
+      }
+      const deploymentSettings: EmailTriggerDeploymentSettings = {}
 
-    mockReturning.mockResolvedValue([])
+      mocks.deployDocumentTrigger.mockResolvedValue(
+        Result.ok(deploymentSettings),
+      )
 
-    // Act
-    const result = await createDocumentTrigger({
-      workspace,
-      document,
-      projectId: project.id,
-      trigger: {
-        type: DocumentTriggerType.Email,
-        configuration: emailConfiguration,
-      },
+      // Act
+      const result = await createDocumentTrigger({
+        workspace,
+        project,
+        commit: draft,
+        document,
+        triggerType: DocumentTriggerType.Email,
+        configuration: emailConfig,
+      })
+
+      const triggersScoppe = new DocumentTriggersRepository(workspace.id)
+      const triggers = await triggersScoppe
+        .getTriggersInDocument({
+          documentUuid: document.documentUuid,
+          commit: draft,
+        })
+        .then((r) => r.unwrap())
+
+      const trigger = triggers[0]!
+
+      // Assert
+      expect(result.ok).toBeTruthy()
+      expect(trigger).toBeDefined()
+      expect(trigger.workspaceId).toBe(workspace.id)
+      expect(trigger.projectId).toBe(project.id)
+      expect(trigger.commitId).toBe(draft.id)
+      expect(trigger.documentUuid).toBe(document.documentUuid)
+      expect(trigger.triggerType).toBe(DocumentTriggerType.Email)
+      expect(trigger.configuration).toEqual(emailConfig)
+      expect(trigger.deploymentSettings).toEqual(deploymentSettings)
     })
+  })
 
-    // Assert
-    expect(result.ok).toBeFalsy()
-    expect(result.error).toBeInstanceOf(LatitudeError)
-    expect(result.error?.message).toBe('Failed to create document trigger')
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
-    )
-    expect(mockTx.insert).toHaveBeenCalledWith(documentTriggers)
-    expect(mockValues).toHaveBeenCalledWith({
-      uuid: 'mocked-uuid',
-      workspaceId: workspace.id,
-      documentUuid: document.documentUuid,
-      projectId: project.id,
-      triggerType: DocumentTriggerType.Email,
-      configuration: emailConfiguration,
+  describe('successful scheduled trigger creation', () => {
+    it('creates scheduled trigger with correct configuration', async () => {
+      // Arrange
+      const scheduledConfig: ScheduledTriggerConfiguration = {
+        cronExpression: '0 9 * * MON-FRI',
+      }
+      const deploymentSettings: ScheduledTriggerDeploymentSettings = {
+        lastRun: new Date('2023-01-01T09:00:00Z'),
+        nextRunTime: new Date('2023-01-02T09:00:00Z'),
+      }
+
+      mocks.deployDocumentTrigger.mockResolvedValue(
+        Result.ok(deploymentSettings),
+      )
+
+      // Act
+      const result = await createDocumentTrigger({
+        workspace,
+        project,
+        commit: draft,
+        document,
+        triggerType: DocumentTriggerType.Scheduled,
+        configuration: scheduledConfig,
+      })
+
+      const triggersScoppe = new DocumentTriggersRepository(workspace.id)
+      const triggers = await triggersScoppe
+        .getTriggersInDocument({
+          documentUuid: document.documentUuid,
+          commit: draft,
+        })
+        .then((r) => r.unwrap())
+
+      const trigger = triggers[0]!
+
+      // Assert
+      expect(result.ok).toBeTruthy()
+      expect(trigger).toBeDefined()
+      expect(trigger.workspaceId).toBe(workspace.id)
+      expect(trigger.projectId).toBe(project.id)
+      expect(trigger.commitId).toBe(draft.id)
+      expect(trigger.documentUuid).toBe(document.documentUuid)
+      expect(trigger.triggerType).toBe(DocumentTriggerType.Scheduled)
+      expect(trigger.configuration).toEqual(scheduledConfig)
+      // Database serializes dates as ISO strings
+      expect(trigger.deploymentSettings).toEqual({
+        lastRun: '2023-01-01T09:00:00.000Z',
+        nextRunTime: '2023-01-02T09:00:00.000Z',
+      })
+    })
+  })
+
+  describe('successful integration trigger creation', () => {
+    it('creates integration trigger with correct configuration', async () => {
+      // Arrange
+      const integrationConfig: IntegrationTriggerConfiguration = {
+        integrationId: 123,
+        componentId: 'webhook-component',
+        properties: { url: 'https://api.example.com/webhook' },
+        payloadParameters: ['param1', 'param2'],
+      }
+      const deploymentSettings: IntegrationTriggerDeploymentSettings = {
+        triggerId: 'external-trigger-id-456',
+      }
+
+      mocks.deployDocumentTrigger.mockResolvedValue(
+        Result.ok(deploymentSettings),
+      )
+
+      // Act
+      const result = await createDocumentTrigger({
+        workspace,
+        project,
+        commit: draft,
+        document,
+        triggerType: DocumentTriggerType.Integration,
+        configuration: integrationConfig,
+      })
+
+      const triggersScoppe = new DocumentTriggersRepository(workspace.id)
+      const triggers = await triggersScoppe
+        .getTriggersInDocument({
+          documentUuid: document.documentUuid,
+          commit: draft,
+        })
+        .then((r) => r.unwrap())
+
+      const trigger = triggers[0]!
+
+      // Assert
+      expect(result.ok).toBeTruthy()
+      expect(trigger).toBeDefined()
+      expect(trigger.workspaceId).toBe(workspace.id)
+      expect(trigger.projectId).toBe(project.id)
+      expect(trigger.commitId).toBe(draft.id)
+      expect(trigger.documentUuid).toBe(document.documentUuid)
+      expect(trigger.triggerType).toBe(DocumentTriggerType.Integration)
+      expect(trigger.configuration).toEqual(integrationConfig)
+      expect(trigger.deploymentSettings).toEqual(deploymentSettings)
     })
   })
 })

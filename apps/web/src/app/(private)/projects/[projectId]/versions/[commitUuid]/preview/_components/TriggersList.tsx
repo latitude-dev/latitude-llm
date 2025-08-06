@@ -24,6 +24,7 @@ export function TriggersList({
   const { data: triggers } = useDocumentTriggers(
     {
       projectId: project.id,
+      commitUuid: commit.uuid,
     },
     {
       fallbackData,

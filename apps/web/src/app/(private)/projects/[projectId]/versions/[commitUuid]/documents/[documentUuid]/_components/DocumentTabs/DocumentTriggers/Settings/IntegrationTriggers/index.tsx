@@ -8,19 +8,19 @@ import { IntegrationTriggerList } from './TriggerList'
 export function IntegrationTriggerSettings({
   document,
   projectId,
+  commitUuid,
   openTriggerModal,
 }: {
   document: DocumentVersion
   projectId: number
+  commitUuid: string
   openTriggerModal: (
-    trigger?: Extract<
-      DocumentTrigger,
-      { triggerType: DocumentTriggerType.Integration }
-    >,
+    trigger?: DocumentTrigger<DocumentTriggerType.Integration>,
   ) => void
 }) {
   const { data: documentTriggers, isLoading } = useDocumentTriggers({
     projectId,
+    commitUuid,
     documentUuid: document.documentUuid,
   })
 
@@ -28,7 +28,7 @@ export function IntegrationTriggerSettings({
     () =>
       documentTriggers.filter(
         (t) => t.triggerType === DocumentTriggerType.Integration,
-      ),
+      ) as DocumentTrigger<DocumentTriggerType.Integration>[],
     [documentTriggers],
   )
 
