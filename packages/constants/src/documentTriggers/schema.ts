@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import { DocumentTriggerParameters, DocumentTriggerType } from '..'
 
+// --- Trigger Configuration ---
+
 export const emailTriggerConfigurationSchema = z.object({
   name: z.string().optional(),
   replyWithResponse: z.boolean(),
@@ -8,94 +10,59 @@ export const emailTriggerConfigurationSchema = z.object({
   domainWhitelist: z.array(z.string()).optional(),
   parameters: z.record(z.nativeEnum(DocumentTriggerParameters)).optional(),
 })
-
-export type EmailTriggerConfiguration = z.infer<
-  typeof emailTriggerConfigurationSchema
->
-
-export const insertScheduledTriggerConfigurationSchema = z.object({
-  cronExpression: z.string(),
-})
 export const scheduledTriggerConfigurationSchema = z.object({
   cronExpression: z.string(),
-  lastRun: z.date(),
-  nextRunTime: z.date().or(z.undefined()),
-  parameters: z.record(z.string(), z.unknown()).optional(),
 })
 export const integrationTriggerConfigurationSchema = z.object({
   integrationId: z.number(),
   componentId: z.string(),
   properties: z.record(z.string(), z.unknown()).optional(),
   payloadParameters: z.array(z.string()),
-  triggerId: z.string(),
 })
 
-const insertIntegrationTriggerConfigurationSchema =
-  integrationTriggerConfigurationSchema.omit({
-    triggerId: true,
-  })
-
-export type InsertIntegrationTriggerConfiguration = z.infer<
-  typeof insertIntegrationTriggerConfigurationSchema
+export type EmailTriggerConfiguration = z.infer<
+  typeof emailTriggerConfigurationSchema
 >
-
-export type InsertScheduledTriggerConfiguration = z.infer<
-  typeof insertScheduledTriggerConfigurationSchema
->
-
 export type ScheduledTriggerConfiguration = z.infer<
   typeof scheduledTriggerConfigurationSchema
 >
-
 export type IntegrationTriggerConfiguration = z.infer<
   typeof integrationTriggerConfigurationSchema
 >
 
-export const documentTriggerConfigurationSchema = z.discriminatedUnion(
-  'triggerType',
-  [
-    z.object({
-      triggerType: z.literal(DocumentTriggerType.Email),
-      configuration: emailTriggerConfigurationSchema,
-    }),
-    z.object({
-      triggerType: z.literal(DocumentTriggerType.Scheduled),
-      configuration: scheduledTriggerConfigurationSchema,
-    }),
-    z.object({
-      triggerType: z.literal(DocumentTriggerType.Integration),
-      configuration: integrationTriggerConfigurationSchema,
-    }),
-  ],
-)
+// prettier-ignore
+export type DocumentTriggerConfiguration<T extends DocumentTriggerType> =
+  T extends DocumentTriggerType.Email ? EmailTriggerConfiguration :
+  T extends DocumentTriggerType.Scheduled ? ScheduledTriggerConfiguration :
+  T extends DocumentTriggerType.Integration ? IntegrationTriggerConfiguration :
+  never
 
-export const insertDocumentTriggerConfigurationSchema = z.discriminatedUnion(
-  'type',
-  [
-    z.object({
-      type: z.literal(DocumentTriggerType.Email),
-      configuration: emailTriggerConfigurationSchema,
-    }),
-    z.object({
-      type: z.literal(DocumentTriggerType.Scheduled),
-      configuration: insertScheduledTriggerConfigurationSchema,
-    }),
-    z.object({
-      type: z.literal(DocumentTriggerType.Integration),
-      configuration: insertIntegrationTriggerConfigurationSchema,
-    }),
-  ],
-)
+// --- Trigger Deployment Settings ---
 
-export type DocumentTriggerConfiguration =
-  | EmailTriggerConfiguration
-  | ScheduledTriggerConfiguration
-  | IntegrationTriggerConfiguration
+export const emailTriggerDeploymentSettingsSchema = z.object({
+  // No settings, really
+})
+export const scheduledTriggerDeploymentSettingsSchema = z.object({
+  lastRun: z.date(),
+  nextRunTime: z.date().or(z.undefined()),
+})
+export const integrationTriggerDeploymentSettingsSchema = z.object({
+  triggerId: z.string(),
+})
 
-export type DocumentTriggerWithConfiguration = z.infer<
-  typeof documentTriggerConfigurationSchema
+export type EmailTriggerDeploymentSettings = z.infer<
+  typeof emailTriggerDeploymentSettingsSchema
+>
+export type ScheduledTriggerDeploymentSettings = z.infer<
+  typeof scheduledTriggerDeploymentSettingsSchema
+>
+export type IntegrationTriggerDeploymentSettings = z.infer<
+  typeof integrationTriggerDeploymentSettingsSchema
 >
 
-export type InsertDocumentTriggerWithConfiguration = z.infer<
-  typeof insertDocumentTriggerConfigurationSchema
->
+// prettier-ignore
+export type DocumentTriggerDeploymentSettings<T extends DocumentTriggerType> =
+  T extends DocumentTriggerType.Email ? EmailTriggerDeploymentSettings :
+  T extends DocumentTriggerType.Scheduled ? ScheduledTriggerDeploymentSettings :
+  T extends DocumentTriggerType.Integration ? IntegrationTriggerDeploymentSettings :
+  never

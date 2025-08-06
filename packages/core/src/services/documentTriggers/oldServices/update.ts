@@ -1,16 +1,16 @@
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { and, eq } from 'drizzle-orm'
-import { DocumentTrigger, Workspace } from '../../browser'
-import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
-import { documentTriggers } from '../../schema'
-import { buildConfiguration } from './helpers/buildConfiguration'
+import { DocumentTrigger, Workspace } from '../../../browser'
+import { Result } from '../../../lib/Result'
+import Transaction, { PromisedResult } from '../../../lib/Transaction'
+import { documentTriggers } from '../../../schema'
+import { buildConfiguration } from '../helpers/buildConfiguration'
 import {
   InsertDocumentTriggerWithConfiguration,
-  InsertIntegrationTriggerConfiguration,
+  IntegrationTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { updatePipedreamTrigger } from '../integrations/pipedream/triggers'
+import { updatePipedreamTrigger } from '../../integrations/pipedream/triggers'
 
 export async function updateDocumentTriggerConfiguration(
   {
@@ -28,7 +28,7 @@ export async function updateDocumentTriggerConfiguration(
     const preupdateResult = await updatePipedreamTrigger({
       workspace,
       trigger: documentTrigger,
-      updatedConfig: configuration as InsertIntegrationTriggerConfiguration,
+      updatedConfig: configuration as IntegrationTriggerConfiguration,
     })
 
     if (!Result.isOk(preupdateResult)) return preupdateResult

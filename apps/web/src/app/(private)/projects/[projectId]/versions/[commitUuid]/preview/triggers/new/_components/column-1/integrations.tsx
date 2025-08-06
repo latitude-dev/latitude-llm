@@ -43,7 +43,7 @@ export function Integrations() {
                       type: IntegrationType.Pipedream,
                       pipedream: {
                         app: {
-                          name: app.name,
+                          name: app.name_slug,
                         },
                       },
                     })

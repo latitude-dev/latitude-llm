@@ -5,7 +5,7 @@ import { Result } from '../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../lib/Transaction'
 import { documentTriggers } from '../../../../schema'
 import { checkCronExpression, getNextRunTime } from '../../helpers/cronHelper'
-import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { ScheduledTriggerConfigurationWithDeployementSettings } from '@latitude-data/constants/documentTriggers'
 import { database } from '../../../../client'
 
 /**
@@ -15,7 +15,8 @@ import { database } from '../../../../client'
  * @returns A boolean indicating whether the trigger should run
  */
 export function isScheduledTriggerDue(trigger: DocumentTrigger): boolean {
-  const config = trigger.configuration as ScheduledTriggerConfiguration
+  const config =
+    trigger.configuration as ScheduledTriggerConfigurationWithDeployementSettings
 
   // If we have a nextRunTime, check if it's in the past
   if (config.nextRunTime) {
@@ -45,7 +46,7 @@ export async function updateScheduledTriggerLastRun(
 ): PromisedResult<DocumentTrigger> {
   return transaction.call(async (trx) => {
     // First, get the current configuration if only a partial trigger was provided
-    let config: ScheduledTriggerConfiguration
+    let config: ScheduledTriggerConfigurationWithDeployementSettings
 
     if (!('configuration' in trigger)) {
       const fullTrigger = await trx
@@ -60,10 +61,11 @@ export async function updateScheduledTriggerLastRun(
         )
       }
 
-      config = fullTrigger.configuration as ScheduledTriggerConfiguration
+      config =
+        fullTrigger.configuration as ScheduledTriggerConfigurationWithDeployementSettings
     } else {
       config = (trigger as DocumentTrigger)
-        .configuration as ScheduledTriggerConfiguration
+        .configuration as ScheduledTriggerConfigurationWithDeployementSettings
     }
 
     // Calculate the next run time
@@ -163,7 +165,8 @@ export async function findScheduledTriggersDueToRun(
 
     // Filter the triggers without nextRunTime using the cron expression
     const dueTriggers = triggersWithoutNextRunTime.filter((trigger) => {
-      const config = trigger.configuration as ScheduledTriggerConfiguration
+      const config =
+        trigger.configuration as ScheduledTriggerConfigurationWithDeployementSettings
 
       return checkCronExpression(
         config.cronExpression,

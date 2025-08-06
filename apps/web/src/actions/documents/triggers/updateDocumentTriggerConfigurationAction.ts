@@ -6,8 +6,8 @@ import { withDocument } from '../../procedures'
 import {
   DocumentTriggerConfiguration,
   emailTriggerConfigurationSchema,
-  insertScheduledTriggerConfigurationSchema,
-  integrationTriggerConfigurationSchema,
+  scheduledTriggerConfigurationSchema,
+  integrationTriggerConfigurationWithDeployementSettingsSchema,
 } from '@latitude-data/constants/documentTriggers'
 import { z } from 'zod'
 import { DocumentTriggersRepository } from '@latitude-data/core/repositories'
@@ -18,9 +18,9 @@ export const updateDocumentTriggerConfigurationAction = withDocument
     z.object({
       documentTriggerId: z.number(),
       configuration: z.union([
-        insertScheduledTriggerConfigurationSchema,
+        scheduledTriggerConfigurationSchema,
         emailTriggerConfigurationSchema,
-        integrationTriggerConfigurationSchema,
+        integrationTriggerConfigurationWithDeployementSettingsSchema,
       ]),
     }),
   )

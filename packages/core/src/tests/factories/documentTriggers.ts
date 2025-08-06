@@ -7,9 +7,9 @@ import { database } from '../../client'
 import { documentTriggers } from '../../schema'
 import { createProject } from './createProject'
 import {
-  ScheduledTriggerConfiguration,
+  ScheduledTriggerConfigurationWithDeployementSettings,
   EmailTriggerConfiguration,
-  IntegrationTriggerConfiguration,
+  IntegrationTriggerConfigurationWithDeployementSettings,
 } from '@latitude-data/constants/documentTriggers'
 import { DocumentTrigger } from '../../browser'
 
@@ -40,7 +40,7 @@ export async function createScheduledDocumentTrigger({
     projectId = project.id
   }
 
-  const configuration: ScheduledTriggerConfiguration = {
+  const configuration: ScheduledTriggerConfigurationWithDeployementSettings = {
     cronExpression,
     lastRun: lastRun || new Date(),
     nextRunTime,
@@ -136,13 +136,14 @@ export async function createIntegrationDocumentTrigger({
     projectId = project.id
   }
 
-  const configuration: IntegrationTriggerConfiguration = {
-    integrationId,
-    componentId,
-    properties,
-    payloadParameters,
-    triggerId: uuidv4(),
-  }
+  const configuration: IntegrationTriggerConfigurationWithDeployementSettings =
+    {
+      integrationId,
+      componentId,
+      properties,
+      payloadParameters,
+      triggerId: uuidv4(),
+    }
 
   const [trigger] = await database
     .insert(documentTriggers)

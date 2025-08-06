@@ -14,11 +14,11 @@ import {
   convertToCronExpression,
   getScheduleDescription,
 } from './scheduleUtils'
-import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { ScheduledTriggerConfigurationWithDeployementSettings } from '@latitude-data/constants/documentTriggers'
 
 // Convert ScheduledTriggerConfiguration to ScheduleConfig
 function convertToScheduleConfig(
-  triggerConfig?: ScheduledTriggerConfiguration,
+  triggerConfig?: ScheduledTriggerConfigurationWithDeployementSettings,
 ): ScheduleConfig {
   if (!triggerConfig) {
     return DEFAULT_CONFIG
@@ -43,7 +43,7 @@ export function ScheduleTriggerConfig({
   canDestroy: boolean
   onChangeConfig: (config?: SavedConfig) => void
   isLoading: boolean
-  initialConfig?: ScheduledTriggerConfiguration
+  initialConfig?: ScheduledTriggerConfigurationWithDeployementSettings
 }) {
   const [config, setConfig] = useState<ScheduleConfig>(
     convertToScheduleConfig(initialConfig),

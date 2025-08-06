@@ -11,7 +11,7 @@ import executeTriggerActions from './executeTriggerActions'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import {
   emailTriggerConfigurationSchema,
-  insertScheduledTriggerConfigurationSchema,
+  scheduledTriggerConfigurationSchema,
 } from '@latitude-data/constants/documentTriggers'
 
 const triggerActions = defineLatteTool(
@@ -68,7 +68,7 @@ const triggerActions = defineLatteTool(
           operation: z.literal('create'),
           triggerType: z.literal(DocumentTriggerType.Scheduled),
           promptUuid: z.string(),
-          configuration: insertScheduledTriggerConfigurationSchema,
+          configuration: scheduledTriggerConfigurationSchema,
         }),
         z.object({
           operation: z.literal('delete'),
@@ -90,7 +90,7 @@ const triggerActions = defineLatteTool(
           operation: z.literal('update'),
           triggerType: z.literal(DocumentTriggerType.Scheduled),
           promptUuid: z.string(),
-          configuration: insertScheduledTriggerConfigurationSchema,
+          configuration: scheduledTriggerConfigurationSchema,
         }),
       ]),
     ),

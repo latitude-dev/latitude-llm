@@ -2,7 +2,7 @@ import { DocumentVersion } from '@latitude-data/constants'
 import { Commit, Workspace } from '../../../../../browser'
 import { InsertDocumentTriggerWithConfiguration } from '@latitude-data/constants/documentTriggers'
 import { Result } from '../../../../../lib/Result'
-import { createDocumentTrigger } from '../../../../documentTriggers'
+import { createDocumentTrigger } from '../../../../documentTriggers/oldServices'
 import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
 import {
   LatteTriggerAction,
@@ -13,8 +13,8 @@ import {
   DocumentTriggersRepository,
   ProjectsRepository,
 } from '../../../../../repositories'
-import { deleteDocumentTrigger } from '../../../../documentTriggers/delete'
-import { updateDocumentTriggerConfiguration } from '../../../../documentTriggers/update'
+import { deleteDocumentTrigger } from '../../../../documentTriggers/oldServices/delete'
+import { updateDocumentTriggerConfiguration } from '../../../../documentTriggers/oldServices/update'
 
 async function executeTriggerActions(
   {
@@ -77,15 +77,19 @@ async function executeTriggerActions(
     const documentTriggersRepository = new DocumentTriggersRepository(
       workspace.id,
     )
-    const documentTrigger = await documentTriggersRepository
-      .findByDocumentUuid(action.promptUuid)
-      // Assuming there can only be one trigger of the specified type per document
-      // TODO - change this when adding integrations, as they have the same type
-      .then((documentTriggers) =>
-        documentTriggers.find(
-          (trigger) => trigger.triggerType === action.triggerType,
-        ),
-      )
+    const triggersResult =
+      await documentTriggersRepository.getTriggersInDocument({
+        documentUuid: action.promptUuid,
+        commit,
+      })
+    if (!Result.isOk(triggersResult)) return triggersResult
+    const totalTriggers = triggersResult.unwrap()
+
+    // Assuming there can only be one trigger of the specified type per document
+    // TODO - change this when adding integrations, as they have the same type
+    const documentTrigger = totalTriggers.find(
+      (trigger) => trigger.triggerType === action.triggerType,
+    )
 
     if (!documentTrigger) {
       return Result.error(
@@ -119,15 +123,19 @@ async function executeTriggerActions(
     const documentTriggersRepository = new DocumentTriggersRepository(
       workspace.id,
     )
-    const documentTrigger = await documentTriggersRepository
-      .findByDocumentUuid(action.promptUuid)
-      // Assuming there can only be one trigger of the specified type per document
-      // TODO - change this when adding integrations, as they have the same type
-      .then((documentTriggers) =>
-        documentTriggers.find(
-          (trigger) => trigger.triggerType === action.triggerType,
-        ),
-      )
+    const triggersResult =
+      await documentTriggersRepository.getTriggersInDocument({
+        documentUuid: action.promptUuid,
+        commit,
+      })
+    if (!Result.isOk(triggersResult)) return triggersResult
+    const totalTriggers = triggersResult.unwrap()
+
+    // Assuming there can only be one trigger of the specified type per document
+    // TODO - change this when adding integrations, as they have the same type
+    const documentTrigger = totalTriggers.find(
+      (trigger) => trigger.triggerType === action.triggerType,
+    )
 
     if (!documentTrigger) {
       return Result.error(

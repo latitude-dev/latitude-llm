@@ -13,7 +13,7 @@ import { Result } from '../../../../lib/Result'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../../../repositories'
 import { uploadFile } from '../../../files'
-import { findUnscopedDocumentTriggers } from '../../find'
+import { findUnscopedDocumentTriggers } from '../../oldServices/find'
 import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 
 async function getTriggerName(

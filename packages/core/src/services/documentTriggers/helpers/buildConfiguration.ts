@@ -5,9 +5,9 @@ import {
   DocumentTriggerConfiguration,
   EmailTriggerConfiguration,
   InsertDocumentTriggerWithConfiguration,
-  InsertScheduledTriggerConfiguration,
-  IntegrationTriggerConfiguration,
   ScheduledTriggerConfiguration,
+  IntegrationTriggerConfigurationWithDeployementSettings,
+  ScheduledTriggerConfigurationWithDeployementSettings,
 } from '@latitude-data/constants/documentTriggers'
 
 export function buildConfiguration({
@@ -19,7 +19,7 @@ export function buildConfiguration({
 }): DocumentTriggerConfiguration {
   switch (triggerType) {
     case 'integration':
-      return configuration as IntegrationTriggerConfiguration
+      return configuration as IntegrationTriggerConfigurationWithDeployementSettings
     case 'email':
       return configuration as EmailTriggerConfiguration
     case 'scheduled':
@@ -27,9 +27,9 @@ export function buildConfiguration({
         ...configuration,
         lastRun: new Date(),
         nextRunTime: getNextRunTime(
-          (configuration as InsertScheduledTriggerConfiguration).cronExpression,
+          (configuration as ScheduledTriggerConfiguration).cronExpression,
         ),
-      } as ScheduledTriggerConfiguration
+      } as ScheduledTriggerConfigurationWithDeployementSettings
     default:
       throw new LatitudeError('Invalid trigger type')
   }

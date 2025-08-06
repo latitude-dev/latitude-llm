@@ -1,12 +1,24 @@
-import { bigint, bigserial, index, jsonb, uuid } from 'drizzle-orm/pg-core'
+import {
+  bigint,
+  bigserial,
+  boolean,
+  index,
+  jsonb,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { projects } from './projects'
 import { workspaces } from './workspaces'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import {
+  DocumentTriggerConfiguration,
+  DocumentTriggerDeploymentSettings,
+} from '@latitude-data/constants/documentTriggers'
 import { sql } from 'drizzle-orm'
+import { commits } from './commits'
 
 export const documentTriggerTypeEnum = latitudeSchema.enum(
   'document_trigger_types',
@@ -19,7 +31,6 @@ export const documentTriggers = latitudeSchema.table(
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     uuid: uuid('uuid')
       .notNull()
-      .unique()
       .default(sql`gen_random_uuid()`),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
@@ -27,9 +38,19 @@ export const documentTriggers = latitudeSchema.table(
     projectId: bigint('project_id', { mode: 'number' })
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
+    commitId: bigint('commit_id', { mode: 'number' })
+      .notNull()
+      .references(() => commits.id, { onDelete: 'cascade' }),
     documentUuid: uuid('document_uuid').notNull(),
     triggerType: documentTriggerTypeEnum('trigger_type').notNull(),
-    configuration: jsonb('configuration').$type<DocumentTriggerConfiguration>(),
+    configuration: jsonb('configuration')
+      .$type<DocumentTriggerConfiguration<DocumentTriggerType>>()
+      .notNull(),
+    deploymentSettings: jsonb(
+      'deployment_settings',
+    ).$type<DocumentTriggerDeploymentSettings<DocumentTriggerType> | null>(), // When NULL, the trigger is not deployed
+    enabled: boolean('enabled').notNull().default(false), // Indicates whether the trigger is enabled and should run the prompt with incoming events
+    deletedAt: timestamp('deleted_at'),
     ...timestamps(),
   },
   (table) => ({
@@ -39,7 +60,7 @@ export const documentTriggers = latitudeSchema.table(
     // Index for efficient scheduled trigger queries
     scheduledTriggerNextRunTimeIdx: index(
       'scheduled_trigger_next_run_time_idx',
-    ).on(sql`(configuration->>'nextRunTime')`),
+    ).on(sql`(deployment_settings->>'nextRunTime')`),
     // Index on triggerType to quickly find scheduled triggers
     triggerTypeIdx: index('document_trigger_type_idx').on(table.triggerType),
   }),

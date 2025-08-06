@@ -14,7 +14,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { TriggerTypeSelector } from './TriggerTypeSelector'
 import { IntegrationTriggerConfig } from './IntegrationTriggerConfig'
-import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { IntegrationTriggerConfigurationWithDeployementSettings } from '@latitude-data/constants/documentTriggers'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 
@@ -81,7 +81,7 @@ export function TriggerConfigModal({
     if (loadingComponents || !pipedreamData) return
 
     const triggerConfig =
-      trigger.configuration as IntegrationTriggerConfiguration
+      trigger.configuration as IntegrationTriggerConfigurationWithDeployementSettings
     const triggerComponent = pipedreamData.triggers.find(
       (t) => t.key === triggerConfig.componentId,
     )

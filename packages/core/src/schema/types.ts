@@ -2,6 +2,7 @@ import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
 
 import {
   DocumentLog,
+  DocumentTriggerType,
   EvaluationResultDto,
   ExperimentScores,
   IntegrationType,
@@ -14,7 +15,10 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '../constants'
-import { DocumentTriggerWithConfiguration } from '@latitude-data/constants/documentTriggers'
+import {
+  DocumentTriggerConfiguration,
+  DocumentTriggerDeploymentSettings,
+} from '@latitude-data/constants/documentTriggers'
 import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
 import { connectedEvaluations } from './legacyModels/connectedEvaluations'
 import { evaluationAdvancedTemplates } from './legacyModels/evaluationAdvancedTemplates'
@@ -53,6 +57,7 @@ import { latteThreads } from './models/latteThreads'
 import { latteThreadCheckpoints } from './models/latteThreadCheckpoints'
 import { features } from './models/features'
 import { workspaceFeatures } from './models/workspaceFeatures'
+import { triggerEvents } from './models/triggerEvents'
 
 export type {
   DocumentLog,
@@ -261,8 +266,15 @@ export type PipedreamIntegration = Extract<
 >
 
 type _DocumentTrigger = InferSelectModel<typeof documentTriggers>
-export type DocumentTrigger = Omit<_DocumentTrigger, 'configuration' | 'type'> &
-  DocumentTriggerWithConfiguration
+export type DocumentTrigger<
+  T extends DocumentTriggerType = DocumentTriggerType,
+> = Omit<_DocumentTrigger, 'type' | 'configuration' | 'deploymentSettings'> & {
+  type: T
+  configuration: DocumentTriggerConfiguration<T>
+  deploymentSettings: DocumentTriggerDeploymentSettings<T> | null
+}
+
+export type TriggerEvents = InferSelectModel<typeof triggerEvents>
 
 export type ResultWithEvaluation = {
   result: EvaluationResultDto

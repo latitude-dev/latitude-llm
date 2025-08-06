@@ -5,6 +5,7 @@ import {
   createBackendClient,
 } from '@pipedream/sdk'
 import {
+  Commit,
   DocumentTrigger,
   gatewayPath,
   PipedreamIntegration,
@@ -20,20 +21,19 @@ import {
 import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
 import { database } from '../../../client'
 import { IntegrationsRepository } from '../../../repositories'
-import {
-  InsertIntegrationTriggerConfiguration,
-  IntegrationTriggerConfiguration,
-} from '@latitude-data/constants/documentTriggers'
+import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { isEqual } from 'lodash-es'
 
 export async function deployPipedreamTrigger({
   triggerUuid,
+  commit,
   integration,
   componentId,
   configuredProps: configuredClientProps,
 }: {
   triggerUuid: string
+  commit: Commit
   integration: PipedreamIntegration
   componentId: ComponentId
   configuredProps: ConfiguredProps<ConfigurableProps>
@@ -70,7 +70,9 @@ export async function deployPipedreamTrigger({
       externalUserId,
       triggerId: componentId,
       configuredProps,
-      webhookUrl: gatewayPath(`/webhook/integration/${triggerUuid}`),
+      webhookUrl: gatewayPath(
+        `/webhook/integration/${triggerUuid}/${commit.uuid}`,
+      ),
     })
 
     return Result.ok({ id: deployResult.data.id })
@@ -90,10 +92,13 @@ export async function updatePipedreamTrigger(
       DocumentTrigger,
       { triggerType: DocumentTriggerType.Integration }
     >
-    updatedConfig: InsertIntegrationTriggerConfiguration
+    updatedConfig: IntegrationTriggerConfiguration
   },
   db = database,
-): PromisedResult<IntegrationTriggerConfiguration, Error> {
+): PromisedResult<
+  IntegrationTriggerConfigurationWithDeployementSettings,
+  Error
+> {
   const originalConfig = trigger.configuration
 
   if (

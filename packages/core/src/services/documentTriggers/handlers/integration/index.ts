@@ -1,7 +1,7 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { database } from '../../../../client'
 import { HEAD_COMMIT } from '../../../../browser'
-import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { IntegrationTriggerConfigurationWithDeployementSettings } from '@latitude-data/constants/documentTriggers'
 import {
   unsafelyFindDocumentTrigger,
   unsafelyFindWorkspace,
@@ -34,7 +34,8 @@ export async function handleIntegrationTrigger(
 
   const workspace = await unsafelyFindWorkspace(trigger.workspaceId, db)
 
-  const triggerConfig = trigger.configuration as IntegrationTriggerConfiguration
+  const triggerConfig =
+    trigger.configuration as IntegrationTriggerConfigurationWithDeployementSettings
   const parameters = Object.fromEntries(
     triggerConfig.payloadParameters.map((paramName) => [paramName, payload]),
   )

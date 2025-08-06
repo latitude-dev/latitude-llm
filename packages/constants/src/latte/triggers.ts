@@ -1,7 +1,7 @@
 import { DocumentTriggerType } from '..'
 import {
   EmailTriggerConfiguration,
-  InsertScheduledTriggerConfiguration,
+  ScheduledTriggerConfiguration,
 } from '../documentTriggers/schema'
 
 type LatteCreateEmailTriggerAction = {
@@ -15,7 +15,7 @@ type LatteCreateScheduledTriggerAction = {
   operation: 'create'
   triggerType: DocumentTriggerType.Scheduled
   promptUuid: string
-  configuration: InsertScheduledTriggerConfiguration
+  configuration: ScheduledTriggerConfiguration
 }
 
 type LatteDeleteScheduledTriggerAction = {
@@ -34,7 +34,7 @@ type LatteUpdateScheduledTriggerAction = {
   operation: 'update'
   triggerType: DocumentTriggerType.Scheduled
   promptUuid: string
-  configuration: InsertScheduledTriggerConfiguration
+  configuration: ScheduledTriggerConfiguration
 }
 
 type LatteUpdateEmailTriggerAction = {

@@ -7,7 +7,7 @@ import {
 } from './index'
 import * as cronHelperModule from '../../helpers/cronHelper'
 import { createScheduledDocumentTrigger } from '../../../../tests/factories/documentTriggers'
-import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { ScheduledTriggerConfigurationWithDeployementSettings } from '@latitude-data/constants/documentTriggers'
 
 describe('Scheduled Document Triggers Handlers', () => {
   beforeEach(() => {
@@ -122,12 +122,16 @@ describe('Scheduled Document Triggers Handlers', () => {
       if (result.ok) {
         expect(result.value!.id).toEqual(trigger.id)
         expect(
-          (result.value!.configuration as ScheduledTriggerConfiguration)
-            .lastRun,
+          (
+            result.value!
+              .configuration as ScheduledTriggerConfigurationWithDeployementSettings
+          ).lastRun,
         ).toEqual(now.toISOString())
         expect(
-          (result.value!.configuration as ScheduledTriggerConfiguration)
-            .nextRunTime,
+          (
+            result.value!
+              .configuration as ScheduledTriggerConfigurationWithDeployementSettings
+          ).nextRunTime,
         ).toEqual(new Date('2023-01-02').toISOString())
       }
       expect(cronHelperModule.getNextRunTime).toHaveBeenCalledWith(
@@ -158,12 +162,16 @@ describe('Scheduled Document Triggers Handlers', () => {
       if (result.ok) {
         expect(result.value!.id).toEqual(fullTrigger.id)
         expect(
-          (result.value!.configuration as ScheduledTriggerConfiguration)
-            .lastRun,
+          (
+            result.value!
+              .configuration as ScheduledTriggerConfigurationWithDeployementSettings
+          ).lastRun,
         ).toEqual(now.toISOString())
         expect(
-          (result.value!.configuration as ScheduledTriggerConfiguration)
-            .nextRunTime,
+          (
+            result.value!
+              .configuration as ScheduledTriggerConfigurationWithDeployementSettings
+          ).nextRunTime,
         ).toEqual(new Date('2023-01-02').toISOString())
       }
     })

@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm'
-import { database } from '../../client'
-import { documentTriggers } from '../../schema'
-import { DocumentTrigger } from '../../browser'
+import { database } from '../../../client'
+import { documentTriggers } from '../../../schema'
+import { DocumentTrigger } from '../../../browser'
 import { DocumentTriggerType } from '@latitude-data/constants'
 
 /**
