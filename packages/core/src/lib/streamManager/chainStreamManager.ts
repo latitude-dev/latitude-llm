@@ -1,13 +1,13 @@
-import { streamAIResponse } from './step/streamAIResponse'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { Chain } from 'promptl-ai'
+import { StreamManager, StreamManagerProps } from '.'
 import {
   renderChain,
   ValidatedChainStep,
 } from '../../services/chains/ChainValidator'
-import { StreamManager, StreamManagerProps } from '.'
-import { resolveToolsFromConfig } from './resolveTools'
 import { CachedApiKeys } from '../../services/chains/run'
+import { resolveToolsFromConfig } from './resolveTools'
+import { streamAIResponse } from './step/streamAIResponse'
 
 /**
  * ChainStreamManager extends StreamManager to handle streaming for multi-step AI chains.

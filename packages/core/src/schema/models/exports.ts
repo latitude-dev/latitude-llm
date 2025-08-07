@@ -1,8 +1,8 @@
 import { bigint, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { latitudeSchema } from '../db-schema'
+import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 import { workspaces } from './workspaces'
-import { timestamps } from '../schemaHelpers'
-import { latitudeSchema } from '../db-schema'
 
 export const latitudeExports = latitudeSchema.table('exports', {
   uuid: uuid('id').primaryKey().defaultRandom(),

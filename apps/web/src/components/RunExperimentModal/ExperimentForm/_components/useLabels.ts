@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react'
 import { Dataset } from '@latitude-data/core/browser'
 import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { useCallback, useState } from 'react'
 import LabelIndicator from './LabelIndicator'
 
 export function useLabels() {

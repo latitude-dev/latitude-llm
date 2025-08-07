@@ -1,18 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import Stripe from 'stripe'
 import { eq } from 'drizzle-orm'
+import Stripe from 'stripe'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { database } from '../../client'
-import { handleSubscriptionUpdate } from './handleSubscriptionUpdate'
-import {
-  createUser,
-  createSubscription,
-  createProject,
-} from '../../tests/factories'
-import { workspaces } from '../../schema/models/workspaces'
-import { SubscriptionPlan } from '../../plans'
-import { LatitudeError } from '../../lib/errors'
 import { User, Workspace } from '../../browser'
+import { database } from '../../client'
+import { LatitudeError } from '../../lib/errors'
+import { SubscriptionPlan } from '../../plans'
+import { workspaces } from '../../schema/models/workspaces'
+import {
+  createProject,
+  createSubscription,
+  createUser,
+} from '../../tests/factories'
+import { handleSubscriptionUpdate } from './handleSubscriptionUpdate'
 
 const mockStripe = {
   customers: {

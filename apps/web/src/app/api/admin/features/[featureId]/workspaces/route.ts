@@ -1,6 +1,6 @@
-import { getEnabledWorkspaceIdsForFeature } from '@latitude-data/core/services/workspaceFeatures/getEnabledWorkspaceIds'
-import { errorHandler } from '$/middlewares/errorHandler'
 import { adminHandler } from '$/middlewares/adminHandler'
+import { errorHandler } from '$/middlewares/errorHandler'
+import { getEnabledWorkspaceIdsForFeature } from '@latitude-data/core/services/workspaceFeatures/getEnabledWorkspaceIds'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(

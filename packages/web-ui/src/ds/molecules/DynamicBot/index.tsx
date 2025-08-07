@@ -1,19 +1,19 @@
 'use client'
 import { useCallback, useRef, useState } from 'react'
-import { colors, TextColor } from '../../tokens'
 import { cn } from '../../../lib/utils'
-import { useCursorPosition } from './hooks/followCursor'
+import { colors, TextColor } from '../../tokens'
+import { AntennaSettings, DynamicBotAntenna } from './Antenna'
 import { DynamicBotEyes } from './Eyes'
-import { EyeBehaviourSettings } from './hooks/eyeBehaviour'
-import { BotEmotion } from './types'
+import { DynamicBotMouth } from './Mouth'
 import {
+  OUTER_STROKE_WIDTH,
   STROKE_LINECAP,
   STROKE_LINEJOIN,
-  OUTER_STROKE_WIDTH,
 } from './constants'
-import { AntennaSettings, DynamicBotAntenna } from './Antenna'
-import { DynamicBotMouth } from './Mouth'
+import { EyeBehaviourSettings } from './hooks/eyeBehaviour'
+import { useCursorPosition } from './hooks/followCursor'
 import { useFollowedPosition } from './hooks/useFollowedPosition'
+import { BotEmotion } from './types'
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 

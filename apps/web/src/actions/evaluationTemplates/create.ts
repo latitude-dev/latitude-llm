@@ -1,7 +1,7 @@
 'use server'
 
-import { EvaluationResultableType } from '@latitude-data/core/browser'
 import { UnauthorizedError } from '@latitude-data/constants/errors'
+import { EvaluationResultableType } from '@latitude-data/core/browser'
 import { createEvaluationTemplate } from '@latitude-data/core/services/evaluationAdvancedTemplates/create'
 import { z } from 'zod'
 

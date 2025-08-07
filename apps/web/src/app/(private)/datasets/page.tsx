@@ -1,14 +1,14 @@
-import { DatasetsRepository } from '@latitude-data/core/repositories'
-import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { env } from '@latitude-data/env'
-import { RootDatasetHeader } from './_components/RootHeader'
-import { DatasetsTable } from './_components/DatasetsTable'
-import { IDatasetSettingsModal } from '$/services/routes'
-import Layout from './_components/Layout'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import { IDatasetSettingsModal } from '$/services/routes'
+import { DatasetsRepository } from '@latitude-data/core/repositories'
+import { env } from '@latitude-data/env'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { DatasetsTable } from './_components/DatasetsTable'
+import Layout from './_components/Layout'
+import { RootDatasetHeader } from './_components/RootHeader'
 
 export default async function DatasetsRoot({
   searchParams,

@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { applyAllRules } from './index'
 import { Providers } from '@latitude-data/constants'
+import { describe, expect, it } from 'vitest'
+import { applyAllRules } from './index'
 
 describe('rules', () => {
   it('add providerOptions to rules config', () => {

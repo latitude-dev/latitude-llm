@@ -1,8 +1,8 @@
 'use server'
 
+import { testWebhookEndpoint } from '@latitude-data/core/services/webhooks/testWebhook'
 import { z } from 'zod'
 import { authProcedure } from '../procedures'
-import { testWebhookEndpoint } from '@latitude-data/core/services/webhooks/testWebhook'
 
 export const testWebhookAction = authProcedure
   .createServerAction()

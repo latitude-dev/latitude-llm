@@ -1,5 +1,5 @@
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
   Commit,

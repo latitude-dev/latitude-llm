@@ -6,6 +6,7 @@ import {
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import {
   ICommitContextType,
   IProjectContextType,
@@ -13,7 +14,6 @@ import {
 import DiffMatchPatch from 'diff-match-patch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import { useCallback, useMemo } from 'react'
 
 const dmp = new DiffMatchPatch()

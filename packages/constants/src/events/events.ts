@@ -3,6 +3,7 @@ import {
   Message,
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
+import { FinishReason, LanguageModelUsage } from 'ai'
 import {
   ChainStepResponse,
   ProviderData,
@@ -10,7 +11,6 @@ import {
   StreamType,
   TraceContext,
 } from '..'
-import { FinishReason, LanguageModelUsage } from 'ai'
 import { ChainError, RunErrorCodes } from '../errors'
 
 export enum ChainEventTypes {

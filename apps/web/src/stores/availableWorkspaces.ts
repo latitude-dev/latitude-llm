@@ -1,14 +1,14 @@
 import { useCallback } from 'react'
 
-import { Workspace } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { switchWorkspaceAction } from '$/actions/workspaces/switch'
 import useFetcher from '$/hooks/useFetcher'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
+import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
+import { Workspace } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useSWR from 'swr'
 import { useServerAction } from 'zsa-react'
-import { useNavigate } from '$/hooks/useNavigate'
 
 export default function useAvailableWorkspaces() {
   const { toast } = useToast()

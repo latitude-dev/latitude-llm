@@ -7,10 +7,10 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core'
 
+import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 import { workspaces } from './workspaces'
-import { latitudeSchema } from '../db-schema'
 
 // Define the possible states for a K8s application
 export const k8sAppStatusEnum = latitudeSchema.enum('k8s_app_status', [

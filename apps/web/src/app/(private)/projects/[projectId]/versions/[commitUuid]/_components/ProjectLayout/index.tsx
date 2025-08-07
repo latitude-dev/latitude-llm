@@ -1,19 +1,19 @@
 import { ReactNode } from 'react'
 
-import type { DocumentVersion } from '@latitude-data/core/browser'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { ProjectSidebarLayout } from '@latitude-data/web-ui/sections/ProjectSidebarLayout'
+import {
+  findCommitCached,
+  findProjectCached,
+} from '$/app/(private)/_data-access'
 import {
   getResizablePanelGroupData,
   MIN_SIDEBAR_WIDTH_PX,
   ResizableGroups,
 } from '$/app/_lib/getResizablePanelGroupData'
-import {
-  findCommitCached,
-  findProjectCached,
-} from '$/app/(private)/_data-access'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
+import type { DocumentVersion } from '@latitude-data/core/browser'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { ProjectSidebarLayout } from '@latitude-data/web-ui/sections/ProjectSidebarLayout'
 import { redirect } from 'next/navigation'
 
 import { LastSeenCommitCookie } from '../LastSeenCommitCookie'

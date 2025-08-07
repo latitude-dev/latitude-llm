@@ -1,17 +1,17 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { MenuOption } from '@lexical/react/LexicalTypeaheadMenuPlugin'
 import {
+  $createParagraphNode,
   $getSelection,
   $isRangeSelection,
   LexicalEditor,
-  $createParagraphNode,
   TextNode,
 } from 'lexical'
 import { useEffect, useMemo, useState } from 'react'
+import { IconName } from '../../../../../atoms/Icons'
 import { $createMessageBlockNode } from '../../nodes/MessageBlock'
 import { $createStepBlockNode } from '../../nodes/StepBlock'
 import { VariableNode } from '../../nodes/VariableNode'
-import { IconName } from '../../../../../atoms/Icons'
 import { getAllVariables } from '../VariablesMenuPlugin'
 
 interface MenuItemOption {

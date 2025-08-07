@@ -2,13 +2,13 @@
 
 import { compact } from 'lodash-es'
 
+import { useCommits } from '$/stores/commitsStore'
 import {
   CommitStatus,
   DocumentVersion,
   type Commit,
 } from '@latitude-data/core/browser'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { useCommits } from '$/stores/commitsStore'
 
 import { CommitItem, CommitItemSkeleton, SimpleUser } from './CommitItem'
 import { CommitItemsWrapper } from './CommitItemsWrapper'

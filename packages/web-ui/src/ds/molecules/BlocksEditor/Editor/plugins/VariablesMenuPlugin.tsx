@@ -1,16 +1,16 @@
-import React, { useCallback, useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   LexicalTypeaheadMenuPlugin,
   MenuOption,
   useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $insertNodes, LexicalEditor, TextNode } from 'lexical'
+import React, { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '../../../../../lib/utils'
 import { Text } from '../../../../atoms/Text'
-import { $getVariableNames, VariableNode } from '../nodes/VariableNode'
 import { $getStepNames } from '../nodes/StepBlock'
+import { $getVariableNames, VariableNode } from '../nodes/VariableNode'
 
 class ComponentPickerOption extends MenuOption {
   name: string

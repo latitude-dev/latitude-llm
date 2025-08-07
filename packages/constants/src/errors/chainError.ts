@@ -1,9 +1,9 @@
-import { UnprocessableEntityError } from './latitudeError'
 import {
+  LatitudeErrorDetails,
   RunErrorCodes,
   RunErrorDetails,
-  LatitudeErrorDetails,
 } from './constants'
+import { UnprocessableEntityError } from './latitudeError'
 export class ChainError<
   T extends RunErrorCodes,
   RunError = object,

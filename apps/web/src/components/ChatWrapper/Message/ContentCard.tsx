@@ -1,14 +1,14 @@
-import { memo, ReactNode, useMemo } from 'react'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { cn } from '@latitude-data/web-ui/utils'
-import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
 import {
   BackgroundColor,
   colors,
   TextColor,
 } from '@latitude-data/web-ui/tokens'
+import { cn } from '@latitude-data/web-ui/utils'
+import { memo, ReactNode, useMemo } from 'react'
 
 export const ContentCard = memo(
   ({

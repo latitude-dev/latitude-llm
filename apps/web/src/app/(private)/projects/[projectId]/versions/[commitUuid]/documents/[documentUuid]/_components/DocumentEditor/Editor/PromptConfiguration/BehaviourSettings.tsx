@@ -1,8 +1,8 @@
-import { useCallback } from 'react'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { useCallback } from 'react'
+import { SubAgentSelector } from './_components/AgentSelector'
 import { ConfigElement, ConfigSection } from './_components/ConfigSection'
 import { PromptConfigurationProps } from './utils'
-import { SubAgentSelector } from './_components/AgentSelector'
 
 export function BehaviourSettings({
   config,

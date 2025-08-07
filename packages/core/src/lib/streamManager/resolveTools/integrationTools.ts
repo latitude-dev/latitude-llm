@@ -1,15 +1,15 @@
-import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
-import { PromisedResult } from '../../Transaction'
-import { Result } from '../../Result'
-import { ResolvedTools, ToolSource } from './types'
-import { IntegrationsRepository } from '../../../repositories'
-import { listTools } from '../../../services/integrations'
+import { LATITUDE_TOOL_PREFIX } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Tool } from 'ai'
-import { callIntegrationTool } from '../../../services/integrations/McpClient/callTool'
 import { StreamManager } from '..'
-import { LATITUDE_TOOL_PREFIX } from '@latitude-data/constants'
+import { IntegrationsRepository } from '../../../repositories'
+import { listTools } from '../../../services/integrations'
+import { callIntegrationTool } from '../../../services/integrations/McpClient/callTool'
 import { telemetry } from '../../../telemetry'
+import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
+import { Result } from '../../Result'
+import { PromisedResult } from '../../Transaction'
+import { ResolvedTools, ToolSource } from './types'
 
 export async function resolveIntegrationTools({
   config,

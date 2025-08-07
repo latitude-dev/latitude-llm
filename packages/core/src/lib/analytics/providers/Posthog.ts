@@ -1,6 +1,6 @@
 import { PostHog } from 'posthog-node'
-import { AnalyticsProvider } from './AnalyticsProvider'
 import { CollectorOutput, ProductEdition } from '../collectors/DataCollector'
+import { AnalyticsProvider } from './AnalyticsProvider'
 
 const POSTHOG_KEY = 'phc_4R5q3ZzjJ3biZ9SandlYXn5SceEa5KoKeQ7u4hsW8vF'
 const POSTHOG_HOST = 'https://eu.i.posthog.com'

@@ -1,13 +1,13 @@
-import path from 'path'
 import slugify from '@sindresorhus/slugify'
+import path from 'path'
 
 import { User, Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
-import { diskFactory, DiskWrapper } from '../../lib/disk'
-import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
-import { createDataset, getCsvAndBuildColumns } from './create'
 import Transaction from '../../lib/Transaction'
+import { diskFactory, DiskWrapper } from '../../lib/disk'
+import { createDataset, getCsvAndBuildColumns } from './create'
+import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 
 export const createDatasetFromFile = async (
   {

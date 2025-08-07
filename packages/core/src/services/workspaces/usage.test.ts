@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { WorkspaceDto } from '../../browser'
 import { Providers } from '../../constants'
 import { deleteCommitDraft } from '../commits'
-import { computeWorkspaceUsage } from './usage'
 import { deleteEvaluationV2 } from '../evaluationsV2/delete'
+import { computeWorkspaceUsage } from './usage'
 
 describe('computeWorkspaceUsage', () => {
   it('calculates usage correctly when there are evaluation results and document logs', async (ctx) => {

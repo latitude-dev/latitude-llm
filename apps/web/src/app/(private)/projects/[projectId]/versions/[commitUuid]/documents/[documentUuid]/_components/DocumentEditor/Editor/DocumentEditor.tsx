@@ -1,41 +1,41 @@
+import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { LatteLayout } from '$/components/LatteLayout'
-import { useCallback, useMemo, useState } from 'react'
-import { DocumentEditorProps } from './OldDocumentEditor'
+import { MetadataProvider } from '$/components/MetadataProvider'
+import { RunExperimentModal } from '$/components/RunExperimentModal'
+import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
+import { useMetadata } from '$/hooks/useMetadata'
+import { useToggleModal } from '$/hooks/useToogleModal'
+import useDocumentVersions from '$/stores/documentVersions'
+import {
+  Commit,
+  DocumentVersion,
+  INPUT_SOURCE,
+  LogSources,
+  Project,
+} from '@latitude-data/core/browser'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import useDocumentVersions from '$/stores/documentVersions'
-import { useMetadata } from '$/hooks/useMetadata'
-import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
-import { DocumentTabSelector } from '../../DocumentTabs/tabs'
-import { V2Playground } from './V2Playground'
-import { useToggleModal } from '$/hooks/useToogleModal'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import DocumentParams from './V2Playground/DocumentParams'
-import {
-  Commit,
-  LogSources,
-  Project,
-  DocumentVersion,
-  INPUT_SOURCE,
-} from '@latitude-data/core/browser'
-import { TitleRow } from './EditorHeader/TitleRow'
-import { AgentToolbar } from './EditorHeader/AgentToolbar'
-import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { cn } from '@latitude-data/web-ui/utils'
-import { RunExperimentModal } from '$/components/RunExperimentModal'
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { useRunPlaygroundPrompt } from './Playground/hooks/useRunPlaygroundPrompt'
-import { RunButton } from './RunButton'
+import { useCallback, useMemo, useState } from 'react'
+import { DocumentTabSelector } from '../../DocumentTabs/tabs'
 import { ChatInputBox } from './ChatInputBox'
-import { Editors } from './Editors'
-import { DevModeProvider } from './hooks/useDevMode'
 import {
   DocumentValueProvider,
   useDocumentValue,
 } from './context/DocumentValueContext'
-import { MetadataProvider } from '$/components/MetadataProvider'
+import { AgentToolbar } from './EditorHeader/AgentToolbar'
+import { TitleRow } from './EditorHeader/TitleRow'
+import { Editors } from './Editors'
+import { DevModeProvider } from './hooks/useDevMode'
+import { DocumentEditorProps } from './OldDocumentEditor'
+import { useRunPlaygroundPrompt } from './Playground/hooks/useRunPlaygroundPrompt'
+import { RunButton } from './RunButton'
+import { V2Playground } from './V2Playground'
+import DocumentParams from './V2Playground/DocumentParams'
 
 export function DocumentEditor(props: DocumentEditorProps) {
   return (

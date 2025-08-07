@@ -1,7 +1,7 @@
-import { executeLatitudeToolCall } from '../../../../../services/latitudeTools'
 import { Result } from '../../../../../lib/Result'
 import { PromisedResult } from '../../../../../lib/Transaction'
 import { NotFoundError } from '../../../../../lib/errors'
+import { executeLatitudeToolCall } from '../../../../../services/latitudeTools'
 import { ToolSource } from '../../resolveTools/types'
 import { ToolResponsesArgs } from './types'
 

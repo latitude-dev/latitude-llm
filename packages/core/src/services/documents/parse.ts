@@ -1,9 +1,9 @@
+import { OverloadedError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import os from 'os'
 import Piscina from 'piscina'
 import { parse, type Fragment } from 'promptl-ai'
 import { Result, TypedResult } from '../../lib/Result'
-import { OverloadedError } from '@latitude-data/constants/errors'
 
 let pool: Piscina | undefined
 if (env.NODE_ENV !== 'test') {

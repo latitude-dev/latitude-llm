@@ -1,5 +1,6 @@
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
+import { Message as MessageComponent } from '$/components/ChatWrapper'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
   DocumentLog,
@@ -11,7 +12,6 @@ import {
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import { Message as MessageComponent } from '$/components/ChatWrapper'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { format } from 'date-fns'
 import { useCallback, useMemo } from 'react'

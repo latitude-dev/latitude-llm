@@ -1,11 +1,11 @@
 'use server'
 
-import { ReactNode } from 'react'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { CSPostHogProvider, IdentifyUser } from '$/app/providers'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { redirect } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { redirect } from 'next/navigation'
+import { ReactNode } from 'react'
 
 export default async function OnboardingLayout({
   children,

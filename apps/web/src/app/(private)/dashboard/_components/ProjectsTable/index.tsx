@@ -1,6 +1,9 @@
 'use client'
 import { useState } from 'react'
 
+import { useNavigate } from '$/hooks/useNavigate'
+import { relativeTime } from '$/lib/relativeTime'
+import { ROUTES } from '$/services/routes'
 import { Project } from '@latitude-data/core/browser'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import {
@@ -12,9 +15,6 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useNavigate } from '$/hooks/useNavigate'
-import { relativeTime } from '$/lib/relativeTime'
-import { ROUTES } from '$/services/routes'
 
 import RenameProjectModal from './RenameProjectModal'
 

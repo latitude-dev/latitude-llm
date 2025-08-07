@@ -1,7 +1,7 @@
 import { ProviderLogsRepository } from '../../repositories'
-import { EventHandler, ProviderLogCreatedEvent } from '../events'
 import { touchProviderApiKey } from '../../services/providerApiKeys/touch'
 import { bufferOperation } from '../../utils/bufferOperation'
+import { EventHandler, ProviderLogCreatedEvent } from '../events'
 
 // Buffer time in seconds before allowing another touch to the same provider API key
 const BUFFER_TIME_SECONDS = 5

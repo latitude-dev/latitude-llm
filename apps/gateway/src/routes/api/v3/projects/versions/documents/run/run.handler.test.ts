@@ -1,11 +1,12 @@
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { ChainEventTypes } from '@latitude-data/constants'
 import {
   ChainError,
   LatitudeError,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   Commit,
   LegacyChainEventTypes,
@@ -27,7 +28,6 @@ import { Result } from '@latitude-data/core/lib/Result'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ChainEventTypes } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),

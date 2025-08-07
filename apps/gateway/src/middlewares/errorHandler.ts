@@ -1,11 +1,11 @@
-import { ApiErrorCodes } from '@latitude-data/constants/errors'
-import {
-  LatitudeError,
-  UnprocessableEntityError,
-  ChainError,
-} from '@latitude-data/constants/errors'
 import http from '$/common/http'
 import { captureException } from '$/common/sentry'
+import {
+  ApiErrorCodes,
+  ChainError,
+  LatitudeError,
+  UnprocessableEntityError,
+} from '@latitude-data/constants/errors'
 import { HTTPException } from 'hono/http-exception'
 
 function unprocessableExtraParameters(error: UnprocessableEntityError) {

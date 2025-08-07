@@ -1,12 +1,12 @@
 'use client'
-import { IntegrationType } from '@latitude-data/constants'
-import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { forwardRef, useImperativeHandle, useState } from 'react'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { pingCustomMcpAction } from '$/actions/integrations/pingCustomMcpServer'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { IntegrationType } from '@latitude-data/constants'
 import { IntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { forwardRef, useImperativeHandle, useState } from 'react'
 
 export const ExternalIntegrationConfiguration = forwardRef<
   {

@@ -1,11 +1,11 @@
+import { envClient } from '$/envClient'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useDocs } from './Provider'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import Link from 'next/link'
-import { envClient } from '$/envClient'
 import { DocsRoute, getRouteFromPathname } from './routes'
-import { usePathname } from 'next/navigation'
 
 const DOCS_DOMAIN = envClient.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.latitude.so'
 

@@ -5,10 +5,10 @@ import { LatitudeError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'
 import { StreamManager } from '../../../../lib/streamManager'
 import { PromisedResult } from '../../../../lib/Transaction'
+import { listPipedreamIntegrationTools } from '../../pipedream/listTools'
 import { touchIntegration } from '../../touch'
 import { getMcpClient } from '../McpClientManager'
 import { fixToolSchema } from './fixToolSchema'
-import { listPipedreamIntegrationTools } from '../../pipedream/listTools'
 
 export async function listTools(
   integration: IntegrationDto,

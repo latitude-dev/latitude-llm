@@ -1,6 +1,5 @@
 'use client'
 
-import { ChangeEvent } from 'react'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
@@ -11,7 +10,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useCallback, useState } from 'react'
+import { ChangeEvent, useCallback, useState } from 'react'
 
 export function AddPromptTextarea() {
   const navigate = useNavigate()

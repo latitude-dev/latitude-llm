@@ -1,15 +1,15 @@
 'use client'
+import { useMemo, useState } from 'react'
+import {
+  DisambiguatedFilePath,
+  disambiguateFilePaths,
+} from '../../../lib/disambiguateFilePaths'
 import { Button } from '../../atoms/Button'
 import { Icon } from '../../atoms/Icons'
 import { Input } from '../../atoms/Input'
 import { Popover } from '../../atoms/Popover'
 import { Text } from '../../atoms/Text'
 import { Tooltip } from '../../atoms/Tooltip'
-import { useMemo, useState } from 'react'
-import {
-  DisambiguatedFilePath,
-  disambiguateFilePaths,
-} from '../../../lib/disambiguateFilePaths'
 
 // TODO: Deprecate this component in favor of MultiSelect
 export function FilePathSelector({

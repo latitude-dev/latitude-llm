@@ -1,7 +1,7 @@
 import { and, count, eq, inArray, isNull } from 'drizzle-orm'
-import { commits, documentLogs, documentVersions } from '../../schema'
-import { database } from '../../client'
 import { DocumentVersion } from '../../browser'
+import { database } from '../../client'
+import { commits, documentLogs, documentVersions } from '../../schema'
 
 export async function countDocumentLogs(
   document: DocumentVersion,

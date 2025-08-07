@@ -1,10 +1,10 @@
+import { AgentToolsMap } from '@latitude-data/constants'
+import { type DocumentVersion, HEAD_COMMIT } from '@latitude-data/core/browser'
+import { getAgentToolName } from '@latitude-data/core/services/agents/helpers'
 import { isEqual } from 'lodash-es'
 import { useEffect, useMemo, useState } from 'react'
-import { type DocumentVersion, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { SWRConfiguration } from 'swr'
 import useDocumentVersions from './documentVersions'
-import { getAgentToolName } from '@latitude-data/core/services/agents/helpers'
-import { AgentToolsMap } from '@latitude-data/constants'
 
 function buildAgentsToolMap(data: DocumentVersion[] = []) {
   if (!data) return {}

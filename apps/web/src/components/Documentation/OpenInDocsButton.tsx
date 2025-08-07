@@ -1,9 +1,9 @@
 'use client'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { DocsRoute } from './routes'
-import { useDocs } from './Provider'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useState } from 'react'
+import { useDocs } from './Provider'
+import { DocsRoute } from './routes'
 
 export function OpenInDocsButton({ route }: { route: DocsRoute }) {
   const { open } = useDocs()

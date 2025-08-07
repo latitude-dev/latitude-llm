@@ -1,7 +1,7 @@
-import { createRoute as createOpenAPIRoute, z } from '@hono/zod-openapi'
 import { API_ROUTES } from '$/api.routes'
-import { ProjectSchema } from '$/openApi/schemas/ai'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
+import { ProjectSchema } from '$/openApi/schemas/ai'
+import { createRoute as createOpenAPIRoute, z } from '@hono/zod-openapi'
 
 export const createRoute = createOpenAPIRoute({
   method: 'post',

@@ -1,4 +1,5 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
+import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
 import { MetadataItem } from '$/components/MetadataItem'
 import useModelOptions from '$/hooks/useModelOptions'
 import { formatCount } from '$/lib/formatCount'
@@ -41,7 +42,6 @@ import LlmEvaluationComparisonSpecification from './Comparison'
 import LlmEvaluationCustomSpecification from './Custom'
 import LlmEvaluationCustomLabeledSpecification from './CustomLabeled'
 import LlmEvaluationRatingSpecification from './Rating'
-import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
 
 // prettier-ignore
 const METRICS: {

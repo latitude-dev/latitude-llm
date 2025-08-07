@@ -3,6 +3,7 @@
 // All this can be seen in the browser. If you want something private
 // put in other place.
 
+import { LatteChange } from '@latitude-data/constants/latte'
 import type {
   Commit,
   Dataset,
@@ -14,7 +15,6 @@ import type {
   ExperimentDto,
   ProviderLogDto,
 } from '../browser'
-import { LatteChange } from '@latitude-data/constants/latte'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR

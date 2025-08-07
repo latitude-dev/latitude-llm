@@ -1,9 +1,9 @@
 import { and, eq } from 'drizzle-orm'
 
 import { database } from '../../client'
-import { webhooks } from '../../schema/models/webhooks'
 import { NotFoundError } from '../../lib/errors'
 import { Result, type TypedResult } from '../../lib/Result'
+import { webhooks } from '../../schema/models/webhooks'
 import { type Webhook } from './types'
 
 export async function deleteWebhook(

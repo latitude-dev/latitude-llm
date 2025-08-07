@@ -1,31 +1,31 @@
+import { MetadataProvider } from '$/components/MetadataProvider'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
+import { useMetadata } from '$/hooks/useMetadata'
 import useDocumentVersions from '$/stores/documentVersions'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
+import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useMemo } from 'react'
-import { useOldEditorHeaderActions } from './hooks/useOldEditorHeaderActions'
-import { useMetadata } from '$/hooks/useMetadata'
-import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { useLatteStreaming } from './hooks/useLatteStreaming'
-import { useDiffState } from './hooks/useDiffState'
-import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
-import { EditorHeader } from './EditorHeader'
-import { PlaygroundTextEditor } from './TextEditor'
-import { PlaygroundBlocksEditor } from './BlocksEditor'
-import { Playground } from './Playground'
 import { EvaluationEditorHeader } from '../../../(withTabs)/evaluations/[evaluationUuid]/editor/_components/EvaluationEditor/EditorHeader'
 import DocumentTabs from '../../DocumentTabs'
+import { PlaygroundBlocksEditor } from './BlocksEditor'
 import {
   DocumentValueProvider,
   useDocumentValue,
 } from './context/DocumentValueContext'
+import { EditorHeader } from './EditorHeader'
 import { DevModeProvider, useDevMode } from './hooks/useDevMode'
-import { MetadataProvider } from '$/components/MetadataProvider'
+import { useDiffState } from './hooks/useDiffState'
+import { useLatteStreaming } from './hooks/useLatteStreaming'
+import { useOldEditorHeaderActions } from './hooks/useOldEditorHeaderActions'
+import { Playground } from './Playground'
+import { PlaygroundTextEditor } from './TextEditor'
 
 export type DocumentEditorProps = {
   document: DocumentVersion

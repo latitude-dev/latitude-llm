@@ -1,11 +1,11 @@
 'use client'
 import { useConnectToPipedreamApp } from '$/hooks/useConnectToPipedreamApp'
-import { forwardRef, useImperativeHandle, useState } from 'react'
-import { AppSelector } from './Pipedream/AppSelector'
-import type { App } from '@pipedream/sdk/browser'
-import { IntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
 import { IntegrationType } from '@latitude-data/constants'
+import { IntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
+import type { App } from '@pipedream/sdk/browser'
+import { forwardRef, useImperativeHandle, useState } from 'react'
 import { PipedreamAppCard } from './Pipedream/AppCard'
+import { AppSelector } from './Pipedream/AppSelector'
 
 export const PipedreamIntegrationConfiguration = forwardRef<{
   validate: () => Promise<IntegrationConfiguration>

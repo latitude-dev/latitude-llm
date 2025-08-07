@@ -2,10 +2,10 @@
 
 import { DayPicker } from 'react-day-picker'
 
-import { cn } from '../../../../lib/utils'
-import { Icon } from '../../Icons'
-import { buttonVariants } from '../../Button'
 import { ComponentProps } from 'react'
+import { cn } from '../../../../lib/utils'
+import { buttonVariants } from '../../Button'
+import { Icon } from '../../Icons'
 
 export type CalendarProps = ComponentProps<typeof DayPicker>
 const RANGE_SELECTED_CLASS = cn(

@@ -1,7 +1,7 @@
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
-import { DatasetsRepository, UsersRepository } from '../../../repositories'
 import { DatasetUpdateMailer } from '../../../mailers/mailers/mailers/datasets/DatasetUpdateMailer'
+import { DatasetsRepository, UsersRepository } from '../../../repositories'
 
 type NotifyClientOfDatasetUpdateJobProps = {
   userId: string

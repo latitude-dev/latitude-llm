@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { webhooksQueue } from '../../queues'
-import { processWebhookJob } from './processWebhookJob'
-import * as factories from '../../../tests/factories'
 import { Commit, Providers } from '../../../browser'
 import {
   CommitPublishedEvent,
   DocumentLogCreatedEvent,
 } from '../../../events/events'
+import * as factories from '../../../tests/factories'
+import { webhooksQueue } from '../../queues'
+import { processWebhookJob } from './processWebhookJob'
 
 describe('processWebhookJob', () => {
   const mocks = vi.hoisted(() => ({

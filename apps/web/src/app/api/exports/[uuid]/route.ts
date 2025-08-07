@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { diskFactory } from '@latitude-data/core/lib/disk'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { Workspace } from '@latitude-data/core/browser'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
+import { Workspace } from '@latitude-data/core/browser'
 import { findByUuid } from '@latitude-data/core/data-access/exports/findByUuid'
+import { diskFactory } from '@latitude-data/core/lib/disk'
 import { env } from '@latitude-data/env'
+import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
   authHandler(

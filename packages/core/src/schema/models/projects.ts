@@ -6,10 +6,10 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
+import { sql } from 'drizzle-orm'
 import { latitudeSchema } from '../db-schema'
 import { workspaces } from '../models/workspaces'
 import { timestamps } from '../schemaHelpers'
-import { sql } from 'drizzle-orm'
 
 export const projects = latitudeSchema.table(
   'projects',

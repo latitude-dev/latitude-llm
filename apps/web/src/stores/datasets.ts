@@ -1,14 +1,14 @@
-import type { Dataset } from '@latitude-data/core/browser'
-import { compact } from 'lodash-es'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { destroyDatasetAction } from '$/actions/datasets/destroy'
 import { updateDatasetColumnAction } from '$/actions/datasets/updateColumn'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import type { Dataset } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { compact } from 'lodash-es'
 import { useCallback, useState } from 'react'
+import useSWR, { SWRConfiguration } from 'swr'
 
 const EMPTY_ARRAY: Dataset[] = []
 

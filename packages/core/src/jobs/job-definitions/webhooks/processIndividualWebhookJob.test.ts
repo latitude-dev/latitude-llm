@@ -1,16 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Providers } from '@latitude-data/constants'
+import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { Job } from 'bullmq'
-import { processIndividualWebhookJob } from './processIndividualWebhookJob'
-import * as factories from '../../../tests/factories'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Commit } from '../../../browser'
 import { CommitPublishedEvent } from '../../../events/events'
 import {
   createWebhookDelivery,
   sendSignedWebhook,
 } from '../../../services/webhooks'
+import * as factories from '../../../tests/factories'
 import { Result } from './../../../lib/Result'
-import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
-import { Providers } from '@latitude-data/constants'
+import { processIndividualWebhookJob } from './processIndividualWebhookJob'
 
 // Mock the services
 vi.mock('../../../services/webhooks', () => ({

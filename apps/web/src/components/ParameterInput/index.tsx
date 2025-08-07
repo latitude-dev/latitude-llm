@@ -1,12 +1,12 @@
 import { ChangeEvent, useCallback, useMemo } from 'react'
 
+import useFiles from '$/stores/files'
+import { ParameterType } from '@latitude-data/constants'
+import { SUPPORTED_IMAGE_TYPES } from '@latitude-data/core/browser'
+import { DropzoneInput } from '@latitude-data/web-ui/atoms/DropzoneInput'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import { ParameterType } from '@latitude-data/constants'
-import { DropzoneInput } from '@latitude-data/web-ui/atoms/DropzoneInput'
-import { SUPPORTED_IMAGE_TYPES } from '@latitude-data/core/browser'
 import { isPromptLFile } from 'promptl-ai'
-import useFiles from '$/stores/files'
 
 export function ParameterInputSkeleton() {
   return (

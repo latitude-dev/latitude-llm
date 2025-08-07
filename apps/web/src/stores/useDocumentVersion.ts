@@ -1,8 +1,8 @@
 'use client'
 
-import { DocumentVersionDto } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import { DocumentVersionDto } from '@latitude-data/core/browser'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useDocumentVersion(

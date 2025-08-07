@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState } from 'react'
 import { customDiff, CustomDiffType } from '$/helpers/latte/customDiff'
+import { useCallback, useRef, useState } from 'react'
 
 const MAX_ANIMATION_TIME = 5000
 const STEP_DURATION = 4

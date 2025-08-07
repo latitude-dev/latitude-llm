@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { estimateCost } from './index'
 import { Providers } from '@latitude-data/constants'
+import { describe, expect, it } from 'vitest'
+import { estimateCost } from './index'
 
 describe('estimateCost', () => {
   it('calculates cost for a single cost model', () => {

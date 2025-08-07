@@ -1,7 +1,7 @@
 'use client'
 
-import { ComponentPropsWithoutRef, ElementRef, forwardRef } from 'react'
 import * as CheckboxPrimitive from '@radix-ui/react-checkbox'
+import { ComponentPropsWithoutRef, ElementRef, forwardRef } from 'react'
 
 import { cn } from '../../../../lib/utils'
 import { Icon } from '../../Icons'

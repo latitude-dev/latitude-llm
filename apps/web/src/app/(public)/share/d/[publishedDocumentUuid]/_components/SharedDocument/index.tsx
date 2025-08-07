@@ -2,10 +2,10 @@
 
 import { PublishedDocument } from '@latitude-data/core/browser'
 
-import { PromptHeader } from '../Header'
 import { ServerClientMetadata } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/SharedDocument/types'
-import { RunPrompt } from './RunPrompt'
+import { PromptHeader } from '../Header'
 import { DisplayPrompt } from './DisplayPrompt'
+import { RunPrompt } from './RunPrompt'
 
 export function SharedDocument({
   metadata,

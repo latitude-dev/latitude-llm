@@ -1,10 +1,10 @@
 'use client'
 
+import { CurrentTheme } from '@latitude-data/web-ui/browser'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { CurrentTheme } from '@latitude-data/web-ui/browser'
 import { useTheme } from 'next-themes'
 
 export function useCurrentTheme() {

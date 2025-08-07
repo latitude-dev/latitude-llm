@@ -1,12 +1,12 @@
 import { ReactNode } from 'react'
 
-import { Container } from '@latitude-data/web-ui/atoms/Container'
-import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
-import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import buildMetatags from '$/app/_lib/buildMetatags'
 import { AppTabs } from '$/app/(private)/AppTabs'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
+import { Container } from '@latitude-data/web-ui/atoms/Container'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import Link from 'next/link'
 
 import { getActiveProjectsCached } from '../_data-access'

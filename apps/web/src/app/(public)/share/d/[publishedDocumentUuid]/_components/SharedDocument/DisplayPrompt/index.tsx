@@ -1,5 +1,5 @@
-import { Container } from '../../Container'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { Container } from '../../Container'
 
 export function DisplayPrompt({ prompt }: { prompt: string }) {
   return (

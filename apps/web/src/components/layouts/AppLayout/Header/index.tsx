@@ -1,9 +1,9 @@
 'use client'
 import { ReactNode } from 'react'
 
-import { cn } from '@latitude-data/web-ui/utils'
-import { SessionUser } from '@latitude-data/web-ui/providers'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { SessionUser } from '@latitude-data/web-ui/providers'
+import { cn } from '@latitude-data/web-ui/utils'
 
 import AvatarDropdown from './AvatarDropdown'
 import { HeaderBreadcrumb } from './Breadcrumb'

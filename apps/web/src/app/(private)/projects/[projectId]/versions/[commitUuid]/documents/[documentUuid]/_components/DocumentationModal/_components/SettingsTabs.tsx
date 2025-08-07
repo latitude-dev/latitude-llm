@@ -2,13 +2,12 @@
 import { useState } from 'react'
 
 import { ApiKey, DocumentVersion } from '@latitude-data/core/browser'
-import { Tabs } from '@latitude-data/web-ui/molecules/Tabs'
-import { TabItem } from '@latitude-data/web-ui/molecules/Tabs'
+import { TabItem, Tabs } from '@latitude-data/web-ui/molecules/Tabs'
 
+import { UsedToolsDoc } from '../index'
 import { APIUsage } from './APIUsage'
 import { JavascriptUsage } from './JavascriptUsage'
 import { PythonUsage } from './PythonUsage'
-import { UsedToolsDoc } from '../index'
 
 const tabs: TabItem[] = [
   { id: 'javascript', label: 'Javascript' },

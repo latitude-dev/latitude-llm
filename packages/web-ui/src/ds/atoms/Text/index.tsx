@@ -1,3 +1,4 @@
+import { Slot } from '@radix-ui/react-slot'
 import {
   Children,
   forwardRef,
@@ -5,7 +6,6 @@ import {
   ReactNode,
   type ForwardRefExoticComponent,
 } from 'react'
-import { Slot } from '@radix-ui/react-slot'
 
 import { ExtendsUnion } from '@latitude-data/core/lib/commonTypes'
 
@@ -24,9 +24,9 @@ import {
   type FontWeight,
   type Overflow,
   type TextColor,
+  type TextOpacity,
   type WhiteSpace,
   type WordBreak,
-  type TextOpacity,
 } from '../../tokens'
 
 type Display = 'inline' | 'inline-block' | 'block'

@@ -1,9 +1,9 @@
 'use client'
 
 import { Column1Provider } from '../contexts/column-1-context'
-import { SearchBox } from './search-box'
-import { Integrations } from './integrations'
 import { ConnectedIntegrations } from './connected-integrations'
+import { Integrations } from './integrations'
+import { SearchBox } from './search-box'
 
 function Column1Content() {
   return (

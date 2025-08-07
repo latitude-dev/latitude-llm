@@ -2,10 +2,10 @@ import { render } from '@react-email/components'
 import Mail from 'nodemailer/lib/mailer'
 import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
-import { TypedResult } from '../../../../lib/Result'
-import Mailer from '../../Mailer'
 import { User } from '../../../../browser'
+import { TypedResult } from '../../../../lib/Result'
 import ExportReadyMail from '../../../emails/exports/ExportReadyMail'
+import Mailer from '../../Mailer'
 
 export class ExportReadyMailer extends Mailer {
   token: string

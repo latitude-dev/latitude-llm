@@ -7,8 +7,8 @@ import {
   Workspace,
 } from '../../browser'
 import * as factories from '../../tests/factories'
-import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 import { NotFoundError } from './../../lib/errors'
+import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 
 describe('computeDocumentLogWithMetadata', () => {
   let workspace: Workspace

@@ -1,12 +1,12 @@
 import { Command } from 'commander'
-import inquirer from 'inquirer'
 import * as fs from 'fs/promises'
+import inquirer from 'inquirer'
 import * as path from 'path'
 import { InitOptions } from '../types'
 import { BaseCommand } from '../utils/baseCommand'
-import { savePrompts } from '../utils/promptOperations'
-import { LatitudeLockFile } from '../utils/lockFileManager'
 import { registerCommand } from '../utils/commandRegistrar'
+import { LatitudeLockFile } from '../utils/lockFileManager'
+import { savePrompts } from '../utils/promptOperations'
 
 /**
  * Handles the initialization of a new Latitude project

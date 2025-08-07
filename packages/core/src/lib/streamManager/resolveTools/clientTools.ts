@@ -1,20 +1,19 @@
 import { LogSources, ToolDefinition } from '@latitude-data/constants'
-import { LatitudeError } from '../../errors'
-import { Result, TypedResult } from '../../Result'
-import { ResolvedTools, ToolSource } from './types'
 import {
   AI_PROVIDERS_WITH_BUILTIN_TOOLS,
   LatitudePromptConfig,
 } from '@latitude-data/constants/latitudePromptSchema'
+import { Tool, ToolExecutionOptions } from 'ai'
 import { StreamManager } from '..'
 import { telemetry, TelemetryContext } from '../../../telemetry'
-import { Tool } from 'ai'
-import { ToolExecutionOptions } from 'ai'
+import { LatitudeError } from '../../errors'
+import { Result, TypedResult } from '../../Result'
 import {
   awaitClientToolResult,
   mockClientToolResult,
   ToolHandler,
 } from '../clientTools/handlers'
+import { ResolvedTools, ToolSource } from './types'
 
 type ToolTuple = [string, ToolDefinition]
 

@@ -1,8 +1,8 @@
-import { type IntegrationDto } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
 import { IntegrationReference } from '@latitude-data/constants'
+import { type IntegrationDto } from '@latitude-data/core/browser'
+import useSWR, { SWRConfiguration } from 'swr'
 
 const EMPTY_ARRAY: IntegrationReference[] = []
 

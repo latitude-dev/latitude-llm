@@ -1,16 +1,16 @@
 import { JSX, ReactNode, useCallback, useState } from 'react'
-import { Skeleton } from '../../atoms/Skeleton'
 import { cn } from '../../../lib/utils'
-import { Icon, IconName } from '../../atoms/Icons'
-import { Text } from '../../atoms/Text'
+import { Button } from '../../atoms/Button'
 import {
   Command,
   CommandEmpty,
   CommandItem,
   CommandList,
 } from '../../atoms/Command'
-import { Button } from '../../atoms/Button'
 import { DotIndicator } from '../../atoms/DotIndicator'
+import { Icon, IconName } from '../../atoms/Icons'
+import { Skeleton } from '../../atoms/Skeleton'
+import { Text } from '../../atoms/Text'
 
 function LoadingOptionSkeleton() {
   return (

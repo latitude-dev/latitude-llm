@@ -1,12 +1,12 @@
 'use server'
 
-import { WorkspacesRepository } from '@latitude-data/core/repositories'
-import { unsafelyGetUser } from '@latitude-data/core/data-access'
-import { z } from 'zod'
-import { setSession } from '$/services/auth/setSession'
-import { authProcedure } from '../procedures'
-import { cookies } from 'next/headers'
 import { removeSession, Session } from '$/services/auth/removeSession'
+import { setSession } from '$/services/auth/setSession'
+import { unsafelyGetUser } from '@latitude-data/core/data-access'
+import { WorkspacesRepository } from '@latitude-data/core/repositories'
+import { cookies } from 'next/headers'
+import { z } from 'zod'
+import { authProcedure } from '../procedures'
 
 export const switchWorkspaceAction = authProcedure
   .createServerAction()

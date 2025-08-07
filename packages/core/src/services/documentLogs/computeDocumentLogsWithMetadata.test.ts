@@ -18,8 +18,8 @@ import { mergeCommit } from '../../services/commits'
 import { updateDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'
 import {
-  computeDocumentLogsWithMetadataCount,
   computeDocumentLogsWithMetadata,
+  computeDocumentLogsWithMetadataCount,
 } from './computeDocumentLogsWithMetadata'
 import { parseSafeCreatedAtRange } from './logsFilterUtils'
 

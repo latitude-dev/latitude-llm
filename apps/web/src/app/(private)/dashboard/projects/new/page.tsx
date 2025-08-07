@@ -1,14 +1,13 @@
 'use client'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
-import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { useFormAction } from '$/hooks/useFormAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useProjects from '$/stores/projects'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 
 export default function NewProject() {
   const navigate = useNavigate()

@@ -1,6 +1,6 @@
 import { createRouter } from '$/openApi/createApp'
-import { chatRoute, chatHandler } from './chat'
-import { annotateRoute, annotateHandler } from './annotate'
+import { annotateHandler, annotateRoute } from './annotate'
+import { chatHandler, chatRoute } from './chat'
 
 export const conversationsRouter = createRouter()
   .openapi(chatRoute, chatHandler)

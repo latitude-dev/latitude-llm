@@ -1,5 +1,5 @@
-import { Queues } from '@latitude-data/core/queues/types'
 import * as jobs from '@latitude-data/core/jobs/definitions'
+import { Queues } from '@latitude-data/core/queues/types'
 import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { useExperiments } from '$/stores/experiments'
 import { Commit, Project } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -9,12 +10,11 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { ExperimentsTable } from '../ExperimentsTable'
-import { RunExperimentModal } from '$/components/RunExperimentModal'
+import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { ExperimentComparison } from '../ExperimentsComparison'
+import { ExperimentsTable } from '../ExperimentsTable'
 import { EmptyPage } from './EmptyPage'
-import { useSearchParams } from 'next/navigation'
 
 export function ExperimentsPageContent({
   initialCount,

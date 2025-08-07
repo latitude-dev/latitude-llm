@@ -1,8 +1,8 @@
-import { useEffect } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $getNodeByKey } from 'lexical'
-import { MessageBlockType } from '../state/promptlToLexical/types'
+import { useEffect } from 'react'
 import { $isMessageBlockNode } from '../nodes/MessageBlock'
+import { MessageBlockType } from '../state/promptlToLexical/types'
 
 export function MessageEditPlugin() {
   const [editor] = useLexicalComposerContext()

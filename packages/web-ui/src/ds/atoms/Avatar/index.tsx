@@ -1,7 +1,7 @@
 'use client'
 
-import { ComponentPropsWithoutRef, ElementRef, forwardRef } from 'react'
 import * as AvatarPrimitive from '@radix-ui/react-avatar'
+import { ComponentPropsWithoutRef, ElementRef, forwardRef } from 'react'
 
 import { cn } from '../../../lib/utils'
 
@@ -72,4 +72,4 @@ function Avatar({ url, alt, fallback, className }: Props) {
     </AvatarRoot>
   )
 }
-export { Avatar, AvatarRoot, AvatarImage, AvatarFallback }
+export { Avatar, AvatarFallback, AvatarImage, AvatarRoot }

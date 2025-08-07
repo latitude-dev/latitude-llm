@@ -1,16 +1,16 @@
-import { useEffect } from 'react'
+import { $isCodeNode } from '@lexical/code'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
-  KEY_ENTER_COMMAND,
-  COMMAND_PRIORITY_CRITICAL,
-  $getSelection,
-  $isRangeSelection,
-  $isParagraphNode,
   $createParagraphNode,
+  $getSelection,
+  $isParagraphNode,
+  $isRangeSelection,
+  COMMAND_PRIORITY_CRITICAL,
+  KEY_ENTER_COMMAND,
 } from 'lexical'
+import { useEffect } from 'react'
 import { $isMessageBlockNode } from '../nodes/MessageBlock'
 import { $isStepBlockNode } from '../nodes/StepBlock'
-import { $isCodeNode } from '@lexical/code'
 
 export function EnterKeyPlugin(): null {
   const [editor] = useLexicalComposerContext()

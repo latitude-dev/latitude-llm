@@ -29,5 +29,5 @@ function EditorCellWrapper(props: EditorCellProps) {
   return <CellTextEditorLazy {...props} />
 }
 
-export type { EditorCellProps }
 export { EditorCellWrapper as DataGridCellEditor }
+export type { EditorCellProps }

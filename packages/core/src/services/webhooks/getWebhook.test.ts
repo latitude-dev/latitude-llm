@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { NotFoundError } from '../../lib/errors'
 import { publisher } from '../../events/publisher'
+import { NotFoundError } from '../../lib/errors'
 import { getWebhook } from './getWebhook'
 
 // @ts-expect-error - Mock

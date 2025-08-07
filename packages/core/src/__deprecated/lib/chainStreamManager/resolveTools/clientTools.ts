@@ -1,11 +1,11 @@
 import { ToolDefinition } from '@latitude-data/constants'
-import { LatitudeError } from '../../../../lib/errors'
-import { Result, TypedResult } from '../../../../lib/Result'
-import { ResolvedTools, ToolSource } from './types'
 import {
   AI_PROVIDERS_WITH_BUILTIN_TOOLS,
   LatitudePromptConfig,
 } from '@latitude-data/constants/latitudePromptSchema'
+import { LatitudeError } from '../../../../lib/errors'
+import { Result, TypedResult } from '../../../../lib/Result'
+import { ResolvedTools, ToolSource } from './types'
 
 type ToolTuple = [string, ToolDefinition]
 function filterProviderTools([name]: ToolTuple) {

@@ -1,22 +1,22 @@
 // index.tsx
+import cronstrue from 'cronstrue'
 import { useCallback, useState } from 'react'
 import { Button } from '../../atoms/Button'
 import { FormField } from '../../atoms/FormField'
-import { Popover } from '../../atoms/Popover'
-import { TabSelector, TabSelectorOption } from '../../molecules/TabSelector'
-import { Text } from '../../atoms/Text'
-import cronstrue from 'cronstrue'
 import { Icon } from '../../atoms/Icons'
+import { Popover } from '../../atoms/Popover'
+import { Text } from '../../atoms/Text'
+import { TabSelector, TabSelectorOption } from '../../molecules/TabSelector'
 
+import { CustomCronInput } from './Custom'
 import { IntervalCronInput } from './Interval'
 import { ScheduleCronInput } from './Schedule'
-import { CustomCronInput } from './Custom'
 import {
   CronValue,
-  parseCronValue,
   formatCronValue,
   isIntervalCron,
   isScheduleCron,
+  parseCronValue,
 } from './utils'
 
 /** Editing modes */

@@ -5,9 +5,9 @@ import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
-import { authProcedure } from '../procedures'
-import { ForbiddenError } from '@latitude-data/constants/errors'
 import { setSession } from '$/services/auth/setSession'
+import { ForbiddenError } from '@latitude-data/constants/errors'
+import { authProcedure } from '../procedures'
 
 export const impersonateAction = authProcedure
   .createServerAction()

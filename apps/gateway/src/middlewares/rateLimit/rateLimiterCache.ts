@@ -1,5 +1,5 @@
-import { RateLimiterRedis } from 'rate-limiter-flexible'
 import { cache } from '@latitude-data/core/cache'
+import { RateLimiterRedis } from 'rate-limiter-flexible'
 
 const RATE_LIMIT_DURATION = 1
 

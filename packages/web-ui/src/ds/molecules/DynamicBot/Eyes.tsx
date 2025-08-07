@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
-import { calculateUnitVector } from './utils'
-import { Position } from './types'
-import { EyeBehaviourSettings, useEyeBehaviour } from './hooks/eyeBehaviour'
 import { INNER_STROKE_WIDTH } from './constants'
+import { EyeBehaviourSettings, useEyeBehaviour } from './hooks/eyeBehaviour'
+import { Position } from './types'
+import { calculateUnitVector } from './utils'
 
 const LEFT_EYE_X = 9
 const RIGHT_EYE_X = 15

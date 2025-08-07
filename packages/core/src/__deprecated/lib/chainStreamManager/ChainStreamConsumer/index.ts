@@ -1,18 +1,18 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
+  ChainStepResponse,
   LegacyChainEvent,
   LegacyChainEventTypes,
-  ChainStepResponse,
   Message,
   StreamEventTypes,
   StreamType,
 } from '../../../../constants'
 import { ValidatedChainStep } from '../../../../services/chains/ChainValidator'
 
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { FinishReason } from 'ai'
 import { buildMessagesFromResponse } from '../../../../helpers'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ValidatedAgentStep } from '../../../../services/__deprecated/agents/AgentStepValidator'
 
 type ValidatedStep = ValidatedChainStep | ValidatedAgentStep

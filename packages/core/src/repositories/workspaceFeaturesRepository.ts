@@ -1,7 +1,7 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
-import { workspaceFeatures } from '../schema'
 import { WorkspaceFeature } from '../browser'
+import { workspaceFeatures } from '../schema'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(workspaceFeatures)

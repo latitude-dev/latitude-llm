@@ -3,10 +3,10 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useActiveIntegrations } from './useActiveIntegrations'
 import { trigger } from '$/lib/events'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
+import { useActiveIntegrations } from './useActiveIntegrations'
 
 // TODO: fix this test, i have to properly mock useIntegrations hook
 describe.skip('useActiveIntegrations', () => {

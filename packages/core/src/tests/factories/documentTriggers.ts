@@ -2,16 +2,16 @@ import {
   DocumentTriggerParameters,
   DocumentTriggerType,
 } from '@latitude-data/constants'
+import {
+  EmailTriggerConfiguration,
+  IntegrationTriggerConfiguration,
+  ScheduledTriggerConfiguration,
+} from '@latitude-data/constants/documentTriggers'
 import { v4 as uuidv4 } from 'uuid'
+import { DocumentTrigger } from '../../browser'
 import { database } from '../../client'
 import { documentTriggers } from '../../schema'
 import { createProject } from './createProject'
-import {
-  ScheduledTriggerConfiguration,
-  EmailTriggerConfiguration,
-  IntegrationTriggerConfiguration,
-} from '@latitude-data/constants/documentTriggers'
-import { DocumentTrigger } from '../../browser'
 
 /**
  * Creates a scheduled document trigger in the database

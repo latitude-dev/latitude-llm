@@ -1,15 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType, DocumentVersion } from '@latitude-data/constants'
-import { DocumentTrigger, Project, Workspace } from '../../browser'
-import { createDocumentTrigger } from './create'
-import * as buildConfigurationModule from './helpers/buildConfiguration'
-import { documentTriggers } from '../../schema'
 import {
   EmailTriggerConfiguration,
   InsertScheduledTriggerConfiguration,
   ScheduledTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { DocumentTrigger, Project, Workspace } from '../../browser'
+import { documentTriggers } from '../../schema'
 import { LatitudeError } from './../../lib/errors'
+import { createDocumentTrigger } from './create'
+import * as buildConfigurationModule from './helpers/buildConfiguration'
 
 describe('createDocumentTrigger', () => {
   let workspace: Workspace

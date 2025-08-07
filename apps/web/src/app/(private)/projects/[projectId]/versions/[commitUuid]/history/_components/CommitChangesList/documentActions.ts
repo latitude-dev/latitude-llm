@@ -1,15 +1,15 @@
+import { getChangesToResetDocumentAction } from '$/actions/history/resetDocumentVersion/getChangesToResetDocumentAction'
+import { resetDocumentVersionAction } from '$/actions/history/resetDocumentVersion/resetDocumentVersionAction'
+import { getChangesToRevertDocumentAction } from '$/actions/history/revertDocumentVersion/getChangesToRevertDocumentAction'
+import { revertDocumentChangesAction } from '$/actions/history/revertDocumentVersion/revertDocumentAction'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
+import { ChangedDocument } from '@latitude-data/constants'
 import { Commit } from '@latitude-data/core/browser'
 import { useCurrentCommit } from '@latitude-data/web-ui/browser'
 import { useRouter } from 'next/navigation'
-import { ROUTES } from '$/services/routes'
-import { useHistoryActionModalContext } from '../ActionModal'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { getChangesToRevertDocumentAction } from '$/actions/history/revertDocumentVersion/getChangesToRevertDocumentAction'
-import { revertDocumentChangesAction } from '$/actions/history/revertDocumentVersion/revertDocumentAction'
 import { useCallback } from 'react'
-import { getChangesToResetDocumentAction } from '$/actions/history/resetDocumentVersion/getChangesToResetDocumentAction'
-import { resetDocumentVersionAction } from '$/actions/history/resetDocumentVersion/resetDocumentVersionAction'
-import { ChangedDocument } from '@latitude-data/constants'
+import { useHistoryActionModalContext } from '../ActionModal'
 
 export function useDocumentActions({
   commit,

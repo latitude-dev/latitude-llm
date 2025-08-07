@@ -1,4 +1,3 @@
-import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
 import { Providers } from '@latitude-data/core/browser'
 import { database, utils } from '@latitude-data/core/client'
 import { publisher } from '@latitude-data/core/events/publisher'
@@ -15,6 +14,7 @@ import {
   workspaces,
 } from '@latitude-data/core/schema'
 import { env } from '@latitude-data/env'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import setupServiceGlobal from './setupService'
 
 const mocks = vi.hoisted(() => ({

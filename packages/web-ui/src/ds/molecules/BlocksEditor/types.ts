@@ -1,6 +1,6 @@
+import { ConversationMetadata } from 'promptl-ai'
 import { ComponentType, EventHandler, MouseEvent, ReactNode } from 'react'
 import type { UrlObject } from 'url'
-import { ConversationMetadata } from 'promptl-ai'
 import { BlockRootNode } from './Editor/state/promptlToLexical/types'
 
 export type IncludedPrompt = {

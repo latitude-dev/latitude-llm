@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

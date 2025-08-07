@@ -29,6 +29,7 @@ import React, {
 } from 'react'
 import { createPortal } from 'react-dom'
 
+import { cn } from '../../../../../../lib/utils'
 import { Point } from './shared/point'
 import { Rectangle } from './shared/rect'
 import {
@@ -36,7 +37,6 @@ import {
   hideTargetLine,
   setTargetLine,
 } from './targetLine'
-import { cn } from '../../../../../../lib/utils'
 
 const DRAG_DATA_FORMAT = 'application/x-lexical-drag-block'
 

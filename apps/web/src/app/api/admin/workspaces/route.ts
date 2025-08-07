@@ -1,6 +1,6 @@
-import { findAllWorkspacesForAdmin } from '@latitude-data/core/services/workspaces/findAllForAdmin'
-import { errorHandler } from '$/middlewares/errorHandler'
 import { adminHandler } from '$/middlewares/adminHandler'
+import { errorHandler } from '$/middlewares/errorHandler'
+import { findAllWorkspacesForAdmin } from '@latitude-data/core/services/workspaces/findAllForAdmin'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(

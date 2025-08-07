@@ -1,18 +1,19 @@
 import {
-  ChainStepResponse,
-  LegacyChainEvent,
-  LegacyChainEventTypes,
-  StreamEventTypes,
-} from '@latitude-data/constants'
-import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
-import { StreamType } from '../../../../constants'
-import {
   ContentType,
   Message,
   MessageRole,
   ToolCall,
 } from '@latitude-data/compiler'
+import {
+  ChainEvent,
+  ChainEventTypes,
+  ChainStepResponse,
+  LegacyChainEvent,
+  LegacyChainEventTypes,
+  StreamEventTypes,
+} from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { StreamType } from '../../../../constants'
 
 function getAssistantMessageToolCallIds(message?: Message): unknown[] {
   if (message?.role !== 'assistant') return []

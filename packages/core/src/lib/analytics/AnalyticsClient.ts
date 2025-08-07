@@ -1,19 +1,19 @@
 import { eq } from 'drizzle-orm'
 
-import { users } from '../../schema'
-import { WorkspacesRepository } from '../../repositories'
 import { database } from '../../client'
 import { LatitudeEvent } from '../../events/events'
+import { WorkspacesRepository } from '../../repositories'
+import { users } from '../../schema'
 import debug from '../debug'
+import { CloudCollector } from './collectors/Cloud'
 import {
   CollectorInput,
   DataCollector,
   ProductEdition,
 } from './collectors/DataCollector'
-import { CloudCollector } from './collectors/Cloud'
-import { AnalyticsEnvironment } from './types'
 import { OpenSourceCollector } from './collectors/OpenSource'
 import { AnalyticsProvider } from './providers/AnalyticsProvider'
+import { AnalyticsEnvironment } from './types'
 
 type CollectorEntities = {
   user: CollectorInput['user']

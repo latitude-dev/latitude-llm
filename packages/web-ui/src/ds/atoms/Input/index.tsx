@@ -1,10 +1,9 @@
-import { forwardRef, InputHTMLAttributes } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { forwardRef, InputHTMLAttributes } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { font } from '../../tokens'
-import { FormField } from '../FormField'
-import { type FormFieldProps } from '../FormField'
+import { FormField, type FormFieldProps } from '../FormField'
 
 export const INPUT_BASE_CLASSES = [
   'flex w-full border border-input bg-background ring-offset-background',

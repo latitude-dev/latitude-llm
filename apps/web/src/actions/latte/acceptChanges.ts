@@ -1,9 +1,9 @@
 'use server'
 
-import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
 import { clearLatteThreadCheckpoints } from '@latitude-data/core/services/copilot/latte/threads/checkpoints/clearCheckpoints'
 import { evaluateLatteThreadChanges } from '@latitude-data/core/services/copilot/latte/threads/evaluateChanges'
+import { z } from 'zod'
 
 export const acceptLatteChangesAction = authProcedure
   .createServerAction()

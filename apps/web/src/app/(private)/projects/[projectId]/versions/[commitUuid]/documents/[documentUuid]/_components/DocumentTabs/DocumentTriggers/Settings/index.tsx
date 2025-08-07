@@ -1,14 +1,14 @@
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
-import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
-import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useState } from 'react'
-import { EmailTriggerSettings } from './EmailTrigger'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { ScheduleTriggerSettings } from './ScheduleTrigger'
+import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
+import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
+import { useState } from 'react'
+import { EmailTriggerSettings } from './EmailTrigger'
 import { IntegrationTriggerSettings } from './IntegrationTriggers'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { ScheduleTriggerSettings } from './ScheduleTrigger'
 
 enum ShareSettingsTabs {
   Email = 'email',

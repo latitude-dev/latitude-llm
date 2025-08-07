@@ -1,8 +1,7 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import { ROUTES } from '$/routes'
-import { createRoute } from '@hono/zod-openapi'
-import { z } from '@hono/zod-openapi'
+import { createRoute, z } from '@hono/zod-openapi'
 
 export const clientToolResultBodySchema = z.object({
   toolCallId: z.string(),

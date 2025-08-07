@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { testWebhookEndpoint } from './testWebhook'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { sendWebhook } from './sendWebhook'
+import { testWebhookEndpoint } from './testWebhook'
 
 // Mock the sendWebhook function
 vi.mock('./sendWebhook', () => ({

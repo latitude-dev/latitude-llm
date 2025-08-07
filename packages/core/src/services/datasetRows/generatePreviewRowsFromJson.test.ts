@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import { identityHashAlgorithm } from '../datasets/utils'
 import {
   extractHeadersFromFirstRow,
   generatePreviewRowsFromJson,
 } from './generatePreviewRowsFromJson'
-import { identityHashAlgorithm } from '../datasets/utils'
 
 const validJsonArray = JSON.stringify([
   { name: 'Alice', age: 30 },

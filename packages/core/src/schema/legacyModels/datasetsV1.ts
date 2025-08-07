@@ -10,9 +10,9 @@ import {
 import { type FileSnapshot } from 'flydrive/types'
 
 import { latitudeSchema } from '../db-schema'
-import { timestamps } from '../schemaHelpers'
 import { users } from '../models/users'
 import { workspaces } from '../models/workspaces'
+import { timestamps } from '../schemaHelpers'
 
 type FileMetadata = FileSnapshot & { headers: string[]; rowCount: number }
 

@@ -6,10 +6,10 @@ import { Providers } from '../../constants'
 import { documentVersions } from '../../schema'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'
+import { NotFoundError } from './../../lib/errors'
 import { createNewDocument } from './create'
 import { destroyFolder } from './destroyFolder'
 import { updateDocument } from './update'
-import { NotFoundError } from './../../lib/errors'
 
 describe('removing folders', () => {
   it('throws error if folder does not exist', async () => {

@@ -1,7 +1,7 @@
 'use client'
 
-import { Select } from '@latitude-data/web-ui/atoms/Select'
 import useProjects from '$/stores/projects'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
 
 interface ProjectDocumentSelectorProps {
   defaultProjectId?: number

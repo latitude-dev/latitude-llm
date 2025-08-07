@@ -1,14 +1,14 @@
-import { describe, expect, it, vi } from 'vitest'
-import * as factories from '../../../../../tests/factories'
-import { createNewDocument, updateDocument } from '../../../../documents'
-import { DocumentVersionsRepository } from '../../../../../repositories'
 import { LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
+import { describe, expect, it, vi } from 'vitest'
+import { DocumentVersion } from '../../../../../browser'
+import { DocumentVersionsRepository } from '../../../../../repositories'
+import * as factories from '../../../../../tests/factories'
+import { WebsocketClient } from '../../../../../websockets/workers'
+import { deleteCommitDraft } from '../../../../commits'
+import { createNewDocument, updateDocument } from '../../../../documents'
 import { LATTE_TOOLS } from '../../tools'
 import { createLatteThread } from '../createThread'
 import { undoLatteThreadChanges } from './undoChanges'
-import { DocumentVersion } from '../../../../../browser'
-import { WebsocketClient } from '../../../../../websockets/workers'
-import { deleteCommitDraft } from '../../../../commits'
 
 vi.spyOn(WebsocketClient, 'sendEvent').mockImplementation(vi.fn())
 

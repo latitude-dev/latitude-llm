@@ -1,7 +1,7 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
 import { listApps } from '@latitude-data/core/services/integrations/pipedream/apps'
+import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
   authHandler(async (request: NextRequest) => {

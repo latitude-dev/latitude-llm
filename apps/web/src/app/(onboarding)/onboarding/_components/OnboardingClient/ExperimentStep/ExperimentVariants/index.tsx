@@ -1,13 +1,13 @@
-import { ChangeEvent, useCallback } from 'react'
 import { ExperimentVariantWrapper } from '$/components/ExperimentVariantWrapper'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { Select } from '@latitude-data/web-ui/atoms/Select'
-import type { ExperimentVariant } from '@latitude-data/constants/experiments'
-import { type Variants } from '../index'
+import { envClient } from '$/envClient'
 import useModelOptions from '$/hooks/useModelOptions'
 import { Providers } from '@latitude-data/constants'
-import { envClient } from '$/envClient'
+import type { ExperimentVariant } from '@latitude-data/constants/experiments'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { ChangeEvent, useCallback } from 'react'
+import { type Variants } from '../index'
 
 function VariantItem({
   position,

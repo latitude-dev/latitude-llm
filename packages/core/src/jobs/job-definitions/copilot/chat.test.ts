@@ -7,9 +7,9 @@ import {
   DocumentLogsRepository,
   UsersRepository,
 } from '../../../repositories'
-import * as runLatte from '../../../services/copilot/latte/run'
 import * as addMessageLatte from '../../../services/copilot/latte/addMessage'
 import * as chatHelpers from '../../../services/copilot/latte/helpers'
+import * as runLatte from '../../../services/copilot/latte/run'
 import { WebsocketClient } from '../../../websockets/workers'
 import { runLatteJob } from './chat'
 

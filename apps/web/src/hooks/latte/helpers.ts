@@ -1,6 +1,6 @@
 import { LatteTool } from '@latitude-data/constants/latte'
-import { LatteToolStep } from './types'
 import { ToolCall } from 'ai'
+import { LatteToolStep } from './types'
 
 export function getDescriptionFromToolCall(
   toolCall: ToolCall<string, Record<string, unknown>>,

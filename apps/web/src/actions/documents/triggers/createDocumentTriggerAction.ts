@@ -2,15 +2,15 @@
 
 import { createDocumentTrigger } from '@latitude-data/core/services/documentTriggers/create'
 
-import { withDocument } from '../../procedures'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { z } from 'zod'
 import {
   emailTriggerConfigurationSchema,
+  InsertDocumentTriggerWithConfiguration,
   insertScheduledTriggerConfigurationSchema,
   integrationTriggerConfigurationSchema,
-  InsertDocumentTriggerWithConfiguration,
 } from '@latitude-data/constants/documentTriggers'
+import { z } from 'zod'
+import { withDocument } from '../../procedures'
 
 export const createDocumentTriggerAction = withDocument
   .createServerAction()

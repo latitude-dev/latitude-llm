@@ -1,11 +1,11 @@
 'use client'
 
-import React, { ReactNode, useCallback, useMemo, useState } from 'react'
+import { DocumentationContent } from '$/components/Documentation'
+import { DocumentationProvider } from '$/components/Documentation/Provider'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
+import { ReactNode, useCallback, useMemo, useState } from 'react'
 import { RightSidebar } from './RightSidebar'
 import type { RightSidebarItem, RightSidebarTabs } from './types'
-import { DocumentationProvider } from '$/components/Documentation/Provider'
-import { DocumentationContent } from '$/components/Documentation'
 
 const MIN_SIDEBAR_WIDTH_PX = 400
 const COLLAPSED_SIDEBAR_WIDTH_PX = 49

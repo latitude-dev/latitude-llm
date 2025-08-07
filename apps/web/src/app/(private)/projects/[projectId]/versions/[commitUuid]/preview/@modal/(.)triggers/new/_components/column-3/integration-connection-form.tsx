@@ -1,14 +1,14 @@
-import { FormEvent, useCallback } from 'react'
-import { App } from '@pipedream/sdk/browser'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { useConnectToPipedreamApp } from '$/hooks/useConnectToPipedreamApp'
+import useIntegrations from '$/stores/integrations'
 import { IntegrationType } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import useIntegrations from '$/stores/integrations'
-import { useTriggersModalContext } from '../contexts/triggers-modal-context'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { App } from '@pipedream/sdk/browser'
+import { FormEvent, useCallback } from 'react'
+import { useTriggersModalContext } from '../contexts/triggers-modal-context'
 
 interface IntegrationConnectionFormProps {
   app: App

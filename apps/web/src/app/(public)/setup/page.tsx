@@ -1,11 +1,11 @@
+import AuthFooter from '$/app/(public)/_components/Footer'
+import buildMetatags from '$/app/_lib/buildMetatags'
+import { FocusLayout } from '$/components/layouts'
 import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
 import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
-import buildMetatags from '$/app/_lib/buildMetatags'
-import AuthFooter from '$/app/(public)/_components/Footer'
-import { FocusLayout } from '$/components/layouts'
 
-import SetupForm from './SetupForm'
 import SignupFooter from '$/app/(public)/setup/_components/SignupFooter'
+import SetupForm from './SetupForm'
 
 export const dynamic = 'force-dynamic'
 

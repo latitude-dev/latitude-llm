@@ -1,15 +1,15 @@
-import { useDebouncedCallback } from 'use-debounce'
 import { ParameterInput } from '$/components/ParameterInput'
 import {
   UseDocumentParameters,
   useDocumentParameters,
 } from '$/hooks/useDocumentParameters'
 import { ParameterType } from '@latitude-data/constants'
+import { PlaygroundInput } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { useDebouncedCallback } from 'use-debounce'
 import { ParameterTypeSelector } from './ParameterTypeSelector'
-import { PlaygroundInput } from '@latitude-data/core/browser'
 
 import { Props } from '../index'
 import { ParametersWrapper } from '../ParametersWrapper'

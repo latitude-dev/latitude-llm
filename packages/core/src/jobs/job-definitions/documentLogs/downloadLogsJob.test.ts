@@ -1,13 +1,13 @@
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { downloadLogsJob } from './downloadLogsJob'
-import * as factories from '../../../tests/factories'
 import { LogSources, Providers } from '../../../constants'
 import { diskFactory } from '../../../lib/disk'
-import { buildRedisConnection } from '../../../redis'
 import { Result } from '../../../lib/Result'
+import { buildRedisConnection } from '../../../redis'
 import { findOrCreateExport } from '../../../services/exports/findOrCreate'
 import { updateExport } from '../../../services/exports/update'
+import * as factories from '../../../tests/factories'
+import { downloadLogsJob } from './downloadLogsJob'
 
 // Mock dependencies
 vi.mock('../../../lib/disk', () => ({

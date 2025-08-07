@@ -1,11 +1,11 @@
-import { sum } from 'lodash-es'
-import { describe, beforeAll, it, expect } from 'vitest'
 import { Providers } from '@latitude-data/constants'
+import { sum } from 'lodash-es'
+import { beforeAll, describe, expect, it } from 'vitest'
+import { DocumentLog } from '../../browser'
+import { ProviderLogsRepository } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../tests/factories'
-import { DocumentLog } from '../../browser'
 import { previewDatasetFromLogs } from './previewFromLogs'
-import { ProviderLogsRepository } from '../../repositories'
 import { identityHashAlgorithm } from './utils'
 
 let setup: FactoryCreateProjectReturn

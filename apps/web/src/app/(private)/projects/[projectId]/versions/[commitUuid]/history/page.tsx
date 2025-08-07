@@ -1,7 +1,7 @@
 import { findCommitsByProjectCached } from '$/app/(private)/_data-access'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import ProjectLayout from '../_components/ProjectLayout'
 import { ProjectChanges } from './_components/ProjectChanges'
-import buildMetatags from '$/app/_lib/buildMetatags'
 
 export const metadata = buildMetatags({
   title: 'History',

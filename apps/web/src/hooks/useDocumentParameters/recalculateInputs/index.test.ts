@@ -1,8 +1,8 @@
 import { ResolvedMetadata } from '$/workers/readMetadata'
 import { describe, expect, it } from 'vitest'
 
-import { recalculateInputs } from './index'
 import { ParameterType } from '@latitude-data/constants'
+import { recalculateInputs } from './index'
 
 describe('recalculateInputs', () => {
   it('delete inputs not present in parameters', () => {

@@ -1,9 +1,9 @@
 import { Providers } from '@latitude-data/constants'
-import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { AmazonBedrockConfiguration } from './AmazonBedrock'
-import { VertexConfiguration } from './Vertex'
 import { OpenAIConfiguration } from './OpenAI'
+import { VertexConfiguration } from './Vertex'
 
 const PROVIDERS_WITHOUT_API_KEY = [
   Providers.GoogleVertex,

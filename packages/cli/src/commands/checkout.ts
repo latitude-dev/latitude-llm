@@ -1,9 +1,9 @@
 import { Command } from 'commander'
 import { CheckoutOptions } from '../types'
 import { BaseCommand } from '../utils/baseCommand'
+import { registerCommand } from '../utils/commandRegistrar'
 import { LatitudeLockFile } from '../utils/lockFileManager'
 import { savePrompts } from '../utils/promptOperations'
-import { registerCommand } from '../utils/commandRegistrar'
 
 /**
  * Handles checking out a specific version of prompts from a Latitude project

@@ -1,18 +1,18 @@
-import React, { useCallback, useState, useMemo, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   LexicalTypeaheadMenuPlugin,
   MenuOption,
   useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodes, TextNode, LexicalEditor } from 'lexical'
-import { cn } from '../../../../../lib/utils'
-import { Text } from '../../../../atoms/Text'
-import { ReferenceNode } from '../nodes/ReferenceNode'
-import { BlocksEditorProps, IncludedPrompt } from '../../types'
-import { Icon } from '../../../../atoms/Icons'
+import { $insertNodes, LexicalEditor, TextNode } from 'lexical'
 import { ConversationMetadata } from 'promptl-ai'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { cn } from '../../../../../lib/utils'
+import { Icon } from '../../../../atoms/Icons'
+import { Text } from '../../../../atoms/Text'
+import { BlocksEditorProps, IncludedPrompt } from '../../types'
+import { ReferenceNode } from '../nodes/ReferenceNode'
 
 export function buildReferencePath(path: string): string {
   return `/${path}`

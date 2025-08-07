@@ -1,5 +1,4 @@
-import { FormField } from '../FormField'
-import { FormFieldProps } from '../FormField'
+import { FormField, FormFieldProps } from '../FormField'
 import { CheckboxAtom, CheckedState, type CheckboxAtomProps } from './Primitive'
 
 export type CheckboxProps = CheckboxAtomProps & Omit<FormFieldProps, 'children'>

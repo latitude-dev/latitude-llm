@@ -1,12 +1,12 @@
-import * as factories from '@latitude-data/core/factories'
 import { Providers } from '@latitude-data/constants'
-import { describe, expect, beforeEach, it, vi } from 'vitest'
+import { BadRequestError } from '@latitude-data/constants/errors'
+import * as factories from '@latitude-data/core/factories'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Workspace } from '../../../../../browser'
 import { Result } from '../../../../../lib/Result'
-import triggerActions from './triggerActions'
-import { LatteToolContext } from '../types'
 import { CommitsRepository } from '../../../../../repositories'
-import { BadRequestError } from '@latitude-data/constants/errors'
+import { LatteToolContext } from '../types'
+import triggerActions from './triggerActions'
 
 const mockCommit = (mergedAt: boolean) => ({
   projectId: 1,

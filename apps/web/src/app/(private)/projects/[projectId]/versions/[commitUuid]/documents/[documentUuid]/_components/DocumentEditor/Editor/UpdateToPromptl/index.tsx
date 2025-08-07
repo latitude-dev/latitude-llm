@@ -1,20 +1,20 @@
 'use client'
 import { useCallback, useState } from 'react'
 
-import { DocumentVersion } from '@latitude-data/core/browser'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
 import { createDraftWithPromptlUpgradeAction } from '$/actions/commits/createDraftWithPromptlUpgrade'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
+import { DocumentVersion } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 

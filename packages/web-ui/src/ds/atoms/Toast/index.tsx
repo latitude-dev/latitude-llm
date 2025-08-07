@@ -1,13 +1,13 @@
 'use client'
 
+import * as ToastPrimitives from '@radix-ui/react-toast'
+import { cva, type VariantProps } from 'class-variance-authority'
 import {
   ComponentPropsWithRef,
   ElementRef,
   forwardRef,
   ReactElement,
 } from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
-import * as ToastPrimitives from '@radix-ui/react-toast'
 
 import { cn } from '../../../lib/utils'
 import { Icon } from '../Icons'
@@ -134,15 +134,15 @@ type ToastProps = ComponentPropsWithRef<typeof Toast>
 type ToastActionElement = ReactElement<typeof ToastAction>
 
 export {
-  type ToastProps,
-  type ToastActionElement,
-  ToastProviderPrimitive,
-  ToastViewport,
   Toast,
-  ToastTitle,
-  ToastDescription,
-  ToastClose,
   ToastAction,
+  ToastClose,
+  ToastDescription,
+  ToastProviderPrimitive,
+  ToastTitle,
+  ToastViewport,
+  type ToastActionElement,
+  type ToastProps,
 }
 
 export { toast, useToast } from './useToast'

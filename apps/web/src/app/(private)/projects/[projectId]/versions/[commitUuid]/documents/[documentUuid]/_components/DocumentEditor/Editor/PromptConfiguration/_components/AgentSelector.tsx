@@ -1,6 +1,6 @@
 import { FilePathSelector } from '@latitude-data/web-ui/molecules/FilepathSelector'
-import { PromptConfigurationProps, useLatitudeAgentsConfig } from '../utils'
 import { useMemo } from 'react'
+import { PromptConfigurationProps, useLatitudeAgentsConfig } from '../utils'
 
 export function SubAgentSelector({
   config,

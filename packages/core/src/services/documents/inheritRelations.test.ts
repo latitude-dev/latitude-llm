@@ -5,8 +5,8 @@ import { DocumentSuggestionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'
-import { inheritDocumentRelations } from './inheritRelations'
 import { ConflictError } from './../../lib/errors'
+import { inheritDocumentRelations } from './inheritRelations'
 
 describe('inheritDocumentRelations', () => {
   let workspace: Workspace

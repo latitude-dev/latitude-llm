@@ -1,9 +1,9 @@
+import { getData } from '$/common/documents/getData'
+import { AppRouteHandler } from '$/openApi/types'
 import { LogSources } from '@latitude-data/core/browser'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { createDocumentLog } from '@latitude-data/core/services/documentLogs/create'
-import { AppRouteHandler } from '$/openApi/types'
 import { CreateLogRoute } from './create.route'
-import { getData } from '$/common/documents/getData'
 
 // @ts-expect-error: broken types
 export const createLogHandler: AppRouteHandler<CreateLogRoute> = async (c) => {

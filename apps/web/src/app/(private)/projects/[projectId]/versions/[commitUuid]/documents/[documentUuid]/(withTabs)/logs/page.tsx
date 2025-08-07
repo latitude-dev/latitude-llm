@@ -25,10 +25,10 @@ import {
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
 import { redirect } from 'next/navigation'
 
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseLogFilterParams'
 import { DocumentLogsPage } from './_components'
 import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
-import buildMetatags from '$/app/_lib/buildMetatags'
 
 export const metadata = buildMetatags({
   locationDescription: 'Document Logs Page',

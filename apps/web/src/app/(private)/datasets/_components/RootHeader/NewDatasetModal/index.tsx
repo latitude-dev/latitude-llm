@@ -1,20 +1,19 @@
-import { FormEvent, useCallback, useRef, useState } from 'react'
-import { DropzoneInput } from '@latitude-data/web-ui/atoms/DropzoneInput'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
-import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
+import DelimiterSelector from '$/app/(private)/datasets/_components/DelimiterSelector'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'
-import DelimiterSelector from '$/app/(private)/datasets/_components/DelimiterSelector'
 import {
   Dataset,
-  MAX_UPLOAD_SIZE_IN_MB,
   MAX_SIZE,
+  MAX_UPLOAD_SIZE_IN_MB,
 } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { DropzoneInput } from '@latitude-data/web-ui/atoms/DropzoneInput'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { FormEvent, useCallback, useRef, useState } from 'react'
 
 const MAX_SIZE_MESSAGE = `Your dataset must be less than ${MAX_SIZE}MB in size.`
 

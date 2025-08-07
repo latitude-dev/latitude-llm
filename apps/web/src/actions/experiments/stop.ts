@@ -1,9 +1,9 @@
 'use server'
 
-import { withDocument } from '../procedures'
 import { ExperimentsRepository } from '@latitude-data/core/repositories'
-import { z } from 'zod'
 import { completeExperiment } from '@latitude-data/core/services/experiments/complete'
+import { z } from 'zod'
+import { withDocument } from '../procedures'
 
 export const stopExperimentAction = withDocument
   .createServerAction()

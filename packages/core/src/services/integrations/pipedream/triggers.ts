@@ -1,31 +1,31 @@
+import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
+import {
+  InsertIntegrationTriggerConfiguration,
+  IntegrationTriggerConfiguration,
+} from '@latitude-data/constants/documentTriggers'
+import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import {
   ComponentId,
   ConfigurableProps,
   ConfiguredProps,
   createBackendClient,
 } from '@pipedream/sdk'
+import { isEqual } from 'lodash-es'
 import {
   DocumentTrigger,
   gatewayPath,
   PipedreamIntegration,
   Workspace,
 } from '../../../browser'
-import { getPipedreamEnvironment } from './apps'
+import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
+import { IntegrationsRepository } from '../../../repositories'
+import { getPipedreamEnvironment } from './apps'
 import {
   fillConfiguredProps,
   isIntegrationConfigured,
 } from './components/fillConfiguredProps'
-import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
-import { database } from '../../../client'
-import { IntegrationsRepository } from '../../../repositories'
-import {
-  InsertIntegrationTriggerConfiguration,
-  IntegrationTriggerConfiguration,
-} from '@latitude-data/constants/documentTriggers'
-import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
-import { isEqual } from 'lodash-es'
 
 export async function deployPipedreamTrigger({
   triggerUuid,

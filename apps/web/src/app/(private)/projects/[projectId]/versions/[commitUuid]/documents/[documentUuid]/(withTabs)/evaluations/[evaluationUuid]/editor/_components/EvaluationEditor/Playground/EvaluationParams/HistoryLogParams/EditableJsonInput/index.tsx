@@ -1,12 +1,12 @@
-import { useMemo, lazy, useState, useCallback, useRef, useEffect } from 'react'
 import { type LlmEvaluationPromptParameter } from '@latitude-data/constants'
-import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { useOnClickOutside } from '@latitude-data/web-ui/hooks/useOnClickOutside'
+import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type UseEvaluationParameters } from '../../../../hooks/useEvaluationParamaters'
 import { type LogInput } from '../../../../hooks/useEvaluationParamaters/logInputParamaters'
 import { InputWrapper } from '../InputWrapper'
 import { useDebouncedInput } from '../useDebouncedInput'
-import { useOnClickOutside } from '@latitude-data/web-ui/hooks/useOnClickOutside'
 
 const TextEditor = lazy(() => import('./TextEditor/index'))
 

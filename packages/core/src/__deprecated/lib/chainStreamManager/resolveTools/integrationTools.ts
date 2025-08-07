@@ -1,17 +1,17 @@
 import { ToolDefinition } from '@latitude-data/constants'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { ChainStreamManager } from '..'
+import { Workspace } from '../../../../browser'
 import {
   BadRequestError,
   LatitudeError,
   NotFoundError,
 } from '../../../../lib/errors'
-import { PromisedResult } from '../../../../lib/Transaction'
 import { Result } from '../../../../lib/Result'
-import { ResolvedTools, ToolSource } from './types'
+import { PromisedResult } from '../../../../lib/Transaction'
 import { IntegrationsRepository } from '../../../../repositories'
-import { Workspace } from '../../../../browser'
 import { listTools } from '../../../../services/integrations'
-import { ChainStreamManager } from '..'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { ResolvedTools, ToolSource } from './types'
 
 export async function resolveIntegrationTools({
   workspace,

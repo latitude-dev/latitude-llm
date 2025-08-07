@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
 
-import {
-  BreadcrumbItem,
-  BreadcrumbSeparator,
-} from '@latitude-data/web-ui/molecules/Breadcrumb'
-import { BreadcrumbItemSkeleton } from '@latitude-data/web-ui/molecules/Breadcrumb'
-import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { ROUTES } from '$/services/routes'
 import useProjects from '$/stores/projects'
+import {
+  BreadcrumbItem,
+  BreadcrumbItemSkeleton,
+  BreadcrumbSeparator,
+} from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 
 import { BreadcrumbSelector, BreadcrumbSelectorOption } from '../Selector'
 import { CommitBreadcrumbItems } from './Versions'

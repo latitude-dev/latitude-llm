@@ -1,9 +1,9 @@
 import { User, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { createProject } from './create'
-import { createNewDocument } from '../documents/create'
 import { mergeCommit } from '../commits/merge'
+import { createNewDocument } from '../documents/create'
+import { createProject } from './create'
 
 /**
  * Creates an onboarding project with a single document containing a template for product descriptions

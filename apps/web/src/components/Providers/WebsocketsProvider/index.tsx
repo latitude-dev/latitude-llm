@@ -14,8 +14,8 @@ import {
   Workspace,
 } from '@latitude-data/core/browser'
 import { IoProvider, useSocket } from '@latitude-data/socket.io-react-hook'
-import { useSession } from '@latitude-data/web-ui/providers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { useSession } from '@latitude-data/web-ui/providers'
 import * as Sentry from '@sentry/nextjs'
 
 export const SocketIOProvider = ({ children }: { children: ReactNode }) => {

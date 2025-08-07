@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, RefObject } from 'react'
+import { RefObject, useEffect, useRef, useState } from 'react'
 
 export function useFollowedPosition<T extends HTMLElement>(
   ref: RefObject<T>,

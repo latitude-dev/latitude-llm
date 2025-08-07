@@ -1,15 +1,15 @@
 import { logger } from 'hono/logger'
 
 import authMiddleware from '$/middlewares/auth'
-import { rateLimitMiddleware } from '$/middlewares/rateLimit'
 import errorHandlerMiddleware from '$/middlewares/errorHandler'
+import { rateLimitMiddleware } from '$/middlewares/rateLimit'
 
-import createApp from '$/openApi/createApp'
-import configureOpenAPI from '$/openApi/configureOpenAPI'
-import { configureApiRoutes } from './api'
-import { configureWebhookRoutes } from './webhook'
 import { memoryUsageMiddleware } from '$/middlewares/memoryLogger'
 import { tracerMiddleware } from '$/middlewares/tracer'
+import configureOpenAPI from '$/openApi/configureOpenAPI'
+import createApp from '$/openApi/createApp'
+import { configureApiRoutes } from './api'
+import { configureWebhookRoutes } from './webhook'
 
 const app = createApp()
 

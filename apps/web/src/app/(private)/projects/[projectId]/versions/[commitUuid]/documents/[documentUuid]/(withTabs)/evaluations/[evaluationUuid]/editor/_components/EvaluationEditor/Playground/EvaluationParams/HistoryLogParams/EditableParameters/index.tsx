@@ -1,3 +1,4 @@
+import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import {
   DocumentVersion,
   EvaluationType,
@@ -7,10 +8,9 @@ import {
   LlmEvaluationPromptParameter,
 } from '@latitude-data/core/browser'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
-import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { useEvaluationParameters } from '../../../../hooks/useEvaluationParamaters'
-import { PlainTextParameterInput } from '../PlainTextParameterInput'
 import { EditableJsonInput } from '../EditableJsonInput'
+import { PlainTextParameterInput } from '../PlainTextParameterInput'
 
 const JSON_FIELDS = [
   'config',

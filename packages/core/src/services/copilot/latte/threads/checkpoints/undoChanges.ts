@@ -1,3 +1,4 @@
+import { and, eq } from 'drizzle-orm'
 import {
   DocumentVersion,
   LatteThreadCheckpoint,
@@ -7,7 +8,6 @@ import { Result } from '../../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
 import { LatteThreadsRepository } from '../../../../../repositories'
 import { documentVersions } from '../../../../../schema'
-import { and, eq } from 'drizzle-orm'
 import { clearLatteThreadCheckpoints } from './clearCheckpoints'
 
 export async function undoLatteThreadChanges(

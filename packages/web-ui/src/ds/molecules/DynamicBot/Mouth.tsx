@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { BotEmotion } from './types'
 import { INNER_STROKE_WIDTH } from './constants'
+import { BotEmotion } from './types'
 
 export function DynamicBotMouth({ emotion }: { emotion: BotEmotion }) {
   const mouthPath = useMemo(() => {

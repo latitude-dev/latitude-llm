@@ -2,6 +2,7 @@ import {
   DocumentTriggerType,
   EMAIL_TRIGGER_DOMAIN,
 } from '@latitude-data/constants'
+import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { PromptLFile } from 'promptl-ai'
 import { DocumentTrigger, HEAD_COMMIT, Workspace } from '../../../../browser'
 import { database } from '../../../../client'
@@ -14,7 +15,6 @@ import { PromisedResult } from '../../../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../../../repositories'
 import { uploadFile } from '../../../files'
 import { findUnscopedDocumentTriggers } from '../../find'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 
 async function getTriggerName(
   trigger: DocumentTrigger,

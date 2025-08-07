@@ -5,33 +5,33 @@ import { createNewLatteAction } from '$/actions/latte/new'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useServerAction } from 'zsa-react'
 
-import { useCallback, useEffect, useMemo } from 'react'
-import {
-  LatteInteraction,
-  LatteInteractionStep,
-  LatteToolStep,
-  LatteActionStep,
-} from './types'
-import { getDescriptionFromToolCall } from './helpers'
+import { acceptLatteChangesAction } from '$/actions/latte/acceptChanges'
+import { addFeedbackToLatteChangeAction } from '$/actions/latte/addFeedbackToLatteChange'
+import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
 import { trigger } from '$/lib/events'
-import { useLatteContext } from './context'
+import { useLatteStore } from '$/stores/latte'
+import useProviderLogs from '$/stores/providerLogs'
 import {
   LatteChange,
   LatteEditAction,
   LatteTool,
 } from '@latitude-data/constants/latte'
-import { acceptLatteChangesAction } from '$/actions/latte/acceptChanges'
-import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
-import { addFeedbackToLatteChangeAction } from '$/actions/latte/addFeedbackToLatteChange'
 import { LatteThreadUpdateArgs } from '@latitude-data/core/browser'
-import { useLatteStore } from '$/stores/latte'
-import { useOnce } from '../useMount'
-import useProviderLogs from '$/stores/providerLogs'
-import { sortBy } from 'lodash-es'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { sortBy } from 'lodash-es'
+import { useCallback, useEffect, useMemo } from 'react'
+import { useOnce } from '../useMount'
+import { useLatteContext } from './context'
+import { getDescriptionFromToolCall } from './helpers'
+import {
+  LatteActionStep,
+  LatteInteraction,
+  LatteInteractionStep,
+  LatteToolStep,
+} from './types'
 
 /**
  * Synchronizes the Latte thread UUID with local storage on mount.

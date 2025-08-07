@@ -1,8 +1,8 @@
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import { EvaluationV2 } from '@latitude-data/core/browser'
-import { BreadcrumbSeparator } from '@latitude-data/web-ui/molecules/Breadcrumb'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { BreadcrumbSeparator } from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import Link from 'next/link'
 import { EvaluationBadge } from './EvaluationBadge'
 

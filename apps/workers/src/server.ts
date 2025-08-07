@@ -1,17 +1,17 @@
 import './workers/utils/tracer' // Has to be the first import
 
-import express from 'express'
 import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js'
 import { ExpressAdapter } from '@bull-board/express'
+import express from 'express'
 
+import * as queues from '@latitude-data/core/queues'
 import {
   captureException,
   captureMessage,
 } from '@latitude-data/core/utils/workers/sentry'
-import { startWorkers, setupSchedules } from './workers'
 import { env } from '@latitude-data/env'
-import * as queues from '@latitude-data/core/queues'
+import { setupSchedules, startWorkers } from './workers'
 
 setupSchedules()
 

@@ -8,14 +8,19 @@ import {
   InputSource,
 } from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
-import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import {
+  CollapsibleBox,
+  OnToggleFn,
+} from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import {
   TabSelector,
   TabSelectorOption,
 } from '@latitude-data/web-ui/molecules/TabSelector'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
-import { OnToggleFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
+import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { DatasetParams } from '../../Playground/DocumentParams/DatasetParams'
 import {
   UseSelectDataset,
@@ -27,9 +32,6 @@ import {
   useLogHistoryParams,
 } from '../../Playground/DocumentParams/HistoryLogParams/useLogHistoryParams'
 import { ManualParams } from '../../Playground/DocumentParams/ManualParams'
-import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
-import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
-import { DocsRoute } from '$/components/Documentation/routes'
 
 export const TABS: TabSelectorOption<InputSource>[] = [
   { label: 'Manual', value: INPUT_SOURCE.manual },

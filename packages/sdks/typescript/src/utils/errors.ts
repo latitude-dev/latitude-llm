@@ -58,5 +58,5 @@ export class LatitudeApiError extends Error {
   }
 }
 
-export type { DbErrorRef, ApiErrorJsonResponse, ApiResponseCode }
-export { RunErrorCodes, ApiErrorCodes, LatitudeErrorCodes }
+export { ApiErrorCodes, LatitudeErrorCodes, RunErrorCodes }
+export type { ApiErrorJsonResponse, ApiResponseCode, DbErrorRef }

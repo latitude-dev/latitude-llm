@@ -1,12 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTrigger, Workspace } from '../../browser'
-import { updateDocumentTriggerConfiguration } from './update'
-import * as buildConfigurationModule from './helpers/buildConfiguration'
-import { documentTriggers } from '../../schema'
 import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { and, eq } from 'drizzle-orm'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { DocumentTrigger, Workspace } from '../../browser'
+import { documentTriggers } from '../../schema'
 import { LatitudeError } from './../../lib/errors'
+import * as buildConfigurationModule from './helpers/buildConfiguration'
+import { updateDocumentTriggerConfiguration } from './update'
 
 describe('updateDocumentTriggerConfiguration', () => {
   let workspace: Workspace

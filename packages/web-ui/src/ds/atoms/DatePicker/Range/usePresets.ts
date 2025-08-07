@@ -1,3 +1,4 @@
+import { RelativeDate } from '@latitude-data/core/browser'
 import {
   endOfDay,
   endOfMonth,
@@ -11,10 +12,9 @@ import {
   subMonths,
   subWeeks,
 } from 'date-fns'
-import { RelativeDate } from '@latitude-data/core/browser'
-import { SelectOption } from '../../Select'
-import { DateRange } from 'react-day-picker'
 import { useMemo } from 'react'
+import { DateRange } from 'react-day-picker'
+import { SelectOption } from '../../Select'
 
 export const RELATIVE_DATES_OPTIONS: SelectOption<RelativeDate>[] = [
   { value: 'today', label: 'Today' },

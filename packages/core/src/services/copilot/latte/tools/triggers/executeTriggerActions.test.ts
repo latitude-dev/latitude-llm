@@ -1,23 +1,23 @@
-import * as factories from '@latitude-data/core/factories'
 import {
   DocumentTriggerParameters,
   DocumentTriggerType,
   DocumentVersion,
   Providers,
 } from '@latitude-data/constants'
-import { describe, expect, beforeEach, it, vi } from 'vitest'
-import { Commit, Workspace } from '../../../../../browser'
-import { LatteTriggerAction } from '../../../../../../../constants/src/latte/triggers'
 import {
   EmailTriggerConfiguration,
   InsertScheduledTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
-import executeTriggerActions from './executeTriggerActions'
 import { NotFoundError } from '@latitude-data/constants/errors'
+import * as factories from '@latitude-data/core/factories'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { LatteTriggerAction } from '../../../../../../../constants/src/latte/triggers'
+import { Commit, Workspace } from '../../../../../browser'
+import { Result } from '../../../../../lib/Result'
 import * as createDocumentTriggersModule from '../../../../documentTriggers/create'
 import * as deleteDocumentTriggersModule from '../../../../documentTriggers/delete'
 import * as updateDocumentTriggersModule from '../../../../documentTriggers/update'
-import { Result } from '../../../../../lib/Result'
+import executeTriggerActions from './executeTriggerActions'
 
 describe('Latte CRUD document triggers', () => {
   let workspace: Workspace

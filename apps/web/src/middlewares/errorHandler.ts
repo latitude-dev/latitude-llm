@@ -1,8 +1,8 @@
-import { LatitudeError } from '@latitude-data/constants/errors'
-import { env } from '@latitude-data/env'
 import { captureException } from '$/helpers/captureException'
-import { NextRequest, NextResponse } from 'next/server'
+import { LatitudeError } from '@latitude-data/constants/errors'
 import debug from '@latitude-data/core/lib/debug'
+import { env } from '@latitude-data/env'
+import { NextRequest, NextResponse } from 'next/server'
 
 export function errorHandler(handler: any) {
   return async (req: NextRequest, res: any) => {

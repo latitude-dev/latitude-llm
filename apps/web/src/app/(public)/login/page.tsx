@@ -1,13 +1,13 @@
-import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
-import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
-import buildMetatags from '$/app/_lib/buildMetatags'
 import AuthFooter from '$/app/(public)/_components/Footer'
 import LoginFooter from '$/app/(public)/login/_components/LoginFooter'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { FocusLayout } from '$/components/layouts'
+import { getDataFromSession } from '$/data-access'
 import { ROUTES } from '$/services/routes'
+import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
+import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 import { redirect } from 'next/navigation'
 import LoginForm from './LoginForm'
-import { getDataFromSession } from '$/data-access'
 
 export const dynamic = 'force-dynamic'
 
