@@ -2,7 +2,7 @@
 
 # Latitude CLI
 latitude-lock.json
-prompts/test.js
+**/cli/prompts/test.js
 
 # Dependencies
 node_modules
