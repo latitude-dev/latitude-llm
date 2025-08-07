@@ -1,14 +1,14 @@
 'use server'
 
+import { setSession } from '$/services/auth/setSession'
+import { ROUTES } from '$/services/routes'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import {
   unsafelyFindMembershipByToken,
   unsafelyFindWorkspace,
   unsafelyGetUser,
 } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/constants/errors'
 import { acceptInvitation } from '@latitude-data/core/services/invitations/accept'
-import { setSession } from '$/services/auth/setSession'
-import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createServerAction } from 'zsa'

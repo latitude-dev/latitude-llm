@@ -1,13 +1,13 @@
 import { attributesToString } from './astParsingUtils'
 import {
-  StepChild,
-  ContentBlock,
-  BlockAttributes,
   BLOCK_EDITOR_TYPE,
+  BlockAttributes,
   BlockRootNode,
+  CodeBlock,
+  ContentBlock,
   InlineBlock,
   ParagraphBlock,
-  CodeBlock,
+  StepChild,
 } from './types'
 
 function contentBlockToText(child: ContentBlock): string {

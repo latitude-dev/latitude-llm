@@ -1,6 +1,10 @@
 'use client'
 
-import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import useIntegrations from '$/stores/integrations'
+import { IntegrationType } from '@latitude-data/constants'
+import type { IntegrationDto } from '@latitude-data/core/browser'
+import { PipedreamIntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import {
   Table,
   TableBody,
@@ -8,15 +12,11 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import useIntegrations from '$/stores/integrations'
-import { IntegrationType } from '@latitude-data/constants'
-import { useColumn1Context } from '../contexts/column-1-context'
-import type { IntegrationDto } from '@latitude-data/core/browser'
-import { useTriggersModalContext } from '../contexts/triggers-modal-context'
-import Image from 'next/image'
-import { PipedreamIntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import { cn } from '@latitude-data/web-ui/utils'
+import Image from 'next/image'
+import { useColumn1Context } from '../contexts/column-1-context'
+import { useTriggersModalContext } from '../contexts/triggers-modal-context'
 
 export function ConnectedIntegrations() {
   const { data: integrations, isLoading } = useIntegrations({

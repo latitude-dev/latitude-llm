@@ -1,13 +1,13 @@
 'use client'
 import { useMemo } from 'react'
 
-import { SubscriptionPlan, FREE_PLANS } from '@latitude-data/core/browser'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { useSession } from '@latitude-data/web-ui/providers'
-import useWorkspaceUsage from '$/stores/workspaceUsage'
+import { UpgradeLink } from '$/components/UpgradeLink'
 import { UsageIndicatorPopover } from '$/components/UsageIndicatorPopover'
 import { calcualteUsage } from '$/lib/usageUtils'
-import { UpgradeLink } from '$/components/UpgradeLink'
+import useWorkspaceUsage from '$/stores/workspaceUsage'
+import { FREE_PLANS, SubscriptionPlan } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { useSession } from '@latitude-data/web-ui/providers'
 
 function SubscriptionButton({
   subscriptionPlan,

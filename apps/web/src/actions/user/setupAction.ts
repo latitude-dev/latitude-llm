@@ -1,9 +1,9 @@
 'use server'
 
-import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access'
 import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
+import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 

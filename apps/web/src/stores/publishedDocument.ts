@@ -1,11 +1,7 @@
 import { useCallback, useMemo } from 'react'
 
-import {
-  HEAD_COMMIT,
-  type PublishedDocument,
-} from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createPublishedDocumentAction } from '$/actions/documents/sharing/createPublishedDocumentAction'
+import { publishDocumentAction } from '$/actions/documents/sharing/publishDocumentAction'
 import {
   updatePublishedDocumentAction,
   UpdatePublishedDocumentInput,
@@ -13,8 +9,12 @@ import {
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
+import {
+  HEAD_COMMIT,
+  type PublishedDocument,
+} from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useSWR, { SWRConfiguration } from 'swr'
-import { publishDocumentAction } from '$/actions/documents/sharing/publishDocumentAction'
 
 const EMPTY_ARRAY = [] as const
 export default function usePublishedDocument(

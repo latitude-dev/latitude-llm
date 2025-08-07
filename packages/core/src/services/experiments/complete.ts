@@ -1,11 +1,11 @@
+import { eq } from 'drizzle-orm'
 import { Experiment } from '../../browser'
+import { ProgressTracker } from '../../jobs/utils/progressTracker'
 import { LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { experiments } from '../../schema'
-import { eq } from 'drizzle-orm'
 import { WebsocketClient } from '../../websockets/workers'
-import { ProgressTracker } from '../../jobs/utils/progressTracker'
 
 export async function completeExperiment(
   experiment: Experiment,

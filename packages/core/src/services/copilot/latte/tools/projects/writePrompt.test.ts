@@ -1,13 +1,13 @@
+import { CompileError } from '@latitude-data/compiler'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Providers } from '../../../../../constants'
-import writePrompt from './writePrompt'
-import { DocumentVersionsRepository } from '../../../../../repositories'
 import { Commit, Project, User, Workspace } from '../../../../../browser'
+import { Providers } from '../../../../../constants'
+import { DocumentVersionsRepository } from '../../../../../repositories'
 import * as factories from '../../../../../tests/factories'
+import { WebsocketClient } from '../../../../../websockets/workers'
 import { createLatteThread } from '../../threads/createThread'
 import { LatteToolContext } from '../types'
-import { WebsocketClient } from '../../../../../websockets/workers'
-import { CompileError } from '@latitude-data/compiler'
+import writePrompt from './writePrompt'
 
 vi.spyOn(WebsocketClient, 'sendEvent').mockImplementation(vi.fn())
 

@@ -1,4 +1,5 @@
 import { addSharedMessagesAction } from '$/actions/sdk/addSharedMessagesAction'
+import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 import {
   Message as ConversationMessage,
   MessageRole,
@@ -8,9 +9,8 @@ import {
   StreamEventTypes,
 } from '@latitude-data/core/browser'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { useCallback } from 'react'
 import { readStreamableValue } from 'ai/rsc'
-import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
+import { useCallback } from 'react'
 
 export function useChat({
   shared,

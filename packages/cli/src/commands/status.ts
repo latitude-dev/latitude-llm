@@ -1,5 +1,7 @@
-import { Command } from 'commander'
 import chalk from 'chalk'
+import { Command } from 'commander'
+import * as fs from 'fs/promises'
+import * as path from 'path'
 import { StatusOptions } from '../types'
 import { BaseCommand } from '../utils/baseCommand'
 import { registerCommand } from '../utils/commandRegistrar'
@@ -10,8 +12,6 @@ import {
   OriginPrompt,
 } from '../utils/computePromptDiff'
 import { hashContent } from '../utils/hashContent'
-import * as path from 'path'
-import * as fs from 'fs/promises'
 
 /**
  * Handles displaying the current status of a Latitude project

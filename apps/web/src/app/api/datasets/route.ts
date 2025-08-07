@@ -1,9 +1,9 @@
-import { DEFAULT_PAGINATION_SIZE, Workspace } from '@latitude-data/core/browser'
-import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { DEFAULT_PAGINATION_SIZE, Workspace } from '@latitude-data/core/browser'
+import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { parsePage } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
+import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
   authHandler(

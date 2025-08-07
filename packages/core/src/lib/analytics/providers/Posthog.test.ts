@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { User, Workspace } from '../../../browser'
 import { ProductEdition } from '../collectors/DataCollector'

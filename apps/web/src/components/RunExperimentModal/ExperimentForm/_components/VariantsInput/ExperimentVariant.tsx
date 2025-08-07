@@ -1,3 +1,4 @@
+import { ExperimentVariantWrapper } from '$/components/ExperimentVariantWrapper'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -8,7 +9,6 @@ import {
   VariantPromptSettings,
   VariantPromptSettingsPlaceholder,
 } from './PromptSettings'
-import { ExperimentVariantWrapper } from '$/components/ExperimentVariantWrapper'
 
 export function NewVariantCard({ onClick }: { onClick: () => void }) {
   return (

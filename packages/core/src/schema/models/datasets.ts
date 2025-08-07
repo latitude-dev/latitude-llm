@@ -9,12 +9,12 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
+import { sql } from 'drizzle-orm'
+import { type DatasetColumnRole } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 import { workspaces } from './workspaces'
-import { type DatasetColumnRole } from '../../constants'
-import { sql } from 'drizzle-orm'
 
 export type Column = {
   identifier: string

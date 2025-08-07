@@ -1,9 +1,9 @@
 'use client'
+import { DocumentTriggerType } from '@latitude-data/constants'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import SendEmailTrigger from './_components/SendEmailTrigger'
 import { useState } from 'react'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import SendEmailTrigger from './_components/SendEmailTrigger'
 
 export default function AdminTriggerPage() {
   const [triggerType, setTriggerType] = useState<DocumentTriggerType>(

@@ -1,13 +1,16 @@
-import { ErrorMessage, MessageList } from '$/components/ChatWrapper'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { MessageSkeleton } from '$/components/ChatWrapper'
+import {
+  ErrorMessage,
+  MessageList,
+  MessageSkeleton,
+} from '$/components/ChatWrapper'
+import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
 import {
   Conversation,
   Message as ConversationMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { ExpandMessages } from '../ExpandMessages'
-import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
+import { ExpandMessages } from '../ExpandMessages'
 
 export function AllMessages({
   messages,

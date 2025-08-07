@@ -1,5 +1,5 @@
-import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
 /**
  * Get the current workspace onboarding status
  * If the onboarding status doesn't exist, it creates a new one

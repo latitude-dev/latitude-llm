@@ -8,12 +8,12 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
+import { ExperimentMetadata } from '@latitude-data/constants'
+import { sql } from 'drizzle-orm'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
-import { ExperimentMetadata } from '@latitude-data/constants'
 import { datasets } from './datasets'
-import { sql } from 'drizzle-orm'
 import { workspaces } from './workspaces'
 
 export const experiments = latitudeSchema.table(

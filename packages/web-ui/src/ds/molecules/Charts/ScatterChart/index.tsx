@@ -16,13 +16,13 @@ import {
   ValueType,
 } from 'recharts/types/component/DefaultTooltipContent'
 
-import { Text } from '../../../atoms/Text'
-import { ScatterChartConfig, ScatterDataItem } from '../types'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from '../../../atoms/Charts'
+import { Text } from '../../../atoms/Text'
+import { ScatterChartConfig, ScatterDataItem } from '../types'
 
 export function ScatterChart({ config }: { config: ScatterChartConfig }) {
   const containerRef = useRef<HTMLDivElement>(null)

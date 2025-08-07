@@ -1,13 +1,13 @@
+import { CompileError } from '@latitude-data/compiler'
 import { BadRequestError } from '@latitude-data/constants/errors'
+import { z } from 'zod'
 import { Result } from '../../../../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../../../../repositories'
 import { defineLatteTool } from '../types'
-import { z } from 'zod'
 import { executeLatteActions } from './latteActions/executeActions'
-import { CompileError } from '@latitude-data/compiler'
 
 const editProject = defineLatteTool(
   async ({ projectId, draftUuid, actions }, { workspace, threadUuid }) => {

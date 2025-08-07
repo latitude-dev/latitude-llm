@@ -5,16 +5,16 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 
-import CreateDraftCommitModal from '../CreateDraftCommitModal'
-import MergedCommitWarningModal from '../MergedCommitWarningModal'
 import { FilesTree } from '$/components/Sidebar/Files'
 import { SidebarDocument } from '$/components/Sidebar/Files/useTree'
+import CreateDraftCommitModal from '../CreateDraftCommitModal'
+import MergedCommitWarningModal from '../MergedCommitWarningModal'
 
 export default function ClientFilesTree({
   documents: serverDocuments,

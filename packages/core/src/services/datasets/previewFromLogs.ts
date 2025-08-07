@@ -1,7 +1,7 @@
-import { Result } from '../../lib/Result'
 import { Dataset, Workspace } from '../../browser'
-import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
+import { Result } from '../../lib/Result'
 import { DatasetRowsRepository, DatasetsRepository } from '../../repositories'
+import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 
 async function getFirstRowsFromDataset({

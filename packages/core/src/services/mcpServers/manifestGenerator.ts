@@ -1,7 +1,7 @@
-import { TEMPLATES } from './k8sTemplates'
-import Mustache from 'mustache'
 import { env } from '@latitude-data/env'
 import { createHash } from 'crypto'
+import Mustache from 'mustache'
+import { TEMPLATES } from './k8sTemplates'
 
 function buildCommand(command: string): string {
   const executeCommand = `npx -y @latitude-data/supergateway --stdio ${JSON.stringify(command)}`

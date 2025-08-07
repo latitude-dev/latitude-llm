@@ -1,7 +1,7 @@
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
-import * as factories from '../../../tests/factories'
 import { LanguageModelUsage } from 'ai'
 import { beforeEach, describe, expect, it } from 'vitest'
+import * as factories from '../../../tests/factories'
 
 import { processResponse } from '.'
 import { LogSources, Providers } from '../../../constants'

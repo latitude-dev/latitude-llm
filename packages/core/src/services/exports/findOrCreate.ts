@@ -1,8 +1,8 @@
 import { NewExport, Workspace } from '../../browser'
-import { latitudeExports } from '../../schema'
+import { findByUuid } from '../../data-access/exports/findByUuid'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { findByUuid } from '../../data-access/exports/findByUuid'
+import { latitudeExports } from '../../schema'
 
 export async function findOrCreateExport(
   {

@@ -2,9 +2,9 @@
 
 import { ReactNode } from 'react'
 
-import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { useNavigate } from '$/hooks/useNavigate'
 import { BackofficeRoutes, ROUTES } from '$/services/routes'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { useSelectedLayoutSegment } from 'next/navigation'
 
 export function BackofficeTabs({ children }: { children: ReactNode }) {

@@ -1,10 +1,10 @@
-import { describe, it, vi, expect, beforeAll } from 'vitest'
+import { Providers } from '@latitude-data/constants'
+import { LanguageModel } from 'ai'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { ProviderApiKey, VercelConfigWithProviderRules } from '../../browser'
+import * as factories from '../../tests/factories'
 import { getLanguageModel } from './getLanguageModel'
 import { LlmProvider } from './helpers'
-import * as factories from '../../tests/factories'
-import { Providers } from '@latitude-data/constants'
-import { ProviderApiKey, VercelConfigWithProviderRules } from '../../browser'
-import { LanguageModel } from 'ai'
 
 const GetLanguageModelMock = vi.hoisted(() => vi.fn())
 const GetResponsesLanguageModelMock = vi.hoisted(() => vi.fn())

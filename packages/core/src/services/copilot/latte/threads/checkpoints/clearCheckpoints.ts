@@ -1,6 +1,6 @@
+import { and, eq, inArray } from 'drizzle-orm'
 import { Result } from '../../../../../lib/Result'
 import Transaction from '../../../../../lib/Transaction'
-import { and, eq, inArray } from 'drizzle-orm'
 import { latteThreadCheckpoints, latteThreads } from '../../../../../schema'
 
 export function clearLatteThreadCheckpoints(

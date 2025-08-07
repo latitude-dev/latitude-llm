@@ -1,8 +1,8 @@
 import { Job } from 'bullmq'
 import { DocumentTrigger, HEAD_COMMIT } from '../../../browser'
 import { updateScheduledTriggerLastRun } from '../../../services/documentTriggers/handlers/scheduled'
-import { RunDocumentJobData } from '../documents/runDocumentJob'
 import { documentsQueue } from '../../queues'
+import { RunDocumentJobData } from '../documents/runDocumentJob'
 
 export type ProcessScheduledTriggerJobData = {
   documentTriggerId: number

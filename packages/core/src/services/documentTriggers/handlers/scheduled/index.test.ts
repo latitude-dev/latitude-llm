@@ -1,13 +1,13 @@
+import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createScheduledDocumentTrigger } from '../../../../tests/factories/documentTriggers'
+import * as cronHelperModule from '../../helpers/cronHelper'
 import {
-  isScheduledTriggerDue,
-  updateScheduledTriggerLastRun,
   findAllScheduledTriggers,
   findScheduledTriggersDueToRun,
+  isScheduledTriggerDue,
+  updateScheduledTriggerLastRun,
 } from './index'
-import * as cronHelperModule from '../../helpers/cronHelper'
-import { createScheduledDocumentTrigger } from '../../../../tests/factories/documentTriggers'
-import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 
 describe('Scheduled Document Triggers Handlers', () => {
   beforeEach(() => {

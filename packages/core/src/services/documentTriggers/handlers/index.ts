@@ -1,3 +1,3 @@
 export * from './email'
-export * from './scheduled'
 export * from './integration'
+export * from './scheduled'

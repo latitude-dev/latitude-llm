@@ -1,21 +1,21 @@
 'use client'
 
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  DocumentVersion,
-  Project,
-  Commit,
-  Dataset,
-} from '@latitude-data/core/browser'
-import { useCallback, useState } from 'react'
-import { ROUTES } from '$/services/routes'
+import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
+import { ExperimentStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient/ExperimentStep'
+import { OnboardingPromptStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient/PromptStep'
+import { useRunOnboardingPrompt } from '$/app/(onboarding)/onboarding/_components/OnboardingClient/useRunPrompt'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
-import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
+import { ROUTES } from '$/services/routes'
+import {
+  Commit,
+  Dataset,
+  DocumentVersion,
+  Project,
+} from '@latitude-data/core/browser'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { useRunOnboardingPrompt } from '$/app/(onboarding)/onboarding/_components/OnboardingClient/useRunPrompt'
-import { OnboardingPromptStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient/PromptStep'
-import { ExperimentStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient/ExperimentStep'
+import { useCallback, useState } from 'react'
 
 type OnboardingStep1ContentProps = {
   workspaceName: string

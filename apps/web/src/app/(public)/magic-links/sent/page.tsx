@@ -1,7 +1,7 @@
-import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { FocusLayout } from '$/components/layouts'
 import { ROUTES } from '$/services/routes'
+import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 import { redirect } from 'next/navigation'
 
 export const metadata = buildMetatags({

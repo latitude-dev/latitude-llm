@@ -1,9 +1,9 @@
 import { ToolCall } from '@latitude-data/compiler'
-import { PromptSource, Workspace } from '../../../../../browser'
-import { ResolvedTools } from '../../resolveTools/types'
-import { createMcpClientManager } from '../../../../../services/integrations/McpClient/McpClientManager'
 import { ChainStreamManager } from '../..'
+import { PromptSource, Workspace } from '../../../../../browser'
+import { createMcpClientManager } from '../../../../../services/integrations/McpClient/McpClientManager'
 import { TelemetryContext } from '../../../../../telemetry'
+import { ResolvedTools } from '../../resolveTools/types'
 
 export type ToolResponsesArgs = {
   contexts: TelemetryContext[]

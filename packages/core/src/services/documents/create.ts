@@ -9,6 +9,7 @@ import {
   type Commit,
   type DocumentVersion,
 } from '../../browser'
+import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
@@ -19,7 +20,6 @@ import { createDemoEvaluation } from '../evaluationsV2/createDemoEvaluation'
 import { pingProjectUpdate } from '../projects'
 import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
 import { getDocumentType } from './update'
-import { database } from '../../client'
 
 async function hasMetadata(content: string) {
   try {

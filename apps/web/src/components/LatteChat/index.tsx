@@ -1,21 +1,21 @@
 'use client'
 
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCallback, useRef } from 'react'
-import { LatteMessageList } from './_components/MessageList'
-import { ChatSkeleton } from './_components/ChatSkeleton'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import { LatteChatInput } from './LatteChatInput'
-import Image from 'next/image'
-import { useLatteStore } from '$/stores/latte'
 import {
   useLatteChangeActions,
   useLatteChatActions,
   useLoadThreadFromProviderLogs,
   useSyncLatteUrlState,
 } from '$/hooks/latte'
+import { useLatteStore } from '$/stores/latte'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
+import Image from 'next/image'
+import { useCallback, useRef } from 'react'
+import { ChatSkeleton } from './_components/ChatSkeleton'
+import { LatteMessageList } from './_components/MessageList'
+import { LatteChatInput } from './LatteChatInput'
 
 export function LatteChat() {
   useSyncLatteUrlState()

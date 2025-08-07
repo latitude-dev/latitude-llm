@@ -1,10 +1,10 @@
 import app from '$/routes/app'
-import { beforeEach, describe, expect, it } from 'vitest'
 import {
   createApiKey,
   createDraft,
   createProject,
 } from '@latitude-data/core/factories'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 describe('POST /projects/:projectId/versions/:commitUuid/push', () => {
   describe('when unauthorized', () => {

@@ -1,5 +1,5 @@
-import { Context } from 'hono'
 import { ProjectsRepository } from '@latitude-data/core/repositories'
+import { Context } from 'hono'
 
 export const getAllHandler = async (c: Context) => {
   const workspace = c.get('workspace')

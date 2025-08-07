@@ -1,25 +1,25 @@
 import { ReactNode, useRef } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { ErrorMessage, Message } from '$/components/ChatWrapper'
+import { ToolBarWrapper } from '$/components/ChatWrapper/ChatTextArea/ToolBar'
+import Actions, {
+  type ActionsState,
+} from '$/components/PlaygroundCommon/Actions'
+import { usePreviewConversation } from '$/hooks/playgrounds/usePreviewConversation'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
   AppliedRules,
   LATITUDE_DOCS_URL,
   ProviderRules,
 } from '@latitude-data/core/browser'
-import { ResolvedMetadata } from '$/workers/readMetadata'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { ErrorMessage, Message } from '$/components/ChatWrapper'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import Link from 'next/link'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import { usePreviewConversation } from '$/hooks/playgrounds/usePreviewConversation'
-import Actions, {
-  type ActionsState,
-} from '$/components/PlaygroundCommon/Actions'
-import { ToolBarWrapper } from '$/components/ChatWrapper/ChatTextArea/ToolBar'
+import { cn } from '@latitude-data/web-ui/utils'
+import Link from 'next/link'
 
 function WarningLink({ providerRule }: { providerRule: ProviderRules }) {
   const docPath = providerRule.startsWith('vertex') ? 'vertex' : providerRule

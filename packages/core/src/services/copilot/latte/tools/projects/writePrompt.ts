@@ -1,12 +1,12 @@
 import { BadRequestError } from '@latitude-data/constants/errors'
+import { LatteEditAction } from '@latitude-data/constants/latte'
+import { z } from 'zod'
 import { Result } from '../../../../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../../../../repositories'
 import { defineLatteTool } from '../types'
-import { LatteEditAction } from '@latitude-data/constants/latte'
-import { z } from 'zod'
 import { executeLatteActions } from './latteActions/executeActions'
 
 const writePrompt = defineLatteTool(

@@ -1,7 +1,7 @@
+import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { MouseEvent } from 'react'
 

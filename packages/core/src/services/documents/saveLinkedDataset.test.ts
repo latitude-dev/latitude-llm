@@ -1,10 +1,10 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { DatasetRow, Dataset, DocumentVersion } from '../../browser'
+import { Dataset, DatasetRow, DocumentVersion } from '../../browser'
 import { Providers } from '../../constants'
+import { DocumentVersionsRepository } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { saveLinkedDataset } from './saveLinkedDataset'
-import { DocumentVersionsRepository } from '../../repositories'
 
 let setup: Awaited<ReturnType<typeof factories.createProject>>
 let doc1: DocumentVersion

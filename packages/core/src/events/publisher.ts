@@ -1,12 +1,12 @@
-import { LatitudeEvent } from './events'
 import { eventsQueue, webhooksQueue } from '../jobs/queues'
 import {
+  PubSubEvent,
   pubSubEvents,
+  PubSubHandler,
   PubSubListener,
   pubSubProducer,
-  PubSubEvent,
-  PubSubHandler,
 } from '../pubSub'
+import { LatitudeEvent } from './events'
 
 export const publisher = {
   publishLater: async (event: LatitudeEvent) => {

@@ -8,12 +8,12 @@ import { DocumentVersion, EvaluationV2 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import type { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import {
   ICommitContextType,
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
 import { useRouter } from 'next/navigation'
-import type { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import { useCallback, useRef, useState } from 'react'
 import { Step1 } from './Step1'
 import { Step2 } from './Step2'

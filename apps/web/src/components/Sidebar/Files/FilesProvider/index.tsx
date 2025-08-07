@@ -1,25 +1,25 @@
 'use client'
 import {
   type DataRef,
+  DndContext,
   type DragOverEvent,
   MouseSensor,
-  DndContext,
+  restrictToFirstScrollableAncestor,
   useSensor,
   useSensors,
-  restrictToFirstScrollableAncestor,
 } from '@latitude-data/web-ui/hooks/useDnD'
 
 import { createContext, ReactNode, useCallback, useContext } from 'react'
 
+import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
+import { type SidebarLinkContext } from '../index'
+import { useOpenPaths } from '../useOpenPaths'
 import { Node } from '../useTree'
 import {
   DraggableAndDroppableData,
   DraggableOverlayNode,
 } from './DragOverlayNode'
-import { useOpenPaths } from '../useOpenPaths'
 import { useDragEndFile } from './useDragEndFile'
-import { type SidebarLinkContext } from '../index'
-import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 
 type IFilesContext = {
   isLoading: boolean

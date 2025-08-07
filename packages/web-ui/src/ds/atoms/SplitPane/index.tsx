@@ -4,9 +4,9 @@ import { memo, ReactNode, useEffect, useState } from 'react'
 
 import { JS_PANEL_CLASS } from './Common'
 import { HorizontalSplit } from './HorizontalSplit'
-import { VerticalSplit } from './VerticalSplit'
 import { ReversedHorizontalSplit } from './ReversedHorizontalSplit'
 import { ReversedVerticalSplit } from './ReversedVerticalSplit'
+import { VerticalSplit } from './VerticalSplit'
 
 export type SplitDirection = 'horizontal' | 'vertical'
 export type SplitGap = 2 | 4 | 8

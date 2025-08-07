@@ -1,7 +1,7 @@
 'use server'
 
-import { verifyWebsocketToken } from '@latitude-data/core/websockets/utils'
 import { setWebsocketSessionCookie } from '$/services/auth/setSession'
+import { verifyWebsocketToken } from '@latitude-data/core/websockets/utils'
 import { cookies } from 'next/headers'
 
 import { authProcedure } from '../procedures'

@@ -7,10 +7,10 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 import { latitudeSchema } from '../db-schema'
+import { evaluations } from '../legacyModels/evaluations'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { documentVersions } from './documentVersions'
-import { evaluations } from '../legacyModels/evaluations'
 import { workspaces } from './workspaces'
 
 export const documentSuggestions = latitudeSchema.table(

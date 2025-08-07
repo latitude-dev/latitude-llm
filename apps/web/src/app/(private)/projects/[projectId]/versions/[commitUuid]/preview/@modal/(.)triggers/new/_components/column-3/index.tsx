@@ -1,7 +1,7 @@
-import { IntegrationConnectionForm } from './integration-connection-form'
-import { TriggerConfigurationForm } from './trigger-configuration-form'
 import useIntegrations from '$/stores/integrations'
 import { useTriggersModalContext } from '../contexts/triggers-modal-context'
+import { IntegrationConnectionForm } from './integration-connection-form'
+import { TriggerConfigurationForm } from './trigger-configuration-form'
 
 export function Column3() {
   const { selectedIntegration, selectedPipedreamApp } =

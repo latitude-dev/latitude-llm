@@ -1,3 +1,5 @@
+import MonacoReactEditor, { Monaco } from '@monaco-editor/react'
+import { type editor } from 'monaco-editor'
 import {
   useCallback,
   useEffect,
@@ -6,12 +8,9 @@ import {
   useState,
 } from 'react'
 import { createPortal } from 'react-dom'
-import { type editor } from 'monaco-editor'
-import MonacoReactEditor, { Monaco } from '@monaco-editor/react'
 
+import { DEFAULT_ROW_HEIGHT, EditorCellProps } from '..'
 import { useCellPosition } from './useCellPosition'
-import { DEFAULT_ROW_HEIGHT } from '..'
-import { EditorCellProps } from '..'
 
 export function useUpdateEditorHeight({
   initialHeight,

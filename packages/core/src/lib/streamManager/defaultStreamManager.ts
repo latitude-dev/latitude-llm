@@ -1,10 +1,10 @@
-import { StreamManager, StreamManagerProps } from '.'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
-import { Output, streamAIResponse } from './step/streamAIResponse'
-import { resolveToolsFromConfig } from './resolveTools'
-import { ValidatedChainStep } from '../../services/chains/ChainValidator'
-import { ProviderApiKey } from '../../browser'
 import { JSONSchema7 } from 'json-schema'
+import { StreamManager, StreamManagerProps } from '.'
+import { ProviderApiKey } from '../../browser'
+import { ValidatedChainStep } from '../../services/chains/ChainValidator'
+import { resolveToolsFromConfig } from './resolveTools'
+import { Output, streamAIResponse } from './step/streamAIResponse'
 
 /**
  * DefaultStreamManager implements a simple single-step streaming strategy.

@@ -1,6 +1,6 @@
 import { AppRouteHandler } from '$/openApi/types'
-import { ClientToolResultRoute } from './route'
 import { publisher } from '@latitude-data/core/events/publisher'
+import { ClientToolResultRoute } from './route'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 export const clientToolResultHandler: AppRouteHandler<

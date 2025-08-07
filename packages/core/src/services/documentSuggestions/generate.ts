@@ -10,6 +10,7 @@ import {
   MAX_DOCUMENT_SUGGESTIONS_PER_EVALUATION,
   Workspace,
 } from '../../browser'
+import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -25,7 +26,6 @@ import {
   serializeEvaluationResult as serializeEvaluationResultV2,
   serializeEvaluation as serializeEvaluationV2,
 } from './serialize'
-import { database } from '../../client'
 
 async function checkSuggestionLimits(
   {

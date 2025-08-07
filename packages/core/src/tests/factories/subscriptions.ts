@@ -1,10 +1,10 @@
 // A simple utility type to make all properties of T optional for creation
 export type Create<T> = { [P in keyof T]?: T[P] }
 
-import { database } from '../../client'
-import { subscriptions } from '../../schema/models/subscriptions'
-import { SubscriptionPlan } from '../../plans'
 import { Subscription, Workspace } from '../../browser'
+import { database } from '../../client'
+import { SubscriptionPlan } from '../../plans'
+import { subscriptions } from '../../schema/models/subscriptions'
 
 export type CreateSubscriptionProps = Create<Subscription> & {
   workspaceId: Workspace['id']

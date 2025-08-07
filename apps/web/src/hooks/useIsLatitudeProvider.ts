@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { ResolvedMetadata } from '$/workers/readMetadata'
 import { envClient } from '$/envClient'
+import { ResolvedMetadata } from '$/workers/readMetadata'
+import { useEffect, useState } from 'react'
 
 /**
  * INFO: React to metadata changes and send event to provider model picker

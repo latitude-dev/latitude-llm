@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { Providers } from '@latitude-data/constants'
+import { describe, expect, it } from 'vitest'
 import {
   buildConfigFieldName,
   buildProviderPayload,
 } from './buildProviderPayload'
-import { Providers } from '@latitude-data/constants'
 
 describe('buildProviderPayload', () => {
   it('should build payload for a non-vertex provider', () => {

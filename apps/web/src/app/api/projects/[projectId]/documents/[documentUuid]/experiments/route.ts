@@ -1,9 +1,9 @@
-import { Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { Workspace } from '@latitude-data/core/browser'
 import { ExperimentsRepository } from '@latitude-data/core/repositories'
 import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
+import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
   authHandler(

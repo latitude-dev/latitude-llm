@@ -1,8 +1,8 @@
+import { authHandler } from '$/middlewares/authHandler'
+import { errorHandler } from '$/middlewares/errorHandler'
 import { Workspace } from '@latitude-data/core/browser'
 import { ProviderLogsRepository } from '@latitude-data/core/repositories'
 import serializeProviderLog from '@latitude-data/core/services/providerLogs/serialize'
-import { authHandler } from '$/middlewares/authHandler'
-import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(

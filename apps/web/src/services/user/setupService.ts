@@ -1,6 +1,6 @@
+import { captureException } from '$/helpers/captureException'
 import setupServiceFn from '@latitude-data/core/services/users/setupService'
 import { env } from '@latitude-data/env'
-import { captureException } from '$/helpers/captureException'
 
 export default function setupService({
   email,

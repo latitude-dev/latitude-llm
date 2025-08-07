@@ -1,6 +1,9 @@
 'use client'
 import { useState } from 'react'
 
+import { relativeTime } from '$/lib/relativeTime'
+import { ROUTES } from '$/services/routes'
+import useUsers from '$/stores/users'
 import type { User } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -12,16 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
-import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { relativeTime } from '$/lib/relativeTime'
-import { ROUTES } from '$/services/routes'
-import useUsers from '$/stores/users'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import Link from 'next/link'
 
-import NewUser from './New'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
+import NewUser from './New'
 
 export default function Memberships() {
   const [open, setOpen] = useState(false)

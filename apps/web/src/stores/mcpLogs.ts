@@ -1,8 +1,8 @@
 'use client'
 
-import useSWR, { SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import useSWR, { SWRConfiguration } from 'swr'
 
 export interface McpLogOptions {
   tailLines?: number

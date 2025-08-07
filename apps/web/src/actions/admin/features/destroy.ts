@@ -1,9 +1,9 @@
 'use server'
 
+import { FeaturesRepository } from '@latitude-data/core/repositories/featuresRepository'
+import { destroyFeature } from '@latitude-data/core/services/features/destroy'
 import { z } from 'zod'
 import { withAdmin } from '../../procedures'
-import { destroyFeature } from '@latitude-data/core/services/features/destroy'
-import { FeaturesRepository } from '@latitude-data/core/repositories/featuresRepository'
 
 export const destroyFeatureAction = withAdmin
   .createServerAction()

@@ -1,18 +1,18 @@
 import { DocumentVersion } from '@latitude-data/constants'
-import { Commit, Workspace } from '../../../../../browser'
 import { InsertDocumentTriggerWithConfiguration } from '@latitude-data/constants/documentTriggers'
-import { Result } from '../../../../../lib/Result'
-import { createDocumentTrigger } from '../../../../documentTriggers'
-import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import {
   LatteTriggerAction,
   LatteTriggerChanges,
 } from '@latitude-data/constants/latte'
-import { NotFoundError } from '@latitude-data/constants/errors'
+import { Commit, Workspace } from '../../../../../browser'
+import { Result } from '../../../../../lib/Result'
+import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
 import {
   DocumentTriggersRepository,
   ProjectsRepository,
 } from '../../../../../repositories'
+import { createDocumentTrigger } from '../../../../documentTriggers'
 import { deleteDocumentTrigger } from '../../../../documentTriggers/delete'
 import { updateDocumentTriggerConfiguration } from '../../../../documentTriggers/update'
 

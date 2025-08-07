@@ -1,5 +1,5 @@
-import { ReactNode } from 'react'
 import { Slot } from '@radix-ui/react-slot'
+import { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Text } from '../Text'

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMetadata } from '$/hooks/useMetadata'
 import {
   Commit,
   Dataset,
@@ -7,7 +7,7 @@ import {
   Project,
 } from '@latitude-data/core/browser'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { useMetadata } from '$/hooks/useMetadata'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export type ExperimentFormPayload = {
   project: Project

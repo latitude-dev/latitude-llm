@@ -8,10 +8,10 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 
 import type { AgentToolsMap } from '@latitude-data/constants'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import { memo } from 'react'
 import { Message } from '..'
-import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 
 /**
  * Checks if the tool message has an existing tool request with the same ID.

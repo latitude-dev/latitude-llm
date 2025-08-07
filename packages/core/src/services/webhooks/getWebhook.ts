@@ -1,11 +1,11 @@
 import { and, eq } from 'drizzle-orm'
 
+import { type Workspace } from '../../browser'
 import { database } from '../../client'
-import { webhooks } from '../../schema/models/webhooks'
 import { NotFoundError } from '../../lib/errors'
 import { Result, type TypedResult } from '../../lib/Result'
+import { webhooks } from '../../schema/models/webhooks'
 import { type Webhook } from './types'
-import { type Workspace } from '../../browser'
 
 export async function getWebhook(
   id: number,

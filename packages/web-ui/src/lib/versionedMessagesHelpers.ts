@@ -1,8 +1,8 @@
 import { ToolCallResponse as ToolResponse } from '@latitude-data/constants'
 import {
   Message as PromptlMessage,
-  ToolCallContent as ToolRequest,
   MessageRole as PromptlMessageRole,
+  ToolCallContent as ToolRequest,
 } from 'promptl-ai'
 
 export type PromptlVersion = 0 | 1

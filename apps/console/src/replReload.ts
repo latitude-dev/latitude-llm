@@ -1,5 +1,5 @@
-import { pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
+import { pathToFileURL } from 'node:url'
 
 const require = createRequire(import.meta.url)
 const LOADED_MODULES: Record<string, string> = {}

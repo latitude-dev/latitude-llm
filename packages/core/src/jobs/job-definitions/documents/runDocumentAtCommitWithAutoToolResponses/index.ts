@@ -1,18 +1,18 @@
 import { LogSources, ToolDefinition } from '@latitude-data/constants'
+import { scan } from 'promptl-ai'
+import { Experiment } from '../../../../browser'
+import {
+  mockClientToolResult,
+  ToolHandler,
+} from '../../../../lib/streamManager/clientTools/handlers'
+import { isOldToolsSchema } from '../../../../lib/streamManager/resolveTools/clientTools'
+import { runDocumentAtCommit } from '../../../../services/commits'
 import { BACKGROUND, TelemetryContext } from '../../../../telemetry'
 import { getCopilotDataForGenerateToolResponses } from './getCopilotData'
 import {
   getDataForInitialRequest,
   GetDataParams,
 } from './getDataForInitialRequest'
-import { scan } from 'promptl-ai'
-import { Experiment } from '../../../../browser'
-import { runDocumentAtCommit } from '../../../../services/commits'
-import { isOldToolsSchema } from '../../../../lib/streamManager/resolveTools/clientTools'
-import {
-  mockClientToolResult,
-  ToolHandler,
-} from '../../../../lib/streamManager/clientTools/handlers'
 
 export async function runDocumentAtCommitWithAutoToolResponses({
   parameters,

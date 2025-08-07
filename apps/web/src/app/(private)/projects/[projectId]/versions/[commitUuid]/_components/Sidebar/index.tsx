@@ -1,4 +1,9 @@
 import {
+  getDocumentsAtCommitCached,
+  getHeadCommitCached,
+} from '$/app/(private)/_data-access'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import {
   Commit,
   CommitStatus,
   DocumentVersion,
@@ -6,17 +11,12 @@ import {
   ULTRA_LARGE_PAGE_SIZE,
 } from '@latitude-data/core/browser'
 import { CommitsRepository } from '@latitude-data/core/repositories/index'
-import {
-  getDocumentsAtCommitCached,
-  getHeadCommitCached,
-} from '$/app/(private)/_data-access'
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 
+import DocumentSidebar from '$/components/Sidebar'
+import { paginateQuery } from '@latitude-data/core/lib/pagination/paginate'
 import ClientFilesTree from './ClientFilesTree'
 import CommitSelector from './CommitSelector'
 import ProjectSection from './ProjectSection'
-import DocumentSidebar from '$/components/Sidebar'
-import { paginateQuery } from '@latitude-data/core/lib/pagination/paginate'
 
 export default async function Sidebar({
   project,

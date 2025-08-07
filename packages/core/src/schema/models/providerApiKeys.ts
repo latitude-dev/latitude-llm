@@ -2,23 +2,23 @@ import {
   bigint,
   bigserial,
   index,
+  jsonb,
   text,
   timestamp,
   unique,
   varchar,
-  jsonb,
 } from 'drizzle-orm/pg-core'
 
 import { Providers } from '../../browser'
-import { latitudeSchema } from '../db-schema'
-import { timestamps } from '../schemaHelpers'
-import { users } from './users'
-import { workspaces } from './workspaces'
 import {
   AmazonBedrockConfiguration,
   VertexConfiguration,
 } from '../../services/ai'
 import { OpenAIProviderConfiguration } from '../../services/ai/providers/helpers/openai'
+import { latitudeSchema } from '../db-schema'
+import { timestamps } from '../schemaHelpers'
+import { users } from './users'
+import { workspaces } from './workspaces'
 
 export const providersEnum = latitudeSchema.enum('provider', [
   Providers.OpenAI,

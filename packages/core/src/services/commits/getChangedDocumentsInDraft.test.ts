@@ -9,13 +9,13 @@ import {
   User,
   Workspace,
 } from '../../browser'
-import { destroyDocument, updateDocument } from '../documents'
 import {
   createDocumentVersion,
   createDraft,
   createProject,
   helpers,
 } from '../../tests/factories'
+import { destroyDocument, updateDocument } from '../documents'
 import { getCommitChanges } from './getChanges'
 import { mergeCommit } from './merge'
 

@@ -1,5 +1,5 @@
-import { ReactNode } from 'react'
 import { cn } from '@latitude-data/web-ui/utils'
+import { ReactNode } from 'react'
 
 export function ExperimentVariantWrapper({
   children,

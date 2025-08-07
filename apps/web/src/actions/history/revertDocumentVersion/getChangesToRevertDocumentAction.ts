@@ -1,8 +1,8 @@
 'use server'
 
+import { getChangesToRevertDocumentChanges } from '@latitude-data/core/services/history/revertDocumentVersion'
 import { z } from 'zod'
 import { withProject } from '../../procedures'
-import { getChangesToRevertDocumentChanges } from '@latitude-data/core/services/history/revertDocumentVersion'
 
 export const getChangesToRevertDocumentAction = withProject
   .createServerAction()

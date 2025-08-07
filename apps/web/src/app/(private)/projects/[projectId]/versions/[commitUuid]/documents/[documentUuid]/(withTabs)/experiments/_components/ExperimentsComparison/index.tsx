@@ -1,12 +1,12 @@
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ExperimentItem } from './ExperimentItem/index'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useExperimentComparison } from '$/stores/experimentComparison'
+import { Commit, Project } from '@latitude-data/core/browser'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { Commit, Project } from '@latitude-data/core/browser'
+import { ExperimentItem } from './ExperimentItem/index'
 
 export function ExperimentComparison({
   selectedExperimentUuids,

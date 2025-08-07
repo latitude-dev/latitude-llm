@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { Providers } from '../../constants'
-import { updateDocument } from '../documents/update'
-import { mergeCommit } from './merge'
-import { computeChangesToRevertCommit } from './computeRevertChanges'
 import { createNewDocument } from '../documents/create'
+import { updateDocument } from '../documents/update'
+import { computeChangesToRevertCommit } from './computeRevertChanges'
+import { mergeCommit } from './merge'
 
 describe('computeChangesToRevertCommit', () => {
   it('reverts path changes between commits', async (ctx) => {

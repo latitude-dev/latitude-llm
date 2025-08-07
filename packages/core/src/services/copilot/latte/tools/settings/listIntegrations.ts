@@ -1,7 +1,7 @@
 import { Result } from '../../../../../lib/Result'
+import { listIntegrations as listIntegrationsLatte } from '../../../../integrations/list'
 import { integrationPresenter } from '../presenters'
 import { defineLatteTool } from '../types'
-import { listIntegrations as listIntegrationsLatte } from '../../../../integrations/list'
 
 const listIntegrations = defineLatteTool(async (_, { workspace }) => {
   const integrations = await listIntegrationsLatte(workspace).then((r) =>

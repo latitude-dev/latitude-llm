@@ -1,11 +1,11 @@
 'use client'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { capitalize } from 'lodash-es'
+import { UpgradeLink } from '$/components/UpgradeLink'
 import { useMcpServer } from '$/stores/mcpServer'
 import { McpServer } from '@latitude-data/core/browser'
-import { UpgradeLink } from '$/components/UpgradeLink'
+import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { capitalize } from 'lodash-es'
 
 interface McpServerStatusProps {
   mcpServerId?: number

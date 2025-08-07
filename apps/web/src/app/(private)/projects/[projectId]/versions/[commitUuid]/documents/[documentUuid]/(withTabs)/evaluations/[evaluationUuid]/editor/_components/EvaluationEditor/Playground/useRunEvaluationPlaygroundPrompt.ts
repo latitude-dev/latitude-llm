@@ -1,4 +1,5 @@
-import { useCallback } from 'react'
+import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
+import { ROUTES } from '$/services/routes'
 import {
   Commit,
   DocumentVersion,
@@ -6,8 +7,7 @@ import {
   EvaluationV2,
   LlmEvaluationMetricAnyCustom,
 } from '@latitude-data/core/browser'
-import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
-import { ROUTES } from '$/services/routes'
+import { useCallback } from 'react'
 
 export function useRunEvaluationPlaygroundPrompt({
   projectId,

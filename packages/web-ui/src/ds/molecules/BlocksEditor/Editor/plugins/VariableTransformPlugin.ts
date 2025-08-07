@@ -1,8 +1,8 @@
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { useEffect } from 'react'
-import { TextNode, $getSelection, $isRangeSelection } from 'lexical'
-import { VariableNode } from '../nodes/VariableNode'
 import { $isCodeNode } from '@lexical/code'
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { $getSelection, $isRangeSelection, TextNode } from 'lexical'
+import { useEffect } from 'react'
+import { VariableNode } from '../nodes/VariableNode'
 
 const VARIABLE_REGEX = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/
 

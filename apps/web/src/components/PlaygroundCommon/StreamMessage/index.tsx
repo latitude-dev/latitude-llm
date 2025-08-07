@@ -1,8 +1,8 @@
+import { Message } from '$/components/ChatWrapper'
 import {
   Message as ConversationMessage,
   MessageRole,
 } from '@latitude-data/constants/legacyCompiler'
-import { Message } from '$/components/ChatWrapper'
 
 export function StreamMessage({
   responseStream,

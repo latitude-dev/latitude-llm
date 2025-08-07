@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import { Providers } from '../../constants'
 import { DocumentVersionsRepository } from '../../repositories'
-import { updateDocument } from './update'
 import { mergeCommit } from '../commits'
-import { resetToDocumentVersion } from './resetToVersion'
 import { createNewDocument } from './create'
+import { resetToDocumentVersion } from './resetToVersion'
+import { updateDocument } from './update'
 
 describe('resetDocumentToVersion', () => {
   it('removes all the changes made to a document from in-between commits', async (ctx) => {

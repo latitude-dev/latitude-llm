@@ -1,5 +1,5 @@
-import * as Sentry from '@sentry/nextjs'
 import { env } from '@latitude-data/env'
+import * as Sentry from '@sentry/nextjs'
 
 export const captureException = (error: Error) => {
   if (env.SENTRY_WEB_DSN) {

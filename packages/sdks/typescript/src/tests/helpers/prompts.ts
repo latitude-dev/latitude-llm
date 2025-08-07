@@ -1,5 +1,5 @@
-import { ApiErrorCodes } from '@latitude-data/constants/errors'
 import { SdkApiVersion } from '$sdk/utils/types'
+import { ApiErrorCodes } from '@latitude-data/constants/errors'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { vi } from 'vitest'

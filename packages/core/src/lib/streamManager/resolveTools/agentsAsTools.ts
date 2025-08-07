@@ -1,15 +1,15 @@
 import { resolveRelativePath } from '@latitude-data/constants'
-import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
-import { PromisedResult } from '../../Transaction'
-import { Result, TypedResult } from '../../Result'
-import { ResolvedTools, ToolSource, ToolSourceData } from './types'
-import { DocumentVersion } from '../../../browser'
-import { DocumentVersionsRepository } from '../../../repositories'
-import { getAgentToolName } from '../../../services/agents/helpers'
-import { getToolDefinitionFromDocument } from '../../../services/agents/agentsAsTools'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Tool } from 'ai'
 import { StreamManager } from '..'
+import { DocumentVersion } from '../../../browser'
+import { DocumentVersionsRepository } from '../../../repositories'
+import { getToolDefinitionFromDocument } from '../../../services/agents/agentsAsTools'
+import { getAgentToolName } from '../../../services/agents/helpers'
+import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
+import { Result, TypedResult } from '../../Result'
+import { PromisedResult } from '../../Transaction'
+import { ResolvedTools, ToolSource, ToolSourceData } from './types'
 
 function findAgentDocs({
   agentPaths,

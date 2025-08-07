@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { StatusCommand } from './status'
-import { StatusOptions } from '../types'
 import * as fs from 'fs/promises'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { StatusOptions } from '../types'
+import { StatusCommand } from './status'
 
 const mocks = vi.hoisted(() => ({
   blue: vi.fn((text) => text),

@@ -1,7 +1,6 @@
-import { Text } from '../Text'
-import { Icon } from '../Icons'
-import { IconProps } from '../Icons'
 import { cn } from '../../../lib/utils'
+import { Icon, IconProps } from '../Icons'
+import { Text } from '../Text'
 
 function Line({ clickable }: { clickable: boolean }) {
   return (

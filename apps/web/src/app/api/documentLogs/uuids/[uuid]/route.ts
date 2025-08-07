@@ -1,7 +1,7 @@
-import { Workspace } from '@latitude-data/core/browser'
-import { fetchDocumentLogWithMetadata } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithMetadata'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
+import { Workspace } from '@latitude-data/core/browser'
+import { fetchDocumentLogWithMetadata } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithMetadata'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(

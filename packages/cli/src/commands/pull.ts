@@ -1,10 +1,9 @@
-import { Command } from 'commander'
 import chalk from 'chalk'
-import * as path from 'path'
+import { Command } from 'commander'
 import * as fs from 'fs/promises'
+import * as path from 'path'
 import { PullOptions } from '../types'
 import { BaseCommand } from '../utils/baseCommand'
-import { savePrompts } from '../utils/promptOperations'
 import { registerCommand } from '../utils/commandRegistrar'
 import {
   computePromptDiff,
@@ -13,6 +12,7 @@ import {
   OriginPrompt,
 } from '../utils/computePromptDiff'
 import { hashContent } from '../utils/hashContent'
+import { savePrompts } from '../utils/promptOperations'
 
 /**
  * Handles pulling prompts from a Latitude project to the local filesystem

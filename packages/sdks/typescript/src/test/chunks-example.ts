@@ -1,10 +1,10 @@
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainEvent,
   ChainEventTypes,
   LatitudeProviderCompletedEventData,
   StreamEventTypes,
 } from '@latitude-data/constants'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 
 const CHUNK_EVENTS: ChainEvent[] = [
   {

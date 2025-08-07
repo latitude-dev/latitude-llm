@@ -1,6 +1,6 @@
+import { Latitude } from '@latitude-data/sdk'
 import * as fs from 'fs/promises'
 import * as path from 'path'
-import { Latitude } from '@latitude-data/sdk'
 
 /**
  * Manages project operations for the Latitude CLI

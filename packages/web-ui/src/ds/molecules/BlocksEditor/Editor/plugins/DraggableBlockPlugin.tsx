@@ -1,20 +1,20 @@
-import { useRef, useState, useCallback, MouseEvent } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $createParagraphNode,
   $createTextNode,
   $getNearestNodeFromDOMNode,
 } from 'lexical'
+import { MouseEvent, useCallback, useRef, useState } from 'react'
 
-import { DraggableBlockPlugin_EXPERIMENTAL } from '../overrides/plugins/DraggableBlockPlugin'
 import { $isParagraphNode, LexicalNode } from 'lexical'
+import { DraggableBlockPlugin_EXPERIMENTAL } from '../overrides/plugins/DraggableBlockPlugin'
 
+import { $isCodeNode } from '@lexical/code'
+import { cn } from '../../../../../lib/utils'
 import { Icon } from '../../../../atoms/Icons'
 import { Tooltip } from '../../../../atoms/Tooltip'
-import { cn } from '../../../../../lib/utils'
-import { $isStepBlockNode } from '../nodes/StepBlock'
 import { $isMessageBlockNode } from '../nodes/MessageBlock'
-import { $isCodeNode } from '@lexical/code'
+import { $isStepBlockNode } from '../nodes/StepBlock'
 
 const DRAGGABLE_BLOCK_MENU_CLASSNAME = 'draggable-block-menu'
 

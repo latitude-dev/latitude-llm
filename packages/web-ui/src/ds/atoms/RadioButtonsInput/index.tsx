@@ -1,8 +1,7 @@
 'use client'
 import { FormField } from '../FormField'
 import { Label } from '../Label'
-import { SelectOption } from '../Select'
-import { SelectProps } from '../Select'
+import { SelectOption, SelectProps } from '../Select'
 import { RadioGroup, RadioGroupItem } from './Primitives'
 
 function Options({ options }: { options: SelectOption[] }) {

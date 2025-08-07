@@ -1,11 +1,11 @@
-import { omit } from 'lodash-es'
+import { OpenAIProvider } from '@ai-sdk/openai'
 import { Providers } from '@latitude-data/constants'
 import { LanguageModel } from 'ai'
-import { VercelConfigWithProviderRules } from './providers/rules'
-import { LlmProvider } from './helpers'
-import { OpenAIProvider } from '@ai-sdk/openai'
+import { omit } from 'lodash-es'
 import { ProviderApiKey } from '../../browser'
 import { ProviderConfiguration } from '../../schema'
+import { LlmProvider } from './helpers'
+import { VercelConfigWithProviderRules } from './providers/rules'
 
 function buildGenericLanguageModel({
   model,

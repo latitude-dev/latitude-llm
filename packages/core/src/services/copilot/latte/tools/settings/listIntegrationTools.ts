@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { IntegrationsRepository } from '../../../../../repositories'
-import { defineLatteTool } from '../types'
 import { listTools } from '../../../../integrations'
+import { defineLatteTool } from '../types'
 
 const listIntegrationTools = defineLatteTool(
   async ({ name }, { workspace }) => {

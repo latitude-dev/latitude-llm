@@ -4,6 +4,9 @@ import {
   PipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/browser'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { AlertProps } from '@latitude-data/web-ui/atoms/Alert/Primitives'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -13,12 +16,9 @@ import {
   ConfigurableProps,
   ConfiguredProps,
 } from '@pipedream/sdk/browser'
-import DynamicPipedreamProp, { isDynamicProp } from './Props/DynamicProp'
-import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { AlertProps } from '@latitude-data/web-ui/atoms/Alert/Primitives'
-import PipedreamTimerProp from './Props/TimerProp'
 import ArrayPipedreamProp from './Props/ArrayProp'
+import DynamicPipedreamProp, { isDynamicProp } from './Props/DynamicProp'
+import PipedreamTimerProp from './Props/TimerProp'
 
 type Defined<T> = Exclude<T, undefined | null>
 type AlertType = Defined<

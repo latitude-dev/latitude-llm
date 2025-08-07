@@ -1,10 +1,10 @@
 'use server'
 
+import { IntegrationType } from '@latitude-data/constants'
+import { IntegrationsRepository } from '@latitude-data/core/repositories'
+import { configureComponent } from '@latitude-data/core/services/integrations/pipedream/components/configureComponent'
 import { z } from 'zod'
 import { authProcedure } from '../../procedures'
-import { IntegrationsRepository } from '@latitude-data/core/repositories'
-import { IntegrationType } from '@latitude-data/constants'
-import { configureComponent } from '@latitude-data/core/services/integrations/pipedream/components/configureComponent'
 
 export const configurePipedreamComponentAction = authProcedure
   .createServerAction()

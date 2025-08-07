@@ -1,18 +1,18 @@
-import { z } from 'zod'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../../../../repositories'
-import { defineLatteTool } from '../types'
-import { BadRequestError } from '@latitude-data/constants/errors'
-import { Result } from '../../../../../lib/Result'
-import Transaction from '../../../../../lib/Transaction'
-import executeTriggerActions from './executeTriggerActions'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import {
   emailTriggerConfigurationSchema,
   insertScheduledTriggerConfigurationSchema,
 } from '@latitude-data/constants/documentTriggers'
+import { BadRequestError } from '@latitude-data/constants/errors'
+import { z } from 'zod'
+import { Result } from '../../../../../lib/Result'
+import Transaction from '../../../../../lib/Transaction'
+import {
+  CommitsRepository,
+  DocumentVersionsRepository,
+} from '../../../../../repositories'
+import { defineLatteTool } from '../types'
+import executeTriggerActions from './executeTriggerActions'
 
 const triggerActions = defineLatteTool(
   async ({ projectId, versionUuid, actions }, { workspace }) => {

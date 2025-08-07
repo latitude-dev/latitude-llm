@@ -1,8 +1,8 @@
-import { z } from 'zod'
 import { Providers } from '@latitude-data/core/browser'
-import { vertexConfigurationSchema } from '@latitude-data/core/services/ai/providers/helpers/vertex'
 import { amazonBedrockConfigurationSchema } from '@latitude-data/core/services/ai/providers/helpers/amazonBedrock'
 import { openAIProviderConfiguration } from '@latitude-data/core/services/ai/providers/helpers/openai'
+import { vertexConfigurationSchema } from '@latitude-data/core/services/ai/providers/helpers/vertex'
+import { z } from 'zod'
 
 const WITH_CONFIG = [
   Providers.OpenAI,

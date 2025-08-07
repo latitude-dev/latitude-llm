@@ -3,8 +3,8 @@ import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
-import { destroyOrSoftDeleteDocuments } from '../documents/destroyOrSoftDeleteDocuments'
 import { createNewDocument, updateDocument } from '../documents'
+import { destroyOrSoftDeleteDocuments } from '../documents/destroyOrSoftDeleteDocuments'
 
 export interface PushChangeDocument {
   path: string

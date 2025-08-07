@@ -1,8 +1,8 @@
 'use client'
 
 import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
-import { MetadataInfoTabs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataInfoTabs'
 import { DocumentLogParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/logs/_components/DocumentLogs/DocumentLogInfo/Metadata'
+import { MetadataInfoTabs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataInfoTabs'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { MetadataItem } from '$/components/MetadataItem'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'

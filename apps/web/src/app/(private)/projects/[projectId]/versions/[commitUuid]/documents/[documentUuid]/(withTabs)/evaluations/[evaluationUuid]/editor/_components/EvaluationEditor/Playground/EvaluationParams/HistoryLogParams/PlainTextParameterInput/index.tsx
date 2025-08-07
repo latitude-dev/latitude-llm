@@ -1,7 +1,7 @@
+import { LlmEvaluationPromptParameter } from '@latitude-data/constants'
 import { type UseEvaluationParameters } from '../../../../hooks/useEvaluationParamaters'
 import { LogInput } from '../../../../hooks/useEvaluationParamaters/logInputParamaters'
 import { DebouncedTextArea } from '../DebouncedTextArea'
-import { LlmEvaluationPromptParameter } from '@latitude-data/constants'
 import { InputWrapper } from '../InputWrapper'
 
 export function PlainTextParameterInput({

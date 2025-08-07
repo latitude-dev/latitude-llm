@@ -1,16 +1,15 @@
-import { AnimatedDots } from '@latitude-data/web-ui/molecules/AnimatedDots'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { useFormAction } from '$/hooks/useFormAction'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { AnimatedDots } from '@latitude-data/web-ui/molecules/AnimatedDots'
+import { ReactNode } from 'react'
 import {
   inferServerActionError,
   inferServerActionInput,
   inferServerActionReturnData,
   TAnyZodSafeFunctionHandler,
 } from 'zsa'
-import { ReactNode } from 'react'
 
 type Props<TServerAction extends TAnyZodSafeFunctionHandler> = {
   action: (

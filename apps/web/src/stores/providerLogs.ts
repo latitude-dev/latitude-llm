@@ -2,9 +2,9 @@
 
 import { compact } from 'lodash-es'
 
-import { ProviderLogDto } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import { ProviderLogDto } from '@latitude-data/core/browser'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useProviderLogs(

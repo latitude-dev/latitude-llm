@@ -8,31 +8,31 @@ import {
   useState,
 } from 'react'
 
+import useUsers from '$/stores/users'
 import {
   DocumentVersion,
   HELP_CENTER,
   type Commit,
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   SelectContent,
   SelectRoot,
   SelectTrigger,
   SelectValueWithIcon,
 } from '@latitude-data/web-ui/atoms/Select'
-import useUsers from '$/stores/users'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 import CreateDraftCommitModal from '../CreateDraftCommitModal'
 import PublishDraftCommitModal from '../PublishDraftCommitModal'
 import { ArchivedCommitsList } from './ArchivedCommitsList'
 import { BadgeCommit, BadgeType, SimpleUser } from './CommitItem'
 import { CurrentCommitsList } from './CurrentCommitsList'
 import DeleteDraftCommitModal from './DeleteDraftCommitModal'
-import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
-import { DocsRoute } from '$/components/Documentation/routes'
 
 const MIN_WIDTH_SELECTOR_PX = 380
 const TRIGGER_X_PADDING_PX = 26

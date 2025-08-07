@@ -1,13 +1,12 @@
 import { googleProvider } from '$/services/auth'
-import { cookies } from 'next/headers'
-import { decodeIdToken, OAuth2RequestError, OAuth2Tokens } from 'arctic'
-import { NextRequest } from 'next/server'
-import { findOrCreateUserFromOAuth } from '@latitude-data/core/services/auth/findOrCreateUserFromOAuth'
 import { setSession } from '$/services/auth/setSession'
-import { ObjectParser } from '@pilcrowjs/object-parser'
-import { NextResponse } from 'next/server'
 import { OAuthProvider } from '@latitude-data/core/schema'
+import { findOrCreateUserFromOAuth } from '@latitude-data/core/services/auth/findOrCreateUserFromOAuth'
 import { env } from '@latitude-data/env'
+import { ObjectParser } from '@pilcrowjs/object-parser'
+import { decodeIdToken, OAuth2RequestError, OAuth2Tokens } from 'arctic'
+import { cookies } from 'next/headers'
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest): Promise<Response> {
   const url = new URL(request.url)

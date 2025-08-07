@@ -1,9 +1,9 @@
+import { MultipleInput } from '@latitude-data/web-ui/molecules/MultipleInput'
+import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
 import {
   ConfigurablePropIntegerArray,
   ConfigurablePropStringArray,
 } from '@pipedream/sdk/browser'
-import { MultipleInput } from '@latitude-data/web-ui/molecules/MultipleInput'
-import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
 import { useState } from 'react'
 
 export default function ArrayPipedreamProp<

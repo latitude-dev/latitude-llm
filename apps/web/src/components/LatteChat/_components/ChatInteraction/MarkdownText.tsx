@@ -1,10 +1,10 @@
-import React, { ReactNode, useMemo } from 'react'
-import Link from 'next/link'
-import type { Components } from 'react-markdown'
-import { Markdown } from '@latitude-data/web-ui/atoms/Markdown'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Markdown } from '@latitude-data/web-ui/atoms/Markdown'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import Link from 'next/link'
+import React, { ReactNode, useMemo } from 'react'
+import type { Components } from 'react-markdown'
 
 function isCodeBlockInline(children: string, className?: string) {
   return className === undefined && !children.includes('\n')

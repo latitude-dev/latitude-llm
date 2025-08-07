@@ -1,11 +1,11 @@
 'use client'
 
 import { impersonateAction } from '$/actions/user/impersonateAction'
+import { useFormAction } from '$/hooks/useFormAction'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Label } from '@latitude-data/web-ui/atoms/Label'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { useFormAction } from '$/hooks/useFormAction'
 
 export function ImpersonateUser() {
   const { execute } = useLatitudeAction(impersonateAction)

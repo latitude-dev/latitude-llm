@@ -1,4 +1,5 @@
 'use client'
+import usePendingRewardClaims from '$/stores/pendingRewardClaims'
 import { RewardType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
@@ -10,11 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
-import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
-import usePendingRewardClaims from '$/stores/pendingRewardClaims'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import Link from 'next/link'
 
 function ReferenceCell({

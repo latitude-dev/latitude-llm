@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useMemo } from 'react'
 import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
   DocumentVersion,
@@ -10,10 +9,11 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { useCallback, useEffect, useMemo } from 'react'
 
+import { useEvaluatedLogInputs } from './logInputParamaters'
 import { EVALUATION_EMPTY_INPUTS, EvaluationInputsByDocument } from './types'
 import { getDocState } from './utils'
-import { useEvaluatedLogInputs } from './logInputParamaters'
 
 export function useEvaluationParameters({
   commitVersionUuid,

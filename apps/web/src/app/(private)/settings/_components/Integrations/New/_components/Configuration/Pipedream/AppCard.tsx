@@ -1,18 +1,18 @@
 'use client'
-import Image from 'next/image'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import type { App } from '@pipedream/sdk/browser'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
-import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
   PipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/browser'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import type { App } from '@pipedream/sdk/browser'
+import Image from 'next/image'
 import { ReactNode } from 'react'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 function AppComponent({ component }: { component: PipedreamComponent }) {
   return (

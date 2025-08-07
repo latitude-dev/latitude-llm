@@ -1,4 +1,4 @@
-import { Workspace, User } from '../../browser'
+import { User, Workspace } from '../../browser'
 import { createMembership as createMembershipFn } from '../../services/memberships/create'
 export async function createMembership({
   user,

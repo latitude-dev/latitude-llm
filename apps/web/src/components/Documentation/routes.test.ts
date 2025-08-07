@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { getRouteFromPathname, DocsRoute } from './routes'
+import { describe, expect, it } from 'vitest'
+import { DocsRoute, getRouteFromPathname } from './routes'
 
 describe('getRouteFromPathname', () => {
   it('returns Introduction for root and unknown routes', () => {

@@ -3,8 +3,8 @@
 import { KeyboardEvent, useCallback, useState } from 'react'
 
 import { ToolMessage } from '@latitude-data/constants/legacyCompiler'
-import { ToolBar } from './ToolBar'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { ToolBar } from './ToolBar'
 
 type OnSubmitWithTools = (value: string | ToolMessage[]) => void
 type OnSubmit = (value: string) => void

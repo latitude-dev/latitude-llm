@@ -1,7 +1,7 @@
-import { IntegrationDto, Workspace } from '@latitude-data/core/browser'
 import { IntegrationType } from '@latitude-data/constants'
-import { IntegrationsRepository } from '@latitude-data/core/repositories'
+import { IntegrationDto, Workspace } from '@latitude-data/core/browser'
 import { Result } from '@latitude-data/core/lib/Result'
+import { IntegrationsRepository } from '@latitude-data/core/repositories'
 
 export async function listIntegrations(workspace: Workspace) {
   const integrationsScope = new IntegrationsRepository(workspace.id)

@@ -1,7 +1,7 @@
-import { Session as LuciaSession } from 'lucia'
 import { type TokenType } from '@latitude-data/core/websockets/constants'
-import { cookies } from 'next/headers'
+import { Session as LuciaSession } from 'lucia'
 import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies'
+import { cookies } from 'next/headers'
 
 import { lucia } from '.'
 

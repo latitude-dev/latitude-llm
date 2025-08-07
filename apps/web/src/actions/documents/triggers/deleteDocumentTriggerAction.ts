@@ -2,9 +2,9 @@
 
 import { deleteDocumentTrigger } from '@latitude-data/core/services/documentTriggers/delete'
 
-import { withDocument } from '../../procedures'
-import { z } from 'zod'
 import { DocumentTriggersRepository } from '@latitude-data/core/repositories'
+import { z } from 'zod'
+import { withDocument } from '../../procedures'
 
 export const deleteDocumentTriggerAction = withDocument
   .createServerAction()

@@ -8,11 +8,11 @@ import { DocumentVersionProvider } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
+import buildMetatags from '$/app/_lib/buildMetatags'
 import ProjectLayout from '../../_components/ProjectLayout'
 import DocumentationModal, {
   DocumentationModalProvider,
 } from './_components/DocumentationModal'
-import buildMetatags from '$/app/_lib/buildMetatags'
 
 export const metadata = buildMetatags({
   locationDescription: 'Prompt Editor and Playground',

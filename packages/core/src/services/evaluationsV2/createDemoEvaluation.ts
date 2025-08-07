@@ -8,9 +8,9 @@ import {
   Workspace,
 } from '../../browser'
 import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { findDefaultEvaluationProvider } from '../providerApiKeys/findDefaultProvider'
 import { createEvaluationV2 } from './create'
-import Transaction from '../../lib/Transaction'
 
 export async function createDemoEvaluation(
   {

@@ -1,23 +1,23 @@
-import { useCallback, useMemo, useState } from 'react'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { MessageList } from '$/components/ChatWrapper'
-import { cn } from '@latitude-data/web-ui/utils'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient'
+import { MessageList } from '$/components/ChatWrapper'
+import { envClient } from '$/envClient'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { useExperiments } from '$/stores/experiments'
+import type { ExperimentVariant } from '@latitude-data/constants/experiments'
 import { Message } from '@latitude-data/constants/legacyCompiler'
-import { ParameterTable } from './ParameterTable'
-import { ExperimentVariants } from './ExperimentVariants'
+import { OnboardingDocumentParameterKeys } from '@latitude-data/constants/onboarding'
 import {
-  DocumentVersion,
-  Project,
   Commit,
   Dataset,
+  DocumentVersion,
+  Project,
 } from '@latitude-data/core/browser'
-import { useExperiments } from '$/stores/experiments'
-import { OnboardingDocumentParameterKeys } from '@latitude-data/constants/onboarding'
-import type { ExperimentVariant } from '@latitude-data/constants/experiments'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { envClient } from '$/envClient'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { cn } from '@latitude-data/web-ui/utils'
+import { useCallback, useMemo, useState } from 'react'
+import { ExperimentVariants } from './ExperimentVariants'
+import { ParameterTable } from './ParameterTable'
 
 const PARAMETERS_MAP: Record<OnboardingDocumentParameterKeys, number> = {
   product_name: 0,

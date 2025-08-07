@@ -1,6 +1,6 @@
-import { WorkspaceDto } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
+import { WorkspaceDto } from '@latitude-data/core/browser'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(

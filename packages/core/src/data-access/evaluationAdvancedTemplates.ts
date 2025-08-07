@@ -1,8 +1,8 @@
 import { asc, eq, getTableColumns, inArray } from 'drizzle-orm'
 
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { EvaluationTemplate, EvaluationTemplateWithCategory } from '../browser'
 import { database } from '../client'
-import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result, TypedResult } from '../lib/Result'
 import {
   evaluationAdvancedTemplates,

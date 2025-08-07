@@ -1,13 +1,13 @@
-import { User, Workspace } from '../../browser'
-import { Result } from '../../lib/Result'
-import { nanoidHashAlgorithm } from './utils'
-import { Column, DatasetRowData, DatasetRowDataContent } from '../../schema'
 import { OnboardingParameters } from '@latitude-data/constants/onboarding'
+import { User, Workspace } from '../../browser'
 import { DATASET_COLUMN_ROLES } from '../../constants'
+import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { createDataset } from './create'
 import { DatasetsRepository } from '../../repositories'
+import { Column, DatasetRowData, DatasetRowDataContent } from '../../schema'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
+import { createDataset } from './create'
+import { nanoidHashAlgorithm } from './utils'
 
 const ONBOARDING_DATASET_COLUMNS: Column[] = [
   {

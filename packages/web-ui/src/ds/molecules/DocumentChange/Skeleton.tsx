@@ -1,7 +1,7 @@
 import { ModifiedDocumentType } from '@latitude-data/core/browser'
-import { MODIFICATION_ICONS } from './colors'
 import { Icon, IconName } from '../../atoms/Icons'
 import { Skeleton } from '../../atoms/Skeleton'
+import { MODIFICATION_ICONS } from './colors'
 
 export function DocumentChangeSkeleton({
   changeType = ModifiedDocumentType.Updated,

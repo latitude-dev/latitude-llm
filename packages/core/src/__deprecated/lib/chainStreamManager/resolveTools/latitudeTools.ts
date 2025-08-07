@@ -1,16 +1,16 @@
 import { LatitudeTool } from '@latitude-data/constants'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import {
   BadRequestError,
   LatitudeError,
   NotFoundError,
 } from '../../../../lib/errors'
 import { Result, TypedResult } from '../../../../lib/Result'
-import { ResolvedTools, ToolSource } from './types'
 import {
   getLatitudeToolDefinition,
   getLatitudeToolInternalName,
 } from '../../../../services/latitudeTools/helpers'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { ResolvedTools, ToolSource } from './types'
 
 const ALL_LATITUDE_RESOLVED_TOOLS = Object.fromEntries(
   Object.values(LatitudeTool).map((latitudeToolName) => [

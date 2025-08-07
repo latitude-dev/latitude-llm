@@ -1,7 +1,7 @@
 import useFetcher from '$/hooks/useFetcher'
-import useSWR, { SWRConfiguration } from 'swr'
-import { Dataset } from '@latitude-data/core/browser'
 import { ROUTES } from '$/services/routes'
+import { Dataset } from '@latitude-data/core/browser'
+import useSWR, { SWRConfiguration } from 'swr'
 import { deserializeDataset } from './datasets'
 
 export function useDataset(id: number, opts?: SWRConfiguration) {

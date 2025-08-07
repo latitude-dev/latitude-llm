@@ -1,11 +1,11 @@
-import { database } from '../client'
-import { mcpServers } from '../schema/models/mcpServers'
-import { eq, and } from 'drizzle-orm'
-import { getK8sClient } from '../services/k8s/k8sClient'
 import * as k8s from '@kubernetes/client-node'
+import { and, eq } from 'drizzle-orm'
 import yaml from 'js-yaml'
-import Transaction from '../lib/Transaction'
+import { database } from '../client'
 import { Result } from '../lib/Result'
+import Transaction from '../lib/Transaction'
+import { mcpServers } from '../schema/models/mcpServers'
+import { getK8sClient } from '../services/k8s/k8sClient'
 
 export async function fixMcpServerMisconfiguration() {
   const workspaceId = 1

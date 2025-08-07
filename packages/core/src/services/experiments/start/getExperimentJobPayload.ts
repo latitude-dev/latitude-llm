@@ -6,8 +6,8 @@ import {
   Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
-import { PromisedResult } from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
 import { NotFoundError } from '../../../lib/errors'
 import {
   CommitsRepository,

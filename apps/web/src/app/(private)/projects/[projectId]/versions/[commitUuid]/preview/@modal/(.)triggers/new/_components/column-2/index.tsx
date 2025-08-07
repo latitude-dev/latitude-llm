@@ -1,6 +1,6 @@
 'use client'
 
-import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import {
   Table,
   TableBody,
@@ -8,9 +8,9 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { useTriggersModalContext } from '../contexts/triggers-modal-context'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import { cn } from '@latitude-data/web-ui/utils'
+import { useTriggersModalContext } from '../contexts/triggers-modal-context'
 
 export function Column2() {
   const {

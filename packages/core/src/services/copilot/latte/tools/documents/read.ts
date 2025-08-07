@@ -1,12 +1,12 @@
 import { LatitudeError } from '@latitude-data/constants/errors'
+import { z } from 'zod'
 import { ErrorResult, Result } from '../../../../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../../../../repositories'
-import { defineLatteTool } from '../types'
-import { z } from 'zod'
 import { scanDocuments } from '../../helpers'
+import { defineLatteTool } from '../types'
 
 const readPrompt = defineLatteTool(
   async ({ projectId, versionUuid, path }, { workspace }) => {

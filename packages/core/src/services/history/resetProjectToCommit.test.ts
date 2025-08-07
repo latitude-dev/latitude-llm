@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
+import { Providers } from '@latitude-data/constants'
+import { mergeCommit } from '../commits'
 import {
   getChangesToResetProjectToCommit,
   resetProjectToCommit,
 } from './resetProjectToCommit'
-import { Providers } from '@latitude-data/constants'
-import { mergeCommit } from '../commits'
 
 describe('getChangesToResetProjectToCommit', () => {
   it('fetches and computes changes between commits', async (ctx) => {

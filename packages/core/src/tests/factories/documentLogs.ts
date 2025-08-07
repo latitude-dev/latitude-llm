@@ -1,6 +1,8 @@
 import { eq } from 'drizzle-orm'
 import { v4 as uuid } from 'uuid'
 
+import { Message } from '@latitude-data/constants/legacyCompiler'
+import { createChain } from 'promptl-ai'
 import {
   Commit,
   DocumentVersion,
@@ -12,13 +14,11 @@ import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { ProviderApiKeysRepository } from '../../repositories'
 import { documentLogs } from '../../schema'
+import { PartialConfig } from '../../services/ai'
 import { createDocumentLog as ogCreateDocumentLog } from '../../services/documentLogs/create'
 import { getResolvedContent } from '../../services/documents'
 import { createProviderLog } from '../../services/providerLogs'
 import { helpers } from './helpers'
-import { createChain } from 'promptl-ai'
-import { PartialConfig } from '../../services/ai'
-import { Message } from '@latitude-data/constants/legacyCompiler'
 
 export type IDocumentLogData = {
   document: DocumentVersion

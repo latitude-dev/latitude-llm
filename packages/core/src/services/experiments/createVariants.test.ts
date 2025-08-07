@@ -1,14 +1,14 @@
-import { vi, beforeEach, describe, expect, it } from 'vitest'
-import { publisher } from '../../events/publisher'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   Commit,
   Dataset,
   DocumentVersion,
   EvaluationV2,
-  Workspace,
   Providers,
   User,
+  Workspace,
 } from '../../browser'
+import { publisher } from '../../events/publisher'
 import * as factories from '../../tests/factories'
 import { createExperimentVariants } from './createVariants'
 

@@ -1,7 +1,7 @@
-import { Conversation } from '@latitude-data/constants/legacyCompiler'
 import { ErrorMessage, MessageList } from '$/components/ChatWrapper'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { StreamMessage } from '$/components/PlaygroundCommon/StreamMessage'
+import { Conversation } from '@latitude-data/constants/legacyCompiler'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export function ChatMessages({
   conversation,

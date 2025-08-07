@@ -1,15 +1,15 @@
-import { useMemo } from 'react'
 import { ROUTES } from '$/services/routes'
-import Link from 'next/link'
-import { UpdateToPromptLButton } from '../UpdateToPromptl'
+import { DocumentVersion } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import {
   ICommitContextType,
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
-import { DocumentVersion } from '@latitude-data/core/browser'
-import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
+import Link from 'next/link'
+import { useMemo } from 'react'
+import { UpdateToPromptLButton } from '../UpdateToPromptl'
 
 /**
  * DEPRECATED: This will be not needed once new editor header

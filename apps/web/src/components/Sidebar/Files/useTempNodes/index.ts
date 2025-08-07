@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
-import { defaultGenerateNodeUuid, Node } from '../useTree'
 import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import { defaultGenerateNodeUuid, Node } from '../useTree'
 
 type TmpFoldersState = {
   tmpFolders: Record<string, Node[]>

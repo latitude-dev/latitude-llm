@@ -1,10 +1,10 @@
+import { IntegrationReference } from '@latitude-data/constants'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { IntegrationDto } from '../../browser'
-import { PromisedResult } from '../../lib/Transaction'
-import { DocumentTriggersRepository } from '../../repositories'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { IntegrationReference } from '@latitude-data/constants'
+import { PromisedResult } from '../../lib/Transaction'
+import { DocumentTriggersRepository } from '../../repositories'
 
 export async function listReferences(
   integration: IntegrationDto,

@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { RewardType } from '../../browser'
 import { createProject, createUser } from '../../tests/factories'
 import { createMembership } from '../memberships/create'
-import { claimReward } from './claim'
 import { BadRequestError } from './../../lib/errors'
+import { claimReward } from './claim'
 
 describe('claimReward', () => {
   const reference = 'test@example.com'

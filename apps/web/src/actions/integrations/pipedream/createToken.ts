@@ -1,7 +1,7 @@
 'use server'
 
-import { authProcedure } from '../../procedures'
 import { createConnectToken } from '@latitude-data/core/services/integrations/pipedream/createConnectToken'
+import { authProcedure } from '../../procedures'
 
 export const createPipedreamTokenAction = authProcedure
   .createServerAction()

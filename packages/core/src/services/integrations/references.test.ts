@@ -1,15 +1,15 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { Project, IntegrationDto, Workspace } from '../../browser'
-import { listReferences } from './references'
 import {
   DocumentVersion,
   IntegrationType,
   Providers,
 } from '@latitude-data/constants'
-import * as factories from '../../tests/factories'
-import { Result } from '../../lib/Result'
-import { destroyIntegration } from './destroy'
 import { ForbiddenError } from '@latitude-data/constants/errors'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { IntegrationDto, Project, Workspace } from '../../browser'
+import { Result } from '../../lib/Result'
+import * as factories from '../../tests/factories'
+import { destroyIntegration } from './destroy'
+import { listReferences } from './references'
 
 describe('listReferences', () => {
   let workspace: Workspace

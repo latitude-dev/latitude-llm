@@ -1,6 +1,6 @@
 import { AstError } from '@latitude-data/constants/promptl'
-import { BLOCK_EDITOR_TYPE, CodeBlock, TemplateNode } from './types'
 import { createTextNode } from './astParsingUtils'
+import { BLOCK_EDITOR_TYPE, CodeBlock, TemplateNode } from './types'
 
 function getDefaultText({
   prompt,

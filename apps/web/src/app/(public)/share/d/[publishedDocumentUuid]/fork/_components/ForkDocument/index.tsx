@@ -1,17 +1,18 @@
 'use client'
-import { PromptHeader } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Header'
-import { PublishedDocument } from '@latitude-data/core/browser'
 import { Container } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Container'
-import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import {
-  CardDescription,
-  CardTitle,
-  CardHeader,
-} from '@latitude-data/web-ui/atoms/Card'
 import { ForkButton } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/ForkButton'
+import { PromptHeader } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Header'
 import { ROUTES } from '$/services/routes'
+import { PublishedDocument } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@latitude-data/web-ui/atoms/Card'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import Link from 'next/link'
 
 export function ForkDocument({ shared }: { shared: PublishedDocument }) {

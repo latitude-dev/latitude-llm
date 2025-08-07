@@ -1,6 +1,8 @@
 'use client'
 
+import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
+import useDocumentVersions from '$/stores/documentVersions'
 import useIntegrations from '$/stores/integrations'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { DocumentTriggerType } from '@latitude-data/constants'
@@ -11,15 +13,15 @@ import {
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
-import Image from 'next/image'
-import { useCallback, useMemo, useState } from 'react'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
-import Link from 'next/link'
-import { ROUTES } from '$/services/routes'
-import useDocumentVersions from '$/stores/documentVersions'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import Image from 'next/image'
+import Link from 'next/link'
+import { useCallback, useMemo, useState } from 'react'
 
 type IntegrationTrigger = Extract<
   DocumentTrigger,

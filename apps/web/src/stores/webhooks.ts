@@ -1,13 +1,13 @@
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
-import useFetcher from '$/hooks/useFetcher'
 import {
   createWebhookAction,
-  updateWebhookAction,
   deleteWebhookAction,
+  updateWebhookAction,
 } from '$/actions/webhooks'
+import useFetcher from '$/hooks/useFetcher'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import useSWR, { SWRConfiguration } from 'swr'
 
 export interface Webhook {
   id: number

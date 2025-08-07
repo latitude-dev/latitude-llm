@@ -2,6 +2,7 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { Chain, createChain, MessageRole } from 'promptl-ai'
 import { Workspace } from '../../browser'
 import {
   ErrorableEntity,
@@ -10,12 +11,11 @@ import {
   Providers,
 } from '../../constants'
 import { Result } from '../../lib/Result'
+import { TelemetryContext } from '../../telemetry'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
 import * as ChainValidator from './ChainValidator'
 import { runChain } from './run'
-import { TelemetryContext } from '../../telemetry'
-import { Chain, createChain, MessageRole } from 'promptl-ai'
 
 let context: TelemetryContext
 let providersMap: Map<string, any>

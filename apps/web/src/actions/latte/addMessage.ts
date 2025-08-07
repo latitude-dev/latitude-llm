@@ -1,10 +1,10 @@
 'use server'
 
-import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { LatteThreadsRepository } from '@latitude-data/core/repositories'
 import { createLatteJob } from '@latitude-data/core/services/copilot/latte/addMessage'
-import { NotFoundError } from '@latitude-data/constants/errors'
+import { z } from 'zod'
 
 export const addMessageToLatteAction = authProcedure
   .createServerAction()

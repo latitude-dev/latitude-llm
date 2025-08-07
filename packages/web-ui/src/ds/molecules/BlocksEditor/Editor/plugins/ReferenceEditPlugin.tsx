@@ -1,9 +1,9 @@
-import { useEffect } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $getNodeByKey } from 'lexical'
+import { useEffect } from 'react'
+import { BlocksEditorProps, IncludedPrompt } from '../../types'
 import { $isReferenceNode } from '../nodes/ReferenceNode'
 import { buildEmptyAttributes, buildReferencePath } from './ReferencesPlugin'
-import { BlocksEditorProps, IncludedPrompt } from '../../types'
 
 export function ReferenceEditPlugin({
   onRequestPromptMetadata,

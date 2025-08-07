@@ -16,14 +16,14 @@ import {
   ValueType,
 } from 'recharts/types/component/DefaultTooltipContent'
 
-import { Text } from '../../../atoms/Text'
-import { AreaChartConfig, CartesianDataItem } from '../types'
+import { CurveType } from 'recharts/types/shape/Curve'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from '../../../atoms/Charts'
-import { CurveType } from 'recharts/types/shape/Curve'
+import { Text } from '../../../atoms/Text'
+import { AreaChartConfig, CartesianDataItem } from '../types'
 
 export function AreaChart({
   config: { curveType, ...config },

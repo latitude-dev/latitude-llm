@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import { errorHandler } from '$/middlewares/errorHandler'
 import {
   BadRequestError,
   UnprocessableEntityError,
 } from '@latitude-data/constants/errors'
-import { env } from '@latitude-data/env'
 import { handleSubscriptionUpdate } from '@latitude-data/core/services/billing/handleSubscriptionUpdate'
-import { errorHandler } from '$/middlewares/errorHandler'
+import { env } from '@latitude-data/env'
+import { NextRequest, NextResponse } from 'next/server'
+import Stripe from 'stripe'
 
 export const POST = errorHandler(async (req: NextRequest) => {
   const stripeSecretKey = env.STRIPE_SECRET_KEY

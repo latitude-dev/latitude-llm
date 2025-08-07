@@ -1,19 +1,19 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 
+import { VercelConfig } from '@latitude-data/constants'
+import { JSONValue } from 'ai'
+import { toCamelCaseDeep } from '../../../../lib/camelCaseRecursive'
 import { Providers } from '../models'
 import { applyAnthropicRules } from './anthropic'
 import { applyCustomRules } from './custom'
 import { applyGoogleRules } from './google'
-import { AppliedRules } from './types'
-import { vercelSdkRules } from './vercel'
 import { applyOpenAiRules } from './openai'
-import { applyVertexAnthropicRules } from './vertexAnthropic'
-import { applyVertexGoogleRules } from './vertexGoogle'
 import { applyPerplexityRules } from './perplexity'
 import { getProviderMetadataKey } from './providerMetadata'
-import { JSONValue } from 'ai'
-import { VercelConfig } from '@latitude-data/constants'
-import { toCamelCaseDeep } from '../../../../lib/camelCaseRecursive'
+import { AppliedRules } from './types'
+import { vercelSdkRules } from './vercel'
+import { applyVertexAnthropicRules } from './vertexAnthropic'
+import { applyVertexGoogleRules } from './vertexGoogle'
 
 type Props = {
   providerType: Providers

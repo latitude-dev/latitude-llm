@@ -1,21 +1,21 @@
+import { LogSources } from '@latitude-data/constants'
+import { LatitudeError } from '@latitude-data/constants/errors'
 import {
   Message,
   MessageRole,
   UserMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { LogSources } from '@latitude-data/constants'
 import { Commit, DocumentVersion, User, Workspace } from '../../../browser'
 import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
 import { documentsQueue } from '../../../jobs/queues'
-import { BACKGROUND, TelemetryContext } from '../../../telemetry'
+import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
+import { BACKGROUND, TelemetryContext } from '../../../telemetry'
+import { WebsocketClient } from '../../../websockets/workers'
 import { runDocumentAtCommit } from '../../commits'
 import { addMessages } from '../../documentLogs/addMessages/index'
-import { ErrorResult, Result } from '../../../lib/Result'
-import { LatitudeError } from '@latitude-data/constants/errors'
-import { buildToolHandlers } from './tools'
-import { WebsocketClient } from '../../../websockets/workers'
 import { assertCopilotIsSupported, sendWebsockets } from './helpers'
+import { buildToolHandlers } from './tools'
 
 export * from './threads/checkpoints/clearCheckpoints'
 export * from './threads/checkpoints/createCheckpoint'

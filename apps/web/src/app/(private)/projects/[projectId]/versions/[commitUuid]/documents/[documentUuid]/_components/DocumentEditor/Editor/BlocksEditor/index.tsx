@@ -1,3 +1,4 @@
+import useDocumentVersions from '$/stores/documentVersions'
 import { type DocumentVersion } from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -17,9 +18,8 @@ import Link from 'next/link'
 import { Config, scan } from 'promptl-ai'
 import { memo, Suspense, useCallback } from 'react'
 import { stringify as stringifyObjectToYaml } from 'yaml'
-import { useIncludabledPrompts } from './useIncludabledPrompts'
-import useDocumentVersions from '$/stores/documentVersions'
 import { useDevMode } from '../hooks/useDevMode'
+import { useIncludabledPrompts } from './useIncludabledPrompts'
 
 export const PlaygroundBlocksEditor = memo(
   ({

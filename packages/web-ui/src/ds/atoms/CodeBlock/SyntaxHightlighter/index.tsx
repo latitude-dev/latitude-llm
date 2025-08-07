@@ -1,15 +1,15 @@
 'use client'
 
 import React, {
-  lazy,
   ComponentProps,
+  lazy,
   Suspense,
   useEffect,
-  useState,
   useMemo,
+  useState,
 } from 'react'
-import { cn } from '../../../../lib/utils'
 import { CurrentTheme } from '../../../../constants'
+import { cn } from '../../../../lib/utils'
 
 const LazyPrism = lazy(() =>
   import('react-syntax-highlighter').then((mod) => ({ default: mod.Prism })),

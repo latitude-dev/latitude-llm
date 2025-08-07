@@ -1,21 +1,26 @@
 import {
-  eq,
   and,
-  getTableColumns,
-  sql,
   count,
   desc,
-  sum,
-  isNull,
+  eq,
+  getTableColumns,
   isNotNull,
+  isNull,
+  sql,
+  sum,
 } from 'drizzle-orm'
 
+import { ExperimentScores } from '@latitude-data/constants'
+import { omit } from 'lodash-es'
 import {
   ErrorableEntity,
   Experiment,
   ExperimentDto,
   ExperimentLogsMetadata,
 } from '../browser'
+import { LatitudeError, NotFoundError } from '../lib/errors'
+import { Result } from '../lib/Result'
+import { PromisedResult } from '../lib/Transaction'
 import {
   commits,
   documentLogs,
@@ -26,11 +31,6 @@ import {
   runErrors,
 } from '../schema'
 import Repository from './repositoryV2'
-import { omit } from 'lodash-es'
-import { PromisedResult } from '../lib/Transaction'
-import { LatitudeError, NotFoundError } from '../lib/errors'
-import { Result } from '../lib/Result'
-import { ExperimentScores } from '@latitude-data/constants'
 
 export class ExperimentsRepository extends Repository<Experiment> {
   get scopeFilter() {

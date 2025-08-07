@@ -3,7 +3,7 @@
 import { useCommitsFromProject } from '$/stores/commitsStore'
 import useDocumentVersions from '$/stores/documentVersions'
 import useProjects from '$/stores/projects'
-import { Commit, Project, DocumentVersion } from '@latitude-data/core/browser'
+import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import { useParams, usePathname } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 

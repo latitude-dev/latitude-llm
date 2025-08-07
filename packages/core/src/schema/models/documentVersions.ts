@@ -11,11 +11,11 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
+import { DocumentType, LinkedDataset, LinkedDatasetRow } from '../../browser'
 import { latitudeSchema } from '../db-schema'
+import { datasetsV1 } from '../legacyModels/datasetsV1'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
-import { datasetsV1 } from '../legacyModels/datasetsV1'
-import { DocumentType, LinkedDataset, LinkedDatasetRow } from '../../browser'
 import { datasets } from './datasets'
 
 type LinkedDatasetByDatasetId = Record<number, LinkedDataset>

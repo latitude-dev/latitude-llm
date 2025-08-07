@@ -1,5 +1,6 @@
 import { cache } from 'react'
 
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import {
   DOCUMENT_STATS_CACHE_KEY,
   DocumentLogsLimitedView,
@@ -26,7 +27,6 @@ import {
   ProviderLogsRepository,
 } from '@latitude-data/core/repositories/index'
 import { notFound } from 'next/navigation'
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 
 export const getFirstProjectCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {

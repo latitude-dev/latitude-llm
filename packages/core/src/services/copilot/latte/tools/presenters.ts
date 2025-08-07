@@ -1,3 +1,5 @@
+import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
+import { env } from '@latitude-data/env'
 import type { ConversationMetadata as PromptlMetadata } from 'promptl-ai'
 import {
   Commit,
@@ -8,11 +10,9 @@ import {
   Project,
   ProviderApiKey,
 } from '../../../../browser'
-import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
+import { Result } from '../../../../lib/Result'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { IntegrationsRepository } from '../../../../repositories'
-import { Result } from '../../../../lib/Result'
-import { env } from '@latitude-data/env'
 
 export function projectPresenter(project: Project) {
   return {

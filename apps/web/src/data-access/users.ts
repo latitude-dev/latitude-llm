@@ -1,21 +1,21 @@
-import { database, utils } from '@latitude-data/core/client'
-import {
-  unsafelyFindWorkspace,
-  unsafelyGetUser,
-} from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/constants/errors'
-import { Result } from '@latitude-data/core/lib/Result'
-import { PromisedResult } from '@latitude-data/core/lib/Transaction'
-import { users } from '@latitude-data/core/schema'
 import { getFirstWorkspace } from '$/data-access/workspaces'
+import { getSession } from '$/services/auth/getSession'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import {
   SubscriptionPlan,
   SubscriptionPlans,
   User,
   Workspace,
 } from '@latitude-data/core/browser'
+import { database, utils } from '@latitude-data/core/client'
+import {
+  unsafelyFindWorkspace,
+  unsafelyGetUser,
+} from '@latitude-data/core/data-access'
+import { Result } from '@latitude-data/core/lib/Result'
+import { PromisedResult } from '@latitude-data/core/lib/Transaction'
+import { users } from '@latitude-data/core/schema'
 import { Session } from 'lucia'
-import { getSession } from '$/services/auth/getSession'
 
 function notFoundWithEmail(email: string | undefined | null) {
   return Result.error(new NotFoundError(`Not found user with email: ${email}`))
