@@ -11,7 +11,6 @@ import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 export type SelectedIntegration = {
-  id?: number
   name: string
   type: IntegrationType
   pipedream?: {

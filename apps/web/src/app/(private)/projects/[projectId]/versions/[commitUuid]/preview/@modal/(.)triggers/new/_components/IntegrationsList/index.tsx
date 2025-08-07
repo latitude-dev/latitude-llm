@@ -115,6 +115,7 @@ export function IntegrationsList({
 
   return (
     <SearchableList<IntegrationType>
+      multiGroup
       items={optionGroups}
       onSearchChange={debouncedSetSearchQuery}
       selectedValue={selectedValue}

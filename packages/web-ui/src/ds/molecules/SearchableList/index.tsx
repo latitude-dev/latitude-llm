@@ -40,13 +40,21 @@ function LoadingItem() {
 const LOADING_ITEMS = Array.from({ length: 15 })
 const SMALL_LOADING = Array.from({ length: 5 })
 
-function LoadingList({ size }: { size: 'loading' | 'loadingMore' }) {
+function LoadingList({
+  size,
+  multiGroup,
+  groupStyle,
+}: {
+  multiGroup: boolean
+  groupStyle: GroupWrapperProps['style']
+  size: 'loading' | 'loadingMore'
+}) {
   const items = size === 'loading' ? LOADING_ITEMS : SMALL_LOADING
   return (
     <div className='flex flex-col gap-y-4 min-h-0'>
-      {size === 'loading' && <Skeleton height='h5' className='w-1/2' />}
+      {multiGroup && <Skeleton height='h5' className='w-1/2' />}
       <div className='flex flex-col gap-y-4 overflow-y-auto custom-scrollbar'>
-        <GroupWrapper>
+        <GroupWrapper style={groupStyle}>
           {items.map((_, idx) => (
             <LoadingItem key={idx} />
           ))}
@@ -109,13 +117,18 @@ function ImageIcon({ imageIcon }: { imageIcon: OptionItem['imageIcon'] }) {
   )
 }
 
-type ItemProps<T> = Omit<ComponentProps<typeof Command.Item>, 'onSelect'> & {
+type ItemProps<T extends ItemType> = Omit<
+  ComponentProps<typeof Command.Item>,
+  'onSelect'
+> & {
   item: OptionItem<T>
+  textSize: 'normal' | 'small'
   onSelectValue?: OnSelectValue<T>
   isSelected?: boolean
 }
 function Item<T extends ItemType = 'no_type'>({
   item,
+  textSize,
   onSelectValue,
   isSelected,
   ...itemProps
@@ -126,6 +139,7 @@ function Item<T extends ItemType = 'no_type'>({
     },
     [onSelectValue, item.metadata],
   )
+  const TextTitle = textSize === 'normal' ? Text.H4 : Text.H5M
   return (
     <Command.Item
       onSelect={onSelect}
@@ -156,9 +170,9 @@ function Item<T extends ItemType = 'no_type'>({
             },
           )}
         >
-          <Text.H4 ellipsis noWrap>
+          <TextTitle ellipsis noWrap>
             {item.title}
-          </Text.H4>
+          </TextTitle>
           <Text.H5 ellipsis noWrap color='foregroundMuted'>
             {item.description}
           </Text.H5>
@@ -233,20 +247,23 @@ function Heading({
     </div>
   )
 }
+
 export type OnSelectValue<T extends ItemType = 'no_type'> = (
   value: string,
   metadata?: MetadataItem<T>,
 ) => void
-function renderItem<T extends ItemType>({
+function renderItem<T extends ItemType = 'no_type'>({
   item,
   idx,
   onSelectValue,
   isSelected,
+  textSize,
 }: {
-  item: OptionItem<T>
   idx: number
+  item: OptionItem<T>
   onSelectValue?: OnSelectValue<T>
   isSelected?: boolean
+  textSize: ItemProps<T>['textSize']
 }) {
   return (
     <Item
@@ -254,14 +271,25 @@ function renderItem<T extends ItemType>({
       value={item.value}
       item={item}
       onSelectValue={onSelectValue}
+      textSize={textSize}
       isSelected={isSelected}
     />
   )
 }
 
-function GroupWrapper({ children }: { children: ReactNode }) {
+type GroupWrapperProps = {
+  children: ReactNode
+  style: 'border' | 'onlySeparators'
+}
+function GroupWrapper({ children, style }: GroupWrapperProps) {
   return (
-    <div className='border border-border rounded-2xl overflow-hidden divide-border divide-y'>
+    <div
+      className={cn('border-border', {
+        'rounded-2xl overflow-hidden border divide-border divide-y':
+          style === 'border',
+        ' divide-border divide-y border-b': style === 'onlySeparators',
+      })}
+    >
       {children}
     </div>
   )
@@ -271,10 +299,14 @@ function renderGroup<T extends ItemType = 'no_type'>({
   group,
   idx,
   onSelectValue,
+  groupStyle,
+  textSize,
   selectedValue,
 }: {
   group: OptionGroup<T>
   idx: number
+  groupStyle: GroupWrapperProps['style']
+  textSize: ItemProps<T>['textSize']
   onSelectValue?: OnSelectValue<T>
   selectedValue?: string | undefined
 }) {
@@ -283,12 +315,13 @@ function renderGroup<T extends ItemType = 'no_type'>({
       key={idx}
       heading={<Heading loading={group.loading} label={group.label} />}
     >
-      <GroupWrapper>
+      <GroupWrapper style={groupStyle}>
         {!group.loading
           ? group.items.map((item, idx) =>
             renderItem({
               item,
               idx,
+              textSize,
               onSelectValue,
               isSelected: item.value === selectedValue,
             }),
@@ -299,9 +332,48 @@ function renderGroup<T extends ItemType = 'no_type'>({
   )
 }
 
-type Props<T extends ItemType> = {
-  loading?: boolean
+function MultiGroupList<T extends ItemType>({
+  items,
+  selectedValue,
+  onSelectValue,
+  groupStyle,
+  textSize,
+}: {
+  items: Option<T>[]
   onSelectValue?: OnSelectValue<T>
+  groupStyle: GroupWrapperProps['style']
+  textSize: ItemProps<T>['textSize']
+  selectedValue?: string | undefined
+}) {
+  return items.map((option, idx) =>
+    option.type === 'group'
+      ? renderGroup({
+        group: option,
+        idx,
+        onSelectValue,
+        selectedValue,
+        groupStyle,
+        textSize,
+      })
+      : renderItem({
+        item: option,
+        idx,
+        onSelectValue,
+        textSize,
+        isSelected: option.value === selectedValue,
+      }),
+  )
+}
+
+type Props<T extends ItemType> = {
+  multiGroup: boolean
+  loading?: boolean
+  listStyle?: {
+    listWrapper: GroupWrapperProps['style']
+    size: ItemProps<T>['textSize']
+  }
+  onSelectValue?: OnSelectValue<T>
+  showSearch?: boolean
   onSearchChange?: (query: string) => void
   items: Option<T>[]
   selectedValue?: string | undefined
@@ -317,13 +389,16 @@ type Props<T extends ItemType> = {
 }
 
 export function SearchableList<T extends ItemType>({
+  multiGroup,
   selectedValue,
   onSelectValue,
   onSearchChange,
   items,
   placeholder,
+  showSearch = true,
   loading = false,
   emptyMessage = 'No results',
+  listStyle,
   infiniteScroll,
 }: Props<T>) {
   const observerRef = useRef<IntersectionObserver | null>(null)
@@ -363,32 +438,47 @@ export function SearchableList<T extends ItemType>({
     return 'No more items'
   }, [infiniteScroll?.totalCount])
 
+  const groupStyle = listStyle?.listWrapper ?? 'border'
+  const textSize = listStyle?.size ?? 'normal'
+
   return (
     <Command className='relative flex flex-col gap-y-4 h-full min-h-0'>
-      <SearchInput placeholder={placeholder} onValueChange={onSearchChange} />
+      {showSearch ? (
+        <SearchInput placeholder={placeholder} onValueChange={onSearchChange} />
+      ) : null}
       {loading ? (
-        <LoadingList size='loading' />
+        <LoadingList
+          groupStyle={groupStyle}
+          size='loading'
+          multiGroup={multiGroup}
+        />
       ) : (
         <Command.List
           asChild
           className='overflow-y-auto custom-scrollbar space-y-4 scrollable-indicator'
         >
-          {items.map((option, idx) =>
-            option.type === 'group'
-              ? renderGroup({
-                group: option,
-                idx,
-                onSelectValue,
-                selectedValue,
-              })
-              : renderItem({
-                item: option,
-                idx,
-                onSelectValue,
-                isSelected: option.value === selectedValue,
-              }),
+          {multiGroup ? (
+            <MultiGroupList
+              items={items}
+              groupStyle={groupStyle}
+              textSize={textSize}
+              onSelectValue={onSelectValue}
+              selectedValue={selectedValue}
+            />
+          ) : (
+            <GroupWrapper style={groupStyle}>
+              {(items as OptionItem<T>[]).map((item, idx) => (
+                <Item
+                  key={idx}
+                  value={item.value}
+                  textSize={textSize}
+                  item={item}
+                  onSelectValue={onSelectValue}
+                  isSelected={item.value === selectedValue}
+                />
+              ))}
+            </GroupWrapper>
           )}
-
           <Command.Empty className='py-6 flex items-center justify-center'>
             <Text.H6>{emptyMessage}</Text.H6>
           </Command.Empty>

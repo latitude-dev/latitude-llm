@@ -1,7 +1,8 @@
 import {
-  TwoColumnSelect,
-  TwoColumnSelectOption,
-} from '@latitude-data/web-ui/molecules/TwoColumnSelect'
+  SearchableList,
+  OptionItem,
+  type OnSelectValue,
+} from '@latitude-data/web-ui/molecules/SearchableList'
 import { useCallback, useMemo, useState } from 'react'
 import {
   PipedreamComponent,
@@ -18,34 +19,43 @@ export function TriggersList({ pipedreamSlug }: { pipedreamSlug: string }) {
     usePipedreamApp(pipedreamSlug)
 
   const triggers = selectedPipedreamApp?.triggers ?? EMPTY_LIST
-  const options = useMemo<TwoColumnSelectOption<string>[]>(
+  const options = useMemo<OptionItem[]>(
     () =>
-      triggers.map((trigger) => ({
-        label: trigger.name,
-        value: trigger.key,
-        name: trigger.name,
-      })),
+      triggers.map(
+        (trigger) =>
+          ({
+            type: 'item',
+            value: trigger.key,
+            title: trigger.name,
+            description: trigger.name,
+          }) satisfies OptionItem,
+      ),
     [triggers],
   )
-  const onTriggerChange = useCallback(
+  const onTriggerChange: OnSelectValue = useCallback(
     (triggerKey: string) => {
-      setTrigger((prevTrigger) => {
-        return triggers.find((t) => t.key === triggerKey) ?? prevTrigger
-      })
+      const foundTrigger = triggers.find((t) => t.key === triggerKey)
+      if (!foundTrigger) return
+
+      console.log('FOUND_TRIGGER', foundTrigger)
+      setTrigger(foundTrigger)
     },
     [triggers],
   )
 
   return (
-    <TwoColumnSelect
-      loading={isLoading}
-      options={options}
-      onChange={onTriggerChange}
-      emptySlateLabel='This integration has no triggers'
-    >
-      {selectedTrigger
-        ? (JSON.stringify(selectedTrigger, null, 2) as string)
-        : 'No trigger'}
-    </TwoColumnSelect>
+    <div className='h-full grid grid-cols-2'>
+      <div className='bg-background border-r border-border'>
+        <SearchableList
+          listStyle={{ listWrapper: 'onlySeparators', size: 'small' }}
+          multiGroup={false}
+          showSearch={false}
+          loading={isLoading}
+          items={options}
+          selectedValue={selectedTrigger?.key}
+          onSelectValue={onTriggerChange}
+        />
+      </div>
+    </div>
   )
 }
