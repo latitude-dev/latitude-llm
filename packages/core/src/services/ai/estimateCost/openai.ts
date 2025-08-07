@@ -3,8 +3,14 @@ import { createModelSpec } from './helpers'
 // source: https://openai.com/api/pricing/
 // NOTE: Order matters here, the first model is the default model
 export const OPENAI_MODELS = createModelSpec({
-  defaultModel: 'gpt-4.1-mini',
+  defaultModel: 'gpt-5-mini',
   models: {
+    // gpt-5 family
+    'gpt-5-mini': { cost: { input: 0.25, output: 2.0 } },
+    'gpt-5-nano': { cost: { input: 0.05, output: 0.4 } },
+    'gpt-5-chat-latest': { cost: { input: 1.25, output: 10.0 } },
+    'gpt-5': { cost: { input: 1.25, output: 10.0 } },
+
     // gpt-4o mini family
     'gpt-4o-mini': { cost: { input: 0.15, output: 0.6 } },
     'gpt-4o-mini-2024-07-18': {
@@ -117,6 +123,11 @@ export const OPENAI_MODELS = createModelSpec({
     },
   },
   modelName: (model: string) => {
+    if (model.startsWith('gpt-5-chat-latest')) return 'gpt-5-chat-latest'
+    if (model.startsWith('gpt-5-nano')) return 'gpt-5-nano'
+    if (model.startsWith('gpt-5-mini')) return 'gpt-5-mini'
+    if (model.startsWith('gpt-5')) return 'gpt-5'
+
     if (model.startsWith('gpt-4.5')) return 'gpt-4.5-preview'
     if (model.startsWith('gpt-4.1-nano')) return 'gpt-4.1-nano'
     if (model.startsWith('gpt-4.1-mini')) return 'gpt-4.1-mini'
