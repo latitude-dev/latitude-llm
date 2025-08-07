@@ -237,9 +237,13 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                   <TableCell
                     preventDefault
                     align='left'
-                    onClick={() =>
+                    onClick={() => {
+                      if (error) return
                       toggleRow(documentLog.id, !isSelected(documentLog.id))
-                    }
+                    }}
+                    className={cn({
+                      'pointer-events-none cursor-wait': !!error,
+                    })}
                   >
                     <Checkbox
                       fullWidth={false}

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { CheckedState } from '@latitude-data/web-ui/atoms/Checkbox'
 
-type SelectionMode = 'NONE' | 'PARTIAL' | 'ALL' | 'ALL_EXCEPT'
+export type SelectionMode = 'NONE' | 'PARTIAL' | 'ALL' | 'ALL_EXCEPT'
 
 interface SelectionState<T extends string | number> {
   mode: SelectionMode
@@ -44,7 +44,11 @@ export function useSelectableRows<T extends string | number>({
       if (id === undefined) return
 
       setSelectionState((prev) => {
-        const newState = { ...prev }
+        const newState: SelectionState<T> = {
+          mode: prev.mode,
+          selectedIds: new Set<T>(prev.selectedIds),
+          excludedIds: new Set<T>(prev.excludedIds),
+        }
 
         switch (prev.mode) {
           case 'ALL':
