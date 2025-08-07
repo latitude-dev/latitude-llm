@@ -133,7 +133,7 @@ function Item({ item, onSelect, isSelected, ...itemProps }: ItemProps) {
             'flex flex-col',
             'group-aria-selected:[&>span]:!text-accent-foreground min-w-0',
             {
-              '[&>span]:!text-foregroundMuted': !isSelected,
+              '[&>span]:!text-accent-foreground': isSelected,
             },
           )}
         >

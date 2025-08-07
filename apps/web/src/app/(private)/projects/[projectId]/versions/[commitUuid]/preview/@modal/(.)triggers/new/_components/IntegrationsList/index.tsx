@@ -138,7 +138,6 @@ export function IntegrationsList() {
     [loadMore, isLoadingMore, isReachingEnd, totalCount],
   )
 
-  console.log('SELECTED_VALUE___', selectedValue)
   return (
     <SearchableList
       items={optionGroups}
