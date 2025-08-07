@@ -112,6 +112,7 @@ export function Messages({
             canChat
             clearChat={onReset}
             onSubmit={onChat}
+            minRows={5}
             placeholder='Enter follow up message...'
           />
         ) : (
