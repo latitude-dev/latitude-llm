@@ -69,9 +69,5 @@ export async function runAction({
     }
   }
 
-  if (result.ret !== undefined && result.ret !== null) {
-    return Result.ok(result.ret)
-  }
-
-  return Result.ok({ ok: true }) // Default response if no return value is provided
+  return Result.ok(result.ret)
 }
