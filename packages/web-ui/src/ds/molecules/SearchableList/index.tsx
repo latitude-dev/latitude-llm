@@ -1,4 +1,11 @@
-import { ComponentProps, ReactNode, useEffect, useMemo, useRef } from 'react'
+import {
+  ComponentProps,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react'
 import { Command } from 'cmdk'
 import { cn } from '../../../lib/utils'
 import { Icon, IconProps } from '../../atoms/Icons'
@@ -102,11 +109,23 @@ function ImageIcon({ imageIcon }: { imageIcon: OptionItem['imageIcon'] }) {
   )
 }
 
-type ItemProps = ComponentProps<typeof Command.Item> & {
-  item: OptionItem
+type ItemProps<T> = Omit<ComponentProps<typeof Command.Item>, 'onSelect'> & {
+  item: OptionItem<T>
+  onSelectValue?: OnSelectValue<T>
   isSelected?: boolean
 }
-function Item({ item, onSelect, isSelected, ...itemProps }: ItemProps) {
+function Item<T extends ItemType = 'no_type'>({
+  item,
+  onSelectValue,
+  isSelected,
+  ...itemProps
+}: ItemProps<T>) {
+  const onSelect = useCallback(
+    (value: string) => {
+      onSelectValue?.(value, item.metadata)
+    },
+    [onSelectValue, item.metadata],
+  )
   return (
     <Command.Item
       onSelect={onSelect}
@@ -161,24 +180,33 @@ function Item({ item, onSelect, isSelected, ...itemProps }: ItemProps) {
 }
 
 type ItemIcon = { type: 'icon'; name: IconProps['name'] }
+
+type MetadataItem<ItemType> = {
+  type: ItemType
+  [key: string]: unknown
+}
+type ItemType = unknown
 type ItemImage = { type: 'image'; src: string; alt: string }
-export type OptionItem = {
+export type OptionItem<T extends ItemType = 'no_type'> = {
   type: 'item'
   value: string
   keywords?: string[] // Search keywords for the item
+  metadata?: MetadataItem<T>
   title: string
   description: string
   imageIcon?: ItemIcon | ItemImage
   disabled?: boolean
 }
-type OptionGroup = {
+type OptionGroup<T extends ItemType = 'no_type'> = {
   type: 'group'
   label: string
-  items: OptionItem[]
+  items: OptionItem<T>[]
   loading?: boolean
 }
 
-export type Option = OptionItem | OptionGroup
+export type Option<T extends ItemType = 'no_type'> =
+  | OptionItem<T>
+  | OptionGroup<T>
 
 function Heading({
   label,
@@ -205,16 +233,19 @@ function Heading({
     </div>
   )
 }
-
-function renderItem({
+export type OnSelectValue<T extends ItemType = 'no_type'> = (
+  value: string,
+  metadata?: MetadataItem<T>,
+) => void
+function renderItem<T extends ItemType>({
   item,
   idx,
   onSelectValue,
   isSelected,
 }: {
-  item: OptionItem
+  item: OptionItem<T>
   idx: number
-  onSelectValue?: (value: string) => void
+  onSelectValue?: OnSelectValue<T>
   isSelected?: boolean
 }) {
   return (
@@ -222,7 +253,7 @@ function renderItem({
       key={idx}
       value={item.value}
       item={item}
-      onSelect={onSelectValue}
+      onSelectValue={onSelectValue}
       isSelected={isSelected}
     />
   )
@@ -236,15 +267,15 @@ function GroupWrapper({ children }: { children: ReactNode }) {
   )
 }
 
-function renderGroup({
+function renderGroup<T extends ItemType = 'no_type'>({
   group,
   idx,
   onSelectValue,
   selectedValue,
 }: {
-  group: OptionGroup
+  group: OptionGroup<T>
   idx: number
-  onSelectValue?: (value: string) => void
+  onSelectValue?: OnSelectValue<T>
   selectedValue?: string | undefined
 }) {
   return (
@@ -268,11 +299,11 @@ function renderGroup({
   )
 }
 
-type Props = {
+type Props<T extends ItemType> = {
   loading?: boolean
-  onSelectValue?: (value: string) => void
+  onSelectValue?: OnSelectValue<T>
   onSearchChange?: (query: string) => void
-  items: Option[]
+  items: Option<T>[]
   selectedValue?: string | undefined
   placeholder?: string
   emptyMessage?: string
@@ -285,7 +316,7 @@ type Props = {
   totalCount?: number
 }
 
-export function SearchableList({
+export function SearchableList<T extends ItemType>({
   selectedValue,
   onSelectValue,
   onSearchChange,
@@ -294,7 +325,7 @@ export function SearchableList({
   loading = false,
   emptyMessage = 'No results',
   infiniteScroll,
-}: Props) {
+}: Props<T>) {
   const observerRef = useRef<IntersectionObserver | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
 

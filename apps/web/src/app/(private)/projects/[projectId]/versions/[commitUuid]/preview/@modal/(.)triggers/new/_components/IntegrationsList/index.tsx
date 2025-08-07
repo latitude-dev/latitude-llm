@@ -2,14 +2,22 @@ import {
   SearchableList,
   Option as SearchableOption,
   OptionItem as SearchableOptionItem,
+  type OnSelectValue,
 } from '@latitude-data/web-ui/molecules/SearchableList'
 import usePipedreamApps from '$/stores/pipedreamApps'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import useConnectedIntegrationsByPipedreamApp from '$/stores/integrationsConnectedByPipedreamApp'
 import { useDebouncedCallback } from 'use-debounce'
+import { IntegrationType } from '@latitude-data/constants'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { SelectedIntegration } from '../../client'
 import { buildIntegrationOption } from './utils'
 
-export function IntegrationsList() {
+export function IntegrationsList({
+  onSelectIntegration,
+}: {
+  onSelectIntegration: ReactStateDispatch<SelectedIntegration | null>
+}) {
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedValue, setSelectedValue] = useState<string | undefined>()
   const debouncedSetSearchQuery = useDebouncedCallback(setSearchQuery, 500)
@@ -29,7 +37,7 @@ export function IntegrationsList() {
 
   const isLoading = isLoadingPipedreamApps || isLoadingConnectedIntegrations
 
-  const optionGroups = useMemo<SearchableOption[]>(() => {
+  const optionGroups = useMemo<SearchableOption<IntegrationType>[]>(() => {
     if (isLoadingPipedreamApps && isLoadingConnectedIntegrations) return []
 
     const connectedSlugs = connectedApps.reduce(
@@ -42,7 +50,7 @@ export function IntegrationsList() {
       {} as Record<string, string>,
     )
 
-    const availableApps: SearchableOptionItem[] = pipedreamApps
+    const availableApps: SearchableOptionItem<IntegrationType>[] = pipedreamApps
       .filter((app) => !connectedSlugs[app.name_slug])
       .map(
         (app) =>
@@ -50,6 +58,7 @@ export function IntegrationsList() {
             type: 'item',
             value: app.name_slug,
             keywords: [app.name, app.name_slug],
+            metadata: { type: IntegrationType.Pipedream },
             title: app.name,
             description: `${app.triggerCount} triggers`,
             imageIcon: {
@@ -57,10 +66,10 @@ export function IntegrationsList() {
               src: app.img_src,
               alt: app.name,
             },
-          }) satisfies SearchableOptionItem,
+          }) satisfies SearchableOptionItem<IntegrationType>,
       )
 
-    const groups: SearchableOption[] = []
+    const groups: SearchableOption<IntegrationType>[] = []
 
     if (connectedApps.length) {
       groups.push({
@@ -94,12 +103,22 @@ export function IntegrationsList() {
     [loadMore, isLoadingMore, isReachingEnd, totalCount],
   )
 
+  const onSelectValue: OnSelectValue<IntegrationType> = useCallback(
+    (slug, metadata) => {
+      if (!slug || !metadata) return
+
+      setSelectedValue(slug)
+      onSelectIntegration({ slug, type: metadata.type })
+    },
+    [onSelectIntegration, setSelectedValue],
+  )
+
   return (
-    <SearchableList
+    <SearchableList<IntegrationType>
       items={optionGroups}
       onSearchChange={debouncedSetSearchQuery}
       selectedValue={selectedValue}
-      onSelectValue={setSelectedValue}
+      onSelectValue={onSelectValue}
       infiniteScroll={infiniteScroll}
       loading={isLoading}
       placeholder='Search integrations...'
