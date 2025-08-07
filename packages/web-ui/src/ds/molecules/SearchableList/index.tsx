@@ -318,14 +318,14 @@ function renderGroup<T extends ItemType = 'no_type'>({
       <GroupWrapper style={groupStyle}>
         {!group.loading
           ? group.items.map((item, idx) =>
-            renderItem({
-              item,
-              idx,
-              textSize,
-              onSelectValue,
-              isSelected: item.value === selectedValue,
-            }),
-          )
+              renderItem({
+                item,
+                idx,
+                textSize,
+                onSelectValue,
+                isSelected: item.value === selectedValue,
+              }),
+            )
           : SMALL_LOADING.map((_, idx) => <LoadingItem key={idx} />)}
       </GroupWrapper>
     </Command.Group>
@@ -348,20 +348,20 @@ function MultiGroupList<T extends ItemType>({
   return items.map((option, idx) =>
     option.type === 'group'
       ? renderGroup({
-        group: option,
-        idx,
-        onSelectValue,
-        selectedValue,
-        groupStyle,
-        textSize,
-      })
+          group: option,
+          idx,
+          onSelectValue,
+          selectedValue,
+          groupStyle,
+          textSize,
+        })
       : renderItem({
-        item: option,
-        idx,
-        onSelectValue,
-        textSize,
-        isSelected: option.value === selectedValue,
-      }),
+          item: option,
+          idx,
+          onSelectValue,
+          textSize,
+          isSelected: option.value === selectedValue,
+        }),
   )
 }
 
